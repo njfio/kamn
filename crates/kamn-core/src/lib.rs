@@ -6,6 +6,7 @@ pub mod bridge_adapter;
 pub mod channel_models;
 pub mod channel_policies;
 pub mod config;
+pub mod content_storage;
 pub mod cross_chain_bridge;
 pub mod data_classification;
 pub mod did;
@@ -71,6 +72,10 @@ pub use channel_policies::{
 pub use config::{
     ConfigError, NodeConfig, NodeRole, SyncMode, SyncOperationalProfile, SyncRecoveryStrategy,
     SyncStartupStrategy,
+};
+pub use content_storage::{
+    cid_from_content_uri, content_uri_for_cid, ContentHead, ContentObject, ContentStorageAdapter,
+    ContentStorageError, InMemoryContentAdapter,
 };
 pub use cross_chain_bridge::{
     CrossChainBridgeConfig, CrossChainBridgeEngine, CrossChainBridgeError,
