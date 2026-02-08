@@ -1071,7 +1071,206 @@ pub fn evaluate_daemon_listener_quorum(
     evaluator.evaluate(input)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApproverAttestation {
+    approver_did: String,
+    payload_digest: String,
+    attestation_id: String,
+}
+
+impl ApproverAttestation {
+    pub fn new(
+        approver_did: &str,
+        payload_digest: &str,
+        attestation_id: &str,
+    ) -> Result<Self, ApproverQuorumError> {
+        if !is_valid_kamn_did(approver_did) {
+            return Err(ApproverQuorumError::InvalidApproverDid);
+        }
+        if payload_digest.trim().is_empty() {
+            return Err(ApproverQuorumError::InvalidPayloadDigest);
+        }
+        if attestation_id.trim().is_empty() {
+            return Err(ApproverQuorumError::InvalidAttestationId);
+        }
+        Ok(Self {
+            approver_did: approver_did.to_owned(),
+            payload_digest: payload_digest.to_owned(),
+            attestation_id: attestation_id.to_owned(),
+        })
+    }
+
+    pub fn approver_did(&self) -> &str {
+        &self.approver_did
+    }
+
+    pub fn payload_digest(&self) -> &str {
+        &self.payload_digest
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApproverQuorumInput {
+    action_id: String,
+    payload_digest: String,
+    attestations: Vec<ApproverAttestation>,
+}
+
+impl ApproverQuorumInput {
+    pub fn new(
+        action_id: &str,
+        payload_digest: &str,
+        attestations: Vec<ApproverAttestation>,
+    ) -> Result<Self, ApproverQuorumError> {
+        if action_id.trim().is_empty() {
+            return Err(ApproverQuorumError::InvalidActionId);
+        }
+        if payload_digest.trim().is_empty() {
+            return Err(ApproverQuorumError::InvalidPayloadDigest);
+        }
+        Ok(Self {
+            action_id: action_id.to_owned(),
+            payload_digest: payload_digest.to_owned(),
+            attestations,
+        })
+    }
+
+    pub fn action_id(&self) -> &str {
+        &self.action_id
+    }
+
+    pub fn payload_digest(&self) -> &str {
+        &self.payload_digest
+    }
+
+    pub fn attestations(&self) -> &[ApproverAttestation] {
+        &self.attestations
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApproverQuorumDecision {
+    pub action_id: String,
+    pub required_approvals: usize,
+    pub approved_by: Vec<String>,
+    pub authorized: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ApproverQuorumError {
+    InvalidRequiredApprovals { required: usize },
+    InvalidActionId,
+    InvalidPayloadDigest,
+    InvalidApproverDid,
+    InvalidAttestationId,
+    DuplicateApproverAttestation { approver_did: String },
+    PayloadDigestMismatch { expected: String, found: String },
+    InsufficientApprovals { required: usize, received: usize },
+}
+
+impl Display for ApproverQuorumError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidRequiredApprovals { required } => {
+                write!(f, "invalid approver quorum requirement: {required}")
+            }
+            Self::InvalidActionId => write!(f, "approver quorum action id cannot be empty"),
+            Self::InvalidPayloadDigest => {
+                write!(f, "approver quorum payload digest cannot be empty")
+            }
+            Self::InvalidApproverDid => write!(f, "approver attestation did is invalid"),
+            Self::InvalidAttestationId => write!(f, "approver attestation id cannot be empty"),
+            Self::DuplicateApproverAttestation { approver_did } => {
+                write!(
+                    f,
+                    "duplicate approver attestation replay detected for {approver_did}"
+                )
+            }
+            Self::PayloadDigestMismatch { expected, found } => {
+                write!(
+                    f,
+                    "approver payload digest mismatch: expected {expected}, found {found}"
+                )
+            }
+            Self::InsufficientApprovals { required, received } => {
+                write!(
+                    f,
+                    "approver quorum insufficient approvals: required {required}, received {received}"
+                )
+            }
+        }
+    }
+}
+
+impl Error for ApproverQuorumError {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApproverQuorumEvaluator {
+    required_approvals: usize,
+}
+
+impl ApproverQuorumEvaluator {
+    pub fn new(required_approvals: usize) -> Result<Self, ApproverQuorumError> {
+        if required_approvals == 0 {
+            return Err(ApproverQuorumError::InvalidRequiredApprovals {
+                required: required_approvals,
+            });
+        }
+        Ok(Self { required_approvals })
+    }
+
+    pub fn authorize(
+        &self,
+        input: ApproverQuorumInput,
+    ) -> Result<ApproverQuorumDecision, ApproverQuorumError> {
+        let mut approved = BTreeSet::new();
+
+        for attestation in input.attestations() {
+            if !is_valid_kamn_did(attestation.approver_did()) {
+                return Err(ApproverQuorumError::InvalidApproverDid);
+            }
+            if attestation.payload_digest() != input.payload_digest() {
+                return Err(ApproverQuorumError::PayloadDigestMismatch {
+                    expected: input.payload_digest().to_owned(),
+                    found: attestation.payload_digest().to_owned(),
+                });
+            }
+            if !approved.insert(attestation.approver_did().to_owned()) {
+                return Err(ApproverQuorumError::DuplicateApproverAttestation {
+                    approver_did: attestation.approver_did().to_owned(),
+                });
+            }
+        }
+
+        let approved_by = approved.into_iter().collect::<Vec<_>>();
+        if approved_by.len() < self.required_approvals {
+            return Err(ApproverQuorumError::InsufficientApprovals {
+                required: self.required_approvals,
+                received: approved_by.len(),
+            });
+        }
+
+        Ok(ApproverQuorumDecision {
+            action_id: input.action_id().to_owned(),
+            required_approvals: self.required_approvals,
+            approved_by,
+            authorized: true,
+        })
+    }
+}
+
+pub fn authorize_daemon_outbound_action(
+    evaluator: &ApproverQuorumEvaluator,
+    input: ApproverQuorumInput,
+) -> Result<ApproverQuorumDecision, ApproverQuorumError> {
+    evaluator.authorize(input)
+}
+
 fn is_valid_listener_did(value: &str) -> bool {
+    is_valid_kamn_did(value)
+}
+
+fn is_valid_kamn_did(value: &str) -> bool {
     let trimmed = value.trim();
     !trimmed.is_empty() && trimmed.starts_with("kamn:did:")
 }
@@ -1214,8 +1413,9 @@ pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_runtime_wiring, execute_processor_daemon_tick, BoundedRuntimeQueue,
-        ConstructLockError, ConstructLockGuard, DeterministicProposalPlanner,
+        authorize_daemon_outbound_action, build_runtime_wiring, execute_processor_daemon_tick,
+        ApproverAttestation, ApproverQuorumError, ApproverQuorumEvaluator, ApproverQuorumInput,
+        BoundedRuntimeQueue, ConstructLockError, ConstructLockGuard, DeterministicProposalPlanner,
         FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore, ListenerAttestation,
         ListenerQuorumError, ListenerQuorumEvaluator, ListenerQuorumInput, PeerLifecycle,
         PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, ProposalPlannerError,
@@ -1839,6 +2039,134 @@ mod tests {
                 event_id: "bridge-event-regression".to_owned(),
                 previous_sequence: 7,
                 received_sequence: 6
+            }
+        );
+    }
+
+    #[test]
+    fn functional_approver_quorum_authorizes_outbound_with_threshold_attestations() {
+        let evaluator =
+            ApproverQuorumEvaluator::new(2).expect("approver quorum evaluator should build");
+        let input = ApproverQuorumInput::new(
+            "outbound-action-1",
+            "payload-hash-1",
+            vec![
+                ApproverAttestation::new("kamn:did:agent:approver-a", "payload-hash-1", "att-1")
+                    .expect("valid attestation"),
+                ApproverAttestation::new("kamn:did:agent:approver-b", "payload-hash-1", "att-2")
+                    .expect("valid attestation"),
+            ],
+        )
+        .expect("valid outbound authorization input");
+
+        let decision = evaluator
+            .authorize(input)
+            .expect("outbound action should be authorized");
+        assert!(decision.authorized);
+        assert_eq!(decision.required_approvals, 2);
+        assert_eq!(
+            decision.approved_by,
+            vec![
+                "kamn:did:agent:approver-a".to_owned(),
+                "kamn:did:agent:approver-b".to_owned()
+            ]
+        );
+    }
+
+    #[test]
+    fn unit_approver_quorum_rejects_zero_required_approvals() {
+        let error =
+            ApproverQuorumEvaluator::new(0).expect_err("zero required approvals must be rejected");
+        assert_eq!(
+            error,
+            ApproverQuorumError::InvalidRequiredApprovals { required: 0 }
+        );
+    }
+
+    #[test]
+    fn integration_daemon_outbound_approver_quorum_rejects_under_threshold() {
+        let evaluator =
+            ApproverQuorumEvaluator::new(2).expect("approver quorum evaluator should build");
+        let input = ApproverQuorumInput::new(
+            "outbound-action-under-threshold",
+            "payload-hash-2",
+            vec![
+                ApproverAttestation::new("kamn:did:agent:approver-a", "payload-hash-2", "att-1")
+                    .expect("valid attestation"),
+            ],
+        )
+        .expect("valid outbound authorization input");
+        let error = authorize_daemon_outbound_action(&evaluator, input)
+            .expect_err("under-threshold approvals must be rejected");
+        assert_eq!(
+            error,
+            ApproverQuorumError::InsufficientApprovals {
+                required: 2,
+                received: 1
+            }
+        );
+    }
+
+    #[test]
+    fn regression_malformed_approver_payload_is_rejected() {
+        // Regression: #372
+        let evaluator =
+            ApproverQuorumEvaluator::new(1).expect("approver quorum evaluator should build");
+        let input = ApproverQuorumInput::new(
+            "outbound-action-malformed",
+            "payload-hash-expected",
+            vec![ApproverAttestation::new(
+                "kamn:did:agent:approver-a",
+                "payload-hash-tampered",
+                "att-1",
+            )
+            .expect("valid attestation")],
+        )
+        .expect("valid outbound authorization input");
+        let error = evaluator
+            .authorize(input)
+            .expect_err("payload mismatch must be rejected");
+        assert_eq!(
+            error,
+            ApproverQuorumError::PayloadDigestMismatch {
+                expected: "payload-hash-expected".to_owned(),
+                found: "payload-hash-tampered".to_owned()
+            }
+        );
+    }
+
+    #[test]
+    fn regression_outbound_under_quorum_is_rejected() {
+        // Regression: #372
+        let evaluator =
+            ApproverQuorumEvaluator::new(3).expect("approver quorum evaluator should build");
+        let input = ApproverQuorumInput::new(
+            "outbound-action-regression",
+            "payload-hash-regression",
+            vec![
+                ApproverAttestation::new(
+                    "kamn:did:agent:approver-a",
+                    "payload-hash-regression",
+                    "att-1",
+                )
+                .expect("valid attestation"),
+                ApproverAttestation::new(
+                    "kamn:did:agent:approver-b",
+                    "payload-hash-regression",
+                    "att-2",
+                )
+                .expect("valid attestation"),
+            ],
+        )
+        .expect("valid outbound authorization input");
+        let error = evaluator
+            .authorize(input)
+            .expect_err("under-threshold approvals must be rejected");
+        assert_eq!(
+            error,
+            ApproverQuorumError::InsufficientApprovals {
+                required: 3,
+                received: 2
             }
         );
     }
