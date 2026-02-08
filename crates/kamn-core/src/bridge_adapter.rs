@@ -3,7 +3,8 @@ use crate::{
     EnvelopeProof, CANONICAL_ENCRYPTION_ALGORITHM, CANONICAL_MESSAGE_ENVELOPE_TYPE,
     CANONICAL_PROOF_PURPOSE,
 };
-use std::collections::BTreeMap;
+use std::cell::RefCell;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -191,6 +192,7 @@ impl BridgeAdapter for PassThroughBridgeAdapter {
 pub struct BridgeAdapterEngine<A, P> {
     adapter: A,
     policy: P,
+    seen_inbound_message_ids: RefCell<BTreeSet<String>>,
 }
 
 impl<A, P> BridgeAdapterEngine<A, P>
@@ -199,7 +201,11 @@ where
     P: BridgePolicyHook,
 {
     pub fn new(adapter: A, policy: P) -> Self {
-        Self { adapter, policy }
+        Self {
+            adapter,
+            policy,
+            seen_inbound_message_ids: RefCell::new(BTreeSet::new()),
+        }
     }
 
     pub fn process_inbound(
@@ -211,6 +217,16 @@ where
         let normalized = self.adapter.normalize_inbound(inbound)?;
         validate_normalized_inbound(&normalized)?;
         self.policy.authorize_inbound(&normalized)?;
+        let bridge_message_id = normalized.bridge_message_id.clone();
+        if !self
+            .seen_inbound_message_ids
+            .borrow_mut()
+            .insert(bridge_message_id.clone())
+        {
+            return Err(BridgeAdapterError::DuplicateInboundMessageId(
+                bridge_message_id,
+            ));
+        }
         Ok(normalized)
     }
 
@@ -307,6 +323,7 @@ where
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BridgeAdapterError {
+    DuplicateInboundMessageId(String),
     EmptyField(&'static str),
     InvalidDid(String),
     InvalidNonce(u64),
@@ -324,6 +341,9 @@ pub enum BridgeAdapterError {
 impl fmt::Display for BridgeAdapterError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::DuplicateInboundMessageId(message_id) => {
+                write!(f, "duplicate inbound message id: {message_id}")
+            }
             Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
             Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
             Self::InvalidNonce(value) => write!(f, "nonce must be greater than zero: {value}"),
@@ -526,6 +546,32 @@ mod tests {
         assert_eq!(
             engine.process_inbound_to_envelope(&inbound, Vec::new(), "2026-02-08T10:00:00Z", 1),
             Err(BridgeAdapterError::EmptyField("recipient_keys"))
+        );
+    }
+
+    #[test]
+    fn process_inbound_rejects_duplicate_message_id() {
+        let adapter = PassThroughBridgeAdapter::new(
+            BridgePlatform::Discord,
+            "kamn:did:agent:bridge-discord-1",
+        )
+        .expect("adapter should be valid");
+        let engine = BridgeAdapterEngine::new(adapter, AllowAllBridgePolicy::new());
+        let inbound = BridgeInboundEnvelope {
+            external_message_id: "ext-9".to_owned(),
+            external_sender_id: "discord:user-1".to_owned(),
+            external_channel_id: "discord:channel:1".to_owned(),
+            target_agent_did: "kamn:did:agent:planner-1".to_owned(),
+            body: "hello".to_owned(),
+            received_at: "2026-02-08T09:00:00Z".to_owned(),
+        };
+
+        assert!(engine.process_inbound(&inbound).is_ok());
+        assert_eq!(
+            engine.process_inbound(&inbound),
+            Err(BridgeAdapterError::DuplicateInboundMessageId(
+                "discord:ext-9".to_owned()
+            ))
         );
     }
 

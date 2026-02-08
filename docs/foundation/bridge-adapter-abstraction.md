@@ -23,6 +23,7 @@ This document describes the first implementation slice for bridge adapter abstra
   - Validate external envelope fields and target DID.
   - Normalize external payload into deterministic `bridge_message_id` (`<platform>:<external_message_id>`).
   - Apply policy hook before returning normalized message.
+  - Duplicate inbound message IDs are rejected with `DuplicateInboundMessageId`.
 - Outbound flow:
   - Validate request fields and sender DID.
   - Apply policy hook before translation.
@@ -43,3 +44,4 @@ cargo test -p kamn-core
 ## Follow-up
 - Add platform-specific adapters (Telegram/Discord/Slack) with real credential and rate-limit hooks.
 - Replace static allow-all policy with channel and capability-aware policy implementations.
+- duplicate inbound event is rejected (`Regression: #423`).
