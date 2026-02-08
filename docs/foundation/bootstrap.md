@@ -48,3 +48,4 @@ For escrow lifecycle state transitions, see `docs/foundation/escrow-lifecycle.md
 For multi-AZ topology and failover operations, see `docs/foundation/multi-az-failover-runbook.md`.
 For security control ownership and enforcement mapping, see `docs/foundation/threat-control-matrix.md`.
 For anti-hallucination instruction validation controls, see `docs/foundation/instruction-verification.md`.
+For deterministic key lifecycle and rotation transitions, see `docs/foundation/key-lifecycle.md`.
