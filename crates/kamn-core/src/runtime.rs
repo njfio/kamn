@@ -2570,7 +2570,7 @@ mod tests {
 
     #[test]
     fn functional_divergence_watchdog_flags_hash_mismatch_as_critical() {
-        let evaluator = StateDivergenceEvaluator::default();
+        let evaluator = StateDivergenceEvaluator;
         let input = StateDivergenceWatchInput::new(
             "kamn:did:agent:validator-a",
             42,
@@ -2609,7 +2609,7 @@ mod tests {
 
     #[test]
     fn integration_daemon_divergence_report_includes_deterministic_evidence_fields() {
-        let evaluator = StateDivergenceEvaluator::default();
+        let evaluator = StateDivergenceEvaluator;
         let input = StateDivergenceWatchInput::new(
             "kamn:did:agent:validator-a",
             42,
@@ -2637,7 +2637,7 @@ mod tests {
     #[test]
     fn regression_state_divergence_false_negative_is_rejected() {
         // Regression: #381
-        let evaluator = StateDivergenceEvaluator::default();
+        let evaluator = StateDivergenceEvaluator;
         let input = StateDivergenceWatchInput::new(
             "kamn:did:agent:validator-a",
             99,
@@ -2659,7 +2659,7 @@ mod tests {
 
     #[test]
     fn functional_watchdog_anomaly_classifies_liveness_degradation_as_warning() {
-        let evaluator = WatchdogAnomalyEvaluator::default();
+        let evaluator = WatchdogAnomalyEvaluator;
         let input = WatchdogAnomalyWatchInput::new("sample-liveness", 100, 96, 7, 5, 30, 1)
             .expect("valid anomaly sample");
         let report = evaluator
@@ -2684,7 +2684,7 @@ mod tests {
 
     #[test]
     fn integration_daemon_watchdog_anomaly_report_includes_summary_fields() {
-        let evaluator = WatchdogAnomalyEvaluator::default();
+        let evaluator = WatchdogAnomalyEvaluator;
         let input = WatchdogAnomalyWatchInput::new("sample-censorship", 100, 45, 8, 8, 60, 3)
             .expect("valid anomaly sample");
         let report = evaluate_daemon_watchdog_anomaly(&evaluator, input)
@@ -2700,7 +2700,7 @@ mod tests {
     #[test]
     fn regression_censorship_edge_signal_remains_detected_as_critical() {
         // Regression: #382
-        let evaluator = WatchdogAnomalyEvaluator::default();
+        let evaluator = WatchdogAnomalyEvaluator;
         let input = WatchdogAnomalyWatchInput::new("sample-regression", 200, 98, 12, 12, 60, 2)
             .expect("valid anomaly sample");
         let report = evaluate_daemon_watchdog_anomaly(&evaluator, input)
