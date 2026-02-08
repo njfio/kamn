@@ -28,7 +28,10 @@ fn doc_contains_fallback_semantics_and_transaction_integration() {
     assert!(DOC.contains("signature_profile_compatibility_fixtures_for_fields(...)"));
     assert!(DOC.contains("legacy-unversioned"));
     assert!(DOC.contains("baseline-v0"));
+    assert!(DOC.contains("secp256k1+baseline-v1"));
+    assert!(DOC.contains("baseline signature algorithm: `ed25519`."));
     assert!(DOC.contains("baseline signature profile id: `baseline-v1`"));
+    assert!(DOC.contains("parse_signature_profile_metadata(...)"));
 }
 
 #[test]
@@ -63,6 +66,7 @@ fn regression_requires_no_fallback_on_unsupported_secure_key_reference() {
     assert!(DOC.contains("does not fallback on hard request errors"));
     assert!(DOC.contains("canonical signature-profile helper consumed by both paths"));
     assert!(DOC.contains("non-versioned signature profile is rejected (`Regression: #404`)"));
+    assert!(DOC.contains("algorithm/profile drift is rejected (`Regression: #677`)."));
     assert!(DOC.contains(
         "signer and transaction compatibility fixture matrix decisions stay aligned (`Regression: #677`)."
     ));

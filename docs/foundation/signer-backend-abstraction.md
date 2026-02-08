@@ -44,11 +44,15 @@ This document captures the first implementation slice for signer backend abstrac
 - `SigningRequest::for_transaction(...)` maps `BaselineTransaction` fields into signer requests.
 - Signed output remains compatible with `TransactionGuards::validate_and_record(...)`.
 - `baseline_signature_for_fields(...)` provides the canonical signature-profile helper consumed by both paths.
+- baseline signatures carry explicit metadata prefix: `sig:ed25519:baseline-v1:<sender>:<nonce>:<state_hash>:<payload_len>`.
 - `signature_profile_compatibility_fixtures_for_fields(...)` defines migration fixtures for signer/transaction parity:
   - `baseline-v1` fixture is accepted.
-  - `legacy-unversioned` and `baseline-v0` fixtures are rejected.
+  - `legacy-unversioned`, `baseline-v0`, and `secp256k1+baseline-v1` fixtures are rejected.
+- parsed signature metadata is enforced through shared profile verification (`parse_signature_profile_metadata(...)`).
+- baseline signature algorithm: `ed25519`.
 - baseline signature profile id: `baseline-v1`.
 - non-versioned signature profile is rejected (`Regression: #404`).
+- algorithm/profile drift is rejected (`Regression: #677`).
 - signer and transaction compatibility fixture matrix decisions stay aligned (`Regression: #677`).
 
 ## Signer Emulator Contract Lanes
