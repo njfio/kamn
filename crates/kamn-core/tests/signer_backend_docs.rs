@@ -29,10 +29,19 @@ fn doc_contains_signer_emulator_contract_lane_policy() {
 }
 
 #[test]
+fn doc_contains_production_style_secure_provider_adapter_rules() {
+    assert!(DOC.contains("secure-aws-kms-emulator"));
+    assert!(DOC.contains("secure:aws-kms:<key-ref>"));
+    assert!(DOC.contains("UnsupportedSecureProvider"));
+    assert!(DOC.contains("MalformedSecureKeyReference"));
+}
+
+#[test]
 fn regression_requires_no_fallback_on_unsupported_secure_key_reference() {
     // Regression: #160
     assert!(DOC.contains("does not fallback on hard request errors"));
     assert!(DOC.contains("canonical signature-profile helper consumed by both paths"));
     assert!(DOC.contains("non-versioned signature profile is rejected (`Regression: #404`)"));
     assert!(DOC.contains("Contract lane guards remain required for signer provider compatibility (`Regression: #619`)."));
+    assert!(DOC.contains("SecureProviderBackendMismatch"));
 }
