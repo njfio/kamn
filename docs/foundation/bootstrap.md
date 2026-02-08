@@ -41,3 +41,4 @@ This is intentionally minimal and dependency-light so the bootstrap path is fast
 Migration execution is not implemented yet; this stage focuses on deterministic planning and validation hooks.
 For role interaction baseline coverage, see `docs/foundation/role-smoke.md`.
 For transaction invariant guard behavior, see `docs/foundation/transaction-guards.md`.
+For canonical invariant IDs and taxonomy mapping, see `docs/foundation/invariants.md`.

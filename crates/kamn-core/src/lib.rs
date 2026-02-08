@@ -1,5 +1,6 @@
 pub mod bootstrap;
 pub mod config;
+pub mod invariants;
 pub mod migrations;
 pub mod namespaces;
 pub mod runtime;
@@ -9,6 +10,11 @@ pub mod transaction;
 
 pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};
 pub use config::{ConfigError, NodeConfig, NodeRole};
+pub use invariants::{
+    catalog as invariant_catalog, classify_smoke_error, classify_transaction_guard_error,
+    invariant_by_id, validate_catalog, InvariantCatalogError, InvariantDomain,
+    InvariantFailureCode, InvariantSpec, InvariantViolation,
+};
 pub use migrations::{MigrationPlan, MigrationRegistry, MigrationStep};
 pub use namespaces::StateNamespaces;
 pub use runtime::RuntimeWiring;
