@@ -98,5 +98,6 @@ For compliance audit export interface controls, see `docs/foundation/audit-expor
 For configurable retention policy enforcement controls, see `docs/foundation/retention-policy-engine.md`.
 For data classification tiers and write-path tagging enforcement controls, see `docs/foundation/data-classification-tagging.md`.
 For optional operator binding proof validation and configure/revoke/read-history permission controls, see `docs/foundation/operator-binding-permissions.md`.
+For operator dashboard backend read-model APIs and deterministic pagination controls, see `docs/foundation/operator-dashboard-backend-apis.md`.
 For fast/slow/archive sync-mode operational profile controls, see `docs/foundation/sync-mode-profiles.md`.
 For PRD 13.2 benchmark target validation evidence controls, see `docs/foundation/performance-target-benchmarking.md`.
