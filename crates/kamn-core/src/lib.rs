@@ -5,6 +5,7 @@ pub mod bridge_adapter;
 pub mod channel_models;
 pub mod channel_policies;
 pub mod config;
+pub mod data_classification;
 pub mod did;
 pub mod did_registry;
 pub mod direct_message_crypto;
@@ -47,6 +48,10 @@ pub use channel_policies::{
     RetentionMessage, RetentionPolicy,
 };
 pub use config::{ConfigError, NodeConfig, NodeRole};
+pub use data_classification::{
+    ClassificationPolicy, ClassificationStatus, DataClassificationEngine, DataClassificationError,
+    DataClassificationLevel, WriteDomain, WriteRequestContext, WriteTag,
+};
 pub use did::{
     canonical_did_document, AgentDid, AgentDidError, AgentDidMetadata, DidDocument,
     DidDocumentError, DidService, DidVerificationMethod,
