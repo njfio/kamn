@@ -6,6 +6,7 @@ fn doc_contains_bridge_adapter_core_contracts() {
     assert!(DOC.contains("BridgeAdapterEngine"));
     assert!(DOC.contains("process_inbound_to_envelope(...)"));
     assert!(DOC.contains("run_bridge_replay_harness"));
+    assert!(DOC.contains("bridge_replay_suites"));
 }
 
 #[test]
@@ -52,5 +53,7 @@ fn regression_requires_bridge_fixture_matrix_guard() {
     // Regression: #587
     assert!(DOC.contains("fixtures/bridge_replay/replay_validation_cases.json"));
     assert!(DOC.contains("scripts/bridge/run_bridge_replay_matrix.sh"));
+    assert!(DOC.contains("signature-failure"));
+    assert!(DOC.contains("adapter subset execution"));
     assert!(DOC.contains("Regression: #587"));
 }

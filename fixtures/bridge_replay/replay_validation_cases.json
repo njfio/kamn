@@ -54,6 +54,24 @@
       "expected": {
         "status": "pass"
       }
+    },
+    {
+      "id": "discord-unauthorized-approver-signature-failure",
+      "suite": "discord_bridge",
+      "test_name": "outbound_rejects_unauthorized_approver",
+      "class": "signature-failure",
+      "expected": {
+        "status": "pass"
+      }
+    },
+    {
+      "id": "cross-chain-unauthorized-approver-signature-failure",
+      "suite": "cross_chain_bridge",
+      "test_name": "outbound_rejects_unauthorized_approver",
+      "class": "signature-failure",
+      "expected": {
+        "status": "pass"
+      }
     }
   ]
 }

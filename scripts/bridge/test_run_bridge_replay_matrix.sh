@@ -11,6 +11,30 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 PASS_REPORT="$TMP_DIR/pass-report.json"
 bash "$SCRIPT" --fixture "$FIXTURE" --output-json "$PASS_REPORT" >"$TMP_DIR/pass.out"
 grep -q '"status": "pass"' "$PASS_REPORT"
+grep -q '"class": "signature-failure"' "$PASS_REPORT"
+
+TELEGRAM_REPORT="$TMP_DIR/telegram-report.json"
+bash "$SCRIPT" --fixture "$FIXTURE" --suites "telegram_bridge" --output-json "$TELEGRAM_REPORT" >"$TMP_DIR/telegram.out"
+grep -q '"suite": "telegram_bridge"' "$TELEGRAM_REPORT"
+if grep -q '"suite": "discord_bridge"' "$TELEGRAM_REPORT"; then
+  echo "expected suite-filtered report to exclude discord cases" >&2
+  exit 1
+fi
+
+set +e
+bash "$SCRIPT" --fixture "$FIXTURE" --suites "unknown_suite" --output-json "$TMP_DIR/unknown-suite.json" >"$TMP_DIR/unknown-suite.out" 2>&1
+unknown_suite_code=$?
+set -e
+
+if [ "$unknown_suite_code" -eq 0 ]; then
+  echo "expected bridge replay matrix to fail for unknown suite filter" >&2
+  exit 1
+fi
+
+if ! grep -q "reason=no-selected-cases" "$TMP_DIR/unknown-suite.out"; then
+  echo "expected unknown suite filter failure status output" >&2
+  exit 1
+fi
 
 INVALID_FIXTURE="$TMP_DIR/invalid.json"
 cat >"$INVALID_FIXTURE" <<'JSON'

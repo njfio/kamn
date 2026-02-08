@@ -30,6 +30,7 @@ append_summary() {
     echo "- Run deploy preflight checks: ${RUN_DEPLOY_PREFLIGHT_TESTS}"
     echo "- Run frontend dashboard tests: ${RUN_FRONTEND_DASHBOARD_TESTS}"
     echo "- Run bridge replay harness: ${RUN_BRIDGE_REPLAY_HARNESS}"
+    echo "- Bridge replay suites: ${BRIDGE_REPLAY_SUITES}"
     echo "- Run SDK parity matrix: ${RUN_SDK_PARITY_MATRIX}"
     echo "- Run invariant harness: ${RUN_INVARIANT_HARNESS}"
     echo "- Test scope: ${TEST_SCOPE}"
@@ -118,6 +119,10 @@ CI_INFRA_CHANGED=false
 DEPLOY_SCRIPT_CHANGED=false
 FRONTEND_DASHBOARD_CHANGED=false
 BRIDGE_REPLAY_RELATED_CHANGED=false
+BRIDGE_SUITE_ADAPTER=false
+BRIDGE_SUITE_TELEGRAM=false
+BRIDGE_SUITE_DISCORD=false
+BRIDGE_SUITE_CROSS_CHAIN=false
 SDK_RELATED_CHANGED=false
 CRITICAL_PATH_CHANGED=false
 UNKNOWN_RISK_CHANGED=false
@@ -170,8 +175,30 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    crates/kamn-core/src/bridge_adapter.rs|crates/kamn-core/src/telegram_bridge.rs|crates/kamn-core/src/discord_bridge.rs|crates/kamn-core/src/cross_chain_bridge.rs|crates/kamn-core/tests/bridge_adapter.rs|crates/kamn-core/tests/telegram_bridge.rs|crates/kamn-core/tests/discord_bridge.rs|crates/kamn-core/tests/cross_chain_bridge.rs|docs/foundation/bridge-adapter-abstraction.md|scripts/bridge/*|fixtures/bridge_replay/*)
+    crates/kamn-core/src/bridge_adapter.rs|crates/kamn-core/tests/bridge_adapter.rs|docs/foundation/bridge-adapter-abstraction.md|scripts/bridge/*|fixtures/bridge_replay/*)
       BRIDGE_REPLAY_RELATED_CHANGED=true
+      BRIDGE_SUITE_ADAPTER=true
+      BRIDGE_SUITE_TELEGRAM=true
+      BRIDGE_SUITE_DISCORD=true
+      BRIDGE_SUITE_CROSS_CHAIN=true
+      classified=true
+      ;;
+    crates/kamn-core/src/telegram_bridge.rs|crates/kamn-core/tests/telegram_bridge.rs)
+      BRIDGE_REPLAY_RELATED_CHANGED=true
+      BRIDGE_SUITE_ADAPTER=true
+      BRIDGE_SUITE_TELEGRAM=true
+      classified=true
+      ;;
+    crates/kamn-core/src/discord_bridge.rs|crates/kamn-core/tests/discord_bridge.rs)
+      BRIDGE_REPLAY_RELATED_CHANGED=true
+      BRIDGE_SUITE_ADAPTER=true
+      BRIDGE_SUITE_DISCORD=true
+      classified=true
+      ;;
+    crates/kamn-core/src/cross_chain_bridge.rs|crates/kamn-core/tests/cross_chain_bridge.rs)
+      BRIDGE_REPLAY_RELATED_CHANGED=true
+      BRIDGE_SUITE_ADAPTER=true
+      BRIDGE_SUITE_CROSS_CHAIN=true
       classified=true
       ;;
   esac
@@ -220,6 +247,7 @@ TEST_CMD=":"
 TEST_SCOPE="none"
 CHANGED_MANIFESTS=""
 RUN_INVARIANT_HARNESS=false
+BRIDGE_REPLAY_SUITES=""
 
 if [ "$REPO_HAS_RUST" = true ] && { [ "$RUST_CHANGED" = true ] || [ "$CI_INFRA_CHANGED" = true ] || [ "$FULL_SUITE" = true ]; }; then
   RUN_RUST=true
@@ -273,6 +301,28 @@ fi
 
 if [ "$BRIDGE_REPLAY_RELATED_CHANGED" = true ]; then
   RUN_BRIDGE_REPLAY_HARNESS=true
+  bridge_suite_parts=()
+  if [ "$BRIDGE_SUITE_ADAPTER" = true ]; then
+    bridge_suite_parts+=("bridge_adapter")
+  fi
+  if [ "$BRIDGE_SUITE_TELEGRAM" = true ]; then
+    bridge_suite_parts+=("telegram_bridge")
+  fi
+  if [ "$BRIDGE_SUITE_DISCORD" = true ]; then
+    bridge_suite_parts+=("discord_bridge")
+  fi
+  if [ "$BRIDGE_SUITE_CROSS_CHAIN" = true ]; then
+    bridge_suite_parts+=("cross_chain_bridge")
+  fi
+  if [ "${#bridge_suite_parts[@]}" -eq 0 ]; then
+    bridge_suite_parts=(
+      "bridge_adapter"
+      "telegram_bridge"
+      "discord_bridge"
+      "cross_chain_bridge"
+    )
+  fi
+  BRIDGE_REPLAY_SUITES="$(printf '%s,' "${bridge_suite_parts[@]}" | sed 's/,$//')"
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
     TEST_SCOPE="bridge"
   fi
@@ -295,6 +345,7 @@ write_output "run_ci_tool_checks" "$RUN_CI_TOOL_CHECKS"
 write_output "run_deploy_preflight_tests" "$RUN_DEPLOY_PREFLIGHT_TESTS"
 write_output "run_frontend_dashboard_tests" "$RUN_FRONTEND_DASHBOARD_TESTS"
 write_output "run_bridge_replay_harness" "$RUN_BRIDGE_REPLAY_HARNESS"
+write_output "bridge_replay_suites" "$BRIDGE_REPLAY_SUITES"
 write_output "run_sdk_parity_matrix" "$RUN_SDK_PARITY_MATRIX"
 write_output "run_invariant_harness" "$RUN_INVARIANT_HARNESS"
 write_output "test_scope" "$TEST_SCOPE"

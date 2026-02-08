@@ -1,4 +1,4 @@
-# Bridge Adapter Abstraction (Issues #130, #131, #546, #587, #589, #590)
+# Bridge Adapter Abstraction (Issues #130, #131, #546, #587, #589, #590, #612)
 
 This document describes the first implementation slice for bridge adapter abstraction aligned to PRD section 10.1 and story #34.
 
@@ -23,7 +23,8 @@ This document describes the first implementation slice for bridge adapter abstra
   - `scripts/bridge/run_bridge_replay_matrix.sh`
 - Added CI scope routing for bridge-only diffs:
   - selector output `run_bridge_replay_harness`
-  - fast-gate bridge harness command runs only for bridge-related path changes.
+  - selector output `bridge_replay_suites` to run changed adapter subsets.
+  - fast-gate bridge harness command runs only for bridge-related path changes and passes selected suites.
 
 ## Design Notes
 - Inbound flow:
@@ -45,13 +46,14 @@ This document describes the first implementation slice for bridge adapter abstra
   - duplicate replay: Telegram, Discord, and cross-chain inbound projection replay rejections.
   - stale ingress: stale bridge inbound message rejection.
   - malformed ingress: route-target mismatch and unknown route rejection paths.
+  - signature-failure: unauthorized approver signatures are rejected for Discord and cross-chain outbound quorum flows.
 
 ## Local Validation
 Run from repository root:
 
 ```bash
 cargo test -p kamn-core --test bridge_adapter
-bash scripts/bridge/run_bridge_replay_matrix.sh --fixture fixtures/bridge_replay/replay_validation_cases.json --output-json /tmp/bridge-replay-report.json
+bash scripts/bridge/run_bridge_replay_matrix.sh --fixture fixtures/bridge_replay/replay_validation_cases.json --suites bridge_adapter,telegram_bridge --output-json /tmp/bridge-replay-report.json
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core
@@ -66,3 +68,4 @@ cargo test -p kamn-core
 - first inbound-to-envelope projection does not self-trigger duplicate replay rejection (`Regression: #438`).
 - cross-chain inbound projection also preserves single-pass replay safety (`Regression: #443`).
 - bridge replay fixture matrix guards duplicate/stale/malformed replay behavior across adapters (`Regression: #587`).
+- bridge replay fixture matrix includes signature-failure class coverage and adapter subset execution (`Regression: #587`).

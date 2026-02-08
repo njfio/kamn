@@ -34,6 +34,7 @@ assert_eq "$(extract_output "$docs_output" "run_rust")" "false" "docs_only shoul
 assert_eq "$(extract_output "$docs_output" "run_ci_tool_checks")" "false" "docs_only should not run CI tool checks"
 assert_eq "$(extract_output "$docs_output" "run_frontend_dashboard_tests")" "false" "docs_only should not run frontend dashboard tests"
 assert_eq "$(extract_output "$docs_output" "run_bridge_replay_harness")" "false" "docs_only should not run bridge replay harness"
+assert_eq "$(extract_output "$docs_output" "bridge_replay_suites")" "" "docs_only should not select bridge replay suites"
 assert_eq "$(extract_output "$docs_output" "run_sdk_parity_matrix")" "false" "docs_only should not run sdk parity matrix"
 assert_eq "$(extract_output "$docs_output" "test_scope")" "none" "docs_only should keep none scope"
 
@@ -43,6 +44,7 @@ assert_eq "$(extract_output "$deploy_output" "run_rust")" "false" "deploy-only c
 assert_eq "$(extract_output "$deploy_output" "run_deploy_preflight_tests")" "true" "deploy-only changes must run deploy preflight tests"
 assert_eq "$(extract_output "$deploy_output" "run_frontend_dashboard_tests")" "false" "deploy-only changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$deploy_output" "run_bridge_replay_harness")" "false" "deploy-only changes should skip bridge replay harness"
+assert_eq "$(extract_output "$deploy_output" "bridge_replay_suites")" "" "deploy-only changes should not select bridge replay suites"
 assert_eq "$(extract_output "$deploy_output" "run_sdk_parity_matrix")" "false" "deploy-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$deploy_output" "test_scope")" "deploy" "deploy-only changes must use deploy scope"
 
@@ -62,6 +64,7 @@ unknown_output="$(run_selector $'config/runtime-policy.json')"
 assert_eq "$(extract_output "$unknown_output" "run_rust")" "true" "unknown paths must run rust fallback"
 assert_eq "$(extract_output "$unknown_output" "run_frontend_dashboard_tests")" "false" "unknown paths should not trigger frontend dashboard tests"
 assert_eq "$(extract_output "$unknown_output" "run_bridge_replay_harness")" "false" "unknown paths should not trigger bridge replay harness"
+assert_eq "$(extract_output "$unknown_output" "bridge_replay_suites")" "" "unknown paths should not select bridge replay suites"
 assert_eq "$(extract_output "$unknown_output" "run_sdk_parity_matrix")" "false" "unknown paths should not trigger sdk parity matrix"
 assert_eq "$(extract_output "$unknown_output" "test_scope")" "full" "unknown paths must use full fallback"
 
@@ -70,6 +73,7 @@ assert_eq "$(extract_output "$targeted_output" "run_rust")" "true" "rust path sh
 assert_eq "$(extract_output "$targeted_output" "run_ci_tool_checks")" "false" "Regression: #568 non-CI paths should skip CI tool checks"
 assert_eq "$(extract_output "$targeted_output" "run_frontend_dashboard_tests")" "false" "bridge adapter rust paths should skip frontend dashboard tests"
 assert_eq "$(extract_output "$targeted_output" "run_bridge_replay_harness")" "true" "bridge adapter rust paths should run bridge replay harness"
+assert_eq "$(extract_output "$targeted_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge adapter path should select all bridge suites"
 assert_eq "$(extract_output "$targeted_output" "run_sdk_parity_matrix")" "false" "non-sdk rust paths should skip sdk parity matrix"
 assert_eq "$(extract_output "$targeted_output" "test_scope")" "targeted" "crate path should be targeted"
 
@@ -100,7 +104,20 @@ bridge_script_output="$(run_selector $'scripts/bridge/run_bridge_replay_matrix.s
 assert_eq "$(extract_output "$bridge_script_output" "run_rust")" "false" "bridge script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$bridge_script_output" "run_frontend_dashboard_tests")" "false" "bridge script-only changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$bridge_script_output" "run_bridge_replay_harness")" "true" "bridge script-only changes must run bridge replay harness"
+assert_eq "$(extract_output "$bridge_script_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge script-only changes should select all bridge suites"
 assert_eq "$(extract_output "$bridge_script_output" "test_scope")" "bridge" "bridge script-only changes should set bridge scope"
+
+telegram_bridge_output="$(run_selector $'crates/kamn-core/src/telegram_bridge.rs')"
+assert_eq "$(extract_output "$telegram_bridge_output" "run_bridge_replay_harness")" "true" "telegram bridge changes must run bridge replay harness"
+assert_eq "$(extract_output "$telegram_bridge_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge" "telegram bridge changes should select telegram subset plus bridge adapter suite"
+
+discord_bridge_output="$(run_selector $'crates/kamn-core/src/discord_bridge.rs')"
+assert_eq "$(extract_output "$discord_bridge_output" "run_bridge_replay_harness")" "true" "discord bridge changes must run bridge replay harness"
+assert_eq "$(extract_output "$discord_bridge_output" "bridge_replay_suites")" "bridge_adapter,discord_bridge" "discord bridge changes should select discord subset plus bridge adapter suite"
+
+cross_chain_bridge_output="$(run_selector $'crates/kamn-core/src/cross_chain_bridge.rs')"
+assert_eq "$(extract_output "$cross_chain_bridge_output" "run_bridge_replay_harness")" "true" "cross-chain bridge changes must run bridge replay harness"
+assert_eq "$(extract_output "$cross_chain_bridge_output" "bridge_replay_suites")" "bridge_adapter,cross_chain_bridge" "cross-chain bridge changes should select cross-chain subset plus bridge adapter suite"
 
 frontend_output="$(run_selector $'packages/kamn-dashboard/tests/dashboard.test.ts')"
 assert_eq "$(extract_output "$frontend_output" "run_rust")" "false" "frontend-only changes should avoid rust lane"

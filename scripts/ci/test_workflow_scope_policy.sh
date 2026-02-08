@@ -35,7 +35,7 @@ if ! grep -Fq "if: steps.scope.outputs.run_bridge_replay_harness == 'true'" "$FA
   exit 1
 fi
 
-if ! grep -Fq "bash scripts/bridge/run_bridge_replay_matrix.sh --fixture fixtures/bridge_replay/replay_validation_cases.json --output-json bridge-replay-report.json" "$FAST_WORKFLOW"; then
+if ! grep -Fq "bash scripts/bridge/run_bridge_replay_matrix.sh --fixture fixtures/bridge_replay/replay_validation_cases.json --suites \"\${{ steps.scope.outputs.bridge_replay_suites }}\" --output-json bridge-replay-report.json" "$FAST_WORKFLOW"; then
   echo "expected bridge replay harness command in ci-fast-gate.yml" >&2
   exit 1
 fi
