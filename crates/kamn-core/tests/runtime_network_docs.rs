@@ -33,6 +33,9 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
     assert!(DOC.contains("## Fast and Cost-Effective Validation"));
     assert!(DOC.contains("cargo test -p kamn-core runtime::tests::"));
     assert!(DOC.contains("cargo test -p kamn-node --test node_runtime_cli_docs"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition"
+    ));
     assert!(DOC.contains("cargo clippy -p kamn-core -- -D warnings"));
 }
 

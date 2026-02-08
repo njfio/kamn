@@ -206,3 +206,10 @@ Then run broader regression:
 ```bash
 cargo test -p kamn-core
 ```
+
+### Daemon-focused fast lane
+
+```bash
+cargo test -p kamn-node integration_runtime_daemon_renders_bounded_completion_output
+cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
+```
