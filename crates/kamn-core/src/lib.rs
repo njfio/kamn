@@ -250,8 +250,10 @@ pub use task_artifacts::{
 };
 pub use task_lifecycle::{TaskLifecycle, TaskLifecycleError, TaskState, TaskTransition};
 pub use task_operations::{
-    SwarmTaskDraft, TaskOperationEngine, TaskOperationError, TaskOperationNoticeKind,
-    TaskOperationRecord, TaskOperationRecordSnapshot, TaskOperationSnapshot,
+    FileTaskOperationSnapshotStore, InMemoryTaskOperationSnapshotStore, SwarmTaskDraft,
+    TaskOperationEngine, TaskOperationError, TaskOperationNoticeKind, TaskOperationRecord,
+    TaskOperationRecordSnapshot, TaskOperationRecoveryResult, TaskOperationSnapshot,
+    TaskOperationSnapshotStore, TaskOperationSnapshotStoreError,
     TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION,
 };
 pub use task_payment::{PaymentConfirm, PaymentOffer, TaskPaymentError, TaskPaymentWorkflow};

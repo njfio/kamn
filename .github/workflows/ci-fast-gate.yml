@@ -82,12 +82,12 @@ jobs:
         run: npm --prefix packages/kamn-sdk test
 
       - name: Set up Rust toolchain
-        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_sdk_parity_matrix == 'true' || steps.scope.outputs.run_signer_emulator_contract_tests == 'true' || steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true' || steps.scope.outputs.run_message_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_rust_live_transport_contract_tests == 'true' || steps.scope.outputs.run_live_transport_parity_contract_tests == 'true'
+        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_sdk_parity_matrix == 'true' || steps.scope.outputs.run_signer_emulator_contract_tests == 'true' || steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true' || steps.scope.outputs.run_message_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true' || steps.scope.outputs.run_rust_live_transport_contract_tests == 'true' || steps.scope.outputs.run_live_transport_parity_contract_tests == 'true'
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Rust build artifacts
         id: rust_cache
-        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_sdk_parity_matrix == 'true' || steps.scope.outputs.run_signer_emulator_contract_tests == 'true' || steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true' || steps.scope.outputs.run_message_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_rust_live_transport_contract_tests == 'true' || steps.scope.outputs.run_live_transport_parity_contract_tests == 'true'
+        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_sdk_parity_matrix == 'true' || steps.scope.outputs.run_signer_emulator_contract_tests == 'true' || steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true' || steps.scope.outputs.run_message_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true' || steps.scope.outputs.run_rust_live_transport_contract_tests == 'true' || steps.scope.outputs.run_live_transport_parity_contract_tests == 'true'
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: kamn-rust-ci-v1
@@ -116,6 +116,10 @@ jobs:
       - name: Run channel lifecycle contract lane
         if: steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true'
         run: bash scripts/channel/run_channel_lifecycle_contract_lane.sh
+
+      - name: Run task operation snapshot contract lane
+        if: steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true'
+        run: bash scripts/task/run_task_operation_snapshot_contract_lane.sh
 
       - name: Run bridge replay fixture harness
         if: steps.scope.outputs.run_bridge_replay_harness == 'true'
