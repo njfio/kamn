@@ -490,6 +490,145 @@ impl SnapshotRestoreGuard {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConstructLockLease {
+    owner_id: String,
+    fencing_token: u64,
+}
+
+impl ConstructLockLease {
+    fn new(owner_id: String, fencing_token: u64) -> Self {
+        Self {
+            owner_id,
+            fencing_token,
+        }
+    }
+
+    pub fn owner_id(&self) -> &str {
+        &self.owner_id
+    }
+
+    pub fn fencing_token(&self) -> u64 {
+        self.fencing_token
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ConstructLockError {
+    InvalidLeaseTtl,
+    InvalidOwnerId,
+    NoActiveLease,
+    LeaseAlreadyHeld { owner: String },
+    LeaseOwnerMismatch { expected: String, found: String },
+    StaleFencingToken { expected: u64, found: u64 },
+}
+
+impl Display for ConstructLockError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidLeaseTtl => write!(f, "construct lock lease ttl must be positive"),
+            Self::InvalidOwnerId => write!(f, "construct lock owner id cannot be empty"),
+            Self::NoActiveLease => write!(f, "construct lock has no active lease"),
+            Self::LeaseAlreadyHeld { owner } => {
+                write!(f, "construct lock lease already held by {owner}")
+            }
+            Self::LeaseOwnerMismatch { expected, found } => {
+                write!(
+                    f,
+                    "construct lock owner mismatch: expected {expected}, found {found}"
+                )
+            }
+            Self::StaleFencingToken { expected, found } => {
+                write!(
+                    f,
+                    "construct lock stale fencing token: expected {expected}, found {found}"
+                )
+            }
+        }
+    }
+}
+
+impl Error for ConstructLockError {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConstructLockGuard {
+    lease_ttl_ticks: u64,
+    current_lease: Option<ConstructLockLease>,
+}
+
+impl ConstructLockGuard {
+    pub fn new(lease_ttl_ticks: u64) -> Result<Self, ConstructLockError> {
+        if lease_ttl_ticks == 0 {
+            return Err(ConstructLockError::InvalidLeaseTtl);
+        }
+        Ok(Self {
+            lease_ttl_ticks,
+            current_lease: None,
+        })
+    }
+
+    pub fn lease_ttl_ticks(&self) -> u64 {
+        self.lease_ttl_ticks
+    }
+
+    pub fn acquire_for(
+        &mut self,
+        owner_id: &str,
+    ) -> Result<ConstructLockLease, ConstructLockError> {
+        if owner_id.trim().is_empty() {
+            return Err(ConstructLockError::InvalidOwnerId);
+        }
+
+        if let Some(lease) = &self.current_lease {
+            if lease.owner_id() != owner_id {
+                return Err(ConstructLockError::LeaseAlreadyHeld {
+                    owner: lease.owner_id().to_owned(),
+                });
+            }
+            return Ok(lease.clone());
+        }
+
+        let lease = ConstructLockLease::new(owner_id.to_owned(), 1);
+        self.current_lease = Some(lease.clone());
+        Ok(lease)
+    }
+
+    pub fn renew(
+        &mut self,
+        owner_id: &str,
+        fencing_token: u64,
+    ) -> Result<ConstructLockLease, ConstructLockError> {
+        if owner_id.trim().is_empty() {
+            return Err(ConstructLockError::InvalidOwnerId);
+        }
+        let current_lease = self
+            .current_lease
+            .as_ref()
+            .ok_or(ConstructLockError::NoActiveLease)?;
+
+        if current_lease.owner_id() != owner_id {
+            return Err(ConstructLockError::LeaseOwnerMismatch {
+                expected: current_lease.owner_id().to_owned(),
+                found: owner_id.to_owned(),
+            });
+        }
+
+        if current_lease.fencing_token() != fencing_token {
+            return Err(ConstructLockError::StaleFencingToken {
+                expected: current_lease.fencing_token(),
+                found: fencing_token,
+            });
+        }
+
+        let renewed = ConstructLockLease::new(
+            current_lease.owner_id().to_owned(),
+            current_lease.fencing_token() + 1,
+        );
+        self.current_lease = Some(renewed.clone());
+        Ok(renewed)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RecoveryStatus {
     RejoinAccepted,
     CatchUpRequired { from_version: u64, to_version: u64 },
@@ -627,11 +766,11 @@ pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_runtime_wiring, BoundedRuntimeQueue, DeterministicProposalPlanner, PeerLifecycle,
-        PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, ProposalPlannerError,
-        RecoveryGuardError, RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt,
-        RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot, SnapshotRestoreError,
-        SnapshotRestoreGuard,
+        build_runtime_wiring, BoundedRuntimeQueue, ConstructLockError, ConstructLockGuard,
+        DeterministicProposalPlanner, PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState,
+        ProposalCandidate, ProposalPlannerError, RecoveryGuardError, RecoveryRejoinGuard,
+        RecoveryStatus, RejoinAttempt, RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot,
+        SnapshotRestoreError, SnapshotRestoreGuard,
     };
     use crate::config::{NodeConfig, NodeRole, SyncMode};
 
@@ -971,6 +1110,62 @@ mod tests {
             SnapshotRestoreError::StateHashMismatch {
                 expected: "state-42".to_owned(),
                 found: "state-41".to_owned()
+            }
+        );
+    }
+
+    #[test]
+    fn functional_construct_lock_allows_acquire_then_renew_flow() {
+        let mut lock = ConstructLockGuard::new(5).expect("construct lock should build");
+        let lease = lock
+            .acquire_for("processor-a")
+            .expect("initial lease acquisition should succeed");
+        let renewed = lock
+            .renew("processor-a", lease.fencing_token())
+            .expect("lease renewal should succeed");
+        assert!(renewed.fencing_token() > lease.fencing_token());
+    }
+
+    #[test]
+    fn unit_construct_lock_rejects_empty_owner_id() {
+        let mut lock = ConstructLockGuard::new(5).expect("construct lock should build");
+        let error = lock
+            .acquire_for("")
+            .expect_err("empty owner id must be rejected");
+        assert_eq!(error, ConstructLockError::InvalidOwnerId);
+    }
+
+    #[test]
+    fn regression_split_brain_lock_acquisition_is_rejected() {
+        // Regression: #362
+        let mut lock = ConstructLockGuard::new(5).expect("construct lock should build");
+        assert!(lock.acquire_for("processor-a").is_ok());
+        let error = lock
+            .acquire_for("processor-b")
+            .expect_err("second owner acquisition must be rejected");
+        assert_eq!(
+            error,
+            ConstructLockError::LeaseAlreadyHeld {
+                owner: "processor-a".to_owned()
+            }
+        );
+    }
+
+    #[test]
+    fn regression_stale_lease_renewal_is_rejected() {
+        // Regression: #362
+        let mut lock = ConstructLockGuard::new(5).expect("construct lock should build");
+        let lease = lock
+            .acquire_for("processor-a")
+            .expect("initial lease acquisition should succeed");
+        let error = lock
+            .renew("processor-a", lease.fencing_token().saturating_sub(1))
+            .expect_err("stale fencing token must be rejected");
+        assert_eq!(
+            error,
+            ConstructLockError::StaleFencingToken {
+                expected: lease.fencing_token(),
+                found: lease.fencing_token().saturating_sub(1)
             }
         );
     }

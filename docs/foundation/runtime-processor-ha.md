@@ -9,6 +9,10 @@ This document captures processor high-availability runtime contract text for sna
   - `RuntimeSnapshot`
   - `SnapshotRestoreGuard`
   - `SnapshotRestoreError`
+- Added construct-lock guard model references:
+  - `ConstructLockLease`
+  - `ConstructLockGuard`
+  - `ConstructLockError`
 - Added low-cost validation lane commands for docs-focused PR checks.
 
 ## Snapshot Restore Rules
@@ -23,6 +27,9 @@ This document captures processor high-availability runtime contract text for sna
 - Processor construct-lock ownership must enforce single active lease semantics.
 - split-brain lock acquisition attempts are rejected.
 - stale lease renewal attempts are rejected.
+- Typed lock/fencing guard failures:
+  - `ConstructLockError::LeaseAlreadyHeld`
+  - `ConstructLockError::StaleFencingToken`
 
 ## Test Coverage Mapping
 - Unit: N/A (docs-focused contract slice).
