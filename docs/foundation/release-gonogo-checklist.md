@@ -41,12 +41,28 @@ Go/no-go decisions are captured as machine-readable JSON so release policy check
 - Scheduled deep lane entrypoint:
   - `bash scripts/deploy/run_gonogo_evidence_deep_lane.sh`
 
+## Staging Deploy + Rollback Rehearsal Contract (Issue #658)
+Staging rehearsal automation must verify deploy and rollback outcomes before release decisions are accepted.
+
+- Rehearsal bundle generator:
+  - `bash scripts/deploy/generate_staging_rehearsal_bundle.sh --output-file /tmp/staging-rehearsal.json --release-candidate v1.1.0-rc.1 --deploy-status PASS --rollback-status PASS --rollback-target-hash state-hash-expected --post-rollback-hash state-hash-expected --evidence-complete true --ci-fast-gate PASS`
+- Rehearsal policy checker:
+  - `bash scripts/deploy/check_staging_rehearsal_policy.sh --bundle-file /tmp/staging-rehearsal.json`
+- Fast contract lane:
+  - `bash scripts/deploy/run_staging_rehearsal_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/deploy/run_staging_rehearsal_deep_lane.sh`
+- Regression policy:
+  - rollback target hash mismatch and incomplete rehearsal evidence force `NO-GO` (`Regression: #623`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
 bash scripts/deploy/test_generate_gonogo_evidence_bundle.sh
 bash scripts/deploy/test_run_gonogo_evidence_contract_lane.sh
+bash scripts/deploy/test_generate_staging_rehearsal_bundle.sh
+bash scripts/deploy/test_run_staging_rehearsal_contract_lane.sh
 cargo test -p kamn-core --test release_gonogo_checklist_docs
 cargo fmt --check
 cargo clippy -- -D warnings

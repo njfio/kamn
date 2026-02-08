@@ -37,7 +37,24 @@ fn checklist_contains_machine_readable_bundle_contract() {
 }
 
 #[test]
+fn checklist_contains_staging_rehearsal_contract() {
+    assert!(CHECKLIST.contains("## Staging Deploy + Rollback Rehearsal Contract"));
+    assert!(CHECKLIST.contains("generate_staging_rehearsal_bundle.sh"));
+    assert!(CHECKLIST.contains("check_staging_rehearsal_policy.sh"));
+    assert!(CHECKLIST.contains("run_staging_rehearsal_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_staging_rehearsal_deep_lane.sh"));
+}
+
+#[test]
 fn regression_requires_rollback_precheck_in_checklist() {
     // Regression: #173
     assert!(CHECKLIST.contains("Rollback precheck result: PASS"));
+}
+
+#[test]
+fn regression_requires_staging_rehearsal_mismatch_guard() {
+    // Regression: #623
+    assert!(CHECKLIST.contains(
+        "rollback target hash mismatch and incomplete rehearsal evidence force `NO-GO` (`Regression: #623`)."
+    ));
 }

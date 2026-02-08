@@ -29,6 +29,16 @@ if ! grep -Fq "bash scripts/deploy/test_run_gonogo_evidence_contract_lane.sh" "$
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/deploy/test_generate_staging_rehearsal_bundle.sh" "$FAST_WORKFLOW"; then
+  echo "expected staging rehearsal bundle tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/deploy/test_run_staging_rehearsal_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected staging rehearsal contract lane script tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_frontend_dashboard_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected frontend dashboard scope condition in ci-fast-gate.yml" >&2
   exit 1
