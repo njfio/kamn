@@ -1,4 +1,4 @@
-# Message Lifecycle and Index Queries (Issue #114)
+# Message Lifecycle and Index Queries (Issue #114 / #563)
 
 This document defines the first implementation slice for message lifecycle
 state transitions and deterministic index query APIs.
@@ -15,6 +15,10 @@ state transitions and deterministic index query APIs.
   applies legal state transitions and updates indexes.
 - `status(message_id)`:
   returns current lifecycle status.
+- `expire_message_if_overdue(message_id, observed_at)`:
+  expires an active message deterministically when `observed_at > expires`.
+- `expire_overdue_messages(observed_at)`:
+  sweeps active records and returns deterministically ordered expired message IDs.
 - `ids_by_status(status)`:
   returns deterministic message IDs for a lifecycle stage.
 - `ids_by_sender(sender)`:
@@ -27,7 +31,10 @@ state transitions and deterministic index query APIs.
 - `sender` and each recipient must be valid `kamn:did:agent:*` DIDs.
 - Recipients must be non-empty.
 - `created` and `expires` timestamps must be non-empty, with `expires > created`.
+- `observed_at` passed to expiry APIs must be non-empty.
 - Unknown message IDs return `MessageLifecycleError::NotFound`.
+- Expiry APIs only transition active records (`Created`, `Signed`, `Broadcast`,
+  `Included`, `Delivered`) to `Expired`.
 
 ## Processor Proof-Gated Validation
 - `validate_with_processor_proof(message_id, expected_payload_commitment, artifact, evaluator)` gates lifecycle validation on deterministic processor proof admission.
