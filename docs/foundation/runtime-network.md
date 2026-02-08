@@ -25,6 +25,9 @@ This document captures the initial runtime-network foundation slice for peer lif
 
 ## Node CLI Recovery-Check Mapping
 - `kamn-node --runtime-mode recovery-check` maps directly to `RecoveryRejoinGuard` evaluation flow.
+- Command example:
+  - `kamn-node --role processor --runtime-mode recovery-check`
+  - `kamn-node --role processor --runtime-mode recovery-check --expected-state-version 42 --expected-state-hash state-42 --rejoin-attempt node-a|42|state-42|resume-1`
 - CLI argument mapping:
   - `--expected-state-version` -> `RecoveryRejoinGuard::new(expected_state_version, ...)`
   - `--expected-state-hash` -> `RecoveryRejoinGuard::new(..., expected_state_hash)`
@@ -112,6 +115,7 @@ Run targeted checks first:
 ```bash
 cargo test -p kamn-core runtime::tests::
 cargo test -p kamn-core --test runtime_network_docs
+cargo test -p kamn-node --test node_runtime_cli_docs
 ```
 
 Then run strict lint/format gates:
