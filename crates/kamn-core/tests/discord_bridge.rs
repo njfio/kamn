@@ -130,6 +130,36 @@ fn integration_processes_discord_inbound_to_envelope() {
 }
 
 #[test]
+fn regression_rejects_replayed_discord_inbound_projection_event() {
+    // Regression: #438
+    let engine = DiscordBridgeEngine::new(config()).expect("engine should build");
+    let request = DiscordInboundRequest {
+        listener_did: "kamn:did:agent:listener-1".to_owned(),
+        inbound: inbound("kamn:did:agent:listener-target-1"),
+    };
+
+    engine
+        .process_inbound_to_envelope(
+            &request,
+            vec!["kamn:did:agent:listener-target-1#key-agreement-1".to_owned()],
+            "2026-02-08T04:30:00Z",
+            82,
+        )
+        .expect("first envelope projection should succeed");
+    assert_eq!(
+        engine.process_inbound_to_envelope(
+            &request,
+            vec!["kamn:did:agent:listener-target-1#key-agreement-1".to_owned()],
+            "2026-02-08T04:30:00Z",
+            83,
+        ),
+        Err(DiscordBridgeError::Bridge(
+            "duplicate inbound message id: discord:discord-msg-1".to_owned()
+        ))
+    );
+}
+
+#[test]
 fn regression_duplicate_approval_is_rejected() {
     let engine = DiscordBridgeEngine::new(config()).expect("engine should build");
 

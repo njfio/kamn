@@ -76,6 +76,36 @@ fn integration_processes_inbound_to_canonical_envelope() {
 }
 
 #[test]
+fn regression_rejects_replayed_telegram_inbound_projection_event() {
+    // Regression: #438
+    let engine = TelegramBridgeEngine::new(config()).expect("engine should build");
+    let request = TelegramInboundRequest {
+        listener_did: "kamn:did:agent:listener-1".to_owned(),
+        inbound: inbound("kamn:did:agent:listener-target-1"),
+    };
+
+    engine
+        .process_inbound_to_envelope(
+            &request,
+            vec!["kamn:did:agent:listener-target-1#key-agreement-1".to_owned()],
+            "2026-02-07T21:15:00Z",
+            42,
+        )
+        .expect("first envelope projection should succeed");
+    assert_eq!(
+        engine.process_inbound_to_envelope(
+            &request,
+            vec!["kamn:did:agent:listener-target-1#key-agreement-1".to_owned()],
+            "2026-02-07T21:15:00Z",
+            43,
+        ),
+        Err(TelegramBridgeError::Bridge(
+            "duplicate inbound message id: telegram:tg-msg-1".to_owned()
+        ))
+    );
+}
+
+#[test]
 fn route_target_mismatch_is_rejected() {
     let engine = TelegramBridgeEngine::new(config()).expect("engine should build");
 

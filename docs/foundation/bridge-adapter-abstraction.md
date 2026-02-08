@@ -31,6 +31,7 @@ This document describes the first implementation slice for bridge adapter abstra
   - Reject duplicate outbound request IDs with `DuplicateOutboundRequestId`.
 - Cross-module integration:
   - `process_inbound_to_envelope(...)` maps normalized bridge ingress into `CanonicalMessageEnvelope` and runs envelope validation before returning.
+  - Bridge engine wrappers apply route/listener checks while keeping single-pass inbound projection so replay guards run exactly once per logical projection flow.
 
 ## Local Validation
 Run from repository root:
@@ -47,3 +48,4 @@ cargo test -p kamn-core
 - Replace static allow-all policy with channel and capability-aware policy implementations.
 - duplicate inbound event is rejected (`Regression: #423`).
 - duplicate outbound request is rejected (`Regression: #433`).
+- first inbound-to-envelope projection does not self-trigger duplicate replay rejection (`Regression: #438`).

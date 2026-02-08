@@ -84,6 +84,30 @@ impl DiscordBridgeEngine {
         &self,
         request: &DiscordInboundRequest,
     ) -> Result<NormalizedInboundMessage, DiscordBridgeError> {
+        self.validate_inbound_request(request)?;
+
+        self.bridge
+            .process_inbound(&request.inbound)
+            .map_err(|error| DiscordBridgeError::Bridge(error.to_string()))
+    }
+
+    pub fn process_inbound_to_envelope(
+        &self,
+        request: &DiscordInboundRequest,
+        recipient_keys: Vec<String>,
+        expires: &str,
+        nonce: u64,
+    ) -> Result<CanonicalMessageEnvelope, DiscordBridgeError> {
+        self.validate_inbound_request(request)?;
+        self.bridge
+            .process_inbound_to_envelope(&request.inbound, recipient_keys, expires, nonce)
+            .map_err(|error| DiscordBridgeError::Bridge(error.to_string()))
+    }
+
+    fn validate_inbound_request(
+        &self,
+        request: &DiscordInboundRequest,
+    ) -> Result<(), DiscordBridgeError> {
         validate_did(&request.listener_did)?;
         if !self
             .config
@@ -109,23 +133,7 @@ impl DiscordBridgeEngine {
                 provided_target_did: request.inbound.target_agent_did.clone(),
             });
         }
-
-        self.bridge
-            .process_inbound(&request.inbound)
-            .map_err(|error| DiscordBridgeError::Bridge(error.to_string()))
-    }
-
-    pub fn process_inbound_to_envelope(
-        &self,
-        request: &DiscordInboundRequest,
-        recipient_keys: Vec<String>,
-        expires: &str,
-        nonce: u64,
-    ) -> Result<CanonicalMessageEnvelope, DiscordBridgeError> {
-        self.process_inbound(request)?;
-        self.bridge
-            .process_inbound_to_envelope(&request.inbound, recipient_keys, expires, nonce)
-            .map_err(|error| DiscordBridgeError::Bridge(error.to_string()))
+        Ok(())
     }
 
     pub fn process_outbound_with_approvals(
