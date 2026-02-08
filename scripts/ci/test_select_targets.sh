@@ -46,6 +46,8 @@ assert_eq "$(extract_output "$docs_output" "run_rust_live_transport_contract_tes
 assert_eq "$(extract_output "$docs_output" "run_python_live_transport_contract_tests")" "false" "docs_only should not run python live transport lane"
 assert_eq "$(extract_output "$docs_output" "run_typescript_live_transport_contract_tests")" "false" "docs_only should not run typescript live transport lane"
 assert_eq "$(extract_output "$docs_output" "run_live_transport_parity_contract_tests")" "false" "docs_only should not run live transport parity lane"
+assert_eq "$(extract_output "$docs_output" "run_live_transport_parity_rust_contract_tests")" "false" "docs_only should not require rust setup for parity lane"
+assert_eq "$(extract_output "$docs_output" "live_transport_parity_languages")" "" "docs_only should not select live transport parity languages"
 assert_eq "$(extract_output "$docs_output" "run_sdk_parity_matrix")" "false" "docs_only should not run sdk parity matrix"
 assert_eq "$(extract_output "$docs_output" "test_scope")" "none" "docs_only should keep none scope"
 
@@ -67,6 +69,8 @@ assert_eq "$(extract_output "$deploy_output" "run_rust_live_transport_contract_t
 assert_eq "$(extract_output "$deploy_output" "run_python_live_transport_contract_tests")" "false" "deploy-only changes should skip python live transport lane"
 assert_eq "$(extract_output "$deploy_output" "run_typescript_live_transport_contract_tests")" "false" "deploy-only changes should skip typescript live transport lane"
 assert_eq "$(extract_output "$deploy_output" "run_live_transport_parity_contract_tests")" "false" "deploy-only changes should skip live transport parity lane"
+assert_eq "$(extract_output "$deploy_output" "run_live_transport_parity_rust_contract_tests")" "false" "deploy-only changes should not require rust parity setup"
+assert_eq "$(extract_output "$deploy_output" "live_transport_parity_languages")" "" "deploy-only changes should not select parity languages"
 assert_eq "$(extract_output "$deploy_output" "run_sdk_parity_matrix")" "false" "deploy-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$deploy_output" "test_scope")" "deploy" "deploy-only changes must use deploy scope"
 
@@ -98,6 +102,8 @@ assert_eq "$(extract_output "$unknown_output" "run_rust_live_transport_contract_
 assert_eq "$(extract_output "$unknown_output" "run_python_live_transport_contract_tests")" "false" "unknown paths should not trigger python live transport lane"
 assert_eq "$(extract_output "$unknown_output" "run_typescript_live_transport_contract_tests")" "false" "unknown paths should not trigger typescript live transport lane"
 assert_eq "$(extract_output "$unknown_output" "run_live_transport_parity_contract_tests")" "false" "unknown paths should not trigger live transport parity lane"
+assert_eq "$(extract_output "$unknown_output" "run_live_transport_parity_rust_contract_tests")" "false" "unknown paths should not require rust parity setup"
+assert_eq "$(extract_output "$unknown_output" "live_transport_parity_languages")" "" "unknown paths should not select parity languages"
 assert_eq "$(extract_output "$unknown_output" "run_sdk_parity_matrix")" "false" "unknown paths should not trigger sdk parity matrix"
 assert_eq "$(extract_output "$unknown_output" "test_scope")" "full" "unknown paths must use full fallback"
 
@@ -127,6 +133,8 @@ assert_eq "$(extract_output "$python_sdk_output" "run_rust_live_transport_contra
 assert_eq "$(extract_output "$python_sdk_output" "run_python_live_transport_contract_tests")" "true" "python sdk-only changes must run python live transport lane"
 assert_eq "$(extract_output "$python_sdk_output" "run_typescript_live_transport_contract_tests")" "false" "python sdk-only changes should skip typescript live transport lane"
 assert_eq "$(extract_output "$python_sdk_output" "run_live_transport_parity_contract_tests")" "false" "python sdk-only changes should skip parity lane"
+assert_eq "$(extract_output "$python_sdk_output" "run_live_transport_parity_rust_contract_tests")" "false" "python sdk-only changes should not require rust parity setup"
+assert_eq "$(extract_output "$python_sdk_output" "live_transport_parity_languages")" "" "python sdk-only changes should not select parity languages"
 assert_eq "$(extract_output "$python_sdk_output" "run_sdk_parity_matrix")" "false" "python sdk-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$python_sdk_output" "test_scope")" "sdk-live-python" "python sdk-only changes should set sdk-live-python scope"
 
@@ -136,6 +144,8 @@ assert_eq "$(extract_output "$typescript_sdk_output" "run_rust_live_transport_co
 assert_eq "$(extract_output "$typescript_sdk_output" "run_python_live_transport_contract_tests")" "false" "typescript sdk-only changes should skip python live transport lane"
 assert_eq "$(extract_output "$typescript_sdk_output" "run_typescript_live_transport_contract_tests")" "true" "typescript sdk-only changes must run typescript live transport lane"
 assert_eq "$(extract_output "$typescript_sdk_output" "run_live_transport_parity_contract_tests")" "false" "typescript sdk-only changes should skip parity lane"
+assert_eq "$(extract_output "$typescript_sdk_output" "run_live_transport_parity_rust_contract_tests")" "false" "typescript sdk-only changes should not require rust parity setup"
+assert_eq "$(extract_output "$typescript_sdk_output" "live_transport_parity_languages")" "" "typescript sdk-only changes should not select parity languages"
 assert_eq "$(extract_output "$typescript_sdk_output" "run_sdk_parity_matrix")" "false" "typescript sdk-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$typescript_sdk_output" "test_scope")" "sdk-live-typescript" "typescript sdk-only changes should set sdk-live-typescript scope"
 
@@ -145,6 +155,8 @@ assert_eq "$(extract_output "$rust_sdk_output" "run_rust_live_transport_contract
 assert_eq "$(extract_output "$rust_sdk_output" "run_python_live_transport_contract_tests")" "false" "rust sdk changes should skip python live transport lane"
 assert_eq "$(extract_output "$rust_sdk_output" "run_typescript_live_transport_contract_tests")" "false" "rust sdk changes should skip typescript live transport lane"
 assert_eq "$(extract_output "$rust_sdk_output" "run_live_transport_parity_contract_tests")" "false" "rust sdk changes should skip parity lane"
+assert_eq "$(extract_output "$rust_sdk_output" "run_live_transport_parity_rust_contract_tests")" "false" "rust sdk changes should not require rust parity setup"
+assert_eq "$(extract_output "$rust_sdk_output" "live_transport_parity_languages")" "" "rust sdk changes should not select parity languages"
 assert_eq "$(extract_output "$rust_sdk_output" "run_sdk_parity_matrix")" "false" "rust sdk changes should skip sdk parity matrix unless shared fixtures change"
 assert_eq "$(extract_output "$rust_sdk_output" "run_frontend_dashboard_tests")" "false" "sdk-only paths should skip frontend dashboard tests"
 assert_eq "$(extract_output "$rust_sdk_output" "run_bridge_replay_harness")" "false" "sdk-only paths should skip bridge replay harness"
@@ -156,12 +168,22 @@ assert_eq "$(extract_output "$multi_lang_sdk_output" "run_rust_live_transport_co
 assert_eq "$(extract_output "$multi_lang_sdk_output" "run_python_live_transport_contract_tests")" "false" "multi-language sdk changes should consolidate into parity lane"
 assert_eq "$(extract_output "$multi_lang_sdk_output" "run_typescript_live_transport_contract_tests")" "false" "multi-language sdk changes should consolidate into parity lane"
 assert_eq "$(extract_output "$multi_lang_sdk_output" "run_live_transport_parity_contract_tests")" "true" "multi-language sdk changes must run parity lane"
+assert_eq "$(extract_output "$multi_lang_sdk_output" "run_live_transport_parity_rust_contract_tests")" "false" "multi-language non-rust sdk changes should avoid rust parity setup"
+assert_eq "$(extract_output "$multi_lang_sdk_output" "live_transport_parity_languages")" "python,typescript" "multi-language non-rust sdk changes should run parity subset only"
 assert_eq "$(extract_output "$multi_lang_sdk_output" "run_sdk_parity_matrix")" "false" "multi-language sdk changes should avoid expensive parity matrix lane"
 assert_eq "$(extract_output "$multi_lang_sdk_output" "test_scope")" "sdk-live-parity" "multi-language sdk changes should set sdk-live-parity scope"
+
+multi_lang_rust_sdk_output="$(run_selector $'crates/kamn-sdk/src/lib.rs\nkamn_sdk.py')"
+assert_eq "$(extract_output "$multi_lang_rust_sdk_output" "run_live_transport_parity_contract_tests")" "true" "rust + python sdk changes must run parity lane"
+assert_eq "$(extract_output "$multi_lang_rust_sdk_output" "run_live_transport_parity_rust_contract_tests")" "true" "rust + python sdk changes should require rust parity setup"
+assert_eq "$(extract_output "$multi_lang_rust_sdk_output" "live_transport_parity_languages")" "rust,python" "rust + python sdk changes should run rust+python parity subset"
+assert_eq "$(extract_output "$multi_lang_rust_sdk_output" "test_scope")" "targeted" "rust + python sdk changes should preserve targeted rust scope"
 
 parity_script_output="$(run_selector $'scripts/sdk/run_live_transport_parity_contract_lane.sh')"
 assert_eq "$(extract_output "$parity_script_output" "run_rust")" "false" "parity script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$parity_script_output" "run_live_transport_parity_contract_tests")" "true" "parity script-only changes must run parity lane"
+assert_eq "$(extract_output "$parity_script_output" "run_live_transport_parity_rust_contract_tests")" "true" "parity script-only changes should require rust parity setup"
+assert_eq "$(extract_output "$parity_script_output" "live_transport_parity_languages")" "rust,python,typescript" "parity script-only changes should run full parity language set"
 assert_eq "$(extract_output "$parity_script_output" "run_sdk_parity_matrix")" "false" "parity script-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$parity_script_output" "test_scope")" "sdk-live-parity" "parity script-only changes should set sdk-live-parity scope"
 
@@ -171,6 +193,8 @@ assert_eq "$(extract_output "$shared_matrix_output" "run_rust_live_transport_con
 assert_eq "$(extract_output "$shared_matrix_output" "run_python_live_transport_contract_tests")" "false" "shared sdk matrix fixture changes should skip python live lane"
 assert_eq "$(extract_output "$shared_matrix_output" "run_typescript_live_transport_contract_tests")" "false" "shared sdk matrix fixture changes should skip typescript live lane"
 assert_eq "$(extract_output "$shared_matrix_output" "run_live_transport_parity_contract_tests")" "false" "shared sdk matrix fixture changes should skip parity lane"
+assert_eq "$(extract_output "$shared_matrix_output" "run_live_transport_parity_rust_contract_tests")" "false" "shared sdk matrix fixture changes should skip rust parity setup"
+assert_eq "$(extract_output "$shared_matrix_output" "live_transport_parity_languages")" "" "shared sdk matrix fixture changes should not select parity languages"
 assert_eq "$(extract_output "$shared_matrix_output" "run_sdk_parity_matrix")" "true" "shared sdk matrix fixture changes must run sdk parity matrix"
 assert_eq "$(extract_output "$shared_matrix_output" "test_scope")" "sdk" "shared sdk matrix fixture changes should set sdk scope"
 

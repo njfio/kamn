@@ -18,8 +18,9 @@ fn regression_requires_performance_threshold_gate_commands() {
 
 #[test]
 fn regression_requires_sdk_parity_lane_guidance() {
-    // Regression: #583
+    // Regression: #689
     assert!(DOC.contains("scripts/sdk/run_sdk_parity_matrix.sh"));
-    assert!(DOC.contains("test_scope=sdk"));
-    assert!(DOC.contains("Regression: #583"));
+    assert!(DOC.contains("live_transport_parity_languages"));
+    assert!(DOC.contains("run_live_transport_parity_rust_contract_tests"));
+    assert!(DOC.contains("Regression: #689"));
 }
