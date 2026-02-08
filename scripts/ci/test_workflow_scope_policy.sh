@@ -19,6 +19,16 @@ if ! grep -Fq "bash scripts/deploy/test_generate_bundle.sh" "$FAST_WORKFLOW"; th
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_frontend_dashboard_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected frontend dashboard scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/frontend/test_dashboard_package.sh" "$FAST_WORKFLOW"; then
+  echo "expected frontend dashboard test command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 # Regression: #587
 if ! grep -Fq "if: steps.scope.outputs.run_bridge_replay_harness == 'true'" "$FAST_WORKFLOW"; then
   echo "expected bridge replay harness scope condition in ci-fast-gate.yml" >&2

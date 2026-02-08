@@ -28,6 +28,7 @@ append_summary() {
     echo "- Run Rust checks: ${RUN_RUST}"
     echo "- Run CI tool checks: ${RUN_CI_TOOL_CHECKS}"
     echo "- Run deploy preflight checks: ${RUN_DEPLOY_PREFLIGHT_TESTS}"
+    echo "- Run frontend dashboard tests: ${RUN_FRONTEND_DASHBOARD_TESTS}"
     echo "- Run bridge replay harness: ${RUN_BRIDGE_REPLAY_HARNESS}"
     echo "- Run SDK parity matrix: ${RUN_SDK_PARITY_MATRIX}"
     echo "- Run invariant harness: ${RUN_INVARIANT_HARNESS}"
@@ -115,6 +116,7 @@ DOCS_ONLY=true
 RUST_CHANGED=false
 CI_INFRA_CHANGED=false
 DEPLOY_SCRIPT_CHANGED=false
+FRONTEND_DASHBOARD_CHANGED=false
 BRIDGE_REPLAY_RELATED_CHANGED=false
 SDK_RELATED_CHANGED=false
 CRITICAL_PATH_CHANGED=false
@@ -161,6 +163,13 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
+    packages/kamn-dashboard/*|scripts/frontend/*|docs/foundation/operator-dashboard-ui-mvp.md|docs/foundation/observability-slo-dashboards.md)
+      FRONTEND_DASHBOARD_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
     crates/kamn-core/src/bridge_adapter.rs|crates/kamn-core/src/telegram_bridge.rs|crates/kamn-core/src/discord_bridge.rs|crates/kamn-core/src/cross_chain_bridge.rs|crates/kamn-core/tests/bridge_adapter.rs|crates/kamn-core/tests/telegram_bridge.rs|crates/kamn-core/tests/discord_bridge.rs|crates/kamn-core/tests/cross_chain_bridge.rs|docs/foundation/bridge-adapter-abstraction.md|scripts/bridge/*|fixtures/bridge_replay/*)
       BRIDGE_REPLAY_RELATED_CHANGED=true
       classified=true
@@ -202,6 +211,7 @@ fi
 RUN_RUST=false
 RUN_CI_TOOL_CHECKS=false
 RUN_DEPLOY_PREFLIGHT_TESTS=false
+RUN_FRONTEND_DASHBOARD_TESTS=false
 RUN_BRIDGE_REPLAY_HARNESS=false
 RUN_SDK_PARITY_MATRIX=false
 FMT_CMD=":"
@@ -254,6 +264,13 @@ if [ "$RUN_RUST" != true ] && [ "$DEPLOY_SCRIPT_CHANGED" = true ]; then
   TEST_SCOPE="deploy"
 fi
 
+if [ "$FRONTEND_DASHBOARD_CHANGED" = true ]; then
+  RUN_FRONTEND_DASHBOARD_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="frontend"
+  fi
+fi
+
 if [ "$BRIDGE_REPLAY_RELATED_CHANGED" = true ]; then
   RUN_BRIDGE_REPLAY_HARNESS=true
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
@@ -276,6 +293,7 @@ write_output "docs_only" "$DOCS_ONLY"
 write_output "run_rust" "$RUN_RUST"
 write_output "run_ci_tool_checks" "$RUN_CI_TOOL_CHECKS"
 write_output "run_deploy_preflight_tests" "$RUN_DEPLOY_PREFLIGHT_TESTS"
+write_output "run_frontend_dashboard_tests" "$RUN_FRONTEND_DASHBOARD_TESTS"
 write_output "run_bridge_replay_harness" "$RUN_BRIDGE_REPLAY_HARNESS"
 write_output "run_sdk_parity_matrix" "$RUN_SDK_PARITY_MATRIX"
 write_output "run_invariant_harness" "$RUN_INVARIANT_HARNESS"
