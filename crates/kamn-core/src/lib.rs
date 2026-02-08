@@ -27,6 +27,7 @@ pub mod observability;
 pub mod operator_binding;
 pub mod performance_targets;
 pub mod redaction_compliance;
+pub mod reputation_state;
 pub mod retention_engine;
 pub mod runtime;
 pub mod service_marketplace;
@@ -140,6 +141,11 @@ pub use performance_targets::{
 pub use redaction_compliance::{
     RedactionAction, RedactionAuditEvent, RedactionAuditEventKind, RedactionComplianceEngine,
     RedactionComplianceError, RedactionRequestStatus, RedactionVisibility,
+};
+pub use reputation_state::{
+    agent_state_key, AgentReputation, CapabilityVerification, DisputeRecord, Endorsement,
+    ReputationError, ReputationPersistedRecord, ReputationStore, ReputationTaskOutcome,
+    ScoreSnapshot, DEFAULT_TRUST_SCORE, MAX_TRUST_SCORE,
 };
 pub use retention_engine::{
     RetentionClass, RetentionDomain, RetentionEnginePolicy, RetentionEvaluation,
