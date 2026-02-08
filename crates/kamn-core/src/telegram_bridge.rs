@@ -252,9 +252,11 @@ mod tests {
     fn constructor_rejects_empty_listener_allowlist() {
         let mut config = config();
         config.authorized_listener_dids.clear();
+        let error =
+            TelegramBridgeEngine::new(config).expect_err("empty listener allowlist must fail");
         assert_eq!(
-            TelegramBridgeEngine::new(config),
-            Err(TelegramBridgeError::EmptyField("authorized_listener_dids"))
+            error,
+            TelegramBridgeError::EmptyField("authorized_listener_dids")
         );
     }
 
@@ -264,11 +266,11 @@ mod tests {
         config
             .channel_routes
             .insert("telegram:channel:ops".to_owned(), "bad-did".to_owned());
+        let error =
+            TelegramBridgeEngine::new(config).expect_err("invalid route target DID must fail");
         assert_eq!(
-            TelegramBridgeEngine::new(config),
-            Err(TelegramBridgeError::InvalidDid(
-                "invalid agent did prefix: bad-did".to_owned()
-            ))
+            error,
+            TelegramBridgeError::InvalidDid("invalid agent did prefix: bad-did".to_owned())
         );
     }
 
@@ -276,9 +278,7 @@ mod tests {
     fn constructor_rejects_empty_webhook_token() {
         let mut config = config();
         config.webhook_token.clear();
-        assert_eq!(
-            TelegramBridgeEngine::new(config),
-            Err(TelegramBridgeError::EmptyField("webhook_token"))
-        );
+        let error = TelegramBridgeEngine::new(config).expect_err("empty webhook token must fail");
+        assert_eq!(error, TelegramBridgeError::EmptyField("webhook_token"));
     }
 }
