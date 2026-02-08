@@ -22,6 +22,17 @@ This document defines the first versioning policy slice for chain protocol, app-
 - Security fixes are backported only for supported minors.
 - Deprecated minors require explicit governance waiver for continued operation.
 
+## Governance Parameter Compatibility Policy
+| Parameter Key | Allowed Range | Minimum Supported Version |
+|---|---|---|
+| `listener.quorum` | `[1, 7]` | `1.0.0` |
+| `approver.required_approvals` | `[1, 7]` | `1.0.0` |
+| `watchdog.delivery_ratio_bps` | `[9000, 9999]` | `1.1.0` |
+
+- Unknown parameter keys are rejected before proposal registration.
+- Parameter ranges outside catalog bounds are rejected before voting.
+- Target versions below a parameter's minimum supported version are NO-GO.
+
 ## Decision Rules
 - Incompatible downgrade decision: NO-GO.
 - Any cross-major schema shift requires dry-run evidence before GO.
