@@ -45,6 +45,14 @@ jobs:
         if: steps.scope.outputs.docs_only != 'true'
         run: bash scripts/ci/check_flaky_registry.sh
 
+      - name: Validate PR CI impact declaration
+        if: steps.scope.outputs.docs_only != 'true'
+        run: bash scripts/ci/check_pr_ci_declaration.sh
+
+      - name: Run CI tool regression tests
+        if: steps.scope.outputs.docs_only != 'true'
+        run: bash scripts/ci/test_ci_tools.sh
+
       - name: Set up Rust toolchain
         if: steps.scope.outputs.run_rust == 'true'
         uses: dtolnay/rust-toolchain@stable

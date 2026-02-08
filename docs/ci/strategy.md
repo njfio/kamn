@@ -47,6 +47,22 @@ This data supports cache/parallel tuning and flaky-test burn-down without wideni
 - Flaky test quarantine inventory is tracked in `.ci/flaky-tests.txt`.
 - Each quarantine entry must include owner, tracking issue, and expiry date.
 
+## PR CI Impact Declaration
+When CI-sensitive files are modified (`.github/workflows/*`, `scripts/ci/*`, `.ci/*`), PR description must explicitly declare CI impact.
+
+Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
+
+## Script Regression Coverage
+`ci-fast-gate` runs `scripts/ci/test_ci_tools.sh` to locally regression-test CI helper scripts:
+- Budget evaluator (`test_evaluate_budget.sh`)
+- Retry helper (`test_run_with_retry.sh`)
+- Flaky registry validator (`test_check_flaky_registry.sh`)
+- Budget summarizer (`test_summarize_budget_artifacts.sh`)
+
+## Reporting and Burn-down
+- Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
+- Use `scripts/ci/summarize_budget_artifacts.sh` on downloaded `ci-budget-*.json` artifacts to compute p50/p95 and cache/retry trends.
+
 ## Deep Validation Behavior
 `ci-deep-validate` runs full formatting, linting, and test suites on a nightly schedule and manually on demand.
 
@@ -55,7 +71,3 @@ This data supports cache/parallel tuning and flaky-test burn-down without wideni
 - Rust dependency/build cache enabled in Rust lanes.
 - Expensive suites are not on the PR merge-critical path.
 - PR template includes a mandatory CI-impact declaration for workflow/test-scope changes.
-
-## Reporting and Burn-down
-- Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
-- Use `scripts/ci/summarize_budget_artifacts.sh` on downloaded `ci-budget-*.json` artifacts to compute p50/p95 and cache/retry trends.

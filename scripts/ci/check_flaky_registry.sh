@@ -46,7 +46,7 @@ while IFS= read -r line || [ -n "$line" ]; do
   fi
 
   today="$(date -u +%Y-%m-%d)"
-  if [ "$expiry" -lt "$today" ]; then
+  if [[ "$expiry" < "$today" ]]; then
     echo "Expired flaky quarantine entry at $REGISTRY_FILE:$line_no (expiry: $expiry)" >&2
     status=1
   fi
