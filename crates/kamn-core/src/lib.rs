@@ -29,6 +29,7 @@ pub mod migrations;
 pub mod namespaces;
 pub mod observability;
 pub mod operator_binding;
+pub mod operator_dashboard_api;
 pub mod performance_targets;
 pub mod redaction_compliance;
 pub mod reputation_signals;
@@ -156,6 +157,11 @@ pub use observability::{
 pub use operator_binding::{
     OperatorBindingAction, OperatorBindingEngine, OperatorBindingError, OperatorBindingProof,
     OperatorBindingRecord,
+};
+pub use operator_dashboard_api::{
+    DashboardPage, DashboardPageRequest, OperatorAgentView, OperatorDashboardApi,
+    OperatorDashboardApiError, OperatorDashboardSnapshot, OperatorEscrowView, OperatorMessageView,
+    OperatorReputationView, OperatorTaskView,
 };
 pub use performance_targets::{
     evaluate_performance_from_observability, evaluate_performance_run, PerformanceAggregate,
