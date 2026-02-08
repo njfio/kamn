@@ -41,11 +41,16 @@ jobs:
         if: steps.scope.outputs.docs_only != 'true'
         run: bash -n scripts/ci/*.sh
 
+      - name: Validate flaky registry
+        if: steps.scope.outputs.docs_only != 'true'
+        run: bash scripts/ci/check_flaky_registry.sh
+
       - name: Set up Rust toolchain
         if: steps.scope.outputs.run_rust == 'true'
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Rust build artifacts
+        id: rust_cache
         if: steps.scope.outputs.run_rust == 'true'
         uses: Swatinem/rust-cache@v2
 
@@ -57,9 +62,14 @@ jobs:
         if: steps.scope.outputs.run_rust == 'true'
         run: ${{ steps.scope.outputs.clippy_cmd }}
 
-      - name: Test
+      - name: Test (bounded retry)
+        id: tests
         if: steps.scope.outputs.run_rust == 'true'
-        run: ${{ steps.scope.outputs.test_cmd }}
+        run: |
+          bash scripts/ci/run_with_retry.sh \
+            --label test-lane \
+            --max-attempts 2 \
+            -- bash -lc "${{ steps.scope.outputs.test_cmd }}"
 
       - name: No Rust checks required
         if: steps.scope.outputs.run_rust != 'true' && steps.scope.outputs.docs_only != 'true'
@@ -73,6 +83,8 @@ jobs:
           START_EPOCH: ${{ steps.started.outputs.epoch }}
           TEST_SCOPE: ${{ steps.scope.outputs.test_scope }}
           CHANGED_FILES: ${{ steps.scope.outputs.changed_files }}
+          CACHE_HIT: ${{ steps.rust_cache.outputs.cache-hit }}
+          RETRY_USED: ${{ steps.tests.outputs.retry_used }}
         run: |
           end_epoch="$(date +%s)"
           elapsed="$(( end_epoch - START_EPOCH ))"
@@ -83,6 +95,8 @@ jobs:
             --test-scope "${TEST_SCOPE:-unknown}" \
             --changed-files "${CHANGED_FILES:-0}" \
             --job-count 1 \
+            --cache-hit "${CACHE_HIT:-unknown}" \
+            --retry-used "${RETRY_USED:-unknown}" \
             --output-json ci-budget-fast-gate.json
 
       - name: Upload fast-gate budget telemetry

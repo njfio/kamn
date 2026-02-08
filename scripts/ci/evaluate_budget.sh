@@ -9,6 +9,8 @@ Options:
   --test-scope <scope>       Optional scope label (docs-only/smoke/targeted/full)
   --changed-files <count>    Optional changed file count
   --job-count <count>        Approximate concurrent job multiplier (default: 1)
+  --cache-hit <value>        Rust cache status (e.g., true/false/partial/unknown)
+  --retry-used <value>       Whether bounded retry was used (true/false/unknown)
   --budget-file <path>       Budget config file (default: .ci/ci-budget.env)
   --output-json <path>       Optional JSON metrics output path
 USAGE
@@ -44,6 +46,8 @@ append_summary() {
     echo "- Max threshold runner-minutes: ${MAX_RUNNER_MINUTES}"
     echo "- Test scope: ${TEST_SCOPE}"
     echo "- Changed files: ${CHANGED_FILES}"
+    echo "- Rust cache hit: ${CACHE_HIT}"
+    echo "- Retry used: ${RETRY_USED}"
     if [ -n "${BUDGET_NOTES}" ]; then
       echo "- Notes: ${BUDGET_NOTES}"
     fi
@@ -69,6 +73,8 @@ ELAPSED_SECONDS=""
 TEST_SCOPE="unknown"
 CHANGED_FILES="0"
 JOB_COUNT="1"
+CACHE_HIT="unknown"
+RETRY_USED="unknown"
 BUDGET_FILE=".ci/ci-budget.env"
 OUTPUT_JSON=""
 
@@ -92,6 +98,14 @@ while [ "$#" -gt 0 ]; do
       ;;
     --job-count)
       JOB_COUNT="${2:-1}"
+      shift 2
+      ;;
+    --cache-hit)
+      CACHE_HIT="${2:-unknown}"
+      shift 2
+      ;;
+    --retry-used)
+      RETRY_USED="${2:-unknown}"
       shift 2
       ;;
     --budget-file)
@@ -192,7 +206,6 @@ fi
 if [ "$JOB_COUNT" -gt "$MAX_JOB_COUNT" ]; then
   fail_msgs+=("job-count>${MAX_JOB_COUNT}")
 elif [ "$JOB_COUNT" -eq "$MAX_JOB_COUNT" ] && [ "$MAX_JOB_COUNT" -gt 0 ] && [ "$WARN_PERCENT" -le 100 ]; then
-  # explicit note only, not warning/failure
   BUDGET_NOTES="job-count at configured maximum"
 fi
 
@@ -202,7 +215,7 @@ elif [ "${#warn_msgs[@]}" -gt 0 ]; then
   STATUS="warn"
 fi
 
-MESSAGE="status=${STATUS}; lane=${LANE}; elapsed=${ELAPSED_SECONDS}s; runner_minutes=${RUNNER_MINUTES}"
+MESSAGE="status=${STATUS}; lane=${LANE}; elapsed=${ELAPSED_SECONDS}s; runner_minutes=${RUNNER_MINUTES}; cache_hit=${CACHE_HIT}; retry_used=${RETRY_USED}"
 if [ "${#warn_msgs[@]}" -gt 0 ]; then
   MESSAGE+="; warnings=$(IFS=,; echo "${warn_msgs[*]}")"
 fi
@@ -216,6 +229,8 @@ write_output "budget_status" "$STATUS"
 write_output "budget_lane" "$LANE"
 write_output "budget_elapsed_seconds" "$ELAPSED_SECONDS"
 write_output "budget_runner_minutes" "$RUNNER_MINUTES"
+write_output "budget_cache_hit" "$CACHE_HIT"
+write_output "budget_retry_used" "$RETRY_USED"
 write_output "budget_message" "$MESSAGE"
 
 append_summary
@@ -230,6 +245,8 @@ if [ -n "$OUTPUT_JSON" ]; then
   run_attempt="$(json_escape "${GITHUB_RUN_ATTEMPT:-unknown}")"
   scope_json="$(json_escape "$TEST_SCOPE")"
   status_json="$(json_escape "$STATUS")"
+  cache_json="$(json_escape "$CACHE_HIT")"
+  retry_json="$(json_escape "$RETRY_USED")"
   message_json="$(json_escape "$MESSAGE")"
 
   cat > "$OUTPUT_JSON" <<JSON
@@ -244,6 +261,8 @@ if [ -n "$OUTPUT_JSON" ]; then
   "job_count": $JOB_COUNT,
   "changed_files": $CHANGED_FILES,
   "test_scope": "$scope_json",
+  "cache_hit": "$cache_json",
+  "retry_used": "$retry_json",
   "thresholds": {
     "warn_percent": $WARN_PERCENT,
     "max_seconds": $MAX_SECONDS,

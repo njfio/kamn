@@ -37,11 +37,15 @@ jobs:
             echo "run_rust=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Validate flaky registry
+        run: bash scripts/ci/check_flaky_registry.sh
+
       - name: Set up Rust toolchain
         if: steps.detect.outputs.run_rust == 'true'
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Rust build artifacts
+        id: rust_cache
         if: steps.detect.outputs.run_rust == 'true'
         uses: Swatinem/rust-cache@v2
 
@@ -53,9 +57,14 @@ jobs:
         if: steps.detect.outputs.run_rust == 'true'
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-      - name: Full suite
+      - name: Full suite (bounded retry)
+        id: tests
         if: steps.detect.outputs.run_rust == 'true'
-        run: cargo test --workspace --locked --all-features --no-fail-fast
+        run: |
+          bash scripts/ci/run_with_retry.sh \
+            --label deep-validate-tests \
+            --max-attempts 2 \
+            -- cargo test --workspace --locked --all-features --no-fail-fast
 
       - name: No Rust project present
         if: steps.detect.outputs.run_rust != 'true'
@@ -68,6 +77,8 @@ jobs:
         env:
           START_EPOCH: ${{ steps.started.outputs.epoch }}
           TEST_SCOPE: full
+          CACHE_HIT: ${{ steps.rust_cache.outputs.cache-hit }}
+          RETRY_USED: ${{ steps.tests.outputs.retry_used }}
         run: |
           end_epoch="$(date +%s)"
           elapsed="$(( end_epoch - START_EPOCH ))"
@@ -78,6 +89,8 @@ jobs:
             --test-scope "${TEST_SCOPE}" \
             --changed-files 0 \
             --job-count 1 \
+            --cache-hit "${CACHE_HIT:-unknown}" \
+            --retry-used "${RETRY_USED:-unknown}" \
             --output-json ci-budget-deep-validate.json
 
       - name: Upload deep-validate budget telemetry

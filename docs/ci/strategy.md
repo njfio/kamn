@@ -34,6 +34,19 @@ Policy:
 - Warning at 90% of configured budget.
 - Failure at 100% of configured budget for `ci-fast-gate` (merge-critical lane).
 
+## Cache and Retry Telemetry
+Telemetry includes:
+- Rust cache hit status from `Swatinem/rust-cache` output.
+- Whether bounded retry was used for test execution.
+
+This data supports cache/parallel tuning and flaky-test burn-down without widening PR cost.
+
+## Bounded Retry + Flaky Policy
+- Tests run through `scripts/ci/run_with_retry.sh` with `max-attempts=2`.
+- Retries are intentionally bounded to avoid hidden regressions.
+- Flaky test quarantine inventory is tracked in `.ci/flaky-tests.txt`.
+- Each quarantine entry must include owner, tracking issue, and expiry date.
+
 ## Deep Validation Behavior
 `ci-deep-validate` runs full formatting, linting, and test suites on a nightly schedule and manually on demand.
 
