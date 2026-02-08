@@ -14,3 +14,11 @@ fn regression_requires_overlong_claim_window_rejection_rule() {
     assert!(DOC.contains("OverlongValidityWindow"));
     assert!(DOC.contains("overlong validity window is rejected (`Regression: #409`)"));
 }
+
+#[test]
+fn regression_requires_replay_claim_rejection_rule() {
+    // Regression: #414
+    assert!(DOC.contains("one-time claim consumption"));
+    assert!(DOC.contains("ReplayClaim"));
+    assert!(DOC.contains("replayed claim is rejected (`Regression: #414`)"));
+}
