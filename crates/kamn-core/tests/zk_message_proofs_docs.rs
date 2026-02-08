@@ -1,0 +1,36 @@
+const DOC: &str = include_str!("../../../docs/foundation/zk-message-proof-design.md");
+
+#[test]
+fn doc_contains_kolme_constraints_and_design_options() {
+    assert!(DOC.contains("## Kolme Constraints That Shape Design"));
+    assert!(DOC.contains("single active processor"));
+    assert!(DOC.contains("deterministic re-execution"));
+    assert!(DOC.contains("## Architecture Options"));
+    assert!(DOC.contains("groth16-processor-only"));
+    assert!(DOC.contains("plonkish-batched-envelope"));
+    assert!(DOC.contains("stark-recursive-watchdog"));
+}
+
+#[test]
+fn doc_contains_complexity_trust_and_rollout() {
+    assert!(DOC.contains("## Complexity and Trust Assumptions"));
+    assert!(DOC.contains("trusted setup ceremony"));
+    assert!(DOC.contains("watchdog sampling"));
+    assert!(DOC.contains("## Recommended Phase 4 Rollout"));
+    assert!(DOC.contains("Phase 4.0 - Feasibility harness"));
+    assert!(DOC.contains("Phase 4.1 - Processor verification pilot"));
+    assert!(DOC.contains("Phase 4.2 - Validator and watchdog expansion"));
+}
+
+#[test]
+fn doc_contains_fast_cost_effective_validation_lane() {
+    assert!(DOC.contains("## Fast and Cost-Effective Validation"));
+    assert!(DOC.contains("cargo test -p kamn-core --test zk_message_proofs"));
+    assert!(DOC.contains("cargo clippy -- -D warnings"));
+}
+
+#[test]
+fn regression_requires_boundary_inclusive_evaluation_rule() {
+    // Regression: #62
+    assert!(DOC.contains("threshold checks are inclusive"));
+}
