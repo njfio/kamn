@@ -53,7 +53,7 @@ pub fn bootstrap_from_state_version(
 #[cfg(test)]
 mod tests {
     use super::{bootstrap, bootstrap_from_state_version};
-    use crate::config::{ConfigError, NodeConfig, NodeRole};
+    use crate::config::{ConfigError, NodeConfig, NodeRole, SyncMode};
     use crate::state::{StateVersion, APP_STATE_VERSION};
     use crate::token::DEFAULT_TOKEN_SYMBOL;
 
@@ -65,6 +65,7 @@ mod tests {
             role: NodeRole::Processor,
             storage_dir: "/tmp/kamn".to_owned(),
             enable_gossip: true,
+            sync_mode: SyncMode::Fast,
         };
 
         let plan = bootstrap(config).expect("bootstrap should succeed");
@@ -84,6 +85,7 @@ mod tests {
             role: NodeRole::Processor,
             storage_dir: "/tmp/kamn".to_owned(),
             enable_gossip: true,
+            sync_mode: SyncMode::Fast,
         };
 
         assert_eq!(bootstrap(config), Err(ConfigError::EmptyChainId));
@@ -97,6 +99,7 @@ mod tests {
             role: NodeRole::Processor,
             storage_dir: "/tmp/kamn".to_owned(),
             enable_gossip: true,
+            sync_mode: SyncMode::Fast,
         };
 
         let result = bootstrap_from_state_version(config, StateVersion(APP_STATE_VERSION.0 + 1));
