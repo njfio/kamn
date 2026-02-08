@@ -15,6 +15,13 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Added bounded FIFO queue primitives in `crates/kamn-core/src/runtime.rs`:
   - `BoundedRuntimeQueue<T>`
   - `RuntimeQueueError`
+- Added deterministic queue backpressure primitives in `crates/kamn-core/src/runtime.rs`:
+  - `RuntimeBackpressurePolicy`
+  - `RuntimeBackpressureInput`
+  - `RuntimeBackpressureDecision`
+  - `RuntimeBackpressureAction`
+  - `RuntimeBackpressureError`
+  - `DeterministicBackpressureController`
 - Added deterministic proposal-planner primitives in `crates/kamn-core/src/runtime.rs`:
   - `ProposalCandidate`
   - `DeterministicProposalPlanner`
@@ -127,6 +134,28 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Zero-capacity queues fail with:
   - `RuntimeQueueError::InvalidCapacity { capacity: 0 }`
 
+## Deterministic Backpressure and Stale-Peer Queue Rules
+- `RuntimeBackpressurePolicy` thresholds are bounded and ordered:
+  - `slow_threshold_per_mille` must be in `1..=1000`
+  - `reject_threshold_per_mille` must be in `1..=1000`
+  - slow threshold must be strictly lower than reject threshold
+- `RuntimeBackpressureInput` requires:
+  - valid `kamn:did:*` peer identifier
+  - queue capacity greater than zero
+  - queue depth less than or equal to queue capacity
+- `DeterministicBackpressureController` decisions are deterministic for identical inputs:
+  - `Accept`
+  - `SlowProducer`
+  - `RejectNewEnqueue`
+  - `PurgeStalePeerQueue`
+- Backpressure action mapping:
+  - disconnected peers with pending queue entries can be forced to `PurgeStalePeerQueue` when policy enables stale-peer purge.
+  - utilization above reject threshold yields `RejectNewEnqueue`.
+  - utilization above slow threshold yields `SlowProducer`.
+- Regression contract:
+  - queue depth above capacity is rejected (`Regression: #618`)
+  - stale disconnected peer queue must purge deterministically (`Regression: #618`)
+
 ## Scheduler Determinism Rules
 - `ProposalCandidate` requires non-empty:
   - candidate ID
@@ -201,18 +230,21 @@ This document captures the initial runtime-network foundation slice for peer lif
   - empty peer ID and zero-capacity queue rejection
   - invalid peer-frame wire payload and delimiter rejection
   - deterministic signature mismatch rejection
+  - invalid backpressure threshold ordering and queue-depth validation rejection
   - empty proposal candidate ID rejection
   - empty resume-token rejoin attempt rejection
   - snapshot cursor/hash validation and continuity regression checks
 - Functional:
   - peer lifecycle connect/degrade/recover/disconnect flow
   - authenticated peer-frame wire roundtrip and signature verification
+  - deterministic queue saturation backpressure classification
   - planner deterministic ordering contract
   - rejoin acceptance with matching snapshot
   - snapshot recovery truncation with stale metadata suffix
 - Integration:
   - bounded FIFO queue behavior under capacity
   - inbound peer-frame authenticator monotonic nonce acceptance flow
+  - stale disconnected peer queue purge decision mapping
   - queue-drain to planner ordering preservation
   - lagging-node catch-up guidance output
   - daemon network-fault simulation with queue-overflow/degradation reporting
@@ -231,9 +263,12 @@ This document captures the initial runtime-network foundation slice for peer lif
   - network fault simulation censorship critical-boundary guard (`Regression: #618`)
   - forged or unauthorized peer frame rejection (`Regression: #618`)
   - replayed peer-frame nonce rejection (`Regression: #618`)
+  - queue depth above capacity is rejected (`Regression: #618`)
+  - stale disconnected peer queue purge decision remains deterministic (`Regression: #618`)
   - snapshot stale metadata rejection (`Regression: #617`)
   - snapshot restore cursor mismatch rejection (`Regression: #617`)
 - Performance:
+  - bounded PR-lane runtime backpressure evaluation budget check
   - bounded PR-lane authenticated peer-frame validation budget check
   - bounded PR-lane deterministic fault simulation budget check
   - bounded PR-lane snapshot recovery budget check
@@ -245,6 +280,8 @@ Run targeted checks first:
 
 ```bash
 cargo test -p kamn-core runtime::tests::
+cargo test -p kamn-core runtime::tests::functional_runtime_backpressure_classifies_queue_saturation
+cargo test -p kamn-core runtime::tests::regression_runtime_backpressure_rejects_capacity_overflow_sample
 cargo test -p kamn-core runtime::tests::functional_authenticated_peer_frame_roundtrips_wire_and_signature
 cargo test -p kamn-core runtime::tests::regression_forged_or_unauthorized_peer_frame_is_rejected
 cargo test -p kamn-core network_fault_simulation

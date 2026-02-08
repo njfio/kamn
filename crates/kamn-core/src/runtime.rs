@@ -195,6 +195,218 @@ impl<T> BoundedRuntimeQueue<T> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuntimeBackpressureAction {
+    Accept,
+    SlowProducer,
+    RejectNewEnqueue,
+    PurgeStalePeerQueue,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuntimeBackpressureDecision {
+    pub action: RuntimeBackpressureAction,
+    pub queue_utilization_per_mille: u16,
+    pub stale_peer_queue: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuntimeBackpressurePolicy {
+    slow_threshold_per_mille: u16,
+    reject_threshold_per_mille: u16,
+    purge_disconnected_with_pending_queue: bool,
+}
+
+impl RuntimeBackpressurePolicy {
+    pub fn new(
+        slow_threshold_per_mille: u16,
+        reject_threshold_per_mille: u16,
+        purge_disconnected_with_pending_queue: bool,
+    ) -> Result<Self, RuntimeBackpressureError> {
+        if slow_threshold_per_mille == 0 || slow_threshold_per_mille > 1000 {
+            return Err(RuntimeBackpressureError::InvalidThresholdRange {
+                field: "slow_threshold_per_mille",
+                found: slow_threshold_per_mille,
+            });
+        }
+        if reject_threshold_per_mille == 0 || reject_threshold_per_mille > 1000 {
+            return Err(RuntimeBackpressureError::InvalidThresholdRange {
+                field: "reject_threshold_per_mille",
+                found: reject_threshold_per_mille,
+            });
+        }
+        if slow_threshold_per_mille >= reject_threshold_per_mille {
+            return Err(RuntimeBackpressureError::InvalidThresholdOrder {
+                slow_threshold_per_mille,
+                reject_threshold_per_mille,
+            });
+        }
+
+        Ok(Self {
+            slow_threshold_per_mille,
+            reject_threshold_per_mille,
+            purge_disconnected_with_pending_queue,
+        })
+    }
+
+    pub fn slow_threshold_per_mille(&self) -> u16 {
+        self.slow_threshold_per_mille
+    }
+
+    pub fn reject_threshold_per_mille(&self) -> u16 {
+        self.reject_threshold_per_mille
+    }
+
+    pub fn purge_disconnected_with_pending_queue(&self) -> bool {
+        self.purge_disconnected_with_pending_queue
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuntimeBackpressureInput {
+    peer_id: String,
+    queue_depth: usize,
+    queue_capacity: usize,
+    lifecycle_state: PeerLifecycleState,
+}
+
+impl RuntimeBackpressureInput {
+    pub fn new(
+        peer_id: &str,
+        queue_depth: usize,
+        queue_capacity: usize,
+        lifecycle_state: PeerLifecycleState,
+    ) -> Result<Self, RuntimeBackpressureError> {
+        if !is_valid_kamn_did(peer_id) {
+            return Err(RuntimeBackpressureError::InvalidPeerId);
+        }
+        if queue_capacity == 0 {
+            return Err(RuntimeBackpressureError::InvalidQueueCapacity {
+                capacity: queue_capacity,
+            });
+        }
+        if queue_depth > queue_capacity {
+            return Err(RuntimeBackpressureError::QueueDepthExceedsCapacity {
+                depth: queue_depth,
+                capacity: queue_capacity,
+            });
+        }
+
+        Ok(Self {
+            peer_id: peer_id.to_owned(),
+            queue_depth,
+            queue_capacity,
+            lifecycle_state,
+        })
+    }
+
+    pub fn peer_id(&self) -> &str {
+        &self.peer_id
+    }
+
+    pub fn queue_depth(&self) -> usize {
+        self.queue_depth
+    }
+
+    pub fn queue_capacity(&self) -> usize {
+        self.queue_capacity
+    }
+
+    pub fn lifecycle_state(&self) -> PeerLifecycleState {
+        self.lifecycle_state
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RuntimeBackpressureError {
+    InvalidThresholdRange {
+        field: &'static str,
+        found: u16,
+    },
+    InvalidThresholdOrder {
+        slow_threshold_per_mille: u16,
+        reject_threshold_per_mille: u16,
+    },
+    InvalidPeerId,
+    InvalidQueueCapacity {
+        capacity: usize,
+    },
+    QueueDepthExceedsCapacity {
+        depth: usize,
+        capacity: usize,
+    },
+}
+
+impl Display for RuntimeBackpressureError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidThresholdRange { field, found } => write!(
+                f,
+                "runtime backpressure threshold {field} must be in 1..=1000 (got {found})"
+            ),
+            Self::InvalidThresholdOrder {
+                slow_threshold_per_mille,
+                reject_threshold_per_mille,
+            } => write!(
+                f,
+                "runtime backpressure threshold order is invalid: slow {slow_threshold_per_mille}, reject {reject_threshold_per_mille}"
+            ),
+            Self::InvalidPeerId => write!(f, "runtime backpressure peer id must be a valid DID"),
+            Self::InvalidQueueCapacity { capacity } => write!(
+                f,
+                "runtime backpressure queue capacity must be at least 1 (got {capacity})"
+            ),
+            Self::QueueDepthExceedsCapacity { depth, capacity } => write!(
+                f,
+                "runtime backpressure queue depth exceeds capacity: depth {depth}, capacity {capacity}"
+            ),
+        }
+    }
+}
+
+impl Error for RuntimeBackpressureError {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeterministicBackpressureController {
+    policy: RuntimeBackpressurePolicy,
+}
+
+impl DeterministicBackpressureController {
+    pub fn new(policy: RuntimeBackpressurePolicy) -> Self {
+        Self { policy }
+    }
+
+    pub fn evaluate(
+        &self,
+        input: RuntimeBackpressureInput,
+    ) -> Result<RuntimeBackpressureDecision, RuntimeBackpressureError> {
+        let utilization = queue_utilization_per_mille(input.queue_depth, input.queue_capacity);
+        let stale_peer_queue = input.lifecycle_state == PeerLifecycleState::Disconnected
+            && input.queue_depth > 0
+            && self.policy.purge_disconnected_with_pending_queue;
+
+        let action = if stale_peer_queue {
+            RuntimeBackpressureAction::PurgeStalePeerQueue
+        } else if utilization >= self.policy.reject_threshold_per_mille {
+            RuntimeBackpressureAction::RejectNewEnqueue
+        } else if utilization >= self.policy.slow_threshold_per_mille {
+            RuntimeBackpressureAction::SlowProducer
+        } else {
+            RuntimeBackpressureAction::Accept
+        };
+
+        Ok(RuntimeBackpressureDecision {
+            action,
+            queue_utilization_per_mille: utilization,
+            stale_peer_queue,
+        })
+    }
+}
+
+fn queue_utilization_per_mille(queue_depth: usize, queue_capacity: usize) -> u16 {
+    ((queue_depth as u128) * 1000 / queue_capacity as u128) as u16
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AuthenticatedPeerFrameError {
     InvalidFrameId,
@@ -2570,12 +2782,14 @@ mod tests {
         evaluate_daemon_watchdog_anomaly, execute_processor_daemon_tick, ApproverAttestation,
         ApproverQuorumError, ApproverQuorumEvaluator, ApproverQuorumInput, AuthenticatedPeerFrame,
         AuthenticatedPeerFrameError, BoundedRuntimeQueue, ConstructLockError, ConstructLockGuard,
-        DeterministicNetworkFaultSimulator, DeterministicProposalPlanner, FileRuntimeSnapshotStore,
-        InMemoryRuntimeSnapshotStore, ListenerAttestation, ListenerQuorumError,
-        ListenerQuorumEvaluator, ListenerQuorumInput, NetworkFaultSimulationError,
-        NetworkFaultSimulationInput, PeerFrameAuthenticator, PeerLifecycle, PeerLifecycleEvent,
-        PeerLifecycleState, ProposalCandidate, ProposalPlannerError, RecoveryGuardError,
-        RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, RuntimeLifecycleError,
+        DeterministicBackpressureController, DeterministicNetworkFaultSimulator,
+        DeterministicProposalPlanner, FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore,
+        ListenerAttestation, ListenerQuorumError, ListenerQuorumEvaluator, ListenerQuorumInput,
+        NetworkFaultSimulationError, NetworkFaultSimulationInput, PeerFrameAuthenticator,
+        PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate,
+        ProposalPlannerError, RecoveryGuardError, RecoveryRejoinGuard, RecoveryStatus,
+        RejoinAttempt, RuntimeBackpressureAction, RuntimeBackpressureError,
+        RuntimeBackpressureInput, RuntimeBackpressurePolicy, RuntimeLifecycleError,
         RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore, SnapshotRestoreError,
         SnapshotRestoreGuard, SnapshotStoreError, StateDivergenceError, StateDivergenceEvaluator,
         StateDivergenceSeverity, StateDivergenceStatus, StateDivergenceWatchInput,
@@ -2720,6 +2934,94 @@ mod tests {
         assert_eq!(
             BoundedRuntimeQueue::<String>::new(0),
             Err(RuntimeQueueError::InvalidCapacity { capacity: 0 })
+        );
+    }
+
+    #[test]
+    fn unit_runtime_backpressure_policy_rejects_invalid_threshold_order() {
+        assert_eq!(
+            RuntimeBackpressurePolicy::new(900, 900, true),
+            Err(RuntimeBackpressureError::InvalidThresholdOrder {
+                slow_threshold_per_mille: 900,
+                reject_threshold_per_mille: 900
+            })
+        );
+    }
+
+    #[test]
+    fn functional_runtime_backpressure_classifies_queue_saturation() {
+        let policy = RuntimeBackpressurePolicy::new(700, 900, true).expect("valid policy");
+        let controller = DeterministicBackpressureController::new(policy);
+        let input = RuntimeBackpressureInput::new(
+            "kamn:did:agent:peer-a",
+            8,
+            10,
+            PeerLifecycleState::Active,
+        )
+        .expect("valid input");
+        let decision = controller.evaluate(input).expect("evaluation should pass");
+        assert_eq!(decision.action, RuntimeBackpressureAction::SlowProducer);
+        assert_eq!(decision.queue_utilization_per_mille, 800);
+    }
+
+    #[test]
+    fn integration_runtime_backpressure_purges_stale_disconnected_peer_queue() {
+        let policy = RuntimeBackpressurePolicy::new(700, 900, true).expect("valid policy");
+        let controller = DeterministicBackpressureController::new(policy);
+        let input = RuntimeBackpressureInput::new(
+            "kamn:did:agent:peer-b",
+            3,
+            10,
+            PeerLifecycleState::Disconnected,
+        )
+        .expect("valid input");
+        let decision = controller.evaluate(input).expect("evaluation should pass");
+        assert_eq!(
+            decision.action,
+            RuntimeBackpressureAction::PurgeStalePeerQueue
+        );
+    }
+
+    #[test]
+    fn regression_runtime_backpressure_rejects_capacity_overflow_sample() {
+        // Regression: #618
+        assert_eq!(
+            RuntimeBackpressureInput::new(
+                "kamn:did:agent:peer-a",
+                11,
+                10,
+                PeerLifecycleState::Active
+            ),
+            Err(RuntimeBackpressureError::QueueDepthExceedsCapacity {
+                depth: 11,
+                capacity: 10
+            })
+        );
+    }
+
+    #[test]
+    fn performance_runtime_backpressure_evaluation_stays_within_ci_budget() {
+        let policy = RuntimeBackpressurePolicy::new(700, 900, true).expect("valid policy");
+        let controller = DeterministicBackpressureController::new(policy);
+        let started = Instant::now();
+        for sample_index in 0..2000 {
+            let queue_depth = (sample_index % 10) + 1;
+            let state = if sample_index % 7 == 0 {
+                PeerLifecycleState::Disconnected
+            } else {
+                PeerLifecycleState::Active
+            };
+            let input =
+                RuntimeBackpressureInput::new("kamn:did:agent:peer-perf", queue_depth, 10, state)
+                    .expect("input should be valid");
+            let _ = controller
+                .evaluate(input)
+                .expect("evaluation should remain bounded");
+        }
+        let elapsed_millis = started.elapsed().as_millis();
+        assert!(
+            elapsed_millis < 200,
+            "runtime backpressure evaluation exceeded CI budget: {elapsed_millis}ms"
         );
     }
 

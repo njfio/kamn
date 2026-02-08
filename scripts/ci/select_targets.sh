@@ -209,7 +209,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/runtime-network.md|crates/kamn-core/tests/runtime_network_docs.rs|scripts/runtime/*)
+    docs/foundation/runtime-network.md|docs/foundation/runtime-watchdog-attestation.md|crates/kamn-core/tests/runtime_network_docs.rs|crates/kamn-core/tests/runtime_watchdog_attestation_docs.rs|scripts/runtime/*)
       RUNTIME_SNAPSHOT_CONTRACT_CHANGED=true
       classified=true
       ;;
