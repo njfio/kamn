@@ -110,6 +110,11 @@ if ! grep -Fq "bash scripts/bridge/run_bridge_replay_matrix.sh --fixture fixture
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/bridge/run_bridge_credentialed_contract_lane.sh --skip-replay" "$FAST_WORKFLOW"; then
+  echo "expected bridge credentialed contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 # Regression: #583
 if ! grep -Fq "if: steps.scope.outputs.run_sdk_parity_matrix == 'true'" "$FAST_WORKFLOW"; then
   echo "expected sdk parity matrix scope condition in ci-fast-gate.yml" >&2

@@ -57,3 +57,20 @@ fn regression_requires_bridge_fixture_matrix_guard() {
     assert!(DOC.contains("adapter subset execution"));
     assert!(DOC.contains("Regression: #587"));
 }
+
+#[test]
+fn doc_contains_credential_redaction_contract_lane() {
+    assert!(DOC.contains("## Credentialed Staging + Redaction Contract"));
+    assert!(DOC.contains("run_bridge_credential_redaction_check.py"));
+    assert!(DOC.contains("run_bridge_credentialed_contract_lane.sh"));
+    assert!(DOC.contains("run_bridge_credentialed_deep_lane.sh"));
+}
+
+#[test]
+fn regression_requires_credential_leakage_guard() {
+    // Regression: #621
+    assert!(DOC.contains("credential leakage and replay gaps remain blocked (`Regression: #621`)"));
+    assert!(DOC.contains(
+        "staged credentialed bridge lane blocks raw secret exposure in logs/artifacts while retaining replay safety (`Regression: #621`)."
+    ));
+}
