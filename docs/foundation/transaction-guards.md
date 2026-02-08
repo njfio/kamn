@@ -7,7 +7,7 @@ This document defines the baseline deterministic transaction guards implemented 
 - Positive nonce values.
 - Per-sender nonce sequencing (first nonce `1`, then increment by `1`).
 - State-hash match against the currently expected chain/app state hash.
-- Deterministic signature integrity check (baseline placeholder scheme).
+- Deterministic signature integrity check (explicit algorithm/profile metadata contract).
 - Duplicate transaction ID rejection.
 
 ## Components
@@ -20,14 +20,18 @@ This document defines the baseline deterministic transaction guards implemented 
 ## Canonical Signature Profile
 - `baseline_signature_for_fields(...)` is the canonical baseline signing profile helper.
 - Signature profile is shared between `transaction` and `signer_backend` paths.
+- baseline signature algorithm: `ed25519`.
 - baseline signature profile id: `baseline-v1`.
+- baseline signatures include explicit metadata prefix: `sig:ed25519:baseline-v1:<sender>:<nonce>:<state_hash>:<payload_len>`.
 - migration fixture matrix helper:
   - `signature_profile_compatibility_fixtures_for_fields(...)`
   - baseline fixture (`baseline-v1`) is accepted.
   - legacy unversioned fixture (`legacy-unversioned`) is rejected.
   - unknown profile fixture (`baseline-v0`) is rejected.
+  - unknown algorithm fixture (`secp256k1+baseline-v1`) is rejected.
 - signature-profile drift between transaction and signer paths is rejected (`Regression: #400`).
 - non-versioned signature profile is rejected (`Regression: #404`).
+- algorithm/profile metadata drift or downgrade is rejected (`Regression: #677`).
 - compatibility fixture matrix remains aligned between signer and transaction verification (`Regression: #677`).
 
 ## Signer Fallback Policy Integration

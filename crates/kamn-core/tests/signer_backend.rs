@@ -410,7 +410,7 @@ fn regression_signatures_include_profile_identifier_segment() {
     let signed = router
         .sign_with_secure_fallback(&request)
         .expect("signature should be produced");
-    assert!(signed.signature.starts_with("sig:baseline-v1:"));
+    assert!(signed.signature.starts_with("sig:ed25519:baseline-v1:"));
 }
 
 #[test]

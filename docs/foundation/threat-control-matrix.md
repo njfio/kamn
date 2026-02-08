@@ -10,6 +10,7 @@ This matrix translates PRD threat model concerns into enforceable controls, owne
 | TM-002 | Replay and nonce reuse | Enforce per-sender nonce monotonicity and stale state hash rejection | Transaction guard validation | Backend | `reject_out_of_sequence_nonce_per_sender` |
 | TM-003 | Unauthorized escrow state mutation | Escrow lifecycle state machine blocks illegal transitions and invalid release amounts | Escrow lifecycle engine | Economics + Backend | `escrow_lifecycle_illegal_transition_rejected` |
 | TM-004 | Invalid failover action during degraded quorum | Require listener/approver quorum checks before processor promotion | Failover runbook execution gate | DevOps + Governance | `failover_runbook_contains_failover_steps` |
+| TM-005 | Signature metadata downgrade or algorithm drift | Enforce explicit signature algorithm/profile parsing and reject unsupported metadata pairs | Shared signer + transaction profile verification | Security + Backend | `integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards` |
 
 ## Ownership and Review Cadence
 - Security owner reviews this matrix each milestone and when new threat classes are introduced.
