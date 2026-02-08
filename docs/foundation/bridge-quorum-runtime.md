@@ -13,6 +13,13 @@ This document captures deterministic bridge quorum runtime contracts for listene
   - `ListenerQuorumDecision`
   - `ListenerQuorumError`
   - `evaluate_daemon_listener_quorum`
+- Added approver quorum runtime model references:
+  - `ApproverAttestation`
+  - `ApproverQuorumInput`
+  - `ApproverQuorumEvaluator`
+  - `ApproverQuorumDecision`
+  - `ApproverQuorumError`
+  - `authorize_daemon_outbound_action`
 
 ## Listener Quorum Workflow Rules
 - Inbound bridge decisions require canonical listener attestation normalization before threshold evaluation.
@@ -43,6 +50,7 @@ Run targeted checks first:
 ```bash
 cargo test -p kamn-core --test bridge_quorum_runtime_docs
 cargo test -p kamn-core --test runtime_network_docs
+cargo test -p kamn-core approver_quorum
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
 ```

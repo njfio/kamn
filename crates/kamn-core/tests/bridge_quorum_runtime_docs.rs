@@ -8,12 +8,15 @@ fn doc_contains_bridge_quorum_scope_and_models() {
     assert!(DOC.contains("## Fast and Cost-Effective Validation"));
     assert!(DOC.contains("listener attestation"));
     assert!(DOC.contains("approver attestation"));
+    assert!(DOC.contains("ApproverQuorumEvaluator"));
+    assert!(DOC.contains("authorize_daemon_outbound_action"));
 }
 
 #[test]
 fn doc_contains_bridge_quorum_fast_lane_commands() {
     assert!(DOC.contains("cargo test -p kamn-core --test bridge_quorum_runtime_docs"));
     assert!(DOC.contains("cargo test -p kamn-core --test runtime_network_docs"));
+    assert!(DOC.contains("cargo test -p kamn-core approver_quorum"));
     assert!(DOC.contains("cargo fmt --check"));
     assert!(DOC.contains("cargo clippy -p kamn-core -- -D warnings"));
 }
