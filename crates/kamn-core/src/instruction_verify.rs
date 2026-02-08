@@ -8,6 +8,7 @@ pub struct InstructionRecord {
     pub from_did: String,
     pub payload_hash: String,
     pub signature: String,
+    pub inclusion_proof_ref: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,6 +17,7 @@ pub struct InstructionClaim {
     pub from_did: String,
     pub payload_hash: String,
     pub signature: String,
+    pub inclusion_proof_ref: String,
     pub expires_at_unix: u64,
 }
 
@@ -64,12 +66,17 @@ impl VerificationContext {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VerificationFailure {
     MissingInstruction(String),
+    MissingInclusionProofReference,
     SenderMismatch {
         expected: String,
         actual: String,
     },
     PayloadMismatch,
     SignatureMismatch,
+    InclusionProofMismatch {
+        expected: String,
+        actual: String,
+    },
     UnauthorizedSender(String),
     Expired {
         expires_at: u64,
@@ -114,6 +121,19 @@ impl InstructionVerifier {
         }
         if record.signature != claim.signature {
             return VerificationOutcome::Rejected(VerificationFailure::SignatureMismatch);
+        }
+        if record.inclusion_proof_ref.trim().is_empty()
+            || claim.inclusion_proof_ref.trim().is_empty()
+        {
+            return VerificationOutcome::Rejected(
+                VerificationFailure::MissingInclusionProofReference,
+            );
+        }
+        if record.inclusion_proof_ref != claim.inclusion_proof_ref {
+            return VerificationOutcome::Rejected(VerificationFailure::InclusionProofMismatch {
+                expected: record.inclusion_proof_ref.clone(),
+                actual: claim.inclusion_proof_ref.clone(),
+            });
         }
         if !context.authorized_senders.contains(&claim.from_did) {
             return VerificationOutcome::Rejected(VerificationFailure::UnauthorizedSender(
@@ -174,6 +194,7 @@ mod tests {
                 from_did: "kamn:did:agent:alpha".to_owned(),
                 payload_hash: "hash_a".to_owned(),
                 signature: "sig".to_owned(),
+                inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
             })
             .with_authorized_sender("kamn:did:agent:alpha");
         let claim = InstructionClaim {
@@ -181,6 +202,7 @@ mod tests {
             from_did: "kamn:did:agent:alpha".to_owned(),
             payload_hash: "hash_b".to_owned(),
             signature: "sig".to_owned(),
+            inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
             expires_at_unix: 2,
         };
 
@@ -207,6 +229,7 @@ mod tests {
                 from_did: "kamn:did:agent:alpha".to_owned(),
                 payload_hash: "hash_a".to_owned(),
                 signature: "sig".to_owned(),
+                inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
             })
             .with_authorized_sender("kamn:did:agent:alpha")
             .with_max_claim_validity_window_secs(60);
@@ -215,6 +238,7 @@ mod tests {
             from_did: "kamn:did:agent:alpha".to_owned(),
             payload_hash: "hash_a".to_owned(),
             signature: "sig".to_owned(),
+            inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
             expires_at_unix: 200,
         };
 
@@ -235,6 +259,7 @@ mod tests {
                 from_did: "kamn:did:agent:alpha".to_owned(),
                 payload_hash: "hash_a".to_owned(),
                 signature: "sig".to_owned(),
+                inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
             })
             .with_authorized_sender("kamn:did:agent:alpha");
         let claim = InstructionClaim {
@@ -242,6 +267,7 @@ mod tests {
             from_did: "kamn:did:agent:alpha".to_owned(),
             payload_hash: "hash_a".to_owned(),
             signature: "sig".to_owned(),
+            inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
             expires_at_unix: 120,
         };
 
@@ -253,6 +279,61 @@ mod tests {
             InstructionVerifier::verify_and_record(&claim, &mut context),
             VerificationOutcome::Rejected(VerificationFailure::ReplayClaim {
                 instruction_id: "ins_1".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn rejects_missing_inclusion_proof_reference() {
+        let context = VerificationContext::new(100)
+            .with_instruction(InstructionRecord {
+                id: "ins_1".to_owned(),
+                from_did: "kamn:did:agent:alpha".to_owned(),
+                payload_hash: "hash_a".to_owned(),
+                signature: "sig".to_owned(),
+                inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
+            })
+            .with_authorized_sender("kamn:did:agent:alpha");
+        let claim = InstructionClaim {
+            instruction_id: "ins_1".to_owned(),
+            from_did: "kamn:did:agent:alpha".to_owned(),
+            payload_hash: "hash_a".to_owned(),
+            signature: "sig".to_owned(),
+            inclusion_proof_ref: String::new(),
+            expires_at_unix: 120,
+        };
+
+        assert_eq!(
+            InstructionVerifier::verify(&claim, &context),
+            VerificationOutcome::Rejected(VerificationFailure::MissingInclusionProofReference)
+        );
+    }
+
+    #[test]
+    fn rejects_inclusion_proof_reference_mismatch() {
+        let context = VerificationContext::new(100)
+            .with_instruction(InstructionRecord {
+                id: "ins_1".to_owned(),
+                from_did: "kamn:did:agent:alpha".to_owned(),
+                payload_hash: "hash_a".to_owned(),
+                signature: "sig".to_owned(),
+                inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
+            })
+            .with_authorized_sender("kamn:did:agent:alpha");
+        let claim = InstructionClaim {
+            instruction_id: "ins_1".to_owned(),
+            from_did: "kamn:did:agent:alpha".to_owned(),
+            payload_hash: "hash_a".to_owned(),
+            signature: "sig".to_owned(),
+            inclusion_proof_ref: "proof:chain:tx-2".to_owned(),
+            expires_at_unix: 120,
+        };
+
+        assert_eq!(
+            InstructionVerifier::verify(&claim, &context),
+            VerificationOutcome::Rejected(VerificationFailure::InclusionProofMismatch {
+                expected: "proof:chain:tx-1".to_owned(),
+                actual: "proof:chain:tx-2".to_owned(),
             })
         );
     }

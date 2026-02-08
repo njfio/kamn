@@ -9,6 +9,7 @@ fn sample_record() -> InstructionRecord {
         from_did: "kamn:did:agent:alpha".to_owned(),
         payload_hash: "payload_hash_abc".to_owned(),
         signature: "sig_123".to_owned(),
+        inclusion_proof_ref: "proof:chain:tx-abc".to_owned(),
     }
 }
 
@@ -18,6 +19,7 @@ fn sample_claim() -> InstructionClaim {
         from_did: "kamn:did:agent:alpha".to_owned(),
         payload_hash: "payload_hash_abc".to_owned(),
         signature: "sig_123".to_owned(),
+        inclusion_proof_ref: "proof:chain:tx-abc".to_owned(),
         expires_at_unix: 200,
     }
 }
@@ -132,6 +134,41 @@ fn regression_replayed_claim_is_rejected_after_first_use() {
         InstructionVerifier::verify_and_record(&claim, &mut context),
         VerificationOutcome::Rejected(VerificationFailure::ReplayClaim {
             instruction_id: "ins_001".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn regression_rejects_missing_inclusion_proof_reference() {
+    // Regression: #448
+    let record = sample_record();
+    let mut claim = sample_claim();
+    claim.inclusion_proof_ref.clear();
+    let context = VerificationContext::new(100)
+        .with_instruction(record)
+        .with_authorized_sender("kamn:did:agent:alpha");
+
+    assert_eq!(
+        InstructionVerifier::verify(&claim, &context),
+        VerificationOutcome::Rejected(VerificationFailure::MissingInclusionProofReference)
+    );
+}
+
+#[test]
+fn regression_rejects_mismatched_inclusion_proof_reference() {
+    // Regression: #448
+    let record = sample_record();
+    let mut claim = sample_claim();
+    claim.inclusion_proof_ref = "proof:chain:tx-other".to_owned();
+    let context = VerificationContext::new(100)
+        .with_instruction(record)
+        .with_authorized_sender("kamn:did:agent:alpha");
+
+    assert_eq!(
+        InstructionVerifier::verify(&claim, &context),
+        VerificationOutcome::Rejected(VerificationFailure::InclusionProofMismatch {
+            expected: "proof:chain:tx-abc".to_owned(),
+            actual: "proof:chain:tx-other".to_owned(),
         })
     );
 }
