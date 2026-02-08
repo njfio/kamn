@@ -72,6 +72,7 @@ For CI cache strategy and bounded parallelism controls, see `docs/foundation/ci-
 For flaky-test quarantine and bounded retry controls, see `docs/foundation/ci-flaky-quarantine.md`.
 For release rollback triggers and post-upgrade verification controls, see `docs/foundation/upgrade-rollback-runbook.md`.
 For release go/no-go checklist and dry-run evidence controls, see `docs/foundation/release-gonogo-checklist.md`.
+For semantic version policy and compatibility matrix controls, see `docs/foundation/versioning-compatibility-matrix.md`.
 For redaction and tombstone compliance workflow controls, see `docs/foundation/redaction-tombstones.md`.
 For compliance audit export interface controls, see `docs/foundation/audit-export-interfaces.md`.
 For configurable retention policy enforcement controls, see `docs/foundation/retention-policy-engine.md`.

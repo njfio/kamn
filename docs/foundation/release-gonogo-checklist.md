@@ -1,6 +1,7 @@
 # Release Go/No-Go Checklist and Dry-Run Workflow (Issues #172, #173)
 
 This checklist defines deterministic release gates and auditable evidence requirements before approving a protocol or runtime upgrade.
+For semantic versioning policy and compatibility rules, see `docs/foundation/versioning-compatibility-matrix.md`.
 
 ## Preflight Gates
 - Migration plan reviewed and signed.
