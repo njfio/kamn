@@ -6,6 +6,7 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 ## Preflight Gates
 - Migration plan reviewed and signed.
 - Compatibility matrix validated.
+- Deployment topology preflight passed (`scripts/deploy/preflight_topology.sh`).
 - CI fast gate and deferred deep lane both green.
 - Rollback runbook version pinned.
 - Release candidate artifact digest verified.

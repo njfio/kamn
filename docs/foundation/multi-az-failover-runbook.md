@@ -15,6 +15,19 @@ This runbook defines the minimal multi-AZ deployment shape and deterministic fai
 - Persistent storage and state snapshots are replicated across AZ boundaries.
 - Gossip network connectivity is available between all validator roles.
 
+## Deployment Preflight
+Run topology validation before rollout:
+
+```bash
+bash scripts/deploy/preflight_topology.sh \
+  --processors 3 \
+  --listeners 3 \
+  --approvers 3 \
+  --required-approvals 2
+```
+
+Preflight rejects invalid cardinality and quorum mismatches (Regression: #481).
+
 ## Processor Failover Procedure
 
 1. Detect processor failure
