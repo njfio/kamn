@@ -27,6 +27,14 @@ fn policy_defines_support_and_deprecation_windows() {
 }
 
 #[test]
+fn policy_defines_governance_parameter_compatibility_contract() {
+    assert!(POLICY.contains("## Governance Parameter Compatibility Policy"));
+    assert!(POLICY.contains("| Parameter Key | Allowed Range | Minimum Supported Version |"));
+    assert!(POLICY.contains("| `listener.quorum` | `[1, 7]` | `1.0.0` |"));
+    assert!(POLICY.contains("| `watchdog.delivery_ratio_bps` | `[9000, 9999]` | `1.1.0` |"));
+}
+
+#[test]
 fn regression_requires_incompatible_downgrade_no_go_rule() {
     // Regression: #175
     assert!(POLICY.contains("Incompatible downgrade decision: NO-GO."));
