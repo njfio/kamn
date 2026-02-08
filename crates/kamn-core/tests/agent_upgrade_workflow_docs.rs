@@ -18,6 +18,7 @@ fn doc_contains_workflow_safeguards_and_audit_rules() {
         "configured minimum activation delay elapsed since governance approval timestamp."
     ));
     assert!(DOC.contains("allowlisted validator voter DID"));
+    assert!(DOC.contains("allowlisted validator reviewer DID"));
 }
 
 #[test]
@@ -45,4 +46,10 @@ fn regression_requires_activation_delay_rejection_rule() {
 fn regression_requires_unauthorized_validator_vote_rejection_rule() {
     // Regression: #533
     assert!(DOC.contains("unauthorized validator vote is rejected (`Regression: #533`)."));
+}
+
+#[test]
+fn regression_requires_unauthorized_human_reviewer_rejection_rule() {
+    // Regression: #538
+    assert!(DOC.contains("unauthorized human reviewer approval is rejected (`Regression: #538`)."));
 }

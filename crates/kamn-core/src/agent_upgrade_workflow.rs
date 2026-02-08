@@ -197,6 +197,11 @@ impl AgentDrivenUpgradeWorkflow {
     ) -> Result<(), AgentUpgradeWorkflowError> {
         validate_did(reviewer_did)?;
         validate_timestamp("reviewed_at_unix", reviewed_at_unix)?;
+        if !self.allowed_validator_voters.contains(reviewer_did) {
+            return Err(AgentUpgradeWorkflowError::UnauthorizedHumanReviewer(
+                reviewer_did.to_owned(),
+            ));
+        }
         let proposal = self
             .proposals
             .get_mut(proposal_id)
@@ -452,6 +457,7 @@ pub enum AgentUpgradeWorkflowError {
     MissingAllowedAgentProposers,
     MissingAllowedValidatorVoters,
     UnauthorizedAgentProposer(String),
+    UnauthorizedHumanReviewer(String),
     UnauthorizedValidatorVoter(String),
     ProposalAlreadyExists(String),
     ProposalNotFound(String),
@@ -511,6 +517,9 @@ impl fmt::Display for AgentUpgradeWorkflowError {
             }
             Self::UnauthorizedAgentProposer(agent_did) => {
                 write!(f, "unauthorized agent proposer: {agent_did}")
+            }
+            Self::UnauthorizedHumanReviewer(reviewer_did) => {
+                write!(f, "unauthorized human reviewer: {reviewer_did}")
             }
             Self::UnauthorizedValidatorVoter(validator_did) => {
                 write!(f, "unauthorized validator voter: {validator_did}")
@@ -709,6 +718,37 @@ mod tests {
                 130,
             ),
             Err(AgentUpgradeWorkflowError::UnauthorizedValidatorVoter(
+                "kamn:did:agent:validator-rogue".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn approve_human_review_rejects_non_allowlisted_reviewer() {
+        let mut workflow = AgentDrivenUpgradeWorkflow::new(AgentUpgradeWorkflowConfig {
+            current_version: "v0.1.0".to_owned(),
+            allowed_agent_proposers: vec!["kamn:did:agent:upgrade-bot".to_owned()],
+            allowed_validator_voters: vec!["kamn:did:agent:validator-1".to_owned()],
+            required_human_reviews: 1,
+            required_validator_quorum: 1,
+            min_activation_delay_secs: 60,
+        })
+        .expect("workflow should initialize");
+        workflow
+            .submit_agent_proposal(AgentUpgradeProposalDraft {
+                proposal_id: "agent-upgrade-c".to_owned(),
+                target_version: "v0.2.0".to_owned(),
+                agent_did: "kamn:did:agent:upgrade-bot".to_owned(),
+                rationale: "reviewer-allowlist".to_owned(),
+                created_at_unix: 100,
+                voting_deadline_unix: 200,
+            })
+            .expect("proposal should register");
+
+        assert_eq!(
+            workflow
+                .approve_human_review("agent-upgrade-c", "kamn:did:agent:validator-rogue", 110,),
+            Err(AgentUpgradeWorkflowError::UnauthorizedHumanReviewer(
                 "kamn:did:agent:validator-rogue".to_owned()
             ))
         );
