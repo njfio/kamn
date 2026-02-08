@@ -7,6 +7,8 @@ fn doc_contains_ui_scope_and_composer_contract() {
     assert!(DOC.contains("DashboardSummary"));
     assert!(DOC.contains("OperatorDashboardUiError"));
     assert!(DOC.contains("packages/kamn-dashboard"));
+    assert!(DOC.contains("src/live_api.ts"));
+    assert!(DOC.contains("buildDashboardShellFromBackend(...)"));
 }
 
 #[test]
@@ -40,4 +42,12 @@ fn regression_requires_critical_badge_with_stale_banner_rule() {
     assert!(DOC.contains("stale-data-banner"));
     assert!(DOC.contains("severity-critical"));
     assert!(DOC.contains("Regression: #591"));
+}
+
+#[test]
+fn regression_requires_live_backend_error_shell_rule() {
+    // Regression: #639
+    assert!(DOC.contains("fetchDashboardSnapshotFromBackend(...)"));
+    assert!(DOC.contains("dashboard-error"));
+    assert!(DOC.contains("Regression: #639"));
 }

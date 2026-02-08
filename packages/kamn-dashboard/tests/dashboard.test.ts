@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   buildDashboardShell,
+  buildDashboardShellFromBackend,
+  fetchDashboardSnapshotFromBackend,
   mapSnapshotToDashboardModel,
   mapSeverityLevel,
   renderDashboardHtml,
@@ -128,4 +130,70 @@ test("regression renders critical badge and stale banner together", () => {
 
   assert.match(html, /stale-data-banner/);
   assert.match(html, /severity-critical/);
+});
+
+test("unit fetches dashboard snapshot from live backend client", async () => {
+  const snapshot = await fetchDashboardSnapshotFromBackend({
+    baseUrl: "https://dashboard.internal",
+    fetchImpl: async (url) => {
+      assert.equal(url, "https://dashboard.internal/api/dashboard/snapshot");
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          generated_at_unix: 1_700_002_000,
+          domains: [
+            {
+              domain: "messaging",
+              latency_p99_ms: 470,
+              error_rate: 0.012,
+              availability: 0.998,
+            },
+          ],
+        }),
+      };
+    },
+  });
+
+  assert.equal(snapshot.generated_at_unix, 1_700_002_000);
+  assert.equal(snapshot.domains[0]?.domain, "messaging");
+});
+
+test("functional builds dashboard shell from live backend snapshot", async () => {
+  const html = await buildDashboardShellFromBackend(1_700_002_200, {
+    baseUrl: "https://dashboard.internal",
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        generated_at_unix: 1_700_002_000,
+        domains: [
+          {
+            domain: "messaging",
+            latency_p99_ms: 470,
+            error_rate: 0.012,
+            availability: 0.998,
+          },
+        ],
+      }),
+    }),
+  });
+
+  assert.match(html, /summary-grid/);
+  assert.match(html, /messaging/);
+});
+
+test("regression renders error shell when live backend request fails", async () => {
+  // Regression: #622
+  const html = await buildDashboardShellFromBackend(1_700_002_200, {
+    baseUrl: "https://dashboard.internal",
+    fetchImpl: async () => ({
+      ok: false,
+      status: 503,
+      json: async () => ({}),
+    }),
+  });
+
+  assert.match(html, /dashboard-error/);
+  assert.match(html, /503/);
 });
