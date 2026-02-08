@@ -2,6 +2,7 @@ use kamn_core::{
     SwarmTaskDraft, TaskArtifactRegistry, TaskArtifactSubmission, TaskOperationEngine,
     TaskOperationError, TaskState,
 };
+use std::time::Instant;
 
 #[test]
 fn swarm_dag_rejects_cyclic_dependency_graph_submission() {
@@ -168,4 +169,46 @@ fn swarm_dag_regression_rejects_replayed_dependency_completion() {
             "task is in terminal state: Completed".to_owned()
         ))
     );
+}
+
+fn linear_swarm_drafts(task_count: usize) -> Vec<SwarmTaskDraft> {
+    (0..task_count)
+        .map(|index| {
+            let dependencies = if index == 0 {
+                vec![]
+            } else {
+                vec![format!("swarm-bench-{}", index - 1)]
+            };
+            SwarmTaskDraft {
+                task_id: format!("swarm-bench-{index}"),
+                requester: "kamn:did:agent:requester-1".to_owned(),
+                description: format!("benchmark task {index}"),
+                dependencies,
+            }
+        })
+        .collect()
+}
+
+#[test]
+fn swarm_dag_bounded_graph_validation_benchmark_is_fast_for_ci() {
+    const TASK_COUNT: usize = 128;
+    let drafts = linear_swarm_drafts(TASK_COUNT);
+    let mut engine = TaskOperationEngine::new();
+
+    let started_at = Instant::now();
+    engine
+        .submit_swarm_tasks(drafts)
+        .expect("bounded swarm DAG should submit");
+    let elapsed_millis = started_at.elapsed().as_millis();
+    assert!(
+        elapsed_millis < 2_000,
+        "bounded graph validation exceeded CI budget: {elapsed_millis}ms"
+    );
+
+    for index in 0..TASK_COUNT {
+        engine
+            .accept(&format!("swarm-bench-{index}"), "kamn:did:agent:worker-1")
+            .expect("accept should pass for benchmark task");
+    }
+    assert_eq!(engine.ready_tasks(), vec!["swarm-bench-0".to_owned()]);
 }

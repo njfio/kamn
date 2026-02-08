@@ -78,6 +78,10 @@ and `cancel`.
   - `start_work` is blocked when any dependency is not `Completed` (`DependencyNotSatisfied`).
   - replayed completion attempts remain rejected by terminal-state lifecycle guards (`Regression: #472`).
 
+## Bounded Graph Benchmark
+- A bounded graph benchmark keeps CI cost low while validating DAG guard performance characteristics.
+- The benchmark covers a 128-task linear DAG registration path and enforces a generous local CI budget.
+
 ## Local Validation
 Run from repository root:
 
