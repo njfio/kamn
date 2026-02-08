@@ -29,10 +29,24 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Final decision: GO | NO-GO
 - Approver signatures:
 
+## Machine-Readable Evidence Bundle Contract (Issue #644)
+Go/no-go decisions are captured as machine-readable JSON so release policy checks are auditable and deterministic.
+
+- Generator:
+  - `bash scripts/deploy/generate_gonogo_evidence_bundle.sh --output-file /tmp/gonogo.json --release-candidate v1.0.0-rc.1 --schema-target-version 1.0.0 --runtime-image-digest sha256:abc123 --ci-fast-gate PASS --ci-deep-lane PASS --rollback-precheck PASS --rollback-trigger-status CLEAR --required-approvals 2 --received-approvals 2`
+- Policy checker:
+  - `bash scripts/deploy/check_gonogo_evidence_policy.sh --bundle-file /tmp/gonogo.json`
+- Fast contract lane:
+  - `bash scripts/deploy/run_gonogo_evidence_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/deploy/run_gonogo_evidence_deep_lane.sh`
+
 ## Local Validation
 Run from repository root:
 
 ```bash
+bash scripts/deploy/test_generate_gonogo_evidence_bundle.sh
+bash scripts/deploy/test_run_gonogo_evidence_contract_lane.sh
 cargo test -p kamn-core --test release_gonogo_checklist_docs
 cargo fmt --check
 cargo clippy -- -D warnings
