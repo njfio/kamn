@@ -142,7 +142,7 @@ pub use group_channel_crypto::{
 };
 pub use instruction_verify::{
     InstructionClaim, InstructionRecord, InstructionVerifier, VerificationContext,
-    VerificationFailure, VerificationOutcome,
+    VerificationFailure, VerificationOutcome, DEFAULT_MAX_CLAIM_VALIDITY_WINDOW_SECS,
 };
 pub use invariants::{
     catalog as invariant_catalog, classify_smoke_error, classify_transaction_guard_error,
