@@ -1,4 +1,4 @@
-# Channel Models (Issues #118, #228, #229)
+# Channel Models and Snapshot Persistence Contracts (Issues #118, #228, #229, #617)
 
 This document defines the implemented channel model slices for direct/group
 channels and specialized broadcast/task/marketplace/governance channels.
@@ -20,6 +20,12 @@ For marketplace listing/discovery workflow controls built on marketplace channel
   - `Marketplace { market_scope }`
   - `Governance { proposal_scope }`
 - `ChannelStore`: in-memory channel registry with deterministic member-to-channel indexing.
+- Snapshot contracts:
+  - `ChannelRecordSnapshot`
+  - `ChannelSnapshot`
+  - `ChannelSnapshotStore`
+  - `InMemoryChannelSnapshotStore`
+  - `FileChannelSnapshotStore`
 
 ## Supported Operations
 - `create_direct(channel_id, participant_a, participant_b)`
@@ -55,6 +61,12 @@ For marketplace listing/discovery workflow controls built on marketplace channel
   - `admins(channel_id)`
   - `is_member(channel_id, did)`
   - `channels_for_member(did)`
+- Snapshot APIs:
+  - `export_snapshot()`
+  - `restore_snapshot(snapshot)`
+  - `ChannelSnapshotStore::write(snapshot)`
+  - `ChannelSnapshotStore::read_latest()`
+  - `FileChannelSnapshotStore::recover_latest_and_repair()`
 
 ## Validation and Safety Rules
 - Channel IDs must be non-empty and unique.
@@ -63,16 +75,43 @@ For marketplace listing/discovery workflow controls built on marketplace channel
 - Direct channels reject unsupported group-style mutations.
 - Specialized channels enforce typed metadata and per-type minimum member thresholds.
 
-## Local Validation
-Run from repository root:
+## Snapshot Persistence and Restore Contract Rules
+- Snapshot schema is versioned by `CHANNEL_SNAPSHOT_SCHEMA_VERSION`.
+- Restore validation enforces channel ID, DID, metadata/type compatibility, and per-type member/admin invariants.
+- Restore guards reject:
+  - duplicate channel IDs
+  - duplicate members/admins within one channel record
+  - admin/member mismatch (admin must be a member)
+  - direct-channel snapshot state that does not preserve exactly two distinct participants/admins
+- File-backed persistence uses deterministic payload lines:
+  - `schema|<version>`
+  - `record|<channel_id>|<type_code>|<metadata_value>|<members_csv>|<admins_csv>`
+- Delimiter poisoning (`|`, newline, `,`) is rejected for scalar fields during serialization.
+- Corrupt payload recovery truncates invalid data and returns `latest=None` with `repaired=true`.
+- Regression contract:
+  - duplicate channel IDs on restore are rejected (`Regression: #617`)
+  - admin/member mismatch on restore is rejected (`Regression: #617`)
+
+## Fast and Cost-Effective Validation
+Run targeted checks from repository root:
+
+```bash
+cargo test -p kamn-core --lib channel_models::tests::
+cargo test -p kamn-core --test channel_models
+cargo test -p kamn-core --test channel_models_docs
+bash scripts/channel/run_channel_lifecycle_contract_lane.sh
+```
+
+Scheduled deep-lane command:
+
+```bash
+cargo test -p kamn-core --lib channel_models::tests::performance_channel_snapshot_deep_lane_stress -- --ignored
+bash scripts/channel/run_channel_lifecycle_deep_lane.sh
+```
+
+Then run strict gates:
 
 ```bash
 cargo fmt --check
-cargo clippy -- -D warnings
-cargo test -p kamn-core --test channel_models
-cargo test -p kamn-core
+cargo clippy -p kamn-core -- -D warnings
 ```
-
-## Notes
-This slice is deterministic and dependency-light (`BTreeMap`/`BTreeSet`) to keep
-CI fast and low-cost while establishing channel authorization semantics.
