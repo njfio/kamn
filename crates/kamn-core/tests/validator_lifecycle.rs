@@ -199,3 +199,59 @@ fn validator_lifecycle_regression_blocks_offboarding_that_breaks_quorum() {
         })
     );
 }
+
+#[test]
+fn validator_lifecycle_regression_rejects_replayed_transition_proof() {
+    // Regression: #523
+    let mut manager = ValidatorLifecycleManager::new(
+        vec![
+            "kamn:did:agent:validator-1".to_owned(),
+            "kamn:did:agent:validator-2".to_owned(),
+        ],
+        2,
+    )
+    .expect("manager should initialize");
+    let replayed_proof = proof(
+        "gov-proposal-replay",
+        &["kamn:did:agent:validator-1", "kamn:did:agent:validator-2"],
+    );
+
+    manager
+        .onboard_validator("kamn:did:agent:validator-3", &replayed_proof, 1_716_403_100)
+        .expect("first transition with proof should pass");
+
+    assert_eq!(
+        manager.reconfigure_quorum(2, &replayed_proof, 1_716_403_200),
+        Err(ValidatorLifecycleError::TransitionProofReplay {
+            proposal_id: "gov-proposal-replay".to_owned(),
+            proof_hash: "proof-hash-gov-proposal-replay".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn validator_lifecycle_regression_rejects_onboarding_self_approval() {
+    // Regression: #523
+    let mut manager = ValidatorLifecycleManager::new(
+        vec![
+            "kamn:did:agent:validator-1".to_owned(),
+            "kamn:did:agent:validator-2".to_owned(),
+        ],
+        2,
+    )
+    .expect("manager should initialize");
+
+    assert_eq!(
+        manager.onboard_validator(
+            "kamn:did:agent:validator-3",
+            &proof(
+                "gov-proposal-self-approval",
+                &["kamn:did:agent:validator-1", "kamn:did:agent:validator-3",],
+            ),
+            1_716_404_100,
+        ),
+        Err(ValidatorLifecycleError::OnboardingSelfApproval {
+            validator_did: "kamn:did:agent:validator-3".to_owned(),
+        })
+    );
+}

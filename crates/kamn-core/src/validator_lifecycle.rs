@@ -40,6 +40,7 @@ pub struct ValidatorLifecycleManager {
     quorum_threshold: usize,
     updated_at_unix: u64,
     transitions: Vec<ValidatorTransitionRecord>,
+    consumed_transition_proofs: BTreeSet<String>,
 }
 
 impl ValidatorLifecycleManager {
@@ -65,6 +66,7 @@ impl ValidatorLifecycleManager {
             quorum_threshold,
             updated_at_unix: 0,
             transitions: Vec::new(),
+            consumed_transition_proofs: BTreeSet::new(),
         })
     }
 
@@ -77,6 +79,8 @@ impl ValidatorLifecycleManager {
         validate_timestamp("requested_at_unix", requested_at_unix)?;
         validate_did(validator_did)?;
         validate_transition_proof(proof, self.quorum_threshold)?;
+        reject_onboarding_self_approval(validator_did, proof)?;
+        self.ensure_transition_proof_not_replayed(proof)?;
         if self.validator_dids.contains(validator_did) {
             return Err(ValidatorLifecycleError::DuplicateValidator(
                 validator_did.to_owned(),
@@ -95,6 +99,7 @@ impl ValidatorLifecycleManager {
             proof: proof.clone(),
             requested_at_unix,
         });
+        self.consume_transition_proof(proof);
         Ok(())
     }
 
@@ -107,6 +112,7 @@ impl ValidatorLifecycleManager {
         validate_timestamp("requested_at_unix", requested_at_unix)?;
         validate_did(validator_did)?;
         validate_transition_proof(proof, self.quorum_threshold)?;
+        self.ensure_transition_proof_not_replayed(proof)?;
         if !self.validator_dids.contains(validator_did) {
             return Err(ValidatorLifecycleError::ValidatorNotFound(
                 validator_did.to_owned(),
@@ -133,6 +139,7 @@ impl ValidatorLifecycleManager {
             proof: proof.clone(),
             requested_at_unix,
         });
+        self.consume_transition_proof(proof);
         Ok(())
     }
 
@@ -144,6 +151,7 @@ impl ValidatorLifecycleManager {
     ) -> Result<(), ValidatorLifecycleError> {
         validate_timestamp("requested_at_unix", requested_at_unix)?;
         validate_transition_proof(proof, self.quorum_threshold)?;
+        self.ensure_transition_proof_not_replayed(proof)?;
         validate_quorum_threshold(new_quorum_threshold, self.validator_dids.len())?;
 
         let previous_snapshot = self.snapshot();
@@ -158,6 +166,7 @@ impl ValidatorLifecycleManager {
             proof: proof.clone(),
             requested_at_unix,
         });
+        self.consume_transition_proof(proof);
         Ok(())
     }
 
@@ -211,6 +220,27 @@ impl ValidatorLifecycleManager {
     pub fn transition_history(&self) -> Vec<ValidatorTransitionRecord> {
         self.transitions.clone()
     }
+
+    fn ensure_transition_proof_not_replayed(
+        &self,
+        proof: &ValidatorTransitionProof,
+    ) -> Result<(), ValidatorLifecycleError> {
+        if self
+            .consumed_transition_proofs
+            .contains(&transition_proof_fingerprint(proof))
+        {
+            return Err(ValidatorLifecycleError::TransitionProofReplay {
+                proposal_id: proof.proposal_id.clone(),
+                proof_hash: proof.proof_hash.clone(),
+            });
+        }
+        Ok(())
+    }
+
+    fn consume_transition_proof(&mut self, proof: &ValidatorTransitionProof) {
+        self.consumed_transition_proofs
+            .insert(transition_proof_fingerprint(proof));
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -233,6 +263,13 @@ pub enum ValidatorLifecycleError {
     InsufficientTransitionApprovals {
         required: usize,
         provided: usize,
+    },
+    TransitionProofReplay {
+        proposal_id: String,
+        proof_hash: String,
+    },
+    OnboardingSelfApproval {
+        validator_did: String,
     },
     NoTransitionToRollback,
 }
@@ -266,6 +303,17 @@ impl fmt::Display for ValidatorLifecycleError {
             Self::InsufficientTransitionApprovals { required, provided } => write!(
                 f,
                 "insufficient transition approvals: required {required}, provided {provided}"
+            ),
+            Self::TransitionProofReplay {
+                proposal_id,
+                proof_hash,
+            } => write!(
+                f,
+                "transition proof replay detected: proposal_id={proposal_id}, proof_hash={proof_hash}"
+            ),
+            Self::OnboardingSelfApproval { validator_did } => write!(
+                f,
+                "onboarding transition proof cannot include candidate self-approval: {validator_did}"
             ),
             Self::NoTransitionToRollback => write!(f, "no validator transition to rollback"),
         }
@@ -301,6 +349,26 @@ fn validate_transition_proof(
     }
 
     Ok(())
+}
+
+fn reject_onboarding_self_approval(
+    validator_did: &str,
+    proof: &ValidatorTransitionProof,
+) -> Result<(), ValidatorLifecycleError> {
+    if proof
+        .approver_dids
+        .iter()
+        .any(|approver| approver == validator_did)
+    {
+        return Err(ValidatorLifecycleError::OnboardingSelfApproval {
+            validator_did: validator_did.to_owned(),
+        });
+    }
+    Ok(())
+}
+
+fn transition_proof_fingerprint(proof: &ValidatorTransitionProof) -> String {
+    format!("{}|{}", proof.proposal_id, proof.proof_hash)
 }
 
 fn validate_quorum_threshold(
