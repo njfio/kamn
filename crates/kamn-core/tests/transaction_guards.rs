@@ -1,6 +1,7 @@
 use kamn_core::{
-    baseline_signature_for_fields, BaselineTransaction, RoleSmokeNetwork, SmokeError,
-    TransactionGuardError, GENESIS_STATE_HASH,
+    baseline_signature_for_fields, legacy_signature_for_fields,
+    signature_profile_compatibility_fixtures_for_fields, BaselineTransaction, RoleSmokeNetwork,
+    SmokeError, TransactionGuardError, GENESIS_STATE_HASH,
 };
 
 fn signed_tx(
@@ -108,7 +109,7 @@ fn regression_non_versioned_signature_profile_is_rejected() {
     let mut network = RoleSmokeNetwork::new(true);
     let mut tx =
         BaselineTransaction::signed("tx-1", "agent-a", 1, "payload-tx-1", GENESIS_STATE_HASH);
-    tx.signature = "sig:agent-a:1:state:genesis:12".to_owned();
+    tx.signature = legacy_signature_for_fields("agent-a", 1, GENESIS_STATE_HASH, "payload-tx-1");
 
     assert!(matches!(
         network.submit_transaction(tx),
@@ -116,4 +117,28 @@ fn regression_non_versioned_signature_profile_is_rejected() {
             TransactionGuardError::InvalidSignature { .. }
         ))
     ));
+}
+
+#[test]
+fn regression_signature_profile_fixture_matrix_matches_transaction_guard_expectations() {
+    // Regression: #677
+    let fixtures = signature_profile_compatibility_fixtures_for_fields(
+        "agent-a",
+        1,
+        GENESIS_STATE_HASH,
+        "payload-tx-1",
+    );
+
+    for fixture in fixtures {
+        let mut network = RoleSmokeNetwork::new(true);
+        let mut tx =
+            BaselineTransaction::signed("tx-1", "agent-a", 1, "payload-tx-1", GENESIS_STATE_HASH);
+        tx.signature = fixture.signature.clone();
+        let accepted = network.submit_transaction(tx).is_ok();
+        assert_eq!(
+            accepted, fixture.should_verify,
+            "transaction guard compatibility fixture {} should remain deterministic",
+            fixture.fixture_id
+        );
+    }
 }

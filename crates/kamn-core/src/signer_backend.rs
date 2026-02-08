@@ -1,4 +1,6 @@
-use crate::signature_profile::baseline_signature_for_fields;
+use crate::signature_profile::{
+    baseline_signature_for_fields, signature_matches_supported_profile_for_fields,
+};
 use crate::transaction::BaselineTransaction;
 
 const LOCAL_BACKEND_NAME: &str = "local-software";
@@ -286,7 +288,13 @@ impl SignerBackend for LocalSignerBackend {
 
     fn verify(&self, request: &SigningRequest, signature: &str) -> Result<(), SignerBackendError> {
         let expected = request.expected_signature();
-        if expected != signature {
+        if !signature_matches_supported_profile_for_fields(
+            signature,
+            &request.sender,
+            request.nonce,
+            &request.state_hash,
+            &request.payload,
+        ) {
             return Err(SignerBackendError::SignatureMismatch {
                 backend: self.backend_name().to_owned(),
                 expected,
@@ -404,7 +412,13 @@ impl SignerBackend for SecureSignerBackend {
         self.enforce_provider_handshake(secure_key.provider)?;
 
         let expected = request.expected_signature();
-        if expected != signature {
+        if !signature_matches_supported_profile_for_fields(
+            signature,
+            &request.sender,
+            request.nonce,
+            &request.state_hash,
+            &request.payload,
+        ) {
             return Err(SignerBackendError::SignatureMismatch {
                 backend: secure_key.provider.backend_name().to_owned(),
                 expected,

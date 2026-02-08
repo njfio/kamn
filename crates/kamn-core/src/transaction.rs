@@ -1,4 +1,6 @@
-use crate::signature_profile::baseline_signature_for_fields;
+use crate::signature_profile::{
+    baseline_signature_for_fields, signature_matches_supported_profile_for_fields,
+};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -94,7 +96,13 @@ impl TransactionGuards {
             });
         }
 
-        if tx.signature != tx.expected_signature() {
+        if !signature_matches_supported_profile_for_fields(
+            &tx.signature,
+            &tx.sender,
+            tx.nonce,
+            &tx.state_hash,
+            &tx.payload,
+        ) {
             return Err(TransactionGuardError::InvalidSignature {
                 tx_id: tx.id.clone(),
                 expected: tx.expected_signature(),

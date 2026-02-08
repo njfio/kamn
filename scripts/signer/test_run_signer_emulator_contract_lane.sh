@@ -34,6 +34,11 @@ if ! grep -q "regression_provider_handshake_policy_block_rejects_without_fallbac
   exit 1
 fi
 
+if ! grep -q "integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards" "$FAST_SCRIPT"; then
+  echo "expected signer emulator contract lane to include signature profile compatibility matrix integration coverage" >&2
+  exit 1
+fi
+
 if ! grep -Fq "performance_signer_emulator_bulk_signing_deep_lane -- --ignored" "$DEEP_SCRIPT"; then
   echo "expected deep-lane script to execute ignored signer provider stress test" >&2
   exit 1
