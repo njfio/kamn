@@ -51,6 +51,14 @@ Each failed metric includes:
 
 This keeps per-PR compute cost low while preserving confidence in target conformance trends.
 
+## CI Runtime/Cost Measurement Signals
+- `scripts/ci/summarize_budget_artifacts.sh` now emits narrow-diff telemetry slices from budget artifacts:
+  - `Narrow-diff records (<=3 changed files)`
+  - `Narrow-diff elapsed mean`
+  - `Narrow-diff runner mean`
+  - `Narrow-diff full-scope count`
+- These signals provide lightweight evidence of fast-lane cost efficiency while preserving safety fallback visibility (`Regression: #428`).
+
 ## Local Validation
 Run from repository root:
 
