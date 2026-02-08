@@ -271,6 +271,8 @@ pub use watchdog::{
 };
 pub use zk_message_proofs::{
     build_message_witness, evaluate_zk_option, phase4_baseline_options, recommend_phase4_plan,
-    ZkArchitectureOption, ZkDesignError, ZkEvaluationPolicy, ZkMessageWitness, ZkOptionAssessment,
-    ZkPhaseMilestone, ZkPhasePlan, ZkProofSystem, ZkRisk, ZkRiskSeverity, ZkVerificationTopology,
+    ProcessorProofAdmissionDecision, ProcessorProofAdmissionEvaluator,
+    ProcessorProofAdmissionInput, ProcessorProofArtifact, ZkArchitectureOption, ZkDesignError,
+    ZkEvaluationPolicy, ZkMessageWitness, ZkOptionAssessment, ZkPhaseMilestone, ZkPhasePlan,
+    ZkProofSystem, ZkRisk, ZkRiskSeverity, ZkVerificationTopology,
 };

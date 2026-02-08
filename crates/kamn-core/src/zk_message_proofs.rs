@@ -97,12 +97,131 @@ pub struct ZkMessageWitness {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProcessorProofArtifact {
+    pub artifact_id: String,
+    pub message_id: String,
+    pub payload_commitment: String,
+    pub proof_value: String,
+}
+
+impl ProcessorProofArtifact {
+    pub fn new(
+        artifact_id: &str,
+        message_id: &str,
+        payload_commitment: &str,
+        proof_value: &str,
+    ) -> Result<Self, ZkDesignError> {
+        require_non_empty_artifact_field("artifact_id", artifact_id)?;
+        require_non_empty_artifact_field("message_id", message_id)?;
+        require_non_empty_artifact_field("payload_commitment", payload_commitment)?;
+        require_non_empty_artifact_field("proof_value", proof_value)?;
+        Ok(Self {
+            artifact_id: artifact_id.to_owned(),
+            message_id: message_id.to_owned(),
+            payload_commitment: payload_commitment.to_owned(),
+            proof_value: proof_value.to_owned(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProcessorProofAdmissionInput {
+    pub message_id: String,
+    pub expected_payload_commitment: String,
+    pub artifact: ProcessorProofArtifact,
+}
+
+impl ProcessorProofAdmissionInput {
+    pub fn new(
+        message_id: &str,
+        expected_payload_commitment: &str,
+        artifact: ProcessorProofArtifact,
+    ) -> Result<Self, ZkDesignError> {
+        require_non_empty_artifact_field("message_id", message_id)?;
+        require_non_empty_artifact_field(
+            "expected_payload_commitment",
+            expected_payload_commitment,
+        )?;
+        Ok(Self {
+            message_id: message_id.to_owned(),
+            expected_payload_commitment: expected_payload_commitment.to_owned(),
+            artifact,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProcessorProofAdmissionDecision {
+    pub message_id: String,
+    pub artifact_id: String,
+    pub payload_commitment: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ProcessorProofAdmissionEvaluator {
+    accepted_artifact_ids: BTreeSet<String>,
+}
+
+impl ProcessorProofAdmissionEvaluator {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn evaluate(
+        &mut self,
+        input: ProcessorProofAdmissionInput,
+    ) -> Result<ProcessorProofAdmissionDecision, ZkDesignError> {
+        if input.artifact.message_id != input.message_id {
+            return Err(ZkDesignError::ProofArtifactMessageMismatch {
+                expected: input.message_id,
+                found: input.artifact.message_id,
+            });
+        }
+
+        if input.artifact.payload_commitment != input.expected_payload_commitment {
+            return Err(ZkDesignError::ProofArtifactCommitmentMismatch {
+                expected: input.expected_payload_commitment,
+                found: input.artifact.payload_commitment,
+            });
+        }
+
+        let expected_proof_value = format!("proof:ok:{}", input.artifact.artifact_id);
+        if input.artifact.proof_value != expected_proof_value {
+            return Err(ZkDesignError::ProofVerificationFailed {
+                artifact_id: input.artifact.artifact_id,
+                reason: "proof value failed deterministic verification".to_owned(),
+            });
+        }
+
+        if !self
+            .accepted_artifact_ids
+            .insert(input.artifact.artifact_id.clone())
+        {
+            return Err(ZkDesignError::ProofArtifactReplay(
+                input.artifact.artifact_id,
+            ));
+        }
+
+        Ok(ProcessorProofAdmissionDecision {
+            message_id: input.message_id,
+            artifact_id: input.artifact.artifact_id,
+            payload_commitment: input.expected_payload_commitment,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ZkDesignError {
     InvalidPolicy(String),
     InvalidOption { option: String, reason: String },
     EmptyOptionSet,
     InvalidPrivateField(String),
     MissingPrivateField(String),
+    InvalidProofArtifact(String),
+    ProofArtifactMessageMismatch { expected: String, found: String },
+    ProofArtifactCommitmentMismatch { expected: String, found: String },
+    ProofArtifactReplay(String),
+    ProofVerificationFailed { artifact_id: String, reason: String },
     EnvelopeError(MessageEnvelopeError),
 }
 
@@ -121,6 +240,25 @@ impl fmt::Display for ZkDesignError {
                     "private field `{field}` is missing from envelope body payload"
                 )
             }
+            Self::InvalidProofArtifact(message) => write!(f, "invalid proof artifact: {message}"),
+            Self::ProofArtifactMessageMismatch { expected, found } => write!(
+                f,
+                "proof artifact message mismatch: expected {expected}, found {found}"
+            ),
+            Self::ProofArtifactCommitmentMismatch { expected, found } => write!(
+                f,
+                "proof artifact commitment mismatch: expected {expected}, found {found}"
+            ),
+            Self::ProofArtifactReplay(artifact_id) => {
+                write!(f, "proof artifact replay detected: {artifact_id}")
+            }
+            Self::ProofVerificationFailed {
+                artifact_id,
+                reason,
+            } => write!(
+                f,
+                "proof verification failed for artifact {artifact_id}: {reason}"
+            ),
             Self::EnvelopeError(error) => write!(f, "invalid canonical envelope: {error}"),
         }
     }
@@ -469,6 +607,15 @@ fn left_high_risk_count(assessment: &ZkOptionAssessment) -> usize {
         .count()
 }
 
+fn require_non_empty_artifact_field(field: &str, value: &str) -> Result<(), ZkDesignError> {
+    if value.trim().is_empty() {
+        return Err(ZkDesignError::InvalidProofArtifact(format!(
+            "{field} must not be empty"
+        )));
+    }
+    Ok(())
+}
+
 fn validate_policy(policy: ZkEvaluationPolicy) -> Result<(), ZkDesignError> {
     if policy.max_verifier_latency_ms == 0 {
         return Err(ZkDesignError::InvalidPolicy(
@@ -538,7 +685,8 @@ fn fnv1a_64(input: &[u8]) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        evaluate_zk_option, phase4_baseline_options, ZkArchitectureOption, ZkDesignError,
+        evaluate_zk_option, phase4_baseline_options, ProcessorProofAdmissionEvaluator,
+        ProcessorProofAdmissionInput, ProcessorProofArtifact, ZkArchitectureOption, ZkDesignError,
         ZkEvaluationPolicy, ZkProofSystem, ZkVerificationTopology,
     };
 
@@ -575,6 +723,44 @@ mod tests {
             Err(ZkDesignError::InvalidOption {
                 option: "invalid".to_owned(),
                 reason: "proof_size_bytes must be greater than zero".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn processor_proof_artifact_rejects_empty_artifact_id() {
+        assert_eq!(
+            ProcessorProofArtifact::new(
+                "",
+                "urn:uuid:message-1",
+                "fnv1a64:abc",
+                "proof:ok:artifact-1",
+            ),
+            Err(ZkDesignError::InvalidProofArtifact(
+                "artifact_id must not be empty".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn processor_admission_rejects_invalid_proof_value() {
+        let artifact = ProcessorProofArtifact::new(
+            "artifact-1",
+            "urn:uuid:message-1",
+            "fnv1a64:abc",
+            "proof:tampered:artifact-1",
+        )
+        .expect("artifact should parse");
+        let input =
+            ProcessorProofAdmissionInput::new("urn:uuid:message-1", "fnv1a64:abc", artifact)
+                .expect("input should parse");
+        let mut evaluator = ProcessorProofAdmissionEvaluator::new();
+
+        assert_eq!(
+            evaluator.evaluate(input),
+            Err(ZkDesignError::ProofVerificationFailed {
+                artifact_id: "artifact-1".to_owned(),
+                reason: "proof value failed deterministic verification".to_owned(),
             })
         );
     }

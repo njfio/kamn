@@ -1,7 +1,8 @@
 use kamn_core::{
     build_message_witness, phase4_baseline_options, recommend_phase4_plan, AttachmentRef,
     CanonicalMessageEnvelope, EnvelopeEncryption, EnvelopeHeader, EnvelopeMetadata, EnvelopeProof,
-    MessageEnvelopeError, ZkArchitectureOption, ZkDesignError, ZkEvaluationPolicy, ZkProofSystem,
+    MessageEnvelopeError, ProcessorProofAdmissionEvaluator, ProcessorProofAdmissionInput,
+    ProcessorProofArtifact, ZkArchitectureOption, ZkDesignError, ZkEvaluationPolicy, ZkProofSystem,
     ZkVerificationTopology,
 };
 use std::collections::BTreeMap;
@@ -156,4 +157,103 @@ fn zk_message_proofs_regression_threshold_boundaries_are_inclusive() {
     .expect("boundary option should remain feasible");
 
     assert_eq!(plan.recommended_option, "boundary");
+}
+
+#[test]
+fn zk_message_proofs_regression_rejects_tampered_processor_proof_artifact() {
+    // Regression: #509
+    let envelope = valid_envelope();
+    let witness = build_message_witness(&envelope, &["task.description"])
+        .expect("witness generation should succeed");
+    let mut evaluator = ProcessorProofAdmissionEvaluator::new();
+
+    let artifact = ProcessorProofArtifact::new(
+        "artifact-1",
+        &envelope.envelope.id,
+        "fnv1a64:tampered",
+        "proof:ok:artifact-1",
+    )
+    .expect("artifact should parse");
+    let input = ProcessorProofAdmissionInput::new(
+        &envelope.envelope.id,
+        &witness.public_commitment,
+        artifact,
+    )
+    .expect("input should parse");
+
+    assert_eq!(
+        evaluator.evaluate(input),
+        Err(ZkDesignError::ProofArtifactCommitmentMismatch {
+            expected: witness.public_commitment,
+            found: "fnv1a64:tampered".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn zk_message_proofs_functional_processor_admission_accepts_valid_artifact() {
+    let envelope = valid_envelope();
+    let witness = build_message_witness(&envelope, &["task.description"])
+        .expect("witness generation should succeed");
+    let mut evaluator = ProcessorProofAdmissionEvaluator::new();
+
+    let artifact = ProcessorProofArtifact::new(
+        "artifact-2",
+        &envelope.envelope.id,
+        &witness.public_commitment,
+        "proof:ok:artifact-2",
+    )
+    .expect("artifact should parse");
+    let input = ProcessorProofAdmissionInput::new(
+        &envelope.envelope.id,
+        &witness.public_commitment,
+        artifact,
+    )
+    .expect("input should parse");
+
+    let decision = evaluator
+        .evaluate(input)
+        .expect("valid artifact should be admitted");
+    assert_eq!(decision.message_id, envelope.envelope.id);
+    assert_eq!(decision.artifact_id, "artifact-2".to_owned());
+}
+
+#[test]
+fn zk_message_proofs_integration_rejects_replayed_processor_artifact() {
+    let envelope = valid_envelope();
+    let witness = build_message_witness(&envelope, &["task.description"])
+        .expect("witness generation should succeed");
+    let mut evaluator = ProcessorProofAdmissionEvaluator::new();
+
+    let first_input = ProcessorProofAdmissionInput::new(
+        &envelope.envelope.id,
+        &witness.public_commitment,
+        ProcessorProofArtifact::new(
+            "artifact-3",
+            &envelope.envelope.id,
+            &witness.public_commitment,
+            "proof:ok:artifact-3",
+        )
+        .expect("artifact should parse"),
+    )
+    .expect("input should parse");
+    assert!(evaluator.evaluate(first_input).is_ok());
+
+    let replay_input = ProcessorProofAdmissionInput::new(
+        &envelope.envelope.id,
+        &witness.public_commitment,
+        ProcessorProofArtifact::new(
+            "artifact-3",
+            &envelope.envelope.id,
+            &witness.public_commitment,
+            "proof:ok:artifact-3",
+        )
+        .expect("artifact should parse"),
+    )
+    .expect("input should parse");
+
+    assert_eq!(
+        evaluator.evaluate(replay_input),
+        Err(ZkDesignError::ProofArtifactReplay("artifact-3".to_owned()))
+    );
 }
