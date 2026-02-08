@@ -6,6 +6,7 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
 ## Scope Delivered
 - Runtime watchdog attestation payload structure for state-divergence and liveness/censorship anomalies.
 - Deterministic severity mapping and evidence field requirements for operator workflows.
+- Deterministic runtime backpressure incident mapping for queue saturation and stale-peer queue purge signals.
 - Explicit incident response mapping to `docs/foundation/upgrade-rollback-runbook.md`.
 - Fast and cost-effective validation commands for docs contract changes.
 
@@ -37,6 +38,12 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
   - `WatchdogAnomalyReport`
   - `WatchdogAnomalyError`
   - `evaluate_daemon_watchdog_anomaly`
+- Runtime backpressure evaluator references:
+  - `RuntimeBackpressurePolicy`
+  - `RuntimeBackpressureInput`
+  - `RuntimeBackpressureDecision`
+  - `RuntimeBackpressureAction`
+  - `DeterministicBackpressureController`
 - Proof outcome mismatch projection references:
   - `ValidatorProofConsensusEvaluator`
   - `ValidatorProofConsensusDecision`
@@ -48,11 +55,15 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
 - Quorum anomaly severity is `critical` when observed quorum is below configured safety floor.
 - single-recipient deliveries are excluded from censorship classification.
 - Censorship classification must use bounded sample windows to avoid stale evidence amplification.
+- queue saturation incidents should include utilization and threshold evidence for deterministic response routing.
+- stale disconnected peer queue incidents should include peer identifier and pending queue depth evidence.
 - proof consensus alignment (`ConsensusValid`) projects `info` severity.
 - proof consensus invalid/replay/mismatch projects `critical` severity with deterministic fingerprint fields.
 - attestation replay for the same incident fingerprint is rejected (`Regression: #383`).
 - hash mismatch false-negative is rejected (`Regression: #381`).
 - censorship edge-signal remains critical when targeted peers are at least two and delivery ratio is 500 per-mille or lower (`Regression: #382`).
+- backpressure overflow sample validation rejects queue depth above capacity (`Regression: #618`).
+- stale disconnected peer queue purge mapping remains deterministic (`Regression: #618`).
 
 ## Incident Response Mapping
 - Runtime watchdog output is triaged with `WatchdogSeverity` and `incident_fingerprint`.
@@ -69,6 +80,7 @@ cargo test -p kamn-core --test watchdog_node_docs
 cargo test -p kamn-core --test upgrade_rollback_runbook_docs
 cargo test -p kamn-core divergence_watchdog
 cargo test -p kamn-core watchdog_anomaly
+cargo test -p kamn-core runtime::tests::functional_runtime_backpressure_classifies_queue_saturation
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
 ```

@@ -11,6 +11,8 @@ fn doc_contains_runtime_network_scope_and_models() {
     assert!(DOC.contains("PeerLifecycle"));
     assert!(DOC.contains("AuthenticatedPeerFrame"));
     assert!(DOC.contains("PeerFrameAuthenticator"));
+    assert!(DOC.contains("RuntimeBackpressurePolicy"));
+    assert!(DOC.contains("DeterministicBackpressureController"));
     assert!(DOC.contains("BoundedRuntimeQueue<T>"));
     assert!(DOC.contains("RuntimeLifecycleError"));
     assert!(DOC.contains("NetworkFaultSimulationInput"));
@@ -26,6 +28,7 @@ fn doc_contains_peer_lifecycle_and_queue_rules() {
     assert!(DOC.contains("## Peer Lifecycle Rules"));
     assert!(DOC.contains("## Authenticated Peer Transport Framing Rules"));
     assert!(DOC.contains("## Queue Guard Rules"));
+    assert!(DOC.contains("## Deterministic Backpressure and Stale-Peer Queue Rules"));
     assert!(DOC.contains("## Scheduler Determinism Rules"));
     assert!(DOC.contains("## Recovery and Rejoin Guard Rules"));
     assert!(DOC.contains("version/hash/cursor"));
@@ -39,6 +42,8 @@ fn doc_contains_peer_lifecycle_and_queue_rules() {
         "frame|<frame_id>|<sender_peer_did>|<recipient_peer_did>|<nonce>|<payload>|<signature>"
     ));
     assert!(DOC.contains("monotonic sender nonce progression"));
+    assert!(DOC.contains("queue depth less than or equal to queue capacity"));
+    assert!(DOC.contains("PurgeStalePeerQueue"));
 }
 
 #[test]
@@ -59,6 +64,12 @@ fn doc_contains_recovery_check_cli_command_example() {
 fn doc_contains_fast_and_cost_effective_validation_lane() {
     assert!(DOC.contains("## Fast and Cost-Effective Validation"));
     assert!(DOC.contains("cargo test -p kamn-core runtime::tests::"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core runtime::tests::functional_runtime_backpressure_classifies_queue_saturation"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core runtime::tests::regression_runtime_backpressure_rejects_capacity_overflow_sample"
+    ));
     assert!(DOC.contains(
         "cargo test -p kamn-core runtime::tests::functional_authenticated_peer_frame_roundtrips_wire_and_signature"
     ));
@@ -98,6 +109,10 @@ fn regression_requires_rejoin_and_overflow_rejection_rules() {
     ));
     assert!(DOC.contains("forged or unauthorized peer frame rejection (`Regression: #618`)"));
     assert!(DOC.contains("replayed peer-frame nonce rejection (`Regression: #618`)"));
+    assert!(DOC.contains("queue depth above capacity is rejected (`Regression: #618`)"));
+    assert!(DOC.contains(
+        "stale disconnected peer queue purge decision remains deterministic (`Regression: #618`)"
+    ));
     assert!(DOC.contains("snapshot stale metadata rejection (`Regression: #617`)"));
     assert!(DOC.contains("snapshot restore cursor mismatch rejection (`Regression: #617`)"));
 }

@@ -24,6 +24,16 @@ if ! grep -q "runtime snapshot contract lane tests passed." "$TMP_OUT"; then
   exit 1
 fi
 
+if ! grep -q "functional_runtime_backpressure_classifies_queue_saturation" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include backpressure saturation functional coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "regression_runtime_backpressure_rejects_capacity_overflow_sample" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include backpressure overflow regression coverage" >&2
+  exit 1
+fi
+
 if ! grep -q "functional_authenticated_peer_frame_roundtrips_wire_and_signature" "$FAST_SCRIPT"; then
   echo "expected runtime snapshot contract lane to include authenticated peer frame roundtrip coverage" >&2
   exit 1
@@ -36,6 +46,11 @@ fi
 
 if ! grep -q "regression_replayed_peer_frame_nonce_is_rejected" "$FAST_SCRIPT"; then
   echo "expected runtime snapshot contract lane to include replay nonce regression coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_watchdog_attestation_docs" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include runtime watchdog attestation docs coverage" >&2
   exit 1
 fi
 
