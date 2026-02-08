@@ -37,6 +37,37 @@ impl OutputMode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DiagnosticsMode {
+    Basic,
+    Snapshot,
+}
+
+impl DiagnosticsMode {
+    fn basic() -> Self {
+        Self::Basic
+    }
+
+    fn snapshot() -> Self {
+        Self::Snapshot
+    }
+
+    fn parse(value: &str) -> Result<Self, ConfigError> {
+        match value {
+            "basic" => Ok(Self::basic()),
+            "snapshot" => Ok(Self::snapshot()),
+            other => Err(ConfigError::InvalidDiagnosticsMode(other.to_owned())),
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Basic => "basic",
+            Self::Snapshot => "snapshot",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum LocalProfile {
     Processor,
     Listener,
@@ -88,10 +119,13 @@ struct NodeCli {
     enable_gossip: bool,
     sync_mode: SyncMode,
     output_mode: OutputMode,
+    diagnostics_mode: DiagnosticsMode,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct NodeBootstrapReport {
+    diagnostics_mode: String,
+    component_count: usize,
     profile: Option<String>,
     role: String,
     chain_id: String,
@@ -118,6 +152,7 @@ where
     let mut enable_gossip = true;
     let mut sync_mode = SyncMode::Fast;
     let mut output_mode = OutputMode::text();
+    let mut diagnostics_mode = DiagnosticsMode::basic();
     let mut role_overridden = false;
     let mut chain_id_overridden = false;
     let mut chain_version_overridden = false;
@@ -178,6 +213,12 @@ where
                     .ok_or(ConfigError::MissingArgumentValue("--output"))?;
                 output_mode = OutputMode::parse(&value)?;
             }
+            "--diagnostics" => {
+                let value = iter
+                    .next()
+                    .ok_or(ConfigError::MissingArgumentValue("--diagnostics"))?;
+                diagnostics_mode = DiagnosticsMode::parse(&value)?;
+            }
             unknown => {
                 return Err(ConfigError::UnknownArgument(unknown.to_owned()));
             }
@@ -216,6 +257,7 @@ where
         enable_gossip,
         sync_mode,
         output_mode,
+        diagnostics_mode,
     })
 }
 
@@ -232,7 +274,7 @@ fn run() -> Result<(), ConfigError> {
     };
 
     let plan = bootstrap(config)?;
-    let report = build_bootstrap_report(&plan, cli.profile);
+    let report = build_bootstrap_report(&plan, cli.profile, cli.diagnostics_mode);
     println!("{}", render_bootstrap_report(&report, cli.output_mode));
 
     Ok(())
@@ -241,9 +283,18 @@ fn run() -> Result<(), ConfigError> {
 fn build_bootstrap_report(
     plan: &BootstrapPlan,
     profile: Option<LocalProfile>,
+    diagnostics_mode: DiagnosticsMode,
 ) -> NodeBootstrapReport {
     let operational_profile = plan.config.operational_profile();
+    let components = plan
+        .wiring
+        .all_components()
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<Vec<String>>();
     NodeBootstrapReport {
+        diagnostics_mode: diagnostics_mode.as_str().to_owned(),
+        component_count: components.len(),
         profile: profile.map(LocalProfile::as_str).map(str::to_owned),
         role: plan.config.role.as_str().to_owned(),
         chain_id: plan.config.chain_id.clone(),
@@ -255,12 +306,7 @@ fn build_bootstrap_report(
         sync_recovery: format!("{:?}", operational_profile.recovery_strategy),
         state_version: plan.state_schema.version.0,
         pending_migrations: plan.migration_plan.steps.len(),
-        components: plan
-            .wiring
-            .all_components()
-            .into_iter()
-            .map(str::to_owned)
-            .collect(),
+        components,
     }
 }
 
@@ -274,7 +320,8 @@ fn render_bootstrap_report(report: &NodeBootstrapReport, mode: OutputMode) -> St
 fn render_text_report(report: &NodeBootstrapReport) -> String {
     let profile = report.profile.as_deref().unwrap_or("none");
     format!(
-        "KAMN node bootstrap\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  components: {}",
+        "KAMN node bootstrap\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  components: {}",
+        report.diagnostics_mode,
         profile,
         report.role,
         report.chain_id,
@@ -290,6 +337,7 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         report.sync_recovery,
         report.state_version,
         report.pending_migrations,
+        report.component_count,
         report.components.join(", "),
     )
 }
@@ -306,7 +354,8 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         .collect::<Vec<String>>()
         .join(",");
     format!(
-        "{{\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"components\":[{}]}}",
+        "{{\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"components\":[{}]}}",
+        json_escape(&report.diagnostics_mode),
         profile,
         json_escape(&report.role),
         json_escape(&report.chain_id),
@@ -318,6 +367,7 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         json_escape(&report.sync_recovery),
         report.state_version,
         report.pending_migrations,
+        report.component_count,
         components,
     )
 }
@@ -342,7 +392,7 @@ fn main() -> ExitCode {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_bootstrap_report, parse_args, render_bootstrap_report, LocalProfile,
+        build_bootstrap_report, parse_args, render_bootstrap_report, DiagnosticsMode, LocalProfile,
         NodeBootstrapReport, OutputMode,
     };
     use kamn_core::{bootstrap, ConfigError, NodeConfig, NodeRole, SyncMode};
@@ -364,6 +414,7 @@ mod tests {
         assert!(parsed.enable_gossip);
         assert_eq!(parsed.sync_mode, SyncMode::Fast);
         assert_eq!(parsed.output_mode, OutputMode::text());
+        assert_eq!(parsed.diagnostics_mode, DiagnosticsMode::basic());
     }
 
     #[test]
@@ -410,6 +461,20 @@ mod tests {
     }
 
     #[test]
+    fn parses_diagnostics_snapshot_flag() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--diagnostics".to_owned(),
+            "snapshot".to_owned(),
+        ];
+
+        let parsed = parse_args(args).expect("diagnostics args should parse");
+        assert_eq!(parsed.diagnostics_mode, DiagnosticsMode::snapshot());
+    }
+
+    #[test]
     fn parses_local_listener_profile_defaults() {
         let args = vec![
             "kamn-node".to_owned(),
@@ -453,6 +518,8 @@ mod tests {
     #[test]
     fn functional_json_render_is_deterministic() {
         let report = NodeBootstrapReport {
+            diagnostics_mode: "basic".to_owned(),
+            component_count: 2,
             profile: None,
             role: "processor".to_owned(),
             chain_id: "kamn-devnet".to_owned(),
@@ -493,9 +560,10 @@ mod tests {
             sync_mode: parsed.sync_mode,
         };
         let plan = bootstrap(config).expect("bootstrap should succeed");
-        let report = build_bootstrap_report(&plan, parsed.profile);
+        let report = build_bootstrap_report(&plan, parsed.profile, parsed.diagnostics_mode);
         let rendered = render_bootstrap_report(&report, parsed.output_mode);
 
+        assert!(rendered.contains("\"diagnostics_mode\":\"basic\""));
         assert!(rendered.contains("\"profile\":null"));
         assert!(rendered.contains("\"role\":\"processor\""));
         assert!(rendered.contains("\"chain_id\":\"kamn-devnet\""));
@@ -522,13 +590,42 @@ mod tests {
             sync_mode: parsed.sync_mode,
         };
         let plan = bootstrap(config).expect("bootstrap should succeed");
-        let report = build_bootstrap_report(&plan, parsed.profile);
+        let report = build_bootstrap_report(&plan, parsed.profile, parsed.diagnostics_mode);
         let rendered = render_bootstrap_report(&report, parsed.output_mode);
 
+        assert!(rendered.contains("\"diagnostics_mode\":\"basic\""));
         assert!(rendered.contains("\"profile\":\"local-listener\""));
         assert!(rendered.contains("\"role\":\"listener\""));
         assert!(rendered.contains("\"chain_id\":\"kamn-localnet\""));
         assert!(rendered.contains("\"storage_dir\":\"./data/listener\""));
+    }
+
+    #[test]
+    fn integration_diagnostics_snapshot_includes_component_count() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+            "--diagnostics".to_owned(),
+            "snapshot".to_owned(),
+        ];
+        let parsed = parse_args(args).expect("diagnostics args should parse");
+        let config = NodeConfig {
+            chain_id: parsed.chain_id,
+            chain_version: parsed.chain_version,
+            role: parsed.role,
+            storage_dir: parsed.storage_dir,
+            enable_gossip: parsed.enable_gossip,
+            sync_mode: parsed.sync_mode,
+        };
+        let plan = bootstrap(config).expect("bootstrap should succeed");
+        let report = build_bootstrap_report(&plan, parsed.profile, parsed.diagnostics_mode);
+        let rendered = render_bootstrap_report(&report, parsed.output_mode);
+
+        assert!(rendered.contains("\"diagnostics_mode\":\"snapshot\""));
+        assert!(rendered.contains("\"component_count\":"));
     }
 
     #[test]
@@ -581,6 +678,22 @@ mod tests {
         assert_eq!(
             parse_args(args),
             Err(ConfigError::InvalidNodeProfile("local-unknown".to_owned()))
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_diagnostics_mode() {
+        // Regression: #313
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--diagnostics".to_owned(),
+            "extended".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::InvalidDiagnosticsMode("extended".to_owned()))
         );
     }
 }
