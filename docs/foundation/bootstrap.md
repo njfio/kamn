@@ -50,6 +50,7 @@ For security control ownership and enforcement mapping, see `docs/foundation/thr
 For anti-hallucination instruction validation controls, see `docs/foundation/instruction-verification.md`.
 For deterministic key lifecycle and rotation transitions, see `docs/foundation/key-lifecycle.md`.
 For tamper-evident key lifecycle audit trail verification controls, see `docs/foundation/key-lifecycle-audit-trails.md`.
+For pluggable local/secure signer backend controls, see `docs/foundation/signer-backend-abstraction.md`.
 For key compromise containment and recovery workflows, see `docs/foundation/key-recovery.md`.
 For Python SDK parity slice, see `docs/foundation/python-sdk-beta.md`.
 For DID method and canonical DID document schema controls, see `docs/foundation/did-method.md`.

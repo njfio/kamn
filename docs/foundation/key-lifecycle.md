@@ -2,6 +2,7 @@
 
 This document captures the first implementation slice for deterministic key lifecycle and rotation transitions.
 For tamper-evident audit trail verification controls, see `docs/foundation/key-lifecycle-audit-trails.md`.
+For pluggable local/secure signer backend controls, see `docs/foundation/signer-backend-abstraction.md`.
 
 ## Scope Delivered
 - Added `crates/kamn-core/src/key_lifecycle.rs` with:

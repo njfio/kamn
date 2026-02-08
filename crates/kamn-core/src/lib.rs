@@ -26,6 +26,7 @@ pub mod operator_binding;
 pub mod redaction_compliance;
 pub mod retention_engine;
 pub mod runtime;
+pub mod signer_backend;
 pub mod smoke;
 pub mod state;
 pub mod task_artifacts;
@@ -124,6 +125,10 @@ pub use retention_engine::{
     RetentionPolicyEngine, RetentionPolicyError, RetentionRecord, RetentionStatus,
 };
 pub use runtime::RuntimeWiring;
+pub use signer_backend::{
+    BackendSignature, LocalSignerBackend, SecureSignerBackend, SignerBackend, SignerBackendError,
+    SignerBackendRouter, SigningRequest,
+};
 pub use smoke::{ProducedBlock, RoleSmokeNetwork, SmokeError};
 pub use state::{
     canonical_state_key, AppStateSchema, StateKeyError, StateVersion, APP_STATE_VERSION,
