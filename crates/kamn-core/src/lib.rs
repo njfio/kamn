@@ -224,9 +224,10 @@ pub use retention_engine::{
     RetentionPolicyEngine, RetentionPolicyError, RetentionRecord, RetentionStatus,
 };
 pub use runtime::{
-    simulate_daemon_network_fault, BoundedRuntimeQueue, DeterministicNetworkFaultSimulator,
-    DeterministicProposalPlanner, NetworkFaultSimulationError, NetworkFaultSimulationInput,
-    NetworkFaultSimulationReport, PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState,
+    simulate_daemon_network_fault, AuthenticatedPeerFrame, AuthenticatedPeerFrameError,
+    BoundedRuntimeQueue, DeterministicNetworkFaultSimulator, DeterministicProposalPlanner,
+    NetworkFaultSimulationError, NetworkFaultSimulationInput, NetworkFaultSimulationReport,
+    PeerFrameAuthenticator, PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState,
     ProposalCandidate, ProposalPlan, ProposalPlannerError, RecoveryGuardError, RecoveryRejoinGuard,
     RecoveryStatus, RejoinAttempt, RuntimeLifecycleError, RuntimeQueueError, RuntimeWiring,
 };

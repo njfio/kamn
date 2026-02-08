@@ -8,6 +8,10 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `PeerLifecycleEvent`
   - `PeerLifecycle`
   - `RuntimeLifecycleError`
+- Added authenticated peer transport framing primitives in `crates/kamn-core/src/runtime.rs`:
+  - `AuthenticatedPeerFrame`
+  - `AuthenticatedPeerFrameError`
+  - `PeerFrameAuthenticator`
 - Added bounded FIFO queue primitives in `crates/kamn-core/src/runtime.rs`:
   - `BoundedRuntimeQueue<T>`
   - `RuntimeQueueError`
@@ -92,6 +96,29 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Invalid transitions return `RuntimeLifecycleError::InvalidTransition`.
 - Empty peer IDs are rejected with `RuntimeLifecycleError::InvalidPeerId`.
 
+## Authenticated Peer Transport Framing Rules
+- `AuthenticatedPeerFrame` enforces deterministic wire fields:
+  - non-empty `frame_id`
+  - valid `kamn:did:*` sender and recipient peer DIDs
+  - positive nonce
+  - non-empty payload and signature
+  - scalar fields must not include `|`, newline, or carriage-return delimiters
+- Deterministic wire format:
+  - `frame|<frame_id>|<sender_peer_did>|<recipient_peer_did>|<nonce>|<payload>|<signature>`
+- Signatures are validated against deterministic baseline profile inputs:
+  - sender DID
+  - nonce
+  - recipient DID (bound into signature context)
+  - payload
+- `PeerFrameAuthenticator` enforces:
+  - local recipient DID match
+  - sender allowlist membership
+  - monotonic sender nonce progression (strictly increasing)
+- Regression contract:
+  - forged signatures are rejected (`Regression: #618`)
+  - unauthorized sender DIDs are rejected (`Regression: #618`)
+  - replayed sender nonces are rejected (`Regression: #618`)
+
 ## Queue Guard Rules
 - `BoundedRuntimeQueue<T>` is FIFO and preserves insertion order.
 - Capacity must be greater than zero.
@@ -172,16 +199,20 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Unit:
   - invalid transition checks
   - empty peer ID and zero-capacity queue rejection
+  - invalid peer-frame wire payload and delimiter rejection
+  - deterministic signature mismatch rejection
   - empty proposal candidate ID rejection
   - empty resume-token rejoin attempt rejection
   - snapshot cursor/hash validation and continuity regression checks
 - Functional:
   - peer lifecycle connect/degrade/recover/disconnect flow
+  - authenticated peer-frame wire roundtrip and signature verification
   - planner deterministic ordering contract
   - rejoin acceptance with matching snapshot
   - snapshot recovery truncation with stale metadata suffix
 - Integration:
   - bounded FIFO queue behavior under capacity
+  - inbound peer-frame authenticator monotonic nonce acceptance flow
   - queue-drain to planner ordering preservation
   - lagging-node catch-up guidance output
   - daemon network-fault simulation with queue-overflow/degradation reporting
@@ -198,9 +229,12 @@ This document captures the initial runtime-network foundation slice for peer lif
   - listener attestation replay rejection (`Regression: #371`)
   - outbound under-quorum rejection (`Regression: #372`)
   - network fault simulation censorship critical-boundary guard (`Regression: #618`)
+  - forged or unauthorized peer frame rejection (`Regression: #618`)
+  - replayed peer-frame nonce rejection (`Regression: #618`)
   - snapshot stale metadata rejection (`Regression: #617`)
   - snapshot restore cursor mismatch rejection (`Regression: #617`)
 - Performance:
+  - bounded PR-lane authenticated peer-frame validation budget check
   - bounded PR-lane deterministic fault simulation budget check
   - bounded PR-lane snapshot recovery budget check
   - scheduled chaos lane stress hook (`--ignored`)
@@ -211,6 +245,8 @@ Run targeted checks first:
 
 ```bash
 cargo test -p kamn-core runtime::tests::
+cargo test -p kamn-core runtime::tests::functional_authenticated_peer_frame_roundtrips_wire_and_signature
+cargo test -p kamn-core runtime::tests::regression_forged_or_unauthorized_peer_frame_is_rejected
 cargo test -p kamn-core network_fault_simulation
 cargo test -p kamn-core snapshot_store
 cargo test -p kamn-core --test runtime_network_docs

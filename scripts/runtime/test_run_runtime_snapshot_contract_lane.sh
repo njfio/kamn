@@ -24,6 +24,21 @@ if ! grep -q "runtime snapshot contract lane tests passed." "$TMP_OUT"; then
   exit 1
 fi
 
+if ! grep -q "functional_authenticated_peer_frame_roundtrips_wire_and_signature" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include authenticated peer frame roundtrip coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "regression_forged_or_unauthorized_peer_frame_is_rejected" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include forged/unauthorized peer frame regression coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "regression_replayed_peer_frame_nonce_is_rejected" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include replay nonce regression coverage" >&2
+  exit 1
+fi
+
 if ! grep -Fq "run_runtime_snapshot_contract_lane.sh" "$DEEP_SCRIPT"; then
   echo "expected deep-lane script to execute runtime snapshot fast-lane checks first" >&2
   exit 1
