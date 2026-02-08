@@ -41,6 +41,7 @@ pub mod task_payment;
 pub mod telegram_bridge;
 pub mod token;
 pub mod transaction;
+pub mod trust_score;
 pub mod watchdog;
 pub mod zk_message_proofs;
 
@@ -181,6 +182,10 @@ pub use token::{
 };
 pub use transaction::{
     BaselineTransaction, TransactionGuardError, TransactionGuards, GENESIS_STATE_HASH,
+};
+pub use trust_score::{
+    calculate_trust_score, recalculate_and_persist_trust_score, TrustScoreBreakdown,
+    TrustScoreError, TRUST_SCORE_ENGINE_VERSION, TRUST_SCORE_MAX, TRUST_SCORE_MIN,
 };
 pub use watchdog::{
     WatchdogAlert, WatchdogAlertKind, WatchdogConfig, WatchdogError, WatchdogNode,
