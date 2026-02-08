@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import AsyncIterator, Dict, List, Optional
 
 
 class SDKError(Exception):
@@ -96,6 +96,10 @@ class KAMNClient:
         drained = list(inbox)
         inbox.clear()
         return drained
+
+    async def receive_stream(self, did: str) -> AsyncIterator[Dict[str, object]]:
+        for message in self.receive(did):
+            yield dict(message)
 
     def create_task(self, creator_did: str, task_type: str, description: str) -> str:
         self._ensure_known_agent(creator_did)
