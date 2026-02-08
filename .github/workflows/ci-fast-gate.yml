@@ -59,6 +59,10 @@ jobs:
           bash scripts/deploy/test_preflight_topology.sh
           bash scripts/deploy/test_generate_bundle.sh
 
+      - name: Run frontend dashboard tests
+        if: steps.scope.outputs.run_frontend_dashboard_tests == 'true'
+        run: bash scripts/frontend/test_dashboard_package.sh
+
       - name: Set up Rust toolchain
         if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_sdk_parity_matrix == 'true'
         uses: dtolnay/rust-toolchain@stable
