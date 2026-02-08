@@ -31,5 +31,7 @@ bash "$ROOT_DIR/scripts/deploy/test_preflight_topology.sh"
 bash "$ROOT_DIR/scripts/deploy/test_generate_bundle.sh"
 bash "$ROOT_DIR/scripts/deploy/test_generate_gonogo_evidence_bundle.sh"
 bash "$ROOT_DIR/scripts/deploy/test_run_gonogo_evidence_contract_lane.sh"
+bash "$ROOT_DIR/scripts/deploy/test_generate_staging_rehearsal_bundle.sh"
+bash "$ROOT_DIR/scripts/deploy/test_run_staging_rehearsal_contract_lane.sh"
 
 echo "All CI tool regression tests passed."
