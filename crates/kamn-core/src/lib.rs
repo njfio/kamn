@@ -125,7 +125,10 @@ pub use did::{
     canonical_did_document, AgentDid, AgentDidError, AgentDidMetadata, DidDocument,
     DidDocumentError, DidService, DidVerificationMethod,
 };
-pub use did_registry::{DidRegistry, DidRegistryError};
+pub use did_registry::{
+    DidRegistry, DidRegistryError, DidSubmissionFinalityRecord, DidSubmissionFinalityStatus,
+    DidSubmissionRetryClass,
+};
 pub use direct_message_crypto::{
     DirectMessageCiphertext, DirectMessageCryptoEngine, DirectMessageCryptoError,
     DIRECT_MESSAGE_CIPHER_ALGORITHM, DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
