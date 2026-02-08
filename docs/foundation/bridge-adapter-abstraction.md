@@ -21,10 +21,14 @@ This document describes the first implementation slice for bridge adapter abstra
   - `fixtures/bridge_replay/replay_validation_cases.json`
   - `scripts/bridge/run_bridge_replay_case.sh`
   - `scripts/bridge/run_bridge_replay_matrix.sh`
+- Added staged credentialed bridge lane with secret-redaction policy checks:
+  - `scripts/bridge/run_bridge_credential_redaction_check.py`
+  - `scripts/bridge/run_bridge_credentialed_contract_lane.sh`
+  - `scripts/bridge/run_bridge_credentialed_deep_lane.sh`
 - Added CI scope routing for bridge-only diffs:
   - selector output `run_bridge_replay_harness`
   - selector output `bridge_replay_suites` to run changed adapter subsets.
-  - fast-gate bridge harness command runs only for bridge-related path changes and passes selected suites.
+  - fast-gate bridge harness command runs only for bridge-related path changes, passes selected suites, and runs credential redaction checks.
 
 ## Design Notes
 - Inbound flow:
@@ -48,12 +52,26 @@ This document describes the first implementation slice for bridge adapter abstra
   - malformed ingress: route-target mismatch and unknown route rejection paths.
   - signature-failure: unauthorized approver signatures are rejected for Discord and cross-chain outbound quorum flows.
 
+## Credentialed Staging + Redaction Contract (Issue #638)
+- Contract lane:
+  - runs bridge replay matrix subset for credentialed connectors.
+  - executes `run_bridge_credential_redaction_check.py` with staged credential fixtures.
+  - fails on any raw secret leakage in report or command output.
+- Deep lane:
+  - runs full bridge suite replay matrix plus deep redaction sample contract.
+  - emits deterministic report artifact (`bridge-credential-redaction-report.json`).
+- Regression policy:
+  - credential leakage and replay gaps remain blocked (`Regression: #621`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
 cargo test -p kamn-core --test bridge_adapter
 bash scripts/bridge/run_bridge_replay_matrix.sh --fixture fixtures/bridge_replay/replay_validation_cases.json --suites bridge_adapter,telegram_bridge --output-json /tmp/bridge-replay-report.json
+bash scripts/bridge/test_run_bridge_credential_redaction_check.sh
+bash scripts/bridge/test_run_bridge_credentialed_contract_lane.sh
+bash scripts/bridge/run_bridge_credentialed_deep_lane.sh
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core
@@ -69,3 +87,4 @@ cargo test -p kamn-core
 - cross-chain inbound projection also preserves single-pass replay safety (`Regression: #443`).
 - bridge replay fixture matrix guards duplicate/stale/malformed replay behavior across adapters (`Regression: #587`).
 - bridge replay fixture matrix includes signature-failure class coverage and adapter subset execution (`Regression: #587`).
+- staged credentialed bridge lane blocks raw secret exposure in logs/artifacts while retaining replay safety (`Regression: #621`).
