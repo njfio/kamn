@@ -60,6 +60,7 @@ For direct/group plus specialized broadcast/task/marketplace/governance channel 
 For channel permission and retention policy controls, see `docs/foundation/channel-permissions-retention.md`.
 For agent key hierarchy role bindings and ephemeral session key controls, see `docs/foundation/agent-key-hierarchy.md`.
 For direct-message encryption path controls, see `docs/foundation/direct-message-encryption.md`.
+For group sender-key distribution and rotation controls, see `docs/foundation/group-sender-key-rotation.md`.
 For task state machine and legal transition validation controls, see `docs/foundation/task-state-machine.md`.
 For task operation command handling controls, see `docs/foundation/task-operations.md`.
 For bridge inbound/outbound adapter abstraction controls, see `docs/foundation/bridge-adapter-abstraction.md`.

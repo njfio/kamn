@@ -10,6 +10,7 @@ pub mod did;
 pub mod did_registry;
 pub mod direct_message_crypto;
 pub mod escrow;
+pub mod group_channel_crypto;
 pub mod instruction_verify;
 pub mod invariants;
 pub mod key_lifecycle;
@@ -66,6 +67,11 @@ pub use direct_message_crypto::{
     DIRECT_MESSAGE_CIPHER_ALGORITHM, DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
 };
 pub use escrow::{EscrowLifecycle, EscrowLifecycleError, EscrowStatus};
+pub use group_channel_crypto::{
+    GroupChannelCryptoEngine, GroupChannelCryptoError, GroupMessageCiphertext,
+    SenderKeyDistributionRecord, GROUP_MESSAGE_CIPHER_ALGORITHM,
+    GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM,
+};
 pub use instruction_verify::{
     InstructionClaim, InstructionRecord, InstructionVerifier, VerificationContext,
     VerificationFailure, VerificationOutcome,
