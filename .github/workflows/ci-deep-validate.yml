@@ -48,6 +48,9 @@ jobs:
         id: rust_cache
         if: steps.detect.outputs.run_rust == 'true'
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: kamn-rust-ci-v1
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Format check
         if: steps.detect.outputs.run_rust == 'true'
@@ -72,7 +75,7 @@ jobs:
           bash scripts/ci/run_with_retry.sh \
             --label invariant-harness-deep \
             --max-attempts 1 \
-            -- bash scripts/ci/run_invariant_harness.sh --mode deep
+            -- bash scripts/ci/run_invariant_harness.sh --mode deep --parallelism 2
 
       - name: No Rust project present
         if: steps.detect.outputs.run_rust != 'true'
