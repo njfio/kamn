@@ -62,6 +62,8 @@ jobs:
           bash scripts/deploy/test_run_gonogo_evidence_contract_lane.sh
           bash scripts/deploy/test_generate_staging_rehearsal_bundle.sh
           bash scripts/deploy/test_run_staging_rehearsal_contract_lane.sh
+          bash scripts/deploy/test_generate_dr_evidence_bundle.sh
+          bash scripts/deploy/test_run_dr_evidence_contract_lane.sh
 
       - name: Run frontend dashboard tests
         if: steps.scope.outputs.run_frontend_dashboard_tests == 'true'
