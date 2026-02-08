@@ -63,6 +63,7 @@ For direct-message encryption path controls, see `docs/foundation/direct-message
 For group sender-key distribution and rotation controls, see `docs/foundation/group-sender-key-rotation.md`.
 For task state machine and legal transition validation controls, see `docs/foundation/task-state-machine.md`.
 For task operation command handling controls, see `docs/foundation/task-operations.md`.
+For task artifact integrity references and provenance metadata controls, see `docs/foundation/task-artifacts-provenance.md`.
 For bridge inbound/outbound adapter abstraction controls, see `docs/foundation/bridge-adapter-abstraction.md`.
 For CI cache strategy and bounded parallelism controls, see `docs/foundation/ci-caching-parallelism.md`.
 For flaky-test quarantine and bounded retry controls, see `docs/foundation/ci-flaky-quarantine.md`.
