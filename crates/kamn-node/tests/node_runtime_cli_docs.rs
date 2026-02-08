@@ -12,7 +12,9 @@ fn doc_contains_output_mode_scope_and_rules() {
     assert!(DOC.contains("ConfigError::InvalidDiagnosticsMode"));
     assert!(DOC.contains("--runtime-mode planning"));
     assert!(DOC.contains("--runtime-mode recovery-check"));
+    assert!(DOC.contains("--runtime-mode daemon"));
     assert!(DOC.contains("ConfigError::InvalidRuntimeMode"));
+    assert!(DOC.contains("ConfigError::InvalidDaemonControlArgument"));
 }
 
 #[test]
@@ -27,6 +29,9 @@ fn doc_contains_deterministic_json_fields() {
     assert!(DOC.contains("recovery_expected_state_version"));
     assert!(DOC.contains("recovery_attempt_count"));
     assert!(DOC.contains("recovery_decisions"));
+    assert!(DOC.contains("daemon_max_ticks"));
+    assert!(DOC.contains("daemon_executed_ticks"));
+    assert!(DOC.contains("daemon_completion_reason"));
     assert!(DOC.contains("sync_mode"));
     assert!(DOC.contains("components"));
 }
@@ -69,6 +74,15 @@ fn doc_contains_runtime_recovery_check_rules() {
 fn doc_contains_runtime_mode_command_examples() {
     assert!(DOC.contains("`kamn-node --role processor --runtime-mode planning`"));
     assert!(DOC.contains("`kamn-node --role processor --runtime-mode recovery-check`"));
+    assert!(DOC.contains("`kamn-node --role processor --runtime-mode daemon`"));
+}
+
+#[test]
+fn doc_contains_runtime_daemon_rules() {
+    assert!(DOC.contains("## Daemon Runtime Rules"));
+    assert!(DOC.contains("--daemon-max-ticks"));
+    assert!(DOC.contains("--daemon-tick-interval-ms"));
+    assert!(DOC.contains("tick-budget-exhausted"));
 }
 
 #[test]
@@ -122,4 +136,10 @@ fn regression_requires_runtime_recovery_error_rule_references() {
     assert!(DOC.contains("ConfigError::InvalidExpectedStateVersion"));
     assert!(DOC.contains("ConfigError::InvalidRejoinAttemptArgument"));
     assert!(DOC.contains("ConfigError::RuntimeRecovery"));
+}
+
+#[test]
+fn regression_requires_runtime_daemon_control_rules() {
+    // Regression: #348
+    assert!(DOC.contains("zero/invalid daemon bounded-loop control rejection (`Regression: #348`)"));
 }
