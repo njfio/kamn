@@ -14,12 +14,20 @@ This document captures the first implementation slice for signer backend abstrac
 ## Backend Compatibility Rules
 - `local-software` backend:
   - signs and verifies deterministic signatures for valid requests.
-- `secure-mock` backend:
-  - requires key IDs with `secure:` prefix.
-  - returns explicit `ProviderUnavailable` when disabled/unavailable.
+- secure provider adapters:
+  - `secure-mock` for deterministic mock custody.
+  - `secure-aws-kms-emulator` for production-style provider adapter coverage.
+  - key references:
+    - legacy mock: `secure:<key-ref>`
+    - explicit mock: `secure:mock:<key-ref>`
+    - production-style adapter: `secure:aws-kms:<key-ref>`
+  - unknown provider labels are rejected with typed `UnsupportedSecureProvider`.
+  - malformed secure key references are rejected with typed `MalformedSecureKeyReference`.
+  - `ProviderUnavailable` reports the provider-specific backend when the secure path is disabled.
 - Router fallback:
   - falls back from secure to local only for `ProviderUnavailable`.
   - does not fallback on hard request errors (for example, unsupported secure key references).
+  - verification rejects backend/provider mismatches via `SecureProviderBackendMismatch` (`Regression: #619`).
 
 ## Transaction Path Integration
 - `SigningRequest::for_transaction(...)` maps `BaselineTransaction` fields into signer requests.

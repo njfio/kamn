@@ -229,8 +229,8 @@ pub use signature_profile::{
     baseline_signature_for_fields, baseline_signature_profile_id, BASELINE_SIGNATURE_PROFILE_ID,
 };
 pub use signer_backend::{
-    BackendSignature, LocalSignerBackend, SecureSignerBackend, SignerBackend, SignerBackendError,
-    SignerBackendRouter, SigningRequest,
+    BackendSignature, LocalSignerBackend, SecureSignerBackend, SecureSignerProvider, SignerBackend,
+    SignerBackendError, SignerBackendRouter, SigningRequest,
 };
 pub use smoke::{ProducedBlock, RoleSmokeNetwork, SmokeError};
 pub use state::{
