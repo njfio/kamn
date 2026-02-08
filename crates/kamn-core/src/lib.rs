@@ -39,6 +39,7 @@ pub mod task_payment;
 pub mod telegram_bridge;
 pub mod token;
 pub mod transaction;
+pub mod watchdog;
 
 pub use agent_key_hierarchy::{
     AgentKeyHierarchy, AgentKeyHierarchyError, EphemeralSessionKey, KeyRole,
@@ -168,4 +169,8 @@ pub use token::{
 };
 pub use transaction::{
     BaselineTransaction, TransactionGuardError, TransactionGuards, GENESIS_STATE_HASH,
+};
+pub use watchdog::{
+    WatchdogAlert, WatchdogAlertKind, WatchdogConfig, WatchdogError, WatchdogNode,
+    WatchdogObservation, WatchdogSeverity, WatchdogSnapshot,
 };
