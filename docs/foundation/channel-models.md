@@ -2,6 +2,7 @@
 
 This document defines the implemented channel model slices for direct/group
 channels and specialized broadcast/task/marketplace/governance channels.
+For marketplace listing/discovery workflow controls built on marketplace channels, see `docs/foundation/service-marketplace-discovery.md`.
 
 ## Core Models
 - `ChannelType`:

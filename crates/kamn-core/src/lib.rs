@@ -26,6 +26,7 @@ pub mod operator_binding;
 pub mod redaction_compliance;
 pub mod retention_engine;
 pub mod runtime;
+pub mod service_marketplace;
 pub mod signer_backend;
 pub mod smoke;
 pub mod state;
@@ -126,6 +127,10 @@ pub use retention_engine::{
     RetentionPolicyEngine, RetentionPolicyError, RetentionRecord, RetentionStatus,
 };
 pub use runtime::RuntimeWiring;
+pub use service_marketplace::{
+    MarketplaceSearchFilter, NegotiationThreadHook, ServiceListing, ServiceMarketplaceEngine,
+    ServiceMarketplaceError,
+};
 pub use signer_backend::{
     BackendSignature, LocalSignerBackend, SecureSignerBackend, SignerBackend, SignerBackendError,
     SignerBackendRouter, SigningRequest,

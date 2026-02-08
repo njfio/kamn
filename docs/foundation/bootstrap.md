@@ -61,6 +61,7 @@ For message lifecycle state machine and index query controls, see `docs/foundati
 For nonce/TTL/replay enforcement and failed-delivery notice controls, see `docs/foundation/message-delivery-guards.md`.
 For direct/group plus specialized broadcast/task/marketplace/governance channel models, see `docs/foundation/channel-models.md`.
 For channel permission and retention policy controls, see `docs/foundation/channel-permissions-retention.md`.
+For marketplace listing registration, discovery filters, and negotiation hook controls, see `docs/foundation/service-marketplace-discovery.md`.
 For agent key hierarchy role bindings and ephemeral session key controls, see `docs/foundation/agent-key-hierarchy.md`.
 For direct-message encryption path controls, see `docs/foundation/direct-message-encryption.md`.
 For group sender-key distribution and rotation controls, see `docs/foundation/group-sender-key-rotation.md`.
