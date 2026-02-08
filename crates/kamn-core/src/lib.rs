@@ -1,5 +1,6 @@
 pub mod bootstrap;
 pub mod config;
+pub mod did;
 pub mod escrow;
 pub mod instruction_verify;
 pub mod invariants;
@@ -15,6 +16,10 @@ pub mod transaction;
 
 pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};
 pub use config::{ConfigError, NodeConfig, NodeRole};
+pub use did::{
+    canonical_did_document, AgentDid, AgentDidError, AgentDidMetadata, DidDocument,
+    DidDocumentError, DidService, DidVerificationMethod,
+};
 pub use escrow::{EscrowLifecycle, EscrowLifecycleError, EscrowStatus};
 pub use instruction_verify::{
     InstructionClaim, InstructionRecord, InstructionVerifier, VerificationContext,
