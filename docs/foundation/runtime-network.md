@@ -137,6 +137,7 @@ Run targeted checks first:
 cargo test -p kamn-core runtime::tests::
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-node --test node_runtime_cli_docs
+cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
 ```
 
 Then run strict lint/format gates:

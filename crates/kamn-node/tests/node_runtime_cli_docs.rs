@@ -104,6 +104,17 @@ fn doc_contains_docs_fast_lane_command_checks() {
 }
 
 #[test]
+fn doc_contains_daemon_focused_fast_lane_commands() {
+    assert!(DOC.contains("### Daemon-focused fast lane"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node integration_runtime_daemon_renders_bounded_completion_output"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition"
+    ));
+}
+
+#[test]
 fn regression_requires_invalid_output_mode_rule() {
     // Regression: #307
     assert!(DOC.contains("Invalid modes are rejected with explicit typed error."));
