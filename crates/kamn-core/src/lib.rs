@@ -7,6 +7,7 @@ pub mod channel_models;
 pub mod channel_policies;
 pub mod config;
 pub mod content_replication;
+pub mod content_retrieval;
 pub mod content_storage;
 pub mod cross_chain_bridge;
 pub mod data_classification;
@@ -78,6 +79,11 @@ pub use content_replication::{
     ContentAvailabilityAlert, ContentAvailabilityHealth, ContentAvailabilitySnapshot,
     ContentRepairAction, ContentRepairReason, ContentReplicationError, ContentReplicationManager,
     ContentReplicationPolicy,
+};
+pub use content_retrieval::{
+    ContentRetrievalAuditEvent, ContentRetrievalConfig, ContentRetrievalEngine,
+    ContentRetrievalError, ContentRetrievalOutcome, ContentRetrievalRequest,
+    ContentRetrievalResult, ContentRetrievalScope,
 };
 pub use content_storage::{
     cid_from_content_uri, content_uri_for_cid, ContentHead, ContentObject, ContentStorageAdapter,
