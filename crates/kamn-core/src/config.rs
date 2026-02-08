@@ -149,6 +149,7 @@ pub enum ConfigError {
     InvalidRole(String),
     InvalidSyncMode(String),
     InvalidOutputMode(String),
+    InvalidNodeProfile(String),
     UnknownArgument(String),
     MissingArgumentValue(&'static str),
 }
@@ -164,6 +165,7 @@ impl fmt::Display for ConfigError {
             Self::InvalidRole(value) => write!(f, "invalid role: {value}"),
             Self::InvalidSyncMode(value) => write!(f, "invalid sync mode: {value}"),
             Self::InvalidOutputMode(value) => write!(f, "invalid output mode: {value}"),
+            Self::InvalidNodeProfile(value) => write!(f, "invalid node profile: {value}"),
             Self::UnknownArgument(value) => write!(f, "unknown argument: {value}"),
             Self::MissingArgumentValue(flag) => {
                 write!(f, "missing value for argument: {flag}")
