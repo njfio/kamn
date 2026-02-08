@@ -1,3 +1,4 @@
+pub mod agent_key_hierarchy;
 pub mod bootstrap;
 pub mod channel_models;
 pub mod channel_policies;
@@ -20,6 +21,9 @@ pub mod state;
 pub mod token;
 pub mod transaction;
 
+pub use agent_key_hierarchy::{
+    AgentKeyHierarchy, AgentKeyHierarchyError, EphemeralSessionKey, KeyRole,
+};
 pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};
 pub use channel_models::{ChannelModelError, ChannelStore, ChannelType};
 pub use channel_policies::{
