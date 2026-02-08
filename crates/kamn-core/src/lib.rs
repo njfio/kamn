@@ -211,7 +211,10 @@ pub use retention_engine::{
     RetentionClass, RetentionDomain, RetentionEnginePolicy, RetentionEvaluation,
     RetentionPolicyEngine, RetentionPolicyError, RetentionRecord, RetentionStatus,
 };
-pub use runtime::RuntimeWiring;
+pub use runtime::{
+    BoundedRuntimeQueue, PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState,
+    RuntimeLifecycleError, RuntimeQueueError, RuntimeWiring,
+};
 pub use service_marketplace::{
     MarketplaceSearchFilter, NegotiationThreadHook, ServiceListing, ServiceMarketplaceEngine,
     ServiceMarketplaceError,
