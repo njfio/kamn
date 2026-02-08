@@ -1,5 +1,5 @@
-use crate::{AgentDid, TaskLifecycle, TaskLifecycleError, TaskTransition};
-use std::collections::BTreeMap;
+use crate::{AgentDid, TaskLifecycle, TaskLifecycleError, TaskState, TaskTransition};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -23,10 +23,19 @@ pub struct TaskOperationRecord {
     pub lifecycle: TaskLifecycle,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SwarmTaskDraft {
+    pub task_id: String,
+    pub requester: String,
+    pub description: String,
+    pub dependencies: Vec<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct TaskOperationEngine {
     tasks: BTreeMap<String, TaskOperationRecord>,
     notices_by_task: BTreeMap<String, Vec<TaskOperationNoticeKind>>,
+    dependencies_by_task: BTreeMap<String, BTreeSet<String>>,
 }
 
 impl TaskOperationEngine {
@@ -60,7 +69,76 @@ impl TaskOperationEngine {
                 lifecycle,
             },
         );
+        self.dependencies_by_task
+            .entry(task_id.to_owned())
+            .or_default();
         self.push_notice(task_id, TaskOperationNoticeKind::Submitted);
+        Ok(())
+    }
+
+    pub fn submit_swarm_tasks(
+        &mut self,
+        drafts: Vec<SwarmTaskDraft>,
+    ) -> Result<(), TaskOperationError> {
+        if drafts.is_empty() {
+            return Err(TaskOperationError::EmptySwarmTaskSet);
+        }
+
+        let mut graph = BTreeMap::new();
+        let mut draft_ids = BTreeSet::new();
+        for draft in &drafts {
+            if self.tasks.contains_key(&draft.task_id) || !draft_ids.insert(draft.task_id.clone()) {
+                return Err(TaskOperationError::DuplicateTaskId(draft.task_id.clone()));
+            }
+            validate_did(&draft.requester)?;
+            if draft.description.trim().is_empty() {
+                return Err(TaskOperationError::EmptyDescription);
+            }
+
+            let mut unique_dependencies = BTreeSet::new();
+            for dependency_id in &draft.dependencies {
+                if !unique_dependencies.insert(dependency_id.clone()) {
+                    return Err(TaskOperationError::DuplicateDependency {
+                        task_id: draft.task_id.clone(),
+                        dependency_id: dependency_id.clone(),
+                    });
+                }
+            }
+            graph.insert(draft.task_id.clone(), unique_dependencies);
+        }
+
+        for (task_id, dependencies) in &graph {
+            for dependency_id in dependencies {
+                if !draft_ids.contains(dependency_id) && !self.tasks.contains_key(dependency_id) {
+                    return Err(TaskOperationError::UnknownDependency {
+                        task_id: task_id.clone(),
+                        dependency_id: dependency_id.clone(),
+                    });
+                }
+            }
+        }
+
+        let cycle_task_id = detect_cycle_task_id(&graph);
+        if let Some(task_id) = cycle_task_id {
+            return Err(TaskOperationError::CyclicDependency { task_id });
+        }
+
+        let mut dependencies_by_task = BTreeMap::new();
+        for draft in &drafts {
+            dependencies_by_task.insert(
+                draft.task_id.clone(),
+                graph.get(&draft.task_id).cloned().unwrap_or_default(),
+            );
+        }
+
+        for draft in drafts {
+            self.submit(&draft.task_id, &draft.requester, &draft.description)?;
+            let dependencies = dependencies_by_task
+                .remove(&draft.task_id)
+                .unwrap_or_default();
+            self.dependencies_by_task
+                .insert(draft.task_id, dependencies);
+        }
         Ok(())
     }
 
@@ -108,6 +186,12 @@ impl TaskOperationEngine {
 
     pub fn start_work(&mut self, task_id: &str, actor: &str) -> Result<(), TaskOperationError> {
         validate_did(actor)?;
+        if let Some(dependency_id) = self.unsatisfied_dependency(task_id)? {
+            return Err(TaskOperationError::DependencyNotSatisfied {
+                task_id: task_id.to_owned(),
+                dependency_id,
+            });
+        }
         let record = self.task_mut(task_id)?;
         Self::require_assignee(record, actor)?;
         record
@@ -203,6 +287,27 @@ impl TaskOperationEngine {
             .unwrap_or_default()
     }
 
+    pub fn ready_tasks(&self) -> Vec<String> {
+        self.tasks
+            .iter()
+            .filter_map(|(task_id, record)| {
+                let state = record.lifecycle.state();
+                if state != TaskState::Accepted && state != TaskState::Delegated {
+                    return None;
+                }
+                if self
+                    .unsatisfied_dependency(task_id)
+                    .ok()
+                    .flatten()
+                    .is_some()
+                {
+                    return None;
+                }
+                Some(task_id.clone())
+            })
+            .collect()
+    }
+
     fn task_mut(&mut self, task_id: &str) -> Result<&mut TaskOperationRecord, TaskOperationError> {
         self.tasks
             .get_mut(task_id)
@@ -228,12 +333,50 @@ impl TaskOperationEngine {
             .or_default()
             .push(notice);
     }
+
+    fn unsatisfied_dependency(&self, task_id: &str) -> Result<Option<String>, TaskOperationError> {
+        if !self.tasks.contains_key(task_id) {
+            return Err(TaskOperationError::NotFound(task_id.to_owned()));
+        }
+        let dependencies = match self.dependencies_by_task.get(task_id) {
+            Some(value) => value,
+            None => return Ok(None),
+        };
+        for dependency_id in dependencies {
+            let dependency = self.tasks.get(dependency_id).ok_or_else(|| {
+                TaskOperationError::UnknownDependency {
+                    task_id: task_id.to_owned(),
+                    dependency_id: dependency_id.clone(),
+                }
+            })?;
+            if dependency.lifecycle.state() != TaskState::Completed {
+                return Ok(Some(dependency_id.clone()));
+            }
+        }
+        Ok(None)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TaskOperationError {
     NotFound(String),
     DuplicateTaskId(String),
+    EmptySwarmTaskSet,
+    DuplicateDependency {
+        task_id: String,
+        dependency_id: String,
+    },
+    UnknownDependency {
+        task_id: String,
+        dependency_id: String,
+    },
+    CyclicDependency {
+        task_id: String,
+    },
+    DependencyNotSatisfied {
+        task_id: String,
+        dependency_id: String,
+    },
     InvalidDid(String),
     EmptyDescription,
     EmptyReason(&'static str),
@@ -249,6 +392,25 @@ impl fmt::Display for TaskOperationError {
         match self {
             Self::NotFound(value) => write!(f, "task not found: {value}"),
             Self::DuplicateTaskId(value) => write!(f, "duplicate task id: {value}"),
+            Self::EmptySwarmTaskSet => write!(f, "swarm task set must not be empty"),
+            Self::DuplicateDependency {
+                task_id,
+                dependency_id,
+            } => write!(f, "duplicate dependency {dependency_id} for task {task_id}"),
+            Self::UnknownDependency {
+                task_id,
+                dependency_id,
+            } => write!(f, "unknown dependency {dependency_id} for task {task_id}"),
+            Self::CyclicDependency { task_id } => {
+                write!(f, "cyclic task dependency detected at task {task_id}")
+            }
+            Self::DependencyNotSatisfied {
+                task_id,
+                dependency_id,
+            } => write!(
+                f,
+                "task {task_id} cannot start before dependency {dependency_id} is completed"
+            ),
             Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
             Self::EmptyDescription => write!(f, "task description must not be empty"),
             Self::EmptyReason(action) => write!(f, "reason must not be empty for {action}"),
@@ -271,9 +433,54 @@ fn lifecycle_error(error: TaskLifecycleError) -> TaskOperationError {
     TaskOperationError::Lifecycle(error.to_string())
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum VisitState {
+    Visiting,
+    Visited,
+}
+
+fn detect_cycle_task_id(graph: &BTreeMap<String, BTreeSet<String>>) -> Option<String> {
+    fn dfs(
+        task_id: &str,
+        graph: &BTreeMap<String, BTreeSet<String>>,
+        states: &mut BTreeMap<String, VisitState>,
+    ) -> Option<String> {
+        states.insert(task_id.to_owned(), VisitState::Visiting);
+        if let Some(dependencies) = graph.get(task_id) {
+            for dependency_id in dependencies {
+                if !graph.contains_key(dependency_id) {
+                    continue;
+                }
+                match states.get(dependency_id) {
+                    Some(VisitState::Visiting) => return Some(dependency_id.clone()),
+                    Some(VisitState::Visited) => continue,
+                    None => {
+                        if let Some(task_id) = dfs(dependency_id, graph, states) {
+                            return Some(task_id);
+                        }
+                    }
+                }
+            }
+        }
+        states.insert(task_id.to_owned(), VisitState::Visited);
+        None
+    }
+
+    let mut states = BTreeMap::new();
+    for task_id in graph.keys() {
+        if states.contains_key(task_id) {
+            continue;
+        }
+        if let Some(cycle_task_id) = dfs(task_id, graph, &mut states) {
+            return Some(cycle_task_id);
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{TaskOperationEngine, TaskOperationError};
+    use super::{SwarmTaskDraft, TaskOperationEngine, TaskOperationError};
     use crate::TaskState;
 
     #[test]
@@ -301,5 +508,62 @@ mod tests {
             Err(error) => panic!("task lookup failed: {error}"),
         };
         assert_eq!(state, TaskState::Cancelled);
+    }
+
+    #[test]
+    fn submit_swarm_rejects_cyclic_dependencies() {
+        let mut engine = TaskOperationEngine::new();
+        assert!(matches!(
+            engine.submit_swarm_tasks(vec![
+                SwarmTaskDraft {
+                    task_id: "cycle-a".to_owned(),
+                    requester: "kamn:did:agent:req-1".to_owned(),
+                    description: "a".to_owned(),
+                    dependencies: vec!["cycle-b".to_owned()],
+                },
+                SwarmTaskDraft {
+                    task_id: "cycle-b".to_owned(),
+                    requester: "kamn:did:agent:req-1".to_owned(),
+                    description: "b".to_owned(),
+                    dependencies: vec!["cycle-a".to_owned()],
+                },
+            ]),
+            Err(TaskOperationError::CyclicDependency { .. })
+        ));
+    }
+
+    #[test]
+    fn start_work_rejects_unsatisfied_dependency() {
+        let mut engine = TaskOperationEngine::new();
+        engine
+            .submit_swarm_tasks(vec![
+                SwarmTaskDraft {
+                    task_id: "dep-root".to_owned(),
+                    requester: "kamn:did:agent:req-1".to_owned(),
+                    description: "root".to_owned(),
+                    dependencies: vec![],
+                },
+                SwarmTaskDraft {
+                    task_id: "dep-child".to_owned(),
+                    requester: "kamn:did:agent:req-1".to_owned(),
+                    description: "child".to_owned(),
+                    dependencies: vec!["dep-root".to_owned()],
+                },
+            ])
+            .expect("swarm submission should succeed");
+        engine
+            .accept("dep-root", "kamn:did:agent:worker-1")
+            .expect("root accept should succeed");
+        engine
+            .accept("dep-child", "kamn:did:agent:worker-1")
+            .expect("child accept should succeed");
+
+        assert_eq!(
+            engine.start_work("dep-child", "kamn:did:agent:worker-1"),
+            Err(TaskOperationError::DependencyNotSatisfied {
+                task_id: "dep-child".to_owned(),
+                dependency_id: "dep-root".to_owned(),
+            })
+        );
     }
 }
