@@ -356,7 +356,9 @@ fn validate_rate(
 fn task_attention(state: TaskState) -> DashboardAttentionLevel {
     match state {
         TaskState::Blocked | TaskState::Failed => DashboardAttentionLevel::Critical,
-        TaskState::Cancelled | TaskState::Delegated => DashboardAttentionLevel::Warning,
+        TaskState::Cancelled | TaskState::Delegated | TaskState::InputRequired => {
+            DashboardAttentionLevel::Warning
+        }
         TaskState::Completed => DashboardAttentionLevel::Success,
         TaskState::Submitted | TaskState::Accepted | TaskState::InProgress => {
             DashboardAttentionLevel::Info

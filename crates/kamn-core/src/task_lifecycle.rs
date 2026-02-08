@@ -6,6 +6,7 @@ pub enum TaskState {
     Accepted,
     Delegated,
     InProgress,
+    InputRequired,
     Blocked,
     Completed,
     Failed,
@@ -17,6 +18,7 @@ pub enum TaskTransition {
     Accept,
     Delegate,
     StartWork,
+    RequestInput,
     Block,
     Complete,
     Fail,
@@ -71,9 +73,14 @@ impl TaskLifecycle {
             (TaskState::Delegated, TaskTransition::Cancel) => TaskState::Cancelled,
 
             (TaskState::InProgress, TaskTransition::Block) => TaskState::Blocked,
+            (TaskState::InProgress, TaskTransition::RequestInput) => TaskState::InputRequired,
             (TaskState::InProgress, TaskTransition::Complete) => TaskState::Completed,
             (TaskState::InProgress, TaskTransition::Fail) => TaskState::Failed,
             (TaskState::InProgress, TaskTransition::Cancel) => TaskState::Cancelled,
+
+            (TaskState::InputRequired, TaskTransition::StartWork) => TaskState::InProgress,
+            (TaskState::InputRequired, TaskTransition::Fail) => TaskState::Failed,
+            (TaskState::InputRequired, TaskTransition::Cancel) => TaskState::Cancelled,
 
             (TaskState::Blocked, TaskTransition::StartWork) => TaskState::InProgress,
             (TaskState::Blocked, TaskTransition::Fail) => TaskState::Failed,
@@ -168,9 +175,14 @@ fn transition_between(from: TaskState, to: TaskState) -> Option<TaskTransition> 
         (TaskState::Delegated, TaskState::Cancelled) => Some(TaskTransition::Cancel),
 
         (TaskState::InProgress, TaskState::Blocked) => Some(TaskTransition::Block),
+        (TaskState::InProgress, TaskState::InputRequired) => Some(TaskTransition::RequestInput),
         (TaskState::InProgress, TaskState::Completed) => Some(TaskTransition::Complete),
         (TaskState::InProgress, TaskState::Failed) => Some(TaskTransition::Fail),
         (TaskState::InProgress, TaskState::Cancelled) => Some(TaskTransition::Cancel),
+
+        (TaskState::InputRequired, TaskState::InProgress) => Some(TaskTransition::StartWork),
+        (TaskState::InputRequired, TaskState::Failed) => Some(TaskTransition::Fail),
+        (TaskState::InputRequired, TaskState::Cancelled) => Some(TaskTransition::Cancel),
 
         (TaskState::Blocked, TaskState::InProgress) => Some(TaskTransition::StartWork),
         (TaskState::Blocked, TaskState::Failed) => Some(TaskTransition::Fail),
@@ -205,6 +217,19 @@ mod tests {
         assert!(lifecycle.transition(TaskTransition::Accept).is_ok());
         assert!(lifecycle.transition(TaskTransition::StartWork).is_ok());
         assert!(lifecycle.transition(TaskTransition::Block).is_ok());
+        assert!(lifecycle.transition(TaskTransition::StartWork).is_ok());
+        assert_eq!(lifecycle.state(), TaskState::InProgress);
+    }
+
+    #[test]
+    fn input_required_can_return_to_in_progress() {
+        let mut lifecycle = match TaskLifecycle::new("task-2") {
+            Ok(value) => value,
+            Err(error) => panic!("init failed: {error}"),
+        };
+        assert!(lifecycle.transition(TaskTransition::Accept).is_ok());
+        assert!(lifecycle.transition(TaskTransition::StartWork).is_ok());
+        assert!(lifecycle.transition(TaskTransition::RequestInput).is_ok());
         assert!(lifecycle.transition(TaskTransition::StartWork).is_ok());
         assert_eq!(lifecycle.state(), TaskState::InProgress);
     }

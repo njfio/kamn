@@ -113,3 +113,72 @@ fn cancelled_task_cannot_be_accepted_again() {
         ))
     );
 }
+
+#[test]
+fn request_input_then_resume_emits_notices_and_allows_completion() {
+    let mut engine = TaskOperationEngine::new();
+    engine
+        .submit(
+            "task-op-6",
+            "kamn:did:agent:requester-1",
+            "Review specification",
+        )
+        .expect("submit should succeed");
+    engine
+        .accept("task-op-6", "kamn:did:agent:worker-1")
+        .expect("accept should succeed");
+    engine
+        .start_work("task-op-6", "kamn:did:agent:worker-1")
+        .expect("start should succeed");
+    engine
+        .request_input(
+            "task-op-6",
+            "kamn:did:agent:worker-1",
+            "Need clarification on section 4",
+        )
+        .expect("request input should succeed");
+    engine
+        .start_work("task-op-6", "kamn:did:agent:worker-1")
+        .expect("resume should succeed");
+    engine
+        .complete("task-op-6", "kamn:did:agent:worker-1")
+        .expect("complete should succeed");
+
+    let task = engine.task("task-op-6").expect("task should exist");
+    assert_eq!(task.lifecycle.state(), TaskState::Completed);
+    assert_eq!(
+        engine.notices("task-op-6"),
+        vec![
+            TaskOperationNoticeKind::Submitted,
+            TaskOperationNoticeKind::Accepted,
+            TaskOperationNoticeKind::Started,
+            TaskOperationNoticeKind::InputRequired,
+            TaskOperationNoticeKind::Started,
+            TaskOperationNoticeKind::Completed,
+        ]
+    );
+}
+
+#[test]
+fn regression_request_input_requires_non_empty_reason() {
+    // Regression: #573
+    let mut engine = TaskOperationEngine::new();
+    engine
+        .submit(
+            "task-op-7",
+            "kamn:did:agent:requester-1",
+            "Confirm assumptions",
+        )
+        .expect("submit should succeed");
+    engine
+        .accept("task-op-7", "kamn:did:agent:worker-1")
+        .expect("accept should succeed");
+    engine
+        .start_work("task-op-7", "kamn:did:agent:worker-1")
+        .expect("start should succeed");
+
+    assert_eq!(
+        engine.request_input("task-op-7", "kamn:did:agent:worker-1", " "),
+        Err(TaskOperationError::EmptyReason("request_input"))
+    );
+}

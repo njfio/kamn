@@ -88,3 +88,48 @@ fn cancelled_task_cannot_be_completed() {
         Err(TaskLifecycleError::TerminalState(TaskState::Cancelled))
     );
 }
+
+#[test]
+fn input_required_can_resume_to_in_progress_before_completion() {
+    let mut lifecycle = TaskLifecycle::new("task-6").expect("task lifecycle should initialize");
+    lifecycle
+        .transition(TaskTransition::Accept)
+        .expect("accept should succeed");
+    lifecycle
+        .transition(TaskTransition::StartWork)
+        .expect("start should succeed");
+    lifecycle
+        .transition(TaskTransition::RequestInput)
+        .expect("in_progress->input_required should succeed");
+    lifecycle
+        .transition(TaskTransition::StartWork)
+        .expect("input_required->in_progress should succeed");
+    lifecycle
+        .transition(TaskTransition::Complete)
+        .expect("in_progress->complete should succeed");
+
+    assert_eq!(lifecycle.state(), TaskState::Completed);
+}
+
+#[test]
+fn regression_input_required_cannot_complete_without_resume() {
+    // Regression: #573
+    let mut lifecycle = TaskLifecycle::new("task-7").expect("task lifecycle should initialize");
+    lifecycle
+        .transition(TaskTransition::Accept)
+        .expect("accept should succeed");
+    lifecycle
+        .transition(TaskTransition::StartWork)
+        .expect("start should succeed");
+    lifecycle
+        .transition(TaskTransition::RequestInput)
+        .expect("request input should succeed");
+
+    assert_eq!(
+        lifecycle.transition(TaskTransition::Complete),
+        Err(TaskLifecycleError::InvalidTransition {
+            from: TaskState::InputRequired,
+            transition: TaskTransition::Complete,
+        })
+    );
+}

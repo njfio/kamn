@@ -8,6 +8,7 @@ pub enum TaskOperationNoticeKind {
     Accepted,
     Delegated,
     Started,
+    InputRequired,
     Blocked,
     Completed,
     Failed,
@@ -238,6 +239,26 @@ impl TaskOperationEngine {
             .transition(TaskTransition::Block)
             .map_err(lifecycle_error)?;
         self.push_notice(task_id, TaskOperationNoticeKind::Blocked);
+        Ok(())
+    }
+
+    pub fn request_input(
+        &mut self,
+        task_id: &str,
+        actor: &str,
+        reason: &str,
+    ) -> Result<(), TaskOperationError> {
+        validate_did(actor)?;
+        if reason.trim().is_empty() {
+            return Err(TaskOperationError::EmptyReason("request_input"));
+        }
+        let record = self.task_mut(task_id)?;
+        Self::require_assignee(record, actor)?;
+        record
+            .lifecycle
+            .transition(TaskTransition::RequestInput)
+            .map_err(lifecycle_error)?;
+        self.push_notice(task_id, TaskOperationNoticeKind::InputRequired);
         Ok(())
     }
 
@@ -655,7 +676,11 @@ fn detect_cycle_task_id(graph: &BTreeMap<String, BTreeSet<String>>) -> Option<St
 fn requires_completed_dependencies(state: TaskState) -> bool {
     matches!(
         state,
-        TaskState::InProgress | TaskState::Blocked | TaskState::Completed | TaskState::Failed
+        TaskState::InProgress
+            | TaskState::InputRequired
+            | TaskState::Blocked
+            | TaskState::Completed
+            | TaskState::Failed
     )
 }
 
