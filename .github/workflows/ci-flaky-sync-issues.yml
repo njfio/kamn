@@ -1,0 +1,38 @@
+name: ci-flaky-sync-issues
+
+on:
+  schedule:
+    - cron: '37 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  flaky-sync:
+    name: Flaky Issue Sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate flaky registry
+        run: bash scripts/ci/check_flaky_registry.sh
+
+      - name: Ensure flaky label exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! gh label list --repo "${{ github.repository }}" --search "flaky-test" | grep -q '^flaky-test'; then
+            gh label create "flaky-test" --repo "${{ github.repository }}" --color "f9d0c4" --description "Tracked flaky tests referenced by CI quarantine registry"
+          fi
+
+      - name: Sync flaky registry entries to issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bash scripts/ci/sync_flaky_registry_issues.sh \
+            --repo "${{ github.repository }}"
