@@ -60,16 +60,20 @@ jobs:
           bash scripts/deploy/test_generate_bundle.sh
 
       - name: Set up Rust toolchain
-        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_sdk_parity_matrix == 'true'
+        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_sdk_parity_matrix == 'true'
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Rust build artifacts
         id: rust_cache
-        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_sdk_parity_matrix == 'true'
+        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_sdk_parity_matrix == 'true'
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: kamn-rust-ci-v1
           save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Run bridge replay fixture harness
+        if: steps.scope.outputs.run_bridge_replay_harness == 'true'
+        run: bash scripts/bridge/run_bridge_replay_matrix.sh --fixture fixtures/bridge_replay/replay_validation_cases.json --output-json bridge-replay-report.json
 
       - name: Run SDK parity matrix
         if: steps.scope.outputs.run_sdk_parity_matrix == 'true'

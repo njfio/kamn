@@ -5,6 +5,7 @@ fn doc_contains_bridge_adapter_core_contracts() {
     assert!(DOC.contains("# Bridge Adapter Abstraction"));
     assert!(DOC.contains("BridgeAdapterEngine"));
     assert!(DOC.contains("process_inbound_to_envelope(...)"));
+    assert!(DOC.contains("run_bridge_replay_harness"));
 }
 
 #[test]
@@ -44,4 +45,12 @@ fn regression_requires_cross_chain_single_pass_projection_rule() {
     assert!(DOC.contains(
         "cross-chain inbound projection also preserves single-pass replay safety (`Regression: #443`)"
     ));
+}
+
+#[test]
+fn regression_requires_bridge_fixture_matrix_guard() {
+    // Regression: #587
+    assert!(DOC.contains("fixtures/bridge_replay/replay_validation_cases.json"));
+    assert!(DOC.contains("scripts/bridge/run_bridge_replay_matrix.sh"));
+    assert!(DOC.contains("Regression: #587"));
 }
