@@ -1,4 +1,5 @@
 use crate::config::{NodeConfig, NodeRole};
+use crate::signature_profile::baseline_signature_for_fields;
 use std::collections::{BTreeMap, BTreeSet, HashSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -192,6 +193,356 @@ impl<T> BoundedRuntimeQueue<T> {
     pub fn dequeue(&mut self) -> Option<T> {
         self.entries.pop_front()
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AuthenticatedPeerFrameError {
+    InvalidFrameId,
+    InvalidSenderDid,
+    InvalidRecipientDid,
+    InvalidLocalPeerDid,
+    EmptyAllowedSenders,
+    InvalidNonce,
+    EmptyPayload,
+    EmptySignature,
+    InvalidWireFieldDelimiter {
+        field: &'static str,
+    },
+    InvalidWireFormat(String),
+    SignatureMismatch {
+        expected: String,
+        found: String,
+    },
+    UnauthorizedSender(String),
+    WrongRecipient {
+        expected: String,
+        found: String,
+    },
+    ReplayNonce {
+        sender_did: String,
+        last_nonce: u64,
+        found: u64,
+    },
+}
+
+impl Display for AuthenticatedPeerFrameError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidFrameId => write!(f, "peer frame id cannot be empty"),
+            Self::InvalidSenderDid => write!(f, "peer frame sender DID is invalid"),
+            Self::InvalidRecipientDid => write!(f, "peer frame recipient DID is invalid"),
+            Self::InvalidLocalPeerDid => write!(f, "local peer DID is invalid"),
+            Self::EmptyAllowedSenders => write!(f, "allowed sender DID set cannot be empty"),
+            Self::InvalidNonce => write!(f, "peer frame nonce must be positive"),
+            Self::EmptyPayload => write!(f, "peer frame payload cannot be empty"),
+            Self::EmptySignature => write!(f, "peer frame signature cannot be empty"),
+            Self::InvalidWireFieldDelimiter { field } => write!(
+                f,
+                "peer frame field contains unsupported wire delimiters: {field}"
+            ),
+            Self::InvalidWireFormat(payload) => {
+                write!(f, "peer frame wire payload is invalid: {payload}")
+            }
+            Self::SignatureMismatch { expected, found } => {
+                write!(
+                    f,
+                    "peer frame signature mismatch: expected {expected}, found {found}"
+                )
+            }
+            Self::UnauthorizedSender(value) => {
+                write!(f, "peer frame sender is unauthorized: {value}")
+            }
+            Self::WrongRecipient { expected, found } => write!(
+                f,
+                "peer frame recipient mismatch: expected {expected}, found {found}"
+            ),
+            Self::ReplayNonce {
+                sender_did,
+                last_nonce,
+                found,
+            } => write!(
+                f,
+                "peer frame nonce replay for {sender_did}: last {last_nonce}, found {found}"
+            ),
+        }
+    }
+}
+
+impl Error for AuthenticatedPeerFrameError {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AuthenticatedPeerFrame {
+    frame_id: String,
+    sender_peer_did: String,
+    recipient_peer_did: String,
+    nonce: u64,
+    payload: String,
+    signature: String,
+}
+
+impl AuthenticatedPeerFrame {
+    pub fn new(
+        frame_id: &str,
+        sender_peer_did: &str,
+        recipient_peer_did: &str,
+        nonce: u64,
+        payload: &str,
+        signature: &str,
+    ) -> Result<Self, AuthenticatedPeerFrameError> {
+        if frame_id.trim().is_empty() {
+            return Err(AuthenticatedPeerFrameError::InvalidFrameId);
+        }
+        if !is_valid_kamn_did(sender_peer_did) {
+            return Err(AuthenticatedPeerFrameError::InvalidSenderDid);
+        }
+        if !is_valid_kamn_did(recipient_peer_did) {
+            return Err(AuthenticatedPeerFrameError::InvalidRecipientDid);
+        }
+        if nonce == 0 {
+            return Err(AuthenticatedPeerFrameError::InvalidNonce);
+        }
+        if payload.trim().is_empty() {
+            return Err(AuthenticatedPeerFrameError::EmptyPayload);
+        }
+        if signature.trim().is_empty() {
+            return Err(AuthenticatedPeerFrameError::EmptySignature);
+        }
+        ensure_peer_frame_wire_field(frame_id, "frame_id")?;
+        ensure_peer_frame_wire_field(sender_peer_did, "sender_peer_did")?;
+        ensure_peer_frame_wire_field(recipient_peer_did, "recipient_peer_did")?;
+        ensure_peer_frame_wire_field(payload, "payload")?;
+        ensure_peer_frame_wire_field(signature, "signature")?;
+
+        Ok(Self {
+            frame_id: frame_id.to_owned(),
+            sender_peer_did: sender_peer_did.to_owned(),
+            recipient_peer_did: recipient_peer_did.to_owned(),
+            nonce,
+            payload: payload.to_owned(),
+            signature: signature.to_owned(),
+        })
+    }
+
+    pub fn signed(
+        frame_id: &str,
+        sender_peer_did: &str,
+        recipient_peer_did: &str,
+        nonce: u64,
+        payload: &str,
+    ) -> Result<Self, AuthenticatedPeerFrameError> {
+        let signature =
+            expected_peer_frame_signature(sender_peer_did, recipient_peer_did, nonce, payload);
+        Self::new(
+            frame_id,
+            sender_peer_did,
+            recipient_peer_did,
+            nonce,
+            payload,
+            &signature,
+        )
+    }
+
+    pub fn frame_id(&self) -> &str {
+        &self.frame_id
+    }
+
+    pub fn sender_peer_did(&self) -> &str {
+        &self.sender_peer_did
+    }
+
+    pub fn recipient_peer_did(&self) -> &str {
+        &self.recipient_peer_did
+    }
+
+    pub fn nonce(&self) -> u64 {
+        self.nonce
+    }
+
+    pub fn payload(&self) -> &str {
+        &self.payload
+    }
+
+    pub fn signature(&self) -> &str {
+        &self.signature
+    }
+
+    pub fn verify_signature(&self) -> Result<(), AuthenticatedPeerFrameError> {
+        let expected = expected_peer_frame_signature(
+            &self.sender_peer_did,
+            &self.recipient_peer_did,
+            self.nonce,
+            &self.payload,
+        );
+        if self.signature != expected {
+            return Err(AuthenticatedPeerFrameError::SignatureMismatch {
+                expected,
+                found: self.signature.clone(),
+            });
+        }
+        Ok(())
+    }
+
+    pub fn to_wire(&self) -> Result<String, AuthenticatedPeerFrameError> {
+        ensure_peer_frame_wire_field(&self.frame_id, "frame_id")?;
+        ensure_peer_frame_wire_field(&self.sender_peer_did, "sender_peer_did")?;
+        ensure_peer_frame_wire_field(&self.recipient_peer_did, "recipient_peer_did")?;
+        ensure_peer_frame_wire_field(&self.payload, "payload")?;
+        ensure_peer_frame_wire_field(&self.signature, "signature")?;
+        Ok(format!(
+            "frame|{}|{}|{}|{}|{}|{}",
+            self.frame_id,
+            self.sender_peer_did,
+            self.recipient_peer_did,
+            self.nonce,
+            self.payload,
+            self.signature
+        ))
+    }
+
+    pub fn from_wire(raw: &str) -> Result<Self, AuthenticatedPeerFrameError> {
+        let mut segments = raw.split('|');
+        let Some(prefix) = segments.next() else {
+            return Err(AuthenticatedPeerFrameError::InvalidWireFormat(
+                raw.to_owned(),
+            ));
+        };
+        let Some(frame_id) = segments.next() else {
+            return Err(AuthenticatedPeerFrameError::InvalidWireFormat(
+                raw.to_owned(),
+            ));
+        };
+        let Some(sender_peer_did) = segments.next() else {
+            return Err(AuthenticatedPeerFrameError::InvalidWireFormat(
+                raw.to_owned(),
+            ));
+        };
+        let Some(recipient_peer_did) = segments.next() else {
+            return Err(AuthenticatedPeerFrameError::InvalidWireFormat(
+                raw.to_owned(),
+            ));
+        };
+        let Some(nonce_raw) = segments.next() else {
+            return Err(AuthenticatedPeerFrameError::InvalidWireFormat(
+                raw.to_owned(),
+            ));
+        };
+        let Some(payload) = segments.next() else {
+            return Err(AuthenticatedPeerFrameError::InvalidWireFormat(
+                raw.to_owned(),
+            ));
+        };
+        let Some(signature) = segments.next() else {
+            return Err(AuthenticatedPeerFrameError::InvalidWireFormat(
+                raw.to_owned(),
+            ));
+        };
+        if prefix != "frame" || segments.next().is_some() {
+            return Err(AuthenticatedPeerFrameError::InvalidWireFormat(
+                raw.to_owned(),
+            ));
+        }
+
+        let nonce = nonce_raw
+            .parse::<u64>()
+            .map_err(|_| AuthenticatedPeerFrameError::InvalidWireFormat(raw.to_owned()))?;
+
+        Self::new(
+            frame_id,
+            sender_peer_did,
+            recipient_peer_did,
+            nonce,
+            payload,
+            signature,
+        )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PeerFrameAuthenticator {
+    local_peer_did: String,
+    allowed_sender_dids: BTreeSet<String>,
+    last_nonce_by_sender: BTreeMap<String, u64>,
+}
+
+impl PeerFrameAuthenticator {
+    pub fn new(
+        local_peer_did: &str,
+        allowed_sender_dids: Vec<String>,
+    ) -> Result<Self, AuthenticatedPeerFrameError> {
+        if !is_valid_kamn_did(local_peer_did) {
+            return Err(AuthenticatedPeerFrameError::InvalidLocalPeerDid);
+        }
+        if allowed_sender_dids.is_empty() {
+            return Err(AuthenticatedPeerFrameError::EmptyAllowedSenders);
+        }
+
+        let mut allowlist = BTreeSet::new();
+        for sender_did in allowed_sender_dids {
+            if !is_valid_kamn_did(&sender_did) {
+                return Err(AuthenticatedPeerFrameError::InvalidSenderDid);
+            }
+            allowlist.insert(sender_did);
+        }
+
+        Ok(Self {
+            local_peer_did: local_peer_did.to_owned(),
+            allowed_sender_dids: allowlist,
+            last_nonce_by_sender: BTreeMap::new(),
+        })
+    }
+
+    pub fn validate_inbound(
+        &mut self,
+        frame: &AuthenticatedPeerFrame,
+    ) -> Result<(), AuthenticatedPeerFrameError> {
+        frame.verify_signature()?;
+
+        if frame.recipient_peer_did != self.local_peer_did {
+            return Err(AuthenticatedPeerFrameError::WrongRecipient {
+                expected: self.local_peer_did.clone(),
+                found: frame.recipient_peer_did.clone(),
+            });
+        }
+
+        if !self.allowed_sender_dids.contains(&frame.sender_peer_did) {
+            return Err(AuthenticatedPeerFrameError::UnauthorizedSender(
+                frame.sender_peer_did.clone(),
+            ));
+        }
+
+        if let Some(last_nonce) = self.last_nonce_by_sender.get(&frame.sender_peer_did) {
+            if frame.nonce <= *last_nonce {
+                return Err(AuthenticatedPeerFrameError::ReplayNonce {
+                    sender_did: frame.sender_peer_did.clone(),
+                    last_nonce: *last_nonce,
+                    found: frame.nonce,
+                });
+            }
+        }
+
+        self.last_nonce_by_sender
+            .insert(frame.sender_peer_did.clone(), frame.nonce);
+        Ok(())
+    }
+}
+
+fn expected_peer_frame_signature(
+    sender_peer_did: &str,
+    recipient_peer_did: &str,
+    nonce: u64,
+    payload: &str,
+) -> String {
+    baseline_signature_for_fields(sender_peer_did, nonce, recipient_peer_did, payload)
+}
+
+fn ensure_peer_frame_wire_field(
+    value: &str,
+    field: &'static str,
+) -> Result<(), AuthenticatedPeerFrameError> {
+    if value.contains('|') || value.contains('\n') || value.contains('\r') {
+        return Err(AuthenticatedPeerFrameError::InvalidWireFieldDelimiter { field });
+    }
+    Ok(())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -2217,18 +2568,19 @@ mod tests {
     use super::{
         authorize_daemon_outbound_action, build_runtime_wiring, evaluate_daemon_state_divergence,
         evaluate_daemon_watchdog_anomaly, execute_processor_daemon_tick, ApproverAttestation,
-        ApproverQuorumError, ApproverQuorumEvaluator, ApproverQuorumInput, BoundedRuntimeQueue,
-        ConstructLockError, ConstructLockGuard, DeterministicNetworkFaultSimulator,
-        DeterministicProposalPlanner, FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore,
-        ListenerAttestation, ListenerQuorumError, ListenerQuorumEvaluator, ListenerQuorumInput,
-        NetworkFaultSimulationError, NetworkFaultSimulationInput, PeerLifecycle,
-        PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, ProposalPlannerError,
-        RecoveryGuardError, RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt,
-        RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore,
-        SnapshotRestoreError, SnapshotRestoreGuard, SnapshotStoreError, StateDivergenceError,
-        StateDivergenceEvaluator, StateDivergenceSeverity, StateDivergenceStatus,
-        StateDivergenceWatchInput, WatchdogAnomalyError, WatchdogAnomalyEvaluator,
-        WatchdogAnomalyKind, WatchdogAnomalySeverity, WatchdogAnomalyWatchInput,
+        ApproverQuorumError, ApproverQuorumEvaluator, ApproverQuorumInput, AuthenticatedPeerFrame,
+        AuthenticatedPeerFrameError, BoundedRuntimeQueue, ConstructLockError, ConstructLockGuard,
+        DeterministicNetworkFaultSimulator, DeterministicProposalPlanner, FileRuntimeSnapshotStore,
+        InMemoryRuntimeSnapshotStore, ListenerAttestation, ListenerQuorumError,
+        ListenerQuorumEvaluator, ListenerQuorumInput, NetworkFaultSimulationError,
+        NetworkFaultSimulationInput, PeerFrameAuthenticator, PeerLifecycle, PeerLifecycleEvent,
+        PeerLifecycleState, ProposalCandidate, ProposalPlannerError, RecoveryGuardError,
+        RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, RuntimeLifecycleError,
+        RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore, SnapshotRestoreError,
+        SnapshotRestoreGuard, SnapshotStoreError, StateDivergenceError, StateDivergenceEvaluator,
+        StateDivergenceSeverity, StateDivergenceStatus, StateDivergenceWatchInput,
+        WatchdogAnomalyError, WatchdogAnomalyEvaluator, WatchdogAnomalyKind,
+        WatchdogAnomalySeverity, WatchdogAnomalyWatchInput,
     };
     use crate::config::{NodeConfig, NodeRole, SyncMode};
     use std::fs;
@@ -2368,6 +2720,157 @@ mod tests {
         assert_eq!(
             BoundedRuntimeQueue::<String>::new(0),
             Err(RuntimeQueueError::InvalidCapacity { capacity: 0 })
+        );
+    }
+
+    #[test]
+    fn unit_authenticated_peer_frame_rejects_invalid_wire_format() {
+        assert_eq!(
+            AuthenticatedPeerFrame::from_wire("frame|broken"),
+            Err(AuthenticatedPeerFrameError::InvalidWireFormat(
+                "frame|broken".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn functional_authenticated_peer_frame_roundtrips_wire_and_signature() {
+        let frame = AuthenticatedPeerFrame::signed(
+            "frame-1",
+            "kamn:did:agent:peer-a",
+            "kamn:did:agent:peer-b",
+            1,
+            "payload-1",
+        )
+        .expect("signed frame should build");
+        let wire = frame.to_wire().expect("wire encode should pass");
+        let decoded = AuthenticatedPeerFrame::from_wire(&wire).expect("wire decode should pass");
+        decoded
+            .verify_signature()
+            .expect("signature verification should pass");
+        assert_eq!(decoded, frame);
+    }
+
+    #[test]
+    fn integration_peer_frame_authenticator_accepts_monotonic_nonce_flow() {
+        let mut authenticator = PeerFrameAuthenticator::new(
+            "kamn:did:agent:peer-b",
+            vec!["kamn:did:agent:peer-a".to_owned()],
+        )
+        .expect("authenticator should build");
+        let frame_1 = AuthenticatedPeerFrame::signed(
+            "frame-1",
+            "kamn:did:agent:peer-a",
+            "kamn:did:agent:peer-b",
+            1,
+            "payload-1",
+        )
+        .expect("frame 1 should build");
+        let frame_2 = AuthenticatedPeerFrame::signed(
+            "frame-2",
+            "kamn:did:agent:peer-a",
+            "kamn:did:agent:peer-b",
+            2,
+            "payload-2",
+        )
+        .expect("frame 2 should build");
+
+        assert!(authenticator.validate_inbound(&frame_1).is_ok());
+        assert!(authenticator.validate_inbound(&frame_2).is_ok());
+    }
+
+    #[test]
+    fn regression_forged_or_unauthorized_peer_frame_is_rejected() {
+        // Regression: #618
+        let mut authenticator = PeerFrameAuthenticator::new(
+            "kamn:did:agent:peer-b",
+            vec!["kamn:did:agent:peer-a".to_owned()],
+        )
+        .expect("authenticator should build");
+        let mut forged = AuthenticatedPeerFrame::signed(
+            "frame-1",
+            "kamn:did:agent:peer-a",
+            "kamn:did:agent:peer-b",
+            1,
+            "payload-1",
+        )
+        .expect("frame should build");
+        forged.signature.push_str("-tampered");
+        assert!(matches!(
+            authenticator.validate_inbound(&forged),
+            Err(AuthenticatedPeerFrameError::SignatureMismatch { .. })
+        ));
+
+        let unauthorized = AuthenticatedPeerFrame::signed(
+            "frame-2",
+            "kamn:did:agent:peer-z",
+            "kamn:did:agent:peer-b",
+            1,
+            "payload-2",
+        )
+        .expect("frame should build");
+        assert_eq!(
+            authenticator.validate_inbound(&unauthorized),
+            Err(AuthenticatedPeerFrameError::UnauthorizedSender(
+                "kamn:did:agent:peer-z".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn regression_replayed_peer_frame_nonce_is_rejected() {
+        // Regression: #618
+        let mut authenticator = PeerFrameAuthenticator::new(
+            "kamn:did:agent:peer-b",
+            vec!["kamn:did:agent:peer-a".to_owned()],
+        )
+        .expect("authenticator should build");
+        let frame = AuthenticatedPeerFrame::signed(
+            "frame-1",
+            "kamn:did:agent:peer-a",
+            "kamn:did:agent:peer-b",
+            1,
+            "payload-1",
+        )
+        .expect("frame should build");
+        authenticator
+            .validate_inbound(&frame)
+            .expect("first frame should be accepted");
+        assert_eq!(
+            authenticator.validate_inbound(&frame),
+            Err(AuthenticatedPeerFrameError::ReplayNonce {
+                sender_did: "kamn:did:agent:peer-a".to_owned(),
+                last_nonce: 1,
+                found: 1
+            })
+        );
+    }
+
+    #[test]
+    fn performance_authenticated_peer_frame_validation_stays_within_ci_budget() {
+        let mut authenticator = PeerFrameAuthenticator::new(
+            "kamn:did:agent:peer-b",
+            vec!["kamn:did:agent:peer-a".to_owned()],
+        )
+        .expect("authenticator should build");
+        let started = Instant::now();
+        for nonce in 1..=256 {
+            let frame = AuthenticatedPeerFrame::signed(
+                &format!("frame-{nonce}"),
+                "kamn:did:agent:peer-a",
+                "kamn:did:agent:peer-b",
+                nonce,
+                "payload-bounded",
+            )
+            .expect("frame should build");
+            authenticator
+                .validate_inbound(&frame)
+                .expect("frame should be accepted");
+        }
+        let elapsed_millis = started.elapsed().as_millis();
+        assert!(
+            elapsed_millis < 250,
+            "authenticated peer frame validation exceeded CI budget: {elapsed_millis}ms"
         );
     }
 
