@@ -94,6 +94,22 @@ jobs:
             --max-attempts 1 \
             -- bash scripts/ci/run_invariant_harness.sh --mode fast
 
+      - name: Generate performance smoke report
+        if: steps.scope.outputs.run_rust == 'true'
+        run: bash scripts/ci/generate_performance_smoke_report.sh --lane smoke --output-json performance-smoke-report.json
+
+      - name: Check performance thresholds (smoke)
+        if: steps.scope.outputs.run_rust == 'true'
+        run: bash scripts/ci/check_performance_thresholds.sh --lane smoke --report-json performance-smoke-report.json --profile-file .ci/performance-targets.env
+
+      - name: Upload performance smoke report
+        if: always() && hashFiles('performance-smoke-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-smoke-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: performance-smoke-report.json
+          if-no-files-found: error
+
       - name: No Rust checks required
         if: steps.scope.outputs.run_rust != 'true' && steps.scope.outputs.docs_only != 'true'
         run: echo "No Rust changes detected; skipping Rust toolchain setup and tests."
