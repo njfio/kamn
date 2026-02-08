@@ -1,4 +1,4 @@
-# CI Caching and Parallelism Slice (Issues #182, #183, #568, #595)
+# CI Caching and Parallelism Slice (Issues #182, #183, #568, #595, #603, #604)
 
 This document captures the first implementation slice for CI runtime/cost optimization in story #68.
 
@@ -28,6 +28,10 @@ This document captures the first implementation slice for CI runtime/cost optimi
   - `scripts/ci/generate_performance_smoke_report.sh --lane smoke|deep`
   - `scripts/ci/check_performance_thresholds.sh --lane smoke|deep --profile-file .ci/performance-targets.env`
   - PR fast-gate runs smoke lane only; deep-validate runs deep lane on schedule/manual to keep PR cost low.
+- Added SDK parity matrix routing for SDK-related diffs:
+  - `run_sdk_parity_matrix` is true for SDK paths (`kamn_sdk.py`, `packages/kamn-sdk/*`, `crates/kamn-sdk/*`, `scripts/sdk/*`, `fixtures/sdk_parity/*`).
+  - SDK-only diffs use `test_scope=sdk` and skip broad Rust lint/test lanes to control cost.
+  - Fast-gate executes `scripts/sdk/run_sdk_parity_matrix.sh` with the canonical fixture corpus when routed.
 
 ## Operational Guidance
 - Cache invalidation:
@@ -38,6 +42,7 @@ This document captures the first implementation slice for CI runtime/cost optimi
   - Keep harness parallelism bounded (current limit: 2 in deep lane) to avoid unstable load spikes.
   - Route deploy-only diffs to `scripts/deploy/test_preflight_topology.sh` so fast-gate avoids Rust toolchain startup.
   - Keep CI-tool-check steps scoped to CI-sensitive diffs to reduce unnecessary runner time (`Regression: #568`).
+  - Keep SDK parity checks targeted to SDK paths to avoid full-suite fallback for non-Rust SDK edits (`Regression: #583`).
   - Keep performance threshold checks deterministic and fixture-based in PR lanes; reserve heavy replay/load suites for deferred deep lanes.
   - Prefer targeted crate scopes for known Rust module edits, but keep strict full-scope fallback for critical/unknown paths.
 - Troubleshooting:
@@ -54,4 +59,5 @@ bash scripts/ci/run_invariant_harness.sh --mode deep --parallelism 2 --dry-run
 bash scripts/ci/generate_performance_smoke_report.sh --lane smoke --output-json /tmp/perf-smoke.json
 bash scripts/ci/check_performance_thresholds.sh --lane smoke --report-json /tmp/perf-smoke.json --profile-file .ci/performance-targets.env
 bash scripts/deploy/test_preflight_topology.sh
+bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json /tmp/sdk-parity-report.json
 ```

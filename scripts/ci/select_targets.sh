@@ -28,6 +28,7 @@ append_summary() {
     echo "- Run Rust checks: ${RUN_RUST}"
     echo "- Run CI tool checks: ${RUN_CI_TOOL_CHECKS}"
     echo "- Run deploy preflight checks: ${RUN_DEPLOY_PREFLIGHT_TESTS}"
+    echo "- Run SDK parity matrix: ${RUN_SDK_PARITY_MATRIX}"
     echo "- Run invariant harness: ${RUN_INVARIANT_HARNESS}"
     echo "- Test scope: ${TEST_SCOPE}"
     echo "- Critical path fallback: ${CRITICAL_PATH_CHANGED}"
@@ -113,6 +114,7 @@ DOCS_ONLY=true
 RUST_CHANGED=false
 CI_INFRA_CHANGED=false
 DEPLOY_SCRIPT_CHANGED=false
+SDK_RELATED_CHANGED=false
 CRITICAL_PATH_CHANGED=false
 UNKNOWN_RISK_CHANGED=false
 FULL_SUITE=false
@@ -157,6 +159,13 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
+    kamn_sdk.py|packages/kamn-sdk/*|crates/kamn-sdk/*|scripts/sdk/*|fixtures/sdk_parity/*|tests/python/test_sdk.py)
+      SDK_RELATED_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
     crates/kamn-core/src/invariants.rs|crates/kamn-core/src/transaction.rs|crates/kamn-core/src/smoke.rs|crates/kamn-core/tests/invariant_*|crates/kamn-core/tests/transaction_guards.rs|docs/foundation/invariants.md|docs/foundation/transaction-guards.md|scripts/ci/run_invariant_harness.sh|scripts/ci/test_run_invariant_harness.sh)
       INVARIANT_RELATED_CHANGED=true
       ;;
@@ -184,6 +193,7 @@ fi
 RUN_RUST=false
 RUN_CI_TOOL_CHECKS=false
 RUN_DEPLOY_PREFLIGHT_TESTS=false
+RUN_SDK_PARITY_MATRIX=false
 FMT_CMD=":"
 CLIPPY_CMD=":"
 TEST_CMD=":"
@@ -234,6 +244,13 @@ if [ "$RUN_RUST" != true ] && [ "$DEPLOY_SCRIPT_CHANGED" = true ]; then
   TEST_SCOPE="deploy"
 fi
 
+if [ "$SDK_RELATED_CHANGED" = true ]; then
+  RUN_SDK_PARITY_MATRIX=true
+  if [ "$RUN_RUST" != true ]; then
+    TEST_SCOPE="sdk"
+  fi
+fi
+
 if [ "$CI_INFRA_CHANGED" = true ]; then
   RUN_CI_TOOL_CHECKS=true
 fi
@@ -242,6 +259,7 @@ write_output "docs_only" "$DOCS_ONLY"
 write_output "run_rust" "$RUN_RUST"
 write_output "run_ci_tool_checks" "$RUN_CI_TOOL_CHECKS"
 write_output "run_deploy_preflight_tests" "$RUN_DEPLOY_PREFLIGHT_TESTS"
+write_output "run_sdk_parity_matrix" "$RUN_SDK_PARITY_MATRIX"
 write_output "run_invariant_harness" "$RUN_INVARIANT_HARNESS"
 write_output "test_scope" "$TEST_SCOPE"
 write_output "critical_path_changed" "$CRITICAL_PATH_CHANGED"
