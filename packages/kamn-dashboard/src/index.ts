@@ -4,11 +4,13 @@ export {
   mapSeverityLevel,
   mapSnapshotToDashboardModel,
   renderDashboardHtml,
+  renderDashboardState,
 } from "./dashboard.ts";
 export type {
   DashboardDomainRow,
   DashboardDomainSample,
   DashboardModel,
+  DashboardRenderState,
   DashboardSnapshot,
   DashboardSummaryCard,
   SeverityInput,

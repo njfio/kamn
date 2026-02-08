@@ -6,6 +6,7 @@ import {
   mapSnapshotToDashboardModel,
   mapSeverityLevel,
   renderDashboardHtml,
+  renderDashboardState,
 } from "../src/index.ts";
 
 test("unit maps severity to critical when error rate exceeds critical threshold", () => {
@@ -69,6 +70,40 @@ test("integration builds dashboard shell from deterministic mock adapter data", 
   assert.match(html, /KAMN Operator Dashboard MVP/);
   assert.match(html, /summary-grid/);
   assert.match(html, /reputation/);
+});
+
+test("integration returns empty state when shell receives null snapshot", () => {
+  const html = buildDashboardShell(1_700_001_200, null);
+  assert.match(html, /dashboard-empty/);
+});
+
+test("functional returns empty state when snapshot has no domains", () => {
+  const html = buildDashboardShell(1_700_001_200, {
+    generated_at_unix: 1_700_001_000,
+    domains: [],
+  });
+  assert.match(html, /dashboard-empty/);
+});
+
+test("functional renders deterministic loading state", () => {
+  const html = renderDashboardState({ state: "loading" });
+  assert.match(html, /dashboard-loading/);
+  assert.match(html, /Loading dashboard/);
+});
+
+test("integration renders explicit error state shell", () => {
+  const html = renderDashboardState({
+    state: "error",
+    message: "mock adapter unavailable",
+  });
+  assert.match(html, /dashboard-error/);
+  assert.match(html, /mock adapter unavailable/);
+});
+
+test("functional renders empty state when no rows are available", () => {
+  const html = renderDashboardState({ state: "empty" });
+  assert.match(html, /dashboard-empty/);
+  assert.match(html, /No dashboard data available/);
 });
 
 test("regression renders critical badge and stale banner together", () => {

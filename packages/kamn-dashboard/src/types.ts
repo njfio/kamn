@@ -41,3 +41,19 @@ export type DashboardModel = {
   summaryCards: DashboardSummaryCard[];
   domains: DashboardDomainRow[];
 };
+
+export type DashboardRenderState =
+  | {
+      state: "loading";
+    }
+  | {
+      state: "error";
+      message: string;
+    }
+  | {
+      state: "empty";
+    }
+  | {
+      state: "ready";
+      model: DashboardModel;
+    };

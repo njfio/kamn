@@ -14,6 +14,9 @@ fn doc_contains_section_and_audit_trace_rules() {
     assert!(DOC.contains("## UI Composition Rules"));
     assert!(DOC.contains("## Audit Trace Rules"));
     assert!(DOC.contains("Denied operator actions are marked critical"));
+    assert!(DOC.contains("dashboard-loading"));
+    assert!(DOC.contains("dashboard-error"));
+    assert!(DOC.contains("dashboard-empty"));
 }
 
 #[test]
