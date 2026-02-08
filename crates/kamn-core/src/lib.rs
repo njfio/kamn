@@ -1,4 +1,5 @@
 pub mod agent_key_hierarchy;
+pub mod agent_upgrade_workflow;
 pub mod anti_spam;
 pub mod audit_exports;
 pub mod bootstrap;
@@ -58,6 +59,11 @@ pub mod zk_message_proofs;
 
 pub use agent_key_hierarchy::{
     AgentKeyHierarchy, AgentKeyHierarchyError, EphemeralSessionKey, KeyRole,
+};
+pub use agent_upgrade_workflow::{
+    AgentDrivenUpgradeWorkflow, AgentUpgradeAuditEvent, AgentUpgradeAuditEventKind,
+    AgentUpgradeProposalDraft, AgentUpgradeProposalRecord, AgentUpgradeProposalState,
+    AgentUpgradeWorkflowConfig, AgentUpgradeWorkflowError,
 };
 pub use anti_spam::{
     AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamError, AntiSpamRejection,
