@@ -21,6 +21,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Rust changes in specific crates/manifests: run targeted clippy/tests by manifest path.
 - Core Rust metadata changes (`Cargo.toml`, `Cargo.lock`, toolchain, `.cargo`): run full workspace lane.
 - CI/workflow changes without Rust source changes: run shell syntax checks and a smoke Rust lane when a Cargo project exists.
+- Invariant-related changes (`invariants.rs`, `transaction.rs`, smoke/invariant harness tests, or harness scripts): run deterministic invariant harness in `fast` mode (single seed) after Rust tests.
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
@@ -56,6 +57,7 @@ Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 `ci-fast-gate` runs `scripts/ci/test_ci_tools.sh` to locally regression-test CI helper scripts:
 - Budget evaluator (`test_evaluate_budget.sh`)
 - Retry helper (`test_run_with_retry.sh`)
+- Invariant harness runner (`test_run_invariant_harness.sh`)
 - Flaky registry validator (`test_check_flaky_registry.sh`)
 - Budget summarizer (`test_summarize_budget_artifacts.sh`)
 - PR CI declaration checker (`test_check_pr_ci_declaration.sh`)
@@ -71,6 +73,7 @@ Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 
 ## Deep Validation Behavior
 `ci-deep-validate` runs full formatting, linting, and test suites on a nightly schedule and manually on demand.
+It also runs deterministic invariant harness coverage in `deep` mode (bounded seed set) to keep invariant negative-path checks off the PR-critical lane while preserving repeatable coverage.
 
 ## Cost Controls
 - Concurrency cancellation enabled on both workflows.
