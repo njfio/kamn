@@ -19,6 +19,7 @@ pub mod message_lifecycle;
 pub mod migrations;
 pub mod namespaces;
 pub mod redaction_compliance;
+pub mod retention_engine;
 pub mod runtime;
 pub mod smoke;
 pub mod state;
@@ -82,6 +83,10 @@ pub use namespaces::StateNamespaces;
 pub use redaction_compliance::{
     RedactionAction, RedactionAuditEvent, RedactionAuditEventKind, RedactionComplianceEngine,
     RedactionComplianceError, RedactionRequestStatus, RedactionVisibility,
+};
+pub use retention_engine::{
+    RetentionClass, RetentionDomain, RetentionEnginePolicy, RetentionEvaluation,
+    RetentionPolicyEngine, RetentionPolicyError, RetentionRecord, RetentionStatus,
 };
 pub use runtime::RuntimeWiring;
 pub use smoke::{ProducedBlock, RoleSmokeNetwork, SmokeError};
