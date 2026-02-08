@@ -21,6 +21,14 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `RecoveryRejoinGuard`
   - `RecoveryStatus`
   - `RecoveryGuardError`
+- Added runtime snapshot persistence/restore guard primitives in `crates/kamn-core/src/runtime.rs`:
+  - `RuntimeSnapshot` (version/hash/cursor)
+  - `SnapshotRestoreGuard`
+  - `SnapshotRestoreError`
+  - `RuntimeSnapshotStore`
+  - `InMemoryRuntimeSnapshotStore`
+  - `FileRuntimeSnapshotStore`
+  - `SnapshotStoreError`
 - Added deterministic fault simulation primitives in `crates/kamn-core/src/runtime.rs`:
   - `NetworkFaultSimulationInput`
   - `NetworkFaultSimulationReport`
@@ -119,6 +127,28 @@ This document captures the initial runtime-network foundation slice for peer lif
   - replayed resume tokens are rejected (`ReplayResumeToken`)
   - matching version/hash with unique resume token is accepted (`RejoinAccepted`)
 
+## Snapshot Persistence and Restore Contract Rules
+- Runtime snapshot persistence enforces strict continuity across:
+  - state version
+  - state hash
+  - snapshot cursor/checkpoint
+- `RuntimeSnapshot::with_cursor(...)` requires:
+  - positive state version
+  - non-empty hash with no metadata delimiter (`|`)
+  - positive cursor
+- `SnapshotRestoreGuard::with_expected_cursor(...)` enforces deterministic restore identity across version/hash/cursor.
+- File-backed snapshot entries serialize as:
+  - `<state-version>|<state-hash>|<cursor>`
+  - legacy `<state-version>|<state-hash>` lines remain readable and are mapped to cursor=`state_version`.
+- Typed persistence guard failures:
+  - `SnapshotStoreError::StateVersionRegression`
+  - `SnapshotStoreError::CursorRegression`
+  - `SnapshotStoreError::StaleStateHash`
+- Corrupt or stale metadata restores are repaired deterministically by truncating the invalid suffix.
+- Regression contract:
+  - stale version/cursor/hash metadata are rejected (`Regression: #617`)
+  - cursor mismatch restore attempts are rejected (`Regression: #617`)
+
 ## Deterministic Fault Simulation Harness Rules
 - `NetworkFaultSimulationInput` requires:
   - non-empty `sample_id`
@@ -144,15 +174,18 @@ This document captures the initial runtime-network foundation slice for peer lif
   - empty peer ID and zero-capacity queue rejection
   - empty proposal candidate ID rejection
   - empty resume-token rejoin attempt rejection
+  - snapshot cursor/hash validation and continuity regression checks
 - Functional:
   - peer lifecycle connect/degrade/recover/disconnect flow
   - planner deterministic ordering contract
   - rejoin acceptance with matching snapshot
+  - snapshot recovery truncation with stale metadata suffix
 - Integration:
   - bounded FIFO queue behavior under capacity
   - queue-drain to planner ordering preservation
   - lagging-node catch-up guidance output
   - daemon network-fault simulation with queue-overflow/degradation reporting
+  - runtime snapshot contract lane wiring and docs mapping checks
 - Regression:
   - rejoin without disconnect is rejected (`Regression: #324`)
   - queue overflow rejects new event (`Regression: #324`)
@@ -165,9 +198,13 @@ This document captures the initial runtime-network foundation slice for peer lif
   - listener attestation replay rejection (`Regression: #371`)
   - outbound under-quorum rejection (`Regression: #372`)
   - network fault simulation censorship critical-boundary guard (`Regression: #618`)
+  - snapshot stale metadata rejection (`Regression: #617`)
+  - snapshot restore cursor mismatch rejection (`Regression: #617`)
 - Performance:
   - bounded PR-lane deterministic fault simulation budget check
+  - bounded PR-lane snapshot recovery budget check
   - scheduled chaos lane stress hook (`--ignored`)
+  - scheduled snapshot recovery deep lane stress hook (`--ignored`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
@@ -175,16 +212,19 @@ Run targeted checks first:
 ```bash
 cargo test -p kamn-core runtime::tests::
 cargo test -p kamn-core network_fault_simulation
+cargo test -p kamn-core snapshot_store
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-core --test bridge_quorum_runtime_docs
 cargo test -p kamn-node --test node_runtime_cli_docs
 cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
+bash scripts/runtime/run_runtime_snapshot_contract_lane.sh
 ```
 
 Scheduled deep-lane command:
 
 ```bash
 cargo test -p kamn-core performance_network_fault_simulation_chaos_lane_stress -- --ignored
+bash scripts/runtime/run_runtime_snapshot_deep_lane.sh
 ```
 
 Then run strict lint/format gates:
