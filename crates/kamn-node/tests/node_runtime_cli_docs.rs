@@ -115,6 +115,12 @@ fn doc_contains_daemon_focused_fast_lane_commands() {
 }
 
 #[test]
+fn doc_contains_processor_ha_reference_section() {
+    assert!(DOC.contains("## Processor HA Runtime References"));
+    assert!(DOC.contains("docs/foundation/runtime-processor-ha.md"));
+}
+
+#[test]
 fn regression_requires_invalid_output_mode_rule() {
     // Regression: #307
     assert!(DOC.contains("Invalid modes are rejected with explicit typed error."));

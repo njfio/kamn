@@ -213,3 +213,8 @@ cargo test -p kamn-core
 cargo test -p kamn-node integration_runtime_daemon_renders_bounded_completion_output
 cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
 ```
+
+## Processor HA Runtime References
+
+- Processor HA snapshot restore and construct-lock contract details:
+  - `docs/foundation/runtime-processor-ha.md`
