@@ -9,6 +9,7 @@ pub mod data_classification;
 pub mod did;
 pub mod did_registry;
 pub mod direct_message_crypto;
+pub mod discord_bridge;
 pub mod escrow;
 pub mod group_channel_crypto;
 pub mod instruction_verify;
@@ -67,6 +68,10 @@ pub use did_registry::{DidRegistry, DidRegistryError};
 pub use direct_message_crypto::{
     DirectMessageCiphertext, DirectMessageCryptoEngine, DirectMessageCryptoError,
     DIRECT_MESSAGE_CIPHER_ALGORITHM, DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
+};
+pub use discord_bridge::{
+    DiscordBridgeConfig, DiscordBridgeEngine, DiscordBridgeError, DiscordInboundRequest,
+    DiscordOutboundApproval, DiscordOutboundDispatch,
 };
 pub use escrow::{EscrowLifecycle, EscrowLifecycleError, EscrowStatus};
 pub use group_channel_crypto::{
