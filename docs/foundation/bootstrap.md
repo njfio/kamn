@@ -105,5 +105,6 @@ For governance proposal, voting, and execution workflow controls, see `docs/foun
 For validator onboarding/offboarding lifecycle and quorum reconfiguration controls, see `docs/foundation/validator-lifecycle-quorum-reconfiguration.md`.
 For governed version-upgrade orchestration and governance audit-view controls, see `docs/foundation/version-upgrade-orchestration-audit.md`.
 For pilot agent-driven upgrade proposal workflow controls with human-review safeguards, see `docs/foundation/agent-driven-upgrade-proposal-workflow.md`.
+For node runtime CLI output-mode contracts and deterministic text/json report surfaces, see `docs/foundation/node-runtime-cli.md`.
 For fast/slow/archive sync-mode operational profile controls, see `docs/foundation/sync-mode-profiles.md`.
 For PRD 13.2 benchmark target validation evidence controls, see `docs/foundation/performance-target-benchmarking.md`.
