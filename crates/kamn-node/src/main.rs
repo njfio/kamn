@@ -82,7 +82,7 @@ fn run() -> Result<(), ConfigError> {
     let plan = bootstrap(config)?;
 
     println!(
-        "KAMN node bootstrap\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  components: {}",
+        "KAMN node bootstrap\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  state_version: {}\n  pending_migrations: {}\n  components: {}",
         plan.config.role.as_str(),
         plan.config.chain_id,
         plan.config.chain_version,
@@ -92,6 +92,8 @@ fn run() -> Result<(), ConfigError> {
         } else {
             "disabled"
         },
+        plan.state_schema.version.0,
+        plan.migration_plan.steps.len(),
         plan.wiring.all_components().join(", ")
     );
 

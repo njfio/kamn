@@ -60,6 +60,7 @@ pub enum ConfigError {
     EmptyChainId,
     EmptyChainVersion,
     EmptyStorageDir,
+    MigrationPlan(String),
     InvalidRole(String),
     UnknownArgument(String),
     MissingArgumentValue(&'static str),
@@ -71,6 +72,7 @@ impl fmt::Display for ConfigError {
             Self::EmptyChainId => write!(f, "chain_id must not be empty"),
             Self::EmptyChainVersion => write!(f, "chain_version must not be empty"),
             Self::EmptyStorageDir => write!(f, "storage_dir must not be empty"),
+            Self::MigrationPlan(message) => write!(f, "migration planning failed: {message}"),
             Self::InvalidRole(value) => write!(f, "invalid role: {value}"),
             Self::UnknownArgument(value) => write!(f, "unknown argument: {value}"),
             Self::MissingArgumentValue(flag) => {
