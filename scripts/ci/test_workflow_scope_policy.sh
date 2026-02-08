@@ -129,6 +129,21 @@ if ! grep -Fq "bash scripts/runtime/run_runtime_snapshot_contract_lane.sh" "$FAS
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_message_lifecycle_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected message lifecycle contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/message/run_message_lifecycle_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected message lifecycle contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true' || steps.scope.outputs.run_message_lifecycle_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected message lifecycle rust setup/cache condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 # Regression: #587
 if ! grep -Fq "if: steps.scope.outputs.run_bridge_replay_harness == 'true'" "$FAST_WORKFLOW"; then
   echo "expected bridge replay harness scope condition in ci-fast-gate.yml" >&2
