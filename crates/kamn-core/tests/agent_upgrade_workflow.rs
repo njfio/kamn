@@ -11,6 +11,7 @@ fn agent_upgrade_workflow_rejects_unallowlisted_agent_proposer() {
         allowed_agent_proposers: vec!["kamn:did:agent:upgrade-bot".to_owned()],
         required_human_reviews: 1,
         required_validator_quorum: 2,
+        min_activation_delay_secs: 60,
     })
     .expect("workflow should initialize");
 
@@ -36,6 +37,7 @@ fn agent_upgrade_workflow_functional_human_review_governance_activation_flow() {
         allowed_agent_proposers: vec!["kamn:did:agent:upgrade-bot".to_owned()],
         required_human_reviews: 2,
         required_validator_quorum: 2,
+        min_activation_delay_secs: 60,
     })
     .expect("workflow should initialize");
     workflow
@@ -108,6 +110,7 @@ fn agent_upgrade_workflow_integration_records_governance_and_upgrade_audit_trace
         allowed_agent_proposers: vec!["kamn:did:agent:upgrade-bot".to_owned()],
         required_human_reviews: 1,
         required_validator_quorum: 2,
+        min_activation_delay_secs: 60,
     })
     .expect("workflow should initialize");
     workflow
@@ -183,6 +186,7 @@ fn agent_upgrade_workflow_regression_blocks_governance_submission_without_human_
         allowed_agent_proposers: vec!["kamn:did:agent:upgrade-bot".to_owned()],
         required_human_reviews: 2,
         required_validator_quorum: 2,
+        min_activation_delay_secs: 60,
     })
     .expect("workflow should initialize");
     workflow
@@ -208,6 +212,69 @@ fn agent_upgrade_workflow_regression_blocks_governance_submission_without_human_
         Err(AgentUpgradeWorkflowError::InsufficientHumanReviews {
             required: 2,
             provided: 1,
+        })
+    );
+}
+
+#[test]
+fn agent_upgrade_workflow_regression_rejects_early_activation_before_delay() {
+    // Regression: #528
+    let mut workflow = AgentDrivenUpgradeWorkflow::new(AgentUpgradeWorkflowConfig {
+        current_version: "v0.8.0".to_owned(),
+        allowed_agent_proposers: vec!["kamn:did:agent:upgrade-bot".to_owned()],
+        required_human_reviews: 1,
+        required_validator_quorum: 2,
+        min_activation_delay_secs: 120,
+    })
+    .expect("workflow should initialize");
+    workflow
+        .submit_agent_proposal(AgentUpgradeProposalDraft {
+            proposal_id: "pilot-upgrade-5".to_owned(),
+            target_version: "v0.9.0".to_owned(),
+            agent_did: "kamn:did:agent:upgrade-bot".to_owned(),
+            rationale: "timelock regression".to_owned(),
+            created_at_unix: 1_716_614_000,
+            voting_deadline_unix: 1_716_614_700,
+        })
+        .expect("proposal should register");
+    workflow
+        .approve_human_review(
+            "pilot-upgrade-5",
+            "kamn:did:agent:validator-1",
+            1_716_614_050,
+        )
+        .expect("review should pass");
+    workflow
+        .submit_to_governance("pilot-upgrade-5", 1_716_614_100)
+        .expect("governance submission should pass");
+    workflow
+        .cast_validator_vote(
+            "pilot-upgrade-5",
+            "kamn:did:agent:validator-1",
+            GovernanceVoteChoice::Yes,
+            1_716_614_120,
+        )
+        .expect("yes vote should pass");
+    workflow
+        .cast_validator_vote(
+            "pilot-upgrade-5",
+            "kamn:did:agent:validator-2",
+            GovernanceVoteChoice::Yes,
+            1_716_614_130,
+        )
+        .expect("yes vote should pass");
+
+    assert_eq!(
+        workflow.finalize_upgrade(
+            "pilot-upgrade-5",
+            "kamn:did:agent:validator-1",
+            1_716_614_200,
+            "op-hash-pilot-upgrade-5-early",
+        ),
+        Err(AgentUpgradeWorkflowError::ActivationDelayNotElapsed {
+            proposal_id: "pilot-upgrade-5".to_owned(),
+            earliest_activation_unix: 1_716_614_250,
+            attempted_activation_unix: 1_716_614_200,
         })
     );
 }
