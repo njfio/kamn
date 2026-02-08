@@ -157,6 +157,37 @@ fn integration_projects_solana_inbound_to_envelope() {
 }
 
 #[test]
+fn regression_rejects_replayed_solana_inbound_projection_event() {
+    // Regression: #443
+    let engine = CrossChainBridgeEngine::new(config()).expect("engine should build");
+    let request = CrossChainInboundRequest {
+        listener_did: "kamn:did:agent:listener-1".to_owned(),
+        chain: CrossChainNetwork::Solana,
+        inbound: solana_inbound("kamn:did:agent:listener-target-sol"),
+    };
+
+    engine
+        .process_inbound_to_envelope(
+            &request,
+            vec!["kamn:did:agent:listener-target-sol#key-agreement-1".to_owned()],
+            "2026-02-08T09:30:00Z",
+            14,
+        )
+        .expect("first inbound projection should succeed");
+    assert_eq!(
+        engine.process_inbound_to_envelope(
+            &request,
+            vec!["kamn:did:agent:listener-target-sol#key-agreement-1".to_owned()],
+            "2026-02-08T09:30:00Z",
+            15,
+        ),
+        Err(CrossChainBridgeError::Bridge(
+            "duplicate inbound message id: solana:slot-881991:ix-2".to_owned()
+        ))
+    );
+}
+
+#[test]
 fn regression_unknown_ethereum_route_is_rejected() {
     let engine = CrossChainBridgeEngine::new(config()).expect("engine should build");
 
