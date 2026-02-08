@@ -28,6 +28,7 @@ pub mod message_lifecycle;
 pub mod migrations;
 pub mod namespaces;
 pub mod observability;
+pub mod operator_actions;
 pub mod operator_binding;
 pub mod operator_dashboard_api;
 pub mod performance_targets;
@@ -153,6 +154,10 @@ pub use observability::{
     ObservabilityAlert, ObservabilityError, ObservabilityHealth, ObservabilityMetric,
     ObservabilityMonitor, ObservabilityReport, ObservabilitySample, ObservabilitySeverity,
     ObservabilitySloProfile, ObservabilitySnapshot,
+};
+pub use operator_actions::{
+    OperatorActionAuditRecord, OperatorActionOutcome, OperatorActionServiceError,
+    PermissionedOperatorActionService,
 };
 pub use operator_binding::{
     OperatorBindingAction, OperatorBindingEngine, OperatorBindingError, OperatorBindingProof,
