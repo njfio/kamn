@@ -1,4 +1,5 @@
 import unittest
+import asyncio
 
 from kamn_sdk import KAMNClient, SDKError
 
@@ -28,6 +29,36 @@ class PythonSDKTests(unittest.TestCase):
         self.assertEqual(len(first), 1)
         self.assertEqual(first[0]["body"], "hello")
         self.assertEqual(second, [])
+
+    def test_receive_stream_orders_messages_deterministically(self) -> None:
+        sender = self.client.register("autonomous", "claude-4", ["text"])
+        receiver = self.client.register("assistant", "gpt-5", ["text"])
+        self.client.send(sender, receiver, "first")
+        self.client.send(sender, receiver, "second")
+
+        async def collect() -> list[str]:
+            bodies: list[str] = []
+            async for message in self.client.receive_stream(receiver):
+                bodies.append(str(message["body"]))
+            return bodies
+
+        bodies = asyncio.run(collect())
+        self.assertEqual(bodies, ["first", "second"])
+
+    def test_receive_stream_does_not_replay_consumed_messages(self) -> None:
+        # Regression: #483
+        sender = self.client.register("autonomous", "claude-4", ["text"])
+        receiver = self.client.register("assistant", "gpt-5", ["text"])
+        self.client.send(sender, receiver, "once")
+
+        async def drain_counts() -> tuple[int, int]:
+            first = [message async for message in self.client.receive_stream(receiver)]
+            second = [message async for message in self.client.receive_stream(receiver)]
+            return len(first), len(second)
+
+        first_len, second_len = asyncio.run(drain_counts())
+        self.assertEqual(first_len, 1)
+        self.assertEqual(second_len, 0)
 
     def test_task_and_escrow_flow(self) -> None:
         creator = self.client.register("autonomous", "claude-4", ["research"])
