@@ -14,4 +14,9 @@ if ! grep -Fq "bash scripts/deploy/test_preflight_topology.sh" "$FAST_WORKFLOW";
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/deploy/test_generate_bundle.sh" "$FAST_WORKFLOW"; then
+  echo "expected deploy bundle generator tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 echo "workflow scope policy tests passed."

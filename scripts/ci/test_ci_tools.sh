@@ -19,5 +19,7 @@ bash "$ROOT_DIR/scripts/ci/test_workflow_retry_policy.sh"
 bash "$ROOT_DIR/scripts/ci/test_workflow_cache_policy.sh"
 bash "$ROOT_DIR/scripts/ci/test_workflow_scope_policy.sh"
 bash "$ROOT_DIR/scripts/ci/test_workflow_performance_policy.sh"
+bash "$ROOT_DIR/scripts/deploy/test_preflight_topology.sh"
+bash "$ROOT_DIR/scripts/deploy/test_generate_bundle.sh"
 
 echo "All CI tool regression tests passed."
