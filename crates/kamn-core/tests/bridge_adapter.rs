@@ -172,3 +172,22 @@ fn regression_rejects_adapter_outbound_request_id_mutation() {
         })
     );
 }
+
+#[test]
+fn regression_rejects_duplicate_inbound_event_replay() {
+    // Regression: #423
+    let adapter =
+        PassThroughBridgeAdapter::new(BridgePlatform::Discord, "kamn:did:agent:bridge-discord-1")
+            .expect("adapter should build");
+    let engine = BridgeAdapterEngine::new(adapter, AllowAllBridgePolicy::new());
+
+    engine
+        .process_inbound(&inbound_sample())
+        .expect("first inbound event should normalize");
+    assert_eq!(
+        engine.process_inbound(&inbound_sample()),
+        Err(BridgeAdapterError::DuplicateInboundMessageId(
+            "discord:ext-42".to_owned()
+        ))
+    );
+}
