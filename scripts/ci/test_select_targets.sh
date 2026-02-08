@@ -32,6 +32,7 @@ docs_output="$(run_selector $'docs/foundation/ci-caching-parallelism.md')"
 assert_eq "$(extract_output "$docs_output" "docs_only")" "true" "docs_only selection mismatch"
 assert_eq "$(extract_output "$docs_output" "run_rust")" "false" "docs_only should not run rust"
 assert_eq "$(extract_output "$docs_output" "run_ci_tool_checks")" "false" "docs_only should not run CI tool checks"
+assert_eq "$(extract_output "$docs_output" "run_bridge_replay_harness")" "false" "docs_only should not run bridge replay harness"
 assert_eq "$(extract_output "$docs_output" "run_sdk_parity_matrix")" "false" "docs_only should not run sdk parity matrix"
 assert_eq "$(extract_output "$docs_output" "test_scope")" "none" "docs_only should keep none scope"
 
@@ -39,6 +40,7 @@ deploy_output="$(run_selector $'scripts/deploy/preflight_topology.sh')"
 assert_eq "$(extract_output "$deploy_output" "docs_only")" "false" "deploy-only change must not be docs-only"
 assert_eq "$(extract_output "$deploy_output" "run_rust")" "false" "deploy-only changes should avoid rust lane"
 assert_eq "$(extract_output "$deploy_output" "run_deploy_preflight_tests")" "true" "deploy-only changes must run deploy preflight tests"
+assert_eq "$(extract_output "$deploy_output" "run_bridge_replay_harness")" "false" "deploy-only changes should skip bridge replay harness"
 assert_eq "$(extract_output "$deploy_output" "run_sdk_parity_matrix")" "false" "deploy-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$deploy_output" "test_scope")" "deploy" "deploy-only changes must use deploy scope"
 
@@ -56,12 +58,14 @@ assert_eq "$(extract_output "$critical_output" "test_scope")" "full" "workflow c
 unknown_output="$(run_selector $'config/runtime-policy.json')"
 # Regression: #505
 assert_eq "$(extract_output "$unknown_output" "run_rust")" "true" "unknown paths must run rust fallback"
+assert_eq "$(extract_output "$unknown_output" "run_bridge_replay_harness")" "false" "unknown paths should not trigger bridge replay harness"
 assert_eq "$(extract_output "$unknown_output" "run_sdk_parity_matrix")" "false" "unknown paths should not trigger sdk parity matrix"
 assert_eq "$(extract_output "$unknown_output" "test_scope")" "full" "unknown paths must use full fallback"
 
 targeted_output="$(run_selector $'crates/kamn-core/src/bridge_adapter.rs')"
 assert_eq "$(extract_output "$targeted_output" "run_rust")" "true" "rust path should run rust"
 assert_eq "$(extract_output "$targeted_output" "run_ci_tool_checks")" "false" "Regression: #568 non-CI paths should skip CI tool checks"
+assert_eq "$(extract_output "$targeted_output" "run_bridge_replay_harness")" "true" "bridge adapter rust paths should run bridge replay harness"
 assert_eq "$(extract_output "$targeted_output" "run_sdk_parity_matrix")" "false" "non-sdk rust paths should skip sdk parity matrix"
 assert_eq "$(extract_output "$targeted_output" "test_scope")" "targeted" "crate path should be targeted"
 
@@ -85,5 +89,11 @@ rust_sdk_output="$(run_selector $'crates/kamn-sdk/src/lib.rs')"
 assert_eq "$(extract_output "$rust_sdk_output" "run_rust")" "true" "rust sdk changes should run rust lane"
 # Regression: #583
 assert_eq "$(extract_output "$rust_sdk_output" "run_sdk_parity_matrix")" "true" "rust sdk changes must also run sdk parity matrix"
+assert_eq "$(extract_output "$rust_sdk_output" "run_bridge_replay_harness")" "false" "sdk-only paths should skip bridge replay harness"
+
+bridge_script_output="$(run_selector $'scripts/bridge/run_bridge_replay_matrix.sh')"
+assert_eq "$(extract_output "$bridge_script_output" "run_rust")" "false" "bridge script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$bridge_script_output" "run_bridge_replay_harness")" "true" "bridge script-only changes must run bridge replay harness"
+assert_eq "$(extract_output "$bridge_script_output" "test_scope")" "bridge" "bridge script-only changes should set bridge scope"
 
 echo "select_targets matrix regression tests passed."

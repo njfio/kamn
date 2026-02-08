@@ -1,0 +1,59 @@
+{
+  "version": "1",
+  "cases": [
+    {
+      "id": "telegram-duplicate-inbound-replay",
+      "suite": "telegram_bridge",
+      "test_name": "regression_rejects_replayed_telegram_inbound_projection_event",
+      "class": "duplicate",
+      "expected": {
+        "status": "pass"
+      }
+    },
+    {
+      "id": "discord-duplicate-inbound-replay",
+      "suite": "discord_bridge",
+      "test_name": "regression_rejects_replayed_discord_inbound_projection_event",
+      "class": "duplicate",
+      "expected": {
+        "status": "pass"
+      }
+    },
+    {
+      "id": "cross-chain-duplicate-inbound-replay",
+      "suite": "cross_chain_bridge",
+      "test_name": "regression_rejects_replayed_solana_inbound_projection_event",
+      "class": "duplicate",
+      "expected": {
+        "status": "pass"
+      }
+    },
+    {
+      "id": "bridge-adapter-stale-inbound",
+      "suite": "bridge_adapter",
+      "test_name": "regression_rejects_stale_inbound_event",
+      "class": "stale",
+      "expected": {
+        "status": "pass"
+      }
+    },
+    {
+      "id": "telegram-route-target-mismatch",
+      "suite": "telegram_bridge",
+      "test_name": "route_target_mismatch_is_rejected",
+      "class": "malformed",
+      "expected": {
+        "status": "pass"
+      }
+    },
+    {
+      "id": "cross-chain-unknown-route",
+      "suite": "cross_chain_bridge",
+      "test_name": "regression_unknown_ethereum_route_is_rejected",
+      "class": "malformed",
+      "expected": {
+        "status": "pass"
+      }
+    }
+  ]
+}
