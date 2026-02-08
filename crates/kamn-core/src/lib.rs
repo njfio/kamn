@@ -239,7 +239,8 @@ pub use task_artifacts::{
 pub use task_lifecycle::{TaskLifecycle, TaskLifecycleError, TaskState, TaskTransition};
 pub use task_operations::{
     SwarmTaskDraft, TaskOperationEngine, TaskOperationError, TaskOperationNoticeKind,
-    TaskOperationRecord,
+    TaskOperationRecord, TaskOperationRecordSnapshot, TaskOperationSnapshot,
+    TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION,
 };
 pub use task_payment::{PaymentConfirm, PaymentOffer, TaskPaymentError, TaskPaymentWorkflow};
 pub use telegram_bridge::{

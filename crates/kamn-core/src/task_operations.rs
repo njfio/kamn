@@ -31,6 +31,25 @@ pub struct SwarmTaskDraft {
     pub dependencies: Vec<String>,
 }
 
+pub const TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION: u16 = 1;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskOperationRecordSnapshot {
+    pub task_id: String,
+    pub requester: String,
+    pub assignee: Option<String>,
+    pub description: String,
+    pub lifecycle_history: Vec<TaskState>,
+    pub dependencies: Vec<String>,
+    pub notices: Vec<TaskOperationNoticeKind>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskOperationSnapshot {
+    pub schema_version: u16,
+    pub tasks: Vec<TaskOperationRecordSnapshot>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct TaskOperationEngine {
     tasks: BTreeMap<String, TaskOperationRecord>,
@@ -308,6 +327,138 @@ impl TaskOperationEngine {
             .collect()
     }
 
+    pub fn export_snapshot(&self) -> TaskOperationSnapshot {
+        let tasks = self
+            .tasks
+            .iter()
+            .map(|(task_id, record)| TaskOperationRecordSnapshot {
+                task_id: task_id.clone(),
+                requester: record.requester.clone(),
+                assignee: record.assignee.clone(),
+                description: record.description.clone(),
+                lifecycle_history: record.lifecycle.history(),
+                dependencies: self
+                    .dependencies_by_task
+                    .get(task_id)
+                    .map(|values| values.iter().cloned().collect())
+                    .unwrap_or_default(),
+                notices: self.notices(task_id),
+            })
+            .collect();
+        TaskOperationSnapshot {
+            schema_version: TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION,
+            tasks,
+        }
+    }
+
+    pub fn restore_snapshot(
+        &mut self,
+        snapshot: TaskOperationSnapshot,
+    ) -> Result<(), TaskOperationError> {
+        if snapshot.schema_version != TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION {
+            return Err(TaskOperationError::SnapshotVersionMismatch {
+                expected: TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION,
+                found: snapshot.schema_version,
+            });
+        }
+
+        let mut restored_tasks = BTreeMap::new();
+        let mut restored_notices = BTreeMap::new();
+        let mut restored_dependencies = BTreeMap::new();
+
+        for task in snapshot.tasks {
+            if restored_tasks.contains_key(&task.task_id) {
+                return Err(TaskOperationError::DuplicateTaskId(task.task_id));
+            }
+            validate_did(&task.requester)?;
+            if let Some(assignee) = &task.assignee {
+                validate_did(assignee)?;
+            }
+            if task.description.trim().is_empty() {
+                return Err(TaskOperationError::InvalidSnapshot(format!(
+                    "task {} has empty description",
+                    task.task_id
+                )));
+            }
+            let lifecycle = TaskLifecycle::restore(&task.task_id, task.lifecycle_history.clone())
+                .map_err(|error| {
+                TaskOperationError::InvalidSnapshot(format!(
+                    "task {} has invalid lifecycle history: {error}",
+                    task.task_id
+                ))
+            })?;
+
+            let mut dependency_set = BTreeSet::new();
+            for dependency_id in &task.dependencies {
+                if !dependency_set.insert(dependency_id.clone()) {
+                    return Err(TaskOperationError::DuplicateDependency {
+                        task_id: task.task_id.clone(),
+                        dependency_id: dependency_id.clone(),
+                    });
+                }
+            }
+
+            restored_notices.insert(task.task_id.clone(), task.notices);
+            restored_dependencies.insert(task.task_id.clone(), dependency_set);
+            restored_tasks.insert(
+                task.task_id.clone(),
+                TaskOperationRecord {
+                    task_id: task.task_id,
+                    requester: task.requester,
+                    assignee: task.assignee,
+                    description: task.description,
+                    lifecycle,
+                },
+            );
+        }
+
+        for (task_id, dependencies) in &restored_dependencies {
+            for dependency_id in dependencies {
+                if !restored_tasks.contains_key(dependency_id) {
+                    return Err(TaskOperationError::UnknownDependency {
+                        task_id: task_id.clone(),
+                        dependency_id: dependency_id.clone(),
+                    });
+                }
+            }
+        }
+
+        if let Some(task_id) = detect_cycle_task_id(&restored_dependencies) {
+            return Err(TaskOperationError::CyclicDependency { task_id });
+        }
+
+        for (task_id, dependencies) in &restored_dependencies {
+            let task_state = restored_tasks
+                .get(task_id)
+                .map(|task| task.lifecycle.state())
+                .ok_or_else(|| TaskOperationError::NotFound(task_id.clone()))?;
+            if !requires_completed_dependencies(task_state) {
+                continue;
+            }
+            for dependency_id in dependencies {
+                let dependency_state = restored_tasks
+                    .get(dependency_id)
+                    .map(|task| task.lifecycle.state())
+                    .ok_or_else(|| TaskOperationError::UnknownDependency {
+                        task_id: task_id.clone(),
+                        dependency_id: dependency_id.clone(),
+                    })?;
+                if dependency_state != TaskState::Completed {
+                    return Err(TaskOperationError::SnapshotDependencyNotCompleted {
+                        task_id: task_id.clone(),
+                        dependency_id: dependency_id.clone(),
+                        dependency_state,
+                    });
+                }
+            }
+        }
+
+        self.tasks = restored_tasks;
+        self.notices_by_task = restored_notices;
+        self.dependencies_by_task = restored_dependencies;
+        Ok(())
+    }
+
     fn task_mut(&mut self, task_id: &str) -> Result<&mut TaskOperationRecord, TaskOperationError> {
         self.tasks
             .get_mut(task_id)
@@ -377,6 +528,16 @@ pub enum TaskOperationError {
         task_id: String,
         dependency_id: String,
     },
+    SnapshotVersionMismatch {
+        expected: u16,
+        found: u16,
+    },
+    SnapshotDependencyNotCompleted {
+        task_id: String,
+        dependency_id: String,
+        dependency_state: TaskState,
+    },
+    InvalidSnapshot(String),
     InvalidDid(String),
     EmptyDescription,
     EmptyReason(&'static str),
@@ -411,6 +572,19 @@ impl fmt::Display for TaskOperationError {
                 f,
                 "task {task_id} cannot start before dependency {dependency_id} is completed"
             ),
+            Self::SnapshotVersionMismatch { expected, found } => write!(
+                f,
+                "snapshot schema version mismatch, expected {expected}, found {found}"
+            ),
+            Self::SnapshotDependencyNotCompleted {
+                task_id,
+                dependency_id,
+                dependency_state,
+            } => write!(
+                f,
+                "task {task_id} has dependency {dependency_id} in {dependency_state:?} during snapshot restore"
+            ),
+            Self::InvalidSnapshot(value) => write!(f, "invalid task operation snapshot: {value}"),
             Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
             Self::EmptyDescription => write!(f, "task description must not be empty"),
             Self::EmptyReason(action) => write!(f, "reason must not be empty for {action}"),
@@ -476,6 +650,13 @@ fn detect_cycle_task_id(graph: &BTreeMap<String, BTreeSet<String>>) -> Option<St
         }
     }
     None
+}
+
+fn requires_completed_dependencies(state: TaskState) -> bool {
+    matches!(
+        state,
+        TaskState::InProgress | TaskState::Blocked | TaskState::Completed | TaskState::Failed
+    )
 }
 
 #[cfg(test)]

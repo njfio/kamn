@@ -91,11 +91,44 @@ impl TaskLifecycle {
         self.history.push(next);
         Ok(())
     }
+
+    pub fn restore(task_id: &str, history: Vec<TaskState>) -> Result<Self, TaskLifecycleError> {
+        if history.is_empty() {
+            return Err(TaskLifecycleError::InvalidHistory(
+                "history must not be empty".to_owned(),
+            ));
+        }
+        if history[0] != TaskState::Submitted {
+            return Err(TaskLifecycleError::InvalidHistory(
+                "history must begin with Submitted".to_owned(),
+            ));
+        }
+
+        let mut lifecycle = Self::new(task_id)?;
+        for states in history.windows(2) {
+            let from = states[0];
+            let to = states[1];
+            let transition = transition_between(from, to).ok_or_else(|| {
+                TaskLifecycleError::InvalidHistory(format!(
+                    "invalid state step from {from:?} to {to:?}"
+                ))
+            })?;
+            lifecycle.transition(transition)?;
+        }
+
+        if lifecycle.history != history {
+            return Err(TaskLifecycleError::InvalidHistory(
+                "restored history does not match replayed history".to_owned(),
+            ));
+        }
+        Ok(lifecycle)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TaskLifecycleError {
     EmptyTaskId,
+    InvalidHistory(String),
     InvalidTransition {
         from: TaskState,
         transition: TaskTransition,
@@ -107,6 +140,7 @@ impl fmt::Display for TaskLifecycleError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::EmptyTaskId => write!(f, "task_id must not be empty"),
+            Self::InvalidHistory(value) => write!(f, "invalid task history: {value}"),
             Self::InvalidTransition { from, transition } => {
                 write!(
                     f,
@@ -120,6 +154,31 @@ impl fmt::Display for TaskLifecycleError {
 }
 
 impl std::error::Error for TaskLifecycleError {}
+
+fn transition_between(from: TaskState, to: TaskState) -> Option<TaskTransition> {
+    match (from, to) {
+        (TaskState::Submitted, TaskState::Accepted) => Some(TaskTransition::Accept),
+        (TaskState::Submitted, TaskState::Cancelled) => Some(TaskTransition::Cancel),
+
+        (TaskState::Accepted, TaskState::Delegated) => Some(TaskTransition::Delegate),
+        (TaskState::Accepted, TaskState::InProgress) => Some(TaskTransition::StartWork),
+        (TaskState::Accepted, TaskState::Cancelled) => Some(TaskTransition::Cancel),
+
+        (TaskState::Delegated, TaskState::InProgress) => Some(TaskTransition::StartWork),
+        (TaskState::Delegated, TaskState::Cancelled) => Some(TaskTransition::Cancel),
+
+        (TaskState::InProgress, TaskState::Blocked) => Some(TaskTransition::Block),
+        (TaskState::InProgress, TaskState::Completed) => Some(TaskTransition::Complete),
+        (TaskState::InProgress, TaskState::Failed) => Some(TaskTransition::Fail),
+        (TaskState::InProgress, TaskState::Cancelled) => Some(TaskTransition::Cancel),
+
+        (TaskState::Blocked, TaskState::InProgress) => Some(TaskTransition::StartWork),
+        (TaskState::Blocked, TaskState::Failed) => Some(TaskTransition::Fail),
+        (TaskState::Blocked, TaskState::Cancelled) => Some(TaskTransition::Cancel),
+
+        _ => None,
+    }
+}
 
 fn is_terminal(state: TaskState) -> bool {
     matches!(
@@ -148,5 +207,39 @@ mod tests {
         assert!(lifecycle.transition(TaskTransition::Block).is_ok());
         assert!(lifecycle.transition(TaskTransition::StartWork).is_ok());
         assert_eq!(lifecycle.state(), TaskState::InProgress);
+    }
+
+    #[test]
+    fn restore_rejects_empty_history() {
+        assert_eq!(
+            TaskLifecycle::restore("task-restore-1", vec![]),
+            Err(TaskLifecycleError::InvalidHistory(
+                "history must not be empty".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn restore_replays_valid_history() {
+        let lifecycle = TaskLifecycle::restore(
+            "task-restore-2",
+            vec![
+                TaskState::Submitted,
+                TaskState::Accepted,
+                TaskState::InProgress,
+                TaskState::Completed,
+            ],
+        )
+        .expect("restore should pass");
+        assert_eq!(lifecycle.state(), TaskState::Completed);
+        assert_eq!(
+            lifecycle.history(),
+            vec![
+                TaskState::Submitted,
+                TaskState::Accepted,
+                TaskState::InProgress,
+                TaskState::Completed,
+            ]
+        );
     }
 }

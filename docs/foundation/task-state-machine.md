@@ -28,6 +28,9 @@ Any transition outside this map is rejected.
   - all declared dependencies must already be in `Completed` state.
   - unsatisfied dependencies are rejected with `DependencyNotSatisfied`.
   - cyclic DAG registration is rejected before lifecycle transitions begin (`Regression: #472`).
+- Snapshot restore invariants:
+  - lifecycle history must replay deterministically from `Submitted`.
+  - restore rejects dependency-state tampering where execution states appear before dependency completion (`Regression: #502`).
 
 ## APIs
 - `TaskLifecycle::new(task_id)` initializes task in `Submitted`.
@@ -48,6 +51,7 @@ cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core --test task_state_machine
 cargo test -p kamn-core --test swarm_task_dag
+cargo test -p kamn-core --test task_operation_snapshot
 cargo test -p kamn-core
 ```
 
