@@ -66,6 +66,14 @@ jobs:
             --max-attempts 2 \
             -- cargo test --workspace --locked --all-features --no-fail-fast
 
+      - name: Invariant harness (deterministic deep lane)
+        if: steps.detect.outputs.run_rust == 'true'
+        run: |
+          bash scripts/ci/run_with_retry.sh \
+            --label invariant-harness-deep \
+            --max-attempts 1 \
+            -- bash scripts/ci/run_invariant_harness.sh --mode deep
+
       - name: No Rust project present
         if: steps.detect.outputs.run_rust != 'true'
         run: echo "No Cargo project detected; deep validation skipped."

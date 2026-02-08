@@ -26,6 +26,7 @@ append_summary() {
     echo "- Changed files: ${CHANGED_COUNT}"
     echo "- Docs only: ${DOCS_ONLY}"
     echo "- Run Rust checks: ${RUN_RUST}"
+    echo "- Run invariant harness: ${RUN_INVARIANT_HARNESS}"
     echo "- Test scope: ${TEST_SCOPE}"
     if [ -n "$CHANGED_MANIFESTS" ]; then
       echo "- Targeted manifests: ${CHANGED_MANIFESTS}"
@@ -103,6 +104,7 @@ DOCS_ONLY=true
 RUST_CHANGED=false
 CI_INFRA_CHANGED=false
 FULL_SUITE=false
+INVARIANT_RELATED_CHANGED=false
 
 # manifest -> 1
 # shellcheck disable=SC2034
@@ -130,6 +132,12 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
+    crates/kamn-core/src/invariants.rs|crates/kamn-core/src/transaction.rs|crates/kamn-core/src/smoke.rs|crates/kamn-core/tests/invariant_*|crates/kamn-core/tests/transaction_guards.rs|docs/foundation/invariants.md|docs/foundation/transaction-guards.md|scripts/ci/run_invariant_harness.sh|scripts/ci/test_run_invariant_harness.sh)
+      INVARIANT_RELATED_CHANGED=true
+      ;;
+  esac
+
+  case "$file" in
     Cargo.toml|Cargo.lock|rust-toolchain.toml|.cargo/*)
       FULL_SUITE=true
       ;;
@@ -146,6 +154,7 @@ CLIPPY_CMD=":"
 TEST_CMD=":"
 TEST_SCOPE="none"
 CHANGED_MANIFESTS=""
+RUN_INVARIANT_HARNESS=false
 
 if [ "$REPO_HAS_RUST" = true ] && { [ "$RUST_CHANGED" = true ] || [ "$CI_INFRA_CHANGED" = true ]; }; then
   RUN_RUST=true
@@ -181,8 +190,13 @@ if [ "$REPO_HAS_RUST" = true ] && { [ "$RUST_CHANGED" = true ] || [ "$CI_INFRA_C
   fi
 fi
 
+if [ "$RUN_RUST" = true ] && { [ "$INVARIANT_RELATED_CHANGED" = true ] || [ "$FULL_SUITE" = true ]; }; then
+  RUN_INVARIANT_HARNESS=true
+fi
+
 write_output "docs_only" "$DOCS_ONLY"
 write_output "run_rust" "$RUN_RUST"
+write_output "run_invariant_harness" "$RUN_INVARIANT_HARNESS"
 write_output "test_scope" "$TEST_SCOPE"
 write_output "changed_files" "$CHANGED_COUNT"
 write_output "changed_manifests" "$CHANGED_MANIFESTS"

@@ -79,6 +79,14 @@ jobs:
             --max-attempts 2 \
             -- bash -lc "${{ steps.scope.outputs.test_cmd }}"
 
+      - name: Invariant harness (deterministic fast lane)
+        if: steps.scope.outputs.run_invariant_harness == 'true'
+        run: |
+          bash scripts/ci/run_with_retry.sh \
+            --label invariant-harness-fast \
+            --max-attempts 1 \
+            -- bash scripts/ci/run_invariant_harness.sh --mode fast
+
       - name: No Rust checks required
         if: steps.scope.outputs.run_rust != 'true' && steps.scope.outputs.docs_only != 'true'
         run: echo "No Rust changes detected; skipping Rust toolchain setup and tests."
