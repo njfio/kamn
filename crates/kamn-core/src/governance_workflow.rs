@@ -84,6 +84,75 @@ struct GovernanceProposalState {
     votes: BTreeMap<String, GovernanceVoteRecord>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct SemanticVersion {
+    major: u64,
+    minor: u64,
+    patch: u64,
+}
+
+impl SemanticVersion {
+    fn parse(value: &str) -> Option<Self> {
+        let mut parts = value.split('.');
+        let major = parts.next()?.parse().ok()?;
+        let minor = parts.next()?.parse().ok()?;
+        let patch = parts.next()?.parse().ok()?;
+        if parts.next().is_some() {
+            return None;
+        }
+        Some(Self {
+            major,
+            minor,
+            patch,
+        })
+    }
+
+    fn canonical_string(self) -> String {
+        format!("{}.{}.{}", self.major, self.minor, self.patch)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ParameterPolicySpec {
+    key: &'static str,
+    min_value: u64,
+    max_value: u64,
+    min_supported_version: SemanticVersion,
+}
+
+const PARAMETER_POLICY_CATALOG: [ParameterPolicySpec; 3] = [
+    ParameterPolicySpec {
+        key: "listener.quorum",
+        min_value: 1,
+        max_value: 7,
+        min_supported_version: SemanticVersion {
+            major: 1,
+            minor: 0,
+            patch: 0,
+        },
+    },
+    ParameterPolicySpec {
+        key: "approver.required_approvals",
+        min_value: 1,
+        max_value: 7,
+        min_supported_version: SemanticVersion {
+            major: 1,
+            minor: 0,
+            patch: 0,
+        },
+    },
+    ParameterPolicySpec {
+        key: "watchdog.delivery_ratio_bps",
+        min_value: 9000,
+        max_value: 9999,
+        min_supported_version: SemanticVersion {
+            major: 1,
+            minor: 1,
+            patch: 0,
+        },
+    },
+];
+
 impl GovernanceWorkflow {
     pub fn new() -> Self {
         Self::default()
@@ -297,6 +366,19 @@ pub enum GovernanceWorkflowError {
         min_value: u64,
         max_value: u64,
     },
+    UnknownParameterKey(String),
+    ParameterRangeOutsidePolicy {
+        key: String,
+        min_value: u64,
+        max_value: u64,
+        policy_min_value: u64,
+        policy_max_value: u64,
+    },
+    ParameterUnsupportedForVersion {
+        key: String,
+        target_version: String,
+        min_supported_version: String,
+    },
     ParameterOutOfBounds {
         key: String,
         proposed_value: u64,
@@ -344,6 +426,27 @@ impl fmt::Display for GovernanceWorkflowError {
             } => write!(
                 f,
                 "invalid parameter range: key={key}, min_value={min_value}, max_value={max_value}"
+            ),
+            Self::UnknownParameterKey(key) => {
+                write!(f, "unknown governance parameter key: {key}")
+            }
+            Self::ParameterRangeOutsidePolicy {
+                key,
+                min_value,
+                max_value,
+                policy_min_value,
+                policy_max_value,
+            } => write!(
+                f,
+                "parameter range outside policy: key={key}, min_value={min_value}, max_value={max_value}, policy_min_value={policy_min_value}, policy_max_value={policy_max_value}"
+            ),
+            Self::ParameterUnsupportedForVersion {
+                key,
+                target_version,
+                min_supported_version,
+            } => write!(
+                f,
+                "parameter key unsupported for target version: key={key}, target_version={target_version}, min_supported_version={min_supported_version}"
             ),
             Self::ParameterOutOfBounds {
                 key,
@@ -411,16 +514,38 @@ fn validate_parameter_change(
         "parameter_change.target_version",
         &parameter_change.target_version,
     )?;
-    if !is_semver_version(&parameter_change.target_version) {
-        return Err(GovernanceWorkflowError::InvalidParameterTargetVersion(
-            parameter_change.target_version.clone(),
-        ));
-    }
+    let target_version =
+        SemanticVersion::parse(&parameter_change.target_version).ok_or_else(|| {
+            GovernanceWorkflowError::InvalidParameterTargetVersion(
+                parameter_change.target_version.clone(),
+            )
+        })?;
     if parameter_change.min_value > parameter_change.max_value {
         return Err(GovernanceWorkflowError::InvalidParameterRange {
             key: parameter_change.key.clone(),
             min_value: parameter_change.min_value,
             max_value: parameter_change.max_value,
+        });
+    }
+    let policy = parameter_policy_for_key(&parameter_change.key).ok_or_else(|| {
+        GovernanceWorkflowError::UnknownParameterKey(parameter_change.key.clone())
+    })?;
+    if target_version < policy.min_supported_version {
+        return Err(GovernanceWorkflowError::ParameterUnsupportedForVersion {
+            key: parameter_change.key.clone(),
+            target_version: parameter_change.target_version.clone(),
+            min_supported_version: policy.min_supported_version.canonical_string(),
+        });
+    }
+    if parameter_change.min_value < policy.min_value
+        || parameter_change.max_value > policy.max_value
+    {
+        return Err(GovernanceWorkflowError::ParameterRangeOutsidePolicy {
+            key: parameter_change.key.clone(),
+            min_value: parameter_change.min_value,
+            max_value: parameter_change.max_value,
+            policy_min_value: policy.min_value,
+            policy_max_value: policy.max_value,
         });
     }
     if parameter_change.proposed_value < parameter_change.min_value
@@ -436,12 +561,10 @@ fn validate_parameter_change(
     Ok(())
 }
 
-fn is_semver_version(value: &str) -> bool {
-    let segments: Vec<&str> = value.split('.').collect();
-    segments.len() == 3
-        && segments
-            .iter()
-            .all(|segment| !segment.is_empty() && segment.chars().all(|c| c.is_ascii_digit()))
+fn parameter_policy_for_key(key: &str) -> Option<&'static ParameterPolicySpec> {
+    PARAMETER_POLICY_CATALOG
+        .iter()
+        .find(|policy| policy.key == key)
 }
 
 fn reevaluate_status(record: &mut GovernanceProposalRecord, now_unix: u64) {

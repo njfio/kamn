@@ -225,3 +225,120 @@ fn governance_workflow_regression_rejects_parameter_change_out_of_bounds() {
         })
     );
 }
+
+#[test]
+fn governance_workflow_rejects_unknown_parameter_key() {
+    let mut workflow = GovernanceWorkflow::new();
+    assert_eq!(
+        workflow.submit_proposal(GovernanceProposalDraft {
+            proposal_id: "gov-proposal-7".to_owned(),
+            title: "Parameter update".to_owned(),
+            description: "Attempt unknown parameter".to_owned(),
+            proposer_did: "kamn:did:agent:validator-1".to_owned(),
+            created_at_unix: 1_716_305_000,
+            voting_deadline_unix: 1_716_306_000,
+            quorum_threshold: 2,
+            parameter_change: Some(GovernanceParameterChangeDraft {
+                key: "runtime.unknown-toggle".to_owned(),
+                proposed_value: 1,
+                min_value: 0,
+                max_value: 1,
+                target_version: "1.2.0".to_owned(),
+            }),
+        }),
+        Err(GovernanceWorkflowError::UnknownParameterKey(
+            "runtime.unknown-toggle".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn governance_workflow_regression_rejects_parameter_change_for_unsupported_version() {
+    // Regression: #476
+    let mut workflow = GovernanceWorkflow::new();
+    assert_eq!(
+        workflow.submit_proposal(GovernanceProposalDraft {
+            proposal_id: "gov-proposal-8".to_owned(),
+            title: "Parameter update".to_owned(),
+            description: "Update watchdog threshold before supported version".to_owned(),
+            proposer_did: "kamn:did:agent:validator-1".to_owned(),
+            created_at_unix: 1_716_306_000,
+            voting_deadline_unix: 1_716_307_000,
+            quorum_threshold: 2,
+            parameter_change: Some(GovernanceParameterChangeDraft {
+                key: "watchdog.delivery_ratio_bps".to_owned(),
+                proposed_value: 9700,
+                min_value: 9000,
+                max_value: 9999,
+                target_version: "1.0.0".to_owned(),
+            }),
+        }),
+        Err(GovernanceWorkflowError::ParameterUnsupportedForVersion {
+            key: "watchdog.delivery_ratio_bps".to_owned(),
+            target_version: "1.0.0".to_owned(),
+            min_supported_version: "1.1.0".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn governance_workflow_functional_executes_valid_parameter_change_proposal() {
+    let mut workflow = GovernanceWorkflow::new();
+    workflow
+        .submit_proposal(GovernanceProposalDraft {
+            proposal_id: "gov-proposal-9".to_owned(),
+            title: "Parameter update".to_owned(),
+            description: "Adjust listener quorum for runtime quorum safety".to_owned(),
+            proposer_did: "kamn:did:agent:validator-1".to_owned(),
+            created_at_unix: 1_716_307_000,
+            voting_deadline_unix: 1_716_308_000,
+            quorum_threshold: 2,
+            parameter_change: Some(GovernanceParameterChangeDraft {
+                key: "listener.quorum".to_owned(),
+                proposed_value: 4,
+                min_value: 2,
+                max_value: 7,
+                target_version: "1.2.0".to_owned(),
+            }),
+        })
+        .expect("proposal should submit");
+    workflow
+        .cast_vote(
+            "gov-proposal-9",
+            "kamn:did:agent:validator-2",
+            GovernanceVoteChoice::Yes,
+            1_716_307_100,
+        )
+        .expect("vote should succeed");
+    workflow
+        .cast_vote(
+            "gov-proposal-9",
+            "kamn:did:agent:validator-3",
+            GovernanceVoteChoice::Yes,
+            1_716_307_200,
+        )
+        .expect("vote should succeed");
+    workflow
+        .execute(
+            "gov-proposal-9",
+            "kamn:did:agent:validator-1",
+            1_716_307_300,
+            "op-hash-9",
+        )
+        .expect("approved parameter proposal should execute");
+
+    let proposal = workflow
+        .proposal("gov-proposal-9")
+        .expect("proposal should exist");
+    assert_eq!(proposal.status, GovernanceProposalStatus::Executed);
+    assert_eq!(
+        proposal.parameter_change,
+        Some(GovernanceParameterChangeDraft {
+            key: "listener.quorum".to_owned(),
+            proposed_value: 4,
+            min_value: 2,
+            max_value: 7,
+            target_version: "1.2.0".to_owned(),
+        })
+    );
+}
