@@ -60,3 +60,4 @@ For direct/group channel models with membership/admin operations, see `docs/foun
 For channel permission and retention policy controls, see `docs/foundation/channel-permissions-retention.md`.
 For agent key hierarchy role bindings and ephemeral session key controls, see `docs/foundation/agent-key-hierarchy.md`.
 For direct-message encryption path controls, see `docs/foundation/direct-message-encryption.md`.
+For task state machine and legal transition validation controls, see `docs/foundation/task-state-machine.md`.
