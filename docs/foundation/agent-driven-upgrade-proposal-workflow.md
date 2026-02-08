@@ -1,4 +1,4 @@
-# Agent-Driven Protocol Upgrade Proposal Workflow (Issues #234 / #235 / #528)
+# Agent-Driven Protocol Upgrade Proposal Workflow (Issues #234 / #235 / #528 / #533 / #538)
 
 This document captures the first implementation slice for a pilot agent-driven protocol upgrade workflow with mandatory human and validator safeguards.
 
@@ -28,6 +28,8 @@ This document captures the first implementation slice for a pilot agent-driven p
   - valid timestamps with deadline strictly after creation.
 - Validator governance voting requires:
   - allowlisted validator voter DID.
+- Human review approvals require:
+  - allowlisted validator reviewer DID.
 - Governance submission requires:
   - sufficient unique human reviewer approvals.
   - pending-human-review proposal state.
@@ -51,6 +53,7 @@ This document captures the first implementation slice for a pilot agent-driven p
 - Regression guard:
   - early activation before required delay is rejected (`Regression: #528`).
   - unauthorized validator vote is rejected (`Regression: #533`).
+  - unauthorized human reviewer approval is rejected (`Regression: #538`).
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
