@@ -17,6 +17,7 @@ pub mod did_registry;
 pub mod direct_message_crypto;
 pub mod discord_bridge;
 pub mod escrow;
+pub mod governance_workflow;
 pub mod group_channel_crypto;
 pub mod instruction_verify;
 pub mod invariants;
@@ -120,6 +121,11 @@ pub use discord_bridge::{
     DiscordOutboundApproval, DiscordOutboundDispatch,
 };
 pub use escrow::{EscrowLifecycle, EscrowLifecycleError, EscrowStatus};
+pub use governance_workflow::{
+    GovernanceExecutionRecord, GovernanceProposalDraft, GovernanceProposalRecord,
+    GovernanceProposalStatus, GovernanceVoteChoice, GovernanceVoteRecord, GovernanceWorkflow,
+    GovernanceWorkflowError,
+};
 pub use group_channel_crypto::{
     GroupChannelCryptoEngine, GroupChannelCryptoError, GroupMessageCiphertext,
     SenderKeyDistributionRecord, GROUP_MESSAGE_CIPHER_ALGORITHM,
