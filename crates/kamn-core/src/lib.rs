@@ -3,6 +3,7 @@ pub mod config;
 pub mod escrow;
 pub mod instruction_verify;
 pub mod invariants;
+pub mod key_lifecycle;
 pub mod migrations;
 pub mod namespaces;
 pub mod runtime;
@@ -23,6 +24,7 @@ pub use invariants::{
     invariant_by_id, validate_catalog, InvariantCatalogError, InvariantDomain,
     InvariantFailureCode, InvariantSpec, InvariantViolation,
 };
+pub use key_lifecycle::{KeyLifecycle, KeyLifecycleError, KeyLifecycleEvent, KeyLifecycleState};
 pub use migrations::{MigrationPlan, MigrationRegistry, MigrationStep};
 pub use namespaces::StateNamespaces;
 pub use runtime::RuntimeWiring;
