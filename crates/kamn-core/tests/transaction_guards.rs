@@ -1,5 +1,6 @@
 use kamn_core::{
-    BaselineTransaction, RoleSmokeNetwork, SmokeError, TransactionGuardError, GENESIS_STATE_HASH,
+    baseline_signature_for_fields, BaselineTransaction, RoleSmokeNetwork, SmokeError,
+    TransactionGuardError, GENESIS_STATE_HASH,
 };
 
 fn signed_tx(
@@ -91,4 +92,12 @@ fn regression_tampered_signature_is_rejected() {
             TransactionGuardError::InvalidSignature { .. }
         ))
     ));
+}
+
+#[test]
+fn regression_signature_profile_matches_transaction_expected_signature() {
+    // Regression: #400
+    let tx = BaselineTransaction::signed("tx-1", "agent-a", 1, "payload-tx-1", GENESIS_STATE_HASH);
+    let canonical = baseline_signature_for_fields("agent-a", 1, GENESIS_STATE_HASH, "payload-tx-1");
+    assert_eq!(canonical, tx.expected_signature());
 }

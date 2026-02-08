@@ -17,10 +17,12 @@ fn doc_contains_fallback_semantics_and_transaction_integration() {
     assert!(DOC.contains("does not fallback on hard request errors"));
     assert!(DOC.contains("## Transaction Path Integration"));
     assert!(DOC.contains("SigningRequest::for_transaction(...)"));
+    assert!(DOC.contains("baseline_signature_for_fields(...)"));
 }
 
 #[test]
 fn regression_requires_no_fallback_on_unsupported_secure_key_reference() {
     // Regression: #160
     assert!(DOC.contains("does not fallback on hard request errors"));
+    assert!(DOC.contains("canonical signature-profile helper consumed by both paths"));
 }
