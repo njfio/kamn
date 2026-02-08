@@ -1,4 +1,4 @@
-# Governance Proposal, Vote, and Execution Workflows (Issues #196 / #197)
+# Governance Proposal, Vote, and Execution Workflows (Issues #196 / #197 / #476)
 
 This document captures the first implementation slice for protocol governance message workflows.
 
@@ -7,6 +7,7 @@ This document captures the first implementation slice for protocol governance me
   - `GovernanceWorkflow` for proposal submission, vote casting, status evaluation, and execution recording.
   - proposal/vote/execution models:
     - `GovernanceProposalDraft`
+    - `GovernanceParameterChangeDraft`
     - `GovernanceProposalRecord`
     - `GovernanceVoteRecord`
     - `GovernanceExecutionRecord`
@@ -29,6 +30,15 @@ This document captures the first implementation slice for protocol governance me
   - `Rejected`
   - `Executed`
   - `Expired`
+
+## Parameter Proposal Validation Rules
+- Optional `parameter_change` payload supports typed governance parameter updates.
+- Parameter payload validation requires:
+  - non-empty `key` and `target_version`.
+  - semver-style target version (`major.minor.patch` numeric segments).
+  - `min_value <= max_value`.
+  - `proposed_value` within `[min_value, max_value]`.
+- Malformed or incompatible parameter payloads are rejected before proposal registration (`Regression: #476`).
 
 ## Vote and Quorum Rules
 - Vote casting requires:

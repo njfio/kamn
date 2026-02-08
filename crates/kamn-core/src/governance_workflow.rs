@@ -11,6 +11,16 @@ pub struct GovernanceProposalDraft {
     pub created_at_unix: u64,
     pub voting_deadline_unix: u64,
     pub quorum_threshold: usize,
+    pub parameter_change: Option<GovernanceParameterChangeDraft>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GovernanceParameterChangeDraft {
+    pub key: String,
+    pub proposed_value: u64,
+    pub min_value: u64,
+    pub max_value: u64,
+    pub target_version: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -54,6 +64,7 @@ pub struct GovernanceProposalRecord {
     pub created_at_unix: u64,
     pub voting_deadline_unix: u64,
     pub quorum_threshold: usize,
+    pub parameter_change: Option<GovernanceParameterChangeDraft>,
     pub status: GovernanceProposalStatus,
     pub yes_votes: usize,
     pub no_votes: usize,
@@ -98,6 +109,9 @@ impl GovernanceWorkflow {
         if draft.quorum_threshold == 0 {
             return Err(GovernanceWorkflowError::InvalidQuorum(0));
         }
+        if let Some(parameter_change) = &draft.parameter_change {
+            validate_parameter_change(parameter_change)?;
+        }
         if self.proposals.contains_key(&draft.proposal_id) {
             return Err(GovernanceWorkflowError::DuplicateProposal(
                 draft.proposal_id.clone(),
@@ -115,6 +129,7 @@ impl GovernanceWorkflow {
                     created_at_unix: draft.created_at_unix,
                     voting_deadline_unix: draft.voting_deadline_unix,
                     quorum_threshold: draft.quorum_threshold,
+                    parameter_change: draft.parameter_change,
                     status: GovernanceProposalStatus::Voting,
                     yes_votes: 0,
                     no_votes: 0,
@@ -276,6 +291,18 @@ pub enum GovernanceWorkflowError {
         voting_deadline_unix: u64,
     },
     InvalidQuorum(usize),
+    InvalidParameterTargetVersion(String),
+    InvalidParameterRange {
+        key: String,
+        min_value: u64,
+        max_value: u64,
+    },
+    ParameterOutOfBounds {
+        key: String,
+        proposed_value: u64,
+        min_value: u64,
+        max_value: u64,
+    },
     DuplicateProposal(String),
     ProposalNotFound(String),
     DuplicateVote {
@@ -307,6 +334,26 @@ impl fmt::Display for GovernanceWorkflowError {
                 "invalid voting deadline: created_at_unix={created_at_unix}, voting_deadline_unix={voting_deadline_unix}"
             ),
             Self::InvalidQuorum(value) => write!(f, "invalid quorum threshold: {value}"),
+            Self::InvalidParameterTargetVersion(value) => {
+                write!(f, "invalid parameter target version: {value}")
+            }
+            Self::InvalidParameterRange {
+                key,
+                min_value,
+                max_value,
+            } => write!(
+                f,
+                "invalid parameter range: key={key}, min_value={min_value}, max_value={max_value}"
+            ),
+            Self::ParameterOutOfBounds {
+                key,
+                proposed_value,
+                min_value,
+                max_value,
+            } => write!(
+                f,
+                "parameter value out of bounds: key={key}, proposed_value={proposed_value}, min_value={min_value}, max_value={max_value}"
+            ),
             Self::DuplicateProposal(proposal_id) => {
                 write!(f, "duplicate governance proposal id: {proposal_id}")
             }
@@ -356,6 +403,47 @@ fn validate_did(value: &str) -> Result<(), GovernanceWorkflowError> {
     Ok(())
 }
 
+fn validate_parameter_change(
+    parameter_change: &GovernanceParameterChangeDraft,
+) -> Result<(), GovernanceWorkflowError> {
+    require_non_empty("parameter_change.key", &parameter_change.key)?;
+    require_non_empty(
+        "parameter_change.target_version",
+        &parameter_change.target_version,
+    )?;
+    if !is_semver_version(&parameter_change.target_version) {
+        return Err(GovernanceWorkflowError::InvalidParameterTargetVersion(
+            parameter_change.target_version.clone(),
+        ));
+    }
+    if parameter_change.min_value > parameter_change.max_value {
+        return Err(GovernanceWorkflowError::InvalidParameterRange {
+            key: parameter_change.key.clone(),
+            min_value: parameter_change.min_value,
+            max_value: parameter_change.max_value,
+        });
+    }
+    if parameter_change.proposed_value < parameter_change.min_value
+        || parameter_change.proposed_value > parameter_change.max_value
+    {
+        return Err(GovernanceWorkflowError::ParameterOutOfBounds {
+            key: parameter_change.key.clone(),
+            proposed_value: parameter_change.proposed_value,
+            min_value: parameter_change.min_value,
+            max_value: parameter_change.max_value,
+        });
+    }
+    Ok(())
+}
+
+fn is_semver_version(value: &str) -> bool {
+    let segments: Vec<&str> = value.split('.').collect();
+    segments.len() == 3
+        && segments
+            .iter()
+            .all(|segment| !segment.is_empty() && segment.chars().all(|c| c.is_ascii_digit()))
+}
+
 fn reevaluate_status(record: &mut GovernanceProposalRecord, now_unix: u64) {
     if record.status != GovernanceProposalStatus::Voting {
         return;
@@ -392,6 +480,7 @@ mod tests {
                 created_at_unix: 100,
                 voting_deadline_unix: 99,
                 quorum_threshold: 1,
+                parameter_change: None,
             }),
             Err(GovernanceWorkflowError::InvalidDeadline {
                 created_at_unix: 100,
@@ -412,6 +501,7 @@ mod tests {
                 created_at_unix: 100,
                 voting_deadline_unix: 200,
                 quorum_threshold: 2,
+                parameter_change: None,
             })
             .expect("proposal should submit");
         workflow

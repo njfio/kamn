@@ -239,6 +239,7 @@ impl AgentDrivenUpgradeWorkflow {
                 created_at_unix: submitted_at_unix,
                 voting_deadline_unix: proposal.voting_deadline_unix,
                 quorum_threshold: self.required_validator_quorum,
+                parameter_change: None,
             })
             .map_err(Self::map_governance)?;
 
