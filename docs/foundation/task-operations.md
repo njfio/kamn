@@ -1,4 +1,4 @@
-# Task Operations Command Surface (Issue #128)
+# Task Operations Command Surface (Issue #128 / #472)
 
 This document defines the first implementation slice for task operation command
 handling across `submit`, `accept`, `delegate`, `block`, `complete`, `fail`,
@@ -21,6 +21,11 @@ and `cancel`.
   - `Completed`
   - `Failed`
   - `Cancelled`
+- `SwarmTaskDraft`: swarm DAG registration payload:
+  - `task_id`
+  - `requester`
+  - `description`
+  - `dependencies`
 
 ## Command Behavior
 - `submit(task_id, requester, description)`:
@@ -55,12 +60,23 @@ and `cancel`.
   - requester or current assignee.
   - transitions via `Cancel`.
   - emits `Cancelled` notice.
+- `submit_swarm_tasks(drafts)`:
+  - registers a bounded DAG-linked task set in a single deterministic pass.
+  - rejects duplicate task IDs, duplicate dependency edges, unknown dependency references, and cyclic graphs.
+  - initializes dependency metadata used by readiness checks.
+- `ready_tasks()`:
+  - returns deterministic ready-task IDs (sorted) where lifecycle state is `Accepted` or `Delegated` and all dependencies are `Completed`.
 
 ## Validation and Safety Rules
 - Task IDs must be unique.
 - DIDs must parse as `kamn:did:agent:*`.
 - Unauthorized actors are rejected with explicit required-role context.
 - Underlying illegal or terminal lifecycle transitions bubble as typed lifecycle errors.
+- Swarm dependency rules:
+  - dependency IDs must reference registered tasks.
+  - cyclic dependency graphs are rejected with `CyclicDependency`.
+  - `start_work` is blocked when any dependency is not `Completed` (`DependencyNotSatisfied`).
+  - replayed completion attempts remain rejected by terminal-state lifecycle guards (`Regression: #472`).
 
 ## Local Validation
 Run from repository root:
@@ -69,6 +85,7 @@ Run from repository root:
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core --test task_operations
+cargo test -p kamn-core --test swarm_task_dag
 cargo test -p kamn-core
 ```
 
