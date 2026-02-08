@@ -49,6 +49,7 @@ enum RuntimeModeKind {
     Bootstrap,
     Planning,
     RecoveryCheck,
+    Daemon,
 }
 
 impl RuntimeMode {
@@ -70,11 +71,18 @@ impl RuntimeMode {
         }
     }
 
+    fn daemon() -> Self {
+        Self {
+            kind: RuntimeModeKind::Daemon,
+        }
+    }
+
     fn parse(value: &str) -> Result<Self, ConfigError> {
         match value {
             "bootstrap" => Ok(Self::bootstrap()),
             "planning" => Ok(Self::planning()),
             "recovery-check" => Ok(Self::recovery_check()),
+            "daemon" => Ok(Self::daemon()),
             other => Err(ConfigError::InvalidRuntimeMode(other.to_owned())),
         }
     }
@@ -84,6 +92,7 @@ impl RuntimeMode {
             RuntimeModeKind::Bootstrap => "bootstrap",
             RuntimeModeKind::Planning => "planning",
             RuntimeModeKind::RecoveryCheck => "recovery-check",
+            RuntimeModeKind::Daemon => "daemon",
         }
     }
 }
@@ -175,6 +184,8 @@ struct NodeCli {
     expected_state_hash: Option<String>,
     proposals: Vec<ProposalCandidate>,
     rejoin_attempts: Vec<RejoinAttempt>,
+    daemon_max_ticks: Option<u64>,
+    daemon_tick_interval_ms: Option<u64>,
     output_mode: OutputMode,
     diagnostics_mode: DiagnosticsMode,
 }
@@ -195,6 +206,14 @@ struct RecoveryExecution {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+struct DaemonExecution {
+    max_ticks: u64,
+    tick_interval_ms: u64,
+    executed_ticks: u64,
+    completion_reason: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct NodeBootstrapReport {
     runtime_mode: String,
     diagnostics_mode: String,
@@ -206,6 +225,10 @@ struct NodeBootstrapReport {
     recovery_expected_state_hash: Option<String>,
     recovery_attempt_count: Option<usize>,
     recovery_decisions: Option<Vec<String>>,
+    daemon_max_ticks: Option<u64>,
+    daemon_tick_interval_ms: Option<u64>,
+    daemon_executed_ticks: Option<u64>,
+    daemon_completion_reason: Option<String>,
     profile: Option<String>,
     role: String,
     chain_id: String,
@@ -236,6 +259,8 @@ where
     let mut expected_state_hash: Option<String> = None;
     let mut proposals: Vec<ProposalCandidate> = Vec::new();
     let mut rejoin_attempts: Vec<RejoinAttempt> = Vec::new();
+    let mut daemon_max_ticks: Option<u64> = None;
+    let mut daemon_tick_interval_ms: Option<u64> = None;
     let mut output_mode = OutputMode::text();
     let mut diagnostics_mode = DiagnosticsMode::basic();
     let mut role_overridden = false;
@@ -322,6 +347,18 @@ where
                     .ok_or(ConfigError::MissingArgumentValue("--rejoin-attempt"))?;
                 rejoin_attempts.push(parse_rejoin_attempt(&value)?);
             }
+            "--daemon-max-ticks" => {
+                let value = iter
+                    .next()
+                    .ok_or(ConfigError::MissingArgumentValue("--daemon-max-ticks"))?;
+                daemon_max_ticks = Some(parse_daemon_control_arg(&value)?);
+            }
+            "--daemon-tick-interval-ms" => {
+                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
+                    "--daemon-tick-interval-ms",
+                ))?;
+                daemon_tick_interval_ms = Some(parse_daemon_control_arg(&value)?);
+            }
             "--output" => {
                 let value = iter
                     .next()
@@ -384,6 +421,16 @@ where
             return Err(ConfigError::MissingArgumentValue("--rejoin-attempt"));
         }
     }
+    if runtime_mode.kind == RuntimeModeKind::Daemon {
+        if daemon_max_ticks.is_none() {
+            return Err(ConfigError::MissingArgumentValue("--daemon-max-ticks"));
+        }
+        if daemon_tick_interval_ms.is_none() {
+            return Err(ConfigError::MissingArgumentValue(
+                "--daemon-tick-interval-ms",
+            ));
+        }
+    }
 
     Ok(NodeCli {
         profile,
@@ -398,6 +445,8 @@ where
         expected_state_hash,
         proposals,
         rejoin_attempts,
+        daemon_max_ticks,
+        daemon_tick_interval_ms,
         output_mode,
         diagnostics_mode,
     })
@@ -437,6 +486,16 @@ fn parse_rejoin_attempt(value: &str) -> Result<RejoinAttempt, ConfigError> {
         .map_err(|_| ConfigError::InvalidRejoinAttemptArgument(value.to_owned()))
 }
 
+fn parse_daemon_control_arg(value: &str) -> Result<u64, ConfigError> {
+    let parsed = value
+        .parse::<u64>()
+        .map_err(|_| ConfigError::InvalidDaemonControlArgument(value.to_owned()))?;
+    if parsed == 0 {
+        return Err(ConfigError::InvalidDaemonControlArgument(value.to_owned()));
+    }
+    Ok(parsed)
+}
+
 fn run() -> Result<(), ConfigError> {
     let cli = parse_args(env::args())?;
     let output_mode = cli.output_mode;
@@ -460,6 +519,8 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
         expected_state_hash,
         proposals,
         rejoin_attempts,
+        daemon_max_ticks,
+        daemon_tick_interval_ms,
         output_mode: _,
         diagnostics_mode,
     } = cli;
@@ -473,8 +534,8 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
     };
 
     let plan = bootstrap(config)?;
-    let (planning, recovery) = match runtime_mode.kind {
-        RuntimeModeKind::Bootstrap => (None, None),
+    let (planning, recovery, daemon) = match runtime_mode.kind {
+        RuntimeModeKind::Bootstrap => (None, None, None),
         RuntimeModeKind::Planning => {
             let expected_state_hash = expected_state_hash
                 .ok_or(ConfigError::MissingArgumentValue("--expected-state-hash"))?;
@@ -488,6 +549,7 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                     candidate_count: proposal_plan.ordered_candidates().len(),
                     scheduled_candidate_ids: proposal_plan.ordered_candidate_ids(),
                 }),
+                None,
                 None,
             )
         }
@@ -523,6 +585,24 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                     attempt_count: decisions.len(),
                     decisions,
                 }),
+                None,
+            )
+        }
+        RuntimeModeKind::Daemon => {
+            let max_ticks =
+                daemon_max_ticks.ok_or(ConfigError::MissingArgumentValue("--daemon-max-ticks"))?;
+            let tick_interval_ms = daemon_tick_interval_ms.ok_or(
+                ConfigError::MissingArgumentValue("--daemon-tick-interval-ms"),
+            )?;
+            (
+                None,
+                None,
+                Some(DaemonExecution {
+                    max_ticks,
+                    tick_interval_ms,
+                    executed_ticks: max_ticks,
+                    completion_reason: "tick-budget-exhausted".to_owned(),
+                }),
             )
         }
     };
@@ -533,6 +613,7 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
         runtime_mode,
         planning,
         recovery,
+        daemon,
     );
 
     Ok(report)
@@ -545,6 +626,7 @@ fn build_bootstrap_report(
     runtime_mode: RuntimeMode,
     planning: Option<PlanningExecution>,
     recovery: Option<RecoveryExecution>,
+    daemon: Option<DaemonExecution>,
 ) -> NodeBootstrapReport {
     let operational_profile = plan.config.operational_profile();
     let components = plan
@@ -568,6 +650,12 @@ fn build_bootstrap_report(
         .map(|recovery| recovery.expected_state_hash.clone());
     let recovery_attempt_count = recovery.as_ref().map(|recovery| recovery.attempt_count);
     let recovery_decisions = recovery.as_ref().map(|recovery| recovery.decisions.clone());
+    let daemon_max_ticks = daemon.as_ref().map(|daemon| daemon.max_ticks);
+    let daemon_tick_interval_ms = daemon.as_ref().map(|daemon| daemon.tick_interval_ms);
+    let daemon_executed_ticks = daemon.as_ref().map(|daemon| daemon.executed_ticks);
+    let daemon_completion_reason = daemon
+        .as_ref()
+        .map(|daemon| daemon.completion_reason.clone());
     NodeBootstrapReport {
         runtime_mode: runtime_mode.as_str().to_owned(),
         diagnostics_mode: diagnostics_mode.as_str().to_owned(),
@@ -579,6 +667,10 @@ fn build_bootstrap_report(
         recovery_expected_state_hash,
         recovery_attempt_count,
         recovery_decisions,
+        daemon_max_ticks,
+        daemon_tick_interval_ms,
+        daemon_executed_ticks,
+        daemon_completion_reason,
         profile: profile.map(LocalProfile::as_str).map(str::to_owned),
         role: plan.config.role.as_str().to_owned(),
         chain_id: plan.config.chain_id.clone(),
@@ -633,8 +725,21 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         .as_ref()
         .map(|value| value.join(", "))
         .unwrap_or_else(|| "none".to_owned());
+    let daemon_max_ticks = report
+        .daemon_max_ticks
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_owned());
+    let daemon_tick_interval_ms = report
+        .daemon_tick_interval_ms
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_owned());
+    let daemon_executed_ticks = report
+        .daemon_executed_ticks
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_owned());
+    let daemon_completion_reason = report.daemon_completion_reason.as_deref().unwrap_or("none");
     format!(
-        "KAMN node bootstrap\n  runtime_mode: {}\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  planning_expected_state_hash: {}\n  planning_candidate_count: {}\n  planning_scheduled_candidate_ids: {}\n  recovery_expected_state_version: {}\n  recovery_expected_state_hash: {}\n  recovery_attempt_count: {}\n  recovery_decisions: {}\n  components: {}",
+        "KAMN node bootstrap\n  runtime_mode: {}\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  planning_expected_state_hash: {}\n  planning_candidate_count: {}\n  planning_scheduled_candidate_ids: {}\n  recovery_expected_state_version: {}\n  recovery_expected_state_hash: {}\n  recovery_attempt_count: {}\n  recovery_decisions: {}\n  daemon_max_ticks: {}\n  daemon_tick_interval_ms: {}\n  daemon_executed_ticks: {}\n  daemon_completion_reason: {}\n  components: {}",
         report.runtime_mode,
         report.diagnostics_mode,
         profile,
@@ -660,6 +765,10 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         recovery_expected_state_hash,
         recovery_attempt_count,
         recovery_decisions,
+        daemon_max_ticks,
+        daemon_tick_interval_ms,
+        daemon_executed_ticks,
+        daemon_completion_reason,
         report.components.join(", "),
     )
 }
@@ -711,6 +820,22 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         ),
         None => "null".to_owned(),
     };
+    let daemon_max_ticks = match report.daemon_max_ticks {
+        Some(value) => value.to_string(),
+        None => "null".to_owned(),
+    };
+    let daemon_tick_interval_ms = match report.daemon_tick_interval_ms {
+        Some(value) => value.to_string(),
+        None => "null".to_owned(),
+    };
+    let daemon_executed_ticks = match report.daemon_executed_ticks {
+        Some(value) => value.to_string(),
+        None => "null".to_owned(),
+    };
+    let daemon_completion_reason = match &report.daemon_completion_reason {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
     let components = report
         .components
         .iter()
@@ -718,7 +843,7 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         .collect::<Vec<String>>()
         .join(",");
     format!(
-        "{{\"runtime_mode\":\"{}\",\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"planning_expected_state_hash\":{},\"planning_candidate_count\":{},\"planning_scheduled_candidate_ids\":{},\"recovery_expected_state_version\":{},\"recovery_expected_state_hash\":{},\"recovery_attempt_count\":{},\"recovery_decisions\":{},\"components\":[{}]}}",
+        "{{\"runtime_mode\":\"{}\",\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"planning_expected_state_hash\":{},\"planning_candidate_count\":{},\"planning_scheduled_candidate_ids\":{},\"recovery_expected_state_version\":{},\"recovery_expected_state_hash\":{},\"recovery_attempt_count\":{},\"recovery_decisions\":{},\"daemon_max_ticks\":{},\"daemon_tick_interval_ms\":{},\"daemon_executed_ticks\":{},\"daemon_completion_reason\":{},\"components\":[{}]}}",
         json_escape(&report.runtime_mode),
         json_escape(&report.diagnostics_mode),
         profile,
@@ -740,6 +865,10 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         recovery_expected_state_hash,
         recovery_attempt_count,
         recovery_decisions,
+        daemon_max_ticks,
+        daemon_tick_interval_ms,
+        daemon_executed_ticks,
+        daemon_completion_reason,
         components,
     )
 }
@@ -790,6 +919,8 @@ mod tests {
         assert_eq!(parsed.expected_state_version, None);
         assert!(parsed.proposals.is_empty());
         assert!(parsed.rejoin_attempts.is_empty());
+        assert_eq!(parsed.daemon_max_ticks, None);
+        assert_eq!(parsed.daemon_tick_interval_ms, None);
         assert_eq!(parsed.output_mode, OutputMode::text());
         assert_eq!(parsed.diagnostics_mode, DiagnosticsMode::basic());
     }
@@ -897,6 +1028,26 @@ mod tests {
     }
 
     #[test]
+    fn parses_runtime_mode_daemon_with_bounded_controls() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "daemon".to_owned(),
+            "--daemon-max-ticks".to_owned(),
+            "3".to_owned(),
+            "--daemon-tick-interval-ms".to_owned(),
+            "25".to_owned(),
+        ];
+
+        let parsed = parse_args(args).expect("daemon args should parse");
+        assert_eq!(parsed.runtime_mode, RuntimeMode::daemon());
+        assert_eq!(parsed.daemon_max_ticks, Some(3));
+        assert_eq!(parsed.daemon_tick_interval_ms, Some(25));
+    }
+
+    #[test]
     fn parses_local_listener_profile_defaults() {
         let args = vec![
             "kamn-node".to_owned(),
@@ -950,6 +1101,10 @@ mod tests {
             recovery_expected_state_hash: None,
             recovery_attempt_count: None,
             recovery_decisions: None,
+            daemon_max_ticks: None,
+            daemon_tick_interval_ms: None,
+            daemon_executed_ticks: None,
+            daemon_completion_reason: None,
             profile: None,
             role: "processor".to_owned(),
             chain_id: "kamn-devnet".to_owned(),
@@ -997,6 +1152,7 @@ mod tests {
             RuntimeMode::bootstrap(),
             None,
             None,
+            None,
         );
         let rendered = render_bootstrap_report(&report, parsed.output_mode);
 
@@ -1032,6 +1188,7 @@ mod tests {
             parsed.profile,
             parsed.diagnostics_mode,
             RuntimeMode::bootstrap(),
+            None,
             None,
             None,
         );
@@ -1070,6 +1227,7 @@ mod tests {
             parsed.profile,
             parsed.diagnostics_mode,
             RuntimeMode::bootstrap(),
+            None,
             None,
             None,
         );
@@ -1131,6 +1289,32 @@ mod tests {
         assert!(rendered.contains("\"recovery_expected_state_hash\":\"state-42\""));
         assert!(rendered.contains("\"recovery_attempt_count\":1"));
         assert!(rendered.contains("\"recovery_decisions\":[\"catch-up-required:40->42\"]"));
+    }
+
+    #[test]
+    fn integration_runtime_daemon_renders_bounded_completion_output() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "daemon".to_owned(),
+            "--daemon-max-ticks".to_owned(),
+            "3".to_owned(),
+            "--daemon-tick-interval-ms".to_owned(),
+            "25".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+
+        let parsed = parse_args(args).expect("daemon args should parse");
+        let report = execute(parsed).expect("daemon execution should succeed");
+        let rendered = render_bootstrap_report(&report, OutputMode::json());
+        assert!(rendered.contains("\"runtime_mode\":\"daemon\""));
+        assert!(rendered.contains("\"daemon_max_ticks\":3"));
+        assert!(rendered.contains("\"daemon_tick_interval_ms\":25"));
+        assert!(rendered.contains("\"daemon_executed_ticks\":3"));
+        assert!(rendered.contains("\"daemon_completion_reason\":\"tick-budget-exhausted\""));
     }
 
     #[test]
@@ -1236,6 +1420,42 @@ mod tests {
     }
 
     #[test]
+    fn rejects_daemon_without_max_ticks() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "daemon".to_owned(),
+            "--daemon-tick-interval-ms".to_owned(),
+            "25".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::MissingArgumentValue("--daemon-max-ticks"))
+        );
+    }
+
+    #[test]
+    fn rejects_daemon_without_tick_interval() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "daemon".to_owned(),
+            "--daemon-max-ticks".to_owned(),
+            "3".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::MissingArgumentValue(
+                "--daemon-tick-interval-ms"
+            ))
+        );
+    }
+
+    #[test]
     fn rejects_unknown_argument() {
         let args = vec![
             "kamn-node".to_owned(),
@@ -1286,11 +1506,11 @@ mod tests {
             "--role".to_owned(),
             "processor".to_owned(),
             "--runtime-mode".to_owned(),
-            "daemon".to_owned(),
+            "service".to_owned(),
         ];
         assert_eq!(
             parse_args(args),
-            Err(ConfigError::InvalidRuntimeMode("daemon".to_owned()))
+            Err(ConfigError::InvalidRuntimeMode("service".to_owned()))
         );
     }
 
@@ -1356,6 +1576,25 @@ mod tests {
         assert_eq!(
             parse_args(args),
             Err(ConfigError::InvalidExpectedStateVersion("0".to_owned()))
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_daemon_control_argument() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "daemon".to_owned(),
+            "--daemon-max-ticks".to_owned(),
+            "abc".to_owned(),
+            "--daemon-tick-interval-ms".to_owned(),
+            "25".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::InvalidDaemonControlArgument("abc".to_owned()))
         );
     }
 
@@ -1498,6 +1737,26 @@ mod tests {
             Err(ConfigError::RuntimeRecovery(
                 "rejoin state hash mismatch: expected state-42, found state-41".to_owned()
             ))
+        );
+    }
+
+    #[test]
+    fn regression_runtime_daemon_rejects_zero_tick_budget() {
+        // Regression: #348
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "daemon".to_owned(),
+            "--daemon-max-ticks".to_owned(),
+            "0".to_owned(),
+            "--daemon-tick-interval-ms".to_owned(),
+            "25".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::InvalidDaemonControlArgument("0".to_owned()))
         );
     }
 }

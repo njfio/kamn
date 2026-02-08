@@ -1,4 +1,4 @@
-# Node Runtime CLI Contracts (Issues #306 / #307 / #309 / #310 / #335 / #336)
+# Node Runtime CLI Contracts (Issues #306 / #307 / #309 / #310 / #335 / #336 / #348)
 
 This document captures node-runtime productionization slices for machine-readable output, local role profile projection, diagnostics snapshots, deterministic runtime planning execution, and deterministic recovery-check evaluation.
 
@@ -23,6 +23,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - `--runtime-mode bootstrap` (default)
   - `--runtime-mode planning`
   - `--runtime-mode recovery-check`
+  - `--runtime-mode daemon`
 - Added runtime planning inputs:
   - `--expected-state-hash <state-hash>`
   - `--proposal <id|sender-did|nonce|state-hash>` (repeatable)
@@ -30,9 +31,13 @@ This document captures node-runtime productionization slices for machine-readabl
   - `--expected-state-version <state-version>`
   - `--expected-state-hash <state-hash>`
   - `--rejoin-attempt <node-id|state-version|state-hash|resume-token>` (repeatable)
+- Added daemon bounded-loop controls:
+  - `--daemon-max-ticks <positive-integer>`
+  - `--daemon-tick-interval-ms <positive-integer>`
 - Added explicit runtime mode and proposal validation handling through:
   - `ConfigError::InvalidRuntimeMode`
   - `ConfigError::InvalidExpectedStateVersion`
+  - `ConfigError::InvalidDaemonControlArgument`
   - `ConfigError::InvalidProposalArgument`
   - `ConfigError::InvalidRejoinAttemptArgument`
   - `ConfigError::RuntimePlanner`
@@ -62,6 +67,10 @@ This document captures node-runtime productionization slices for machine-readabl
   - `recovery_expected_state_hash`
   - `recovery_attempt_count`
   - `recovery_decisions`
+  - `daemon_max_ticks`
+  - `daemon_tick_interval_ms`
+  - `daemon_executed_ticks`
+  - `daemon_completion_reason`
   - `components`
 - Invalid modes are rejected with explicit typed error.
 
@@ -136,6 +145,21 @@ This document captures node-runtime productionization slices for machine-readabl
 - Recovery-check mode:
   - `kamn-node --role processor --runtime-mode recovery-check`
   - `kamn-node --role processor --runtime-mode recovery-check --expected-state-version 42 --expected-state-hash state-42 --rejoin-attempt node-a|42|state-42|resume-1`
+- Daemon mode:
+  - `kamn-node --role processor --runtime-mode daemon`
+  - `kamn-node --role processor --runtime-mode daemon --daemon-max-ticks 3 --daemon-tick-interval-ms 25`
+
+## Daemon Runtime Rules
+- Supported runtime modes:
+  - `bootstrap` (default)
+  - `daemon`
+- Daemon mode requires:
+  - `--daemon-max-ticks`
+  - `--daemon-tick-interval-ms`
+- Daemon loop controls must be positive integers.
+- Daemon execution is deterministic and bounded by tick budget:
+  - `daemon_executed_ticks` equals configured `daemon_max_ticks`
+  - `daemon_completion_reason` emits `tick-budget-exhausted`
 
 ## Test Coverage Mapping
 - Unit:
@@ -150,6 +174,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - invalid diagnostics mode rejection (`Regression: #313`)
   - duplicate/stale runtime planning candidate rejection (`Regression: #335`)
   - replay/version/hash recovery-check rejection (`Regression: #336`)
+  - zero/invalid daemon bounded-loop control rejection (`Regression: #348`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:

@@ -153,6 +153,7 @@ pub enum ConfigError {
     InvalidDiagnosticsMode(String),
     InvalidRuntimeMode(String),
     InvalidExpectedStateVersion(String),
+    InvalidDaemonControlArgument(String),
     InvalidProposalArgument(String),
     InvalidRejoinAttemptArgument(String),
     RuntimePlanner(String),
@@ -179,6 +180,9 @@ impl fmt::Display for ConfigError {
             Self::InvalidRuntimeMode(value) => write!(f, "invalid runtime mode: {value}"),
             Self::InvalidExpectedStateVersion(value) => {
                 write!(f, "invalid expected state version: {value}")
+            }
+            Self::InvalidDaemonControlArgument(value) => {
+                write!(f, "invalid daemon control argument: {value}")
             }
             Self::InvalidProposalArgument(value) => {
                 write!(f, "invalid proposal argument: {value}")
