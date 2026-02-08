@@ -1,6 +1,7 @@
 use kamn_core::{
-    canonical_did_document, AgentDid, AgentDidMetadata, DidDocument, DidRegistry, DidRegistryError,
-    DidSubmissionFinalityStatus, DidSubmissionRetryClass,
+    canonical_did_document, AgentDid, AgentDidMetadata, DidChainSubmissionOutcome, DidDocument,
+    DidRegistry, DidRegistryError, DidSubmissionFinalityStatus, DidSubmissionRetryClass,
+    InMemoryDidRegistrationChainAdapter,
 };
 
 fn metadata(model_family: &str) -> AgentDidMetadata {
@@ -242,4 +243,74 @@ fn regression_register_finality_rejects_stale_or_conflicting_updates() {
             sequence: 11,
         })
     );
+}
+
+#[test]
+fn functional_chain_submission_adapter_returns_typed_submitted_outcome() {
+    let mut registry = DidRegistry::new();
+    let mut adapter = InMemoryDidRegistrationChainAdapter::new("ledger-stub");
+    let did = AgentDid::parse("kamn:did:agent:agent-10").expect("did should parse");
+    let document = document_for(&did, "claude-4");
+
+    let result = registry
+        .submit_registration_via_chain_adapter(&mut adapter, did.clone(), document)
+        .expect("submit should succeed");
+
+    assert_eq!(result.retry_class, DidSubmissionRetryClass::NewSubmission);
+    assert!(matches!(
+        result.outcome,
+        DidChainSubmissionOutcome::Submitted(_)
+    ));
+}
+
+#[test]
+fn integration_chain_submission_adapter_deduplicates_retry_outcomes() {
+    let mut registry = DidRegistry::new();
+    let mut adapter = InMemoryDidRegistrationChainAdapter::new("ledger-stub");
+    let did = AgentDid::parse("kamn:did:agent:agent-11").expect("did should parse");
+    let document = document_for(&did, "gpt-5");
+
+    let first = registry
+        .submit_registration_via_chain_adapter(&mut adapter, did.clone(), document.clone())
+        .expect("first submit should succeed");
+    let second = registry
+        .submit_registration_via_chain_adapter(&mut adapter, did.clone(), document)
+        .expect("retry submit should succeed");
+
+    assert_eq!(first.retry_class, DidSubmissionRetryClass::NewSubmission);
+    assert_eq!(
+        second.retry_class,
+        DidSubmissionRetryClass::RetryableInFlight
+    );
+    assert!(matches!(
+        first.outcome,
+        DidChainSubmissionOutcome::Submitted(_)
+    ));
+    assert!(matches!(
+        second.outcome,
+        DidChainSubmissionOutcome::Duplicate(_)
+    ));
+}
+
+#[test]
+fn regression_chain_submission_adapter_exposes_rejected_outcome_without_panicking() {
+    // Regression: #678
+    let mut registry = DidRegistry::new();
+    let mut adapter = InMemoryDidRegistrationChainAdapter::new("ledger-stub");
+    let did = AgentDid::parse("kamn:did:agent:agent-12").expect("did should parse");
+    let document = document_for(&did, "gpt-5");
+    let idempotency_key = registry
+        .idempotency_key_for_register(&did, &document)
+        .expect("idempotency key should derive");
+
+    adapter.reject_idempotency_key(&idempotency_key, "simulated-ledger-reject");
+
+    let rejected = registry
+        .submit_registration_via_chain_adapter(&mut adapter, did.clone(), document)
+        .expect("submission result should remain typed");
+
+    assert!(matches!(
+        rejected.outcome,
+        DidChainSubmissionOutcome::Rejected { .. }
+    ));
 }
