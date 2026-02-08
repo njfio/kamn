@@ -25,6 +25,8 @@ This document captures the first implementation slice for signer backend abstrac
 - `SigningRequest::for_transaction(...)` maps `BaselineTransaction` fields into signer requests.
 - Signed output remains compatible with `TransactionGuards::validate_and_record(...)`.
 - `baseline_signature_for_fields(...)` provides the canonical signature-profile helper consumed by both paths.
+- baseline signature profile id: `baseline-v1`.
+- non-versioned signature profile is rejected (`Regression: #404`).
 
 ## Local Validation
 Run from repository root:

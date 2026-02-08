@@ -20,7 +20,9 @@ This document defines the baseline deterministic transaction guards implemented 
 ## Canonical Signature Profile
 - `baseline_signature_for_fields(...)` is the canonical baseline signing profile helper.
 - Signature profile is shared between `transaction` and `signer_backend` paths.
+- baseline signature profile id: `baseline-v1`.
 - signature-profile drift between transaction and signer paths is rejected (`Regression: #400`).
+- non-versioned signature profile is rejected (`Regression: #404`).
 
 ## Validation
 Run from repository root:

@@ -101,3 +101,19 @@ fn regression_signature_profile_matches_transaction_expected_signature() {
     let canonical = baseline_signature_for_fields("agent-a", 1, GENESIS_STATE_HASH, "payload-tx-1");
     assert_eq!(canonical, tx.expected_signature());
 }
+
+#[test]
+fn regression_non_versioned_signature_profile_is_rejected() {
+    // Regression: #404
+    let mut network = RoleSmokeNetwork::new(true);
+    let mut tx =
+        BaselineTransaction::signed("tx-1", "agent-a", 1, "payload-tx-1", GENESIS_STATE_HASH);
+    tx.signature = "sig:agent-a:1:state:genesis:12".to_owned();
+
+    assert!(matches!(
+        network.submit_transaction(tx),
+        Err(SmokeError::Guard(
+            TransactionGuardError::InvalidSignature { .. }
+        ))
+    ));
+}

@@ -123,3 +123,22 @@ fn regression_signing_request_matches_canonical_signature_profile() {
     let canonical = baseline_signature_for_fields("agent-a", 1, GENESIS_STATE_HASH, "payload-1");
     assert_eq!(signed.signature, canonical);
 }
+
+#[test]
+fn regression_signatures_include_profile_identifier_segment() {
+    // Regression: #404
+    let router = SignerBackendRouter::default();
+    let request = SigningRequest::new(
+        "secure:key-ops-1",
+        "agent-a",
+        1,
+        "payload-1",
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+
+    let signed = router
+        .sign_with_secure_fallback(&request)
+        .expect("signature should be produced");
+    assert!(signed.signature.starts_with("sig:baseline-v1:"));
+}
