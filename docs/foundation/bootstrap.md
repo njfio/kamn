@@ -56,6 +56,7 @@ For pluggable local/secure signer backend controls, see `docs/foundation/signer-
 For key compromise containment and recovery workflows, see `docs/foundation/key-recovery.md`.
 For Python SDK parity slice, see `docs/foundation/python-sdk-beta.md`.
 For TypeScript SDK beta and shared schema package parity slice, see `docs/foundation/typescript-sdk-beta.md`.
+For OpenClaw flagship connector reference workflow controls, see `docs/foundation/openclaw-connector-reference-workflow.md`.
 For DID method and canonical DID document schema controls, see `docs/foundation/did-method.md`.
 For DID register/resolve/update/revoke transaction behavior, see `docs/foundation/did-registry-transactions.md`.
 For canonical message envelope schema and validation controls, see `docs/foundation/message-envelope-schema.md`.
