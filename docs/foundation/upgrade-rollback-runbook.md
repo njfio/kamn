@@ -1,6 +1,7 @@
 # Upgrade Rollback and Post-Upgrade Verification Runbook (Issues #170, #171)
 
 This runbook defines deterministic rollback triggers, rollback execution steps, and post-upgrade verification checks for KAMN operators.
+For semantic versioning policy and compatibility rules, see `docs/foundation/versioning-compatibility-matrix.md`.
 
 ## Rollback Triggers
 - State migration checksum mismatch.
