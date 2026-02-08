@@ -6,12 +6,16 @@ fn doc_contains_runtime_network_scope_and_models() {
     assert!(DOC.contains("## Node CLI Recovery-Check Mapping"));
     assert!(DOC.contains("## Node CLI Daemon Lifecycle Mapping"));
     assert!(DOC.contains("## Bridge Quorum Runtime Mapping"));
+    assert!(DOC.contains("## Snapshot Persistence and Restore Contract Rules"));
     assert!(DOC.contains("## Deterministic Fault Simulation Harness Rules"));
     assert!(DOC.contains("PeerLifecycle"));
     assert!(DOC.contains("BoundedRuntimeQueue<T>"));
     assert!(DOC.contains("RuntimeLifecycleError"));
     assert!(DOC.contains("NetworkFaultSimulationInput"));
     assert!(DOC.contains("DeterministicNetworkFaultSimulator"));
+    assert!(DOC.contains("RuntimeSnapshot"));
+    assert!(DOC.contains("SnapshotRestoreGuard"));
+    assert!(DOC.contains("SnapshotStoreError"));
     assert!(DOC.contains("simulate_daemon_network_fault(...)"));
 }
 
@@ -21,6 +25,8 @@ fn doc_contains_peer_lifecycle_and_queue_rules() {
     assert!(DOC.contains("## Queue Guard Rules"));
     assert!(DOC.contains("## Scheduler Determinism Rules"));
     assert!(DOC.contains("## Recovery and Rejoin Guard Rules"));
+    assert!(DOC.contains("version/hash/cursor"));
+    assert!(DOC.contains("<state-version>|<state-hash>|<cursor>"));
     assert!(DOC.contains("`--rejoin-attempt <node-id|state-version|state-hash|resume-token>`"));
     assert!(DOC.contains("ConfigError::RuntimeRecovery"));
     assert!(DOC.contains("ConfigError::RuntimeDaemonLifecycle"));
@@ -47,14 +53,17 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
     assert!(DOC.contains("## Fast and Cost-Effective Validation"));
     assert!(DOC.contains("cargo test -p kamn-core runtime::tests::"));
     assert!(DOC.contains("cargo test -p kamn-core network_fault_simulation"));
+    assert!(DOC.contains("cargo test -p kamn-core snapshot_store"));
     assert!(DOC.contains("cargo test -p kamn-core --test bridge_quorum_runtime_docs"));
     assert!(DOC.contains("cargo test -p kamn-node --test node_runtime_cli_docs"));
+    assert!(DOC.contains("bash scripts/runtime/run_runtime_snapshot_contract_lane.sh"));
     assert!(DOC.contains(
         "cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition"
     ));
     assert!(DOC.contains(
         "cargo test -p kamn-core performance_network_fault_simulation_chaos_lane_stress -- --ignored"
     ));
+    assert!(DOC.contains("bash scripts/runtime/run_runtime_snapshot_deep_lane.sh"));
     assert!(DOC.contains("cargo clippy -p kamn-core -- -D warnings"));
 }
 
@@ -74,4 +83,6 @@ fn regression_requires_rejoin_and_overflow_rejection_rules() {
     assert!(DOC.contains(
         "network fault simulation censorship critical-boundary guard (`Regression: #618`)"
     ));
+    assert!(DOC.contains("snapshot stale metadata rejection (`Regression: #617`)"));
+    assert!(DOC.contains("snapshot restore cursor mismatch rejection (`Regression: #617`)"));
 }

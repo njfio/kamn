@@ -396,19 +396,32 @@ impl RejoinAttempt {
 pub struct RuntimeSnapshot {
     state_version: u64,
     state_hash: String,
+    cursor: u64,
 }
 
 impl RuntimeSnapshot {
     pub fn new(state_version: u64, state_hash: &str) -> Result<Self, SnapshotRestoreError> {
+        Self::with_cursor(state_version, state_hash, state_version)
+    }
+
+    pub fn with_cursor(
+        state_version: u64,
+        state_hash: &str,
+        cursor: u64,
+    ) -> Result<Self, SnapshotRestoreError> {
         if state_version == 0 {
             return Err(SnapshotRestoreError::InvalidStateVersion);
         }
-        if state_hash.trim().is_empty() {
+        if !is_valid_snapshot_hash(state_hash) {
             return Err(SnapshotRestoreError::InvalidStateHash);
+        }
+        if cursor == 0 {
+            return Err(SnapshotRestoreError::InvalidCursor);
         }
         Ok(Self {
             state_version,
             state_hash: state_hash.to_owned(),
+            cursor,
         })
     }
 
@@ -419,14 +432,20 @@ impl RuntimeSnapshot {
     pub fn state_hash(&self) -> &str {
         &self.state_hash
     }
+
+    pub fn cursor(&self) -> u64 {
+        self.cursor
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SnapshotRestoreError {
     InvalidStateVersion,
     InvalidStateHash,
+    InvalidCursor,
     StateVersionMismatch { expected: u64, found: u64 },
     StateHashMismatch { expected: String, found: String },
+    CursorMismatch { expected: u64, found: u64 },
 }
 
 impl Display for SnapshotRestoreError {
@@ -434,6 +453,7 @@ impl Display for SnapshotRestoreError {
         match self {
             Self::InvalidStateVersion => write!(f, "snapshot state version must be positive"),
             Self::InvalidStateHash => write!(f, "snapshot state hash cannot be empty"),
+            Self::InvalidCursor => write!(f, "snapshot cursor must be positive"),
             Self::StateVersionMismatch { expected, found } => {
                 write!(
                     f,
@@ -446,6 +466,12 @@ impl Display for SnapshotRestoreError {
                     "snapshot state hash mismatch: expected {expected}, found {found}"
                 )
             }
+            Self::CursorMismatch { expected, found } => {
+                write!(
+                    f,
+                    "snapshot cursor mismatch: expected {expected}, found {found}"
+                )
+            }
         }
     }
 }
@@ -456,6 +482,7 @@ impl Error for SnapshotRestoreError {}
 pub struct SnapshotRestoreGuard {
     expected_state_version: u64,
     expected_state_hash: String,
+    expected_cursor: Option<u64>,
 }
 
 impl SnapshotRestoreGuard {
@@ -463,15 +490,39 @@ impl SnapshotRestoreGuard {
         expected_state_version: u64,
         expected_state_hash: &str,
     ) -> Result<Self, SnapshotRestoreError> {
+        Self::with_cursor(expected_state_version, expected_state_hash, None)
+    }
+
+    pub fn with_expected_cursor(
+        expected_state_version: u64,
+        expected_state_hash: &str,
+        expected_cursor: u64,
+    ) -> Result<Self, SnapshotRestoreError> {
+        Self::with_cursor(
+            expected_state_version,
+            expected_state_hash,
+            Some(expected_cursor),
+        )
+    }
+
+    fn with_cursor(
+        expected_state_version: u64,
+        expected_state_hash: &str,
+        expected_cursor: Option<u64>,
+    ) -> Result<Self, SnapshotRestoreError> {
         if expected_state_version == 0 {
             return Err(SnapshotRestoreError::InvalidStateVersion);
         }
-        if expected_state_hash.trim().is_empty() {
+        if !is_valid_snapshot_hash(expected_state_hash) {
             return Err(SnapshotRestoreError::InvalidStateHash);
+        }
+        if matches!(expected_cursor, Some(0)) {
+            return Err(SnapshotRestoreError::InvalidCursor);
         }
         Ok(Self {
             expected_state_version,
             expected_state_hash: expected_state_hash.to_owned(),
+            expected_cursor,
         })
     }
 
@@ -488,6 +539,14 @@ impl SnapshotRestoreGuard {
                 found: snapshot.state_hash().to_owned(),
             });
         }
+        if let Some(expected_cursor) = self.expected_cursor {
+            if snapshot.cursor() != expected_cursor {
+                return Err(SnapshotRestoreError::CursorMismatch {
+                    expected: expected_cursor,
+                    found: snapshot.cursor(),
+                });
+            }
+        }
         Ok(())
     }
 }
@@ -496,6 +555,19 @@ impl SnapshotRestoreGuard {
 pub enum SnapshotStoreError {
     Io(String),
     InvalidPayload(String),
+    StateVersionRegression {
+        previous: u64,
+        found: u64,
+    },
+    CursorRegression {
+        previous: u64,
+        found: u64,
+    },
+    StaleStateHash {
+        state_hash: String,
+        previous_version: u64,
+        found_version: u64,
+    },
 }
 
 impl Display for SnapshotStoreError {
@@ -504,6 +576,28 @@ impl Display for SnapshotStoreError {
             Self::Io(message) => write!(f, "snapshot store I/O error: {message}"),
             Self::InvalidPayload(payload) => {
                 write!(f, "snapshot store invalid payload: {payload}")
+            }
+            Self::StateVersionRegression { previous, found } => {
+                write!(
+                    f,
+                    "snapshot state version regression: previous {previous}, found {found}"
+                )
+            }
+            Self::CursorRegression { previous, found } => {
+                write!(
+                    f,
+                    "snapshot cursor regression: previous {previous}, found {found}"
+                )
+            }
+            Self::StaleStateHash {
+                state_hash,
+                previous_version,
+                found_version,
+            } => {
+                write!(
+                    f,
+                    "snapshot stale state hash detected for {state_hash}: versions {previous_version}->{found_version}"
+                )
             }
         }
     }
@@ -524,6 +618,7 @@ pub struct InMemoryRuntimeSnapshotStore {
 
 impl RuntimeSnapshotStore for InMemoryRuntimeSnapshotStore {
     fn write(&mut self, snapshot: RuntimeSnapshot) -> Result<(), SnapshotStoreError> {
+        validate_snapshot_continuity(self.entries.last(), &snapshot)?;
         self.entries.push(snapshot);
         Ok(())
     }
@@ -588,7 +683,14 @@ impl FileRuntimeSnapshotStore {
             }
 
             match parse_snapshot_line(trimmed) {
-                Ok(snapshot) => snapshots.push(snapshot),
+                Ok(snapshot) => {
+                    if validate_snapshot_continuity(snapshots.last(), &snapshot).is_err() {
+                        corruption_detected = true;
+                        dropped_corrupt_entries += 1;
+                        continue;
+                    }
+                    snapshots.push(snapshot);
+                }
                 Err(_) => {
                     corruption_detected = true;
                     dropped_corrupt_entries += 1;
@@ -611,9 +713,10 @@ impl FileRuntimeSnapshotStore {
         let mut serialized = String::new();
         for snapshot in snapshots {
             serialized.push_str(&format!(
-                "{}|{}\n",
+                "{}|{}|{}\n",
                 snapshot.state_version(),
-                snapshot.state_hash()
+                snapshot.state_hash(),
+                snapshot.cursor()
             ));
         }
         fs::write(&self.path, serialized).map_err(|error| SnapshotStoreError::Io(error.to_string()))
@@ -622,12 +725,21 @@ impl FileRuntimeSnapshotStore {
 
 impl RuntimeSnapshotStore for FileRuntimeSnapshotStore {
     fn write(&mut self, snapshot: RuntimeSnapshot) -> Result<(), SnapshotStoreError> {
+        if let Some(previous) = self.read_latest()? {
+            validate_snapshot_continuity(Some(&previous), &snapshot)?;
+        }
+
         let mut file = OpenOptions::new()
             .create(true)
             .append(true)
             .open(&self.path)
             .map_err(|error| SnapshotStoreError::Io(error.to_string()))?;
-        let serialized = format!("{}|{}\n", snapshot.state_version(), snapshot.state_hash());
+        let serialized = format!(
+            "{}|{}|{}\n",
+            snapshot.state_version(),
+            snapshot.state_hash(),
+            snapshot.cursor()
+        );
         file.write_all(serialized.as_bytes())
             .map_err(|error| SnapshotStoreError::Io(error.to_string()))
     }
@@ -650,7 +762,9 @@ impl RuntimeSnapshotStore for FileRuntimeSnapshotStore {
             if trimmed.is_empty() {
                 continue;
             }
-            snapshots.push(parse_snapshot_line(trimmed)?);
+            let snapshot = parse_snapshot_line(trimmed)?;
+            validate_snapshot_continuity(snapshots.last(), &snapshot)?;
+            snapshots.push(snapshot);
         }
 
         Ok(snapshots)
@@ -658,14 +772,66 @@ impl RuntimeSnapshotStore for FileRuntimeSnapshotStore {
 }
 
 fn parse_snapshot_line(line: &str) -> Result<RuntimeSnapshot, SnapshotStoreError> {
-    let Some((state_version_raw, state_hash_raw)) = line.split_once('|') else {
+    let mut segments = line.split('|');
+    let Some(state_version_raw) = segments.next() else {
         return Err(SnapshotStoreError::InvalidPayload(line.to_owned()));
     };
+    let Some(state_hash_raw) = segments.next() else {
+        return Err(SnapshotStoreError::InvalidPayload(line.to_owned()));
+    };
+    let cursor_raw = segments.next();
+    if segments.next().is_some() {
+        return Err(SnapshotStoreError::InvalidPayload(line.to_owned()));
+    }
+
     let state_version = state_version_raw
         .parse::<u64>()
         .map_err(|_| SnapshotStoreError::InvalidPayload(line.to_owned()))?;
-    RuntimeSnapshot::new(state_version, state_hash_raw)
-        .map_err(|_| SnapshotStoreError::InvalidPayload(line.to_owned()))
+    if let Some(cursor_raw) = cursor_raw {
+        let cursor = cursor_raw
+            .parse::<u64>()
+            .map_err(|_| SnapshotStoreError::InvalidPayload(line.to_owned()))?;
+        RuntimeSnapshot::with_cursor(state_version, state_hash_raw, cursor)
+            .map_err(|_| SnapshotStoreError::InvalidPayload(line.to_owned()))
+    } else {
+        RuntimeSnapshot::new(state_version, state_hash_raw)
+            .map_err(|_| SnapshotStoreError::InvalidPayload(line.to_owned()))
+    }
+}
+
+fn is_valid_snapshot_hash(state_hash: &str) -> bool {
+    !state_hash.trim().is_empty()
+        && !state_hash.contains('|')
+        && !state_hash.contains('\n')
+        && !state_hash.contains('\r')
+}
+
+fn validate_snapshot_continuity(
+    previous: Option<&RuntimeSnapshot>,
+    snapshot: &RuntimeSnapshot,
+) -> Result<(), SnapshotStoreError> {
+    if let Some(previous) = previous {
+        if snapshot.state_version() <= previous.state_version() {
+            return Err(SnapshotStoreError::StateVersionRegression {
+                previous: previous.state_version(),
+                found: snapshot.state_version(),
+            });
+        }
+        if snapshot.cursor() <= previous.cursor() {
+            return Err(SnapshotStoreError::CursorRegression {
+                previous: previous.cursor(),
+                found: snapshot.cursor(),
+            });
+        }
+        if snapshot.state_hash() == previous.state_hash() {
+            return Err(SnapshotStoreError::StaleStateHash {
+                state_hash: snapshot.state_hash().to_owned(),
+                previous_version: previous.state_version(),
+                found_version: snapshot.state_version(),
+            });
+        }
+    }
+    Ok(())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -2410,6 +2576,34 @@ mod tests {
     }
 
     #[test]
+    fn functional_snapshot_restore_guard_with_expected_cursor_accepts_matching_snapshot() {
+        let guard = SnapshotRestoreGuard::with_expected_cursor(42, "state-42", 100)
+            .expect("restore guard should construct");
+        let snapshot =
+            RuntimeSnapshot::with_cursor(42, "state-42", 100).expect("snapshot should be valid");
+        assert!(guard.validate(snapshot).is_ok());
+    }
+
+    #[test]
+    fn regression_snapshot_restore_cursor_mismatch_is_rejected() {
+        // Regression: #617
+        let guard = SnapshotRestoreGuard::with_expected_cursor(42, "state-42", 100)
+            .expect("restore guard should construct");
+        let snapshot =
+            RuntimeSnapshot::with_cursor(42, "state-42", 99).expect("snapshot should be valid");
+        let error = guard
+            .validate(snapshot)
+            .expect_err("cursor mismatch should be rejected");
+        assert_eq!(
+            error,
+            SnapshotRestoreError::CursorMismatch {
+                expected: 100,
+                found: 99
+            }
+        );
+    }
+
+    #[test]
     fn functional_construct_lock_allows_acquire_then_renew_flow() {
         let mut lock = ConstructLockGuard::new(5).expect("construct lock should build");
         let lease = lock
@@ -3242,7 +3436,131 @@ mod tests {
         assert_eq!(result.dropped_corrupt_entries, 2);
         assert_eq!(
             fs::read_to_string(&path).expect("snapshot file should be readable"),
-            "41|state-41\n42|state-42\n"
+            "41|state-41|41\n42|state-42|42\n"
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn unit_runtime_snapshot_with_cursor_rejects_zero_cursor() {
+        let snapshot = RuntimeSnapshot::with_cursor(42, "state-42", 0);
+        assert_eq!(snapshot, Err(SnapshotRestoreError::InvalidCursor));
+    }
+
+    #[test]
+    fn unit_runtime_snapshot_rejects_hash_with_metadata_delimiter() {
+        let snapshot = RuntimeSnapshot::new(42, "state-42|100");
+        assert_eq!(snapshot, Err(SnapshotRestoreError::InvalidStateHash));
+    }
+
+    #[test]
+    fn unit_in_memory_snapshot_store_rejects_state_version_regression() {
+        let mut store = InMemoryRuntimeSnapshotStore::default();
+        let baseline = RuntimeSnapshot::with_cursor(41, "state-41", 100).expect("valid snapshot");
+        assert!(store.write(baseline).is_ok());
+        let stale = RuntimeSnapshot::with_cursor(40, "state-40", 101).expect("valid snapshot");
+        assert_eq!(
+            store.write(stale),
+            Err(SnapshotStoreError::StateVersionRegression {
+                previous: 41,
+                found: 40
+            })
+        );
+    }
+
+    #[test]
+    fn unit_in_memory_snapshot_store_rejects_cursor_regression() {
+        let mut store = InMemoryRuntimeSnapshotStore::default();
+        let baseline = RuntimeSnapshot::with_cursor(41, "state-41", 100).expect("valid snapshot");
+        assert!(store.write(baseline).is_ok());
+        let stale = RuntimeSnapshot::with_cursor(42, "state-42", 99).expect("valid snapshot");
+        assert_eq!(
+            store.write(stale),
+            Err(SnapshotStoreError::CursorRegression {
+                previous: 100,
+                found: 99
+            })
+        );
+    }
+
+    #[test]
+    fn regression_file_snapshot_store_rejects_version_regression_metadata() {
+        // Regression: #617
+        let path = temp_snapshot_store_path("version-regression");
+        let _ = fs::remove_file(&path);
+        assert!(fs::write(&path, "41|state-41|100\n40|state-40|101\n").is_ok());
+
+        let store = FileRuntimeSnapshotStore::new(path.clone()).expect("store should build");
+        assert_eq!(
+            store.list(),
+            Err(SnapshotStoreError::StateVersionRegression {
+                previous: 41,
+                found: 40
+            })
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn regression_file_snapshot_store_rejects_cursor_regression_metadata() {
+        // Regression: #617
+        let path = temp_snapshot_store_path("cursor-regression");
+        let _ = fs::remove_file(&path);
+        assert!(fs::write(&path, "41|state-41|100\n42|state-42|99\n").is_ok());
+
+        let store = FileRuntimeSnapshotStore::new(path.clone()).expect("store should build");
+        assert_eq!(
+            store.list(),
+            Err(SnapshotStoreError::CursorRegression {
+                previous: 100,
+                found: 99
+            })
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn regression_file_snapshot_store_rejects_stale_hash_metadata() {
+        // Regression: #617
+        let path = temp_snapshot_store_path("hash-regression");
+        let _ = fs::remove_file(&path);
+        assert!(fs::write(&path, "41|state-41|100\n42|state-41|101\n").is_ok());
+
+        let store = FileRuntimeSnapshotStore::new(path.clone()).expect("store should build");
+        assert_eq!(
+            store.list(),
+            Err(SnapshotStoreError::StaleStateHash {
+                state_hash: "state-41".to_owned(),
+                previous_version: 41,
+                found_version: 42
+            })
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn functional_file_snapshot_store_recovery_truncates_stale_metadata_suffix() {
+        let path = temp_snapshot_store_path("recover-stale-metadata");
+        let _ = fs::remove_file(&path);
+        assert!(fs::write(&path, "41|state-41|100\n42|state-42|99\n43|state-43|102\n").is_ok());
+
+        let mut store = FileRuntimeSnapshotStore::new(path.clone()).expect("store should build");
+        let result = store
+            .recover_latest_and_repair()
+            .expect("recovery should pass");
+        assert_eq!(
+            result.latest,
+            Some(RuntimeSnapshot::with_cursor(41, "state-41", 100).expect("valid snapshot"))
+        );
+        assert_eq!(result.recovered_entries, 1);
+        assert_eq!(result.dropped_corrupt_entries, 2);
+        assert_eq!(
+            fs::read_to_string(&path).expect("snapshot file should be readable"),
+            "41|state-41|100\n"
         );
 
         let _ = fs::remove_file(path);
@@ -3270,6 +3588,36 @@ mod tests {
         assert!(
             elapsed_millis < 250,
             "snapshot recovery exceeded CI budget: {elapsed_millis}ms"
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    #[ignore = "scheduled snapshot deep lane"]
+    fn performance_file_snapshot_store_recovery_deep_lane_large_payload() {
+        let path = temp_snapshot_store_path("recover-deep-lane");
+        let _ = fs::remove_file(&path);
+        let mut payload = String::new();
+        for state_version in 1..=8192 {
+            payload.push_str(&format!(
+                "{state_version}|state-{state_version}|{state_version}\n"
+            ));
+        }
+        payload.push_str("8193|state-8193|0\n");
+        assert!(fs::write(&path, payload).is_ok());
+
+        let mut store = FileRuntimeSnapshotStore::new(path.clone()).expect("store should build");
+        let start = Instant::now();
+        let result = store
+            .recover_latest_and_repair()
+            .expect("recovery should pass");
+        let elapsed_millis = start.elapsed().as_millis();
+        assert_eq!(result.recovered_entries, 8192);
+        assert_eq!(result.dropped_corrupt_entries, 1);
+        assert!(
+            elapsed_millis < 2000,
+            "snapshot deep-lane recovery exceeded budget: {elapsed_millis}ms"
         );
 
         let _ = fs::remove_file(path);

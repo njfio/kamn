@@ -31,6 +31,7 @@ append_summary() {
     echo "- Run frontend dashboard tests: ${RUN_FRONTEND_DASHBOARD_TESTS}"
     echo "- Run dashboard contract tests: ${RUN_DASHBOARD_CONTRACT_TESTS}"
     echo "- Run signer emulator contract tests: ${RUN_SIGNER_EMULATOR_CONTRACT_TESTS}"
+    echo "- Run runtime snapshot contract tests: ${RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS}"
     echo "- Run bridge replay harness: ${RUN_BRIDGE_REPLAY_HARNESS}"
     echo "- Bridge replay suites: ${BRIDGE_REPLAY_SUITES}"
     echo "- Run Rust live transport contract tests: ${RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS}"
@@ -126,6 +127,7 @@ DEPLOY_SCRIPT_CHANGED=false
 FRONTEND_DASHBOARD_CHANGED=false
 DASHBOARD_CONTRACT_CHANGED=false
 SIGNER_EMULATOR_CONTRACT_CHANGED=false
+RUNTIME_SNAPSHOT_CONTRACT_CHANGED=false
 BRIDGE_REPLAY_RELATED_CHANGED=false
 BRIDGE_SUITE_ADAPTER=false
 BRIDGE_SUITE_TELEGRAM=false
@@ -196,6 +198,13 @@ for file in "${CHANGED_FILES[@]}"; do
   case "$file" in
     crates/kamn-core/src/signer_backend.rs|crates/kamn-core/tests/signer_backend.rs|crates/kamn-core/tests/signer_backend_docs.rs|docs/foundation/signer-backend-abstraction.md|scripts/signer/*)
       SIGNER_EMULATOR_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
+    docs/foundation/runtime-network.md|crates/kamn-core/tests/runtime_network_docs.rs|scripts/runtime/*)
+      RUNTIME_SNAPSHOT_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -283,6 +292,7 @@ RUN_DEPLOY_PREFLIGHT_TESTS=false
 RUN_FRONTEND_DASHBOARD_TESTS=false
 RUN_DASHBOARD_CONTRACT_TESTS=false
 RUN_SIGNER_EMULATOR_CONTRACT_TESTS=false
+RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS=false
 RUN_BRIDGE_REPLAY_HARNESS=false
 RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS=false
 RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS=false
@@ -358,6 +368,13 @@ if [ "$SIGNER_EMULATOR_CONTRACT_CHANGED" = true ]; then
   RUN_SIGNER_EMULATOR_CONTRACT_TESTS=true
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
     TEST_SCOPE="signer-contract"
+  fi
+fi
+
+if [ "$RUNTIME_SNAPSHOT_CONTRACT_CHANGED" = true ]; then
+  RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="runtime-contract"
   fi
 fi
 
@@ -440,6 +457,7 @@ write_output "run_deploy_preflight_tests" "$RUN_DEPLOY_PREFLIGHT_TESTS"
 write_output "run_frontend_dashboard_tests" "$RUN_FRONTEND_DASHBOARD_TESTS"
 write_output "run_dashboard_contract_tests" "$RUN_DASHBOARD_CONTRACT_TESTS"
 write_output "run_signer_emulator_contract_tests" "$RUN_SIGNER_EMULATOR_CONTRACT_TESTS"
+write_output "run_runtime_snapshot_contract_tests" "$RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS"
 write_output "run_bridge_replay_harness" "$RUN_BRIDGE_REPLAY_HARNESS"
 write_output "bridge_replay_suites" "$BRIDGE_REPLAY_SUITES"
 write_output "run_rust_live_transport_contract_tests" "$RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS"
