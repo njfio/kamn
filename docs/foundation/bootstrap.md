@@ -65,3 +65,4 @@ For task operation command handling controls, see `docs/foundation/task-operatio
 For bridge inbound/outbound adapter abstraction controls, see `docs/foundation/bridge-adapter-abstraction.md`.
 For CI cache strategy and bounded parallelism controls, see `docs/foundation/ci-caching-parallelism.md`.
 For flaky-test quarantine and bounded retry controls, see `docs/foundation/ci-flaky-quarantine.md`.
+For redaction and tombstone compliance workflow controls, see `docs/foundation/redaction-tombstones.md`.

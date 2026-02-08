@@ -17,6 +17,7 @@ pub mod message_envelope;
 pub mod message_lifecycle;
 pub mod migrations;
 pub mod namespaces;
+pub mod redaction_compliance;
 pub mod runtime;
 pub mod smoke;
 pub mod state;
@@ -73,6 +74,10 @@ pub use message_envelope::{
 pub use message_lifecycle::{MessageLifecycleError, MessageLifecycleStore, MessageStatus};
 pub use migrations::{MigrationPlan, MigrationRegistry, MigrationStep};
 pub use namespaces::StateNamespaces;
+pub use redaction_compliance::{
+    RedactionAction, RedactionAuditEvent, RedactionAuditEventKind, RedactionComplianceEngine,
+    RedactionComplianceError, RedactionRequestStatus, RedactionVisibility,
+};
 pub use runtime::RuntimeWiring;
 pub use smoke::{ProducedBlock, RoleSmokeNetwork, SmokeError};
 pub use state::{
