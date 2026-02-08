@@ -40,3 +40,4 @@ cargo run -p kamn-node -- --role processor --chain-id kamn-devnet --chain-versio
 This is intentionally minimal and dependency-light so the bootstrap path is fast and auditable.
 Migration execution is not implemented yet; this stage focuses on deterministic planning and validation hooks.
 For role interaction baseline coverage, see `docs/foundation/role-smoke.md`.
+For transaction invariant guard behavior, see `docs/foundation/transaction-guards.md`.

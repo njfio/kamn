@@ -10,14 +10,16 @@ This document describes baseline smoke scenarios for processor/listener/approver
 ## Model
 The smoke harness is intentionally lightweight and deterministic:
 - `RoleSmokeNetwork` simulates one processor, one listener, and one approver.
-- `submit_transaction(...)` validates ID, nonce, and payload before ingest.
+- `submit_transaction(...)` validates ID/sender/nonce/payload/state-hash/signature before ingest.
 - `produce_block(...)` orders transactions deterministically by nonce then ID.
 - Gossip behavior is explicit via the `gossip_enabled` toggle.
+- State-hash progression and transaction guard details are documented in `docs/foundation/transaction-guards.md`.
 
 ## Failure Modes
 - Duplicate transaction IDs are rejected.
-- Non-positive nonces are rejected.
-- Empty payloads are rejected.
+- Non-positive and out-of-sequence nonces are rejected.
+- Empty/invalid envelope fields are rejected.
+- Stale state-hash and tampered signatures are rejected.
 - Producing a block with an empty processor mempool fails explicitly.
 
 ## Validation Commands

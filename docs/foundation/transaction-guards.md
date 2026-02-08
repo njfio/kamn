@@ -1,0 +1,26 @@
+# Transaction Guards (Issue #78)
+
+This document defines the baseline deterministic transaction guards implemented in `kamn-core`.
+
+## Invariants Enforced
+- Non-empty transaction envelope fields (`id`, `sender`, `payload`, `state_hash`, `signature`).
+- Positive nonce values.
+- Per-sender nonce sequencing (first nonce `1`, then increment by `1`).
+- State-hash match against the currently expected chain/app state hash.
+- Deterministic signature integrity check (baseline placeholder scheme).
+- Duplicate transaction ID rejection.
+
+## Components
+- `BaselineTransaction`: canonical envelope used by smoke/runtime scaffolding.
+- `TransactionGuards`: stateful guard evaluator that validates and records transaction invariants.
+- `TransactionGuardError`: explicit typed failures for deterministic operator/agent handling.
+- `RoleSmokeNetwork`: integrates guard checks on `submit_transaction(...)` and advances state hash on `produce_block(...)`.
+
+## Validation
+Run from repository root:
+
+```bash
+cargo fmt --all --check
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test --workspace --all-features
+```

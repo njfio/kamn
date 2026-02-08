@@ -1,5 +1,6 @@
 use kamn_core::{
     bootstrap, BaselineTransaction, NodeConfig, NodeRole, RoleSmokeNetwork, SmokeError,
+    TransactionGuardError,
 };
 
 fn config_for(role: NodeRole, gossip_enabled: bool) -> NodeConfig {
@@ -12,19 +13,26 @@ fn config_for(role: NodeRole, gossip_enabled: bool) -> NodeConfig {
     }
 }
 
-fn sample_tx(id: &str, nonce: u64) -> BaselineTransaction {
-    BaselineTransaction {
-        id: id.to_owned(),
+fn sample_tx(
+    network: &RoleSmokeNetwork,
+    id: &str,
+    sender: &str,
+    nonce: u64,
+) -> BaselineTransaction {
+    BaselineTransaction::signed(
+        id,
+        sender,
         nonce,
-        payload: format!("payload-{id}"),
-    }
+        &format!("payload-{id}"),
+        network.expected_state_hash(),
+    )
 }
 
 #[test]
 fn functional_roles_complete_smoke_roundtrip_with_gossip() {
     let mut network = RoleSmokeNetwork::new(true);
     network
-        .submit_transaction(sample_tx("tx-1", 1))
+        .submit_transaction(sample_tx(&network, "tx-1", "agent-a", 1))
         .expect("transaction submit should succeed");
 
     assert!(network.gossip_reached_all_roles("tx-1"));
@@ -63,7 +71,7 @@ fn integration_bootstrap_role_plans_match_smoke_network_expectations() {
 
     let mut network = RoleSmokeNetwork::new(processor_plan.config.enable_gossip);
     network
-        .submit_transaction(sample_tx("tx-1", 1))
+        .submit_transaction(sample_tx(&network, "tx-1", "agent-a", 1))
         .expect("transaction submit should succeed");
     let block = network
         .produce_block()
@@ -76,7 +84,7 @@ fn regression_gossip_disabled_prevents_cross_role_propagation() {
     // Regression: #18
     let mut network = RoleSmokeNetwork::new(false);
     network
-        .submit_transaction(sample_tx("tx-1", 1))
+        .submit_transaction(sample_tx(&network, "tx-1", "agent-a", 1))
         .expect("transaction submit should succeed");
 
     assert!(!network.gossip_reached_all_roles("tx-1"));
@@ -94,7 +102,7 @@ fn regression_gossip_disabled_prevents_cross_role_propagation() {
 fn integration_rejects_invalid_nonce_at_submit_boundary() {
     let mut network = RoleSmokeNetwork::new(true);
     assert_eq!(
-        network.submit_transaction(sample_tx("tx-1", 0)),
-        Err(SmokeError::InvalidNonce(0))
+        network.submit_transaction(sample_tx(&network, "tx-1", "agent-a", 0)),
+        Err(SmokeError::Guard(TransactionGuardError::InvalidNonce(0)))
     );
 }
