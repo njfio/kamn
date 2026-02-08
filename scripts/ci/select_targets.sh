@@ -33,6 +33,10 @@ append_summary() {
     echo "- Run signer emulator contract tests: ${RUN_SIGNER_EMULATOR_CONTRACT_TESTS}"
     echo "- Run bridge replay harness: ${RUN_BRIDGE_REPLAY_HARNESS}"
     echo "- Bridge replay suites: ${BRIDGE_REPLAY_SUITES}"
+    echo "- Run Rust live transport contract tests: ${RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS}"
+    echo "- Run Python live transport contract tests: ${RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS}"
+    echo "- Run TypeScript live transport contract tests: ${RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS}"
+    echo "- Run cross-language live transport parity contract tests: ${RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS}"
     echo "- Run SDK parity matrix: ${RUN_SDK_PARITY_MATRIX}"
     echo "- Run invariant harness: ${RUN_INVARIANT_HARNESS}"
     echo "- Test scope: ${TEST_SCOPE}"
@@ -127,7 +131,11 @@ BRIDGE_SUITE_ADAPTER=false
 BRIDGE_SUITE_TELEGRAM=false
 BRIDGE_SUITE_DISCORD=false
 BRIDGE_SUITE_CROSS_CHAIN=false
-SDK_RELATED_CHANGED=false
+SDK_RUST_LIVE_CHANGED=false
+SDK_PYTHON_LIVE_CHANGED=false
+SDK_TYPESCRIPT_LIVE_CHANGED=false
+SDK_LIVE_PARITY_SCRIPT_CHANGED=false
+SDK_SHARED_MATRIX_CHANGED=false
 CRITICAL_PATH_CHANGED=false
 UNKNOWN_RISK_CHANGED=false
 FULL_SUITE=false
@@ -222,8 +230,24 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    kamn_sdk.py|packages/kamn-sdk/*|crates/kamn-sdk/*|scripts/sdk/*|fixtures/sdk_parity/*|tests/python/test_sdk.py)
-      SDK_RELATED_CHANGED=true
+    crates/kamn-sdk/*|docs/foundation/rust-sdk-alpha.md|scripts/sdk/run_rust_live_transport_contract_lane.sh|scripts/sdk/run_rust_live_transport_deep_lane.sh|scripts/sdk/test_run_rust_live_transport_contract_lane.sh)
+      SDK_RUST_LIVE_CHANGED=true
+      classified=true
+      ;;
+    kamn_sdk.py|tests/python/test_sdk.py|tests/python/test_sdk_live_transport_deep.py|docs/foundation/python-sdk-beta.md)
+      SDK_PYTHON_LIVE_CHANGED=true
+      classified=true
+      ;;
+    packages/kamn-sdk/*|docs/foundation/typescript-sdk-beta.md)
+      SDK_TYPESCRIPT_LIVE_CHANGED=true
+      classified=true
+      ;;
+    scripts/sdk/run_live_transport_parity_contract_lane.sh|scripts/sdk/run_live_transport_parity_deep_lane.sh|scripts/sdk/test_run_live_transport_parity_contract_lane.sh)
+      SDK_LIVE_PARITY_SCRIPT_CHANGED=true
+      classified=true
+      ;;
+    fixtures/sdk_parity/*|scripts/sdk/run_sdk_parity_matrix.py|scripts/sdk/run_sdk_parity_matrix.sh|scripts/sdk/test_run_sdk_parity_matrix.sh|scripts/sdk/run_parity_python.sh|scripts/sdk/run_parity_rust.sh|scripts/sdk/run_parity_typescript.sh|scripts/sdk/register_case_runner.py|scripts/sdk/register_case_runner.ts)
+      SDK_SHARED_MATRIX_CHANGED=true
       classified=true
       ;;
   esac
@@ -260,6 +284,10 @@ RUN_FRONTEND_DASHBOARD_TESTS=false
 RUN_DASHBOARD_CONTRACT_TESTS=false
 RUN_SIGNER_EMULATOR_CONTRACT_TESTS=false
 RUN_BRIDGE_REPLAY_HARNESS=false
+RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS=false
+RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS=false
+RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS=false
+RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS=false
 RUN_SDK_PARITY_MATRIX=false
 FMT_CMD=":"
 CLIPPY_CMD=":"
@@ -362,9 +390,41 @@ if [ "$BRIDGE_REPLAY_RELATED_CHANGED" = true ]; then
   fi
 fi
 
-if [ "$SDK_RELATED_CHANGED" = true ]; then
+sdk_live_lane_count=0
+if [ "$SDK_RUST_LIVE_CHANGED" = true ]; then
+  sdk_live_lane_count=$((sdk_live_lane_count + 1))
+fi
+if [ "$SDK_PYTHON_LIVE_CHANGED" = true ]; then
+  sdk_live_lane_count=$((sdk_live_lane_count + 1))
+fi
+if [ "$SDK_TYPESCRIPT_LIVE_CHANGED" = true ]; then
+  sdk_live_lane_count=$((sdk_live_lane_count + 1))
+fi
+
+if [ "$SDK_SHARED_MATRIX_CHANGED" = true ]; then
   RUN_SDK_PARITY_MATRIX=true
-  if [ "$RUN_RUST" != true ]; then
+fi
+
+if [ "$SDK_LIVE_PARITY_SCRIPT_CHANGED" = true ] || [ "$sdk_live_lane_count" -gt 1 ]; then
+  RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS=true
+elif [ "$SDK_RUST_LIVE_CHANGED" = true ]; then
+  RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS=true
+elif [ "$SDK_PYTHON_LIVE_CHANGED" = true ]; then
+  RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS=true
+elif [ "$SDK_TYPESCRIPT_LIVE_CHANGED" = true ]; then
+  RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS=true
+fi
+
+if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+  if [ "$RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS" = true ]; then
+    TEST_SCOPE="sdk-live-parity"
+  elif [ "$RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS" = true ]; then
+    TEST_SCOPE="sdk-live-rust"
+  elif [ "$RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS" = true ]; then
+    TEST_SCOPE="sdk-live-python"
+  elif [ "$RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS" = true ]; then
+    TEST_SCOPE="sdk-live-typescript"
+  elif [ "$RUN_SDK_PARITY_MATRIX" = true ]; then
     TEST_SCOPE="sdk"
   fi
 fi
@@ -382,6 +442,10 @@ write_output "run_dashboard_contract_tests" "$RUN_DASHBOARD_CONTRACT_TESTS"
 write_output "run_signer_emulator_contract_tests" "$RUN_SIGNER_EMULATOR_CONTRACT_TESTS"
 write_output "run_bridge_replay_harness" "$RUN_BRIDGE_REPLAY_HARNESS"
 write_output "bridge_replay_suites" "$BRIDGE_REPLAY_SUITES"
+write_output "run_rust_live_transport_contract_tests" "$RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS"
+write_output "run_python_live_transport_contract_tests" "$RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS"
+write_output "run_typescript_live_transport_contract_tests" "$RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS"
+write_output "run_live_transport_parity_contract_tests" "$RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS"
 write_output "run_sdk_parity_matrix" "$RUN_SDK_PARITY_MATRIX"
 write_output "run_invariant_harness" "$RUN_INVARIANT_HARNESS"
 write_output "test_scope" "$TEST_SCOPE"

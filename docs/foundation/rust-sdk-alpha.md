@@ -47,3 +47,19 @@ Runner entrypoints:
 - Rust: `bash scripts/sdk/run_parity_rust.sh`
 - Python: `bash scripts/sdk/run_parity_python.sh`
 - TypeScript: `bash scripts/sdk/run_parity_typescript.sh`
+
+## CI Routing Policy (Issue #635)
+PR checks use changed-language routing to keep cost and runtime bounded:
+
+- Rust SDK diffs route to `bash scripts/sdk/run_rust_live_transport_contract_lane.sh`.
+- Python SDK diffs route to `python3 -m unittest tests/python/test_sdk.py`.
+- TypeScript SDK diffs route to `npm --prefix packages/kamn-sdk test`.
+- Multi-language SDK diffs (or parity-lane runner changes) route to
+  `bash scripts/sdk/run_live_transport_parity_contract_lane.sh`.
+- Shared fixture and matrix runner diffs route to
+  `bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json /tmp/sdk-parity-report.json`.
+
+Deep-lane entrypoints are defined for scheduled execution and are intentionally excluded from the fast PR lane:
+
+- `bash scripts/sdk/run_rust_live_transport_deep_lane.sh`
+- `bash scripts/sdk/run_live_transport_parity_deep_lane.sh`
