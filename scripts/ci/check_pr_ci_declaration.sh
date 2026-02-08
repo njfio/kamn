@@ -20,25 +20,31 @@ fi
 
 pr_body="$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")"
 
-base_ref="${GITHUB_BASE_REF:-main}"
-if git rev-parse --verify "origin/${base_ref}" >/dev/null 2>&1; then
-  base_commit="$(git merge-base HEAD "origin/${base_ref}")"
-  mapfile -t changed_files < <(git diff --name-only "${base_commit}...HEAD" | sed '/^$/d')
-elif git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
-  mapfile -t changed_files < <(git diff --name-only HEAD~1...HEAD | sed '/^$/d')
-else
-  mapfile -t changed_files < <(git ls-files | sed '/^$/d')
-fi
-
 ci_sensitive=false
-for file in "${changed_files[@]}"; do
-  case "$file" in
-    .github/workflows/*|scripts/ci/*|.ci/*)
-      ci_sensitive=true
-      break
-      ;;
-  esac
-done
+if [ "${CI_DECLARATION_FORCE_SENSITIVE:-}" = "true" ]; then
+  ci_sensitive=true
+elif [ "${CI_DECLARATION_FORCE_SENSITIVE:-}" = "false" ]; then
+  ci_sensitive=false
+else
+  base_ref="${GITHUB_BASE_REF:-main}"
+  if git rev-parse --verify "origin/${base_ref}" >/dev/null 2>&1; then
+    base_commit="$(git merge-base HEAD "origin/${base_ref}")"
+    mapfile -t changed_files < <(git diff --name-only "${base_commit}...HEAD" | sed '/^$/d')
+  elif git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+    mapfile -t changed_files < <(git diff --name-only HEAD~1...HEAD | sed '/^$/d')
+  else
+    mapfile -t changed_files < <(git ls-files | sed '/^$/d')
+  fi
+
+  for file in "${changed_files[@]}"; do
+    case "$file" in
+      .github/workflows/*|scripts/ci/*|.ci/*)
+        ci_sensitive=true
+        break
+        ;;
+    esac
+  done
+fi
 
 if [ "$ci_sensitive" != true ]; then
   echo "No CI-sensitive file changes; CI declaration check passed."

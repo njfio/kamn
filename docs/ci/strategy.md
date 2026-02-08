@@ -58,10 +58,12 @@ Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 - Retry helper (`test_run_with_retry.sh`)
 - Flaky registry validator (`test_check_flaky_registry.sh`)
 - Budget summarizer (`test_summarize_budget_artifacts.sh`)
+- PR CI declaration checker (`test_check_pr_ci_declaration.sh`)
 
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
 - Use `scripts/ci/summarize_budget_artifacts.sh` on downloaded `ci-budget-*.json` artifacts to compute p50/p95 and cache/retry trends.
+- Use `scripts/ci/download_and_summarize_budget.sh --repo <owner/repo>` to pull recent budget artifacts and produce a local trend summary.
 
 ## Deep Validation Behavior
 `ci-deep-validate` runs full formatting, linting, and test suites on a nightly schedule and manually on demand.
