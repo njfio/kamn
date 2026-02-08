@@ -13,6 +13,7 @@ fn doc_contains_peer_lifecycle_and_queue_rules() {
     assert!(DOC.contains("## Peer Lifecycle Rules"));
     assert!(DOC.contains("## Queue Guard Rules"));
     assert!(DOC.contains("## Scheduler Determinism Rules"));
+    assert!(DOC.contains("## Recovery and Rejoin Guard Rules"));
     assert!(DOC.contains("Overflow does not evict existing entries"));
     assert!(DOC.contains("Empty peer IDs are rejected"));
 }
@@ -31,4 +32,6 @@ fn regression_requires_rejoin_and_overflow_rejection_rules() {
     assert!(DOC.contains("queue overflow rejects new event"));
     assert!(DOC.contains("duplicate candidate ID is rejected"));
     assert!(DOC.contains("stale state hash is rejected"));
+    assert!(DOC.contains("rejoin replay token is rejected"));
+    assert!(DOC.contains("rejoin state hash mismatch is rejected"));
 }
