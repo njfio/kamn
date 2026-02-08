@@ -67,6 +67,7 @@ For task artifact integrity references and provenance metadata controls, see `do
 For bridge inbound/outbound adapter abstraction controls, see `docs/foundation/bridge-adapter-abstraction.md`.
 For Telegram bridge listener-validated inbound flow controls, see `docs/foundation/telegram-bridge-listener-validation.md`.
 For Discord bridge approver-gated outbound flow controls, see `docs/foundation/discord-bridge-approver-gating.md`.
+For Ethereum/Solana cross-chain adapter foundation controls, see `docs/foundation/cross-chain-bridge-adapters.md`.
 For CI cache strategy and bounded parallelism controls, see `docs/foundation/ci-caching-parallelism.md`.
 For flaky-test quarantine and bounded retry controls, see `docs/foundation/ci-flaky-quarantine.md`.
 For redaction and tombstone compliance workflow controls, see `docs/foundation/redaction-tombstones.md`.
