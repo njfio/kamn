@@ -58,6 +58,7 @@ Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 - Budget evaluator (`test_evaluate_budget.sh`)
 - Retry helper (`test_run_with_retry.sh`)
 - Invariant harness runner (`test_run_invariant_harness.sh`)
+- Selector matrix runner with output-env isolation (`test_select_targets.sh`, `Regression: #463`)
 - Flaky registry validator (`test_check_flaky_registry.sh`)
 - Budget summarizer (`test_summarize_budget_artifacts.sh`)
 - PR CI declaration checker (`test_check_pr_ci_declaration.sh`)
