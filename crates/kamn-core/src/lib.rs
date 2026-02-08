@@ -212,7 +212,8 @@ pub use retention_engine::{
     RetentionPolicyEngine, RetentionPolicyError, RetentionRecord, RetentionStatus,
 };
 pub use runtime::{
-    BoundedRuntimeQueue, PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState,
+    BoundedRuntimeQueue, DeterministicProposalPlanner, PeerLifecycle, PeerLifecycleEvent,
+    PeerLifecycleState, ProposalCandidate, ProposalPlan, ProposalPlannerError,
     RuntimeLifecycleError, RuntimeQueueError, RuntimeWiring,
 };
 pub use service_marketplace::{
