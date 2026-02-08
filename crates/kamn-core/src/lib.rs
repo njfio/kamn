@@ -80,7 +80,12 @@ pub use bridge_adapter::{
     BridgeInboundEnvelope, BridgeOutboundEnvelope, BridgeOutboundRequest, BridgePlatform,
     BridgePolicyHook, NormalizedInboundMessage, PassThroughBridgeAdapter,
 };
-pub use channel_models::{ChannelMetadata, ChannelModelError, ChannelStore, ChannelType};
+pub use channel_models::{
+    ChannelMetadata, ChannelModelError, ChannelRecordSnapshot, ChannelRecoveryResult,
+    ChannelSnapshot, ChannelSnapshotError, ChannelSnapshotStore, ChannelSnapshotStoreError,
+    ChannelStore, ChannelType, FileChannelSnapshotStore, InMemoryChannelSnapshotStore,
+    CHANNEL_SNAPSHOT_SCHEMA_VERSION,
+};
 pub use channel_policies::{
     ChannelAction, ChannelPermissionEngine, ChannelPermissions, ChannelPolicyError, PermissionRule,
     RetentionMessage, RetentionPolicy,

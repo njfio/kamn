@@ -1,6 +1,10 @@
 use crate::AgentDid;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use std::fs;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChannelType {
@@ -28,6 +32,23 @@ struct ChannelRecord {
     metadata: ChannelMetadata,
     members: BTreeSet<String>,
     admins: BTreeSet<String>,
+}
+
+pub const CHANNEL_SNAPSHOT_SCHEMA_VERSION: u16 = 1;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChannelRecordSnapshot {
+    pub channel_id: String,
+    pub channel_type: ChannelType,
+    pub metadata: ChannelMetadata,
+    pub members: Vec<String>,
+    pub admins: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChannelSnapshot {
+    pub schema_version: u16,
+    pub records: Vec<ChannelRecordSnapshot>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -252,6 +273,63 @@ impl ChannelStore {
             .get(member)
             .map(|values| values.iter().cloned().collect())
             .unwrap_or_default()
+    }
+
+    pub fn export_snapshot(&self) -> ChannelSnapshot {
+        let records = self
+            .channels
+            .iter()
+            .map(|(channel_id, record)| ChannelRecordSnapshot {
+                channel_id: channel_id.clone(),
+                channel_type: record.channel_type,
+                metadata: record.metadata.clone(),
+                members: record.members.iter().cloned().collect(),
+                admins: record.admins.iter().cloned().collect(),
+            })
+            .collect();
+
+        ChannelSnapshot {
+            schema_version: CHANNEL_SNAPSHOT_SCHEMA_VERSION,
+            records,
+        }
+    }
+
+    pub fn restore_snapshot(
+        &mut self,
+        snapshot: ChannelSnapshot,
+    ) -> Result<(), ChannelSnapshotError> {
+        if snapshot.schema_version != CHANNEL_SNAPSHOT_SCHEMA_VERSION {
+            return Err(ChannelSnapshotError::SnapshotVersionMismatch {
+                expected: CHANNEL_SNAPSHOT_SCHEMA_VERSION,
+                found: snapshot.schema_version,
+            });
+        }
+
+        let mut channels = BTreeMap::new();
+        let mut channels_by_member = BTreeMap::new();
+        for record_snapshot in snapshot.records {
+            if channels.contains_key(&record_snapshot.channel_id) {
+                return Err(ChannelSnapshotError::DuplicateChannelId(
+                    record_snapshot.channel_id,
+                ));
+            }
+
+            let record =
+                validate_snapshot_record(&record_snapshot).map_err(ChannelSnapshotError::Model)?;
+
+            let channel_id = record_snapshot.channel_id;
+            for member in &record.members {
+                channels_by_member
+                    .entry(member.clone())
+                    .or_insert_with(BTreeSet::new)
+                    .insert(channel_id.clone());
+            }
+            channels.insert(channel_id, record);
+        }
+
+        self.channels = channels;
+        self.channels_by_member = channels_by_member;
+        Ok(())
     }
 
     pub fn is_member(&self, channel_id: &str, member: &str) -> Result<bool, ChannelModelError> {
@@ -513,6 +591,162 @@ impl fmt::Display for ChannelModelError {
 
 impl std::error::Error for ChannelModelError {}
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChannelSnapshotError {
+    SnapshotVersionMismatch { expected: u16, found: u16 },
+    DuplicateChannelId(String),
+    InvalidSnapshot(String),
+    Model(ChannelModelError),
+}
+
+impl fmt::Display for ChannelSnapshotError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::SnapshotVersionMismatch { expected, found } => {
+                write!(
+                    f,
+                    "channel snapshot version mismatch: expected {expected}, found {found}"
+                )
+            }
+            Self::DuplicateChannelId(value) => {
+                write!(f, "duplicate channel id in snapshot: {value}")
+            }
+            Self::InvalidSnapshot(value) => write!(f, "invalid channel snapshot: {value}"),
+            Self::Model(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl std::error::Error for ChannelSnapshotError {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChannelSnapshotStoreError {
+    Io(String),
+    InvalidPayload(String),
+    Snapshot(ChannelSnapshotError),
+}
+
+impl fmt::Display for ChannelSnapshotStoreError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Io(value) => write!(f, "channel snapshot store I/O error: {value}"),
+            Self::InvalidPayload(value) => {
+                write!(f, "channel snapshot store invalid payload: {value}")
+            }
+            Self::Snapshot(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl std::error::Error for ChannelSnapshotStoreError {}
+
+pub trait ChannelSnapshotStore {
+    fn write(&mut self, snapshot: ChannelSnapshot) -> Result<(), ChannelSnapshotStoreError>;
+    fn read_latest(&self) -> Result<Option<ChannelSnapshot>, ChannelSnapshotStoreError>;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct InMemoryChannelSnapshotStore {
+    latest: Option<ChannelSnapshot>,
+}
+
+impl ChannelSnapshotStore for InMemoryChannelSnapshotStore {
+    fn write(&mut self, snapshot: ChannelSnapshot) -> Result<(), ChannelSnapshotStoreError> {
+        self.latest = Some(snapshot);
+        Ok(())
+    }
+
+    fn read_latest(&self) -> Result<Option<ChannelSnapshot>, ChannelSnapshotStoreError> {
+        Ok(self.latest.clone())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileChannelSnapshotStore {
+    path: PathBuf,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChannelRecoveryResult {
+    pub latest: Option<ChannelSnapshot>,
+    pub repaired: bool,
+}
+
+impl FileChannelSnapshotStore {
+    pub fn new(path: PathBuf) -> Result<Self, ChannelSnapshotStoreError> {
+        if path.as_os_str().is_empty() {
+            return Err(ChannelSnapshotStoreError::InvalidPayload(
+                "snapshot file path cannot be empty".to_owned(),
+            ));
+        }
+        Ok(Self { path })
+    }
+
+    pub fn recover_latest_and_repair(
+        &mut self,
+    ) -> Result<ChannelRecoveryResult, ChannelSnapshotStoreError> {
+        if !self.path.exists() {
+            return Ok(ChannelRecoveryResult {
+                latest: None,
+                repaired: false,
+            });
+        }
+
+        match self.read_latest() {
+            Ok(snapshot) => Ok(ChannelRecoveryResult {
+                latest: snapshot,
+                repaired: false,
+            }),
+            Err(ChannelSnapshotStoreError::InvalidPayload(_))
+            | Err(ChannelSnapshotStoreError::Snapshot(_)) => {
+                fs::write(&self.path, "")
+                    .map_err(|error| ChannelSnapshotStoreError::Io(error.to_string()))?;
+                Ok(ChannelRecoveryResult {
+                    latest: None,
+                    repaired: true,
+                })
+            }
+            Err(error) => Err(error),
+        }
+    }
+}
+
+impl ChannelSnapshotStore for FileChannelSnapshotStore {
+    fn write(&mut self, snapshot: ChannelSnapshot) -> Result<(), ChannelSnapshotStoreError> {
+        let mut verifier = ChannelStore::new();
+        verifier
+            .restore_snapshot(snapshot.clone())
+            .map_err(ChannelSnapshotStoreError::Snapshot)?;
+        let payload = serialize_channel_snapshot(&snapshot)?;
+        let mut file = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(&self.path)
+            .map_err(|error| ChannelSnapshotStoreError::Io(error.to_string()))?;
+        file.write_all(payload.as_bytes())
+            .map_err(|error| ChannelSnapshotStoreError::Io(error.to_string()))
+    }
+
+    fn read_latest(&self) -> Result<Option<ChannelSnapshot>, ChannelSnapshotStoreError> {
+        if !self.path.exists() {
+            return Ok(None);
+        }
+
+        let payload = fs::read_to_string(&self.path)
+            .map_err(|error| ChannelSnapshotStoreError::Io(error.to_string()))?;
+        if payload.trim().is_empty() {
+            return Ok(None);
+        }
+        let snapshot = parse_channel_snapshot_payload(&payload)?;
+        let mut verifier = ChannelStore::new();
+        verifier
+            .restore_snapshot(snapshot.clone())
+            .map_err(ChannelSnapshotStoreError::Snapshot)?;
+        Ok(Some(snapshot))
+    }
+}
+
 fn validate_channel_id(channel_id: &str) -> Result<(), ChannelModelError> {
     if channel_id.trim().is_empty() {
         return Err(ChannelModelError::EmptyChannelId);
@@ -566,9 +800,284 @@ fn enforce_specialized_member_requirements(
     Ok(())
 }
 
+fn metadata_matches_channel_type(channel_type: ChannelType, metadata: &ChannelMetadata) -> bool {
+    matches!(
+        (channel_type, metadata),
+        (ChannelType::Direct, ChannelMetadata::Direct)
+            | (ChannelType::Group, ChannelMetadata::Group)
+            | (ChannelType::Broadcast, ChannelMetadata::Broadcast { .. })
+            | (ChannelType::Task, ChannelMetadata::Task { .. })
+            | (
+                ChannelType::Marketplace,
+                ChannelMetadata::Marketplace { .. }
+            )
+            | (ChannelType::Governance, ChannelMetadata::Governance { .. })
+    )
+}
+
+fn validate_snapshot_record(
+    record: &ChannelRecordSnapshot,
+) -> Result<ChannelRecord, ChannelModelError> {
+    validate_channel_id(&record.channel_id)?;
+    if !metadata_matches_channel_type(record.channel_type, &record.metadata) {
+        return Err(ChannelModelError::InvalidMetadata(
+            "channel type and metadata variant mismatch".to_owned(),
+        ));
+    }
+    validate_metadata(&record.metadata)?;
+    if record.members.is_empty() {
+        return Err(ChannelModelError::EmptyMembers);
+    }
+    if record.admins.is_empty() {
+        return Err(ChannelModelError::EmptyAdmins);
+    }
+
+    let mut members = BTreeSet::new();
+    for member in &record.members {
+        validate_did(member)?;
+        if !members.insert(member.clone()) {
+            return Err(ChannelModelError::InvalidMetadata(
+                "duplicate member DID in snapshot".to_owned(),
+            ));
+        }
+    }
+
+    let mut admins = BTreeSet::new();
+    for admin in &record.admins {
+        validate_did(admin)?;
+        if !members.contains(admin) {
+            return Err(ChannelModelError::AdminNotMember(admin.clone()));
+        }
+        if !admins.insert(admin.clone()) {
+            return Err(ChannelModelError::InvalidMetadata(
+                "duplicate admin DID in snapshot".to_owned(),
+            ));
+        }
+    }
+
+    if record.channel_type == ChannelType::Direct {
+        if members.len() != 2 || admins != members {
+            return Err(ChannelModelError::InvalidDirectParticipants);
+        }
+    } else {
+        enforce_specialized_member_requirements(record.channel_type, members.len())?;
+    }
+
+    Ok(ChannelRecord {
+        channel_type: record.channel_type,
+        metadata: record.metadata.clone(),
+        members,
+        admins,
+    })
+}
+
+fn channel_type_code(channel_type: ChannelType) -> &'static str {
+    match channel_type {
+        ChannelType::Direct => "0",
+        ChannelType::Group => "1",
+        ChannelType::Broadcast => "2",
+        ChannelType::Task => "3",
+        ChannelType::Marketplace => "4",
+        ChannelType::Governance => "5",
+    }
+}
+
+fn parse_channel_type_code(raw: &str) -> Option<ChannelType> {
+    match raw {
+        "0" => Some(ChannelType::Direct),
+        "1" => Some(ChannelType::Group),
+        "2" => Some(ChannelType::Broadcast),
+        "3" => Some(ChannelType::Task),
+        "4" => Some(ChannelType::Marketplace),
+        "5" => Some(ChannelType::Governance),
+        _ => None,
+    }
+}
+
+fn metadata_snapshot_value(metadata: &ChannelMetadata) -> &str {
+    match metadata {
+        ChannelMetadata::Direct | ChannelMetadata::Group => "",
+        ChannelMetadata::Broadcast { topic } => topic,
+        ChannelMetadata::Task { task_id } => task_id,
+        ChannelMetadata::Marketplace { market_scope } => market_scope,
+        ChannelMetadata::Governance { proposal_scope } => proposal_scope,
+    }
+}
+
+fn parse_metadata_snapshot_value(
+    channel_type: ChannelType,
+    value: &str,
+) -> Result<ChannelMetadata, ChannelSnapshotStoreError> {
+    match channel_type {
+        ChannelType::Direct => {
+            if !value.is_empty() {
+                return Err(ChannelSnapshotStoreError::InvalidPayload(
+                    "direct channel metadata payload must be empty".to_owned(),
+                ));
+            }
+            Ok(ChannelMetadata::Direct)
+        }
+        ChannelType::Group => {
+            if !value.is_empty() {
+                return Err(ChannelSnapshotStoreError::InvalidPayload(
+                    "group channel metadata payload must be empty".to_owned(),
+                ));
+            }
+            Ok(ChannelMetadata::Group)
+        }
+        ChannelType::Broadcast => Ok(ChannelMetadata::Broadcast {
+            topic: value.to_owned(),
+        }),
+        ChannelType::Task => Ok(ChannelMetadata::Task {
+            task_id: value.to_owned(),
+        }),
+        ChannelType::Marketplace => Ok(ChannelMetadata::Marketplace {
+            market_scope: value.to_owned(),
+        }),
+        ChannelType::Governance => Ok(ChannelMetadata::Governance {
+            proposal_scope: value.to_owned(),
+        }),
+    }
+}
+
+fn ensure_snapshot_token(value: &str, field: &str) -> Result<(), ChannelSnapshotStoreError> {
+    if value.contains('|') || value.contains('\n') || value.contains('\r') || value.contains(',') {
+        return Err(ChannelSnapshotStoreError::InvalidPayload(format!(
+            "{field} contains unsupported delimiter characters"
+        )));
+    }
+    Ok(())
+}
+
+fn serialize_channel_snapshot(
+    snapshot: &ChannelSnapshot,
+) -> Result<String, ChannelSnapshotStoreError> {
+    let mut payload = format!("schema|{}\n", snapshot.schema_version);
+    for record in &snapshot.records {
+        ensure_snapshot_token(&record.channel_id, "channel_id")?;
+        let metadata_value = metadata_snapshot_value(&record.metadata);
+        ensure_snapshot_token(metadata_value, "metadata")?;
+        for member in &record.members {
+            ensure_snapshot_token(member, "member")?;
+        }
+        for admin in &record.admins {
+            ensure_snapshot_token(admin, "admin")?;
+        }
+        payload.push_str(&format!(
+            "record|{}|{}|{}|{}|{}\n",
+            record.channel_id,
+            channel_type_code(record.channel_type),
+            metadata_value,
+            record.members.join(","),
+            record.admins.join(",")
+        ));
+    }
+    Ok(payload)
+}
+
+fn parse_channel_snapshot_payload(
+    payload: &str,
+) -> Result<ChannelSnapshot, ChannelSnapshotStoreError> {
+    let mut lines = payload.lines().filter(|line| !line.trim().is_empty());
+    let Some(schema_line) = lines.next() else {
+        return Err(ChannelSnapshotStoreError::InvalidPayload(
+            "missing schema line".to_owned(),
+        ));
+    };
+
+    let mut schema_parts = schema_line.split('|');
+    let Some(schema_prefix) = schema_parts.next() else {
+        return Err(ChannelSnapshotStoreError::InvalidPayload(
+            schema_line.to_owned(),
+        ));
+    };
+    let Some(schema_version_raw) = schema_parts.next() else {
+        return Err(ChannelSnapshotStoreError::InvalidPayload(
+            schema_line.to_owned(),
+        ));
+    };
+    if schema_prefix != "schema" || schema_parts.next().is_some() {
+        return Err(ChannelSnapshotStoreError::InvalidPayload(
+            schema_line.to_owned(),
+        ));
+    }
+    let schema_version = schema_version_raw
+        .parse::<u16>()
+        .map_err(|_| ChannelSnapshotStoreError::InvalidPayload(schema_line.to_owned()))?;
+
+    let mut records = Vec::new();
+    for line in lines {
+        let mut parts = line.split('|');
+        let Some(prefix) = parts.next() else {
+            return Err(ChannelSnapshotStoreError::InvalidPayload(line.to_owned()));
+        };
+        if prefix != "record" {
+            return Err(ChannelSnapshotStoreError::InvalidPayload(line.to_owned()));
+        }
+        let Some(channel_id) = parts.next() else {
+            return Err(ChannelSnapshotStoreError::InvalidPayload(line.to_owned()));
+        };
+        let Some(type_code) = parts.next() else {
+            return Err(ChannelSnapshotStoreError::InvalidPayload(line.to_owned()));
+        };
+        let Some(metadata_raw) = parts.next() else {
+            return Err(ChannelSnapshotStoreError::InvalidPayload(line.to_owned()));
+        };
+        let Some(members_raw) = parts.next() else {
+            return Err(ChannelSnapshotStoreError::InvalidPayload(line.to_owned()));
+        };
+        let Some(admins_raw) = parts.next() else {
+            return Err(ChannelSnapshotStoreError::InvalidPayload(line.to_owned()));
+        };
+        if parts.next().is_some() {
+            return Err(ChannelSnapshotStoreError::InvalidPayload(line.to_owned()));
+        }
+
+        let channel_type = parse_channel_type_code(type_code)
+            .ok_or_else(|| ChannelSnapshotStoreError::InvalidPayload(line.to_owned()))?;
+        let metadata = parse_metadata_snapshot_value(channel_type, metadata_raw)?;
+        let members = if members_raw.is_empty() {
+            Vec::new()
+        } else {
+            members_raw
+                .split(',')
+                .map(|value| value.to_owned())
+                .collect::<Vec<_>>()
+        };
+        let admins = if admins_raw.is_empty() {
+            Vec::new()
+        } else {
+            admins_raw
+                .split(',')
+                .map(|value| value.to_owned())
+                .collect::<Vec<_>>()
+        };
+
+        records.push(ChannelRecordSnapshot {
+            channel_id: channel_id.to_owned(),
+            channel_type,
+            metadata,
+            members,
+            admins,
+        });
+    }
+
+    Ok(ChannelSnapshot {
+        schema_version,
+        records,
+    })
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{ChannelMetadata, ChannelModelError, ChannelStore, ChannelType};
+    use super::{
+        ChannelMetadata, ChannelModelError, ChannelRecordSnapshot, ChannelSnapshot,
+        ChannelSnapshotError, ChannelSnapshotStore, ChannelSnapshotStoreError, ChannelStore,
+        ChannelType, FileChannelSnapshotStore,
+    };
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
     #[test]
     fn group_creator_must_be_member() {
@@ -655,5 +1164,234 @@ mod tests {
                 topic: "announcements".to_owned(),
             }
         );
+    }
+
+    #[test]
+    fn functional_channel_snapshot_roundtrip_restores_member_index() {
+        let mut store = ChannelStore::new();
+        store
+            .create_group(
+                "channel:group:snapshot-1",
+                "kamn:did:agent:owner",
+                vec![
+                    "kamn:did:agent:owner".to_owned(),
+                    "kamn:did:agent:member-1".to_owned(),
+                ],
+                vec!["kamn:did:agent:owner".to_owned()],
+            )
+            .expect("group should be created");
+        store
+            .invite_member(
+                "channel:group:snapshot-1",
+                "kamn:did:agent:owner",
+                "kamn:did:agent:member-2",
+            )
+            .expect("invite should succeed");
+
+        let snapshot = store.export_snapshot();
+        let mut restored = ChannelStore::new();
+        restored
+            .restore_snapshot(snapshot)
+            .expect("snapshot restore should succeed");
+
+        assert_eq!(
+            restored
+                .members("channel:group:snapshot-1")
+                .expect("members should exist"),
+            vec![
+                "kamn:did:agent:member-1".to_owned(),
+                "kamn:did:agent:member-2".to_owned(),
+                "kamn:did:agent:owner".to_owned(),
+            ]
+        );
+        assert_eq!(
+            restored.channels_for_member("kamn:did:agent:member-2"),
+            vec!["channel:group:snapshot-1".to_owned()]
+        );
+    }
+
+    #[test]
+    fn regression_channel_snapshot_restore_rejects_duplicate_channel_ids() {
+        // Regression: #617
+        let mut store = ChannelStore::new();
+        store
+            .create_direct(
+                "channel:direct:snapshot-2",
+                "kamn:did:agent:alice",
+                "kamn:did:agent:bob",
+            )
+            .expect("direct should be created");
+
+        let mut snapshot = store.export_snapshot();
+        snapshot.records.push(snapshot.records[0].clone());
+
+        let mut restored = ChannelStore::new();
+        assert_eq!(
+            restored.restore_snapshot(snapshot),
+            Err(ChannelSnapshotError::DuplicateChannelId(
+                "channel:direct:snapshot-2".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn regression_channel_snapshot_restore_rejects_admin_not_member_state() {
+        // Regression: #617
+        let snapshot = ChannelSnapshot {
+            schema_version: 1,
+            records: vec![ChannelRecordSnapshot {
+                channel_id: "channel:group:snapshot-3".to_owned(),
+                channel_type: ChannelType::Group,
+                metadata: ChannelMetadata::Group,
+                members: vec![
+                    "kamn:did:agent:owner".to_owned(),
+                    "kamn:did:agent:member-1".to_owned(),
+                ],
+                admins: vec![
+                    "kamn:did:agent:owner".to_owned(),
+                    "kamn:did:agent:ghost-admin".to_owned(),
+                ],
+            }],
+        };
+
+        let mut restored = ChannelStore::new();
+        assert_eq!(
+            restored.restore_snapshot(snapshot),
+            Err(ChannelSnapshotError::Model(
+                ChannelModelError::AdminNotMember("kamn:did:agent:ghost-admin".to_owned())
+            ))
+        );
+    }
+
+    #[test]
+    fn integration_file_channel_snapshot_store_roundtrips_snapshot() {
+        let path = temp_channel_snapshot_path("roundtrip");
+        let _ = fs::remove_file(&path);
+
+        let mut store = ChannelStore::new();
+        store
+            .create_group(
+                "channel:group:snapshot-4",
+                "kamn:did:agent:owner",
+                vec![
+                    "kamn:did:agent:owner".to_owned(),
+                    "kamn:did:agent:member-1".to_owned(),
+                ],
+                vec!["kamn:did:agent:owner".to_owned()],
+            )
+            .expect("group should be created");
+        let snapshot = store.export_snapshot();
+
+        let mut file_store = FileChannelSnapshotStore::new(path.clone()).expect("store");
+        file_store
+            .write(snapshot.clone())
+            .expect("write should succeed");
+        assert_eq!(
+            file_store.read_latest().expect("read should succeed"),
+            Some(snapshot)
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn regression_file_channel_snapshot_store_rejects_malformed_payload() {
+        // Regression: #617
+        let path = temp_channel_snapshot_path("malformed");
+        let _ = fs::remove_file(&path);
+        assert!(fs::write(&path, "schema|1\nrecord|broken\n").is_ok());
+
+        let file_store = FileChannelSnapshotStore::new(path.clone()).expect("store");
+        assert_eq!(
+            file_store.read_latest(),
+            Err(ChannelSnapshotStoreError::InvalidPayload(
+                "record|broken".to_owned()
+            ))
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn functional_file_channel_snapshot_store_recovery_repairs_corrupt_payload() {
+        let path = temp_channel_snapshot_path("recover");
+        let _ = fs::remove_file(&path);
+        assert!(fs::write(&path, "schema|1\nrecord|broken\n").is_ok());
+
+        let mut file_store = FileChannelSnapshotStore::new(path.clone()).expect("store");
+        let recovery = file_store
+            .recover_latest_and_repair()
+            .expect("recovery should succeed");
+        assert!(recovery.latest.is_none());
+        assert!(recovery.repaired);
+        assert_eq!(
+            fs::read_to_string(&path).expect("repaired file should be readable"),
+            ""
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn performance_channel_snapshot_roundtrip_stays_within_ci_budget() {
+        let mut store = ChannelStore::new();
+        for index in 0..256 {
+            store
+                .create_group(
+                    &format!("channel:group:perf-{index}"),
+                    "kamn:did:agent:owner",
+                    vec![
+                        "kamn:did:agent:owner".to_owned(),
+                        format!("kamn:did:agent:member-{index}"),
+                    ],
+                    vec!["kamn:did:agent:owner".to_owned()],
+                )
+                .expect("group should be created");
+        }
+
+        let snapshot = store.export_snapshot();
+        let mut restored = ChannelStore::new();
+        let start = Instant::now();
+        restored
+            .restore_snapshot(snapshot)
+            .expect("snapshot restore should succeed");
+        let elapsed_millis = start.elapsed().as_millis();
+        assert!(
+            elapsed_millis < 300,
+            "channel snapshot roundtrip exceeded CI budget: {elapsed_millis}ms"
+        );
+    }
+
+    #[test]
+    #[ignore = "scheduled channel snapshot deep lane"]
+    fn performance_channel_snapshot_deep_lane_stress() {
+        let mut store = ChannelStore::new();
+        for index in 0..6000 {
+            store
+                .create_group(
+                    &format!("channel:group:deep-{index}"),
+                    "kamn:did:agent:owner",
+                    vec![
+                        "kamn:did:agent:owner".to_owned(),
+                        format!("kamn:did:agent:member-{index}"),
+                    ],
+                    vec!["kamn:did:agent:owner".to_owned()],
+                )
+                .expect("group should be created");
+        }
+
+        let snapshot = store.export_snapshot();
+        let mut restored = ChannelStore::new();
+        restored
+            .restore_snapshot(snapshot)
+            .expect("snapshot restore should succeed");
+    }
+
+    fn temp_channel_snapshot_path(tag: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos();
+        std::env::temp_dir().join(format!("kamn-channel-snapshot-{tag}-{nonce}.log"))
     }
 }
