@@ -1,4 +1,5 @@
 pub mod agent_key_hierarchy;
+pub mod anti_spam;
 pub mod audit_exports;
 pub mod bootstrap;
 pub mod bridge_adapter;
@@ -43,6 +44,10 @@ pub mod watchdog;
 
 pub use agent_key_hierarchy::{
     AgentKeyHierarchy, AgentKeyHierarchyError, EphemeralSessionKey, KeyRole,
+};
+pub use anti_spam::{
+    AntiSpamConfig, AntiSpamDecision, AntiSpamEngine, AntiSpamError, AntiSpamRejection,
+    AntiSpamTelemetry,
 };
 pub use audit_exports::{
     AuditDomain, AuditEventRecord, AuditExportBundle, AuditExportEngine, AuditExportError,
