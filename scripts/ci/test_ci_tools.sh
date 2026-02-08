@@ -8,5 +8,6 @@ bash "$ROOT_DIR/scripts/ci/test_run_with_retry.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_flaky_registry.sh"
 bash "$ROOT_DIR/scripts/ci/test_summarize_budget_artifacts.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_pr_ci_declaration.sh"
+bash "$ROOT_DIR/scripts/ci/test_post_flaky_report_comment.sh"
 
 echo "All CI tool regression tests passed."

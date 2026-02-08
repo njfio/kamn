@@ -1,0 +1,31 @@
+name: ci-flaky-report-comment
+
+on:
+  schedule:
+    - cron: '31 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  flaky-report-comment:
+    name: Flaky Report Commenter
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate flaky registry
+        run: bash scripts/ci/check_flaky_registry.sh
+
+      - name: Post flaky report comment to tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bash scripts/ci/post_flaky_report_comment.sh \
+            --repo "${{ github.repository }}" \
+            --issue 70
