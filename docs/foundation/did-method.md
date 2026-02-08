@@ -1,6 +1,7 @@
 # DID Method and Canonical DID Document Schema (Issues #108, #109)
 
 This document captures the first implementation slice for KAMN DID method handling and canonical DID document construction.
+For DID Core 1.1 conformance mapping of `kamn:did`, see `docs/foundation/did-core-conformance-kamn-method.md`.
 
 ## Scope Delivered
 - Added `crates/kamn-core/src/did.rs` with:
