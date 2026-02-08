@@ -1460,6 +1460,205 @@ pub fn evaluate_daemon_state_divergence(
     evaluator.evaluate(input)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WatchdogAnomalyKind {
+    Nominal,
+    LivenessDegradation,
+    CensorshipSignal,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WatchdogAnomalySeverity {
+    Info,
+    Warning,
+    Critical,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WatchdogAnomalyWatchInput {
+    sample_id: String,
+    expected_deliveries: u32,
+    delivered_deliveries: u32,
+    active_peers: u32,
+    healthy_peers: u32,
+    sample_window_secs: u64,
+    targeted_peer_count: u32,
+}
+
+impl WatchdogAnomalyWatchInput {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        sample_id: &str,
+        expected_deliveries: u32,
+        delivered_deliveries: u32,
+        active_peers: u32,
+        healthy_peers: u32,
+        sample_window_secs: u64,
+        targeted_peer_count: u32,
+    ) -> Result<Self, WatchdogAnomalyError> {
+        if sample_id.trim().is_empty() {
+            return Err(WatchdogAnomalyError::InvalidSampleId);
+        }
+        if expected_deliveries == 0 {
+            return Err(WatchdogAnomalyError::InvalidExpectedDeliveries {
+                expected_deliveries,
+            });
+        }
+        if delivered_deliveries > expected_deliveries {
+            return Err(WatchdogAnomalyError::InvalidSampleCounts {
+                expected_deliveries,
+                delivered_deliveries,
+            });
+        }
+        if active_peers == 0 || healthy_peers > active_peers {
+            return Err(WatchdogAnomalyError::InvalidPeerCounts {
+                active_peers,
+                healthy_peers,
+            });
+        }
+        if sample_window_secs == 0 {
+            return Err(WatchdogAnomalyError::InvalidSampleWindow { sample_window_secs });
+        }
+
+        Ok(Self {
+            sample_id: sample_id.to_owned(),
+            expected_deliveries,
+            delivered_deliveries,
+            active_peers,
+            healthy_peers,
+            sample_window_secs,
+            targeted_peer_count,
+        })
+    }
+
+    fn delivery_ratio_per_mille(&self) -> u16 {
+        ((self.delivered_deliveries as u64) * 1000 / self.expected_deliveries as u64) as u16
+    }
+
+    fn liveness_ratio_per_mille(&self) -> u16 {
+        ((self.healthy_peers as u64) * 1000 / self.active_peers as u64) as u16
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WatchdogAnomalyReport {
+    pub sample_id: String,
+    pub kind: WatchdogAnomalyKind,
+    pub severity: WatchdogAnomalySeverity,
+    pub delivery_ratio_per_mille: u16,
+    pub liveness_ratio_per_mille: u16,
+    pub targeted_peer_count: u32,
+    pub sample_window_secs: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum WatchdogAnomalyError {
+    InvalidSampleId,
+    InvalidExpectedDeliveries {
+        expected_deliveries: u32,
+    },
+    InvalidSampleCounts {
+        expected_deliveries: u32,
+        delivered_deliveries: u32,
+    },
+    InvalidPeerCounts {
+        active_peers: u32,
+        healthy_peers: u32,
+    },
+    InvalidSampleWindow {
+        sample_window_secs: u64,
+    },
+}
+
+impl Display for WatchdogAnomalyError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidSampleId => write!(f, "watchdog anomaly sample id cannot be empty"),
+            Self::InvalidExpectedDeliveries {
+                expected_deliveries,
+            } => write!(
+                f,
+                "watchdog anomaly expected deliveries must be positive, found {expected_deliveries}"
+            ),
+            Self::InvalidSampleCounts {
+                expected_deliveries,
+                delivered_deliveries,
+            } => write!(
+                f,
+                "watchdog anomaly delivered deliveries {delivered_deliveries} exceed expected {expected_deliveries}"
+            ),
+            Self::InvalidPeerCounts {
+                active_peers,
+                healthy_peers,
+            } => write!(
+                f,
+                "watchdog anomaly peer counts are invalid: active {active_peers}, healthy {healthy_peers}"
+            ),
+            Self::InvalidSampleWindow { sample_window_secs } => write!(
+                f,
+                "watchdog anomaly sample window must be positive, found {sample_window_secs}"
+            ),
+        }
+    }
+}
+
+impl Error for WatchdogAnomalyError {}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct WatchdogAnomalyEvaluator;
+
+impl WatchdogAnomalyEvaluator {
+    pub fn evaluate(
+        &self,
+        input: WatchdogAnomalyWatchInput,
+    ) -> Result<WatchdogAnomalyReport, WatchdogAnomalyError> {
+        let delivery_ratio_per_mille = input.delivery_ratio_per_mille();
+        let liveness_ratio_per_mille = input.liveness_ratio_per_mille();
+
+        let (kind, severity) = if input.targeted_peer_count >= 2 && delivery_ratio_per_mille <= 500
+        {
+            (
+                WatchdogAnomalyKind::CensorshipSignal,
+                WatchdogAnomalySeverity::Critical,
+            )
+        } else if input.targeted_peer_count >= 2 && delivery_ratio_per_mille <= 850 {
+            (
+                WatchdogAnomalyKind::CensorshipSignal,
+                WatchdogAnomalySeverity::Warning,
+            )
+        } else if liveness_ratio_per_mille <= 500 {
+            (
+                WatchdogAnomalyKind::LivenessDegradation,
+                WatchdogAnomalySeverity::Critical,
+            )
+        } else if liveness_ratio_per_mille < 1000 {
+            (
+                WatchdogAnomalyKind::LivenessDegradation,
+                WatchdogAnomalySeverity::Warning,
+            )
+        } else {
+            (WatchdogAnomalyKind::Nominal, WatchdogAnomalySeverity::Info)
+        };
+
+        Ok(WatchdogAnomalyReport {
+            sample_id: input.sample_id,
+            kind,
+            severity,
+            delivery_ratio_per_mille,
+            liveness_ratio_per_mille,
+            targeted_peer_count: input.targeted_peer_count,
+            sample_window_secs: input.sample_window_secs,
+        })
+    }
+}
+
+pub fn evaluate_daemon_watchdog_anomaly(
+    evaluator: &WatchdogAnomalyEvaluator,
+    input: WatchdogAnomalyWatchInput,
+) -> Result<WatchdogAnomalyReport, WatchdogAnomalyError> {
+    evaluator.evaluate(input)
+}
+
 fn is_valid_listener_did(value: &str) -> bool {
     is_valid_kamn_did(value)
 }
@@ -1608,16 +1807,18 @@ pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
 mod tests {
     use super::{
         authorize_daemon_outbound_action, build_runtime_wiring, evaluate_daemon_state_divergence,
-        execute_processor_daemon_tick, ApproverAttestation, ApproverQuorumError,
-        ApproverQuorumEvaluator, ApproverQuorumInput, BoundedRuntimeQueue, ConstructLockError,
-        ConstructLockGuard, DeterministicProposalPlanner, FileRuntimeSnapshotStore,
-        InMemoryRuntimeSnapshotStore, ListenerAttestation, ListenerQuorumError,
-        ListenerQuorumEvaluator, ListenerQuorumInput, PeerLifecycle, PeerLifecycleEvent,
-        PeerLifecycleState, ProposalCandidate, ProposalPlannerError, RecoveryGuardError,
-        RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, RuntimeLifecycleError,
-        RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore, SnapshotRestoreError,
-        SnapshotRestoreGuard, SnapshotStoreError, StateDivergenceError, StateDivergenceEvaluator,
-        StateDivergenceSeverity, StateDivergenceStatus, StateDivergenceWatchInput,
+        evaluate_daemon_watchdog_anomaly, execute_processor_daemon_tick, ApproverAttestation,
+        ApproverQuorumError, ApproverQuorumEvaluator, ApproverQuorumInput, BoundedRuntimeQueue,
+        ConstructLockError, ConstructLockGuard, DeterministicProposalPlanner,
+        FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore, ListenerAttestation,
+        ListenerQuorumError, ListenerQuorumEvaluator, ListenerQuorumInput, PeerLifecycle,
+        PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, ProposalPlannerError,
+        RecoveryGuardError, RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt,
+        RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore,
+        SnapshotRestoreError, SnapshotRestoreGuard, SnapshotStoreError, StateDivergenceError,
+        StateDivergenceEvaluator, StateDivergenceSeverity, StateDivergenceStatus,
+        StateDivergenceWatchInput, WatchdogAnomalyError, WatchdogAnomalyEvaluator,
+        WatchdogAnomalyKind, WatchdogAnomalySeverity, WatchdogAnomalyWatchInput,
     };
     use crate::config::{NodeConfig, NodeRole, SyncMode};
     use std::fs;
@@ -2454,6 +2655,58 @@ mod tests {
             report.evidence.expected_state_hash,
             report.evidence.observed_state_hash
         );
+    }
+
+    #[test]
+    fn functional_watchdog_anomaly_classifies_liveness_degradation_as_warning() {
+        let evaluator = WatchdogAnomalyEvaluator::default();
+        let input = WatchdogAnomalyWatchInput::new("sample-liveness", 100, 96, 7, 5, 30, 1)
+            .expect("valid anomaly sample");
+        let report = evaluator
+            .evaluate(input)
+            .expect("anomaly classification should succeed");
+        assert_eq!(report.kind, WatchdogAnomalyKind::LivenessDegradation);
+        assert_eq!(report.severity, WatchdogAnomalySeverity::Warning);
+    }
+
+    #[test]
+    fn unit_watchdog_anomaly_rejects_invalid_delivery_sample() {
+        let error = WatchdogAnomalyWatchInput::new("sample-invalid", 10, 12, 5, 5, 30, 2)
+            .expect_err("delivered count above expected must be rejected");
+        assert_eq!(
+            error,
+            WatchdogAnomalyError::InvalidSampleCounts {
+                expected_deliveries: 10,
+                delivered_deliveries: 12
+            }
+        );
+    }
+
+    #[test]
+    fn integration_daemon_watchdog_anomaly_report_includes_summary_fields() {
+        let evaluator = WatchdogAnomalyEvaluator::default();
+        let input = WatchdogAnomalyWatchInput::new("sample-censorship", 100, 45, 8, 8, 60, 3)
+            .expect("valid anomaly sample");
+        let report = evaluate_daemon_watchdog_anomaly(&evaluator, input)
+            .expect("daemon anomaly evaluation should succeed");
+        assert_eq!(report.sample_id, "sample-censorship");
+        assert_eq!(report.kind, WatchdogAnomalyKind::CensorshipSignal);
+        assert_eq!(report.severity, WatchdogAnomalySeverity::Critical);
+        assert_eq!(report.delivery_ratio_per_mille, 450);
+        assert_eq!(report.targeted_peer_count, 3);
+        assert_eq!(report.sample_window_secs, 60);
+    }
+
+    #[test]
+    fn regression_censorship_edge_signal_remains_detected_as_critical() {
+        // Regression: #382
+        let evaluator = WatchdogAnomalyEvaluator::default();
+        let input = WatchdogAnomalyWatchInput::new("sample-regression", 200, 98, 12, 12, 60, 2)
+            .expect("valid anomaly sample");
+        let report = evaluate_daemon_watchdog_anomaly(&evaluator, input)
+            .expect("edge censorship signal should be classified");
+        assert_eq!(report.kind, WatchdogAnomalyKind::CensorshipSignal);
+        assert_eq!(report.severity, WatchdogAnomalySeverity::Critical);
     }
 
     #[test]

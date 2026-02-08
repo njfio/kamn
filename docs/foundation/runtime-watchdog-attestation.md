@@ -31,6 +31,12 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
   - `StateDivergenceReport`
   - `StateDivergenceError`
   - `evaluate_daemon_state_divergence`
+- Runtime anomaly evaluator references:
+  - `WatchdogAnomalyWatchInput`
+  - `WatchdogAnomalyEvaluator`
+  - `WatchdogAnomalyReport`
+  - `WatchdogAnomalyError`
+  - `evaluate_daemon_watchdog_anomaly`
 
 ## Severity and Evidence Guard Rules
 - state-hash divergence attestation must include expected and observed hashes.
@@ -39,6 +45,7 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
 - Censorship classification must use bounded sample windows to avoid stale evidence amplification.
 - attestation replay for the same incident fingerprint is rejected (`Regression: #383`).
 - hash mismatch false-negative is rejected (`Regression: #381`).
+- censorship edge-signal remains critical when targeted peers are at least two and delivery ratio is 500 per-mille or lower (`Regression: #382`).
 
 ## Incident Response Mapping
 - Runtime watchdog output is triaged with `WatchdogSeverity` and `incident_fingerprint`.
@@ -54,6 +61,7 @@ cargo test -p kamn-core --test runtime_watchdog_attestation_docs
 cargo test -p kamn-core --test watchdog_node_docs
 cargo test -p kamn-core --test upgrade_rollback_runbook_docs
 cargo test -p kamn-core divergence_watchdog
+cargo test -p kamn-core watchdog_anomaly
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
 ```

@@ -13,6 +13,11 @@ fn doc_contains_watchdog_attestation_scope_and_models() {
     assert!(DOC.contains("StateDivergenceReport"));
     assert!(DOC.contains("StateDivergenceError"));
     assert!(DOC.contains("evaluate_daemon_state_divergence"));
+    assert!(DOC.contains("WatchdogAnomalyWatchInput"));
+    assert!(DOC.contains("WatchdogAnomalyEvaluator"));
+    assert!(DOC.contains("WatchdogAnomalyReport"));
+    assert!(DOC.contains("WatchdogAnomalyError"));
+    assert!(DOC.contains("evaluate_daemon_watchdog_anomaly"));
 }
 
 #[test]
@@ -24,6 +29,7 @@ fn doc_contains_incident_response_mapping_and_fast_lane() {
     assert!(DOC.contains("cargo test -p kamn-core --test watchdog_node_docs"));
     assert!(DOC.contains("cargo test -p kamn-core --test upgrade_rollback_runbook_docs"));
     assert!(DOC.contains("cargo test -p kamn-core divergence_watchdog"));
+    assert!(DOC.contains("cargo test -p kamn-core watchdog_anomaly"));
     assert!(DOC.contains("cargo clippy -p kamn-core -- -D warnings"));
 }
 
@@ -39,4 +45,7 @@ fn regression_requires_divergence_and_censorship_guard_rules() {
         "attestation replay for the same incident fingerprint is rejected (`Regression: #383`)."
     ));
     assert!(DOC.contains("hash mismatch false-negative is rejected (`Regression: #381`)."));
+    assert!(DOC.contains(
+        "censorship edge-signal remains critical when targeted peers are at least two and delivery ratio is 500 per-mille or lower (`Regression: #382`)."
+    ));
 }
