@@ -7,6 +7,11 @@ pub enum SdkError {
         field: &'static str,
         reason: &'static str,
     },
+    TransportFailure(&'static str),
+    TransportModeMismatch {
+        expected: &'static str,
+        found: &'static str,
+    },
     NotFound {
         entity: &'static str,
         id: String,
@@ -24,6 +29,13 @@ impl fmt::Display for SdkError {
             Self::NotImplemented(feature) => write!(f, "feature not implemented: {feature}"),
             Self::InvalidInput { field, reason } => {
                 write!(f, "invalid input for {field}: {reason}")
+            }
+            Self::TransportFailure(reason) => write!(f, "transport failure: {reason}"),
+            Self::TransportModeMismatch { expected, found } => {
+                write!(
+                    f,
+                    "transport mode mismatch, expected {expected}, found {found}"
+                )
             }
             Self::NotFound { entity, id } => write!(f, "{entity} not found: {id}"),
             Self::Conflict(reason) => write!(f, "conflict: {reason}"),
