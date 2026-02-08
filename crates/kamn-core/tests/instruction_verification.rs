@@ -208,3 +208,35 @@ fn regression_rejects_invalid_record_sender_did() {
         ))
     );
 }
+
+#[test]
+fn regression_rejects_empty_claim_signature() {
+    // Regression: #553
+    let record = sample_record();
+    let mut claim = sample_claim();
+    claim.signature.clear();
+    let context = VerificationContext::new(100)
+        .with_instruction(record)
+        .with_authorized_sender("kamn:did:agent:alpha");
+
+    assert_eq!(
+        InstructionVerifier::verify(&claim, &context),
+        VerificationOutcome::Rejected(VerificationFailure::MissingClaimSignature)
+    );
+}
+
+#[test]
+fn regression_rejects_empty_record_signature() {
+    // Regression: #553
+    let mut record = sample_record();
+    record.signature.clear();
+    let claim = sample_claim();
+    let context = VerificationContext::new(100)
+        .with_instruction(record)
+        .with_authorized_sender("kamn:did:agent:alpha");
+
+    assert_eq!(
+        InstructionVerifier::verify(&claim, &context),
+        VerificationOutcome::Rejected(VerificationFailure::MissingRecordSignature)
+    );
+}

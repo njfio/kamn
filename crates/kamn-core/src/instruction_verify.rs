@@ -75,6 +75,8 @@ pub enum VerificationFailure {
         actual: String,
     },
     PayloadMismatch,
+    MissingClaimSignature,
+    MissingRecordSignature,
     SignatureMismatch,
     InclusionProofMismatch {
         expected: String,
@@ -131,6 +133,12 @@ impl InstructionVerifier {
         }
         if record.payload_hash != claim.payload_hash {
             return VerificationOutcome::Rejected(VerificationFailure::PayloadMismatch);
+        }
+        if claim.signature.trim().is_empty() {
+            return VerificationOutcome::Rejected(VerificationFailure::MissingClaimSignature);
+        }
+        if record.signature.trim().is_empty() {
+            return VerificationOutcome::Rejected(VerificationFailure::MissingRecordSignature);
         }
         if record.signature != claim.signature {
             return VerificationOutcome::Rejected(VerificationFailure::SignatureMismatch);
@@ -319,6 +327,58 @@ mod tests {
         assert_eq!(
             InstructionVerifier::verify(&claim, &context),
             VerificationOutcome::Rejected(VerificationFailure::MissingInclusionProofReference)
+        );
+    }
+
+    #[test]
+    fn rejects_missing_claim_signature() {
+        let context = VerificationContext::new(100)
+            .with_instruction(InstructionRecord {
+                id: "ins_1".to_owned(),
+                from_did: "kamn:did:agent:alpha".to_owned(),
+                payload_hash: "hash_a".to_owned(),
+                signature: "sig".to_owned(),
+                inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
+            })
+            .with_authorized_sender("kamn:did:agent:alpha");
+        let claim = InstructionClaim {
+            instruction_id: "ins_1".to_owned(),
+            from_did: "kamn:did:agent:alpha".to_owned(),
+            payload_hash: "hash_a".to_owned(),
+            signature: String::new(),
+            inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
+            expires_at_unix: 120,
+        };
+
+        assert_eq!(
+            InstructionVerifier::verify(&claim, &context),
+            VerificationOutcome::Rejected(VerificationFailure::MissingClaimSignature)
+        );
+    }
+
+    #[test]
+    fn rejects_missing_record_signature() {
+        let context = VerificationContext::new(100)
+            .with_instruction(InstructionRecord {
+                id: "ins_1".to_owned(),
+                from_did: "kamn:did:agent:alpha".to_owned(),
+                payload_hash: "hash_a".to_owned(),
+                signature: String::new(),
+                inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
+            })
+            .with_authorized_sender("kamn:did:agent:alpha");
+        let claim = InstructionClaim {
+            instruction_id: "ins_1".to_owned(),
+            from_did: "kamn:did:agent:alpha".to_owned(),
+            payload_hash: "hash_a".to_owned(),
+            signature: "sig".to_owned(),
+            inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
+            expires_at_unix: 120,
+        };
+
+        assert_eq!(
+            InstructionVerifier::verify(&claim, &context),
+            VerificationOutcome::Rejected(VerificationFailure::MissingRecordSignature)
         );
     }
 
