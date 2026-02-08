@@ -51,3 +51,4 @@ For anti-hallucination instruction validation controls, see `docs/foundation/ins
 For deterministic key lifecycle and rotation transitions, see `docs/foundation/key-lifecycle.md`.
 For key compromise containment and recovery workflows, see `docs/foundation/key-recovery.md`.
 For Python SDK parity slice, see `docs/foundation/python-sdk-beta.md`.
+For DID method and canonical DID document schema controls, see `docs/foundation/did-method.md`.
