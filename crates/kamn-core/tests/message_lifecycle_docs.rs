@@ -27,6 +27,16 @@ fn doc_contains_processor_proof_gated_validation_rules() {
 }
 
 #[test]
+fn doc_contains_snapshot_persistence_and_restore_contract_rules() {
+    assert!(DOC.contains("## Snapshot Persistence and Restore Contract Rules"));
+    assert!(DOC.contains("export_snapshot()"));
+    assert!(DOC.contains("restore_snapshot(snapshot)"));
+    assert!(DOC.contains("MessageLifecycleSnapshotStore"));
+    assert!(DOC.contains("recover_latest_and_repair()"));
+    assert!(DOC.contains("MESSAGE_LIFECYCLE_SNAPSHOT_SCHEMA_VERSION"));
+}
+
+#[test]
 fn regression_requires_active_record_ttl_expiry_rule() {
     // Regression: #563
     assert!(DOC.contains("Expiry APIs only transition active records"));
@@ -37,4 +47,27 @@ fn regression_requires_active_record_ttl_expiry_rule() {
 fn regression_requires_tampered_proof_transition_block_rule() {
     // Regression: #510
     assert!(DOC.contains("tampered proof artifacts must not advance message state"));
+}
+
+#[test]
+fn doc_contains_fast_and_cost_effective_validation_lane_commands() {
+    assert!(DOC.contains("## Fast and Cost-Effective Validation"));
+    assert!(DOC.contains("cargo test -p kamn-core message_lifecycle::tests::"));
+    assert!(DOC.contains("cargo test -p kamn-core --test message_lifecycle_queries"));
+    assert!(DOC.contains("cargo test -p kamn-core --test message_lifecycle_proof_admission"));
+    assert!(DOC.contains("bash scripts/message/run_message_lifecycle_contract_lane.sh"));
+    assert!(
+        DOC.contains(
+            "cargo test -p kamn-core message_lifecycle::tests::performance_message_lifecycle_snapshot_deep_lane_stress -- --ignored"
+        )
+    );
+    assert!(DOC.contains("bash scripts/message/run_message_lifecycle_deep_lane.sh"));
+    assert!(DOC.contains("cargo clippy -p kamn-core -- -D warnings"));
+}
+
+#[test]
+fn regression_requires_snapshot_restore_guard_rules() {
+    // Regression: #617
+    assert!(DOC.contains("duplicate message IDs on restore are rejected (`Regression: #617`)"));
+    assert!(DOC.contains("status/history mismatch on restore is rejected (`Regression: #617`)"));
 }

@@ -164,7 +164,11 @@ pub use message_envelope::{
     CANONICAL_MESSAGE_ENVELOPE_TYPE, CANONICAL_PROOF_PURPOSE,
 };
 pub use message_lifecycle::{
-    MessageLifecycleError, MessageLifecycleStore, MessageProofAdmissionError, MessageStatus,
+    FileMessageLifecycleSnapshotStore, InMemoryMessageLifecycleSnapshotStore,
+    MessageLifecycleError, MessageLifecycleRecoveryResult, MessageLifecycleSnapshot,
+    MessageLifecycleSnapshotError, MessageLifecycleSnapshotStore,
+    MessageLifecycleSnapshotStoreError, MessageLifecycleStore, MessageProofAdmissionError,
+    MessageRecordSnapshot, MessageStatus, MESSAGE_LIFECYCLE_SNAPSHOT_SCHEMA_VERSION,
 };
 pub use migrations::{MigrationPlan, MigrationRegistry, MigrationStep};
 pub use namespaces::StateNamespaces;
