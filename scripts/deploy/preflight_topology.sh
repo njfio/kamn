@@ -5,6 +5,11 @@ usage() {
   cat <<'EOF'
 Usage:
   bash scripts/deploy/preflight_topology.sh \
+    --bundle-file <path>
+
+Or:
+
+  bash scripts/deploy/preflight_topology.sh \
     --processors <n> \
     --listeners <n> \
     --approvers <n> \
@@ -30,6 +35,7 @@ processors=""
 listeners=""
 approvers=""
 required_approvals=""
+bundle_file=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -49,6 +55,10 @@ while [[ $# -gt 0 ]]; do
       required_approvals="${2:-}"
       shift 2
       ;;
+    --bundle-file)
+      bundle_file="${2:-}"
+      shift 2
+      ;;
     --help|-h)
       usage
       exit 0
@@ -59,7 +69,59 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$processors" || -z "$listeners" || -z "$approvers" || -z "$required_approvals" ]]; then
+trim_whitespace() {
+  local value="$1"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s' "$value"
+}
+
+if [[ -n "$bundle_file" ]]; then
+  if [[ -n "$processors" || -n "$listeners" || -n "$approvers" || -n "$required_approvals" ]]; then
+    fail "cannot mix --bundle-file with explicit topology arguments"
+  fi
+
+  if [[ ! -f "$bundle_file" ]]; then
+    fail "bundle file not found: $bundle_file"
+  fi
+
+  while IFS='=' read -r raw_key raw_value; do
+    key="$(trim_whitespace "${raw_key:-}")"
+    value="$(trim_whitespace "${raw_value:-}")"
+
+    if [[ -z "$key" || "${key:0:1}" == "#" ]]; then
+      continue
+    fi
+
+    case "$key" in
+      PROCESSORS)
+        processors="$value"
+        ;;
+      LISTENERS)
+        listeners="$value"
+        ;;
+      APPROVERS)
+        approvers="$value"
+        ;;
+      REQUIRED_APPROVALS)
+        required_approvals="$value"
+        ;;
+    esac
+  done <"$bundle_file"
+
+  if [[ -z "$processors" ]]; then
+    fail "missing bundle field: PROCESSORS"
+  fi
+  if [[ -z "$listeners" ]]; then
+    fail "missing bundle field: LISTENERS"
+  fi
+  if [[ -z "$approvers" ]]; then
+    fail "missing bundle field: APPROVERS"
+  fi
+  if [[ -z "$required_approvals" ]]; then
+    fail "missing bundle field: REQUIRED_APPROVALS"
+  fi
+elif [[ -z "$processors" || -z "$listeners" || -z "$approvers" || -z "$required_approvals" ]]; then
   usage
   fail "all topology arguments are required"
 fi
@@ -87,3 +149,6 @@ printf 'processors=%s\n' "$processors"
 printf 'listeners=%s\n' "$listeners"
 printf 'approvers=%s\n' "$approvers"
 printf 'required_approvals=%s\n' "$required_approvals"
+if [[ -n "$bundle_file" ]]; then
+  printf 'bundle_file=%s\n' "$bundle_file"
+fi

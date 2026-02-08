@@ -23,3 +23,11 @@ fn runbook_contains_verification_checklist() {
     assert!(RUNBOOK.contains("State hash continuity confirmed"));
     assert!(RUNBOOK.contains("No duplicate block production"));
 }
+
+#[test]
+fn regression_requires_topology_bundle_command_surface() {
+    // Regression: #579
+    assert!(RUNBOOK.contains("## Topology Bundle Command Surface"));
+    assert!(RUNBOOK.contains("scripts/deploy/generate_bundle.sh"));
+    assert!(RUNBOOK.contains("scripts/deploy/preflight_topology.sh --bundle-file"));
+}

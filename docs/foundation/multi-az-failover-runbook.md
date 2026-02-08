@@ -1,6 +1,16 @@
-# Multi-AZ Topology and Processor Failover Runbook (Issues #140, #141)
+# Multi-AZ Topology and Processor Failover Runbook (Issues #140, #141, #579)
 
 This runbook defines the minimal multi-AZ deployment shape and deterministic failover process for Processor continuity.
+
+## Topology Bundle Command Surface
+- Generate deterministic bundle:
+  - `bash scripts/deploy/generate_bundle.sh --output-file deploy/topology.env --processors 3 --listeners 3 --approvers 3 --required-approvals 2`
+- Validate explicit topology args:
+  - `bash scripts/deploy/preflight_topology.sh --processors 3 --listeners 3 --approvers 3 --required-approvals 2`
+- Validate generated bundle:
+  - `bash scripts/deploy/preflight_topology.sh --bundle-file deploy/topology.env`
+
+Malformed bundles (missing fields, non-integer values, invalid quorum thresholds) must fail deterministically with explicit error messages.
 
 ## Multi-AZ Topology
 
