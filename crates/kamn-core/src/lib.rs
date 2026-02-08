@@ -5,6 +5,7 @@ pub mod channel_policies;
 pub mod config;
 pub mod did;
 pub mod did_registry;
+pub mod direct_message_crypto;
 pub mod escrow;
 pub mod instruction_verify;
 pub mod invariants;
@@ -36,6 +37,10 @@ pub use did::{
     DidDocumentError, DidService, DidVerificationMethod,
 };
 pub use did_registry::{DidRegistry, DidRegistryError};
+pub use direct_message_crypto::{
+    DirectMessageCiphertext, DirectMessageCryptoEngine, DirectMessageCryptoError,
+    DIRECT_MESSAGE_CIPHER_ALGORITHM, DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM,
+};
 pub use escrow::{EscrowLifecycle, EscrowLifecycleError, EscrowStatus};
 pub use instruction_verify::{
     InstructionClaim, InstructionRecord, InstructionVerifier, VerificationContext,
