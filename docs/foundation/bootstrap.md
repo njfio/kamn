@@ -55,3 +55,4 @@ For DID method and canonical DID document schema controls, see `docs/foundation/
 For DID register/resolve/update/revoke transaction behavior, see `docs/foundation/did-registry-transactions.md`.
 For canonical message envelope schema and validation controls, see `docs/foundation/message-envelope-schema.md`.
 For message lifecycle state machine and index query controls, see `docs/foundation/message-lifecycle.md`.
+For nonce/TTL/replay enforcement and failed-delivery notice controls, see `docs/foundation/message-delivery-guards.md`.

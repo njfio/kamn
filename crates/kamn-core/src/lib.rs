@@ -7,6 +7,7 @@ pub mod instruction_verify;
 pub mod invariants;
 pub mod key_lifecycle;
 pub mod key_recovery;
+pub mod message_delivery_guards;
 pub mod message_envelope;
 pub mod message_lifecycle;
 pub mod migrations;
@@ -36,6 +37,10 @@ pub use invariants::{
 };
 pub use key_lifecycle::{KeyLifecycle, KeyLifecycleError, KeyLifecycleEvent, KeyLifecycleState};
 pub use key_recovery::{KeyRecoveryManager, RecoveryError, RecoveryState};
+pub use message_delivery_guards::{
+    DeliveryFailureCode, DeliveryGuardInput, DeliveryValidationResult, FailedDeliveryNotice,
+    MessageDeliveryGuards,
+};
 pub use message_envelope::{
     AttachmentRef, CanonicalMessageEnvelope, EnvelopeEncryption, EnvelopeHeader, EnvelopeMetadata,
     EnvelopeProof, MessageEnvelopeError, CANONICAL_ENCRYPTION_ALGORITHM,
