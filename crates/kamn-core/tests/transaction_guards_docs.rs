@@ -17,10 +17,23 @@ fn doc_contains_canonical_signature_profile_contract() {
 }
 
 #[test]
+fn doc_contains_signer_fallback_policy_integration_rules() {
+    assert!(DOC.contains("## Signer Fallback Policy Integration"));
+    assert!(DOC.contains("secure:aws-kms:role-<operator|admin|treasury|auditor>/<key-ref>"));
+    assert!(DOC.contains("KeyRoleMismatch"));
+    assert!(DOC.contains("FallbackDeniedByRolePolicy"));
+}
+
+#[test]
 fn regression_requires_signature_profile_drift_guard_rule() {
     // Regression: #400
     assert!(DOC.contains(
         "signature-profile drift between transaction and signer paths is rejected (`Regression: #400`).",
     ));
     assert!(DOC.contains("non-versioned signature profile is rejected (`Regression: #404`)."));
+    assert!(
+        DOC.contains(
+            "privileged roles (`admin`, `treasury`, `auditor`) reject fallback via `FallbackDeniedByRolePolicy` (`Regression: #619`).",
+        ),
+    );
 }

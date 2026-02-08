@@ -13,7 +13,9 @@ fn doc_contains_signer_backend_contract_and_router_rules() {
 #[test]
 fn doc_contains_fallback_semantics_and_transaction_integration() {
     assert!(DOC.contains("## Backend Compatibility Rules"));
-    assert!(DOC.contains("falls back from secure to local only for `ProviderUnavailable`."));
+    assert!(DOC.contains(
+        "falls back from secure to local only for `ProviderUnavailable` and `operator` role keys."
+    ));
     assert!(DOC.contains("does not fallback on hard request errors"));
     assert!(DOC.contains("## Transaction Path Integration"));
     assert!(DOC.contains("SigningRequest::for_transaction(...)"));
@@ -32,7 +34,11 @@ fn doc_contains_signer_emulator_contract_lane_policy() {
 fn doc_contains_production_style_secure_provider_adapter_rules() {
     assert!(DOC.contains("secure-aws-kms-emulator"));
     assert!(DOC.contains("secure:aws-kms:<key-ref>"));
+    assert!(DOC.contains("role-scoped production keys"));
+    assert!(DOC.contains("KeyRoleMismatch"));
+    assert!(DOC.contains("FallbackDeniedByRolePolicy"));
     assert!(DOC.contains("UnsupportedSecureProvider"));
+    assert!(DOC.contains("UnsupportedSignerKeyRole"));
     assert!(DOC.contains("MalformedSecureKeyReference"));
 }
 

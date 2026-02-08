@@ -99,9 +99,89 @@ impl SecureSignerProvider {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SignerKeyRole {
+    Operator,
+    Admin,
+    Treasury,
+    Auditor,
+}
+
+impl SignerKeyRole {
+    pub fn from_key_id(key_id: &str) -> Result<Self, SignerBackendError> {
+        Ok(SecureKeyReference::parse(key_id)?.key_role)
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Operator => "operator",
+            Self::Admin => "admin",
+            Self::Treasury => "treasury",
+            Self::Auditor => "auditor",
+        }
+    }
+
+    fn allows_secure_fallback(self) -> bool {
+        matches!(self, Self::Operator)
+    }
+
+    fn from_sender(sender: &str) -> Self {
+        let normalized_sender = sender.trim().to_ascii_lowercase();
+        if normalized_sender.starts_with("admin-") || normalized_sender.starts_with("admin:") {
+            return Self::Admin;
+        }
+        if normalized_sender.starts_with("treasury-") || normalized_sender.starts_with("treasury:")
+        {
+            return Self::Treasury;
+        }
+        if normalized_sender.starts_with("auditor-")
+            || normalized_sender.starts_with("auditor:")
+            || normalized_sender.starts_with("audit-")
+            || normalized_sender.starts_with("audit:")
+        {
+            return Self::Auditor;
+        }
+
+        Self::Operator
+    }
+
+    fn from_provider_key_id(
+        provider_key_id: &str,
+        key_id: &str,
+    ) -> Result<Self, SignerBackendError> {
+        let Some(role_suffix) = provider_key_id.strip_prefix("role-") else {
+            return Ok(Self::Operator);
+        };
+
+        let Some((role_label, role_key_id)) = role_suffix.split_once('/') else {
+            return Err(SignerBackendError::MalformedSecureKeyReference {
+                key_id: key_id.to_owned(),
+            });
+        };
+        if role_label.trim().is_empty() || role_key_id.trim().is_empty() {
+            return Err(SignerBackendError::MalformedSecureKeyReference {
+                key_id: key_id.to_owned(),
+            });
+        }
+
+        let normalized_role_label = role_label.trim().to_ascii_lowercase();
+        match normalized_role_label.as_str() {
+            "operator" => Ok(Self::Operator),
+            "admin" => Ok(Self::Admin),
+            "treasury" => Ok(Self::Treasury),
+            "auditor" => Ok(Self::Auditor),
+            _ => Err(SignerBackendError::UnsupportedSignerKeyRole {
+                role: normalized_role_label,
+                key_id: key_id.to_owned(),
+            }),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct SecureKeyReference {
     provider: SecureSignerProvider,
+    key_role: SignerKeyRole,
     _provider_key_id: String,
 }
 
@@ -129,14 +209,17 @@ impl SecureKeyReference {
             }
             let normalized_provider_label = provider_label.trim().to_ascii_lowercase();
             let provider = SecureSignerProvider::from_label(&normalized_provider_label, key_id)?;
+            let key_role = SignerKeyRole::from_provider_key_id(provider_key_id, key_id)?;
             return Ok(Self {
                 provider,
+                key_role,
                 _provider_key_id: provider_key_id.to_owned(),
             });
         }
 
         Ok(Self {
             provider: SecureSignerProvider::Mock,
+            key_role: SignerKeyRole::Operator,
             _provider_key_id: suffix.to_owned(),
         })
     }
@@ -184,11 +267,30 @@ impl SecureSignerBackend {
         Self { available }
     }
 
+    fn enforce_key_role_segregation(
+        &self,
+        request: &SigningRequest,
+        secure_key: &SecureKeyReference,
+    ) -> Result<(), SignerBackendError> {
+        let sender_role = SignerKeyRole::from_sender(&request.sender);
+        if sender_role != secure_key.key_role {
+            return Err(SignerBackendError::KeyRoleMismatch {
+                key_role: secure_key.key_role.label().to_owned(),
+                sender_role: sender_role.label().to_owned(),
+                sender: request.sender.clone(),
+                key_id: request.key_id.clone(),
+            });
+        }
+
+        Ok(())
+    }
+
     fn sign_with_backend(
         &self,
         request: &SigningRequest,
     ) -> Result<BackendSignature, SignerBackendError> {
         let secure_key = SecureKeyReference::parse(&request.key_id)?;
+        self.enforce_key_role_segregation(request, &secure_key)?;
         if !self.available {
             return Err(SignerBackendError::ProviderUnavailable {
                 backend: secure_key.provider.backend_name().to_owned(),
@@ -232,6 +334,7 @@ impl SignerBackend for SecureSignerBackend {
 
     fn verify(&self, request: &SigningRequest, signature: &str) -> Result<(), SignerBackendError> {
         let secure_key = SecureKeyReference::parse(&request.key_id)?;
+        self.enforce_key_role_segregation(request, &secure_key)?;
         if !self.available {
             return Err(SignerBackendError::ProviderUnavailable {
                 backend: secure_key.provider.backend_name().to_owned(),
@@ -272,6 +375,13 @@ impl SignerBackendRouter {
         match self.secure.sign_with_backend(request) {
             Ok(signature) => Ok(signature),
             Err(SignerBackendError::ProviderUnavailable { .. }) => {
+                let key_role = SignerKeyRole::from_key_id(&request.key_id)?;
+                if !key_role.allows_secure_fallback() {
+                    return Err(SignerBackendError::FallbackDeniedByRolePolicy {
+                        key_role: key_role.label().to_owned(),
+                        key_id: request.key_id.clone(),
+                    });
+                }
                 let signature = self.local.sign(request)?;
                 Ok(BackendSignature {
                     backend: self.local.backend_name().to_owned(),
@@ -307,7 +417,17 @@ impl Default for SignerBackendRouter {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SignerBackendError {
     EmptyField(&'static str),
+    FallbackDeniedByRolePolicy {
+        key_role: String,
+        key_id: String,
+    },
     InvalidNonce,
+    KeyRoleMismatch {
+        key_role: String,
+        sender_role: String,
+        sender: String,
+        key_id: String,
+    },
     MalformedSecureKeyReference {
         key_id: String,
     },
@@ -330,6 +450,10 @@ pub enum SignerBackendError {
         provider: String,
         key_id: String,
     },
+    UnsupportedSignerKeyRole {
+        role: String,
+        key_id: String,
+    },
     UnsupportedKeyReference {
         backend: String,
         key_id: String,
@@ -340,7 +464,20 @@ impl std::fmt::Display for SignerBackendError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::EmptyField(field) => write!(f, "{field} must not be empty"),
+            Self::FallbackDeniedByRolePolicy { key_role, key_id } => write!(
+                f,
+                "secure fallback denied for key role {key_role} ({key_id})"
+            ),
             Self::InvalidNonce => write!(f, "nonce must be positive"),
+            Self::KeyRoleMismatch {
+                key_role,
+                sender_role,
+                sender,
+                key_id,
+            } => write!(
+                f,
+                "key role mismatch for {key_id}; key role {key_role}, sender role {sender_role}, sender {sender}"
+            ),
             Self::MalformedSecureKeyReference { key_id } => {
                 write!(f, "malformed secure key reference: {key_id}")
             }
@@ -372,6 +509,9 @@ impl std::fmt::Display for SignerBackendError {
                 f,
                 "unsupported secure signer provider for backend {backend}: {provider} ({key_id})"
             ),
+            Self::UnsupportedSignerKeyRole { role, key_id } => {
+                write!(f, "unsupported signer key role {role} for key reference {key_id}")
+            }
             Self::UnsupportedKeyReference { backend, key_id } => {
                 write!(
                     f,
@@ -386,7 +526,7 @@ impl std::error::Error for SignerBackendError {}
 
 #[cfg(test)]
 mod tests {
-    use super::{SecureSignerProvider, SignerBackendError, SigningRequest};
+    use super::{SecureSignerProvider, SignerBackendError, SignerKeyRole, SigningRequest};
 
     #[test]
     fn signing_request_rejects_invalid_fields() {
@@ -430,6 +570,33 @@ mod tests {
             SecureSignerProvider::from_key_id("secure:"),
             Err(SignerBackendError::MalformedSecureKeyReference {
                 key_id: "secure:".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn signer_key_role_parser_supports_role_prefixes_and_legacy_defaults() {
+        assert_eq!(
+            SignerKeyRole::from_key_id("secure:key-legacy-1"),
+            Ok(SignerKeyRole::Operator)
+        );
+        assert_eq!(
+            SignerKeyRole::from_key_id("secure:aws-kms:role-admin/key-prod-1"),
+            Ok(SignerKeyRole::Admin)
+        );
+        assert_eq!(
+            SignerKeyRole::from_key_id("secure:aws-kms:role-treasury/key-prod-2"),
+            Ok(SignerKeyRole::Treasury)
+        );
+    }
+
+    #[test]
+    fn signer_key_role_parser_rejects_unsupported_role_labels() {
+        assert_eq!(
+            SignerKeyRole::from_key_id("secure:aws-kms:role-root/key-prod-3"),
+            Err(SignerBackendError::UnsupportedSignerKeyRole {
+                role: "root".to_owned(),
+                key_id: "secure:aws-kms:role-root/key-prod-3".to_owned(),
             })
         );
     }
