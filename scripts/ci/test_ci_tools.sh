@@ -15,5 +15,6 @@ bash "$ROOT_DIR/scripts/ci/test_post_flaky_report_comment.sh"
 bash "$ROOT_DIR/scripts/ci/test_sync_flaky_registry_issues.sh"
 bash "$ROOT_DIR/scripts/ci/test_workflow_retry_policy.sh"
 bash "$ROOT_DIR/scripts/ci/test_workflow_cache_policy.sh"
+bash "$ROOT_DIR/scripts/ci/test_workflow_scope_policy.sh"
 
 echo "All CI tool regression tests passed."

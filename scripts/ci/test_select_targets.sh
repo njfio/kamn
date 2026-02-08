@@ -33,6 +33,12 @@ assert_eq "$(extract_output "$docs_output" "docs_only")" "true" "docs_only selec
 assert_eq "$(extract_output "$docs_output" "run_rust")" "false" "docs_only should not run rust"
 assert_eq "$(extract_output "$docs_output" "test_scope")" "none" "docs_only should keep none scope"
 
+deploy_output="$(run_selector $'scripts/deploy/preflight_topology.sh')"
+assert_eq "$(extract_output "$deploy_output" "docs_only")" "false" "deploy-only change must not be docs-only"
+assert_eq "$(extract_output "$deploy_output" "run_rust")" "false" "deploy-only changes should avoid rust lane"
+assert_eq "$(extract_output "$deploy_output" "run_deploy_preflight_tests")" "true" "deploy-only changes must run deploy preflight tests"
+assert_eq "$(extract_output "$deploy_output" "test_scope")" "deploy" "deploy-only changes must use deploy scope"
+
 # Regression: #463
 runner_output_file="$(mktemp)"
 runner_docs_output="$(GITHUB_OUTPUT="$runner_output_file" run_selector $'docs/foundation/ci-caching-parallelism.md')"
@@ -44,6 +50,7 @@ assert_eq "$(extract_output "$critical_output" "run_rust")" "true" "workflow cha
 assert_eq "$(extract_output "$critical_output" "test_scope")" "full" "workflow changes must use full scope"
 
 unknown_output="$(run_selector $'config/runtime-policy.json')"
+# Regression: #505
 assert_eq "$(extract_output "$unknown_output" "run_rust")" "true" "unknown paths must run rust fallback"
 assert_eq "$(extract_output "$unknown_output" "test_scope")" "full" "unknown paths must use full fallback"
 
