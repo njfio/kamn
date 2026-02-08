@@ -6,6 +6,7 @@ pub mod bridge_adapter;
 pub mod channel_models;
 pub mod channel_policies;
 pub mod config;
+pub mod content_lifecycle;
 pub mod content_replication;
 pub mod content_retrieval;
 pub mod content_storage;
@@ -74,6 +75,10 @@ pub use channel_policies::{
 pub use config::{
     ConfigError, NodeConfig, NodeRole, SyncMode, SyncOperationalProfile, SyncRecoveryStrategy,
     SyncStartupStrategy,
+};
+pub use content_lifecycle::{
+    ContentCleanupAction, ContentCleanupActionKind, ContentLifecycleError, ContentLifecycleManager,
+    ContentLifecycleRecord, ContentLifecycleStatus, ContentRetentionClass, ContentRetentionProfile,
 };
 pub use content_replication::{
     ContentAvailabilityAlert, ContentAvailabilityHealth, ContentAvailabilitySnapshot,

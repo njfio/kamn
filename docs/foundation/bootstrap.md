@@ -80,6 +80,7 @@ For task artifact integrity references and provenance metadata controls, see `do
 For content-addressed storage adapter contract and integrity verification controls, see `docs/foundation/content-storage-adapter.md`.
 For content pinning, replication, and repair policy controls, see `docs/foundation/content-replication-repair.md`.
 For secure off-chain retrieval access, cache TTL, and audit controls, see `docs/foundation/content-retrieval-access-cache.md`.
+For retention-class tombstone and cleanup lifecycle controls, see `docs/foundation/content-retention-tombstones.md`.
 For bridge inbound/outbound adapter abstraction controls, see `docs/foundation/bridge-adapter-abstraction.md`.
 For Telegram bridge listener-validated inbound flow controls, see `docs/foundation/telegram-bridge-listener-validation.md`.
 For Discord bridge approver-gated outbound flow controls, see `docs/foundation/discord-bridge-approver-gating.md`.
