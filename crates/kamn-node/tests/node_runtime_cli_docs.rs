@@ -15,6 +15,8 @@ fn doc_contains_output_mode_scope_and_rules() {
     assert!(DOC.contains("--runtime-mode daemon"));
     assert!(DOC.contains("ConfigError::InvalidRuntimeMode"));
     assert!(DOC.contains("ConfigError::InvalidDaemonControlArgument"));
+    assert!(DOC.contains("ConfigError::InvalidDaemonLifecycleEvent"));
+    assert!(DOC.contains("ConfigError::RuntimeDaemonLifecycle"));
 }
 
 #[test]
@@ -32,6 +34,8 @@ fn doc_contains_deterministic_json_fields() {
     assert!(DOC.contains("daemon_max_ticks"));
     assert!(DOC.contains("daemon_executed_ticks"));
     assert!(DOC.contains("daemon_completion_reason"));
+    assert!(DOC.contains("daemon_peer_lifecycle_final_state"));
+    assert!(DOC.contains("daemon_peer_lifecycle_applied_events"));
     assert!(DOC.contains("sync_mode"));
     assert!(DOC.contains("components"));
 }
@@ -82,6 +86,7 @@ fn doc_contains_runtime_daemon_rules() {
     assert!(DOC.contains("## Daemon Runtime Rules"));
     assert!(DOC.contains("--daemon-max-ticks"));
     assert!(DOC.contains("--daemon-tick-interval-ms"));
+    assert!(DOC.contains("--daemon-lifecycle-event"));
     assert!(DOC.contains("tick-budget-exhausted"));
 }
 
@@ -142,4 +147,10 @@ fn regression_requires_runtime_recovery_error_rule_references() {
 fn regression_requires_runtime_daemon_control_rules() {
     // Regression: #348
     assert!(DOC.contains("zero/invalid daemon bounded-loop control rejection (`Regression: #348`)"));
+}
+
+#[test]
+fn regression_requires_runtime_daemon_lifecycle_rules() {
+    // Regression: #349
+    assert!(DOC.contains("invalid daemon lifecycle transition rejection (`Regression: #349`)"));
 }

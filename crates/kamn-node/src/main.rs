@@ -3,7 +3,8 @@ use std::process::ExitCode;
 
 use kamn_core::{
     bootstrap, BootstrapPlan, ConfigError, DeterministicProposalPlanner, NodeConfig, NodeRole,
-    ProposalCandidate, RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, SyncMode,
+    PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, RecoveryRejoinGuard,
+    RecoveryStatus, RejoinAttempt, SyncMode,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -186,6 +187,8 @@ struct NodeCli {
     rejoin_attempts: Vec<RejoinAttempt>,
     daemon_max_ticks: Option<u64>,
     daemon_tick_interval_ms: Option<u64>,
+    daemon_peer_id: Option<String>,
+    daemon_lifecycle_events: Vec<PeerLifecycleEvent>,
     output_mode: OutputMode,
     diagnostics_mode: DiagnosticsMode,
 }
@@ -211,6 +214,9 @@ struct DaemonExecution {
     tick_interval_ms: u64,
     executed_ticks: u64,
     completion_reason: String,
+    peer_id: Option<String>,
+    peer_lifecycle_final_state: Option<String>,
+    peer_lifecycle_applied_events: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -229,6 +235,9 @@ struct NodeBootstrapReport {
     daemon_tick_interval_ms: Option<u64>,
     daemon_executed_ticks: Option<u64>,
     daemon_completion_reason: Option<String>,
+    daemon_peer_id: Option<String>,
+    daemon_peer_lifecycle_final_state: Option<String>,
+    daemon_peer_lifecycle_applied_events: Option<Vec<String>>,
     profile: Option<String>,
     role: String,
     chain_id: String,
@@ -261,6 +270,8 @@ where
     let mut rejoin_attempts: Vec<RejoinAttempt> = Vec::new();
     let mut daemon_max_ticks: Option<u64> = None;
     let mut daemon_tick_interval_ms: Option<u64> = None;
+    let mut daemon_peer_id: Option<String> = None;
+    let mut daemon_lifecycle_events: Vec<PeerLifecycleEvent> = Vec::new();
     let mut output_mode = OutputMode::text();
     let mut diagnostics_mode = DiagnosticsMode::basic();
     let mut role_overridden = false;
@@ -359,6 +370,18 @@ where
                 ))?;
                 daemon_tick_interval_ms = Some(parse_daemon_control_arg(&value)?);
             }
+            "--daemon-peer-id" => {
+                daemon_peer_id = Some(
+                    iter.next()
+                        .ok_or(ConfigError::MissingArgumentValue("--daemon-peer-id"))?,
+                );
+            }
+            "--daemon-lifecycle-event" => {
+                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
+                    "--daemon-lifecycle-event",
+                ))?;
+                daemon_lifecycle_events.push(parse_daemon_lifecycle_event(&value)?);
+            }
             "--output" => {
                 let value = iter
                     .next()
@@ -430,6 +453,9 @@ where
                 "--daemon-tick-interval-ms",
             ));
         }
+        if !daemon_lifecycle_events.is_empty() && daemon_peer_id.is_none() {
+            return Err(ConfigError::MissingArgumentValue("--daemon-peer-id"));
+        }
     }
 
     Ok(NodeCli {
@@ -447,6 +473,8 @@ where
         rejoin_attempts,
         daemon_max_ticks,
         daemon_tick_interval_ms,
+        daemon_peer_id,
+        daemon_lifecycle_events,
         output_mode,
         diagnostics_mode,
     })
@@ -496,6 +524,38 @@ fn parse_daemon_control_arg(value: &str) -> Result<u64, ConfigError> {
     Ok(parsed)
 }
 
+fn parse_daemon_lifecycle_event(value: &str) -> Result<PeerLifecycleEvent, ConfigError> {
+    match value {
+        "start-connect" => Ok(PeerLifecycleEvent::StartConnect),
+        "handshake-succeeded" => Ok(PeerLifecycleEvent::HandshakeSucceeded),
+        "heartbeat-missed" => Ok(PeerLifecycleEvent::HeartbeatMissed),
+        "heartbeat-restored" => Ok(PeerLifecycleEvent::HeartbeatRestored),
+        "disconnect" => Ok(PeerLifecycleEvent::Disconnect),
+        "rejoin" => Ok(PeerLifecycleEvent::Rejoin),
+        _ => Err(ConfigError::InvalidDaemonLifecycleEvent(value.to_owned())),
+    }
+}
+
+fn daemon_lifecycle_event_as_str(event: PeerLifecycleEvent) -> &'static str {
+    match event {
+        PeerLifecycleEvent::StartConnect => "start-connect",
+        PeerLifecycleEvent::HandshakeSucceeded => "handshake-succeeded",
+        PeerLifecycleEvent::HeartbeatMissed => "heartbeat-missed",
+        PeerLifecycleEvent::HeartbeatRestored => "heartbeat-restored",
+        PeerLifecycleEvent::Disconnect => "disconnect",
+        PeerLifecycleEvent::Rejoin => "rejoin",
+    }
+}
+
+fn peer_lifecycle_state_as_str(state: PeerLifecycleState) -> &'static str {
+    match state {
+        PeerLifecycleState::Disconnected => "disconnected",
+        PeerLifecycleState::Connecting => "connecting",
+        PeerLifecycleState::Active => "active",
+        PeerLifecycleState::Degraded => "degraded",
+    }
+}
+
 fn run() -> Result<(), ConfigError> {
     let cli = parse_args(env::args())?;
     let output_mode = cli.output_mode;
@@ -521,6 +581,8 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
         rejoin_attempts,
         daemon_max_ticks,
         daemon_tick_interval_ms,
+        daemon_peer_id,
+        daemon_lifecycle_events,
         output_mode: _,
         diagnostics_mode,
     } = cli;
@@ -594,6 +656,27 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             let tick_interval_ms = daemon_tick_interval_ms.ok_or(
                 ConfigError::MissingArgumentValue("--daemon-tick-interval-ms"),
             )?;
+            let (peer_id, peer_lifecycle_final_state, peer_lifecycle_applied_events) =
+                match daemon_peer_id {
+                    Some(peer_id) => {
+                        let mut lifecycle = PeerLifecycle::new(&peer_id).map_err(|error| {
+                            ConfigError::RuntimeDaemonLifecycle(error.to_string())
+                        })?;
+                        let mut applied_events = Vec::with_capacity(daemon_lifecycle_events.len());
+                        for event in daemon_lifecycle_events {
+                            lifecycle.transition(event).map_err(|error| {
+                                ConfigError::RuntimeDaemonLifecycle(error.to_string())
+                            })?;
+                            applied_events.push(daemon_lifecycle_event_as_str(event).to_owned());
+                        }
+                        (
+                            Some(peer_id),
+                            Some(peer_lifecycle_state_as_str(lifecycle.state()).to_owned()),
+                            Some(applied_events),
+                        )
+                    }
+                    None => (None, None, None),
+                };
             (
                 None,
                 None,
@@ -602,6 +685,9 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                     tick_interval_ms,
                     executed_ticks: max_ticks,
                     completion_reason: "tick-budget-exhausted".to_owned(),
+                    peer_id,
+                    peer_lifecycle_final_state,
+                    peer_lifecycle_applied_events,
                 }),
             )
         }
@@ -656,6 +742,13 @@ fn build_bootstrap_report(
     let daemon_completion_reason = daemon
         .as_ref()
         .map(|daemon| daemon.completion_reason.clone());
+    let daemon_peer_id = daemon.as_ref().and_then(|daemon| daemon.peer_id.clone());
+    let daemon_peer_lifecycle_final_state = daemon
+        .as_ref()
+        .and_then(|daemon| daemon.peer_lifecycle_final_state.clone());
+    let daemon_peer_lifecycle_applied_events = daemon
+        .as_ref()
+        .and_then(|daemon| daemon.peer_lifecycle_applied_events.clone());
     NodeBootstrapReport {
         runtime_mode: runtime_mode.as_str().to_owned(),
         diagnostics_mode: diagnostics_mode.as_str().to_owned(),
@@ -671,6 +764,9 @@ fn build_bootstrap_report(
         daemon_tick_interval_ms,
         daemon_executed_ticks,
         daemon_completion_reason,
+        daemon_peer_id,
+        daemon_peer_lifecycle_final_state,
+        daemon_peer_lifecycle_applied_events,
         profile: profile.map(LocalProfile::as_str).map(str::to_owned),
         role: plan.config.role.as_str().to_owned(),
         chain_id: plan.config.chain_id.clone(),
@@ -738,8 +834,18 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         .map(|value| value.to_string())
         .unwrap_or_else(|| "none".to_owned());
     let daemon_completion_reason = report.daemon_completion_reason.as_deref().unwrap_or("none");
+    let daemon_peer_id = report.daemon_peer_id.as_deref().unwrap_or("none");
+    let daemon_peer_lifecycle_final_state = report
+        .daemon_peer_lifecycle_final_state
+        .as_deref()
+        .unwrap_or("none");
+    let daemon_peer_lifecycle_applied_events = report
+        .daemon_peer_lifecycle_applied_events
+        .as_ref()
+        .map(|value| value.join(", "))
+        .unwrap_or_else(|| "none".to_owned());
     format!(
-        "KAMN node bootstrap\n  runtime_mode: {}\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  planning_expected_state_hash: {}\n  planning_candidate_count: {}\n  planning_scheduled_candidate_ids: {}\n  recovery_expected_state_version: {}\n  recovery_expected_state_hash: {}\n  recovery_attempt_count: {}\n  recovery_decisions: {}\n  daemon_max_ticks: {}\n  daemon_tick_interval_ms: {}\n  daemon_executed_ticks: {}\n  daemon_completion_reason: {}\n  components: {}",
+        "KAMN node bootstrap\n  runtime_mode: {}\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  planning_expected_state_hash: {}\n  planning_candidate_count: {}\n  planning_scheduled_candidate_ids: {}\n  recovery_expected_state_version: {}\n  recovery_expected_state_hash: {}\n  recovery_attempt_count: {}\n  recovery_decisions: {}\n  daemon_max_ticks: {}\n  daemon_tick_interval_ms: {}\n  daemon_executed_ticks: {}\n  daemon_completion_reason: {}\n  daemon_peer_id: {}\n  daemon_peer_lifecycle_final_state: {}\n  daemon_peer_lifecycle_applied_events: {}\n  components: {}",
         report.runtime_mode,
         report.diagnostics_mode,
         profile,
@@ -769,6 +875,9 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         daemon_tick_interval_ms,
         daemon_executed_ticks,
         daemon_completion_reason,
+        daemon_peer_id,
+        daemon_peer_lifecycle_final_state,
+        daemon_peer_lifecycle_applied_events,
         report.components.join(", "),
     )
 }
@@ -836,6 +945,25 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         Some(value) => format!("\"{}\"", json_escape(value)),
         None => "null".to_owned(),
     };
+    let daemon_peer_id = match &report.daemon_peer_id {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
+    let daemon_peer_lifecycle_final_state = match &report.daemon_peer_lifecycle_final_state {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
+    let daemon_peer_lifecycle_applied_events = match &report.daemon_peer_lifecycle_applied_events {
+        Some(values) => format!(
+            "[{}]",
+            values
+                .iter()
+                .map(|value| format!("\"{}\"", json_escape(value)))
+                .collect::<Vec<String>>()
+                .join(",")
+        ),
+        None => "null".to_owned(),
+    };
     let components = report
         .components
         .iter()
@@ -843,7 +971,7 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         .collect::<Vec<String>>()
         .join(",");
     format!(
-        "{{\"runtime_mode\":\"{}\",\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"planning_expected_state_hash\":{},\"planning_candidate_count\":{},\"planning_scheduled_candidate_ids\":{},\"recovery_expected_state_version\":{},\"recovery_expected_state_hash\":{},\"recovery_attempt_count\":{},\"recovery_decisions\":{},\"daemon_max_ticks\":{},\"daemon_tick_interval_ms\":{},\"daemon_executed_ticks\":{},\"daemon_completion_reason\":{},\"components\":[{}]}}",
+        "{{\"runtime_mode\":\"{}\",\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"planning_expected_state_hash\":{},\"planning_candidate_count\":{},\"planning_scheduled_candidate_ids\":{},\"recovery_expected_state_version\":{},\"recovery_expected_state_hash\":{},\"recovery_attempt_count\":{},\"recovery_decisions\":{},\"daemon_max_ticks\":{},\"daemon_tick_interval_ms\":{},\"daemon_executed_ticks\":{},\"daemon_completion_reason\":{},\"daemon_peer_id\":{},\"daemon_peer_lifecycle_final_state\":{},\"daemon_peer_lifecycle_applied_events\":{},\"components\":[{}]}}",
         json_escape(&report.runtime_mode),
         json_escape(&report.diagnostics_mode),
         profile,
@@ -869,6 +997,9 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         daemon_tick_interval_ms,
         daemon_executed_ticks,
         daemon_completion_reason,
+        daemon_peer_id,
+        daemon_peer_lifecycle_final_state,
+        daemon_peer_lifecycle_applied_events,
         components,
     )
 }
@@ -921,6 +1052,8 @@ mod tests {
         assert!(parsed.rejoin_attempts.is_empty());
         assert_eq!(parsed.daemon_max_ticks, None);
         assert_eq!(parsed.daemon_tick_interval_ms, None);
+        assert_eq!(parsed.daemon_peer_id, None);
+        assert!(parsed.daemon_lifecycle_events.is_empty());
         assert_eq!(parsed.output_mode, OutputMode::text());
         assert_eq!(parsed.diagnostics_mode, DiagnosticsMode::basic());
     }
@@ -1039,12 +1172,20 @@ mod tests {
             "3".to_owned(),
             "--daemon-tick-interval-ms".to_owned(),
             "25".to_owned(),
+            "--daemon-peer-id".to_owned(),
+            "peer-alpha".to_owned(),
+            "--daemon-lifecycle-event".to_owned(),
+            "start-connect".to_owned(),
+            "--daemon-lifecycle-event".to_owned(),
+            "handshake-succeeded".to_owned(),
         ];
 
         let parsed = parse_args(args).expect("daemon args should parse");
         assert_eq!(parsed.runtime_mode, RuntimeMode::daemon());
         assert_eq!(parsed.daemon_max_ticks, Some(3));
         assert_eq!(parsed.daemon_tick_interval_ms, Some(25));
+        assert_eq!(parsed.daemon_peer_id, Some("peer-alpha".to_owned()));
+        assert_eq!(parsed.daemon_lifecycle_events.len(), 2);
     }
 
     #[test]
@@ -1105,6 +1246,9 @@ mod tests {
             daemon_tick_interval_ms: None,
             daemon_executed_ticks: None,
             daemon_completion_reason: None,
+            daemon_peer_id: None,
+            daemon_peer_lifecycle_final_state: None,
+            daemon_peer_lifecycle_applied_events: None,
             profile: None,
             role: "processor".to_owned(),
             chain_id: "kamn-devnet".to_owned(),
@@ -1303,6 +1447,16 @@ mod tests {
             "3".to_owned(),
             "--daemon-tick-interval-ms".to_owned(),
             "25".to_owned(),
+            "--daemon-peer-id".to_owned(),
+            "peer-alpha".to_owned(),
+            "--daemon-lifecycle-event".to_owned(),
+            "start-connect".to_owned(),
+            "--daemon-lifecycle-event".to_owned(),
+            "handshake-succeeded".to_owned(),
+            "--daemon-lifecycle-event".to_owned(),
+            "heartbeat-missed".to_owned(),
+            "--daemon-lifecycle-event".to_owned(),
+            "heartbeat-restored".to_owned(),
             "--output".to_owned(),
             "json".to_owned(),
         ];
@@ -1315,6 +1469,13 @@ mod tests {
         assert!(rendered.contains("\"daemon_tick_interval_ms\":25"));
         assert!(rendered.contains("\"daemon_executed_ticks\":3"));
         assert!(rendered.contains("\"daemon_completion_reason\":\"tick-budget-exhausted\""));
+        assert!(rendered.contains("\"daemon_peer_id\":\"peer-alpha\""));
+        assert!(rendered.contains("\"daemon_peer_lifecycle_final_state\":\"active\""));
+        assert!(
+            rendered.contains(
+                "\"daemon_peer_lifecycle_applied_events\":[\"start-connect\",\"handshake-succeeded\",\"heartbeat-missed\",\"heartbeat-restored\"]"
+            )
+        );
     }
 
     #[test]
@@ -1599,6 +1760,31 @@ mod tests {
     }
 
     #[test]
+    fn rejects_invalid_daemon_lifecycle_event_argument() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "daemon".to_owned(),
+            "--daemon-max-ticks".to_owned(),
+            "3".to_owned(),
+            "--daemon-tick-interval-ms".to_owned(),
+            "25".to_owned(),
+            "--daemon-peer-id".to_owned(),
+            "peer-alpha".to_owned(),
+            "--daemon-lifecycle-event".to_owned(),
+            "resume".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::InvalidDaemonLifecycleEvent(
+                "resume".to_owned()
+            ))
+        );
+    }
+
+    #[test]
     fn rejects_invalid_diagnostics_mode() {
         // Regression: #313
         let args = vec![
@@ -1757,6 +1943,34 @@ mod tests {
         assert_eq!(
             parse_args(args),
             Err(ConfigError::InvalidDaemonControlArgument("0".to_owned()))
+        );
+    }
+
+    #[test]
+    fn regression_runtime_daemon_rejects_invalid_lifecycle_transition() {
+        // Regression: #349
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "daemon".to_owned(),
+            "--daemon-max-ticks".to_owned(),
+            "3".to_owned(),
+            "--daemon-tick-interval-ms".to_owned(),
+            "25".to_owned(),
+            "--daemon-peer-id".to_owned(),
+            "peer-alpha".to_owned(),
+            "--daemon-lifecycle-event".to_owned(),
+            "handshake-succeeded".to_owned(),
+        ];
+        let parsed = parse_args(args).expect("daemon args should parse");
+        assert_eq!(
+            execute(parsed),
+            Err(ConfigError::RuntimeDaemonLifecycle(
+                "invalid peer lifecycle transition from Disconnected via HandshakeSucceeded"
+                    .to_owned()
+            ))
         );
     }
 }
