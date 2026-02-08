@@ -24,12 +24,14 @@ This document captures the first implementation slice for signer backend abstrac
 ## Transaction Path Integration
 - `SigningRequest::for_transaction(...)` maps `BaselineTransaction` fields into signer requests.
 - Signed output remains compatible with `TransactionGuards::validate_and_record(...)`.
+- `baseline_signature_for_fields(...)` provides the canonical signature-profile helper consumed by both paths.
 
 ## Local Validation
 Run from repository root:
 
 ```bash
 cargo test -p kamn-core --test signer_backend
+cargo test -p kamn-core --test transaction_guards_docs
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core

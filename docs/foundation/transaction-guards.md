@@ -17,6 +17,11 @@ This document defines the baseline deterministic transaction guards implemented 
 - `RoleSmokeNetwork`: integrates guard checks on `submit_transaction(...)` and advances state hash on `produce_block(...)`.
 - `INVARIANT_CATALOG`: canonical invariant IDs and failure-code taxonomy mapping (`docs/foundation/invariants.md`).
 
+## Canonical Signature Profile
+- `baseline_signature_for_fields(...)` is the canonical baseline signing profile helper.
+- Signature profile is shared between `transaction` and `signer_backend` paths.
+- signature-profile drift between transaction and signer paths is rejected (`Regression: #400`).
+
 ## Validation
 Run from repository root:
 

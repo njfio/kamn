@@ -41,6 +41,7 @@ pub mod reputation_state;
 pub mod retention_engine;
 pub mod runtime;
 pub mod service_marketplace;
+pub mod signature_profile;
 pub mod signer_backend;
 pub mod smoke;
 pub mod state;
@@ -221,6 +222,7 @@ pub use service_marketplace::{
     MarketplaceSearchFilter, NegotiationThreadHook, ServiceListing, ServiceMarketplaceEngine,
     ServiceMarketplaceError,
 };
+pub use signature_profile::baseline_signature_for_fields;
 pub use signer_backend::{
     BackendSignature, LocalSignerBackend, SecureSignerBackend, SignerBackend, SignerBackendError,
     SignerBackendRouter, SigningRequest,

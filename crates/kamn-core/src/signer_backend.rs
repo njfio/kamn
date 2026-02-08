@@ -1,3 +1,4 @@
+use crate::signature_profile::baseline_signature_for_fields;
 use crate::transaction::BaselineTransaction;
 
 const LOCAL_BACKEND_NAME: &str = "local-software";
@@ -56,13 +57,7 @@ impl SigningRequest {
     }
 
     fn expected_signature(&self) -> String {
-        format!(
-            "sig:{}:{}:{}:{}",
-            self.sender,
-            self.nonce,
-            self.state_hash,
-            self.payload.len()
-        )
+        baseline_signature_for_fields(&self.sender, self.nonce, &self.state_hash, &self.payload)
     }
 }
 

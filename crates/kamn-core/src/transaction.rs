@@ -1,3 +1,4 @@
+use crate::signature_profile::baseline_signature_for_fields;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -28,14 +29,7 @@ impl BaselineTransaction {
     }
 
     pub fn expected_signature(&self) -> String {
-        // Lightweight deterministic placeholder for baseline integrity checks.
-        format!(
-            "sig:{}:{}:{}:{}",
-            self.sender,
-            self.nonce,
-            self.state_hash,
-            self.payload.len()
-        )
+        baseline_signature_for_fields(&self.sender, self.nonce, &self.state_hash, &self.payload)
     }
 
     fn validate_shape(&self) -> Result<(), TransactionGuardError> {

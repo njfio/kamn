@@ -1,6 +1,6 @@
 use kamn_core::{
-    BaselineTransaction, SignerBackendError, SignerBackendRouter, SigningRequest,
-    TransactionGuards, GENESIS_STATE_HASH,
+    baseline_signature_for_fields, BaselineTransaction, SignerBackendError, SignerBackendRouter,
+    SigningRequest, TransactionGuards, GENESIS_STATE_HASH,
 };
 
 #[test]
@@ -102,4 +102,24 @@ fn for_transaction_rejects_empty_transaction_id() {
         SigningRequest::for_transaction("secure:key-ops-3", &tx),
         Err(SignerBackendError::EmptyField("transaction_id"))
     );
+}
+
+#[test]
+fn regression_signing_request_matches_canonical_signature_profile() {
+    // Regression: #400
+    let router = SignerBackendRouter::default();
+    let request = SigningRequest::new(
+        "secure:key-ops-1",
+        "agent-a",
+        1,
+        "payload-1",
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+
+    let signed = router
+        .sign_with_secure_fallback(&request)
+        .expect("signature should be produced");
+    let canonical = baseline_signature_for_fields("agent-a", 1, GENESIS_STATE_HASH, "payload-1");
+    assert_eq!(signed.signature, canonical);
 }
