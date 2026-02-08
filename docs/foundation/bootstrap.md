@@ -107,5 +107,10 @@ For governed version-upgrade orchestration and governance audit-view controls, s
 For pilot agent-driven upgrade proposal workflow controls with human-review safeguards, see `docs/foundation/agent-driven-upgrade-proposal-workflow.md`.
 For node runtime CLI output-mode contracts and deterministic text/json report surfaces, see `docs/foundation/node-runtime-cli.md`.
 For runtime peer lifecycle and bounded queue guard controls, see `docs/foundation/runtime-network.md`.
+For runtime snapshot crash-recovery and corruption-repair controls, see `docs/foundation/runtime-processor-ha.md`.
 For fast/slow/archive sync-mode operational profile controls, see `docs/foundation/sync-mode-profiles.md`.
 For PRD 13.2 benchmark target validation evidence controls, see `docs/foundation/performance-target-benchmarking.md`.
+
+Crash-recovery snapshot validation lanes:
+- Fast PR lane (low-cost): `cargo test -p kamn-core file_snapshot_store_recovery`
+- Deep lane (scheduled): `cargo test -p kamn-core snapshot_store`
