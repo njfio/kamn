@@ -54,3 +54,17 @@ export interface ResolveRecord {
   metadata: AgentMetadata;
   serviceEndpoint: string;
 }
+
+export interface OpenClawWorkflowRequest {
+  requesterDid: string;
+  openClawDid: string;
+  prompt: string;
+  compensation: number;
+}
+
+export interface OpenClawWorkflowResult {
+  messageId: string;
+  taskId: string;
+  escrowId: string;
+  workflowStatus: "settled";
+}
