@@ -32,12 +32,14 @@ docs_output="$(run_selector $'docs/foundation/ci-caching-parallelism.md')"
 assert_eq "$(extract_output "$docs_output" "docs_only")" "true" "docs_only selection mismatch"
 assert_eq "$(extract_output "$docs_output" "run_rust")" "false" "docs_only should not run rust"
 assert_eq "$(extract_output "$docs_output" "run_ci_tool_checks")" "false" "docs_only should not run CI tool checks"
+assert_eq "$(extract_output "$docs_output" "run_sdk_parity_matrix")" "false" "docs_only should not run sdk parity matrix"
 assert_eq "$(extract_output "$docs_output" "test_scope")" "none" "docs_only should keep none scope"
 
 deploy_output="$(run_selector $'scripts/deploy/preflight_topology.sh')"
 assert_eq "$(extract_output "$deploy_output" "docs_only")" "false" "deploy-only change must not be docs-only"
 assert_eq "$(extract_output "$deploy_output" "run_rust")" "false" "deploy-only changes should avoid rust lane"
 assert_eq "$(extract_output "$deploy_output" "run_deploy_preflight_tests")" "true" "deploy-only changes must run deploy preflight tests"
+assert_eq "$(extract_output "$deploy_output" "run_sdk_parity_matrix")" "false" "deploy-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$deploy_output" "test_scope")" "deploy" "deploy-only changes must use deploy scope"
 
 # Regression: #463
@@ -54,11 +56,13 @@ assert_eq "$(extract_output "$critical_output" "test_scope")" "full" "workflow c
 unknown_output="$(run_selector $'config/runtime-policy.json')"
 # Regression: #505
 assert_eq "$(extract_output "$unknown_output" "run_rust")" "true" "unknown paths must run rust fallback"
+assert_eq "$(extract_output "$unknown_output" "run_sdk_parity_matrix")" "false" "unknown paths should not trigger sdk parity matrix"
 assert_eq "$(extract_output "$unknown_output" "test_scope")" "full" "unknown paths must use full fallback"
 
 targeted_output="$(run_selector $'crates/kamn-core/src/bridge_adapter.rs')"
 assert_eq "$(extract_output "$targeted_output" "run_rust")" "true" "rust path should run rust"
 assert_eq "$(extract_output "$targeted_output" "run_ci_tool_checks")" "false" "Regression: #568 non-CI paths should skip CI tool checks"
+assert_eq "$(extract_output "$targeted_output" "run_sdk_parity_matrix")" "false" "non-sdk rust paths should skip sdk parity matrix"
 assert_eq "$(extract_output "$targeted_output" "test_scope")" "targeted" "crate path should be targeted"
 
 test_cmd="$(extract_output "$targeted_output" "test_cmd")"
@@ -66,5 +70,20 @@ if ! printf '%s\n' "$test_cmd" | grep -q "run_cargo_test_with_quarantine.sh"; th
   echo "targeted test command must use quarantine wrapper" >&2
   exit 1
 fi
+
+python_sdk_output="$(run_selector $'kamn_sdk.py')"
+assert_eq "$(extract_output "$python_sdk_output" "run_rust")" "false" "python sdk-only changes should avoid rust lane"
+assert_eq "$(extract_output "$python_sdk_output" "run_sdk_parity_matrix")" "true" "python sdk-only changes must run sdk parity matrix"
+assert_eq "$(extract_output "$python_sdk_output" "test_scope")" "sdk" "python sdk-only changes should set sdk scope"
+
+typescript_sdk_output="$(run_selector $'packages/kamn-sdk/src/memory_client.ts')"
+assert_eq "$(extract_output "$typescript_sdk_output" "run_rust")" "false" "typescript sdk-only changes should avoid rust lane"
+assert_eq "$(extract_output "$typescript_sdk_output" "run_sdk_parity_matrix")" "true" "typescript sdk-only changes must run sdk parity matrix"
+assert_eq "$(extract_output "$typescript_sdk_output" "test_scope")" "sdk" "typescript sdk-only changes should set sdk scope"
+
+rust_sdk_output="$(run_selector $'crates/kamn-sdk/src/lib.rs')"
+assert_eq "$(extract_output "$rust_sdk_output" "run_rust")" "true" "rust sdk changes should run rust lane"
+# Regression: #583
+assert_eq "$(extract_output "$rust_sdk_output" "run_sdk_parity_matrix")" "true" "rust sdk changes must also run sdk parity matrix"
 
 echo "select_targets matrix regression tests passed."
