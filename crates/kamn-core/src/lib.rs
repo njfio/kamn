@@ -24,6 +24,7 @@ pub mod migrations;
 pub mod namespaces;
 pub mod observability;
 pub mod operator_binding;
+pub mod performance_targets;
 pub mod redaction_compliance;
 pub mod retention_engine;
 pub mod runtime;
@@ -123,6 +124,11 @@ pub use observability::{
 pub use operator_binding::{
     OperatorBindingAction, OperatorBindingEngine, OperatorBindingError, OperatorBindingProof,
     OperatorBindingRecord,
+};
+pub use performance_targets::{
+    evaluate_performance_from_observability, evaluate_performance_run, PerformanceAggregate,
+    PerformanceMetric, PerformanceMetricResult, PerformanceRunError, PerformanceRunReport,
+    PerformanceSample, PrdPerformanceTargets,
 };
 pub use redaction_compliance::{
     RedactionAction, RedactionAuditEvent, RedactionAuditEventKind, RedactionComplianceEngine,
