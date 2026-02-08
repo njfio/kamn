@@ -42,6 +42,8 @@ append_summary() {
     echo "- Run Python live transport contract tests: ${RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS}"
     echo "- Run TypeScript live transport contract tests: ${RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS}"
     echo "- Run cross-language live transport parity contract tests: ${RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS}"
+    echo "- Run cross-language live transport parity rust contract tests: ${RUN_LIVE_TRANSPORT_PARITY_RUST_CONTRACT_TESTS}"
+    echo "- Live transport parity languages: ${LIVE_TRANSPORT_PARITY_LANGUAGES}"
     echo "- Run SDK parity matrix: ${RUN_SDK_PARITY_MATRIX}"
     echo "- Run invariant harness: ${RUN_INVARIANT_HARNESS}"
     echo "- Test scope: ${TEST_SCOPE}"
@@ -287,7 +289,7 @@ for file in "${CHANGED_FILES[@]}"; do
       SDK_TYPESCRIPT_LIVE_CHANGED=true
       classified=true
       ;;
-    scripts/sdk/run_live_transport_parity_contract_lane.sh|scripts/sdk/run_live_transport_parity_deep_lane.sh|scripts/sdk/test_run_live_transport_parity_contract_lane.sh)
+    scripts/sdk/run_live_transport_parity_contract_lane.sh|scripts/sdk/run_live_transport_parity_deep_lane.sh|scripts/sdk/test_run_live_transport_parity_contract_lane.sh|scripts/sdk/run_transport_profile_parity_matrix.py|scripts/sdk/run_transport_profile_parity_matrix.sh|scripts/sdk/test_run_transport_profile_parity_matrix.sh|scripts/sdk/transport_profile_probe.py|scripts/sdk/transport_profile_probe.ts|scripts/sdk/run_transport_profile_probe_python.sh|scripts/sdk/run_transport_profile_probe_typescript.sh|scripts/sdk/run_transport_profile_probe_rust.sh)
       SDK_LIVE_PARITY_SCRIPT_CHANGED=true
       classified=true
       ;;
@@ -338,6 +340,8 @@ RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS=false
 RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS=false
 RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS=false
 RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS=false
+RUN_LIVE_TRANSPORT_PARITY_RUST_CONTRACT_TESTS=false
+LIVE_TRANSPORT_PARITY_LANGUAGES=""
 RUN_SDK_PARITY_MATRIX=false
 FMT_CMD=":"
 CLIPPY_CMD=":"
@@ -476,28 +480,40 @@ if [ "$BRIDGE_REPLAY_RELATED_CHANGED" = true ]; then
 fi
 
 sdk_live_lane_count=0
+sdk_live_languages=()
 if [ "$SDK_RUST_LIVE_CHANGED" = true ]; then
   sdk_live_lane_count=$((sdk_live_lane_count + 1))
+  sdk_live_languages+=("rust")
 fi
 if [ "$SDK_PYTHON_LIVE_CHANGED" = true ]; then
   sdk_live_lane_count=$((sdk_live_lane_count + 1))
+  sdk_live_languages+=("python")
 fi
 if [ "$SDK_TYPESCRIPT_LIVE_CHANGED" = true ]; then
   sdk_live_lane_count=$((sdk_live_lane_count + 1))
+  sdk_live_languages+=("typescript")
 fi
 
 if [ "$SDK_SHARED_MATRIX_CHANGED" = true ]; then
   RUN_SDK_PARITY_MATRIX=true
 fi
 
-if [ "$SDK_LIVE_PARITY_SCRIPT_CHANGED" = true ] || [ "$sdk_live_lane_count" -gt 1 ]; then
+if [ "$SDK_LIVE_PARITY_SCRIPT_CHANGED" = true ]; then
   RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS=true
+  LIVE_TRANSPORT_PARITY_LANGUAGES="rust,python,typescript"
+elif [ "$sdk_live_lane_count" -gt 1 ]; then
+  RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS=true
+  LIVE_TRANSPORT_PARITY_LANGUAGES="$(printf '%s,' "${sdk_live_languages[@]}" | sed 's/,$//')"
 elif [ "$SDK_RUST_LIVE_CHANGED" = true ]; then
   RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS=true
 elif [ "$SDK_PYTHON_LIVE_CHANGED" = true ]; then
   RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS=true
 elif [ "$SDK_TYPESCRIPT_LIVE_CHANGED" = true ]; then
   RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS=true
+fi
+
+if [ "$RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS" = true ] && [[ ",$LIVE_TRANSPORT_PARITY_LANGUAGES," == *,rust,* ]]; then
+  RUN_LIVE_TRANSPORT_PARITY_RUST_CONTRACT_TESTS=true
 fi
 
 if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
@@ -536,6 +552,8 @@ write_output "run_rust_live_transport_contract_tests" "$RUN_RUST_LIVE_TRANSPORT_
 write_output "run_python_live_transport_contract_tests" "$RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS"
 write_output "run_typescript_live_transport_contract_tests" "$RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS"
 write_output "run_live_transport_parity_contract_tests" "$RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS"
+write_output "run_live_transport_parity_rust_contract_tests" "$RUN_LIVE_TRANSPORT_PARITY_RUST_CONTRACT_TESTS"
+write_output "live_transport_parity_languages" "$LIVE_TRANSPORT_PARITY_LANGUAGES"
 write_output "run_sdk_parity_matrix" "$RUN_SDK_PARITY_MATRIX"
 write_output "run_invariant_harness" "$RUN_INVARIANT_HARNESS"
 write_output "test_scope" "$TEST_SCOPE"

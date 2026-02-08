@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_WORKFLOW="$ROOT_DIR/.github/workflows/ci-fast-gate.yml"
+DEEP_WORKFLOW="$ROOT_DIR/.github/workflows/ci-deep-validate.yml"
 
 if ! grep -Fq "steps.scope.outputs.run_deploy_preflight_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected deploy preflight scope condition in ci-fast-gate.yml" >&2
@@ -104,8 +105,13 @@ if ! grep -Fq "if: steps.scope.outputs.run_live_transport_parity_contract_tests 
   exit 1
 fi
 
-if ! grep -Fq "bash scripts/sdk/run_live_transport_parity_contract_lane.sh" "$FAST_WORKFLOW"; then
+if ! grep -Fq "bash scripts/sdk/run_live_transport_parity_contract_lane.sh --languages \"\${{ steps.scope.outputs.live_transport_parity_languages }}\"" "$FAST_WORKFLOW"; then
   echo "expected live transport parity lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "steps.scope.outputs.run_live_transport_parity_rust_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected rust setup/cache parity subset guard in ci-fast-gate.yml" >&2
   exit 1
 fi
 
@@ -195,14 +201,24 @@ if ! grep -Fq "bash scripts/bridge/run_telegram_ingress_contract_lane.sh --skip-
   exit 1
 fi
 
-# Regression: #583
-if ! grep -Fq "if: steps.scope.outputs.run_sdk_parity_matrix == 'true'" "$FAST_WORKFLOW"; then
-  echo "expected sdk parity matrix scope condition in ci-fast-gate.yml" >&2
+# Regression: #689
+if grep -Fq "run_sdk_parity_matrix" "$FAST_WORKFLOW"; then
+  echo "fast gate must not execute sdk parity matrix directly" >&2
   exit 1
 fi
 
-if ! grep -Fq "bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json sdk-parity-report.json" "$FAST_WORKFLOW"; then
-  echo "expected sdk parity matrix command in ci-fast-gate.yml" >&2
+if ! grep -Fq "bash scripts/sdk/run_live_transport_parity_deep_lane.sh" "$DEEP_WORKFLOW"; then
+  echo "expected scheduled live transport parity deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json sdk-parity-report.json" "$DEEP_WORKFLOW"; then
+  echo "expected sdk parity matrix command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "sdk-parity-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
+  echo "expected sdk parity matrix artifact upload in ci-deep-validate.yml" >&2
   exit 1
 fi
 
