@@ -32,7 +32,7 @@ pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
 #[cfg(test)]
 mod tests {
     use super::build_runtime_wiring;
-    use crate::config::{NodeConfig, NodeRole};
+    use crate::config::{NodeConfig, NodeRole, SyncMode};
 
     fn sample_config(role: NodeRole) -> NodeConfig {
         NodeConfig {
@@ -41,6 +41,7 @@ mod tests {
             role,
             storage_dir: "/tmp/kamn".to_owned(),
             enable_gossip: true,
+            sync_mode: SyncMode::Fast,
         }
     }
 

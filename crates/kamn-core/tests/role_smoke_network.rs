@@ -1,5 +1,5 @@
 use kamn_core::{
-    bootstrap, BaselineTransaction, NodeConfig, NodeRole, RoleSmokeNetwork, SmokeError,
+    bootstrap, BaselineTransaction, NodeConfig, NodeRole, RoleSmokeNetwork, SmokeError, SyncMode,
     TransactionGuardError,
 };
 
@@ -10,6 +10,7 @@ fn config_for(role: NodeRole, gossip_enabled: bool) -> NodeConfig {
         role,
         storage_dir: "/tmp/kamn".to_owned(),
         enable_gossip: gossip_enabled,
+        sync_mode: SyncMode::Fast,
     }
 }
 

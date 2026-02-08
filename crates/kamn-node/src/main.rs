@@ -1,7 +1,7 @@
 use std::env;
 use std::process::ExitCode;
 
-use kamn_core::{bootstrap, ConfigError, NodeConfig, NodeRole};
+use kamn_core::{bootstrap, ConfigError, NodeConfig, NodeRole, SyncMode};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct NodeCli {
@@ -10,6 +10,7 @@ struct NodeCli {
     chain_version: String,
     storage_dir: String,
     enable_gossip: bool,
+    sync_mode: SyncMode,
 }
 
 fn parse_args<I>(args: I) -> Result<NodeCli, ConfigError>
@@ -21,6 +22,7 @@ where
     let mut chain_version = String::from("v0.1.0");
     let mut storage_dir = String::from("./data");
     let mut enable_gossip = true;
+    let mut sync_mode = SyncMode::Fast;
 
     let mut iter = args.into_iter();
     let _bin = iter.next();
@@ -51,6 +53,12 @@ where
             "--disable-gossip" => {
                 enable_gossip = false;
             }
+            "--sync-mode" => {
+                let value = iter
+                    .next()
+                    .ok_or(ConfigError::MissingArgumentValue("--sync-mode"))?;
+                sync_mode = value.parse::<SyncMode>()?;
+            }
             unknown => {
                 return Err(ConfigError::UnknownArgument(unknown.to_owned()));
             }
@@ -65,6 +73,7 @@ where
         chain_version,
         storage_dir,
         enable_gossip,
+        sync_mode,
     })
 }
 
@@ -77,12 +86,14 @@ fn run() -> Result<(), ConfigError> {
         role: cli.role,
         storage_dir: cli.storage_dir,
         enable_gossip: cli.enable_gossip,
+        sync_mode: cli.sync_mode,
     };
 
     let plan = bootstrap(config)?;
+    let profile = plan.config.operational_profile();
 
     println!(
-        "KAMN node bootstrap\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  state_version: {}\n  pending_migrations: {}\n  components: {}",
+        "KAMN node bootstrap\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {:?}\n  sync_recovery: {:?}\n  state_version: {}\n  pending_migrations: {}\n  components: {}",
         plan.config.role.as_str(),
         plan.config.chain_id,
         plan.config.chain_version,
@@ -92,6 +103,9 @@ fn run() -> Result<(), ConfigError> {
         } else {
             "disabled"
         },
+        plan.config.sync_mode.as_str(),
+        profile.startup_strategy,
+        profile.recovery_strategy,
         plan.state_schema.version.0,
         plan.migration_plan.steps.len(),
         plan.wiring.all_components().join(", ")
@@ -113,7 +127,7 @@ fn main() -> ExitCode {
 #[cfg(test)]
 mod tests {
     use super::parse_args;
-    use kamn_core::{ConfigError, NodeRole};
+    use kamn_core::{ConfigError, NodeRole, SyncMode};
 
     #[test]
     fn parses_required_role_and_defaults() {
@@ -129,6 +143,7 @@ mod tests {
         assert_eq!(parsed.chain_version, "v0.1.0");
         assert_eq!(parsed.storage_dir, "./data");
         assert!(parsed.enable_gossip);
+        assert_eq!(parsed.sync_mode, SyncMode::Fast);
     }
 
     #[test]
@@ -143,6 +158,21 @@ mod tests {
         let parsed = parse_args(args).expect("args should parse");
         assert_eq!(parsed.role, NodeRole::Listener);
         assert!(!parsed.enable_gossip);
+        assert_eq!(parsed.sync_mode, SyncMode::Fast);
+    }
+
+    #[test]
+    fn parses_sync_mode_flag() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--sync-mode".to_owned(),
+            "archive".to_owned(),
+        ];
+
+        let parsed = parse_args(args).expect("args should parse");
+        assert_eq!(parsed.sync_mode, SyncMode::Archive);
     }
 
     #[test]

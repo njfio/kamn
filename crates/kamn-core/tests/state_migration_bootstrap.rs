@@ -1,6 +1,6 @@
 use kamn_core::{
     bootstrap, bootstrap_from_state_version, canonical_state_key, ConfigError, MigrationRegistry,
-    MigrationStep, NodeConfig, NodeRole, StateVersion, APP_STATE_VERSION,
+    MigrationStep, NodeConfig, NodeRole, StateVersion, SyncMode, APP_STATE_VERSION,
 };
 
 fn sample_config() -> NodeConfig {
@@ -10,6 +10,7 @@ fn sample_config() -> NodeConfig {
         role: NodeRole::Processor,
         storage_dir: "/tmp/kamn".to_owned(),
         enable_gossip: true,
+        sync_mode: SyncMode::Fast,
     }
 }
 

@@ -48,7 +48,10 @@ pub use channel_policies::{
     ChannelAction, ChannelPermissionEngine, ChannelPermissions, ChannelPolicyError, PermissionRule,
     RetentionMessage, RetentionPolicy,
 };
-pub use config::{ConfigError, NodeConfig, NodeRole};
+pub use config::{
+    ConfigError, NodeConfig, NodeRole, SyncMode, SyncOperationalProfile, SyncRecoveryStrategy,
+    SyncStartupStrategy,
+};
 pub use data_classification::{
     ClassificationPolicy, ClassificationStatus, DataClassificationEngine, DataClassificationError,
     DataClassificationLevel, WriteDomain, WriteRequestContext, WriteTag,
