@@ -13,6 +13,13 @@ This document describes the initial KAMN chain bootstrap scaffold.
   - tasks
   - reputation
   - escrows
+- App-state schema/version primitives:
+  - `APP_STATE_VERSION` for the current schema revision.
+  - `AppStateSchema` for version + namespace bundle.
+  - `canonical_state_key(namespace, entity, id)` for deterministic key serialization and strict validation.
+- Migration scaffolding:
+  - `MigrationRegistry`, `MigrationStep`, and `MigrationPlan` for deterministic, contiguous state upgrades.
+  - `bootstrap_from_state_version(...)` to compute the startup migration plan from persisted state to current schema.
 
 ## Local Validation
 Run from repository root:
@@ -31,3 +38,4 @@ cargo run -p kamn-node -- --role processor --chain-id kamn-devnet --chain-versio
 
 ## Notes
 This is intentionally minimal and dependency-light so the bootstrap path is fast and auditable.
+Migration execution is not implemented yet; this stage focuses on deterministic planning and validation hooks.
