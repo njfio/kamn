@@ -94,7 +94,10 @@ pub use invariants::{
     invariant_by_id, validate_catalog, InvariantCatalogError, InvariantDomain,
     InvariantFailureCode, InvariantSpec, InvariantViolation,
 };
-pub use key_lifecycle::{KeyLifecycle, KeyLifecycleError, KeyLifecycleEvent, KeyLifecycleState};
+pub use key_lifecycle::{
+    KeyLifecycle, KeyLifecycleAuditError, KeyLifecycleAuditRecord, KeyLifecycleError,
+    KeyLifecycleEvent, KeyLifecycleState,
+};
 pub use key_recovery::{KeyRecoveryManager, RecoveryError, RecoveryState};
 pub use message_delivery_guards::{
     DeliveryFailureCode, DeliveryGuardInput, DeliveryValidationResult, FailedDeliveryNotice,

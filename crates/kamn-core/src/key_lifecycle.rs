@@ -23,6 +23,77 @@ pub enum KeyLifecycleEvent {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeyLifecycleAuditRecord {
+    pub sequence: u64,
+    pub event_kind: String,
+    pub event_payload: String,
+    pub previous_hash: String,
+    pub record_hash: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum KeyLifecycleAuditError {
+    EmptyAuditTrail,
+    SequenceGap { expected: u64, found: u64 },
+    BrokenHashChain { sequence: u64 },
+    HashMismatch { sequence: u64 },
+}
+
+impl std::fmt::Display for KeyLifecycleAuditError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::EmptyAuditTrail => write!(f, "audit trail must not be empty"),
+            Self::SequenceGap { expected, found } => write!(
+                f,
+                "audit sequence gap detected: expected {expected}, found {found}"
+            ),
+            Self::BrokenHashChain { sequence } => {
+                write!(f, "audit hash chain link mismatch at sequence {sequence}")
+            }
+            Self::HashMismatch { sequence } => {
+                write!(f, "audit hash mismatch at sequence {sequence}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for KeyLifecycleAuditError {}
+
+impl KeyLifecycleEvent {
+    fn sequence(&self) -> u64 {
+        match self {
+            Self::RotationInitiated { sequence, .. }
+            | Self::RotationActivated { sequence, .. }
+            | Self::KeyRevoked { sequence, .. } => *sequence,
+        }
+    }
+
+    fn canonical_kind(&self) -> &'static str {
+        match self {
+            Self::RotationInitiated { .. } => "rotation_initiated",
+            Self::RotationActivated { .. } => "rotation_activated",
+            Self::KeyRevoked { .. } => "key_revoked",
+        }
+    }
+
+    fn canonical_payload(&self) -> String {
+        match self {
+            Self::RotationInitiated {
+                from_key, to_key, ..
+            } => {
+                format!("from_key={from_key};to_key={to_key}")
+            }
+            Self::RotationActivated { active_key, .. } => {
+                format!("active_key={active_key}")
+            }
+            Self::KeyRevoked { key_id, .. } => {
+                format!("key_id={key_id}")
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyLifecycle {
     state: KeyLifecycleState,
     active_key_id: String,
@@ -59,6 +130,78 @@ impl KeyLifecycle {
 
     pub fn events(&self) -> &[KeyLifecycleEvent] {
         &self.events
+    }
+
+    pub fn audit_records(&self) -> Vec<KeyLifecycleAuditRecord> {
+        let mut records = Vec::with_capacity(self.events.len());
+        let mut previous_hash = AUDIT_CHAIN_GENESIS.to_owned();
+
+        for event in &self.events {
+            let sequence = event.sequence();
+            let event_kind = event.canonical_kind().to_owned();
+            let event_payload = event.canonical_payload();
+            let record_hash =
+                compute_audit_hash(sequence, &event_kind, &event_payload, &previous_hash);
+
+            records.push(KeyLifecycleAuditRecord {
+                sequence,
+                event_kind,
+                event_payload,
+                previous_hash: previous_hash.clone(),
+                record_hash: record_hash.clone(),
+            });
+
+            previous_hash = record_hash;
+        }
+
+        records
+    }
+
+    pub fn verify_audit_trail(&self) -> Result<(), KeyLifecycleAuditError> {
+        Self::verify_audit_records(&self.audit_records())
+    }
+
+    pub fn verify_audit_records(
+        records: &[KeyLifecycleAuditRecord],
+    ) -> Result<(), KeyLifecycleAuditError> {
+        if records.is_empty() {
+            return Err(KeyLifecycleAuditError::EmptyAuditTrail);
+        }
+
+        let mut expected_sequence = 1;
+        let mut previous_hash = AUDIT_CHAIN_GENESIS.to_owned();
+
+        for record in records {
+            if record.sequence != expected_sequence {
+                return Err(KeyLifecycleAuditError::SequenceGap {
+                    expected: expected_sequence,
+                    found: record.sequence,
+                });
+            }
+
+            if record.previous_hash != previous_hash {
+                return Err(KeyLifecycleAuditError::BrokenHashChain {
+                    sequence: record.sequence,
+                });
+            }
+
+            let expected_hash = compute_audit_hash(
+                record.sequence,
+                &record.event_kind,
+                &record.event_payload,
+                &record.previous_hash,
+            );
+            if record.record_hash != expected_hash {
+                return Err(KeyLifecycleAuditError::HashMismatch {
+                    sequence: record.sequence,
+                });
+            }
+
+            previous_hash = record.record_hash.clone();
+            expected_sequence += 1;
+        }
+
+        Ok(())
     }
 
     pub fn initiate_rotation(&mut self, next_key_id: &str) -> Result<(), KeyLifecycleError> {
@@ -133,6 +276,26 @@ impl KeyLifecycle {
         });
         Ok(())
     }
+}
+
+const AUDIT_CHAIN_GENESIS: &str = "GENESIS";
+
+fn compute_audit_hash(
+    sequence: u64,
+    event_kind: &str,
+    event_payload: &str,
+    previous_hash: &str,
+) -> String {
+    let canonical_payload = format!("{sequence}|{event_kind}|{event_payload}|{previous_hash}");
+
+    // First slice uses a deterministic non-cryptographic hash; this can be replaced by SHA-256 later.
+    let mut hash = 0xcbf2_9ce4_8422_2325_u64;
+    for byte in canonical_payload.bytes() {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3_u64);
+    }
+
+    format!("{hash:016x}")
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

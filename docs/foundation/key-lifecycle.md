@@ -1,6 +1,7 @@
 # Key Lifecycle and Rotation Protocol (Issues #146, #147)
 
 This document captures the first implementation slice for deterministic key lifecycle and rotation transitions.
+For tamper-evident audit trail verification controls, see `docs/foundation/key-lifecycle-audit-trails.md`.
 
 ## Scope Delivered
 - Added `crates/kamn-core/src/key_lifecycle.rs` with:
