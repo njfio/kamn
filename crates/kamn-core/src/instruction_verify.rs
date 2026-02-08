@@ -25,6 +25,7 @@ pub struct VerificationContext {
     pub instructions: HashMap<String, InstructionRecord>,
     pub authorized_senders: HashSet<String>,
     pub max_claim_validity_window_secs: u64,
+    pub consumed_instruction_ids: HashSet<String>,
 }
 
 impl VerificationContext {
@@ -34,6 +35,7 @@ impl VerificationContext {
             instructions: HashMap::new(),
             authorized_senders: HashSet::new(),
             max_claim_validity_window_secs: DEFAULT_MAX_CLAIM_VALIDITY_WINDOW_SECS,
+            consumed_instruction_ids: HashSet::new(),
         }
     }
 
@@ -49,6 +51,12 @@ impl VerificationContext {
 
     pub fn with_max_claim_validity_window_secs(mut self, max_window_secs: u64) -> Self {
         self.max_claim_validity_window_secs = max_window_secs;
+        self
+    }
+
+    pub fn with_consumed_instruction_id(mut self, instruction_id: &str) -> Self {
+        self.consumed_instruction_ids
+            .insert(instruction_id.to_owned());
         self
     }
 }
@@ -70,6 +78,9 @@ pub enum VerificationFailure {
     OverlongValidityWindow {
         max_window_secs: u64,
         requested_window_secs: u64,
+    },
+    ReplayClaim {
+        instruction_id: String,
     },
 }
 
@@ -123,6 +134,28 @@ impl InstructionVerifier {
             });
         }
         VerificationOutcome::Valid
+    }
+
+    pub fn verify_and_record(
+        claim: &InstructionClaim,
+        context: &mut VerificationContext,
+    ) -> VerificationOutcome {
+        if context
+            .consumed_instruction_ids
+            .contains(&claim.instruction_id)
+        {
+            return VerificationOutcome::Rejected(VerificationFailure::ReplayClaim {
+                instruction_id: claim.instruction_id.clone(),
+            });
+        }
+
+        let outcome = Self::verify(claim, context);
+        if outcome == VerificationOutcome::Valid {
+            context
+                .consumed_instruction_ids
+                .insert(claim.instruction_id.clone());
+        }
+        outcome
     }
 }
 
@@ -190,6 +223,36 @@ mod tests {
             VerificationOutcome::Rejected(VerificationFailure::OverlongValidityWindow {
                 max_window_secs: 60,
                 requested_window_secs: 100,
+            })
+        );
+    }
+
+    #[test]
+    fn verify_and_record_rejects_replayed_claim() {
+        let mut context = VerificationContext::new(100)
+            .with_instruction(InstructionRecord {
+                id: "ins_1".to_owned(),
+                from_did: "kamn:did:agent:alpha".to_owned(),
+                payload_hash: "hash_a".to_owned(),
+                signature: "sig".to_owned(),
+            })
+            .with_authorized_sender("kamn:did:agent:alpha");
+        let claim = InstructionClaim {
+            instruction_id: "ins_1".to_owned(),
+            from_did: "kamn:did:agent:alpha".to_owned(),
+            payload_hash: "hash_a".to_owned(),
+            signature: "sig".to_owned(),
+            expires_at_unix: 120,
+        };
+
+        assert_eq!(
+            InstructionVerifier::verify_and_record(&claim, &mut context),
+            VerificationOutcome::Valid
+        );
+        assert_eq!(
+            InstructionVerifier::verify_and_record(&claim, &mut context),
+            VerificationOutcome::Rejected(VerificationFailure::ReplayClaim {
+                instruction_id: "ins_1".to_owned(),
             })
         );
     }

@@ -114,3 +114,24 @@ fn regression_rejects_overlong_claim_validity_window() {
         })
     );
 }
+
+#[test]
+fn regression_replayed_claim_is_rejected_after_first_use() {
+    // Regression: #414
+    let record = sample_record();
+    let claim = sample_claim();
+    let mut context = VerificationContext::new(100)
+        .with_instruction(record)
+        .with_authorized_sender("kamn:did:agent:alpha");
+
+    assert_eq!(
+        InstructionVerifier::verify_and_record(&claim, &mut context),
+        VerificationOutcome::Valid
+    );
+    assert_eq!(
+        InstructionVerifier::verify_and_record(&claim, &mut context),
+        VerificationOutcome::Rejected(VerificationFailure::ReplayClaim {
+            instruction_id: "ins_001".to_owned(),
+        })
+    );
+}

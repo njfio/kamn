@@ -19,6 +19,7 @@ This document captures the first implementation slice of anti-hallucination inst
 5. Sender is explicitly authorized.
 6. Claim is not expired relative to deterministic current time.
 7. bounded claim validity window is enforced against context policy.
+8. one-time claim consumption is enforced on replay-aware verification path.
 
 ## Rejection Outcomes
 - `MissingInstruction`
@@ -28,7 +29,9 @@ This document captures the first implementation slice of anti-hallucination inst
 - `UnauthorizedSender`
 - `Expired`
 - `OverlongValidityWindow`
+- `ReplayClaim`
 - overlong validity window is rejected (`Regression: #409`).
+- replayed claim is rejected (`Regression: #414`).
 
 ## Local Validation
 Run from repository root:
