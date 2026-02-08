@@ -1,7 +1,7 @@
 use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    DidDocument, EscrowConfig, EscrowId, Message, MessageId, MessageRecord, SdkError,
-    TaskDefinition, TaskId, TokenAmount,
+    DidDocument, EscrowConfig, EscrowId, Message, MessageId, MessageRecord, MessageStream,
+    SdkError, TaskDefinition, TaskId, TokenAmount,
 };
 
 pub trait KamnAgent {
@@ -10,6 +10,7 @@ pub trait KamnAgent {
 
     fn send(&mut self, message: Message) -> Result<MessageId, SdkError>;
     fn receive(&mut self, did: &AgentDid) -> Result<Vec<MessageRecord>, SdkError>;
+    fn receive_stream(&mut self, did: &AgentDid) -> Result<MessageStream, SdkError>;
 
     fn create_task(&mut self, task: TaskDefinition) -> Result<TaskId, SdkError>;
     fn accept_task(&mut self, task_id: &TaskId, assignee: &AgentDid) -> Result<(), SdkError>;

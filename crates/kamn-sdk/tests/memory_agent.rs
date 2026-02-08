@@ -74,6 +74,78 @@ fn send_and_receive_drains_inbox() {
 }
 
 #[test]
+fn receive_stream_orders_messages_deterministically() {
+    let mut client = InMemoryKamnClient::new();
+    let sender = match client.register(metadata("autonomous", "claude-4", &["text"])) {
+        Ok(value) => value,
+        Err(error) => panic!("register sender failed: {error}"),
+    };
+    let recipient = match client.register(metadata("assistant", "gpt-5", &["text"])) {
+        Ok(value) => value,
+        Err(error) => panic!("register recipient failed: {error}"),
+    };
+
+    if let Err(error) = client.send(Message {
+        from: sender.clone(),
+        to: recipient.clone(),
+        body: "first".to_owned(),
+        channel: None,
+    }) {
+        panic!("send first failed: {error}");
+    }
+    if let Err(error) = client.send(Message {
+        from: sender,
+        to: recipient.clone(),
+        body: "second".to_owned(),
+        channel: None,
+    }) {
+        panic!("send second failed: {error}");
+    }
+
+    let bodies = match client.receive_stream(&recipient) {
+        Ok(stream) => stream.map(|record| record.message.body).collect::<Vec<_>>(),
+        Err(error) => panic!("receive stream failed: {error}"),
+    };
+
+    assert_eq!(bodies, vec!["first".to_owned(), "second".to_owned()]);
+}
+
+#[test]
+fn receive_stream_does_not_replay_consumed_messages() {
+    // Regression: #468
+    let mut client = InMemoryKamnClient::new();
+    let sender = match client.register(metadata("autonomous", "claude-4", &["text"])) {
+        Ok(value) => value,
+        Err(error) => panic!("register sender failed: {error}"),
+    };
+    let recipient = match client.register(metadata("assistant", "gpt-5", &["text"])) {
+        Ok(value) => value,
+        Err(error) => panic!("register recipient failed: {error}"),
+    };
+
+    if let Err(error) = client.send(Message {
+        from: sender,
+        to: recipient.clone(),
+        body: "once".to_owned(),
+        channel: None,
+    }) {
+        panic!("send failed: {error}");
+    }
+
+    let first_len = match client.receive_stream(&recipient) {
+        Ok(stream) => stream.count(),
+        Err(error) => panic!("first stream failed: {error}"),
+    };
+    let second_len = match client.receive_stream(&recipient) {
+        Ok(stream) => stream.count(),
+        Err(error) => panic!("second stream failed: {error}"),
+    };
+
+    assert_eq!(first_len, 1);
+    assert_eq!(second_len, 0);
+}
+
+#[test]
 fn task_accept_rejects_second_acceptance() {
     let mut client = InMemoryKamnClient::new();
     let creator = match client.register(metadata("autonomous", "claude-4", &["research"])) {

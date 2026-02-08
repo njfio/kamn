@@ -9,5 +9,5 @@ pub use memory::InMemoryKamnClient;
 pub use types::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
     ChannelId, DidDocument, EscrowConfig, EscrowId, Message, MessageId, MessageRecord,
-    TaskDefinition, TaskId, TokenAmount,
+    MessageStream, TaskDefinition, TaskId, TokenAmount,
 };
