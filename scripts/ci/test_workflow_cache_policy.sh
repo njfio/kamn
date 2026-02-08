@@ -22,4 +22,10 @@ if ! grep -q "run_invariant_harness.sh --mode deep --parallelism 2" "$DEEP_WORKF
   exit 1
 fi
 
+# Regression: #568
+if ! grep -Fq "if: steps.scope.outputs.run_ci_tool_checks == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected ci-fast-gate CI tool checks to be gated by run_ci_tool_checks output" >&2
+  exit 1
+fi
+
 echo "workflow cache policy tests passed."

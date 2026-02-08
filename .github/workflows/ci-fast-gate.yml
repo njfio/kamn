@@ -38,7 +38,7 @@ jobs:
         run: bash scripts/ci/check_markdown.sh
 
       - name: Validate CI scripts syntax
-        if: steps.scope.outputs.docs_only != 'true'
+        if: steps.scope.outputs.run_ci_tool_checks == 'true'
         run: bash -n scripts/ci/*.sh
 
       - name: Validate flaky registry
@@ -46,11 +46,11 @@ jobs:
         run: bash scripts/ci/check_flaky_registry.sh
 
       - name: Validate PR CI impact declaration
-        if: steps.scope.outputs.docs_only != 'true'
+        if: steps.scope.outputs.run_ci_tool_checks == 'true'
         run: bash scripts/ci/check_pr_ci_declaration.sh
 
       - name: Run CI tool regression tests
-        if: steps.scope.outputs.docs_only != 'true'
+        if: steps.scope.outputs.run_ci_tool_checks == 'true'
         run: bash scripts/ci/test_ci_tools.sh
 
       - name: Run deploy preflight tests
