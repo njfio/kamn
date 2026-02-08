@@ -1,0 +1,540 @@
+use crate::{
+    AgentDid, CanonicalMessageEnvelope, EnvelopeEncryption, EnvelopeHeader, EnvelopeMetadata,
+    EnvelopeProof, CANONICAL_ENCRYPTION_ALGORITHM, CANONICAL_MESSAGE_ENVELOPE_TYPE,
+    CANONICAL_PROOF_PURPOSE,
+};
+use std::collections::BTreeMap;
+use std::fmt;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum BridgePlatform {
+    Telegram,
+    Discord,
+    Slack,
+    Signal,
+    Twitter,
+    Custom(String),
+}
+
+impl BridgePlatform {
+    fn label(&self) -> String {
+        match self {
+            Self::Telegram => "telegram".to_owned(),
+            Self::Discord => "discord".to_owned(),
+            Self::Slack => "slack".to_owned(),
+            Self::Signal => "signal".to_owned(),
+            Self::Twitter => "twitter".to_owned(),
+            Self::Custom(name) => name.trim().to_lowercase(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BridgeDirection {
+    Inbound,
+    Outbound,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BridgeInboundEnvelope {
+    pub external_message_id: String,
+    pub external_sender_id: String,
+    pub external_channel_id: String,
+    pub target_agent_did: String,
+    pub body: String,
+    pub received_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NormalizedInboundMessage {
+    pub bridge_message_id: String,
+    pub sender_handle: String,
+    pub source_channel: String,
+    pub target_agent_did: String,
+    pub body: String,
+    pub received_at: String,
+    pub platform: BridgePlatform,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BridgeOutboundRequest {
+    pub request_id: String,
+    pub from_agent_did: String,
+    pub destination_channel_id: String,
+    pub body: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BridgeOutboundEnvelope {
+    pub request_id: String,
+    pub destination_channel_id: String,
+    pub payload: String,
+    pub platform: BridgePlatform,
+}
+
+pub trait BridgeAdapter {
+    fn platform(&self) -> BridgePlatform;
+    fn bridge_agent_did(&self) -> &str;
+    fn normalize_inbound(
+        &self,
+        inbound: &BridgeInboundEnvelope,
+    ) -> Result<NormalizedInboundMessage, BridgeAdapterError>;
+    fn translate_outbound(
+        &self,
+        request: &BridgeOutboundRequest,
+    ) -> Result<BridgeOutboundEnvelope, BridgeAdapterError>;
+}
+
+pub trait BridgePolicyHook {
+    fn authorize_inbound(
+        &self,
+        normalized: &NormalizedInboundMessage,
+    ) -> Result<(), BridgeAdapterError>;
+    fn authorize_outbound(&self, request: &BridgeOutboundRequest)
+        -> Result<(), BridgeAdapterError>;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct AllowAllBridgePolicy;
+
+impl AllowAllBridgePolicy {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl BridgePolicyHook for AllowAllBridgePolicy {
+    fn authorize_inbound(
+        &self,
+        _normalized: &NormalizedInboundMessage,
+    ) -> Result<(), BridgeAdapterError> {
+        Ok(())
+    }
+
+    fn authorize_outbound(
+        &self,
+        _request: &BridgeOutboundRequest,
+    ) -> Result<(), BridgeAdapterError> {
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PassThroughBridgeAdapter {
+    platform: BridgePlatform,
+    bridge_agent_did: String,
+}
+
+impl PassThroughBridgeAdapter {
+    pub fn new(
+        platform: BridgePlatform,
+        bridge_agent_did: &str,
+    ) -> Result<Self, BridgeAdapterError> {
+        if platform.label().is_empty() {
+            return Err(BridgeAdapterError::EmptyField("platform"));
+        }
+        validate_did(bridge_agent_did)?;
+        Ok(Self {
+            platform,
+            bridge_agent_did: bridge_agent_did.to_owned(),
+        })
+    }
+}
+
+impl BridgeAdapter for PassThroughBridgeAdapter {
+    fn platform(&self) -> BridgePlatform {
+        self.platform.clone()
+    }
+
+    fn bridge_agent_did(&self) -> &str {
+        &self.bridge_agent_did
+    }
+
+    fn normalize_inbound(
+        &self,
+        inbound: &BridgeInboundEnvelope,
+    ) -> Result<NormalizedInboundMessage, BridgeAdapterError> {
+        validate_inbound_envelope(inbound)?;
+
+        Ok(NormalizedInboundMessage {
+            bridge_message_id: format!("{}:{}", self.platform.label(), inbound.external_message_id),
+            sender_handle: inbound.external_sender_id.clone(),
+            source_channel: inbound.external_channel_id.clone(),
+            target_agent_did: inbound.target_agent_did.clone(),
+            body: inbound.body.clone(),
+            received_at: inbound.received_at.clone(),
+            platform: self.platform(),
+        })
+    }
+
+    fn translate_outbound(
+        &self,
+        request: &BridgeOutboundRequest,
+    ) -> Result<BridgeOutboundEnvelope, BridgeAdapterError> {
+        validate_outbound_request(request)?;
+        Ok(BridgeOutboundEnvelope {
+            request_id: request.request_id.clone(),
+            destination_channel_id: request.destination_channel_id.clone(),
+            payload: format!(
+                "{{\"platform\":\"{}\",\"channel\":\"{}\",\"message\":\"{}\"}}",
+                self.platform.label(),
+                escape_json(&request.destination_channel_id),
+                escape_json(&request.body),
+            ),
+            platform: self.platform(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BridgeAdapterEngine<A, P> {
+    adapter: A,
+    policy: P,
+}
+
+impl<A, P> BridgeAdapterEngine<A, P>
+where
+    A: BridgeAdapter,
+    P: BridgePolicyHook,
+{
+    pub fn new(adapter: A, policy: P) -> Self {
+        Self { adapter, policy }
+    }
+
+    pub fn process_inbound(
+        &self,
+        inbound: &BridgeInboundEnvelope,
+    ) -> Result<NormalizedInboundMessage, BridgeAdapterError> {
+        validate_did(self.adapter.bridge_agent_did())?;
+        validate_inbound_envelope(inbound)?;
+        let normalized = self.adapter.normalize_inbound(inbound)?;
+        validate_normalized_inbound(&normalized)?;
+        self.policy.authorize_inbound(&normalized)?;
+        Ok(normalized)
+    }
+
+    pub fn process_outbound(
+        &self,
+        request: &BridgeOutboundRequest,
+    ) -> Result<BridgeOutboundEnvelope, BridgeAdapterError> {
+        validate_outbound_request(request)?;
+        self.policy.authorize_outbound(request)?;
+        let translated = self.adapter.translate_outbound(request)?;
+        if translated.request_id != request.request_id {
+            return Err(BridgeAdapterError::OutboundRequestIdMismatch {
+                expected: request.request_id.clone(),
+                actual: translated.request_id,
+            });
+        }
+        validate_non_empty(
+            "bridge_outbound_envelope.destination_channel_id",
+            &translated.destination_channel_id,
+        )?;
+        validate_non_empty("bridge_outbound_envelope.payload", &translated.payload)?;
+        Ok(translated)
+    }
+
+    pub fn process_inbound_to_envelope(
+        &self,
+        inbound: &BridgeInboundEnvelope,
+        recipient_keys: Vec<String>,
+        expires: &str,
+        nonce: u64,
+    ) -> Result<CanonicalMessageEnvelope, BridgeAdapterError> {
+        if recipient_keys.is_empty() {
+            return Err(BridgeAdapterError::EmptyField("recipient_keys"));
+        }
+        for key in &recipient_keys {
+            validate_non_empty("recipient_keys[]", key)?;
+        }
+        validate_non_empty("expires", expires)?;
+        if nonce == 0 {
+            return Err(BridgeAdapterError::InvalidNonce(nonce));
+        }
+
+        let normalized = self.process_inbound(inbound)?;
+
+        let mut body = BTreeMap::new();
+        body.insert("message".to_owned(), normalized.body.clone());
+        body.insert(
+            "external_sender".to_owned(),
+            normalized.sender_handle.clone(),
+        );
+        body.insert(
+            "external_channel".to_owned(),
+            normalized.source_channel.clone(),
+        );
+        body.insert("platform".to_owned(), normalized.platform.label());
+
+        let envelope = CanonicalMessageEnvelope {
+            envelope: EnvelopeMetadata {
+                id: normalized.bridge_message_id.clone(),
+                type_name: CANONICAL_MESSAGE_ENVELOPE_TYPE.to_owned(),
+                from: self.adapter.bridge_agent_did().to_owned(),
+                to: vec![normalized.target_agent_did.clone()],
+                created: normalized.received_at.clone(),
+                expires: expires.to_owned(),
+                thread_id: None,
+                parent_id: None,
+                nonce,
+            },
+            header: EnvelopeHeader {
+                message_type: "Request".to_owned(),
+                priority: "normal".to_owned(),
+                content_type: "application/json".to_owned(),
+                encryption: EnvelopeEncryption {
+                    algorithm: CANONICAL_ENCRYPTION_ALGORITHM.to_owned(),
+                    recipient_keys,
+                },
+            },
+            body,
+            attachments: Vec::new(),
+            proof: EnvelopeProof {
+                type_name: "Ed25519Signature2020".to_owned(),
+                created: normalized.received_at,
+                verification_method: format!("{}#bridge-key-1", self.adapter.bridge_agent_did()),
+                proof_purpose: CANONICAL_PROOF_PURPOSE.to_owned(),
+                proof_value: format!("proof:{}", normalized.bridge_message_id),
+            },
+        };
+        envelope
+            .validate()
+            .map_err(|error| BridgeAdapterError::Envelope(error.to_string()))?;
+        Ok(envelope)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BridgeAdapterError {
+    EmptyField(&'static str),
+    InvalidDid(String),
+    InvalidNonce(u64),
+    PolicyDenied {
+        direction: BridgeDirection,
+        reason: String,
+    },
+    OutboundRequestIdMismatch {
+        expected: String,
+        actual: String,
+    },
+    Envelope(String),
+}
+
+impl fmt::Display for BridgeAdapterError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
+            Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
+            Self::InvalidNonce(value) => write!(f, "nonce must be greater than zero: {value}"),
+            Self::PolicyDenied { direction, reason } => {
+                write!(f, "policy denied {direction:?} traffic: {reason}")
+            }
+            Self::OutboundRequestIdMismatch { expected, actual } => write!(
+                f,
+                "outbound request id mismatch: expected {expected}, got {actual}"
+            ),
+            Self::Envelope(value) => write!(f, "invalid canonical envelope: {value}"),
+        }
+    }
+}
+
+impl std::error::Error for BridgeAdapterError {}
+
+fn validate_inbound_envelope(inbound: &BridgeInboundEnvelope) -> Result<(), BridgeAdapterError> {
+    validate_non_empty(
+        "bridge_inbound_envelope.external_message_id",
+        &inbound.external_message_id,
+    )?;
+    validate_non_empty(
+        "bridge_inbound_envelope.external_sender_id",
+        &inbound.external_sender_id,
+    )?;
+    validate_non_empty(
+        "bridge_inbound_envelope.external_channel_id",
+        &inbound.external_channel_id,
+    )?;
+    validate_did(&inbound.target_agent_did)?;
+    validate_non_empty("bridge_inbound_envelope.body", &inbound.body)?;
+    validate_non_empty("bridge_inbound_envelope.received_at", &inbound.received_at)?;
+    Ok(())
+}
+
+fn validate_normalized_inbound(
+    normalized: &NormalizedInboundMessage,
+) -> Result<(), BridgeAdapterError> {
+    validate_non_empty(
+        "normalized_inbound_message.bridge_message_id",
+        &normalized.bridge_message_id,
+    )?;
+    validate_non_empty(
+        "normalized_inbound_message.sender_handle",
+        &normalized.sender_handle,
+    )?;
+    validate_non_empty(
+        "normalized_inbound_message.source_channel",
+        &normalized.source_channel,
+    )?;
+    validate_did(&normalized.target_agent_did)?;
+    validate_non_empty("normalized_inbound_message.body", &normalized.body)?;
+    validate_non_empty(
+        "normalized_inbound_message.received_at",
+        &normalized.received_at,
+    )?;
+    if normalized.platform.label().is_empty() {
+        return Err(BridgeAdapterError::EmptyField(
+            "normalized_inbound_message.platform",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_outbound_request(request: &BridgeOutboundRequest) -> Result<(), BridgeAdapterError> {
+    validate_non_empty("bridge_outbound_request.request_id", &request.request_id)?;
+    validate_did(&request.from_agent_did)?;
+    validate_non_empty(
+        "bridge_outbound_request.destination_channel_id",
+        &request.destination_channel_id,
+    )?;
+    validate_non_empty("bridge_outbound_request.body", &request.body)?;
+    validate_non_empty("bridge_outbound_request.created_at", &request.created_at)?;
+    Ok(())
+}
+
+fn validate_non_empty(field: &'static str, value: &str) -> Result<(), BridgeAdapterError> {
+    if value.trim().is_empty() {
+        return Err(BridgeAdapterError::EmptyField(field));
+    }
+    Ok(())
+}
+
+fn validate_did(value: &str) -> Result<(), BridgeAdapterError> {
+    AgentDid::parse(value).map_err(|error| BridgeAdapterError::InvalidDid(error.to_string()))?;
+    Ok(())
+}
+
+fn escape_json(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '\\' => escaped.push_str("\\\\"),
+            '"' => escaped.push_str("\\\""),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        AllowAllBridgePolicy, BridgeAdapter, BridgeAdapterEngine, BridgeAdapterError,
+        BridgeDirection, BridgeInboundEnvelope, BridgeOutboundEnvelope, BridgeOutboundRequest,
+        BridgePlatform, NormalizedInboundMessage, PassThroughBridgeAdapter,
+    };
+
+    #[test]
+    fn constructor_rejects_invalid_bridge_agent_did() {
+        assert_eq!(
+            PassThroughBridgeAdapter::new(BridgePlatform::Discord, "not-a-did"),
+            Err(BridgeAdapterError::InvalidDid(
+                "invalid agent did prefix: not-a-did".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn process_outbound_rejects_request_id_mutation() {
+        #[derive(Debug, Clone, Copy)]
+        struct BadAdapter;
+
+        impl BridgeAdapter for BadAdapter {
+            fn platform(&self) -> BridgePlatform {
+                BridgePlatform::Telegram
+            }
+
+            fn bridge_agent_did(&self) -> &str {
+                "kamn:did:agent:bridge-telegram"
+            }
+
+            fn normalize_inbound(
+                &self,
+                inbound: &BridgeInboundEnvelope,
+            ) -> Result<NormalizedInboundMessage, BridgeAdapterError> {
+                Ok(NormalizedInboundMessage {
+                    bridge_message_id: format!("telegram:{}", inbound.external_message_id),
+                    sender_handle: inbound.external_sender_id.clone(),
+                    source_channel: inbound.external_channel_id.clone(),
+                    target_agent_did: inbound.target_agent_did.clone(),
+                    body: inbound.body.clone(),
+                    received_at: inbound.received_at.clone(),
+                    platform: self.platform(),
+                })
+            }
+
+            fn translate_outbound(
+                &self,
+                request: &BridgeOutboundRequest,
+            ) -> Result<BridgeOutboundEnvelope, BridgeAdapterError> {
+                Ok(BridgeOutboundEnvelope {
+                    request_id: format!("{}-mutated", request.request_id),
+                    destination_channel_id: request.destination_channel_id.clone(),
+                    payload: "{\"message\":\"x\"}".to_owned(),
+                    platform: self.platform(),
+                })
+            }
+        }
+
+        let engine = BridgeAdapterEngine::new(BadAdapter, AllowAllBridgePolicy::new());
+        let request = BridgeOutboundRequest {
+            request_id: "req-1".to_owned(),
+            from_agent_did: "kamn:did:agent:planner-1".to_owned(),
+            destination_channel_id: "telegram:channel:a".to_owned(),
+            body: "hi".to_owned(),
+            created_at: "2026-02-08T09:00:00Z".to_owned(),
+        };
+
+        assert_eq!(
+            engine.process_outbound(&request),
+            Err(BridgeAdapterError::OutboundRequestIdMismatch {
+                expected: "req-1".to_owned(),
+                actual: "req-1-mutated".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn process_inbound_to_envelope_rejects_empty_recipient_keys() {
+        let adapter = PassThroughBridgeAdapter::new(
+            BridgePlatform::Discord,
+            "kamn:did:agent:bridge-discord-1",
+        )
+        .expect("adapter should be valid");
+        let engine = BridgeAdapterEngine::new(adapter, AllowAllBridgePolicy::new());
+        let inbound = BridgeInboundEnvelope {
+            external_message_id: "ext-9".to_owned(),
+            external_sender_id: "discord:user-1".to_owned(),
+            external_channel_id: "discord:channel:1".to_owned(),
+            target_agent_did: "kamn:did:agent:planner-1".to_owned(),
+            body: "hello".to_owned(),
+            received_at: "2026-02-08T09:00:00Z".to_owned(),
+        };
+
+        assert_eq!(
+            engine.process_inbound_to_envelope(&inbound, Vec::new(), "2026-02-08T10:00:00Z", 1),
+            Err(BridgeAdapterError::EmptyField("recipient_keys"))
+        );
+    }
+
+    #[test]
+    fn display_policy_denied_error_mentions_direction() {
+        let error = BridgeAdapterError::PolicyDenied {
+            direction: BridgeDirection::Inbound,
+            reason: "blocked".to_owned(),
+        };
+        assert_eq!(error.to_string(), "policy denied Inbound traffic: blocked");
+    }
+}

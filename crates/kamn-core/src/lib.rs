@@ -1,5 +1,6 @@
 pub mod agent_key_hierarchy;
 pub mod bootstrap;
+pub mod bridge_adapter;
 pub mod channel_models;
 pub mod channel_policies;
 pub mod config;
@@ -28,6 +29,11 @@ pub use agent_key_hierarchy::{
     AgentKeyHierarchy, AgentKeyHierarchyError, EphemeralSessionKey, KeyRole,
 };
 pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};
+pub use bridge_adapter::{
+    AllowAllBridgePolicy, BridgeAdapter, BridgeAdapterEngine, BridgeAdapterError, BridgeDirection,
+    BridgeInboundEnvelope, BridgeOutboundEnvelope, BridgeOutboundRequest, BridgePlatform,
+    BridgePolicyHook, NormalizedInboundMessage, PassThroughBridgeAdapter,
+};
 pub use channel_models::{ChannelModelError, ChannelStore, ChannelType};
 pub use channel_policies::{
     ChannelAction, ChannelPermissionEngine, ChannelPermissions, ChannelPolicyError, PermissionRule,
