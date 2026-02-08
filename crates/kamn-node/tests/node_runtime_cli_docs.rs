@@ -10,14 +10,19 @@ fn doc_contains_output_mode_scope_and_rules() {
     assert!(DOC.contains("ConfigError::InvalidNodeProfile"));
     assert!(DOC.contains("--diagnostics snapshot"));
     assert!(DOC.contains("ConfigError::InvalidDiagnosticsMode"));
+    assert!(DOC.contains("--runtime-mode planning"));
+    assert!(DOC.contains("ConfigError::InvalidRuntimeMode"));
 }
 
 #[test]
 fn doc_contains_deterministic_json_fields() {
     assert!(DOC.contains("JSON output is deterministic and includes:"));
+    assert!(DOC.contains("runtime_mode"));
     assert!(DOC.contains("diagnostics_mode"));
     assert!(DOC.contains("profile"));
     assert!(DOC.contains("component_count"));
+    assert!(DOC.contains("planning_candidate_count"));
+    assert!(DOC.contains("planning_scheduled_candidate_ids"));
     assert!(DOC.contains("sync_mode"));
     assert!(DOC.contains("components"));
 }
@@ -36,6 +41,15 @@ fn doc_contains_diagnostics_snapshot_rules() {
     assert!(DOC.contains("`basic` (default)"));
     assert!(DOC.contains("`snapshot`"));
     assert!(DOC.contains("component_count"));
+}
+
+#[test]
+fn doc_contains_runtime_planning_rules() {
+    assert!(DOC.contains("## Runtime Planning Rules"));
+    assert!(DOC.contains("`planning`"));
+    assert!(DOC.contains("--expected-state-hash"));
+    assert!(DOC.contains("--proposal <id|sender-did|nonce|state-hash>"));
+    assert!(DOC.contains("Duplicate candidate IDs and stale state hashes are rejected"));
 }
 
 #[test]
@@ -61,4 +75,12 @@ fn regression_requires_invalid_profile_rule() {
 fn regression_requires_invalid_diagnostics_mode_rule() {
     // Regression: #313
     assert!(DOC.contains("Invalid diagnostics modes are rejected with explicit typed error."));
+}
+
+#[test]
+fn regression_requires_runtime_planning_candidate_rules() {
+    // Regression: #335
+    assert!(
+        DOC.contains("duplicate/stale runtime planning candidate rejection (`Regression: #335`)")
+    );
 }
