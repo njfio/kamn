@@ -30,6 +30,7 @@ append_summary() {
     echo "- Run deploy preflight checks: ${RUN_DEPLOY_PREFLIGHT_TESTS}"
     echo "- Run frontend dashboard tests: ${RUN_FRONTEND_DASHBOARD_TESTS}"
     echo "- Run dashboard contract tests: ${RUN_DASHBOARD_CONTRACT_TESTS}"
+    echo "- Run signer emulator contract tests: ${RUN_SIGNER_EMULATOR_CONTRACT_TESTS}"
     echo "- Run bridge replay harness: ${RUN_BRIDGE_REPLAY_HARNESS}"
     echo "- Bridge replay suites: ${BRIDGE_REPLAY_SUITES}"
     echo "- Run SDK parity matrix: ${RUN_SDK_PARITY_MATRIX}"
@@ -120,6 +121,7 @@ CI_INFRA_CHANGED=false
 DEPLOY_SCRIPT_CHANGED=false
 FRONTEND_DASHBOARD_CHANGED=false
 DASHBOARD_CONTRACT_CHANGED=false
+SIGNER_EMULATOR_CONTRACT_CHANGED=false
 BRIDGE_REPLAY_RELATED_CHANGED=false
 BRIDGE_SUITE_ADAPTER=false
 BRIDGE_SUITE_TELEGRAM=false
@@ -179,6 +181,13 @@ for file in "${CHANGED_FILES[@]}"; do
   case "$file" in
     docs/foundation/operator-dashboard-backend-apis.md|docs/foundation/operator-dashboard-ui-mvp.md|crates/kamn-core/tests/operator_dashboard_api_docs.rs|crates/kamn-core/tests/operator_dashboard_ui_docs.rs)
       DASHBOARD_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
+    crates/kamn-core/src/signer_backend.rs|crates/kamn-core/tests/signer_backend.rs|crates/kamn-core/tests/signer_backend_docs.rs|docs/foundation/signer-backend-abstraction.md|scripts/signer/*)
+      SIGNER_EMULATOR_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -249,6 +258,7 @@ RUN_CI_TOOL_CHECKS=false
 RUN_DEPLOY_PREFLIGHT_TESTS=false
 RUN_FRONTEND_DASHBOARD_TESTS=false
 RUN_DASHBOARD_CONTRACT_TESTS=false
+RUN_SIGNER_EMULATOR_CONTRACT_TESTS=false
 RUN_BRIDGE_REPLAY_HARNESS=false
 RUN_SDK_PARITY_MATRIX=false
 FMT_CMD=":"
@@ -316,6 +326,13 @@ if [ "$DASHBOARD_CONTRACT_CHANGED" = true ]; then
   fi
 fi
 
+if [ "$SIGNER_EMULATOR_CONTRACT_CHANGED" = true ]; then
+  RUN_SIGNER_EMULATOR_CONTRACT_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="signer-contract"
+  fi
+fi
+
 if [ "$BRIDGE_REPLAY_RELATED_CHANGED" = true ]; then
   RUN_BRIDGE_REPLAY_HARNESS=true
   bridge_suite_parts=()
@@ -362,6 +379,7 @@ write_output "run_ci_tool_checks" "$RUN_CI_TOOL_CHECKS"
 write_output "run_deploy_preflight_tests" "$RUN_DEPLOY_PREFLIGHT_TESTS"
 write_output "run_frontend_dashboard_tests" "$RUN_FRONTEND_DASHBOARD_TESTS"
 write_output "run_dashboard_contract_tests" "$RUN_DASHBOARD_CONTRACT_TESTS"
+write_output "run_signer_emulator_contract_tests" "$RUN_SIGNER_EMULATOR_CONTRACT_TESTS"
 write_output "run_bridge_replay_harness" "$RUN_BRIDGE_REPLAY_HARNESS"
 write_output "bridge_replay_suites" "$BRIDGE_REPLAY_SUITES"
 write_output "run_sdk_parity_matrix" "$RUN_SDK_PARITY_MATRIX"

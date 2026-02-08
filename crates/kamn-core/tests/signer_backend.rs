@@ -2,6 +2,7 @@ use kamn_core::{
     baseline_signature_for_fields, BaselineTransaction, SignerBackendError, SignerBackendRouter,
     SigningRequest, TransactionGuards, GENESIS_STATE_HASH,
 };
+use std::time::Instant;
 
 #[test]
 fn functional_secure_backend_signs_and_verifies_when_available() {
@@ -141,4 +142,60 @@ fn regression_signatures_include_profile_identifier_segment() {
         .sign_with_secure_fallback(&request)
         .expect("signature should be produced");
     assert!(signed.signature.starts_with("sig:baseline-v1:"));
+}
+
+#[test]
+fn performance_signer_emulator_contract_lane_stays_within_budget() {
+    let router = SignerBackendRouter::default();
+    let start = Instant::now();
+
+    for nonce in 1..=256 {
+        let request = SigningRequest::new(
+            "secure:key-ops-perf",
+            "agent-a",
+            nonce,
+            &format!("payload-perf-{nonce}"),
+            GENESIS_STATE_HASH,
+        )
+        .expect("request should be valid");
+        let signed = router
+            .sign_with_secure_fallback(&request)
+            .expect("signature should be produced");
+        assert_eq!(signed.backend, "secure-mock");
+    }
+
+    let elapsed_millis = start.elapsed().as_millis();
+    assert!(
+        elapsed_millis < 250,
+        "signer emulator contract lane exceeded budget: {elapsed_millis}ms"
+    );
+}
+
+#[test]
+#[ignore = "scheduled provider integration lane"]
+fn performance_signer_emulator_bulk_signing_deep_lane() {
+    let secure_router = SignerBackendRouter::default();
+    let fallback_router = SignerBackendRouter::with_secure_availability(false);
+
+    for nonce in 1..=5000 {
+        let request = SigningRequest::new(
+            "secure:key-ops-deep",
+            "agent-a",
+            nonce,
+            &format!("payload-deep-{nonce}"),
+            GENESIS_STATE_HASH,
+        )
+        .expect("request should be valid");
+
+        let (router, expected_backend) = if nonce % 10 == 0 {
+            (&fallback_router, "local-software")
+        } else {
+            (&secure_router, "secure-mock")
+        };
+
+        let signed = router
+            .sign_with_secure_fallback(&request)
+            .expect("signature should be produced");
+        assert_eq!(signed.backend, expected_backend);
+    }
 }

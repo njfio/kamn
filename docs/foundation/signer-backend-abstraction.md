@@ -28,12 +28,19 @@ This document captures the first implementation slice for signer backend abstrac
 - baseline signature profile id: `baseline-v1`.
 - non-versioned signature profile is rejected (`Regression: #404`).
 
+## Signer Emulator Contract Lanes
+- Fast PR lane (low-cost):
+  - `bash scripts/signer/run_signer_emulator_contract_lane.sh`
+- Scheduled provider-integration deep lane:
+  - `bash scripts/signer/run_signer_provider_deep_lane.sh`
+- Contract lane guards remain required for signer provider compatibility (`Regression: #619`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
-cargo test -p kamn-core --test signer_backend
-cargo test -p kamn-core --test transaction_guards_docs
+bash scripts/signer/run_signer_emulator_contract_lane.sh
+bash scripts/signer/run_signer_provider_deep_lane.sh
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core
