@@ -59,6 +59,13 @@ This document captures the initial runtime-network foundation slice for peer lif
   - invalid lifecycle event argument -> `ConfigError::InvalidDaemonLifecycleEvent`
   - invalid transition from lifecycle state machine -> `ConfigError::RuntimeDaemonLifecycle`
 
+## Bridge Quorum Runtime Mapping
+- Listener and approver bridge quorum runtime contracts are documented in:
+  - `docs/foundation/bridge-quorum-runtime.md`
+- Inbound bridge event handling maps listener attestation normalization and quorum evaluation before acceptance.
+- Outbound bridge authorization maps approver attestation threshold validation before action dispatch.
+- Bridge runtime guard outcomes are deterministic and include replay, malformed payload, and under-quorum rejection semantics.
+
 ## Peer Lifecycle Rules
 - `PeerLifecycle` starts in `Disconnected`.
 - Valid transitions:
@@ -129,6 +136,8 @@ This document captures the initial runtime-network foundation slice for peer lif
   - rejoin state hash mismatch is rejected (`Regression: #322`)
   - CLI recovery-check replay/version/hash mismatch rejection (`Regression: #336`)
   - daemon lifecycle invalid transition rejection (`Regression: #349`)
+  - listener attestation replay rejection (`Regression: #371`)
+  - outbound under-quorum rejection (`Regression: #372`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
@@ -136,6 +145,7 @@ Run targeted checks first:
 ```bash
 cargo test -p kamn-core runtime::tests::
 cargo test -p kamn-core --test runtime_network_docs
+cargo test -p kamn-core --test bridge_quorum_runtime_docs
 cargo test -p kamn-node --test node_runtime_cli_docs
 cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
 ```
