@@ -4,6 +4,37 @@ use crate::{
     SdkError, TaskDefinition, TaskId, TokenAmount,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransportMode {
+    InMemory,
+    Live,
+}
+
+impl TransportMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::InMemory => "in-memory",
+            Self::Live => "live",
+        }
+    }
+}
+
+pub trait KamnTransport {
+    fn transport_mode(&self) -> TransportMode;
+
+    fn assert_transport_mode(&self, expected: TransportMode) -> Result<(), SdkError> {
+        let found = self.transport_mode();
+        if found == expected {
+            return Ok(());
+        }
+
+        Err(SdkError::TransportModeMismatch {
+            expected: expected.as_str(),
+            found: found.as_str(),
+        })
+    }
+}
+
 pub trait KamnAgent {
     fn register(&mut self, metadata: AgentMetadata) -> Result<AgentDid, SdkError>;
     fn resolve(&self, did: &AgentDid) -> Result<DidDocument, SdkError>;

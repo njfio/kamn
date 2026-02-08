@@ -1,7 +1,7 @@
 use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    DidDocument, EscrowConfig, EscrowId, KamnAgent, Message, MessageId, MessageRecord,
-    MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount,
+    DidDocument, EscrowConfig, EscrowId, KamnAgent, KamnTransport, Message, MessageId,
+    MessageRecord, MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount, TransportMode,
 };
 use std::collections::HashMap;
 
@@ -413,5 +413,11 @@ impl KamnAgent for InMemoryKamnClient {
                 entity: "reputation",
                 id: agent.to_string(),
             })
+    }
+}
+
+impl KamnTransport for InMemoryKamnClient {
+    fn transport_mode(&self) -> TransportMode {
+        TransportMode::InMemory
     }
 }
