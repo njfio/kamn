@@ -1,5 +1,5 @@
 use crate::config::{NodeConfig, NodeRole};
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
@@ -192,6 +192,152 @@ impl<T> BoundedRuntimeQueue<T> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProposalCandidate {
+    id: String,
+    sender_did: String,
+    nonce: u64,
+    state_hash: String,
+}
+
+impl ProposalCandidate {
+    pub fn new(
+        id: &str,
+        sender_did: &str,
+        nonce: u64,
+        state_hash: &str,
+    ) -> Result<Self, ProposalPlannerError> {
+        if id.trim().is_empty() {
+            return Err(ProposalPlannerError::InvalidCandidateId);
+        }
+        if sender_did.trim().is_empty() {
+            return Err(ProposalPlannerError::InvalidSenderDid);
+        }
+        if state_hash.trim().is_empty() {
+            return Err(ProposalPlannerError::InvalidStateHash);
+        }
+        if nonce == 0 {
+            return Err(ProposalPlannerError::InvalidNonce);
+        }
+        Ok(Self {
+            id: id.to_owned(),
+            sender_did: sender_did.to_owned(),
+            nonce,
+            state_hash: state_hash.to_owned(),
+        })
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn sender_did(&self) -> &str {
+        &self.sender_did
+    }
+
+    pub fn nonce(&self) -> u64 {
+        self.nonce
+    }
+
+    pub fn state_hash(&self) -> &str {
+        &self.state_hash
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProposalPlan {
+    ordered_candidates: Vec<ProposalCandidate>,
+}
+
+impl ProposalPlan {
+    pub fn ordered_candidates(&self) -> &[ProposalCandidate] {
+        &self.ordered_candidates
+    }
+
+    pub fn ordered_candidate_ids(&self) -> Vec<String> {
+        self.ordered_candidates
+            .iter()
+            .map(|candidate| candidate.id.clone())
+            .collect()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProposalPlannerError {
+    InvalidCandidateId,
+    InvalidSenderDid,
+    InvalidStateHash,
+    InvalidNonce,
+    DuplicateCandidateId(String),
+    StaleStateHash { expected: String, found: String },
+}
+
+impl Display for ProposalPlannerError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidCandidateId => write!(f, "proposal candidate id cannot be empty"),
+            Self::InvalidSenderDid => write!(f, "proposal candidate sender DID cannot be empty"),
+            Self::InvalidStateHash => write!(f, "proposal candidate state hash cannot be empty"),
+            Self::InvalidNonce => write!(f, "proposal candidate nonce must be positive"),
+            Self::DuplicateCandidateId(id) => {
+                write!(f, "duplicate proposal candidate id: {id}")
+            }
+            Self::StaleStateHash { expected, found } => {
+                write!(
+                    f,
+                    "proposal candidate state hash mismatch: expected {expected}, found {found}"
+                )
+            }
+        }
+    }
+}
+
+impl Error for ProposalPlannerError {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeterministicProposalPlanner {
+    expected_state_hash: String,
+}
+
+impl DeterministicProposalPlanner {
+    pub fn new(expected_state_hash: &str) -> Self {
+        Self {
+            expected_state_hash: expected_state_hash.to_owned(),
+        }
+    }
+
+    pub fn plan(
+        &self,
+        mut candidates: Vec<ProposalCandidate>,
+    ) -> Result<ProposalPlan, ProposalPlannerError> {
+        let mut seen_ids = HashSet::new();
+        for candidate in &candidates {
+            if !seen_ids.insert(candidate.id.as_str()) {
+                return Err(ProposalPlannerError::DuplicateCandidateId(
+                    candidate.id.clone(),
+                ));
+            }
+            if candidate.state_hash != self.expected_state_hash {
+                return Err(ProposalPlannerError::StaleStateHash {
+                    expected: self.expected_state_hash.clone(),
+                    found: candidate.state_hash.clone(),
+                });
+            }
+        }
+
+        candidates.sort_by(|left, right| {
+            left.nonce
+                .cmp(&right.nonce)
+                .then_with(|| left.sender_did.cmp(&right.sender_did))
+                .then_with(|| left.id.cmp(&right.id))
+        });
+
+        Ok(ProposalPlan {
+            ordered_candidates: candidates,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuntimeWiring {
     pub common_components: Vec<&'static str>,
     pub role_components: Vec<&'static str>,
@@ -223,8 +369,9 @@ pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_runtime_wiring, BoundedRuntimeQueue, PeerLifecycle, PeerLifecycleEvent,
-        PeerLifecycleState, RuntimeLifecycleError, RuntimeQueueError,
+        build_runtime_wiring, BoundedRuntimeQueue, DeterministicProposalPlanner, PeerLifecycle,
+        PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, ProposalPlannerError,
+        RuntimeLifecycleError, RuntimeQueueError,
     };
     use crate::config::{NodeConfig, NodeRole, SyncMode};
 
@@ -361,6 +508,96 @@ mod tests {
         assert_eq!(
             BoundedRuntimeQueue::<String>::new(0),
             Err(RuntimeQueueError::InvalidCapacity { capacity: 0 })
+        );
+    }
+
+    #[test]
+    fn functional_planner_orders_candidates_deterministically() {
+        let candidates = vec![
+            ProposalCandidate::new("tx-3", "did:kamn:agent:bbb", 2, "state-1").expect("valid"),
+            ProposalCandidate::new("tx-1", "did:kamn:agent:aaa", 1, "state-1").expect("valid"),
+            ProposalCandidate::new("tx-2", "did:kamn:agent:bbb", 1, "state-1").expect("valid"),
+        ];
+
+        let planner = DeterministicProposalPlanner::new("state-1");
+        let plan = planner.plan(candidates).expect("plan should build");
+        assert_eq!(
+            plan.ordered_candidate_ids(),
+            vec!["tx-1".to_owned(), "tx-2".to_owned(), "tx-3".to_owned()]
+        );
+    }
+
+    #[test]
+    fn integration_queue_drains_into_planner_without_order_loss() {
+        let mut queue = BoundedRuntimeQueue::new(3).expect("queue should build");
+        assert!(queue
+            .enqueue(
+                ProposalCandidate::new("tx-3", "did:kamn:agent:bbb", 2, "state-1").expect("valid"),
+            )
+            .is_ok());
+        assert!(queue
+            .enqueue(
+                ProposalCandidate::new("tx-1", "did:kamn:agent:aaa", 1, "state-1").expect("valid"),
+            )
+            .is_ok());
+        assert!(queue
+            .enqueue(
+                ProposalCandidate::new("tx-2", "did:kamn:agent:bbb", 1, "state-1").expect("valid"),
+            )
+            .is_ok());
+
+        let mut drained = Vec::new();
+        while let Some(candidate) = queue.dequeue() {
+            drained.push(candidate);
+        }
+
+        let planner = DeterministicProposalPlanner::new("state-1");
+        let plan = planner.plan(drained).expect("plan should build");
+        assert_eq!(
+            plan.ordered_candidate_ids(),
+            vec!["tx-1".to_owned(), "tx-2".to_owned(), "tx-3".to_owned()]
+        );
+    }
+
+    #[test]
+    fn unit_rejects_empty_candidate_id() {
+        let candidate = ProposalCandidate::new("", "did:kamn:agent:aaa", 1, "state-1");
+        assert_eq!(candidate, Err(ProposalPlannerError::InvalidCandidateId));
+    }
+
+    #[test]
+    fn regression_duplicate_candidate_id_is_rejected() {
+        // Regression: #323
+        let candidates = vec![
+            ProposalCandidate::new("tx-1", "did:kamn:agent:aaa", 1, "state-1").expect("valid"),
+            ProposalCandidate::new("tx-1", "did:kamn:agent:bbb", 2, "state-1").expect("valid"),
+        ];
+        let planner = DeterministicProposalPlanner::new("state-1");
+        let error = planner
+            .plan(candidates)
+            .expect_err("duplicate candidate id must fail");
+        assert_eq!(
+            error,
+            ProposalPlannerError::DuplicateCandidateId("tx-1".to_owned())
+        );
+    }
+
+    #[test]
+    fn regression_stale_state_hash_is_rejected() {
+        // Regression: #323
+        let candidates = vec![
+            ProposalCandidate::new("tx-1", "did:kamn:agent:aaa", 1, "state-2").expect("valid"),
+        ];
+        let planner = DeterministicProposalPlanner::new("state-1");
+        let error = planner
+            .plan(candidates)
+            .expect_err("candidate state mismatch must fail");
+        assert_eq!(
+            error,
+            ProposalPlannerError::StaleStateHash {
+                expected: "state-1".to_owned(),
+                found: "state-2".to_owned()
+            }
         );
     }
 }
