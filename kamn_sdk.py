@@ -53,6 +53,8 @@ class KAMNClient:
             raise SDKError("model_family must not be empty")
         if not capabilities:
             raise SDKError("capabilities must not be empty")
+        if any(not capability.strip() for capability in capabilities):
+            raise SDKError("capabilities must not include empty entries")
 
         did = f"kamn:did:agent:agent_{self._agent_seq}"
         self._agent_seq += 1

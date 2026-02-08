@@ -107,3 +107,12 @@ test("regression rejects duplicate escrow release", () => {
 
   assert.throws(() => client.releaseEscrow(escrowId), SDKError);
 });
+
+test("regression register rejects empty capability entries", () => {
+  // Regression: #583
+  const client = new KAMNClient();
+  assert.throws(
+    () => client.register("autonomous", "claude-4", ["text", " "]),
+    SDKError,
+  );
+});

@@ -44,6 +44,9 @@ export class KAMNClient {
     if (capabilities.length === 0) {
       throw new SDKError("capabilities must not be empty");
     }
+    if (capabilities.some((capability) => !capability.trim())) {
+      throw new SDKError("capabilities must not include empty entries");
+    }
 
     const did = `kamn:did:agent:agent_${this.agentSeq}`;
     this.agentSeq += 1;
