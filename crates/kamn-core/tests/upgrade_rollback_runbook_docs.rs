@@ -46,6 +46,15 @@ fn runbook_contains_watchdog_incident_response_flow() {
 }
 
 #[test]
+fn runbook_contains_dr_evidence_and_slo_gate_contract() {
+    assert!(RUNBOOK.contains("## DR Drill Evidence and Release SLO Gate Contract"));
+    assert!(RUNBOOK.contains("generate_dr_evidence_bundle.sh"));
+    assert!(RUNBOOK.contains("check_release_slo_gates.sh"));
+    assert!(RUNBOOK.contains("run_dr_evidence_contract_lane.sh"));
+    assert!(RUNBOOK.contains("run_dr_evidence_deep_lane.sh"));
+}
+
+#[test]
 fn regression_requires_watchdog_evidence_capture_and_fast_lane() {
     // Regression: #383
     assert!(RUNBOOK.contains(
@@ -54,4 +63,12 @@ fn regression_requires_watchdog_evidence_capture_and_fast_lane() {
     assert!(RUNBOOK.contains("## Fast and Cost-Effective Watchdog Validation Lane"));
     assert!(RUNBOOK.contains("cargo test -p kamn-core --test runtime_watchdog_attestation_docs"));
     assert!(RUNBOOK.contains("cargo test -p kamn-core --test upgrade_rollback_runbook_docs"));
+}
+
+#[test]
+fn regression_requires_dr_evidence_and_slo_gate_guard() {
+    // Regression: #623
+    assert!(RUNBOOK.contains(
+        "missing/incomplete DR evidence and SLO threshold violations force `NO-GO` (`Regression: #623`)."
+    ));
 }

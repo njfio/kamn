@@ -41,6 +41,20 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 
 Capture incident evidence payload with expected/observed state hash, quorum sample, and censorship delivery ratios before rollback action.
 
+## DR Drill Evidence and Release SLO Gate Contract (Issue #660)
+Release promotion requires machine-validated DR drill evidence and SLO gate checks.
+
+- DR evidence bundle generator:
+  - `bash scripts/deploy/generate_dr_evidence_bundle.sh --output-file /tmp/dr-evidence.json --drill-id dr-2026-02-08-a --recovery-rto-seconds 240 --recovery-rpo-seconds 90 --max-rto-seconds 300 --max-rpo-seconds 120 --rollback-restored true --evidence-complete true --ci-fast-gate PASS`
+- SLO gate policy checker:
+  - `bash scripts/deploy/check_release_slo_gates.sh --bundle-file /tmp/dr-evidence.json`
+- Fast contract lane:
+  - `bash scripts/deploy/run_dr_evidence_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/deploy/run_dr_evidence_deep_lane.sh`
+- Regression policy:
+  - missing/incomplete DR evidence and SLO threshold violations force `NO-GO` (`Regression: #623`).
+
 ## Fast and Cost-Effective Watchdog Validation Lane
 Run from repository root:
 
@@ -56,6 +70,8 @@ cargo clippy -p kamn-core -- -D warnings
 Run from repository root:
 
 ```bash
+bash scripts/deploy/test_generate_dr_evidence_bundle.sh
+bash scripts/deploy/test_run_dr_evidence_contract_lane.sh
 cargo test -p kamn-core --test upgrade_rollback_runbook_docs
 cargo fmt --check
 cargo clippy -- -D warnings
