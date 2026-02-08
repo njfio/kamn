@@ -15,6 +15,7 @@ This document defines the baseline deterministic transaction guards implemented 
 - `TransactionGuards`: stateful guard evaluator that validates and records transaction invariants.
 - `TransactionGuardError`: explicit typed failures for deterministic operator/agent handling.
 - `RoleSmokeNetwork`: integrates guard checks on `submit_transaction(...)` and advances state hash on `produce_block(...)`.
+- `INVARIANT_CATALOG`: canonical invariant IDs and failure-code taxonomy mapping (`docs/foundation/invariants.md`).
 
 ## Validation
 Run from repository root:
