@@ -1,5 +1,5 @@
 use crate::config::{NodeConfig, NodeRole};
-use std::collections::{HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::fs::{self, OpenOptions};
@@ -859,6 +859,224 @@ pub fn execute_processor_daemon_tick(
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ListenerAttestation {
+    listener_did: String,
+    attestation_id: String,
+}
+
+impl ListenerAttestation {
+    pub fn new(listener_did: &str, attestation_id: &str) -> Result<Self, ListenerQuorumError> {
+        if !is_valid_listener_did(listener_did) {
+            return Err(ListenerQuorumError::InvalidListenerDid);
+        }
+        if attestation_id.trim().is_empty() {
+            return Err(ListenerQuorumError::InvalidAttestationId);
+        }
+        Ok(Self {
+            listener_did: listener_did.to_owned(),
+            attestation_id: attestation_id.to_owned(),
+        })
+    }
+
+    pub fn listener_did(&self) -> &str {
+        &self.listener_did
+    }
+
+    pub fn attestation_id(&self) -> &str {
+        &self.attestation_id
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ListenerQuorumInput {
+    event_id: String,
+    event_sequence: u64,
+    attestations: Vec<ListenerAttestation>,
+}
+
+impl ListenerQuorumInput {
+    pub fn new(
+        event_id: &str,
+        event_sequence: u64,
+        attestations: Vec<ListenerAttestation>,
+    ) -> Result<Self, ListenerQuorumError> {
+        if event_id.trim().is_empty() {
+            return Err(ListenerQuorumError::InvalidEventId);
+        }
+        if event_sequence == 0 {
+            return Err(ListenerQuorumError::InvalidEventSequence);
+        }
+        Ok(Self {
+            event_id: event_id.to_owned(),
+            event_sequence,
+            attestations,
+        })
+    }
+
+    pub fn event_id(&self) -> &str {
+        &self.event_id
+    }
+
+    pub fn event_sequence(&self) -> u64 {
+        self.event_sequence
+    }
+
+    pub fn attestations(&self) -> &[ListenerAttestation] {
+        &self.attestations
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ListenerQuorumDecision {
+    pub event_id: String,
+    pub event_sequence: u64,
+    pub required_confirmations: usize,
+    pub confirmed_listeners: Vec<String>,
+    pub accepted: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ListenerQuorumError {
+    InvalidRequiredConfirmations {
+        required: usize,
+    },
+    InvalidEventId,
+    InvalidEventSequence,
+    InvalidListenerDid,
+    InvalidAttestationId,
+    DuplicateListenerAttestation {
+        listener_did: String,
+    },
+    ReplayedEventSequence {
+        event_id: String,
+        previous_sequence: u64,
+        received_sequence: u64,
+    },
+    InsufficientConfirmations {
+        required: usize,
+        received: usize,
+    },
+}
+
+impl Display for ListenerQuorumError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidRequiredConfirmations { required } => {
+                write!(f, "invalid listener quorum requirement: {required}")
+            }
+            Self::InvalidEventId => write!(f, "listener quorum event id cannot be empty"),
+            Self::InvalidEventSequence => {
+                write!(f, "listener quorum event sequence must be positive")
+            }
+            Self::InvalidListenerDid => write!(f, "listener attestation did is invalid"),
+            Self::InvalidAttestationId => write!(f, "listener attestation id cannot be empty"),
+            Self::DuplicateListenerAttestation { listener_did } => {
+                write!(
+                    f,
+                    "duplicate listener attestation replay detected for {listener_did}"
+                )
+            }
+            Self::ReplayedEventSequence {
+                event_id,
+                previous_sequence,
+                received_sequence,
+            } => {
+                write!(
+                    f,
+                    "listener event sequence replay detected for {event_id}: previous {previous_sequence}, received {received_sequence}"
+                )
+            }
+            Self::InsufficientConfirmations { required, received } => {
+                write!(
+                    f,
+                    "listener quorum insufficient confirmations: required {required}, received {received}"
+                )
+            }
+        }
+    }
+}
+
+impl Error for ListenerQuorumError {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ListenerQuorumEvaluator {
+    required_confirmations: usize,
+    latest_sequence_by_event: BTreeMap<String, u64>,
+}
+
+impl ListenerQuorumEvaluator {
+    pub fn new(required_confirmations: usize) -> Result<Self, ListenerQuorumError> {
+        if required_confirmations == 0 {
+            return Err(ListenerQuorumError::InvalidRequiredConfirmations {
+                required: required_confirmations,
+            });
+        }
+        Ok(Self {
+            required_confirmations,
+            latest_sequence_by_event: BTreeMap::new(),
+        })
+    }
+
+    pub fn evaluate(
+        &mut self,
+        input: ListenerQuorumInput,
+    ) -> Result<ListenerQuorumDecision, ListenerQuorumError> {
+        if let Some(previous_sequence) = self.latest_sequence_by_event.get(input.event_id()) {
+            if input.event_sequence() <= *previous_sequence {
+                return Err(ListenerQuorumError::ReplayedEventSequence {
+                    event_id: input.event_id().to_owned(),
+                    previous_sequence: *previous_sequence,
+                    received_sequence: input.event_sequence(),
+                });
+            }
+        }
+
+        let mut confirmed = BTreeSet::new();
+        for attestation in input.attestations() {
+            if !is_valid_listener_did(attestation.listener_did()) {
+                return Err(ListenerQuorumError::InvalidListenerDid);
+            }
+            if !confirmed.insert(attestation.listener_did().to_owned()) {
+                return Err(ListenerQuorumError::DuplicateListenerAttestation {
+                    listener_did: attestation.listener_did().to_owned(),
+                });
+            }
+        }
+
+        let confirmed_listeners = confirmed.into_iter().collect::<Vec<_>>();
+        if confirmed_listeners.len() < self.required_confirmations {
+            return Err(ListenerQuorumError::InsufficientConfirmations {
+                required: self.required_confirmations,
+                received: confirmed_listeners.len(),
+            });
+        }
+
+        self.latest_sequence_by_event
+            .insert(input.event_id().to_owned(), input.event_sequence());
+
+        Ok(ListenerQuorumDecision {
+            event_id: input.event_id().to_owned(),
+            event_sequence: input.event_sequence(),
+            required_confirmations: self.required_confirmations,
+            confirmed_listeners,
+            accepted: true,
+        })
+    }
+}
+
+pub fn evaluate_daemon_listener_quorum(
+    evaluator: &mut ListenerQuorumEvaluator,
+    input: ListenerQuorumInput,
+) -> Result<ListenerQuorumDecision, ListenerQuorumError> {
+    evaluator.evaluate(input)
+}
+
+fn is_valid_listener_did(value: &str) -> bool {
+    let trimmed = value.trim();
+    !trimmed.is_empty() && trimmed.starts_with("kamn:did:")
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RecoveryStatus {
     RejoinAccepted,
     CatchUpRequired { from_version: u64, to_version: u64 },
@@ -998,11 +1216,12 @@ mod tests {
     use super::{
         build_runtime_wiring, execute_processor_daemon_tick, BoundedRuntimeQueue,
         ConstructLockError, ConstructLockGuard, DeterministicProposalPlanner,
-        FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore, PeerLifecycle, PeerLifecycleEvent,
-        PeerLifecycleState, ProposalCandidate, ProposalPlannerError, RecoveryGuardError,
-        RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, RuntimeLifecycleError,
-        RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore, SnapshotRestoreError,
-        SnapshotRestoreGuard, SnapshotStoreError,
+        FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore, ListenerAttestation,
+        ListenerQuorumError, ListenerQuorumEvaluator, ListenerQuorumInput, PeerLifecycle,
+        PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, ProposalPlannerError,
+        RecoveryGuardError, RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt,
+        RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore,
+        SnapshotRestoreError, SnapshotRestoreGuard, SnapshotStoreError,
     };
     use crate::config::{NodeConfig, NodeRole, SyncMode};
     use std::fs;
@@ -1480,6 +1699,148 @@ mod tests {
         let error = execute_processor_daemon_tick(&lock, "processor-a", 1, 0)
             .expect_err("daemon execution without active lease must be rejected");
         assert_eq!(error, ConstructLockError::NoLeaseForExecution);
+    }
+
+    #[test]
+    fn functional_listener_quorum_accepts_canonical_sufficient_attestations() {
+        let mut evaluator =
+            ListenerQuorumEvaluator::new(2).expect("listener quorum evaluator should build");
+        let input = ListenerQuorumInput::new(
+            "bridge-event-1",
+            1,
+            vec![
+                ListenerAttestation::new("kamn:did:agent:listener-b", "att-2")
+                    .expect("valid attestation"),
+                ListenerAttestation::new("kamn:did:agent:listener-a", "att-1")
+                    .expect("valid attestation"),
+            ],
+        )
+        .expect("valid listener quorum input");
+
+        let decision = evaluator
+            .evaluate(input)
+            .expect("quorum should accept canonical listener attestations");
+        assert!(decision.accepted);
+        assert_eq!(decision.required_confirmations, 2);
+        assert_eq!(decision.confirmed_listeners.len(), 2);
+        assert_eq!(
+            decision.confirmed_listeners,
+            vec![
+                "kamn:did:agent:listener-a".to_owned(),
+                "kamn:did:agent:listener-b".to_owned()
+            ]
+        );
+    }
+
+    #[test]
+    fn unit_listener_quorum_rejects_zero_required_confirmations() {
+        let error =
+            ListenerQuorumEvaluator::new(0).expect_err("zero quorum threshold must be rejected");
+        assert_eq!(
+            error,
+            ListenerQuorumError::InvalidRequiredConfirmations { required: 0 }
+        );
+    }
+
+    #[test]
+    fn integration_daemon_listener_quorum_rejects_replayed_event_sequence() {
+        let mut evaluator =
+            ListenerQuorumEvaluator::new(1).expect("listener quorum evaluator should build");
+        let first = ListenerQuorumInput::new(
+            "bridge-event-1",
+            3,
+            vec![
+                ListenerAttestation::new("kamn:did:agent:listener-a", "att-1")
+                    .expect("valid attestation"),
+            ],
+        )
+        .expect("valid listener quorum input");
+        assert!(super::evaluate_daemon_listener_quorum(&mut evaluator, first).is_ok());
+
+        let replay = ListenerQuorumInput::new(
+            "bridge-event-1",
+            3,
+            vec![
+                ListenerAttestation::new("kamn:did:agent:listener-a", "att-2")
+                    .expect("valid attestation"),
+            ],
+        )
+        .expect("valid listener quorum input");
+        let error = super::evaluate_daemon_listener_quorum(&mut evaluator, replay)
+            .expect_err("replayed sequence should be rejected");
+        assert_eq!(
+            error,
+            ListenerQuorumError::ReplayedEventSequence {
+                event_id: "bridge-event-1".to_owned(),
+                previous_sequence: 3,
+                received_sequence: 3
+            }
+        );
+    }
+
+    #[test]
+    fn regression_duplicate_listener_attestation_replay_is_rejected() {
+        // Regression: #371
+        let mut evaluator =
+            ListenerQuorumEvaluator::new(2).expect("listener quorum evaluator should build");
+        let input = ListenerQuorumInput::new(
+            "bridge-event-dup",
+            1,
+            vec![
+                ListenerAttestation::new("kamn:did:agent:listener-a", "att-1")
+                    .expect("valid attestation"),
+                ListenerAttestation::new("kamn:did:agent:listener-a", "att-2")
+                    .expect("valid attestation"),
+            ],
+        )
+        .expect("valid listener quorum input");
+        let error = evaluator
+            .evaluate(input)
+            .expect_err("duplicate listener attestations must be rejected");
+        assert_eq!(
+            error,
+            ListenerQuorumError::DuplicateListenerAttestation {
+                listener_did: "kamn:did:agent:listener-a".to_owned()
+            }
+        );
+    }
+
+    #[test]
+    fn regression_replayed_listener_event_sequence_is_rejected() {
+        // Regression: #371
+        let mut evaluator =
+            ListenerQuorumEvaluator::new(1).expect("listener quorum evaluator should build");
+        let first = ListenerQuorumInput::new(
+            "bridge-event-regression",
+            7,
+            vec![
+                ListenerAttestation::new("kamn:did:agent:listener-a", "att-1")
+                    .expect("valid attestation"),
+            ],
+        )
+        .expect("valid listener quorum input");
+        assert!(evaluator.evaluate(first).is_ok());
+
+        let replay = ListenerQuorumInput::new(
+            "bridge-event-regression",
+            6,
+            vec![
+                ListenerAttestation::new("kamn:did:agent:listener-a", "att-2")
+                    .expect("valid attestation"),
+            ],
+        )
+        .expect("valid listener quorum input");
+        let error = evaluator
+            .evaluate(replay)
+            .expect_err("stale/replayed sequence must be rejected");
+        assert_eq!(
+            error,
+            ListenerQuorumError::ReplayedEventSequence {
+                event_id: "bridge-event-regression".to_owned(),
+                previous_sequence: 7,
+                received_sequence: 6
+            }
+        );
     }
 
     #[test]
