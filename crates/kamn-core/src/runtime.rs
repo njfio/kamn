@@ -629,6 +629,7 @@ pub enum ConstructLockError {
     InvalidLeaseTtl,
     InvalidOwnerId,
     NoActiveLease,
+    NoLeaseForExecution,
     LeaseAlreadyHeld { owner: String },
     LeaseOwnerMismatch { expected: String, found: String },
     StaleFencingToken { expected: u64, found: u64 },
@@ -640,6 +641,12 @@ impl Display for ConstructLockError {
             Self::InvalidLeaseTtl => write!(f, "construct lock lease ttl must be positive"),
             Self::InvalidOwnerId => write!(f, "construct lock owner id cannot be empty"),
             Self::NoActiveLease => write!(f, "construct lock has no active lease"),
+            Self::NoLeaseForExecution => {
+                write!(
+                    f,
+                    "daemon execution requires an active construct lock lease"
+                )
+            }
             Self::LeaseAlreadyHeld { owner } => {
                 write!(f, "construct lock lease already held by {owner}")
             }
@@ -738,6 +745,117 @@ impl ConstructLockGuard {
         self.current_lease = Some(renewed.clone());
         Ok(renewed)
     }
+
+    pub fn release(
+        &mut self,
+        owner_id: &str,
+        fencing_token: u64,
+    ) -> Result<(), ConstructLockError> {
+        if owner_id.trim().is_empty() {
+            return Err(ConstructLockError::InvalidOwnerId);
+        }
+        let current_lease = self
+            .current_lease
+            .as_ref()
+            .ok_or(ConstructLockError::NoActiveLease)?;
+
+        if current_lease.owner_id() != owner_id {
+            return Err(ConstructLockError::LeaseOwnerMismatch {
+                expected: current_lease.owner_id().to_owned(),
+                found: owner_id.to_owned(),
+            });
+        }
+
+        if current_lease.fencing_token() != fencing_token {
+            return Err(ConstructLockError::StaleFencingToken {
+                expected: current_lease.fencing_token(),
+                found: fencing_token,
+            });
+        }
+
+        self.current_lease = None;
+        Ok(())
+    }
+
+    pub fn transfer(
+        &mut self,
+        owner_id: &str,
+        next_owner_id: &str,
+        fencing_token: u64,
+    ) -> Result<ConstructLockLease, ConstructLockError> {
+        if owner_id.trim().is_empty() || next_owner_id.trim().is_empty() {
+            return Err(ConstructLockError::InvalidOwnerId);
+        }
+        let current_lease = self
+            .current_lease
+            .as_ref()
+            .ok_or(ConstructLockError::NoActiveLease)?;
+
+        if current_lease.owner_id() != owner_id {
+            return Err(ConstructLockError::LeaseOwnerMismatch {
+                expected: current_lease.owner_id().to_owned(),
+                found: owner_id.to_owned(),
+            });
+        }
+
+        if current_lease.fencing_token() != fencing_token {
+            return Err(ConstructLockError::StaleFencingToken {
+                expected: current_lease.fencing_token(),
+                found: fencing_token,
+            });
+        }
+
+        if current_lease.owner_id() == next_owner_id {
+            return Err(ConstructLockError::LeaseAlreadyHeld {
+                owner: current_lease.owner_id().to_owned(),
+            });
+        }
+
+        let transferred =
+            ConstructLockLease::new(next_owner_id.to_owned(), current_lease.fencing_token() + 1);
+        self.current_lease = Some(transferred.clone());
+        Ok(transferred)
+    }
+
+    pub fn validate_execution_lease(
+        &self,
+        owner_id: &str,
+        fencing_token: u64,
+    ) -> Result<(), ConstructLockError> {
+        if owner_id.trim().is_empty() {
+            return Err(ConstructLockError::InvalidOwnerId);
+        }
+        let current_lease = self
+            .current_lease
+            .as_ref()
+            .ok_or(ConstructLockError::NoLeaseForExecution)?;
+
+        if current_lease.owner_id() != owner_id {
+            return Err(ConstructLockError::LeaseOwnerMismatch {
+                expected: current_lease.owner_id().to_owned(),
+                found: owner_id.to_owned(),
+            });
+        }
+
+        if current_lease.fencing_token() != fencing_token {
+            return Err(ConstructLockError::StaleFencingToken {
+                expected: current_lease.fencing_token(),
+                found: fencing_token,
+            });
+        }
+
+        Ok(())
+    }
+}
+
+pub fn execute_processor_daemon_tick(
+    lock_guard: &ConstructLockGuard,
+    owner_id: &str,
+    fencing_token: u64,
+    executed_ticks: u64,
+) -> Result<u64, ConstructLockError> {
+    lock_guard.validate_execution_lease(owner_id, fencing_token)?;
+    Ok(executed_ticks + 1)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -878,12 +996,13 @@ pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_runtime_wiring, BoundedRuntimeQueue, ConstructLockError, ConstructLockGuard,
-        DeterministicProposalPlanner, FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore,
-        PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate,
-        ProposalPlannerError, RecoveryGuardError, RecoveryRejoinGuard, RecoveryStatus,
-        RejoinAttempt, RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot,
-        RuntimeSnapshotStore, SnapshotRestoreError, SnapshotRestoreGuard, SnapshotStoreError,
+        build_runtime_wiring, execute_processor_daemon_tick, BoundedRuntimeQueue,
+        ConstructLockError, ConstructLockGuard, DeterministicProposalPlanner,
+        FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore, PeerLifecycle, PeerLifecycleEvent,
+        PeerLifecycleState, ProposalCandidate, ProposalPlannerError, RecoveryGuardError,
+        RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, RuntimeLifecycleError,
+        RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore, SnapshotRestoreError,
+        SnapshotRestoreGuard, SnapshotStoreError,
     };
     use crate::config::{NodeConfig, NodeRole, SyncMode};
     use std::fs;
@@ -1284,6 +1403,83 @@ mod tests {
                 found: lease.fencing_token().saturating_sub(1)
             }
         );
+    }
+
+    #[test]
+    fn functional_construct_lock_supports_transfer_then_release_flow() {
+        let mut lock = ConstructLockGuard::new(5).expect("construct lock should build");
+        let lease = lock
+            .acquire_for("processor-a")
+            .expect("initial lease acquisition should succeed");
+        let transferred = lock
+            .transfer("processor-a", "processor-b", lease.fencing_token())
+            .expect("lease transfer should succeed");
+        assert_eq!(transferred.owner_id(), "processor-b");
+        assert!(transferred.fencing_token() > lease.fencing_token());
+        assert!(lock
+            .validate_execution_lease("processor-b", transferred.fencing_token())
+            .is_ok());
+        assert!(lock
+            .release("processor-b", transferred.fencing_token())
+            .is_ok());
+    }
+
+    #[test]
+    fn unit_construct_lock_rejects_release_for_non_owner() {
+        let mut lock = ConstructLockGuard::new(5).expect("construct lock should build");
+        let lease = lock
+            .acquire_for("processor-a")
+            .expect("initial lease acquisition should succeed");
+        let error = lock
+            .release("processor-b", lease.fencing_token())
+            .expect_err("non-owner release must be rejected");
+        assert_eq!(
+            error,
+            ConstructLockError::LeaseOwnerMismatch {
+                expected: "processor-a".to_owned(),
+                found: "processor-b".to_owned()
+            }
+        );
+    }
+
+    #[test]
+    fn integration_daemon_tick_requires_matching_active_lease() {
+        let mut lock = ConstructLockGuard::new(5).expect("construct lock should build");
+        let lease = lock
+            .acquire_for("processor-a")
+            .expect("initial lease acquisition should succeed");
+        assert_eq!(
+            execute_processor_daemon_tick(&lock, "processor-a", lease.fencing_token(), 0),
+            Ok(1)
+        );
+    }
+
+    #[test]
+    fn regression_unauthorized_transfer_is_rejected() {
+        // Regression: #388
+        let mut lock = ConstructLockGuard::new(5).expect("construct lock should build");
+        let lease = lock
+            .acquire_for("processor-a")
+            .expect("initial lease acquisition should succeed");
+        let error = lock
+            .transfer("processor-b", "processor-c", lease.fencing_token())
+            .expect_err("unauthorized transfer must be rejected");
+        assert_eq!(
+            error,
+            ConstructLockError::LeaseOwnerMismatch {
+                expected: "processor-a".to_owned(),
+                found: "processor-b".to_owned()
+            }
+        );
+    }
+
+    #[test]
+    fn regression_daemon_tick_without_lease_is_rejected() {
+        // Regression: #388
+        let lock = ConstructLockGuard::new(5).expect("construct lock should build");
+        let error = execute_processor_daemon_tick(&lock, "processor-a", 1, 0)
+            .expect_err("daemon execution without active lease must be rejected");
+        assert_eq!(error, ConstructLockError::NoLeaseForExecution);
     }
 
     #[test]

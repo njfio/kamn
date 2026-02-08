@@ -18,6 +18,7 @@ This document captures processor high-availability runtime contract text for sna
   - `ConstructLockLease`
   - `ConstructLockGuard`
   - `ConstructLockError`
+  - `execute_processor_daemon_tick`
 - Added low-cost validation lane commands for docs-focused PR checks.
 
 ## Snapshot Restore Rules
@@ -40,9 +41,13 @@ This document captures processor high-availability runtime contract text for sna
 - Processor construct-lock ownership must enforce single active lease semantics.
 - split-brain lock acquisition attempts are rejected.
 - stale lease renewal attempts are rejected.
+- lease release and transfer operations require matching active owner and fencing token lineage.
+- daemon tick execution without active lease ownership is rejected.
 - Typed lock/fencing guard failures:
   - `ConstructLockError::LeaseAlreadyHeld`
+  - `ConstructLockError::LeaseOwnerMismatch`
   - `ConstructLockError::StaleFencingToken`
+  - `ConstructLockError::NoLeaseForExecution`
 
 ## Test Coverage Mapping
 - Unit: N/A (docs-focused contract slice).
@@ -52,6 +57,7 @@ This document captures processor high-availability runtime contract text for sna
   - snapshot restore mismatch rejection (`Regression: #361`)
   - split-brain and stale-renew lock rejection (`Regression: #362`)
   - malformed file-backed snapshot payload rejection (`Regression: #387`)
+  - unauthorized release/transfer and no-lease daemon tick rejection (`Regression: #388`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
@@ -60,6 +66,7 @@ Run targeted checks first:
 cargo test -p kamn-node --test runtime_processor_ha_docs
 cargo test -p kamn-node --test node_runtime_cli_docs
 cargo test -p kamn-core snapshot_store
+cargo test -p kamn-core construct_lock
 ```
 
 Then run strict formatting/lint gates:

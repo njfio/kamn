@@ -87,6 +87,9 @@ fn doc_contains_runtime_daemon_rules() {
     assert!(DOC.contains("--daemon-max-ticks"));
     assert!(DOC.contains("--daemon-tick-interval-ms"));
     assert!(DOC.contains("--daemon-lifecycle-event"));
+    assert!(DOC.contains("active construct-lock lease owner"));
+    assert!(DOC.contains("execute_processor_daemon_tick"));
+    assert!(DOC.contains("typed construct-lock errors"));
     assert!(DOC.contains("tick-budget-exhausted"));
 }
 
@@ -94,6 +97,7 @@ fn doc_contains_runtime_daemon_rules() {
 fn doc_contains_fast_and_cost_effective_validation_lane() {
     assert!(DOC.contains("## Fast and Cost-Effective Validation"));
     assert!(DOC.contains("cargo test -p kamn-node"));
+    assert!(DOC.contains("cargo test -p kamn-core construct_lock"));
     assert!(DOC.contains("cargo clippy -p kamn-node -- -D warnings"));
 }
 
@@ -170,4 +174,12 @@ fn regression_requires_runtime_daemon_control_rules() {
 fn regression_requires_runtime_daemon_lifecycle_rules() {
     // Regression: #349
     assert!(DOC.contains("invalid daemon lifecycle transition rejection (`Regression: #349`)"));
+}
+
+#[test]
+fn regression_requires_runtime_daemon_lease_guard_rules() {
+    // Regression: #388
+    assert!(
+        DOC.contains("daemon lease guard no-lease/invalid-owner rejection (`Regression: #388`)")
+    );
 }
