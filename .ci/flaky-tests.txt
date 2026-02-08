@@ -1,0 +1,6 @@
+# Flaky test quarantine registry
+#
+# Format:
+# <owner>|<test-id>|<tracking-issue>|<expires-on-YYYY-MM-DD>|<notes>
+#
+# Keep this file small and temporary. Expired entries should be removed promptly.

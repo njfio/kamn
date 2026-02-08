@@ -24,6 +24,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Mark start timestamp
+        id: started
+        run: echo "epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Select CI scope
         id: scope
         shell: bash
@@ -37,11 +41,24 @@ jobs:
         if: steps.scope.outputs.docs_only != 'true'
         run: bash -n scripts/ci/*.sh
 
+      - name: Validate flaky registry
+        if: steps.scope.outputs.docs_only != 'true'
+        run: bash scripts/ci/check_flaky_registry.sh
+
+      - name: Validate PR CI impact declaration
+        if: steps.scope.outputs.docs_only != 'true'
+        run: bash scripts/ci/check_pr_ci_declaration.sh
+
+      - name: Run CI tool regression tests
+        if: steps.scope.outputs.docs_only != 'true'
+        run: bash scripts/ci/test_ci_tools.sh
+
       - name: Set up Rust toolchain
         if: steps.scope.outputs.run_rust == 'true'
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Rust build artifacts
+        id: rust_cache
         if: steps.scope.outputs.run_rust == 'true'
         uses: Swatinem/rust-cache@v2
 
@@ -53,10 +70,47 @@ jobs:
         if: steps.scope.outputs.run_rust == 'true'
         run: ${{ steps.scope.outputs.clippy_cmd }}
 
-      - name: Test
+      - name: Test (bounded retry)
+        id: tests
         if: steps.scope.outputs.run_rust == 'true'
-        run: ${{ steps.scope.outputs.test_cmd }}
+        run: |
+          bash scripts/ci/run_with_retry.sh \
+            --label test-lane \
+            --max-attempts 2 \
+            -- bash -lc "${{ steps.scope.outputs.test_cmd }}"
 
       - name: No Rust checks required
         if: steps.scope.outputs.run_rust != 'true' && steps.scope.outputs.docs_only != 'true'
         run: echo "No Rust changes detected; skipping Rust toolchain setup and tests."
+
+      - name: Evaluate fast-gate budget
+        if: always() && steps.started.outputs.epoch != ''
+        id: budget
+        shell: bash
+        env:
+          START_EPOCH: ${{ steps.started.outputs.epoch }}
+          TEST_SCOPE: ${{ steps.scope.outputs.test_scope }}
+          CHANGED_FILES: ${{ steps.scope.outputs.changed_files }}
+          CACHE_HIT: ${{ steps.rust_cache.outputs.cache-hit }}
+          RETRY_USED: ${{ steps.tests.outputs.retry_used }}
+        run: |
+          end_epoch="$(date +%s)"
+          elapsed="$(( end_epoch - START_EPOCH ))"
+
+          bash scripts/ci/evaluate_budget.sh \
+            --lane fast-gate \
+            --elapsed-seconds "$elapsed" \
+            --test-scope "${TEST_SCOPE:-unknown}" \
+            --changed-files "${CHANGED_FILES:-0}" \
+            --job-count 1 \
+            --cache-hit "${CACHE_HIT:-unknown}" \
+            --retry-used "${RETRY_USED:-unknown}" \
+            --output-json ci-budget-fast-gate.json
+
+      - name: Upload fast-gate budget telemetry
+        if: always() && hashFiles('ci-budget-fast-gate.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-budget-fast-gate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-budget-fast-gate.json
+          if-no-files-found: error

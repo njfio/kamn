@@ -1,0 +1,32 @@
+name: ci-flaky-registry
+
+on:
+  schedule:
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flaky-registry:
+    name: Flaky Registry Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate flaky registry
+        run: bash scripts/ci/check_flaky_registry.sh
+
+      - name: Generate flaky report
+        run: bash scripts/ci/report_flaky_registry.sh > flaky-registry-report.md
+
+      - name: Upload flaky report
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-registry-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: flaky-registry-report.md
+          if-no-files-found: error

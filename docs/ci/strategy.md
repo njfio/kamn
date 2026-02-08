@@ -12,6 +12,8 @@ Keep CI feedback fast and runner cost low while preserving confidence.
 - PR runner consumption: <= 25 total runner-minutes.
 - Nightly deep validate: <= 120 minutes.
 
+Versioned thresholds are defined in `.ci/ci-budget.env`.
+
 ## Fast Gate Behavior
 `ci-fast-gate` calls `scripts/ci/select_targets.sh` to select execution scope from changed files:
 
@@ -20,6 +22,51 @@ Keep CI feedback fast and runner cost low while preserving confidence.
 - Core Rust metadata changes (`Cargo.toml`, `Cargo.lock`, toolchain, `.cargo`): run full workspace lane.
 - CI/workflow changes without Rust source changes: run shell syntax checks and a smoke Rust lane when a Cargo project exists.
 
+## Budget Telemetry and Enforcement
+Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
+
+- Compute elapsed runtime and approximate runner-minutes.
+- Apply lane-specific warning/failure thresholds.
+- Emit step-summary metrics for quick inspection.
+- Upload JSON telemetry artifacts (`ci-budget-*.json`) for historical comparisons.
+
+Policy:
+- Warning at 90% of configured budget.
+- Failure at 100% of configured budget for `ci-fast-gate` (merge-critical lane).
+
+## Cache and Retry Telemetry
+Telemetry includes:
+- Rust cache hit status from `Swatinem/rust-cache` output.
+- Whether bounded retry was used for test execution.
+
+This data supports cache/parallel tuning and flaky-test burn-down without widening PR cost.
+
+## Bounded Retry + Flaky Policy
+- Tests run through `scripts/ci/run_with_retry.sh` with `max-attempts=2`.
+- Retries are intentionally bounded to avoid hidden regressions.
+- Flaky test quarantine inventory is tracked in `.ci/flaky-tests.txt`.
+- Each quarantine entry must include owner, tracking issue, and expiry date.
+
+## PR CI Impact Declaration
+When CI-sensitive files are modified (`.github/workflows/*`, `scripts/ci/*`, `.ci/*`), PR description must explicitly declare CI impact.
+
+Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
+
+## Script Regression Coverage
+`ci-fast-gate` runs `scripts/ci/test_ci_tools.sh` to locally regression-test CI helper scripts:
+- Budget evaluator (`test_evaluate_budget.sh`)
+- Retry helper (`test_run_with_retry.sh`)
+- Flaky registry validator (`test_check_flaky_registry.sh`)
+- Budget summarizer (`test_summarize_budget_artifacts.sh`)
+- PR CI declaration checker (`test_check_pr_ci_declaration.sh`)
+- Flaky report commenter (`test_post_flaky_report_comment.sh`)
+
+## Reporting and Burn-down
+- Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
+- Weekly workflow `ci-flaky-report-comment` posts an automated report comment to issue `#70`.
+- Use `scripts/ci/summarize_budget_artifacts.sh` on downloaded `ci-budget-*.json` artifacts to compute p50/p95 and cache/retry trends.
+- Use `scripts/ci/download_and_summarize_budget.sh --repo <owner/repo>` to pull recent budget artifacts and produce a local trend summary.
+
 ## Deep Validation Behavior
 `ci-deep-validate` runs full formatting, linting, and test suites on a nightly schedule and manually on demand.
 
@@ -27,3 +74,4 @@ Keep CI feedback fast and runner cost low while preserving confidence.
 - Concurrency cancellation enabled on both workflows.
 - Rust dependency/build cache enabled in Rust lanes.
 - Expensive suites are not on the PR merge-critical path.
+- PR template includes a mandatory CI-impact declaration for workflow/test-scope changes.
