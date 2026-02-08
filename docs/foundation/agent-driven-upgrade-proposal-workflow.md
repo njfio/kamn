@@ -26,6 +26,8 @@ This document captures the first implementation slice for a pilot agent-driven p
   - allowlisted proposer DID.
   - non-empty proposal id and rationale.
   - valid timestamps with deadline strictly after creation.
+- Validator governance voting requires:
+  - allowlisted validator voter DID.
 - Governance submission requires:
   - sufficient unique human reviewer approvals.
   - pending-human-review proposal state.
@@ -48,6 +50,7 @@ This document captures the first implementation slice for a pilot agent-driven p
   - `agent_audit_log(...)`
 - Regression guard:
   - early activation before required delay is rejected (`Regression: #528`).
+  - unauthorized validator vote is rejected (`Regression: #533`).
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:

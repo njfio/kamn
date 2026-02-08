@@ -17,6 +17,7 @@ fn doc_contains_workflow_safeguards_and_audit_rules() {
     assert!(DOC.contains(
         "configured minimum activation delay elapsed since governance approval timestamp."
     ));
+    assert!(DOC.contains("allowlisted validator voter DID"));
 }
 
 #[test]
@@ -38,4 +39,10 @@ fn regression_requires_activation_delay_rejection_rule() {
     assert!(
         DOC.contains("early activation before required delay is rejected (`Regression: #528`).")
     );
+}
+
+#[test]
+fn regression_requires_unauthorized_validator_vote_rejection_rule() {
+    // Regression: #533
+    assert!(DOC.contains("unauthorized validator vote is rejected (`Regression: #533`)."));
 }

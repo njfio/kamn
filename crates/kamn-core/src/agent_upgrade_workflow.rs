@@ -10,6 +10,7 @@ use std::fmt;
 pub struct AgentUpgradeWorkflowConfig {
     pub current_version: String,
     pub allowed_agent_proposers: Vec<String>,
+    pub allowed_validator_voters: Vec<String>,
     pub required_human_reviews: usize,
     pub required_validator_quorum: usize,
     pub min_activation_delay_secs: u64,
@@ -71,6 +72,7 @@ pub struct AgentUpgradeAuditEvent {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AgentDrivenUpgradeWorkflow {
     allowed_agent_proposers: BTreeSet<String>,
+    allowed_validator_voters: BTreeSet<String>,
     required_human_reviews: usize,
     required_validator_quorum: usize,
     min_activation_delay_secs: u64,
@@ -94,11 +96,19 @@ impl AgentDrivenUpgradeWorkflow {
         if config.allowed_agent_proposers.is_empty() {
             return Err(AgentUpgradeWorkflowError::MissingAllowedAgentProposers);
         }
+        if config.allowed_validator_voters.is_empty() {
+            return Err(AgentUpgradeWorkflowError::MissingAllowedValidatorVoters);
+        }
 
         let mut allowed_agent_proposers = BTreeSet::new();
         for proposer in config.allowed_agent_proposers {
             validate_did(&proposer)?;
             allowed_agent_proposers.insert(proposer);
+        }
+        let mut allowed_validator_voters = BTreeSet::new();
+        for validator in config.allowed_validator_voters {
+            validate_did(&validator)?;
+            allowed_validator_voters.insert(validator);
         }
 
         let orchestrator =
@@ -106,6 +116,7 @@ impl AgentDrivenUpgradeWorkflow {
 
         Ok(Self {
             allowed_agent_proposers,
+            allowed_validator_voters,
             required_human_reviews: config.required_human_reviews,
             required_validator_quorum: config.required_validator_quorum,
             min_activation_delay_secs: config.min_activation_delay_secs,
@@ -272,6 +283,12 @@ impl AgentDrivenUpgradeWorkflow {
         choice: GovernanceVoteChoice,
         cast_at_unix: u64,
     ) -> Result<(), AgentUpgradeWorkflowError> {
+        validate_did(validator_did)?;
+        if !self.allowed_validator_voters.contains(validator_did) {
+            return Err(AgentUpgradeWorkflowError::UnauthorizedValidatorVoter(
+                validator_did.to_owned(),
+            ));
+        }
         self.governance
             .cast_vote(proposal_id, validator_did, choice, cast_at_unix)
             .map_err(Self::map_governance)?;
@@ -433,7 +450,9 @@ pub enum AgentUpgradeWorkflowError {
     InvalidRequiredValidatorQuorum(usize),
     InvalidMinActivationDelaySecs(u64),
     MissingAllowedAgentProposers,
+    MissingAllowedValidatorVoters,
     UnauthorizedAgentProposer(String),
+    UnauthorizedValidatorVoter(String),
     ProposalAlreadyExists(String),
     ProposalNotFound(String),
     DuplicateHumanReview {
@@ -487,8 +506,14 @@ impl fmt::Display for AgentUpgradeWorkflowError {
             Self::MissingAllowedAgentProposers => {
                 write!(f, "allowed agent proposer set must not be empty")
             }
+            Self::MissingAllowedValidatorVoters => {
+                write!(f, "allowed validator voter set must not be empty")
+            }
             Self::UnauthorizedAgentProposer(agent_did) => {
                 write!(f, "unauthorized agent proposer: {agent_did}")
+            }
+            Self::UnauthorizedValidatorVoter(validator_did) => {
+                write!(f, "unauthorized validator voter: {validator_did}")
             }
             Self::ProposalAlreadyExists(proposal_id) => {
                 write!(f, "proposal already exists: {proposal_id}")
@@ -562,6 +587,7 @@ mod tests {
         AgentDrivenUpgradeWorkflow, AgentUpgradeProposalDraft, AgentUpgradeProposalState,
         AgentUpgradeWorkflowConfig, AgentUpgradeWorkflowError,
     };
+    use crate::GovernanceVoteChoice;
 
     #[test]
     fn constructor_requires_allowlisted_agent_set() {
@@ -569,6 +595,7 @@ mod tests {
             AgentDrivenUpgradeWorkflow::new(AgentUpgradeWorkflowConfig {
                 current_version: "v0.1.0".to_owned(),
                 allowed_agent_proposers: Vec::new(),
+                allowed_validator_voters: vec!["kamn:did:agent:validator-1".to_owned()],
                 required_human_reviews: 1,
                 required_validator_quorum: 2,
                 min_activation_delay_secs: 60,
@@ -578,11 +605,27 @@ mod tests {
     }
 
     #[test]
+    fn constructor_requires_allowlisted_validator_set() {
+        assert_eq!(
+            AgentDrivenUpgradeWorkflow::new(AgentUpgradeWorkflowConfig {
+                current_version: "v0.1.0".to_owned(),
+                allowed_agent_proposers: vec!["kamn:did:agent:upgrade-bot".to_owned()],
+                allowed_validator_voters: Vec::new(),
+                required_human_reviews: 1,
+                required_validator_quorum: 2,
+                min_activation_delay_secs: 60,
+            }),
+            Err(AgentUpgradeWorkflowError::MissingAllowedValidatorVoters)
+        );
+    }
+
+    #[test]
     fn constructor_rejects_zero_activation_delay() {
         assert_eq!(
             AgentDrivenUpgradeWorkflow::new(AgentUpgradeWorkflowConfig {
                 current_version: "v0.1.0".to_owned(),
                 allowed_agent_proposers: vec!["kamn:did:agent:upgrade-bot".to_owned()],
+                allowed_validator_voters: vec!["kamn:did:agent:validator-1".to_owned()],
                 required_human_reviews: 1,
                 required_validator_quorum: 2,
                 min_activation_delay_secs: 0,
@@ -596,6 +639,7 @@ mod tests {
         let mut workflow = AgentDrivenUpgradeWorkflow::new(AgentUpgradeWorkflowConfig {
             current_version: "v0.1.0".to_owned(),
             allowed_agent_proposers: vec!["kamn:did:agent:upgrade-bot".to_owned()],
+            allowed_validator_voters: vec!["kamn:did:agent:validator-1".to_owned()],
             required_human_reviews: 1,
             required_validator_quorum: 2,
             min_activation_delay_secs: 60,
@@ -627,5 +671,46 @@ mod tests {
             .proposal("agent-upgrade-a")
             .expect("proposal should exist");
         assert_eq!(record.state, AgentUpgradeProposalState::PendingHumanReview);
+    }
+
+    #[test]
+    fn cast_validator_vote_rejects_non_allowlisted_validator() {
+        let mut workflow = AgentDrivenUpgradeWorkflow::new(AgentUpgradeWorkflowConfig {
+            current_version: "v0.1.0".to_owned(),
+            allowed_agent_proposers: vec!["kamn:did:agent:upgrade-bot".to_owned()],
+            allowed_validator_voters: vec!["kamn:did:agent:validator-1".to_owned()],
+            required_human_reviews: 1,
+            required_validator_quorum: 1,
+            min_activation_delay_secs: 60,
+        })
+        .expect("workflow should initialize");
+        workflow
+            .submit_agent_proposal(AgentUpgradeProposalDraft {
+                proposal_id: "agent-upgrade-b".to_owned(),
+                target_version: "v0.2.0".to_owned(),
+                agent_did: "kamn:did:agent:upgrade-bot".to_owned(),
+                rationale: "validator-vote-allowlist".to_owned(),
+                created_at_unix: 100,
+                voting_deadline_unix: 200,
+            })
+            .expect("proposal should register");
+        workflow
+            .approve_human_review("agent-upgrade-b", "kamn:did:agent:validator-1", 110)
+            .expect("review should pass");
+        workflow
+            .submit_to_governance("agent-upgrade-b", 120)
+            .expect("governance submission should pass");
+
+        assert_eq!(
+            workflow.cast_validator_vote(
+                "agent-upgrade-b",
+                "kamn:did:agent:validator-rogue",
+                GovernanceVoteChoice::Yes,
+                130,
+            ),
+            Err(AgentUpgradeWorkflowError::UnauthorizedValidatorVoter(
+                "kamn:did:agent:validator-rogue".to_owned()
+            ))
+        );
     }
 }
