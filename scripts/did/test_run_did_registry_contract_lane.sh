@@ -23,6 +23,21 @@ if ! grep -q "retry_classification_is_deterministic_for_duplicate_submission" "$
   exit 1
 fi
 
+if ! grep -q "functional_chain_submission_adapter_returns_typed_submitted_outcome" "$SCRIPT"; then
+  echo "expected did registry lane to include chain adapter submitted outcome coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "integration_chain_submission_adapter_deduplicates_retry_outcomes" "$SCRIPT"; then
+  echo "expected did registry lane to include chain adapter duplicate outcome integration coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "regression_chain_submission_adapter_exposes_rejected_outcome_without_panicking" "$SCRIPT"; then
+  echo "expected did registry lane to include chain adapter rejected-outcome regression coverage" >&2
+  exit 1
+fi
+
 if ! grep -q "integration_register_retry_and_finality_boundary_is_idempotent" "$SCRIPT"; then
   echo "expected did registry lane to include finality idempotency integration coverage" >&2
   exit 1

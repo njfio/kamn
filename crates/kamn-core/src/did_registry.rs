@@ -30,6 +30,93 @@ pub struct DidSubmissionFinalityRecord {
     pub receipt: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DidChainSubmissionRequest {
+    pub did: AgentDid,
+    pub idempotency_key: String,
+    pub document: DidDocument,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DidChainSubmissionReceipt {
+    pub provider: String,
+    pub transaction_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DidChainSubmissionOutcome {
+    Submitted(DidChainSubmissionReceipt),
+    Duplicate(DidChainSubmissionReceipt),
+    Rejected { reason: String },
+    FinalizedNoOp,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DidChainSubmissionResult {
+    pub did: AgentDid,
+    pub idempotency_key: String,
+    pub retry_class: DidSubmissionRetryClass,
+    pub outcome: DidChainSubmissionOutcome,
+}
+
+pub trait DidRegistrationChainAdapter {
+    fn submit_registration(
+        &mut self,
+        request: &DidChainSubmissionRequest,
+    ) -> Result<DidChainSubmissionOutcome, DidRegistryError>;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct InMemoryDidRegistrationChainAdapter {
+    provider: String,
+    receipts_by_key: HashMap<String, DidChainSubmissionReceipt>,
+    rejected_reasons_by_key: HashMap<String, String>,
+}
+
+impl InMemoryDidRegistrationChainAdapter {
+    pub fn new(provider: &str) -> Self {
+        Self {
+            provider: provider.to_owned(),
+            receipts_by_key: HashMap::new(),
+            rejected_reasons_by_key: HashMap::new(),
+        }
+    }
+
+    pub fn reject_idempotency_key(&mut self, idempotency_key: &str, reason: &str) {
+        self.rejected_reasons_by_key
+            .insert(idempotency_key.to_owned(), reason.to_owned());
+    }
+}
+
+impl DidRegistrationChainAdapter for InMemoryDidRegistrationChainAdapter {
+    fn submit_registration(
+        &mut self,
+        request: &DidChainSubmissionRequest,
+    ) -> Result<DidChainSubmissionOutcome, DidRegistryError> {
+        if let Some(reason) = self.rejected_reasons_by_key.get(&request.idempotency_key) {
+            return Ok(DidChainSubmissionOutcome::Rejected {
+                reason: reason.clone(),
+            });
+        }
+
+        if let Some(existing) = self.receipts_by_key.get(&request.idempotency_key) {
+            return Ok(DidChainSubmissionOutcome::Duplicate(existing.clone()));
+        }
+
+        let receipt = DidChainSubmissionReceipt {
+            provider: self.provider.clone(),
+            transaction_id: format!(
+                "did-tx:{}:{}",
+                request.did.method_specific_id(),
+                request.idempotency_key.len()
+            ),
+        };
+        self.receipts_by_key
+            .insert(request.idempotency_key.clone(), receipt.clone());
+        Ok(DidChainSubmissionOutcome::Submitted(receipt))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct DidRegistry {
     records: HashMap<AgentDid, DidRegistryRecord>,
@@ -182,6 +269,34 @@ impl DidRegistry {
                 })
             }
         }
+    }
+
+    pub fn submit_registration_via_chain_adapter<A: DidRegistrationChainAdapter>(
+        &mut self,
+        adapter: &mut A,
+        did: AgentDid,
+        document: DidDocument,
+    ) -> Result<DidChainSubmissionResult, DidRegistryError> {
+        let idempotency_key = self.idempotency_key_for_register(&did, &document)?;
+        let retry_class = self.register_with_retry_guard(did.clone(), document.clone())?;
+
+        let outcome = if retry_class == DidSubmissionRetryClass::FinalizedNoRetry {
+            DidChainSubmissionOutcome::FinalizedNoOp
+        } else {
+            let request = DidChainSubmissionRequest {
+                did: did.clone(),
+                idempotency_key: idempotency_key.clone(),
+                document,
+            };
+            adapter.submit_registration(&request)?
+        };
+
+        Ok(DidChainSubmissionResult {
+            did,
+            idempotency_key,
+            retry_class,
+            outcome,
+        })
     }
 
     pub fn record_register_finality(

@@ -126,8 +126,10 @@ pub use did::{
     DidDocumentError, DidService, DidVerificationMethod,
 };
 pub use did_registry::{
-    DidRegistry, DidRegistryError, DidSubmissionFinalityRecord, DidSubmissionFinalityStatus,
-    DidSubmissionRetryClass,
+    DidChainSubmissionOutcome, DidChainSubmissionReceipt, DidChainSubmissionRequest,
+    DidChainSubmissionResult, DidRegistrationChainAdapter, DidRegistry, DidRegistryError,
+    DidSubmissionFinalityRecord, DidSubmissionFinalityStatus, DidSubmissionRetryClass,
+    InMemoryDidRegistrationChainAdapter,
 };
 pub use direct_message_crypto::{
     DirectMessageCiphertext, DirectMessageCryptoEngine, DirectMessageCryptoError,
