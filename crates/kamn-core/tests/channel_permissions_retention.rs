@@ -204,3 +204,49 @@ fn zero_message_count_retention_is_rejected() {
         ))
     );
 }
+
+#[test]
+fn regression_allowlist_rule_rejects_empty_set() {
+    // Regression: #458
+    let mut engine = ChannelPermissionEngine::new();
+    let mut permissions = base_permissions();
+    permissions.send = PermissionRule::Allowlist(Default::default());
+
+    assert_eq!(
+        engine.register_channel(
+            "channel:group:perm-6",
+            vec![
+                "kamn:did:agent:owner".to_owned(),
+                "kamn:did:agent:member-1".to_owned(),
+            ],
+            vec!["kamn:did:agent:owner".to_owned()],
+            permissions,
+        ),
+        Err(ChannelPolicyError::InvalidPermissionRule(
+            "allowlist for send must not be empty".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn regression_allowlist_rule_rejects_invalid_did_entries() {
+    // Regression: #458
+    let mut engine = ChannelPermissionEngine::new();
+    let mut permissions = base_permissions();
+    permissions.send = PermissionRule::Allowlist(["not-a-did".to_owned()].into_iter().collect());
+
+    assert_eq!(
+        engine.register_channel(
+            "channel:group:perm-7",
+            vec![
+                "kamn:did:agent:owner".to_owned(),
+                "kamn:did:agent:member-1".to_owned(),
+            ],
+            vec!["kamn:did:agent:owner".to_owned()],
+            permissions,
+        ),
+        Err(ChannelPolicyError::InvalidPermissionRule(
+            "allowlist for send contains invalid did: not-a-did".to_owned()
+        ))
+    );
+}
