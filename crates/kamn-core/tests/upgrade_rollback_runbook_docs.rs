@@ -34,3 +34,24 @@ fn runbook_contains_failure_simulation_scenarios() {
     assert!(RUNBOOK.contains("Partial node upgrade divergence drill"));
     assert!(RUNBOOK.contains("Quorum degradation during upgrade drill"));
 }
+
+#[test]
+fn runbook_contains_watchdog_incident_response_flow() {
+    assert!(RUNBOOK.contains("## Watchdog Incident Response Flow"));
+    assert!(RUNBOOK.contains("1. Confirm incident attestation severity and fingerprint."));
+    assert!(RUNBOOK.contains("2. Capture incident evidence payload before mitigation."));
+    assert!(RUNBOOK.contains("3. Execute containment actions from the approved response tier."));
+    assert!(RUNBOOK.contains("4. Run rollback procedure when severity is `critical`."));
+    assert!(RUNBOOK.contains("5. Record closure summary with deterministic incident fields."));
+}
+
+#[test]
+fn regression_requires_watchdog_evidence_capture_and_fast_lane() {
+    // Regression: #383
+    assert!(RUNBOOK.contains(
+        "Capture incident evidence payload with expected/observed state hash, quorum sample, and censorship delivery ratios before rollback action."
+    ));
+    assert!(RUNBOOK.contains("## Fast and Cost-Effective Watchdog Validation Lane"));
+    assert!(RUNBOOK.contains("cargo test -p kamn-core --test runtime_watchdog_attestation_docs"));
+    assert!(RUNBOOK.contains("cargo test -p kamn-core --test upgrade_rollback_runbook_docs"));
+}
