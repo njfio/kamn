@@ -311,3 +311,18 @@ fn did_parse_rejects_wrong_prefix() {
     let parsed = valid_did("alpha-1");
     assert_eq!(parsed.as_str(), "kamn:did:agent:alpha-1");
 }
+
+#[test]
+fn register_rejects_empty_capability_entries() {
+    // Regression: #583
+    let mut client = InMemoryKamnClient::new();
+    let result = client.register(metadata("autonomous", "claude-4", &["text", ""]));
+
+    assert_eq!(
+        result,
+        Err(SdkError::InvalidInput {
+            field: "capabilities",
+            reason: "must not include empty capability entries",
+        })
+    );
+}

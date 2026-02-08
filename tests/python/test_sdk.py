@@ -89,6 +89,15 @@ class PythonSDKTests(unittest.TestCase):
         with self.assertRaises(SDKError):
             self.client.resolve("kamn:did:agent:unknown")
 
+    def test_regression_register_rejects_empty_capability_entries(self) -> None:
+        # Regression: #583
+        with self.assertRaises(SDKError):
+            self.client.register(
+                agent_type="autonomous",
+                model_family="claude-4",
+                capabilities=["text", " "],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
