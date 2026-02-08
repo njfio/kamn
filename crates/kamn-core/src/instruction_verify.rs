@@ -1,3 +1,4 @@
+use crate::AgentDid;
 use std::collections::{HashMap, HashSet};
 
 pub const DEFAULT_MAX_CLAIM_VALIDITY_WINDOW_SECS: u64 = 24 * 60 * 60;
@@ -67,6 +68,8 @@ impl VerificationContext {
 pub enum VerificationFailure {
     MissingInstruction(String),
     MissingInclusionProofReference,
+    InvalidClaimSenderDid(String),
+    InvalidRecordSenderDid(String),
     SenderMismatch {
         expected: String,
         actual: String,
@@ -109,6 +112,16 @@ impl InstructionVerifier {
                 ));
             }
         };
+        if AgentDid::parse(&claim.from_did).is_err() {
+            return VerificationOutcome::Rejected(VerificationFailure::InvalidClaimSenderDid(
+                claim.from_did.clone(),
+            ));
+        }
+        if AgentDid::parse(&record.from_did).is_err() {
+            return VerificationOutcome::Rejected(VerificationFailure::InvalidRecordSenderDid(
+                record.from_did.clone(),
+            ));
+        }
 
         if record.from_did != claim.from_did {
             return VerificationOutcome::Rejected(VerificationFailure::SenderMismatch {
@@ -335,6 +348,62 @@ mod tests {
                 expected: "proof:chain:tx-1".to_owned(),
                 actual: "proof:chain:tx-2".to_owned(),
             })
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_claim_sender_did() {
+        let context = VerificationContext::new(100)
+            .with_instruction(InstructionRecord {
+                id: "ins_1".to_owned(),
+                from_did: "kamn:did:agent:alpha".to_owned(),
+                payload_hash: "hash_a".to_owned(),
+                signature: "sig".to_owned(),
+                inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
+            })
+            .with_authorized_sender("not-a-did");
+        let claim = InstructionClaim {
+            instruction_id: "ins_1".to_owned(),
+            from_did: "not-a-did".to_owned(),
+            payload_hash: "hash_a".to_owned(),
+            signature: "sig".to_owned(),
+            inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
+            expires_at_unix: 120,
+        };
+
+        assert_eq!(
+            InstructionVerifier::verify(&claim, &context),
+            VerificationOutcome::Rejected(VerificationFailure::InvalidClaimSenderDid(
+                "not-a-did".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_record_sender_did() {
+        let context = VerificationContext::new(100)
+            .with_instruction(InstructionRecord {
+                id: "ins_1".to_owned(),
+                from_did: "bad-record-did".to_owned(),
+                payload_hash: "hash_a".to_owned(),
+                signature: "sig".to_owned(),
+                inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
+            })
+            .with_authorized_sender("kamn:did:agent:alpha");
+        let claim = InstructionClaim {
+            instruction_id: "ins_1".to_owned(),
+            from_did: "kamn:did:agent:alpha".to_owned(),
+            payload_hash: "hash_a".to_owned(),
+            signature: "sig".to_owned(),
+            inclusion_proof_ref: "proof:chain:tx-1".to_owned(),
+            expires_at_unix: 120,
+        };
+
+        assert_eq!(
+            InstructionVerifier::verify(&claim, &context),
+            VerificationOutcome::Rejected(VerificationFailure::InvalidRecordSenderDid(
+                "bad-record-did".to_owned()
+            ))
         );
     }
 }
