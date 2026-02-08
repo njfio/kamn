@@ -77,3 +77,6 @@ Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 - Rust dependency/build cache enabled in Rust lanes.
 - Expensive suites are not on the PR merge-critical path.
 - PR template includes a mandatory CI-impact declaration for workflow/test-scope changes.
+
+## Post-Billing Runbook
+- Follow `docs/ci/post-billing-closeout.md` to close #68/#70 once hosted workflows are available.
