@@ -21,6 +21,12 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `RecoveryRejoinGuard`
   - `RecoveryStatus`
   - `RecoveryGuardError`
+- Added deterministic fault simulation primitives in `crates/kamn-core/src/runtime.rs`:
+  - `NetworkFaultSimulationInput`
+  - `NetworkFaultSimulationReport`
+  - `NetworkFaultSimulationError`
+  - `DeterministicNetworkFaultSimulator`
+  - `simulate_daemon_network_fault(...)`
 - Kept runtime role wiring behavior unchanged and covered by existing tests.
 
 ## Node CLI Recovery-Check Mapping
@@ -113,6 +119,25 @@ This document captures the initial runtime-network foundation slice for peer lif
   - replayed resume tokens are rejected (`ReplayResumeToken`)
   - matching version/hash with unique resume token is accepted (`RejoinAccepted`)
 
+## Deterministic Fault Simulation Harness Rules
+- `NetworkFaultSimulationInput` requires:
+  - non-empty `sample_id`
+  - non-empty `peer_id`
+  - queue capacity greater than zero
+  - watchdog-compatible delivery/peer sample values
+- `DeterministicNetworkFaultSimulator` executes deterministic simulation flow:
+  - lifecycle bootstrap: `StartConnect` -> `HandshakeSucceeded`
+  - degraded lifecycle projection when `healthy_peers < active_peers`
+  - bounded queue saturation accounting via `queue_overflow_attempts`
+  - watchdog anomaly classification via `WatchdogAnomalyEvaluator`
+- `simulate_daemon_network_fault(...)` provides daemon wrapper parity for simulator execution.
+- Output contract fields:
+  - `final_lifecycle_state`
+  - `queue_overflow_attempts`
+  - `watchdog_kind`
+  - `watchdog_severity`
+  - delivery/liveness per-mille ratios
+
 ## Test Coverage Mapping
 - Unit:
   - invalid transition checks
@@ -127,6 +152,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - bounded FIFO queue behavior under capacity
   - queue-drain to planner ordering preservation
   - lagging-node catch-up guidance output
+  - daemon network-fault simulation with queue-overflow/degradation reporting
 - Regression:
   - rejoin without disconnect is rejected (`Regression: #324`)
   - queue overflow rejects new event (`Regression: #324`)
@@ -138,16 +164,27 @@ This document captures the initial runtime-network foundation slice for peer lif
   - daemon lifecycle invalid transition rejection (`Regression: #349`)
   - listener attestation replay rejection (`Regression: #371`)
   - outbound under-quorum rejection (`Regression: #372`)
+  - network fault simulation censorship critical-boundary guard (`Regression: #618`)
+- Performance:
+  - bounded PR-lane deterministic fault simulation budget check
+  - scheduled chaos lane stress hook (`--ignored`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 
 ```bash
 cargo test -p kamn-core runtime::tests::
+cargo test -p kamn-core network_fault_simulation
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-core --test bridge_quorum_runtime_docs
 cargo test -p kamn-node --test node_runtime_cli_docs
 cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
+```
+
+Scheduled deep-lane command:
+
+```bash
+cargo test -p kamn-core performance_network_fault_simulation_chaos_lane_stress -- --ignored
 ```
 
 Then run strict lint/format gates:

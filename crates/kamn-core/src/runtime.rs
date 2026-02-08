@@ -1726,6 +1726,182 @@ pub fn evaluate_daemon_watchdog_anomaly(
     evaluator.evaluate(input)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NetworkFaultSimulationInput {
+    sample_id: String,
+    peer_id: String,
+    expected_deliveries: u32,
+    delivered_deliveries: u32,
+    active_peers: u32,
+    healthy_peers: u32,
+    sample_window_secs: u64,
+    targeted_peer_count: u32,
+    queue_capacity: usize,
+    queued_events: usize,
+}
+
+impl NetworkFaultSimulationInput {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        sample_id: &str,
+        peer_id: &str,
+        expected_deliveries: u32,
+        delivered_deliveries: u32,
+        active_peers: u32,
+        healthy_peers: u32,
+        sample_window_secs: u64,
+        targeted_peer_count: u32,
+        queue_capacity: usize,
+        queued_events: usize,
+    ) -> Result<Self, NetworkFaultSimulationError> {
+        if sample_id.trim().is_empty() {
+            return Err(NetworkFaultSimulationError::InvalidSampleId);
+        }
+        if peer_id.trim().is_empty() {
+            return Err(NetworkFaultSimulationError::InvalidPeerId);
+        }
+        if queue_capacity == 0 {
+            return Err(NetworkFaultSimulationError::InvalidQueueCapacity { capacity: 0 });
+        }
+        WatchdogAnomalyWatchInput::new(
+            sample_id,
+            expected_deliveries,
+            delivered_deliveries,
+            active_peers,
+            healthy_peers,
+            sample_window_secs,
+            targeted_peer_count,
+        )
+        .map_err(NetworkFaultSimulationError::Watchdog)?;
+
+        Ok(Self {
+            sample_id: sample_id.to_owned(),
+            peer_id: peer_id.to_owned(),
+            expected_deliveries,
+            delivered_deliveries,
+            active_peers,
+            healthy_peers,
+            sample_window_secs,
+            targeted_peer_count,
+            queue_capacity,
+            queued_events,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NetworkFaultSimulationReport {
+    pub sample_id: String,
+    pub final_lifecycle_state: PeerLifecycleState,
+    pub queue_capacity: usize,
+    pub queued_events: usize,
+    pub queue_overflow_attempts: usize,
+    pub watchdog_kind: WatchdogAnomalyKind,
+    pub watchdog_severity: WatchdogAnomalySeverity,
+    pub watchdog_delivery_ratio_per_mille: u16,
+    pub watchdog_liveness_ratio_per_mille: u16,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NetworkFaultSimulationError {
+    InvalidSampleId,
+    InvalidPeerId,
+    InvalidQueueCapacity { capacity: usize },
+    Lifecycle(RuntimeLifecycleError),
+    Watchdog(WatchdogAnomalyError),
+}
+
+impl Display for NetworkFaultSimulationError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidSampleId => {
+                write!(f, "network fault simulation sample id cannot be empty")
+            }
+            Self::InvalidPeerId => write!(f, "network fault simulation peer id cannot be empty"),
+            Self::InvalidQueueCapacity { capacity } => write!(
+                f,
+                "network fault simulation queue capacity must be positive, found {capacity}"
+            ),
+            Self::Lifecycle(error) => write!(f, "{error}"),
+            Self::Watchdog(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl Error for NetworkFaultSimulationError {}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DeterministicNetworkFaultSimulator {
+    anomaly_evaluator: WatchdogAnomalyEvaluator,
+}
+
+impl DeterministicNetworkFaultSimulator {
+    pub fn simulate(
+        &self,
+        input: NetworkFaultSimulationInput,
+    ) -> Result<NetworkFaultSimulationReport, NetworkFaultSimulationError> {
+        let mut lifecycle =
+            PeerLifecycle::new(&input.peer_id).map_err(NetworkFaultSimulationError::Lifecycle)?;
+        lifecycle
+            .transition(PeerLifecycleEvent::StartConnect)
+            .map_err(NetworkFaultSimulationError::Lifecycle)?;
+        lifecycle
+            .transition(PeerLifecycleEvent::HandshakeSucceeded)
+            .map_err(NetworkFaultSimulationError::Lifecycle)?;
+        if input.healthy_peers < input.active_peers {
+            lifecycle
+                .transition(PeerLifecycleEvent::HeartbeatMissed)
+                .map_err(NetworkFaultSimulationError::Lifecycle)?;
+        }
+
+        let mut queue = BoundedRuntimeQueue::new(input.queue_capacity).map_err(|_| {
+            NetworkFaultSimulationError::InvalidQueueCapacity {
+                capacity: input.queue_capacity,
+            }
+        })?;
+        let mut queue_overflow_attempts = 0usize;
+        for event_index in 0..input.queued_events {
+            if queue.enqueue(format!("fault-event-{event_index}")).is_err() {
+                queue_overflow_attempts += 1;
+            }
+        }
+
+        let watchdog_input = WatchdogAnomalyWatchInput::new(
+            &input.sample_id,
+            input.expected_deliveries,
+            input.delivered_deliveries,
+            input.active_peers,
+            input.healthy_peers,
+            input.sample_window_secs,
+            input.targeted_peer_count,
+        )
+        .map_err(NetworkFaultSimulationError::Watchdog)?;
+        let watchdog_report = self
+            .anomaly_evaluator
+            .evaluate(watchdog_input)
+            .map_err(NetworkFaultSimulationError::Watchdog)?;
+
+        Ok(NetworkFaultSimulationReport {
+            sample_id: input.sample_id,
+            final_lifecycle_state: lifecycle.state(),
+            queue_capacity: input.queue_capacity,
+            queued_events: input.queued_events,
+            queue_overflow_attempts,
+            watchdog_kind: watchdog_report.kind,
+            watchdog_severity: watchdog_report.severity,
+            watchdog_delivery_ratio_per_mille: watchdog_report.delivery_ratio_per_mille,
+            watchdog_liveness_ratio_per_mille: watchdog_report.liveness_ratio_per_mille,
+        })
+    }
+}
+
+pub fn simulate_daemon_network_fault(
+    simulator: &DeterministicNetworkFaultSimulator,
+    input: NetworkFaultSimulationInput,
+) -> Result<NetworkFaultSimulationReport, NetworkFaultSimulationError> {
+    simulator.simulate(input)
+}
+
 fn is_valid_listener_did(value: &str) -> bool {
     is_valid_kamn_did(value)
 }
@@ -1876,9 +2052,10 @@ mod tests {
         authorize_daemon_outbound_action, build_runtime_wiring, evaluate_daemon_state_divergence,
         evaluate_daemon_watchdog_anomaly, execute_processor_daemon_tick, ApproverAttestation,
         ApproverQuorumError, ApproverQuorumEvaluator, ApproverQuorumInput, BoundedRuntimeQueue,
-        ConstructLockError, ConstructLockGuard, DeterministicProposalPlanner,
-        FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore, ListenerAttestation,
-        ListenerQuorumError, ListenerQuorumEvaluator, ListenerQuorumInput, PeerLifecycle,
+        ConstructLockError, ConstructLockGuard, DeterministicNetworkFaultSimulator,
+        DeterministicProposalPlanner, FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore,
+        ListenerAttestation, ListenerQuorumError, ListenerQuorumEvaluator, ListenerQuorumInput,
+        NetworkFaultSimulationError, NetworkFaultSimulationInput, PeerLifecycle,
         PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, ProposalPlannerError,
         RecoveryGuardError, RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt,
         RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore,
@@ -2774,6 +2951,156 @@ mod tests {
             .expect("edge censorship signal should be classified");
         assert_eq!(report.kind, WatchdogAnomalyKind::CensorshipSignal);
         assert_eq!(report.severity, WatchdogAnomalySeverity::Critical);
+    }
+
+    #[test]
+    fn unit_network_fault_simulation_rejects_zero_queue_capacity() {
+        let input = NetworkFaultSimulationInput::new(
+            "fault-sample-invalid",
+            "peer-sim-a",
+            100,
+            99,
+            6,
+            6,
+            30,
+            1,
+            0,
+            2,
+        );
+        assert_eq!(
+            input,
+            Err(NetworkFaultSimulationError::InvalidQueueCapacity { capacity: 0 })
+        );
+    }
+
+    #[test]
+    fn functional_network_fault_simulation_classifies_targeted_packet_loss_as_critical() {
+        let simulator = DeterministicNetworkFaultSimulator::default();
+        let input = NetworkFaultSimulationInput::new(
+            "fault-sample-censorship",
+            "peer-sim-a",
+            100,
+            45,
+            8,
+            8,
+            60,
+            3,
+            8,
+            8,
+        )
+        .expect("valid simulation input");
+        let report = simulator
+            .simulate(input)
+            .expect("simulation should classify targeted packet loss");
+
+        assert_eq!(report.watchdog_kind, WatchdogAnomalyKind::CensorshipSignal);
+        assert_eq!(report.watchdog_severity, WatchdogAnomalySeverity::Critical);
+        assert_eq!(report.final_lifecycle_state, PeerLifecycleState::Active);
+        assert_eq!(report.queue_overflow_attempts, 0);
+    }
+
+    #[test]
+    fn integration_daemon_network_fault_simulation_reports_overflow_and_degradation() {
+        let simulator = DeterministicNetworkFaultSimulator::default();
+        let input = NetworkFaultSimulationInput::new(
+            "fault-sample-overflow",
+            "peer-sim-b",
+            120,
+            110,
+            6,
+            4,
+            30,
+            1,
+            2,
+            5,
+        )
+        .expect("valid simulation input");
+        let report = super::simulate_daemon_network_fault(&simulator, input)
+            .expect("simulation should pass");
+
+        assert_eq!(report.final_lifecycle_state, PeerLifecycleState::Degraded);
+        assert_eq!(report.queue_overflow_attempts, 3);
+        assert_eq!(
+            report.watchdog_kind,
+            WatchdogAnomalyKind::LivenessDegradation
+        );
+    }
+
+    #[test]
+    fn regression_network_fault_simulation_keeps_censorship_critical_boundary() {
+        // Regression: #618
+        let simulator = DeterministicNetworkFaultSimulator::default();
+        let input = NetworkFaultSimulationInput::new(
+            "fault-sample-regression",
+            "peer-sim-c",
+            200,
+            100,
+            12,
+            12,
+            60,
+            2,
+            4,
+            4,
+        )
+        .expect("valid simulation input");
+        let report = simulator
+            .simulate(input)
+            .expect("simulation should classify censorship boundary");
+
+        assert_eq!(report.watchdog_kind, WatchdogAnomalyKind::CensorshipSignal);
+        assert_eq!(report.watchdog_severity, WatchdogAnomalySeverity::Critical);
+    }
+
+    #[test]
+    fn performance_network_fault_simulation_pr_lane_stays_within_budget() {
+        let simulator = DeterministicNetworkFaultSimulator::default();
+        let start = Instant::now();
+        for sample_index in 0..256 {
+            let input = NetworkFaultSimulationInput::new(
+                &format!("fault-sample-perf-{sample_index}"),
+                "peer-sim-perf",
+                100,
+                98,
+                16,
+                16,
+                30,
+                1,
+                8,
+                8,
+            )
+            .expect("valid simulation input");
+            assert!(simulator.simulate(input).is_ok());
+        }
+        let elapsed_millis = start.elapsed().as_millis();
+        assert!(
+            elapsed_millis < 250,
+            "network fault simulation PR lane exceeded budget: {elapsed_millis}ms"
+        );
+    }
+
+    #[test]
+    #[ignore = "scheduled chaos lane"]
+    fn performance_network_fault_simulation_chaos_lane_stress() {
+        let simulator = DeterministicNetworkFaultSimulator::default();
+        for sample_index in 0..5000 {
+            let targeted_peer_count = if sample_index % 4 == 0 { 3 } else { 1 };
+            let delivered = if targeted_peer_count == 3 { 45 } else { 99 };
+            let healthy_peers = if sample_index % 3 == 0 { 8 } else { 10 };
+            let input = NetworkFaultSimulationInput::new(
+                &format!("fault-sample-chaos-{sample_index}"),
+                "peer-sim-chaos",
+                100,
+                delivered,
+                10,
+                healthy_peers,
+                30,
+                targeted_peer_count,
+                16,
+                24,
+            )
+            .expect("valid simulation input");
+            assert!(simulator.simulate(input).is_ok());
+        }
     }
 
     #[test]
