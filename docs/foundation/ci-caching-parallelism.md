@@ -16,6 +16,10 @@ This document captures the first implementation slice for CI runtime/cost optimi
   - Critical CI paths (`.github/workflows/*`, `scripts/ci/*`) escalate to full Rust validation scope.
   - Unknown non-doc paths escalate to full Rust validation scope.
   - duplicate/unknown matrix drift is guarded by selector regression tests (`Regression: #419`).
+- Added narrow-diff telemetry summary metrics for CI budget artifact rollups:
+  - narrow-diff records are defined as runs with `changed_files <= 3`.
+  - summary reports narrow-diff elapsed and runner-minute means.
+  - summary reports narrow-diff full-scope count to track safety fallback frequency (`Regression: #428`).
 
 ## Operational Guidance
 - Cache invalidation:
@@ -28,6 +32,7 @@ This document captures the first implementation slice for CI runtime/cost optimi
 - Troubleshooting:
   - If deep invariant lane becomes unstable, temporarily reduce to `--parallelism 1` and compare budget telemetry.
   - If cache hit rates drop unexpectedly, verify lockfile churn and key continuity before changing workflow logic.
+  - If narrow-diff full-scope count rises unexpectedly, inspect path classification rules before relaxing fallback policy.
 
 ## Local Validation
 Run from repository root:

@@ -58,8 +58,19 @@ for file in "$@"; do
   status="$(jq -r '.status // "unknown"' "$file")"
   cache_hit="$(jq -r '.cache_hit // "unknown"' "$file")"
   retry_used="$(jq -r '.retry_used // "unknown"' "$file")"
+  changed_files="$(jq -r '.changed_files // 0' "$file")"
+  test_scope="$(jq -r '.test_scope // "unknown"' "$file")"
 
-  printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$lane" "$elapsed" "$runner" "$status" "$cache_hit" "$retry_used" >> "$VALUES_FILE"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$lane" \
+    "$elapsed" \
+    "$runner" \
+    "$status" \
+    "$cache_hit" \
+    "$retry_used" \
+    "$changed_files" \
+    "$test_scope" \
+    >> "$VALUES_FILE"
 done
 
 if [ ! -f "$VALUES_FILE" ] || [ ! -s "$VALUES_FILE" ]; then
@@ -108,6 +119,10 @@ cache_unknown="$(awk -F '\t' '$5 != "true" && $5 != "false" {c += 1} END {print 
 retry_true="$(awk -F '\t' '$6 == "true" {c += 1} END {print c+0}' "$VALUES_FILE")"
 retry_false="$(awk -F '\t' '$6 == "false" {c += 1} END {print c+0}' "$VALUES_FILE")"
 retry_unknown="$(awk -F '\t' '$6 != "true" && $6 != "false" {c += 1} END {print c+0}' "$VALUES_FILE")"
+narrow_records="$(awk -F '\t' '$7 ~ /^[0-9]+$/ && $7 <= 3 {c += 1} END {print c+0}' "$VALUES_FILE")"
+narrow_elapsed_mean="$(awk -F '\t' '$7 ~ /^[0-9]+$/ && $7 <= 3 {sum += $2; n += 1} END { if (n == 0) { print "0.00" } else { printf "%.2f", sum/n } }' "$VALUES_FILE")"
+narrow_runner_mean="$(awk -F '\t' '$7 ~ /^[0-9]+$/ && $7 <= 3 {sum += $3; n += 1} END { if (n == 0) { print "0.00" } else { printf "%.2f", sum/n } }' "$VALUES_FILE")"
+narrow_full_scope_count="$(awk -F '\t' '$7 ~ /^[0-9]+$/ && $7 <= 3 && $8 == "full" {c += 1} END {print c+0}' "$VALUES_FILE")"
 
 cat <<REPORT
 CI Budget Telemetry Summary
@@ -125,6 +140,12 @@ Runner minutes:
 - p50: $runner_p50
 - p95: $runner_p95
 - mean: $runner_mean
+
+Narrow-diff slice:
+- Narrow-diff records (<=3 changed files): $narrow_records
+- Narrow-diff elapsed mean: $narrow_elapsed_mean
+- Narrow-diff runner mean: $narrow_runner_mean
+- Narrow-diff full-scope count: $narrow_full_scope_count
 
 Status counts:
 - pass: $status_pass
