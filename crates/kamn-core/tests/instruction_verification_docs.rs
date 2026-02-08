@@ -42,3 +42,12 @@ fn regression_requires_sender_did_validation_rules() {
     assert!(DOC.contains("InvalidRecordSenderDid"));
     assert!(DOC.contains("malformed claim or record sender DID is rejected (`Regression: #453`)"));
 }
+
+#[test]
+fn regression_requires_non_empty_signature_rules() {
+    // Regression: #553
+    assert!(DOC.contains("Claim and on-chain signatures must be non-empty."));
+    assert!(DOC.contains("MissingClaimSignature"));
+    assert!(DOC.contains("MissingRecordSignature"));
+    assert!(DOC.contains("empty claim or record signatures are rejected (`Regression: #553`)."));
+}
