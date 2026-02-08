@@ -1,4 +1,4 @@
-# Python SDK Beta Slice (Issues #134, #135, #483)
+# Python SDK Beta Slice (Issues #134, #135, #483, #585)
 
 This document captures the first Python SDK implementation slice for MVP workflow parity.
 
@@ -24,7 +24,15 @@ Run from repository root:
 
 ```bash
 python3 -m unittest tests/python/test_sdk.py
+bash scripts/sdk/test_run_sdk_parity_matrix.sh
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test
 ```
+
+## Shared SDK Parity Fixture Matrix
+The Python SDK participates in shared cross-language parity checks:
+
+- Fixture source: `fixtures/sdk_parity/register_validation_cases.json`
+- Matrix command:
+  - `bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json /tmp/sdk-parity-report.json`

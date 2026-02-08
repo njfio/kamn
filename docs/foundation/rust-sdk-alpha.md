@@ -1,4 +1,4 @@
-# Rust SDK Alpha Slice (Issues #132, #133, #468)
+# Rust SDK Alpha Slice (Issues #132, #133, #468, #585)
 
 This document describes the first implementation slice for the Rust SDK aligned to PRD 12.1.
 
@@ -28,3 +28,15 @@ cargo test
 ## Follow-up
 - Introduce async transport-backed client implementation in a later slice.
 - Extend stream API parity to Python and TypeScript SDK implementations.
+
+## Shared SDK Parity Fixture Matrix
+Cross-language behavior parity is validated with a shared fixture corpus:
+
+- Fixture source: `fixtures/sdk_parity/register_validation_cases.json`
+- Matrix command:
+  - `bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json /tmp/sdk-parity-report.json`
+
+Runner entrypoints:
+- Rust: `bash scripts/sdk/run_parity_rust.sh`
+- Python: `bash scripts/sdk/run_parity_python.sh`
+- TypeScript: `bash scripts/sdk/run_parity_typescript.sh`

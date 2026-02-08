@@ -1,4 +1,4 @@
-# TypeScript SDK Beta and Shared Schema Package (Issues #218, #219, #485)
+# TypeScript SDK Beta and Shared Schema Package (Issues #218, #219, #485, #585)
 
 This document captures the first TypeScript SDK implementation slice and the shared protocol schema package used to keep language SDK behavior aligned.
 
@@ -42,6 +42,7 @@ PR-fast validation commands:
 ```bash
 npm --prefix packages/kamn-schema test
 npm --prefix packages/kamn-sdk test
+bash scripts/sdk/test_run_sdk_parity_matrix.sh
 ```
 
 These tests are deterministic, run in milliseconds, and require no package install at this stage.
@@ -57,3 +58,10 @@ cargo clippy -- -D warnings
 cargo test -p kamn-core --test typescript_sdk_beta_docs
 cargo test -p kamn-core
 ```
+
+## Shared SDK Parity Fixture Matrix
+The TypeScript SDK participates in shared cross-language parity checks:
+
+- Fixture source: `fixtures/sdk_parity/register_validation_cases.json`
+- Matrix command:
+  - `bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json /tmp/sdk-parity-report.json`
