@@ -1,4 +1,5 @@
 pub mod bootstrap;
+pub mod channel_models;
 pub mod config;
 pub mod did;
 pub mod did_registry;
@@ -19,6 +20,7 @@ pub mod token;
 pub mod transaction;
 
 pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};
+pub use channel_models::{ChannelModelError, ChannelStore, ChannelType};
 pub use config::{ConfigError, NodeConfig, NodeRole};
 pub use did::{
     canonical_did_document, AgentDid, AgentDidError, AgentDidMetadata, DidDocument,
