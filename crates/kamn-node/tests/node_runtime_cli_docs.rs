@@ -11,6 +11,7 @@ fn doc_contains_output_mode_scope_and_rules() {
     assert!(DOC.contains("--diagnostics snapshot"));
     assert!(DOC.contains("ConfigError::InvalidDiagnosticsMode"));
     assert!(DOC.contains("--runtime-mode planning"));
+    assert!(DOC.contains("--runtime-mode recovery-check"));
     assert!(DOC.contains("ConfigError::InvalidRuntimeMode"));
 }
 
@@ -23,6 +24,9 @@ fn doc_contains_deterministic_json_fields() {
     assert!(DOC.contains("component_count"));
     assert!(DOC.contains("planning_candidate_count"));
     assert!(DOC.contains("planning_scheduled_candidate_ids"));
+    assert!(DOC.contains("recovery_expected_state_version"));
+    assert!(DOC.contains("recovery_attempt_count"));
+    assert!(DOC.contains("recovery_decisions"));
     assert!(DOC.contains("sync_mode"));
     assert!(DOC.contains("components"));
 }
@@ -50,6 +54,15 @@ fn doc_contains_runtime_planning_rules() {
     assert!(DOC.contains("--expected-state-hash"));
     assert!(DOC.contains("--proposal <id|sender-did|nonce|state-hash>"));
     assert!(DOC.contains("Duplicate candidate IDs and stale state hashes are rejected"));
+}
+
+#[test]
+fn doc_contains_runtime_recovery_check_rules() {
+    assert!(DOC.contains("## Recovery Check Rules"));
+    assert!(DOC.contains("`recovery-check`"));
+    assert!(DOC.contains("--expected-state-version"));
+    assert!(DOC.contains("--rejoin-attempt <node-id|state-version|state-hash|resume-token>"));
+    assert!(DOC.contains("Replay resume tokens and version/hash mismatch scenarios are rejected"));
 }
 
 #[test]
@@ -83,4 +96,10 @@ fn regression_requires_runtime_planning_candidate_rules() {
     assert!(
         DOC.contains("duplicate/stale runtime planning candidate rejection (`Regression: #335`)")
     );
+}
+
+#[test]
+fn regression_requires_runtime_recovery_rejection_rules() {
+    // Regression: #336
+    assert!(DOC.contains("replay/version/hash recovery-check rejection (`Regression: #336`)"));
 }

@@ -3,7 +3,7 @@ use std::process::ExitCode;
 
 use kamn_core::{
     bootstrap, BootstrapPlan, ConfigError, DeterministicProposalPlanner, NodeConfig, NodeRole,
-    ProposalCandidate, SyncMode,
+    ProposalCandidate, RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, SyncMode,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -48,6 +48,7 @@ struct RuntimeMode {
 enum RuntimeModeKind {
     Bootstrap,
     Planning,
+    RecoveryCheck,
 }
 
 impl RuntimeMode {
@@ -63,10 +64,17 @@ impl RuntimeMode {
         }
     }
 
+    fn recovery_check() -> Self {
+        Self {
+            kind: RuntimeModeKind::RecoveryCheck,
+        }
+    }
+
     fn parse(value: &str) -> Result<Self, ConfigError> {
         match value {
             "bootstrap" => Ok(Self::bootstrap()),
             "planning" => Ok(Self::planning()),
+            "recovery-check" => Ok(Self::recovery_check()),
             other => Err(ConfigError::InvalidRuntimeMode(other.to_owned())),
         }
     }
@@ -75,6 +83,7 @@ impl RuntimeMode {
         match self.kind {
             RuntimeModeKind::Bootstrap => "bootstrap",
             RuntimeModeKind::Planning => "planning",
+            RuntimeModeKind::RecoveryCheck => "recovery-check",
         }
     }
 }
@@ -162,8 +171,10 @@ struct NodeCli {
     enable_gossip: bool,
     sync_mode: SyncMode,
     runtime_mode: RuntimeMode,
+    expected_state_version: Option<u64>,
     expected_state_hash: Option<String>,
     proposals: Vec<ProposalCandidate>,
+    rejoin_attempts: Vec<RejoinAttempt>,
     output_mode: OutputMode,
     diagnostics_mode: DiagnosticsMode,
 }
@@ -176,6 +187,14 @@ struct PlanningExecution {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+struct RecoveryExecution {
+    expected_state_version: u64,
+    expected_state_hash: String,
+    attempt_count: usize,
+    decisions: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct NodeBootstrapReport {
     runtime_mode: String,
     diagnostics_mode: String,
@@ -183,6 +202,10 @@ struct NodeBootstrapReport {
     planning_expected_state_hash: Option<String>,
     planning_candidate_count: Option<usize>,
     planning_scheduled_candidate_ids: Option<Vec<String>>,
+    recovery_expected_state_version: Option<u64>,
+    recovery_expected_state_hash: Option<String>,
+    recovery_attempt_count: Option<usize>,
+    recovery_decisions: Option<Vec<String>>,
     profile: Option<String>,
     role: String,
     chain_id: String,
@@ -209,8 +232,10 @@ where
     let mut enable_gossip = true;
     let mut sync_mode = SyncMode::Fast;
     let mut runtime_mode = RuntimeMode::bootstrap();
+    let mut expected_state_version: Option<u64> = None;
     let mut expected_state_hash: Option<String> = None;
     let mut proposals: Vec<ProposalCandidate> = Vec::new();
+    let mut rejoin_attempts: Vec<RejoinAttempt> = Vec::new();
     let mut output_mode = OutputMode::text();
     let mut diagnostics_mode = DiagnosticsMode::basic();
     let mut role_overridden = false;
@@ -273,6 +298,12 @@ where
                     .ok_or(ConfigError::MissingArgumentValue("--runtime-mode"))?;
                 runtime_mode = RuntimeMode::parse(&value)?;
             }
+            "--expected-state-version" => {
+                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
+                    "--expected-state-version",
+                ))?;
+                expected_state_version = Some(parse_state_version_arg(&value)?);
+            }
             "--expected-state-hash" => {
                 expected_state_hash = Some(
                     iter.next()
@@ -284,6 +315,12 @@ where
                     .next()
                     .ok_or(ConfigError::MissingArgumentValue("--proposal"))?;
                 proposals.push(parse_proposal_candidate(&value)?);
+            }
+            "--rejoin-attempt" => {
+                let value = iter
+                    .next()
+                    .ok_or(ConfigError::MissingArgumentValue("--rejoin-attempt"))?;
+                rejoin_attempts.push(parse_rejoin_attempt(&value)?);
             }
             "--output" => {
                 let value = iter
@@ -334,6 +371,19 @@ where
             return Err(ConfigError::MissingArgumentValue("--proposal"));
         }
     }
+    if runtime_mode.kind == RuntimeModeKind::RecoveryCheck {
+        if expected_state_version.is_none() {
+            return Err(ConfigError::MissingArgumentValue(
+                "--expected-state-version",
+            ));
+        }
+        if expected_state_hash.is_none() {
+            return Err(ConfigError::MissingArgumentValue("--expected-state-hash"));
+        }
+        if rejoin_attempts.is_empty() {
+            return Err(ConfigError::MissingArgumentValue("--rejoin-attempt"));
+        }
+    }
 
     Ok(NodeCli {
         profile,
@@ -344,11 +394,23 @@ where
         enable_gossip,
         sync_mode,
         runtime_mode,
+        expected_state_version,
         expected_state_hash,
         proposals,
+        rejoin_attempts,
         output_mode,
         diagnostics_mode,
     })
+}
+
+fn parse_state_version_arg(value: &str) -> Result<u64, ConfigError> {
+    let state_version = value
+        .parse::<u64>()
+        .map_err(|_| ConfigError::InvalidExpectedStateVersion(value.to_owned()))?;
+    if state_version == 0 {
+        return Err(ConfigError::InvalidExpectedStateVersion(value.to_owned()));
+    }
+    Ok(state_version)
 }
 
 fn parse_proposal_candidate(value: &str) -> Result<ProposalCandidate, ConfigError> {
@@ -363,6 +425,18 @@ fn parse_proposal_candidate(value: &str) -> Result<ProposalCandidate, ConfigErro
         .map_err(|error| ConfigError::RuntimePlanner(error.to_string()))
 }
 
+fn parse_rejoin_attempt(value: &str) -> Result<RejoinAttempt, ConfigError> {
+    let parts = value.split('|').collect::<Vec<&str>>();
+    if parts.len() != 4 {
+        return Err(ConfigError::InvalidRejoinAttemptArgument(value.to_owned()));
+    }
+    let state_version = parts[1]
+        .parse::<u64>()
+        .map_err(|_| ConfigError::InvalidRejoinAttemptArgument(value.to_owned()))?;
+    RejoinAttempt::new(parts[0], state_version, parts[2], parts[3])
+        .map_err(|_| ConfigError::InvalidRejoinAttemptArgument(value.to_owned()))
+}
+
 fn run() -> Result<(), ConfigError> {
     let cli = parse_args(env::args())?;
     let output_mode = cli.output_mode;
@@ -373,39 +447,92 @@ fn run() -> Result<(), ConfigError> {
 }
 
 fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
+    let NodeCli {
+        profile,
+        role,
+        chain_id,
+        chain_version,
+        storage_dir,
+        enable_gossip,
+        sync_mode,
+        runtime_mode,
+        expected_state_version,
+        expected_state_hash,
+        proposals,
+        rejoin_attempts,
+        output_mode: _,
+        diagnostics_mode,
+    } = cli;
     let config = NodeConfig {
-        chain_id: cli.chain_id.clone(),
-        chain_version: cli.chain_version.clone(),
-        role: cli.role,
-        storage_dir: cli.storage_dir.clone(),
-        enable_gossip: cli.enable_gossip,
-        sync_mode: cli.sync_mode,
+        chain_id: chain_id.clone(),
+        chain_version: chain_version.clone(),
+        role,
+        storage_dir: storage_dir.clone(),
+        enable_gossip,
+        sync_mode,
     };
 
     let plan = bootstrap(config)?;
-    let planning = match cli.runtime_mode.kind {
-        RuntimeModeKind::Bootstrap => None,
+    let (planning, recovery) = match runtime_mode.kind {
+        RuntimeModeKind::Bootstrap => (None, None),
         RuntimeModeKind::Planning => {
-            let expected_state_hash = cli
-                .expected_state_hash
+            let expected_state_hash = expected_state_hash
                 .ok_or(ConfigError::MissingArgumentValue("--expected-state-hash"))?;
             let planner = DeterministicProposalPlanner::new(&expected_state_hash);
             let proposal_plan = planner
-                .plan(cli.proposals)
+                .plan(proposals)
                 .map_err(|error| ConfigError::RuntimePlanner(error.to_string()))?;
-            Some(PlanningExecution {
-                expected_state_hash,
-                candidate_count: proposal_plan.ordered_candidates().len(),
-                scheduled_candidate_ids: proposal_plan.ordered_candidate_ids(),
-            })
+            (
+                Some(PlanningExecution {
+                    expected_state_hash,
+                    candidate_count: proposal_plan.ordered_candidates().len(),
+                    scheduled_candidate_ids: proposal_plan.ordered_candidate_ids(),
+                }),
+                None,
+            )
+        }
+        RuntimeModeKind::RecoveryCheck => {
+            let expected_state_version = expected_state_version.ok_or(
+                ConfigError::MissingArgumentValue("--expected-state-version"),
+            )?;
+            let expected_state_hash = expected_state_hash
+                .ok_or(ConfigError::MissingArgumentValue("--expected-state-hash"))?;
+            let mut guard = RecoveryRejoinGuard::new(expected_state_version, &expected_state_hash)
+                .map_err(|error| ConfigError::RuntimeRecovery(error.to_string()))?;
+            let mut decisions = Vec::with_capacity(rejoin_attempts.len());
+            for attempt in rejoin_attempts {
+                let decision = match guard
+                    .evaluate(attempt)
+                    .map_err(|error| ConfigError::RuntimeRecovery(error.to_string()))?
+                {
+                    RecoveryStatus::RejoinAccepted => "rejoin-accepted".to_owned(),
+                    RecoveryStatus::CatchUpRequired {
+                        from_version,
+                        to_version,
+                    } => {
+                        format!("catch-up-required:{from_version}->{to_version}")
+                    }
+                };
+                decisions.push(decision);
+            }
+            (
+                None,
+                Some(RecoveryExecution {
+                    expected_state_version,
+                    expected_state_hash,
+                    attempt_count: decisions.len(),
+                    decisions,
+                }),
+            )
         }
     };
     let report = build_bootstrap_report(
         &plan,
-        cli.profile,
-        cli.diagnostics_mode,
-        cli.runtime_mode,
+        profile,
+        diagnostics_mode,
+        runtime_mode,
         planning,
+        recovery,
     );
 
     Ok(report)
@@ -417,6 +544,7 @@ fn build_bootstrap_report(
     diagnostics_mode: DiagnosticsMode,
     runtime_mode: RuntimeMode,
     planning: Option<PlanningExecution>,
+    recovery: Option<RecoveryExecution>,
 ) -> NodeBootstrapReport {
     let operational_profile = plan.config.operational_profile();
     let components = plan
@@ -432,6 +560,14 @@ fn build_bootstrap_report(
     let planning_scheduled_candidate_ids = planning
         .as_ref()
         .map(|planning| planning.scheduled_candidate_ids.clone());
+    let recovery_expected_state_version = recovery
+        .as_ref()
+        .map(|recovery| recovery.expected_state_version);
+    let recovery_expected_state_hash = recovery
+        .as_ref()
+        .map(|recovery| recovery.expected_state_hash.clone());
+    let recovery_attempt_count = recovery.as_ref().map(|recovery| recovery.attempt_count);
+    let recovery_decisions = recovery.as_ref().map(|recovery| recovery.decisions.clone());
     NodeBootstrapReport {
         runtime_mode: runtime_mode.as_str().to_owned(),
         diagnostics_mode: diagnostics_mode.as_str().to_owned(),
@@ -439,6 +575,10 @@ fn build_bootstrap_report(
         planning_expected_state_hash,
         planning_candidate_count,
         planning_scheduled_candidate_ids,
+        recovery_expected_state_version,
+        recovery_expected_state_hash,
+        recovery_attempt_count,
+        recovery_decisions,
         profile: profile.map(LocalProfile::as_str).map(str::to_owned),
         role: plan.config.role.as_str().to_owned(),
         chain_id: plan.config.chain_id.clone(),
@@ -476,8 +616,25 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         .as_ref()
         .map(|value| value.join(", "))
         .unwrap_or_else(|| "none".to_owned());
+    let recovery_expected_state_version = report
+        .recovery_expected_state_version
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_owned());
+    let recovery_expected_state_hash = report
+        .recovery_expected_state_hash
+        .as_deref()
+        .unwrap_or("none");
+    let recovery_attempt_count = report
+        .recovery_attempt_count
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_owned());
+    let recovery_decisions = report
+        .recovery_decisions
+        .as_ref()
+        .map(|value| value.join(", "))
+        .unwrap_or_else(|| "none".to_owned());
     format!(
-        "KAMN node bootstrap\n  runtime_mode: {}\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  planning_expected_state_hash: {}\n  planning_candidate_count: {}\n  planning_scheduled_candidate_ids: {}\n  components: {}",
+        "KAMN node bootstrap\n  runtime_mode: {}\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  planning_expected_state_hash: {}\n  planning_candidate_count: {}\n  planning_scheduled_candidate_ids: {}\n  recovery_expected_state_version: {}\n  recovery_expected_state_hash: {}\n  recovery_attempt_count: {}\n  recovery_decisions: {}\n  components: {}",
         report.runtime_mode,
         report.diagnostics_mode,
         profile,
@@ -499,6 +656,10 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         planning_expected_state_hash,
         planning_candidate_count,
         planning_scheduled_candidate_ids,
+        recovery_expected_state_version,
+        recovery_expected_state_hash,
+        recovery_attempt_count,
+        recovery_decisions,
         report.components.join(", "),
     )
 }
@@ -527,6 +688,29 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         ),
         None => "null".to_owned(),
     };
+    let recovery_expected_state_version = match report.recovery_expected_state_version {
+        Some(value) => value.to_string(),
+        None => "null".to_owned(),
+    };
+    let recovery_expected_state_hash = match &report.recovery_expected_state_hash {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
+    let recovery_attempt_count = match report.recovery_attempt_count {
+        Some(value) => value.to_string(),
+        None => "null".to_owned(),
+    };
+    let recovery_decisions = match &report.recovery_decisions {
+        Some(values) => format!(
+            "[{}]",
+            values
+                .iter()
+                .map(|value| format!("\"{}\"", json_escape(value)))
+                .collect::<Vec<String>>()
+                .join(",")
+        ),
+        None => "null".to_owned(),
+    };
     let components = report
         .components
         .iter()
@@ -534,7 +718,7 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         .collect::<Vec<String>>()
         .join(",");
     format!(
-        "{{\"runtime_mode\":\"{}\",\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"planning_expected_state_hash\":{},\"planning_candidate_count\":{},\"planning_scheduled_candidate_ids\":{},\"components\":[{}]}}",
+        "{{\"runtime_mode\":\"{}\",\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"planning_expected_state_hash\":{},\"planning_candidate_count\":{},\"planning_scheduled_candidate_ids\":{},\"recovery_expected_state_version\":{},\"recovery_expected_state_hash\":{},\"recovery_attempt_count\":{},\"recovery_decisions\":{},\"components\":[{}]}}",
         json_escape(&report.runtime_mode),
         json_escape(&report.diagnostics_mode),
         profile,
@@ -552,6 +736,10 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         planning_expected_state_hash,
         planning_candidate_count,
         planning_scheduled_candidate_ids,
+        recovery_expected_state_version,
+        recovery_expected_state_hash,
+        recovery_attempt_count,
+        recovery_decisions,
         components,
     )
 }
@@ -599,7 +787,9 @@ mod tests {
         assert_eq!(parsed.sync_mode, SyncMode::Fast);
         assert_eq!(parsed.runtime_mode, RuntimeMode::bootstrap());
         assert_eq!(parsed.expected_state_hash, None);
+        assert_eq!(parsed.expected_state_version, None);
         assert!(parsed.proposals.is_empty());
+        assert!(parsed.rejoin_attempts.is_empty());
         assert_eq!(parsed.output_mode, OutputMode::text());
         assert_eq!(parsed.diagnostics_mode, DiagnosticsMode::basic());
     }
@@ -684,6 +874,29 @@ mod tests {
     }
 
     #[test]
+    fn parses_runtime_mode_recovery_check_with_rejoin_attempt() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "recovery-check".to_owned(),
+            "--expected-state-version".to_owned(),
+            "42".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-42".to_owned(),
+            "--rejoin-attempt".to_owned(),
+            "node-a|42|state-42|resume-1".to_owned(),
+        ];
+
+        let parsed = parse_args(args).expect("recovery-check args should parse");
+        assert_eq!(parsed.runtime_mode, RuntimeMode::recovery_check());
+        assert_eq!(parsed.expected_state_version, Some(42));
+        assert_eq!(parsed.expected_state_hash, Some("state-42".to_owned()));
+        assert_eq!(parsed.rejoin_attempts.len(), 1);
+    }
+
+    #[test]
     fn parses_local_listener_profile_defaults() {
         let args = vec![
             "kamn-node".to_owned(),
@@ -733,6 +946,10 @@ mod tests {
             planning_expected_state_hash: None,
             planning_candidate_count: None,
             planning_scheduled_candidate_ids: None,
+            recovery_expected_state_version: None,
+            recovery_expected_state_hash: None,
+            recovery_attempt_count: None,
+            recovery_decisions: None,
             profile: None,
             role: "processor".to_owned(),
             chain_id: "kamn-devnet".to_owned(),
@@ -779,6 +996,7 @@ mod tests {
             parsed.diagnostics_mode,
             RuntimeMode::bootstrap(),
             None,
+            None,
         );
         let rendered = render_bootstrap_report(&report, parsed.output_mode);
 
@@ -814,6 +1032,7 @@ mod tests {
             parsed.profile,
             parsed.diagnostics_mode,
             RuntimeMode::bootstrap(),
+            None,
             None,
         );
         let rendered = render_bootstrap_report(&report, parsed.output_mode);
@@ -852,6 +1071,7 @@ mod tests {
             parsed.diagnostics_mode,
             RuntimeMode::bootstrap(),
             None,
+            None,
         );
         let rendered = render_bootstrap_report(&report, parsed.output_mode);
 
@@ -883,6 +1103,34 @@ mod tests {
         assert!(rendered.contains("\"runtime_mode\":\"planning\""));
         assert!(rendered.contains("\"planning_candidate_count\":2"));
         assert!(rendered.contains("\"planning_scheduled_candidate_ids\":[\"tx-1\",\"tx-2\"]"));
+    }
+
+    #[test]
+    fn integration_runtime_recovery_check_renders_deterministic_decision_output() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "recovery-check".to_owned(),
+            "--expected-state-version".to_owned(),
+            "42".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-42".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+            "--rejoin-attempt".to_owned(),
+            "node-a|40|state-40|resume-1".to_owned(),
+        ];
+
+        let parsed = parse_args(args).expect("recovery-check args should parse");
+        let report = execute(parsed).expect("recovery-check execution should succeed");
+        let rendered = render_bootstrap_report(&report, OutputMode::json());
+        assert!(rendered.contains("\"runtime_mode\":\"recovery-check\""));
+        assert!(rendered.contains("\"recovery_expected_state_version\":42"));
+        assert!(rendered.contains("\"recovery_expected_state_hash\":\"state-42\""));
+        assert!(rendered.contains("\"recovery_attempt_count\":1"));
+        assert!(rendered.contains("\"recovery_decisions\":[\"catch-up-required:40->42\"]"));
     }
 
     #[test]
@@ -925,6 +1173,65 @@ mod tests {
         assert_eq!(
             parse_args(args),
             Err(ConfigError::MissingArgumentValue("--proposal"))
+        );
+    }
+
+    #[test]
+    fn rejects_recovery_check_without_expected_state_version() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "recovery-check".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-42".to_owned(),
+            "--rejoin-attempt".to_owned(),
+            "node-a|42|state-42|resume-1".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::MissingArgumentValue(
+                "--expected-state-version"
+            ))
+        );
+    }
+
+    #[test]
+    fn rejects_recovery_check_without_expected_state_hash() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "recovery-check".to_owned(),
+            "--expected-state-version".to_owned(),
+            "42".to_owned(),
+            "--rejoin-attempt".to_owned(),
+            "node-a|42|state-42|resume-1".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::MissingArgumentValue("--expected-state-hash"))
+        );
+    }
+
+    #[test]
+    fn rejects_recovery_check_without_rejoin_attempt() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "recovery-check".to_owned(),
+            "--expected-state-version".to_owned(),
+            "42".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-42".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::MissingArgumentValue("--rejoin-attempt"))
         );
     }
 
@@ -1009,6 +1316,50 @@ mod tests {
     }
 
     #[test]
+    fn rejects_malformed_rejoin_attempt_argument() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "recovery-check".to_owned(),
+            "--expected-state-version".to_owned(),
+            "42".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-42".to_owned(),
+            "--rejoin-attempt".to_owned(),
+            "node-a|42|state-42".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::InvalidRejoinAttemptArgument(
+                "node-a|42|state-42".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_expected_state_version_argument() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "recovery-check".to_owned(),
+            "--expected-state-version".to_owned(),
+            "0".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-42".to_owned(),
+            "--rejoin-attempt".to_owned(),
+            "node-a|42|state-42|resume-1".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::InvalidExpectedStateVersion("0".to_owned()))
+        );
+    }
+
+    #[test]
     fn rejects_invalid_diagnostics_mode() {
         // Regression: #313
         let args = vec![
@@ -1069,6 +1420,83 @@ mod tests {
             Err(ConfigError::RuntimePlanner(
                 "proposal candidate state hash mismatch: expected state-1, found state-2"
                     .to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn regression_runtime_recovery_rejects_replay_resume_token() {
+        // Regression: #336
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "recovery-check".to_owned(),
+            "--expected-state-version".to_owned(),
+            "42".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-42".to_owned(),
+            "--rejoin-attempt".to_owned(),
+            "node-a|42|state-42|resume-1".to_owned(),
+            "--rejoin-attempt".to_owned(),
+            "node-a|42|state-42|resume-1".to_owned(),
+        ];
+        let parsed = parse_args(args).expect("recovery-check args should parse");
+        assert_eq!(
+            execute(parsed),
+            Err(ConfigError::RuntimeRecovery(
+                "rejoin resume token replayed: resume-1".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn regression_runtime_recovery_rejects_state_version_mismatch() {
+        // Regression: #336
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "recovery-check".to_owned(),
+            "--expected-state-version".to_owned(),
+            "42".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-42".to_owned(),
+            "--rejoin-attempt".to_owned(),
+            "node-a|43|state-43|resume-1".to_owned(),
+        ];
+        let parsed = parse_args(args).expect("recovery-check args should parse");
+        assert_eq!(
+            execute(parsed),
+            Err(ConfigError::RuntimeRecovery(
+                "rejoin state version mismatch: expected 42, found 43".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn regression_runtime_recovery_rejects_state_hash_mismatch() {
+        // Regression: #336
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "recovery-check".to_owned(),
+            "--expected-state-version".to_owned(),
+            "42".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-42".to_owned(),
+            "--rejoin-attempt".to_owned(),
+            "node-a|42|state-41|resume-1".to_owned(),
+        ];
+        let parsed = parse_args(args).expect("recovery-check args should parse");
+        assert_eq!(
+            execute(parsed),
+            Err(ConfigError::RuntimeRecovery(
+                "rejoin state hash mismatch: expected state-42, found state-41".to_owned()
             ))
         );
     }

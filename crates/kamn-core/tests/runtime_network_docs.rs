@@ -3,6 +3,7 @@ const DOC: &str = include_str!("../../../docs/foundation/runtime-network.md");
 #[test]
 fn doc_contains_runtime_network_scope_and_models() {
     assert!(DOC.contains("## Scope Delivered"));
+    assert!(DOC.contains("## Node CLI Recovery-Check Mapping"));
     assert!(DOC.contains("PeerLifecycle"));
     assert!(DOC.contains("BoundedRuntimeQueue<T>"));
     assert!(DOC.contains("RuntimeLifecycleError"));
@@ -14,6 +15,8 @@ fn doc_contains_peer_lifecycle_and_queue_rules() {
     assert!(DOC.contains("## Queue Guard Rules"));
     assert!(DOC.contains("## Scheduler Determinism Rules"));
     assert!(DOC.contains("## Recovery and Rejoin Guard Rules"));
+    assert!(DOC.contains("`--rejoin-attempt <node-id|state-version|state-hash|resume-token>`"));
+    assert!(DOC.contains("ConfigError::RuntimeRecovery"));
     assert!(DOC.contains("Overflow does not evict existing entries"));
     assert!(DOC.contains("Empty peer IDs are rejected"));
 }
@@ -34,4 +37,5 @@ fn regression_requires_rejoin_and_overflow_rejection_rules() {
     assert!(DOC.contains("stale state hash is rejected"));
     assert!(DOC.contains("rejoin replay token is rejected"));
     assert!(DOC.contains("rejoin state hash mismatch is rejected"));
+    assert!(DOC.contains("CLI recovery-check replay/version/hash mismatch rejection"));
 }

@@ -1,6 +1,6 @@
-# Node Runtime CLI Contracts (Issues #306 / #307 / #309 / #310 / #335)
+# Node Runtime CLI Contracts (Issues #306 / #307 / #309 / #310 / #335 / #336)
 
-This document captures node-runtime productionization slices for machine-readable output, local role profile projection, diagnostics snapshots, and deterministic runtime planning execution.
+This document captures node-runtime productionization slices for machine-readable output, local role profile projection, diagnostics snapshots, deterministic runtime planning execution, and deterministic recovery-check evaluation.
 
 ## Scope Delivered
 - Added output-mode support to `crates/kamn-node/src/main.rs`:
@@ -22,13 +22,21 @@ This document captures node-runtime productionization slices for machine-readabl
 - Added runtime execution mode command surface:
   - `--runtime-mode bootstrap` (default)
   - `--runtime-mode planning`
+  - `--runtime-mode recovery-check`
 - Added runtime planning inputs:
   - `--expected-state-hash <state-hash>`
   - `--proposal <id|sender-did|nonce|state-hash>` (repeatable)
+- Added runtime recovery-check inputs:
+  - `--expected-state-version <state-version>`
+  - `--expected-state-hash <state-hash>`
+  - `--rejoin-attempt <node-id|state-version|state-hash|resume-token>` (repeatable)
 - Added explicit runtime mode and proposal validation handling through:
   - `ConfigError::InvalidRuntimeMode`
+  - `ConfigError::InvalidExpectedStateVersion`
   - `ConfigError::InvalidProposalArgument`
+  - `ConfigError::InvalidRejoinAttemptArgument`
   - `ConfigError::RuntimePlanner`
+  - `ConfigError::RuntimeRecovery`
 
 ## Output Mode Rules
 - Default behavior remains text output when `--output` is omitted.
@@ -50,6 +58,10 @@ This document captures node-runtime productionization slices for machine-readabl
   - `planning_expected_state_hash`
   - `planning_candidate_count`
   - `planning_scheduled_candidate_ids`
+  - `recovery_expected_state_version`
+  - `recovery_expected_state_hash`
+  - `recovery_attempt_count`
+  - `recovery_decisions`
   - `components`
 - Invalid modes are rejected with explicit typed error.
 
@@ -96,6 +108,27 @@ This document captures node-runtime productionization slices for machine-readabl
   - `planning_candidate_count`
   - `planning_scheduled_candidate_ids`
 
+## Recovery Check Rules
+- Supported runtime modes:
+  - `bootstrap` (default)
+  - `recovery-check`
+- Recovery-check mode requires:
+  - `--expected-state-version`
+  - `--expected-state-hash`
+  - at least one `--rejoin-attempt`
+- Rejoin-attempt argument format is strict:
+  - `<node-id|state-version|state-hash|resume-token>`
+- Recovery-check mode evaluates rejoin attempts in deterministic input order using `RecoveryRejoinGuard`.
+- Recovery-check decision mapping:
+  - accepted rejoin -> `rejoin-accepted`
+  - lagging state -> `catch-up-required:<from_version>-><to_version>`
+- Replay resume tokens and version/hash mismatch scenarios are rejected with explicit typed runtime recovery error.
+- Runtime recovery-check outputs include:
+  - `recovery_expected_state_version`
+  - `recovery_expected_state_hash`
+  - `recovery_attempt_count`
+  - `recovery_decisions`
+
 ## Test Coverage Mapping
 - Unit:
   - default mode behavior and mode parsing checks
@@ -108,6 +141,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - invalid profile rejection (`Regression: #310`)
   - invalid diagnostics mode rejection (`Regression: #313`)
   - duplicate/stale runtime planning candidate rejection (`Regression: #335`)
+  - replay/version/hash recovery-check rejection (`Regression: #336`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
