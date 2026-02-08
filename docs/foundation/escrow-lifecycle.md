@@ -1,6 +1,7 @@
 # Escrow Lifecycle State Machine (Issues #138, #139)
 
 This document captures the first implementation slice for PRD 9.2 escrow lifecycle states.
+For PaymentOffer and PaymentConfirm workflow integration controls, see `docs/foundation/task-payment-workflow.md`.
 
 ## Scope Delivered
 - Added `crates/kamn-core/src/escrow.rs` with:

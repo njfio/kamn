@@ -45,6 +45,7 @@ For canonical invariant IDs and taxonomy mapping, see `docs/foundation/invariant
 For the Rust SDK first implementation slice, see `docs/foundation/rust-sdk-alpha.md`.
 For token model and genesis allocation controls, see `docs/foundation/token-model.md`.
 For escrow lifecycle state transitions, see `docs/foundation/escrow-lifecycle.md`.
+For PaymentOffer and PaymentConfirm integration with task completion workflows, see `docs/foundation/task-payment-workflow.md`.
 For multi-AZ topology and failover operations, see `docs/foundation/multi-az-failover-runbook.md`.
 For security control ownership and enforcement mapping, see `docs/foundation/threat-control-matrix.md`.
 For anti-hallucination instruction validation controls, see `docs/foundation/instruction-verification.md`.
