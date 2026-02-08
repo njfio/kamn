@@ -26,6 +26,7 @@ append_summary() {
     echo "- Changed files: ${CHANGED_COUNT}"
     echo "- Docs only: ${DOCS_ONLY}"
     echo "- Run Rust checks: ${RUN_RUST}"
+    echo "- Run CI tool checks: ${RUN_CI_TOOL_CHECKS}"
     echo "- Run deploy preflight checks: ${RUN_DEPLOY_PREFLIGHT_TESTS}"
     echo "- Run invariant harness: ${RUN_INVARIANT_HARNESS}"
     echo "- Test scope: ${TEST_SCOPE}"
@@ -181,6 +182,7 @@ if [ "$CRITICAL_PATH_CHANGED" = true ] || [ "$UNKNOWN_RISK_CHANGED" = true ]; th
 fi
 
 RUN_RUST=false
+RUN_CI_TOOL_CHECKS=false
 RUN_DEPLOY_PREFLIGHT_TESTS=false
 FMT_CMD=":"
 CLIPPY_CMD=":"
@@ -232,8 +234,13 @@ if [ "$RUN_RUST" != true ] && [ "$DEPLOY_SCRIPT_CHANGED" = true ]; then
   TEST_SCOPE="deploy"
 fi
 
+if [ "$CI_INFRA_CHANGED" = true ]; then
+  RUN_CI_TOOL_CHECKS=true
+fi
+
 write_output "docs_only" "$DOCS_ONLY"
 write_output "run_rust" "$RUN_RUST"
+write_output "run_ci_tool_checks" "$RUN_CI_TOOL_CHECKS"
 write_output "run_deploy_preflight_tests" "$RUN_DEPLOY_PREFLIGHT_TESTS"
 write_output "run_invariant_harness" "$RUN_INVARIANT_HARNESS"
 write_output "test_scope" "$TEST_SCOPE"
