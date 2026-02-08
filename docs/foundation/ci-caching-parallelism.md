@@ -12,6 +12,10 @@ This document captures the first implementation slice for CI runtime/cost optimi
   - `scripts/ci/run_invariant_harness.sh --parallelism <n>`
   - Deep validation lane now uses `--parallelism 2`.
 - Added CI regression checks for workflow cache policy and deep-lane parallel harness configuration.
+- Added deterministic fast-lane target selection fallback safety:
+  - Critical CI paths (`.github/workflows/*`, `scripts/ci/*`) escalate to full Rust validation scope.
+  - Unknown non-doc paths escalate to full Rust validation scope.
+  - duplicate/unknown matrix drift is guarded by selector regression tests (`Regression: #419`).
 
 ## Operational Guidance
 - Cache invalidation:
@@ -20,6 +24,7 @@ This document captures the first implementation slice for CI runtime/cost optimi
 - Cost control:
   - Keep cache saves on main only unless there is a measured need to populate PR-branch-specific caches.
   - Keep harness parallelism bounded (current limit: 2 in deep lane) to avoid unstable load spikes.
+  - Prefer targeted crate scopes for known Rust module edits, but keep strict full-scope fallback for critical/unknown paths.
 - Troubleshooting:
   - If deep invariant lane becomes unstable, temporarily reduce to `--parallelism 1` and compare budget telemetry.
   - If cache hit rates drop unexpectedly, verify lockfile churn and key continuity before changing workflow logic.

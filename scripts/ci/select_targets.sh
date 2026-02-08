@@ -28,6 +28,8 @@ append_summary() {
     echo "- Run Rust checks: ${RUN_RUST}"
     echo "- Run invariant harness: ${RUN_INVARIANT_HARNESS}"
     echo "- Test scope: ${TEST_SCOPE}"
+    echo "- Critical path fallback: ${CRITICAL_PATH_CHANGED}"
+    echo "- Unknown path fallback: ${UNKNOWN_RISK_CHANGED}"
     if [ -n "$CHANGED_MANIFESTS" ]; then
       echo "- Targeted manifests: ${CHANGED_MANIFESTS}"
     fi
@@ -99,10 +101,17 @@ else
   mapfile -t CHANGED_FILES < <(git ls-files | sed '/^$/d')
 fi
 
+if [ -n "${CI_CHANGED_FILES:-}" ]; then
+  BASE_REF_DISPLAY="(env:CI_CHANGED_FILES)"
+  mapfile -t CHANGED_FILES < <(printf '%s\n' "$CI_CHANGED_FILES" | sed '/^$/d')
+fi
+
 CHANGED_COUNT="${#CHANGED_FILES[@]}"
 DOCS_ONLY=true
 RUST_CHANGED=false
 CI_INFRA_CHANGED=false
+CRITICAL_PATH_CHANGED=false
+UNKNOWN_RISK_CHANGED=false
 FULL_SUITE=false
 INVARIANT_RELATED_CHANGED=false
 
@@ -111,8 +120,11 @@ INVARIANT_RELATED_CHANGED=false
 declare -A MANIFESTS=()
 
 for file in "${CHANGED_FILES[@]}"; do
+  classified=false
+
   case "$file" in
     *.md|*.txt|docs/*)
+      classified=true
       ;;
     *)
       DOCS_ONLY=false
@@ -122,12 +134,15 @@ for file in "${CHANGED_FILES[@]}"; do
   case "$file" in
     *.rs|Cargo.toml|Cargo.lock|*/Cargo.toml|*/Cargo.lock|rust-toolchain.toml|.cargo/*)
       RUST_CHANGED=true
+      classified=true
       ;;
   esac
 
   case "$file" in
     .github/workflows/*|scripts/ci/*)
       CI_INFRA_CHANGED=true
+      CRITICAL_PATH_CHANGED=true
+      classified=true
       ;;
   esac
 
@@ -143,10 +158,18 @@ for file in "${CHANGED_FILES[@]}"; do
       ;;
   esac
 
+  if [ "$DOCS_ONLY" = false ] && [ "$classified" = false ]; then
+    UNKNOWN_RISK_CHANGED=true
+  fi
+
   if manifest="$(find_manifest_for_path "$file" 2>/dev/null)"; then
     MANIFESTS["$manifest"]=1
   fi
 done
+
+if [ "$CRITICAL_PATH_CHANGED" = true ] || [ "$UNKNOWN_RISK_CHANGED" = true ]; then
+  FULL_SUITE=true
+fi
 
 RUN_RUST=false
 FMT_CMD=":"
@@ -156,7 +179,7 @@ TEST_SCOPE="none"
 CHANGED_MANIFESTS=""
 RUN_INVARIANT_HARNESS=false
 
-if [ "$REPO_HAS_RUST" = true ] && { [ "$RUST_CHANGED" = true ] || [ "$CI_INFRA_CHANGED" = true ]; }; then
+if [ "$REPO_HAS_RUST" = true ] && { [ "$RUST_CHANGED" = true ] || [ "$CI_INFRA_CHANGED" = true ] || [ "$FULL_SUITE" = true ]; }; then
   RUN_RUST=true
 
   mapfile -t manifest_list < <(printf '%s\n' "${!MANIFESTS[@]}" | sed '/^$/d' | sort)
@@ -198,6 +221,8 @@ write_output "docs_only" "$DOCS_ONLY"
 write_output "run_rust" "$RUN_RUST"
 write_output "run_invariant_harness" "$RUN_INVARIANT_HARNESS"
 write_output "test_scope" "$TEST_SCOPE"
+write_output "critical_path_changed" "$CRITICAL_PATH_CHANGED"
+write_output "unknown_risk_changed" "$UNKNOWN_RISK_CHANGED"
 write_output "changed_files" "$CHANGED_COUNT"
 write_output "changed_manifests" "$CHANGED_MANIFESTS"
 write_output "fmt_cmd" "$FMT_CMD"
