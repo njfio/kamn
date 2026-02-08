@@ -2,6 +2,9 @@ use crate::config::{NodeConfig, NodeRole};
 use std::collections::{HashSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::fs::{self, OpenOptions};
+use std::io::Write;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PeerLifecycleState {
@@ -490,6 +493,115 @@ impl SnapshotRestoreGuard {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SnapshotStoreError {
+    Io(String),
+    InvalidPayload(String),
+}
+
+impl Display for SnapshotStoreError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io(message) => write!(f, "snapshot store I/O error: {message}"),
+            Self::InvalidPayload(payload) => {
+                write!(f, "snapshot store invalid payload: {payload}")
+            }
+        }
+    }
+}
+
+impl Error for SnapshotStoreError {}
+
+pub trait RuntimeSnapshotStore {
+    fn write(&mut self, snapshot: RuntimeSnapshot) -> Result<(), SnapshotStoreError>;
+    fn read_latest(&self) -> Result<Option<RuntimeSnapshot>, SnapshotStoreError>;
+    fn list(&self) -> Result<Vec<RuntimeSnapshot>, SnapshotStoreError>;
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct InMemoryRuntimeSnapshotStore {
+    entries: Vec<RuntimeSnapshot>,
+}
+
+impl RuntimeSnapshotStore for InMemoryRuntimeSnapshotStore {
+    fn write(&mut self, snapshot: RuntimeSnapshot) -> Result<(), SnapshotStoreError> {
+        self.entries.push(snapshot);
+        Ok(())
+    }
+
+    fn read_latest(&self) -> Result<Option<RuntimeSnapshot>, SnapshotStoreError> {
+        Ok(self.entries.last().cloned())
+    }
+
+    fn list(&self) -> Result<Vec<RuntimeSnapshot>, SnapshotStoreError> {
+        Ok(self.entries.clone())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileRuntimeSnapshotStore {
+    path: PathBuf,
+}
+
+impl FileRuntimeSnapshotStore {
+    pub fn new(path: PathBuf) -> Result<Self, SnapshotStoreError> {
+        if path.as_os_str().is_empty() {
+            return Err(SnapshotStoreError::InvalidPayload(
+                "snapshot file path cannot be empty".to_owned(),
+            ));
+        }
+        Ok(Self { path })
+    }
+}
+
+impl RuntimeSnapshotStore for FileRuntimeSnapshotStore {
+    fn write(&mut self, snapshot: RuntimeSnapshot) -> Result<(), SnapshotStoreError> {
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&self.path)
+            .map_err(|error| SnapshotStoreError::Io(error.to_string()))?;
+        let serialized = format!("{}|{}\n", snapshot.state_version(), snapshot.state_hash());
+        file.write_all(serialized.as_bytes())
+            .map_err(|error| SnapshotStoreError::Io(error.to_string()))
+    }
+
+    fn read_latest(&self) -> Result<Option<RuntimeSnapshot>, SnapshotStoreError> {
+        Ok(self.list()?.pop())
+    }
+
+    fn list(&self) -> Result<Vec<RuntimeSnapshot>, SnapshotStoreError> {
+        if !self.path.exists() {
+            return Ok(Vec::new());
+        }
+
+        let payload = fs::read_to_string(&self.path)
+            .map_err(|error| SnapshotStoreError::Io(error.to_string()))?;
+        let mut snapshots = Vec::new();
+
+        for line in payload.lines() {
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            snapshots.push(parse_snapshot_line(trimmed)?);
+        }
+
+        Ok(snapshots)
+    }
+}
+
+fn parse_snapshot_line(line: &str) -> Result<RuntimeSnapshot, SnapshotStoreError> {
+    let Some((state_version_raw, state_hash_raw)) = line.split_once('|') else {
+        return Err(SnapshotStoreError::InvalidPayload(line.to_owned()));
+    };
+    let state_version = state_version_raw
+        .parse::<u64>()
+        .map_err(|_| SnapshotStoreError::InvalidPayload(line.to_owned()))?;
+    RuntimeSnapshot::new(state_version, state_hash_raw)
+        .map_err(|_| SnapshotStoreError::InvalidPayload(line.to_owned()))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConstructLockLease {
     owner_id: String,
     fencing_token: u64,
@@ -767,12 +879,16 @@ pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
 mod tests {
     use super::{
         build_runtime_wiring, BoundedRuntimeQueue, ConstructLockError, ConstructLockGuard,
-        DeterministicProposalPlanner, PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState,
-        ProposalCandidate, ProposalPlannerError, RecoveryGuardError, RecoveryRejoinGuard,
-        RecoveryStatus, RejoinAttempt, RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot,
-        SnapshotRestoreError, SnapshotRestoreGuard,
+        DeterministicProposalPlanner, FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore,
+        PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate,
+        ProposalPlannerError, RecoveryGuardError, RecoveryRejoinGuard, RecoveryStatus,
+        RejoinAttempt, RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot,
+        RuntimeSnapshotStore, SnapshotRestoreError, SnapshotRestoreGuard, SnapshotStoreError,
     };
     use crate::config::{NodeConfig, NodeRole, SyncMode};
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn sample_config(role: NodeRole) -> NodeConfig {
         NodeConfig {
@@ -1168,5 +1284,65 @@ mod tests {
                 found: lease.fencing_token().saturating_sub(1)
             }
         );
+    }
+
+    #[test]
+    fn functional_in_memory_snapshot_store_round_trips_snapshots() {
+        let mut store = InMemoryRuntimeSnapshotStore::default();
+        assert!(store.list().expect("list should succeed").is_empty());
+
+        let snapshot_1 = RuntimeSnapshot::new(41, "state-41").expect("valid snapshot");
+        let snapshot_2 = RuntimeSnapshot::new(42, "state-42").expect("valid snapshot");
+        assert!(store.write(snapshot_1).is_ok());
+        assert!(store.write(snapshot_2.clone()).is_ok());
+
+        let latest = store.read_latest().expect("read_latest should succeed");
+        assert_eq!(latest, Some(snapshot_2));
+        assert_eq!(store.list().expect("list should succeed").len(), 2);
+    }
+
+    #[test]
+    fn integration_file_snapshot_store_round_trips_snapshots() {
+        let path = temp_snapshot_store_path("roundtrip");
+        let _ = fs::remove_file(&path);
+
+        let mut store = FileRuntimeSnapshotStore::new(path.clone()).expect("store should build");
+        let snapshot_1 = RuntimeSnapshot::new(41, "state-41").expect("valid snapshot");
+        let snapshot_2 = RuntimeSnapshot::new(42, "state-42").expect("valid snapshot");
+        assert!(store.write(snapshot_1).is_ok());
+        assert!(store.write(snapshot_2.clone()).is_ok());
+
+        let latest = store.read_latest().expect("read_latest should succeed");
+        assert_eq!(latest, Some(snapshot_2));
+        assert_eq!(store.list().expect("list should succeed").len(), 2);
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn regression_file_snapshot_store_rejects_malformed_payload() {
+        // Regression: #387
+        let path = temp_snapshot_store_path("malformed");
+        let _ = fs::remove_file(&path);
+        assert!(fs::write(&path, "not-a-valid-snapshot-line\n").is_ok());
+
+        let store = FileRuntimeSnapshotStore::new(path.clone()).expect("store should build");
+        let error = store
+            .list()
+            .expect_err("malformed payload must be rejected");
+        assert_eq!(
+            error,
+            SnapshotStoreError::InvalidPayload("not-a-valid-snapshot-line".to_owned())
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    fn temp_snapshot_store_path(tag: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos();
+        std::env::temp_dir().join(format!("kamn-runtime-snapshot-{tag}-{nonce}.log"))
     }
 }
