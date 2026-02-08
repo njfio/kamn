@@ -13,20 +13,23 @@ This document captures the first implementation slice of anti-hallucination inst
 
 ## Verification Checks
 1. Instruction exists on-chain.
-2. Claim sender matches on-chain sender.
-3. Claim payload hash matches on-chain payload hash.
-4. Claim signature matches on-chain signature.
-5. Sender is explicitly authorized.
-6. Claim is not expired relative to deterministic current time.
-7. bounded claim validity window is enforced against context policy.
-8. one-time claim consumption is enforced on replay-aware verification path.
-9. inclusion proof reference must be present and match the on-chain record.
+2. sender DID format validation: claim sender DID and on-chain sender DID are syntactically valid.
+3. Claim sender matches on-chain sender.
+4. Claim payload hash matches on-chain payload hash.
+5. Claim signature matches on-chain signature.
+6. Sender is explicitly authorized.
+7. Claim is not expired relative to deterministic current time.
+8. bounded claim validity window is enforced against context policy.
+9. one-time claim consumption is enforced on replay-aware verification path.
+10. inclusion proof reference must be present and match the on-chain record.
 
 ## Rejection Outcomes
 - `MissingInstruction`
 - `SenderMismatch`
 - `PayloadMismatch`
 - `SignatureMismatch`
+- `InvalidClaimSenderDid`
+- `InvalidRecordSenderDid`
 - `UnauthorizedSender`
 - `Expired`
 - `OverlongValidityWindow`
@@ -36,6 +39,7 @@ This document captures the first implementation slice of anti-hallucination inst
 - overlong validity window is rejected (`Regression: #409`).
 - replayed claim is rejected (`Regression: #414`).
 - mismatched or missing inclusion proof reference is rejected (`Regression: #448`).
+- malformed claim or record sender DID is rejected (`Regression: #453`).
 
 ## Local Validation
 Run from repository root:

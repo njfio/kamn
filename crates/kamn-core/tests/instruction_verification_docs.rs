@@ -33,3 +33,12 @@ fn regression_requires_inclusion_proof_binding_rules() {
         "mismatched or missing inclusion proof reference is rejected (`Regression: #448`)"
     ));
 }
+
+#[test]
+fn regression_requires_sender_did_validation_rules() {
+    // Regression: #453
+    assert!(DOC.contains("sender DID format validation"));
+    assert!(DOC.contains("InvalidClaimSenderDid"));
+    assert!(DOC.contains("InvalidRecordSenderDid"));
+    assert!(DOC.contains("malformed claim or record sender DID is rejected (`Regression: #453`)"));
+}

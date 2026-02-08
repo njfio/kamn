@@ -172,3 +172,39 @@ fn regression_rejects_mismatched_inclusion_proof_reference() {
         })
     );
 }
+
+#[test]
+fn regression_rejects_invalid_claim_sender_did() {
+    // Regression: #453
+    let record = sample_record();
+    let mut claim = sample_claim();
+    claim.from_did = "not-a-did".to_owned();
+    let context = VerificationContext::new(100)
+        .with_instruction(record)
+        .with_authorized_sender("not-a-did");
+
+    assert_eq!(
+        InstructionVerifier::verify(&claim, &context),
+        VerificationOutcome::Rejected(VerificationFailure::InvalidClaimSenderDid(
+            "not-a-did".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn regression_rejects_invalid_record_sender_did() {
+    // Regression: #453
+    let mut record = sample_record();
+    record.from_did = "bad-record-did".to_owned();
+    let claim = sample_claim();
+    let context = VerificationContext::new(100)
+        .with_instruction(record)
+        .with_authorized_sender("kamn:did:agent:alpha");
+
+    assert_eq!(
+        InstructionVerifier::verify(&claim, &context),
+        VerificationOutcome::Rejected(VerificationFailure::InvalidRecordSenderDid(
+            "bad-record-did".to_owned()
+        ))
+    );
+}
