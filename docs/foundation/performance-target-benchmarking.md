@@ -1,4 +1,4 @@
-# PRD 13.2 Performance Target Benchmark Evidence (Issue #184)
+# PRD 13.2 Performance Target Benchmark Evidence (Issue #184 / #595)
 
 This document captures the first implementation slice for validating benchmark evidence against PRD Section 13.2 targets.
 
@@ -44,10 +44,27 @@ Each failed metric includes:
 ## Fast and Cost-Effective Validation Strategy
 - PR gate (fast lane):
   - run targeted benchmark logic tests only (`performance_targets` + doc checks).
-  - enforce deterministic fixtures, no long-running synthetic load.
+  - generate deterministic smoke report via `scripts/ci/generate_performance_smoke_report.sh --lane smoke`.
+  - enforce thresholds with `scripts/ci/check_performance_thresholds.sh --lane smoke`.
+  - no long-running synthetic load in PR jobs.
 - Deferred deep validation (slow lane):
-  - run heavier benchmark replay suites on schedule/nightly or manual dispatch.
+  - run deeper smoke/threshold checks (`--lane deep`) on schedule/nightly or manual dispatch.
+  - keep heavy replay/load suites out of the PR critical path.
   - attach evidence bundles to issue/PR comments.
+
+## CI Threshold Gate Contract
+- Threshold profile source: `.ci/performance-targets.env`.
+- Required report metrics:
+  - `latency_p50_ms` (must remain `< 100`).
+  - `latency_p99_ms` (must remain `< 500`).
+  - `throughput_tps` (must remain `>= 10000`).
+  - `availability_pct` (must remain `>= 99.9`).
+- Fast lane command sequence:
+  - `bash scripts/ci/generate_performance_smoke_report.sh --lane smoke --output-json performance-smoke-report.json`
+  - `bash scripts/ci/check_performance_thresholds.sh --lane smoke --report-json performance-smoke-report.json --profile-file .ci/performance-targets.env`
+- Deep lane command sequence:
+  - `bash scripts/ci/generate_performance_smoke_report.sh --lane deep --output-json performance-deep-report.json`
+  - `bash scripts/ci/check_performance_thresholds.sh --lane deep --report-json performance-deep-report.json --profile-file .ci/performance-targets.env`
 
 This keeps per-PR compute cost low while preserving confidence in target conformance trends.
 

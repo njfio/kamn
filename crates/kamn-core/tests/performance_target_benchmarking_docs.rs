@@ -25,3 +25,12 @@ fn regression_requires_cost_effective_fast_lane_policy() {
     assert!(DOC.contains("PR gate (fast lane):"));
     assert!(DOC.contains("Deferred deep validation (slow lane):"));
 }
+
+#[test]
+fn regression_requires_threshold_gate_commands() {
+    // Regression: #595
+    assert!(DOC.contains("## CI Threshold Gate Contract"));
+    assert!(DOC.contains(".ci/performance-targets.env"));
+    assert!(DOC.contains("generate_performance_smoke_report.sh --lane smoke"));
+    assert!(DOC.contains("check_performance_thresholds.sh --lane deep"));
+}

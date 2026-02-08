@@ -77,6 +77,22 @@ jobs:
             --max-attempts 1 \
             -- bash scripts/ci/run_invariant_harness.sh --mode deep --parallelism 2
 
+      - name: Generate performance smoke report
+        if: steps.detect.outputs.run_rust == 'true'
+        run: bash scripts/ci/generate_performance_smoke_report.sh --lane deep --output-json performance-deep-report.json
+
+      - name: Check performance thresholds (deep)
+        if: steps.detect.outputs.run_rust == 'true'
+        run: bash scripts/ci/check_performance_thresholds.sh --lane deep --report-json performance-deep-report.json --profile-file .ci/performance-targets.env
+
+      - name: Upload performance deep report
+        if: always() && hashFiles('performance-deep-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-deep-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: performance-deep-report.json
+          if-no-files-found: error
+
       - name: No Rust project present
         if: steps.detect.outputs.run_rust != 'true'
         run: echo "No Cargo project detected; deep validation skipped."
