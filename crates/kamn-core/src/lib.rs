@@ -230,7 +230,7 @@ pub use signature_profile::{
 };
 pub use signer_backend::{
     BackendSignature, LocalSignerBackend, SecureSignerBackend, SecureSignerProvider, SignerBackend,
-    SignerBackendError, SignerBackendRouter, SigningRequest,
+    SignerBackendError, SignerBackendRouter, SignerKeyRole, SigningRequest,
 };
 pub use smoke::{ProducedBlock, RoleSmokeNetwork, SmokeError};
 pub use state::{

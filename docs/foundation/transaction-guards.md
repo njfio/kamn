@@ -24,6 +24,13 @@ This document defines the baseline deterministic transaction guards implemented 
 - signature-profile drift between transaction and signer paths is rejected (`Regression: #400`).
 - non-versioned signature profile is rejected (`Regression: #404`).
 
+## Signer Fallback Policy Integration
+- signer keys support role-scoped secure references: `secure:aws-kms:role-<operator|admin|treasury|auditor>/<key-ref>`.
+- sender role prefixes map to signing roles and are validated against key role before signing.
+- role mismatch is rejected through typed `KeyRoleMismatch`.
+- secure fallback to local signing is permitted only for `operator` role keys.
+- privileged roles (`admin`, `treasury`, `auditor`) reject fallback via `FallbackDeniedByRolePolicy` (`Regression: #619`).
+
 ## Validation
 Run from repository root:
 

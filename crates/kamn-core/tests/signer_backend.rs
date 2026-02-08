@@ -120,6 +120,74 @@ fn integration_aws_kms_signed_transaction_passes_transaction_guards() {
 }
 
 #[test]
+fn functional_admin_role_key_signs_when_sender_role_matches() {
+    let router = SignerBackendRouter::default();
+    let request = SigningRequest::new(
+        "secure:aws-kms:role-admin/key-ops-1",
+        "admin-agent-a",
+        1,
+        "payload-1",
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+
+    let signed = router
+        .sign_with_secure_fallback(&request)
+        .expect("signing should succeed");
+    assert_eq!(signed.backend, "secure-aws-kms-emulator");
+
+    router
+        .verify_with_backend(&signed.backend, &request, &signed.signature)
+        .expect("signature should verify");
+}
+
+#[test]
+fn regression_role_mismatch_signing_request_is_rejected() {
+    // Regression: #619
+    let router = SignerBackendRouter::default();
+    let request = SigningRequest::new(
+        "secure:aws-kms:role-admin/key-ops-1",
+        "agent-a",
+        1,
+        "payload-1",
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+
+    assert_eq!(
+        router.sign_with_secure_fallback(&request),
+        Err(SignerBackendError::KeyRoleMismatch {
+            key_role: "admin".to_owned(),
+            sender_role: "operator".to_owned(),
+            sender: "agent-a".to_owned(),
+            key_id: "secure:aws-kms:role-admin/key-ops-1".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn regression_admin_key_does_not_fallback_when_secure_provider_unavailable() {
+    // Regression: #619
+    let router = SignerBackendRouter::with_secure_availability(false);
+    let request = SigningRequest::new(
+        "secure:aws-kms:role-admin/key-ops-1",
+        "admin-agent-a",
+        1,
+        "payload-1",
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+
+    assert_eq!(
+        router.sign_with_secure_fallback(&request),
+        Err(SignerBackendError::FallbackDeniedByRolePolicy {
+            key_role: "admin".to_owned(),
+            key_id: "secure:aws-kms:role-admin/key-ops-1".to_owned(),
+        })
+    );
+}
+
+#[test]
 fn regression_unsupported_secure_key_reference_does_not_fallback() {
     // Regression: #160
     let router = SignerBackendRouter::default();
