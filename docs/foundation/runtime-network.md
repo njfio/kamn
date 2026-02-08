@@ -1,4 +1,4 @@
-# Runtime Network Contracts (Issues #315 / #317 / #320 / #324 / #319 / #323 / #321 / #322)
+# Runtime Network Contracts (Issues #315 / #317 / #320 / #324 / #319 / #323 / #321 / #322 / #333 / #336)
 
 This document captures the initial runtime-network foundation slice for peer lifecycle and bounded queue behavior in `kamn-core`.
 
@@ -22,6 +22,19 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `RecoveryStatus`
   - `RecoveryGuardError`
 - Kept runtime role wiring behavior unchanged and covered by existing tests.
+
+## Node CLI Recovery-Check Mapping
+- `kamn-node --runtime-mode recovery-check` maps directly to `RecoveryRejoinGuard` evaluation flow.
+- CLI argument mapping:
+  - `--expected-state-version` -> `RecoveryRejoinGuard::new(expected_state_version, ...)`
+  - `--expected-state-hash` -> `RecoveryRejoinGuard::new(..., expected_state_hash)`
+  - `--rejoin-attempt <node-id|state-version|state-hash|resume-token>` -> `RejoinAttempt::new(...)`
+- Deterministic output mapping:
+  - `RecoveryStatus::RejoinAccepted` -> `rejoin-accepted`
+  - `RecoveryStatus::CatchUpRequired { from_version, to_version }` -> `catch-up-required:<from_version>-><to_version>`
+- Error mapping:
+  - malformed rejoin-attempt argument -> `ConfigError::InvalidRejoinAttemptArgument`
+  - replay/version/hash mismatch from guard evaluation -> `ConfigError::RuntimeRecovery`
 
 ## Peer Lifecycle Rules
 - `PeerLifecycle` starts in `Disconnected`.
@@ -91,6 +104,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - stale state hash is rejected (`Regression: #323`)
   - rejoin replay token is rejected (`Regression: #322`)
   - rejoin state hash mismatch is rejected (`Regression: #322`)
+  - CLI recovery-check replay/version/hash mismatch rejection (`Regression: #336`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:

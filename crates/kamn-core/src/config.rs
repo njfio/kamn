@@ -152,8 +152,11 @@ pub enum ConfigError {
     InvalidNodeProfile(String),
     InvalidDiagnosticsMode(String),
     InvalidRuntimeMode(String),
+    InvalidExpectedStateVersion(String),
     InvalidProposalArgument(String),
+    InvalidRejoinAttemptArgument(String),
     RuntimePlanner(String),
+    RuntimeRecovery(String),
     UnknownArgument(String),
     MissingArgumentValue(&'static str),
 }
@@ -174,11 +177,20 @@ impl fmt::Display for ConfigError {
                 write!(f, "invalid diagnostics mode: {value}")
             }
             Self::InvalidRuntimeMode(value) => write!(f, "invalid runtime mode: {value}"),
+            Self::InvalidExpectedStateVersion(value) => {
+                write!(f, "invalid expected state version: {value}")
+            }
             Self::InvalidProposalArgument(value) => {
                 write!(f, "invalid proposal argument: {value}")
             }
+            Self::InvalidRejoinAttemptArgument(value) => {
+                write!(f, "invalid rejoin attempt argument: {value}")
+            }
             Self::RuntimePlanner(message) => {
                 write!(f, "runtime planner validation failed: {message}")
+            }
+            Self::RuntimeRecovery(message) => {
+                write!(f, "runtime recovery validation failed: {message}")
             }
             Self::UnknownArgument(value) => write!(f, "unknown argument: {value}"),
             Self::MissingArgumentValue(flag) => {
