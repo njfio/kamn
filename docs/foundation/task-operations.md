@@ -1,8 +1,8 @@
-# Task Operations Command Surface (Issue #128 / #472)
+# Task Operations Command Surface (Issue #128 / #472 / #573)
 
 This document defines the first implementation slice for task operation command
 handling across `submit`, `accept`, `delegate`, `block`, `complete`, `fail`,
-and `cancel`.
+`request_input`, and `cancel`.
 
 ## Core Types
 - `TaskOperationEngine`: deterministic in-memory task operations handler.
@@ -17,6 +17,7 @@ and `cancel`.
   - `Accepted`
   - `Delegated`
   - `Started`
+  - `InputRequired`
   - `Blocked`
   - `Completed`
   - `Failed`
@@ -48,6 +49,10 @@ and `cancel`.
   - assignee-only with non-empty reason.
   - transitions via `Block`.
   - emits `Blocked` notice.
+- `request_input(task_id, actor, reason)`:
+  - assignee-only with non-empty reason.
+  - transitions via `RequestInput`.
+  - emits `InputRequired` notice.
 - `complete(task_id, actor)`:
   - assignee-only.
   - transitions via `Complete`.

@@ -15,6 +15,8 @@ fn docs_define_dependency_aware_transition_gates() {
     assert!(STATE_MACHINE_DOC.contains("TaskOperationEngine::start_work"));
     assert!(STATE_MACHINE_DOC
         .contains("all declared dependencies must already be in `Completed` state."));
+    assert!(STATE_MACHINE_DOC.contains("`InputRequired`"));
+    assert!(STATE_MACHINE_DOC.contains("InputRequired -> InProgress | Failed | Cancelled"));
 }
 
 #[test]
@@ -49,4 +51,11 @@ fn regression_requires_tampered_snapshot_rejection_rule() {
 fn docs_define_snapshot_roundtrip_benchmark_lane() {
     assert!(OPERATIONS_DOC.contains("snapshot roundtrip benchmark"));
     assert!(OPERATIONS_DOC.contains("cargo test -p kamn-core --test task_operation_snapshot"));
+}
+
+#[test]
+fn regression_requires_input_required_operation_surface() {
+    // Regression: #573
+    assert!(OPERATIONS_DOC.contains("request_input(task_id, actor, reason)"));
+    assert!(OPERATIONS_DOC.contains("emits `InputRequired` notice."));
 }

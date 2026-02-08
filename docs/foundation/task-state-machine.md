@@ -1,4 +1,4 @@
-# Task State Machine and Transition Validator (Issue #126 / #472)
+# Task State Machine and Transition Validator (Issue #126 / #472 / #573)
 
 This document defines the first implementation slice for deterministic task
 state transitions and legal transition validation.
@@ -8,6 +8,7 @@ state transitions and legal transition validation.
 - `Accepted`
 - `Delegated`
 - `InProgress`
+- `InputRequired`
 - `Blocked`
 - `Completed` (terminal)
 - `Failed` (terminal)
@@ -17,7 +18,8 @@ state transitions and legal transition validation.
 - `Submitted -> Accepted | Cancelled`
 - `Accepted -> Delegated | InProgress | Cancelled`
 - `Delegated -> InProgress | Cancelled`
-- `InProgress -> Blocked | Completed | Failed | Cancelled`
+- `InProgress -> InputRequired | Blocked | Completed | Failed | Cancelled`
+- `InputRequired -> InProgress | Failed | Cancelled`
 - `Blocked -> InProgress | Failed | Cancelled`
 
 Any transition outside this map is rejected.
