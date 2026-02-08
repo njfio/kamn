@@ -61,6 +61,7 @@ impl TaskPaymentWorkflow {
                 state,
             });
         }
+        validate_offer_participants(&offer, &task.requester, task.assignee.as_deref())?;
 
         let remaining = escrow.remaining_amount();
         if offer.amount > remaining {
@@ -130,8 +131,11 @@ pub enum TaskPaymentError {
     EscrowMismatch { expected: String, found: String },
     InvalidDid(String),
     InvalidOfferAmount(u128),
+    PayerRequesterMismatch { expected: String, found: String },
+    PayeeAssigneeMismatch { expected: String, found: String },
     OfferExceedsEscrow { offered: u128, remaining: u128 },
     TaskLookup(String),
+    TaskMissingAssignee(String),
     TaskNotCompleted { task_id: String, state: TaskState },
     UnauthorizedConfirmer { expected: String, found: String },
     UnknownOffer(String),
@@ -156,11 +160,22 @@ impl fmt::Display for TaskPaymentError {
             Self::InvalidOfferAmount(amount) => {
                 write!(f, "offer amount must be greater than zero, found {amount}")
             }
+            Self::PayerRequesterMismatch { expected, found } => write!(
+                f,
+                "payer DID must match task requester, expected {expected}, found {found}"
+            ),
+            Self::PayeeAssigneeMismatch { expected, found } => write!(
+                f,
+                "payee DID must match task assignee, expected {expected}, found {found}"
+            ),
             Self::OfferExceedsEscrow { offered, remaining } => write!(
                 f,
                 "offer amount exceeds escrow remaining balance, offered {offered}, remaining {remaining}"
             ),
             Self::TaskLookup(error) => write!(f, "task lookup failed: {error}"),
+            Self::TaskMissingAssignee(task_id) => {
+                write!(f, "task {task_id} has no assignee for payment offer")
+            }
             Self::TaskNotCompleted { task_id, state } => {
                 write!(
                     f,
@@ -196,6 +211,30 @@ fn validate_did(value: &str) -> Result<(), TaskPaymentError> {
     Ok(())
 }
 
+fn validate_offer_participants(
+    offer: &PaymentOffer,
+    task_requester: &str,
+    task_assignee: Option<&str>,
+) -> Result<(), TaskPaymentError> {
+    if offer.payer_did != task_requester {
+        return Err(TaskPaymentError::PayerRequesterMismatch {
+            expected: task_requester.to_owned(),
+            found: offer.payer_did.clone(),
+        });
+    }
+
+    let assignee = task_assignee
+        .ok_or_else(|| TaskPaymentError::TaskMissingAssignee(offer.task_id.clone()))?;
+    if offer.payee_did != assignee {
+        return Err(TaskPaymentError::PayeeAssigneeMismatch {
+            expected: assignee.to_owned(),
+            found: offer.payee_did.clone(),
+        });
+    }
+
+    Ok(())
+}
+
 impl From<TaskOperationError> for TaskPaymentError {
     fn from(error: TaskOperationError) -> Self {
         Self::TaskLookup(error.to_string())
@@ -205,5 +244,64 @@ impl From<TaskOperationError> for TaskPaymentError {
 impl From<EscrowLifecycleError> for TaskPaymentError {
     fn from(error: EscrowLifecycleError) -> Self {
         Self::Escrow(error.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{validate_offer_participants, PaymentOffer, TaskPaymentError};
+
+    fn offer(payer: &str, payee: &str) -> PaymentOffer {
+        PaymentOffer {
+            task_id: "task-pay-unit".to_owned(),
+            escrow_id: "escrow-unit".to_owned(),
+            payer_did: payer.to_owned(),
+            payee_did: payee.to_owned(),
+            amount: 10,
+        }
+    }
+
+    #[test]
+    fn participant_check_rejects_payer_requester_mismatch() {
+        assert_eq!(
+            validate_offer_participants(
+                &offer("kamn:did:agent:observer-9", "kamn:did:agent:worker-1"),
+                "kamn:did:agent:requester-1",
+                Some("kamn:did:agent:worker-1")
+            ),
+            Err(TaskPaymentError::PayerRequesterMismatch {
+                expected: "kamn:did:agent:requester-1".to_owned(),
+                found: "kamn:did:agent:observer-9".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn participant_check_rejects_payee_assignee_mismatch() {
+        assert_eq!(
+            validate_offer_participants(
+                &offer("kamn:did:agent:requester-1", "kamn:did:agent:observer-9"),
+                "kamn:did:agent:requester-1",
+                Some("kamn:did:agent:worker-1")
+            ),
+            Err(TaskPaymentError::PayeeAssigneeMismatch {
+                expected: "kamn:did:agent:worker-1".to_owned(),
+                found: "kamn:did:agent:observer-9".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn participant_check_requires_task_assignee() {
+        assert_eq!(
+            validate_offer_participants(
+                &offer("kamn:did:agent:requester-1", "kamn:did:agent:worker-1"),
+                "kamn:did:agent:requester-1",
+                None
+            ),
+            Err(TaskPaymentError::TaskMissingAssignee(
+                "task-pay-unit".to_owned()
+            ))
+        );
     }
 }

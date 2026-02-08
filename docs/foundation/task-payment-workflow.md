@@ -1,4 +1,4 @@
-# Task Payment Offer/Confirm Workflow (Issues #216 / #542)
+# Task Payment Offer/Confirm Workflow (Issues #216 / #542 / #558)
 
 This document captures the first implementation slice for integrating `PaymentOffer` and `PaymentConfirm` with task completion and escrow release flow.
 
@@ -15,6 +15,8 @@ This document captures the first implementation slice for integrating `PaymentOf
   - positive payment amount.
   - valid payer/payee DIDs.
   - target task in `Completed` state.
+  - `payer_did` equal to task requester DID.
+  - `payee_did` equal to task assignee DID.
   - offered amount less than or equal to escrow remaining balance.
 - Payment confirms require:
   - matching task and escrow references for an existing offer.

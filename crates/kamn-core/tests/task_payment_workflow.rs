@@ -94,6 +94,62 @@ fn completed_task_offer_confirm_releases_escrow() {
 }
 
 #[test]
+fn regression_rejects_offer_with_payer_mismatch() {
+    // Regression: #558
+    let mut workflow = TaskPaymentWorkflow::new();
+    let tasks = completed_task_engine("task-pay-payer-mismatch");
+    let escrow = EscrowLifecycle::new(100).expect("escrow should initialize");
+
+    let result = workflow.submit_offer(
+        PaymentOffer {
+            task_id: "task-pay-payer-mismatch".to_owned(),
+            escrow_id: "escrow-payer-mismatch".to_owned(),
+            payer_did: "kamn:did:agent:observer-9".to_owned(),
+            payee_did: "kamn:did:agent:worker-1".to_owned(),
+            amount: 60,
+        },
+        &tasks,
+        &escrow,
+    );
+
+    assert_eq!(
+        result,
+        Err(TaskPaymentError::PayerRequesterMismatch {
+            expected: "kamn:did:agent:requester-1".to_owned(),
+            found: "kamn:did:agent:observer-9".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn regression_rejects_offer_with_payee_mismatch() {
+    // Regression: #558
+    let mut workflow = TaskPaymentWorkflow::new();
+    let tasks = completed_task_engine("task-pay-payee-mismatch");
+    let escrow = EscrowLifecycle::new(100).expect("escrow should initialize");
+
+    let result = workflow.submit_offer(
+        PaymentOffer {
+            task_id: "task-pay-payee-mismatch".to_owned(),
+            escrow_id: "escrow-payee-mismatch".to_owned(),
+            payer_did: "kamn:did:agent:requester-1".to_owned(),
+            payee_did: "kamn:did:agent:observer-9".to_owned(),
+            amount: 60,
+        },
+        &tasks,
+        &escrow,
+    );
+
+    assert_eq!(
+        result,
+        Err(TaskPaymentError::PayeeAssigneeMismatch {
+            expected: "kamn:did:agent:worker-1".to_owned(),
+            found: "kamn:did:agent:observer-9".to_owned(),
+        })
+    );
+}
+
+#[test]
 fn confirm_rejects_unauthorized_confirmer() {
     let mut workflow = TaskPaymentWorkflow::new();
     let tasks = completed_task_engine("task-pay-3");
