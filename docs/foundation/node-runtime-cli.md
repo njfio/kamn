@@ -1,4 +1,4 @@
-# Node Runtime CLI Contracts (Issues #306 / #307 / #309 / #310 / #335 / #336 / #348)
+# Node Runtime CLI Contracts (Issues #306 / #307 / #309 / #310 / #335 / #336 / #348 / #349)
 
 This document captures node-runtime productionization slices for machine-readable output, local role profile projection, diagnostics snapshots, deterministic runtime planning execution, and deterministic recovery-check evaluation.
 
@@ -34,14 +34,18 @@ This document captures node-runtime productionization slices for machine-readabl
 - Added daemon bounded-loop controls:
   - `--daemon-max-ticks <positive-integer>`
   - `--daemon-tick-interval-ms <positive-integer>`
+  - `--daemon-peer-id <peer-id>` (optional)
+  - `--daemon-lifecycle-event <start-connect|handshake-succeeded|heartbeat-missed|heartbeat-restored|disconnect|rejoin>` (repeatable)
 - Added explicit runtime mode and proposal validation handling through:
   - `ConfigError::InvalidRuntimeMode`
   - `ConfigError::InvalidExpectedStateVersion`
   - `ConfigError::InvalidDaemonControlArgument`
+  - `ConfigError::InvalidDaemonLifecycleEvent`
   - `ConfigError::InvalidProposalArgument`
   - `ConfigError::InvalidRejoinAttemptArgument`
   - `ConfigError::RuntimePlanner`
   - `ConfigError::RuntimeRecovery`
+  - `ConfigError::RuntimeDaemonLifecycle`
 
 ## Output Mode Rules
 - Default behavior remains text output when `--output` is omitted.
@@ -71,6 +75,9 @@ This document captures node-runtime productionization slices for machine-readabl
   - `daemon_tick_interval_ms`
   - `daemon_executed_ticks`
   - `daemon_completion_reason`
+  - `daemon_peer_id`
+  - `daemon_peer_lifecycle_final_state`
+  - `daemon_peer_lifecycle_applied_events`
   - `components`
 - Invalid modes are rejected with explicit typed error.
 
@@ -157,6 +164,12 @@ This document captures node-runtime productionization slices for machine-readabl
   - `--daemon-max-ticks`
   - `--daemon-tick-interval-ms`
 - Daemon loop controls must be positive integers.
+- Optional daemon lifecycle inputs:
+  - `--daemon-peer-id`
+  - repeatable `--daemon-lifecycle-event`
+- Daemon lifecycle events are evaluated in input order using `PeerLifecycle` transitions.
+- Invalid lifecycle event names are rejected with explicit typed error.
+- Invalid lifecycle transitions are rejected with explicit typed runtime daemon lifecycle error.
 - Daemon execution is deterministic and bounded by tick budget:
   - `daemon_executed_ticks` equals configured `daemon_max_ticks`
   - `daemon_completion_reason` emits `tick-budget-exhausted`
@@ -175,6 +188,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - duplicate/stale runtime planning candidate rejection (`Regression: #335`)
   - replay/version/hash recovery-check rejection (`Regression: #336`)
   - zero/invalid daemon bounded-loop control rejection (`Regression: #348`)
+  - invalid daemon lifecycle transition rejection (`Regression: #349`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:

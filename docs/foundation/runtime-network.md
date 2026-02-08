@@ -39,6 +39,26 @@ This document captures the initial runtime-network foundation slice for peer lif
   - malformed rejoin-attempt argument -> `ConfigError::InvalidRejoinAttemptArgument`
   - replay/version/hash mismatch from guard evaluation -> `ConfigError::RuntimeRecovery`
 
+## Node CLI Daemon Lifecycle Mapping
+- `kamn-node --runtime-mode daemon` can optionally evaluate peer lifecycle transitions.
+- CLI argument mapping:
+  - `--daemon-peer-id` -> `PeerLifecycle::new(peer_id)`
+  - `--daemon-lifecycle-event <event>` -> `PeerLifecycle::transition(event)` in input order
+- Supported daemon lifecycle events:
+  - `start-connect`
+  - `handshake-succeeded`
+  - `heartbeat-missed`
+  - `heartbeat-restored`
+  - `disconnect`
+  - `rejoin`
+- Deterministic daemon lifecycle outputs:
+  - `daemon_peer_id`
+  - `daemon_peer_lifecycle_final_state`
+  - `daemon_peer_lifecycle_applied_events`
+- Error mapping:
+  - invalid lifecycle event argument -> `ConfigError::InvalidDaemonLifecycleEvent`
+  - invalid transition from lifecycle state machine -> `ConfigError::RuntimeDaemonLifecycle`
+
 ## Peer Lifecycle Rules
 - `PeerLifecycle` starts in `Disconnected`.
 - Valid transitions:
@@ -108,6 +128,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - rejoin replay token is rejected (`Regression: #322`)
   - rejoin state hash mismatch is rejected (`Regression: #322`)
   - CLI recovery-check replay/version/hash mismatch rejection (`Regression: #336`)
+  - daemon lifecycle invalid transition rejection (`Regression: #349`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:

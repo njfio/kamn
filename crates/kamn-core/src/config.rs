@@ -154,10 +154,12 @@ pub enum ConfigError {
     InvalidRuntimeMode(String),
     InvalidExpectedStateVersion(String),
     InvalidDaemonControlArgument(String),
+    InvalidDaemonLifecycleEvent(String),
     InvalidProposalArgument(String),
     InvalidRejoinAttemptArgument(String),
     RuntimePlanner(String),
     RuntimeRecovery(String),
+    RuntimeDaemonLifecycle(String),
     UnknownArgument(String),
     MissingArgumentValue(&'static str),
 }
@@ -184,6 +186,9 @@ impl fmt::Display for ConfigError {
             Self::InvalidDaemonControlArgument(value) => {
                 write!(f, "invalid daemon control argument: {value}")
             }
+            Self::InvalidDaemonLifecycleEvent(value) => {
+                write!(f, "invalid daemon lifecycle event: {value}")
+            }
             Self::InvalidProposalArgument(value) => {
                 write!(f, "invalid proposal argument: {value}")
             }
@@ -195,6 +200,9 @@ impl fmt::Display for ConfigError {
             }
             Self::RuntimeRecovery(message) => {
                 write!(f, "runtime recovery validation failed: {message}")
+            }
+            Self::RuntimeDaemonLifecycle(message) => {
+                write!(f, "runtime daemon lifecycle validation failed: {message}")
             }
             Self::UnknownArgument(value) => write!(f, "unknown argument: {value}"),
             Self::MissingArgumentValue(flag) => {
