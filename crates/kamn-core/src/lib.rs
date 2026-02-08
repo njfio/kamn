@@ -20,6 +20,7 @@ pub mod runtime;
 pub mod smoke;
 pub mod state;
 pub mod task_lifecycle;
+pub mod task_operations;
 pub mod token;
 pub mod transaction;
 
@@ -72,6 +73,9 @@ pub use state::{
     canonical_state_key, AppStateSchema, StateKeyError, StateVersion, APP_STATE_VERSION,
 };
 pub use task_lifecycle::{TaskLifecycle, TaskLifecycleError, TaskState, TaskTransition};
+pub use task_operations::{
+    TaskOperationEngine, TaskOperationError, TaskOperationNoticeKind, TaskOperationRecord,
+};
 pub use token::{
     default_token_config, AllocationBucket, GenesisAllocation, TokenConfig, TokenConfigError,
     DEFAULT_DECIMALS, DEFAULT_TOKEN_SYMBOL, DEFAULT_TOTAL_SUPPLY,
