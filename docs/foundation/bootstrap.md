@@ -69,3 +69,4 @@ For redaction and tombstone compliance workflow controls, see `docs/foundation/r
 For compliance audit export interface controls, see `docs/foundation/audit-export-interfaces.md`.
 For configurable retention policy enforcement controls, see `docs/foundation/retention-policy-engine.md`.
 For data classification tiers and write-path tagging enforcement controls, see `docs/foundation/data-classification-tagging.md`.
+For optional operator binding proof validation and configure/revoke/read-history permission controls, see `docs/foundation/operator-binding-permissions.md`.
