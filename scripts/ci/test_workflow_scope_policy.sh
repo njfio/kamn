@@ -119,6 +119,16 @@ if ! grep -Fq "bash scripts/signer/run_signer_emulator_contract_lane.sh" "$FAST_
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_did_registry_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected did registry contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/did/run_did_registry_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected did registry contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected runtime snapshot contract scope condition in ci-fast-gate.yml" >&2
   exit 1

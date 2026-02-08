@@ -31,6 +31,7 @@ append_summary() {
     echo "- Run frontend dashboard tests: ${RUN_FRONTEND_DASHBOARD_TESTS}"
     echo "- Run dashboard contract tests: ${RUN_DASHBOARD_CONTRACT_TESTS}"
     echo "- Run signer emulator contract tests: ${RUN_SIGNER_EMULATOR_CONTRACT_TESTS}"
+    echo "- Run DID registry contract tests: ${RUN_DID_REGISTRY_CONTRACT_TESTS}"
     echo "- Run runtime snapshot contract tests: ${RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS}"
     echo "- Run message lifecycle contract tests: ${RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS}"
     echo "- Run channel lifecycle contract tests: ${RUN_CHANNEL_LIFECYCLE_CONTRACT_TESTS}"
@@ -130,6 +131,7 @@ DEPLOY_SCRIPT_CHANGED=false
 FRONTEND_DASHBOARD_CHANGED=false
 DASHBOARD_CONTRACT_CHANGED=false
 SIGNER_EMULATOR_CONTRACT_CHANGED=false
+DID_REGISTRY_CONTRACT_CHANGED=false
 RUNTIME_SNAPSHOT_CONTRACT_CHANGED=false
 MESSAGE_LIFECYCLE_CONTRACT_CHANGED=false
 CHANNEL_LIFECYCLE_CONTRACT_CHANGED=false
@@ -204,6 +206,13 @@ for file in "${CHANGED_FILES[@]}"; do
   case "$file" in
     crates/kamn-core/src/signer_backend.rs|crates/kamn-core/tests/signer_backend.rs|crates/kamn-core/tests/signer_backend_docs.rs|docs/foundation/signer-backend-abstraction.md|scripts/signer/*)
       SIGNER_EMULATOR_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
+    crates/kamn-core/src/did_registry.rs|crates/kamn-core/tests/did_registry_transactions.rs|crates/kamn-core/tests/did_registry_transactions_docs.rs|docs/foundation/did-registry-transactions.md|scripts/did/*)
+      DID_REGISTRY_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -319,6 +328,7 @@ RUN_DEPLOY_PREFLIGHT_TESTS=false
 RUN_FRONTEND_DASHBOARD_TESTS=false
 RUN_DASHBOARD_CONTRACT_TESTS=false
 RUN_SIGNER_EMULATOR_CONTRACT_TESTS=false
+RUN_DID_REGISTRY_CONTRACT_TESTS=false
 RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS=false
 RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS=false
 RUN_CHANNEL_LIFECYCLE_CONTRACT_TESTS=false
@@ -398,6 +408,13 @@ if [ "$SIGNER_EMULATOR_CONTRACT_CHANGED" = true ]; then
   RUN_SIGNER_EMULATOR_CONTRACT_TESTS=true
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
     TEST_SCOPE="signer-contract"
+  fi
+fi
+
+if [ "$DID_REGISTRY_CONTRACT_CHANGED" = true ]; then
+  RUN_DID_REGISTRY_CONTRACT_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="did-contract"
   fi
 fi
 
@@ -508,6 +525,7 @@ write_output "run_deploy_preflight_tests" "$RUN_DEPLOY_PREFLIGHT_TESTS"
 write_output "run_frontend_dashboard_tests" "$RUN_FRONTEND_DASHBOARD_TESTS"
 write_output "run_dashboard_contract_tests" "$RUN_DASHBOARD_CONTRACT_TESTS"
 write_output "run_signer_emulator_contract_tests" "$RUN_SIGNER_EMULATOR_CONTRACT_TESTS"
+write_output "run_did_registry_contract_tests" "$RUN_DID_REGISTRY_CONTRACT_TESTS"
 write_output "run_runtime_snapshot_contract_tests" "$RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS"
 write_output "run_message_lifecycle_contract_tests" "$RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS"
 write_output "run_channel_lifecycle_contract_tests" "$RUN_CHANNEL_LIFECYCLE_CONTRACT_TESTS"

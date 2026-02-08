@@ -1,4 +1,4 @@
-# DID Registry Transactions (Issue #110)
+# DID Registry Transactions (Issues #110, #685)
 
 This document defines the first implementation slice for DID
 register/resolve/update/revoke transaction behavior.
@@ -15,10 +15,22 @@ register/resolve/update/revoke transaction behavior.
 - Updating an unknown DID returns `DidRegistryError::NotFound`.
 - `revoke(did)` transitions an active DID to revoked.
 - Re-registering a revoked DID is rejected (`DidRegistryError::Revoked`) as a regression guard.
+- `idempotency_key_for_register(did, document)` derives a deterministic submission key.
+- `register_with_retry_guard(did, document)` classifies retries as:
+  - `NewSubmission`
+  - `RetryableInFlight`
+  - `FinalizedNoRetry`
+  - `ConflictNoRetry`
+- `record_register_finality(did, key, sequence, status, receipt)` enforces finality update safety:
+  - duplicate update with identical sequence/status/receipt is idempotent
+  - stale sequence is rejected (`DidRegistryError::StaleFinalityUpdate`)
+  - conflicting update at same sequence is rejected (`DidRegistryError::ConflictingFinalityUpdate`)
+  - unknown key is rejected (`DidRegistryError::UnknownSubmissionIdempotencyKey`)
 
 ## Validation Rules
 - The DID document `id` must match the target `did`.
 - Document mismatch is rejected with `DidRegistryError::DocumentDidMismatch`.
+- retry classification and finality checks are deterministic across duplicate/stale/conflict outcomes (`Regression: #678`).
 
 ## Local Validation
 Run from repository root:
@@ -27,6 +39,9 @@ Run from repository root:
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core --test did_registry_transactions
+cargo test -p kamn-core --test did_registry_transactions -- retry_classification_is_deterministic_for_duplicate_submission
+cargo test -p kamn-core --test did_registry_transactions -- regression_register_finality_rejects_stale_or_conflicting_updates
+bash scripts/did/run_did_registry_contract_lane.sh
 cargo test -p kamn-core
 ```
 
