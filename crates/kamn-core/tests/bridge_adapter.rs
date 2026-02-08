@@ -12,6 +12,7 @@ fn inbound_sample() -> BridgeInboundEnvelope {
         target_agent_did: "kamn:did:agent:planner-1".to_owned(),
         body: "Need a sprint plan".to_owned(),
         received_at: "2026-02-08T10:00:00Z".to_owned(),
+        received_at_unix: 1_716_620_000,
     }
 }
 
@@ -33,7 +34,7 @@ fn inbound_is_normalized_deterministically() {
     let engine = BridgeAdapterEngine::new(adapter, AllowAllBridgePolicy::new());
 
     let normalized = engine
-        .process_inbound(&inbound_sample())
+        .process_inbound(&inbound_sample(), 1_716_620_100)
         .expect("inbound should normalize");
 
     assert_eq!(normalized.bridge_message_id, "discord:ext-42");
@@ -68,6 +69,7 @@ fn inbound_can_be_projected_to_canonical_envelope() {
     let envelope = engine
         .process_inbound_to_envelope(
             &inbound_sample(),
+            1_716_620_100,
             vec!["recipient-key-1".to_owned()],
             "2026-02-08T11:00:00Z",
             91,
@@ -127,6 +129,7 @@ impl BridgeAdapter for MismatchedOutboundAdapter {
             target_agent_did: inbound.target_agent_did.clone(),
             body: inbound.body.clone(),
             received_at: inbound.received_at.clone(),
+            received_at_unix: inbound.received_at_unix,
             platform: self.platform(),
         })
     }
@@ -182,10 +185,10 @@ fn regression_rejects_duplicate_inbound_event_replay() {
     let engine = BridgeAdapterEngine::new(adapter, AllowAllBridgePolicy::new());
 
     engine
-        .process_inbound(&inbound_sample())
+        .process_inbound(&inbound_sample(), 1_716_620_100)
         .expect("first inbound event should normalize");
     assert_eq!(
-        engine.process_inbound(&inbound_sample()),
+        engine.process_inbound(&inbound_sample(), 1_716_620_100),
         Err(BridgeAdapterError::DuplicateInboundMessageId(
             "discord:ext-42".to_owned()
         ))
@@ -209,5 +212,24 @@ fn regression_rejects_duplicate_outbound_request_replay() {
     assert_eq!(
         replay_error.to_string(),
         "duplicate outbound request id: req-7"
+    );
+}
+
+#[test]
+fn regression_rejects_stale_inbound_event() {
+    // Regression: #546
+    let adapter =
+        PassThroughBridgeAdapter::new(BridgePlatform::Discord, "kamn:did:agent:bridge-discord-1")
+            .expect("adapter should build");
+    let engine = BridgeAdapterEngine::new(adapter, AllowAllBridgePolicy::new());
+
+    assert_eq!(
+        engine.process_inbound(&inbound_sample(), 1_716_621_000),
+        Err(BridgeAdapterError::StaleInboundMessage {
+            bridge_message_id: "discord:ext-42".to_owned(),
+            received_at_unix: 1_716_620_000,
+            observed_at_unix: 1_716_621_000,
+            max_age_secs: 300,
+        })
     );
 }

@@ -28,6 +28,7 @@ fn inbound(target: &str) -> BridgeInboundEnvelope {
         target_agent_did: target.to_owned(),
         body: "run diagnostics".to_owned(),
         received_at: "2026-02-07T21:00:00Z".to_owned(),
+        received_at_unix: 1_707_340_800,
     }
 }
 
@@ -38,6 +39,7 @@ fn authorized_listener_can_process_inbound() {
     let normalized = engine
         .process_inbound(&TelegramInboundRequest {
             listener_did: "kamn:did:agent:listener-1".to_owned(),
+            observed_at_unix: 1_707_340_900,
             inbound: inbound("kamn:did:agent:listener-target-1"),
         })
         .expect("inbound should process");
@@ -57,6 +59,7 @@ fn integration_processes_inbound_to_canonical_envelope() {
         .process_inbound_to_envelope(
             &TelegramInboundRequest {
                 listener_did: "kamn:did:agent:listener-1".to_owned(),
+                observed_at_unix: 1_707_340_900,
                 inbound: inbound("kamn:did:agent:listener-target-1"),
             },
             vec!["kamn:did:agent:listener-target-1#key-agreement-1".to_owned()],
@@ -81,6 +84,7 @@ fn regression_rejects_replayed_telegram_inbound_projection_event() {
     let engine = TelegramBridgeEngine::new(config()).expect("engine should build");
     let request = TelegramInboundRequest {
         listener_did: "kamn:did:agent:listener-1".to_owned(),
+        observed_at_unix: 1_707_340_900,
         inbound: inbound("kamn:did:agent:listener-target-1"),
     };
 
@@ -112,6 +116,7 @@ fn route_target_mismatch_is_rejected() {
     assert_eq!(
         engine.process_inbound(&TelegramInboundRequest {
             listener_did: "kamn:did:agent:listener-1".to_owned(),
+            observed_at_unix: 1_707_340_900,
             inbound: inbound("kamn:did:agent:different-target"),
         }),
         Err(TelegramBridgeError::RouteTargetMismatch {
@@ -130,6 +135,7 @@ fn regression_unauthorized_listener_is_rejected() {
     assert_eq!(
         engine.process_inbound(&TelegramInboundRequest {
             listener_did: "kamn:did:agent:listener-x".to_owned(),
+            observed_at_unix: 1_707_340_900,
             inbound: inbound("kamn:did:agent:listener-target-1"),
         }),
         Err(TelegramBridgeError::UnauthorizedListener(

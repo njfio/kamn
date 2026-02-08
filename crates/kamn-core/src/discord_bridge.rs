@@ -18,6 +18,7 @@ pub struct DiscordBridgeConfig {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DiscordInboundRequest {
     pub listener_did: String,
+    pub observed_at_unix: u64,
     pub inbound: BridgeInboundEnvelope,
 }
 
@@ -87,7 +88,7 @@ impl DiscordBridgeEngine {
         self.validate_inbound_request(request)?;
 
         self.bridge
-            .process_inbound(&request.inbound)
+            .process_inbound(&request.inbound, request.observed_at_unix)
             .map_err(|error| DiscordBridgeError::Bridge(error.to_string()))
     }
 
@@ -100,7 +101,13 @@ impl DiscordBridgeEngine {
     ) -> Result<CanonicalMessageEnvelope, DiscordBridgeError> {
         self.validate_inbound_request(request)?;
         self.bridge
-            .process_inbound_to_envelope(&request.inbound, recipient_keys, expires, nonce)
+            .process_inbound_to_envelope(
+                &request.inbound,
+                request.observed_at_unix,
+                recipient_keys,
+                expires,
+                nonce,
+            )
             .map_err(|error| DiscordBridgeError::Bridge(error.to_string()))
     }
 

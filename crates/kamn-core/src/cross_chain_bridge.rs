@@ -34,6 +34,7 @@ pub struct CrossChainBridgeConfig {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CrossChainInboundRequest {
     pub listener_did: String,
+    pub observed_at_unix: u64,
     pub chain: CrossChainNetwork,
     pub inbound: BridgeInboundEnvelope,
 }
@@ -133,7 +134,7 @@ impl CrossChainBridgeEngine {
     ) -> Result<NormalizedInboundMessage, CrossChainBridgeError> {
         self.validate_inbound_request(request)?;
         self.bridge_engine(request.chain)
-            .process_inbound(&request.inbound)
+            .process_inbound(&request.inbound, request.observed_at_unix)
             .map_err(|error| CrossChainBridgeError::Bridge(error.to_string()))
     }
 
@@ -146,7 +147,13 @@ impl CrossChainBridgeEngine {
     ) -> Result<CanonicalMessageEnvelope, CrossChainBridgeError> {
         self.validate_inbound_request(request)?;
         self.bridge_engine(request.chain)
-            .process_inbound_to_envelope(&request.inbound, recipient_keys, expires, nonce)
+            .process_inbound_to_envelope(
+                &request.inbound,
+                request.observed_at_unix,
+                recipient_keys,
+                expires,
+                nonce,
+            )
             .map_err(|error| CrossChainBridgeError::Bridge(error.to_string()))
     }
 
