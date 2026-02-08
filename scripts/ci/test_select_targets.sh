@@ -22,13 +22,22 @@ assert_eq() {
 
 run_selector() {
   local changed_files="$1"
-  CI_CHANGED_FILES="$changed_files" GITHUB_BASE_REF=__missing__ bash "$SCRIPT"
+  env -u GITHUB_OUTPUT -u GITHUB_STEP_SUMMARY \
+    CI_CHANGED_FILES="$changed_files" \
+    GITHUB_BASE_REF=__missing__ \
+    bash "$SCRIPT"
 }
 
 docs_output="$(run_selector $'docs/foundation/ci-caching-parallelism.md')"
 assert_eq "$(extract_output "$docs_output" "docs_only")" "true" "docs_only selection mismatch"
 assert_eq "$(extract_output "$docs_output" "run_rust")" "false" "docs_only should not run rust"
 assert_eq "$(extract_output "$docs_output" "test_scope")" "none" "docs_only should keep none scope"
+
+# Regression: #463
+runner_output_file="$(mktemp)"
+runner_docs_output="$(GITHUB_OUTPUT="$runner_output_file" run_selector $'docs/foundation/ci-caching-parallelism.md')"
+rm -f "$runner_output_file"
+assert_eq "$(extract_output "$runner_docs_output" "docs_only")" "true" "runner output env must not hide docs_only"
 
 critical_output="$(run_selector $'.github/workflows/ci-fast-gate.yml')"
 assert_eq "$(extract_output "$critical_output" "run_rust")" "true" "workflow changes must run rust"
