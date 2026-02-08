@@ -28,6 +28,15 @@ fn checklist_contains_go_no_go_evidence_template() {
 }
 
 #[test]
+fn checklist_contains_machine_readable_bundle_contract() {
+    assert!(CHECKLIST.contains("## Machine-Readable Evidence Bundle Contract"));
+    assert!(CHECKLIST.contains("generate_gonogo_evidence_bundle.sh"));
+    assert!(CHECKLIST.contains("check_gonogo_evidence_policy.sh"));
+    assert!(CHECKLIST.contains("run_gonogo_evidence_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_gonogo_evidence_deep_lane.sh"));
+}
+
+#[test]
 fn regression_requires_rollback_precheck_in_checklist() {
     // Regression: #173
     assert!(CHECKLIST.contains("Rollback precheck result: PASS"));
