@@ -1,6 +1,13 @@
 export { fetchMockDashboardSnapshot } from "./mock_api.ts";
 export {
+  DashboardBackendError,
+  fetchDashboardSnapshotFromBackend,
+  type DashboardBackendClientOptions,
+  type DashboardFetchLike,
+} from "./live_api.ts";
+export {
   buildDashboardShell,
+  buildDashboardShellFromBackend,
   mapSeverityLevel,
   mapSnapshotToDashboardModel,
   renderDashboardHtml,

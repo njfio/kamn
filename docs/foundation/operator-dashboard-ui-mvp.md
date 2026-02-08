@@ -1,4 +1,4 @@
-# Operator Dashboard UI MVP Composition (Issues #200, #201, #591, #593, #594)
+# Operator Dashboard UI MVP Composition (Issues #200, #201, #591, #593, #594, #639)
 
 This document captures the first implementation slice for the operator dashboard UI presentation model.
 
@@ -17,7 +17,9 @@ This document captures the first implementation slice for the operator dashboard
 - Added integration and regression tests in `crates/kamn-core/tests/operator_dashboard_ui.rs`.
 - Added frontend MVP package `packages/kamn-dashboard` with:
   - deterministic mock snapshot adapter (`src/mock_api.ts`),
+  - live backend snapshot client (`src/live_api.ts`),
   - UI mapping and rendering logic (`src/dashboard.ts`),
+  - async backend-backed shell rendering (`buildDashboardShellFromBackend(...)`),
   - exported package surface (`src/index.ts`),
   - frontend unit/functional/integration/regression tests (`tests/dashboard.test.ts`).
 
@@ -37,6 +39,10 @@ This document captures the first implementation slice for the operator dashboard
   - loading: `dashboard-loading` section with status semantics.
   - error: `dashboard-error` section with deterministic message surface.
   - empty: `dashboard-empty` section when no rows are available.
+- Frontend live backend behavior:
+  - backend snapshot fetch uses `fetchDashboardSnapshotFromBackend(...)`.
+  - successful live fetch maps to deterministic ready shell rendering.
+  - non-2xx backend responses map to deterministic `dashboard-error` rendering with status detail.
 
 ## Audit Trace Rules
 - Audit traces are projected from `OperatorActionAuditRecord`.
@@ -62,3 +68,4 @@ cargo test -p kamn-core
 
 ## Regression Guards
 - critical severity badge and stale banner render together for degraded snapshots (`Regression: #591`).
+- live backend HTTP failures render deterministic error shell output (`Regression: #639`).

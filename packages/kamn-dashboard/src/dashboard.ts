@@ -1,4 +1,8 @@
 import { fetchMockDashboardSnapshot } from "./mock_api.ts";
+import {
+  fetchDashboardSnapshotFromBackend,
+  type DashboardBackendClientOptions,
+} from "./live_api.ts";
 import type {
   DashboardDomainSample,
   DashboardModel,
@@ -219,4 +223,21 @@ export function buildDashboardShell(
     state: "ready",
     model,
   });
+}
+
+export async function buildDashboardShellFromBackend(
+  nowUnix: number,
+  backendOptions: DashboardBackendClientOptions,
+): Promise<string> {
+  try {
+    const snapshot = await fetchDashboardSnapshotFromBackend(backendOptions);
+    return buildDashboardShell(nowUnix, snapshot);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "dashboard backend request failed";
+    return renderDashboardState({
+      state: "error",
+      message,
+    });
+  }
 }
