@@ -62,3 +62,4 @@ For agent key hierarchy role bindings and ephemeral session key controls, see `d
 For direct-message encryption path controls, see `docs/foundation/direct-message-encryption.md`.
 For task state machine and legal transition validation controls, see `docs/foundation/task-state-machine.md`.
 For task operation command handling controls, see `docs/foundation/task-operations.md`.
+For bridge inbound/outbound adapter abstraction controls, see `docs/foundation/bridge-adapter-abstraction.md`.
