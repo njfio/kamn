@@ -63,6 +63,10 @@ jobs:
         if: steps.scope.outputs.run_frontend_dashboard_tests == 'true'
         run: bash scripts/frontend/test_dashboard_package.sh
 
+      - name: Run dashboard frontend/backend contract checks
+        if: steps.scope.outputs.run_dashboard_contract_tests == 'true'
+        run: bash scripts/frontend/test_dashboard_contract_lane.sh
+
       - name: Set up Rust toolchain
         if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_sdk_parity_matrix == 'true'
         uses: dtolnay/rust-toolchain@stable
