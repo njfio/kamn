@@ -17,6 +17,10 @@ This document captures the first implementation slice for signer backend abstrac
 - secure provider adapters:
   - `secure-mock` for deterministic mock custody.
   - `secure-aws-kms-emulator` for production-style provider adapter coverage.
+  - provider handshake matrix statuses:
+    - `Available`
+    - `Unavailable`
+    - `PolicyBlocked`
   - key references:
     - legacy mock: `secure:<key-ref>`
     - explicit mock: `secure:mock:<key-ref>`
@@ -27,10 +31,12 @@ This document captures the first implementation slice for signer backend abstrac
   - unknown provider labels are rejected with typed `UnsupportedSecureProvider`.
   - unknown role labels are rejected with typed `UnsupportedSignerKeyRole`.
   - malformed secure key references are rejected with typed `MalformedSecureKeyReference`.
+  - provider handshake policy blocks are rejected with typed `ProviderHandshakeRejected`.
   - `ProviderUnavailable` reports the provider-specific backend when the secure path is disabled.
 - Router fallback:
   - falls back from secure to local only for `ProviderUnavailable` and `operator` role keys.
   - fallback is denied for privileged roles with typed `FallbackDeniedByRolePolicy`.
+  - fallback is denied for handshake policy blocks (`ProviderHandshakeRejected`) (`Regression: #677`).
   - does not fallback on hard request errors (for example, unsupported secure key references).
   - verification rejects backend/provider mismatches via `SecureProviderBackendMismatch` (`Regression: #619`).
 
@@ -44,6 +50,9 @@ This document captures the first implementation slice for signer backend abstrac
 ## Signer Emulator Contract Lanes
 - Fast PR lane (low-cost):
   - `bash scripts/signer/run_signer_emulator_contract_lane.sh`
+  - includes provider handshake matrix functional + regression checks:
+    - `cargo test -p kamn-core --test signer_backend functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider`
+    - `cargo test -p kamn-core --test signer_backend regression_provider_handshake_policy_block_rejects_without_fallback`
 - Scheduled provider-integration deep lane:
   - `bash scripts/signer/run_signer_provider_deep_lane.sh`
 - Contract lane guards remain required for signer provider compatibility (`Regression: #619`).

@@ -24,6 +24,16 @@ if ! grep -q "signer emulator contract lane tests passed." "$TMP_OUT"; then
   exit 1
 fi
 
+if ! grep -q "functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider" "$FAST_SCRIPT"; then
+  echo "expected signer emulator contract lane to include provider handshake fallback functional coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "regression_provider_handshake_policy_block_rejects_without_fallback" "$FAST_SCRIPT"; then
+  echo "expected signer emulator contract lane to include provider handshake policy-block regression coverage" >&2
+  exit 1
+fi
+
 if ! grep -Fq "performance_signer_emulator_bulk_signing_deep_lane -- --ignored" "$DEEP_SCRIPT"; then
   echo "expected deep-lane script to execute ignored signer provider stress test" >&2
   exit 1
