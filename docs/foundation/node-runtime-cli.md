@@ -15,10 +15,15 @@ This document captures the first two node-runtime productionization slices for m
   - `--profile local-listener`
   - `--profile local-approver`
 - Added explicit invalid-profile handling through `ConfigError::InvalidNodeProfile`.
+- Added diagnostics mode command surface:
+  - `--diagnostics basic` (default)
+  - `--diagnostics snapshot`
+- Added explicit invalid diagnostics-mode handling through `ConfigError::InvalidDiagnosticsMode`.
 
 ## Output Mode Rules
 - Default behavior remains text output when `--output` is omitted.
 - JSON output is deterministic and includes:
+  - `diagnostics_mode`
   - `profile`
   - `role`
   - `chain_id`
@@ -30,6 +35,7 @@ This document captures the first two node-runtime productionization slices for m
   - `sync_recovery`
   - `state_version`
   - `pending_migrations`
+  - `component_count`
   - `components`
 - Invalid modes are rejected with explicit typed error.
 
@@ -48,6 +54,15 @@ This document captures the first two node-runtime productionization slices for m
 - Explicit CLI flags override profile defaults (`--chain-id`, `--storage-dir`, `--sync-mode`, `--disable-gossip`, `--role`).
 - Invalid profiles are rejected with explicit typed error.
 
+## Diagnostics Snapshot Rules
+- Supported diagnostics modes:
+  - `basic` (default)
+  - `snapshot`
+- Snapshot output includes deterministic component summary:
+  - `component_count`
+  - `components`
+- Invalid diagnostics modes are rejected with explicit typed error.
+
 ## Test Coverage Mapping
 - Unit:
   - default mode behavior and mode parsing checks
@@ -58,6 +73,7 @@ This document captures the first two node-runtime productionization slices for m
 - Regression:
   - invalid output mode rejection (`Regression: #307`)
   - invalid profile rejection (`Regression: #310`)
+  - invalid diagnostics mode rejection (`Regression: #313`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
