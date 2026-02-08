@@ -9,6 +9,11 @@ This document captures processor high-availability runtime contract text for sna
   - `RuntimeSnapshot`
   - `SnapshotRestoreGuard`
   - `SnapshotRestoreError`
+- Added runtime snapshot store model references:
+  - `RuntimeSnapshotStore`
+  - `InMemoryRuntimeSnapshotStore`
+  - `FileRuntimeSnapshotStore`
+  - `SnapshotStoreError`
 - Added construct-lock guard model references:
   - `ConstructLockLease`
   - `ConstructLockGuard`
@@ -22,6 +27,14 @@ This document captures processor high-availability runtime contract text for sna
 - Typed restore mismatches:
   - `SnapshotRestoreError::StateVersionMismatch`
   - `SnapshotRestoreError::StateHashMismatch`
+
+## Snapshot Store Adapter Rules
+- Runtime snapshot adapters expose deterministic `write`, `read_latest`, and `list` behavior.
+- File-backed snapshot entries serialize as `<state-version>|<state-hash>` per line.
+- malformed snapshot payload entries are rejected.
+- Typed adapter guard failures:
+  - `SnapshotStoreError::InvalidPayload`
+  - `SnapshotStoreError::Io`
 
 ## Construct Lock Rules
 - Processor construct-lock ownership must enforce single active lease semantics.
@@ -38,6 +51,7 @@ This document captures processor high-availability runtime contract text for sna
 - Regression:
   - snapshot restore mismatch rejection (`Regression: #361`)
   - split-brain and stale-renew lock rejection (`Regression: #362`)
+  - malformed file-backed snapshot payload rejection (`Regression: #387`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
@@ -45,6 +59,7 @@ Run targeted checks first:
 ```bash
 cargo test -p kamn-node --test runtime_processor_ha_docs
 cargo test -p kamn-node --test node_runtime_cli_docs
+cargo test -p kamn-core snapshot_store
 ```
 
 Then run strict formatting/lint gates:
