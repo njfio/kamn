@@ -215,10 +215,11 @@ pub use retention_engine::{
     RetentionPolicyEngine, RetentionPolicyError, RetentionRecord, RetentionStatus,
 };
 pub use runtime::{
-    BoundedRuntimeQueue, DeterministicProposalPlanner, PeerLifecycle, PeerLifecycleEvent,
-    PeerLifecycleState, ProposalCandidate, ProposalPlan, ProposalPlannerError, RecoveryGuardError,
-    RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, RuntimeLifecycleError, RuntimeQueueError,
-    RuntimeWiring,
+    simulate_daemon_network_fault, BoundedRuntimeQueue, DeterministicNetworkFaultSimulator,
+    DeterministicProposalPlanner, NetworkFaultSimulationError, NetworkFaultSimulationInput,
+    NetworkFaultSimulationReport, PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState,
+    ProposalCandidate, ProposalPlan, ProposalPlannerError, RecoveryGuardError, RecoveryRejoinGuard,
+    RecoveryStatus, RejoinAttempt, RuntimeLifecycleError, RuntimeQueueError, RuntimeWiring,
 };
 pub use service_marketplace::{
     MarketplaceSearchFilter, NegotiationThreadHook, ServiceListing, ServiceMarketplaceEngine,
