@@ -5,6 +5,7 @@ pub mod bridge_adapter;
 pub mod channel_models;
 pub mod channel_policies;
 pub mod config;
+pub mod cross_chain_bridge;
 pub mod data_classification;
 pub mod did;
 pub mod did_registry;
@@ -55,6 +56,11 @@ pub use channel_policies::{
 pub use config::{
     ConfigError, NodeConfig, NodeRole, SyncMode, SyncOperationalProfile, SyncRecoveryStrategy,
     SyncStartupStrategy,
+};
+pub use cross_chain_bridge::{
+    CrossChainBridgeConfig, CrossChainBridgeEngine, CrossChainBridgeError,
+    CrossChainInboundRequest, CrossChainNetwork, CrossChainOutboundApproval,
+    CrossChainOutboundDispatch,
 };
 pub use data_classification::{
     ClassificationPolicy, ClassificationStatus, DataClassificationEngine, DataClassificationError,
