@@ -4,25 +4,30 @@ use crate::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use std::sync::Mutex;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TelegramBridgeConfig {
     pub bridge_agent_did: String,
     pub authorized_listener_dids: BTreeSet<String>,
+    pub webhook_token: String,
     pub channel_routes: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TelegramInboundRequest {
     pub listener_did: String,
+    pub webhook_token: String,
+    pub checkpoint: u64,
     pub observed_at_unix: u64,
     pub inbound: BridgeInboundEnvelope,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct TelegramBridgeEngine {
     config: TelegramBridgeConfig,
     bridge: BridgeAdapterEngine<PassThroughBridgeAdapter, AllowAllBridgePolicy>,
+    channel_checkpoints: Mutex<BTreeMap<String, u64>>,
 }
 
 impl TelegramBridgeEngine {
@@ -34,6 +39,7 @@ impl TelegramBridgeEngine {
         for listener_did in &config.authorized_listener_dids {
             validate_did(listener_did)?;
         }
+        validate_non_empty("webhook_token", &config.webhook_token)?;
         if config.channel_routes.is_empty() {
             return Err(TelegramBridgeError::EmptyField("channel_routes"));
         }
@@ -47,7 +53,11 @@ impl TelegramBridgeEngine {
                 .map_err(|error| TelegramBridgeError::Bridge(error.to_string()))?;
         let bridge = BridgeAdapterEngine::new(adapter, AllowAllBridgePolicy::new());
 
-        Ok(Self { config, bridge })
+        Ok(Self {
+            config,
+            bridge,
+            channel_checkpoints: Mutex::new(BTreeMap::new()),
+        })
     }
 
     pub fn process_inbound(
@@ -56,9 +66,12 @@ impl TelegramBridgeEngine {
     ) -> Result<NormalizedInboundMessage, TelegramBridgeError> {
         self.validate_inbound_request(request)?;
 
-        self.bridge
+        let normalized = self
+            .bridge
             .process_inbound(&request.inbound, request.observed_at_unix)
-            .map_err(|error| TelegramBridgeError::Bridge(error.to_string()))
+            .map_err(|error| TelegramBridgeError::Bridge(error.to_string()))?;
+        self.record_checkpoint(&request.inbound.external_channel_id, request.checkpoint)?;
+        Ok(normalized)
     }
 
     pub fn process_inbound_to_envelope(
@@ -69,7 +82,8 @@ impl TelegramBridgeEngine {
         nonce: u64,
     ) -> Result<CanonicalMessageEnvelope, TelegramBridgeError> {
         self.validate_inbound_request(request)?;
-        self.bridge
+        let envelope = self
+            .bridge
             .process_inbound_to_envelope(
                 &request.inbound,
                 request.observed_at_unix,
@@ -77,7 +91,9 @@ impl TelegramBridgeEngine {
                 expires,
                 nonce,
             )
-            .map_err(|error| TelegramBridgeError::Bridge(error.to_string()))
+            .map_err(|error| TelegramBridgeError::Bridge(error.to_string()))?;
+        self.record_checkpoint(&request.inbound.external_channel_id, request.checkpoint)?;
+        Ok(envelope)
     }
 
     fn validate_inbound_request(
@@ -93,6 +109,13 @@ impl TelegramBridgeEngine {
             return Err(TelegramBridgeError::UnauthorizedListener(
                 request.listener_did.clone(),
             ));
+        }
+        validate_non_empty(
+            "telegram_inbound_request.webhook_token",
+            &request.webhook_token,
+        )?;
+        if request.webhook_token != self.config.webhook_token {
+            return Err(TelegramBridgeError::InvalidWebhookToken);
         }
 
         let external_channel_id = request.inbound.external_channel_id.clone();
@@ -111,6 +134,28 @@ impl TelegramBridgeEngine {
         }
         Ok(())
     }
+
+    fn record_checkpoint(
+        &self,
+        external_channel_id: &str,
+        checkpoint: u64,
+    ) -> Result<(), TelegramBridgeError> {
+        let mut guard = self
+            .channel_checkpoints
+            .lock()
+            .map_err(|_| TelegramBridgeError::CheckpointStateUnavailable)?;
+        if let Some(last_checkpoint) = guard.get(external_channel_id).copied() {
+            if checkpoint <= last_checkpoint {
+                return Err(TelegramBridgeError::NonMonotonicCheckpoint {
+                    external_channel_id: external_channel_id.to_owned(),
+                    last_checkpoint,
+                    received_checkpoint: checkpoint,
+                });
+            }
+        }
+        guard.insert(external_channel_id.to_owned(), checkpoint);
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -118,6 +163,13 @@ pub enum TelegramBridgeError {
     EmptyField(&'static str),
     InvalidDid(String),
     UnauthorizedListener(String),
+    InvalidWebhookToken,
+    NonMonotonicCheckpoint {
+        external_channel_id: String,
+        last_checkpoint: u64,
+        received_checkpoint: u64,
+    },
+    CheckpointStateUnavailable,
     UnknownRouteChannel(String),
     RouteTargetMismatch {
         external_channel_id: String,
@@ -133,6 +185,18 @@ impl fmt::Display for TelegramBridgeError {
             Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
             Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
             Self::UnauthorizedListener(value) => write!(f, "unauthorized listener did: {value}"),
+            Self::InvalidWebhookToken => write!(f, "invalid telegram webhook token"),
+            Self::NonMonotonicCheckpoint {
+                external_channel_id,
+                last_checkpoint,
+                received_checkpoint,
+            } => write!(
+                f,
+                "non-monotonic telegram checkpoint for {external_channel_id}: last {last_checkpoint}, received {received_checkpoint}"
+            ),
+            Self::CheckpointStateUnavailable => {
+                write!(f, "telegram checkpoint state is unavailable")
+            }
             Self::UnknownRouteChannel(value) => {
                 write!(f, "telegram channel route not found: {value}")
             }
@@ -179,6 +243,7 @@ mod tests {
             authorized_listener_dids: ["kamn:did:agent:listener-1".to_owned()]
                 .into_iter()
                 .collect::<BTreeSet<_>>(),
+            webhook_token: "telegram-webhook-token-valid".to_owned(),
             channel_routes,
         }
     }
@@ -204,6 +269,16 @@ mod tests {
             Err(TelegramBridgeError::InvalidDid(
                 "invalid agent did prefix: bad-did".to_owned()
             ))
+        );
+    }
+
+    #[test]
+    fn constructor_rejects_empty_webhook_token() {
+        let mut config = config();
+        config.webhook_token.clear();
+        assert_eq!(
+            TelegramBridgeEngine::new(config),
+            Err(TelegramBridgeError::EmptyField("webhook_token"))
         );
     }
 }
