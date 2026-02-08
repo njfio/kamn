@@ -21,8 +21,14 @@ This document defines the baseline deterministic transaction guards implemented 
 - `baseline_signature_for_fields(...)` is the canonical baseline signing profile helper.
 - Signature profile is shared between `transaction` and `signer_backend` paths.
 - baseline signature profile id: `baseline-v1`.
+- migration fixture matrix helper:
+  - `signature_profile_compatibility_fixtures_for_fields(...)`
+  - baseline fixture (`baseline-v1`) is accepted.
+  - legacy unversioned fixture (`legacy-unversioned`) is rejected.
+  - unknown profile fixture (`baseline-v0`) is rejected.
 - signature-profile drift between transaction and signer paths is rejected (`Regression: #400`).
 - non-versioned signature profile is rejected (`Regression: #404`).
+- compatibility fixture matrix remains aligned between signer and transaction verification (`Regression: #677`).
 
 ## Signer Fallback Policy Integration
 - signer keys support role-scoped secure references: `secure:aws-kms:role-<operator|admin|treasury|auditor>/<key-ref>`.

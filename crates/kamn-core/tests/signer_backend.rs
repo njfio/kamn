@@ -1,5 +1,6 @@
 use kamn_core::{
-    baseline_signature_for_fields, BaselineTransaction, SignerBackendError, SignerBackendRouter,
+    baseline_signature_for_fields, signature_profile_compatibility_fixtures_for_fields,
+    BaselineTransaction, RoleSmokeNetwork, SignerBackendError, SignerBackendRouter,
     SignerProviderHandshakeMatrix, SignerProviderHandshakeStatus, SigningRequest,
     TransactionGuards, GENESIS_STATE_HASH,
 };
@@ -275,6 +276,59 @@ fn regression_provider_handshake_policy_block_rejects_without_fallback() {
             failure_class: "policy-blocked".to_owned(),
         })
     );
+}
+
+#[test]
+fn integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards() {
+    let router = SignerBackendRouter::default();
+    let request = SigningRequest::new(
+        "secure:key-ops-1",
+        "agent-a",
+        1,
+        "payload-1",
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+
+    let fixtures = signature_profile_compatibility_fixtures_for_fields(
+        "agent-a",
+        1,
+        GENESIS_STATE_HASH,
+        "payload-1",
+    );
+
+    for fixture in fixtures {
+        let signer_accepts = router
+            .verify_with_backend("secure-mock", &request, &fixture.signature)
+            .is_ok();
+
+        let mut tx_network = RoleSmokeNetwork::new(true);
+        let mut tx = BaselineTransaction::signed(
+            "tx-profile-fixture",
+            "agent-a",
+            1,
+            "payload-1",
+            GENESIS_STATE_HASH,
+        );
+        tx.signature = fixture.signature.clone();
+        let transaction_accepts = tx_network.submit_transaction(tx).is_ok();
+
+        assert_eq!(
+            signer_accepts, fixture.should_verify,
+            "signer compatibility fixture {} should remain deterministic",
+            fixture.fixture_id
+        );
+        assert_eq!(
+            transaction_accepts, fixture.should_verify,
+            "transaction compatibility fixture {} should remain deterministic",
+            fixture.fixture_id
+        );
+        assert_eq!(
+            signer_accepts, transaction_accepts,
+            "signer and transaction compatibility decisions must stay aligned for fixture {}",
+            fixture.fixture_id
+        );
+    }
 }
 
 #[test]

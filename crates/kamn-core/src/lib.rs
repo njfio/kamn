@@ -238,7 +238,11 @@ pub use service_marketplace::{
     ServiceMarketplaceError,
 };
 pub use signature_profile::{
-    baseline_signature_for_fields, baseline_signature_profile_id, BASELINE_SIGNATURE_PROFILE_ID,
+    baseline_signature_for_fields, baseline_signature_profile_id, legacy_signature_for_fields,
+    signature_matches_supported_profile_for_fields,
+    signature_profile_compatibility_fixtures_for_fields, unknown_signature_profile_for_fields,
+    SignatureProfileCompatibilityFixture, BASELINE_SIGNATURE_PROFILE_ID,
+    LEGACY_SIGNATURE_PROFILE_ID,
 };
 pub use signer_backend::{
     BackendSignature, LocalSignerBackend, SecureSignerBackend, SecureSignerProvider, SignerBackend,

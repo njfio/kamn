@@ -44,8 +44,12 @@ This document captures the first implementation slice for signer backend abstrac
 - `SigningRequest::for_transaction(...)` maps `BaselineTransaction` fields into signer requests.
 - Signed output remains compatible with `TransactionGuards::validate_and_record(...)`.
 - `baseline_signature_for_fields(...)` provides the canonical signature-profile helper consumed by both paths.
+- `signature_profile_compatibility_fixtures_for_fields(...)` defines migration fixtures for signer/transaction parity:
+  - `baseline-v1` fixture is accepted.
+  - `legacy-unversioned` and `baseline-v0` fixtures are rejected.
 - baseline signature profile id: `baseline-v1`.
 - non-versioned signature profile is rejected (`Regression: #404`).
+- signer and transaction compatibility fixture matrix decisions stay aligned (`Regression: #677`).
 
 ## Signer Emulator Contract Lanes
 - Fast PR lane (low-cost):
@@ -53,6 +57,7 @@ This document captures the first implementation slice for signer backend abstrac
   - includes provider handshake matrix functional + regression checks:
     - `cargo test -p kamn-core --test signer_backend functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider`
     - `cargo test -p kamn-core --test signer_backend regression_provider_handshake_policy_block_rejects_without_fallback`
+    - `cargo test -p kamn-core --test signer_backend integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards`
 - Scheduled provider-integration deep lane:
   - `bash scripts/signer/run_signer_provider_deep_lane.sh`
 - Contract lane guards remain required for signer provider compatibility (`Regression: #619`).
