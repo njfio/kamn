@@ -137,6 +137,12 @@ export class KAMNClient {
     return drained;
   }
 
+  async *receiveStream(did: string): AsyncIterable<InboxMessage> {
+    for (const message of this.receive(did)) {
+      yield { ...message };
+    }
+  }
+
   createTask(creatorDid: string, taskType: string, description: string): string {
     this.ensureKnownAgent(creatorDid);
     if (!taskType.trim()) {

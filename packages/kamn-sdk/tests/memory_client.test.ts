@@ -28,6 +28,43 @@ test("send receive and drain", () => {
   assert.equal(second.length, 0);
 });
 
+test("receive stream iterator orders messages deterministically", async () => {
+  const client = new KAMNClient();
+  const sender = client.register("autonomous", "claude-4", ["text"]);
+  const receiver = client.register("assistant", "gpt-5", ["text"]);
+
+  client.send(sender, receiver, "first");
+  client.send(sender, receiver, "second");
+
+  const bodies: string[] = [];
+  for await (const message of client.receiveStream(receiver)) {
+    bodies.push(message.body);
+  }
+
+  assert.deepEqual(bodies, ["first", "second"]);
+});
+
+test("regression receive stream does not replay consumed messages", async () => {
+  // Regression: #485
+  const client = new KAMNClient();
+  const sender = client.register("autonomous", "claude-4", ["text"]);
+  const receiver = client.register("assistant", "gpt-5", ["text"]);
+  client.send(sender, receiver, "once");
+
+  const first: string[] = [];
+  for await (const message of client.receiveStream(receiver)) {
+    first.push(message.body);
+  }
+
+  const second: string[] = [];
+  for await (const message of client.receiveStream(receiver)) {
+    second.push(message.body);
+  }
+
+  assert.equal(first.length, 1);
+  assert.equal(second.length, 0);
+});
+
 test("task and escrow flow", () => {
   const client = new KAMNClient();
   const creator = client.register("autonomous", "claude-4", ["research"]);
