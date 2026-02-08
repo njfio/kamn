@@ -17,6 +17,11 @@ def parse_args() -> argparse.Namespace:
         "--fixture",
         default=str(ROOT_DIR / "fixtures/bridge_replay/replay_validation_cases.json"),
     )
+    parser.add_argument(
+        "--suites",
+        default="",
+        help="Comma-separated suite names to include (for example: telegram_bridge,bridge_adapter)",
+    )
     parser.add_argument("--output-json", default="")
     return parser.parse_args()
 
@@ -30,6 +35,20 @@ def parse_key_values(stdout: str) -> Dict[str, str]:
         key, value = line.split("=", 1)
         values[key] = value
     return values
+
+
+def parse_requested_suites(raw: str) -> List[str]:
+    requested: List[str] = []
+    seen = set()
+    for part in raw.split(","):
+        suite = part.strip()
+        if not suite:
+            continue
+        if suite in seen:
+            continue
+        seen.add(suite)
+        requested.append(suite)
+    return requested
 
 
 def run_case(case: Dict[str, Any]) -> Dict[str, str]:
@@ -104,9 +123,27 @@ def main() -> int:
         print("status=fail; reason=invalid-fixture-cases")
         return 2
 
+    requested_suites = parse_requested_suites(args.suites)
+    if requested_suites:
+        requested_set = set(requested_suites)
+        selected_cases = [
+            case
+            for case in cases
+            if isinstance(case, dict) and str(case.get("suite", "")) in requested_set
+        ]
+        if not selected_cases:
+            print(
+                "status=fail; "
+                "reason=no-selected-cases; "
+                f"requested_suites={','.join(requested_suites)}"
+            )
+            return 2
+    else:
+        selected_cases = cases
+
     report_cases: List[Dict[str, Any]] = []
     failed_ids: List[str] = []
-    for case in cases:
+    for case in selected_cases:
         if not isinstance(case, dict):
             failed_ids.append("invalid-case")
             continue
@@ -119,9 +156,10 @@ def main() -> int:
     report = {
         "status": status,
         "fixture": str(fixture_path),
-        "case_count": len(cases),
+        "case_count": len(selected_cases),
         "failed_count": len(failed_ids),
         "failed_case_ids": failed_ids,
+        "requested_suites": requested_suites,
         "cases": report_cases,
     }
 
@@ -129,12 +167,15 @@ def main() -> int:
         Path(args.output_json).write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     if status == "pass":
-        print(f"status=pass; cases={len(cases)}; failed=0")
+        print(
+            f"status=pass; cases={len(selected_cases)}; failed=0; "
+            f"suites={','.join(requested_suites) if requested_suites else 'all'}"
+        )
         return 0
 
     print(
         "status=fail; "
-        f"cases={len(cases)}; failed={len(failed_ids)}; "
+        f"cases={len(selected_cases)}; failed={len(failed_ids)}; "
         f"failed_ids={','.join(failed_ids)}"
     )
     return 1

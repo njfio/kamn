@@ -20,6 +20,10 @@ This document captures deterministic bridge quorum runtime contracts for listene
   - `ApproverQuorumDecision`
   - `ApproverQuorumError`
   - `authorize_daemon_outbound_action`
+- Added bridge replay fixture mapping for approver signature-failure coverage:
+  - `discord_bridge::outbound_rejects_unauthorized_approver`
+  - `cross_chain_bridge::outbound_rejects_unauthorized_approver`
+- Added bridge replay subset command example for low-cost fast-gate execution.
 
 ## Listener Quorum Workflow Rules
 - Inbound bridge decisions require canonical listener attestation normalization before threshold evaluation.
@@ -43,6 +47,7 @@ This document captures deterministic bridge quorum runtime contracts for listene
   - listener event sequence replay rejection (`Regression: #371`)
   - malformed approver payload rejection (`Regression: #372`)
   - outbound under-quorum rejection (`Regression: #372`)
+  - unauthorized approver signature-failure rejection in bridge replay fixtures (`Regression: #587`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
@@ -51,6 +56,7 @@ Run targeted checks first:
 cargo test -p kamn-core --test bridge_quorum_runtime_docs
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-core approver_quorum
+bash scripts/bridge/run_bridge_replay_matrix.sh --fixture fixtures/bridge_replay/replay_validation_cases.json --suites bridge_adapter,discord_bridge --output-json /tmp/bridge-replay-quorum-report.json
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
 ```
