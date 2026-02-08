@@ -2,6 +2,7 @@ import { fetchMockDashboardSnapshot } from "./mock_api.ts";
 import type {
   DashboardDomainSample,
   DashboardModel,
+  DashboardRenderState,
   DashboardSummaryCard,
   DashboardSnapshot,
   SeverityInput,
@@ -128,7 +129,7 @@ export function mapSnapshotToDashboardModel(
   };
 }
 
-export function renderDashboardHtml(model: DashboardModel): string {
+function renderReadyBody(model: DashboardModel): string {
   const staleBanner = model.staleBanner
     ? '<div class="stale-data-banner severity-critical">Snapshot is stale</div>'
     : "";
@@ -147,15 +148,7 @@ export function renderDashboardHtml(model: DashboardModel): string {
     )
     .join("");
 
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>KAMN Operator Dashboard MVP</title>
-  </head>
-  <body>
-    <main class="dashboard-shell">
+  return `<main class="dashboard-shell">
       ${staleBanner}
       <section class="summary-grid">${cards}</section>
       <section class="domain-table-shell">
@@ -166,13 +159,64 @@ export function renderDashboardHtml(model: DashboardModel): string {
           <tbody>${rows}</tbody>
         </table>
       </section>
-    </main>
+    </main>`;
+}
+
+function renderShell(body: string): string {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KAMN Operator Dashboard MVP</title>
+  </head>
+  <body>
+    ${body}
   </body>
 </html>`;
 }
 
-export function buildDashboardShell(nowUnix: number): string {
-  const snapshot = fetchMockDashboardSnapshot();
-  const model = mapSnapshotToDashboardModel(snapshot, nowUnix);
-  return renderDashboardHtml(model);
+export function renderDashboardState(state: DashboardRenderState): string {
+  switch (state.state) {
+    case "loading":
+      return renderShell(
+        '<main class="dashboard-shell"><section class="dashboard-loading" role="status" aria-live="polite">Loading dashboard...</section></main>',
+      );
+    case "error":
+      return renderShell(
+        `<main class="dashboard-shell"><section class="dashboard-error" role="alert">Dashboard error: ${state.message}</section></main>`,
+      );
+    case "empty":
+      return renderShell(
+        '<main class="dashboard-shell"><section class="dashboard-empty">No dashboard data available.</section></main>',
+      );
+    case "ready":
+      return renderShell(renderReadyBody(state.model));
+  }
+}
+
+export function renderDashboardHtml(model: DashboardModel): string {
+  return renderDashboardState({
+    state: "ready",
+    model,
+  });
+}
+
+export function buildDashboardShell(
+  nowUnix: number,
+  snapshot: DashboardSnapshot | null = undefined,
+): string {
+  if (snapshot === null) {
+    return renderDashboardState({ state: "empty" });
+  }
+
+  const resolvedSnapshot = snapshot ?? fetchMockDashboardSnapshot();
+  const model = mapSnapshotToDashboardModel(resolvedSnapshot, nowUnix);
+  if (model.domains.length === 0) {
+    return renderDashboardState({ state: "empty" });
+  }
+  return renderDashboardState({
+    state: "ready",
+    model,
+  });
 }

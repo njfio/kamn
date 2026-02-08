@@ -33,6 +33,10 @@ This document captures the first implementation slice for the operator dashboard
 - Frontend stale-state indicators:
   - `stale-data-banner` is rendered when snapshot age exceeds threshold.
   - stale domain rows retain severity badges for operator triage.
+- Frontend deterministic shell states:
+  - loading: `dashboard-loading` section with status semantics.
+  - error: `dashboard-error` section with deterministic message surface.
+  - empty: `dashboard-empty` section when no rows are available.
 
 ## Audit Trace Rules
 - Audit traces are projected from `OperatorActionAuditRecord`.

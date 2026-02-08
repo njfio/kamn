@@ -36,6 +36,8 @@ This document captures the first implementation slice for deterministic observab
 - Frontend dashboard mapping:
   - critical samples map to `severity-critical` badges.
   - stale snapshots map to `stale-data-banner` indicators.
+  - unavailable sample fetch maps to `dashboard-error` state.
+  - empty sample batches map to `dashboard-empty` state.
 
 ## Local Validation
 Run from repository root:

@@ -30,4 +30,6 @@ fn regression_requires_frontend_stale_and_severity_projection_rules() {
     // Regression: #591
     assert!(DOC.contains("severity-critical"));
     assert!(DOC.contains("stale-data-banner"));
+    assert!(DOC.contains("dashboard-error"));
+    assert!(DOC.contains("dashboard-empty"));
 }
