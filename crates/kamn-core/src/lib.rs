@@ -1,6 +1,7 @@
 pub mod bootstrap;
 pub mod config;
 pub mod did;
+pub mod did_registry;
 pub mod escrow;
 pub mod instruction_verify;
 pub mod invariants;
@@ -20,6 +21,7 @@ pub use did::{
     canonical_did_document, AgentDid, AgentDidError, AgentDidMetadata, DidDocument,
     DidDocumentError, DidService, DidVerificationMethod,
 };
+pub use did_registry::{DidRegistry, DidRegistryError};
 pub use escrow::{EscrowLifecycle, EscrowLifecycleError, EscrowStatus};
 pub use instruction_verify::{
     InstructionClaim, InstructionRecord, InstructionVerifier, VerificationContext,
