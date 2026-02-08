@@ -50,6 +50,7 @@ For multi-AZ topology and failover operations, see `docs/foundation/multi-az-fai
 For observability SLO evaluation and dashboard rollup controls, see `docs/foundation/observability-slo-dashboards.md`.
 For security control ownership and enforcement mapping, see `docs/foundation/threat-control-matrix.md`.
 For anti-hallucination instruction validation controls, see `docs/foundation/instruction-verification.md`.
+For watchdog prototype detection controls (invalid blocks, censorship, quorum anomalies), see `docs/foundation/watchdog-node-prototype.md`.
 For deterministic key lifecycle and rotation transitions, see `docs/foundation/key-lifecycle.md`.
 For tamper-evident key lifecycle audit trail verification controls, see `docs/foundation/key-lifecycle-audit-trails.md`.
 For pluggable local/secure signer backend controls, see `docs/foundation/signer-backend-abstraction.md`.
