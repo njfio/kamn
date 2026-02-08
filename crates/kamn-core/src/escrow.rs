@@ -107,6 +107,20 @@ impl EscrowLifecycle {
         Ok(())
     }
 
+    pub fn refund_after_timeout(
+        &mut self,
+        current_unix: u64,
+        timeout_unix: u64,
+    ) -> Result<(), EscrowLifecycleError> {
+        if current_unix < timeout_unix {
+            return Err(EscrowLifecycleError::TimeoutNotElapsed {
+                current_unix,
+                timeout_unix,
+            });
+        }
+        self.refund_remaining()
+    }
+
     pub fn dispute(&mut self) -> Result<(), EscrowLifecycleError> {
         match self.status {
             EscrowStatus::Funded | EscrowStatus::PartiallyReleased { .. } => {
@@ -176,6 +190,10 @@ pub enum EscrowLifecycleError {
         expected_remaining: u128,
         actual_split: u128,
     },
+    TimeoutNotElapsed {
+        current_unix: u64,
+        timeout_unix: u64,
+    },
     AmountOverflow,
 }
 
@@ -206,6 +224,13 @@ impl fmt::Display for EscrowLifecycleError {
             } => write!(
                 f,
                 "resolution split must equal remaining, expected {expected_remaining}, got {actual_split}"
+            ),
+            Self::TimeoutNotElapsed {
+                current_unix,
+                timeout_unix,
+            } => write!(
+                f,
+                "timeout not elapsed: current_unix {current_unix}, timeout_unix {timeout_unix}"
             ),
             Self::AmountOverflow => write!(f, "escrow amount overflow"),
         }
@@ -248,5 +273,31 @@ mod tests {
         }
         assert_eq!(escrow.status(), EscrowStatus::Refunded);
         assert_eq!(escrow.refunded_amount(), 10);
+    }
+
+    #[test]
+    fn regression_premature_timeout_refund_is_rejected() {
+        // Regression: #542
+        let mut escrow = EscrowLifecycle::new(50).expect("escrow should initialize");
+        assert_eq!(
+            escrow.refund_after_timeout(1_716_620_050, 1_716_620_100),
+            Err(EscrowLifecycleError::TimeoutNotElapsed {
+                current_unix: 1_716_620_050,
+                timeout_unix: 1_716_620_100,
+            })
+        );
+    }
+
+    #[test]
+    fn timeout_refund_at_deadline_refunds_remaining_balance() {
+        let mut escrow = EscrowLifecycle::new(100).expect("escrow should initialize");
+        escrow.release(35).expect("release should succeed");
+        escrow
+            .refund_after_timeout(1_716_620_100, 1_716_620_100)
+            .expect("refund at timeout boundary should succeed");
+
+        assert_eq!(escrow.status(), EscrowStatus::Refunded);
+        assert_eq!(escrow.released_amount(), 35);
+        assert_eq!(escrow.refunded_amount(), 65);
     }
 }

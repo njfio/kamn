@@ -1,4 +1,4 @@
-# Task Payment Offer/Confirm Workflow (Issue #216)
+# Task Payment Offer/Confirm Workflow (Issues #216 / #542)
 
 This document captures the first implementation slice for integrating `PaymentOffer` and `PaymentConfirm` with task completion and escrow release flow.
 
@@ -20,9 +20,13 @@ This document captures the first implementation slice for integrating `PaymentOf
   - matching task and escrow references for an existing offer.
   - confirmer DID equal to offer payer DID.
   - single-use confirmation (duplicates are rejected).
+- Timeout refunds require:
+  - `current_unix >= timeout_unix` before invoking timeout-conditioned escrow refund.
+  - premature timeout refund attempts are rejected (`Regression: #542`).
 
 ## Escrow Release Behavior
 - Successful `PaymentConfirm` calls `EscrowLifecycle::release(amount)` using the previously accepted offer amount.
+- Timeout-based recovery calls `EscrowLifecycle::refund_after_timeout(current_unix, timeout_unix)` to return the remaining balance once the deadline is reached.
 - Escrow transition and amount validation errors are surfaced as typed workflow errors.
 
 ## Local Validation

@@ -164,3 +164,41 @@ fn regression_duplicate_confirm_is_rejected() {
         Err(TaskPaymentError::DuplicateConfirm("task-pay-4".to_owned()))
     );
 }
+
+#[test]
+fn integration_timeout_refund_recovers_remaining_escrow_after_confirm() {
+    let mut workflow = TaskPaymentWorkflow::new();
+    let tasks = completed_task_engine("task-pay-5");
+    let mut escrow = EscrowLifecycle::new(100).expect("escrow should initialize");
+
+    workflow
+        .submit_offer(
+            PaymentOffer {
+                task_id: "task-pay-5".to_owned(),
+                escrow_id: "escrow-5".to_owned(),
+                payer_did: "kamn:did:agent:requester-1".to_owned(),
+                payee_did: "kamn:did:agent:worker-1".to_owned(),
+                amount: 60,
+            },
+            &tasks,
+            &escrow,
+        )
+        .expect("offer should be accepted");
+    workflow
+        .confirm_offer(
+            PaymentConfirm {
+                task_id: "task-pay-5".to_owned(),
+                escrow_id: "escrow-5".to_owned(),
+                confirmer_did: "kamn:did:agent:requester-1".to_owned(),
+            },
+            &mut escrow,
+        )
+        .expect("confirmation should release escrow");
+    escrow
+        .refund_after_timeout(1_716_620_500, 1_716_620_100)
+        .expect("timeout refund should recover remaining funds");
+
+    assert_eq!(escrow.status(), EscrowStatus::Refunded);
+    assert_eq!(escrow.released_amount(), 60);
+    assert_eq!(escrow.refunded_amount(), 40);
+}
