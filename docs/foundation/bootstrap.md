@@ -58,3 +58,4 @@ For message lifecycle state machine and index query controls, see `docs/foundati
 For nonce/TTL/replay enforcement and failed-delivery notice controls, see `docs/foundation/message-delivery-guards.md`.
 For direct/group channel models with membership/admin operations, see `docs/foundation/channel-models.md`.
 For channel permission and retention policy controls, see `docs/foundation/channel-permissions-retention.md`.
+For agent key hierarchy role bindings and ephemeral session key controls, see `docs/foundation/agent-key-hierarchy.md`.
