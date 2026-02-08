@@ -191,3 +191,23 @@ fn regression_rejects_duplicate_inbound_event_replay() {
         ))
     );
 }
+
+#[test]
+fn regression_rejects_duplicate_outbound_request_replay() {
+    // Regression: #433
+    let adapter =
+        PassThroughBridgeAdapter::new(BridgePlatform::Discord, "kamn:did:agent:bridge-discord-1")
+            .expect("adapter should build");
+    let engine = BridgeAdapterEngine::new(adapter, AllowAllBridgePolicy::new());
+
+    engine
+        .process_outbound(&outbound_sample())
+        .expect("first outbound request should translate");
+    let replay_error = engine
+        .process_outbound(&outbound_sample())
+        .expect_err("duplicate outbound request id should be rejected");
+    assert_eq!(
+        replay_error.to_string(),
+        "duplicate outbound request id: req-7"
+    );
+}

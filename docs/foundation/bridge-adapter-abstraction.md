@@ -28,6 +28,7 @@ This document describes the first implementation slice for bridge adapter abstra
   - Validate request fields and sender DID.
   - Apply policy hook before translation.
   - Enforce request ID stability to prevent adapter-side mutation.
+  - Reject duplicate outbound request IDs with `DuplicateOutboundRequestId`.
 - Cross-module integration:
   - `process_inbound_to_envelope(...)` maps normalized bridge ingress into `CanonicalMessageEnvelope` and runs envelope validation before returning.
 
@@ -45,3 +46,4 @@ cargo test -p kamn-core
 - Add platform-specific adapters (Telegram/Discord/Slack) with real credential and rate-limit hooks.
 - Replace static allow-all policy with channel and capability-aware policy implementations.
 - duplicate inbound event is rejected (`Regression: #423`).
+- duplicate outbound request is rejected (`Regression: #433`).

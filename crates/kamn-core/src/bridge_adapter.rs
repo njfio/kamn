@@ -193,6 +193,7 @@ pub struct BridgeAdapterEngine<A, P> {
     adapter: A,
     policy: P,
     seen_inbound_message_ids: RefCell<BTreeSet<String>>,
+    seen_outbound_request_ids: RefCell<BTreeSet<String>>,
 }
 
 impl<A, P> BridgeAdapterEngine<A, P>
@@ -205,6 +206,7 @@ where
             adapter,
             policy,
             seen_inbound_message_ids: RefCell::new(BTreeSet::new()),
+            seen_outbound_request_ids: RefCell::new(BTreeSet::new()),
         }
     }
 
@@ -248,6 +250,15 @@ where
             &translated.destination_channel_id,
         )?;
         validate_non_empty("bridge_outbound_envelope.payload", &translated.payload)?;
+        if !self
+            .seen_outbound_request_ids
+            .borrow_mut()
+            .insert(request.request_id.clone())
+        {
+            return Err(BridgeAdapterError::DuplicateOutboundRequestId(
+                request.request_id.clone(),
+            ));
+        }
         Ok(translated)
     }
 
@@ -324,6 +335,7 @@ where
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BridgeAdapterError {
     DuplicateInboundMessageId(String),
+    DuplicateOutboundRequestId(String),
     EmptyField(&'static str),
     InvalidDid(String),
     InvalidNonce(u64),
@@ -343,6 +355,9 @@ impl fmt::Display for BridgeAdapterError {
         match self {
             Self::DuplicateInboundMessageId(message_id) => {
                 write!(f, "duplicate inbound message id: {message_id}")
+            }
+            Self::DuplicateOutboundRequestId(request_id) => {
+                write!(f, "duplicate outbound request id: {request_id}")
             }
             Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
             Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
@@ -571,6 +586,31 @@ mod tests {
             engine.process_inbound(&inbound),
             Err(BridgeAdapterError::DuplicateInboundMessageId(
                 "discord:ext-9".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn process_outbound_rejects_duplicate_request_id() {
+        let adapter = PassThroughBridgeAdapter::new(
+            BridgePlatform::Discord,
+            "kamn:did:agent:bridge-discord-1",
+        )
+        .expect("adapter should be valid");
+        let engine = BridgeAdapterEngine::new(adapter, AllowAllBridgePolicy::new());
+        let request = BridgeOutboundRequest {
+            request_id: "req-1".to_owned(),
+            from_agent_did: "kamn:did:agent:planner-1".to_owned(),
+            destination_channel_id: "discord:channel:1".to_owned(),
+            body: "hello".to_owned(),
+            created_at: "2026-02-08T09:00:00Z".to_owned(),
+        };
+
+        assert!(engine.process_outbound(&request).is_ok());
+        assert_eq!(
+            engine.process_outbound(&request),
+            Err(BridgeAdapterError::DuplicateOutboundRequestId(
+                "req-1".to_owned()
             ))
         );
     }
