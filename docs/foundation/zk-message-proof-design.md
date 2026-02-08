@@ -61,6 +61,19 @@ This spike evaluates feasible zero-knowledge (ZK) message-proof designs for PRD 
   - missing private fields
   - empty private-field selectors
 
+## Processor Admission Guard Contract
+- Processor admission consumes a deterministic proof artifact containing:
+  - `artifact_id`
+  - `message_id`
+  - `payload_commitment`
+  - `proof_value`
+- Admission rejects and blocks state mutation when:
+  - artifact message ID mismatches the targeted message
+  - payload commitment mismatches the expected witness commitment (tampered artifact)
+  - artifact ID is replayed
+  - proof value fails deterministic verification format checks
+- Regression guard: tampered processor proof artifacts are rejected before admission (`Regression: #509`).
+
 ## Fast and Cost-Effective Validation
 Run the smallest lane needed for rapid feedback:
 

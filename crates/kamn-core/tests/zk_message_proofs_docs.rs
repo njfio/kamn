@@ -34,3 +34,10 @@ fn regression_requires_boundary_inclusive_evaluation_rule() {
     // Regression: #62
     assert!(DOC.contains("threshold checks are inclusive"));
 }
+
+#[test]
+fn regression_requires_tampered_processor_proof_rejection_rule() {
+    // Regression: #509
+    assert!(DOC.contains("## Processor Admission Guard Contract"));
+    assert!(DOC.contains("tampered processor proof artifacts are rejected"));
+}
