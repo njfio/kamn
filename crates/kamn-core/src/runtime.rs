@@ -542,6 +542,13 @@ pub struct FileRuntimeSnapshotStore {
     path: PathBuf,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SnapshotRecoveryResult {
+    pub latest: Option<RuntimeSnapshot>,
+    pub recovered_entries: usize,
+    pub dropped_corrupt_entries: usize,
+}
+
 impl FileRuntimeSnapshotStore {
     pub fn new(path: PathBuf) -> Result<Self, SnapshotStoreError> {
         if path.as_os_str().is_empty() {
@@ -550,6 +557,66 @@ impl FileRuntimeSnapshotStore {
             ));
         }
         Ok(Self { path })
+    }
+
+    pub fn recover_latest_and_repair(
+        &mut self,
+    ) -> Result<SnapshotRecoveryResult, SnapshotStoreError> {
+        if !self.path.exists() {
+            return Ok(SnapshotRecoveryResult {
+                latest: None,
+                recovered_entries: 0,
+                dropped_corrupt_entries: 0,
+            });
+        }
+
+        let payload = fs::read_to_string(&self.path)
+            .map_err(|error| SnapshotStoreError::Io(error.to_string()))?;
+        let mut snapshots = Vec::new();
+        let mut dropped_corrupt_entries = 0;
+        let mut corruption_detected = false;
+
+        for line in payload.lines() {
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+
+            if corruption_detected {
+                dropped_corrupt_entries += 1;
+                continue;
+            }
+
+            match parse_snapshot_line(trimmed) {
+                Ok(snapshot) => snapshots.push(snapshot),
+                Err(_) => {
+                    corruption_detected = true;
+                    dropped_corrupt_entries += 1;
+                }
+            }
+        }
+
+        if corruption_detected {
+            self.persist_snapshots(&snapshots)?;
+        }
+
+        Ok(SnapshotRecoveryResult {
+            latest: snapshots.last().cloned(),
+            recovered_entries: snapshots.len(),
+            dropped_corrupt_entries,
+        })
+    }
+
+    fn persist_snapshots(&self, snapshots: &[RuntimeSnapshot]) -> Result<(), SnapshotStoreError> {
+        let mut serialized = String::new();
+        for snapshot in snapshots {
+            serialized.push_str(&format!(
+                "{}|{}\n",
+                snapshot.state_version(),
+                snapshot.state_hash()
+            ));
+        }
+        fs::write(&self.path, serialized).map_err(|error| SnapshotStoreError::Io(error.to_string()))
     }
 }
 
@@ -1823,7 +1890,7 @@ mod tests {
     use crate::config::{NodeConfig, NodeRole, SyncMode};
     use std::fs;
     use std::path::PathBuf;
-    use std::time::{SystemTime, UNIX_EPOCH};
+    use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
     fn sample_config(role: NodeRole) -> NodeConfig {
         NodeConfig {
@@ -2756,6 +2823,126 @@ mod tests {
         assert_eq!(
             error,
             SnapshotStoreError::InvalidPayload("not-a-valid-snapshot-line".to_owned())
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn unit_file_snapshot_store_recovery_handles_missing_snapshot_file() {
+        let path = temp_snapshot_store_path("recover-missing");
+        let _ = fs::remove_file(&path);
+
+        let mut store = FileRuntimeSnapshotStore::new(path.clone()).expect("store should build");
+        let result = store
+            .recover_latest_and_repair()
+            .expect("recovery should pass");
+        assert!(result.latest.is_none());
+        assert_eq!(result.recovered_entries, 0);
+        assert_eq!(result.dropped_corrupt_entries, 0);
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn functional_file_snapshot_store_recovery_recovers_latest_after_trailing_corruption() {
+        let path = temp_snapshot_store_path("recover-trailing-corruption");
+        let _ = fs::remove_file(&path);
+        assert!(fs::write(&path, "41|state-41\n42|state-42\n43|\n").is_ok());
+
+        let mut store = FileRuntimeSnapshotStore::new(path.clone()).expect("store should build");
+        assert_eq!(
+            store.list(),
+            Err(SnapshotStoreError::InvalidPayload("43|".to_owned()))
+        );
+
+        let result = store
+            .recover_latest_and_repair()
+            .expect("recovery should pass");
+        assert_eq!(
+            result.latest,
+            Some(RuntimeSnapshot::new(42, "state-42").expect("valid snapshot"))
+        );
+        assert_eq!(result.recovered_entries, 2);
+        assert_eq!(result.dropped_corrupt_entries, 1);
+        assert_eq!(store.list().expect("list should succeed").len(), 2);
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn integration_file_snapshot_store_recovery_allows_append_after_restart() {
+        let path = temp_snapshot_store_path("recover-restart");
+        let _ = fs::remove_file(&path);
+        assert!(fs::write(&path, "41|state-41\n42|state-42\n43|\n").is_ok());
+
+        let mut first_store =
+            FileRuntimeSnapshotStore::new(path.clone()).expect("store should build");
+        let first_recovery = first_store
+            .recover_latest_and_repair()
+            .expect("recovery should pass");
+        assert_eq!(first_recovery.recovered_entries, 2);
+
+        let mut restarted_store =
+            FileRuntimeSnapshotStore::new(path.clone()).expect("store should build");
+        let next_snapshot = RuntimeSnapshot::new(43, "state-43").expect("valid snapshot");
+        assert!(restarted_store.write(next_snapshot.clone()).is_ok());
+        assert_eq!(
+            restarted_store.read_latest().expect("read should pass"),
+            Some(next_snapshot)
+        );
+        assert_eq!(restarted_store.list().expect("list should pass").len(), 3);
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn regression_file_snapshot_store_recovery_truncates_corrupt_suffix() {
+        // Regression: #617
+        let path = temp_snapshot_store_path("recover-corrupt-suffix");
+        let _ = fs::remove_file(&path);
+        assert!(fs::write(&path, "41|state-41\n42|state-42\nbroken\n43|state-43\n").is_ok());
+
+        let mut store = FileRuntimeSnapshotStore::new(path.clone()).expect("store should build");
+        let result = store
+            .recover_latest_and_repair()
+            .expect("recovery should pass");
+        assert_eq!(
+            result.latest,
+            Some(RuntimeSnapshot::new(42, "state-42").expect("valid snapshot"))
+        );
+        assert_eq!(result.recovered_entries, 2);
+        assert_eq!(result.dropped_corrupt_entries, 2);
+        assert_eq!(
+            fs::read_to_string(&path).expect("snapshot file should be readable"),
+            "41|state-41\n42|state-42\n"
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn performance_file_snapshot_store_recovery_scan_stays_within_ci_budget() {
+        let path = temp_snapshot_store_path("recover-performance");
+        let _ = fs::remove_file(&path);
+        let mut payload = String::new();
+        for state_version in 1..=256 {
+            payload.push_str(&format!("{state_version}|state-{state_version}\n"));
+        }
+        payload.push_str("broken\n");
+        assert!(fs::write(&path, payload).is_ok());
+
+        let mut store = FileRuntimeSnapshotStore::new(path.clone()).expect("store should build");
+        let start = Instant::now();
+        let result = store
+            .recover_latest_and_repair()
+            .expect("recovery should pass");
+        let elapsed_millis = start.elapsed().as_millis();
+        assert_eq!(result.recovered_entries, 256);
+        assert_eq!(result.dropped_corrupt_entries, 1);
+        assert!(
+            elapsed_millis < 250,
+            "snapshot recovery exceeded CI budget: {elapsed_millis}ms"
         );
 
         let _ = fs::remove_file(path);
