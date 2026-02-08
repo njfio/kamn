@@ -22,3 +22,14 @@ fn regression_requires_replay_claim_rejection_rule() {
     assert!(DOC.contains("ReplayClaim"));
     assert!(DOC.contains("replayed claim is rejected (`Regression: #414`)"));
 }
+
+#[test]
+fn regression_requires_inclusion_proof_binding_rules() {
+    // Regression: #448
+    assert!(DOC.contains("inclusion proof reference"));
+    assert!(DOC.contains("MissingInclusionProofReference"));
+    assert!(DOC.contains("InclusionProofMismatch"));
+    assert!(DOC.contains(
+        "mismatched or missing inclusion proof reference is rejected (`Regression: #448`)"
+    ));
+}
