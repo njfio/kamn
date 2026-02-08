@@ -1,4 +1,4 @@
-# Telegram Bridge Listener-Validated Inbound Flow (Issues #222, #223)
+# Telegram Bridge Listener-Validated Inbound Flow (Issues #222, #223, #587, #614)
 
 This document captures the first implementation slice for Telegram bridge inbound processing with listener validation.
 
@@ -9,6 +9,10 @@ This document captures the first implementation slice for Telegram bridge inboun
   - `TelegramBridgeEngine` wrapper over generic bridge adapter flow.
   - typed errors via `TelegramBridgeError`.
 - Added integration tests in `crates/kamn-core/tests/telegram_bridge.rs`.
+- Added bridge replay fixture hardening references for low-cost CI coverage:
+  - `fixtures/bridge_replay/replay_validation_cases.json`
+  - suite subset execution via `scripts/bridge/run_bridge_replay_matrix.sh`
+  - changed-adapter selector output `bridge_replay_suites`
 
 ## Validation Rules
 - Bridge agent DID and listener DIDs must parse as `kamn:did:agent:*`.
@@ -19,6 +23,14 @@ This document captures the first implementation slice for Telegram bridge inboun
   - listener DID must be authorized.
   - inbound `external_channel_id` must exist in route map.
   - inbound `target_agent_did` must match mapped route target.
+  - duplicate replay ingress is rejected deterministically by adapter replay guards.
+
+## Replay Fixture Hardening
+- Bridge replay harness validates Telegram replay contracts without running all adapter suites for every bridge diff.
+- Fast-gate bridge lane consumes `bridge_replay_suites` and executes changed-adapter subsets first.
+- Telegram-focused bridge diffs should run:
+  - `--suites bridge_adapter,telegram_bridge`
+- Replay fixture corpus includes duplicate replay and malformed ingress classes (`Regression: #587`).
 
 ## Processing Flow
 - `process_inbound(...)`:
@@ -33,6 +45,7 @@ Run from repository root:
 
 ```bash
 cargo test -p kamn-core --test telegram_bridge
+bash scripts/bridge/run_bridge_replay_matrix.sh --fixture fixtures/bridge_replay/replay_validation_cases.json --suites bridge_adapter,telegram_bridge --output-json /tmp/telegram-bridge-replay-report.json
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core
