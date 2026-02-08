@@ -39,6 +39,46 @@ if ! grep -Fq "bash scripts/frontend/test_dashboard_contract_lane.sh" "$FAST_WOR
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_python_live_transport_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected python live transport scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "python3 -m unittest tests/python/test_sdk.py" "$FAST_WORKFLOW"; then
+  echo "expected python live transport lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "if: steps.scope.outputs.run_typescript_live_transport_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected typescript live transport scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "npm --prefix packages/kamn-sdk test" "$FAST_WORKFLOW"; then
+  echo "expected typescript live transport lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "if: steps.scope.outputs.run_rust_live_transport_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected rust live transport scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/sdk/run_rust_live_transport_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected rust live transport lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "if: steps.scope.outputs.run_live_transport_parity_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected live transport parity scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/sdk/run_live_transport_parity_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected live transport parity lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_signer_emulator_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected signer emulator contract scope condition in ci-fast-gate.yml" >&2
   exit 1
