@@ -1,5 +1,6 @@
 pub mod bootstrap;
 pub mod config;
+pub mod escrow;
 pub mod invariants;
 pub mod migrations;
 pub mod namespaces;
@@ -11,6 +12,7 @@ pub mod transaction;
 
 pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};
 pub use config::{ConfigError, NodeConfig, NodeRole};
+pub use escrow::{EscrowLifecycle, EscrowLifecycleError, EscrowStatus};
 pub use invariants::{
     catalog as invariant_catalog, classify_smoke_error, classify_transaction_guard_error,
     invariant_by_id, validate_catalog, InvariantCatalogError, InvariantDomain,
