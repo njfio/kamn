@@ -19,6 +19,14 @@ export type DashboardSnapshot = {
   domains: DashboardDomainSample[];
 };
 
+export type DashboardOperatorRole = "viewer" | "operator" | "admin";
+
+export type DashboardOperatorSession = {
+  accessToken: string;
+  role: DashboardOperatorRole;
+  expiresAtUnix: number;
+};
+
 export type DashboardSummaryCard = {
   id: string;
   label: string;

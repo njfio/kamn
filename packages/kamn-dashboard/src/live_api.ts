@@ -1,4 +1,9 @@
-import type { DashboardDomainSample, DashboardSnapshot } from "./types.ts";
+import type {
+  DashboardDomainSample,
+  DashboardOperatorRole,
+  DashboardOperatorSession,
+  DashboardSnapshot,
+} from "./types.ts";
 
 type JsonResponse = {
   ok: boolean;
@@ -17,14 +22,21 @@ export type DashboardBackendClientOptions = {
   baseUrl: string;
   snapshotPath?: string;
   headers?: Record<string, string>;
+  session?: DashboardOperatorSession;
+  allowedRoles?: DashboardOperatorRole[];
+  sessionNowUnix?: number;
   fetchImpl?: DashboardFetchLike;
 };
 
 export class DashboardBackendError extends Error {
-  readonly code: "network" | "http" | "invalid-response";
+  readonly code: "network" | "http" | "invalid-response" | "unauthorized";
   readonly status?: number;
 
-  constructor(code: "network" | "http" | "invalid-response", message: string, status?: number) {
+  constructor(
+    code: "network" | "http" | "invalid-response" | "unauthorized",
+    message: string,
+    status?: number,
+  ) {
     super(message);
     this.code = code;
     this.status = status;
@@ -94,10 +106,43 @@ function buildSnapshotUrl(baseUrl: string, snapshotPath = "/api/dashboard/snapsh
   }
 }
 
+function validateSession(options: DashboardBackendClientOptions): DashboardOperatorSession {
+  const session = options.session;
+  if (!session) {
+    throw new DashboardBackendError(
+      "unauthorized",
+      "operator session is required for dashboard backend access",
+    );
+  }
+
+  if (typeof session.accessToken !== "string" || session.accessToken.trim().length === 0) {
+    throw new DashboardBackendError("unauthorized", "operator session token is invalid");
+  }
+
+  const nowUnix = options.sessionNowUnix ?? Math.floor(Date.now() / 1000);
+  if (!Number.isFinite(session.expiresAtUnix) || session.expiresAtUnix <= nowUnix) {
+    throw new DashboardBackendError(
+      "unauthorized",
+      `operator session expired at ${session.expiresAtUnix}`,
+    );
+  }
+
+  const allowedRoles = options.allowedRoles ?? ["operator", "admin"];
+  if (!allowedRoles.includes(session.role)) {
+    throw new DashboardBackendError(
+      "unauthorized",
+      `operator session role not allowed: ${session.role}`,
+    );
+  }
+
+  return session;
+}
+
 export async function fetchDashboardSnapshotFromBackend(
   options: DashboardBackendClientOptions,
 ): Promise<DashboardSnapshot> {
   const url = buildSnapshotUrl(options.baseUrl, options.snapshotPath);
+  const session = validateSession(options);
 
   const defaultFetch: DashboardFetchLike | undefined = globalThis.fetch
     ? async (targetUrl, init) => {
@@ -118,6 +163,8 @@ export async function fetchDashboardSnapshotFromBackend(
     response = await fetchImpl(url, {
       headers: {
         Accept: "application/json",
+        Authorization: `Bearer ${session.accessToken}`,
+        "X-KAMN-Role": session.role,
         ...(options.headers ?? {}),
       },
     });

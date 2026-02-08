@@ -37,3 +37,12 @@ fn regression_requires_frontend_state_mapping_contract_rules() {
     assert!(DOC.contains("dashboard-error"));
     assert!(DOC.contains("dashboard-empty"));
 }
+
+#[test]
+fn regression_requires_live_session_authorization_contract_rules() {
+    // Regression: #640
+    assert!(DOC.contains("operator session token is required"));
+    assert!(DOC.contains("expired sessions are rejected"));
+    assert!(DOC.contains("Authorization: Bearer <token>"));
+    assert!(DOC.contains("Regression: #640"));
+}
