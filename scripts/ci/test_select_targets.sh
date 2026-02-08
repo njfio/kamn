@@ -214,6 +214,11 @@ assert_eq "$(extract_output "$signer_rust_output" "run_rust")" "true" "signer ba
 assert_eq "$(extract_output "$signer_rust_output" "run_signer_emulator_contract_tests")" "true" "signer backend rust changes must run signer emulator contract lane"
 assert_eq "$(extract_output "$signer_rust_output" "test_scope")" "targeted" "signer backend rust changes should stay targeted"
 
+signer_contract_script_output="$(run_selector $'scripts/signer/run_signer_emulator_contract_lane.sh')"
+assert_eq "$(extract_output "$signer_contract_script_output" "run_rust")" "false" "signer contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$signer_contract_script_output" "run_signer_emulator_contract_tests")" "true" "signer contract script changes must run signer emulator contract lane"
+assert_eq "$(extract_output "$signer_contract_script_output" "test_scope")" "signer-contract" "signer contract script changes should set signer-contract scope"
+
 runtime_contract_docs_output="$(run_selector $'docs/foundation/runtime-network.md')"
 assert_eq "$(extract_output "$runtime_contract_docs_output" "run_rust")" "false" "runtime contract docs should avoid rust lane"
 assert_eq "$(extract_output "$runtime_contract_docs_output" "run_runtime_snapshot_contract_tests")" "true" "runtime contract docs must run runtime snapshot contract lane"

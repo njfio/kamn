@@ -1,6 +1,7 @@
 use kamn_core::{
     baseline_signature_for_fields, BaselineTransaction, SignerBackendError, SignerBackendRouter,
-    SigningRequest, TransactionGuards, GENESIS_STATE_HASH,
+    SignerProviderHandshakeMatrix, SignerProviderHandshakeStatus, SigningRequest,
+    TransactionGuards, GENESIS_STATE_HASH,
 };
 use std::time::Instant;
 
@@ -68,6 +69,29 @@ fn functional_secure_unavailable_falls_back_to_local_backend() {
     router
         .verify_with_backend(&signed.backend, &request, &signed.signature)
         .expect("fallback signature should verify");
+}
+
+#[test]
+fn functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider() {
+    let router = SignerBackendRouter::with_provider_handshake_matrix(
+        SignerProviderHandshakeMatrix::with_statuses(
+            SignerProviderHandshakeStatus::Available,
+            SignerProviderHandshakeStatus::Unavailable,
+        ),
+    );
+    let request = SigningRequest::new(
+        "secure:aws-kms:key-ops-1",
+        "agent-a",
+        1,
+        "payload-1",
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+
+    let signed = router
+        .sign_with_secure_fallback(&request)
+        .expect("operator fallback should sign when provider is unavailable");
+    assert_eq!(signed.backend, "local-software");
 }
 
 #[test]
@@ -222,6 +246,33 @@ fn regression_unknown_secure_provider_is_rejected_without_fallback() {
             backend: "secure-mock".to_owned(),
             provider: "gcp-kms".to_owned(),
             key_id: "secure:gcp-kms:key-ops-1".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn regression_provider_handshake_policy_block_rejects_without_fallback() {
+    // Regression: #677
+    let router = SignerBackendRouter::with_provider_handshake_matrix(
+        SignerProviderHandshakeMatrix::with_statuses(
+            SignerProviderHandshakeStatus::Available,
+            SignerProviderHandshakeStatus::PolicyBlocked,
+        ),
+    );
+    let request = SigningRequest::new(
+        "secure:aws-kms:key-ops-1",
+        "agent-a",
+        1,
+        "payload-1",
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+
+    assert_eq!(
+        router.sign_with_secure_fallback(&request),
+        Err(SignerBackendError::ProviderHandshakeRejected {
+            backend: "secure-aws-kms-emulator".to_owned(),
+            failure_class: "policy-blocked".to_owned(),
         })
     );
 }

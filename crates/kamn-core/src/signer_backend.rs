@@ -100,6 +100,47 @@ impl SecureSignerProvider {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SignerProviderHandshakeStatus {
+    Available,
+    Unavailable,
+    PolicyBlocked,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SignerProviderHandshakeMatrix {
+    mock_status: SignerProviderHandshakeStatus,
+    aws_kms_status: SignerProviderHandshakeStatus,
+}
+
+impl SignerProviderHandshakeMatrix {
+    pub fn with_uniform_availability(available: bool) -> Self {
+        let status = if available {
+            SignerProviderHandshakeStatus::Available
+        } else {
+            SignerProviderHandshakeStatus::Unavailable
+        };
+        Self::with_statuses(status, status)
+    }
+
+    pub fn with_statuses(
+        mock_status: SignerProviderHandshakeStatus,
+        aws_kms_status: SignerProviderHandshakeStatus,
+    ) -> Self {
+        Self {
+            mock_status,
+            aws_kms_status,
+        }
+    }
+
+    fn status_for_provider(&self, provider: SecureSignerProvider) -> SignerProviderHandshakeStatus {
+        match provider {
+            SecureSignerProvider::Mock => self.mock_status,
+            SecureSignerProvider::AwsKmsEmulator => self.aws_kms_status,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SignerKeyRole {
     Operator,
     Admin,
@@ -259,12 +300,22 @@ impl SignerBackend for LocalSignerBackend {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SecureSignerBackend {
-    available: bool,
+    provider_handshake_matrix: SignerProviderHandshakeMatrix,
 }
 
 impl SecureSignerBackend {
     pub fn new(available: bool) -> Self {
-        Self { available }
+        Self::with_provider_handshake_matrix(
+            SignerProviderHandshakeMatrix::with_uniform_availability(available),
+        )
+    }
+
+    pub fn with_provider_handshake_matrix(
+        provider_handshake_matrix: SignerProviderHandshakeMatrix,
+    ) -> Self {
+        Self {
+            provider_handshake_matrix,
+        }
     }
 
     fn enforce_key_role_segregation(
@@ -285,17 +336,32 @@ impl SecureSignerBackend {
         Ok(())
     }
 
+    fn enforce_provider_handshake(
+        &self,
+        provider: SecureSignerProvider,
+    ) -> Result<(), SignerBackendError> {
+        let backend = provider.backend_name().to_owned();
+        match self.provider_handshake_matrix.status_for_provider(provider) {
+            SignerProviderHandshakeStatus::Available => Ok(()),
+            SignerProviderHandshakeStatus::Unavailable => {
+                Err(SignerBackendError::ProviderUnavailable { backend })
+            }
+            SignerProviderHandshakeStatus::PolicyBlocked => {
+                Err(SignerBackendError::ProviderHandshakeRejected {
+                    backend,
+                    failure_class: "policy-blocked".to_owned(),
+                })
+            }
+        }
+    }
+
     fn sign_with_backend(
         &self,
         request: &SigningRequest,
     ) -> Result<BackendSignature, SignerBackendError> {
         let secure_key = SecureKeyReference::parse(&request.key_id)?;
         self.enforce_key_role_segregation(request, &secure_key)?;
-        if !self.available {
-            return Err(SignerBackendError::ProviderUnavailable {
-                backend: secure_key.provider.backend_name().to_owned(),
-            });
-        }
+        self.enforce_provider_handshake(secure_key.provider)?;
 
         Ok(BackendSignature {
             backend: secure_key.provider.backend_name().to_owned(),
@@ -335,11 +401,7 @@ impl SignerBackend for SecureSignerBackend {
     fn verify(&self, request: &SigningRequest, signature: &str) -> Result<(), SignerBackendError> {
         let secure_key = SecureKeyReference::parse(&request.key_id)?;
         self.enforce_key_role_segregation(request, &secure_key)?;
-        if !self.available {
-            return Err(SignerBackendError::ProviderUnavailable {
-                backend: secure_key.provider.backend_name().to_owned(),
-            });
-        }
+        self.enforce_provider_handshake(secure_key.provider)?;
 
         let expected = request.expected_signature();
         if expected != signature {
@@ -362,9 +424,17 @@ pub struct SignerBackendRouter {
 
 impl SignerBackendRouter {
     pub fn with_secure_availability(secure_available: bool) -> Self {
+        Self::with_provider_handshake_matrix(
+            SignerProviderHandshakeMatrix::with_uniform_availability(secure_available),
+        )
+    }
+
+    pub fn with_provider_handshake_matrix(
+        provider_handshake_matrix: SignerProviderHandshakeMatrix,
+    ) -> Self {
         Self {
             local: LocalSignerBackend,
-            secure: SecureSignerBackend::new(secure_available),
+            secure: SecureSignerBackend::with_provider_handshake_matrix(provider_handshake_matrix),
         }
     }
 
@@ -431,6 +501,10 @@ pub enum SignerBackendError {
     MalformedSecureKeyReference {
         key_id: String,
     },
+    ProviderHandshakeRejected {
+        backend: String,
+        failure_class: String,
+    },
     ProviderUnavailable {
         backend: String,
     },
@@ -481,6 +555,13 @@ impl std::fmt::Display for SignerBackendError {
             Self::MalformedSecureKeyReference { key_id } => {
                 write!(f, "malformed secure key reference: {key_id}")
             }
+            Self::ProviderHandshakeRejected {
+                backend,
+                failure_class,
+            } => write!(
+                f,
+                "signer provider handshake rejected for backend {backend}: {failure_class}"
+            ),
             Self::ProviderUnavailable { backend } => {
                 write!(f, "signer backend unavailable: {backend}")
             }
@@ -526,7 +607,11 @@ impl std::error::Error for SignerBackendError {}
 
 #[cfg(test)]
 mod tests {
-    use super::{SecureSignerProvider, SignerBackendError, SignerKeyRole, SigningRequest};
+    use super::{
+        SecureSignerBackend, SecureSignerProvider, SignerBackend, SignerBackendError,
+        SignerKeyRole, SignerProviderHandshakeMatrix, SignerProviderHandshakeStatus,
+        SigningRequest,
+    };
 
     #[test]
     fn signing_request_rejects_invalid_fields() {
@@ -597,6 +682,48 @@ mod tests {
             Err(SignerBackendError::UnsupportedSignerKeyRole {
                 role: "root".to_owned(),
                 key_id: "secure:aws-kms:role-root/key-prod-3".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn handshake_matrix_maps_provider_statuses() {
+        let matrix = SignerProviderHandshakeMatrix::with_statuses(
+            SignerProviderHandshakeStatus::Available,
+            SignerProviderHandshakeStatus::PolicyBlocked,
+        );
+        assert_eq!(
+            matrix.status_for_provider(SecureSignerProvider::Mock),
+            SignerProviderHandshakeStatus::Available
+        );
+        assert_eq!(
+            matrix.status_for_provider(SecureSignerProvider::AwsKmsEmulator),
+            SignerProviderHandshakeStatus::PolicyBlocked
+        );
+    }
+
+    #[test]
+    fn secure_backend_rejects_policy_blocked_provider_handshake() {
+        let backend = SecureSignerBackend::with_provider_handshake_matrix(
+            SignerProviderHandshakeMatrix::with_statuses(
+                SignerProviderHandshakeStatus::Available,
+                SignerProviderHandshakeStatus::PolicyBlocked,
+            ),
+        );
+        let request = SigningRequest::new(
+            "secure:aws-kms:key-prod-1",
+            "agent-a",
+            1,
+            "payload-1",
+            "state:genesis",
+        )
+        .expect("request should be valid");
+
+        assert_eq!(
+            backend.sign(&request),
+            Err(SignerBackendError::ProviderHandshakeRejected {
+                backend: "secure-aws-kms-emulator".to_owned(),
+                failure_class: "policy-blocked".to_owned(),
             })
         );
     }

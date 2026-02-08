@@ -242,7 +242,8 @@ pub use signature_profile::{
 };
 pub use signer_backend::{
     BackendSignature, LocalSignerBackend, SecureSignerBackend, SecureSignerProvider, SignerBackend,
-    SignerBackendError, SignerBackendRouter, SignerKeyRole, SigningRequest,
+    SignerBackendError, SignerBackendRouter, SignerKeyRole, SignerProviderHandshakeMatrix,
+    SignerProviderHandshakeStatus, SigningRequest,
 };
 pub use smoke::{ProducedBlock, RoleSmokeNetwork, SmokeError};
 pub use state::{
