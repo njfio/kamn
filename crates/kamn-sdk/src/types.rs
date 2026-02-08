@@ -66,6 +66,27 @@ pub struct MessageRecord {
     pub message: Message,
 }
 
+#[derive(Debug)]
+pub struct MessageStream {
+    records: std::vec::IntoIter<MessageRecord>,
+}
+
+impl MessageStream {
+    pub fn new(records: Vec<MessageRecord>) -> Self {
+        Self {
+            records: records.into_iter(),
+        }
+    }
+}
+
+impl Iterator for MessageStream {
+    type Item = MessageRecord;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.records.next()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TaskId(pub u64);
 

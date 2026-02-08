@@ -1,7 +1,7 @@
 use crate::{
     AgentDid, AgentMetadata, AgentQuery, AgentReputation, AgentSummary, Artifact, ArtifactId,
-    DidDocument, EscrowConfig, EscrowId, KamnAgent, Message, MessageId, MessageRecord, SdkError,
-    TaskDefinition, TaskId, TokenAmount,
+    DidDocument, EscrowConfig, EscrowId, KamnAgent, Message, MessageId, MessageRecord,
+    MessageStream, SdkError, TaskDefinition, TaskId, TokenAmount,
 };
 use std::collections::HashMap;
 
@@ -212,6 +212,11 @@ impl KamnAgent for InMemoryKamnClient {
                 id: did.to_string(),
             })?;
         Ok(std::mem::take(inbox))
+    }
+
+    fn receive_stream(&mut self, did: &AgentDid) -> Result<MessageStream, SdkError> {
+        let records = self.receive(did)?;
+        Ok(MessageStream::new(records))
     }
 
     fn create_task(&mut self, task: TaskDefinition) -> Result<TaskId, SdkError> {

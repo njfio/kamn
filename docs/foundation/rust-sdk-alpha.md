@@ -1,4 +1,4 @@
-# Rust SDK Alpha Slice (Issues #132, #133)
+# Rust SDK Alpha Slice (Issues #132, #133, #468)
 
 This document describes the first implementation slice for the Rust SDK aligned to PRD 12.1.
 
@@ -6,6 +6,7 @@ This document describes the first implementation slice for the Rust SDK aligned 
 - Added new crate: `crates/kamn-sdk`.
 - Added `KamnAgent` trait that covers first-slice identity, messaging, task, escrow, and discovery APIs.
 - Added deterministic in-memory implementation: `InMemoryKamnClient`.
+- Added deterministic `receive_stream(...)` iterator API for async-style receive workflows.
 - Added typed SDK data models and explicit error types.
 - Added integration-style tests for register/resolve, send/receive, task lifecycle, escrow lifecycle, search, and reputation.
 
@@ -26,4 +27,4 @@ cargo test
 
 ## Follow-up
 - Introduce async transport-backed client implementation in a later slice.
-- Expand API parity to include subscribe stream semantics from PRD 12.1.
+- Extend stream API parity to Python and TypeScript SDK implementations.
