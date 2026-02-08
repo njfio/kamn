@@ -74,6 +74,7 @@ For release rollback triggers and post-upgrade verification controls, see `docs/
 For release go/no-go checklist and dry-run evidence controls, see `docs/foundation/release-gonogo-checklist.md`.
 For semantic version policy and compatibility matrix controls, see `docs/foundation/versioning-compatibility-matrix.md`.
 For A2A and MCP interoperability mapping controls, see `docs/foundation/a2a-mcp-interoperability.md`.
+For KAMN to DIDComm v2 compatibility profile controls, see `docs/foundation/didcomm-v2-compatibility-profile.md`.
 For redaction and tombstone compliance workflow controls, see `docs/foundation/redaction-tombstones.md`.
 For compliance audit export interface controls, see `docs/foundation/audit-export-interfaces.md`.
 For configurable retention policy enforcement controls, see `docs/foundation/retention-policy-engine.md`.
