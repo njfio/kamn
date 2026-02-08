@@ -24,6 +24,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Mark start timestamp
+        id: started
+        run: echo "epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Select CI scope
         id: scope
         shell: bash
@@ -60,3 +64,31 @@ jobs:
       - name: No Rust checks required
         if: steps.scope.outputs.run_rust != 'true' && steps.scope.outputs.docs_only != 'true'
         run: echo "No Rust changes detected; skipping Rust toolchain setup and tests."
+
+      - name: Evaluate fast-gate budget
+        if: always() && steps.started.outputs.epoch != ''
+        id: budget
+        shell: bash
+        env:
+          START_EPOCH: ${{ steps.started.outputs.epoch }}
+          TEST_SCOPE: ${{ steps.scope.outputs.test_scope }}
+          CHANGED_FILES: ${{ steps.scope.outputs.changed_files }}
+        run: |
+          end_epoch="$(date +%s)"
+          elapsed="$(( end_epoch - START_EPOCH ))"
+
+          bash scripts/ci/evaluate_budget.sh \
+            --lane fast-gate \
+            --elapsed-seconds "$elapsed" \
+            --test-scope "${TEST_SCOPE:-unknown}" \
+            --changed-files "${CHANGED_FILES:-0}" \
+            --job-count 1 \
+            --output-json ci-budget-fast-gate.json
+
+      - name: Upload fast-gate budget telemetry
+        if: always() && hashFiles('ci-budget-fast-gate.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-budget-fast-gate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-budget-fast-gate.json
+          if-no-files-found: error
