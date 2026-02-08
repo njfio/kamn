@@ -65,6 +65,7 @@ For task state machine and legal transition validation controls, see `docs/found
 For task operation command handling controls, see `docs/foundation/task-operations.md`.
 For task artifact integrity references and provenance metadata controls, see `docs/foundation/task-artifacts-provenance.md`.
 For bridge inbound/outbound adapter abstraction controls, see `docs/foundation/bridge-adapter-abstraction.md`.
+For Telegram bridge listener-validated inbound flow controls, see `docs/foundation/telegram-bridge-listener-validation.md`.
 For CI cache strategy and bounded parallelism controls, see `docs/foundation/ci-caching-parallelism.md`.
 For flaky-test quarantine and bounded retry controls, see `docs/foundation/ci-flaky-quarantine.md`.
 For redaction and tombstone compliance workflow controls, see `docs/foundation/redaction-tombstones.md`.
