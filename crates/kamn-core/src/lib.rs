@@ -27,6 +27,7 @@ pub mod observability;
 pub mod operator_binding;
 pub mod performance_targets;
 pub mod redaction_compliance;
+pub mod reputation_signals;
 pub mod reputation_state;
 pub mod retention_engine;
 pub mod runtime;
@@ -142,6 +143,10 @@ pub use performance_targets::{
 pub use redaction_compliance::{
     RedactionAction, RedactionAuditEvent, RedactionAuditEventKind, RedactionComplianceEngine,
     RedactionComplianceError, RedactionRequestStatus, RedactionVisibility,
+};
+pub use reputation_signals::{
+    rank_agents_for_routing, rank_listings_by_reputation, RankedAgentCandidate,
+    RankedListingCandidate, ReputationSignalError, ReputationSignalSummary, RoutingSignalWeights,
 };
 pub use reputation_state::{
     agent_state_key, AgentReputation, CapabilityVerification, DisputeRecord, Endorsement,
