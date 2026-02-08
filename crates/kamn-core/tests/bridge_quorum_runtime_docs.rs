@@ -22,6 +22,7 @@ fn doc_contains_bridge_quorum_fast_lane_commands() {
 fn regression_requires_listener_and_approver_quorum_guard_rules() {
     // Regression: #373
     assert!(DOC.contains("Duplicate listener attestation replay is rejected."));
+    assert!(DOC.contains("Replayed or out-of-order listener event sequences are rejected."));
     assert!(DOC.contains("Outbound under-quorum approval sets are rejected."));
     assert!(DOC.contains("Malformed approver attestation payload is rejected."));
 }

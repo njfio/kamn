@@ -6,11 +6,19 @@ This document captures deterministic bridge quorum runtime contracts for listene
 - Added bridge quorum docs contract baseline for runtime listener and approver workflows.
 - Added deterministic guard text for replay, malformed payload, and under-quorum rejection paths.
 - Added low-cost validation lane commands for bridge quorum docs assertions.
+- Added listener quorum runtime model references:
+  - `ListenerAttestation`
+  - `ListenerQuorumInput`
+  - `ListenerQuorumEvaluator`
+  - `ListenerQuorumDecision`
+  - `ListenerQuorumError`
+  - `evaluate_daemon_listener_quorum`
 
 ## Listener Quorum Workflow Rules
 - Inbound bridge decisions require canonical listener attestation normalization before threshold evaluation.
 - Listener confirmation sets are deduplicated and sorted deterministically for stable outcomes.
 - Duplicate listener attestation replay is rejected.
+- Replayed or out-of-order listener event sequences are rejected.
 - Listener quorum outcomes emit deterministic accept/reject decision evidence in runtime reporting.
 
 ## Approver Quorum Workflow Rules
@@ -25,6 +33,7 @@ This document captures deterministic bridge quorum runtime contracts for listene
 - Integration: command-to-contract mapping assertions for bridge quorum validation lanes.
 - Regression:
   - duplicate listener attestation replay rejection (`Regression: #371`)
+  - listener event sequence replay rejection (`Regression: #371`)
   - malformed approver payload rejection (`Regression: #372`)
   - outbound under-quorum rejection (`Regression: #372`)
 
