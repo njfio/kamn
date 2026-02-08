@@ -1,4 +1,4 @@
-# Runtime Network Contracts (Issues #315 / #317 / #320 / #324 / #319 / #323)
+# Runtime Network Contracts (Issues #315 / #317 / #320 / #324 / #319 / #323 / #321 / #322)
 
 This document captures the initial runtime-network foundation slice for peer lifecycle and bounded queue behavior in `kamn-core`.
 
@@ -16,6 +16,11 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `DeterministicProposalPlanner`
   - `ProposalPlan`
   - `ProposalPlannerError`
+- Added recovery/rejoin guard primitives in `crates/kamn-core/src/runtime.rs`:
+  - `RejoinAttempt`
+  - `RecoveryRejoinGuard`
+  - `RecoveryStatus`
+  - `RecoveryGuardError`
 - Kept runtime role wiring behavior unchanged and covered by existing tests.
 
 ## Peer Lifecycle Rules
@@ -52,22 +57,40 @@ This document captures the initial runtime-network foundation slice for peer lif
   - sender DID ascending
   - candidate ID ascending
 
+## Recovery and Rejoin Guard Rules
+- `RejoinAttempt` requires non-empty:
+  - node ID
+  - state hash
+  - resume token
+- Rejoin state version must be positive.
+- `RecoveryRejoinGuard` behavior:
+  - lagging state versions produce `CatchUpRequired { from_version, to_version }`
+  - newer-than-expected state versions are rejected (`StateVersionMismatch`)
+  - matching version with mismatched state hash is rejected (`StateHashMismatch`)
+  - replayed resume tokens are rejected (`ReplayResumeToken`)
+  - matching version/hash with unique resume token is accepted (`RejoinAccepted`)
+
 ## Test Coverage Mapping
 - Unit:
   - invalid transition checks
   - empty peer ID and zero-capacity queue rejection
   - empty proposal candidate ID rejection
+  - empty resume-token rejoin attempt rejection
 - Functional:
   - peer lifecycle connect/degrade/recover/disconnect flow
   - planner deterministic ordering contract
+  - rejoin acceptance with matching snapshot
 - Integration:
   - bounded FIFO queue behavior under capacity
   - queue-drain to planner ordering preservation
+  - lagging-node catch-up guidance output
 - Regression:
   - rejoin without disconnect is rejected (`Regression: #324`)
   - queue overflow rejects new event (`Regression: #324`)
   - duplicate candidate ID is rejected (`Regression: #323`)
   - stale state hash is rejected (`Regression: #323`)
+  - rejoin replay token is rejected (`Regression: #322`)
+  - rejoin state hash mismatch is rejected (`Regression: #322`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:

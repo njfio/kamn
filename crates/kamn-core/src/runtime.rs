@@ -338,6 +338,164 @@ impl DeterministicProposalPlanner {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RejoinAttempt {
+    node_id: String,
+    state_version: u64,
+    state_hash: String,
+    resume_token: String,
+}
+
+impl RejoinAttempt {
+    pub fn new(
+        node_id: &str,
+        state_version: u64,
+        state_hash: &str,
+        resume_token: &str,
+    ) -> Result<Self, RecoveryGuardError> {
+        if node_id.trim().is_empty() {
+            return Err(RecoveryGuardError::InvalidNodeId);
+        }
+        if state_version == 0 {
+            return Err(RecoveryGuardError::InvalidStateVersion);
+        }
+        if state_hash.trim().is_empty() {
+            return Err(RecoveryGuardError::InvalidStateHash);
+        }
+        if resume_token.trim().is_empty() {
+            return Err(RecoveryGuardError::InvalidResumeToken);
+        }
+        Ok(Self {
+            node_id: node_id.to_owned(),
+            state_version,
+            state_hash: state_hash.to_owned(),
+            resume_token: resume_token.to_owned(),
+        })
+    }
+
+    pub fn node_id(&self) -> &str {
+        &self.node_id
+    }
+
+    pub fn state_version(&self) -> u64 {
+        self.state_version
+    }
+
+    pub fn state_hash(&self) -> &str {
+        &self.state_hash
+    }
+
+    pub fn resume_token(&self) -> &str {
+        &self.resume_token
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RecoveryStatus {
+    RejoinAccepted,
+    CatchUpRequired { from_version: u64, to_version: u64 },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RecoveryGuardError {
+    InvalidNodeId,
+    InvalidStateVersion,
+    InvalidStateHash,
+    InvalidResumeToken,
+    ReplayResumeToken(String),
+    StateVersionMismatch { expected: u64, found: u64 },
+    StateHashMismatch { expected: String, found: String },
+}
+
+impl Display for RecoveryGuardError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidNodeId => write!(f, "rejoin node id cannot be empty"),
+            Self::InvalidStateVersion => write!(f, "rejoin state version must be positive"),
+            Self::InvalidStateHash => write!(f, "rejoin state hash cannot be empty"),
+            Self::InvalidResumeToken => write!(f, "rejoin resume token cannot be empty"),
+            Self::ReplayResumeToken(token) => {
+                write!(f, "rejoin resume token replayed: {token}")
+            }
+            Self::StateVersionMismatch { expected, found } => {
+                write!(
+                    f,
+                    "rejoin state version mismatch: expected {expected}, found {found}"
+                )
+            }
+            Self::StateHashMismatch { expected, found } => {
+                write!(
+                    f,
+                    "rejoin state hash mismatch: expected {expected}, found {found}"
+                )
+            }
+        }
+    }
+}
+
+impl Error for RecoveryGuardError {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecoveryRejoinGuard {
+    expected_state_version: u64,
+    expected_state_hash: String,
+    consumed_resume_tokens: HashSet<String>,
+}
+
+impl RecoveryRejoinGuard {
+    pub fn new(
+        expected_state_version: u64,
+        expected_state_hash: &str,
+    ) -> Result<Self, RecoveryGuardError> {
+        if expected_state_version == 0 {
+            return Err(RecoveryGuardError::InvalidStateVersion);
+        }
+        if expected_state_hash.trim().is_empty() {
+            return Err(RecoveryGuardError::InvalidStateHash);
+        }
+        Ok(Self {
+            expected_state_version,
+            expected_state_hash: expected_state_hash.to_owned(),
+            consumed_resume_tokens: HashSet::new(),
+        })
+    }
+
+    pub fn evaluate(
+        &mut self,
+        attempt: RejoinAttempt,
+    ) -> Result<RecoveryStatus, RecoveryGuardError> {
+        if self.consumed_resume_tokens.contains(attempt.resume_token()) {
+            return Err(RecoveryGuardError::ReplayResumeToken(
+                attempt.resume_token.clone(),
+            ));
+        }
+
+        if attempt.state_version < self.expected_state_version {
+            return Ok(RecoveryStatus::CatchUpRequired {
+                from_version: attempt.state_version,
+                to_version: self.expected_state_version,
+            });
+        }
+
+        if attempt.state_version > self.expected_state_version {
+            return Err(RecoveryGuardError::StateVersionMismatch {
+                expected: self.expected_state_version,
+                found: attempt.state_version,
+            });
+        }
+
+        if attempt.state_hash != self.expected_state_hash {
+            return Err(RecoveryGuardError::StateHashMismatch {
+                expected: self.expected_state_hash.clone(),
+                found: attempt.state_hash,
+            });
+        }
+
+        self.consumed_resume_tokens.insert(attempt.resume_token);
+        Ok(RecoveryStatus::RejoinAccepted)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuntimeWiring {
     pub common_components: Vec<&'static str>,
     pub role_components: Vec<&'static str>,
@@ -371,6 +529,7 @@ mod tests {
     use super::{
         build_runtime_wiring, BoundedRuntimeQueue, DeterministicProposalPlanner, PeerLifecycle,
         PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, ProposalPlannerError,
+        RecoveryGuardError, RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt,
         RuntimeLifecycleError, RuntimeQueueError,
     };
     use crate::config::{NodeConfig, NodeRole, SyncMode};
@@ -597,6 +756,70 @@ mod tests {
             ProposalPlannerError::StaleStateHash {
                 expected: "state-1".to_owned(),
                 found: "state-2".to_owned()
+            }
+        );
+    }
+
+    #[test]
+    fn functional_rejoin_guard_accepts_matching_snapshot() {
+        let mut guard = RecoveryRejoinGuard::new(42, "state-42").expect("guard should build");
+        let attempt = RejoinAttempt::new("node-a", 42, "state-42", "resume-1").expect("valid");
+        let status = guard.evaluate(attempt).expect("rejoin should be accepted");
+        assert_eq!(status, RecoveryStatus::RejoinAccepted);
+    }
+
+    #[test]
+    fn integration_rejoin_guard_emits_catch_up_required_for_lagging_node() {
+        let mut guard = RecoveryRejoinGuard::new(42, "state-42").expect("guard should build");
+        let attempt = RejoinAttempt::new("node-a", 40, "state-40", "resume-1").expect("valid");
+        let status = guard
+            .evaluate(attempt)
+            .expect("lagging node should receive catch-up guidance");
+        assert_eq!(
+            status,
+            RecoveryStatus::CatchUpRequired {
+                from_version: 40,
+                to_version: 42
+            }
+        );
+    }
+
+    #[test]
+    fn unit_rejoin_guard_rejects_empty_resume_token() {
+        let attempt = RejoinAttempt::new("node-a", 42, "state-42", "");
+        assert_eq!(attempt, Err(RecoveryGuardError::InvalidResumeToken));
+    }
+
+    #[test]
+    fn regression_rejoin_replay_token_is_rejected() {
+        // Regression: #322
+        let mut guard = RecoveryRejoinGuard::new(42, "state-42").expect("guard should build");
+        let first = RejoinAttempt::new("node-a", 42, "state-42", "resume-1").expect("valid");
+        assert_eq!(guard.evaluate(first), Ok(RecoveryStatus::RejoinAccepted));
+
+        let replay = RejoinAttempt::new("node-a", 42, "state-42", "resume-1").expect("valid");
+        let error = guard
+            .evaluate(replay)
+            .expect_err("replay token should be rejected");
+        assert_eq!(
+            error,
+            RecoveryGuardError::ReplayResumeToken("resume-1".to_owned())
+        );
+    }
+
+    #[test]
+    fn regression_rejoin_state_hash_mismatch_is_rejected() {
+        // Regression: #322
+        let mut guard = RecoveryRejoinGuard::new(42, "state-42").expect("guard should build");
+        let attempt = RejoinAttempt::new("node-a", 42, "state-41", "resume-1").expect("valid");
+        let error = guard
+            .evaluate(attempt)
+            .expect_err("hash mismatch should be rejected");
+        assert_eq!(
+            error,
+            RecoveryGuardError::StateHashMismatch {
+                expected: "state-42".to_owned(),
+                found: "state-41".to_owned()
             }
         );
     }

@@ -213,8 +213,9 @@ pub use retention_engine::{
 };
 pub use runtime::{
     BoundedRuntimeQueue, DeterministicProposalPlanner, PeerLifecycle, PeerLifecycleEvent,
-    PeerLifecycleState, ProposalCandidate, ProposalPlan, ProposalPlannerError,
-    RuntimeLifecycleError, RuntimeQueueError, RuntimeWiring,
+    PeerLifecycleState, ProposalCandidate, ProposalPlan, ProposalPlannerError, RecoveryGuardError,
+    RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, RuntimeLifecycleError, RuntimeQueueError,
+    RuntimeWiring,
 };
 pub use service_marketplace::{
     MarketplaceSearchFilter, NegotiationThreadHook, ServiceListing, ServiceMarketplaceEngine,
