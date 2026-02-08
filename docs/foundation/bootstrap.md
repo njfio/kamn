@@ -53,3 +53,4 @@ For key compromise containment and recovery workflows, see `docs/foundation/key-
 For Python SDK parity slice, see `docs/foundation/python-sdk-beta.md`.
 For DID method and canonical DID document schema controls, see `docs/foundation/did-method.md`.
 For DID register/resolve/update/revoke transaction behavior, see `docs/foundation/did-registry-transactions.md`.
+For canonical message envelope schema and validation controls, see `docs/foundation/message-envelope-schema.md`.
