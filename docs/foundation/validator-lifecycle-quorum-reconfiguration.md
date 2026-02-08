@@ -1,4 +1,4 @@
-# Validator Lifecycle and Quorum Reconfiguration (Issues #194 / #195)
+# Validator Lifecycle and Quorum Reconfiguration (Issues #194 / #195 / #523)
 
 This document captures the first implementation slice for validator onboarding, offboarding, and quorum updates.
 
@@ -28,6 +28,11 @@ This document captures the first implementation slice for validator onboarding, 
   - valid DID format for each approver.
 - Proof approvals must satisfy the current quorum threshold.
 - Duplicate validator DIDs are rejected.
+- Transition proof fingerprint (`proposal_id` + `proof_hash`) is one-time-use and replay attempts are rejected.
+- Onboarding proof approver sets cannot include the candidate validator DID (self-approval rejection).
+- Regression guards:
+  - transition proof replay is rejected (`Regression: #523`).
+  - onboarding self-approval is rejected (`Regression: #523`).
 
 ## Quorum Safety and Rollback Rules
 - Quorum threshold must be in `1..=validator_count`.
