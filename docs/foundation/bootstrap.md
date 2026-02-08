@@ -99,6 +99,7 @@ For configurable retention policy enforcement controls, see `docs/foundation/ret
 For data classification tiers and write-path tagging enforcement controls, see `docs/foundation/data-classification-tagging.md`.
 For optional operator binding proof validation and configure/revoke/read-history permission controls, see `docs/foundation/operator-binding-permissions.md`.
 For operator dashboard backend read-model APIs and deterministic pagination controls, see `docs/foundation/operator-dashboard-backend-apis.md`.
+For dashboard UI MVP composition controls across agent/task/message/escrow/reputation/audit sections, see `docs/foundation/operator-dashboard-ui-mvp.md`.
 For permissioned operator configure/revoke/read-history control actions and audit trail outcomes, see `docs/foundation/operator-permissioned-actions.md`.
 For fast/slow/archive sync-mode operational profile controls, see `docs/foundation/sync-mode-profiles.md`.
 For PRD 13.2 benchmark target validation evidence controls, see `docs/foundation/performance-target-benchmarking.md`.

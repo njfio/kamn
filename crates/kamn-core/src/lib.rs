@@ -31,6 +31,7 @@ pub mod observability;
 pub mod operator_actions;
 pub mod operator_binding;
 pub mod operator_dashboard_api;
+pub mod operator_dashboard_ui;
 pub mod performance_targets;
 pub mod redaction_compliance;
 pub mod reputation_signals;
@@ -167,6 +168,12 @@ pub use operator_dashboard_api::{
     DashboardPage, DashboardPageRequest, OperatorAgentView, OperatorDashboardApi,
     OperatorDashboardApiError, OperatorDashboardSnapshot, OperatorEscrowView, OperatorMessageView,
     OperatorReputationView, OperatorTaskView,
+};
+pub use operator_dashboard_ui::{
+    DashboardAttentionLevel, DashboardSummary, OperatorAgentListRow, OperatorAuditTraceEntry,
+    OperatorDashboardUi, OperatorDashboardUiError, OperatorDashboardUiModel,
+    OperatorEscrowStatusEntry, OperatorMessageTraceEntry, OperatorReputationOverviewEntry,
+    OperatorTaskTimelineEntry, ReputationRiskTier,
 };
 pub use performance_targets::{
     evaluate_performance_from_observability, evaluate_performance_run, PerformanceAggregate,
