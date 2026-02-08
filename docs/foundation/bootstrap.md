@@ -45,3 +45,4 @@ For canonical invariant IDs and taxonomy mapping, see `docs/foundation/invariant
 For the Rust SDK first implementation slice, see `docs/foundation/rust-sdk-alpha.md`.
 For token model and genesis allocation controls, see `docs/foundation/token-model.md`.
 For escrow lifecycle state transitions, see `docs/foundation/escrow-lifecycle.md`.
+For multi-AZ topology and failover operations, see `docs/foundation/multi-az-failover-runbook.md`.
