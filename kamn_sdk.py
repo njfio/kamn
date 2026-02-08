@@ -1,11 +1,38 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import AsyncIterator, Dict, List, Optional
 
 
 class SDKError(Exception):
     pass
+
+
+class TransportMode(str, Enum):
+    IN_MEMORY = "in-memory"
+    LIVE = "live"
+
+
+class TransportModeMismatchError(SDKError):
+    def __init__(self, expected: TransportMode, found: TransportMode) -> None:
+        self.expected = expected.value
+        self.found = found.value
+        super().__init__(
+            f"transport mode mismatch, expected {self.expected}, found {self.found}"
+        )
+
+
+@dataclass(frozen=True)
+class LiveTransportConfig:
+    endpoint: str
+
+    def __post_init__(self) -> None:
+        normalized = self.endpoint.strip().lower()
+        if not (normalized.startswith("https://") or normalized.startswith("wss://")):
+            raise SDKError("transport endpoint must start with https:// or wss://")
+        if len(normalized) <= len("https://a"):
+            raise SDKError("transport endpoint must include host information")
 
 
 @dataclass
@@ -178,6 +205,40 @@ class KAMNClient:
         self._ensure_known_agent(did)
         return dict(self._reputation[did])
 
+    def transport_mode(self) -> TransportMode:
+        return TransportMode.IN_MEMORY
+
+    def assert_transport_mode(self, expected: TransportMode) -> None:
+        found = self.transport_mode()
+        if found != expected:
+            raise TransportModeMismatchError(expected, found)
+
     def _ensure_known_agent(self, did: str) -> None:
         if did not in self._agents:
             raise SDKError(f"unknown did: {did}")
+
+
+class LiveKAMNClient:
+    _live_endpoints: Dict[str, KAMNClient] = {}
+
+    def __init__(self, endpoint: str) -> None:
+        self.config = LiveTransportConfig(endpoint=endpoint)
+        self._endpoint = self.config.endpoint
+        if self._endpoint not in self._live_endpoints:
+            self._live_endpoints[self._endpoint] = KAMNClient()
+        self._delegate = self._live_endpoints[self._endpoint]
+
+    @property
+    def endpoint(self) -> str:
+        return self._endpoint
+
+    def transport_mode(self) -> TransportMode:
+        return TransportMode.LIVE
+
+    def assert_transport_mode(self, expected: TransportMode) -> None:
+        found = self.transport_mode()
+        if found != expected:
+            raise TransportModeMismatchError(expected, found)
+
+    def __getattr__(self, name: str):
+        return getattr(self._delegate, name)

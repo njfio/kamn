@@ -1,4 +1,4 @@
-# Python SDK Beta Slice (Issues #134, #135, #483, #585)
+# Python SDK Beta Slice (Issues #134, #135, #483, #585, #634)
 
 This document captures the first Python SDK implementation slice for MVP workflow parity.
 
@@ -10,7 +10,12 @@ This document captures the first Python SDK implementation slice for MVP workflo
   - `create_task`, `accept_task`
   - `create_escrow`, `release_escrow`, `balance`
   - `search_agents`, `get_reputation`
+- Added live transport parity implementation:
+  - `LiveTransportConfig` endpoint contract.
+  - `LiveKAMNClient` endpoint-scoped shared-state live path.
+  - transport mode contracts (`TransportMode`) and mismatch rejection (`TransportModeMismatchError`, `Regression: #620`).
 - Added Python test coverage: `tests/python/test_sdk.py`.
+- Added scheduled deep-lane coverage: `tests/python/test_sdk_live_transport_deep.py`.
 
 ## Deterministic Behavior
 - DIDs, message IDs, task IDs, and escrow IDs use deterministic sequence generators.
@@ -18,11 +23,14 @@ This document captures the first Python SDK implementation slice for MVP workflo
 - Async `receive_stream(...)` yields drained messages in deterministic FIFO order.
 - Escrow release is one-time and guarded against duplicate release.
 - Unknown DID/task/escrow access returns explicit `SDKError`.
+- Transport mode mismatch (`in-memory` vs `live`) is explicitly rejected to prevent cross-language contract drift (`Regression: #620`).
 
 ## Local Validation
 Run from repository root:
 
 ```bash
+bash scripts/sdk/run_live_transport_parity_contract_lane.sh
+bash scripts/sdk/run_live_transport_parity_deep_lane.sh
 python3 -m unittest tests/python/test_sdk.py
 bash scripts/sdk/test_run_sdk_parity_matrix.sh
 cargo fmt --check

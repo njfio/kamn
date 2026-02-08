@@ -1,7 +1,13 @@
 import unittest
 import asyncio
 
-from kamn_sdk import KAMNClient, SDKError
+from kamn_sdk import (
+    KAMNClient,
+    LiveKAMNClient,
+    SDKError,
+    TransportMode,
+    TransportModeMismatchError,
+)
 
 
 class PythonSDKTests(unittest.TestCase):
@@ -97,6 +103,61 @@ class PythonSDKTests(unittest.TestCase):
                 model_family="claude-4",
                 capabilities=["text", " "],
             )
+
+
+class PythonLiveTransportSDKTests(unittest.TestCase):
+    def test_unit_live_transport_config_rejects_non_live_endpoint(self) -> None:
+        with self.assertRaises(SDKError):
+            LiveKAMNClient("http://localhost:7000")
+
+    def test_functional_live_transport_round_trip(self) -> None:
+        client = LiveKAMNClient("https://live.kamn.testnet/python-functional")
+        sender = client.register("autonomous", "claude-4", ["text"])
+        receiver = client.register("assistant", "gpt-5", ["text"])
+
+        message_id = client.send(sender, receiver, "python live hello")
+        self.assertTrue(message_id.startswith("msg_"))
+
+        received = client.receive(receiver)
+        self.assertEqual(len(received), 1)
+        self.assertEqual(received[0]["body"], "python live hello")
+
+    def test_integration_live_clients_share_endpoint_state(self) -> None:
+        endpoint = "https://live.kamn.testnet/python-integration"
+        publisher = LiveKAMNClient(endpoint)
+        consumer = LiveKAMNClient(endpoint)
+
+        sender = publisher.register("autonomous", "claude-4", ["text"])
+        receiver = publisher.register("assistant", "gpt-5", ["text"])
+        publisher.send(sender, receiver, "shared endpoint python message")
+
+        received = consumer.receive(receiver)
+        self.assertEqual(len(received), 1)
+        self.assertEqual(received[0]["body"], "shared endpoint python message")
+
+    def test_regression_transport_mode_mismatch_is_rejected(self) -> None:
+        # Regression: #620
+        memory = KAMNClient()
+        with self.assertRaises(TransportModeMismatchError) as memory_error:
+            memory.assert_transport_mode(TransportMode.LIVE)
+        self.assertEqual(memory_error.exception.expected, "live")
+        self.assertEqual(memory_error.exception.found, "in-memory")
+
+        live = LiveKAMNClient("https://live.kamn.testnet/python-mismatch")
+        with self.assertRaises(TransportModeMismatchError) as live_error:
+            live.assert_transport_mode(TransportMode.IN_MEMORY)
+        self.assertEqual(live_error.exception.expected, "in-memory")
+        self.assertEqual(live_error.exception.found, "live")
+
+    def test_performance_live_transport_contract_lane_budget(self) -> None:
+        client = LiveKAMNClient("https://live.kamn.testnet/python-perf")
+        sender = client.register("autonomous", "claude-4", ["text"])
+        receiver = client.register("assistant", "gpt-5", ["text"])
+
+        for nonce in range(256):
+            client.send(sender, receiver, f"python-live-perf-{nonce}")
+        received = client.receive(receiver)
+        self.assertEqual(len(received), 256)
 
 
 if __name__ == "__main__":

@@ -12,12 +12,25 @@ import type {
   SearchAgentResult,
   SearchAgentsQuery,
   TaskRecord,
+  TransportMode,
 } from "./types.ts";
 
 export class SDKError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "SDKError";
+  }
+}
+
+export class TransportModeMismatchError extends SDKError {
+  readonly expected: TransportMode;
+  readonly found: TransportMode;
+
+  constructor(expected: TransportMode, found: TransportMode) {
+    super(`transport mode mismatch, expected ${expected}, found ${found}`);
+    this.name = "TransportModeMismatchError";
+    this.expected = expected;
+    this.found = found;
   }
 }
 
@@ -268,6 +281,17 @@ export class KAMNClient {
     }
 
     return { ...reputation };
+  }
+
+  transportMode(): TransportMode {
+    return "in-memory";
+  }
+
+  assertTransportMode(expected: TransportMode): void {
+    const found = this.transportMode();
+    if (found !== expected) {
+      throw new TransportModeMismatchError(expected, found);
+    }
   }
 
   private ensureKnownAgent(did: string): void {
