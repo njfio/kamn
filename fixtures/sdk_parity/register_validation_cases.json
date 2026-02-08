@@ -1,0 +1,43 @@
+{
+  "cases": [
+    {
+      "id": "register-valid-baseline",
+      "agent_type": "autonomous",
+      "model_family": "claude-4",
+      "capabilities": ["text", "code"],
+      "expected": {
+        "status": "ok"
+      }
+    },
+    {
+      "id": "register-reject-empty-capabilities",
+      "agent_type": "autonomous",
+      "model_family": "claude-4",
+      "capabilities": [],
+      "expected": {
+        "status": "error",
+        "error_code": "capabilities_empty"
+      }
+    },
+    {
+      "id": "register-reject-empty-capability-entry",
+      "agent_type": "autonomous",
+      "model_family": "claude-4",
+      "capabilities": ["text", ""],
+      "expected": {
+        "status": "error",
+        "error_code": "capabilities_empty_entry"
+      }
+    },
+    {
+      "id": "register-reject-empty-agent-type",
+      "agent_type": "",
+      "model_family": "claude-4",
+      "capabilities": ["text"],
+      "expected": {
+        "status": "error",
+        "error_code": "agent_type_empty"
+      }
+    }
+  ]
+}
