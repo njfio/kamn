@@ -55,3 +55,7 @@ This data supports cache/parallel tuning and flaky-test burn-down without wideni
 - Rust dependency/build cache enabled in Rust lanes.
 - Expensive suites are not on the PR merge-critical path.
 - PR template includes a mandatory CI-impact declaration for workflow/test-scope changes.
+
+## Reporting and Burn-down
+- Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
+- Use `scripts/ci/summarize_budget_artifacts.sh` on downloaded `ci-budget-*.json` artifacts to compute p50/p95 and cache/retry trends.
