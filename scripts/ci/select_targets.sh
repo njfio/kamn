@@ -170,7 +170,7 @@ if [ "$REPO_HAS_RUST" = true ] && { [ "$RUST_CHANGED" = true ] || [ "$CI_INFRA_C
   if [ "$FULL_SUITE" = true ]; then
     TEST_SCOPE="full"
     CLIPPY_CMD='cargo clippy --workspace --all-targets --all-features -- -D warnings'
-    TEST_CMD='cargo test --workspace --locked --all-features --no-fail-fast'
+    TEST_CMD='bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test --workspace --locked --all-features --no-fail-fast'
   elif [ "${#manifest_list[@]}" -gt 1 ] || { [ "${#manifest_list[@]}" -eq 1 ] && [ "${manifest_list[0]}" != "Cargo.toml" ]; }; then
     TEST_SCOPE="targeted"
 
@@ -178,7 +178,7 @@ if [ "$REPO_HAS_RUST" = true ] && { [ "$RUST_CHANGED" = true ] || [ "$CI_INFRA_C
     test_parts=()
     for manifest in "${manifest_list[@]}"; do
       clippy_parts+=("cargo clippy --all-targets --all-features --manifest-path '$manifest' -- -D warnings")
-      test_parts+=("cargo test --locked --all-features --manifest-path '$manifest' --no-fail-fast")
+      test_parts+=("bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test --locked --all-features --manifest-path '$manifest' --no-fail-fast")
     done
 
     CLIPPY_CMD="$(join_with_and "${clippy_parts[@]}")"
@@ -186,7 +186,7 @@ if [ "$REPO_HAS_RUST" = true ] && { [ "$RUST_CHANGED" = true ] || [ "$CI_INFRA_C
   else
     TEST_SCOPE="smoke"
     CLIPPY_CMD='cargo clippy --workspace --all-targets -- -D warnings'
-    TEST_CMD='cargo test --workspace --locked --all-features --lib --no-fail-fast'
+    TEST_CMD='bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test --workspace --locked --all-features --lib --no-fail-fast'
   fi
 fi
 
