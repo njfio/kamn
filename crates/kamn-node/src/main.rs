@@ -36,8 +36,51 @@ impl OutputMode {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LocalProfile {
+    Processor,
+    Listener,
+    Approver,
+}
+
+impl LocalProfile {
+    fn parse(value: &str) -> Result<Self, ConfigError> {
+        match value {
+            "local-processor" => Ok(Self::Processor),
+            "local-listener" => Ok(Self::Listener),
+            "local-approver" => Ok(Self::Approver),
+            other => Err(ConfigError::InvalidNodeProfile(other.to_owned())),
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Processor => "local-processor",
+            Self::Listener => "local-listener",
+            Self::Approver => "local-approver",
+        }
+    }
+
+    fn default_role(self) -> NodeRole {
+        match self {
+            Self::Processor => NodeRole::Processor,
+            Self::Listener => NodeRole::Listener,
+            Self::Approver => NodeRole::Approver,
+        }
+    }
+
+    fn default_storage_dir(self) -> &'static str {
+        match self {
+            Self::Processor => "./data/processor",
+            Self::Listener => "./data/listener",
+            Self::Approver => "./data/approver",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct NodeCli {
+    profile: Option<LocalProfile>,
     role: NodeRole,
     chain_id: String,
     chain_version: String,
@@ -49,6 +92,7 @@ struct NodeCli {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct NodeBootstrapReport {
+    profile: Option<String>,
     role: String,
     chain_id: String,
     chain_version: String,
@@ -67,12 +111,19 @@ where
     I: IntoIterator<Item = String>,
 {
     let mut role: Option<NodeRole> = None;
+    let mut profile: Option<LocalProfile> = None;
     let mut chain_id = String::from("kamn-devnet");
     let mut chain_version = String::from("v0.1.0");
     let mut storage_dir = String::from("./data");
     let mut enable_gossip = true;
     let mut sync_mode = SyncMode::Fast;
     let mut output_mode = OutputMode::text();
+    let mut role_overridden = false;
+    let mut chain_id_overridden = false;
+    let mut chain_version_overridden = false;
+    let mut storage_dir_overridden = false;
+    let mut gossip_overridden = false;
+    let mut sync_mode_overridden = false;
 
     let mut iter = args.into_iter();
     let _bin = iter.next();
@@ -84,30 +135,42 @@ where
                     .next()
                     .ok_or(ConfigError::MissingArgumentValue("--role"))?;
                 role = Some(value.parse::<NodeRole>()?);
+                role_overridden = true;
+            }
+            "--profile" => {
+                let value = iter
+                    .next()
+                    .ok_or(ConfigError::MissingArgumentValue("--profile"))?;
+                profile = Some(LocalProfile::parse(&value)?);
             }
             "--chain-id" => {
                 chain_id = iter
                     .next()
                     .ok_or(ConfigError::MissingArgumentValue("--chain-id"))?;
+                chain_id_overridden = true;
             }
             "--chain-version" => {
                 chain_version = iter
                     .next()
                     .ok_or(ConfigError::MissingArgumentValue("--chain-version"))?;
+                chain_version_overridden = true;
             }
             "--storage-dir" => {
                 storage_dir = iter
                     .next()
                     .ok_or(ConfigError::MissingArgumentValue("--storage-dir"))?;
+                storage_dir_overridden = true;
             }
             "--disable-gossip" => {
                 enable_gossip = false;
+                gossip_overridden = true;
             }
             "--sync-mode" => {
                 let value = iter
                     .next()
                     .ok_or(ConfigError::MissingArgumentValue("--sync-mode"))?;
                 sync_mode = value.parse::<SyncMode>()?;
+                sync_mode_overridden = true;
             }
             "--output" => {
                 let value = iter
@@ -121,9 +184,31 @@ where
         }
     }
 
+    if let Some(selected_profile) = profile {
+        if !role_overridden {
+            role = Some(selected_profile.default_role());
+        }
+        if !chain_id_overridden {
+            chain_id = "kamn-localnet".to_owned();
+        }
+        if !chain_version_overridden {
+            chain_version = "v0.1.0".to_owned();
+        }
+        if !storage_dir_overridden {
+            storage_dir = selected_profile.default_storage_dir().to_owned();
+        }
+        if !gossip_overridden {
+            enable_gossip = true;
+        }
+        if !sync_mode_overridden {
+            sync_mode = SyncMode::Fast;
+        }
+    }
+
     let role = role.ok_or(ConfigError::MissingArgumentValue("--role"))?;
 
     Ok(NodeCli {
+        profile,
         role,
         chain_id,
         chain_version,
@@ -147,23 +232,27 @@ fn run() -> Result<(), ConfigError> {
     };
 
     let plan = bootstrap(config)?;
-    let report = build_bootstrap_report(&plan);
+    let report = build_bootstrap_report(&plan, cli.profile);
     println!("{}", render_bootstrap_report(&report, cli.output_mode));
 
     Ok(())
 }
 
-fn build_bootstrap_report(plan: &BootstrapPlan) -> NodeBootstrapReport {
-    let profile = plan.config.operational_profile();
+fn build_bootstrap_report(
+    plan: &BootstrapPlan,
+    profile: Option<LocalProfile>,
+) -> NodeBootstrapReport {
+    let operational_profile = plan.config.operational_profile();
     NodeBootstrapReport {
+        profile: profile.map(LocalProfile::as_str).map(str::to_owned),
         role: plan.config.role.as_str().to_owned(),
         chain_id: plan.config.chain_id.clone(),
         chain_version: plan.config.chain_version.clone(),
         storage_dir: plan.config.storage_dir.clone(),
         gossip_enabled: plan.config.enable_gossip,
         sync_mode: plan.config.sync_mode.as_str().to_owned(),
-        sync_startup: format!("{:?}", profile.startup_strategy),
-        sync_recovery: format!("{:?}", profile.recovery_strategy),
+        sync_startup: format!("{:?}", operational_profile.startup_strategy),
+        sync_recovery: format!("{:?}", operational_profile.recovery_strategy),
         state_version: plan.state_schema.version.0,
         pending_migrations: plan.migration_plan.steps.len(),
         components: plan
@@ -183,8 +272,10 @@ fn render_bootstrap_report(report: &NodeBootstrapReport, mode: OutputMode) -> St
 }
 
 fn render_text_report(report: &NodeBootstrapReport) -> String {
+    let profile = report.profile.as_deref().unwrap_or("none");
     format!(
-        "KAMN node bootstrap\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  components: {}",
+        "KAMN node bootstrap\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  components: {}",
+        profile,
         report.role,
         report.chain_id,
         report.chain_version,
@@ -204,6 +295,10 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
 }
 
 fn render_json_report(report: &NodeBootstrapReport) -> String {
+    let profile = match &report.profile {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
     let components = report
         .components
         .iter()
@@ -211,7 +306,8 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         .collect::<Vec<String>>()
         .join(",");
     format!(
-        "{{\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"components\":[{}]}}",
+        "{{\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"components\":[{}]}}",
+        profile,
         json_escape(&report.role),
         json_escape(&report.chain_id),
         json_escape(&report.chain_version),
@@ -246,8 +342,8 @@ fn main() -> ExitCode {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_bootstrap_report, parse_args, render_bootstrap_report, NodeBootstrapReport,
-        OutputMode,
+        build_bootstrap_report, parse_args, render_bootstrap_report, LocalProfile,
+        NodeBootstrapReport, OutputMode,
     };
     use kamn_core::{bootstrap, ConfigError, NodeConfig, NodeRole, SyncMode};
 
@@ -260,6 +356,7 @@ mod tests {
         ];
 
         let parsed = parse_args(args).expect("args should parse");
+        assert_eq!(parsed.profile, None);
         assert_eq!(parsed.role, NodeRole::Processor);
         assert_eq!(parsed.chain_id, "kamn-devnet");
         assert_eq!(parsed.chain_version, "v0.1.0");
@@ -313,8 +410,50 @@ mod tests {
     }
 
     #[test]
+    fn parses_local_listener_profile_defaults() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--profile".to_owned(),
+            "local-listener".to_owned(),
+        ];
+
+        let parsed = parse_args(args).expect("profile args should parse");
+        assert_eq!(parsed.profile, Some(LocalProfile::Listener));
+        assert_eq!(parsed.role, NodeRole::Listener);
+        assert_eq!(parsed.chain_id, "kamn-localnet");
+        assert_eq!(parsed.storage_dir, "./data/listener");
+        assert_eq!(parsed.sync_mode, SyncMode::Fast);
+        assert!(parsed.enable_gossip);
+    }
+
+    #[test]
+    fn profile_defaults_can_be_overridden_by_explicit_flags() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--profile".to_owned(),
+            "local-listener".to_owned(),
+            "--chain-id".to_owned(),
+            "kamn-custom".to_owned(),
+            "--storage-dir".to_owned(),
+            "./tmp/custom-listener".to_owned(),
+            "--disable-gossip".to_owned(),
+            "--sync-mode".to_owned(),
+            "archive".to_owned(),
+        ];
+
+        let parsed = parse_args(args).expect("profile args with overrides should parse");
+        assert_eq!(parsed.profile, Some(LocalProfile::Listener));
+        assert_eq!(parsed.role, NodeRole::Listener);
+        assert_eq!(parsed.chain_id, "kamn-custom");
+        assert_eq!(parsed.storage_dir, "./tmp/custom-listener");
+        assert_eq!(parsed.sync_mode, SyncMode::Archive);
+        assert!(!parsed.enable_gossip);
+    }
+
+    #[test]
     fn functional_json_render_is_deterministic() {
         let report = NodeBootstrapReport {
+            profile: None,
             role: "processor".to_owned(),
             chain_id: "kamn-devnet".to_owned(),
             chain_version: "v0.1.0".to_owned(),
@@ -354,13 +493,42 @@ mod tests {
             sync_mode: parsed.sync_mode,
         };
         let plan = bootstrap(config).expect("bootstrap should succeed");
-        let report = build_bootstrap_report(&plan);
+        let report = build_bootstrap_report(&plan, parsed.profile);
         let rendered = render_bootstrap_report(&report, parsed.output_mode);
 
+        assert!(rendered.contains("\"profile\":null"));
         assert!(rendered.contains("\"role\":\"processor\""));
         assert!(rendered.contains("\"chain_id\":\"kamn-devnet\""));
         assert!(rendered.contains("\"sync_mode\":\"fast\""));
         assert!(rendered.contains("\"components\":["));
+    }
+
+    #[test]
+    fn integration_profile_bootstrap_and_render_json() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--profile".to_owned(),
+            "local-listener".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+        let parsed = parse_args(args).expect("profile args should parse");
+        let config = NodeConfig {
+            chain_id: parsed.chain_id,
+            chain_version: parsed.chain_version,
+            role: parsed.role,
+            storage_dir: parsed.storage_dir,
+            enable_gossip: parsed.enable_gossip,
+            sync_mode: parsed.sync_mode,
+        };
+        let plan = bootstrap(config).expect("bootstrap should succeed");
+        let report = build_bootstrap_report(&plan, parsed.profile);
+        let rendered = render_bootstrap_report(&report, parsed.output_mode);
+
+        assert!(rendered.contains("\"profile\":\"local-listener\""));
+        assert!(rendered.contains("\"role\":\"listener\""));
+        assert!(rendered.contains("\"chain_id\":\"kamn-localnet\""));
+        assert!(rendered.contains("\"storage_dir\":\"./data/listener\""));
     }
 
     #[test]
@@ -399,6 +567,20 @@ mod tests {
         assert_eq!(
             parse_args(args),
             Err(ConfigError::InvalidOutputMode("yaml".to_owned()))
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_profile_value() {
+        // Regression: #310
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--profile".to_owned(),
+            "local-unknown".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::InvalidNodeProfile("local-unknown".to_owned()))
         );
     }
 }
