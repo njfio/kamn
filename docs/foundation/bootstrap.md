@@ -43,3 +43,4 @@ For role interaction baseline coverage, see `docs/foundation/role-smoke.md`.
 For transaction invariant guard behavior, see `docs/foundation/transaction-guards.md`.
 For canonical invariant IDs and taxonomy mapping, see `docs/foundation/invariants.md`.
 For the Rust SDK first implementation slice, see `docs/foundation/rust-sdk-alpha.md`.
+For token model and genesis allocation controls, see `docs/foundation/token-model.md`.
