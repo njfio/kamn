@@ -1,4 +1,4 @@
-# TypeScript SDK Beta and Shared Schema Package (Issues #218, #219, #485, #585)
+# TypeScript SDK Beta and Shared Schema Package (Issues #218, #219, #485, #585, #634)
 
 This document captures the first TypeScript SDK implementation slice and the shared protocol schema package used to keep language SDK behavior aligned.
 
@@ -11,6 +11,8 @@ This document captures the first TypeScript SDK implementation slice and the sha
 - Added `packages/kamn-sdk` with dependency-light in-memory SDK parity:
   - `KAMNClient` for register/resolve/send/receive/receiveStream/task/escrow/search/reputation flows.
   - `SDKError` explicit typed errors.
+  - `LiveTransportConfig` and `LiveTransportKAMNClient` for endpoint-scoped live transport parity.
+  - `TransportModeMismatchError` for typed transport mode mismatch rejection (`Regression: #620`).
   - send path enforces schema validation through `kamn-schema`.
 
 ## Shared Schema Rules (Parity Targets)
@@ -32,6 +34,7 @@ The TypeScript schema package mirrors canonical constraints used by core protoco
 - escrow release is one-way and idempotency-protected.
 - search results are deterministic and sorted by DID.
 - schema violations in send path are surfaced as `SDKError`.
+- transport mode mismatch (`in-memory` vs `live`) is surfaced through `TransportModeMismatchError` (`Regression: #620`).
 
 ## Fast and Cost-Effective Validation
 This slice avoids dependency-heavy toolchains and uses Node 22 native TypeScript stripping:
@@ -40,6 +43,7 @@ This slice avoids dependency-heavy toolchains and uses Node 22 native TypeScript
 PR-fast validation commands:
 
 ```bash
+bash scripts/sdk/run_live_transport_parity_contract_lane.sh
 npm --prefix packages/kamn-schema test
 npm --prefix packages/kamn-sdk test
 bash scripts/sdk/test_run_sdk_parity_matrix.sh
@@ -51,6 +55,8 @@ These tests are deterministic, run in milliseconds, and require no package insta
 Run from repository root:
 
 ```bash
+bash scripts/sdk/run_live_transport_parity_contract_lane.sh
+bash scripts/sdk/run_live_transport_parity_deep_lane.sh
 npm --prefix packages/kamn-schema test
 npm --prefix packages/kamn-sdk test
 cargo fmt --check

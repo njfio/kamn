@@ -1,5 +1,7 @@
 import type { CanonicalMessageEnvelope } from "../../kamn-schema/src/index.ts";
 
+export type TransportMode = "in-memory" | "live";
+
 export interface AgentMetadata {
   agentType: string;
   modelFamily: string;
