@@ -52,6 +52,7 @@ For security control ownership and enforcement mapping, see `docs/foundation/thr
 For anti-hallucination instruction validation controls, see `docs/foundation/instruction-verification.md`.
 For watchdog prototype detection controls (invalid blocks, censorship, quorum anomalies), see `docs/foundation/watchdog-node-prototype.md`.
 For anti-spam controls with deposit gating and abuse telemetry, see `docs/foundation/anti-spam-controls.md`.
+For PRD Phase 4 zero-knowledge message-proof feasibility design and rollout guidance, see `docs/foundation/zk-message-proof-design.md`.
 For deterministic key lifecycle and rotation transitions, see `docs/foundation/key-lifecycle.md`.
 For tamper-evident key lifecycle audit trail verification controls, see `docs/foundation/key-lifecycle-audit-trails.md`.
 For pluggable local/secure signer backend controls, see `docs/foundation/signer-backend-abstraction.md`.

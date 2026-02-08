@@ -41,6 +41,7 @@ pub mod telegram_bridge;
 pub mod token;
 pub mod transaction;
 pub mod watchdog;
+pub mod zk_message_proofs;
 
 pub use agent_key_hierarchy::{
     AgentKeyHierarchy, AgentKeyHierarchyError, EphemeralSessionKey, KeyRole,
@@ -178,4 +179,9 @@ pub use transaction::{
 pub use watchdog::{
     WatchdogAlert, WatchdogAlertKind, WatchdogConfig, WatchdogError, WatchdogNode,
     WatchdogObservation, WatchdogSeverity, WatchdogSnapshot,
+};
+pub use zk_message_proofs::{
+    build_message_witness, evaluate_zk_option, phase4_baseline_options, recommend_phase4_plan,
+    ZkArchitectureOption, ZkDesignError, ZkEvaluationPolicy, ZkMessageWitness, ZkOptionAssessment,
+    ZkPhaseMilestone, ZkPhasePlan, ZkProofSystem, ZkRisk, ZkRiskSeverity, ZkVerificationTopology,
 };
