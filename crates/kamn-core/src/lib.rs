@@ -8,6 +8,7 @@ pub mod invariants;
 pub mod key_lifecycle;
 pub mod key_recovery;
 pub mod message_envelope;
+pub mod message_lifecycle;
 pub mod migrations;
 pub mod namespaces;
 pub mod runtime;
@@ -40,6 +41,7 @@ pub use message_envelope::{
     EnvelopeProof, MessageEnvelopeError, CANONICAL_ENCRYPTION_ALGORITHM,
     CANONICAL_MESSAGE_ENVELOPE_TYPE, CANONICAL_PROOF_PURPOSE,
 };
+pub use message_lifecycle::{MessageLifecycleError, MessageLifecycleStore, MessageStatus};
 pub use migrations::{MigrationPlan, MigrationRegistry, MigrationStep};
 pub use namespaces::StateNamespaces;
 pub use runtime::RuntimeWiring;
