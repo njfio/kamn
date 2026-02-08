@@ -1,4 +1,4 @@
-# Operator Dashboard Backend APIs (Issues #202 / #203)
+# Operator Dashboard Backend APIs (Issues #202, #203, #591, #610)
 
 This document captures the first implementation slice for backend read APIs that power human-operator dashboard visibility.
 
@@ -15,6 +15,9 @@ This document captures the first implementation slice for backend read APIs that
   - unified snapshot response via `snapshot(...)`.
   - typed errors via `OperatorDashboardApiError`.
 - Added integration and regression tests in `crates/kamn-core/tests/operator_dashboard_api.rs`.
+- Added explicit frontend consumer contract mapping for `packages/kamn-dashboard`:
+  - backend snapshot shape maps to deterministic frontend shell state projections.
+  - backend absence/failure semantics map to deterministic loading/error/empty frontend states.
 
 ## Pagination and Filter Rules
 - Page limit must be positive.
@@ -29,11 +32,19 @@ This document captures the first implementation slice for backend read APIs that
 - Escrow view includes status and remaining amount.
 - Reputation view includes trust/delivery/dispute metrics.
 
+## Frontend Contract Mapping
+- Frontend package consumer: `packages/kamn-dashboard`.
+- Backend snapshot response maps to frontend `ready` shell state.
+- Backend fetch-in-flight maps to frontend `dashboard-loading` state.
+- Backend fetch failures map to frontend `dashboard-error` state.
+- Empty backend snapshot sets map to frontend `dashboard-empty` state.
+
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 
 ```bash
 cargo test -p kamn-core --test operator_dashboard_api --test operator_dashboard_api_docs
+npm --prefix packages/kamn-dashboard test
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
 ```
