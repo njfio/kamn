@@ -32,6 +32,7 @@ pub mod state;
 pub mod task_artifacts;
 pub mod task_lifecycle;
 pub mod task_operations;
+pub mod task_payment;
 pub mod telegram_bridge;
 pub mod token;
 pub mod transaction;
@@ -140,6 +141,7 @@ pub use task_lifecycle::{TaskLifecycle, TaskLifecycleError, TaskState, TaskTrans
 pub use task_operations::{
     TaskOperationEngine, TaskOperationError, TaskOperationNoticeKind, TaskOperationRecord,
 };
+pub use task_payment::{PaymentConfirm, PaymentOffer, TaskPaymentError, TaskPaymentWorkflow};
 pub use telegram_bridge::{
     TelegramBridgeConfig, TelegramBridgeEngine, TelegramBridgeError, TelegramInboundRequest,
 };
