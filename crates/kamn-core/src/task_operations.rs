@@ -1,6 +1,10 @@
 use crate::{AgentDid, TaskLifecycle, TaskLifecycleError, TaskState, TaskTransition};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use std::fs;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TaskOperationNoticeKind {
@@ -619,6 +623,148 @@ impl fmt::Display for TaskOperationError {
 
 impl std::error::Error for TaskOperationError {}
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TaskOperationSnapshotStoreError {
+    Io(String),
+    InvalidPayload(String),
+    Snapshot(TaskOperationError),
+}
+
+impl fmt::Display for TaskOperationSnapshotStoreError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Io(value) => write!(f, "task operation snapshot store I/O error: {value}"),
+            Self::InvalidPayload(value) => {
+                write!(f, "task operation snapshot store invalid payload: {value}")
+            }
+            Self::Snapshot(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl std::error::Error for TaskOperationSnapshotStoreError {}
+
+pub trait TaskOperationSnapshotStore {
+    fn write(
+        &mut self,
+        snapshot: TaskOperationSnapshot,
+    ) -> Result<(), TaskOperationSnapshotStoreError>;
+    fn read_latest(&self)
+        -> Result<Option<TaskOperationSnapshot>, TaskOperationSnapshotStoreError>;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct InMemoryTaskOperationSnapshotStore {
+    latest: Option<TaskOperationSnapshot>,
+}
+
+impl TaskOperationSnapshotStore for InMemoryTaskOperationSnapshotStore {
+    fn write(
+        &mut self,
+        snapshot: TaskOperationSnapshot,
+    ) -> Result<(), TaskOperationSnapshotStoreError> {
+        self.latest = Some(snapshot);
+        Ok(())
+    }
+
+    fn read_latest(
+        &self,
+    ) -> Result<Option<TaskOperationSnapshot>, TaskOperationSnapshotStoreError> {
+        Ok(self.latest.clone())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileTaskOperationSnapshotStore {
+    path: PathBuf,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskOperationRecoveryResult {
+    pub latest: Option<TaskOperationSnapshot>,
+    pub repaired: bool,
+}
+
+impl FileTaskOperationSnapshotStore {
+    pub fn new(path: PathBuf) -> Result<Self, TaskOperationSnapshotStoreError> {
+        if path.as_os_str().is_empty() {
+            return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+                "snapshot file path cannot be empty".to_owned(),
+            ));
+        }
+        Ok(Self { path })
+    }
+
+    pub fn recover_latest_and_repair(
+        &mut self,
+    ) -> Result<TaskOperationRecoveryResult, TaskOperationSnapshotStoreError> {
+        if !self.path.exists() {
+            return Ok(TaskOperationRecoveryResult {
+                latest: None,
+                repaired: false,
+            });
+        }
+
+        match self.read_latest() {
+            Ok(snapshot) => Ok(TaskOperationRecoveryResult {
+                latest: snapshot,
+                repaired: false,
+            }),
+            Err(TaskOperationSnapshotStoreError::InvalidPayload(_))
+            | Err(TaskOperationSnapshotStoreError::Snapshot(_)) => {
+                fs::write(&self.path, "")
+                    .map_err(|error| TaskOperationSnapshotStoreError::Io(error.to_string()))?;
+                Ok(TaskOperationRecoveryResult {
+                    latest: None,
+                    repaired: true,
+                })
+            }
+            Err(error) => Err(error),
+        }
+    }
+}
+
+impl TaskOperationSnapshotStore for FileTaskOperationSnapshotStore {
+    fn write(
+        &mut self,
+        snapshot: TaskOperationSnapshot,
+    ) -> Result<(), TaskOperationSnapshotStoreError> {
+        let mut verifier = TaskOperationEngine::new();
+        verifier
+            .restore_snapshot(snapshot.clone())
+            .map_err(TaskOperationSnapshotStoreError::Snapshot)?;
+        let payload = serialize_task_operation_snapshot(&snapshot)?;
+        let mut file = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(&self.path)
+            .map_err(|error| TaskOperationSnapshotStoreError::Io(error.to_string()))?;
+        file.write_all(payload.as_bytes())
+            .map_err(|error| TaskOperationSnapshotStoreError::Io(error.to_string()))
+    }
+
+    fn read_latest(
+        &self,
+    ) -> Result<Option<TaskOperationSnapshot>, TaskOperationSnapshotStoreError> {
+        if !self.path.exists() {
+            return Ok(None);
+        }
+
+        let payload = fs::read_to_string(&self.path)
+            .map_err(|error| TaskOperationSnapshotStoreError::Io(error.to_string()))?;
+        if payload.trim().is_empty() {
+            return Ok(None);
+        }
+        let snapshot = parse_task_operation_snapshot_payload(&payload)?;
+        let mut verifier = TaskOperationEngine::new();
+        verifier
+            .restore_snapshot(snapshot.clone())
+            .map_err(TaskOperationSnapshotStoreError::Snapshot)?;
+        Ok(Some(snapshot))
+    }
+}
+
 fn validate_did(value: &str) -> Result<(), TaskOperationError> {
     AgentDid::parse(value).map_err(|error| TaskOperationError::InvalidDid(error.to_string()))?;
     Ok(())
@@ -684,10 +830,269 @@ fn requires_completed_dependencies(state: TaskState) -> bool {
     )
 }
 
+fn task_state_code(state: TaskState) -> &'static str {
+    match state {
+        TaskState::Submitted => "0",
+        TaskState::Accepted => "1",
+        TaskState::Delegated => "2",
+        TaskState::InProgress => "3",
+        TaskState::InputRequired => "4",
+        TaskState::Blocked => "5",
+        TaskState::Completed => "6",
+        TaskState::Failed => "7",
+        TaskState::Cancelled => "8",
+    }
+}
+
+fn parse_task_state_code(raw: &str) -> Option<TaskState> {
+    match raw {
+        "0" => Some(TaskState::Submitted),
+        "1" => Some(TaskState::Accepted),
+        "2" => Some(TaskState::Delegated),
+        "3" => Some(TaskState::InProgress),
+        "4" => Some(TaskState::InputRequired),
+        "5" => Some(TaskState::Blocked),
+        "6" => Some(TaskState::Completed),
+        "7" => Some(TaskState::Failed),
+        "8" => Some(TaskState::Cancelled),
+        _ => None,
+    }
+}
+
+fn task_notice_code(notice: TaskOperationNoticeKind) -> &'static str {
+    match notice {
+        TaskOperationNoticeKind::Submitted => "0",
+        TaskOperationNoticeKind::Accepted => "1",
+        TaskOperationNoticeKind::Delegated => "2",
+        TaskOperationNoticeKind::Started => "3",
+        TaskOperationNoticeKind::InputRequired => "4",
+        TaskOperationNoticeKind::Blocked => "5",
+        TaskOperationNoticeKind::Completed => "6",
+        TaskOperationNoticeKind::Failed => "7",
+        TaskOperationNoticeKind::Cancelled => "8",
+    }
+}
+
+fn parse_task_notice_code(raw: &str) -> Option<TaskOperationNoticeKind> {
+    match raw {
+        "0" => Some(TaskOperationNoticeKind::Submitted),
+        "1" => Some(TaskOperationNoticeKind::Accepted),
+        "2" => Some(TaskOperationNoticeKind::Delegated),
+        "3" => Some(TaskOperationNoticeKind::Started),
+        "4" => Some(TaskOperationNoticeKind::InputRequired),
+        "5" => Some(TaskOperationNoticeKind::Blocked),
+        "6" => Some(TaskOperationNoticeKind::Completed),
+        "7" => Some(TaskOperationNoticeKind::Failed),
+        "8" => Some(TaskOperationNoticeKind::Cancelled),
+        _ => None,
+    }
+}
+
+fn ensure_snapshot_token(
+    value: &str,
+    field: &str,
+    allow_comma: bool,
+) -> Result<(), TaskOperationSnapshotStoreError> {
+    let has_comma = !allow_comma && value.contains(',');
+    if value.contains('|') || value.contains('\n') || value.contains('\r') || has_comma {
+        return Err(TaskOperationSnapshotStoreError::InvalidPayload(format!(
+            "{field} contains unsupported delimiter characters"
+        )));
+    }
+    Ok(())
+}
+
+fn serialize_task_operation_snapshot(
+    snapshot: &TaskOperationSnapshot,
+) -> Result<String, TaskOperationSnapshotStoreError> {
+    let mut payload = format!("schema|{}\n", snapshot.schema_version);
+    for task in &snapshot.tasks {
+        ensure_snapshot_token(&task.task_id, "task_id", false)?;
+        ensure_snapshot_token(&task.requester, "requester", false)?;
+        if let Some(assignee) = &task.assignee {
+            ensure_snapshot_token(assignee, "assignee", false)?;
+        }
+        ensure_snapshot_token(&task.description, "description", true)?;
+        for dependency in &task.dependencies {
+            ensure_snapshot_token(dependency, "dependency", false)?;
+        }
+
+        let assignee = task.assignee.clone().unwrap_or_default();
+        let history = task
+            .lifecycle_history
+            .iter()
+            .map(|state| task_state_code(*state))
+            .collect::<Vec<_>>()
+            .join(",");
+        let dependencies = task.dependencies.join(",");
+        let notices = task
+            .notices
+            .iter()
+            .map(|notice| task_notice_code(*notice))
+            .collect::<Vec<_>>()
+            .join(",");
+        payload.push_str(&format!(
+            "task|{}|{}|{}|{}|{}|{}|{}\n",
+            task.task_id,
+            task.requester,
+            assignee,
+            task.description,
+            history,
+            dependencies,
+            notices
+        ));
+    }
+    Ok(payload)
+}
+
+fn parse_task_operation_snapshot_payload(
+    payload: &str,
+) -> Result<TaskOperationSnapshot, TaskOperationSnapshotStoreError> {
+    let mut lines = payload.lines().filter(|line| !line.trim().is_empty());
+    let Some(schema_line) = lines.next() else {
+        return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+            "missing schema line".to_owned(),
+        ));
+    };
+
+    let mut schema_parts = schema_line.split('|');
+    let Some(schema_prefix) = schema_parts.next() else {
+        return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+            schema_line.to_owned(),
+        ));
+    };
+    let Some(schema_version_raw) = schema_parts.next() else {
+        return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+            schema_line.to_owned(),
+        ));
+    };
+    if schema_prefix != "schema" || schema_parts.next().is_some() {
+        return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+            schema_line.to_owned(),
+        ));
+    }
+    let schema_version = schema_version_raw
+        .parse::<u16>()
+        .map_err(|_| TaskOperationSnapshotStoreError::InvalidPayload(schema_line.to_owned()))?;
+
+    let mut tasks = Vec::new();
+    for line in lines {
+        let mut parts = line.split('|');
+        let Some(prefix) = parts.next() else {
+            return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+                line.to_owned(),
+            ));
+        };
+        if prefix != "task" {
+            return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+                line.to_owned(),
+            ));
+        }
+        let Some(task_id) = parts.next() else {
+            return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+                line.to_owned(),
+            ));
+        };
+        let Some(requester) = parts.next() else {
+            return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+                line.to_owned(),
+            ));
+        };
+        let Some(assignee_raw) = parts.next() else {
+            return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+                line.to_owned(),
+            ));
+        };
+        let Some(description) = parts.next() else {
+            return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+                line.to_owned(),
+            ));
+        };
+        let Some(history_raw) = parts.next() else {
+            return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+                line.to_owned(),
+            ));
+        };
+        let Some(dependencies_raw) = parts.next() else {
+            return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+                line.to_owned(),
+            ));
+        };
+        let Some(notices_raw) = parts.next() else {
+            return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+                line.to_owned(),
+            ));
+        };
+        if parts.next().is_some() {
+            return Err(TaskOperationSnapshotStoreError::InvalidPayload(
+                line.to_owned(),
+            ));
+        }
+
+        let lifecycle_history = if history_raw.is_empty() {
+            Vec::new()
+        } else {
+            history_raw
+                .split(',')
+                .map(|raw| {
+                    parse_task_state_code(raw).ok_or_else(|| {
+                        TaskOperationSnapshotStoreError::InvalidPayload(line.to_owned())
+                    })
+                })
+                .collect::<Result<Vec<_>, _>>()?
+        };
+        let dependencies = if dependencies_raw.is_empty() {
+            Vec::new()
+        } else {
+            dependencies_raw
+                .split(',')
+                .map(|value| value.to_owned())
+                .collect::<Vec<_>>()
+        };
+        let notices = if notices_raw.is_empty() {
+            Vec::new()
+        } else {
+            notices_raw
+                .split(',')
+                .map(|raw| {
+                    parse_task_notice_code(raw).ok_or_else(|| {
+                        TaskOperationSnapshotStoreError::InvalidPayload(line.to_owned())
+                    })
+                })
+                .collect::<Result<Vec<_>, _>>()?
+        };
+
+        tasks.push(TaskOperationRecordSnapshot {
+            task_id: task_id.to_owned(),
+            requester: requester.to_owned(),
+            assignee: if assignee_raw.is_empty() {
+                None
+            } else {
+                Some(assignee_raw.to_owned())
+            },
+            description: description.to_owned(),
+            lifecycle_history,
+            dependencies,
+            notices,
+        });
+    }
+
+    Ok(TaskOperationSnapshot {
+        schema_version,
+        tasks,
+    })
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{SwarmTaskDraft, TaskOperationEngine, TaskOperationError};
+    use super::{
+        FileTaskOperationSnapshotStore, SwarmTaskDraft, TaskOperationEngine, TaskOperationError,
+        TaskOperationSnapshotStore, TaskOperationSnapshotStoreError,
+    };
     use crate::TaskState;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn submit_rejects_duplicate_task_id() {
@@ -771,5 +1176,132 @@ mod tests {
                 dependency_id: "dep-root".to_owned(),
             })
         );
+    }
+
+    #[test]
+    fn integration_file_task_operation_snapshot_store_roundtrips_snapshot() {
+        let path = temp_task_operation_snapshot_path("roundtrip");
+        let _ = fs::remove_file(&path);
+
+        let mut engine = TaskOperationEngine::new();
+        engine
+            .submit(
+                "task-store-1",
+                "kamn:did:agent:requester-1",
+                "Store snapshot flow",
+            )
+            .expect("submit should pass");
+        engine
+            .accept("task-store-1", "kamn:did:agent:worker-1")
+            .expect("accept should pass");
+
+        let snapshot = engine.export_snapshot();
+        let mut file_store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
+        file_store
+            .write(snapshot.clone())
+            .expect("write should pass");
+        assert_eq!(
+            file_store.read_latest().expect("read should pass"),
+            Some(snapshot)
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn regression_file_task_operation_snapshot_store_rejects_malformed_payload() {
+        // Regression: #617
+        let path = temp_task_operation_snapshot_path("malformed");
+        let _ = fs::remove_file(&path);
+        assert!(fs::write(&path, "schema|1\ntask|broken\n").is_ok());
+
+        let file_store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
+        assert_eq!(
+            file_store.read_latest(),
+            Err(TaskOperationSnapshotStoreError::InvalidPayload(
+                "task|broken".to_owned()
+            ))
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn functional_file_task_operation_snapshot_store_recovery_repairs_corrupt_payload() {
+        let path = temp_task_operation_snapshot_path("recover");
+        let _ = fs::remove_file(&path);
+        assert!(fs::write(&path, "schema|1\ntask|broken\n").is_ok());
+
+        let mut file_store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
+        let recovery = file_store
+            .recover_latest_and_repair()
+            .expect("recovery should pass");
+        assert!(recovery.latest.is_none());
+        assert!(recovery.repaired);
+        assert_eq!(
+            fs::read_to_string(&path).expect("repaired file should be readable"),
+            ""
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn performance_file_task_operation_snapshot_store_roundtrip_stays_within_ci_budget() {
+        let path = temp_task_operation_snapshot_path("perf");
+        let _ = fs::remove_file(&path);
+        let mut engine = TaskOperationEngine::new();
+        for index in 0..256 {
+            engine
+                .submit(
+                    &format!("task-store-perf-{index}"),
+                    "kamn:did:agent:requester-1",
+                    "bounded snapshot benchmark",
+                )
+                .expect("submit should pass");
+        }
+        let snapshot = engine.export_snapshot();
+        let mut store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
+        let started = std::time::Instant::now();
+        store
+            .write(snapshot)
+            .expect("write should stay within perf budget");
+        let _ = store.read_latest().expect("read should pass");
+        let elapsed_millis = started.elapsed().as_millis();
+        assert!(
+            elapsed_millis < 250,
+            "task operation snapshot store roundtrip exceeded CI budget: {elapsed_millis}ms"
+        );
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    #[ignore = "scheduled task operation snapshot deep lane"]
+    fn performance_task_operation_snapshot_store_deep_lane_stress() {
+        let path = temp_task_operation_snapshot_path("deep");
+        let _ = fs::remove_file(&path);
+        let mut engine = TaskOperationEngine::new();
+        for index in 0..6000 {
+            engine
+                .submit(
+                    &format!("task-store-deep-{index}"),
+                    "kamn:did:agent:requester-1",
+                    "scheduled deep lane benchmark",
+                )
+                .expect("submit should pass");
+        }
+        let snapshot = engine.export_snapshot();
+        let mut store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
+        store.write(snapshot).expect("write should pass");
+        let _ = store.read_latest().expect("read should pass");
+        let _ = fs::remove_file(path);
+    }
+
+    fn temp_task_operation_snapshot_path(tag: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be monotonic")
+            .as_nanos();
+        std::env::temp_dir().join(format!("kamn-task-operation-snapshot-{tag}-{nonce}.log"))
     }
 }

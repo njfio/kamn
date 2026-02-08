@@ -1,8 +1,7 @@
-# Task Operations Command Surface (Issue #128 / #472 / #573)
+# Task Operations Command Surface and Snapshot Durability (Issue #128 / #472 / #573 / #617)
 
-This document defines the first implementation slice for task operation command
-handling across `submit`, `accept`, `delegate`, `block`, `complete`, `fail`,
-`request_input`, and `cancel`.
+This document defines task operation command handling and durable snapshot
+persistence/recovery contracts for the task operation registry.
 
 ## Core Types
 - `TaskOperationEngine`: deterministic in-memory task operations handler.
@@ -27,6 +26,12 @@ handling across `submit`, `accept`, `delegate`, `block`, `complete`, `fail`,
   - `requester`
   - `description`
   - `dependencies`
+- Snapshot contracts:
+  - `TaskOperationRecordSnapshot`
+  - `TaskOperationSnapshot`
+  - `TaskOperationSnapshotStore`
+  - `InMemoryTaskOperationSnapshotStore`
+  - `FileTaskOperationSnapshotStore`
 
 ## Command Behavior
 - `submit(task_id, requester, description)`:
@@ -76,6 +81,10 @@ handling across `submit`, `accept`, `delegate`, `block`, `complete`, `fail`,
 - `restore_snapshot(snapshot)`:
   - validates schema version, lifecycle history, dependency references, and cycle safety before mutating engine state.
   - rejects tampered restore payloads where dependency-complete invariants are violated (`Regression: #502`).
+- Snapshot store APIs:
+  - `TaskOperationSnapshotStore::write(snapshot)`
+  - `TaskOperationSnapshotStore::read_latest()`
+  - `FileTaskOperationSnapshotStore::recover_latest_and_repair()`
 
 ## Validation and Safety Rules
 - Task IDs must be unique.
@@ -91,25 +100,48 @@ handling across `submit`, `accept`, `delegate`, `block`, `complete`, `fail`,
   - schema version mismatch is rejected.
   - lifecycle history shape must be replayable from `Submitted`.
   - dependency references must resolve and remain acyclic.
-  - tasks restored in execution states (`InProgress`/`Blocked`/`Completed`/`Failed`) require dependencies already `Completed` (`Regression: #502`).
+  - tasks restored in execution states (`InProgress`/`InputRequired`/`Blocked`/`Completed`/`Failed`) require dependencies already `Completed` (`Regression: #502`).
+
+## Snapshot Persistence and Restore Contract Rules
+- Snapshot schema is versioned by `TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION`.
+- File-backed snapshot payload lines are deterministic:
+  - `schema|<version>`
+  - `task|<task_id>|<requester>|<assignee>|<description>|<history_codes>|<dependency_csv>|<notice_codes>`
+- Serialization rejects unsupported delimiters in scalar fields (`|`, newline, carriage return).
+- Restore guards are validated via `TaskOperationEngine::restore_snapshot(...)` before file writes are committed.
+- Corrupt payload recovery truncates invalid data and returns `latest=None` with `repaired=true`.
+- Regression contract:
+  - duplicate task IDs on restore are rejected (`Regression: #617`)
+  - malformed snapshot payloads are rejected (`Regression: #617`)
+  - dependency-completion tampering remains rejected during restore (`Regression: #502`)
 
 ## Bounded Graph Benchmark
 - A bounded graph benchmark keeps CI cost low while validating DAG guard performance characteristics.
 - The benchmark covers a 128-task linear DAG registration path and enforces a generous local CI budget.
 - A snapshot roundtrip benchmark validates export+restore overhead for a bounded 128-task DAG without requiring expensive integration infrastructure.
+- A bounded snapshot-store roundtrip benchmark validates write/read overhead in PR lanes.
 
-## Local Validation
-Run from repository root:
+## Fast and Cost-Effective Validation
+Run targeted checks from repository root:
+
+```bash
+cargo test -p kamn-core --lib task_operations::tests::
+cargo test -p kamn-core --test task_operations
+cargo test -p kamn-core --test task_operation_snapshot
+cargo test -p kamn-core --test task_operations_docs
+bash scripts/task/run_task_operation_snapshot_contract_lane.sh
+```
+
+Scheduled deep-lane command:
+
+```bash
+cargo test -p kamn-core --lib task_operations::tests::performance_task_operation_snapshot_store_deep_lane_stress -- --ignored
+bash scripts/task/run_task_operation_snapshot_deep_lane.sh
+```
+
+Then run strict gates:
 
 ```bash
 cargo fmt --check
-cargo clippy -- -D warnings
-cargo test -p kamn-core --test task_operations
-cargo test -p kamn-core --test swarm_task_dag
-cargo test -p kamn-core --test task_operation_snapshot
-cargo test -p kamn-core
+cargo clippy -p kamn-core -- -D warnings
 ```
-
-## Notes
-This slice wires operation commands directly to the deterministic task lifecycle
-validator to keep CI fast and behavior auditable.
