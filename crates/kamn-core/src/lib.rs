@@ -274,7 +274,11 @@ pub use watchdog::{
 pub use zk_message_proofs::{
     build_message_witness, evaluate_zk_option, phase4_baseline_options, recommend_phase4_plan,
     ProcessorProofAdmissionDecision, ProcessorProofAdmissionEvaluator,
-    ProcessorProofAdmissionInput, ProcessorProofArtifact, ZkArchitectureOption, ZkDesignError,
-    ZkEvaluationPolicy, ZkMessageWitness, ZkOptionAssessment, ZkPhaseMilestone, ZkPhasePlan,
-    ZkProofSystem, ZkRisk, ZkRiskSeverity, ZkVerificationTopology,
+    ProcessorProofAdmissionInput, ProcessorProofArtifact, ProofWatchdogProjection,
+    ProofWatchdogProjectionKind, ProofWatchdogProjector, ProofWatchdogSeverity,
+    ValidatorProofAttestation, ValidatorProofConsensusDecision, ValidatorProofConsensusError,
+    ValidatorProofConsensusEvaluator, ValidatorProofConsensusInput, ValidatorProofConsensusStatus,
+    ValidatorProofVerdict, ZkArchitectureOption, ZkDesignError, ZkEvaluationPolicy,
+    ZkMessageWitness, ZkOptionAssessment, ZkPhaseMilestone, ZkPhasePlan, ZkProofSystem, ZkRisk,
+    ZkRiskSeverity, ZkVerificationTopology,
 };

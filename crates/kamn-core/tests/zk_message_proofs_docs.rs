@@ -41,3 +41,16 @@ fn regression_requires_tampered_processor_proof_rejection_rule() {
     assert!(DOC.contains("## Processor Admission Guard Contract"));
     assert!(DOC.contains("tampered processor proof artifacts are rejected"));
 }
+
+#[test]
+fn regression_requires_validator_watchdog_mismatch_projection_rule() {
+    // Regression: #509
+    assert!(DOC.contains("## Validator Quorum and Watchdog Projection Contract"));
+    assert!(DOC.contains("ValidatorProofConsensusDecision"));
+    assert!(DOC.contains("validator DID output is lexicographically ordered"));
+    assert!(DOC.contains("ConsensusValid"));
+    assert!(DOC.contains("validator-mismatch"));
+    assert!(DOC.contains(
+        "invalid-proof mismatch propagation must project as a critical validator mismatch signal"
+    ));
+}

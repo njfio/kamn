@@ -2,7 +2,10 @@ use kamn_core::{
     build_message_witness, phase4_baseline_options, recommend_phase4_plan, AttachmentRef,
     CanonicalMessageEnvelope, EnvelopeEncryption, EnvelopeHeader, EnvelopeMetadata, EnvelopeProof,
     MessageEnvelopeError, ProcessorProofAdmissionEvaluator, ProcessorProofAdmissionInput,
-    ProcessorProofArtifact, ZkArchitectureOption, ZkDesignError, ZkEvaluationPolicy, ZkProofSystem,
+    ProcessorProofArtifact, ProofWatchdogProjectionKind, ProofWatchdogProjector,
+    ProofWatchdogSeverity, ValidatorProofAttestation, ValidatorProofConsensusError,
+    ValidatorProofConsensusEvaluator, ValidatorProofConsensusInput, ValidatorProofConsensusStatus,
+    ValidatorProofVerdict, ZkArchitectureOption, ZkDesignError, ZkEvaluationPolicy, ZkProofSystem,
     ZkVerificationTopology,
 };
 use std::collections::BTreeMap;
@@ -255,5 +258,167 @@ fn zk_message_proofs_integration_rejects_replayed_processor_artifact() {
     assert_eq!(
         evaluator.evaluate(replay_input),
         Err(ZkDesignError::ProofArtifactReplay("artifact-3".to_owned()))
+    );
+}
+
+#[test]
+fn zk_message_proofs_functional_validator_quorum_consensus_aligned_valid_is_nominal() {
+    let envelope = valid_envelope();
+    let mut evaluator =
+        ValidatorProofConsensusEvaluator::new(2).expect("consensus evaluator should build");
+
+    let input = ValidatorProofConsensusInput::new(
+        &envelope.envelope.id,
+        "artifact-quorum-valid",
+        vec![
+            ValidatorProofAttestation::new(
+                "attestation-valid-1",
+                "kamn:did:agent:validator-z",
+                &envelope.envelope.id,
+                "artifact-quorum-valid",
+                ValidatorProofVerdict::Valid,
+            )
+            .expect("first attestation should parse"),
+            ValidatorProofAttestation::new(
+                "attestation-valid-2",
+                "kamn:did:agent:validator-a",
+                &envelope.envelope.id,
+                "artifact-quorum-valid",
+                ValidatorProofVerdict::Valid,
+            )
+            .expect("second attestation should parse"),
+        ],
+    )
+    .expect("consensus input should parse");
+
+    let decision = evaluator
+        .evaluate(input)
+        .expect("aligned consensus should evaluate");
+    let projection = ProofWatchdogProjector::new().project(&decision);
+
+    assert_eq!(
+        decision.status,
+        ValidatorProofConsensusStatus::ConsensusValid
+    );
+    assert_eq!(
+        decision.validator_dids,
+        vec![
+            "kamn:did:agent:validator-a".to_owned(),
+            "kamn:did:agent:validator-z".to_owned()
+        ],
+        "validator did ordering should be deterministic"
+    );
+    assert_eq!(
+        projection.kind,
+        ProofWatchdogProjectionKind::ConsensusAligned
+    );
+    assert_eq!(projection.severity, ProofWatchdogSeverity::Info);
+}
+
+#[test]
+fn zk_message_proofs_integration_rejects_replayed_validator_attestation_id() {
+    let envelope = valid_envelope();
+    let mut evaluator =
+        ValidatorProofConsensusEvaluator::new(1).expect("consensus evaluator should build");
+
+    let first = ValidatorProofConsensusInput::new(
+        &envelope.envelope.id,
+        "artifact-quorum-replay",
+        vec![ValidatorProofAttestation::new(
+            "attestation-replay-1",
+            "kamn:did:agent:validator-a",
+            &envelope.envelope.id,
+            "artifact-quorum-replay",
+            ValidatorProofVerdict::Valid,
+        )
+        .expect("first attestation should parse")],
+    )
+    .expect("first input should parse");
+    assert!(evaluator.evaluate(first).is_ok());
+
+    let replayed = ValidatorProofConsensusInput::new(
+        &envelope.envelope.id,
+        "artifact-quorum-replay",
+        vec![ValidatorProofAttestation::new(
+            "attestation-replay-1",
+            "kamn:did:agent:validator-b",
+            &envelope.envelope.id,
+            "artifact-quorum-replay",
+            ValidatorProofVerdict::Replay,
+        )
+        .expect("second attestation should parse")],
+    )
+    .expect("second input should parse");
+
+    assert_eq!(
+        evaluator.evaluate(replayed),
+        Err(ValidatorProofConsensusError::AttestationReplay(
+            "attestation-replay-1".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn zk_message_proofs_regression_projects_validator_invalid_mismatch_to_watchdog_signal() {
+    // Regression: #509
+    let envelope = valid_envelope();
+    let witness = build_message_witness(&envelope, &["task.description"])
+        .expect("witness generation should succeed");
+    let mut evaluator =
+        ValidatorProofConsensusEvaluator::new(2).expect("consensus evaluator should build");
+
+    let input = ValidatorProofConsensusInput::new(
+        &envelope.envelope.id,
+        "artifact-quorum-1",
+        vec![
+            ValidatorProofAttestation::new(
+                "attestation-1",
+                "kamn:did:agent:validator-a",
+                &envelope.envelope.id,
+                "artifact-quorum-1",
+                ValidatorProofVerdict::Valid,
+            )
+            .expect("first attestation should parse"),
+            ValidatorProofAttestation::new(
+                "attestation-2",
+                "kamn:did:agent:validator-b",
+                &envelope.envelope.id,
+                "artifact-quorum-1",
+                ValidatorProofVerdict::Invalid,
+            )
+            .expect("second attestation should parse"),
+        ],
+    )
+    .expect("consensus input should parse");
+
+    let decision = evaluator
+        .evaluate(input)
+        .expect("mismatch consensus decision should evaluate");
+    let projection = ProofWatchdogProjector::new().project(&decision);
+
+    assert_eq!(
+        decision.message_id, envelope.envelope.id,
+        "consensus should preserve message id"
+    );
+    assert_eq!(
+        projection.kind,
+        ProofWatchdogProjectionKind::ValidatorMismatch
+    );
+    assert_eq!(projection.severity, ProofWatchdogSeverity::Critical);
+    assert_eq!(projection.valid_attestation_count, 1);
+    assert_eq!(projection.invalid_attestation_count, 1);
+    assert_eq!(projection.replay_attestation_count, 0);
+    assert_eq!(
+        projection.artifact_id,
+        "artifact-quorum-1".to_owned(),
+        "projection should preserve artifact id"
+    );
+    assert_eq!(
+        projection.required_quorum, 2,
+        "projection should preserve required quorum"
+    );
+    assert_ne!(
+        witness.public_commitment, "fnv1a64:tampered",
+        "regression setup must use valid witness commitment baseline"
     );
 }
