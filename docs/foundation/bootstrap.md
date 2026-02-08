@@ -66,3 +66,4 @@ For bridge inbound/outbound adapter abstraction controls, see `docs/foundation/b
 For CI cache strategy and bounded parallelism controls, see `docs/foundation/ci-caching-parallelism.md`.
 For flaky-test quarantine and bounded retry controls, see `docs/foundation/ci-flaky-quarantine.md`.
 For redaction and tombstone compliance workflow controls, see `docs/foundation/redaction-tombstones.md`.
+For compliance audit export interface controls, see `docs/foundation/audit-export-interfaces.md`.

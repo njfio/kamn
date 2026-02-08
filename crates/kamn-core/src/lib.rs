@@ -1,4 +1,5 @@
 pub mod agent_key_hierarchy;
+pub mod audit_exports;
 pub mod bootstrap;
 pub mod bridge_adapter;
 pub mod channel_models;
@@ -28,6 +29,10 @@ pub mod transaction;
 
 pub use agent_key_hierarchy::{
     AgentKeyHierarchy, AgentKeyHierarchyError, EphemeralSessionKey, KeyRole,
+};
+pub use audit_exports::{
+    AuditDomain, AuditEventRecord, AuditExportBundle, AuditExportEngine, AuditExportError,
+    AuditExportFilter, AuditExportFormat, AuditExportManifest, AuditExportRequest,
 };
 pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};
 pub use bridge_adapter::{
