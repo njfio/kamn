@@ -56,7 +56,7 @@ For DID register/resolve/update/revoke transaction behavior, see `docs/foundatio
 For canonical message envelope schema and validation controls, see `docs/foundation/message-envelope-schema.md`.
 For message lifecycle state machine and index query controls, see `docs/foundation/message-lifecycle.md`.
 For nonce/TTL/replay enforcement and failed-delivery notice controls, see `docs/foundation/message-delivery-guards.md`.
-For direct/group channel models with membership/admin operations, see `docs/foundation/channel-models.md`.
+For direct/group plus specialized broadcast/task/marketplace/governance channel models, see `docs/foundation/channel-models.md`.
 For channel permission and retention policy controls, see `docs/foundation/channel-permissions-retention.md`.
 For agent key hierarchy role bindings and ephemeral session key controls, see `docs/foundation/agent-key-hierarchy.md`.
 For direct-message encryption path controls, see `docs/foundation/direct-message-encryption.md`.

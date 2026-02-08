@@ -6,11 +6,26 @@ use std::fmt;
 pub enum ChannelType {
     Direct,
     Group,
+    Broadcast,
+    Task,
+    Marketplace,
+    Governance,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChannelMetadata {
+    Direct,
+    Group,
+    Broadcast { topic: String },
+    Task { task_id: String },
+    Marketplace { market_scope: String },
+    Governance { proposal_scope: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ChannelRecord {
     channel_type: ChannelType,
+    metadata: ChannelMetadata,
     members: BTreeSet<String>,
     admins: BTreeSet<String>,
 }
@@ -42,7 +57,13 @@ impl ChannelStore {
 
         let members = BTreeSet::from([participant_a.to_owned(), participant_b.to_owned()]);
         let admins = members.clone();
-        self.insert_channel(channel_id, ChannelType::Direct, members, admins);
+        self.insert_channel(
+            channel_id,
+            ChannelType::Direct,
+            ChannelMetadata::Direct,
+            members,
+            admins,
+        );
         Ok(())
     }
 
@@ -87,7 +108,119 @@ impl ChannelStore {
             });
         }
 
-        self.insert_channel(channel_id, ChannelType::Group, member_set, admin_set);
+        self.insert_channel(
+            channel_id,
+            ChannelType::Group,
+            ChannelMetadata::Group,
+            member_set,
+            admin_set,
+        );
+        Ok(())
+    }
+
+    pub fn create_broadcast(
+        &mut self,
+        channel_id: &str,
+        creator: &str,
+        topic: &str,
+        members: Vec<String>,
+        admins: Vec<String>,
+    ) -> Result<(), ChannelModelError> {
+        self.create_specialized_channel(
+            channel_id,
+            creator,
+            ChannelType::Broadcast,
+            ChannelMetadata::Broadcast {
+                topic: topic.to_owned(),
+            },
+            members,
+            admins,
+        )
+    }
+
+    pub fn create_task_channel(
+        &mut self,
+        channel_id: &str,
+        creator: &str,
+        task_id: &str,
+        members: Vec<String>,
+        admins: Vec<String>,
+    ) -> Result<(), ChannelModelError> {
+        self.create_specialized_channel(
+            channel_id,
+            creator,
+            ChannelType::Task,
+            ChannelMetadata::Task {
+                task_id: task_id.to_owned(),
+            },
+            members,
+            admins,
+        )
+    }
+
+    pub fn create_marketplace_channel(
+        &mut self,
+        channel_id: &str,
+        creator: &str,
+        market_scope: &str,
+        members: Vec<String>,
+        admins: Vec<String>,
+    ) -> Result<(), ChannelModelError> {
+        self.create_specialized_channel(
+            channel_id,
+            creator,
+            ChannelType::Marketplace,
+            ChannelMetadata::Marketplace {
+                market_scope: market_scope.to_owned(),
+            },
+            members,
+            admins,
+        )
+    }
+
+    pub fn create_governance_channel(
+        &mut self,
+        channel_id: &str,
+        creator: &str,
+        proposal_scope: &str,
+        members: Vec<String>,
+        admins: Vec<String>,
+    ) -> Result<(), ChannelModelError> {
+        self.create_specialized_channel(
+            channel_id,
+            creator,
+            ChannelType::Governance,
+            ChannelMetadata::Governance {
+                proposal_scope: proposal_scope.to_owned(),
+            },
+            members,
+            admins,
+        )
+    }
+
+    fn create_specialized_channel(
+        &mut self,
+        channel_id: &str,
+        creator: &str,
+        channel_type: ChannelType,
+        metadata: ChannelMetadata,
+        members: Vec<String>,
+        admins: Vec<String>,
+    ) -> Result<(), ChannelModelError> {
+        validate_metadata(&metadata)?;
+        self.create_group(channel_id, creator, members, admins)?;
+        let member_count = self
+            .channels
+            .get(channel_id)
+            .map(|record| record.members.len())
+            .ok_or_else(|| ChannelModelError::NotFound(channel_id.to_owned()))?;
+        enforce_specialized_member_requirements(channel_type, member_count)?;
+        let record = self
+            .channels
+            .get_mut(channel_id)
+            .ok_or_else(|| ChannelModelError::NotFound(channel_id.to_owned()))?;
+        record.channel_type = channel_type;
+        record.metadata = metadata;
         Ok(())
     }
 
@@ -127,6 +260,14 @@ impl ChannelStore {
             .get(channel_id)
             .ok_or_else(|| ChannelModelError::NotFound(channel_id.to_owned()))?;
         Ok(record.members.contains(member))
+    }
+
+    pub fn metadata(&self, channel_id: &str) -> Result<ChannelMetadata, ChannelModelError> {
+        let record = self
+            .channels
+            .get(channel_id)
+            .ok_or_else(|| ChannelModelError::NotFound(channel_id.to_owned()))?;
+        Ok(record.metadata.clone())
     }
 
     pub fn invite_member(
@@ -276,6 +417,7 @@ impl ChannelStore {
         &mut self,
         channel_id: &str,
         channel_type: ChannelType,
+        metadata: ChannelMetadata,
         members: BTreeSet<String>,
         admins: BTreeSet<String>,
     ) {
@@ -283,6 +425,7 @@ impl ChannelStore {
             channel_id.to_owned(),
             ChannelRecord {
                 channel_type,
+                metadata,
                 members: members.clone(),
                 admins,
             },
@@ -304,6 +447,12 @@ pub enum ChannelModelError {
     InvalidDirectParticipants,
     EmptyMembers,
     EmptyAdmins,
+    InvalidMetadata(String),
+    InsufficientMembers {
+        channel_type: ChannelType,
+        minimum: usize,
+        actual: usize,
+    },
     CreatorNotMember(String),
     AdminNotMember(String),
     UnauthorizedActor {
@@ -332,6 +481,15 @@ impl fmt::Display for ChannelModelError {
             }
             Self::EmptyMembers => write!(f, "group channel members must not be empty"),
             Self::EmptyAdmins => write!(f, "group channel admins must not be empty"),
+            Self::InvalidMetadata(value) => write!(f, "invalid channel metadata: {value}"),
+            Self::InsufficientMembers {
+                channel_type,
+                minimum,
+                actual,
+            } => write!(
+                f,
+                "channel type {channel_type:?} requires at least {minimum} members, found {actual}"
+            ),
             Self::CreatorNotMember(value) => write!(f, "creator must be a member: {value}"),
             Self::AdminNotMember(value) => write!(f, "admin must be a member: {value}"),
             Self::UnauthorizedActor { actor, required } => {
@@ -367,9 +525,50 @@ fn validate_did(value: &str) -> Result<(), ChannelModelError> {
     Ok(())
 }
 
+fn validate_metadata(metadata: &ChannelMetadata) -> Result<(), ChannelModelError> {
+    let invalid = match metadata {
+        ChannelMetadata::Broadcast { topic } if topic.trim().is_empty() => Some("topic"),
+        ChannelMetadata::Task { task_id } if task_id.trim().is_empty() => Some("task_id"),
+        ChannelMetadata::Marketplace { market_scope } if market_scope.trim().is_empty() => {
+            Some("market_scope")
+        }
+        ChannelMetadata::Governance { proposal_scope } if proposal_scope.trim().is_empty() => {
+            Some("proposal_scope")
+        }
+        _ => None,
+    };
+
+    if let Some(field) = invalid {
+        return Err(ChannelModelError::InvalidMetadata(format!(
+            "{field} must not be empty"
+        )));
+    }
+    Ok(())
+}
+
+fn enforce_specialized_member_requirements(
+    channel_type: ChannelType,
+    actual: usize,
+) -> Result<(), ChannelModelError> {
+    let minimum = match channel_type {
+        ChannelType::Task | ChannelType::Marketplace => 2,
+        ChannelType::Governance => 3,
+        _ => 1,
+    };
+
+    if actual < minimum {
+        return Err(ChannelModelError::InsufficientMembers {
+            channel_type,
+            minimum,
+            actual,
+        });
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{ChannelModelError, ChannelStore};
+    use super::{ChannelMetadata, ChannelModelError, ChannelStore, ChannelType};
 
     #[test]
     fn group_creator_must_be_member() {
@@ -397,6 +596,64 @@ mod tests {
                 "kamn:did:agent:alice",
             ),
             Err(ChannelModelError::InvalidDirectParticipants)
+        );
+    }
+
+    #[test]
+    fn governance_channels_require_three_members() {
+        let mut store = ChannelStore::new();
+        assert_eq!(
+            store.create_governance_channel(
+                "channel:gov:1",
+                "kamn:did:agent:owner",
+                "core-protocol",
+                vec![
+                    "kamn:did:agent:owner".to_owned(),
+                    "kamn:did:agent:validator-1".to_owned(),
+                ],
+                vec!["kamn:did:agent:owner".to_owned()],
+            ),
+            Err(ChannelModelError::InsufficientMembers {
+                channel_type: ChannelType::Governance,
+                minimum: 3,
+                actual: 2,
+            })
+        );
+    }
+
+    #[test]
+    fn broadcast_metadata_requires_non_empty_topic() {
+        let mut store = ChannelStore::new();
+        assert_eq!(
+            store.create_broadcast(
+                "channel:broadcast:1",
+                "kamn:did:agent:owner",
+                "",
+                vec!["kamn:did:agent:owner".to_owned()],
+                vec!["kamn:did:agent:owner".to_owned()],
+            ),
+            Err(ChannelModelError::InvalidMetadata(
+                "topic must not be empty".to_owned()
+            ))
+        );
+
+        store
+            .create_broadcast(
+                "channel:broadcast:2",
+                "kamn:did:agent:owner",
+                "announcements",
+                vec!["kamn:did:agent:owner".to_owned()],
+                vec!["kamn:did:agent:owner".to_owned()],
+            )
+            .expect("broadcast should be created");
+
+        assert_eq!(
+            store
+                .metadata("channel:broadcast:2")
+                .expect("metadata should resolve"),
+            ChannelMetadata::Broadcast {
+                topic: "announcements".to_owned(),
+            }
         );
     }
 }
