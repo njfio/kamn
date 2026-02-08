@@ -22,9 +22,17 @@ fn doc_contains_fallback_semantics_and_transaction_integration() {
 }
 
 #[test]
+fn doc_contains_signer_emulator_contract_lane_policy() {
+    assert!(DOC.contains("## Signer Emulator Contract Lanes"));
+    assert!(DOC.contains("bash scripts/signer/run_signer_emulator_contract_lane.sh"));
+    assert!(DOC.contains("bash scripts/signer/run_signer_provider_deep_lane.sh"));
+}
+
+#[test]
 fn regression_requires_no_fallback_on_unsupported_secure_key_reference() {
     // Regression: #160
     assert!(DOC.contains("does not fallback on hard request errors"));
     assert!(DOC.contains("canonical signature-profile helper consumed by both paths"));
     assert!(DOC.contains("non-versioned signature profile is rejected (`Regression: #404`)"));
+    assert!(DOC.contains("Contract lane guards remain required for signer provider compatibility (`Regression: #619`)."));
 }

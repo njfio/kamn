@@ -39,6 +39,16 @@ if ! grep -Fq "bash scripts/frontend/test_dashboard_contract_lane.sh" "$FAST_WOR
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_signer_emulator_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected signer emulator contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/signer/run_signer_emulator_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected signer emulator contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 # Regression: #587
 if ! grep -Fq "if: steps.scope.outputs.run_bridge_replay_harness == 'true'" "$FAST_WORKFLOW"; then
   echo "expected bridge replay harness scope condition in ci-fast-gate.yml" >&2
