@@ -53,6 +53,30 @@ impl TelegramBridgeEngine {
         &self,
         request: &TelegramInboundRequest,
     ) -> Result<NormalizedInboundMessage, TelegramBridgeError> {
+        self.validate_inbound_request(request)?;
+
+        self.bridge
+            .process_inbound(&request.inbound)
+            .map_err(|error| TelegramBridgeError::Bridge(error.to_string()))
+    }
+
+    pub fn process_inbound_to_envelope(
+        &self,
+        request: &TelegramInboundRequest,
+        recipient_keys: Vec<String>,
+        expires: &str,
+        nonce: u64,
+    ) -> Result<CanonicalMessageEnvelope, TelegramBridgeError> {
+        self.validate_inbound_request(request)?;
+        self.bridge
+            .process_inbound_to_envelope(&request.inbound, recipient_keys, expires, nonce)
+            .map_err(|error| TelegramBridgeError::Bridge(error.to_string()))
+    }
+
+    fn validate_inbound_request(
+        &self,
+        request: &TelegramInboundRequest,
+    ) -> Result<(), TelegramBridgeError> {
         validate_did(&request.listener_did)?;
         if !self
             .config
@@ -78,23 +102,7 @@ impl TelegramBridgeEngine {
                 provided_target_did: request.inbound.target_agent_did.clone(),
             });
         }
-
-        self.bridge
-            .process_inbound(&request.inbound)
-            .map_err(|error| TelegramBridgeError::Bridge(error.to_string()))
-    }
-
-    pub fn process_inbound_to_envelope(
-        &self,
-        request: &TelegramInboundRequest,
-        recipient_keys: Vec<String>,
-        expires: &str,
-        nonce: u64,
-    ) -> Result<CanonicalMessageEnvelope, TelegramBridgeError> {
-        self.process_inbound(request)?;
-        self.bridge
-            .process_inbound_to_envelope(&request.inbound, recipient_keys, expires, nonce)
-            .map_err(|error| TelegramBridgeError::Bridge(error.to_string()))
+        Ok(())
     }
 }
 

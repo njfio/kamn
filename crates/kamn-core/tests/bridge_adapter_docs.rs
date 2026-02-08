@@ -20,3 +20,12 @@ fn regression_requires_duplicate_outbound_replay_rejection_rule() {
     assert!(DOC.contains("DuplicateOutboundRequestId"));
     assert!(DOC.contains("duplicate outbound request is rejected (`Regression: #433`)"));
 }
+
+#[test]
+fn regression_requires_single_pass_projection_rule() {
+    // Regression: #438
+    assert!(DOC.contains("single-pass inbound projection"));
+    assert!(DOC.contains(
+        "first inbound-to-envelope projection does not self-trigger duplicate replay rejection (`Regression: #438`)"
+    ));
+}
