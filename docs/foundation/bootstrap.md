@@ -57,3 +57,4 @@ For canonical message envelope schema and validation controls, see `docs/foundat
 For message lifecycle state machine and index query controls, see `docs/foundation/message-lifecycle.md`.
 For nonce/TTL/replay enforcement and failed-delivery notice controls, see `docs/foundation/message-delivery-guards.md`.
 For direct/group channel models with membership/admin operations, see `docs/foundation/channel-models.md`.
+For channel permission and retention policy controls, see `docs/foundation/channel-permissions-retention.md`.
