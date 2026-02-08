@@ -1,4 +1,7 @@
-use crate::AgentDid;
+use crate::{
+    AgentDid, ProcessorProofAdmissionEvaluator, ProcessorProofAdmissionInput,
+    ProcessorProofArtifact, ZkDesignError,
+};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -193,6 +196,32 @@ impl MessageLifecycleStore {
             .ok_or_else(|| MessageLifecycleError::NotFound(message_id.to_owned()))?;
         Ok((&record.sender, &record.recipients))
     }
+
+    pub fn validate_with_processor_proof(
+        &mut self,
+        message_id: &str,
+        expected_payload_commitment: &str,
+        artifact: ProcessorProofArtifact,
+        evaluator: &mut ProcessorProofAdmissionEvaluator,
+    ) -> Result<(), MessageProofAdmissionError> {
+        let status = self
+            .status(message_id)
+            .map_err(MessageProofAdmissionError::Lifecycle)?;
+        if status != MessageStatus::Delivered {
+            return Err(MessageProofAdmissionError::InvalidValidationState { found: status });
+        }
+
+        let input =
+            ProcessorProofAdmissionInput::new(message_id, expected_payload_commitment, artifact)
+                .map_err(MessageProofAdmissionError::Proof)?;
+        evaluator
+            .evaluate(input)
+            .map_err(MessageProofAdmissionError::Proof)?;
+
+        self.transition(message_id, MessageStatus::Validated)
+            .map_err(MessageProofAdmissionError::Lifecycle)?;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -240,6 +269,28 @@ impl fmt::Display for MessageLifecycleError {
 
 impl std::error::Error for MessageLifecycleError {}
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MessageProofAdmissionError {
+    Lifecycle(MessageLifecycleError),
+    InvalidValidationState { found: MessageStatus },
+    Proof(ZkDesignError),
+}
+
+impl fmt::Display for MessageProofAdmissionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Lifecycle(error) => write!(f, "{error}"),
+            Self::InvalidValidationState { found } => write!(
+                f,
+                "message must be in Delivered state before processor proof validation (found {found:?})"
+            ),
+            Self::Proof(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl std::error::Error for MessageProofAdmissionError {}
+
 fn is_valid_transition(from: MessageStatus, to: MessageStatus) -> bool {
     matches!(
         (from, to),
@@ -255,7 +306,10 @@ fn is_valid_transition(from: MessageStatus, to: MessageStatus) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{MessageLifecycleError, MessageLifecycleStore, MessageStatus};
+    use super::{
+        MessageLifecycleError, MessageLifecycleStore, MessageProofAdmissionError, MessageStatus,
+    };
+    use crate::{ProcessorProofAdmissionEvaluator, ProcessorProofArtifact, ZkDesignError};
 
     #[test]
     fn register_rejects_duplicate_id() {
@@ -304,6 +358,91 @@ mod tests {
         assert_eq!(
             store.ids_by_status(MessageStatus::Signed),
             vec!["urn:uuid:msg-2".to_owned()]
+        );
+    }
+
+    #[test]
+    fn validate_with_processor_proof_rejects_non_delivered_state() {
+        let mut store = MessageLifecycleStore::new();
+        store
+            .register(
+                "urn:uuid:msg-3",
+                "kamn:did:agent:sender-1",
+                vec!["kamn:did:agent:recipient-1".to_owned()],
+                "2026-02-07T20:15:30.123Z",
+                "2026-02-07T20:45:30.123Z",
+            )
+            .expect("register should succeed");
+
+        let mut evaluator = ProcessorProofAdmissionEvaluator::new();
+        let artifact = ProcessorProofArtifact::new(
+            "artifact-1",
+            "urn:uuid:msg-3",
+            "fnv1a64:abc",
+            "proof:ok:artifact-1",
+        )
+        .expect("artifact should parse");
+
+        assert_eq!(
+            store.validate_with_processor_proof(
+                "urn:uuid:msg-3",
+                "fnv1a64:abc",
+                artifact,
+                &mut evaluator
+            ),
+            Err(MessageProofAdmissionError::InvalidValidationState {
+                found: MessageStatus::Created
+            })
+        );
+    }
+
+    #[test]
+    fn validate_with_processor_proof_maps_proof_errors() {
+        let mut store = MessageLifecycleStore::new();
+        store
+            .register(
+                "urn:uuid:msg-4",
+                "kamn:did:agent:sender-1",
+                vec!["kamn:did:agent:recipient-1".to_owned()],
+                "2026-02-07T20:15:30.123Z",
+                "2026-02-07T20:45:30.123Z",
+            )
+            .expect("register should succeed");
+        store
+            .transition("urn:uuid:msg-4", MessageStatus::Signed)
+            .expect("created->signed should succeed");
+        store
+            .transition("urn:uuid:msg-4", MessageStatus::Broadcast)
+            .expect("signed->broadcast should succeed");
+        store
+            .transition("urn:uuid:msg-4", MessageStatus::Included)
+            .expect("broadcast->included should succeed");
+        store
+            .transition("urn:uuid:msg-4", MessageStatus::Delivered)
+            .expect("included->delivered should succeed");
+
+        let mut evaluator = ProcessorProofAdmissionEvaluator::new();
+        let artifact = ProcessorProofArtifact::new(
+            "artifact-2",
+            "urn:uuid:msg-4",
+            "fnv1a64:abc",
+            "proof:tampered:artifact-2",
+        )
+        .expect("artifact should parse");
+
+        assert_eq!(
+            store.validate_with_processor_proof(
+                "urn:uuid:msg-4",
+                "fnv1a64:abc",
+                artifact,
+                &mut evaluator
+            ),
+            Err(MessageProofAdmissionError::Proof(
+                ZkDesignError::ProofVerificationFailed {
+                    artifact_id: "artifact-2".to_owned(),
+                    reason: "proof value failed deterministic verification".to_owned(),
+                }
+            ))
         );
     }
 }

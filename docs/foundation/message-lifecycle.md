@@ -29,6 +29,13 @@ state transitions and deterministic index query APIs.
 - `created` and `expires` timestamps must be non-empty, with `expires > created`.
 - Unknown message IDs return `MessageLifecycleError::NotFound`.
 
+## Processor Proof-Gated Validation
+- `validate_with_processor_proof(message_id, expected_payload_commitment, artifact, evaluator)` gates lifecycle validation on deterministic processor proof admission.
+- The message must already be in `Delivered` state before proof-gated validation is attempted.
+- On successful proof admission, the lifecycle transition advances `Delivered -> Validated`.
+- Proof admission errors are surfaced as `MessageProofAdmissionError::Proof(...)` and do not mutate lifecycle status.
+- tampered proof artifacts must not advance message state (`Regression: #510`).
+
 ## Local Validation
 Run from repository root:
 
@@ -36,6 +43,7 @@ Run from repository root:
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core --test message_lifecycle_queries
+cargo test -p kamn-core --test message_lifecycle_proof_admission --test message_lifecycle_docs
 cargo test -p kamn-core
 ```
 

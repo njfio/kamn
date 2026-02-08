@@ -163,7 +163,9 @@ pub use message_envelope::{
     EnvelopeProof, MessageEnvelopeError, CANONICAL_ENCRYPTION_ALGORITHM,
     CANONICAL_MESSAGE_ENVELOPE_TYPE, CANONICAL_PROOF_PURPOSE,
 };
-pub use message_lifecycle::{MessageLifecycleError, MessageLifecycleStore, MessageStatus};
+pub use message_lifecycle::{
+    MessageLifecycleError, MessageLifecycleStore, MessageProofAdmissionError, MessageStatus,
+};
 pub use migrations::{MigrationPlan, MigrationRegistry, MigrationStep};
 pub use namespaces::StateNamespaces;
 pub use observability::{
