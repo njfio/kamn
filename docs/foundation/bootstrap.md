@@ -64,3 +64,4 @@ For task state machine and legal transition validation controls, see `docs/found
 For task operation command handling controls, see `docs/foundation/task-operations.md`.
 For bridge inbound/outbound adapter abstraction controls, see `docs/foundation/bridge-adapter-abstraction.md`.
 For CI cache strategy and bounded parallelism controls, see `docs/foundation/ci-caching-parallelism.md`.
+For flaky-test quarantine and bounded retry controls, see `docs/foundation/ci-flaky-quarantine.md`.
