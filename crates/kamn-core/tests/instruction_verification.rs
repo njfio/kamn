@@ -95,3 +95,22 @@ fn verify_rejects_expired_claim() {
         })
     );
 }
+
+#[test]
+fn regression_rejects_overlong_claim_validity_window() {
+    // Regression: #409
+    let record = sample_record();
+    let mut claim = sample_claim();
+    claim.expires_at_unix = 100 + (24 * 60 * 60) + 1;
+    let context = VerificationContext::new(100)
+        .with_instruction(record)
+        .with_authorized_sender("kamn:did:agent:alpha");
+
+    assert_eq!(
+        InstructionVerifier::verify(&claim, &context),
+        VerificationOutcome::Rejected(VerificationFailure::OverlongValidityWindow {
+            max_window_secs: 24 * 60 * 60,
+            requested_window_secs: (24 * 60 * 60) + 1,
+        })
+    );
+}

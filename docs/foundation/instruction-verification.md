@@ -18,6 +18,7 @@ This document captures the first implementation slice of anti-hallucination inst
 4. Claim signature matches on-chain signature.
 5. Sender is explicitly authorized.
 6. Claim is not expired relative to deterministic current time.
+7. bounded claim validity window is enforced against context policy.
 
 ## Rejection Outcomes
 - `MissingInstruction`
@@ -26,6 +27,8 @@ This document captures the first implementation slice of anti-hallucination inst
 - `SignatureMismatch`
 - `UnauthorizedSender`
 - `Expired`
+- `OverlongValidityWindow`
+- overlong validity window is rejected (`Regression: #409`).
 
 ## Local Validation
 Run from repository root:
