@@ -1,0 +1,23 @@
+const CONTROL_MATRIX: &str = include_str!("../../../docs/foundation/threat-control-matrix.md");
+
+#[test]
+fn matrix_contains_required_columns() {
+    assert!(CONTROL_MATRIX.contains(
+        "| Threat ID | Threat | Control | Enforcement Point | Owner | Validation Test |"
+    ));
+}
+
+#[test]
+fn matrix_contains_core_threat_entries() {
+    assert!(CONTROL_MATRIX.contains("TM-001"));
+    assert!(CONTROL_MATRIX.contains("TM-002"));
+    assert!(CONTROL_MATRIX.contains("TM-003"));
+    assert!(CONTROL_MATRIX.contains("TM-004"));
+}
+
+#[test]
+fn matrix_maps_controls_to_tests() {
+    assert!(CONTROL_MATRIX.contains("verify_instruction_signature_path"));
+    assert!(CONTROL_MATRIX.contains("reject_out_of_sequence_nonce_per_sender"));
+    assert!(CONTROL_MATRIX.contains("escrow_lifecycle_illegal_transition_rejected"));
+}
