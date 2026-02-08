@@ -14,6 +14,9 @@ fn doc_contains_workflow_safeguards_and_audit_rules() {
     assert!(DOC.contains("## Workflow Safeguards"));
     assert!(DOC.contains("## Governance and Audit Rules"));
     assert!(DOC.contains("Governance submission requires:"));
+    assert!(DOC.contains(
+        "configured minimum activation delay elapsed since governance approval timestamp."
+    ));
 }
 
 #[test]
@@ -27,4 +30,12 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
 fn regression_requires_human_review_quorum_gating_rule() {
     // Regression: #235
     assert!(DOC.contains("sufficient unique human reviewer approvals"));
+}
+
+#[test]
+fn regression_requires_activation_delay_rejection_rule() {
+    // Regression: #528
+    assert!(
+        DOC.contains("early activation before required delay is rejected (`Regression: #528`).")
+    );
 }

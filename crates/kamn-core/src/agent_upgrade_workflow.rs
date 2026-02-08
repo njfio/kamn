@@ -12,6 +12,7 @@ pub struct AgentUpgradeWorkflowConfig {
     pub allowed_agent_proposers: Vec<String>,
     pub required_human_reviews: usize,
     pub required_validator_quorum: usize,
+    pub min_activation_delay_secs: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -43,6 +44,7 @@ pub struct AgentUpgradeProposalRecord {
     pub human_reviewers: BTreeSet<String>,
     pub state: AgentUpgradeProposalState,
     pub governance_status: GovernanceProposalStatus,
+    pub governance_approved_at_unix: Option<u64>,
     pub activated_at_unix: Option<u64>,
     pub operation_hash: Option<String>,
 }
@@ -71,6 +73,7 @@ pub struct AgentDrivenUpgradeWorkflow {
     allowed_agent_proposers: BTreeSet<String>,
     required_human_reviews: usize,
     required_validator_quorum: usize,
+    min_activation_delay_secs: u64,
     governance: GovernanceWorkflow,
     orchestrator: VersionUpgradeOrchestrator,
     proposals: BTreeMap<String, AgentUpgradeProposalRecord>,
@@ -84,6 +87,9 @@ impl AgentDrivenUpgradeWorkflow {
         }
         if config.required_validator_quorum == 0 {
             return Err(AgentUpgradeWorkflowError::InvalidRequiredValidatorQuorum(0));
+        }
+        if config.min_activation_delay_secs == 0 {
+            return Err(AgentUpgradeWorkflowError::InvalidMinActivationDelaySecs(0));
         }
         if config.allowed_agent_proposers.is_empty() {
             return Err(AgentUpgradeWorkflowError::MissingAllowedAgentProposers);
@@ -102,6 +108,7 @@ impl AgentDrivenUpgradeWorkflow {
             allowed_agent_proposers,
             required_human_reviews: config.required_human_reviews,
             required_validator_quorum: config.required_validator_quorum,
+            min_activation_delay_secs: config.min_activation_delay_secs,
             governance: GovernanceWorkflow::new(),
             orchestrator,
             proposals: BTreeMap::new(),
@@ -156,6 +163,7 @@ impl AgentDrivenUpgradeWorkflow {
                 human_reviewers: BTreeSet::new(),
                 state: AgentUpgradeProposalState::PendingHumanReview,
                 governance_status: GovernanceProposalStatus::Voting,
+                governance_approved_at_unix: None,
                 activated_at_unix: None,
                 operation_hash: None,
             },
@@ -245,6 +253,7 @@ impl AgentDrivenUpgradeWorkflow {
 
         proposal.state = AgentUpgradeProposalState::GovernanceVoting;
         proposal.governance_status = GovernanceProposalStatus::Voting;
+        proposal.governance_approved_at_unix = None;
         self.proposals.insert(proposal_id.to_owned(), proposal);
         self.events.push(AgentUpgradeAuditEvent {
             proposal_id: proposal_id.to_owned(),
@@ -274,6 +283,9 @@ impl AgentDrivenUpgradeWorkflow {
             record.governance_status = status;
             if status == GovernanceProposalStatus::Approved {
                 record.state = AgentUpgradeProposalState::GovernanceApproved;
+                if record.governance_approved_at_unix.is_none() {
+                    record.governance_approved_at_unix = Some(cast_at_unix);
+                }
                 self.events.push(AgentUpgradeAuditEvent {
                     proposal_id: proposal_id.to_owned(),
                     actor_did: validator_did.to_owned(),
@@ -309,6 +321,21 @@ impl AgentDrivenUpgradeWorkflow {
             return Err(AgentUpgradeWorkflowError::GovernanceStatusNotApproved {
                 proposal_id: proposal_id.to_owned(),
                 status: governance_status,
+            });
+        }
+        let governance_approved_at_unix =
+            proposal.governance_approved_at_unix.ok_or_else(|| {
+                AgentUpgradeWorkflowError::MissingGovernanceApprovalTimestamp(
+                    proposal_id.to_owned(),
+                )
+            })?;
+        let earliest_activation_unix =
+            governance_approved_at_unix.saturating_add(self.min_activation_delay_secs);
+        if executed_at_unix < earliest_activation_unix {
+            return Err(AgentUpgradeWorkflowError::ActivationDelayNotElapsed {
+                proposal_id: proposal_id.to_owned(),
+                earliest_activation_unix,
+                attempted_activation_unix: executed_at_unix,
             });
         }
 
@@ -404,6 +431,7 @@ pub enum AgentUpgradeWorkflowError {
     },
     InvalidRequiredHumanReviews(usize),
     InvalidRequiredValidatorQuorum(usize),
+    InvalidMinActivationDelaySecs(u64),
     MissingAllowedAgentProposers,
     UnauthorizedAgentProposer(String),
     ProposalAlreadyExists(String),
@@ -423,6 +451,12 @@ pub enum AgentUpgradeWorkflowError {
     GovernanceStatusNotApproved {
         proposal_id: String,
         status: GovernanceProposalStatus,
+    },
+    MissingGovernanceApprovalTimestamp(String),
+    ActivationDelayNotElapsed {
+        proposal_id: String,
+        earliest_activation_unix: u64,
+        attempted_activation_unix: u64,
     },
     GovernanceWorkflow(GovernanceWorkflowError),
     UpgradeOrchestration(UpgradeOrchestrationError),
@@ -446,6 +480,9 @@ impl fmt::Display for AgentUpgradeWorkflowError {
             }
             Self::InvalidRequiredValidatorQuorum(value) => {
                 write!(f, "invalid required validator quorum: {value}")
+            }
+            Self::InvalidMinActivationDelaySecs(value) => {
+                write!(f, "invalid minimum activation delay seconds: {value}")
             }
             Self::MissingAllowedAgentProposers => {
                 write!(f, "allowed agent proposer set must not be empty")
@@ -478,6 +515,18 @@ impl fmt::Display for AgentUpgradeWorkflowError {
             } => write!(
                 f,
                 "governance status is not approved: proposal={proposal_id}, status={status:?}"
+            ),
+            Self::MissingGovernanceApprovalTimestamp(proposal_id) => write!(
+                f,
+                "governance approval timestamp is missing for proposal: {proposal_id}"
+            ),
+            Self::ActivationDelayNotElapsed {
+                proposal_id,
+                earliest_activation_unix,
+                attempted_activation_unix,
+            } => write!(
+                f,
+                "activation delay not elapsed: proposal={proposal_id}, earliest_activation_unix={earliest_activation_unix}, attempted_activation_unix={attempted_activation_unix}"
             ),
             Self::GovernanceWorkflow(error) => write!(f, "{error}"),
             Self::UpgradeOrchestration(error) => write!(f, "{error}"),
@@ -522,8 +571,23 @@ mod tests {
                 allowed_agent_proposers: Vec::new(),
                 required_human_reviews: 1,
                 required_validator_quorum: 2,
+                min_activation_delay_secs: 60,
             }),
             Err(AgentUpgradeWorkflowError::MissingAllowedAgentProposers)
+        );
+    }
+
+    #[test]
+    fn constructor_rejects_zero_activation_delay() {
+        assert_eq!(
+            AgentDrivenUpgradeWorkflow::new(AgentUpgradeWorkflowConfig {
+                current_version: "v0.1.0".to_owned(),
+                allowed_agent_proposers: vec!["kamn:did:agent:upgrade-bot".to_owned()],
+                required_human_reviews: 1,
+                required_validator_quorum: 2,
+                min_activation_delay_secs: 0,
+            }),
+            Err(AgentUpgradeWorkflowError::InvalidMinActivationDelaySecs(0))
         );
     }
 
@@ -534,6 +598,7 @@ mod tests {
             allowed_agent_proposers: vec!["kamn:did:agent:upgrade-bot".to_owned()],
             required_human_reviews: 1,
             required_validator_quorum: 2,
+            min_activation_delay_secs: 60,
         })
         .expect("workflow should initialize");
         workflow

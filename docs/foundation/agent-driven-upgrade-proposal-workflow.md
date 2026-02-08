@@ -1,4 +1,4 @@
-# Agent-Driven Protocol Upgrade Proposal Workflow (Issues #234 / #235)
+# Agent-Driven Protocol Upgrade Proposal Workflow (Issues #234 / #235 / #528)
 
 This document captures the first implementation slice for a pilot agent-driven protocol upgrade workflow with mandatory human and validator safeguards.
 
@@ -31,6 +31,7 @@ This document captures the first implementation slice for a pilot agent-driven p
   - pending-human-review proposal state.
 - Upgrade finalization requires:
   - governance status `Approved`.
+  - configured minimum activation delay elapsed since governance approval timestamp.
   - governance execution recording.
   - application of validator `Yes` votes as upgrade approvals before activation.
 
@@ -45,6 +46,8 @@ This document captures the first implementation slice for a pilot agent-driven p
   - `proposal(...)`
   - `upgrade_audit_view(...)`
   - `agent_audit_log(...)`
+- Regression guard:
+  - early activation before required delay is rejected (`Regression: #528`).
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
