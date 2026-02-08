@@ -121,3 +121,50 @@ fn expired_message_cannot_reenter_pipeline() {
         })
     );
 }
+
+#[test]
+fn regression_expire_message_if_overdue_marks_active_record_expired() {
+    // Regression: #563
+    let mut store = MessageLifecycleStore::new();
+    register_baseline(&mut store, "urn:uuid:msg-5");
+
+    let changed = store
+        .expire_message_if_overdue("urn:uuid:msg-5", "2026-02-07T20:50:30.123Z")
+        .expect("expiry check should succeed");
+    assert!(changed, "message should expire once observed past TTL");
+    assert_eq!(
+        store.status("urn:uuid:msg-5").expect("status should exist"),
+        MessageStatus::Expired
+    );
+}
+
+#[test]
+fn integration_expire_overdue_messages_sweeps_active_records_deterministically() {
+    let mut store = MessageLifecycleStore::new();
+    register_baseline(&mut store, "urn:uuid:msg-6");
+    register_baseline(&mut store, "urn:uuid:msg-7");
+    store
+        .transition("urn:uuid:msg-7", MessageStatus::Signed)
+        .expect("created->signed should succeed");
+    store
+        .transition("urn:uuid:msg-7", MessageStatus::Broadcast)
+        .expect("signed->broadcast should succeed");
+    store
+        .transition("urn:uuid:msg-7", MessageStatus::Included)
+        .expect("broadcast->included should succeed");
+    store
+        .transition("urn:uuid:msg-7", MessageStatus::Delivered)
+        .expect("included->delivered should succeed");
+    store
+        .transition("urn:uuid:msg-7", MessageStatus::Validated)
+        .expect("delivered->validated should succeed");
+
+    let expired = store
+        .expire_overdue_messages("2026-02-07T20:50:30.123Z")
+        .expect("sweep should succeed");
+    assert_eq!(expired, vec!["urn:uuid:msg-6".to_owned()]);
+    assert_eq!(
+        store.ids_by_status(MessageStatus::Expired),
+        vec!["urn:uuid:msg-6".to_owned()]
+    );
+}
