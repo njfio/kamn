@@ -1,4 +1,4 @@
-# Bridge Adapter Abstraction (Issues #130, #131)
+# Bridge Adapter Abstraction (Issues #130, #131, #546)
 
 This document describes the first implementation slice for bridge adapter abstraction aligned to PRD section 10.1 and story #34.
 
@@ -21,9 +21,11 @@ This document describes the first implementation slice for bridge adapter abstra
 ## Design Notes
 - Inbound flow:
   - Validate external envelope fields and target DID.
+  - Enforce timestamp freshness by requiring `observed_at_unix - received_at_unix <= max_inbound_age_secs`.
   - Normalize external payload into deterministic `bridge_message_id` (`<platform>:<external_message_id>`).
   - Apply policy hook before returning normalized message.
   - Duplicate inbound message IDs are rejected with `DuplicateInboundMessageId`.
+  - Stale inbound messages are rejected with `StaleInboundMessage`.
 - Outbound flow:
   - Validate request fields and sender DID.
   - Apply policy hook before translation.
@@ -48,5 +50,6 @@ cargo test -p kamn-core
 - Replace static allow-all policy with channel and capability-aware policy implementations.
 - duplicate inbound event is rejected (`Regression: #423`).
 - duplicate outbound request is rejected (`Regression: #433`).
+- stale inbound event beyond freshness window is rejected (`Regression: #546`).
 - first inbound-to-envelope projection does not self-trigger duplicate replay rejection (`Regression: #438`).
 - cross-chain inbound projection also preserves single-pass replay safety (`Regression: #443`).

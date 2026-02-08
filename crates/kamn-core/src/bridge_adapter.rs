@@ -7,6 +7,8 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+const DEFAULT_MAX_INBOUND_AGE_SECS: u64 = 300;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BridgePlatform {
     Telegram,
@@ -44,6 +46,7 @@ pub struct BridgeInboundEnvelope {
     pub target_agent_did: String,
     pub body: String,
     pub received_at: String,
+    pub received_at_unix: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,6 +57,7 @@ pub struct NormalizedInboundMessage {
     pub target_agent_did: String,
     pub body: String,
     pub received_at: String,
+    pub received_at_unix: u64,
     pub platform: BridgePlatform,
 }
 
@@ -165,6 +169,7 @@ impl BridgeAdapter for PassThroughBridgeAdapter {
             target_agent_did: inbound.target_agent_did.clone(),
             body: inbound.body.clone(),
             received_at: inbound.received_at.clone(),
+            received_at_unix: inbound.received_at_unix,
             platform: self.platform(),
         })
     }
@@ -192,6 +197,7 @@ impl BridgeAdapter for PassThroughBridgeAdapter {
 pub struct BridgeAdapterEngine<A, P> {
     adapter: A,
     policy: P,
+    max_inbound_age_secs: u64,
     seen_inbound_message_ids: RefCell<BTreeSet<String>>,
     seen_outbound_request_ids: RefCell<BTreeSet<String>>,
 }
@@ -202,9 +208,14 @@ where
     P: BridgePolicyHook,
 {
     pub fn new(adapter: A, policy: P) -> Self {
+        Self::with_inbound_freshness_window(adapter, policy, DEFAULT_MAX_INBOUND_AGE_SECS)
+    }
+
+    pub fn with_inbound_freshness_window(adapter: A, policy: P, max_inbound_age_secs: u64) -> Self {
         Self {
             adapter,
             policy,
+            max_inbound_age_secs,
             seen_inbound_message_ids: RefCell::new(BTreeSet::new()),
             seen_outbound_request_ids: RefCell::new(BTreeSet::new()),
         }
@@ -213,12 +224,23 @@ where
     pub fn process_inbound(
         &self,
         inbound: &BridgeInboundEnvelope,
+        observed_at_unix: u64,
     ) -> Result<NormalizedInboundMessage, BridgeAdapterError> {
         validate_did(self.adapter.bridge_agent_did())?;
         validate_inbound_envelope(inbound)?;
+        validate_timestamp("observed_at_unix", observed_at_unix)?;
         let normalized = self.adapter.normalize_inbound(inbound)?;
         validate_normalized_inbound(&normalized)?;
         self.policy.authorize_inbound(&normalized)?;
+        let age_secs = observed_at_unix.saturating_sub(normalized.received_at_unix);
+        if age_secs > self.max_inbound_age_secs {
+            return Err(BridgeAdapterError::StaleInboundMessage {
+                bridge_message_id: normalized.bridge_message_id.clone(),
+                received_at_unix: normalized.received_at_unix,
+                observed_at_unix,
+                max_age_secs: self.max_inbound_age_secs,
+            });
+        }
         let bridge_message_id = normalized.bridge_message_id.clone();
         if !self
             .seen_inbound_message_ids
@@ -265,6 +287,7 @@ where
     pub fn process_inbound_to_envelope(
         &self,
         inbound: &BridgeInboundEnvelope,
+        observed_at_unix: u64,
         recipient_keys: Vec<String>,
         expires: &str,
         nonce: u64,
@@ -280,7 +303,7 @@ where
             return Err(BridgeAdapterError::InvalidNonce(nonce));
         }
 
-        let normalized = self.process_inbound(inbound)?;
+        let normalized = self.process_inbound(inbound, observed_at_unix)?;
 
         let mut body = BTreeMap::new();
         body.insert("message".to_owned(), normalized.body.clone());
@@ -338,7 +361,14 @@ pub enum BridgeAdapterError {
     DuplicateOutboundRequestId(String),
     EmptyField(&'static str),
     InvalidDid(String),
+    InvalidTimestamp(&'static str),
     InvalidNonce(u64),
+    StaleInboundMessage {
+        bridge_message_id: String,
+        received_at_unix: u64,
+        observed_at_unix: u64,
+        max_age_secs: u64,
+    },
     PolicyDenied {
         direction: BridgeDirection,
         reason: String,
@@ -361,7 +391,17 @@ impl fmt::Display for BridgeAdapterError {
             }
             Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
             Self::InvalidDid(value) => write!(f, "invalid did: {value}"),
+            Self::InvalidTimestamp(field) => write!(f, "timestamp must be > 0: {field}"),
             Self::InvalidNonce(value) => write!(f, "nonce must be greater than zero: {value}"),
+            Self::StaleInboundMessage {
+                bridge_message_id,
+                received_at_unix,
+                observed_at_unix,
+                max_age_secs,
+            } => write!(
+                f,
+                "stale inbound message: id={bridge_message_id}, received_at_unix={received_at_unix}, observed_at_unix={observed_at_unix}, max_age_secs={max_age_secs}"
+            ),
             Self::PolicyDenied { direction, reason } => {
                 write!(f, "policy denied {direction:?} traffic: {reason}")
             }
@@ -392,6 +432,10 @@ fn validate_inbound_envelope(inbound: &BridgeInboundEnvelope) -> Result<(), Brid
     validate_did(&inbound.target_agent_did)?;
     validate_non_empty("bridge_inbound_envelope.body", &inbound.body)?;
     validate_non_empty("bridge_inbound_envelope.received_at", &inbound.received_at)?;
+    validate_timestamp(
+        "bridge_inbound_envelope.received_at_unix",
+        inbound.received_at_unix,
+    )?;
     Ok(())
 }
 
@@ -415,6 +459,10 @@ fn validate_normalized_inbound(
     validate_non_empty(
         "normalized_inbound_message.received_at",
         &normalized.received_at,
+    )?;
+    validate_timestamp(
+        "normalized_inbound_message.received_at_unix",
+        normalized.received_at_unix,
     )?;
     if normalized.platform.label().is_empty() {
         return Err(BridgeAdapterError::EmptyField(
@@ -445,6 +493,13 @@ fn validate_non_empty(field: &'static str, value: &str) -> Result<(), BridgeAdap
 
 fn validate_did(value: &str) -> Result<(), BridgeAdapterError> {
     AgentDid::parse(value).map_err(|error| BridgeAdapterError::InvalidDid(error.to_string()))?;
+    Ok(())
+}
+
+fn validate_timestamp(field: &'static str, value: u64) -> Result<(), BridgeAdapterError> {
+    if value == 0 {
+        return Err(BridgeAdapterError::InvalidTimestamp(field));
+    }
     Ok(())
 }
 
@@ -506,6 +561,7 @@ mod tests {
                     target_agent_did: inbound.target_agent_did.clone(),
                     body: inbound.body.clone(),
                     received_at: inbound.received_at.clone(),
+                    received_at_unix: inbound.received_at_unix,
                     platform: self.platform(),
                 })
             }
@@ -556,10 +612,17 @@ mod tests {
             target_agent_did: "kamn:did:agent:planner-1".to_owned(),
             body: "hello".to_owned(),
             received_at: "2026-02-08T09:00:00Z".to_owned(),
+            received_at_unix: 1_707_383_600,
         };
 
         assert_eq!(
-            engine.process_inbound_to_envelope(&inbound, Vec::new(), "2026-02-08T10:00:00Z", 1),
+            engine.process_inbound_to_envelope(
+                &inbound,
+                1_707_383_600,
+                Vec::new(),
+                "2026-02-08T10:00:00Z",
+                1,
+            ),
             Err(BridgeAdapterError::EmptyField("recipient_keys"))
         );
     }
@@ -579,11 +642,12 @@ mod tests {
             target_agent_did: "kamn:did:agent:planner-1".to_owned(),
             body: "hello".to_owned(),
             received_at: "2026-02-08T09:00:00Z".to_owned(),
+            received_at_unix: 1_707_383_600,
         };
 
-        assert!(engine.process_inbound(&inbound).is_ok());
+        assert!(engine.process_inbound(&inbound, 1_707_383_700).is_ok());
         assert_eq!(
-            engine.process_inbound(&inbound),
+            engine.process_inbound(&inbound, 1_707_383_700),
             Err(BridgeAdapterError::DuplicateInboundMessageId(
                 "discord:ext-9".to_owned()
             ))

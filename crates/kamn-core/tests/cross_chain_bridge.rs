@@ -43,6 +43,7 @@ fn eth_inbound(target: &str) -> BridgeInboundEnvelope {
         target_agent_did: target.to_owned(),
         body: "event:PaymentOffer".to_owned(),
         received_at: "2026-02-08T09:00:00Z".to_owned(),
+        received_at_unix: 1_707_383_200,
     }
 }
 
@@ -54,6 +55,7 @@ fn solana_inbound(target: &str) -> BridgeInboundEnvelope {
         target_agent_did: target.to_owned(),
         body: "event:TaskStateChanged".to_owned(),
         received_at: "2026-02-08T09:05:00Z".to_owned(),
+        received_at_unix: 1_707_383_500,
     }
 }
 
@@ -74,6 +76,7 @@ fn ethereum_listener_can_process_inbound() {
     let normalized = engine
         .process_inbound(&CrossChainInboundRequest {
             listener_did: "kamn:did:agent:listener-1".to_owned(),
+            observed_at_unix: 1_707_383_260,
             chain: CrossChainNetwork::Ethereum,
             inbound: eth_inbound("kamn:did:agent:listener-target-eth"),
         })
@@ -137,6 +140,7 @@ fn integration_projects_solana_inbound_to_envelope() {
         .process_inbound_to_envelope(
             &CrossChainInboundRequest {
                 listener_did: "kamn:did:agent:listener-1".to_owned(),
+                observed_at_unix: 1_707_383_560,
                 chain: CrossChainNetwork::Solana,
                 inbound: solana_inbound("kamn:did:agent:listener-target-sol"),
             },
@@ -162,6 +166,7 @@ fn regression_rejects_replayed_solana_inbound_projection_event() {
     let engine = CrossChainBridgeEngine::new(config()).expect("engine should build");
     let request = CrossChainInboundRequest {
         listener_did: "kamn:did:agent:listener-1".to_owned(),
+        observed_at_unix: 1_707_383_560,
         chain: CrossChainNetwork::Solana,
         inbound: solana_inbound("kamn:did:agent:listener-target-sol"),
     };
@@ -195,6 +200,7 @@ fn regression_unknown_ethereum_route_is_rejected() {
     assert_eq!(
         engine.process_inbound(&CrossChainInboundRequest {
             listener_did: "kamn:did:agent:listener-1".to_owned(),
+            observed_at_unix: 1_707_383_260,
             chain: CrossChainNetwork::Ethereum,
             inbound: BridgeInboundEnvelope {
                 external_channel_id: "ethereum:sepolia:contract:unknown".to_owned(),

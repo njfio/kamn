@@ -36,6 +36,7 @@ fn inbound(target: &str) -> BridgeInboundEnvelope {
         target_agent_did: target.to_owned(),
         body: "run diagnostics".to_owned(),
         received_at: "2026-02-08T04:00:00Z".to_owned(),
+        received_at_unix: 1_707_365_600,
     }
 }
 
@@ -111,6 +112,7 @@ fn integration_processes_discord_inbound_to_envelope() {
         .process_inbound_to_envelope(
             &DiscordInboundRequest {
                 listener_did: "kamn:did:agent:listener-1".to_owned(),
+                observed_at_unix: 1_707_365_700,
                 inbound: inbound("kamn:did:agent:listener-target-1"),
             },
             vec!["kamn:did:agent:listener-target-1#key-agreement-1".to_owned()],
@@ -135,6 +137,7 @@ fn regression_rejects_replayed_discord_inbound_projection_event() {
     let engine = DiscordBridgeEngine::new(config()).expect("engine should build");
     let request = DiscordInboundRequest {
         listener_did: "kamn:did:agent:listener-1".to_owned(),
+        observed_at_unix: 1_707_365_700,
         inbound: inbound("kamn:did:agent:listener-target-1"),
     };
 

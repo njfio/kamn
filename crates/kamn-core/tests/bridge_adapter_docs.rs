@@ -22,6 +22,14 @@ fn regression_requires_duplicate_outbound_replay_rejection_rule() {
 }
 
 #[test]
+fn regression_requires_stale_inbound_rejection_rule() {
+    // Regression: #546
+    assert!(DOC.contains("StaleInboundMessage"));
+    assert!(DOC
+        .contains("stale inbound event beyond freshness window is rejected (`Regression: #546`)"));
+}
+
+#[test]
 fn regression_requires_single_pass_projection_rule() {
     // Regression: #438
     assert!(DOC.contains("single-pass inbound projection"));
