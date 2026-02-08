@@ -31,6 +31,8 @@ evaluation and retention policy behavior.
   - non-empty members/admins
   - valid `kamn:did:agent:*` identifiers
   - admins must be members
+  - Allowlist permission rules must not be empty.
+  - allowlist entries must be valid `kamn:did:agent:*` identifiers.
 
 ## Retention Evaluation
 - `retention_candidates(channel_id, now_secs, messages)` returns message IDs eligible for pruning.
@@ -54,3 +56,4 @@ cargo test -p kamn-core
 ## Notes
 This slice is intentionally dependency-free and deterministic to keep CI fast
 and low-cost while establishing channel safety controls.
+- malformed allowlist configuration is rejected (`Regression: #458`).

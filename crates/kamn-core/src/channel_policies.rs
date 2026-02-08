@@ -82,6 +82,7 @@ impl ChannelPermissionEngine {
         }
 
         validate_retention_policy(&permissions.retention)?;
+        validate_permission_rules(&permissions)?;
 
         let mut member_set = BTreeSet::new();
         for member in members {
@@ -194,6 +195,7 @@ pub enum ChannelPolicyError {
         action: ChannelAction,
         rule: PermissionRule,
     },
+    InvalidPermissionRule(String),
     InvalidRetentionPolicy(String),
 }
 
@@ -215,6 +217,7 @@ impl fmt::Display for ChannelPolicyError {
                 f,
                 "actor {actor} is unauthorized for action {action:?} under rule {rule:?}"
             ),
+            Self::InvalidPermissionRule(value) => write!(f, "invalid permission rule: {value}"),
             Self::InvalidRetentionPolicy(value) => write!(f, "invalid retention policy: {value}"),
         }
     }
@@ -232,6 +235,39 @@ fn validate_retention_policy(policy: &RetentionPolicy) -> Result<(), ChannelPoli
         RetentionPolicy::MaxMessageCount(0) => Err(ChannelPolicyError::InvalidRetentionPolicy(
             "max message count must be greater than zero".to_owned(),
         )),
+        _ => Ok(()),
+    }
+}
+
+fn validate_permission_rules(permissions: &ChannelPermissions) -> Result<(), ChannelPolicyError> {
+    validate_permission_rule("send", &permissions.send)?;
+    validate_permission_rule("read", &permissions.read)?;
+    validate_permission_rule("invite", &permissions.invite)?;
+    validate_permission_rule("remove", &permissions.remove)?;
+    validate_permission_rule("configure", &permissions.configure)?;
+    Ok(())
+}
+
+fn validate_permission_rule(
+    action: &'static str,
+    rule: &PermissionRule,
+) -> Result<(), ChannelPolicyError> {
+    match rule {
+        PermissionRule::Allowlist(values) => {
+            if values.is_empty() {
+                return Err(ChannelPolicyError::InvalidPermissionRule(format!(
+                    "allowlist for {action} must not be empty"
+                )));
+            }
+            for value in values {
+                if AgentDid::parse(value).is_err() {
+                    return Err(ChannelPolicyError::InvalidPermissionRule(format!(
+                        "allowlist for {action} contains invalid did: {value}"
+                    )));
+                }
+            }
+            Ok(())
+        }
         _ => Ok(()),
     }
 }
@@ -256,6 +292,7 @@ mod tests {
         ChannelAction, ChannelPermissionEngine, ChannelPermissions, ChannelPolicyError,
         PermissionRule, RetentionMessage, RetentionPolicy,
     };
+    use std::collections::BTreeSet;
 
     fn permissions(retention: RetentionPolicy) -> ChannelPermissions {
         ChannelPermissions {
@@ -343,6 +380,50 @@ mod tests {
                 action: ChannelAction::Send,
                 rule: PermissionRule::Members,
             })
+        );
+    }
+
+    #[test]
+    fn registration_rejects_empty_allowlist_rule() {
+        let mut engine = ChannelPermissionEngine::new();
+        let mut config = permissions(RetentionPolicy::Forever);
+        config.send = PermissionRule::Allowlist(BTreeSet::new());
+
+        assert_eq!(
+            engine.register_channel(
+                "channel:group:4",
+                vec![
+                    "kamn:did:agent:member-1".to_owned(),
+                    "kamn:did:agent:member-2".to_owned(),
+                ],
+                vec!["kamn:did:agent:member-1".to_owned()],
+                config,
+            ),
+            Err(ChannelPolicyError::InvalidPermissionRule(
+                "allowlist for send must not be empty".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn registration_rejects_allowlist_rule_with_invalid_did_entry() {
+        let mut engine = ChannelPermissionEngine::new();
+        let mut config = permissions(RetentionPolicy::Forever);
+        config.send = PermissionRule::Allowlist(["bad-did".to_owned()].into_iter().collect());
+
+        assert_eq!(
+            engine.register_channel(
+                "channel:group:5",
+                vec![
+                    "kamn:did:agent:member-1".to_owned(),
+                    "kamn:did:agent:member-2".to_owned(),
+                ],
+                vec!["kamn:did:agent:member-1".to_owned()],
+                config,
+            ),
+            Err(ChannelPolicyError::InvalidPermissionRule(
+                "allowlist for send contains invalid did: bad-did".to_owned()
+            ))
         );
     }
 }
