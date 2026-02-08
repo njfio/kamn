@@ -26,6 +26,7 @@ append_summary() {
     echo "- Changed files: ${CHANGED_COUNT}"
     echo "- Docs only: ${DOCS_ONLY}"
     echo "- Run Rust checks: ${RUN_RUST}"
+    echo "- Run deploy preflight checks: ${RUN_DEPLOY_PREFLIGHT_TESTS}"
     echo "- Run invariant harness: ${RUN_INVARIANT_HARNESS}"
     echo "- Test scope: ${TEST_SCOPE}"
     echo "- Critical path fallback: ${CRITICAL_PATH_CHANGED}"
@@ -110,6 +111,7 @@ CHANGED_COUNT="${#CHANGED_FILES[@]}"
 DOCS_ONLY=true
 RUST_CHANGED=false
 CI_INFRA_CHANGED=false
+DEPLOY_SCRIPT_CHANGED=false
 CRITICAL_PATH_CHANGED=false
 UNKNOWN_RISK_CHANGED=false
 FULL_SUITE=false
@@ -147,6 +149,13 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
+    scripts/deploy/*)
+      DEPLOY_SCRIPT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
     crates/kamn-core/src/invariants.rs|crates/kamn-core/src/transaction.rs|crates/kamn-core/src/smoke.rs|crates/kamn-core/tests/invariant_*|crates/kamn-core/tests/transaction_guards.rs|docs/foundation/invariants.md|docs/foundation/transaction-guards.md|scripts/ci/run_invariant_harness.sh|scripts/ci/test_run_invariant_harness.sh)
       INVARIANT_RELATED_CHANGED=true
       ;;
@@ -172,6 +181,7 @@ if [ "$CRITICAL_PATH_CHANGED" = true ] || [ "$UNKNOWN_RISK_CHANGED" = true ]; th
 fi
 
 RUN_RUST=false
+RUN_DEPLOY_PREFLIGHT_TESTS=false
 FMT_CMD=":"
 CLIPPY_CMD=":"
 TEST_CMD=":"
@@ -217,8 +227,14 @@ if [ "$RUN_RUST" = true ] && { [ "$INVARIANT_RELATED_CHANGED" = true ] || [ "$FU
   RUN_INVARIANT_HARNESS=true
 fi
 
+if [ "$RUN_RUST" != true ] && [ "$DEPLOY_SCRIPT_CHANGED" = true ]; then
+  RUN_DEPLOY_PREFLIGHT_TESTS=true
+  TEST_SCOPE="deploy"
+fi
+
 write_output "docs_only" "$DOCS_ONLY"
 write_output "run_rust" "$RUN_RUST"
+write_output "run_deploy_preflight_tests" "$RUN_DEPLOY_PREFLIGHT_TESTS"
 write_output "run_invariant_harness" "$RUN_INVARIANT_HARNESS"
 write_output "test_scope" "$TEST_SCOPE"
 write_output "critical_path_changed" "$CRITICAL_PATH_CHANGED"

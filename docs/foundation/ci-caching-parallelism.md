@@ -14,6 +14,7 @@ This document captures the first implementation slice for CI runtime/cost optimi
 - Added CI regression checks for workflow cache policy and deep-lane parallel harness configuration.
 - Added deterministic fast-lane target selection fallback safety:
   - Critical CI paths (`.github/workflows/*`, `scripts/ci/*`) escalate to full Rust validation scope.
+  - Deployment script paths (`scripts/deploy/*`) now route to a dedicated deploy preflight scope instead of full Rust.
   - Unknown non-doc paths escalate to full Rust validation scope.
   - duplicate/unknown matrix drift is guarded by selector regression tests (`Regression: #419`).
 - Added narrow-diff telemetry summary metrics for CI budget artifact rollups:
@@ -28,6 +29,7 @@ This document captures the first implementation slice for CI runtime/cost optimi
 - Cost control:
   - Keep cache saves on main only unless there is a measured need to populate PR-branch-specific caches.
   - Keep harness parallelism bounded (current limit: 2 in deep lane) to avoid unstable load spikes.
+  - Route deploy-only diffs to `scripts/deploy/test_preflight_topology.sh` so fast-gate avoids Rust toolchain startup.
   - Prefer targeted crate scopes for known Rust module edits, but keep strict full-scope fallback for critical/unknown paths.
 - Troubleshooting:
   - If deep invariant lane becomes unstable, temporarily reduce to `--parallelism 1` and compare budget telemetry.
@@ -40,4 +42,5 @@ Run from repository root:
 ```bash
 bash scripts/ci/test_ci_tools.sh
 bash scripts/ci/run_invariant_harness.sh --mode deep --parallelism 2 --dry-run
+bash scripts/deploy/test_preflight_topology.sh
 ```

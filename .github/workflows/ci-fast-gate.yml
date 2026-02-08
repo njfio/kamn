@@ -53,6 +53,10 @@ jobs:
         if: steps.scope.outputs.docs_only != 'true'
         run: bash scripts/ci/test_ci_tools.sh
 
+      - name: Run deploy preflight tests
+        if: steps.scope.outputs.run_deploy_preflight_tests == 'true'
+        run: bash scripts/deploy/test_preflight_topology.sh
+
       - name: Set up Rust toolchain
         if: steps.scope.outputs.run_rust == 'true'
         uses: dtolnay/rust-toolchain@stable
