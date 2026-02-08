@@ -26,12 +26,27 @@ for seed in 13 97 401; do
   fi
 done
 
+parallel_output="$(bash "$SCRIPT" --mode deep --parallelism 2 --dry-run)"
+if [ "$(printf '%s\n' "$parallel_output" | wc -l | tr -d ' ')" -ne 3 ]; then
+  echo "expected three commands in deep mode with parallelism" >&2
+  exit 1
+fi
+
 set +e
 bash "$SCRIPT" --mode invalid --dry-run >/dev/null 2>&1
 invalid_status=$?
 set -e
 if [ "$invalid_status" -eq 0 ]; then
   echo "expected invalid mode to fail" >&2
+  exit 1
+fi
+
+set +e
+bash "$SCRIPT" --mode deep --parallelism 0 --dry-run >/dev/null 2>&1
+invalid_parallel_status=$?
+set -e
+if [ "$invalid_parallel_status" -eq 0 ]; then
+  echo "expected invalid parallelism to fail" >&2
   exit 1
 fi
 

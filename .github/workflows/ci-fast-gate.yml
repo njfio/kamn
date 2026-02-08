@@ -61,6 +61,9 @@ jobs:
         id: rust_cache
         if: steps.scope.outputs.run_rust == 'true'
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: kamn-rust-ci-v1
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Format check
         if: steps.scope.outputs.run_rust == 'true'

@@ -63,3 +63,4 @@ For direct-message encryption path controls, see `docs/foundation/direct-message
 For task state machine and legal transition validation controls, see `docs/foundation/task-state-machine.md`.
 For task operation command handling controls, see `docs/foundation/task-operations.md`.
 For bridge inbound/outbound adapter abstraction controls, see `docs/foundation/bridge-adapter-abstraction.md`.
+For CI cache strategy and bounded parallelism controls, see `docs/foundation/ci-caching-parallelism.md`.
