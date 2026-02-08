@@ -1,0 +1,62 @@
+name: ci-fast-gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-fast-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  fast-gate:
+    name: Fast Gate (PR)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select CI scope
+        id: scope
+        shell: bash
+        run: bash scripts/ci/select_targets.sh
+
+      - name: Docs-only hygiene checks
+        if: steps.scope.outputs.docs_only == 'true'
+        run: bash scripts/ci/check_markdown.sh
+
+      - name: Validate CI scripts syntax
+        if: steps.scope.outputs.docs_only != 'true'
+        run: bash -n scripts/ci/*.sh
+
+      - name: Set up Rust toolchain
+        if: steps.scope.outputs.run_rust == 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        if: steps.scope.outputs.run_rust == 'true'
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format check
+        if: steps.scope.outputs.run_rust == 'true'
+        run: ${{ steps.scope.outputs.fmt_cmd }}
+
+      - name: Lint (strict)
+        if: steps.scope.outputs.run_rust == 'true'
+        run: ${{ steps.scope.outputs.clippy_cmd }}
+
+      - name: Test
+        if: steps.scope.outputs.run_rust == 'true'
+        run: ${{ steps.scope.outputs.test_cmd }}
+
+      - name: No Rust checks required
+        if: steps.scope.outputs.run_rust != 'true' && steps.scope.outputs.docs_only != 'true'
+        run: echo "No Rust changes detected; skipping Rust toolchain setup and tests."

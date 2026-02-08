@@ -1,0 +1,58 @@
+name: ci-deep-validate
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-deep-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deep-validate:
+    name: Deep Validate (Nightly/Manual)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check whether repository has Rust sources
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -Eq '(^|/)Cargo.toml$'; then
+            echo "run_rust=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_rust=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Rust toolchain
+        if: steps.detect.outputs.run_rust == 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        if: steps.detect.outputs.run_rust == 'true'
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format check
+        if: steps.detect.outputs.run_rust == 'true'
+        run: cargo fmt --all --check
+
+      - name: Lint (strict)
+        if: steps.detect.outputs.run_rust == 'true'
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Full suite
+        if: steps.detect.outputs.run_rust == 'true'
+        run: cargo test --workspace --locked --all-features --no-fail-fast
+
+      - name: No Rust project present
+        if: steps.detect.outputs.run_rust != 'true'
+        run: echo "No Cargo project detected; deep validation skipped."
