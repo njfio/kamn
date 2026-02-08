@@ -131,6 +131,29 @@ impl CrossChainBridgeEngine {
         &self,
         request: &CrossChainInboundRequest,
     ) -> Result<NormalizedInboundMessage, CrossChainBridgeError> {
+        self.validate_inbound_request(request)?;
+        self.bridge_engine(request.chain)
+            .process_inbound(&request.inbound)
+            .map_err(|error| CrossChainBridgeError::Bridge(error.to_string()))
+    }
+
+    pub fn process_inbound_to_envelope(
+        &self,
+        request: &CrossChainInboundRequest,
+        recipient_keys: Vec<String>,
+        expires: &str,
+        nonce: u64,
+    ) -> Result<CanonicalMessageEnvelope, CrossChainBridgeError> {
+        self.validate_inbound_request(request)?;
+        self.bridge_engine(request.chain)
+            .process_inbound_to_envelope(&request.inbound, recipient_keys, expires, nonce)
+            .map_err(|error| CrossChainBridgeError::Bridge(error.to_string()))
+    }
+
+    fn validate_inbound_request(
+        &self,
+        request: &CrossChainInboundRequest,
+    ) -> Result<(), CrossChainBridgeError> {
         validate_did(&request.listener_did)?;
         if !self
             .config
@@ -160,23 +183,7 @@ impl CrossChainBridgeEngine {
                 provided_target_did: request.inbound.target_agent_did.clone(),
             });
         }
-
-        self.bridge_engine(request.chain)
-            .process_inbound(&request.inbound)
-            .map_err(|error| CrossChainBridgeError::Bridge(error.to_string()))
-    }
-
-    pub fn process_inbound_to_envelope(
-        &self,
-        request: &CrossChainInboundRequest,
-        recipient_keys: Vec<String>,
-        expires: &str,
-        nonce: u64,
-    ) -> Result<CanonicalMessageEnvelope, CrossChainBridgeError> {
-        self.process_inbound(request)?;
-        self.bridge_engine(request.chain)
-            .process_inbound_to_envelope(&request.inbound, recipient_keys, expires, nonce)
-            .map_err(|error| CrossChainBridgeError::Bridge(error.to_string()))
+        Ok(())
     }
 
     pub fn process_outbound_with_approvals(

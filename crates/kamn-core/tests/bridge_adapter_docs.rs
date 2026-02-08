@@ -29,3 +29,11 @@ fn regression_requires_single_pass_projection_rule() {
         "first inbound-to-envelope projection does not self-trigger duplicate replay rejection (`Regression: #438`)"
     ));
 }
+
+#[test]
+fn regression_requires_cross_chain_single_pass_projection_rule() {
+    // Regression: #443
+    assert!(DOC.contains(
+        "cross-chain inbound projection also preserves single-pass replay safety (`Regression: #443`)"
+    ));
+}

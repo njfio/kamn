@@ -49,3 +49,4 @@ cargo test -p kamn-core
 - duplicate inbound event is rejected (`Regression: #423`).
 - duplicate outbound request is rejected (`Regression: #433`).
 - first inbound-to-envelope projection does not self-trigger duplicate replay rejection (`Regression: #438`).
+- cross-chain inbound projection also preserves single-pass replay safety (`Regression: #443`).
