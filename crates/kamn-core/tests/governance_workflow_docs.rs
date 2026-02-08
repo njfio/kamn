@@ -35,3 +35,10 @@ fn regression_requires_parameter_payload_validation_rule() {
     assert!(DOC.contains("semver-style target version"));
     assert!(DOC.contains("Regression: #476"));
 }
+
+#[test]
+fn doc_contains_parameter_catalog_and_compatibility_policy() {
+    assert!(DOC.contains("listener.quorum"));
+    assert!(DOC.contains("watchdog.delivery_ratio_bps"));
+    assert!(DOC.contains("supported from `1.1.0`"));
+}

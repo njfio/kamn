@@ -38,7 +38,11 @@ This document captures the first implementation slice for protocol governance me
   - semver-style target version (`major.minor.patch` numeric segments).
   - `min_value <= max_value`.
   - `proposed_value` within `[min_value, max_value]`.
-- Malformed or incompatible parameter payloads are rejected before proposal registration (`Regression: #476`).
+- Parameter catalog and compatibility policy:
+  - `listener.quorum`: allowed range `[1, 7]`, supported from `1.0.0`.
+  - `approver.required_approvals`: allowed range `[1, 7]`, supported from `1.0.0`.
+  - `watchdog.delivery_ratio_bps`: allowed range `[9000, 9999]`, supported from `1.1.0`.
+- Unknown keys, range-policy violations, and unsupported target-version combinations are rejected before proposal registration (`Regression: #476`).
 
 ## Vote and Quorum Rules
 - Vote casting requires:

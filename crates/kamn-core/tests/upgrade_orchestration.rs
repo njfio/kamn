@@ -1,6 +1,7 @@
 use kamn_core::{
-    GovernanceProposalDraft, GovernanceProposalStatus, GovernanceVoteChoice, GovernanceWorkflow,
-    UpgradeAuditEventKind, UpgradeOrchestrationError, VersionUpgradeOrchestrator,
+    GovernanceParameterChangeDraft, GovernanceProposalDraft, GovernanceProposalStatus,
+    GovernanceVoteChoice, GovernanceWorkflow, UpgradeAuditEventKind, UpgradeOrchestrationError,
+    VersionUpgradeOrchestrator,
 };
 
 #[test]
@@ -72,7 +73,13 @@ fn upgrade_orchestration_integration_uses_governance_vote_outcome() {
             created_at_unix: 1_716_501_000,
             voting_deadline_unix: 1_716_501_600,
             quorum_threshold: 2,
-            parameter_change: None,
+            parameter_change: Some(GovernanceParameterChangeDraft {
+                key: "listener.quorum".to_owned(),
+                proposed_value: 3,
+                min_value: 2,
+                max_value: 7,
+                target_version: "1.1.0".to_owned(),
+            }),
         })
         .expect("proposal should submit");
     governance
