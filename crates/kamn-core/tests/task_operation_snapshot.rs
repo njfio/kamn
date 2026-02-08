@@ -2,6 +2,7 @@ use kamn_core::{
     EscrowLifecycle, PaymentOffer, SwarmTaskDraft, TaskOperationEngine, TaskOperationError,
     TaskPaymentWorkflow, TaskState,
 };
+use std::time::Instant;
 
 fn build_dependency_engine() -> TaskOperationEngine {
     let mut engine = TaskOperationEngine::new();
@@ -145,4 +146,46 @@ fn task_operation_snapshot_regression_rejects_tampered_dependency_completion_sta
             dependency_state: TaskState::Submitted,
         })
     );
+}
+
+#[test]
+fn task_operation_snapshot_bounded_roundtrip_benchmark_is_fast_for_ci() {
+    const TASK_COUNT: usize = 128;
+    let mut engine = TaskOperationEngine::new();
+    let drafts: Vec<SwarmTaskDraft> = (0..TASK_COUNT)
+        .map(|index| SwarmTaskDraft {
+            task_id: format!("snapshot-bench-{index}"),
+            requester: "kamn:did:agent:requester-1".to_owned(),
+            description: format!("snapshot benchmark task {index}"),
+            dependencies: if index == 0 {
+                vec![]
+            } else {
+                vec![format!("snapshot-bench-{}", index - 1)]
+            },
+        })
+        .collect();
+    engine
+        .submit_swarm_tasks(drafts)
+        .expect("benchmark DAG should submit");
+    for index in 0..TASK_COUNT {
+        engine
+            .accept(
+                &format!("snapshot-bench-{index}"),
+                "kamn:did:agent:worker-1",
+            )
+            .expect("accept should pass for benchmark task");
+    }
+
+    let started_at = Instant::now();
+    let snapshot = engine.export_snapshot();
+    let mut restored = TaskOperationEngine::new();
+    restored
+        .restore_snapshot(snapshot)
+        .expect("benchmark snapshot restore should pass");
+    let elapsed_millis = started_at.elapsed().as_millis();
+    assert!(
+        elapsed_millis < 2_000,
+        "snapshot roundtrip exceeded CI budget: {elapsed_millis}ms"
+    );
+    assert_eq!(restored.ready_tasks(), vec!["snapshot-bench-0".to_owned()]);
 }

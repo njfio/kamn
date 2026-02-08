@@ -44,3 +44,9 @@ fn regression_requires_tampered_snapshot_rejection_rule() {
     assert!(OPERATIONS_DOC.contains("Regression: #502"));
     assert!(STATE_MACHINE_DOC.contains("Regression: #502"));
 }
+
+#[test]
+fn docs_define_snapshot_roundtrip_benchmark_lane() {
+    assert!(OPERATIONS_DOC.contains("snapshot roundtrip benchmark"));
+    assert!(OPERATIONS_DOC.contains("cargo test -p kamn-core --test task_operation_snapshot"));
+}

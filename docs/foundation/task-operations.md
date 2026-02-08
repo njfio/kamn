@@ -91,6 +91,7 @@ and `cancel`.
 ## Bounded Graph Benchmark
 - A bounded graph benchmark keeps CI cost low while validating DAG guard performance characteristics.
 - The benchmark covers a 128-task linear DAG registration path and enforces a generous local CI budget.
+- A snapshot roundtrip benchmark validates export+restore overhead for a bounded 128-task DAG without requiring expensive integration infrastructure.
 
 ## Local Validation
 Run from repository root:
