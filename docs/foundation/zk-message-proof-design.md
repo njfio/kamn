@@ -74,6 +74,25 @@ This spike evaluates feasible zero-knowledge (ZK) message-proof designs for PRD 
   - proof value fails deterministic verification format checks
 - Regression guard: tampered processor proof artifacts are rejected before admission (`Regression: #509`).
 
+## Validator Quorum and Watchdog Projection Contract
+- Validator proof consensus introduces deterministic attestation artifacts:
+  - `ValidatorProofAttestation`
+  - `ValidatorProofConsensusInput`
+  - `ValidatorProofConsensusDecision`
+- Consensus evaluator guard rules:
+  - required quorum must be greater than zero
+  - attestation IDs and validator DIDs are unique per decision
+  - attestation replay IDs are rejected across evaluations
+  - attestation message/artifact identifiers must match the consensus input
+- Deterministic ordering guarantee:
+  - validator DID output is lexicographically ordered to stabilize watchdog incident payloads.
+- Watchdog projection severity mapping:
+  - `ConsensusValid` => `consensus-aligned` + `info` (no false-positive alert)
+  - `ConsensusInvalid` => `invalid-proof-consensus` + `critical`
+  - `ConsensusReplay` => `replay-proof-consensus` + `critical`
+  - mixed verdict buckets => `validator-mismatch` + `critical`
+- Regression guard: invalid-proof mismatch propagation must project as a critical validator mismatch signal (`Regression: #509`).
+
 ## Fast and Cost-Effective Validation
 Run the smallest lane needed for rapid feedback:
 

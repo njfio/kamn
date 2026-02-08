@@ -18,6 +18,10 @@ fn doc_contains_watchdog_attestation_scope_and_models() {
     assert!(DOC.contains("WatchdogAnomalyReport"));
     assert!(DOC.contains("WatchdogAnomalyError"));
     assert!(DOC.contains("evaluate_daemon_watchdog_anomaly"));
+    assert!(DOC.contains("ValidatorProofConsensusEvaluator"));
+    assert!(DOC.contains("ValidatorProofConsensusDecision"));
+    assert!(DOC.contains("ProofWatchdogProjector"));
+    assert!(DOC.contains("ProofWatchdogProjection"));
 }
 
 #[test]
@@ -47,5 +51,9 @@ fn regression_requires_divergence_and_censorship_guard_rules() {
     assert!(DOC.contains("hash mismatch false-negative is rejected (`Regression: #381`)."));
     assert!(DOC.contains(
         "censorship edge-signal remains critical when targeted peers are at least two and delivery ratio is 500 per-mille or lower (`Regression: #382`)."
+    ));
+    assert!(DOC.contains("proof consensus alignment (`ConsensusValid`) projects `info` severity."));
+    assert!(DOC.contains(
+        "proof consensus invalid/replay/mismatch projects `critical` severity with deterministic fingerprint fields."
     ));
 }

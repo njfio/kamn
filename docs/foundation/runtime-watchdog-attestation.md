@@ -37,12 +37,19 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
   - `WatchdogAnomalyReport`
   - `WatchdogAnomalyError`
   - `evaluate_daemon_watchdog_anomaly`
+- Proof outcome mismatch projection references:
+  - `ValidatorProofConsensusEvaluator`
+  - `ValidatorProofConsensusDecision`
+  - `ProofWatchdogProjector`
+  - `ProofWatchdogProjection`
 
 ## Severity and Evidence Guard Rules
 - state-hash divergence attestation must include expected and observed hashes.
 - Quorum anomaly severity is `critical` when observed quorum is below configured safety floor.
 - single-recipient deliveries are excluded from censorship classification.
 - Censorship classification must use bounded sample windows to avoid stale evidence amplification.
+- proof consensus alignment (`ConsensusValid`) projects `info` severity.
+- proof consensus invalid/replay/mismatch projects `critical` severity with deterministic fingerprint fields.
 - attestation replay for the same incident fingerprint is rejected (`Regression: #383`).
 - hash mismatch false-negative is rejected (`Regression: #381`).
 - censorship edge-signal remains critical when targeted peers are at least two and delivery ratio is 500 per-mille or lower (`Regression: #382`).

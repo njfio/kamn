@@ -1,4 +1,4 @@
-use crate::{CanonicalMessageEnvelope, MessageEnvelopeError};
+use crate::{AgentDid, CanonicalMessageEnvelope, MessageEnvelopeError};
 use std::collections::BTreeSet;
 use std::fmt;
 
@@ -207,6 +207,359 @@ impl ProcessorProofAdmissionEvaluator {
             artifact_id: input.artifact.artifact_id,
             payload_commitment: input.expected_payload_commitment,
         })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ValidatorProofVerdict {
+    Valid,
+    Invalid,
+    Replay,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValidatorProofAttestation {
+    pub attestation_id: String,
+    pub validator_did: String,
+    pub message_id: String,
+    pub artifact_id: String,
+    pub verdict: ValidatorProofVerdict,
+}
+
+impl ValidatorProofAttestation {
+    pub fn new(
+        attestation_id: &str,
+        validator_did: &str,
+        message_id: &str,
+        artifact_id: &str,
+        verdict: ValidatorProofVerdict,
+    ) -> Result<Self, ValidatorProofConsensusError> {
+        require_non_empty_consensus_field("attestation_id", attestation_id)?;
+        require_non_empty_consensus_field("validator_did", validator_did)?;
+        require_non_empty_consensus_field("message_id", message_id)?;
+        require_non_empty_consensus_field("artifact_id", artifact_id)?;
+        AgentDid::parse(validator_did).map_err(|error| {
+            ValidatorProofConsensusError::InvalidValidatorDid(error.to_string())
+        })?;
+        Ok(Self {
+            attestation_id: attestation_id.to_owned(),
+            validator_did: validator_did.to_owned(),
+            message_id: message_id.to_owned(),
+            artifact_id: artifact_id.to_owned(),
+            verdict,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValidatorProofConsensusInput {
+    pub message_id: String,
+    pub artifact_id: String,
+    pub attestations: Vec<ValidatorProofAttestation>,
+}
+
+impl ValidatorProofConsensusInput {
+    pub fn new(
+        message_id: &str,
+        artifact_id: &str,
+        attestations: Vec<ValidatorProofAttestation>,
+    ) -> Result<Self, ValidatorProofConsensusError> {
+        require_non_empty_consensus_field("message_id", message_id)?;
+        require_non_empty_consensus_field("artifact_id", artifact_id)?;
+        if attestations.is_empty() {
+            return Err(ValidatorProofConsensusError::EmptyAttestations);
+        }
+        Ok(Self {
+            message_id: message_id.to_owned(),
+            artifact_id: artifact_id.to_owned(),
+            attestations,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ValidatorProofConsensusStatus {
+    ConsensusValid,
+    ConsensusInvalid,
+    ConsensusReplay,
+    ValidatorMismatch,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValidatorProofConsensusDecision {
+    pub message_id: String,
+    pub artifact_id: String,
+    pub required_quorum: usize,
+    pub validator_count: usize,
+    pub validator_dids: Vec<String>,
+    pub valid_attestation_count: usize,
+    pub invalid_attestation_count: usize,
+    pub replay_attestation_count: usize,
+    pub status: ValidatorProofConsensusStatus,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ValidatorProofConsensusError {
+    InvalidRequiredQuorum(usize),
+    InvalidField { field: &'static str },
+    EmptyAttestations,
+    InvalidValidatorDid(String),
+    AttestationMessageMismatch { expected: String, found: String },
+    AttestationArtifactMismatch { expected: String, found: String },
+    DuplicateValidator(String),
+    DuplicateAttestationId(String),
+    AttestationReplay(String),
+    InsufficientAttestations { required: usize, received: usize },
+}
+
+impl fmt::Display for ValidatorProofConsensusError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidRequiredQuorum(required_quorum) => {
+                write!(
+                    f,
+                    "validator proof required quorum must be greater than zero, found {required_quorum}"
+                )
+            }
+            Self::InvalidField { field } => write!(f, "{field} must not be empty"),
+            Self::EmptyAttestations => {
+                write!(f, "validator proof attestations must not be empty")
+            }
+            Self::InvalidValidatorDid(value) => {
+                write!(f, "validator proof attestation DID is invalid: {value}")
+            }
+            Self::AttestationMessageMismatch { expected, found } => write!(
+                f,
+                "validator attestation message mismatch: expected {expected}, found {found}"
+            ),
+            Self::AttestationArtifactMismatch { expected, found } => write!(
+                f,
+                "validator attestation artifact mismatch: expected {expected}, found {found}"
+            ),
+            Self::DuplicateValidator(validator_did) => {
+                write!(
+                    f,
+                    "validator proof attestation duplicate validator: {validator_did}"
+                )
+            }
+            Self::DuplicateAttestationId(attestation_id) => {
+                write!(
+                    f,
+                    "validator proof attestation id duplicated in input: {attestation_id}"
+                )
+            }
+            Self::AttestationReplay(attestation_id) => {
+                write!(
+                    f,
+                    "validator proof attestation replay detected: {attestation_id}"
+                )
+            }
+            Self::InsufficientAttestations { required, received } => write!(
+                f,
+                "validator proof quorum insufficient attestations: required {required}, received {received}"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ValidatorProofConsensusError {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValidatorProofConsensusEvaluator {
+    required_quorum: usize,
+    consumed_attestation_ids: BTreeSet<String>,
+}
+
+impl ValidatorProofConsensusEvaluator {
+    pub fn new(required_quorum: usize) -> Result<Self, ValidatorProofConsensusError> {
+        if required_quorum == 0 {
+            return Err(ValidatorProofConsensusError::InvalidRequiredQuorum(
+                required_quorum,
+            ));
+        }
+        Ok(Self {
+            required_quorum,
+            consumed_attestation_ids: BTreeSet::new(),
+        })
+    }
+
+    pub fn required_quorum(&self) -> usize {
+        self.required_quorum
+    }
+
+    pub fn evaluate(
+        &mut self,
+        input: ValidatorProofConsensusInput,
+    ) -> Result<ValidatorProofConsensusDecision, ValidatorProofConsensusError> {
+        let received = input.attestations.len();
+        if received < self.required_quorum {
+            return Err(ValidatorProofConsensusError::InsufficientAttestations {
+                required: self.required_quorum,
+                received,
+            });
+        }
+
+        let mut validator_dids = BTreeSet::new();
+        let mut local_attestation_ids = BTreeSet::new();
+        let mut valid_attestation_count = 0usize;
+        let mut invalid_attestation_count = 0usize;
+        let mut replay_attestation_count = 0usize;
+
+        for attestation in &input.attestations {
+            if attestation.message_id != input.message_id {
+                return Err(ValidatorProofConsensusError::AttestationMessageMismatch {
+                    expected: input.message_id.clone(),
+                    found: attestation.message_id.clone(),
+                });
+            }
+            if attestation.artifact_id != input.artifact_id {
+                return Err(ValidatorProofConsensusError::AttestationArtifactMismatch {
+                    expected: input.artifact_id.clone(),
+                    found: attestation.artifact_id.clone(),
+                });
+            }
+            if !validator_dids.insert(attestation.validator_did.clone()) {
+                return Err(ValidatorProofConsensusError::DuplicateValidator(
+                    attestation.validator_did.clone(),
+                ));
+            }
+            if self
+                .consumed_attestation_ids
+                .contains(&attestation.attestation_id)
+            {
+                return Err(ValidatorProofConsensusError::AttestationReplay(
+                    attestation.attestation_id.clone(),
+                ));
+            }
+            if !local_attestation_ids.insert(attestation.attestation_id.clone()) {
+                return Err(ValidatorProofConsensusError::DuplicateAttestationId(
+                    attestation.attestation_id.clone(),
+                ));
+            }
+
+            match attestation.verdict {
+                ValidatorProofVerdict::Valid => valid_attestation_count += 1,
+                ValidatorProofVerdict::Invalid => invalid_attestation_count += 1,
+                ValidatorProofVerdict::Replay => replay_attestation_count += 1,
+            }
+        }
+
+        for attestation_id in local_attestation_ids {
+            self.consumed_attestation_ids.insert(attestation_id);
+        }
+
+        let verdict_bucket_count = [
+            valid_attestation_count,
+            invalid_attestation_count,
+            replay_attestation_count,
+        ]
+        .into_iter()
+        .filter(|count| *count > 0)
+        .count();
+
+        let status = if verdict_bucket_count > 1 {
+            ValidatorProofConsensusStatus::ValidatorMismatch
+        } else if valid_attestation_count > 0 {
+            ValidatorProofConsensusStatus::ConsensusValid
+        } else if invalid_attestation_count > 0 {
+            ValidatorProofConsensusStatus::ConsensusInvalid
+        } else {
+            ValidatorProofConsensusStatus::ConsensusReplay
+        };
+
+        Ok(ValidatorProofConsensusDecision {
+            message_id: input.message_id,
+            artifact_id: input.artifact_id,
+            required_quorum: self.required_quorum,
+            validator_count: validator_dids.len(),
+            validator_dids: validator_dids.into_iter().collect(),
+            valid_attestation_count,
+            invalid_attestation_count,
+            replay_attestation_count,
+            status,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProofWatchdogProjectionKind {
+    ConsensusAligned,
+    InvalidProofConsensus,
+    ReplayProofConsensus,
+    ValidatorMismatch,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProofWatchdogSeverity {
+    Info,
+    Warning,
+    Critical,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProofWatchdogProjection {
+    pub incident_fingerprint: String,
+    pub message_id: String,
+    pub artifact_id: String,
+    pub kind: ProofWatchdogProjectionKind,
+    pub severity: ProofWatchdogSeverity,
+    pub required_quorum: usize,
+    pub validator_count: usize,
+    pub valid_attestation_count: usize,
+    pub invalid_attestation_count: usize,
+    pub replay_attestation_count: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ProofWatchdogProjector;
+
+impl ProofWatchdogProjector {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn project(&self, decision: &ValidatorProofConsensusDecision) -> ProofWatchdogProjection {
+        let (kind, severity) = match decision.status {
+            ValidatorProofConsensusStatus::ConsensusValid => (
+                ProofWatchdogProjectionKind::ConsensusAligned,
+                ProofWatchdogSeverity::Info,
+            ),
+            ValidatorProofConsensusStatus::ConsensusInvalid => (
+                ProofWatchdogProjectionKind::InvalidProofConsensus,
+                ProofWatchdogSeverity::Critical,
+            ),
+            ValidatorProofConsensusStatus::ConsensusReplay => (
+                ProofWatchdogProjectionKind::ReplayProofConsensus,
+                ProofWatchdogSeverity::Critical,
+            ),
+            ValidatorProofConsensusStatus::ValidatorMismatch => (
+                ProofWatchdogProjectionKind::ValidatorMismatch,
+                ProofWatchdogSeverity::Critical,
+            ),
+        };
+
+        let incident_fingerprint = format!(
+            "proof-consensus:{}:{}:{}:{}:{}:{}",
+            decision.message_id,
+            decision.artifact_id,
+            proof_watchdog_kind_code(kind),
+            decision.valid_attestation_count,
+            decision.invalid_attestation_count,
+            decision.replay_attestation_count,
+        );
+
+        ProofWatchdogProjection {
+            incident_fingerprint,
+            message_id: decision.message_id.clone(),
+            artifact_id: decision.artifact_id.clone(),
+            kind,
+            severity,
+            required_quorum: decision.required_quorum,
+            validator_count: decision.validator_count,
+            valid_attestation_count: decision.valid_attestation_count,
+            invalid_attestation_count: decision.invalid_attestation_count,
+            replay_attestation_count: decision.replay_attestation_count,
+        }
     }
 }
 
@@ -616,6 +969,25 @@ fn require_non_empty_artifact_field(field: &str, value: &str) -> Result<(), ZkDe
     Ok(())
 }
 
+fn require_non_empty_consensus_field(
+    field: &'static str,
+    value: &str,
+) -> Result<(), ValidatorProofConsensusError> {
+    if value.trim().is_empty() {
+        return Err(ValidatorProofConsensusError::InvalidField { field });
+    }
+    Ok(())
+}
+
+fn proof_watchdog_kind_code(kind: ProofWatchdogProjectionKind) -> &'static str {
+    match kind {
+        ProofWatchdogProjectionKind::ConsensusAligned => "consensus-aligned",
+        ProofWatchdogProjectionKind::InvalidProofConsensus => "invalid-proof-consensus",
+        ProofWatchdogProjectionKind::ReplayProofConsensus => "replay-proof-consensus",
+        ProofWatchdogProjectionKind::ValidatorMismatch => "validator-mismatch",
+    }
+}
+
 fn validate_policy(policy: ZkEvaluationPolicy) -> Result<(), ZkDesignError> {
     if policy.max_verifier_latency_ms == 0 {
         return Err(ZkDesignError::InvalidPolicy(
@@ -686,8 +1058,12 @@ fn fnv1a_64(input: &[u8]) -> u64 {
 mod tests {
     use super::{
         evaluate_zk_option, phase4_baseline_options, ProcessorProofAdmissionEvaluator,
-        ProcessorProofAdmissionInput, ProcessorProofArtifact, ZkArchitectureOption, ZkDesignError,
-        ZkEvaluationPolicy, ZkProofSystem, ZkVerificationTopology,
+        ProcessorProofAdmissionInput, ProcessorProofArtifact, ProofWatchdogProjectionKind,
+        ProofWatchdogProjector, ProofWatchdogSeverity, ValidatorProofAttestation,
+        ValidatorProofConsensusError, ValidatorProofConsensusEvaluator,
+        ValidatorProofConsensusInput, ValidatorProofConsensusStatus, ValidatorProofVerdict,
+        ZkArchitectureOption, ZkDesignError, ZkEvaluationPolicy, ZkProofSystem,
+        ZkVerificationTopology,
     };
 
     #[test]
@@ -763,5 +1139,107 @@ mod tests {
                 reason: "proof value failed deterministic verification".to_owned(),
             })
         );
+    }
+
+    #[test]
+    fn validator_attestation_rejects_invalid_did() {
+        let error = ValidatorProofAttestation::new(
+            "attestation-1",
+            "validator-a",
+            "urn:uuid:message-1",
+            "artifact-1",
+            ValidatorProofVerdict::Valid,
+        )
+        .expect_err("invalid validator did should be rejected");
+        assert!(matches!(
+            error,
+            ValidatorProofConsensusError::InvalidValidatorDid(_)
+        ));
+    }
+
+    #[test]
+    fn validator_consensus_rejects_duplicate_validator_attestations() {
+        let mut evaluator =
+            ValidatorProofConsensusEvaluator::new(2).expect("valid quorum should build");
+        let input = ValidatorProofConsensusInput::new(
+            "urn:uuid:message-1",
+            "artifact-1",
+            vec![
+                ValidatorProofAttestation::new(
+                    "attestation-1",
+                    "kamn:did:agent:validator-a",
+                    "urn:uuid:message-1",
+                    "artifact-1",
+                    ValidatorProofVerdict::Valid,
+                )
+                .expect("valid attestation"),
+                ValidatorProofAttestation::new(
+                    "attestation-2",
+                    "kamn:did:agent:validator-a",
+                    "urn:uuid:message-1",
+                    "artifact-1",
+                    ValidatorProofVerdict::Valid,
+                )
+                .expect("valid attestation"),
+            ],
+        )
+        .expect("input should parse");
+
+        assert_eq!(
+            evaluator.evaluate(input),
+            Err(ValidatorProofConsensusError::DuplicateValidator(
+                "kamn:did:agent:validator-a".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn watchdog_projection_is_nominal_for_aligned_valid_consensus() {
+        let mut evaluator =
+            ValidatorProofConsensusEvaluator::new(2).expect("valid quorum should build");
+        let input = ValidatorProofConsensusInput::new(
+            "urn:uuid:message-1",
+            "artifact-1",
+            vec![
+                ValidatorProofAttestation::new(
+                    "attestation-1",
+                    "kamn:did:agent:validator-z",
+                    "urn:uuid:message-1",
+                    "artifact-1",
+                    ValidatorProofVerdict::Valid,
+                )
+                .expect("valid attestation"),
+                ValidatorProofAttestation::new(
+                    "attestation-2",
+                    "kamn:did:agent:validator-a",
+                    "urn:uuid:message-1",
+                    "artifact-1",
+                    ValidatorProofVerdict::Valid,
+                )
+                .expect("valid attestation"),
+            ],
+        )
+        .expect("input should parse");
+        let decision = evaluator
+            .evaluate(input)
+            .expect("aligned valid consensus should succeed");
+        let projection = ProofWatchdogProjector::new().project(&decision);
+
+        assert_eq!(
+            decision.status,
+            ValidatorProofConsensusStatus::ConsensusValid
+        );
+        assert_eq!(
+            decision.validator_dids,
+            vec![
+                "kamn:did:agent:validator-a".to_owned(),
+                "kamn:did:agent:validator-z".to_owned()
+            ]
+        );
+        assert_eq!(
+            projection.kind,
+            ProofWatchdogProjectionKind::ConsensusAligned
+        );
+        assert_eq!(projection.severity, ProofWatchdogSeverity::Info);
     }
 }
