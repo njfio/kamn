@@ -1,4 +1,4 @@
-# Operator Dashboard Backend APIs (Issues #202, #203, #591, #610)
+# Operator Dashboard Backend APIs (Issues #202, #203, #591, #610, #640)
 
 This document captures the first implementation slice for backend read APIs that power human-operator dashboard visibility.
 
@@ -18,6 +18,7 @@ This document captures the first implementation slice for backend read APIs that
 - Added explicit frontend consumer contract mapping for `packages/kamn-dashboard`:
   - backend snapshot shape maps to deterministic frontend shell state projections.
   - backend absence/failure semantics map to deterministic loading/error/empty frontend states.
+  - live backend fetch path requires operator session token + allowed role gates.
 
 ## Pagination and Filter Rules
 - Page limit must be positive.
@@ -38,6 +39,12 @@ This document captures the first implementation slice for backend read APIs that
 - Backend fetch-in-flight maps to frontend `dashboard-loading` state.
 - Backend fetch failures map to frontend `dashboard-error` state.
 - Empty backend snapshot sets map to frontend `dashboard-empty` state.
+- Live backend session policy:
+  - operator session token is required before backend fetch.
+  - expired sessions are rejected before backend fetch.
+  - allowed roles default to `operator` and `admin`.
+  - role mismatches map to deterministic `dashboard-error` output.
+  - backend requests carry `Authorization: Bearer <token>` and `X-KAMN-Role` headers.
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
@@ -54,3 +61,8 @@ Then run crate regression:
 ```bash
 cargo test -p kamn-core
 ```
+
+## Regression Guards
+- tampered pagination cursor tokens are rejected (`Regression: #203`).
+- dashboard shell state mapping remains deterministic for loading/error/empty (`Regression: #591`).
+- missing/expired/unauthorized operator sessions are rejected in live backend fetch path (`Regression: #640`).

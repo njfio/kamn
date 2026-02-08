@@ -11,6 +11,12 @@ import {
   renderDashboardState,
 } from "../src/index.ts";
 
+const ACTIVE_SESSION = {
+  accessToken: "token-ops-1",
+  role: "operator",
+  expiresAtUnix: 1_700_003_000,
+} as const;
+
 test("unit maps severity to critical when error rate exceeds critical threshold", () => {
   const severity = mapSeverityLevel({
     value: 0.09,
@@ -135,8 +141,12 @@ test("regression renders critical badge and stale banner together", () => {
 test("unit fetches dashboard snapshot from live backend client", async () => {
   const snapshot = await fetchDashboardSnapshotFromBackend({
     baseUrl: "https://dashboard.internal",
-    fetchImpl: async (url) => {
+    session: ACTIVE_SESSION,
+    sessionNowUnix: 1_700_002_200,
+    fetchImpl: async (url, init) => {
       assert.equal(url, "https://dashboard.internal/api/dashboard/snapshot");
+      assert.equal(init?.headers?.Authorization, "Bearer token-ops-1");
+      assert.equal(init?.headers?.["X-KAMN-Role"], "operator");
       return {
         ok: true,
         status: 200,
@@ -162,6 +172,8 @@ test("unit fetches dashboard snapshot from live backend client", async () => {
 test("functional builds dashboard shell from live backend snapshot", async () => {
   const html = await buildDashboardShellFromBackend(1_700_002_200, {
     baseUrl: "https://dashboard.internal",
+    session: ACTIVE_SESSION,
+    sessionNowUnix: 1_700_002_200,
     fetchImpl: async () => ({
       ok: true,
       status: 200,
@@ -184,9 +196,11 @@ test("functional builds dashboard shell from live backend snapshot", async () =>
 });
 
 test("regression renders error shell when live backend request fails", async () => {
-  // Regression: #622
+  // Regression: #639
   const html = await buildDashboardShellFromBackend(1_700_002_200, {
     baseUrl: "https://dashboard.internal",
+    session: ACTIVE_SESSION,
+    sessionNowUnix: 1_700_002_200,
     fetchImpl: async () => ({
       ok: false,
       status: 503,
@@ -196,4 +210,49 @@ test("regression renders error shell when live backend request fails", async () 
 
   assert.match(html, /dashboard-error/);
   assert.match(html, /503/);
+});
+
+test("regression rejects live backend access without operator session", async () => {
+  // Regression: #640
+  const html = await buildDashboardShellFromBackend(1_700_002_200, {
+    baseUrl: "https://dashboard.internal",
+    fetchImpl: async () => {
+      throw new Error("fetch should not be called without session");
+    },
+  });
+
+  assert.match(html, /dashboard-error/);
+  assert.match(html, /operator session is required/i);
+});
+
+test("regression rejects expired or unauthorized session role", async () => {
+  // Regression: #640
+  const expiredHtml = await buildDashboardShellFromBackend(1_700_002_200, {
+    baseUrl: "https://dashboard.internal",
+    session: {
+      accessToken: "token-expired",
+      role: "operator",
+      expiresAtUnix: 1_700_002_100,
+    },
+    sessionNowUnix: 1_700_002_200,
+    fetchImpl: async () => {
+      throw new Error("fetch should not be called with expired session");
+    },
+  });
+  assert.match(expiredHtml, /session expired/i);
+
+  const unauthorizedRoleHtml = await buildDashboardShellFromBackend(1_700_002_200, {
+    baseUrl: "https://dashboard.internal",
+    session: {
+      accessToken: "token-viewer",
+      role: "viewer",
+      expiresAtUnix: 1_700_003_000,
+    },
+    sessionNowUnix: 1_700_002_200,
+    allowedRoles: ["operator", "admin"],
+    fetchImpl: async () => {
+      throw new Error("fetch should not be called with unauthorized role");
+    },
+  });
+  assert.match(unauthorizedRoleHtml, /session role not allowed/i);
 });

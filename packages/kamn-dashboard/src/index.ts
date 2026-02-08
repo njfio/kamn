@@ -17,6 +17,8 @@ export type {
   DashboardDomainRow,
   DashboardDomainSample,
   DashboardModel,
+  DashboardOperatorRole,
+  DashboardOperatorSession,
   DashboardRenderState,
   DashboardSnapshot,
   DashboardSummaryCard,

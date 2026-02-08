@@ -51,3 +51,10 @@ fn regression_requires_live_backend_error_shell_rule() {
     assert!(DOC.contains("dashboard-error"));
     assert!(DOC.contains("Regression: #639"));
 }
+
+#[test]
+fn regression_requires_live_session_gate_rule() {
+    // Regression: #640
+    assert!(DOC.contains("missing/expired/unauthorized operator sessions"));
+    assert!(DOC.contains("Regression: #640"));
+}

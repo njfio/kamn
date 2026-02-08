@@ -43,6 +43,7 @@ This document captures the first implementation slice for the operator dashboard
   - backend snapshot fetch uses `fetchDashboardSnapshotFromBackend(...)`.
   - successful live fetch maps to deterministic ready shell rendering.
   - non-2xx backend responses map to deterministic `dashboard-error` rendering with status detail.
+  - missing/expired/unauthorized operator sessions map to deterministic `dashboard-error` rendering.
 
 ## Audit Trace Rules
 - Audit traces are projected from `OperatorActionAuditRecord`.
@@ -69,3 +70,4 @@ cargo test -p kamn-core
 ## Regression Guards
 - critical severity badge and stale banner render together for degraded snapshots (`Regression: #591`).
 - live backend HTTP failures render deterministic error shell output (`Regression: #639`).
+- live backend operator session gate rejects missing/expired/unauthorized access (`Regression: #640`).
