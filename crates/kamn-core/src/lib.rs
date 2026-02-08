@@ -43,7 +43,7 @@ pub use bridge_adapter::{
     BridgeInboundEnvelope, BridgeOutboundEnvelope, BridgeOutboundRequest, BridgePlatform,
     BridgePolicyHook, NormalizedInboundMessage, PassThroughBridgeAdapter,
 };
-pub use channel_models::{ChannelModelError, ChannelStore, ChannelType};
+pub use channel_models::{ChannelMetadata, ChannelModelError, ChannelStore, ChannelType};
 pub use channel_policies::{
     ChannelAction, ChannelPermissionEngine, ChannelPermissions, ChannelPolicyError, PermissionRule,
     RetentionMessage, RetentionPolicy,
