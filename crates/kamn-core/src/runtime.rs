@@ -390,6 +390,106 @@ impl RejoinAttempt {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuntimeSnapshot {
+    state_version: u64,
+    state_hash: String,
+}
+
+impl RuntimeSnapshot {
+    pub fn new(state_version: u64, state_hash: &str) -> Result<Self, SnapshotRestoreError> {
+        if state_version == 0 {
+            return Err(SnapshotRestoreError::InvalidStateVersion);
+        }
+        if state_hash.trim().is_empty() {
+            return Err(SnapshotRestoreError::InvalidStateHash);
+        }
+        Ok(Self {
+            state_version,
+            state_hash: state_hash.to_owned(),
+        })
+    }
+
+    pub fn state_version(&self) -> u64 {
+        self.state_version
+    }
+
+    pub fn state_hash(&self) -> &str {
+        &self.state_hash
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SnapshotRestoreError {
+    InvalidStateVersion,
+    InvalidStateHash,
+    StateVersionMismatch { expected: u64, found: u64 },
+    StateHashMismatch { expected: String, found: String },
+}
+
+impl Display for SnapshotRestoreError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidStateVersion => write!(f, "snapshot state version must be positive"),
+            Self::InvalidStateHash => write!(f, "snapshot state hash cannot be empty"),
+            Self::StateVersionMismatch { expected, found } => {
+                write!(
+                    f,
+                    "snapshot state version mismatch: expected {expected}, found {found}"
+                )
+            }
+            Self::StateHashMismatch { expected, found } => {
+                write!(
+                    f,
+                    "snapshot state hash mismatch: expected {expected}, found {found}"
+                )
+            }
+        }
+    }
+}
+
+impl Error for SnapshotRestoreError {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SnapshotRestoreGuard {
+    expected_state_version: u64,
+    expected_state_hash: String,
+}
+
+impl SnapshotRestoreGuard {
+    pub fn new(
+        expected_state_version: u64,
+        expected_state_hash: &str,
+    ) -> Result<Self, SnapshotRestoreError> {
+        if expected_state_version == 0 {
+            return Err(SnapshotRestoreError::InvalidStateVersion);
+        }
+        if expected_state_hash.trim().is_empty() {
+            return Err(SnapshotRestoreError::InvalidStateHash);
+        }
+        Ok(Self {
+            expected_state_version,
+            expected_state_hash: expected_state_hash.to_owned(),
+        })
+    }
+
+    pub fn validate(&self, snapshot: RuntimeSnapshot) -> Result<(), SnapshotRestoreError> {
+        if snapshot.state_version() != self.expected_state_version {
+            return Err(SnapshotRestoreError::StateVersionMismatch {
+                expected: self.expected_state_version,
+                found: snapshot.state_version(),
+            });
+        }
+        if snapshot.state_hash() != self.expected_state_hash {
+            return Err(SnapshotRestoreError::StateHashMismatch {
+                expected: self.expected_state_hash.clone(),
+                found: snapshot.state_hash().to_owned(),
+            });
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RecoveryStatus {
     RejoinAccepted,
     CatchUpRequired { from_version: u64, to_version: u64 },
@@ -530,7 +630,8 @@ mod tests {
         build_runtime_wiring, BoundedRuntimeQueue, DeterministicProposalPlanner, PeerLifecycle,
         PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, ProposalPlannerError,
         RecoveryGuardError, RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt,
-        RuntimeLifecycleError, RuntimeQueueError,
+        RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot, SnapshotRestoreError,
+        SnapshotRestoreGuard,
     };
     use crate::config::{NodeConfig, NodeRole, SyncMode};
 
@@ -818,6 +919,56 @@ mod tests {
         assert_eq!(
             error,
             RecoveryGuardError::StateHashMismatch {
+                expected: "state-42".to_owned(),
+                found: "state-41".to_owned()
+            }
+        );
+    }
+
+    #[test]
+    fn functional_snapshot_restore_guard_accepts_matching_snapshot() {
+        let guard =
+            SnapshotRestoreGuard::new(42, "state-42").expect("restore guard should construct");
+        let snapshot = RuntimeSnapshot::new(42, "state-42").expect("snapshot should be valid");
+        assert!(guard.validate(snapshot).is_ok());
+    }
+
+    #[test]
+    fn unit_snapshot_restore_guard_rejects_invalid_state_hash() {
+        let snapshot = RuntimeSnapshot::new(42, "");
+        assert_eq!(snapshot, Err(SnapshotRestoreError::InvalidStateHash));
+    }
+
+    #[test]
+    fn regression_snapshot_restore_version_mismatch_is_rejected() {
+        // Regression: #361
+        let guard =
+            SnapshotRestoreGuard::new(42, "state-42").expect("restore guard should construct");
+        let snapshot = RuntimeSnapshot::new(41, "state-42").expect("snapshot should be valid");
+        let error = guard
+            .validate(snapshot)
+            .expect_err("version mismatch should be rejected");
+        assert_eq!(
+            error,
+            SnapshotRestoreError::StateVersionMismatch {
+                expected: 42,
+                found: 41
+            }
+        );
+    }
+
+    #[test]
+    fn regression_snapshot_restore_hash_mismatch_is_rejected() {
+        // Regression: #361
+        let guard =
+            SnapshotRestoreGuard::new(42, "state-42").expect("restore guard should construct");
+        let snapshot = RuntimeSnapshot::new(42, "state-41").expect("snapshot should be valid");
+        let error = guard
+            .validate(snapshot)
+            .expect_err("hash mismatch should be rejected");
+        assert_eq!(
+            error,
+            SnapshotRestoreError::StateHashMismatch {
                 expected: "state-42".to_owned(),
                 found: "state-41".to_owned()
             }

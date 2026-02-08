@@ -5,12 +5,19 @@ This document captures processor high-availability runtime contract text for sna
 ## Scope Delivered
 - Added processor HA docs contract baseline for runtime snapshot restore safeguards.
 - Added construct-lock safety rules for split-brain and stale-lease boundaries.
+- Added runtime snapshot restore guard model references:
+  - `RuntimeSnapshot`
+  - `SnapshotRestoreGuard`
+  - `SnapshotRestoreError`
 - Added low-cost validation lane commands for docs-focused PR checks.
 
 ## Snapshot Restore Rules
 - Snapshot restore requires deterministic expected state version and expected state hash inputs.
 - Snapshot payloads must preserve stable state lineage fields for restore decisions.
 - snapshot version/hash mismatch restores are rejected.
+- Typed restore mismatches:
+  - `SnapshotRestoreError::StateVersionMismatch`
+  - `SnapshotRestoreError::StateHashMismatch`
 
 ## Construct Lock Rules
 - Processor construct-lock ownership must enforce single active lease semantics.
