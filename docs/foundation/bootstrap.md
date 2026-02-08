@@ -70,6 +70,7 @@ For Discord bridge approver-gated outbound flow controls, see `docs/foundation/d
 For Ethereum/Solana cross-chain adapter foundation controls, see `docs/foundation/cross-chain-bridge-adapters.md`.
 For CI cache strategy and bounded parallelism controls, see `docs/foundation/ci-caching-parallelism.md`.
 For flaky-test quarantine and bounded retry controls, see `docs/foundation/ci-flaky-quarantine.md`.
+For release rollback triggers and post-upgrade verification controls, see `docs/foundation/upgrade-rollback-runbook.md`.
 For redaction and tombstone compliance workflow controls, see `docs/foundation/redaction-tombstones.md`.
 For compliance audit export interface controls, see `docs/foundation/audit-export-interfaces.md`.
 For configurable retention policy enforcement controls, see `docs/foundation/retention-policy-engine.md`.
