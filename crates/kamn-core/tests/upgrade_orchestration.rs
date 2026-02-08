@@ -72,6 +72,7 @@ fn upgrade_orchestration_integration_uses_governance_vote_outcome() {
             created_at_unix: 1_716_501_000,
             voting_deadline_unix: 1_716_501_600,
             quorum_threshold: 2,
+            parameter_change: None,
         })
         .expect("proposal should submit");
     governance

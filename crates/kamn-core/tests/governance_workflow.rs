@@ -1,6 +1,6 @@
 use kamn_core::{
-    ChannelStore, GovernanceProposalDraft, GovernanceProposalStatus, GovernanceVoteChoice,
-    GovernanceWorkflow, GovernanceWorkflowError,
+    ChannelStore, GovernanceParameterChangeDraft, GovernanceProposalDraft,
+    GovernanceProposalStatus, GovernanceVoteChoice, GovernanceWorkflow, GovernanceWorkflowError,
 };
 
 #[test]
@@ -15,6 +15,7 @@ fn governance_workflow_rejects_zero_quorum_threshold() {
             created_at_unix: 1_716_300_000,
             voting_deadline_unix: 1_716_300_500,
             quorum_threshold: 0,
+            parameter_change: None,
         }),
         Err(GovernanceWorkflowError::InvalidQuorum(0))
     );
@@ -32,6 +33,7 @@ fn governance_workflow_functional_submit_vote_execute_flow() {
             created_at_unix: 1_716_301_000,
             voting_deadline_unix: 1_716_302_000,
             quorum_threshold: 2,
+            parameter_change: None,
         })
         .expect("proposal should submit");
 
@@ -109,6 +111,7 @@ fn governance_workflow_integration_with_governance_channel_members() {
             created_at_unix: 1_716_302_000,
             voting_deadline_unix: 1_716_303_000,
             quorum_threshold: 2,
+            parameter_change: None,
         })
         .expect("proposal should submit");
     workflow
@@ -149,6 +152,7 @@ fn governance_workflow_regression_rejects_late_votes_after_deadline() {
             created_at_unix: 100,
             voting_deadline_unix: 120,
             quorum_threshold: 2,
+            parameter_change: None,
         })
         .expect("proposal should submit");
 
@@ -162,6 +166,62 @@ fn governance_workflow_regression_rejects_late_votes_after_deadline() {
         Err(GovernanceWorkflowError::ProposalClosed {
             proposal_id: "gov-proposal-4".to_owned(),
             status: GovernanceProposalStatus::Expired
+        })
+    );
+}
+
+#[test]
+fn governance_workflow_rejects_parameter_change_with_invalid_target_version() {
+    let mut workflow = GovernanceWorkflow::new();
+    assert_eq!(
+        workflow.submit_proposal(GovernanceProposalDraft {
+            proposal_id: "gov-proposal-5".to_owned(),
+            title: "Parameter update".to_owned(),
+            description: "Update listener quorum".to_owned(),
+            proposer_did: "kamn:did:agent:validator-1".to_owned(),
+            created_at_unix: 1_716_303_000,
+            voting_deadline_unix: 1_716_304_000,
+            quorum_threshold: 2,
+            parameter_change: Some(GovernanceParameterChangeDraft {
+                key: "listener.quorum".to_owned(),
+                proposed_value: 2,
+                min_value: 1,
+                max_value: 5,
+                target_version: "vNext".to_owned(),
+            }),
+        }),
+        Err(GovernanceWorkflowError::InvalidParameterTargetVersion(
+            "vNext".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn governance_workflow_regression_rejects_parameter_change_out_of_bounds() {
+    // Regression: #476
+    let mut workflow = GovernanceWorkflow::new();
+    assert_eq!(
+        workflow.submit_proposal(GovernanceProposalDraft {
+            proposal_id: "gov-proposal-6".to_owned(),
+            title: "Parameter update".to_owned(),
+            description: "Update listener quorum".to_owned(),
+            proposer_did: "kamn:did:agent:validator-1".to_owned(),
+            created_at_unix: 1_716_304_000,
+            voting_deadline_unix: 1_716_305_000,
+            quorum_threshold: 2,
+            parameter_change: Some(GovernanceParameterChangeDraft {
+                key: "listener.quorum".to_owned(),
+                proposed_value: 0,
+                min_value: 1,
+                max_value: 5,
+                target_version: "1.2.0".to_owned(),
+            }),
+        }),
+        Err(GovernanceWorkflowError::ParameterOutOfBounds {
+            key: "listener.quorum".to_owned(),
+            proposed_value: 0,
+            min_value: 1,
+            max_value: 5,
         })
     );
 }

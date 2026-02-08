@@ -131,9 +131,9 @@ pub use discord_bridge::{
 };
 pub use escrow::{EscrowLifecycle, EscrowLifecycleError, EscrowStatus};
 pub use governance_workflow::{
-    GovernanceExecutionRecord, GovernanceProposalDraft, GovernanceProposalRecord,
-    GovernanceProposalStatus, GovernanceVoteChoice, GovernanceVoteRecord, GovernanceWorkflow,
-    GovernanceWorkflowError,
+    GovernanceExecutionRecord, GovernanceParameterChangeDraft, GovernanceProposalDraft,
+    GovernanceProposalRecord, GovernanceProposalStatus, GovernanceVoteChoice, GovernanceVoteRecord,
+    GovernanceWorkflow, GovernanceWorkflowError,
 };
 pub use group_channel_crypto::{
     GroupChannelCryptoEngine, GroupChannelCryptoError, GroupMessageCiphertext,

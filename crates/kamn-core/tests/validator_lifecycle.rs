@@ -114,6 +114,7 @@ fn validator_lifecycle_integration_requires_approved_governance_proposal_referen
             created_at_unix: 1_716_401_000,
             voting_deadline_unix: 1_716_401_600,
             quorum_threshold: 2,
+            parameter_change: None,
         })
         .expect("proposal should submit");
     governance

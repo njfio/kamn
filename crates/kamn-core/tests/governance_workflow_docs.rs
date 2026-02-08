@@ -27,3 +27,11 @@ fn regression_requires_late_vote_rejection_rule() {
     // Regression: #197
     assert!(DOC.contains("Late votes after deadline are rejected"));
 }
+
+#[test]
+fn regression_requires_parameter_payload_validation_rule() {
+    // Regression: #476
+    assert!(DOC.contains("## Parameter Proposal Validation Rules"));
+    assert!(DOC.contains("semver-style target version"));
+    assert!(DOC.contains("Regression: #476"));
+}
