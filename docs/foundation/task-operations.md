@@ -66,6 +66,11 @@ and `cancel`.
   - initializes dependency metadata used by readiness checks.
 - `ready_tasks()`:
   - returns deterministic ready-task IDs (sorted) where lifecycle state is `Accepted` or `Delegated` and all dependencies are `Completed`.
+- `export_snapshot()`:
+  - returns deterministic snapshot payload with schema version, task records, notices, lifecycle history, and dependency metadata.
+- `restore_snapshot(snapshot)`:
+  - validates schema version, lifecycle history, dependency references, and cycle safety before mutating engine state.
+  - rejects tampered restore payloads where dependency-complete invariants are violated (`Regression: #502`).
 
 ## Validation and Safety Rules
 - Task IDs must be unique.
@@ -77,6 +82,11 @@ and `cancel`.
   - cyclic dependency graphs are rejected with `CyclicDependency`.
   - `start_work` is blocked when any dependency is not `Completed` (`DependencyNotSatisfied`).
   - replayed completion attempts remain rejected by terminal-state lifecycle guards (`Regression: #472`).
+- Snapshot recovery rules:
+  - schema version mismatch is rejected.
+  - lifecycle history shape must be replayable from `Submitted`.
+  - dependency references must resolve and remain acyclic.
+  - tasks restored in execution states (`InProgress`/`Blocked`/`Completed`/`Failed`) require dependencies already `Completed` (`Regression: #502`).
 
 ## Bounded Graph Benchmark
 - A bounded graph benchmark keeps CI cost low while validating DAG guard performance characteristics.
@@ -90,6 +100,7 @@ cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core --test task_operations
 cargo test -p kamn-core --test swarm_task_dag
+cargo test -p kamn-core --test task_operation_snapshot
 cargo test -p kamn-core
 ```
 

@@ -29,3 +29,18 @@ fn docs_define_bounded_graph_benchmark_lane() {
     assert!(OPERATIONS_DOC.contains("bounded graph benchmark"));
     assert!(OPERATIONS_DOC.contains("cargo test -p kamn-core --test swarm_task_dag"));
 }
+
+#[test]
+fn docs_define_snapshot_recovery_validation_rules() {
+    assert!(OPERATIONS_DOC.contains("export_snapshot()"));
+    assert!(OPERATIONS_DOC.contains("restore_snapshot(snapshot)"));
+    assert!(OPERATIONS_DOC.contains("schema version mismatch is rejected."));
+    assert!(STATE_MACHINE_DOC.contains("Snapshot restore invariants"));
+}
+
+#[test]
+fn regression_requires_tampered_snapshot_rejection_rule() {
+    // Regression: #502
+    assert!(OPERATIONS_DOC.contains("Regression: #502"));
+    assert!(STATE_MACHINE_DOC.contains("Regression: #502"));
+}
