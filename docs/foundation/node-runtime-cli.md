@@ -1,6 +1,6 @@
-# Node Runtime CLI Contracts (Issues #306 / #307 / #309 / #310)
+# Node Runtime CLI Contracts (Issues #306 / #307 / #309 / #310 / #335)
 
-This document captures the first two node-runtime productionization slices for machine-readable output and local role profile projection.
+This document captures node-runtime productionization slices for machine-readable output, local role profile projection, diagnostics snapshots, and deterministic runtime planning execution.
 
 ## Scope Delivered
 - Added output-mode support to `crates/kamn-node/src/main.rs`:
@@ -19,10 +19,21 @@ This document captures the first two node-runtime productionization slices for m
   - `--diagnostics basic` (default)
   - `--diagnostics snapshot`
 - Added explicit invalid diagnostics-mode handling through `ConfigError::InvalidDiagnosticsMode`.
+- Added runtime execution mode command surface:
+  - `--runtime-mode bootstrap` (default)
+  - `--runtime-mode planning`
+- Added runtime planning inputs:
+  - `--expected-state-hash <state-hash>`
+  - `--proposal <id|sender-did|nonce|state-hash>` (repeatable)
+- Added explicit runtime mode and proposal validation handling through:
+  - `ConfigError::InvalidRuntimeMode`
+  - `ConfigError::InvalidProposalArgument`
+  - `ConfigError::RuntimePlanner`
 
 ## Output Mode Rules
 - Default behavior remains text output when `--output` is omitted.
 - JSON output is deterministic and includes:
+  - `runtime_mode`
   - `diagnostics_mode`
   - `profile`
   - `role`
@@ -36,6 +47,9 @@ This document captures the first two node-runtime productionization slices for m
   - `state_version`
   - `pending_migrations`
   - `component_count`
+  - `planning_expected_state_hash`
+  - `planning_candidate_count`
+  - `planning_scheduled_candidate_ids`
   - `components`
 - Invalid modes are rejected with explicit typed error.
 
@@ -63,6 +77,25 @@ This document captures the first two node-runtime productionization slices for m
   - `components`
 - Invalid diagnostics modes are rejected with explicit typed error.
 
+## Runtime Planning Rules
+- Supported runtime modes:
+  - `bootstrap` (default)
+  - `planning`
+- Planning mode requires:
+  - `--expected-state-hash`
+  - at least one `--proposal`
+- Proposal argument format is strict:
+  - `<id|sender-did|nonce|state-hash>`
+- Planning mode uses deterministic candidate ordering inherited from `DeterministicProposalPlanner`:
+  - nonce ascending
+  - sender DID ascending
+  - candidate ID ascending
+- Duplicate candidate IDs and stale state hashes are rejected with explicit typed runtime planner error.
+- Runtime planning outputs include:
+  - `planning_expected_state_hash`
+  - `planning_candidate_count`
+  - `planning_scheduled_candidate_ids`
+
 ## Test Coverage Mapping
 - Unit:
   - default mode behavior and mode parsing checks
@@ -74,6 +107,7 @@ This document captures the first two node-runtime productionization slices for m
   - invalid output mode rejection (`Regression: #307`)
   - invalid profile rejection (`Regression: #310`)
   - invalid diagnostics mode rejection (`Regression: #313`)
+  - duplicate/stale runtime planning candidate rejection (`Regression: #335`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:

@@ -1,7 +1,10 @@
 use std::env;
 use std::process::ExitCode;
 
-use kamn_core::{bootstrap, BootstrapPlan, ConfigError, NodeConfig, NodeRole, SyncMode};
+use kamn_core::{
+    bootstrap, BootstrapPlan, ConfigError, DeterministicProposalPlanner, NodeConfig, NodeRole,
+    ProposalCandidate, SyncMode,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct OutputMode {
@@ -32,6 +35,46 @@ impl OutputMode {
             "text" => Ok(Self::text()),
             "json" => Ok(Self::json()),
             other => Err(ConfigError::InvalidOutputMode(other.to_owned())),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct RuntimeMode {
+    kind: RuntimeModeKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RuntimeModeKind {
+    Bootstrap,
+    Planning,
+}
+
+impl RuntimeMode {
+    fn bootstrap() -> Self {
+        Self {
+            kind: RuntimeModeKind::Bootstrap,
+        }
+    }
+
+    fn planning() -> Self {
+        Self {
+            kind: RuntimeModeKind::Planning,
+        }
+    }
+
+    fn parse(value: &str) -> Result<Self, ConfigError> {
+        match value {
+            "bootstrap" => Ok(Self::bootstrap()),
+            "planning" => Ok(Self::planning()),
+            other => Err(ConfigError::InvalidRuntimeMode(other.to_owned())),
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self.kind {
+            RuntimeModeKind::Bootstrap => "bootstrap",
+            RuntimeModeKind::Planning => "planning",
         }
     }
 }
@@ -118,14 +161,28 @@ struct NodeCli {
     storage_dir: String,
     enable_gossip: bool,
     sync_mode: SyncMode,
+    runtime_mode: RuntimeMode,
+    expected_state_hash: Option<String>,
+    proposals: Vec<ProposalCandidate>,
     output_mode: OutputMode,
     diagnostics_mode: DiagnosticsMode,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+struct PlanningExecution {
+    expected_state_hash: String,
+    candidate_count: usize,
+    scheduled_candidate_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct NodeBootstrapReport {
+    runtime_mode: String,
     diagnostics_mode: String,
     component_count: usize,
+    planning_expected_state_hash: Option<String>,
+    planning_candidate_count: Option<usize>,
+    planning_scheduled_candidate_ids: Option<Vec<String>>,
     profile: Option<String>,
     role: String,
     chain_id: String,
@@ -151,6 +208,9 @@ where
     let mut storage_dir = String::from("./data");
     let mut enable_gossip = true;
     let mut sync_mode = SyncMode::Fast;
+    let mut runtime_mode = RuntimeMode::bootstrap();
+    let mut expected_state_hash: Option<String> = None;
+    let mut proposals: Vec<ProposalCandidate> = Vec::new();
     let mut output_mode = OutputMode::text();
     let mut diagnostics_mode = DiagnosticsMode::basic();
     let mut role_overridden = false;
@@ -207,6 +267,24 @@ where
                 sync_mode = value.parse::<SyncMode>()?;
                 sync_mode_overridden = true;
             }
+            "--runtime-mode" => {
+                let value = iter
+                    .next()
+                    .ok_or(ConfigError::MissingArgumentValue("--runtime-mode"))?;
+                runtime_mode = RuntimeMode::parse(&value)?;
+            }
+            "--expected-state-hash" => {
+                expected_state_hash = Some(
+                    iter.next()
+                        .ok_or(ConfigError::MissingArgumentValue("--expected-state-hash"))?,
+                );
+            }
+            "--proposal" => {
+                let value = iter
+                    .next()
+                    .ok_or(ConfigError::MissingArgumentValue("--proposal"))?;
+                proposals.push(parse_proposal_candidate(&value)?);
+            }
             "--output" => {
                 let value = iter
                     .next()
@@ -248,6 +326,15 @@ where
 
     let role = role.ok_or(ConfigError::MissingArgumentValue("--role"))?;
 
+    if runtime_mode.kind == RuntimeModeKind::Planning {
+        if expected_state_hash.is_none() {
+            return Err(ConfigError::MissingArgumentValue("--expected-state-hash"));
+        }
+        if proposals.is_empty() {
+            return Err(ConfigError::MissingArgumentValue("--proposal"));
+        }
+    }
+
     Ok(NodeCli {
         profile,
         role,
@@ -256,34 +343,80 @@ where
         storage_dir,
         enable_gossip,
         sync_mode,
+        runtime_mode,
+        expected_state_hash,
+        proposals,
         output_mode,
         diagnostics_mode,
     })
 }
 
+fn parse_proposal_candidate(value: &str) -> Result<ProposalCandidate, ConfigError> {
+    let parts = value.split('|').collect::<Vec<&str>>();
+    if parts.len() != 4 {
+        return Err(ConfigError::InvalidProposalArgument(value.to_owned()));
+    }
+    let nonce = parts[2]
+        .parse::<u64>()
+        .map_err(|_| ConfigError::InvalidProposalArgument(value.to_owned()))?;
+    ProposalCandidate::new(parts[0], parts[1], nonce, parts[3])
+        .map_err(|error| ConfigError::RuntimePlanner(error.to_string()))
+}
+
 fn run() -> Result<(), ConfigError> {
     let cli = parse_args(env::args())?;
+    let output_mode = cli.output_mode;
+    let report = execute(cli)?;
+    println!("{}", render_bootstrap_report(&report, output_mode));
 
+    Ok(())
+}
+
+fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
     let config = NodeConfig {
-        chain_id: cli.chain_id,
-        chain_version: cli.chain_version,
+        chain_id: cli.chain_id.clone(),
+        chain_version: cli.chain_version.clone(),
         role: cli.role,
-        storage_dir: cli.storage_dir,
+        storage_dir: cli.storage_dir.clone(),
         enable_gossip: cli.enable_gossip,
         sync_mode: cli.sync_mode,
     };
 
     let plan = bootstrap(config)?;
-    let report = build_bootstrap_report(&plan, cli.profile, cli.diagnostics_mode);
-    println!("{}", render_bootstrap_report(&report, cli.output_mode));
+    let planning = match cli.runtime_mode.kind {
+        RuntimeModeKind::Bootstrap => None,
+        RuntimeModeKind::Planning => {
+            let expected_state_hash = cli
+                .expected_state_hash
+                .ok_or(ConfigError::MissingArgumentValue("--expected-state-hash"))?;
+            let planner = DeterministicProposalPlanner::new(&expected_state_hash);
+            let proposal_plan = planner
+                .plan(cli.proposals)
+                .map_err(|error| ConfigError::RuntimePlanner(error.to_string()))?;
+            Some(PlanningExecution {
+                expected_state_hash,
+                candidate_count: proposal_plan.ordered_candidates().len(),
+                scheduled_candidate_ids: proposal_plan.ordered_candidate_ids(),
+            })
+        }
+    };
+    let report = build_bootstrap_report(
+        &plan,
+        cli.profile,
+        cli.diagnostics_mode,
+        cli.runtime_mode,
+        planning,
+    );
 
-    Ok(())
+    Ok(report)
 }
 
 fn build_bootstrap_report(
     plan: &BootstrapPlan,
     profile: Option<LocalProfile>,
     diagnostics_mode: DiagnosticsMode,
+    runtime_mode: RuntimeMode,
+    planning: Option<PlanningExecution>,
 ) -> NodeBootstrapReport {
     let operational_profile = plan.config.operational_profile();
     let components = plan
@@ -292,9 +425,20 @@ fn build_bootstrap_report(
         .into_iter()
         .map(str::to_owned)
         .collect::<Vec<String>>();
+    let planning_expected_state_hash = planning
+        .as_ref()
+        .map(|planning| planning.expected_state_hash.clone());
+    let planning_candidate_count = planning.as_ref().map(|planning| planning.candidate_count);
+    let planning_scheduled_candidate_ids = planning
+        .as_ref()
+        .map(|planning| planning.scheduled_candidate_ids.clone());
     NodeBootstrapReport {
+        runtime_mode: runtime_mode.as_str().to_owned(),
         diagnostics_mode: diagnostics_mode.as_str().to_owned(),
         component_count: components.len(),
+        planning_expected_state_hash,
+        planning_candidate_count,
+        planning_scheduled_candidate_ids,
         profile: profile.map(LocalProfile::as_str).map(str::to_owned),
         role: plan.config.role.as_str().to_owned(),
         chain_id: plan.config.chain_id.clone(),
@@ -319,8 +463,22 @@ fn render_bootstrap_report(report: &NodeBootstrapReport, mode: OutputMode) -> St
 
 fn render_text_report(report: &NodeBootstrapReport) -> String {
     let profile = report.profile.as_deref().unwrap_or("none");
+    let planning_expected_state_hash = report
+        .planning_expected_state_hash
+        .as_deref()
+        .unwrap_or("none");
+    let planning_candidate_count = report
+        .planning_candidate_count
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "none".to_owned());
+    let planning_scheduled_candidate_ids = report
+        .planning_scheduled_candidate_ids
+        .as_ref()
+        .map(|value| value.join(", "))
+        .unwrap_or_else(|| "none".to_owned());
     format!(
-        "KAMN node bootstrap\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  components: {}",
+        "KAMN node bootstrap\n  runtime_mode: {}\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  planning_expected_state_hash: {}\n  planning_candidate_count: {}\n  planning_scheduled_candidate_ids: {}\n  components: {}",
+        report.runtime_mode,
         report.diagnostics_mode,
         profile,
         report.role,
@@ -338,6 +496,9 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         report.state_version,
         report.pending_migrations,
         report.component_count,
+        planning_expected_state_hash,
+        planning_candidate_count,
+        planning_scheduled_candidate_ids,
         report.components.join(", "),
     )
 }
@@ -347,6 +508,25 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         Some(value) => format!("\"{}\"", json_escape(value)),
         None => "null".to_owned(),
     };
+    let planning_expected_state_hash = match &report.planning_expected_state_hash {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
+    let planning_candidate_count = match report.planning_candidate_count {
+        Some(value) => value.to_string(),
+        None => "null".to_owned(),
+    };
+    let planning_scheduled_candidate_ids = match &report.planning_scheduled_candidate_ids {
+        Some(values) => format!(
+            "[{}]",
+            values
+                .iter()
+                .map(|value| format!("\"{}\"", json_escape(value)))
+                .collect::<Vec<String>>()
+                .join(",")
+        ),
+        None => "null".to_owned(),
+    };
     let components = report
         .components
         .iter()
@@ -354,7 +534,8 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         .collect::<Vec<String>>()
         .join(",");
     format!(
-        "{{\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"components\":[{}]}}",
+        "{{\"runtime_mode\":\"{}\",\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"planning_expected_state_hash\":{},\"planning_candidate_count\":{},\"planning_scheduled_candidate_ids\":{},\"components\":[{}]}}",
+        json_escape(&report.runtime_mode),
         json_escape(&report.diagnostics_mode),
         profile,
         json_escape(&report.role),
@@ -368,6 +549,9 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         report.state_version,
         report.pending_migrations,
         report.component_count,
+        planning_expected_state_hash,
+        planning_candidate_count,
+        planning_scheduled_candidate_ids,
         components,
     )
 }
@@ -392,8 +576,8 @@ fn main() -> ExitCode {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_bootstrap_report, parse_args, render_bootstrap_report, DiagnosticsMode, LocalProfile,
-        NodeBootstrapReport, OutputMode,
+        build_bootstrap_report, execute, parse_args, render_bootstrap_report, DiagnosticsMode,
+        LocalProfile, NodeBootstrapReport, OutputMode, RuntimeMode,
     };
     use kamn_core::{bootstrap, ConfigError, NodeConfig, NodeRole, SyncMode};
 
@@ -413,6 +597,9 @@ mod tests {
         assert_eq!(parsed.storage_dir, "./data");
         assert!(parsed.enable_gossip);
         assert_eq!(parsed.sync_mode, SyncMode::Fast);
+        assert_eq!(parsed.runtime_mode, RuntimeMode::bootstrap());
+        assert_eq!(parsed.expected_state_hash, None);
+        assert!(parsed.proposals.is_empty());
         assert_eq!(parsed.output_mode, OutputMode::text());
         assert_eq!(parsed.diagnostics_mode, DiagnosticsMode::basic());
     }
@@ -475,6 +662,28 @@ mod tests {
     }
 
     #[test]
+    fn parses_runtime_mode_planning_with_proposals() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "planning".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-1".to_owned(),
+            "--proposal".to_owned(),
+            "tx-2|did:kamn:agent:bbb|2|state-1".to_owned(),
+            "--proposal".to_owned(),
+            "tx-1|did:kamn:agent:aaa|1|state-1".to_owned(),
+        ];
+
+        let parsed = parse_args(args).expect("planning args should parse");
+        assert_eq!(parsed.runtime_mode, RuntimeMode::planning());
+        assert_eq!(parsed.expected_state_hash, Some("state-1".to_owned()));
+        assert_eq!(parsed.proposals.len(), 2);
+    }
+
+    #[test]
     fn parses_local_listener_profile_defaults() {
         let args = vec![
             "kamn-node".to_owned(),
@@ -518,8 +727,12 @@ mod tests {
     #[test]
     fn functional_json_render_is_deterministic() {
         let report = NodeBootstrapReport {
+            runtime_mode: "bootstrap".to_owned(),
             diagnostics_mode: "basic".to_owned(),
             component_count: 2,
+            planning_expected_state_hash: None,
+            planning_candidate_count: None,
+            planning_scheduled_candidate_ids: None,
             profile: None,
             role: "processor".to_owned(),
             chain_id: "kamn-devnet".to_owned(),
@@ -560,7 +773,13 @@ mod tests {
             sync_mode: parsed.sync_mode,
         };
         let plan = bootstrap(config).expect("bootstrap should succeed");
-        let report = build_bootstrap_report(&plan, parsed.profile, parsed.diagnostics_mode);
+        let report = build_bootstrap_report(
+            &plan,
+            parsed.profile,
+            parsed.diagnostics_mode,
+            RuntimeMode::bootstrap(),
+            None,
+        );
         let rendered = render_bootstrap_report(&report, parsed.output_mode);
 
         assert!(rendered.contains("\"diagnostics_mode\":\"basic\""));
@@ -590,7 +809,13 @@ mod tests {
             sync_mode: parsed.sync_mode,
         };
         let plan = bootstrap(config).expect("bootstrap should succeed");
-        let report = build_bootstrap_report(&plan, parsed.profile, parsed.diagnostics_mode);
+        let report = build_bootstrap_report(
+            &plan,
+            parsed.profile,
+            parsed.diagnostics_mode,
+            RuntimeMode::bootstrap(),
+            None,
+        );
         let rendered = render_bootstrap_report(&report, parsed.output_mode);
 
         assert!(rendered.contains("\"diagnostics_mode\":\"basic\""));
@@ -621,11 +846,43 @@ mod tests {
             sync_mode: parsed.sync_mode,
         };
         let plan = bootstrap(config).expect("bootstrap should succeed");
-        let report = build_bootstrap_report(&plan, parsed.profile, parsed.diagnostics_mode);
+        let report = build_bootstrap_report(
+            &plan,
+            parsed.profile,
+            parsed.diagnostics_mode,
+            RuntimeMode::bootstrap(),
+            None,
+        );
         let rendered = render_bootstrap_report(&report, parsed.output_mode);
 
         assert!(rendered.contains("\"diagnostics_mode\":\"snapshot\""));
         assert!(rendered.contains("\"component_count\":"));
+    }
+
+    #[test]
+    fn integration_runtime_planning_renders_sorted_candidate_ids() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "planning".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-1".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+            "--proposal".to_owned(),
+            "tx-2|did:kamn:agent:bbb|2|state-1".to_owned(),
+            "--proposal".to_owned(),
+            "tx-1|did:kamn:agent:aaa|1|state-1".to_owned(),
+        ];
+
+        let parsed = parse_args(args).expect("planning args should parse");
+        let report = execute(parsed).expect("planning execution should succeed");
+        let rendered = render_bootstrap_report(&report, OutputMode::json());
+        assert!(rendered.contains("\"runtime_mode\":\"planning\""));
+        assert!(rendered.contains("\"planning_candidate_count\":2"));
+        assert!(rendered.contains("\"planning_scheduled_candidate_ids\":[\"tx-1\",\"tx-2\"]"));
     }
 
     #[test]
@@ -634,6 +891,40 @@ mod tests {
         assert_eq!(
             parse_args(args),
             Err(ConfigError::MissingArgumentValue("--role"))
+        );
+    }
+
+    #[test]
+    fn rejects_planning_without_expected_state_hash() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "planning".to_owned(),
+            "--proposal".to_owned(),
+            "tx-1|did:kamn:agent:aaa|1|state-1".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::MissingArgumentValue("--expected-state-hash"))
+        );
+    }
+
+    #[test]
+    fn rejects_planning_without_proposal() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "planning".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-1".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::MissingArgumentValue("--proposal"))
         );
     }
 
@@ -682,6 +973,42 @@ mod tests {
     }
 
     #[test]
+    fn rejects_invalid_runtime_mode() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "daemon".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::InvalidRuntimeMode("daemon".to_owned()))
+        );
+    }
+
+    #[test]
+    fn rejects_malformed_proposal_argument() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "planning".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-1".to_owned(),
+            "--proposal".to_owned(),
+            "tx-1|did:kamn:agent:aaa|state-1".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::InvalidProposalArgument(
+                "tx-1|did:kamn:agent:aaa|state-1".to_owned()
+            ))
+        );
+    }
+
+    #[test]
     fn rejects_invalid_diagnostics_mode() {
         // Regression: #313
         let args = vec![
@@ -694,6 +1021,55 @@ mod tests {
         assert_eq!(
             parse_args(args),
             Err(ConfigError::InvalidDiagnosticsMode("extended".to_owned()))
+        );
+    }
+
+    #[test]
+    fn regression_runtime_planning_rejects_duplicate_candidate_ids() {
+        // Regression: #335
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "planning".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-1".to_owned(),
+            "--proposal".to_owned(),
+            "tx-1|did:kamn:agent:aaa|1|state-1".to_owned(),
+            "--proposal".to_owned(),
+            "tx-1|did:kamn:agent:bbb|2|state-1".to_owned(),
+        ];
+        let parsed = parse_args(args).expect("planning args should parse");
+        assert_eq!(
+            execute(parsed),
+            Err(ConfigError::RuntimePlanner(
+                "duplicate proposal candidate id: tx-1".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn regression_runtime_planning_rejects_stale_state_hash() {
+        // Regression: #335
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "planning".to_owned(),
+            "--expected-state-hash".to_owned(),
+            "state-1".to_owned(),
+            "--proposal".to_owned(),
+            "tx-1|did:kamn:agent:aaa|1|state-2".to_owned(),
+        ];
+        let parsed = parse_args(args).expect("planning args should parse");
+        assert_eq!(
+            execute(parsed),
+            Err(ConfigError::RuntimePlanner(
+                "proposal candidate state hash mismatch: expected state-1, found state-2"
+                    .to_owned()
+            ))
         );
     }
 }

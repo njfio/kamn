@@ -151,6 +151,9 @@ pub enum ConfigError {
     InvalidOutputMode(String),
     InvalidNodeProfile(String),
     InvalidDiagnosticsMode(String),
+    InvalidRuntimeMode(String),
+    InvalidProposalArgument(String),
+    RuntimePlanner(String),
     UnknownArgument(String),
     MissingArgumentValue(&'static str),
 }
@@ -169,6 +172,13 @@ impl fmt::Display for ConfigError {
             Self::InvalidNodeProfile(value) => write!(f, "invalid node profile: {value}"),
             Self::InvalidDiagnosticsMode(value) => {
                 write!(f, "invalid diagnostics mode: {value}")
+            }
+            Self::InvalidRuntimeMode(value) => write!(f, "invalid runtime mode: {value}"),
+            Self::InvalidProposalArgument(value) => {
+                write!(f, "invalid proposal argument: {value}")
+            }
+            Self::RuntimePlanner(message) => {
+                write!(f, "runtime planner validation failed: {message}")
             }
             Self::UnknownArgument(value) => write!(f, "unknown argument: {value}"),
             Self::MissingArgumentValue(flag) => {
