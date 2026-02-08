@@ -170,6 +170,9 @@ This document captures node-runtime productionization slices for machine-readabl
 - Daemon lifecycle events are evaluated in input order using `PeerLifecycle` transitions.
 - Invalid lifecycle event names are rejected with explicit typed error.
 - Invalid lifecycle transitions are rejected with explicit typed runtime daemon lifecycle error.
+- Processor daemon tick execution requires an active construct-lock lease owner and matching fencing token.
+- Daemon lease checks align with `execute_processor_daemon_tick` validation in `kamn-core`.
+- Missing or invalid daemon lease execution is rejected with typed construct-lock errors.
 - Daemon execution is deterministic and bounded by tick budget:
   - `daemon_executed_ticks` equals configured `daemon_max_ticks`
   - `daemon_completion_reason` emits `tick-budget-exhausted`
@@ -189,6 +192,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - replay/version/hash recovery-check rejection (`Regression: #336`)
   - zero/invalid daemon bounded-loop control rejection (`Regression: #348`)
   - invalid daemon lifecycle transition rejection (`Regression: #349`)
+  - daemon lease guard no-lease/invalid-owner rejection (`Regression: #388`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
@@ -197,6 +201,7 @@ Run targeted checks first:
 cargo test -p kamn-node
 cargo test -p kamn-node --test node_runtime_cli_docs
 cargo test -p kamn-core --test runtime_network_docs
+cargo test -p kamn-core construct_lock
 cargo fmt --check
 cargo clippy -p kamn-node -- -D warnings
 ```
@@ -218,3 +223,5 @@ cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_tran
 
 - Processor HA snapshot restore and construct-lock contract details:
   - `docs/foundation/runtime-processor-ha.md`
+- Processor daemon lease tick gate reference:
+  - `execute_processor_daemon_tick` in `crates/kamn-core/src/runtime.rs`

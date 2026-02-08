@@ -12,6 +12,7 @@ fn doc_contains_processor_ha_scope_and_models() {
 fn doc_contains_fast_lane_command_references() {
     assert!(DOC.contains("cargo test -p kamn-node --test runtime_processor_ha_docs"));
     assert!(DOC.contains("cargo test -p kamn-node --test node_runtime_cli_docs"));
+    assert!(DOC.contains("cargo test -p kamn-core construct_lock"));
 }
 
 #[test]
@@ -25,4 +26,14 @@ fn regression_requires_construct_lock_guard_rules() {
     // Regression: #362
     assert!(DOC.contains("split-brain lock acquisition attempts are rejected"));
     assert!(DOC.contains("stale lease renewal attempts are rejected"));
+}
+
+#[test]
+fn regression_requires_construct_lock_release_transfer_and_daemon_tick_rules() {
+    // Regression: #388
+    assert!(DOC.contains("lease release and transfer operations require matching active owner"));
+    assert!(DOC.contains("daemon tick execution without active lease ownership is rejected"));
+    assert!(DOC.contains(
+        "unauthorized release/transfer and no-lease daemon tick rejection (`Regression: #388`)"
+    ));
 }
