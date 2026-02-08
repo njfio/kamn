@@ -66,10 +66,22 @@ fn doc_contains_runtime_recovery_check_rules() {
 }
 
 #[test]
+fn doc_contains_runtime_mode_command_examples() {
+    assert!(DOC.contains("`kamn-node --role processor --runtime-mode planning`"));
+    assert!(DOC.contains("`kamn-node --role processor --runtime-mode recovery-check`"));
+}
+
+#[test]
 fn doc_contains_fast_and_cost_effective_validation_lane() {
     assert!(DOC.contains("## Fast and Cost-Effective Validation"));
     assert!(DOC.contains("cargo test -p kamn-node"));
     assert!(DOC.contains("cargo clippy -p kamn-node -- -D warnings"));
+}
+
+#[test]
+fn doc_contains_docs_fast_lane_command_checks() {
+    assert!(DOC.contains("cargo test -p kamn-node --test node_runtime_cli_docs"));
+    assert!(DOC.contains("cargo test -p kamn-core --test runtime_network_docs"));
 }
 
 #[test]
@@ -102,4 +114,12 @@ fn regression_requires_runtime_planning_candidate_rules() {
 fn regression_requires_runtime_recovery_rejection_rules() {
     // Regression: #336
     assert!(DOC.contains("replay/version/hash recovery-check rejection (`Regression: #336`)"));
+}
+
+#[test]
+fn regression_requires_runtime_recovery_error_rule_references() {
+    // Regression: #337
+    assert!(DOC.contains("ConfigError::InvalidExpectedStateVersion"));
+    assert!(DOC.contains("ConfigError::InvalidRejoinAttemptArgument"));
+    assert!(DOC.contains("ConfigError::RuntimeRecovery"));
 }

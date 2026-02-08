@@ -129,6 +129,14 @@ This document captures node-runtime productionization slices for machine-readabl
   - `recovery_attempt_count`
   - `recovery_decisions`
 
+## Runtime Mode Command Examples
+- Planning mode:
+  - `kamn-node --role processor --runtime-mode planning`
+  - `kamn-node --role processor --runtime-mode planning --expected-state-hash state-1 --proposal tx-1|did:kamn:agent:aaa|1|state-1`
+- Recovery-check mode:
+  - `kamn-node --role processor --runtime-mode recovery-check`
+  - `kamn-node --role processor --runtime-mode recovery-check --expected-state-version 42 --expected-state-hash state-42 --rejoin-attempt node-a|42|state-42|resume-1`
+
 ## Test Coverage Mapping
 - Unit:
   - default mode behavior and mode parsing checks
@@ -148,6 +156,8 @@ Run targeted checks first:
 
 ```bash
 cargo test -p kamn-node
+cargo test -p kamn-node --test node_runtime_cli_docs
+cargo test -p kamn-core --test runtime_network_docs
 cargo fmt --check
 cargo clippy -p kamn-node -- -D warnings
 ```
