@@ -19,6 +19,7 @@ pub mod message_envelope;
 pub mod message_lifecycle;
 pub mod migrations;
 pub mod namespaces;
+pub mod operator_binding;
 pub mod redaction_compliance;
 pub mod retention_engine;
 pub mod runtime;
@@ -85,6 +86,10 @@ pub use message_envelope::{
 pub use message_lifecycle::{MessageLifecycleError, MessageLifecycleStore, MessageStatus};
 pub use migrations::{MigrationPlan, MigrationRegistry, MigrationStep};
 pub use namespaces::StateNamespaces;
+pub use operator_binding::{
+    OperatorBindingAction, OperatorBindingEngine, OperatorBindingError, OperatorBindingProof,
+    OperatorBindingRecord,
+};
 pub use redaction_compliance::{
     RedactionAction, RedactionAuditEvent, RedactionAuditEventKind, RedactionComplianceEngine,
     RedactionComplianceError, RedactionRequestStatus, RedactionVisibility,
