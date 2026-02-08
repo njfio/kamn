@@ -1266,6 +1266,200 @@ pub fn authorize_daemon_outbound_action(
     evaluator.authorize(input)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StateDivergenceStatus {
+    InSync,
+    Diverged,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StateDivergenceSeverity {
+    Info,
+    Critical,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StateDivergenceEvidence {
+    pub peer_id: String,
+    pub expected_state_version: u64,
+    pub observed_state_version: u64,
+    pub expected_state_hash: String,
+    pub observed_state_hash: String,
+    pub observed_at_tick: u64,
+}
+
+impl StateDivergenceEvidence {
+    pub fn new(
+        peer_id: &str,
+        expected_state_version: u64,
+        observed_state_version: u64,
+        expected_state_hash: &str,
+        observed_state_hash: &str,
+        observed_at_tick: u64,
+    ) -> Result<Self, StateDivergenceError> {
+        if !is_valid_kamn_did(peer_id) {
+            return Err(StateDivergenceError::InvalidPeerDid);
+        }
+        if expected_state_version == 0 {
+            return Err(StateDivergenceError::InvalidStateVersion {
+                field: "expected_state_version",
+                value: expected_state_version,
+            });
+        }
+        if observed_state_version == 0 {
+            return Err(StateDivergenceError::InvalidStateVersion {
+                field: "observed_state_version",
+                value: observed_state_version,
+            });
+        }
+        if expected_state_hash.trim().is_empty() {
+            return Err(StateDivergenceError::IncompleteEvidenceField {
+                field: "expected_state_hash",
+            });
+        }
+        if observed_state_hash.trim().is_empty() {
+            return Err(StateDivergenceError::IncompleteEvidenceField {
+                field: "observed_state_hash",
+            });
+        }
+        if observed_at_tick == 0 {
+            return Err(StateDivergenceError::InvalidObservedTick {
+                tick: observed_at_tick,
+            });
+        }
+
+        Ok(Self {
+            peer_id: peer_id.to_owned(),
+            expected_state_version,
+            observed_state_version,
+            expected_state_hash: expected_state_hash.to_owned(),
+            observed_state_hash: observed_state_hash.to_owned(),
+            observed_at_tick,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StateDivergenceWatchInput {
+    evidence: StateDivergenceEvidence,
+}
+
+impl StateDivergenceWatchInput {
+    pub fn new(
+        peer_id: &str,
+        expected_state_version: u64,
+        observed_state_version: u64,
+        expected_state_hash: &str,
+        observed_state_hash: &str,
+        observed_at_tick: u64,
+    ) -> Result<Self, StateDivergenceError> {
+        let evidence = StateDivergenceEvidence::new(
+            peer_id,
+            expected_state_version,
+            observed_state_version,
+            expected_state_hash,
+            observed_state_hash,
+            observed_at_tick,
+        )?;
+        Ok(Self { evidence })
+    }
+
+    pub fn evidence(&self) -> &StateDivergenceEvidence {
+        &self.evidence
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StateDivergenceReport {
+    pub status: StateDivergenceStatus,
+    pub severity: StateDivergenceSeverity,
+    pub incident_fingerprint: String,
+    pub evidence: StateDivergenceEvidence,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StateDivergenceError {
+    InvalidPeerDid,
+    InvalidStateVersion { field: &'static str, value: u64 },
+    IncompleteEvidenceField { field: &'static str },
+    InvalidObservedTick { tick: u64 },
+}
+
+impl Display for StateDivergenceError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidPeerDid => write!(f, "state divergence peer did is invalid"),
+            Self::InvalidStateVersion { field, value } => {
+                write!(
+                    f,
+                    "state divergence {field} must be positive, found {value}"
+                )
+            }
+            Self::IncompleteEvidenceField { field } => {
+                write!(
+                    f,
+                    "state divergence evidence field cannot be empty: {field}"
+                )
+            }
+            Self::InvalidObservedTick { tick } => {
+                write!(
+                    f,
+                    "state divergence observed tick must be positive, found {tick}"
+                )
+            }
+        }
+    }
+}
+
+impl Error for StateDivergenceError {}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct StateDivergenceEvaluator;
+
+impl StateDivergenceEvaluator {
+    pub fn evaluate(
+        &self,
+        input: StateDivergenceWatchInput,
+    ) -> Result<StateDivergenceReport, StateDivergenceError> {
+        let evidence = input.evidence;
+        let diverged = evidence.expected_state_version != evidence.observed_state_version
+            || evidence.expected_state_hash != evidence.observed_state_hash;
+
+        let status = if diverged {
+            StateDivergenceStatus::Diverged
+        } else {
+            StateDivergenceStatus::InSync
+        };
+        let severity = if diverged {
+            StateDivergenceSeverity::Critical
+        } else {
+            StateDivergenceSeverity::Info
+        };
+        let incident_fingerprint = format!(
+            "state-divergence:{}:{}:{}:{}:{}",
+            evidence.peer_id,
+            evidence.expected_state_version,
+            evidence.observed_state_version,
+            evidence.expected_state_hash,
+            evidence.observed_state_hash
+        );
+
+        Ok(StateDivergenceReport {
+            status,
+            severity,
+            incident_fingerprint,
+            evidence,
+        })
+    }
+}
+
+pub fn evaluate_daemon_state_divergence(
+    evaluator: &StateDivergenceEvaluator,
+    input: StateDivergenceWatchInput,
+) -> Result<StateDivergenceReport, StateDivergenceError> {
+    evaluator.evaluate(input)
+}
+
 fn is_valid_listener_did(value: &str) -> bool {
     is_valid_kamn_did(value)
 }
@@ -1413,15 +1607,17 @@ pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
 #[cfg(test)]
 mod tests {
     use super::{
-        authorize_daemon_outbound_action, build_runtime_wiring, execute_processor_daemon_tick,
-        ApproverAttestation, ApproverQuorumError, ApproverQuorumEvaluator, ApproverQuorumInput,
-        BoundedRuntimeQueue, ConstructLockError, ConstructLockGuard, DeterministicProposalPlanner,
-        FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore, ListenerAttestation,
-        ListenerQuorumError, ListenerQuorumEvaluator, ListenerQuorumInput, PeerLifecycle,
-        PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, ProposalPlannerError,
-        RecoveryGuardError, RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt,
-        RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore,
-        SnapshotRestoreError, SnapshotRestoreGuard, SnapshotStoreError,
+        authorize_daemon_outbound_action, build_runtime_wiring, evaluate_daemon_state_divergence,
+        execute_processor_daemon_tick, ApproverAttestation, ApproverQuorumError,
+        ApproverQuorumEvaluator, ApproverQuorumInput, BoundedRuntimeQueue, ConstructLockError,
+        ConstructLockGuard, DeterministicProposalPlanner, FileRuntimeSnapshotStore,
+        InMemoryRuntimeSnapshotStore, ListenerAttestation, ListenerQuorumError,
+        ListenerQuorumEvaluator, ListenerQuorumInput, PeerLifecycle, PeerLifecycleEvent,
+        PeerLifecycleState, ProposalCandidate, ProposalPlannerError, RecoveryGuardError,
+        RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, RuntimeLifecycleError,
+        RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore, SnapshotRestoreError,
+        SnapshotRestoreGuard, SnapshotStoreError, StateDivergenceError, StateDivergenceEvaluator,
+        StateDivergenceSeverity, StateDivergenceStatus, StateDivergenceWatchInput,
     };
     use crate::config::{NodeConfig, NodeRole, SyncMode};
     use std::fs;
@@ -2168,6 +2364,95 @@ mod tests {
                 required: 3,
                 received: 2
             }
+        );
+    }
+
+    #[test]
+    fn functional_divergence_watchdog_flags_hash_mismatch_as_critical() {
+        let evaluator = StateDivergenceEvaluator::default();
+        let input = StateDivergenceWatchInput::new(
+            "kamn:did:agent:validator-a",
+            42,
+            42,
+            "state-hash-expected",
+            "state-hash-observed",
+            110,
+        )
+        .expect("valid divergence input");
+
+        let report = evaluator
+            .evaluate(input)
+            .expect("hash mismatch should emit divergence report");
+        assert_eq!(report.status, StateDivergenceStatus::Diverged);
+        assert_eq!(report.severity, StateDivergenceSeverity::Critical);
+    }
+
+    #[test]
+    fn unit_divergence_watchdog_rejects_incomplete_evidence_payload() {
+        let error = StateDivergenceWatchInput::new(
+            "kamn:did:agent:validator-a",
+            42,
+            42,
+            "state-hash-expected",
+            "",
+            110,
+        )
+        .expect_err("empty observed hash must be rejected");
+        assert_eq!(
+            error,
+            StateDivergenceError::IncompleteEvidenceField {
+                field: "observed_state_hash"
+            }
+        );
+    }
+
+    #[test]
+    fn integration_daemon_divergence_report_includes_deterministic_evidence_fields() {
+        let evaluator = StateDivergenceEvaluator::default();
+        let input = StateDivergenceWatchInput::new(
+            "kamn:did:agent:validator-a",
+            42,
+            42,
+            "state-hash-expected",
+            "state-hash-observed",
+            110,
+        )
+        .expect("valid divergence input");
+
+        let report = evaluate_daemon_state_divergence(&evaluator, input)
+            .expect("daemon divergence evaluation should succeed");
+        assert_eq!(report.evidence.peer_id, "kamn:did:agent:validator-a");
+        assert_eq!(report.evidence.expected_state_version, 42);
+        assert_eq!(report.evidence.observed_state_version, 42);
+        assert_eq!(report.evidence.expected_state_hash, "state-hash-expected");
+        assert_eq!(report.evidence.observed_state_hash, "state-hash-observed");
+        assert_eq!(report.evidence.observed_at_tick, 110);
+        assert_eq!(
+            report.incident_fingerprint,
+            "state-divergence:kamn:did:agent:validator-a:42:42:state-hash-expected:state-hash-observed"
+        );
+    }
+
+    #[test]
+    fn regression_state_divergence_false_negative_is_rejected() {
+        // Regression: #381
+        let evaluator = StateDivergenceEvaluator::default();
+        let input = StateDivergenceWatchInput::new(
+            "kamn:did:agent:validator-a",
+            99,
+            99,
+            "state-hash-expected",
+            "state-hash-mismatched",
+            220,
+        )
+        .expect("valid divergence input");
+
+        let report = evaluate_daemon_state_divergence(&evaluator, input)
+            .expect("mismatch must produce divergence report");
+        assert_eq!(report.status, StateDivergenceStatus::Diverged);
+        assert_ne!(
+            report.evidence.expected_state_hash,
+            report.evidence.observed_state_hash
         );
     }
 

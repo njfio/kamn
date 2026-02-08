@@ -8,6 +8,11 @@ fn doc_contains_watchdog_attestation_scope_and_models() {
     assert!(DOC.contains("WatchdogSeverity"));
     assert!(DOC.contains("WatchdogIncidentEvidence"));
     assert!(DOC.contains("WatchdogIncidentRecord"));
+    assert!(DOC.contains("StateDivergenceWatchInput"));
+    assert!(DOC.contains("StateDivergenceEvaluator"));
+    assert!(DOC.contains("StateDivergenceReport"));
+    assert!(DOC.contains("StateDivergenceError"));
+    assert!(DOC.contains("evaluate_daemon_state_divergence"));
 }
 
 #[test]
@@ -18,6 +23,7 @@ fn doc_contains_incident_response_mapping_and_fast_lane() {
     assert!(DOC.contains("cargo test -p kamn-core --test runtime_watchdog_attestation_docs"));
     assert!(DOC.contains("cargo test -p kamn-core --test watchdog_node_docs"));
     assert!(DOC.contains("cargo test -p kamn-core --test upgrade_rollback_runbook_docs"));
+    assert!(DOC.contains("cargo test -p kamn-core divergence_watchdog"));
     assert!(DOC.contains("cargo clippy -p kamn-core -- -D warnings"));
 }
 
@@ -32,4 +38,5 @@ fn regression_requires_divergence_and_censorship_guard_rules() {
     assert!(DOC.contains(
         "attestation replay for the same incident fingerprint is rejected (`Regression: #383`)."
     ));
+    assert!(DOC.contains("hash mismatch false-negative is rejected (`Regression: #381`)."));
 }

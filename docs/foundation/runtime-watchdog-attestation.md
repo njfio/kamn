@@ -25,6 +25,12 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
 - `WatchdogIncidentRecord`
   - Durable audit artifact persisted after triage.
   - Contains attestation + operator action metadata + closure summary.
+- Runtime divergence evaluator references:
+  - `StateDivergenceWatchInput`
+  - `StateDivergenceEvaluator`
+  - `StateDivergenceReport`
+  - `StateDivergenceError`
+  - `evaluate_daemon_state_divergence`
 
 ## Severity and Evidence Guard Rules
 - state-hash divergence attestation must include expected and observed hashes.
@@ -32,6 +38,7 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
 - single-recipient deliveries are excluded from censorship classification.
 - Censorship classification must use bounded sample windows to avoid stale evidence amplification.
 - attestation replay for the same incident fingerprint is rejected (`Regression: #383`).
+- hash mismatch false-negative is rejected (`Regression: #381`).
 
 ## Incident Response Mapping
 - Runtime watchdog output is triaged with `WatchdogSeverity` and `incident_fingerprint`.
@@ -46,6 +53,7 @@ Run targeted checks first:
 cargo test -p kamn-core --test runtime_watchdog_attestation_docs
 cargo test -p kamn-core --test watchdog_node_docs
 cargo test -p kamn-core --test upgrade_rollback_runbook_docs
+cargo test -p kamn-core divergence_watchdog
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
 ```
