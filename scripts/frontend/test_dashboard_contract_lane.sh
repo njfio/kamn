@@ -7,6 +7,9 @@ cd "$ROOT_DIR"
 bash scripts/dashboard/test_run_backend_session_auth_freshness_lane.sh
 bash scripts/dashboard/test_check_backend_session_auth_freshness_policy.sh
 bash scripts/dashboard/test_run_backend_session_auth_freshness_contract_lane.sh
+bash scripts/frontend/test_run_dashboard_shell_determinism_matrix_lane.sh
+bash scripts/frontend/test_check_dashboard_shell_determinism_matrix_policy.sh
+bash scripts/frontend/test_run_dashboard_shell_determinism_matrix_contract_lane.sh
 
 if ! grep -Fq "## Frontend Contract Mapping" docs/foundation/operator-dashboard-backend-apis.md; then
   echo "expected frontend contract mapping section in operator-dashboard-backend-apis.md" >&2
@@ -30,6 +33,16 @@ fi
 
 if ! grep -Fq "fetchDashboardSnapshotFromBackend(...)" docs/foundation/operator-dashboard-ui-mvp.md; then
   echo "expected live backend snapshot mapping in operator-dashboard-ui-mvp.md" >&2
+  exit 1
+fi
+
+if ! grep -Fq "## Frontend Shell Determinism Matrix Contract" docs/foundation/operator-dashboard-ui-mvp.md; then
+  echo "expected frontend shell determinism matrix contract section in operator-dashboard-ui-mvp.md" >&2
+  exit 1
+fi
+
+if ! grep -Fq "Regression: #943" docs/foundation/operator-dashboard-ui-mvp.md; then
+  echo "expected regression marker for dashboard shell determinism matrix in operator-dashboard-ui-mvp.md" >&2
   exit 1
 fi
 

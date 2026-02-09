@@ -31,6 +31,17 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
 }
 
 #[test]
+fn doc_contains_frontend_shell_matrix_contract_lane() {
+    assert!(DOC.contains("## Frontend Shell Determinism Matrix Contract"));
+    assert!(DOC.contains("run_dashboard_shell_determinism_matrix_lane.sh"));
+    assert!(DOC.contains("check_dashboard_shell_determinism_matrix_policy.sh"));
+    assert!(DOC.contains("run_dashboard_shell_determinism_matrix_contract_lane.sh"));
+    assert!(DOC.contains("kamn.frontend.shell-matrix-report.v1"));
+    assert!(DOC.contains("KAMN_FRONTEND_SHELL_MATRIX_MAX_SECONDS"));
+    assert!(DOC.contains("KAMN_FRONTEND_SHELL_MATRIX_CONTRACT_MAX_SECONDS"));
+}
+
+#[test]
 fn regression_requires_newest_first_audit_trace_ordering_rule() {
     // Regression: #201
     assert!(DOC.contains("newest `requested_at_unix` first"));
@@ -57,4 +68,12 @@ fn regression_requires_live_session_gate_rule() {
     // Regression: #640
     assert!(DOC.contains("missing/expired/unauthorized operator sessions"));
     assert!(DOC.contains("Regression: #640"));
+}
+
+#[test]
+fn regression_requires_frontend_shell_matrix_fail_closed_rules() {
+    // Regression: #943
+    assert!(DOC.contains(
+        "healthy/stale-critical/error shell drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #943`)."
+    ));
 }
