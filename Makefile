@@ -1,12 +1,14 @@
 SHELL := /bin/bash
 
-.PHONY: help check test demo
+.PHONY: help check test smoke-live-network demo ci-tools
 
 help:
 	@echo "KAMN developer lanes"
 	@echo "  make check  - fast static verification (cargo fmt + strict clippy)"
 	@echo "  make test   - default bounded test lane (cargo test)"
+	@echo "  make smoke-live-network - bounded pilot smoke lane + JSON report"
 	@echo "  make demo   - two-process localhost signed-message demo"
+	@echo "  make ci-tools - CI helper regression suite"
 	@echo "Deep/scheduled lanes remain opt-in via scripts/sdk/run_rust_live_transport_deep_lane.sh and related scripts."
 
 check:
@@ -16,5 +18,11 @@ check:
 test:
 	cargo test
 
+smoke-live-network:
+	bash scripts/runtime/run_live_network_smoke_lane.sh --output-json /tmp/live-network-smoke-report.json
+
 demo:
 	bash scripts/sdk/run_localhost_signed_demo.sh
+
+ci-tools:
+	bash scripts/ci/test_ci_tools.sh

@@ -516,10 +516,25 @@ assert_eq "$(extract_output "$runtime_watchdog_contract_docs_output" "run_rust")
 assert_eq "$(extract_output "$runtime_watchdog_contract_docs_output" "run_runtime_snapshot_contract_tests")" "true" "runtime watchdog contract docs must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$runtime_watchdog_contract_docs_output" "test_scope")" "runtime-contract" "runtime watchdog contract docs should set runtime-contract scope"
 
+live_network_wave_docs_output="$(run_selector $'docs/planning/live-network-wave.md')"
+assert_eq "$(extract_output "$live_network_wave_docs_output" "run_rust")" "false" "live-network wave docs should avoid rust lane"
+assert_eq "$(extract_output "$live_network_wave_docs_output" "run_runtime_snapshot_contract_tests")" "true" "live-network wave docs must run runtime snapshot contract lane"
+assert_eq "$(extract_output "$live_network_wave_docs_output" "test_scope")" "runtime-contract" "live-network wave docs should set runtime-contract scope"
+
+live_network_makefile_output="$(run_selector $'Makefile')"
+assert_eq "$(extract_output "$live_network_makefile_output" "run_rust")" "false" "live-network makefile changes should avoid rust lane"
+assert_eq "$(extract_output "$live_network_makefile_output" "run_runtime_snapshot_contract_tests")" "true" "live-network makefile changes must run runtime snapshot contract lane"
+assert_eq "$(extract_output "$live_network_makefile_output" "test_scope")" "runtime-contract" "live-network makefile changes should set runtime-contract scope"
+
 runtime_contract_script_output="$(run_selector $'scripts/runtime/run_runtime_snapshot_contract_lane.sh')"
 assert_eq "$(extract_output "$runtime_contract_script_output" "run_rust")" "false" "runtime contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$runtime_contract_script_output" "run_runtime_snapshot_contract_tests")" "true" "runtime contract script changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$runtime_contract_script_output" "test_scope")" "runtime-contract" "runtime contract script changes should set runtime-contract scope"
+
+live_network_smoke_script_output="$(run_selector $'scripts/runtime/run_live_network_smoke_lane.sh')"
+assert_eq "$(extract_output "$live_network_smoke_script_output" "run_rust")" "false" "live-network smoke script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$live_network_smoke_script_output" "run_runtime_snapshot_contract_tests")" "true" "live-network smoke script changes must run runtime snapshot contract lane"
+assert_eq "$(extract_output "$live_network_smoke_script_output" "test_scope")" "runtime-contract" "live-network smoke script changes should set runtime-contract scope"
 
 message_contract_docs_output="$(run_selector $'docs/foundation/message-lifecycle.md')"
 assert_eq "$(extract_output "$message_contract_docs_output" "run_rust")" "false" "message lifecycle contract docs should avoid rust lane"

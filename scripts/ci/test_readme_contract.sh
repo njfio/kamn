@@ -28,6 +28,8 @@ required_snippets=(
   "cargo fmt --check"
   "cargo clippy -- -D warnings"
   "cargo test"
+  "make smoke-live-network"
+  "live-network-smoke-report.json"
   "AGENTS.md"
   "PRD.md"
 )
