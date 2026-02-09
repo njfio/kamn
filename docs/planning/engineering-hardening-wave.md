@@ -40,7 +40,7 @@ default development loop green while tightening missing-doc policy controls for
   full Rust builds when only documentation/policy files change.
 - The framework extraction pilot keeps legacy shell command surfaces stable while
   moving reusable validation logic into shared Python helpers.
-  - migrated lanes: token launch handoff, treasury disbursement approvals, post-cutover SLO canary gate, escrow settlement reconciliation, cutover rollback evidence, federated delegation settlement.
+  - migrated lanes: token launch handoff, treasury disbursement approvals, post-cutover SLO canary gate, escrow settlement reconciliation, cutover rollback evidence, federated delegation settlement, SOC2 control evidence.
 - CI scope routing only enables the checker for relevant files:
   - `crates/kamn-core/src/lib.rs`
   - `crates/kamn-core/tests/missing_docs_policy.rs`
@@ -56,6 +56,8 @@ default development loop green while tightening missing-doc policy controls for
   - `docs/foundation/escrow-lifecycle.md`
   - `docs/foundation/mainnet-cutover-runbook.md`
   - `docs/foundation/task-operations.md`
+  - `docs/foundation/release-gonogo-checklist.md`
+  - `docs/foundation/audit-export-interfaces.md`
   - `docs/planning/engineering-hardening-wave.md`
   - `README.md`
 

@@ -408,6 +408,7 @@ for file in "${CHANGED_FILES[@]}"; do
       ESCROW_CONTRACT_CHANGED=true
       MAINNET_CUTOVER_CONTRACT_CHANGED=true
       FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_CHANGED=true
+      SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -712,7 +713,7 @@ fi
 
 if [ "$SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED" = true ]; then
   RUN_SOC2_CONTROL_EVIDENCE_CONTRACT_TESTS=true
-  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ] && [ "$TOKEN_LAUNCH_CONTRACT_CHANGED" != true ]; then
     TEST_SCOPE="soc2-contract"
   fi
 fi

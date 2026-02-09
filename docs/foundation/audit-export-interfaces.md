@@ -41,6 +41,11 @@ Escrow settlement accounting must include deterministic ledger-reference evidenc
 ## SOC2 Control Evidence Bundle Contract (Issue #744)
 SOC2 audit readiness requires deterministic control evidence bundles with replay-safe policy verification.
 
+- Stable shell wrappers:
+  - `scripts/compliance/generate_soc2_control_evidence_bundle.sh`
+  - `scripts/compliance/check_soc2_control_evidence_policy.sh`
+- Shared Python implementation:
+  - `scripts/compliance/soc2_control_contract.py`
 - Evidence bundle generator:
   - `bash scripts/compliance/generate_soc2_control_evidence_bundle.sh --output-file /tmp/soc2-control-evidence.json --control-id CC6.1 --audit-period-start 2026-01-01 --audit-period-end 2026-01-31 --collector-did did:kamn:auditor-001 --evidence-uri s3://kamn-audit/soc2/cc6_1/jan-2026/evidence.json --evidence-sha256 sha256:1111111111111111111111111111111111111111111111111111111111111111 --tamper-check PASS --completeness-check PASS --ci-fast-gate PASS`
 - Policy checker:
