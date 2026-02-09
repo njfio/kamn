@@ -40,6 +40,8 @@ required_snippets=(
   "run_localhost_signed_integration_contract_lane.sh"
   "kamn.sdk.localhost-signed.integration-contract.v1"
   "run_localhost_signed_integration_contract_lane_tests"
+  "check_localhost_signed_integration_evidence_policy.sh --report-file"
+  "/tmp/localhost-signed-integration-contract-report.json"
   "run_localhost_bridge_demo_evidence_contract_lane.sh"
   "run_localhost_bridge_demo_evidence_deep_lane.sh"
   "kamn.bridge.localhost-demo-evidence.v1"

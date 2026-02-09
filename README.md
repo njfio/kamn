@@ -113,7 +113,9 @@ bash scripts/bridge/run_localhost_bridge_relay_demo_contract_lane.sh
 ### Run Localhost Signed Integration Contract Lane
 
 ```bash
-bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh
+bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh \
+  --output-json /tmp/localhost-signed-integration-contract-report.json
+bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-file /tmp/localhost-signed-integration-contract-report.json
 # schema: kamn.sdk.localhost-signed.integration-contract.v1
 ```
 

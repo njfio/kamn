@@ -17,6 +17,7 @@ fn live_network_wave_doc_contains_smoke_commands_and_schema() {
     assert!(LIVE_NETWORK_WAVE_DOC.contains("kamn.bridge.localhost-demo-evidence.v1"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("run_localhost_signed_integration_harness.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("run_localhost_signed_integration_contract_lane.sh"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("check_localhost_signed_integration_evidence_policy.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("kamn.sdk.localhost-signed.integration-contract.v1"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("test_dashboard_package_runtime_compat.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("npx -y node@22"));
@@ -35,6 +36,9 @@ fn regression_budget_guard_marker_is_documented() {
     // Regression: #878
     assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #878`"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("integration contract lane preserves"));
+    // Regression: #880
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #880`"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("policy checker preserves schema and reason-code"));
     // Regression: #868
     assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #868`"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("node@22"));
@@ -45,6 +49,8 @@ fn readme_and_makefile_expose_live_network_entrypoints() {
     assert!(README.contains("make smoke-live-network"));
     assert!(README.contains("make deep-live-network"));
     assert!(README.contains("make demo-localhost-transport"));
+    assert!(README.contains("check_localhost_signed_integration_evidence_policy.sh"));
+    assert!(README.contains("/tmp/localhost-signed-integration-contract-report.json"));
     assert!(README.contains("run_localhost_bridge_demo_evidence_contract_lane.sh"));
     assert!(README.contains("run_localhost_bridge_demo_evidence_deep_lane.sh"));
     assert!(MAKEFILE.contains("smoke-live-network:"));
