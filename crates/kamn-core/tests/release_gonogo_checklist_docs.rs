@@ -113,6 +113,17 @@ fn checklist_contains_governance_stake_slash_risk_threshold_contract() {
 }
 
 #[test]
+fn checklist_contains_reputation_dispute_evidence_contract() {
+    assert!(CHECKLIST.contains("## Reputation Dispute Evidence Contract"));
+    assert!(CHECKLIST.contains("generate_reputation_dispute_evidence_bundle.sh"));
+    assert!(CHECKLIST.contains("check_reputation_dispute_policy.sh"));
+    assert!(CHECKLIST.contains("run_reputation_dispute_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_reputation_dispute_deep_lane.sh"));
+    assert!(CHECKLIST.contains("run_reputation_dispute_matrix.py"));
+    assert!(CHECKLIST.contains("fixtures/reputation_dispute/replay_cases.json"));
+}
+
+#[test]
 fn checklist_contains_token_launch_handoff_evidence_contract() {
     assert!(CHECKLIST.contains("## Token Launch Handoff Evidence Contract"));
     assert!(CHECKLIST.contains("generate_token_launch_handoff_evidence_bundle.sh"));
@@ -226,6 +237,14 @@ fn regression_requires_governance_stake_slash_risk_guard_marker() {
     // Regression: #733
     assert!(CHECKLIST.contains(
         "unsafe threshold bypass attempts and tampered risk evidence force `NO-GO` (`Regression: #733`)."
+    ));
+}
+
+#[test]
+fn regression_requires_reputation_dispute_evidence_guard_marker() {
+    // Regression: #730
+    assert!(CHECKLIST.contains(
+        "tampered evidence hashes, score-adjustment limit bypasses, and closed-policy-window decisions force `NO-GO` (`Regression: #730`)."
     ));
 }
 

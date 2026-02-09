@@ -1,0 +1,55 @@
+{
+  "cases": [
+    {
+      "approval_recorded": true,
+      "case_id": "dispute-go-001",
+      "ci_fast_gate": "PASS",
+      "dispute_id": "dispute-go-001",
+      "dispute_reason_code": "QUALITY",
+      "evidence_hash_verified": "PASS",
+      "evidence_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "evidence_uri": "s3://kamn-audit/reputation/dispute-go-001.json",
+      "expected_final_decision": "GO",
+      "max_adjustment_points": 120,
+      "original_trust_score": 640,
+      "policy_window_open": true,
+      "proposed_trust_score": 560,
+      "reviewer_did": "did:kamn:reviewer-001",
+      "subject_did": "did:kamn:agent-001"
+    },
+    {
+      "approval_recorded": true,
+      "case_id": "dispute-tampered-evidence-001",
+      "ci_fast_gate": "PASS",
+      "dispute_id": "dispute-tampered-evidence-001",
+      "dispute_reason_code": "ABUSE",
+      "evidence_hash_verified": "FAIL",
+      "evidence_sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "evidence_uri": "s3://kamn-audit/reputation/dispute-tampered-evidence-001.json",
+      "expected_final_decision": "NO-GO",
+      "max_adjustment_points": 160,
+      "original_trust_score": 710,
+      "policy_window_open": true,
+      "proposed_trust_score": 620,
+      "reviewer_did": "did:kamn:reviewer-002",
+      "subject_did": "did:kamn:agent-002"
+    },
+    {
+      "approval_recorded": true,
+      "case_id": "dispute-over-adjustment-001",
+      "ci_fast_gate": "PASS",
+      "dispute_id": "dispute-over-adjustment-001",
+      "dispute_reason_code": "DELIVERY",
+      "evidence_hash_verified": "PASS",
+      "evidence_sha256": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "evidence_uri": "s3://kamn-audit/reputation/dispute-over-adjustment-001.json",
+      "expected_final_decision": "NO-GO",
+      "max_adjustment_points": 50,
+      "original_trust_score": 580,
+      "policy_window_open": true,
+      "proposed_trust_score": 390,
+      "reviewer_did": "did:kamn:reviewer-003",
+      "subject_did": "did:kamn:agent-003"
+    }
+  ]
+}

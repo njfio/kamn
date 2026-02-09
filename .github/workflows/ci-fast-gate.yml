@@ -161,6 +161,13 @@ jobs:
           bash scripts/governance/test_run_stake_slash_risk_contract_lane.sh
           bash scripts/governance/test_run_stake_slash_risk_matrix.sh
 
+      - name: Run reputation dispute evidence contract lane
+        if: steps.scope.outputs.run_reputation_dispute_contract_tests == 'true'
+        run: |
+          bash scripts/reputation/test_generate_reputation_dispute_evidence_bundle.sh
+          bash scripts/reputation/test_run_reputation_dispute_contract_lane.sh
+          bash scripts/reputation/test_run_reputation_dispute_matrix.sh
+
       - name: Run token launch handoff contract lane
         if: steps.scope.outputs.run_token_launch_contract_tests == 'true'
         run: bash scripts/token/run_token_launch_handoff_contract_lane.sh
