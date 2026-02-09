@@ -76,6 +76,15 @@ fn doc_contains_reputation_signal_quarantine_evidence_export_contract() {
 }
 
 #[test]
+fn doc_contains_reputation_recovery_evidence_export_contract() {
+    assert!(DOC.contains("## Reputation Recovery Reversal Evidence Export Contract"));
+    assert!(DOC.contains("generate_reputation_recovery_evidence_bundle.sh"));
+    assert!(DOC.contains("check_reputation_recovery_policy.sh"));
+    assert!(DOC.contains("run_reputation_recovery_contract_lane.sh"));
+    assert!(DOC.contains("reputation_recovery_contract.py"));
+}
+
+#[test]
 fn regression_requires_reputation_dispute_evidence_guard_marker() {
     // Regression: #730
     assert!(DOC.contains(
@@ -88,5 +97,13 @@ fn regression_requires_reputation_signal_quarantine_guard_marker() {
     // Regression: #935
     assert!(DOC.contains(
         "tampered reason keys/reason codes and ingestion-action mismatches force `NO-GO` (`Regression: #935`)."
+    ));
+}
+
+#[test]
+fn regression_requires_reputation_recovery_guard_marker() {
+    // Regression: #936
+    assert!(DOC.contains(
+        "false-positive irreversible-penalty paths, replayed recovery nonces, and tampered recovery reason codes force `NO-GO` (`Regression: #936`)."
     ));
 }

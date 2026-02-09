@@ -402,6 +402,7 @@ for file in "${CHANGED_FILES[@]}"; do
 
   case "$file" in
     scripts/framework/*)
+      # Includes dispute, signal-quarantine, and recovery reputation lanes.
       TOKEN_LAUNCH_CONTRACT_CHANGED=true
       TREASURY_DISBURSEMENT_CONTRACT_CHANGED=true
       LAUNCH_CANARY_CONTRACT_CHANGED=true

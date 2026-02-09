@@ -54,6 +54,7 @@ fn doc_contains_recovery_reversal_contract() {
     assert!(DOC.contains("generate_reputation_recovery_evidence_bundle.sh"));
     assert!(DOC.contains("check_reputation_recovery_policy.sh"));
     assert!(DOC.contains("run_reputation_recovery_contract_lane.sh"));
+    assert!(DOC.contains("reputation_recovery_contract.py"));
     assert!(DOC.contains("REPUTATION_RECOVERY_MAX_SECONDS"));
     assert!(DOC.contains("recovery_action"));
 }

@@ -93,6 +93,11 @@ False-positive penalties require deterministic reversal checks so recovery remai
   - `reason_key`: `reputation_recovery_reason_codes:<final_decision>:v1`
   - `reason_codes`: sorted deterministic recovery failure codes
   - `recovery_action`: `REVERSE_PENALTY` (GO) or `HOLD_PENALTY` (NO-GO)
+- Stable shell wrappers:
+  - `scripts/reputation/generate_reputation_recovery_evidence_bundle.sh`
+  - `scripts/reputation/check_reputation_recovery_policy.sh`
+- Shared Python implementation:
+  - `scripts/reputation/reputation_recovery_contract.py`
 - Evidence bundle generator:
   - `bash scripts/reputation/generate_reputation_recovery_evidence_bundle.sh --output-file /tmp/reputation-recovery.json --lane contract --recovery-id recovery-001 --subject-did did:kamn:agent-001 --reviewer-did did:kamn:reviewer-001 --pre-penalty-trust-score 700 --post-penalty-trust-score 540 --proposed-recovered-trust-score 660 --max-reversal-points 160 --false-positive-confirmed true --reviewer-quorum-satisfied true --audit-evidence-verified PASS --replay-guard-pass true --ci-fast-gate PASS`
 - Policy checker:
