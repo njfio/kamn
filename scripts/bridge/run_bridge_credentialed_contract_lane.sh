@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REPLAY_FIXTURE="$ROOT_DIR/fixtures/bridge_replay/replay_validation_cases.json"
 REPLAY_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_replay_matrix.sh"
 REDACTION_CHECK_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_credential_redaction_check.py"
+OUTBOUND_INTENT_CONTRACT_SCRIPT="$ROOT_DIR/scripts/bridge/run_cross_chain_outbound_intent_contract_lane.sh"
 
 skip_replay=false
 while [[ $# -gt 0 ]]; do
@@ -33,6 +34,8 @@ if [ "$skip_replay" != true ]; then
     --suites "bridge_adapter,discord_bridge,cross_chain_bridge" \
     --output-json "$BRIDGE_REPLAY_REPORT" >/dev/null
 fi
+
+bash "$OUTBOUND_INTENT_CONTRACT_SCRIPT" >/dev/null
 
 TELEGRAM_TOKEN="telegram_contract_token_q7h3n5m1v9x2"
 DISCORD_TOKEN="discord_contract_token_z6k4d8r2p1w5"

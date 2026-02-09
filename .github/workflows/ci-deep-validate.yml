@@ -137,6 +137,18 @@ jobs:
           path: post-cutover-slo-report.json
           if-no-files-found: error
 
+      - name: Run bridge credentialed deep lane
+        if: steps.detect.outputs.run_rust == 'true'
+        run: bash scripts/bridge/run_bridge_credentialed_deep_lane.sh --output-json bridge-credentialed-deep-report.json
+
+      - name: Upload bridge credentialed deep report
+        if: always() && hashFiles('bridge-credentialed-deep-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: bridge-credentialed-deep-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: bridge-credentialed-deep-report.json
+          if-no-files-found: error
+
       - name: Run SDK parity matrix (scheduled only)
         if: steps.detect.outputs.run_rust == 'true'
         run: bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json sdk-parity-report.json

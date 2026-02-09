@@ -29,8 +29,18 @@ if ! grep -Fq "run_bridge_credentialed_contract_lane.sh" "$DEEP_SCRIPT"; then
   exit 1
 fi
 
+if ! grep -q "run_cross_chain_outbound_intent_contract_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected bridge credentialed fast-lane script to execute outbound intent contract lane" >&2
+  exit 1
+fi
+
 if ! grep -q "bridge-credential-redaction-report.json" "$DEEP_SCRIPT"; then
   echo "expected deep-lane script to emit bridge credential redaction report" >&2
+  exit 1
+fi
+
+if ! grep -q "bridge-outbound-intent-deep-report.json" "$DEEP_SCRIPT"; then
+  echo "expected deep-lane script to emit outbound intent deep report" >&2
   exit 1
 fi
 

@@ -19,6 +19,7 @@ fn doc_contains_bridge_quorum_fast_lane_commands() {
     assert!(DOC.contains("cargo test -p kamn-core approver_quorum"));
     assert!(DOC.contains("bridge_replay_matrix.sh"));
     assert!(DOC.contains("--suites bridge_adapter,discord_bridge"));
+    assert!(DOC.contains("run_cross_chain_outbound_intent_contract_lane.sh"));
     assert!(DOC.contains("cargo fmt --check"));
     assert!(DOC.contains("cargo clippy -p kamn-core -- -D warnings"));
 }
@@ -30,6 +31,9 @@ fn regression_requires_listener_and_approver_quorum_guard_rules() {
     assert!(DOC.contains("Replayed or out-of-order listener event sequences are rejected."));
     assert!(DOC.contains("Outbound under-quorum approval sets are rejected."));
     assert!(DOC.contains("Malformed approver attestation payload is rejected."));
+    assert!(DOC.contains("idempotency-key and payload-hash consistency across attempts"));
+    assert!(DOC.contains("Duplicate outbound replay requests are rejected"));
     assert!(DOC.contains("unauthorized approver signature-failure rejection"));
     assert!(DOC.contains("Regression: #587"));
+    assert!(DOC.contains("Regression: #742"));
 }
