@@ -253,7 +253,8 @@ pub use key_recovery::{KeyRecoveryManager, RecoveryError, RecoveryState};
 pub use kolme_runtime_commit::{
     InMemoryKolmeRuntimeCommitClient, KolmeCommitReceiptFinality, KolmeRuntimeCommitClient,
     KolmeRuntimeCommitError, KolmeRuntimeCommitOutcome, KolmeRuntimeCommitReceipt,
-    KolmeRuntimeCommitRequest,
+    KolmeRuntimeCommitRequest, RuntimeCommitFinalityProjection, RuntimeCommitLifecycleRecord,
+    RuntimeCommitLifecycleState, RuntimeCommitPipeline,
 };
 pub use message_delivery_guards::{
     DeliveryFailureCode, DeliveryGuardInput, DeliveryGuardSnapshot, DeliveryGuardSnapshotError,

@@ -143,6 +143,142 @@ pub enum KolmeRuntimeCommitOutcome {
     Rejected { reason: String },
 }
 
+/// Runtime lifecycle state projected from commit receipt outcomes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuntimeCommitLifecycleState {
+    /// Commit is pending confirmation and should remain on requeue/watch.
+    Pending,
+    /// Commit has reached final confirmation.
+    Finalized,
+    /// Commit failed and should not be retried automatically.
+    Failed,
+}
+
+/// One runtime operation lifecycle record.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuntimeCommitLifecycleRecord {
+    /// Runtime operation identifier.
+    pub operation_id: String,
+    /// Deterministic idempotency key for the operation.
+    pub idempotency_key: String,
+    /// Projected lifecycle state.
+    pub state: RuntimeCommitLifecycleState,
+    /// Whether runtime should requeue/retry polling for this operation.
+    pub needs_requeue: bool,
+    /// Last known receipt provider marker.
+    pub receipt_provider: Option<String>,
+    /// Last known receipt identifier.
+    pub receipt_commit_id: Option<String>,
+    /// Last known rejection/failure reason.
+    pub last_error_reason: Option<String>,
+}
+
+/// Projection summary for runtime commit lifecycle counts.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct RuntimeCommitFinalityProjection {
+    /// Number of pending operations.
+    pub pending_count: usize,
+    /// Number of finalized operations.
+    pub final_count: usize,
+    /// Number of failed operations.
+    pub failed_count: usize,
+}
+
+/// Deterministic runtime pipeline for commit receipt confirmation and finality projection.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct RuntimeCommitPipeline {
+    records_by_operation_id: HashMap<String, RuntimeCommitLifecycleRecord>,
+}
+
+impl RuntimeCommitPipeline {
+    /// Constructs an empty runtime commit pipeline.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Submits one runtime commit through the provided commit client and records lifecycle state.
+    pub fn submit_with_client<C: KolmeRuntimeCommitClient>(
+        &mut self,
+        client: &mut C,
+        request: KolmeRuntimeCommitRequest,
+    ) -> Result<RuntimeCommitLifecycleRecord, KolmeRuntimeCommitError> {
+        let outcome = client.submit_commit(&request)?;
+        let record = lifecycle_record_from_outcome(&request, &outcome);
+        self.records_by_operation_id
+            .insert(request.operation_id.clone(), record.clone());
+        Ok(record)
+    }
+
+    /// Applies explicit receipt finality update for an existing operation.
+    pub fn apply_receipt_finality(
+        &mut self,
+        operation_id: &str,
+        finality: KolmeCommitReceiptFinality,
+        receipt_provider: &str,
+        receipt_commit_id: &str,
+    ) -> Result<RuntimeCommitLifecycleRecord, KolmeRuntimeCommitError> {
+        if receipt_provider.trim().is_empty() {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "receipt_provider",
+                reason: "must not be empty",
+            });
+        }
+        if receipt_commit_id.trim().is_empty() {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "receipt_commit_id",
+                reason: "must not be empty",
+            });
+        }
+
+        let record = self.records_by_operation_id.get_mut(operation_id).ok_or(
+            KolmeRuntimeCommitError::UnknownOperationId {
+                operation_id: operation_id.to_owned(),
+            },
+        )?;
+        let target_state = lifecycle_state_for_finality(finality);
+
+        if record.state != target_state {
+            match (record.state, target_state) {
+                (RuntimeCommitLifecycleState::Finalized, RuntimeCommitLifecycleState::Pending)
+                | (RuntimeCommitLifecycleState::Failed, RuntimeCommitLifecycleState::Pending) => {
+                    return Err(KolmeRuntimeCommitError::InvalidFinalityTransition {
+                        from: lifecycle_state_label(record.state),
+                        to: lifecycle_state_label(target_state),
+                    });
+                }
+                _ => {}
+            }
+        }
+
+        record.state = target_state;
+        record.needs_requeue = matches!(target_state, RuntimeCommitLifecycleState::Pending);
+        record.receipt_provider = Some(receipt_provider.to_owned());
+        record.receipt_commit_id = Some(receipt_commit_id.to_owned());
+        if !matches!(target_state, RuntimeCommitLifecycleState::Failed) {
+            record.last_error_reason = None;
+        }
+        Ok(record.clone())
+    }
+
+    /// Returns lifecycle record for the provided runtime operation identifier.
+    pub fn record(&self, operation_id: &str) -> Option<&RuntimeCommitLifecycleRecord> {
+        self.records_by_operation_id.get(operation_id)
+    }
+
+    /// Computes deterministic pending/final/failed projection counts.
+    pub fn finality_projection(&self) -> RuntimeCommitFinalityProjection {
+        let mut projection = RuntimeCommitFinalityProjection::default();
+        for record in self.records_by_operation_id.values() {
+            match record.state {
+                RuntimeCommitLifecycleState::Pending => projection.pending_count += 1,
+                RuntimeCommitLifecycleState::Finalized => projection.final_count += 1,
+                RuntimeCommitLifecycleState::Failed => projection.failed_count += 1,
+            }
+        }
+        projection
+    }
+}
+
 /// Abstract client interface for Kolme runtime commit submission.
 pub trait KolmeRuntimeCommitClient {
     /// Submits one deterministic runtime commit request.
@@ -157,6 +293,7 @@ pub trait KolmeRuntimeCommitClient {
 pub struct InMemoryKolmeRuntimeCommitClient {
     provider: String,
     receipts_by_idempotency_key: HashMap<String, KolmeRuntimeCommitReceipt>,
+    finality_by_idempotency_key: HashMap<String, KolmeCommitReceiptFinality>,
     rejected_reasons_by_idempotency_key: HashMap<String, String>,
 }
 
@@ -172,6 +309,7 @@ impl InMemoryKolmeRuntimeCommitClient {
         Ok(Self {
             provider: provider.to_owned(),
             receipts_by_idempotency_key: HashMap::new(),
+            finality_by_idempotency_key: HashMap::new(),
             rejected_reasons_by_idempotency_key: HashMap::new(),
         })
     }
@@ -180,6 +318,16 @@ impl InMemoryKolmeRuntimeCommitClient {
     pub fn reject_idempotency_key(&mut self, idempotency_key: &str, reason: &str) {
         self.rejected_reasons_by_idempotency_key
             .insert(idempotency_key.to_owned(), reason.to_owned());
+    }
+
+    /// Overrides the receipt finality that will be emitted for a given idempotency key.
+    pub fn set_finality_for_idempotency_key(
+        &mut self,
+        idempotency_key: &str,
+        finality: KolmeCommitReceiptFinality,
+    ) {
+        self.finality_by_idempotency_key
+            .insert(idempotency_key.to_owned(), finality);
     }
 }
 
@@ -214,7 +362,11 @@ impl KolmeRuntimeCommitClient for InMemoryKolmeRuntimeCommitClient {
                 request.nonce,
                 request.payload_hash.as_str(),
             ),
-            finality: KolmeCommitReceiptFinality::Pending,
+            finality: self
+                .finality_by_idempotency_key
+                .get(request.idempotency_key())
+                .copied()
+                .unwrap_or(KolmeCommitReceiptFinality::Pending),
         };
 
         self.receipts_by_idempotency_key
@@ -233,6 +385,18 @@ pub enum KolmeRuntimeCommitError {
         /// Validation reason.
         reason: &'static str,
     },
+    /// Operation identifier was not found in runtime pipeline state.
+    UnknownOperationId {
+        /// Missing operation identifier.
+        operation_id: String,
+    },
+    /// Runtime attempted invalid lifecycle transition for receipt finality.
+    InvalidFinalityTransition {
+        /// Current lifecycle state label.
+        from: &'static str,
+        /// Target lifecycle state label.
+        to: &'static str,
+    },
 }
 
 impl fmt::Display for KolmeRuntimeCommitError {
@@ -240,6 +404,12 @@ impl fmt::Display for KolmeRuntimeCommitError {
         match self {
             Self::InvalidRequest { field, reason } => {
                 write!(f, "invalid runtime commit request {field}: {reason}")
+            }
+            Self::UnknownOperationId { operation_id } => {
+                write!(f, "unknown runtime operation id: {operation_id}")
+            }
+            Self::InvalidFinalityTransition { from, to } => {
+                write!(f, "invalid finality transition from {from} to {to}")
             }
         }
     }
@@ -277,6 +447,54 @@ fn deterministic_commit_id(
         nonce,
         payload_hash.len()
     )
+}
+
+fn lifecycle_state_for_finality(
+    finality: KolmeCommitReceiptFinality,
+) -> RuntimeCommitLifecycleState {
+    match finality {
+        KolmeCommitReceiptFinality::Pending => RuntimeCommitLifecycleState::Pending,
+        KolmeCommitReceiptFinality::Final => RuntimeCommitLifecycleState::Finalized,
+        KolmeCommitReceiptFinality::Failed => RuntimeCommitLifecycleState::Failed,
+    }
+}
+
+fn lifecycle_state_label(state: RuntimeCommitLifecycleState) -> &'static str {
+    match state {
+        RuntimeCommitLifecycleState::Pending => "pending",
+        RuntimeCommitLifecycleState::Finalized => "finalized",
+        RuntimeCommitLifecycleState::Failed => "failed",
+    }
+}
+
+fn lifecycle_record_from_outcome(
+    request: &KolmeRuntimeCommitRequest,
+    outcome: &KolmeRuntimeCommitOutcome,
+) -> RuntimeCommitLifecycleRecord {
+    match outcome {
+        KolmeRuntimeCommitOutcome::Submitted(receipt)
+        | KolmeRuntimeCommitOutcome::Duplicate(receipt) => {
+            let state = lifecycle_state_for_finality(receipt.finality);
+            RuntimeCommitLifecycleRecord {
+                operation_id: request.operation_id.clone(),
+                idempotency_key: request.idempotency_key().to_owned(),
+                state,
+                needs_requeue: matches!(state, RuntimeCommitLifecycleState::Pending),
+                receipt_provider: Some(receipt.provider.clone()),
+                receipt_commit_id: Some(receipt.commit_id.clone()),
+                last_error_reason: None,
+            }
+        }
+        KolmeRuntimeCommitOutcome::Rejected { reason } => RuntimeCommitLifecycleRecord {
+            operation_id: request.operation_id.clone(),
+            idempotency_key: request.idempotency_key().to_owned(),
+            state: RuntimeCommitLifecycleState::Failed,
+            needs_requeue: false,
+            receipt_provider: None,
+            receipt_commit_id: None,
+            last_error_reason: Some(reason.clone()),
+        },
+    }
 }
 
 #[cfg(test)]

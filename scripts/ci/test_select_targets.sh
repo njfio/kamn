@@ -450,6 +450,13 @@ assert_eq "$(extract_output "$kolme_runtime_commit_fixture_output" "run_kolme_ve
 assert_eq "$(extract_output "$kolme_runtime_commit_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit fixture changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_fixture_output" "test_scope")" "kolme-version-contract" "Kolme runtime commit fixture changes should set kolme-version-contract scope"
 
+kolme_runtime_commit_finality_test_output="$(run_selector $'crates/kamn-core/tests/kolme_runtime_commit_finality.rs')"
+assert_eq "$(extract_output "$kolme_runtime_commit_finality_test_output" "run_rust")" "true" "Kolme runtime commit finality rust tests should run rust lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_finality_test_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit finality rust tests should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_finality_test_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit finality rust tests must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_finality_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit finality rust tests should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_finality_test_output" "test_scope")" "targeted" "Kolme runtime commit finality rust tests should keep targeted scope"
+
 kolme_devnet_contract_docs_output="$(run_selector $'docs/planning/kolme-devnet-ops.md')"
 assert_eq "$(extract_output "$kolme_devnet_contract_docs_output" "run_rust")" "false" "Kolme devnet ops docs should avoid rust lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_docs_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme devnet ops docs should skip snapshot drift contract lane"

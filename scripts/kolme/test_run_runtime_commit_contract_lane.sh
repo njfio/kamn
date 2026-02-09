@@ -9,6 +9,11 @@ if [ ! -x "$CONTRACT_LANE" ]; then
   exit 1
 fi
 
+if ! grep -q "kolme_runtime_commit_finality" "$CONTRACT_LANE"; then
+  echo "expected Kolme runtime commit contract lane to include finality projection tests" >&2
+  exit 1
+fi
+
 lane_output="$(bash "$CONTRACT_LANE")"
 if ! printf '%s\n' "$lane_output" | grep -q "Kolme runtime commit contract lane tests passed."; then
   echo "expected Kolme runtime commit contract lane success marker" >&2

@@ -17,7 +17,9 @@ fi
 
 start_epoch="$(date +%s)"
 
-cargo test -p kamn-core --test kolme_runtime_commit_client
+cargo test -p kamn-core \
+  --test kolme_runtime_commit_client \
+  --test kolme_runtime_commit_finality
 
 if ! grep -q "run_runtime_commit_contract_lane.sh" "$ROADMAP_DOC"; then
   echo "expected Kolme integration roadmap to reference runtime commit contract lane command" >&2
