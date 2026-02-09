@@ -38,6 +38,7 @@ append_summary() {
     echo "- Run task operation snapshot contract tests: ${RUN_TASK_OPERATION_SNAPSHOT_CONTRACT_TESTS}"
     echo "- Run durable guard recovery contract tests: ${RUN_DURABLE_GUARD_RECOVERY_CONTRACT_TESTS}"
     echo "- Run settlement reconciliation contract tests: ${RUN_SETTLEMENT_RECONCILIATION_CONTRACT_TESTS}"
+    echo "- Run SOC2 control evidence contract tests: ${RUN_SOC2_CONTROL_EVIDENCE_CONTRACT_TESTS}"
     echo "- Run token launch contract tests: ${RUN_TOKEN_LAUNCH_CONTRACT_TESTS}"
     echo "- Run treasury disbursement contract tests: ${RUN_TREASURY_DISBURSEMENT_CONTRACT_TESTS}"
     echo "- Run mainnet cutover contract tests: ${RUN_MAINNET_CUTOVER_CONTRACT_TESTS}"
@@ -146,6 +147,7 @@ CHANNEL_LIFECYCLE_CONTRACT_CHANGED=false
 TASK_OPERATION_SNAPSHOT_CONTRACT_CHANGED=false
 DURABLE_GUARD_RECOVERY_CONTRACT_CHANGED=false
 ESCROW_CONTRACT_CHANGED=false
+SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED=false
 TOKEN_LAUNCH_CONTRACT_CHANGED=false
 TREASURY_DISBURSEMENT_CONTRACT_CHANGED=false
 MAINNET_CUTOVER_CONTRACT_CHANGED=false
@@ -274,6 +276,13 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
+    docs/foundation/audit-export-interfaces.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/audit_export_interfaces_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/compliance/*|fixtures/compliance_soc2/*)
+      SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
     crates/kamn-core/src/token.rs|crates/kamn-core/tests/token_config.rs|crates/kamn-core/tests/token_config_docs.rs|docs/foundation/token-config.md|docs/foundation/token-model.md|docs/foundation/release-gonogo-checklist.md|scripts/token/*|fixtures/token_launch/*)
       TOKEN_LAUNCH_CONTRACT_CHANGED=true
       classified=true
@@ -391,6 +400,7 @@ RUN_CHANNEL_LIFECYCLE_CONTRACT_TESTS=false
 RUN_TASK_OPERATION_SNAPSHOT_CONTRACT_TESTS=false
 RUN_DURABLE_GUARD_RECOVERY_CONTRACT_TESTS=false
 RUN_SETTLEMENT_RECONCILIATION_CONTRACT_TESTS=false
+RUN_SOC2_CONTROL_EVIDENCE_CONTRACT_TESTS=false
 RUN_TOKEN_LAUNCH_CONTRACT_TESTS=false
 RUN_TREASURY_DISBURSEMENT_CONTRACT_TESTS=false
 RUN_MAINNET_CUTOVER_CONTRACT_TESTS=false
@@ -524,6 +534,13 @@ if [ "$ESCROW_CONTRACT_CHANGED" = true ]; then
   fi
 fi
 
+if [ "$SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED" = true ]; then
+  RUN_SOC2_CONTROL_EVIDENCE_CONTRACT_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="soc2-contract"
+  fi
+fi
+
 if [ "$TOKEN_LAUNCH_CONTRACT_CHANGED" = true ]; then
   RUN_TOKEN_LAUNCH_CONTRACT_TESTS=true
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
@@ -650,6 +667,7 @@ write_output "run_channel_lifecycle_contract_tests" "$RUN_CHANNEL_LIFECYCLE_CONT
 write_output "run_task_operation_snapshot_contract_tests" "$RUN_TASK_OPERATION_SNAPSHOT_CONTRACT_TESTS"
 write_output "run_durable_guard_recovery_contract_tests" "$RUN_DURABLE_GUARD_RECOVERY_CONTRACT_TESTS"
 write_output "run_settlement_reconciliation_contract_tests" "$RUN_SETTLEMENT_RECONCILIATION_CONTRACT_TESTS"
+write_output "run_soc2_control_evidence_contract_tests" "$RUN_SOC2_CONTROL_EVIDENCE_CONTRACT_TESTS"
 write_output "run_token_launch_contract_tests" "$RUN_TOKEN_LAUNCH_CONTRACT_TESTS"
 write_output "run_treasury_disbursement_contract_tests" "$RUN_TREASURY_DISBURSEMENT_CONTRACT_TESTS"
 write_output "run_mainnet_cutover_contract_tests" "$RUN_MAINNET_CUTOVER_CONTRACT_TESTS"

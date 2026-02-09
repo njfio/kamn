@@ -195,6 +195,26 @@ if ! grep -Fq "bash scripts/escrow/run_settlement_reconciliation_contract_lane.s
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_soc2_control_evidence_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected SOC2 control evidence contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/compliance/test_generate_soc2_control_evidence_bundle.sh" "$FAST_WORKFLOW"; then
+  echo "expected SOC2 control evidence bundle tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/compliance/test_run_soc2_control_evidence_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected SOC2 control evidence contract lane script tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/compliance/test_run_soc2_control_evidence_replay_matrix.sh" "$FAST_WORKFLOW"; then
+  echo "expected SOC2 control evidence replay matrix tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_token_launch_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected token launch contract scope condition in ci-fast-gate.yml" >&2
   exit 1
@@ -299,6 +319,16 @@ fi
 
 if ! grep -Fq "bash scripts/escrow/run_settlement_reconciliation_deep_lane.sh" "$DEEP_WORKFLOW"; then
   echo "expected scheduled settlement reconciliation deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/compliance/run_soc2_control_evidence_deep_lane.sh --output-json soc2-control-evidence-report.json" "$DEEP_WORKFLOW"; then
+  echo "expected scheduled SOC2 control evidence deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "soc2-control-evidence-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
+  echo "expected SOC2 control evidence deep report artifact upload in ci-deep-validate.yml" >&2
   exit 1
 fi
 

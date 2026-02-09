@@ -1,0 +1,57 @@
+{
+  "schema_version": "kamn.compliance.soc2-control-evidence.replay-cases.v1",
+  "cases": [
+    {
+      "case_id": "go_control_cc6_1_complete",
+      "control_id": "CC6.1",
+      "audit_period_start": "2026-01-01",
+      "audit_period_end": "2026-01-31",
+      "collector_did": "did:kamn:auditor-001",
+      "evidence_uri": "s3://kamn-audit/soc2/cc6_1/jan-2026/evidence.json",
+      "evidence_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "tamper_check": "PASS",
+      "completeness_check": "PASS",
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "GO"
+    },
+    {
+      "case_id": "no_go_tamper_detected",
+      "control_id": "CC7.2",
+      "audit_period_start": "2026-01-01",
+      "audit_period_end": "2026-01-31",
+      "collector_did": "did:kamn:auditor-002",
+      "evidence_uri": "s3://kamn-audit/soc2/cc7_2/jan-2026/evidence.json",
+      "evidence_sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "tamper_check": "FAIL",
+      "completeness_check": "PASS",
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
+      "case_id": "no_go_incomplete_bundle",
+      "control_id": "CC9.1",
+      "audit_period_start": "2026-01-01",
+      "audit_period_end": "2026-01-31",
+      "collector_did": "did:kamn:auditor-003",
+      "evidence_uri": "s3://kamn-audit/soc2/cc9_1/jan-2026/evidence.json",
+      "evidence_sha256": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "tamper_check": "PASS",
+      "completeness_check": "FAIL",
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
+      "case_id": "no_go_ci_gate_blocked",
+      "control_id": "CC2.3",
+      "audit_period_start": "2026-01-01",
+      "audit_period_end": "2026-01-31",
+      "collector_did": "did:kamn:auditor-004",
+      "evidence_uri": "s3://kamn-audit/soc2/cc2_3/jan-2026/evidence.json",
+      "evidence_sha256": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "tamper_check": "PASS",
+      "completeness_check": "PASS",
+      "ci_fast_gate": "FAIL",
+      "expected_final_decision": "NO-GO"
+    }
+  ]
+}

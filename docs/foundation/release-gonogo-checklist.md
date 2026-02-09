@@ -89,6 +89,22 @@ Escrow settlement outcomes require deterministic receipt/finality evidence befor
   - timeout-before-finality pending receipts and failed receipts force `NO-GO` (`Regression: #678`).
   - missing ledger reference evidence and ledger amount drift force `NO-GO` (`Regression: #717`).
 
+## SOC2 Control Evidence Contract (Issue #744)
+SOC2 audit gates require deterministic control-evidence bundles and replay-safe checker outcomes before release progression.
+
+- Evidence bundle generator:
+  - `bash scripts/compliance/generate_soc2_control_evidence_bundle.sh --output-file /tmp/soc2-control-evidence.json --control-id CC6.1 --audit-period-start 2026-01-01 --audit-period-end 2026-01-31 --collector-did did:kamn:auditor-001 --evidence-uri s3://kamn-audit/soc2/cc6_1/jan-2026/evidence.json --evidence-sha256 sha256:1111111111111111111111111111111111111111111111111111111111111111 --tamper-check PASS --completeness-check PASS --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/compliance/check_soc2_control_evidence_policy.sh --bundle-file /tmp/soc2-control-evidence.json`
+- PR fast contract lane:
+  - `bash scripts/compliance/run_soc2_control_evidence_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/compliance/run_soc2_control_evidence_deep_lane.sh --output-json soc2-control-evidence-report.json`
+- Replay matrix runner:
+  - `python3 scripts/compliance/run_soc2_control_evidence_replay_matrix.py --fixture fixtures/compliance_soc2/control_evidence_replay_cases.json --output-json soc2-control-evidence-report.json`
+- Regression policy:
+  - tampered final decisions and incomplete/tampered control evidence force `NO-GO` (`Regression: #732`).
+
 ## Token Launch Handoff Evidence Contract (Issue #714)
 Token launch readiness requires deterministic supply/allocation and approval evidence before activation.
 
@@ -184,6 +200,10 @@ bash scripts/cutover/test_run_cutover_rollback_contract_lane.sh
 bash scripts/escrow/test_generate_settlement_reconciliation_evidence_bundle.sh
 bash scripts/escrow/test_run_settlement_reconciliation_contract_lane.sh
 bash scripts/escrow/test_run_settlement_reconciliation_race_matrix.sh
+bash scripts/compliance/test_generate_soc2_control_evidence_bundle.sh
+bash scripts/compliance/test_run_soc2_control_evidence_contract_lane.sh
+bash scripts/compliance/test_run_soc2_control_evidence_replay_matrix.sh
+bash scripts/compliance/test_run_soc2_control_evidence_deep_lane.sh
 bash scripts/token/test_generate_token_launch_handoff_evidence_bundle.sh
 bash scripts/token/test_run_token_launch_handoff_contract_lane.sh
 bash scripts/token/test_run_token_launch_handoff_deep_lane.sh
