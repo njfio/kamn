@@ -257,6 +257,18 @@ jobs:
           path: bridge-credentialed-deep-report.json
           if-no-files-found: error
 
+      - name: Run bridge replay/redaction deep lane
+        if: steps.detect.outputs.run_rust == 'true'
+        run: bash scripts/bridge/run_bridge_replay_redaction_deep_lane.sh --output-json bridge-replay-redaction-deep-report.json
+
+      - name: Upload bridge replay/redaction deep report
+        if: always() && hashFiles('bridge-replay-redaction-deep-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: bridge-replay-redaction-deep-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: bridge-replay-redaction-deep-report.json
+          if-no-files-found: error
+
       - name: Run live-network pilot deep lane
         if: steps.detect.outputs.run_rust == 'true'
         run: bash scripts/runtime/run_live_network_pilot_deep_lane.sh --event-name "${{ github.event_name }}" --output-json live-network-pilot-report.json

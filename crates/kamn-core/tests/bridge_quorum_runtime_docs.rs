@@ -6,6 +6,7 @@ fn doc_contains_bridge_quorum_scope_and_models() {
     assert!(DOC.contains("## Listener Quorum Workflow Rules"));
     assert!(DOC.contains("## Approver Quorum Workflow Rules"));
     assert!(DOC.contains("## Ingress Relay Normalization Rules"));
+    assert!(DOC.contains("## Replay and Redaction Evidence Lane Rules"));
     assert!(DOC.contains("## Fast and Cost-Effective Validation"));
     assert!(DOC.contains("listener attestation"));
     assert!(DOC.contains("approver attestation"));
@@ -22,6 +23,8 @@ fn doc_contains_bridge_quorum_fast_lane_commands() {
     assert!(DOC.contains("--suites bridge_adapter,discord_bridge"));
     assert!(DOC.contains("run_bridge_ingress_relay_contract_lane.sh"));
     assert!(DOC.contains("run_bridge_outbound_quorum_contract_lane.sh"));
+    assert!(DOC.contains("run_bridge_replay_redaction_contract_lane.sh"));
+    assert!(DOC.contains("run_bridge_replay_redaction_deep_lane.sh"));
     assert!(DOC.contains("run_cross_chain_outbound_intent_contract_lane.sh"));
     assert!(DOC.contains("cargo fmt --check"));
     assert!(DOC.contains("cargo clippy -p kamn-core -- -D warnings"));
@@ -41,8 +44,11 @@ fn regression_requires_listener_and_approver_quorum_guard_rules() {
     assert!(DOC.contains("Malformed ingress payloads fail closed"));
     assert!(DOC.contains("required/provided"));
     assert!(DOC.contains("approver DID reason fields"));
+    assert!(DOC.contains("kamn.bridge.replay-redaction-evidence.v1"));
+    assert!(DOC.contains("Tampered replay/redaction evidence `final_decision` is rejected"));
     assert!(DOC.contains("Regression: #587"));
     assert!(DOC.contains("Regression: #742"));
     assert!(DOC.contains("Regression: #850"));
     assert!(DOC.contains("Regression: #851"));
+    assert!(DOC.contains("Regression: #852"));
 }

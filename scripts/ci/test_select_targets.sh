@@ -20,12 +20,19 @@ assert_eq() {
   fi
 }
 
-run_selector() {
+run_selector_with_bridge_deep() {
   local changed_files="$1"
+  local bridge_deep="${2:-false}"
   env -u GITHUB_OUTPUT -u GITHUB_STEP_SUMMARY \
     CI_CHANGED_FILES="$changed_files" \
+    CI_ENABLE_BRIDGE_REPLAY_DEEP_LANE="$bridge_deep" \
     GITHUB_BASE_REF=__missing__ \
     bash "$SCRIPT"
+}
+
+run_selector() {
+  local changed_files="$1"
+  run_selector_with_bridge_deep "$changed_files" "false"
 }
 
 docs_output="$(run_selector $'docs/foundation/ci-caching-parallelism.md')"
@@ -57,6 +64,7 @@ assert_eq "$(extract_output "$docs_output" "run_treasury_disbursement_contract_t
 assert_eq "$(extract_output "$docs_output" "run_mainnet_cutover_contract_tests")" "false" "docs_only should not run mainnet cutover contract tests for unrelated docs"
 assert_eq "$(extract_output "$docs_output" "run_launch_canary_contract_tests")" "false" "docs_only should not run launch canary contract tests for unrelated docs"
 assert_eq "$(extract_output "$docs_output" "run_bridge_replay_harness")" "false" "docs_only should not run bridge replay harness"
+assert_eq "$(extract_output "$docs_output" "run_bridge_replay_deep_lane")" "false" "docs_only should not run bridge replay deep lane"
 assert_eq "$(extract_output "$docs_output" "bridge_replay_suites")" "" "docs_only should not select bridge replay suites"
 assert_eq "$(extract_output "$docs_output" "run_rust_live_transport_contract_tests")" "false" "docs_only should not run rust live transport lane"
 assert_eq "$(extract_output "$docs_output" "run_python_live_transport_contract_tests")" "false" "docs_only should not run python live transport lane"
@@ -96,6 +104,7 @@ assert_eq "$(extract_output "$deploy_output" "run_treasury_disbursement_contract
 assert_eq "$(extract_output "$deploy_output" "run_mainnet_cutover_contract_tests")" "false" "deploy-only changes should skip mainnet cutover contract tests"
 assert_eq "$(extract_output "$deploy_output" "run_launch_canary_contract_tests")" "false" "deploy-only changes should skip launch canary contract tests"
 assert_eq "$(extract_output "$deploy_output" "run_bridge_replay_harness")" "false" "deploy-only changes should skip bridge replay harness"
+assert_eq "$(extract_output "$deploy_output" "run_bridge_replay_deep_lane")" "false" "deploy-only changes should skip bridge replay deep lane"
 assert_eq "$(extract_output "$deploy_output" "bridge_replay_suites")" "" "deploy-only changes should not select bridge replay suites"
 assert_eq "$(extract_output "$deploy_output" "run_rust_live_transport_contract_tests")" "false" "deploy-only changes should skip rust live transport lane"
 assert_eq "$(extract_output "$deploy_output" "run_python_live_transport_contract_tests")" "false" "deploy-only changes should skip python live transport lane"
@@ -153,6 +162,7 @@ assert_eq "$(extract_output "$unknown_output" "run_live_transport_parity_contrac
 assert_eq "$(extract_output "$unknown_output" "run_live_transport_parity_rust_contract_tests")" "false" "unknown paths should not require rust parity setup"
 assert_eq "$(extract_output "$unknown_output" "live_transport_parity_languages")" "" "unknown paths should not select parity languages"
 assert_eq "$(extract_output "$unknown_output" "run_sdk_parity_matrix")" "false" "unknown paths should not trigger sdk parity matrix"
+assert_eq "$(extract_output "$unknown_output" "run_bridge_replay_deep_lane")" "false" "unknown paths should not trigger bridge replay deep lane"
 assert_eq "$(extract_output "$unknown_output" "test_scope")" "full" "unknown paths must use full fallback"
 
 targeted_output="$(run_selector $'crates/kamn-core/src/bridge_adapter.rs')"
@@ -179,6 +189,7 @@ assert_eq "$(extract_output "$targeted_output" "run_reputation_dispute_contract_
 assert_eq "$(extract_output "$targeted_output" "run_token_launch_contract_tests")" "false" "bridge adapter paths should skip token launch contract tests"
 assert_eq "$(extract_output "$targeted_output" "run_treasury_disbursement_contract_tests")" "false" "bridge adapter paths should skip treasury disbursement contract tests"
 assert_eq "$(extract_output "$targeted_output" "run_bridge_replay_harness")" "true" "bridge adapter rust paths should run bridge replay harness"
+assert_eq "$(extract_output "$targeted_output" "run_bridge_replay_deep_lane")" "false" "bridge adapter rust paths should not run bridge replay deep lane by default"
 assert_eq "$(extract_output "$targeted_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge adapter path should select all bridge suites"
 assert_eq "$(extract_output "$targeted_output" "run_sdk_parity_matrix")" "false" "non-sdk rust paths should skip sdk parity matrix"
 assert_eq "$(extract_output "$targeted_output" "test_scope")" "targeted" "crate path should be targeted"
@@ -307,6 +318,7 @@ bridge_script_output="$(run_selector $'scripts/bridge/run_bridge_replay_matrix.s
 assert_eq "$(extract_output "$bridge_script_output" "run_rust")" "false" "bridge script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$bridge_script_output" "run_frontend_dashboard_tests")" "false" "bridge script-only changes should skip frontend dashboard tests"
 assert_eq "$(extract_output "$bridge_script_output" "run_bridge_replay_harness")" "true" "bridge script-only changes must run bridge replay harness"
+assert_eq "$(extract_output "$bridge_script_output" "run_bridge_replay_deep_lane")" "false" "bridge script-only changes should not run deep bridge lane by default"
 assert_eq "$(extract_output "$bridge_script_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge script-only changes should select all bridge suites"
 assert_eq "$(extract_output "$bridge_script_output" "test_scope")" "bridge" "bridge script-only changes should set bridge scope"
 
@@ -321,6 +333,11 @@ assert_eq "$(extract_output "$bridge_outbound_lane_output" "run_rust")" "false" 
 assert_eq "$(extract_output "$bridge_outbound_lane_output" "run_bridge_replay_harness")" "true" "bridge outbound lane script-only changes must run bridge replay harness"
 assert_eq "$(extract_output "$bridge_outbound_lane_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge outbound lane script-only changes should select all bridge suites"
 assert_eq "$(extract_output "$bridge_outbound_lane_output" "test_scope")" "bridge" "bridge outbound lane script-only changes should set bridge scope"
+
+bridge_deep_requested_output="$(run_selector_with_bridge_deep $'scripts/bridge/run_bridge_replay_redaction_deep_lane.sh' true)"
+assert_eq "$(extract_output "$bridge_deep_requested_output" "run_bridge_replay_harness")" "true" "bridge deep lane request should keep bridge replay harness enabled"
+assert_eq "$(extract_output "$bridge_deep_requested_output" "run_bridge_replay_deep_lane")" "true" "bridge deep lane request should enable bridge replay deep lane output"
+assert_eq "$(extract_output "$bridge_deep_requested_output" "test_scope")" "bridge-deep" "bridge deep lane request should mark bridge-deep scope"
 
 telegram_bridge_output="$(run_selector $'crates/kamn-core/src/telegram_bridge.rs')"
 assert_eq "$(extract_output "$telegram_bridge_output" "run_bridge_replay_harness")" "true" "telegram bridge changes must run bridge replay harness"

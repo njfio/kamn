@@ -26,6 +26,15 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
 - Deep summary policy checker:
   - `bash scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh --summary-file /tmp/live-network-pilot-report.json`
 
+## Bridge Replay/Redaction Lane Matrix
+
+- PR-fast bridge evidence lane (bounded):
+  - `bash scripts/bridge/run_bridge_replay_redaction_contract_lane.sh --skip-replay --replay-report-file bridge-replay-report.json`
+- Scheduled/manual bridge evidence lane (deep):
+  - `bash scripts/bridge/run_bridge_replay_redaction_deep_lane.sh --output-json /tmp/bridge-replay-redaction-deep-report.json`
+- Bridge evidence bundle policy checker:
+  - `bash scripts/bridge/check_bridge_replay_redaction_policy.sh --bundle-file /tmp/bridge-replay-redaction-deep-report.json`
+
 ## Evidence Contract
 
 - Smoke report schema:
@@ -60,6 +69,10 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `run_live_network_smoke_contract_lane.sh` enforces a 180-second upper bound.
 - Deep cadence policy:
   - `run_live_network_pilot_deep_lane.sh` rejects non-`schedule` and non-`workflow_dispatch` events.
+- Bridge PR-fast budget:
+  - `run_bridge_replay_redaction_contract_lane.sh` enforces a 120-second upper bound.
+- Bridge deep lane budget:
+  - `run_bridge_replay_redaction_deep_lane.sh` enforces a 300-second upper bound.
 - Regression guard:
   - budget overflow remains fail-closed with explicit reason code `runtime_budget_exceeded` (`Regression: #828`).
 - Regression guard:
