@@ -28,3 +28,19 @@ fn doc_includes_cross_chain_receipt_finality_test_command() {
     assert!(DOC.contains("test_generate_cross_chain_outbound_intent_evidence_bundle.sh"));
     assert!(DOC.contains("test_run_cross_chain_outbound_intent_contract_lane.sh"));
 }
+
+#[test]
+fn doc_includes_bridge_adapter_conformance_contract() {
+    assert!(DOC.contains("## Bridge Adapter Dry-Run Conformance Contract (Issue #907)"));
+    assert!(DOC.contains("kamn.bridge.adapter-conformance.v1"));
+    assert!(DOC.contains("kamn.bridge.adapter-conformance.matrix-report.v1"));
+    assert!(DOC.contains("bridge_adapter_conformance_reason_codes:GO:v1"));
+    assert!(DOC.contains("bridge_adapter_conformance_reason_codes:NO-GO:v1"));
+    assert!(DOC.contains("Regression: #907"));
+}
+
+#[test]
+fn doc_includes_bridge_adapter_conformance_test_commands() {
+    assert!(DOC.contains("test_generate_bridge_adapter_conformance_evidence_bundle.sh"));
+    assert!(DOC.contains("test_run_bridge_adapter_conformance_contract_lane.sh"));
+}

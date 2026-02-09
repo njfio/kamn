@@ -68,6 +68,20 @@ This document captures cross-chain adapter and receipt-finality normalization sl
   - recomputes expected final decision from bundle fields.
   - rejects tampered `final_decision` mismatches fail closed (`Regression: #742`).
 
+## Bridge Adapter Dry-Run Conformance Contract (Issue #907)
+- Dry-run bridge adapter conformance evidence schema:
+  - `kamn.bridge.adapter-conformance.v1`
+- Matrix report schema:
+  - `kamn.bridge.adapter-conformance.matrix-report.v1`
+- Conformance decision policy:
+  - `GO` requires `dry_run=true`, request/receipt schema-version equality, required-field subset compatibility, and `ci_fast_gate=PASS`.
+  - `NO-GO` is mandatory on any schema drift, missing required fields, disabled dry-run mode, or CI fast-gate failure.
+- Deterministic reason-key contract:
+  - `bridge_adapter_conformance_reason_codes:GO:v1`
+  - `bridge_adapter_conformance_reason_codes:NO-GO:v1`
+- Drift handling:
+  - checker recomputes final decision and reason key from payload facts and fails closed on tampering (`Regression: #907`).
+
 ## Processing Flow
 - `process_inbound(...)`:
   - validates listener and chain route mapping.
@@ -88,6 +102,8 @@ cargo test -p kamn-core --test cross_chain_bridge
 cargo test -p kamn-core --test cross_chain_receipt_finality
 bash scripts/bridge/test_generate_cross_chain_outbound_intent_evidence_bundle.sh
 bash scripts/bridge/test_run_cross_chain_outbound_intent_contract_lane.sh
+bash scripts/bridge/test_generate_bridge_adapter_conformance_evidence_bundle.sh
+bash scripts/bridge/test_run_bridge_adapter_conformance_contract_lane.sh
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core

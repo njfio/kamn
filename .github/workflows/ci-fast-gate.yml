@@ -258,6 +258,7 @@ jobs:
           bash scripts/bridge/run_telegram_ingress_contract_lane.sh --skip-replay
           bash scripts/bridge/run_bridge_ingress_relay_contract_lane.sh --skip-replay
           bash scripts/bridge/run_bridge_outbound_quorum_contract_lane.sh --skip-intent-lane
+          bash scripts/bridge/run_bridge_adapter_conformance_contract_lane.sh --output-json bridge-adapter-conformance-contract-report.json
           bash scripts/bridge/run_bridge_replay_redaction_contract_lane.sh --skip-replay --replay-report-file bridge-replay-report.json
           bash scripts/bridge/run_localhost_bridge_demo_evidence_contract_lane.sh --skip-replay --replay-report-file bridge-replay-report.json
 

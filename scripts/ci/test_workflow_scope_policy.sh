@@ -542,6 +542,11 @@ if ! grep -Fq "bash scripts/bridge/run_bridge_outbound_quorum_contract_lane.sh -
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/bridge/run_bridge_adapter_conformance_contract_lane.sh --output-json bridge-adapter-conformance-contract-report.json" "$FAST_WORKFLOW"; then
+  echo "expected bridge adapter conformance contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/bridge/run_bridge_replay_redaction_contract_lane.sh --skip-replay --replay-report-file bridge-replay-report.json" "$FAST_WORKFLOW"; then
   echo "expected bridge replay/redaction contract lane command in ci-fast-gate.yml" >&2
   exit 1

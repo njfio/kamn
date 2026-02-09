@@ -130,6 +130,8 @@ bash "$ROOT_DIR/scripts/bridge/test_run_localhost_bridge_relay_demo_contract_lan
 bash "$ROOT_DIR/scripts/bridge/test_generate_localhost_bridge_demo_evidence_bundle.sh"
 bash "$ROOT_DIR/scripts/bridge/test_run_localhost_bridge_demo_evidence_contract_lane.sh"
 bash "$ROOT_DIR/scripts/bridge/test_run_localhost_bridge_demo_evidence_deep_lane.sh"
+bash "$ROOT_DIR/scripts/bridge/test_generate_bridge_adapter_conformance_evidence_bundle.sh"
+bash "$ROOT_DIR/scripts/bridge/test_run_bridge_adapter_conformance_contract_lane.sh"
 bash "$ROOT_DIR/scripts/deploy/test_preflight_topology.sh"
 bash "$ROOT_DIR/scripts/deploy/test_generate_bundle.sh"
 bash "$ROOT_DIR/scripts/deploy/test_generate_gonogo_evidence_bundle.sh"

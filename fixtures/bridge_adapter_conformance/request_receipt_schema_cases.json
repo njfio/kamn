@@ -1,0 +1,101 @@
+{
+  "schema_version": "kamn.bridge.adapter-conformance.fixture.v1",
+  "cases": [
+    {
+      "case_id": "go_dry_run_schema_compatible",
+      "adapter_id": "adapter-discord-settlement-v1",
+      "bridge_network": "ethereum",
+      "dry_run": true,
+      "request_expected_schema_version": "kamn.bridge.settlement-request.v1",
+      "request_observed_schema_version": "kamn.bridge.settlement-request.v1",
+      "request_required_fields": [
+        "request_id",
+        "destination_channel",
+        "payload_hash"
+      ],
+      "request_observed_fields": [
+        "destination_channel",
+        "payload_hash",
+        "request_id",
+        "trace_id"
+      ],
+      "receipt_expected_schema_version": "kamn.bridge.settlement-receipt.v1",
+      "receipt_observed_schema_version": "kamn.bridge.settlement-receipt.v1",
+      "receipt_required_fields": [
+        "receipt_id",
+        "settlement_ref",
+        "finality"
+      ],
+      "receipt_observed_fields": [
+        "receipt_id",
+        "settlement_ref",
+        "finality",
+        "gas_used"
+      ],
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "GO"
+    },
+    {
+      "case_id": "no_go_request_schema_drift",
+      "adapter_id": "adapter-discord-settlement-v1",
+      "bridge_network": "ethereum",
+      "dry_run": true,
+      "request_expected_schema_version": "kamn.bridge.settlement-request.v1",
+      "request_observed_schema_version": "kamn.bridge.settlement-request.v2",
+      "request_required_fields": [
+        "request_id",
+        "destination_channel",
+        "payload_hash"
+      ],
+      "request_observed_fields": [
+        "request_id",
+        "destination_channel"
+      ],
+      "receipt_expected_schema_version": "kamn.bridge.settlement-receipt.v1",
+      "receipt_observed_schema_version": "kamn.bridge.settlement-receipt.v1",
+      "receipt_required_fields": [
+        "receipt_id",
+        "settlement_ref",
+        "finality"
+      ],
+      "receipt_observed_fields": [
+        "receipt_id",
+        "settlement_ref",
+        "finality"
+      ],
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
+      "case_id": "no_go_receipt_schema_and_ci_drift",
+      "adapter_id": "adapter-solana-settlement-v1",
+      "bridge_network": "solana",
+      "dry_run": false,
+      "request_expected_schema_version": "kamn.bridge.settlement-request.v1",
+      "request_observed_schema_version": "kamn.bridge.settlement-request.v1",
+      "request_required_fields": [
+        "request_id",
+        "destination_channel",
+        "payload_hash"
+      ],
+      "request_observed_fields": [
+        "request_id",
+        "destination_channel",
+        "payload_hash"
+      ],
+      "receipt_expected_schema_version": "kamn.bridge.settlement-receipt.v1",
+      "receipt_observed_schema_version": "kamn.bridge.settlement-receipt.v2",
+      "receipt_required_fields": [
+        "receipt_id",
+        "settlement_ref",
+        "finality"
+      ],
+      "receipt_observed_fields": [
+        "receipt_id",
+        "finality"
+      ],
+      "ci_fast_gate": "FAIL",
+      "expected_final_decision": "NO-GO"
+    }
+  ]
+}
