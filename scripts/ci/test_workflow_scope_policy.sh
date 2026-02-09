@@ -491,6 +491,21 @@ if ! grep -Fq "bash scripts/bridge/run_telegram_ingress_contract_lane.sh --skip-
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/bridge/run_bridge_ingress_relay_contract_lane.sh --skip-replay" "$FAST_WORKFLOW"; then
+  echo "expected bridge ingress relay contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/bridge/run_bridge_outbound_quorum_contract_lane.sh --skip-intent-lane" "$FAST_WORKFLOW"; then
+  echo "expected bridge outbound quorum contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/bridge/run_bridge_replay_redaction_contract_lane.sh --skip-replay --replay-report-file bridge-replay-report.json" "$FAST_WORKFLOW"; then
+  echo "expected bridge replay/redaction contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 # Regression: #689
 if grep -Fq "run_sdk_parity_matrix" "$FAST_WORKFLOW"; then
   echo "fast gate must not execute sdk parity matrix directly" >&2
@@ -654,6 +669,16 @@ fi
 
 if ! grep -Fq "bridge-credentialed-deep-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
   echo "expected bridge credentialed deep report artifact upload in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/bridge/run_bridge_replay_redaction_deep_lane.sh --output-json bridge-replay-redaction-deep-report.json" "$DEEP_WORKFLOW"; then
+  echo "expected bridge replay/redaction deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bridge-replay-redaction-deep-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
+  echo "expected bridge replay/redaction deep report artifact upload in ci-deep-validate.yml" >&2
   exit 1
 fi
 
