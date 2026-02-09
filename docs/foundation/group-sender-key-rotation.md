@@ -1,34 +1,39 @@
-# Group Sender-Key Distribution and Rotation (Issues #226, #227)
+# Group Sender-Key Replay and Ratchet Contract Rules
 
-This document captures the first implementation slice for group-channel sender-key distribution and key rotation behavior.
+This document defines deterministic contract checks for sender-key replay rejection,
+ratchet generation monotonicity, and stale-generation fail-closed behavior.
 
-## Scope Delivered
-- Added `crates/kamn-core/src/group_channel_crypto.rs` with:
-  - `GroupChannelCryptoEngine` for sender-key distribution, rotation, and group encrypt/decrypt.
-  - `SenderKeyDistributionRecord` with per-sender key generations and active generation tracking.
-  - `GroupMessageCiphertext` with deterministic auth-tag and sender-signature fields.
-  - typed errors via `GroupChannelCryptoError` for authorization, generation, integrity, and validation failures.
-- Added integration tests in `crates/kamn-core/tests/group_sender_keys.rs`.
+## Contract Scope
+- Sender-key replay and stale-generation rejection evidence contracts.
+- Deterministic reason-code and evidence key validation for policy drift detection.
+- Bounded runtime contract lane for fast and cost-effective CI checks.
 
-## Behavior Rules
-- Sender-key distribution:
-  - sender DID and recipient DIDs must be valid `kamn:did:agent:*`.
-  - sender key ref must include `#sender-key-`.
-  - recipient allowlist must be non-empty.
-- Rotation:
-  - each distribution for the same sender increments `key_generation`.
-  - previous sender generation is marked inactive.
-- Encryption/decryption:
-  - only allowlisted recipients can decrypt.
-  - algorithm, channel id, signature, and auth-tag are validated.
-  - nonce reuse for `(sender, generation, nonce)` is blocked.
+## Evidence Schema
+- `schema_version`: `kamn.group-sender.replay-ratchet-evidence.v1`
+- `evidence_key`: `group_sender_replay_ratchet:<lane>:v1`
+- `reason_key`: `group_sender_replay_ratchet_reason:<final_decision>:v1`
+- `final_decision`: `GO|NO-GO`
 
-## Local Validation
+## Local Validation Commands
 Run from repository root:
 
 ```bash
+bash scripts/message/generate_group_sender_replay_ratchet_evidence_bundle.sh --help
+bash scripts/message/check_group_sender_replay_ratchet_policy.sh --help
+bash scripts/message/run_group_sender_replay_ratchet_contract_lane.sh
+bash scripts/message/test_generate_group_sender_replay_ratchet_evidence_bundle.sh
+bash scripts/message/test_run_group_sender_replay_ratchet_contract_lane.sh
 cargo test -p kamn-core --test group_sender_keys
-cargo fmt --check
-cargo clippy -- -D warnings
-cargo test -p kamn-core
+cargo test -p kamn-core --test group_sender_key_rotation_docs
 ```
+
+## Policy Rules
+- Any replay nonce detection must force `NO-GO`.
+- Any stale-generation payload detection must force `NO-GO`.
+- Any signature tamper detection must force `NO-GO`.
+- `report.reason_codes` must be sorted deterministic strings.
+- `final_decision` must match derived policy from report booleans.
+- Lane runtime must remain within `GROUP_SENDER_REPLAY_RATCHET_MAX_SECONDS`.
+
+## Regression Marker
+- stale-generation and nonce replay payloads are rejected (`Regression: #932`)
