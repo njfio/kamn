@@ -1,8 +1,9 @@
 use kamn_core::{
     canonical_did_document, AgentDid, AgentDidMetadata, DidChainSubmissionOutcome, DidDocument,
-    DidRegistry, DidRegistryError, DidSubmissionFinalityStatus, DidSubmissionRetryClass,
-    InMemoryDidRegistrationChainAdapter,
+    DidLifecycleMutationAction, DidLifecycleMutationRequest, DidRegistry, DidRegistryError,
+    DidSubmissionFinalityStatus, DidSubmissionRetryClass, InMemoryDidRegistrationChainAdapter,
 };
+use std::time::Instant;
 
 fn metadata(model_family: &str) -> AgentDidMetadata {
     AgentDidMetadata {
@@ -313,4 +314,233 @@ fn regression_chain_submission_adapter_exposes_rejected_outcome_without_panickin
         rejected.outcome,
         DidChainSubmissionOutcome::Rejected { .. }
     ));
+}
+
+#[test]
+fn unit_lifecycle_mutation_nonce_guards_emit_deterministic_reason_codes() {
+    let mut registry = DidRegistry::new();
+    let did = AgentDid::parse("kamn:did:agent:lifecycle-unit-1").expect("did should parse");
+    let mut initial_document = document_for(&did, "claude-4");
+    initial_document.metadata.operator = Some("kamn:did:human:ops-1".to_owned());
+    registry
+        .register(did.clone(), initial_document.clone())
+        .expect("register should succeed");
+
+    let zero_nonce_error = registry
+        .apply_lifecycle_mutation(DidLifecycleMutationRequest {
+            did: did.clone(),
+            actor_did: "kamn:did:human:ops-1".to_owned(),
+            nonce: 0,
+            action: DidLifecycleMutationAction::Revoke,
+        })
+        .expect_err("zero nonce mutation should fail");
+    assert_eq!(
+        zero_nonce_error.reason_code(),
+        "did_lifecycle_mutation_nonce_invalid"
+    );
+
+    registry
+        .apply_lifecycle_mutation(DidLifecycleMutationRequest {
+            did: did.clone(),
+            actor_did: "kamn:did:human:ops-1".to_owned(),
+            nonce: 1,
+            action: DidLifecycleMutationAction::Rotate {
+                document: initial_document,
+            },
+        })
+        .expect("first mutation should succeed");
+
+    let replay_error = registry
+        .apply_lifecycle_mutation(DidLifecycleMutationRequest {
+            did: did.clone(),
+            actor_did: "kamn:did:human:ops-1".to_owned(),
+            nonce: 1,
+            action: DidLifecycleMutationAction::Revoke,
+        })
+        .expect_err("replayed nonce should fail");
+    assert_eq!(
+        replay_error.reason_code(),
+        "did_lifecycle_mutation_nonce_replay"
+    );
+}
+
+#[test]
+fn functional_lifecycle_rotate_mutation_updates_document_and_emits_allowed_reason_code() {
+    let mut registry = DidRegistry::new();
+    let did = AgentDid::parse("kamn:did:agent:lifecycle-func-1").expect("did should parse");
+    let mut initial_document = document_for(&did, "claude-4");
+    initial_document.metadata.operator = Some("kamn:did:human:ops-2".to_owned());
+    registry
+        .register(did.clone(), initial_document)
+        .expect("register should succeed");
+
+    let mut rotated_document = document_for(&did, "gpt-5");
+    rotated_document.metadata.operator = Some("kamn:did:human:ops-2".to_owned());
+    let evidence = registry
+        .apply_lifecycle_mutation(DidLifecycleMutationRequest {
+            did: did.clone(),
+            actor_did: "kamn:did:human:ops-2".to_owned(),
+            nonce: 7,
+            action: DidLifecycleMutationAction::Rotate {
+                document: rotated_document,
+            },
+        })
+        .expect("rotate mutation should succeed");
+
+    assert_eq!(evidence.reason_code, "did_lifecycle_mutation_allowed");
+    assert_eq!(
+        registry
+            .resolve(&did)
+            .expect("resolve should succeed")
+            .metadata
+            .model_family,
+        "gpt-5"
+    );
+}
+
+#[test]
+fn integration_lifecycle_revoke_then_recover_restores_active_resolution() {
+    let mut registry = DidRegistry::new();
+    let did = AgentDid::parse("kamn:did:agent:lifecycle-int-1").expect("did should parse");
+    let mut initial_document = document_for(&did, "claude-4");
+    initial_document.metadata.operator = Some("kamn:did:human:ops-3".to_owned());
+    registry
+        .register(did.clone(), initial_document)
+        .expect("register should succeed");
+
+    registry
+        .apply_lifecycle_mutation(DidLifecycleMutationRequest {
+            did: did.clone(),
+            actor_did: "kamn:did:human:ops-3".to_owned(),
+            nonce: 1,
+            action: DidLifecycleMutationAction::Revoke,
+        })
+        .expect("revoke mutation should succeed");
+    assert_eq!(
+        registry.resolve(&did),
+        Err(DidRegistryError::Revoked(did.as_str().to_owned()))
+    );
+
+    let mut recovered_document = document_for(&did, "claude-4.1");
+    recovered_document.metadata.operator = Some("kamn:did:human:ops-3".to_owned());
+    let recovery_evidence = registry
+        .apply_lifecycle_mutation(DidLifecycleMutationRequest {
+            did: did.clone(),
+            actor_did: "kamn:did:human:ops-3".to_owned(),
+            nonce: 2,
+            action: DidLifecycleMutationAction::Recover {
+                document: recovered_document,
+            },
+        })
+        .expect("recover mutation should succeed");
+
+    assert_eq!(
+        recovery_evidence.reason_code,
+        "did_lifecycle_mutation_allowed"
+    );
+    assert_eq!(
+        registry
+            .resolve(&did)
+            .expect("resolve should recover")
+            .metadata
+            .model_family,
+        "claude-4.1"
+    );
+}
+
+#[test]
+fn regression_lifecycle_replayed_or_unauthorized_mutation_fails_closed() {
+    // Regression: #889
+    let mut registry = DidRegistry::new();
+    let did = AgentDid::parse("kamn:did:agent:lifecycle-reg-1").expect("did should parse");
+    let mut document = document_for(&did, "claude-4");
+    document.metadata.operator = Some("kamn:did:human:ops-4".to_owned());
+    registry
+        .register(did.clone(), document)
+        .expect("register should succeed");
+
+    let unauthorized_error = registry
+        .apply_lifecycle_mutation(DidLifecycleMutationRequest {
+            did: did.clone(),
+            actor_did: "kamn:did:human:intruder-4".to_owned(),
+            nonce: 1,
+            action: DidLifecycleMutationAction::Revoke,
+        })
+        .expect_err("unauthorized mutation must fail");
+    assert_eq!(
+        unauthorized_error.reason_code(),
+        "did_lifecycle_mutation_unauthorized_actor"
+    );
+
+    registry
+        .apply_lifecycle_mutation(DidLifecycleMutationRequest {
+            did: did.clone(),
+            actor_did: "kamn:did:human:ops-4".to_owned(),
+            nonce: 1,
+            action: DidLifecycleMutationAction::Revoke,
+        })
+        .expect("authorized revoke should succeed");
+
+    let replay_error = registry
+        .apply_lifecycle_mutation(DidLifecycleMutationRequest {
+            did: did.clone(),
+            actor_did: "kamn:did:human:ops-4".to_owned(),
+            nonce: 1,
+            action: DidLifecycleMutationAction::Recover {
+                document: {
+                    let mut recovered = document_for(&did, "claude-4.2");
+                    recovered.metadata.operator = Some("kamn:did:human:ops-4".to_owned());
+                    recovered
+                },
+            },
+        })
+        .expect_err("replayed mutation nonce must fail");
+    assert_eq!(
+        replay_error.reason_code(),
+        "did_lifecycle_mutation_nonce_replay"
+    );
+}
+
+#[test]
+fn performance_lifecycle_mutation_contract_lane_stays_within_budget() {
+    let started = Instant::now();
+
+    for round in 0..64 {
+        let mut registry = DidRegistry::new();
+        let did = AgentDid::parse(format!("kamn:did:agent:lifecycle-perf-{round}").as_str())
+            .expect("did should parse");
+        let mut document = document_for(&did, "claude-4");
+        document.metadata.operator = Some("kamn:did:human:ops-perf".to_owned());
+        registry
+            .register(did.clone(), document)
+            .expect("register should succeed");
+
+        registry
+            .apply_lifecycle_mutation(DidLifecycleMutationRequest {
+                did: did.clone(),
+                actor_did: "kamn:did:human:ops-perf".to_owned(),
+                nonce: 1,
+                action: DidLifecycleMutationAction::Revoke,
+            })
+            .expect("revoke should succeed");
+
+        let mut recovered_document = document_for(&did, "claude-4.1");
+        recovered_document.metadata.operator = Some("kamn:did:human:ops-perf".to_owned());
+        registry
+            .apply_lifecycle_mutation(DidLifecycleMutationRequest {
+                did,
+                actor_did: "kamn:did:human:ops-perf".to_owned(),
+                nonce: 2,
+                action: DidLifecycleMutationAction::Recover {
+                    document: recovered_document,
+                },
+            })
+            .expect("recover should succeed");
+    }
+
+    let elapsed_millis = started.elapsed().as_millis();
+    assert!(
+        elapsed_millis < 800,
+        "did lifecycle mutation contract lane exceeded budget: {elapsed_millis}ms"
+    );
 }

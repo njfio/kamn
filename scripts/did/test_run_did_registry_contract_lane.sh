@@ -48,4 +48,34 @@ if ! grep -q "regression_register_finality_rejects_stale_or_conflicting_updates"
   exit 1
 fi
 
+if ! grep -q "unit_lifecycle_mutation_nonce_guards_emit_deterministic_reason_codes" "$SCRIPT"; then
+  echo "expected did registry lane to include DID lifecycle mutation nonce unit coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "functional_lifecycle_rotate_mutation_updates_document_and_emits_allowed_reason_code" "$SCRIPT"; then
+  echo "expected did registry lane to include DID lifecycle rotate mutation functional coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "integration_lifecycle_revoke_then_recover_restores_active_resolution" "$SCRIPT"; then
+  echo "expected did registry lane to include DID lifecycle revoke/recover integration coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "regression_lifecycle_replayed_or_unauthorized_mutation_fails_closed" "$SCRIPT"; then
+  echo "expected did registry lane to include DID lifecycle replay/authorization regression coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "performance_lifecycle_mutation_contract_lane_stays_within_budget" "$SCRIPT"; then
+  echo "expected did registry lane to include DID lifecycle mutation performance budget coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "agent_interop_wave_docs" "$SCRIPT"; then
+  echo "expected did registry lane to include agent interop planning docs contract coverage" >&2
+  exit 1
+fi
+
 echo "did registry contract lane script tests passed."

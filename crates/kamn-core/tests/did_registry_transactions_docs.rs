@@ -29,3 +29,18 @@ fn regression_doc_marks_stale_duplicate_conflict_guard() {
     // Regression: #678
     assert!(DOC.contains("Regression: #678"));
 }
+
+#[test]
+fn doc_contains_lifecycle_mutation_transaction_contracts() {
+    assert!(DOC.contains("DidLifecycleMutationRequest"));
+    assert!(DOC.contains("apply_lifecycle_mutation"));
+    assert!(DOC.contains("did_lifecycle_mutation_allowed"));
+    assert!(DOC.contains("did_lifecycle_mutation_nonce_replay"));
+    assert!(DOC.contains("did_lifecycle_mutation_unauthorized_actor"));
+}
+
+#[test]
+fn regression_doc_marks_lifecycle_mutation_fail_closed_guard() {
+    // Regression: #889
+    assert!(DOC.contains("Regression: #889"));
+}

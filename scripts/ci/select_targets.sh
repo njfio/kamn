@@ -261,7 +261,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    crates/kamn-core/src/did_registry.rs|crates/kamn-core/tests/did_registry_transactions.rs|crates/kamn-core/tests/did_registry_transactions_docs.rs|docs/foundation/did-registry-transactions.md|scripts/did/*did_registry*)
+    crates/kamn-core/src/did_registry.rs|crates/kamn-core/tests/did_registry_transactions.rs|crates/kamn-core/tests/did_registry_transactions_docs.rs|crates/kamn-core/tests/agent_interop_wave_docs.rs|docs/foundation/did-registry-transactions.md|docs/planning/agent-interop-wave.md|scripts/did/*did_registry*)
       DID_REGISTRY_CONTRACT_CHANGED=true
       classified=true
       ;;
