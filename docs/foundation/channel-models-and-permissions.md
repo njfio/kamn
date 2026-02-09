@@ -14,6 +14,8 @@ Run from repository root:
 ```bash
 bash scripts/channel/run_channel_policy_contract_lane.sh
 bash scripts/channel/test_run_channel_policy_contract_lane.sh
+bash scripts/channel/run_channel_retention_redaction_contract_lane.sh
+bash scripts/channel/test_run_channel_retention_redaction_contract_lane.sh
 bash scripts/channel/run_channel_lifecycle_contract_lane.sh
 bash scripts/channel/test_run_channel_lifecycle_contract_lane.sh
 cargo test -p kamn-core --test channel_permissions_retention
