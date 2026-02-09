@@ -55,6 +55,7 @@ append_summary() {
     echo "- Run launch canary contract tests: ${RUN_LAUNCH_CANARY_CONTRACT_TESTS}"
     echo "- Run bridge replay harness: ${RUN_BRIDGE_REPLAY_HARNESS}"
     echo "- Run bridge replay deep lane: ${RUN_BRIDGE_REPLAY_DEEP_LANE}"
+    echo "- Run localhost bridge demo evidence deep lane: ${RUN_LOCALHOST_BRIDGE_DEMO_EVIDENCE_DEEP_LANE}"
     echo "- Bridge replay suites: ${BRIDGE_REPLAY_SUITES}"
     echo "- Run Rust live transport contract tests: ${RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS}"
     echo "- Run Python live transport contract tests: ${RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS}"
@@ -508,6 +509,7 @@ RUN_MAINNET_CUTOVER_CONTRACT_TESTS=false
 RUN_LAUNCH_CANARY_CONTRACT_TESTS=false
 RUN_BRIDGE_REPLAY_HARNESS=false
 RUN_BRIDGE_REPLAY_DEEP_LANE=false
+RUN_LOCALHOST_BRIDGE_DEMO_EVIDENCE_DEEP_LANE=false
 RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS=false
 RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS=false
 RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS=false
@@ -772,6 +774,7 @@ fi
 
 if [ "$BRIDGE_REPLAY_RELATED_CHANGED" = true ] && [ "${CI_ENABLE_BRIDGE_REPLAY_DEEP_LANE:-false}" = "true" ]; then
   RUN_BRIDGE_REPLAY_DEEP_LANE=true
+  RUN_LOCALHOST_BRIDGE_DEMO_EVIDENCE_DEEP_LANE=true
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "bridge" ]; then
     TEST_SCOPE="bridge-deep"
   fi
@@ -863,6 +866,7 @@ write_output "run_mainnet_cutover_contract_tests" "$RUN_MAINNET_CUTOVER_CONTRACT
 write_output "run_launch_canary_contract_tests" "$RUN_LAUNCH_CANARY_CONTRACT_TESTS"
 write_output "run_bridge_replay_harness" "$RUN_BRIDGE_REPLAY_HARNESS"
 write_output "run_bridge_replay_deep_lane" "$RUN_BRIDGE_REPLAY_DEEP_LANE"
+write_output "run_localhost_bridge_demo_evidence_deep_lane" "$RUN_LOCALHOST_BRIDGE_DEMO_EVIDENCE_DEEP_LANE"
 write_output "bridge_replay_suites" "$BRIDGE_REPLAY_SUITES"
 write_output "run_rust_live_transport_contract_tests" "$RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS"
 write_output "run_python_live_transport_contract_tests" "$RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS"

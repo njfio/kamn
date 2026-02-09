@@ -239,7 +239,7 @@ jobs:
           bash scripts/bridge/run_bridge_ingress_relay_contract_lane.sh --skip-replay
           bash scripts/bridge/run_bridge_outbound_quorum_contract_lane.sh --skip-intent-lane
           bash scripts/bridge/run_bridge_replay_redaction_contract_lane.sh --skip-replay --replay-report-file bridge-replay-report.json
-          bash scripts/bridge/run_localhost_bridge_relay_demo_contract_lane.sh
+          bash scripts/bridge/run_localhost_bridge_demo_evidence_contract_lane.sh --skip-replay --replay-report-file bridge-replay-report.json
 
       - name: Format check
         if: steps.scope.outputs.run_rust == 'true'
