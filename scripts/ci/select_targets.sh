@@ -62,6 +62,7 @@ append_summary() {
     echo "- Run TypeScript live transport contract tests: ${RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS}"
     echo "- Run cross-language live transport parity contract tests: ${RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS}"
     echo "- Run cross-language live transport parity rust contract tests: ${RUN_LIVE_TRANSPORT_PARITY_RUST_CONTRACT_TESTS}"
+    echo "- Run localhost signed integration contract lane tests: ${RUN_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_LANE_TESTS}"
     echo "- Live transport parity languages: ${LIVE_TRANSPORT_PARITY_LANGUAGES}"
     echo "- Run SDK parity matrix: ${RUN_SDK_PARITY_MATRIX}"
     echo "- Run invariant harness: ${RUN_INVARIANT_HARNESS}"
@@ -184,6 +185,7 @@ SDK_PYTHON_LIVE_CHANGED=false
 SDK_TYPESCRIPT_LIVE_CHANGED=false
 SDK_LIVE_PARITY_SCRIPT_CHANGED=false
 SDK_SHARED_MATRIX_CHANGED=false
+SDK_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_CHANGED=false
 CRITICAL_PATH_CHANGED=false
 UNKNOWN_RISK_CHANGED=false
 FULL_SUITE=false
@@ -452,6 +454,10 @@ for file in "${CHANGED_FILES[@]}"; do
       SDK_SHARED_MATRIX_CHANGED=true
       classified=true
       ;;
+    scripts/sdk/run_localhost_signed_integration_harness.sh|scripts/sdk/test_run_localhost_signed_integration_harness.sh|scripts/sdk/run_localhost_signed_integration_contract_lane.sh|scripts/sdk/test_run_localhost_signed_integration_contract_lane.sh)
+      SDK_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_CHANGED=true
+      classified=true
+      ;;
   esac
 
   case "$file" in
@@ -515,6 +521,7 @@ RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS=false
 RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS=false
 RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS=false
 RUN_LIVE_TRANSPORT_PARITY_RUST_CONTRACT_TESTS=false
+RUN_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_LANE_TESTS=false
 LIVE_TRANSPORT_PARITY_LANGUAGES=""
 RUN_SDK_PARITY_MATRIX=false
 FMT_CMD=":"
@@ -817,6 +824,10 @@ if [ "$RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS" = true ] && [[ ",$LIVE_TRANSPOR
   RUN_LIVE_TRANSPORT_PARITY_RUST_CONTRACT_TESTS=true
 fi
 
+if [ "$SDK_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_CHANGED" = true ]; then
+  RUN_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_LANE_TESTS=true
+fi
+
 if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
   if [ "$RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS" = true ]; then
     TEST_SCOPE="sdk-live-parity"
@@ -826,6 +837,8 @@ if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
     TEST_SCOPE="sdk-live-python"
   elif [ "$RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS" = true ]; then
     TEST_SCOPE="sdk-live-typescript"
+  elif [ "$RUN_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_LANE_TESTS" = true ]; then
+    TEST_SCOPE="sdk-live-localhost-integration"
   elif [ "$RUN_SDK_PARITY_MATRIX" = true ]; then
     TEST_SCOPE="sdk"
   fi
@@ -873,6 +886,7 @@ write_output "run_python_live_transport_contract_tests" "$RUN_PYTHON_LIVE_TRANSP
 write_output "run_typescript_live_transport_contract_tests" "$RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS"
 write_output "run_live_transport_parity_contract_tests" "$RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS"
 write_output "run_live_transport_parity_rust_contract_tests" "$RUN_LIVE_TRANSPORT_PARITY_RUST_CONTRACT_TESTS"
+write_output "run_localhost_signed_integration_contract_lane_tests" "$RUN_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_LANE_TESTS"
 write_output "live_transport_parity_languages" "$LIVE_TRANSPORT_PARITY_LANGUAGES"
 write_output "run_sdk_parity_matrix" "$RUN_SDK_PARITY_MATRIX"
 write_output "run_invariant_harness" "$RUN_INVARIANT_HARNESS"

@@ -117,6 +117,9 @@ bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh
 # schema: kamn.sdk.localhost-signed.integration-contract.v1
 ```
 
+CI fast-gate routes this lane when selector output
+`run_localhost_signed_integration_contract_lane_tests` is `true`.
+
 ### Run Localhost Bridge Demo Evidence Contract Lane (Fast)
 
 ```bash
