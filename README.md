@@ -90,6 +90,15 @@ cargo test -p kamn-core --test trust_score_engine --test trust_score_engine_docs
 bash scripts/ci/test_select_targets.sh
 ```
 
+### Run A2A/MCP Conformance Contract Lane
+
+```bash
+bash scripts/message/run_a2a_mcp_conformance_contract_lane.sh \
+  --output-json /tmp/a2a-mcp-conformance-report.json
+bash scripts/message/check_a2a_mcp_conformance_policy.sh --report-file /tmp/a2a-mcp-conformance-report.json
+# schema: kamn.a2a_mcp.conformance-report.v1
+```
+
 ### Run A Local End-to-End Demo
 
 ```bash
