@@ -77,6 +77,14 @@ fn checklist_contains_token_launch_handoff_evidence_contract() {
 }
 
 #[test]
+fn checklist_contains_treasury_disbursement_approval_evidence_contract() {
+    assert!(CHECKLIST.contains("## Treasury Disbursement Approval Evidence Contract"));
+    assert!(CHECKLIST.contains("generate_treasury_disbursement_evidence_bundle.sh"));
+    assert!(CHECKLIST.contains("check_treasury_disbursement_policy.sh"));
+    assert!(CHECKLIST.contains("run_treasury_disbursement_contract_lane.sh"));
+}
+
+#[test]
 fn checklist_contains_mainnet_cutover_manifest_contract() {
     assert!(CHECKLIST.contains("## Mainnet Cutover Manifest Validation Contract"));
     assert!(CHECKLIST.contains("fixtures/mainnet_cutover/mainnet_cutover_manifest.schema.json"));
@@ -141,6 +149,14 @@ fn regression_requires_token_launch_handoff_evidence_guard_marker() {
     // Regression: #714
     assert!(CHECKLIST.contains(
         "supply/allocation invariant drift and insufficient approvals force `NO-GO` (`Regression: #714`)."
+    ));
+}
+
+#[test]
+fn regression_requires_treasury_disbursement_approval_guard_marker() {
+    // Regression: #716
+    assert!(CHECKLIST.contains(
+        "insufficient approvals, approval-window closure, and daily-limit overruns force `NO-GO` (`Regression: #716`)."
     ));
 }
 

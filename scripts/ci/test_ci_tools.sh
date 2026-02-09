@@ -44,6 +44,8 @@ bash "$ROOT_DIR/scripts/escrow/test_run_settlement_reconciliation_race_matrix.sh
 bash "$ROOT_DIR/scripts/token/test_generate_token_launch_handoff_evidence_bundle.sh"
 bash "$ROOT_DIR/scripts/token/test_run_token_launch_handoff_contract_lane.sh"
 bash "$ROOT_DIR/scripts/token/test_run_token_launch_handoff_deep_lane.sh"
+bash "$ROOT_DIR/scripts/treasury/test_generate_treasury_disbursement_evidence_bundle.sh"
+bash "$ROOT_DIR/scripts/treasury/test_run_treasury_disbursement_contract_lane.sh"
 bash "$ROOT_DIR/scripts/guard/test_run_durable_guard_recovery_contract_lane.sh"
 bash "$ROOT_DIR/scripts/bridge/test_run_bridge_replay_matrix.sh"
 bash "$ROOT_DIR/scripts/bridge/test_run_bridge_credential_redaction_check.sh"
