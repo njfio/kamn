@@ -144,6 +144,20 @@ Required schema markers:
 
 The contract fails closed: schema-version drift, case mismatch, or tampered reason codes force `NO-GO` (`Regression: #937`).
 
+## SDK Example Fixture Drift Checker Contract
+Generated SDK example fixture outcomes are locked to a deterministic snapshot:
+
+- Snapshot source:
+  - `fixtures/sdk_parity/register_validation_snapshot.json`
+- Drift checker command:
+  - `python3 scripts/sdk/check_example_fixture_drift.py --fixture fixtures/sdk_parity/register_validation_cases.json --snapshot fixtures/sdk_parity/register_validation_snapshot.json --output-json /tmp/sdk-example-fixture-drift-report.json`
+- Policy checker command:
+  - `bash scripts/sdk/check_example_fixture_drift_policy.sh --report-file /tmp/sdk-example-fixture-drift-report.json`
+- Contract lane command:
+  - `bash scripts/sdk/run_example_fixture_drift_contract_lane.sh --output-report /tmp/sdk-example-fixture-drift-contract-report.json`
+
+The lane fails closed on snapshot drift or report-schema mismatch (`Regression: #940`).
+
 ## Live Transport Smoke Parity Budget Contract
 A bounded smoke-parity lane is available for deterministic cross-SDK live transport checks with explicit runtime/retry guardrails:
 

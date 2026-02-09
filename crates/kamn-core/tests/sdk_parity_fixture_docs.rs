@@ -16,3 +16,14 @@ fn regression_requires_shared_matrix_command_in_all_sdk_docs() {
     assert!(PYTHON_DOC.contains("scripts/sdk/run_sdk_parity_matrix.sh"));
     assert!(TYPESCRIPT_DOC.contains("scripts/sdk/run_sdk_parity_matrix.sh"));
 }
+
+#[test]
+fn regression_requires_sdk_fixture_snapshot_drift_checker_commands() {
+    // Regression: #940
+    assert!(RUST_DOC.contains("register_validation_snapshot.json"));
+    assert!(PYTHON_DOC.contains("register_validation_snapshot.json"));
+    assert!(TYPESCRIPT_DOC.contains("register_validation_snapshot.json"));
+    assert!(RUST_DOC.contains("run_example_fixture_drift_contract_lane.sh"));
+    assert!(PYTHON_DOC.contains("run_example_fixture_drift_contract_lane.sh"));
+    assert!(TYPESCRIPT_DOC.contains("run_example_fixture_drift_contract_lane.sh"));
+}
