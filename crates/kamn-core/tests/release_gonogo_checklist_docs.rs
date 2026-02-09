@@ -94,6 +94,15 @@ fn checklist_contains_launch_canary_critical_path_contract() {
 }
 
 #[test]
+fn checklist_contains_post_cutover_slo_evidence_contract() {
+    assert!(CHECKLIST.contains("## Post-Cutover SLO Gate Evidence Contract"));
+    assert!(CHECKLIST.contains("generate_post_cutover_slo_evidence_bundle.sh"));
+    assert!(CHECKLIST.contains("check_post_cutover_slo_policy.sh"));
+    assert!(CHECKLIST.contains("run_post_cutover_slo_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_post_cutover_slo_deep_lane.sh"));
+}
+
+#[test]
 fn regression_requires_rollback_precheck_in_checklist() {
     // Regression: #173
     assert!(CHECKLIST.contains("Rollback precheck result: PASS"));
@@ -139,5 +148,13 @@ fn regression_requires_launch_canary_evidence_guard_marker() {
     // Regression: #710
     assert!(CHECKLIST.contains(
         "missing probe evidence and failing critical-path probes force `NO-GO` (`Regression: #710`)."
+    ));
+}
+
+#[test]
+fn regression_requires_post_cutover_slo_evidence_guard_marker() {
+    // Regression: #711
+    assert!(CHECKLIST.contains(
+        "stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`)."
     ));
 }

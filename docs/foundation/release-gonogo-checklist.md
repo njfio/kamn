@@ -128,12 +128,28 @@ Launch approval requires deterministic critical-path probe evidence covering mes
 - Regression policy:
   - missing probe evidence and failing critical-path probes force `NO-GO` (`Regression: #710`).
 
+## Post-Cutover SLO Gate Evidence Contract (Issue #711)
+Post-cutover launch gates require deterministic SLO evidence export with stale/partial evidence rejection.
+
+- Evidence bundle generator:
+  - `bash scripts/canary/generate_post_cutover_slo_evidence_bundle.sh --output-file /tmp/post-cutover-slo.json --window-minutes 15 --p95-latency-ms 140 --max-p95-latency-ms 200 --error-rate-bps 18 --max-error-rate-bps 25 --delivery-success-bps 9992 --min-delivery-success-bps 9950 --snapshot-age-seconds 30 --max-snapshot-age-seconds 120 --evidence-complete true --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/canary/check_post_cutover_slo_policy.sh --bundle-file /tmp/post-cutover-slo.json`
+- PR fast contract lane:
+  - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/canary/run_post_cutover_slo_deep_lane.sh --output-json post-cutover-slo-report.json`
+- Regression policy:
+  - stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
 bash scripts/canary/test_run_launch_canary_matrix.sh
 bash scripts/canary/test_run_launch_canary_contract_lane.sh
+bash scripts/canary/test_generate_post_cutover_slo_evidence_bundle.sh
+bash scripts/canary/test_run_post_cutover_slo_contract_lane.sh
 bash scripts/cutover/test_validate_mainnet_cutover_manifest.sh
 bash scripts/cutover/test_run_mainnet_cutover_contract_lane.sh
 bash scripts/cutover/test_generate_cutover_rollback_evidence_bundle.sh
