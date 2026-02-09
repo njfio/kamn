@@ -59,6 +59,23 @@ Routing-affecting dispute outcomes are published through deterministic evidence 
 - Regression policy:
   - tampered evidence hashes, score-adjustment limit bypasses, and closed-policy-window decisions force `NO-GO` (`Regression: #730`).
 
+## Signal Quarantine Evidence Contract (Issue #935)
+Inbound reputation signals require deterministic quarantine-policy evidence before ingestion is allowed.
+
+- Stable shell wrappers:
+  - `scripts/reputation/generate_reputation_signal_quarantine_evidence_bundle.sh`
+  - `scripts/reputation/check_reputation_signal_quarantine_policy.sh`
+- Shared Python implementation:
+  - `scripts/reputation/reputation_signal_quarantine_contract.py`
+- Evidence bundle generator:
+  - `bash scripts/reputation/generate_reputation_signal_quarantine_evidence_bundle.sh --output-file /tmp/reputation-signal-quarantine.json --lane contract --signal-id signal-001 --subject-did did:kamn:agent-001 --signal-kind ENDORSEMENT --source-channel TELEGRAM --event-age-seconds 45 --payload-sha256 sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --payload-signature-verified PASS --nonce-unique true --rate-within-threshold true --source-attested true --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/reputation/check_reputation_signal_quarantine_policy.sh --bundle-file /tmp/reputation-signal-quarantine.json`
+- PR fast contract lane:
+  - `bash scripts/reputation/run_reputation_signal_quarantine_contract_lane.sh`
+- Regression policy:
+  - tampered reason keys/reason codes and ingestion-action mismatches force `NO-GO` (`Regression: #935`).
+
 ## Fast and Cost-Effective Validation
 Run the targeted lane first:
 
@@ -67,6 +84,9 @@ cargo test -p kamn-core --test reputation_signal_routing --test reputation_signa
 bash scripts/reputation/test_generate_reputation_dispute_evidence_bundle.sh
 bash scripts/reputation/test_run_reputation_dispute_contract_lane.sh
 bash scripts/reputation/test_run_reputation_dispute_matrix.sh
+bash scripts/reputation/test_generate_reputation_signal_quarantine_evidence_bundle.sh
+bash scripts/reputation/test_check_reputation_signal_quarantine_policy.sh
+bash scripts/reputation/test_run_reputation_signal_quarantine_contract_lane.sh
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
 ```
