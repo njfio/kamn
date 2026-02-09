@@ -146,7 +146,10 @@ pub use durable_guard_store::{
     DurableGuardSnapshotBundle, DurableGuardSnapshotStoreError, FileDurableGuardSnapshotStore,
     InMemoryDurableGuardSnapshotStore, DURABLE_GUARD_BUNDLE_SCHEMA_VERSION,
 };
-pub use escrow::{EscrowLifecycle, EscrowLifecycleError, EscrowStatus};
+pub use escrow::{
+    EscrowLifecycle, EscrowLifecycleError, EscrowReceiptFinality, EscrowSettlementAction,
+    EscrowSettlementOutcome, EscrowStatus,
+};
 pub use governance_workflow::{
     GovernanceExecutionRecord, GovernanceParameterChangeDraft, GovernanceProposalDraft,
     GovernanceProposalRecord, GovernanceProposalStatus, GovernanceVoteChoice, GovernanceVoteRecord,
