@@ -71,6 +71,9 @@ make demo
 
 # Explicit localhost transport sender/listener demo
 make demo-localhost-transport
+
+# CI helper regression suite (command/selector/docs contracts)
+make ci-tools
 ```
 
 Deep/scheduled lanes remain opt-in via scripts in `scripts/sdk/` and `scripts/ci/`.

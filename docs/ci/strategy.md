@@ -24,18 +24,37 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Invariant-related changes (`invariants.rs`, `transaction.rs`, smoke/invariant harness tests, or harness scripts): run deterministic invariant harness in `fast` mode (single seed) after Rust tests.
 - Runtime evaluator tests use direct unit-struct construction to avoid strict-clippy baseline noise (`Regression: #490`).
 
-## Make Target and Demo Scope Contract
-- Contributor make targets must remain stable and documented:
-  - `make check`
-  - `make test`
-  - `make demo`
-- Demo integration scope routing is derived from `scripts/ci/select_targets.sh`:
-  - selector output `run_localhost_signed_integration_contract_lane_tests=true`
-  - selector scope `sdk-live-localhost-integration`
-- Required demo lane command contract:
-  - `bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json`
-- Regression policy:
-  - make-target and selector workflow drift remains fail-closed (`Regression: #900`).
+## Make and Selector Command-Surface Contract
+Contributor entrypoint commands must remain stable and synchronized across `Makefile`, `README.md`, and selector routing policy:
+
+- `make check`
+- `make test`
+- `make smoke-live-network`
+- `make deep-live-network`
+- `make demo`
+- `make demo-localhost-transport`
+- `make ci-tools`
+
+Selector routing remains bounded through `scripts/ci/select_targets.sh`:
+
+- `Makefile` changes map to runtime contract scope:
+  - `run_runtime_snapshot_contract_tests=true`
+  - `test_scope=runtime-contract`
+- Localhost signed integration command changes map to dedicated scope:
+  - `run_localhost_signed_integration_contract_lane_tests=true`
+  - `test_scope=sdk-live-localhost-integration`
+- Live transport parity command changes map to parity scope:
+  - `run_live_transport_parity_contract_tests=true`
+  - `live_transport_parity_languages=rust,python,typescript`
+
+Required demo lane command contract:
+
+- `bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json`
+
+Regression policy:
+
+- make-target and selector workflow drift remains fail-closed (`Regression: #900`).
+- command-surface parity drift remains fail-closed (`Regression: #939`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
