@@ -42,6 +42,12 @@ cargo test -p kamn-core --test trust_score_engine --test trust_score_engine_docs
 bash scripts/ci/test_select_targets.sh
 ```
 
+### Run A Local End-to-End Demo
+
+```bash
+bash scripts/sdk/run_local_e2e_demo.sh
+```
+
 ## Workflow
 
 All code changes are issue-first and follow strict Red → Green → Refactor → Regression TDD. Before implementation:

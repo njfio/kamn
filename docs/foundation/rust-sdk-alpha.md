@@ -24,6 +24,7 @@ This document describes the first implementation slice for the Rust SDK aligned 
 Run from repository root:
 
 ```bash
+bash scripts/sdk/run_local_e2e_demo.sh
 bash scripts/sdk/run_rust_live_transport_contract_lane.sh
 bash scripts/sdk/run_rust_live_transport_deep_lane.sh
 cargo test -p kamn-sdk
@@ -31,6 +32,19 @@ cargo fmt --check
 cargo clippy -- -D warnings
 cargo test
 ```
+
+## Local End-to-End Demo (Issue #770)
+The SDK now includes a deterministic one-command demo for first-run validation:
+
+- Command: `bash scripts/sdk/run_local_e2e_demo.sh`
+- Expected markers:
+  - `status=ok`
+  - `message_id=<id>`
+  - `task_id=<id>`
+  - `artifact_id=<id>`
+  - `escrow_id=<id>`
+
+`Regression: #770` ensures the command remains executable and emits lifecycle markers.
 
 ## Follow-up
 - Replace endpoint-scoped deterministic live adapter with real network transport client implementation in a later slice.

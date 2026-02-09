@@ -10,6 +10,7 @@ fn doc_contains_live_transport_sdk_scope() {
 
 #[test]
 fn doc_contains_live_transport_validation_commands() {
+    assert!(DOC.contains("bash scripts/sdk/run_local_e2e_demo.sh"));
     assert!(DOC.contains("bash scripts/sdk/run_rust_live_transport_contract_lane.sh"));
     assert!(DOC.contains("bash scripts/sdk/run_rust_live_transport_deep_lane.sh"));
 }
@@ -18,4 +19,12 @@ fn doc_contains_live_transport_validation_commands() {
 fn regression_requires_transport_mode_mismatch_guard_contract() {
     // Regression: #620
     assert!(DOC.contains("mismatch rejection (`Regression: #620`)"));
+}
+
+#[test]
+fn regression_requires_local_e2e_demo_marker_contract() {
+    // Regression: #770
+    assert!(DOC.contains("`Regression: #770`"));
+    assert!(DOC.contains("status=ok"));
+    assert!(DOC.contains("escrow_id=<id>"));
 }
