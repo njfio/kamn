@@ -666,10 +666,20 @@ assert_eq "$(extract_output "$message_contract_docs_output" "run_rust")" "false"
 assert_eq "$(extract_output "$message_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "message lifecycle contract docs must run message lifecycle contract lane"
 assert_eq "$(extract_output "$message_contract_docs_output" "test_scope")" "message-contract" "message lifecycle contract docs should set message-contract scope"
 
+key_management_contract_docs_output="$(run_selector $'docs/foundation/key-management-and-encryption.md')"
+assert_eq "$(extract_output "$key_management_contract_docs_output" "run_rust")" "false" "key management contract docs should avoid rust lane"
+assert_eq "$(extract_output "$key_management_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "key management contract docs must run message lifecycle contract lane"
+assert_eq "$(extract_output "$key_management_contract_docs_output" "test_scope")" "message-contract" "key management contract docs should set message-contract scope"
+
 message_contract_script_output="$(run_selector $'scripts/message/run_message_lifecycle_contract_lane.sh')"
 assert_eq "$(extract_output "$message_contract_script_output" "run_rust")" "false" "message lifecycle contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$message_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "message lifecycle contract script changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$message_contract_script_output" "test_scope")" "message-contract" "message lifecycle contract script changes should set message-contract scope"
+
+key_lifecycle_invariant_contract_script_output="$(run_selector $'scripts/message/run_key_hierarchy_invariant_contract_lane.sh')"
+assert_eq "$(extract_output "$key_lifecycle_invariant_contract_script_output" "run_rust")" "false" "key hierarchy invariant contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$key_lifecycle_invariant_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "key hierarchy invariant contract script changes must run message lifecycle contract lane"
+assert_eq "$(extract_output "$key_lifecycle_invariant_contract_script_output" "test_scope")" "message-contract" "key hierarchy invariant contract script changes should set message-contract scope"
 
 channel_contract_docs_output="$(run_selector $'docs/foundation/channel-models.md')"
 assert_eq "$(extract_output "$channel_contract_docs_output" "run_rust")" "false" "channel lifecycle contract docs should avoid rust lane"
