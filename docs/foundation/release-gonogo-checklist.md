@@ -160,12 +160,18 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - `python3 scripts/kolme/validate_version_compatibility.py --kamn-version 1.1.0 --kolme-release-tag v0.15.2 --ci-fast-gate PASS --output-json /tmp/kolme-version-report.json`
 - Replay matrix runner:
   - `python3 scripts/kolme/run_version_compatibility_replay.py --fixture fixtures/kolme_compatibility/version_compatibility_cases.json --output-json /tmp/kolme-version-replay-report.json`
+- Runtime commit replay policy checker:
+  - `python3 scripts/kolme/check_runtime_commit_replay_policy.py --operation-id op-go-001 --idempotency-key kolme-runtime-commit:op-go-001:state:agent:1:12 --receipt-provider kolme-local --expected-receipt-provider kolme-local --receipt-commit-id kolme-commit:op-go-001:agent:1:12 --expected-receipt-commit-id kolme-commit:op-go-001:agent:1:12 --nonce-monotonic true --replay-detected false --payload-hash-match true --receipt-finality FINAL --ci-fast-gate PASS --output-json /tmp/kolme-runtime-commit-replay-policy.json`
+- Runtime commit replay matrix runner:
+  - `python3 scripts/kolme/run_runtime_commit_replay_tamper_matrix.py --fixture fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json --output-json /tmp/kolme-runtime-commit-replay-report.json`
 - PR fast contract lane:
   - `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
+  - `bash scripts/kolme/run_runtime_commit_replay_contract_lane.sh`
 - Scheduled deep lane entrypoint:
   - `bash scripts/kolme/run_version_compatibility_replay_deep_lane.sh --output-json kolme-version-compatibility-report.json`
 - Regression policy:
   - incompatible upgrade signature (`kamn 1.2.x` + `kolme 0.14.x`) remains blocked (`Regression: #775`).
+  - runtime commit replay/tamper mismatches and non-final receipts force `NO-GO` (`Regression: #827`).
 
 ## Failover + Sync Drill Evidence Contract (Issues #787, #788)
 Runtime failover and sync readiness requires deterministic lane routing, budget guards, and scheduled-cadence enforcement before release approval.

@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VALIDATOR="$ROOT_DIR/scripts/kolme/validate_version_compatibility.py"
 REPLAY_RUNNER="$ROOT_DIR/scripts/kolme/run_version_compatibility_replay.py"
 RUNTIME_COMMIT_LANE="$ROOT_DIR/scripts/kolme/run_runtime_commit_contract_lane.sh"
+RUNTIME_COMMIT_REPLAY_LANE="$ROOT_DIR/scripts/kolme/run_runtime_commit_replay_contract_lane.sh"
 FIXTURE_FILE="$ROOT_DIR/fixtures/kolme_compatibility/version_compatibility_cases.json"
 ROADMAP_DOC="$ROOT_DIR/docs/planning/kolme-integration-roadmap.md"
 GONOGO_DOC="$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"
@@ -23,6 +24,11 @@ fi
 
 if [ ! -x "$RUNTIME_COMMIT_LANE" ]; then
   echo "expected Kolme runtime commit contract lane script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$RUNTIME_COMMIT_REPLAY_LANE" ]; then
+  echo "expected Kolme runtime commit replay contract lane script to be executable" >&2
   exit 1
 fi
 
@@ -76,6 +82,7 @@ python3 "$REPLAY_RUNNER" \
   >/dev/null
 
 bash "$RUNTIME_COMMIT_LANE" >/dev/null
+bash "$RUNTIME_COMMIT_REPLAY_LANE" >/dev/null
 
 if ! grep -q "validate_version_compatibility.py" "$ROADMAP_DOC"; then
   echo "expected Kolme roadmap doc to reference version validator command" >&2
@@ -84,6 +91,11 @@ fi
 
 if ! grep -q "run_runtime_commit_contract_lane.sh" "$ROADMAP_DOC"; then
   echo "expected Kolme roadmap doc to reference runtime commit contract lane command" >&2
+  exit 1
+fi
+
+if ! grep -q "run_runtime_commit_replay_contract_lane.sh" "$ROADMAP_DOC"; then
+  echo "expected Kolme roadmap doc to reference runtime commit replay contract lane command" >&2
   exit 1
 fi
 

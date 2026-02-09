@@ -21,6 +21,13 @@ across Kolme upgrades.
 - Runtime commit contract lane:
   - `bash scripts/kolme/run_runtime_commit_contract_lane.sh`
   - fixture: `fixtures/kolme_commit/runtime_commit_request_cases.txt`
+- Runtime commit replay policy checker:
+  - `python3 scripts/kolme/check_runtime_commit_replay_policy.py --operation-id op-go-001 --idempotency-key kolme-runtime-commit:op-go-001:state:agent:1:12 --receipt-provider kolme-local --expected-receipt-provider kolme-local --receipt-commit-id kolme-commit:op-go-001:agent:1:12 --expected-receipt-commit-id kolme-commit:op-go-001:agent:1:12 --nonce-monotonic true --replay-detected false --payload-hash-match true --receipt-finality FINAL --ci-fast-gate PASS --output-json /tmp/kolme-runtime-commit-replay-policy.json`
+- Runtime commit replay matrix command:
+  - `python3 scripts/kolme/run_runtime_commit_replay_tamper_matrix.py --fixture fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json --output-json /tmp/kolme-runtime-commit-replay-report.json`
+- Runtime commit replay contract lane:
+  - `bash scripts/kolme/run_runtime_commit_replay_contract_lane.sh`
+  - fixture: `fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json`
 - Fast contract lane:
   - `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
 - Scheduled deep lane:
@@ -49,6 +56,7 @@ across Kolme upgrades.
 - Known incompatible signature (`kamn 1.2.x` + `kolme v0.14.x`) remains blocked (`Regression: #775`).
 - Malformed runtime commit request shapes remain fail-closed (`Regression: #825`).
 - Runtime commit finality projection blocks invalid lifecycle regression to pending (`Regression: #826`).
+- Runtime commit replay/tamper mismatch policy emits fail-closed reason codes (`Regression: #827`).
 
 ## Local Validation
 
@@ -56,6 +64,8 @@ across Kolme upgrades.
 bash scripts/kolme/test_validate_version_compatibility.sh
 bash scripts/kolme/test_run_version_compatibility_contract_lane.sh
 bash scripts/kolme/test_run_runtime_commit_contract_lane.sh
+bash scripts/kolme/test_check_runtime_commit_replay_policy.sh
+bash scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh
 bash scripts/ci/test_select_targets.sh
 bash scripts/ci/test_workflow_scope_policy.sh
 ```
