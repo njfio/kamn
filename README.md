@@ -97,6 +97,11 @@ bash scripts/sdk/run_localhost_signed_demo.sh \
   --to kamn:did:agent:listener-1 \
   --nonce 1 \
   --timeout-seconds 15
+
+# integration harness scenarios
+bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario success
+bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario signature-mismatch
+bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario timeout --timeout-seconds 1
 ```
 
 ### Run Localhost Bridge Relay Demo Lane
