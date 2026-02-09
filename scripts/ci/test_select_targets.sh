@@ -1133,6 +1133,7 @@ token_framework_script_output="$(run_selector $'scripts/framework/contract_frame
 assert_eq "$(extract_output "$token_framework_script_output" "run_rust")" "false" "contract framework script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$token_framework_script_output" "run_token_launch_contract_tests")" "true" "contract framework changes must run token launch contract lane"
 assert_eq "$(extract_output "$token_framework_script_output" "run_treasury_disbursement_contract_tests")" "true" "contract framework changes must also run treasury disbursement contract lane"
+assert_eq "$(extract_output "$token_framework_script_output" "run_launch_canary_contract_tests")" "true" "contract framework changes must also run launch canary contract lane"
 assert_eq "$(extract_output "$token_framework_script_output" "test_scope")" "token-contract" "contract framework changes should set token-contract scope"
 
 token_contract_fixture_output="$(run_selector $'fixtures/token_launch/handoff_invariant_cases.json')"

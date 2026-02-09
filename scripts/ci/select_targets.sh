@@ -404,6 +404,7 @@ for file in "${CHANGED_FILES[@]}"; do
     scripts/framework/*)
       TOKEN_LAUNCH_CONTRACT_CHANGED=true
       TREASURY_DISBURSEMENT_CONTRACT_CHANGED=true
+      LAUNCH_CANARY_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac

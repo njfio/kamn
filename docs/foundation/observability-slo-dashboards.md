@@ -42,6 +42,11 @@ This document captures the first implementation slice for deterministic observab
 ## Post-Cutover SLO Gate Evidence Contract (Issue #711)
 Launch expansion decisions require deterministic SLO evidence export and fail-closed policy checks.
 
+- Stable shell wrappers:
+  - `scripts/canary/generate_post_cutover_slo_evidence_bundle.sh`
+  - `scripts/canary/check_post_cutover_slo_policy.sh`
+- Shared Python implementation:
+  - `scripts/canary/post_cutover_slo_contract.py`
 - Evidence bundle generator:
   - `bash scripts/canary/generate_post_cutover_slo_evidence_bundle.sh --output-file /tmp/post-cutover-slo.json --window-minutes 15 --p95-latency-ms 140 --max-p95-latency-ms 200 --error-rate-bps 18 --max-error-rate-bps 25 --delivery-success-bps 9992 --min-delivery-success-bps 9950 --snapshot-age-seconds 30 --max-snapshot-age-seconds 120 --evidence-complete true --ci-fast-gate PASS`
 - Policy checker:
