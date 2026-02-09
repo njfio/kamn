@@ -8,6 +8,42 @@ struct DidRegistryRecord {
     revoked: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DidLifecycleMutationAction {
+    Rotate { document: DidDocument },
+    Revoke,
+    Recover { document: DidDocument },
+}
+
+impl DidLifecycleMutationAction {
+    fn label(&self) -> &'static str {
+        match self {
+            Self::Rotate { .. } => "rotate",
+            Self::Revoke => "revoke",
+            Self::Recover { .. } => "recover",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DidLifecycleMutationRequest {
+    pub did: AgentDid,
+    pub actor_did: String,
+    pub nonce: u64,
+    pub action: DidLifecycleMutationAction,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DidLifecycleMutationEvidence {
+    pub did: String,
+    pub actor_did: String,
+    pub nonce: u64,
+    pub action: &'static str,
+    pub from_revoked: bool,
+    pub to_revoked: bool,
+    pub reason_code: &'static str,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DidSubmissionRetryClass {
     NewSubmission,
@@ -122,6 +158,7 @@ pub struct DidRegistry {
     records: HashMap<AgentDid, DidRegistryRecord>,
     submission_keys_by_did: HashMap<AgentDid, String>,
     finality_by_did: HashMap<AgentDid, DidSubmissionFinalityRecord>,
+    last_mutation_nonce_by_did: HashMap<AgentDid, u64>,
 }
 
 impl DidRegistry {
@@ -367,6 +404,109 @@ impl DidRegistry {
         self.finality_by_did.get(did)
     }
 
+    pub fn apply_lifecycle_mutation(
+        &mut self,
+        request: DidLifecycleMutationRequest,
+    ) -> Result<DidLifecycleMutationEvidence, DidRegistryError> {
+        let did = request.did;
+        let did_id = did.as_str().to_owned();
+
+        if request.nonce == 0 {
+            return Err(DidRegistryError::InvalidMutationNonce {
+                did: did_id,
+                nonce: request.nonce,
+            });
+        }
+
+        if let Some(last_nonce) = self.last_mutation_nonce_by_did.get(&did) {
+            if request.nonce <= *last_nonce {
+                return Err(DidRegistryError::ReplayedMutationNonce {
+                    did: did.as_str().to_owned(),
+                    last_nonce: *last_nonce,
+                    found: request.nonce,
+                });
+            }
+        }
+
+        let from_revoked = self
+            .records
+            .get(&did)
+            .map(|record| record.revoked)
+            .ok_or_else(|| DidRegistryError::NotFound(did.as_str().to_owned()))?;
+
+        self.authorize_mutation_actor(&did, &request.actor_did)?;
+        let action = request.action.label();
+
+        match request.action {
+            DidLifecycleMutationAction::Rotate { document } => {
+                if from_revoked {
+                    return Err(DidRegistryError::InvalidLifecycleMutationTransition {
+                        did: did.as_str().to_owned(),
+                        action,
+                        from_revoked,
+                    });
+                }
+
+                Self::validate_document_did(&did, &document)?;
+                let record = self
+                    .records
+                    .get_mut(&did)
+                    .ok_or_else(|| DidRegistryError::NotFound(did.as_str().to_owned()))?;
+                record.document = document;
+            }
+            DidLifecycleMutationAction::Revoke => {
+                if from_revoked {
+                    return Err(DidRegistryError::InvalidLifecycleMutationTransition {
+                        did: did.as_str().to_owned(),
+                        action,
+                        from_revoked,
+                    });
+                }
+
+                let record = self
+                    .records
+                    .get_mut(&did)
+                    .ok_or_else(|| DidRegistryError::NotFound(did.as_str().to_owned()))?;
+                record.revoked = true;
+            }
+            DidLifecycleMutationAction::Recover { document } => {
+                if !from_revoked {
+                    return Err(DidRegistryError::InvalidLifecycleMutationTransition {
+                        did: did.as_str().to_owned(),
+                        action,
+                        from_revoked,
+                    });
+                }
+
+                Self::validate_document_did(&did, &document)?;
+                let record = self
+                    .records
+                    .get_mut(&did)
+                    .ok_or_else(|| DidRegistryError::NotFound(did.as_str().to_owned()))?;
+                record.document = document;
+                record.revoked = false;
+            }
+        }
+
+        self.last_mutation_nonce_by_did
+            .insert(did.clone(), request.nonce);
+        let to_revoked = self
+            .records
+            .get(&did)
+            .map(|record| record.revoked)
+            .unwrap_or(false);
+
+        Ok(DidLifecycleMutationEvidence {
+            did: did.as_str().to_owned(),
+            actor_did: request.actor_did,
+            nonce: request.nonce,
+            action,
+            from_revoked,
+            to_revoked,
+            reason_code: "did_lifecycle_mutation_allowed",
+        })
+    }
+
     fn classify_retry_by_key(
         &self,
         did: &AgentDid,
@@ -399,6 +539,33 @@ impl DidRegistry {
         }
         Ok(())
     }
+
+    fn authorize_mutation_actor(
+        &self,
+        did: &AgentDid,
+        actor_did: &str,
+    ) -> Result<(), DidRegistryError> {
+        let record = self
+            .records
+            .get(did)
+            .ok_or_else(|| DidRegistryError::NotFound(did.as_str().to_owned()))?;
+        let required_actor = record
+            .document
+            .metadata
+            .operator
+            .clone()
+            .unwrap_or_else(|| did.as_str().to_owned());
+
+        if actor_did != required_actor {
+            return Err(DidRegistryError::UnauthorizedMutationActor {
+                did: did.as_str().to_owned(),
+                actor_did: actor_did.to_owned(),
+                required_actor,
+            });
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -428,6 +595,48 @@ pub enum DidRegistryError {
         expected: String,
         actual: String,
     },
+    InvalidMutationNonce {
+        did: String,
+        nonce: u64,
+    },
+    ReplayedMutationNonce {
+        did: String,
+        last_nonce: u64,
+        found: u64,
+    },
+    UnauthorizedMutationActor {
+        did: String,
+        actor_did: String,
+        required_actor: String,
+    },
+    InvalidLifecycleMutationTransition {
+        did: String,
+        action: &'static str,
+        from_revoked: bool,
+    },
+}
+
+impl DidRegistryError {
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::AlreadyRegistered(_) => "did_registry_already_registered",
+            Self::ConflictingFinalityUpdate { .. } => "did_registry_finality_conflict",
+            Self::ConflictingSubmissionIdempotencyKey { .. } => {
+                "did_registry_submission_key_conflict"
+            }
+            Self::NotFound(_) => "did_registry_not_found",
+            Self::StaleFinalityUpdate { .. } => "did_registry_finality_stale",
+            Self::UnknownSubmissionIdempotencyKey { .. } => "did_registry_submission_key_unknown",
+            Self::Revoked(_) => "did_registry_revoked",
+            Self::DocumentDidMismatch { .. } => "did_registry_document_did_mismatch",
+            Self::InvalidMutationNonce { .. } => "did_lifecycle_mutation_nonce_invalid",
+            Self::ReplayedMutationNonce { .. } => "did_lifecycle_mutation_nonce_replay",
+            Self::UnauthorizedMutationActor { .. } => "did_lifecycle_mutation_unauthorized_actor",
+            Self::InvalidLifecycleMutationTransition { .. } => {
+                "did_lifecycle_mutation_invalid_transition"
+            }
+        }
+    }
 }
 
 impl fmt::Display for DidRegistryError {
@@ -467,6 +676,39 @@ impl fmt::Display for DidRegistryError {
                 write!(
                     f,
                     "did document id mismatch, expected {expected}, got {actual}"
+                )
+            }
+            Self::InvalidMutationNonce { did, nonce } => {
+                write!(f, "invalid lifecycle mutation nonce for did {did}: {nonce}")
+            }
+            Self::ReplayedMutationNonce {
+                did,
+                last_nonce,
+                found,
+            } => {
+                write!(
+                    f,
+                    "replayed lifecycle mutation nonce for did {did}; last {last_nonce}, found {found}"
+                )
+            }
+            Self::UnauthorizedMutationActor {
+                did,
+                actor_did,
+                required_actor,
+            } => {
+                write!(
+                    f,
+                    "unauthorized lifecycle mutation actor for did {did}; actor {actor_did}, required {required_actor}"
+                )
+            }
+            Self::InvalidLifecycleMutationTransition {
+                did,
+                action,
+                from_revoked,
+            } => {
+                write!(
+                    f,
+                    "invalid lifecycle mutation transition for did {did}; action {action}, revoked={from_revoked}"
                 )
             }
         }

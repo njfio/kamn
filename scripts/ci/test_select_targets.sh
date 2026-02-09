@@ -609,6 +609,12 @@ assert_eq "$(extract_output "$did_contract_script_output" "run_did_registry_cont
 assert_eq "$(extract_output "$did_contract_script_output" "run_federated_did_handshake_contract_tests")" "false" "did registry script changes should not run federated DID handshake lane"
 assert_eq "$(extract_output "$did_contract_script_output" "test_scope")" "did-contract" "did contract script changes should set did-contract scope"
 
+agent_interop_wave_doc_output="$(run_selector $'docs/planning/agent-interop-wave.md')"
+assert_eq "$(extract_output "$agent_interop_wave_doc_output" "run_rust")" "false" "agent interop planning doc-only changes should avoid rust lane"
+assert_eq "$(extract_output "$agent_interop_wave_doc_output" "run_did_registry_contract_tests")" "true" "agent interop planning docs must run did registry contract lane"
+assert_eq "$(extract_output "$agent_interop_wave_doc_output" "run_federated_did_handshake_contract_tests")" "false" "agent interop planning docs should not run federated DID handshake lane by default"
+assert_eq "$(extract_output "$agent_interop_wave_doc_output" "test_scope")" "did-contract" "agent interop planning docs should set did-contract scope"
+
 federated_did_contract_docs_output="$(run_selector $'docs/foundation/did-method.md')"
 assert_eq "$(extract_output "$federated_did_contract_docs_output" "run_rust")" "false" "federated DID docs should avoid rust lane"
 assert_eq "$(extract_output "$federated_did_contract_docs_output" "run_did_registry_contract_tests")" "false" "federated DID docs should not trigger did registry contract lane"

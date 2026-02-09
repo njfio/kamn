@@ -205,7 +205,8 @@ pub use did::{
 };
 pub use did_registry::{
     DidChainSubmissionOutcome, DidChainSubmissionReceipt, DidChainSubmissionRequest,
-    DidChainSubmissionResult, DidRegistrationChainAdapter, DidRegistry, DidRegistryError,
+    DidChainSubmissionResult, DidLifecycleMutationAction, DidLifecycleMutationEvidence,
+    DidLifecycleMutationRequest, DidRegistrationChainAdapter, DidRegistry, DidRegistryError,
     DidSubmissionFinalityRecord, DidSubmissionFinalityStatus, DidSubmissionRetryClass,
     InMemoryDidRegistrationChainAdapter,
 };
