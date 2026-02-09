@@ -41,6 +41,7 @@ append_summary() {
     echo "- Run SOC2 control evidence contract tests: ${RUN_SOC2_CONTROL_EVIDENCE_CONTRACT_TESTS}"
     echo "- Run DSAR legal-hold contract tests: ${RUN_DSAR_LEGAL_HOLD_CONTRACT_TESTS}"
     echo "- Run governance simulation contract tests: ${RUN_GOVERNANCE_SIMULATION_CONTRACT_TESTS}"
+    echo "- Run governance stake/slash contract tests: ${RUN_GOVERNANCE_STAKE_SLASH_CONTRACT_TESTS}"
     echo "- Run token launch contract tests: ${RUN_TOKEN_LAUNCH_CONTRACT_TESTS}"
     echo "- Run treasury disbursement contract tests: ${RUN_TREASURY_DISBURSEMENT_CONTRACT_TESTS}"
     echo "- Run mainnet cutover contract tests: ${RUN_MAINNET_CUTOVER_CONTRACT_TESTS}"
@@ -152,6 +153,7 @@ ESCROW_CONTRACT_CHANGED=false
 SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED=false
 DSAR_LEGAL_HOLD_CONTRACT_CHANGED=false
 GOVERNANCE_SIMULATION_CONTRACT_CHANGED=false
+GOVERNANCE_STAKE_SLASH_CONTRACT_CHANGED=false
 TOKEN_LAUNCH_CONTRACT_CHANGED=false
 TREASURY_DISBURSEMENT_CONTRACT_CHANGED=false
 MAINNET_CUTOVER_CONTRACT_CHANGED=false
@@ -294,8 +296,15 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/governance-proposal-vote-execution.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/src/governance_workflow.rs|crates/kamn-core/tests/governance_workflow.rs|crates/kamn-core/tests/governance_workflow_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/governance/*|fixtures/governance_simulation/*)
+    docs/foundation/governance-proposal-vote-execution.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/src/governance_workflow.rs|crates/kamn-core/tests/governance_workflow.rs|crates/kamn-core/tests/governance_workflow_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/governance/*governance_simulation*|fixtures/governance_simulation/*)
       GOVERNANCE_SIMULATION_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
+    docs/foundation/governance-proposal-vote-execution.md|docs/foundation/release-gonogo-checklist.md|docs/foundation/validator-lifecycle-quorum-reconfiguration.md|crates/kamn-core/tests/governance_workflow_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|crates/kamn-core/tests/validator_lifecycle_docs.rs|scripts/governance/*stake_slash*|fixtures/governance_stake_slash/*)
+      GOVERNANCE_STAKE_SLASH_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -421,6 +430,7 @@ RUN_SETTLEMENT_RECONCILIATION_CONTRACT_TESTS=false
 RUN_SOC2_CONTROL_EVIDENCE_CONTRACT_TESTS=false
 RUN_DSAR_LEGAL_HOLD_CONTRACT_TESTS=false
 RUN_GOVERNANCE_SIMULATION_CONTRACT_TESTS=false
+RUN_GOVERNANCE_STAKE_SLASH_CONTRACT_TESTS=false
 RUN_TOKEN_LAUNCH_CONTRACT_TESTS=false
 RUN_TREASURY_DISBURSEMENT_CONTRACT_TESTS=false
 RUN_MAINNET_CUTOVER_CONTRACT_TESTS=false
@@ -575,6 +585,13 @@ if [ "$GOVERNANCE_SIMULATION_CONTRACT_CHANGED" = true ]; then
   fi
 fi
 
+if [ "$GOVERNANCE_STAKE_SLASH_CONTRACT_CHANGED" = true ]; then
+  RUN_GOVERNANCE_STAKE_SLASH_CONTRACT_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="governance-risk-contract"
+  fi
+fi
+
 if [ "$TOKEN_LAUNCH_CONTRACT_CHANGED" = true ]; then
   RUN_TOKEN_LAUNCH_CONTRACT_TESTS=true
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
@@ -704,6 +721,7 @@ write_output "run_settlement_reconciliation_contract_tests" "$RUN_SETTLEMENT_REC
 write_output "run_soc2_control_evidence_contract_tests" "$RUN_SOC2_CONTROL_EVIDENCE_CONTRACT_TESTS"
 write_output "run_dsar_legal_hold_contract_tests" "$RUN_DSAR_LEGAL_HOLD_CONTRACT_TESTS"
 write_output "run_governance_simulation_contract_tests" "$RUN_GOVERNANCE_SIMULATION_CONTRACT_TESTS"
+write_output "run_governance_stake_slash_contract_tests" "$RUN_GOVERNANCE_STAKE_SLASH_CONTRACT_TESTS"
 write_output "run_token_launch_contract_tests" "$RUN_TOKEN_LAUNCH_CONTRACT_TESTS"
 write_output "run_treasury_disbursement_contract_tests" "$RUN_TREASURY_DISBURSEMENT_CONTRACT_TESTS"
 write_output "run_mainnet_cutover_contract_tests" "$RUN_MAINNET_CUTOVER_CONTRACT_TESTS"

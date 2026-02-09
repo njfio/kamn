@@ -40,6 +40,18 @@ This document captures the first implementation slice for validator onboarding, 
 - Quorum reconfiguration is validated against current validator count.
 - Rollback restores the previous snapshot and appends a rollback transition record.
 
+## Governance Stake/Slash Threshold Gate Integration (Issue #750)
+Validator lifecycle governance activation requires stake/slash risk evidence before applying quorum-impacting transitions.
+
+- PR fast contract lane:
+  - `bash scripts/governance/run_stake_slash_risk_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/governance/run_stake_slash_risk_deep_lane.sh --output-json governance-stake-slash-report.json`
+- Required policy evidence:
+  - stake-at-risk, slash-probability, and validator-churn thresholds remain within configured limits.
+  - quorum safety margin remains above minimum threshold before execution.
+  - tampered or incomplete risk evidence fails closed (`Regression: #733`).
+
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 

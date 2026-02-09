@@ -154,6 +154,13 @@ jobs:
           bash scripts/governance/test_run_governance_simulation_contract_lane.sh
           bash scripts/governance/test_run_governance_simulation_matrix.sh
 
+      - name: Run governance stake/slash risk contract lane
+        if: steps.scope.outputs.run_governance_stake_slash_contract_tests == 'true'
+        run: |
+          bash scripts/governance/test_generate_stake_slash_risk_evidence_bundle.sh
+          bash scripts/governance/test_run_stake_slash_risk_contract_lane.sh
+          bash scripts/governance/test_run_stake_slash_risk_matrix.sh
+
       - name: Run token launch handoff contract lane
         if: steps.scope.outputs.run_token_launch_contract_tests == 'true'
         run: bash scripts/token/run_token_launch_handoff_contract_lane.sh

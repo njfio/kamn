@@ -37,3 +37,16 @@ fn regression_requires_replay_and_self_approval_rejection_rules() {
     assert!(DOC.contains("transition proof replay is rejected (`Regression: #523`)."));
     assert!(DOC.contains("onboarding self-approval is rejected (`Regression: #523`)."));
 }
+
+#[test]
+fn doc_contains_governance_stake_slash_threshold_gate_integration() {
+    assert!(DOC.contains("## Governance Stake/Slash Threshold Gate Integration"));
+    assert!(DOC.contains("run_stake_slash_risk_contract_lane.sh"));
+    assert!(DOC.contains("run_stake_slash_risk_deep_lane.sh"));
+}
+
+#[test]
+fn regression_requires_stake_slash_tamper_and_threshold_fail_closed_rule() {
+    // Regression: #733
+    assert!(DOC.contains("tampered or incomplete risk evidence fails closed (`Regression: #733`)."));
+}

@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+GENERATOR="$ROOT_DIR/scripts/governance/generate_stake_slash_risk_evidence_bundle.sh"
+POLICY_CHECKER="$ROOT_DIR/scripts/governance/check_stake_slash_risk_policy.sh"
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+extract_value() {
+  local output="$1"
+  local key="$2"
+  printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
+}
+
+assert_eq() {
+  local actual="$1"
+  local expected="$2"
+  local message="$3"
+  if [ "$actual" != "$expected" ]; then
+    echo "$message: expected '$expected', got '$actual'" >&2
+    exit 1
+  fi
+}
+
+if [ ! -x "$GENERATOR" ]; then
+  echo "expected stake/slash risk evidence generator to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$POLICY_CHECKER" ]; then
+  echo "expected stake/slash risk policy checker to be executable" >&2
+  exit 1
+fi
+
+go_bundle="$TMP_DIR/stake-slash-go.json"
+go_output="$(
+  bash "$GENERATOR" \
+    --output-file "$go_bundle" \
+    --proposal-id "gov-risk-go-001" \
+    --simulation-hash "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+    --stake-at-risk-bps 120 \
+    --max-stake-at-risk-bps 300 \
+    --slash-probability-bps 40 \
+    --max-slash-probability-bps 150 \
+    --validator-churn-bps 60 \
+    --max-validator-churn-bps 180 \
+    --quorum-safety-margin-bps 220 \
+    --min-quorum-safety-margin-bps 150 \
+    --evidence-complete true \
+    --ci-fast-gate PASS
+)"
+
+assert_eq "$(extract_value "$go_output" "status")" "generated" "expected GO bundle generation to pass"
+assert_eq "$(extract_value "$go_output" "final_decision")" "GO" "expected GO policy decision"
+
+go_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$go_bundle")"
+assert_eq "$(extract_value "$go_policy_output" "status")" "ok" "expected GO policy check to pass"
+assert_eq "$(extract_value "$go_policy_output" "final_decision")" "GO" "expected GO policy checker decision"
+assert_eq "$(extract_value "$go_policy_output" "failed_checks")" "none" "expected no failed checks for GO"
+
+no_go_bundle="$TMP_DIR/stake-slash-no-go.json"
+no_go_output="$(
+  bash "$GENERATOR" \
+    --output-file "$no_go_bundle" \
+    --proposal-id "gov-risk-no-go-001" \
+    --simulation-hash "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" \
+    --stake-at-risk-bps 420 \
+    --max-stake-at-risk-bps 300 \
+    --slash-probability-bps 60 \
+    --max-slash-probability-bps 150 \
+    --validator-churn-bps 70 \
+    --max-validator-churn-bps 180 \
+    --quorum-safety-margin-bps 210 \
+    --min-quorum-safety-margin-bps 150 \
+    --evidence-complete true \
+    --ci-fast-gate PASS
+)"
+
+assert_eq "$(extract_value "$no_go_output" "final_decision")" "NO-GO" "expected NO-GO policy decision"
+
+no_go_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$no_go_bundle")"
+assert_eq "$(extract_value "$no_go_policy_output" "status")" "ok" "expected NO-GO policy check to pass"
+assert_eq "$(extract_value "$no_go_policy_output" "final_decision")" "NO-GO" "expected NO-GO checker decision"
+assert_eq "$(extract_value "$no_go_policy_output" "failed_checks")" "stake_at_risk_threshold_breach" "expected stake risk threshold failure reason"
+
+tampered_bundle="$TMP_DIR/stake-slash-tampered.json"
+cp "$no_go_bundle" "$tampered_bundle"
+python3 - "$tampered_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text())
+payload["final_decision"] = "GO"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
+PY
+
+set +e
+tampered_output="$(bash "$POLICY_CHECKER" --bundle-file "$tampered_bundle" 2>&1)"
+tampered_code=$?
+set -e
+
+if [ "$tampered_code" -eq 0 ]; then
+  echo "expected tampered stake/slash bundle to fail policy validation" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$tampered_output" | grep -q "policy decision mismatch"; then
+  echo "expected policy decision mismatch error for tampered stake/slash bundle" >&2
+  exit 1
+fi
+
+# Regression: #733
+if ! printf '%s\n' "$tampered_output" | grep -q "expected final_decision=NO-GO"; then
+  echo "expected explicit NO-GO mismatch message for tampered stake/slash bundle" >&2
+  exit 1
+fi
+
+echo "stake/slash risk evidence bundle tests passed."
+
