@@ -34,4 +34,10 @@ if ! grep -q "dr-evidence-report.json" "$DEEP_SCRIPT"; then
   exit 1
 fi
 
+# Keep deployment SLO/rollback automation contract coverage on the deploy lane
+# without widening workflow command count.
+bash "$ROOT_DIR/scripts/deploy/test_run_deployment_slo_rollback_lane.sh"
+bash "$ROOT_DIR/scripts/deploy/test_check_deployment_slo_rollback_policy.sh"
+bash "$ROOT_DIR/scripts/deploy/test_run_deployment_slo_rollback_contract_lane.sh"
+
 echo "dr evidence contract lane script tests passed."

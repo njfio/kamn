@@ -25,12 +25,16 @@ required_snippets=(
   "live_transport_parity_languages=rust,python,typescript"
   "run_dashboard_contract_tests=true"
   "test_scope=frontend-contract"
+  "run_deploy_preflight_tests=true"
+  "test_scope=deploy"
   "run_localhost_signed_integration_contract_lane.sh"
   "run_backend_session_auth_freshness_contract_lane.sh"
+  "run_deployment_slo_rollback_contract_lane.sh"
   "scripts/ci/select_targets.sh"
   "Regression: #900"
   "Regression: #939"
   "Regression: #941"
+  "Regression: #944"
 )
 
 for snippet in "${required_snippets[@]}"; do

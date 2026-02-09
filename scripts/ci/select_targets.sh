@@ -233,7 +233,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    scripts/deploy/*)
+    scripts/deploy/*|docs/foundation/upgrade-rollback-runbook.md|crates/kamn-core/tests/upgrade_rollback_runbook_docs.rs)
       DEPLOY_SCRIPT_CHANGED=true
       classified=true
       ;;
