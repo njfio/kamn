@@ -35,10 +35,18 @@ fn regression_budget_guard_marker_is_documented() {
 fn readme_and_makefile_expose_live_network_entrypoints() {
     assert!(README.contains("make smoke-live-network"));
     assert!(README.contains("make deep-live-network"));
+    assert!(README.contains("make demo-localhost-transport"));
     assert!(README.contains("run_localhost_bridge_demo_evidence_contract_lane.sh"));
     assert!(README.contains("run_localhost_bridge_demo_evidence_deep_lane.sh"));
     assert!(MAKEFILE.contains("smoke-live-network:"));
     assert!(MAKEFILE.contains("deep-live-network:"));
     assert!(MAKEFILE.contains("run_live_network_smoke_lane.sh"));
     assert!(MAKEFILE.contains("run_live_network_pilot_deep_lane.sh"));
+}
+
+#[test]
+fn regression_localhost_transport_demo_entrypoint_is_documented() {
+    // Regression: #877
+    assert!(README.contains("run_localhost_signed_demo.sh"));
+    assert!(MAKEFILE.contains("demo-localhost-transport:"));
 }
