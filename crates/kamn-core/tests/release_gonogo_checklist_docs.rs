@@ -46,6 +46,15 @@ fn checklist_contains_staging_rehearsal_contract() {
 }
 
 #[test]
+fn checklist_contains_durable_guard_recovery_evidence() {
+    assert!(CHECKLIST.contains("## Durable Guard Migration + Recovery Matrix Evidence"));
+    assert!(CHECKLIST.contains("run_durable_guard_recovery_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_durable_guard_recovery_deep_lane.sh"));
+    assert!(CHECKLIST.contains("performance_durable_guard_recovery_contract_lane_budget"));
+    assert!(CHECKLIST.contains("performance_durable_guard_recovery_matrix_deep_lane"));
+}
+
+#[test]
 fn regression_requires_rollback_precheck_in_checklist() {
     // Regression: #173
     assert!(CHECKLIST.contains("Rollback precheck result: PASS"));

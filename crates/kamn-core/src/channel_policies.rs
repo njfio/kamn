@@ -2,6 +2,8 @@ use crate::AgentDid;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+pub const CHANNEL_POLICY_SNAPSHOT_SCHEMA_VERSION: u16 = 1;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChannelAction {
     Send,
@@ -47,6 +49,20 @@ struct ChannelPolicyRecord {
     members: BTreeSet<String>,
     admins: BTreeSet<String>,
     permissions: ChannelPermissions,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChannelPolicySnapshot {
+    pub schema_version: u16,
+    pub channels: Vec<ChannelPolicySnapshotChannel>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChannelPolicySnapshotChannel {
+    pub channel_id: String,
+    pub members: Vec<String>,
+    pub admins: Vec<String>,
+    pub permissions: ChannelPermissions,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -179,6 +195,57 @@ impl ChannelPermissionEngine {
             }
         }
     }
+
+    pub fn export_snapshot(&self) -> ChannelPolicySnapshot {
+        let channels = self
+            .channels
+            .iter()
+            .map(|(channel_id, record)| ChannelPolicySnapshotChannel {
+                channel_id: channel_id.clone(),
+                members: record.members.iter().cloned().collect(),
+                admins: record.admins.iter().cloned().collect(),
+                permissions: record.permissions.clone(),
+            })
+            .collect();
+
+        ChannelPolicySnapshot {
+            schema_version: CHANNEL_POLICY_SNAPSHOT_SCHEMA_VERSION,
+            channels,
+        }
+    }
+
+    pub fn restore_snapshot(
+        &mut self,
+        snapshot: ChannelPolicySnapshot,
+    ) -> Result<(), ChannelPolicySnapshotError> {
+        if snapshot.schema_version != CHANNEL_POLICY_SNAPSHOT_SCHEMA_VERSION {
+            return Err(ChannelPolicySnapshotError::SchemaVersionMismatch {
+                expected: CHANNEL_POLICY_SNAPSHOT_SCHEMA_VERSION,
+                found: snapshot.schema_version,
+            });
+        }
+
+        let mut restored = ChannelPermissionEngine::new();
+        for channel in snapshot.channels {
+            restored.register_channel(
+                &channel.channel_id,
+                channel.members,
+                channel.admins,
+                channel.permissions,
+            )?;
+        }
+
+        self.channels = restored.channels;
+        Ok(())
+    }
+
+    pub fn from_snapshot(
+        snapshot: ChannelPolicySnapshot,
+    ) -> Result<Self, ChannelPolicySnapshotError> {
+        let mut engine = Self::new();
+        engine.restore_snapshot(snapshot)?;
+        Ok(engine)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -197,6 +264,12 @@ pub enum ChannelPolicyError {
     },
     InvalidPermissionRule(String),
     InvalidRetentionPolicy(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChannelPolicySnapshotError {
+    SchemaVersionMismatch { expected: u16, found: u16 },
+    ChannelPolicy(ChannelPolicyError),
 }
 
 impl fmt::Display for ChannelPolicyError {
@@ -224,6 +297,26 @@ impl fmt::Display for ChannelPolicyError {
 }
 
 impl std::error::Error for ChannelPolicyError {}
+
+impl fmt::Display for ChannelPolicySnapshotError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::SchemaVersionMismatch { expected, found } => write!(
+                f,
+                "channel policy snapshot schema version mismatch, expected {expected}, found {found}"
+            ),
+            Self::ChannelPolicy(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl std::error::Error for ChannelPolicySnapshotError {}
+
+impl From<ChannelPolicyError> for ChannelPolicySnapshotError {
+    fn from(value: ChannelPolicyError) -> Self {
+        Self::ChannelPolicy(value)
+    }
+}
 
 fn validate_did(value: &str) -> Result<(), ChannelPolicyError> {
     AgentDid::parse(value).map_err(|error| ChannelPolicyError::InvalidDid(error.to_string()))?;

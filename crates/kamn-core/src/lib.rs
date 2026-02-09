@@ -87,8 +87,9 @@ pub use channel_models::{
     CHANNEL_SNAPSHOT_SCHEMA_VERSION,
 };
 pub use channel_policies::{
-    ChannelAction, ChannelPermissionEngine, ChannelPermissions, ChannelPolicyError, PermissionRule,
-    RetentionMessage, RetentionPolicy,
+    ChannelAction, ChannelPermissionEngine, ChannelPermissions, ChannelPolicyError,
+    ChannelPolicySnapshot, ChannelPolicySnapshotChannel, ChannelPolicySnapshotError,
+    PermissionRule, RetentionMessage, RetentionPolicy, CHANNEL_POLICY_SNAPSHOT_SCHEMA_VERSION,
 };
 pub use config::{
     ConfigError, NodeConfig, NodeRole, SyncMode, SyncOperationalProfile, SyncRecoveryStrategy,
@@ -165,8 +166,9 @@ pub use key_lifecycle::{
 };
 pub use key_recovery::{KeyRecoveryManager, RecoveryError, RecoveryState};
 pub use message_delivery_guards::{
-    DeliveryFailureCode, DeliveryGuardInput, DeliveryValidationResult, FailedDeliveryNotice,
-    MessageDeliveryGuards,
+    DeliveryFailureCode, DeliveryGuardInput, DeliveryGuardSnapshot, DeliveryGuardSnapshotError,
+    DeliveryValidationResult, FailedDeliveryNotice, MessageDeliveryGuards,
+    DELIVERY_GUARD_SNAPSHOT_SCHEMA_VERSION,
 };
 pub use message_envelope::{
     AttachmentRef, CanonicalMessageEnvelope, EnvelopeEncryption, EnvelopeHeader, EnvelopeMetadata,

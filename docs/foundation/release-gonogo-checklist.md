@@ -55,15 +55,31 @@ Staging rehearsal automation must verify deploy and rollback outcomes before rel
 - Regression policy:
   - rollback target hash mismatch and incomplete rehearsal evidence force `NO-GO` (`Regression: #623`).
 
+## Durable Guard Migration + Recovery Matrix Evidence (Issue #691)
+Durable guard schema evolution and restart invariants must be proven before a release is approved.
+
+- PR fast contract lane:
+  - `bash scripts/guard/run_durable_guard_recovery_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/guard/run_durable_guard_recovery_deep_lane.sh`
+- Required evidence:
+  - schema mismatch errors are explicit for delivery and channel policy snapshots.
+  - replay/nonce and retention invariants hold after restart recovery.
+  - corrupted snapshot fixtures fail closed (`Regression: #679`).
+  - PR budget check passes via `performance_durable_guard_recovery_contract_lane_budget`.
+  - nightly deep matrix executes `performance_durable_guard_recovery_matrix_deep_lane`.
+
 ## Local Validation
 Run from repository root:
 
 ```bash
+bash scripts/guard/test_run_durable_guard_recovery_contract_lane.sh
 bash scripts/deploy/test_generate_gonogo_evidence_bundle.sh
 bash scripts/deploy/test_run_gonogo_evidence_contract_lane.sh
 bash scripts/deploy/test_generate_staging_rehearsal_bundle.sh
 bash scripts/deploy/test_run_staging_rehearsal_contract_lane.sh
 cargo test -p kamn-core --test release_gonogo_checklist_docs
+cargo test -p kamn-core --test durable_guard_recovery_matrix
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core
