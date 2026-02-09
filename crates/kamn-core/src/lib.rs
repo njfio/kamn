@@ -62,6 +62,8 @@ pub mod key_lifecycle;
 #[allow(missing_docs)]
 pub mod key_recovery;
 #[allow(missing_docs)]
+pub mod kolme_runtime_commit;
+#[allow(missing_docs)]
 pub mod message_delivery_guards;
 #[allow(missing_docs)]
 pub mod message_envelope;
@@ -248,6 +250,11 @@ pub use key_lifecycle::{
     KeyLifecycleEvent, KeyLifecycleState,
 };
 pub use key_recovery::{KeyRecoveryManager, RecoveryError, RecoveryState};
+pub use kolme_runtime_commit::{
+    InMemoryKolmeRuntimeCommitClient, KolmeCommitReceiptFinality, KolmeRuntimeCommitClient,
+    KolmeRuntimeCommitError, KolmeRuntimeCommitOutcome, KolmeRuntimeCommitReceipt,
+    KolmeRuntimeCommitRequest,
+};
 pub use message_delivery_guards::{
     DeliveryFailureCode, DeliveryGuardInput, DeliveryGuardSnapshot, DeliveryGuardSnapshotError,
     DeliveryValidationResult, FailedDeliveryNotice, MessageDeliveryGuards,

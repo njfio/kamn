@@ -1,0 +1,6 @@
+# case_id|operation_id|state_root|actor_did|nonce|payload_hash|expected_status|expected_reason
+valid_commit_request|op-sync-001|state:abc123|kamn:did:agent:runtime-node-1|1|payload:alpha|pass|
+invalid_empty_operation_id||state:abc123|kamn:did:agent:runtime-node-1|2|payload:beta|fail|must not be empty
+invalid_bad_actor_did|op-sync-003|state:abc123|did:bad-runtime-node|3|payload:gamma|fail|must be a valid KAMN DID
+invalid_zero_nonce|op-sync-004|state:abc123|kamn:did:agent:runtime-node-1|0|payload:delta|fail|must be positive
+invalid_empty_payload_hash|op-sync-005|state:abc123|kamn:did:agent:runtime-node-1|5||fail|must not be empty

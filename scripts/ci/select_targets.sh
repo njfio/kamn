@@ -268,7 +268,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/planning/kolme-integration-roadmap.md|docs/foundation/release-gonogo-checklist.md|scripts/kolme/validate_version_compatibility.py|scripts/kolme/run_version_compatibility_replay.py|scripts/kolme/run_version_compatibility_contract_lane.sh|scripts/kolme/run_version_compatibility_replay_deep_lane.sh|scripts/kolme/test_validate_version_compatibility.sh|scripts/kolme/test_run_version_compatibility_contract_lane.sh|fixtures/kolme_compatibility/version_compatibility_cases.json)
+    docs/planning/kolme-integration-roadmap.md|docs/foundation/release-gonogo-checklist.md|scripts/kolme/validate_version_compatibility.py|scripts/kolme/run_version_compatibility_replay.py|scripts/kolme/run_version_compatibility_contract_lane.sh|scripts/kolme/run_version_compatibility_replay_deep_lane.sh|scripts/kolme/run_runtime_commit_contract_lane.sh|scripts/kolme/test_validate_version_compatibility.sh|scripts/kolme/test_run_version_compatibility_contract_lane.sh|scripts/kolme/test_run_runtime_commit_contract_lane.sh|fixtures/kolme_compatibility/version_compatibility_cases.json|fixtures/kolme_commit/runtime_commit_request_cases.txt|crates/kamn-core/src/kolme_runtime_commit.rs|crates/kamn-core/tests/kolme_runtime_commit_client.rs|crates/kamn-core/tests/kolme_integration_roadmap_docs.rs)
       KOLME_VERSION_COMPATIBILITY_CONTRACT_CHANGED=true
       classified=true
       ;;
