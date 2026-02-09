@@ -33,7 +33,9 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario signature-mismatch`
   - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario timeout --timeout-seconds 1`
 - Localhost signed integration contract lane:
-  - `bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh`
+  - `bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json`
+- Localhost signed integration evidence policy checker:
+  - `bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-file /tmp/localhost-signed-integration-contract-report.json`
 
 ## Bridge Replay/Redaction Lane Matrix
 
@@ -60,6 +62,13 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `kamn.bridge.localhost-demo-evidence.v1`
 - Localhost signed integration contract schema:
   - `kamn.sdk.localhost-signed.integration-contract.v1`
+- Required localhost signed integration report fields:
+  - `status`
+  - `success_scenario_status`
+  - `signature_mismatch_scenario_status`
+  - `timeout_scenario_status`
+  - `signature_mismatch_reason_code`
+  - `timeout_reason_code`
 - Required smoke report fields:
   - `status`
   - `final_decision`
@@ -109,5 +118,7 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - localhost signed integration harness detects signature mismatch and timeout reason codes (`Regression: #876`).
 - Regression guard:
   - localhost signed integration contract lane preserves signature-mismatch/timeout reason codes in report schema (`Regression: #878`).
+- Regression guard:
+  - localhost signed integration policy checker preserves schema and reason-code contracts (`Regression: #880`).
 - Regression guard:
   - dashboard runtime fallback contract remains pinned to `node@22` with local reproduction guidance (`Regression: #868`).

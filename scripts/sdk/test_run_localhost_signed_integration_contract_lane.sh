@@ -20,6 +20,7 @@ required_markers=(
   "localhost_signed_integration_success=pass"
   "localhost_signed_integration_signature_mismatch=pass"
   "localhost_signed_integration_timeout=pass"
+  "localhost_signed_integration_policy=ok"
   "localhost signed integration contract lane tests passed."
 )
 
@@ -45,5 +46,10 @@ assert report["timeout_scenario_status"] == "pass"
 assert report["signature_mismatch_reason_code"] == "signature_mismatch_detected"
 assert report["timeout_reason_code"] == "listener_timeout_detected"
 PY
+
+if ! grep -Fq "check_localhost_signed_integration_evidence_policy.sh" "$LANE_SCRIPT"; then
+  echo "expected localhost signed integration contract lane to enforce evidence policy checker" >&2
+  exit 1
+fi
 
 echo "localhost signed integration contract lane script tests passed."
