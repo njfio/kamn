@@ -58,6 +58,9 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 - Deployment SLO/rollback command changes map to deploy scope:
   - `run_deploy_preflight_tests=true`
   - `test_scope=deploy`
+- Post-cutover SLO/alert evidence command changes map to canary scope:
+  - `run_launch_canary_contract_tests=true`
+  - `test_scope=canary-contract`
 
 Required demo lane command contract:
 
@@ -66,6 +69,7 @@ Required demo lane command contract:
 - `bash scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh --output-file /tmp/dashboard-stale-error-contract-report.json`
 - `bash scripts/frontend/run_dashboard_shell_determinism_matrix_contract_lane.sh --output-file /tmp/dashboard-shell-matrix-contract-report.json`
 - `bash scripts/deploy/run_deployment_slo_rollback_contract_lane.sh --output-file /tmp/deployment-slo-rollback-contract-report.json`
+- `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
 
 Regression policy:
 
@@ -75,6 +79,7 @@ Regression policy:
 - frontend shell matrix selector/docs parity remains fail-closed (`Regression: #943`).
 - dashboard backend session/auth freshness selector/docs parity remains fail-closed (`Regression: #941`).
 - deployment slo/rollback selector/docs parity remains fail-closed (`Regression: #944`).
+- post-cutover slo/alert selector/docs parity remains fail-closed (`Regression: #913`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:

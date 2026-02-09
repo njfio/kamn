@@ -24,6 +24,16 @@ if ! grep -q "post-cutover SLO contract lane tests passed." "$tmp_out"; then
   exit 1
 fi
 
+if ! grep -q "alerts.alert_keys mismatch" "$FAST_SCRIPT"; then
+  echo "expected post-cutover SLO fast-lane script to enforce alert-key drift failures" >&2
+  exit 1
+fi
+
+if ! grep -q "KAMN_POST_CUTOVER_SLO_MAX_SECONDS" "$FAST_SCRIPT"; then
+  echo "expected post-cutover SLO fast-lane script to enforce runtime budget env guard" >&2
+  exit 1
+fi
+
 if ! grep -Fq "run_post_cutover_slo_contract_lane.sh" "$DEEP_SCRIPT"; then
   echo "expected SLO deep-lane script to execute fast-lane checks first" >&2
   exit 1
@@ -31,6 +41,16 @@ fi
 
 if ! grep -q "final_decision=NO-GO" "$DEEP_SCRIPT"; then
   echo "expected SLO deep-lane script to validate NO-GO decision path" >&2
+  exit 1
+fi
+
+if ! grep -q "slo_alert_reason_codes:NO-GO:v1" "$DEEP_SCRIPT"; then
+  echo "expected SLO deep-lane script to enforce NO-GO reason-key marker" >&2
+  exit 1
+fi
+
+if ! grep -q "KAMN_POST_CUTOVER_SLO_DEEP_MAX_SECONDS" "$DEEP_SCRIPT"; then
+  echo "expected SLO deep-lane script to enforce deep runtime budget env guard" >&2
   exit 1
 fi
 

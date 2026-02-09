@@ -184,9 +184,46 @@ if ci_fast_gate != "PASS":
     decision_reasons.append("ci-fast-gate-failed")
 
 final_decision = "GO" if not decision_reasons else "NO-GO"
+reason_key = f"slo_alert_reason_codes:{final_decision}:v1"
+
+reason_to_alert_key = {
+    "p95-latency-threshold-exceeded": "slo.latency.p95.threshold_exceeded",
+    "error-rate-threshold-exceeded": "slo.error_rate.threshold_exceeded",
+    "delivery-success-threshold-breached": "slo.delivery_success.threshold_breached",
+    "stale-snapshot-evidence": "slo.snapshot_age.stale",
+    "incomplete-slo-evidence": "slo.evidence.incomplete",
+    "ci-fast-gate-failed": "slo.ci_fast_gate.failed",
+}
+reason_to_severity = {
+    "p95-latency-threshold-exceeded": "CRITICAL",
+    "error-rate-threshold-exceeded": "CRITICAL",
+    "delivery-success-threshold-breached": "CRITICAL",
+    "stale-snapshot-evidence": "CRITICAL",
+    "incomplete-slo-evidence": "WARNING",
+    "ci-fast-gate-failed": "WARNING",
+}
+
+alert_keys: list[str] = []
+critical_alerts = 0
+warning_alerts = 0
+for reason in decision_reasons:
+    alert_key = reason_to_alert_key[reason]
+    alert_keys.append(alert_key)
+    severity = reason_to_severity[reason]
+    if severity == "CRITICAL":
+        critical_alerts += 1
+    else:
+        warning_alerts += 1
+
+highest_severity = "NONE"
+if critical_alerts > 0:
+    highest_severity = "CRITICAL"
+elif warning_alerts > 0:
+    highest_severity = "WARNING"
 
 payload = {
     "schema_version": "kamn.launch-slo.evidence.v1",
+    "reason_key": reason_key,
     "generated_at": datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "window_minutes": window_minutes,
     "metrics": {
@@ -202,12 +239,21 @@ payload = {
         "ci_fast_gate": ci_fast_gate,
     },
     "decision_reasons": decision_reasons,
+    "alerts": {
+        "total_alerts": len(alert_keys),
+        "critical_alerts": critical_alerts,
+        "warning_alerts": warning_alerts,
+        "has_alerts": len(alert_keys) > 0,
+        "highest_severity": highest_severity,
+        "alert_keys": alert_keys,
+    },
     "final_decision": final_decision,
 }
 output_file.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 print("status=generated")
 print(f"bundle_file={output_file}")
 print(f"final_decision={final_decision}")
+print(f"reason_key={reason_key}")
 print(f"snapshot_age_seconds={snapshot_age_seconds}")
 print(f"max_snapshot_age_seconds={max_snapshot_age_seconds}")
 PY

@@ -62,10 +62,12 @@ except json.JSONDecodeError as exc:
 
 required_fields = (
     "schema_version",
+    "reason_key",
     "generated_at",
     "window_minutes",
     "metrics",
     "decision_reasons",
+    "alerts",
     "final_decision",
 )
 for field in required_fields:
@@ -137,6 +139,15 @@ if not metrics["evidence_complete"]:
 if metrics["ci_fast_gate"] != "PASS":
     decision_reasons.append("ci-fast-gate-failed")
 
+actual_reasons = payload["decision_reasons"]
+if not isinstance(actual_reasons, list) or any(not isinstance(item, str) for item in actual_reasons):
+    fail("decision_reasons must be an array of strings")
+if actual_reasons != decision_reasons:
+    fail(
+        "decision_reasons mismatch: "
+        f"expected {decision_reasons}, found {actual_reasons}"
+    )
+
 expected_decision = "GO" if not decision_reasons else "NO-GO"
 actual_decision = payload["final_decision"]
 if actual_decision not in {"GO", "NO-GO"}:
@@ -149,9 +160,107 @@ if actual_decision != expected_decision:
         f"expected final_decision={expected_decision}, found {actual_decision}; reasons={reasons}"
     )
 
+expected_reason_key = f"slo_alert_reason_codes:{expected_decision}:v1"
+actual_reason_key = payload["reason_key"]
+if actual_reason_key != expected_reason_key:
+    fail(
+        "reason_key mismatch: "
+        f"expected {expected_reason_key}, found {actual_reason_key}"
+    )
+
+alerts = payload["alerts"]
+if not isinstance(alerts, dict):
+    fail("bundle field 'alerts' must be an object")
+for field in (
+    "total_alerts",
+    "critical_alerts",
+    "warning_alerts",
+    "has_alerts",
+    "highest_severity",
+    "alert_keys",
+):
+    if field not in alerts:
+        fail(f"missing alerts field: {field}")
+
+for field in ("total_alerts", "critical_alerts", "warning_alerts"):
+    if not isinstance(alerts[field], int):
+        fail(f"alerts.{field} must be an integer")
+if not isinstance(alerts["has_alerts"], bool):
+    fail("alerts.has_alerts must be a boolean")
+if alerts["highest_severity"] not in {"NONE", "WARNING", "CRITICAL"}:
+    fail("alerts.highest_severity must be NONE, WARNING, or CRITICAL")
+if not isinstance(alerts["alert_keys"], list) or any(
+    not isinstance(item, str) for item in alerts["alert_keys"]
+):
+    fail("alerts.alert_keys must be an array of strings")
+
+reason_to_alert_key = {
+    "p95-latency-threshold-exceeded": "slo.latency.p95.threshold_exceeded",
+    "error-rate-threshold-exceeded": "slo.error_rate.threshold_exceeded",
+    "delivery-success-threshold-breached": "slo.delivery_success.threshold_breached",
+    "stale-snapshot-evidence": "slo.snapshot_age.stale",
+    "incomplete-slo-evidence": "slo.evidence.incomplete",
+    "ci-fast-gate-failed": "slo.ci_fast_gate.failed",
+}
+reason_to_severity = {
+    "p95-latency-threshold-exceeded": "CRITICAL",
+    "error-rate-threshold-exceeded": "CRITICAL",
+    "delivery-success-threshold-breached": "CRITICAL",
+    "stale-snapshot-evidence": "CRITICAL",
+    "incomplete-slo-evidence": "WARNING",
+    "ci-fast-gate-failed": "WARNING",
+}
+expected_alert_keys = [reason_to_alert_key[reason] for reason in decision_reasons]
+if alerts["alert_keys"] != expected_alert_keys:
+    fail(
+        "alerts.alert_keys mismatch: "
+        f"expected {expected_alert_keys}, found {alerts['alert_keys']}"
+    )
+
+expected_critical = sum(
+    1 for reason in decision_reasons if reason_to_severity[reason] == "CRITICAL"
+)
+expected_warning = sum(
+    1 for reason in decision_reasons if reason_to_severity[reason] == "WARNING"
+)
+expected_total = len(expected_alert_keys)
+expected_has_alerts = expected_total > 0
+expected_highest = "NONE"
+if expected_critical > 0:
+    expected_highest = "CRITICAL"
+elif expected_warning > 0:
+    expected_highest = "WARNING"
+
+if alerts["critical_alerts"] != expected_critical:
+    fail(
+        "alerts.critical_alerts mismatch: "
+        f"expected {expected_critical}, found {alerts['critical_alerts']}"
+    )
+if alerts["warning_alerts"] != expected_warning:
+    fail(
+        "alerts.warning_alerts mismatch: "
+        f"expected {expected_warning}, found {alerts['warning_alerts']}"
+    )
+if alerts["total_alerts"] != expected_total:
+    fail(
+        "alerts.total_alerts mismatch: "
+        f"expected {expected_total}, found {alerts['total_alerts']}"
+    )
+if alerts["has_alerts"] != expected_has_alerts:
+    fail(
+        "alerts.has_alerts mismatch: "
+        f"expected {expected_has_alerts}, found {alerts['has_alerts']}"
+    )
+if alerts["highest_severity"] != expected_highest:
+    fail(
+        "alerts.highest_severity mismatch: "
+        f"expected {expected_highest}, found {alerts['highest_severity']}"
+    )
+
 print("status=ok")
 print(f"bundle_file={bundle_path}")
 print(f"final_decision={actual_decision}")
+print(f"reason_key={actual_reason_key}")
 print(f"snapshot_age_seconds={metrics['snapshot_age_seconds']}")
 print(f"max_snapshot_age_seconds={metrics['max_snapshot_age_seconds']}")
 PY
