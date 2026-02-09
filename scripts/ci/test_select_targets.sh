@@ -534,6 +534,24 @@ assert_eq "$(extract_output "$dashboard_backend_session_contract_output" "run_fr
 assert_eq "$(extract_output "$dashboard_backend_session_contract_output" "run_dashboard_contract_tests")" "true" "dashboard backend session/auth freshness contract lane changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_backend_session_contract_output" "test_scope")" "frontend-contract" "dashboard backend session/auth freshness contract lane changes should set frontend-contract scope"
 
+dashboard_stale_error_lane_output="$(run_selector $'scripts/dashboard/run_dashboard_stale_error_budget_lane.sh')"
+assert_eq "$(extract_output "$dashboard_stale_error_lane_output" "run_rust")" "false" "dashboard stale/error budget lane changes should avoid rust lane"
+assert_eq "$(extract_output "$dashboard_stale_error_lane_output" "run_frontend_dashboard_tests")" "false" "dashboard stale/error budget lane changes should skip frontend dashboard tests"
+assert_eq "$(extract_output "$dashboard_stale_error_lane_output" "run_dashboard_contract_tests")" "true" "dashboard stale/error budget lane changes must run dashboard contract lane"
+assert_eq "$(extract_output "$dashboard_stale_error_lane_output" "test_scope")" "frontend-contract" "dashboard stale/error budget lane changes should set frontend-contract scope"
+
+dashboard_stale_error_policy_output="$(run_selector $'scripts/dashboard/check_dashboard_stale_error_budget_policy.sh')"
+assert_eq "$(extract_output "$dashboard_stale_error_policy_output" "run_rust")" "false" "dashboard stale/error budget policy checker changes should avoid rust lane"
+assert_eq "$(extract_output "$dashboard_stale_error_policy_output" "run_frontend_dashboard_tests")" "false" "dashboard stale/error budget policy checker changes should skip frontend dashboard tests"
+assert_eq "$(extract_output "$dashboard_stale_error_policy_output" "run_dashboard_contract_tests")" "true" "dashboard stale/error budget policy checker changes must run dashboard contract lane"
+assert_eq "$(extract_output "$dashboard_stale_error_policy_output" "test_scope")" "frontend-contract" "dashboard stale/error budget policy checker changes should set frontend-contract scope"
+
+dashboard_stale_error_contract_output="$(run_selector $'scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh')"
+assert_eq "$(extract_output "$dashboard_stale_error_contract_output" "run_rust")" "false" "dashboard stale/error budget contract lane changes should avoid rust lane"
+assert_eq "$(extract_output "$dashboard_stale_error_contract_output" "run_frontend_dashboard_tests")" "false" "dashboard stale/error budget contract lane changes should skip frontend dashboard tests"
+assert_eq "$(extract_output "$dashboard_stale_error_contract_output" "run_dashboard_contract_tests")" "true" "dashboard stale/error budget contract lane changes must run dashboard contract lane"
+assert_eq "$(extract_output "$dashboard_stale_error_contract_output" "test_scope")" "frontend-contract" "dashboard stale/error budget contract lane changes should set frontend-contract scope"
+
 signer_contract_output="$(run_selector $'docs/foundation/signer-backend-abstraction.md')"
 assert_eq "$(extract_output "$signer_contract_output" "run_rust")" "false" "signer contract docs should avoid rust lane"
 assert_eq "$(extract_output "$signer_contract_output" "run_signer_emulator_contract_tests")" "true" "signer contract docs must run signer emulator contract lane"
@@ -1049,6 +1067,7 @@ assert_eq "$(extract_output "$canary_contract_fixture_output" "test_scope")" "ca
 canary_observability_docs_output="$(run_selector $'docs/foundation/observability-slo-dashboards.md')"
 assert_eq "$(extract_output "$canary_observability_docs_output" "run_rust")" "false" "observability SLO docs should avoid rust lane"
 assert_eq "$(extract_output "$canary_observability_docs_output" "run_launch_canary_contract_tests")" "true" "observability SLO docs must run launch canary lane"
+assert_eq "$(extract_output "$canary_observability_docs_output" "run_dashboard_contract_tests")" "true" "observability SLO docs must run dashboard contract lane"
 assert_eq "$(extract_output "$canary_observability_docs_output" "test_scope")" "frontend" "observability SLO docs should preserve frontend scope while enabling canary lane"
 
 escrow_rust_output="$(run_selector $'crates/kamn-core/src/escrow.rs')"

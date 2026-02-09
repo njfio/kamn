@@ -49,6 +49,9 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 - Dashboard backend session/auth freshness command changes map to dashboard contract scope:
   - `run_dashboard_contract_tests=true`
   - `test_scope=frontend-contract`
+- Dashboard stale/error budget command changes map to dashboard contract scope:
+  - `run_dashboard_contract_tests=true`
+  - `test_scope=frontend-contract`
 - Frontend shell matrix command changes map to frontend scope:
   - `run_frontend_dashboard_tests=true`
   - `test_scope=frontend`
@@ -60,6 +63,7 @@ Required demo lane command contract:
 
 - `bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json`
 - `bash scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh --output-file /tmp/dashboard-backend-session-auth-freshness-contract-report.json`
+- `bash scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh --output-file /tmp/dashboard-stale-error-contract-report.json`
 - `bash scripts/frontend/run_dashboard_shell_determinism_matrix_contract_lane.sh --output-file /tmp/dashboard-shell-matrix-contract-report.json`
 - `bash scripts/deploy/run_deployment_slo_rollback_contract_lane.sh --output-file /tmp/deployment-slo-rollback-contract-report.json`
 
@@ -67,6 +71,7 @@ Regression policy:
 
 - make-target and selector workflow drift remains fail-closed (`Regression: #900`).
 - command-surface parity drift remains fail-closed (`Regression: #939`).
+- dashboard stale/error selector/docs parity remains fail-closed (`Regression: #942`).
 - frontend shell matrix selector/docs parity remains fail-closed (`Regression: #943`).
 - dashboard backend session/auth freshness selector/docs parity remains fail-closed (`Regression: #941`).
 - deployment slo/rollback selector/docs parity remains fail-closed (`Regression: #944`).

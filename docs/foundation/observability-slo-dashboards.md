@@ -53,6 +53,29 @@ Launch expansion decisions require deterministic SLO evidence export and fail-cl
 - Regression policy:
   - stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`).
 
+## Dashboard Stale/Error Budget Policy Checker Contract
+Deterministic stale-data and error-budget policy checks are enforced through a bounded dashboard evidence lane:
+
+- Lane command:
+  - `bash scripts/dashboard/run_dashboard_stale_error_budget_lane.sh --output-json /tmp/dashboard-stale-error-report.json`
+- Policy checker command:
+  - `bash scripts/dashboard/check_dashboard_stale_error_budget_policy.sh --report-file /tmp/dashboard-stale-error-report.json`
+- Contract lane command:
+  - `bash scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh --output-file /tmp/dashboard-stale-error-contract-report.json`
+
+Runtime budget controls:
+
+- `KAMN_DASHBOARD_STALE_ERROR_MAX_SECONDS`
+- `KAMN_DASHBOARD_STALE_ERROR_CONTRACT_MAX_SECONDS`
+
+Required schema/reason markers:
+
+- `kamn.dashboard.stale-error-budget-report.v1`
+- `dashboard_stale_error_budget_reason_codes:GO:v1`
+- `dashboard_stale_error_budget_reason_codes:NO-GO:v1`
+
+The lane fails closed: stale threshold drift, error-budget threshold drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #942`).
+
 ## Moderation and Recovery Observability Hooks (Issue #924)
 Reputation moderation actions publish deterministic quarantine/recovery evidence so operator dashboards can audit why signals were held or penalties reversed.
 
