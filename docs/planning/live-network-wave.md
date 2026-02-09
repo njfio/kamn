@@ -28,6 +28,10 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `bash scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh --summary-file /tmp/live-network-pilot-report.json`
 - Localhost signed sender/listener transport demo:
   - `bash scripts/sdk/run_localhost_signed_demo.sh`
+- Localhost signed integration harness scenarios:
+  - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario success`
+  - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario signature-mismatch`
+  - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario timeout --timeout-seconds 1`
 
 ## Bridge Replay/Redaction Lane Matrix
 
@@ -95,5 +99,7 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - budget overflow remains fail-closed with explicit reason code `runtime_budget_exceeded` (`Regression: #828`).
 - Regression guard:
   - tampered pilot summary `final_decision` is rejected by policy checker (`Regression: #829`).
+- Regression guard:
+  - localhost signed integration harness detects signature mismatch and timeout reason codes (`Regression: #876`).
 - Regression guard:
   - dashboard runtime fallback contract remains pinned to `node@22` with local reproduction guidance (`Regression: #868`).

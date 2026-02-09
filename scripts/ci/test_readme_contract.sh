@@ -36,6 +36,7 @@ required_snippets=(
   "run_localhost_signed_demo.sh"
   "run_localhost_signed_demo.sh --help"
   "--timeout-seconds"
+  "run_localhost_signed_integration_harness.sh --scenario signature-mismatch"
   "run_localhost_bridge_demo_evidence_contract_lane.sh"
   "run_localhost_bridge_demo_evidence_deep_lane.sh"
   "kamn.bridge.localhost-demo-evidence.v1"
