@@ -113,6 +113,16 @@ fn checklist_contains_federated_delegation_settlement_evidence_contract() {
 }
 
 #[test]
+fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
+    assert!(CHECKLIST.contains("## Kolme Version Compatibility Replay Evidence Contract"));
+    assert!(CHECKLIST.contains("validate_version_compatibility.py"));
+    assert!(CHECKLIST.contains("run_version_compatibility_replay.py"));
+    assert!(CHECKLIST.contains("run_version_compatibility_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_version_compatibility_replay_deep_lane.sh"));
+    assert!(CHECKLIST.contains("fixtures/kolme_compatibility/version_compatibility_cases.json"));
+}
+
+#[test]
 fn checklist_contains_governance_simulation_and_human_veto_evidence_contract() {
     assert!(CHECKLIST.contains("## Governance Simulation and Human-Veto Evidence Contract"));
     assert!(CHECKLIST.contains("generate_governance_simulation_evidence_bundle.sh"));
@@ -259,6 +269,14 @@ fn regression_requires_federated_delegation_settlement_evidence_guard_marker() {
     // Regression: #734
     assert!(CHECKLIST.contains(
         "settlement reference drift, replay attempts, quorum shortfalls, and tampered final decisions force `NO-GO` (`Regression: #734`)."
+    ));
+}
+
+#[test]
+fn regression_requires_kolme_incompatible_upgrade_signature_guard_marker() {
+    // Regression: #775
+    assert!(CHECKLIST.contains(
+        "incompatible upgrade signature (`kamn 1.2.x` + `kolme 0.14.x`) remains blocked (`Regression: #775`)."
     ));
 }
 
