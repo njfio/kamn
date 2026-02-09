@@ -188,6 +188,20 @@ Runtime failover and sync readiness requires deterministic lane routing, budget 
   - preflight runtime budget overruns force lane failure (`Regression: #788`).
   - unscheduled deep-lane execution force-fails via scheduled-only cadence guard (`Regression: #788`).
 
+## Live-Network Pilot Launch and Rollback Evidence Gates (Issue #830)
+Pilot launch gates require deterministic smoke and scheduled/manual deep-lane evidence before release approval.
+
+- PR-fast smoke evidence:
+  - `bash scripts/runtime/run_live_network_smoke_lane.sh --output-json /tmp/live-network-smoke-report.json`
+- Scheduled/manual deep evidence:
+  - `bash scripts/runtime/run_live_network_pilot_deep_lane.sh --event-name schedule --output-json /tmp/live-network-pilot-report.json`
+- Deep summary policy checker:
+  - `bash scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh --summary-file /tmp/live-network-pilot-report.json`
+- Contract lane:
+  - `bash scripts/runtime/run_live_network_pilot_deep_contract_lane.sh`
+- Regression policy:
+  - missing smoke/deep pilot evidence or non-`GO` pilot decisions force launch `NO-GO` and trigger rollback review (`Regression: #830`).
+
 ## Governance Simulation and Human-Veto Evidence Contract (Issue #748)
 Governance activation requires deterministic simulation, veto, timelock, and approval evidence before GO decisions.
 
