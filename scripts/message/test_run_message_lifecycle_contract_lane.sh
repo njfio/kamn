@@ -24,6 +24,11 @@ if ! grep -q "message lifecycle snapshot contract lane tests passed." "$TMP_OUT"
   exit 1
 fi
 
+if ! grep -Fq "run_key_hierarchy_invariant_contract_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected message lifecycle lane to execute key hierarchy invariant lane checks" >&2
+  exit 1
+fi
+
 if ! grep -Fq "run_message_lifecycle_contract_lane.sh" "$DEEP_SCRIPT"; then
   echo "expected deep-lane script to execute message lifecycle fast-lane checks first" >&2
   exit 1

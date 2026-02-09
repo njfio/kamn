@@ -303,7 +303,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/message-lifecycle.md|crates/kamn-core/tests/message_lifecycle_docs.rs|scripts/message/*)
+    docs/foundation/message-lifecycle.md|docs/foundation/key-management-and-encryption.md|crates/kamn-core/tests/message_lifecycle_docs.rs|crates/kamn-core/tests/key_management_and_encryption_docs.rs|scripts/message/*)
       MESSAGE_LIFECYCLE_CONTRACT_CHANGED=true
       classified=true
       ;;
