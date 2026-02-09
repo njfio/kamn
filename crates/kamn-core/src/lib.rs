@@ -1,63 +1,131 @@
+//! Core KAMN domain, protocol, and contract surfaces.
+//!
+//! This crate exports the public interfaces used by node, SDK, and contract-lane
+//! tooling. Missing-docs lint is enabled in phased mode: legacy exports are
+//! explicitly allow-listed while new public surfaces should carry docs by default.
+#![warn(missing_docs)]
+
+#[allow(missing_docs)]
 pub mod agent_key_hierarchy;
+#[allow(missing_docs)]
 pub mod agent_upgrade_workflow;
+#[allow(missing_docs)]
 pub mod anti_spam;
+#[allow(missing_docs)]
 pub mod audit_exports;
+#[allow(missing_docs)]
 pub mod bootstrap;
+#[allow(missing_docs)]
 pub mod bridge_adapter;
+#[allow(missing_docs)]
 pub mod channel_models;
+#[allow(missing_docs)]
 pub mod channel_policies;
+#[allow(missing_docs)]
 pub mod config;
+#[allow(missing_docs)]
 pub mod content_lifecycle;
+#[allow(missing_docs)]
 pub mod content_replication;
+#[allow(missing_docs)]
 pub mod content_retrieval;
+#[allow(missing_docs)]
 pub mod content_storage;
+#[allow(missing_docs)]
 pub mod cross_chain_bridge;
+#[allow(missing_docs)]
 pub mod cross_chain_receipt;
+#[allow(missing_docs)]
 pub mod data_classification;
+#[allow(missing_docs)]
 pub mod did;
+#[allow(missing_docs)]
 pub mod did_registry;
+#[allow(missing_docs)]
 pub mod direct_message_crypto;
+#[allow(missing_docs)]
 pub mod discord_bridge;
+#[allow(missing_docs)]
 pub mod durable_guard_store;
+#[allow(missing_docs)]
 pub mod escrow;
+#[allow(missing_docs)]
 pub mod governance_workflow;
+#[allow(missing_docs)]
 pub mod group_channel_crypto;
+#[allow(missing_docs)]
 pub mod instruction_verify;
+#[allow(missing_docs)]
 pub mod invariants;
+#[allow(missing_docs)]
 pub mod key_lifecycle;
+#[allow(missing_docs)]
 pub mod key_recovery;
+#[allow(missing_docs)]
 pub mod message_delivery_guards;
+#[allow(missing_docs)]
 pub mod message_envelope;
+#[allow(missing_docs)]
 pub mod message_lifecycle;
+#[allow(missing_docs)]
 pub mod migrations;
+#[allow(missing_docs)]
 pub mod namespaces;
+#[allow(missing_docs)]
 pub mod observability;
+#[allow(missing_docs)]
 pub mod operator_actions;
+#[allow(missing_docs)]
 pub mod operator_binding;
+#[allow(missing_docs)]
 pub mod operator_dashboard_api;
+#[allow(missing_docs)]
 pub mod operator_dashboard_ui;
+#[allow(missing_docs)]
 pub mod performance_targets;
+#[allow(missing_docs)]
 pub mod redaction_compliance;
+#[allow(missing_docs)]
 pub mod reputation_signals;
+#[allow(missing_docs)]
 pub mod reputation_state;
+#[allow(missing_docs)]
 pub mod retention_engine;
+#[allow(missing_docs)]
 pub mod runtime;
+#[allow(missing_docs)]
 pub mod service_marketplace;
+#[allow(missing_docs)]
 pub mod signature_profile;
+#[allow(missing_docs)]
 pub mod signer_backend;
+#[allow(missing_docs)]
 pub mod smoke;
+#[allow(missing_docs)]
 pub mod state;
+#[allow(missing_docs)]
 pub mod task_artifacts;
+#[allow(missing_docs)]
 pub mod task_lifecycle;
+#[allow(missing_docs)]
 pub mod task_operations;
+#[allow(missing_docs)]
 pub mod task_payment;
+#[allow(missing_docs)]
 pub mod telegram_bridge;
+#[allow(missing_docs)]
 pub mod token;
+#[allow(missing_docs)]
 pub mod transaction;
+#[allow(missing_docs)]
 pub mod trust_score;
+#[allow(missing_docs)]
 pub mod upgrade_orchestration;
+#[allow(missing_docs)]
 pub mod validator_lifecycle;
+#[allow(missing_docs)]
 pub mod watchdog;
+#[allow(missing_docs)]
 pub mod zk_message_proofs;
 
 pub use agent_key_hierarchy::{
