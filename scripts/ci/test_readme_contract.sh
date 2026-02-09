@@ -36,6 +36,9 @@ required_snippets=(
   "run_localhost_bridge_demo_evidence_deep_lane.sh"
   "kamn.bridge.localhost-demo-evidence.v1"
   "Node.js 22"
+  "bash scripts/frontend/test_dashboard_package_runtime_compat.sh"
+  "KAMN_DASHBOARD_NODE_BIN"
+  "KAMN_DASHBOARD_FALLBACK_NODE_CMD"
   "AGENTS.md"
   "PRD.md"
 )

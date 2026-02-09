@@ -20,6 +20,24 @@ KAMN (Kolme AI Agent Messaging Network) is a privacy-first, auditable coordinati
 - Node.js/npm (only needed for dashboard/TypeScript lanes)
 - Dashboard package lane auto-falls back to `npx -y node@22` when local Node lacks `--experimental-strip-types`
 
+### Dashboard Runtime Compatibility (CI + Local)
+
+```bash
+# Runtime compatibility regression contract
+bash scripts/frontend/test_dashboard_package_runtime_compat.sh
+
+# Frontend/backend dashboard contract lane
+bash scripts/frontend/test_dashboard_contract_lane.sh
+```
+
+For hosts where the default `node` binary does not support `--experimental-strip-types`, run:
+
+```bash
+KAMN_DASHBOARD_NODE_BIN=node \
+KAMN_DASHBOARD_FALLBACK_NODE_CMD="npx -y node@22" \
+bash scripts/frontend/test_dashboard_package.sh
+```
+
 ### Validate Local Environment
 
 ```bash
