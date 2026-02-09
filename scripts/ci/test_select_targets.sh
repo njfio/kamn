@@ -1135,6 +1135,7 @@ assert_eq "$(extract_output "$token_framework_script_output" "run_token_launch_c
 assert_eq "$(extract_output "$token_framework_script_output" "run_treasury_disbursement_contract_tests")" "true" "contract framework changes must also run treasury disbursement contract lane"
 assert_eq "$(extract_output "$token_framework_script_output" "run_launch_canary_contract_tests")" "true" "contract framework changes must also run launch canary contract lane"
 assert_eq "$(extract_output "$token_framework_script_output" "run_settlement_reconciliation_contract_tests")" "true" "contract framework changes must also run settlement reconciliation contract lane"
+assert_eq "$(extract_output "$token_framework_script_output" "run_mainnet_cutover_contract_tests")" "true" "contract framework changes must also run mainnet cutover contract lane"
 assert_eq "$(extract_output "$token_framework_script_output" "test_scope")" "token-contract" "contract framework changes should set token-contract scope"
 
 token_contract_fixture_output="$(run_selector $'fixtures/token_launch/handoff_invariant_cases.json')"

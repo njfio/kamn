@@ -38,6 +38,11 @@ The validator enforces ordering, dependency, quorum, and approval evidence const
   - insufficient approval evidence rejection
 
 ## Cutover Rollback Evidence Contract (Issue #708)
+- Stable shell wrappers:
+  - `scripts/cutover/generate_cutover_rollback_evidence_bundle.sh`
+  - `scripts/cutover/check_cutover_rollback_evidence_policy.sh`
+- Shared Python implementation:
+  - `scripts/cutover/cutover_rollback_contract.py`
 - Evidence bundle generator:
   - `bash scripts/cutover/generate_cutover_rollback_evidence_bundle.sh --output-file /tmp/cutover-rollback.json --cutover-manifest-id cutover-mainnet-2026-02-09 --rollback-trigger-status CLEAR --checkpoint-state READY --failed-checkpoint-id '' --rollback-target-hash state-hash-abc --post-rollback-hash state-hash-abc --evidence-complete true --ci-fast-gate PASS`
 - Policy checker:

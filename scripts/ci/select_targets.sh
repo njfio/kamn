@@ -406,6 +406,7 @@ for file in "${CHANGED_FILES[@]}"; do
       TREASURY_DISBURSEMENT_CONTRACT_CHANGED=true
       LAUNCH_CANARY_CONTRACT_CHANGED=true
       ESCROW_CONTRACT_CHANGED=true
+      MAINNET_CUTOVER_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
