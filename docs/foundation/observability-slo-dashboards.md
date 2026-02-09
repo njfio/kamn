@@ -53,10 +53,24 @@ Launch expansion decisions require deterministic SLO evidence export and fail-cl
 - Regression policy:
   - stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`).
 
+## Moderation and Recovery Observability Hooks (Issue #924)
+Reputation moderation actions publish deterministic quarantine/recovery evidence so operator dashboards can audit why signals were held or penalties reversed.
+
+- Quarantine observability lane:
+  - `bash scripts/reputation/run_reputation_signal_quarantine_contract_lane.sh`
+  - emits deterministic `reason_key`, `reason_codes`, and `ingestion_action` fields.
+- Recovery observability lane:
+  - `bash scripts/reputation/run_reputation_recovery_contract_lane.sh`
+  - emits deterministic `reason_key`, `reason_codes`, and `recovery_action` fields.
+- Regression policy:
+  - quarantined stale/replayed signals and irreversible recovery reversals must remain visible through deterministic evidence keys (`Regression: #924`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
+bash scripts/reputation/test_run_reputation_signal_quarantine_contract_lane.sh
+bash scripts/reputation/test_run_reputation_recovery_contract_lane.sh
 bash scripts/canary/test_generate_post_cutover_slo_evidence_bundle.sh
 bash scripts/canary/test_run_post_cutover_slo_contract_lane.sh
 cargo test -p kamn-core --test observability_stack
