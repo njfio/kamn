@@ -61,6 +61,9 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 - Settlement evidence command changes map to escrow scope:
   - `run_settlement_reconciliation_contract_tests=true`
   - `test_scope=escrow-contract`
+- Bridge adapter dry-run conformance command changes map to bridge scope:
+  - `run_bridge_replay_harness=true`
+  - `test_scope=bridge`
 - Post-cutover SLO/alert evidence command changes map to canary scope:
   - `run_launch_canary_contract_tests=true`
   - `test_scope=canary-contract`
@@ -80,6 +83,7 @@ Required demo lane command contract:
 - `bash scripts/frontend/run_dashboard_shell_determinism_matrix_contract_lane.sh --output-file /tmp/dashboard-shell-matrix-contract-report.json`
 - `bash scripts/deploy/run_deployment_slo_rollback_contract_lane.sh --output-file /tmp/deployment-slo-rollback-contract-report.json`
 - `bash scripts/escrow/run_settlement_reconciliation_contract_lane.sh`
+- `bash scripts/bridge/run_bridge_adapter_conformance_contract_lane.sh --output-json /tmp/bridge-adapter-conformance-contract-report.json`
 - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
 - `bash scripts/compliance/run_classification_redaction_contract_lane.sh --output-file /tmp/classification-redaction-contract-report.json`
 - `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
@@ -94,6 +98,7 @@ Regression policy:
 - dashboard backend session/auth freshness selector/docs parity remains fail-closed (`Regression: #941`).
 - deployment slo/rollback selector/docs parity remains fail-closed (`Regression: #944`).
 - settlement evidence selector/docs parity remains fail-closed (`Regression: #906`).
+- bridge adapter conformance selector/docs parity remains fail-closed (`Regression: #907`).
 - post-cutover slo/alert selector/docs parity remains fail-closed (`Regression: #913`).
 - classification/redaction compliance selector/docs parity remains fail-closed (`Regression: #914`).
 - governance lifecycle/rollback selector/docs parity remains fail-closed (`Regression: #910`).

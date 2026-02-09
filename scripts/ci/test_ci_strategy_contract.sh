@@ -31,12 +31,15 @@ required_snippets=(
   "test_scope=deploy"
   "run_settlement_reconciliation_contract_tests=true"
   "test_scope=escrow-contract"
+  "run_bridge_replay_harness=true"
+  "test_scope=bridge"
   "run_localhost_signed_integration_contract_lane.sh"
   "run_backend_session_auth_freshness_contract_lane.sh"
   "run_dashboard_stale_error_budget_contract_lane.sh"
   "run_dashboard_shell_determinism_matrix_contract_lane.sh"
   "run_deployment_slo_rollback_contract_lane.sh"
   "run_settlement_reconciliation_contract_lane.sh"
+  "run_bridge_adapter_conformance_contract_lane.sh"
   "run_post_cutover_slo_contract_lane.sh"
   "run_classification_redaction_contract_lane.sh"
   "run_quorum_attestation_replay_contract_lane.sh"
@@ -51,6 +54,7 @@ required_snippets=(
   "Regression: #943"
   "Regression: #941"
   "Regression: #944"
+  "Regression: #907"
 )
 
 for snippet in "${required_snippets[@]}"; do

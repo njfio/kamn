@@ -478,6 +478,12 @@ assert_eq "$(extract_output "$bridge_outbound_fixture_output" "run_bridge_replay
 assert_eq "$(extract_output "$bridge_outbound_fixture_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge outbound fixture-only changes should select all bridge suites"
 assert_eq "$(extract_output "$bridge_outbound_fixture_output" "test_scope")" "bridge" "bridge outbound fixture-only changes should set bridge scope"
 
+bridge_conformance_fixture_output="$(run_selector $'fixtures/bridge_adapter_conformance/request_receipt_schema_cases.json')"
+assert_eq "$(extract_output "$bridge_conformance_fixture_output" "run_rust")" "false" "bridge conformance fixture-only changes should avoid rust lane"
+assert_eq "$(extract_output "$bridge_conformance_fixture_output" "run_bridge_replay_harness")" "true" "bridge conformance fixture-only changes must run bridge replay harness"
+assert_eq "$(extract_output "$bridge_conformance_fixture_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge conformance fixture-only changes should select all bridge suites"
+assert_eq "$(extract_output "$bridge_conformance_fixture_output" "test_scope")" "bridge" "bridge conformance fixture-only changes should set bridge scope"
+
 frontend_output="$(run_selector $'packages/kamn-dashboard/tests/dashboard.test.ts')"
 assert_eq "$(extract_output "$frontend_output" "run_rust")" "false" "frontend-only changes should avoid rust lane"
 assert_eq "$(extract_output "$frontend_output" "run_frontend_dashboard_tests")" "true" "frontend-only changes must run dashboard tests"
