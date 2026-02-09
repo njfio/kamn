@@ -25,6 +25,17 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
 }
 
 #[test]
+fn doc_contains_backend_session_auth_freshness_contract_lane() {
+    assert!(DOC.contains("## Backend Session/Auth Freshness Contract"));
+    assert!(DOC.contains("run_backend_session_auth_freshness_lane.sh"));
+    assert!(DOC.contains("check_backend_session_auth_freshness_policy.sh"));
+    assert!(DOC.contains("run_backend_session_auth_freshness_contract_lane.sh"));
+    assert!(DOC.contains("kamn.dashboard.backend-session-auth-freshness-report.v1"));
+    assert!(DOC.contains("KAMN_DASHBOARD_BACKEND_SESSION_MAX_SECONDS"));
+    assert!(DOC.contains("KAMN_DASHBOARD_BACKEND_SESSION_CONTRACT_MAX_SECONDS"));
+}
+
+#[test]
 fn regression_requires_tampered_cursor_rejection_rule() {
     // Regression: #203
     assert!(DOC.contains("Cursor tokens must match an existing key"));
@@ -45,4 +56,12 @@ fn regression_requires_live_session_authorization_contract_rules() {
     assert!(DOC.contains("expired sessions are rejected"));
     assert!(DOC.contains("Authorization: Bearer <token>"));
     assert!(DOC.contains("Regression: #640"));
+}
+
+#[test]
+fn regression_requires_backend_session_auth_freshness_fail_closed_rules() {
+    // Regression: #941
+    assert!(DOC.contains(
+        "missing session guards, freshness guard drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #941`)."
+    ));
 }

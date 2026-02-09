@@ -247,7 +247,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/operator-dashboard-backend-apis.md|docs/foundation/operator-dashboard-ui-mvp.md|crates/kamn-core/tests/operator_dashboard_api_docs.rs|crates/kamn-core/tests/operator_dashboard_ui_docs.rs)
+    docs/foundation/operator-dashboard-backend-apis.md|docs/foundation/operator-dashboard-ui-mvp.md|crates/kamn-core/tests/operator_dashboard_api_docs.rs|crates/kamn-core/tests/operator_dashboard_ui_docs.rs|scripts/dashboard/*)
       DASHBOARD_CONTRACT_CHANGED=true
       classified=true
       ;;
