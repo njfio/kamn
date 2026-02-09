@@ -63,6 +63,12 @@ bash scripts/ci/test_select_targets.sh
 bash scripts/sdk/run_local_e2e_demo.sh
 ```
 
+### Run Localhost Bridge Relay Demo Lane
+
+```bash
+bash scripts/bridge/run_localhost_bridge_relay_demo_contract_lane.sh
+```
+
 ### Run Live-Network Pilot Smoke Lane
 
 ```bash
