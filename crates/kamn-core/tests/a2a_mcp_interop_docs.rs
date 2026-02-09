@@ -40,3 +40,18 @@ fn regression_requires_ambiguous_mapping_manual_review_rule() {
     // Regression: #177
     assert!(INTEROP.contains("Ambiguous mapping decision: ManualReview."));
 }
+
+#[test]
+fn interop_spec_contains_a2a_mcp_conformance_harness_commands() {
+    assert!(INTEROP.contains("## A2A/MCP Conformance Harness Evidence Contract (Issue #893)"));
+    assert!(INTEROP.contains("run_a2a_mcp_conformance_harness.py"));
+    assert!(INTEROP.contains("check_a2a_mcp_conformance_policy.sh"));
+    assert!(INTEROP.contains("run_a2a_mcp_conformance_contract_lane.sh"));
+    assert!(INTEROP.contains("a2a_mcp_conformance_reason_codes:GO:v1"));
+}
+
+#[test]
+fn regression_requires_a2a_mcp_conformance_schema_drift_fail_closed_policy() {
+    // Regression: #893
+    assert!(INTEROP.contains("Regression: #893"));
+}

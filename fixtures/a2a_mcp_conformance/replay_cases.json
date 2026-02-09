@@ -1,0 +1,49 @@
+{
+  "schema_version": "kamn.a2a_mcp.conformance-fixture.v1",
+  "cases": [
+    {
+      "a2a_concept": "task.invoke",
+      "case_id": "request_task_invoke_tool_call",
+      "ci_fast_gate": "PASS",
+      "evidence_hash_verified": "PASS",
+      "expected_decision": "GO",
+      "kamn_envelope_header": "Request",
+      "kamn_task_state": "Submitted",
+      "lifecycle_mapping_valid": true,
+      "mcp_concept": "tool_call"
+    },
+    {
+      "a2a_concept": "task.result",
+      "case_id": "response_task_result_tool_result",
+      "ci_fast_gate": "PASS",
+      "evidence_hash_verified": "PASS",
+      "expected_decision": "GO",
+      "kamn_envelope_header": "Response",
+      "kamn_task_state": "Completed",
+      "lifecycle_mapping_valid": true,
+      "mcp_concept": "tool_result"
+    },
+    {
+      "a2a_concept": "event.notify",
+      "case_id": "event_notify_notification",
+      "ci_fast_gate": "PASS",
+      "evidence_hash_verified": "PASS",
+      "expected_decision": "GO",
+      "kamn_envelope_header": "Event",
+      "kamn_task_state": "InProgress",
+      "lifecycle_mapping_valid": true,
+      "mcp_concept": "notification"
+    },
+    {
+      "a2a_concept": "task.result",
+      "case_id": "request_with_mismatched_concept",
+      "ci_fast_gate": "PASS",
+      "evidence_hash_verified": "PASS",
+      "expected_decision": "NO-GO",
+      "kamn_envelope_header": "Request",
+      "kamn_task_state": "Submitted",
+      "lifecycle_mapping_valid": true,
+      "mcp_concept": "tool_result"
+    }
+  ]
+}

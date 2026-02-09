@@ -303,7 +303,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/message-lifecycle.md|docs/foundation/key-management-and-encryption.md|docs/foundation/group-sender-key-rotation.md|docs/foundation/didcomm-v2-compatibility-profile.md|crates/kamn-core/tests/message_lifecycle_docs.rs|crates/kamn-core/tests/key_management_and_encryption_docs.rs|crates/kamn-core/tests/group_sender_key_rotation_docs.rs|crates/kamn-core/tests/didcomm_compatibility_profile_docs.rs|scripts/message/*|fixtures/didcomm_envelope_compatibility/*)
+    docs/foundation/message-lifecycle.md|docs/foundation/key-management-and-encryption.md|docs/foundation/group-sender-key-rotation.md|docs/foundation/didcomm-v2-compatibility-profile.md|docs/foundation/a2a-mcp-interoperability.md|crates/kamn-core/tests/message_lifecycle_docs.rs|crates/kamn-core/tests/key_management_and_encryption_docs.rs|crates/kamn-core/tests/group_sender_key_rotation_docs.rs|crates/kamn-core/tests/didcomm_compatibility_profile_docs.rs|crates/kamn-core/tests/a2a_mcp_interop_docs.rs|scripts/message/*|fixtures/didcomm_envelope_compatibility/*|fixtures/a2a_mcp_conformance/*)
       MESSAGE_LIFECYCLE_CONTRACT_CHANGED=true
       classified=true
       ;;
