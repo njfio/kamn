@@ -33,6 +33,7 @@ append_summary() {
     echo "- Run signer emulator contract tests: ${RUN_SIGNER_EMULATOR_CONTRACT_TESTS}"
     echo "- Run DID registry contract tests: ${RUN_DID_REGISTRY_CONTRACT_TESTS}"
     echo "- Run federated DID handshake contract tests: ${RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS}"
+    echo "- Run Kolme snapshot drift contract tests: ${RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS}"
     echo "- Run federated delegation settlement contract tests: ${RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS}"
     echo "- Run runtime snapshot contract tests: ${RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS}"
     echo "- Run message lifecycle contract tests: ${RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS}"
@@ -149,6 +150,7 @@ DASHBOARD_CONTRACT_CHANGED=false
 SIGNER_EMULATOR_CONTRACT_CHANGED=false
 DID_REGISTRY_CONTRACT_CHANGED=false
 FEDERATED_DID_HANDSHAKE_CONTRACT_CHANGED=false
+KOLME_SNAPSHOT_DRIFT_CONTRACT_CHANGED=false
 FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_CHANGED=false
 RUNTIME_SNAPSHOT_CONTRACT_CHANGED=false
 MESSAGE_LIFECYCLE_CONTRACT_CHANGED=false
@@ -250,6 +252,13 @@ for file in "${CHANGED_FILES[@]}"; do
   case "$file" in
     docs/foundation/did-method.md|scripts/did/*federated_did_handshake*|fixtures/federated_did_handshake/*|crates/kamn-core/tests/did_method_docs.rs)
       FEDERATED_DID_HANDSHAKE_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
+    docs/research/kolme-upstream-compatibility.md|scripts/kolme/*|fixtures/kolme_compatibility/*)
+      KOLME_SNAPSHOT_DRIFT_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -458,6 +467,7 @@ RUN_DASHBOARD_CONTRACT_TESTS=false
 RUN_SIGNER_EMULATOR_CONTRACT_TESTS=false
 RUN_DID_REGISTRY_CONTRACT_TESTS=false
 RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS=false
+RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS=false
 RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS=false
 RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS=false
 RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS=false
@@ -566,6 +576,13 @@ if [ "$FEDERATED_DID_HANDSHAKE_CONTRACT_CHANGED" = true ]; then
   RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS=true
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
     TEST_SCOPE="federated-did-contract"
+  fi
+fi
+
+if [ "$KOLME_SNAPSHOT_DRIFT_CONTRACT_CHANGED" = true ]; then
+  RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="kolme-contract"
   fi
 fi
 
@@ -781,6 +798,7 @@ write_output "run_dashboard_contract_tests" "$RUN_DASHBOARD_CONTRACT_TESTS"
 write_output "run_signer_emulator_contract_tests" "$RUN_SIGNER_EMULATOR_CONTRACT_TESTS"
 write_output "run_did_registry_contract_tests" "$RUN_DID_REGISTRY_CONTRACT_TESTS"
 write_output "run_federated_did_handshake_contract_tests" "$RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS"
+write_output "run_kolme_snapshot_drift_contract_tests" "$RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS"
 write_output "run_federated_delegation_settlement_contract_tests" "$RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS"
 write_output "run_runtime_snapshot_contract_tests" "$RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS"
 write_output "run_message_lifecycle_contract_tests" "$RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS"

@@ -1,0 +1,31 @@
+{
+  "schema_version": "kamn.kolme.compatibility-snapshot.v1",
+  "kolme_repository": {
+    "owner": "fpco",
+    "repo": "kolme"
+  },
+  "upstream": {
+    "release_tag": "v0.14.2",
+    "commit_sha": "9c0ffee0a11ce00ffeed1234567890abcdef1234"
+  },
+  "docs_contracts": [
+    {
+      "path": "docs/src/SUMMARY.md",
+      "sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "path": "docs/src/sync-manager.md",
+      "sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    }
+  ],
+  "protocols": [
+    {
+      "name": "sync_manager",
+      "version": "1.8.0"
+    },
+    {
+      "name": "triadic_chain",
+      "version": "0.9.3"
+    }
+  ]
+}
