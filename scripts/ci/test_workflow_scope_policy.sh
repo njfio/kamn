@@ -185,6 +185,16 @@ if ! grep -Fq "bash scripts/guard/run_durable_guard_recovery_contract_lane.sh" "
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_settlement_reconciliation_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected settlement reconciliation contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/escrow/run_settlement_reconciliation_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected settlement reconciliation contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected channel/task lifecycle rust setup/cache condition in ci-fast-gate.yml" >&2
   exit 1
@@ -224,6 +234,11 @@ fi
 
 if ! grep -Fq "bash scripts/guard/run_durable_guard_recovery_deep_lane.sh" "$DEEP_WORKFLOW"; then
   echo "expected scheduled durable guard recovery deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/escrow/run_settlement_reconciliation_deep_lane.sh" "$DEEP_WORKFLOW"; then
+  echo "expected scheduled settlement reconciliation deep lane command in ci-deep-validate.yml" >&2
   exit 1
 fi
 
