@@ -1,6 +1,6 @@
-# Cross-Chain Bridge Adapters (Ethereum and Solana) (Issues #232, #233)
+# Cross-Chain Bridge Adapters (Ethereum and Solana) (Issues #232, #233, #740)
 
-This document captures the first implementation slice for cross-chain bridge adapters covering Ethereum and Solana inbound/outbound pathways.
+This document captures cross-chain adapter and receipt-finality normalization slices for Ethereum, Solana, and Near pathways.
 
 ## Scope Delivered
 - Added `crates/kamn-core/src/cross_chain_bridge.rs` with:
@@ -11,6 +11,12 @@ This document captures the first implementation slice for cross-chain bridge ada
   - `process_outbound_with_approvals(...)` with approver quorum enforcement and deterministic approval metadata.
   - typed error handling via `CrossChainBridgeError`.
 - Added integration tests in `crates/kamn-core/tests/cross_chain_bridge.rs`.
+- Added `crates/kamn-core/src/cross_chain_receipt.rs` with deterministic Ethereum/Near receipt-finality normalization:
+  - `CrossChainReceiptNetwork` enum (`Ethereum`, `Near`).
+  - `CrossChainReceiptProof` and `NormalizedCrossChainReceipt` contract structures.
+  - `normalize_cross_chain_receipt(...)` with strict chain-specific finality rules.
+  - typed errors via `CrossChainReceiptNormalizationError`.
+- Added integration tests in `crates/kamn-core/tests/cross_chain_receipt_finality.rs`.
 
 ## Validation Rules
 - Bridge/listener/approver DIDs must parse as `kamn:did:agent:*`.
@@ -25,6 +31,21 @@ This document captures the first implementation slice for cross-chain bridge ada
   - destination channel present in chain-specific route map.
   - authorized approver set with no duplicates.
   - provided approvals satisfy quorum threshold.
+
+## Receipt Finality Normalization Rules (Ethereum / Near)
+- Shared input validation:
+  - `receipt_id`, `block_reference`, and `finality_label` must be non-empty.
+- Ethereum success normalization:
+  - `finalized` or `safe` with at least `12` confirmations -> `Final`.
+  - `finalized`, `safe`, or `latest` below threshold -> `Pending`.
+  - unknown labels are rejected.
+- Near success normalization:
+  - `final` -> `Final`.
+  - `optimistic` or `none` -> `Pending`.
+  - unknown labels are rejected.
+- Status override behavior:
+  - `Failed` status always normalizes to `Failed`.
+  - `Pending` status always normalizes to `Pending`.
 
 ## Processing Flow
 - `process_inbound(...)`:
@@ -43,6 +64,7 @@ Run from repository root:
 
 ```bash
 cargo test -p kamn-core --test cross_chain_bridge
+cargo test -p kamn-core --test cross_chain_receipt_finality
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core
