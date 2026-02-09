@@ -160,6 +160,31 @@ if ! grep -Fq "bash scripts/did/test_run_federated_did_handshake_deep_lane.sh" "
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_federated_delegation_settlement_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected federated delegation settlement contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/task/test_generate_federated_delegation_settlement_evidence_bundle.sh" "$FAST_WORKFLOW"; then
+  echo "expected federated delegation settlement generator tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/task/test_run_federated_delegation_settlement_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected federated delegation settlement contract lane tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/task/test_run_federated_delegation_settlement_matrix.sh" "$FAST_WORKFLOW"; then
+  echo "expected federated delegation settlement matrix tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/task/test_run_federated_delegation_settlement_deep_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected federated delegation settlement deep lane tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected runtime snapshot contract scope condition in ci-fast-gate.yml" >&2
   exit 1
@@ -385,6 +410,11 @@ if ! grep -Fq "steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true
   exit 1
 fi
 
+if ! grep -Fq "steps.scope.outputs.run_federated_delegation_settlement_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected federated delegation settlement rust setup/cache condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "steps.scope.outputs.run_settlement_reconciliation_contract_tests == 'true' || steps.scope.outputs.run_token_launch_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected token launch contract rust setup/cache condition in ci-fast-gate.yml" >&2
   exit 1
@@ -464,6 +494,16 @@ fi
 
 if ! grep -Fq "federated-did-handshake-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
   echo "expected federated DID handshake deep report artifact upload in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/task/run_federated_delegation_settlement_deep_lane.sh --output-json federated-delegation-settlement-report.json" "$DEEP_WORKFLOW"; then
+  echo "expected scheduled federated delegation settlement deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "federated-delegation-settlement-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
+  echo "expected federated delegation settlement deep report artifact upload in ci-deep-validate.yml" >&2
   exit 1
 fi
 

@@ -137,6 +137,22 @@ Federated DID trust handshakes require deterministic replay, downgrade, and quor
 - Regression policy:
   - replay/downgrade attempts, quorum shortfalls, and tampered final decisions force `NO-GO` (`Regression: #734`).
 
+## Federated Delegation Settlement Evidence Contract (Issue #754)
+Cross-network task delegation requires deterministic envelope and settlement reference evidence before cross-network approvals.
+
+- Evidence bundle generator:
+  - `bash scripts/task/generate_federated_delegation_settlement_evidence_bundle.sh --output-file /tmp/federated-delegation-settlement.json --delegation-id delegation-go-001 --task-id task-go-001 --delegator-did kamn:did:agent:delegator-go-001 --delegatee-did kamn:did:agent:delegatee-go-001 --source-network kolme-mainnet-a --destination-network kolme-mainnet-b --settlement-reference-id settlement-ref-go-001 --expected-settlement-reference-id settlement-ref-go-001 --settlement-receipt-finality FINAL --nonce-monotonic true --replay-detected false --partition-sequence-monotonic true --required-attestors 2 --received-attestors 2 --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/task/check_federated_delegation_settlement_policy.sh --bundle-file /tmp/federated-delegation-settlement.json`
+- PR fast contract lane:
+  - `bash scripts/task/run_federated_delegation_settlement_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/task/run_federated_delegation_settlement_deep_lane.sh --output-json federated-delegation-settlement-report.json`
+- Partition replay matrix runner:
+  - `python3 scripts/task/run_federated_delegation_settlement_matrix.py --fixture fixtures/federated_task_delegation/partition_replay_cases.json --output-json federated-delegation-settlement-report.json`
+- Regression policy:
+  - settlement reference drift, replay attempts, quorum shortfalls, and tampered final decisions force `NO-GO` (`Regression: #734`).
+
 ## Governance Simulation and Human-Veto Evidence Contract (Issue #748)
 Governance activation requires deterministic simulation, veto, timelock, and approval evidence before GO decisions.
 
@@ -292,6 +308,10 @@ bash scripts/did/test_generate_federated_did_handshake_evidence_bundle.sh
 bash scripts/did/test_run_federated_did_handshake_contract_lane.sh
 bash scripts/did/test_run_federated_did_handshake_matrix.sh
 bash scripts/did/test_run_federated_did_handshake_deep_lane.sh
+bash scripts/task/test_generate_federated_delegation_settlement_evidence_bundle.sh
+bash scripts/task/test_run_federated_delegation_settlement_contract_lane.sh
+bash scripts/task/test_run_federated_delegation_settlement_matrix.sh
+bash scripts/task/test_run_federated_delegation_settlement_deep_lane.sh
 bash scripts/governance/test_generate_governance_simulation_evidence_bundle.sh
 bash scripts/governance/test_run_governance_simulation_contract_lane.sh
 bash scripts/governance/test_run_governance_simulation_matrix.sh

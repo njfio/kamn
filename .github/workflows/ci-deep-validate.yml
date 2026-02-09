@@ -125,6 +125,18 @@ jobs:
           path: federated-did-handshake-report.json
           if-no-files-found: error
 
+      - name: Run federated delegation settlement deep lane
+        if: steps.detect.outputs.run_rust == 'true'
+        run: bash scripts/task/run_federated_delegation_settlement_deep_lane.sh --output-json federated-delegation-settlement-report.json
+
+      - name: Upload federated delegation settlement deep report
+        if: always() && hashFiles('federated-delegation-settlement-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: federated-delegation-settlement-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: federated-delegation-settlement-report.json
+          if-no-files-found: error
+
       - name: Run governance simulation deep lane
         if: steps.detect.outputs.run_rust == 'true'
         run: bash scripts/governance/run_governance_simulation_deep_lane.sh --output-json governance-simulation-report.json
