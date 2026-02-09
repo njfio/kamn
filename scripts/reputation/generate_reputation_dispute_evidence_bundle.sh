@@ -215,6 +215,7 @@ is_go = (
     and ci_fast_gate_passed
 )
 final_decision = "GO" if is_go else "NO-GO"
+reason_key = f"reputation_dispute_reason_codes:{final_decision}:v1"
 
 reason_codes = []
 if not did_fields_valid:
@@ -235,6 +236,7 @@ if not approval_satisfied:
     reason_codes.append("approval_missing")
 if not ci_fast_gate_passed:
     reason_codes.append("ci_fast_gate_failed")
+reason_codes = sorted(reason_codes)
 
 payload = {
     "schema_version": "kamn.reputation.dispute-evidence.v1",
@@ -257,6 +259,7 @@ payload = {
     "policy_window_open": policy_window_open,
     "approval_recorded": approval_recorded,
     "ci_fast_gate": ci_fast_gate,
+    "reason_key": reason_key,
     "policy_checks": {
         "did_fields_valid": did_fields_valid,
         "evidence_uri_present": evidence_uri_present,
@@ -280,4 +283,5 @@ PY
 
 printf 'status=generated\n'
 printf 'bundle_file=%s\n' "$output_file"
+printf 'reason_key=%s\n' "reputation_dispute_reason_codes:${final_decision}:v1"
 printf 'final_decision=%s\n' "$final_decision"

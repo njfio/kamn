@@ -74,6 +74,7 @@ required_fields = (
     "policy_window_open",
     "approval_recorded",
     "ci_fast_gate",
+    "reason_key",
     "policy_checks",
     "reason_codes",
     "final_decision",
@@ -91,6 +92,10 @@ for field in ("policy_window_open", "approval_recorded"):
 
 if payload["ci_fast_gate"] not in {"PASS", "FAIL"}:
     fail("ci_fast_gate must be PASS or FAIL")
+
+reason_key = payload["reason_key"]
+if not isinstance(reason_key, str) or not reason_key:
+    fail("reason_key must be a non-empty string")
 
 evidence_bundle = payload["evidence_bundle"]
 if not isinstance(evidence_bundle, dict):
@@ -191,6 +196,13 @@ if actual_decision != expected_decision:
         f"expected final_decision={expected_decision}, found {actual_decision}"
     )
 
+expected_reason_key = f"reputation_dispute_reason_codes:{actual_decision}:v1"
+if reason_key != expected_reason_key:
+    fail(
+        "reason_key mismatch: "
+        f"expected {expected_reason_key}, found {reason_key}"
+    )
+
 failed_checks: List[str] = []
 if not did_fields_valid:
     failed_checks.append("did_fields_invalid")
@@ -210,6 +222,20 @@ if not approval_satisfied:
     failed_checks.append("approval_missing")
 if not ci_fast_gate_passed:
     failed_checks.append("ci_fast_gate_failed")
+failed_checks = sorted(failed_checks)
+
+reason_codes = payload["reason_codes"]
+if not isinstance(reason_codes, list):
+    fail("reason_codes must be an array")
+if not all(isinstance(item, str) and item for item in reason_codes):
+    fail("reason_codes must contain non-empty strings")
+if reason_codes != sorted(reason_codes):
+    fail("reason_codes must be sorted and deterministic")
+if reason_codes != failed_checks:
+    fail(
+        "reason_codes mismatch: "
+        f"expected reason_codes={failed_checks}, found {reason_codes}"
+    )
 
 failed_checks_value = ",".join(failed_checks) if failed_checks else "none"
 print("status=ok")

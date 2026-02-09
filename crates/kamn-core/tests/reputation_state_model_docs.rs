@@ -31,6 +31,7 @@ fn doc_contains_dispute_evidence_bundle_contract() {
     assert!(DOC.contains("## Deterministic Reputation Dispute Evidence Contract"));
     assert!(DOC.contains("generate_reputation_dispute_evidence_bundle.sh"));
     assert!(DOC.contains("check_reputation_dispute_policy.sh"));
+    assert!(DOC.contains("reason_key"));
     assert!(DOC.contains("run_reputation_dispute_contract_lane.sh"));
     assert!(DOC.contains("run_reputation_dispute_deep_lane.sh"));
     assert!(DOC.contains("run_reputation_dispute_matrix.py"));
@@ -66,5 +67,13 @@ fn regression_requires_weighted_decay_abuse_guard_marker() {
     // Regression: #730
     assert!(DOC.contains(
         "replayed reciprocity, burst-spam, and churn abuse fixtures remain penalized (`Regression: #730`)."
+    ));
+}
+
+#[test]
+fn regression_requires_dispute_reason_code_policy_guard_marker() {
+    // Regression: #934
+    assert!(DOC.contains(
+        "reason-code mismatch or tampered dispute evidence payloads force `NO-GO` (`Regression: #934`)."
     ));
 }

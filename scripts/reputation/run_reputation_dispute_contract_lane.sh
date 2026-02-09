@@ -7,11 +7,72 @@ POLICY_CHECKER="$ROOT_DIR/scripts/reputation/check_reputation_dispute_policy.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-BUNDLE_FILE="$TMP_DIR/reputation-dispute-contract.json"
+usage() {
+  cat <<'EOF'
+Usage:
+  bash scripts/reputation/run_reputation_dispute_contract_lane.sh \
+    [--output-file <path>] \
+    [--skip-tests]
+EOF
+}
+
+fail() {
+  local message="$1"
+  printf '%s\n' "$message" >&2
+  exit 1
+}
+
+extract_value() {
+  local output="$1"
+  local key="$2"
+  printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
+}
+
+output_file=""
+skip_tests=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --output-file)
+      output_file="${2:-}"
+      shift 2
+      ;;
+    --skip-tests)
+      skip_tests=true
+      shift
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "unknown argument: $1"
+      ;;
+  esac
+done
+
+if [ ! -x "$GENERATOR" ]; then
+  fail "reputation dispute evidence generator is not executable"
+fi
+
+if [ ! -x "$POLICY_CHECKER" ]; then
+  fail "reputation dispute policy checker is not executable"
+fi
+
+if [ "$skip_tests" != true ]; then
+  cargo test -p kamn-core --test reputation_state_model_docs >/dev/null
+  cargo test -p kamn-core --test reputation_signal_routing_docs >/dev/null
+fi
+
+if [[ -z "$output_file" ]]; then
+  output_file="$TMP_DIR/reputation-dispute-contract.json"
+fi
+
+start_epoch="$(date +%s)"
 
 generator_output="$(
   bash "$GENERATOR" \
-    --output-file "$BUNDLE_FILE" \
+    --output-file "$output_file" \
     --dispute-id "dispute-contract-001" \
     --subject-did "did:kamn:agent-contract-001" \
     --reviewer-did "did:kamn:reviewer-contract-001" \
@@ -32,7 +93,7 @@ if ! printf '%s\n' "$generator_output" | grep -q "^final_decision=GO$"; then
   exit 1
 fi
 
-policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$BUNDLE_FILE")"
+policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$output_file")"
 if ! printf '%s\n' "$policy_output" | grep -q "^final_decision=GO$"; then
   echo "expected reputation dispute contract lane policy decision to be GO" >&2
   exit 1
@@ -43,4 +104,14 @@ if ! printf '%s\n' "$policy_output" | grep -q "^failed_checks=none$"; then
   exit 1
 fi
 
+max_seconds="${REPUTATION_DISPUTE_MAX_SECONDS:-90}"
+elapsed_seconds="$(( $(date +%s) - start_epoch ))"
+if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
+  fail "reputation dispute contract lane exceeded runtime budget: ${elapsed_seconds}s"
+fi
+
+printf 'status=ok\n'
+printf 'bundle_file=%s\n' "$output_file"
+printf 'reason_key=%s\n' "$(extract_value "$generator_output" "reason_key")"
+printf 'final_decision=%s\n' "$(extract_value "$policy_output" "final_decision")"
 echo "reputation dispute contract lane tests passed."
