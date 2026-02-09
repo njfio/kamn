@@ -29,10 +29,27 @@ This document defines the first compatibility profile slice between the KAMN can
 - Cross-profile attachment translation is limited to canonical JSON attachments.
 - Unsupported attachment translation decision: reject.
 
+## DIDComm Envelope Compatibility Replay Contract Lane (Issue #892)
+Compatibility vectors must replay through a deterministic fixture matrix and fail closed on schema/signature/key-reference drift.
+
+- Replay matrix runner:
+  - `python3 scripts/message/run_didcomm_envelope_compatibility_replay.py --fixture fixtures/didcomm_envelope_compatibility/replay_cases.json --output-json /tmp/didcomm-envelope-compatibility-report.json`
+- Policy checker:
+  - `bash scripts/message/check_didcomm_envelope_compatibility_policy.sh --report-file /tmp/didcomm-envelope-compatibility-report.json`
+- PR fast contract lane:
+  - `bash scripts/message/run_didcomm_envelope_compatibility_contract_lane.sh`
+- Decision key contract:
+  - `didcomm_envelope_compatibility_reason_codes:GO:v1`
+- Regression policy:
+  - schema/signature/recipient-key drift and expected-decision mismatches force `NO-GO` (`Regression: #892`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
+bash scripts/message/test_run_didcomm_envelope_compatibility_replay.sh
+bash scripts/message/test_check_didcomm_envelope_compatibility_policy.sh
+bash scripts/message/test_run_didcomm_envelope_compatibility_contract_lane.sh
 cargo test -p kamn-core --test didcomm_compatibility_profile_docs
 cargo fmt --check
 cargo clippy -- -D warnings
