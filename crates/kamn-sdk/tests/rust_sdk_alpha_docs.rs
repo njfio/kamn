@@ -12,6 +12,7 @@ fn doc_contains_live_transport_sdk_scope() {
 fn doc_contains_live_transport_validation_commands() {
     assert!(DOC.contains("bash scripts/sdk/run_local_e2e_demo.sh"));
     assert!(DOC.contains("bash scripts/sdk/run_localhost_signed_demo.sh"));
+    assert!(DOC.contains("bash scripts/sdk/run_tcp_signed_relay_demo.sh"));
     assert!(DOC.contains("bash scripts/sdk/run_rust_live_transport_contract_lane.sh"));
     assert!(DOC.contains("bash scripts/sdk/run_rust_live_transport_deep_lane.sh"));
 }
@@ -36,4 +37,13 @@ fn regression_requires_localhost_signed_demo_marker_contract() {
     assert!(DOC.contains("`Regression: #807`"));
     assert!(DOC.contains("verified=true"));
     assert!(DOC.contains("signature=sig:ed25519:baseline-v1:..."));
+}
+
+#[test]
+fn regression_requires_tcp_signed_relay_demo_marker_contract() {
+    // Regression: #822
+    assert!(DOC.contains("`Regression: #822`"));
+    assert!(DOC.contains("adapter=tcp"));
+    assert!(DOC.contains("tcp_signed_relay_listener"));
+    assert!(DOC.contains("tcp_signed_relay_sender"));
 }

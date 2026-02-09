@@ -26,6 +26,7 @@ Run from repository root:
 ```bash
 bash scripts/sdk/run_local_e2e_demo.sh
 bash scripts/sdk/run_localhost_signed_demo.sh
+bash scripts/sdk/run_tcp_signed_relay_demo.sh
 bash scripts/sdk/run_rust_live_transport_contract_lane.sh
 bash scripts/sdk/run_rust_live_transport_deep_lane.sh
 cargo test -p kamn-sdk
@@ -50,6 +51,24 @@ The SDK now includes a localhost two-process signed-message demo:
   - `signature=sig:ed25519:baseline-v1:...`
 
 `Regression: #807` ensures the command remains executable and preserves signed-message verification markers.
+
+## TCP Signed Relay Adapter Demo (Issue #822)
+The SDK now includes a deterministic TCP relay adapter demo backed by reusable wire framing/parsing helpers:
+
+- One-command orchestrator:
+  - `bash scripts/sdk/run_tcp_signed_relay_demo.sh`
+- Manual terminal split:
+  - Listener terminal:
+    - `cargo run --quiet -p kamn-sdk --example tcp_signed_relay_listener -- --addr 127.0.0.1:17881`
+  - Sender terminal:
+    - `cargo run --quiet -p kamn-sdk --example tcp_signed_relay_sender -- --addr 127.0.0.1:17881 --body "hello-from-tcp-relay-demo"`
+- Expected markers:
+  - `status=ok` (sender and listener)
+  - `verified=true`
+  - `adapter=tcp`
+  - `signature=sig:ed25519:baseline-v1:...`
+
+`Regression: #822` ensures deterministic envelope parsing rejects malformed payloads and preserves signed relay markers.
 
 ## Local End-to-End Demo (Issue #770)
 The SDK now includes a deterministic one-command demo for first-run validation:
