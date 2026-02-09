@@ -33,6 +33,15 @@ fn regression_requires_local_e2e_demo_marker_contract() {
 }
 
 #[test]
+fn doc_contains_sdk_schema_compatibility_contract_lane() {
+    assert!(DOC.contains("## SDK Schema Compatibility Contract"));
+    assert!(DOC.contains("run_sdk_schema_compatibility_contract_lane.sh"));
+    assert!(DOC.contains("check_sdk_schema_compatibility_policy.sh"));
+    assert!(DOC.contains("fixtures/sdk_parity/register_validation_cases.json"));
+    assert!(DOC.contains("kamn.sdk.parity.matrix.v1"));
+}
+
+#[test]
 fn regression_requires_localhost_signed_demo_marker_contract() {
     // Regression: #807
     assert!(DOC.contains("`Regression: #807`"));
@@ -64,4 +73,12 @@ fn regression_requires_tcp_failover_reconnect_matrix_contract() {
     assert!(DOC.contains("kamn.sdk.tcp-failover-reconnect.matrix.v1"));
     assert!(DOC.contains("fixtures/sdk_failover_reconnect/reconnect_drift_signatures.txt"));
     assert!(DOC.contains("KAMN_TCP_FAILOVER_DEEP_CADENCE=scheduled"));
+}
+
+#[test]
+fn regression_requires_sdk_schema_compatibility_drift_guard_contract() {
+    // Regression: #937
+    assert!(DOC.contains(
+        "schema-version drift, case mismatch, or tampered reason codes force `NO-GO` (`Regression: #937`)."
+    ));
 }

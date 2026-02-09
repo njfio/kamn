@@ -347,6 +347,24 @@ assert_eq "$(extract_output "$parity_script_output" "live_transport_parity_langu
 assert_eq "$(extract_output "$parity_script_output" "run_sdk_parity_matrix")" "false" "parity script-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$parity_script_output" "test_scope")" "sdk-live-parity" "parity script-only changes should set sdk-live-parity scope"
 
+sdk_schema_policy_output="$(run_selector $'scripts/sdk/check_sdk_schema_compatibility_policy.sh')"
+assert_eq "$(extract_output "$sdk_schema_policy_output" "run_rust")" "false" "sdk schema policy checker script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$sdk_schema_policy_output" "run_live_transport_parity_contract_tests")" "false" "sdk schema policy checker changes should not run live transport parity lane"
+assert_eq "$(extract_output "$sdk_schema_policy_output" "run_sdk_parity_matrix")" "true" "sdk schema policy checker changes must run sdk parity matrix"
+assert_eq "$(extract_output "$sdk_schema_policy_output" "test_scope")" "sdk" "sdk schema policy checker changes should set sdk scope"
+
+sdk_schema_generator_output="$(run_selector $'scripts/sdk/generate_sdk_schema_compatibility_evidence_bundle.sh')"
+assert_eq "$(extract_output "$sdk_schema_generator_output" "run_rust")" "false" "sdk schema evidence generator script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$sdk_schema_generator_output" "run_live_transport_parity_contract_tests")" "false" "sdk schema evidence generator changes should not run live transport parity lane"
+assert_eq "$(extract_output "$sdk_schema_generator_output" "run_sdk_parity_matrix")" "true" "sdk schema evidence generator changes must run sdk parity matrix"
+assert_eq "$(extract_output "$sdk_schema_generator_output" "test_scope")" "sdk" "sdk schema evidence generator changes should set sdk scope"
+
+sdk_schema_contract_lane_output="$(run_selector $'scripts/sdk/run_sdk_schema_compatibility_contract_lane.sh')"
+assert_eq "$(extract_output "$sdk_schema_contract_lane_output" "run_rust")" "false" "sdk schema contract lane script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$sdk_schema_contract_lane_output" "run_live_transport_parity_contract_tests")" "false" "sdk schema contract lane changes should not run live transport parity lane"
+assert_eq "$(extract_output "$sdk_schema_contract_lane_output" "run_sdk_parity_matrix")" "true" "sdk schema contract lane changes must run sdk parity matrix"
+assert_eq "$(extract_output "$sdk_schema_contract_lane_output" "test_scope")" "sdk" "sdk schema contract lane changes should set sdk scope"
+
 shared_matrix_output="$(run_selector $'fixtures/sdk_parity/register_validation_cases.json')"
 assert_eq "$(extract_output "$shared_matrix_output" "run_rust")" "false" "shared sdk matrix fixture changes should avoid rust lane"
 assert_eq "$(extract_output "$shared_matrix_output" "run_rust_live_transport_contract_tests")" "false" "shared sdk matrix fixture changes should skip rust live lane"

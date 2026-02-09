@@ -9,6 +9,7 @@ from typing import Dict, List, Tuple
 
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
+MATRIX_SCHEMA_VERSION = "kamn.sdk.parity.matrix.v1"
 
 
 def parse_args() -> argparse.Namespace:
@@ -159,18 +160,22 @@ def main() -> int:
         if not passed:
             failed_ids.append(str(case.get("id", "unknown")))
 
-    status = "pass" if not failed_ids else "fail"
+    failed_case_ids = sorted(failed_ids)
+    status = "pass" if not failed_case_ids else "fail"
     report = {
+        "schema_version": MATRIX_SCHEMA_VERSION,
         "status": status,
         "fixture": str(fixture_path),
         "case_count": len(cases),
-        "failed_count": len(failed_ids),
-        "failed_case_ids": failed_ids,
+        "failed_count": len(failed_case_ids),
+        "failed_case_ids": failed_case_ids,
         "cases": report_cases,
     }
 
     if args.output_json:
-        Path(args.output_json).write_text(json.dumps(report, indent=2), encoding="utf-8")
+        Path(args.output_json).write_text(
+            json.dumps(report, indent=2) + "\n", encoding="utf-8"
+        )
 
     if status == "pass":
         print(f"status=pass; cases={len(cases)}; failed=0")
@@ -178,8 +183,8 @@ def main() -> int:
 
     print(
         "status=fail; "
-        f"cases={len(cases)}; failed={len(failed_ids)}; "
-        f"failed_ids={','.join(failed_ids)}"
+        f"cases={len(cases)}; failed={len(failed_case_ids)}; "
+        f"failed_ids={','.join(failed_case_ids)}"
     )
     return 1
 
