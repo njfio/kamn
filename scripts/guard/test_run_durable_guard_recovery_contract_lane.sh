@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+FAST_SCRIPT="$ROOT_DIR/scripts/guard/run_durable_guard_recovery_contract_lane.sh"
+DEEP_SCRIPT="$ROOT_DIR/scripts/guard/run_durable_guard_recovery_deep_lane.sh"
+
+if [ ! -x "$FAST_SCRIPT" ]; then
+  echo "expected durable guard recovery fast-lane runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DEEP_SCRIPT" ]; then
+  echo "expected durable guard recovery deep-lane runner to be executable" >&2
+  exit 1
+fi
+
+TMP_OUT="$(mktemp)"
+trap 'rm -f "$TMP_OUT"' EXIT
+
+bash "$FAST_SCRIPT" >"$TMP_OUT"
+if ! grep -q "durable guard recovery contract lane tests passed." "$TMP_OUT"; then
+  echo "expected durable guard recovery contract lane success marker" >&2
+  exit 1
+fi
+
+if ! grep -q "unit_delivery_guard_snapshot_rejects_schema_mismatch" "$FAST_SCRIPT"; then
+  echo "expected durable guard recovery contract lane to include delivery schema mismatch unit coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "unit_channel_policy_snapshot_rejects_schema_mismatch" "$FAST_SCRIPT"; then
+  echo "expected durable guard recovery contract lane to include channel policy schema mismatch unit coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "integration_durable_guard_recovery_matrix_restores_delivery_and_retention_invariants" "$FAST_SCRIPT"; then
+  echo "expected durable guard recovery contract lane to include integration recovery matrix coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "performance_durable_guard_recovery_contract_lane_budget" "$FAST_SCRIPT"; then
+  echo "expected durable guard recovery contract lane to include PR budget performance coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "release_gonogo_checklist_docs" "$FAST_SCRIPT"; then
+  echo "expected durable guard recovery contract lane to include release checklist docs coverage" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_durable_guard_recovery_contract_lane.sh" "$DEEP_SCRIPT"; then
+  echo "expected deep-lane script to execute durable guard recovery fast-lane checks first" >&2
+  exit 1
+fi
+
+if ! grep -q "performance_durable_guard_recovery_matrix_deep_lane -- --ignored" "$DEEP_SCRIPT"; then
+  echo "expected deep-lane script to run ignored durable guard recovery matrix performance test" >&2
+  exit 1
+fi
+
+echo "durable guard recovery contract lane script tests passed."

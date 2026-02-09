@@ -1,6 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+pub const DELIVERY_GUARD_SNAPSHOT_SCHEMA_VERSION: u16 = 1;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeliveryGuardInput {
     pub message_id: String,
@@ -52,6 +54,21 @@ pub enum DeliveryValidationResult {
 pub struct MessageDeliveryGuards {
     next_nonce_by_sender: BTreeMap<String, u64>,
     seen_message_ids: BTreeSet<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeliveryGuardSnapshot {
+    pub schema_version: u16,
+    pub next_nonce_by_sender: BTreeMap<String, u64>,
+    pub seen_message_ids: BTreeSet<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DeliveryGuardSnapshotError {
+    SchemaVersionMismatch { expected: u16, found: u16 },
+    InvalidSender(String),
+    InvalidNonce { sender: String, nonce: u64 },
+    InvalidMessageId(String),
 }
 
 impl MessageDeliveryGuards {
@@ -107,6 +124,58 @@ impl MessageDeliveryGuards {
         DeliveryValidationResult::Accepted
     }
 
+    pub fn export_snapshot(&self) -> DeliveryGuardSnapshot {
+        DeliveryGuardSnapshot {
+            schema_version: DELIVERY_GUARD_SNAPSHOT_SCHEMA_VERSION,
+            next_nonce_by_sender: self.next_nonce_by_sender.clone(),
+            seen_message_ids: self.seen_message_ids.clone(),
+        }
+    }
+
+    pub fn restore_snapshot(
+        &mut self,
+        snapshot: DeliveryGuardSnapshot,
+    ) -> Result<(), DeliveryGuardSnapshotError> {
+        if snapshot.schema_version != DELIVERY_GUARD_SNAPSHOT_SCHEMA_VERSION {
+            return Err(DeliveryGuardSnapshotError::SchemaVersionMismatch {
+                expected: DELIVERY_GUARD_SNAPSHOT_SCHEMA_VERSION,
+                found: snapshot.schema_version,
+            });
+        }
+
+        for (sender, nonce) in &snapshot.next_nonce_by_sender {
+            if sender.trim().is_empty() {
+                return Err(DeliveryGuardSnapshotError::InvalidSender(sender.clone()));
+            }
+            if *nonce == 0 {
+                return Err(DeliveryGuardSnapshotError::InvalidNonce {
+                    sender: sender.clone(),
+                    nonce: *nonce,
+                });
+            }
+        }
+
+        for message_id in &snapshot.seen_message_ids {
+            if message_id.trim().is_empty() {
+                return Err(DeliveryGuardSnapshotError::InvalidMessageId(
+                    message_id.clone(),
+                ));
+            }
+        }
+
+        self.next_nonce_by_sender = snapshot.next_nonce_by_sender;
+        self.seen_message_ids = snapshot.seen_message_ids;
+        Ok(())
+    }
+
+    pub fn from_snapshot(
+        snapshot: DeliveryGuardSnapshot,
+    ) -> Result<Self, DeliveryGuardSnapshotError> {
+        let mut guards = Self::new();
+        guards.restore_snapshot(snapshot)?;
+        Ok(guards)
+    }
+
     fn failed_notice(
         &self,
         input: &DeliveryGuardInput,
@@ -144,6 +213,39 @@ impl fmt::Display for DeliveryFailureCode {
         }
     }
 }
+
+impl fmt::Display for DeliveryGuardSnapshotError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::SchemaVersionMismatch { expected, found } => {
+                write!(
+                    f,
+                    "delivery guard snapshot schema version mismatch, expected {expected}, found {found}"
+                )
+            }
+            Self::InvalidSender(sender) => {
+                write!(
+                    f,
+                    "delivery guard snapshot contains empty sender id: {sender}"
+                )
+            }
+            Self::InvalidNonce { sender, nonce } => {
+                write!(
+                    f,
+                    "delivery guard snapshot nonce must be greater than zero for sender {sender}, found {nonce}"
+                )
+            }
+            Self::InvalidMessageId(message_id) => {
+                write!(
+                    f,
+                    "delivery guard snapshot contains invalid message id: {message_id}"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for DeliveryGuardSnapshotError {}
 
 #[cfg(test)]
 mod tests {
@@ -191,5 +293,31 @@ mod tests {
             }
             DeliveryValidationResult::Accepted => panic!("expected replay rejection"),
         }
+    }
+
+    #[test]
+    fn snapshot_roundtrip_restores_nonce_and_replay_state() {
+        let mut guards = MessageDeliveryGuards::new();
+        assert_eq!(
+            guards.validate(input("urn:uuid:msg-3", 1, "2026-02-07T20:20:30.123Z")),
+            DeliveryValidationResult::Accepted
+        );
+
+        let snapshot = guards.export_snapshot();
+        let restored = MessageDeliveryGuards::from_snapshot(snapshot).expect("snapshot restore");
+
+        assert_eq!(restored.expected_nonce("kamn:did:agent:sender-1"), 2);
+    }
+
+    #[test]
+    fn snapshot_rejects_zero_nonce_state() {
+        let guards = MessageDeliveryGuards::new();
+        let mut snapshot = guards.export_snapshot();
+        snapshot
+            .next_nonce_by_sender
+            .insert("kamn:did:agent:sender-1".to_owned(), 0);
+
+        // Regression: #679
+        assert!(MessageDeliveryGuards::from_snapshot(snapshot).is_err());
     }
 }
