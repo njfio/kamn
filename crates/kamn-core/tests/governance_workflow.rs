@@ -171,6 +171,46 @@ fn governance_workflow_regression_rejects_late_votes_after_deadline() {
 }
 
 #[test]
+fn governance_workflow_regression_rejects_replayed_voter_approval_artifact() {
+    // Regression: #911
+    let mut workflow = GovernanceWorkflow::new();
+    workflow
+        .submit_proposal(GovernanceProposalDraft {
+            proposal_id: "gov-proposal-4b".to_owned(),
+            title: "Replay guard validation".to_owned(),
+            description: "Ensure duplicate approval artifacts are rejected".to_owned(),
+            proposer_did: "kamn:did:agent:validator-1".to_owned(),
+            created_at_unix: 1_716_302_500,
+            voting_deadline_unix: 1_716_303_500,
+            quorum_threshold: 2,
+            parameter_change: None,
+        })
+        .expect("proposal should submit");
+
+    workflow
+        .cast_vote(
+            "gov-proposal-4b",
+            "kamn:did:agent:validator-2",
+            GovernanceVoteChoice::Yes,
+            1_716_302_700,
+        )
+        .expect("first approval should succeed");
+
+    assert_eq!(
+        workflow.cast_vote(
+            "gov-proposal-4b",
+            "kamn:did:agent:validator-2",
+            GovernanceVoteChoice::Yes,
+            1_716_302_800,
+        ),
+        Err(GovernanceWorkflowError::DuplicateVote {
+            proposal_id: "gov-proposal-4b".to_owned(),
+            voter_did: "kamn:did:agent:validator-2".to_owned(),
+        })
+    );
+}
+
+#[test]
 fn governance_workflow_rejects_parameter_change_with_invalid_target_version() {
     let mut workflow = GovernanceWorkflow::new();
     assert_eq!(

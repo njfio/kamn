@@ -14,6 +14,7 @@ fn matrix_contains_core_threat_entries() {
     assert!(CONTROL_MATRIX.contains("TM-003"));
     assert!(CONTROL_MATRIX.contains("TM-004"));
     assert!(CONTROL_MATRIX.contains("TM-005"));
+    assert!(CONTROL_MATRIX.contains("TM-006"));
 }
 
 #[test]
@@ -24,4 +25,13 @@ fn matrix_maps_controls_to_tests() {
     assert!(CONTROL_MATRIX.contains(
         "integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards"
     ));
+    assert!(CONTROL_MATRIX.contains("quorum_attestation_replay_guard_policy_contract"));
+    assert!(CONTROL_MATRIX.contains("run_quorum_attestation_replay_contract_lane.sh"));
+}
+
+#[test]
+fn matrix_contains_quorum_attestation_replay_guard_entry_details() {
+    assert!(
+        CONTROL_MATRIX.contains("Quorum attestation evidence drift or replayed approval artifact")
+    );
 }

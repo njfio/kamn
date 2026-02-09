@@ -892,6 +892,18 @@ assert_eq "$(extract_output "$governance_contract_docs_output" "run_governance_s
 assert_eq "$(extract_output "$governance_contract_docs_output" "run_governance_stake_slash_contract_tests")" "true" "governance contract docs must run governance stake/slash contract lane"
 assert_eq "$(extract_output "$governance_contract_docs_output" "test_scope")" "governance-contract" "governance contract docs should set governance-contract scope"
 
+validator_quorum_reconfiguration_docs_output="$(run_selector $'docs/foundation/validator-lifecycle-quorum-reconfiguration.md')"
+assert_eq "$(extract_output "$validator_quorum_reconfiguration_docs_output" "run_rust")" "false" "validator lifecycle quorum docs should avoid rust lane"
+assert_eq "$(extract_output "$validator_quorum_reconfiguration_docs_output" "run_governance_simulation_contract_tests")" "true" "validator lifecycle quorum docs must run governance simulation contract lane"
+assert_eq "$(extract_output "$validator_quorum_reconfiguration_docs_output" "run_governance_stake_slash_contract_tests")" "true" "validator lifecycle quorum docs must keep governance stake/slash contract lane coverage"
+assert_eq "$(extract_output "$validator_quorum_reconfiguration_docs_output" "test_scope")" "governance-contract" "validator lifecycle quorum docs should set governance-contract scope"
+
+threat_control_matrix_docs_output="$(run_selector $'docs/foundation/threat-control-matrix.md')"
+assert_eq "$(extract_output "$threat_control_matrix_docs_output" "run_rust")" "false" "threat control matrix docs should avoid rust lane"
+assert_eq "$(extract_output "$threat_control_matrix_docs_output" "run_governance_simulation_contract_tests")" "true" "threat control matrix docs must run governance simulation contract lane"
+assert_eq "$(extract_output "$threat_control_matrix_docs_output" "run_governance_stake_slash_contract_tests")" "false" "threat control matrix docs should not force governance stake/slash contract lane"
+assert_eq "$(extract_output "$threat_control_matrix_docs_output" "test_scope")" "governance-contract" "threat control matrix docs should set governance-contract scope"
+
 escrow_contract_script_output="$(run_selector $'scripts/escrow/run_settlement_reconciliation_contract_lane.sh')"
 assert_eq "$(extract_output "$escrow_contract_script_output" "run_rust")" "false" "escrow contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$escrow_contract_script_output" "run_settlement_reconciliation_contract_tests")" "true" "escrow contract script changes must run settlement reconciliation contract lane"
@@ -940,6 +952,12 @@ assert_eq "$(extract_output "$governance_contract_script_output" "run_rust")" "f
 assert_eq "$(extract_output "$governance_contract_script_output" "run_governance_simulation_contract_tests")" "true" "governance contract script changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_contract_script_output" "run_governance_stake_slash_contract_tests")" "false" "governance simulation script changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_contract_script_output" "test_scope")" "governance-contract" "governance contract script changes should set governance-contract scope"
+
+governance_quorum_contract_script_output="$(run_selector $'scripts/governance/run_quorum_attestation_replay_contract_lane.sh')"
+assert_eq "$(extract_output "$governance_quorum_contract_script_output" "run_rust")" "false" "governance quorum attestation contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$governance_quorum_contract_script_output" "run_governance_simulation_contract_tests")" "true" "governance quorum attestation contract script changes must run governance simulation lane"
+assert_eq "$(extract_output "$governance_quorum_contract_script_output" "run_governance_stake_slash_contract_tests")" "false" "governance quorum attestation script changes should not trigger governance stake/slash lane"
+assert_eq "$(extract_output "$governance_quorum_contract_script_output" "test_scope")" "governance-contract" "governance quorum attestation contract script changes should set governance-contract scope"
 
 governance_contract_fixture_output="$(run_selector $'fixtures/governance_simulation/veto_timelock_cases.json')"
 assert_eq "$(extract_output "$governance_contract_fixture_output" "run_rust")" "false" "governance fixture-only changes should avoid rust lane"

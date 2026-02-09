@@ -359,7 +359,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/governance-proposal-vote-execution.md|docs/foundation/upgrade-rollback-runbook.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/src/governance_workflow.rs|crates/kamn-core/tests/governance_workflow.rs|crates/kamn-core/tests/governance_workflow_docs.rs|crates/kamn-core/tests/upgrade_rollback_runbook_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/governance/*governance_simulation*|scripts/governance/*lifecycle_rollback*|fixtures/governance_simulation/*)
+    docs/foundation/governance-proposal-vote-execution.md|docs/foundation/upgrade-rollback-runbook.md|docs/foundation/release-gonogo-checklist.md|docs/foundation/validator-lifecycle-quorum-reconfiguration.md|docs/foundation/threat-control-matrix.md|crates/kamn-core/src/governance_workflow.rs|crates/kamn-core/tests/governance_workflow.rs|crates/kamn-core/tests/governance_workflow_docs.rs|crates/kamn-core/tests/upgrade_rollback_runbook_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|crates/kamn-core/tests/validator_lifecycle_docs.rs|crates/kamn-core/tests/threat_control_matrix_docs.rs|scripts/governance/*governance_simulation*|scripts/governance/*lifecycle_rollback*|scripts/governance/*quorum_attestation_replay*|fixtures/governance_simulation/*)
       GOVERNANCE_SIMULATION_CONTRACT_CHANGED=true
       classified=true
       ;;
