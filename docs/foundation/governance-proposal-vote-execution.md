@@ -67,6 +67,11 @@ This document captures the first implementation slice for protocol governance me
 ## Proposal Simulation and Human-Veto Evidence Contract (Issue #748)
 Governance activation must include deterministic simulation and veto/timelock evidence before automation can proceed.
 
+- Stable shell wrappers:
+  - `scripts/governance/generate_governance_simulation_evidence_bundle.sh`
+  - `scripts/governance/check_governance_simulation_policy.sh`
+- Shared Python implementation:
+  - `scripts/governance/governance_simulation_contract.py`
 - Evidence bundle generator:
   - `bash scripts/governance/generate_governance_simulation_evidence_bundle.sh --output-file /tmp/governance-simulation.json --proposal-id gov-proposal-activation-001 --simulation-hash sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --simulation-complete true --veto-window-open false --veto-recorded false --timelock-expired true --required-approvals 2 --received-approvals 2 --ci-fast-gate PASS`
 - Policy checker:
