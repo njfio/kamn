@@ -22,6 +22,7 @@ struct EscrowState {
     released: bool,
 }
 
+/// Deterministic in-memory implementation of the [`KamnAgent`] API.
 #[derive(Debug, Default)]
 pub struct InMemoryKamnClient {
     next_agent_id: u64,
@@ -39,6 +40,7 @@ pub struct InMemoryKamnClient {
 }
 
 impl InMemoryKamnClient {
+    /// Creates a new in-memory SDK client with empty state.
     pub fn new() -> Self {
         Self {
             next_agent_id: 1,
