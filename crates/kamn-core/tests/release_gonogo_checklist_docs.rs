@@ -80,6 +80,17 @@ fn checklist_contains_soc2_control_evidence_contract() {
 }
 
 #[test]
+fn checklist_contains_dsar_legal_hold_evidence_contract() {
+    assert!(CHECKLIST.contains("## DSAR Legal-Hold Evidence Contract"));
+    assert!(CHECKLIST.contains("generate_dsar_legal_hold_evidence_bundle.sh"));
+    assert!(CHECKLIST.contains("check_dsar_legal_hold_policy.sh"));
+    assert!(CHECKLIST.contains("run_dsar_legal_hold_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_dsar_legal_hold_deep_lane.sh"));
+    assert!(CHECKLIST.contains("run_dsar_legal_hold_matrix.py"));
+    assert!(CHECKLIST.contains("fixtures/compliance_dsar/legal_hold_precedence_cases.json"));
+}
+
+#[test]
 fn checklist_contains_token_launch_handoff_evidence_contract() {
     assert!(CHECKLIST.contains("## Token Launch Handoff Evidence Contract"));
     assert!(CHECKLIST.contains("generate_token_launch_handoff_evidence_bundle.sh"));
@@ -169,6 +180,14 @@ fn regression_requires_soc2_control_evidence_guard_marker() {
     // Regression: #732
     assert!(CHECKLIST.contains(
         "tampered final decisions and incomplete/tampered control evidence force `NO-GO` (`Regression: #732`)."
+    ));
+}
+
+#[test]
+fn regression_requires_dsar_legal_hold_evidence_guard_marker() {
+    // Regression: #732
+    assert!(CHECKLIST.contains(
+        "legal-hold bypass attempts and tampered DSAR evidence force `NO-GO` (`Regression: #732`)."
     ));
 }
 
