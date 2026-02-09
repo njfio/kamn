@@ -36,6 +36,14 @@ fn runbook_contains_cutover_rollback_evidence_contract() {
 }
 
 #[test]
+fn runbook_contains_live_network_pilot_cutover_gates() {
+    assert!(RUNBOOK.contains("## Live-Network Pilot Cutover Evidence Gates"));
+    assert!(RUNBOOK.contains("run_live_network_smoke_lane.sh"));
+    assert!(RUNBOOK.contains("run_live_network_pilot_deep_lane.sh"));
+    assert!(RUNBOOK.contains("check_live_network_pilot_artifact_summary_policy.sh"));
+}
+
+#[test]
 fn regression_requires_dependency_and_approval_rejection_policy() {
     // Regression: #705
     assert!(RUNBOOK.contains(
@@ -51,5 +59,13 @@ fn regression_requires_rollback_evidence_guards() {
     // Regression: #708
     assert!(RUNBOOK.contains(
         "missing failed-checkpoint rollback evidence and rollback-target hash mismatch force `NO-GO` (`Regression: #708`)."
+    ));
+}
+
+#[test]
+fn regression_requires_live_network_pilot_cutover_guard_marker() {
+    // Regression: #830
+    assert!(RUNBOOK.contains(
+        "pilot cutover progression is blocked when smoke/deep pilot evidence is missing or policy validation is `NO-GO` (`Regression: #830`)."
     ));
 }

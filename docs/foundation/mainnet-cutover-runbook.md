@@ -47,10 +47,21 @@ The validator enforces ordering, dependency, quorum, and approval evidence const
 - Scheduled deep lane entrypoint:
   - `bash scripts/cutover/run_cutover_rollback_deep_lane.sh --output-json /tmp/cutover-rollback-report.json`
 
+## Live-Network Pilot Cutover Evidence Gates (Issue #830)
+Cutover progression requires pilot smoke and deep-lane evidence checks before checkpoint advancement.
+
+- Pilot smoke evidence:
+  - `bash scripts/runtime/run_live_network_smoke_lane.sh --output-json /tmp/live-network-smoke-report.json`
+- Pilot deep evidence:
+  - `bash scripts/runtime/run_live_network_pilot_deep_lane.sh --event-name schedule --output-json /tmp/live-network-pilot-report.json`
+- Pilot policy checker:
+  - `bash scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh --summary-file /tmp/live-network-pilot-report.json`
+
 ## Regression Policy
 - out-of-order or unresolved checkpoint dependencies force `NO-GO` (`Regression: #705`).
 - missing or insufficient checkpoint approvals force `NO-GO` (`Regression: #705`).
 - missing failed-checkpoint rollback evidence and rollback-target hash mismatch force `NO-GO` (`Regression: #708`).
+- pilot cutover progression is blocked when smoke/deep pilot evidence is missing or policy validation is `NO-GO` (`Regression: #830`).
 
 ## Local Validation
 Run from repository root:

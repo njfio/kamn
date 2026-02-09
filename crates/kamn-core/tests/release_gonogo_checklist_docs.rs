@@ -136,6 +136,15 @@ fn checklist_contains_failover_sync_drill_evidence_contract() {
 }
 
 #[test]
+fn checklist_contains_live_network_pilot_launch_and_rollback_evidence_gates() {
+    assert!(CHECKLIST.contains("## Live-Network Pilot Launch and Rollback Evidence Gates"));
+    assert!(CHECKLIST.contains("run_live_network_smoke_lane.sh"));
+    assert!(CHECKLIST.contains("run_live_network_pilot_deep_lane.sh"));
+    assert!(CHECKLIST.contains("check_live_network_pilot_artifact_summary_policy.sh"));
+    assert!(CHECKLIST.contains("run_live_network_pilot_deep_contract_lane.sh"));
+}
+
+#[test]
 fn checklist_contains_governance_simulation_and_human_veto_evidence_contract() {
     assert!(CHECKLIST.contains("## Governance Simulation and Human-Veto Evidence Contract"));
     assert!(CHECKLIST.contains("generate_governance_simulation_evidence_bundle.sh"));
@@ -260,6 +269,14 @@ fn regression_requires_failover_sync_budget_and_cadence_guard_markers() {
         .contains("preflight runtime budget overruns force lane failure (`Regression: #788`)."));
     assert!(CHECKLIST.contains(
         "unscheduled deep-lane execution force-fails via scheduled-only cadence guard (`Regression: #788`)."
+    ));
+}
+
+#[test]
+fn regression_requires_live_network_pilot_launch_and_rollback_guard_marker() {
+    // Regression: #830
+    assert!(CHECKLIST.contains(
+        "missing smoke/deep pilot evidence or non-`GO` pilot decisions force launch `NO-GO` and trigger rollback review (`Regression: #830`)."
     ));
 }
 

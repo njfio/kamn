@@ -55,6 +55,14 @@ fn runbook_contains_dr_evidence_and_slo_gate_contract() {
 }
 
 #[test]
+fn runbook_contains_live_network_pilot_rollback_evidence_gate() {
+    assert!(RUNBOOK.contains("## Live-Network Pilot Rollback Evidence Gate"));
+    assert!(RUNBOOK.contains("run_live_network_pilot_deep_lane.sh"));
+    assert!(RUNBOOK.contains("check_live_network_pilot_artifact_summary_policy.sh"));
+    assert!(RUNBOOK.contains("run_live_network_pilot_deep_contract_lane.sh"));
+}
+
+#[test]
 fn regression_requires_watchdog_evidence_capture_and_fast_lane() {
     // Regression: #383
     assert!(RUNBOOK.contains(
@@ -70,5 +78,13 @@ fn regression_requires_dr_evidence_and_slo_gate_guard() {
     // Regression: #623
     assert!(RUNBOOK.contains(
         "missing/incomplete DR evidence and SLO threshold violations force `NO-GO` (`Regression: #623`)."
+    ));
+}
+
+#[test]
+fn regression_requires_live_network_pilot_rollback_guard_marker() {
+    // Regression: #830
+    assert!(RUNBOOK.contains(
+        "pilot rollback remains mandatory when deep-lane evidence is stale, missing, or policy-invalid (`Regression: #830`)."
     ));
 }

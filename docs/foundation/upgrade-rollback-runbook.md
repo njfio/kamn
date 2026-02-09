@@ -55,6 +55,18 @@ Release promotion requires machine-validated DR drill evidence and SLO gate chec
 - Regression policy:
   - missing/incomplete DR evidence and SLO threshold violations force `NO-GO` (`Regression: #623`).
 
+## Live-Network Pilot Rollback Evidence Gate (Issue #830)
+Pilot rollback readiness requires deterministic deep-lane evidence and policy validation before release continuity is approved.
+
+- Pilot deep evidence:
+  - `bash scripts/runtime/run_live_network_pilot_deep_lane.sh --event-name schedule --output-json /tmp/live-network-pilot-report.json`
+- Pilot summary policy checker:
+  - `bash scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh --summary-file /tmp/live-network-pilot-report.json`
+- Pilot deep contract lane:
+  - `bash scripts/runtime/run_live_network_pilot_deep_contract_lane.sh`
+- Regression policy:
+  - pilot rollback remains mandatory when deep-lane evidence is stale, missing, or policy-invalid (`Regression: #830`).
+
 ## Fast and Cost-Effective Watchdog Validation Lane
 Run from repository root:
 
