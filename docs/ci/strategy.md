@@ -24,6 +24,19 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Invariant-related changes (`invariants.rs`, `transaction.rs`, smoke/invariant harness tests, or harness scripts): run deterministic invariant harness in `fast` mode (single seed) after Rust tests.
 - Runtime evaluator tests use direct unit-struct construction to avoid strict-clippy baseline noise (`Regression: #490`).
 
+## Make Target and Demo Scope Contract
+- Contributor make targets must remain stable and documented:
+  - `make check`
+  - `make test`
+  - `make demo`
+- Demo integration scope routing is derived from `scripts/ci/select_targets.sh`:
+  - selector output `run_localhost_signed_integration_contract_lane_tests=true`
+  - selector scope `sdk-live-localhost-integration`
+- Required demo lane command contract:
+  - `bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json`
+- Regression policy:
+  - make-target and selector workflow drift remains fail-closed (`Regression: #900`).
+
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
 

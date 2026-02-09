@@ -78,6 +78,12 @@ assert_eq "$(extract_output "$docs_output" "live_transport_parity_languages")" "
 assert_eq "$(extract_output "$docs_output" "run_sdk_parity_matrix")" "false" "docs_only should not run sdk parity matrix"
 assert_eq "$(extract_output "$docs_output" "test_scope")" "none" "docs_only should keep none scope"
 
+ci_strategy_docs_output="$(run_selector $'docs/ci/strategy.md')"
+assert_eq "$(extract_output "$ci_strategy_docs_output" "docs_only")" "true" "ci strategy docs should remain docs-only"
+assert_eq "$(extract_output "$ci_strategy_docs_output" "run_rust")" "false" "ci strategy docs should avoid rust lane"
+assert_eq "$(extract_output "$ci_strategy_docs_output" "run_ci_tool_checks")" "true" "ci strategy docs must run CI tool contract checks"
+assert_eq "$(extract_output "$ci_strategy_docs_output" "test_scope")" "ci-doc-contract" "ci strategy docs should set ci-doc-contract scope"
+
 hardening_docs_output="$(run_selector $'docs/planning/engineering-hardening-wave.md')"
 assert_eq "$(extract_output "$hardening_docs_output" "docs_only")" "true" "engineering hardening docs should remain docs-only"
 assert_eq "$(extract_output "$hardening_docs_output" "run_rust")" "false" "engineering hardening docs should avoid rust lane"
