@@ -409,6 +409,7 @@ for file in "${CHANGED_FILES[@]}"; do
       MAINNET_CUTOVER_CONTRACT_CHANGED=true
       FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_CHANGED=true
       SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED=true
+      DSAR_LEGAL_HOLD_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -720,7 +721,7 @@ fi
 
 if [ "$DSAR_LEGAL_HOLD_CONTRACT_CHANGED" = true ]; then
   RUN_DSAR_LEGAL_HOLD_CONTRACT_TESTS=true
-  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ] && [ "$TOKEN_LAUNCH_CONTRACT_CHANGED" != true ]; then
     TEST_SCOPE="dsar-contract"
   fi
 fi
