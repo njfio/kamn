@@ -4,6 +4,7 @@ const DOC: &str = include_str!("../../../docs/foundation/channel-models-and-perm
 fn doc_contains_channel_models_and_permissions_scope() {
     assert!(DOC.contains("# Channel Models and Permissions Contract Rules"));
     assert!(DOC.contains("run_channel_policy_contract_lane.sh"));
+    assert!(DOC.contains("run_channel_retention_redaction_contract_lane.sh"));
     assert!(DOC.contains("channel_permissions_retention"));
 }
 

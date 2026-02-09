@@ -19,4 +19,9 @@ if ! grep -q "channel policy contract lane tests passed." "$TMP_OUT"; then
   exit 1
 fi
 
+if ! grep -Fq "run_channel_retention_redaction_contract_lane.sh" "$SCRIPT"; then
+  echo "expected channel policy lane to execute retention/redaction contract lane checks" >&2
+  exit 1
+fi
+
 echo "channel policy contract lane script tests passed."
