@@ -195,6 +195,16 @@ if ! grep -Fq "bash scripts/escrow/run_settlement_reconciliation_contract_lane.s
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_token_launch_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected token launch contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/token/run_token_launch_handoff_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected token launch contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_mainnet_cutover_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected mainnet cutover contract scope condition in ci-fast-gate.yml" >&2
   exit 1
@@ -227,6 +237,11 @@ fi
 
 if ! grep -Fq "steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected channel/task lifecycle rust setup/cache condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "steps.scope.outputs.run_settlement_reconciliation_contract_tests == 'true' || steps.scope.outputs.run_token_launch_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected token launch contract rust setup/cache condition in ci-fast-gate.yml" >&2
   exit 1
 fi
 
@@ -269,6 +284,16 @@ fi
 
 if ! grep -Fq "bash scripts/escrow/run_settlement_reconciliation_deep_lane.sh" "$DEEP_WORKFLOW"; then
   echo "expected scheduled settlement reconciliation deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/token/run_token_launch_handoff_deep_lane.sh --output-json token-launch-handoff-report.json" "$DEEP_WORKFLOW"; then
+  echo "expected scheduled token launch handoff deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "token-launch-handoff-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
+  echo "expected token launch handoff deep report artifact upload in ci-deep-validate.yml" >&2
   exit 1
 fi
 

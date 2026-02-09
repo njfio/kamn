@@ -82,12 +82,12 @@ jobs:
         run: npm --prefix packages/kamn-sdk test
 
       - name: Set up Rust toolchain
-        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_signer_emulator_contract_tests == 'true' || steps.scope.outputs.run_did_registry_contract_tests == 'true' || steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true' || steps.scope.outputs.run_message_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true' || steps.scope.outputs.run_durable_guard_recovery_contract_tests == 'true' || steps.scope.outputs.run_settlement_reconciliation_contract_tests == 'true' || steps.scope.outputs.run_rust_live_transport_contract_tests == 'true' || steps.scope.outputs.run_live_transport_parity_rust_contract_tests == 'true'
+        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_signer_emulator_contract_tests == 'true' || steps.scope.outputs.run_did_registry_contract_tests == 'true' || steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true' || steps.scope.outputs.run_message_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true' || steps.scope.outputs.run_durable_guard_recovery_contract_tests == 'true' || steps.scope.outputs.run_settlement_reconciliation_contract_tests == 'true' || steps.scope.outputs.run_token_launch_contract_tests == 'true' || steps.scope.outputs.run_rust_live_transport_contract_tests == 'true' || steps.scope.outputs.run_live_transport_parity_rust_contract_tests == 'true'
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Rust build artifacts
         id: rust_cache
-        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_signer_emulator_contract_tests == 'true' || steps.scope.outputs.run_did_registry_contract_tests == 'true' || steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true' || steps.scope.outputs.run_message_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true' || steps.scope.outputs.run_durable_guard_recovery_contract_tests == 'true' || steps.scope.outputs.run_settlement_reconciliation_contract_tests == 'true' || steps.scope.outputs.run_rust_live_transport_contract_tests == 'true' || steps.scope.outputs.run_live_transport_parity_rust_contract_tests == 'true'
+        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_signer_emulator_contract_tests == 'true' || steps.scope.outputs.run_did_registry_contract_tests == 'true' || steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true' || steps.scope.outputs.run_message_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true' || steps.scope.outputs.run_durable_guard_recovery_contract_tests == 'true' || steps.scope.outputs.run_settlement_reconciliation_contract_tests == 'true' || steps.scope.outputs.run_token_launch_contract_tests == 'true' || steps.scope.outputs.run_rust_live_transport_contract_tests == 'true' || steps.scope.outputs.run_live_transport_parity_rust_contract_tests == 'true'
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: kamn-rust-ci-v1
@@ -132,6 +132,10 @@ jobs:
       - name: Run settlement reconciliation contract lane
         if: steps.scope.outputs.run_settlement_reconciliation_contract_tests == 'true'
         run: bash scripts/escrow/run_settlement_reconciliation_contract_lane.sh
+
+      - name: Run token launch handoff contract lane
+        if: steps.scope.outputs.run_token_launch_contract_tests == 'true'
+        run: bash scripts/token/run_token_launch_handoff_contract_lane.sh
 
       - name: Run mainnet cutover contract lane
         if: steps.scope.outputs.run_mainnet_cutover_contract_tests == 'true'

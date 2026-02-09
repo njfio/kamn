@@ -1,0 +1,31 @@
+{
+  "schema_version": "kamn.token.launch-handoff.fixture.v1",
+  "cases": [
+    {
+      "case_id": "go-all-invariants-satisfied",
+      "configured_total_supply": 1000000000,
+      "expected_total_supply": 1000000000,
+      "configured_allocation_sum": 1000000000,
+      "expected_allocation_sum": 1000000000,
+      "allocation_bucket_count": 5,
+      "expected_bucket_count": 5,
+      "required_approvals": 2,
+      "received_approvals": 2,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "GO"
+    },
+    {
+      "case_id": "no-go-supply-mismatch",
+      "configured_total_supply": 1000000001,
+      "expected_total_supply": 1000000000,
+      "configured_allocation_sum": 1000000000,
+      "expected_allocation_sum": 1000000000,
+      "allocation_bucket_count": 5,
+      "expected_bucket_count": 5,
+      "required_approvals": 3,
+      "received_approvals": 2,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    }
+  ]
+}
