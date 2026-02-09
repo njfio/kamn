@@ -85,7 +85,12 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `run_localhost_bridge_demo_evidence_deep_lane.sh` enforces a 300-second upper bound.
 - Bridge deep lane budget:
   - `run_bridge_replay_redaction_deep_lane.sh` enforces a 300-second upper bound.
+- Dashboard runtime compatibility guard:
+  - `bash scripts/frontend/test_dashboard_package_runtime_compat.sh` validates fallback behavior when local `node` lacks `--experimental-strip-types`.
+  - `scripts/frontend/test_dashboard_package.sh` defaults fallback execution to `npx -y node@22` in fail-closed mode.
 - Regression guard:
   - budget overflow remains fail-closed with explicit reason code `runtime_budget_exceeded` (`Regression: #828`).
 - Regression guard:
   - tampered pilot summary `final_decision` is rejected by policy checker (`Regression: #829`).
+- Regression guard:
+  - dashboard runtime fallback contract remains pinned to `node@22` with local reproduction guidance (`Regression: #868`).

@@ -15,6 +15,8 @@ fn live_network_wave_doc_contains_smoke_commands_and_schema() {
     assert!(LIVE_NETWORK_WAVE_DOC.contains("run_localhost_bridge_demo_evidence_deep_lane.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("check_localhost_bridge_demo_policy.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("kamn.bridge.localhost-demo-evidence.v1"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("test_dashboard_package_runtime_compat.sh"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("npx -y node@22"));
 }
 
 #[test]
@@ -24,6 +26,9 @@ fn regression_budget_guard_marker_is_documented() {
     assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #828`"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("120-second upper bound"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("300-second upper bound"));
+    // Regression: #868
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #868`"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("node@22"));
 }
 
 #[test]

@@ -130,4 +130,44 @@ if ! printf '%s\n' "$failure_output" | grep -q "set KAMN_DASHBOARD_FALLBACK_NODE
   exit 1
 fi
 
+# Regression: #868
+: >"$marker_file"
+create_fake_node "$primary_binary" "reject" "$marker_file" "primary"
+
+cat >"$TMP_DIR/npx" <<'FAKE_NPX'
+#!/usr/bin/env bash
+set -euo pipefail
+
+MARKER_FILE="${KAMN_DASHBOARD_RUNTIME_MARKER_FILE:?}"
+if [[ "${1:-}" != "-y" || "${2:-}" != "node@22" ]]; then
+  echo "expected default fallback command to invoke 'npx -y node@22'" >&2
+  exit 33
+fi
+
+if [[ "${3:-}" == "--experimental-strip-types" && "${4:-}" == "-e" ]]; then
+  exit 0
+fi
+
+if [[ "${3:-}" == "--experimental-strip-types" && "${4:-}" == "--test" ]]; then
+  printf '%s\n' "default-fallback" >>"$MARKER_FILE"
+  exit 0
+fi
+
+exit 0
+FAKE_NPX
+chmod +x "$TMP_DIR/npx"
+
+env -u KAMN_DASHBOARD_FALLBACK_NODE_CMD \
+  PATH="$TMP_DIR:$PATH" \
+  KAMN_DASHBOARD_RUNTIME_MARKER_FILE="$marker_file" \
+  KAMN_DASHBOARD_NODE_BIN="$primary_binary.wrapper" \
+  KAMN_DASHBOARD_TEST_TARGET_GLOB="./packages/kamn-dashboard/tests/dashboard.test.ts" \
+  bash "$SCRIPT_UNDER_TEST"
+
+assert_contains "$marker_file" "default-fallback" "expected dashboard package script to use default node@22 fallback when primary runtime probing fails"
+if grep -Fq "primary" "$marker_file"; then
+  echo "expected dashboard package script to avoid primary node execution when default fallback is selected" >&2
+  exit 1
+fi
+
 echo "dashboard package runtime compatibility tests passed."
