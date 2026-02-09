@@ -12,12 +12,21 @@ fi
 required_snippets=(
   "make check"
   "make test"
+  "make smoke-live-network"
+  "make deep-live-network"
   "make demo"
+  "make demo-localhost-transport"
+  "make ci-tools"
+  "run_runtime_snapshot_contract_tests=true"
+  "test_scope=runtime-contract"
   "run_localhost_signed_integration_contract_lane_tests"
   "sdk-live-localhost-integration"
+  "run_live_transport_parity_contract_tests=true"
+  "live_transport_parity_languages=rust,python,typescript"
   "run_localhost_signed_integration_contract_lane.sh"
   "scripts/ci/select_targets.sh"
   "Regression: #900"
+  "Regression: #939"
 )
 
 for snippet in "${required_snippets[@]}"; do
