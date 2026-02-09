@@ -18,6 +18,7 @@ KAMN (Kolme AI Agent Messaging Network) is a privacy-first, auditable coordinati
 - Rust toolchain (`cargo`, `rustc`)
 - Bash shell
 - Node.js/npm (only needed for dashboard/TypeScript lanes)
+- Dashboard package lane auto-falls back to `npx -y node@22` when local Node lacks `--experimental-strip-types`
 
 ### Validate Local Environment
 
