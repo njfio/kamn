@@ -115,6 +115,22 @@ if ! grep -Fq "bash scripts/sdk/run_rust_live_transport_contract_lane.sh" "$FAST
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_localhost_signed_integration_contract_lane_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected localhost signed integration contract lane scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/sdk/test_run_localhost_signed_integration_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected localhost signed integration contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+localhost_signed_integration_scope_hits="$(grep -Fc "steps.scope.outputs.run_localhost_signed_integration_contract_lane_tests == 'true'" "$FAST_WORKFLOW")"
+if [ "$localhost_signed_integration_scope_hits" -lt 3 ]; then
+  echo "expected localhost signed integration contract lane scope guard in rust setup/cache and lane step" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_live_transport_parity_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected live transport parity scope condition in ci-fast-gate.yml" >&2
   exit 1
