@@ -34,6 +34,8 @@ required_snippets=(
   "live-network-pilot-report.json"
   "make demo-localhost-transport"
   "run_localhost_signed_demo.sh"
+  "run_localhost_signed_demo.sh --help"
+  "--timeout-seconds"
   "run_localhost_bridge_demo_evidence_contract_lane.sh"
   "run_localhost_bridge_demo_evidence_deep_lane.sh"
   "kamn.bridge.localhost-demo-evidence.v1"
@@ -46,7 +48,7 @@ required_snippets=(
 )
 
 for snippet in "${required_snippets[@]}"; do
-  if ! grep -Fq "$snippet" "$README_FILE"; then
+  if ! grep -Fq -- "$snippet" "$README_FILE"; then
     echo "README contract failed: missing snippet '$snippet'." >&2
     exit 1
   fi
