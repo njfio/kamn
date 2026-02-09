@@ -70,6 +70,13 @@ make smoke-live-network
 # emits /tmp/live-network-smoke-report.json (schema: kamn.runtime.live-network-smoke-report.v1)
 ```
 
+### Run Live-Network Pilot Deep Lane (Scheduled/Manual)
+
+```bash
+make deep-live-network
+# emits /tmp/live-network-pilot-report.json (schema: kamn.runtime.live-network-pilot-artifact-summary.v1)
+```
+
 ### Run Triadic Devnet Smoke (Kolme)
 
 ```bash
@@ -93,6 +100,6 @@ Canonical contributor rules are in `.github/CONTRIBUTING.md` (`AGENTS.md` remain
 - `.github/CONTRIBUTING.md`: mandatory execution contract (issue hierarchy, TDD, PR standards).
 - `AGENTS.md`: compatibility redirect for agent tooling.
 - `PRD.md`: product requirements and phase scope baseline.
-- `docs/planning/live-network-wave.md`: pilot smoke lane command, budget, and evidence contract.
+- `docs/planning/live-network-wave.md`: pilot smoke/deep lane commands, budgets, and evidence contracts.
 - `docs/foundation/`: domain contracts used by docs tests and release gates.
 - `.github/workflows/`: CI lane orchestration.

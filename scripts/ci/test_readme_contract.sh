@@ -30,6 +30,8 @@ required_snippets=(
   "cargo test"
   "make smoke-live-network"
   "live-network-smoke-report.json"
+  "make deep-live-network"
+  "live-network-pilot-report.json"
   "AGENTS.md"
   "PRD.md"
 )

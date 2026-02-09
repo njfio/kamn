@@ -497,6 +497,11 @@ if grep -Fq "run_sdk_parity_matrix" "$FAST_WORKFLOW"; then
   exit 1
 fi
 
+if grep -Fq "run_live_network_pilot_deep_lane.sh" "$FAST_WORKFLOW"; then
+  echo "fast gate must not execute live-network pilot deep lane directly" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/sdk/run_live_transport_parity_deep_lane.sh" "$DEEP_WORKFLOW"; then
   echo "expected scheduled live transport parity deep lane command in ci-deep-validate.yml" >&2
   exit 1
@@ -649,6 +654,16 @@ fi
 
 if ! grep -Fq "bridge-credentialed-deep-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
   echo "expected bridge credentialed deep report artifact upload in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/runtime/run_live_network_pilot_deep_lane.sh --event-name \"\${{ github.event_name }}\" --output-json live-network-pilot-report.json" "$DEEP_WORKFLOW"; then
+  echo "expected live-network pilot deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "live-network-pilot-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
+  echo "expected live-network pilot deep report artifact upload in ci-deep-validate.yml" >&2
   exit 1
 fi
 

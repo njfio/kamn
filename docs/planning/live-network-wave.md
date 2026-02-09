@@ -1,28 +1,38 @@
-# Live-Network Pilot Smoke Wave (Issue #828)
+# Live-Network Pilot Validation Wave (Issues #828 / #829)
 
-This plan defines the bounded PR-fast smoke lane used to validate live-network
-pilot readiness without running deep or expensive suites on every change.
+This plan defines the bounded PR-fast smoke lane plus the scheduled/manual deep
+lane used to validate live-network pilot readiness while keeping PR cost low.
 
 ## Scope
 
 - One-command live-network smoke validation for local developer use.
+- Scheduled/manual live-network deep validation lane for pilot evidence review.
 - PR-fast budget guard with deterministic fail-closed behavior.
-- Machine-readable smoke report artifact for pilot evidence review.
+- Machine-readable smoke report and pilot artifact summary contracts.
 
 ## Commands
 
-- Makefile developer entrypoint:
+- Makefile developer entrypoints:
   - `make smoke-live-network`
+  - `make deep-live-network`
 - Direct smoke runner:
   - `bash scripts/runtime/run_live_network_smoke_lane.sh --output-json /tmp/live-network-smoke-report.json`
-- Contract lane:
+- Smoke contract lane:
   - `bash scripts/runtime/run_live_network_smoke_contract_lane.sh`
+- Scheduled/manual deep lane:
+  - `bash scripts/runtime/run_live_network_pilot_deep_lane.sh --event-name schedule --output-json /tmp/live-network-pilot-report.json`
+- Deep contract lane:
+  - `bash scripts/runtime/run_live_network_pilot_deep_contract_lane.sh`
+- Deep summary policy checker:
+  - `bash scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh --summary-file /tmp/live-network-pilot-report.json`
 
 ## Evidence Contract
 
-- Report schema:
+- Smoke report schema:
   - `kamn.runtime.live-network-smoke-report.v1`
-- Required report fields:
+- Pilot summary schema:
+  - `kamn.runtime.live-network-pilot-artifact-summary.v1`
+- Required smoke report fields:
   - `status`
   - `final_decision`
   - `elapsed_seconds`
@@ -30,12 +40,27 @@ pilot readiness without running deep or expensive suites on every change.
   - `command_count`
   - `commands`
   - `reason_codes`
+- Required pilot summary fields:
+  - `event_name`
+  - `cadence`
+  - `smoke`
+  - `deep`
+  - `budget_status`
+  - `evidence_complete`
+  - `decision_reasons`
+  - `final_decision`
 
 ## Runtime and Cost Policy
 
 - Default smoke budget:
   - `KAMN_LIVE_NETWORK_SMOKE_MAX_SECONDS=120`
-- Contract lane ceiling:
+- Default deep lane budget:
+  - `KAMN_LIVE_NETWORK_PILOT_DEEP_MAX_SECONDS=300`
+- Smoke contract lane ceiling:
   - `run_live_network_smoke_contract_lane.sh` enforces a 180-second upper bound.
+- Deep cadence policy:
+  - `run_live_network_pilot_deep_lane.sh` rejects non-`schedule` and non-`workflow_dispatch` events.
 - Regression guard:
   - budget overflow remains fail-closed with explicit reason code `runtime_budget_exceeded` (`Regression: #828`).
+- Regression guard:
+  - tampered pilot summary `final_decision` is rejected by policy checker (`Regression: #829`).
