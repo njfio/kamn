@@ -34,3 +34,13 @@ fn regression_requires_threshold_gate_commands() {
     assert!(DOC.contains("generate_performance_smoke_report.sh --lane smoke"));
     assert!(DOC.contains("check_performance_thresholds.sh --lane deep"));
 }
+
+#[test]
+fn regression_requires_runtime_invariant_fuzz_concurrency_budget_contract() {
+    // Regression: #897
+    assert!(DOC.contains("## Runtime Invariant/Fuzz/Concurrency Budget Contract"));
+    assert!(DOC.contains("run_invariant_fuzz_concurrency_contract_lane.sh"));
+    assert!(DOC.contains("check_invariant_fuzz_concurrency_policy.sh"));
+    assert!(DOC.contains("KAMN_RUNTIME_INVARIANT_FUZZ_CONCURRENCY_MAX_SECONDS=180"));
+    assert!(DOC.contains("kamn.runtime.invariant-fuzz-concurrency-contract-report.v1"));
+}

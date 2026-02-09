@@ -14,9 +14,8 @@ cargo test -p kamn-core runtime::tests::regression_snapshot_restore_cursor_misma
 cargo test -p kamn-core --test runtime_network_docs >/dev/null
 cargo test -p kamn-core --test runtime_watchdog_attestation_docs >/dev/null
 cargo test -p kamn-core --test live_network_wave_docs >/dev/null
-bash scripts/runtime/test_run_concurrency_state_mutation_contract_lane.sh >/dev/null
-bash scripts/runtime/test_run_input_mutation_contract_lane.sh >/dev/null
-bash scripts/runtime/test_run_lifecycle_property_contract_lane.sh >/dev/null
+bash scripts/runtime/test_run_invariant_fuzz_concurrency_contract_lane.sh >/dev/null
+bash scripts/runtime/test_check_invariant_fuzz_concurrency_policy.sh >/dev/null
 bash scripts/runtime/test_select_failover_sync_drill_lane.sh >/dev/null
 bash scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh >/dev/null
 bash scripts/runtime/test_run_failover_sync_drill_deep_lane.sh >/dev/null

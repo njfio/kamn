@@ -116,6 +116,12 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
         "cargo test -p kamn-core --test runtime_peer_lifecycle peer_lifecycle_property_generated_event_sequences_match_transition_contract -- --exact"
     ));
     assert!(DOC.contains("bash scripts/runtime/run_lifecycle_property_contract_lane.sh"));
+    assert!(DOC.contains(
+        "bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json"
+    ));
+    assert!(DOC.contains(
+        "bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /tmp/invariant-fuzz-concurrency-contract-report.json"
+    ));
     assert!(DOC.contains("cargo test -p kamn-node --test node_runtime_cli_docs"));
     assert!(DOC.contains("bash scripts/runtime/run_runtime_snapshot_contract_lane.sh"));
     assert!(DOC.contains(
@@ -162,6 +168,9 @@ fn regression_requires_rejoin_and_overflow_rejection_rules() {
     assert!(DOC.contains(
         "task/escrow/peer lifecycle generated invariant lanes remain deterministic (`Regression: #842`)"
     ));
+    assert!(DOC.contains(
+        "invariant/fuzz/concurrency combined lane reason-code policy remains fail-closed (`Regression: #897`)"
+    ));
 }
 
 #[test]
@@ -179,4 +188,11 @@ fn doc_contains_concurrency_harness_contract_rules() {
     assert!(DOC.contains("run_concurrency_state_mutation_contract_lane.sh"));
     assert!(DOC.contains("run_concurrency_state_mutation_deep_lane.sh"));
     assert!(DOC.contains("Regression: #844"));
+}
+
+#[test]
+fn doc_contains_invariant_fuzz_concurrency_contract_rules() {
+    assert!(DOC.contains("run_invariant_fuzz_concurrency_contract_lane.sh"));
+    assert!(DOC.contains("check_invariant_fuzz_concurrency_policy.sh"));
+    assert!(DOC.contains("kamn.runtime.invariant-fuzz-concurrency-contract-report.v1"));
 }

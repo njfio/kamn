@@ -52,6 +52,17 @@ Each failed metric includes:
   - keep heavy replay/load suites out of the PR critical path.
   - attach evidence bundles to issue/PR comments.
 
+## Runtime Invariant/Fuzz/Concurrency Budget Contract (Issue #897)
+- Combined bounded lane command:
+  - `bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json`
+- Policy checker command:
+  - `bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /tmp/invariant-fuzz-concurrency-contract-report.json`
+- Runtime budget environment variable:
+  - `KAMN_RUNTIME_INVARIANT_FUZZ_CONCURRENCY_MAX_SECONDS=180` (default)
+- Budget behavior:
+  - lane fails closed when elapsed runtime exceeds the budget.
+  - report schema remains deterministic: `kamn.runtime.invariant-fuzz-concurrency-contract-report.v1`.
+
 ## CI Threshold Gate Contract
 - Threshold profile source: `.ci/performance-targets.env`.
 - Required report metrics:

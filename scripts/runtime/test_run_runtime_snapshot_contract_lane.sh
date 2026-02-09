@@ -59,18 +59,13 @@ if ! grep -q "live_network_wave_docs" "$FAST_SCRIPT"; then
   exit 1
 fi
 
-if ! grep -q "test_run_concurrency_state_mutation_contract_lane.sh" "$FAST_SCRIPT"; then
-  echo "expected runtime snapshot contract lane to include concurrency mutation contract coverage" >&2
+if ! grep -q "test_run_invariant_fuzz_concurrency_contract_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include combined invariant/fuzz/concurrency contract coverage" >&2
   exit 1
 fi
 
-if ! grep -q "test_run_input_mutation_contract_lane.sh" "$FAST_SCRIPT"; then
-  echo "expected runtime snapshot contract lane to include input mutation contract coverage" >&2
-  exit 1
-fi
-
-if ! grep -q "test_run_lifecycle_property_contract_lane.sh" "$FAST_SCRIPT"; then
-  echo "expected runtime snapshot contract lane to include lifecycle property contract coverage" >&2
+if ! grep -q "test_check_invariant_fuzz_concurrency_policy.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include invariant/fuzz/concurrency policy checker coverage" >&2
   exit 1
 fi
 

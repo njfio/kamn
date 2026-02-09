@@ -22,6 +22,20 @@ This document defines the canonical transaction invariant catalog and error taxo
 - `classify_smoke_error(...)`
 - `validate_catalog(...)`
 
+## Runtime Invariant Harness Coverage (Issue #897)
+- Property-based lifecycle invariant lane:
+  - `bash scripts/runtime/run_lifecycle_property_contract_lane.sh`
+- Fuzz/mutation fail-closed lane:
+  - `bash scripts/runtime/run_input_mutation_contract_lane.sh`
+- Concurrency state-mutation lane:
+  - `bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh`
+- Combined bounded lane with evidence output:
+  - `bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json`
+- Combined lane policy checker:
+  - `bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /tmp/invariant-fuzz-concurrency-contract-report.json`
+- Report schema:
+  - `kamn.runtime.invariant-fuzz-concurrency-contract-report.v1`
+
 ## Validation
 Run from repository root:
 

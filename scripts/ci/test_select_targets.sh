@@ -645,6 +645,16 @@ assert_eq "$(extract_output "$input_mutation_script_output" "run_rust")" "false"
 assert_eq "$(extract_output "$input_mutation_script_output" "run_runtime_snapshot_contract_tests")" "true" "input mutation contract script changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$input_mutation_script_output" "test_scope")" "runtime-contract" "input mutation contract script changes should set runtime-contract scope"
 
+invariant_fuzz_concurrency_script_output="$(run_selector $'scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh')"
+assert_eq "$(extract_output "$invariant_fuzz_concurrency_script_output" "run_rust")" "false" "invariant/fuzz/concurrency contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$invariant_fuzz_concurrency_script_output" "run_runtime_snapshot_contract_tests")" "true" "invariant/fuzz/concurrency contract script changes must run runtime snapshot contract lane"
+assert_eq "$(extract_output "$invariant_fuzz_concurrency_script_output" "test_scope")" "runtime-contract" "invariant/fuzz/concurrency contract script changes should set runtime-contract scope"
+
+invariant_fuzz_concurrency_policy_checker_output="$(run_selector $'scripts/runtime/check_invariant_fuzz_concurrency_policy.sh')"
+assert_eq "$(extract_output "$invariant_fuzz_concurrency_policy_checker_output" "run_rust")" "false" "invariant/fuzz/concurrency policy checker script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$invariant_fuzz_concurrency_policy_checker_output" "run_runtime_snapshot_contract_tests")" "true" "invariant/fuzz/concurrency policy checker changes must run runtime snapshot contract lane"
+assert_eq "$(extract_output "$invariant_fuzz_concurrency_policy_checker_output" "test_scope")" "runtime-contract" "invariant/fuzz/concurrency policy checker changes should set runtime-contract scope"
+
 message_contract_docs_output="$(run_selector $'docs/foundation/message-lifecycle.md')"
 assert_eq "$(extract_output "$message_contract_docs_output" "run_rust")" "false" "message lifecycle contract docs should avoid rust lane"
 assert_eq "$(extract_output "$message_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "message lifecycle contract docs must run message lifecycle contract lane"

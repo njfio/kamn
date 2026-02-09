@@ -150,6 +150,26 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Regression policy:
   - concurrent accept races must never admit multiple winners (`Regression: #844`).
 
+## Combined Invariant/Fuzz/Concurrency Contract Rules
+- Combined lane command:
+  - `bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json`
+- Evidence policy checker:
+  - `bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /tmp/invariant-fuzz-concurrency-contract-report.json`
+- Report schema:
+  - `kamn.runtime.invariant-fuzz-concurrency-contract-report.v1`
+- Required report fields:
+  - `status`
+  - `property_lane_status`
+  - `fuzz_lane_status`
+  - `concurrency_lane_status`
+  - `elapsed_seconds`
+  - `max_seconds`
+  - `reason_codes`
+- Runtime budget:
+  - `KAMN_RUNTIME_INVARIANT_FUZZ_CONCURRENCY_MAX_SECONDS=180` (default)
+- Regression policy:
+  - reason-code policy remains fail-closed with stable `["none"]` success marker (`Regression: #897`).
+
 ## Queue Guard Rules
 - `BoundedRuntimeQueue<T>` is FIFO and preserves insertion order.
 - Capacity must be greater than zero.
@@ -280,6 +300,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - daemon network-fault simulation with queue-overflow/degradation reporting
   - deterministic runtime mutation contract lane command coverage
   - deterministic concurrency replay summaries across peer lifecycle phase transitions
+  - combined invariant/fuzz/concurrency lane + policy checker contract coverage
   - runtime snapshot contract lane wiring and docs mapping checks
 - Regression:
   - rejoin without disconnect is rejected (`Regression: #324`)
@@ -302,6 +323,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - concurrent accept races never allow multiple winners (`Regression: #844`)
   - deterministic envelope/DID mutation fail-closed reasons remain stable (`Regression: #843`)
   - task/escrow/peer lifecycle generated invariant lanes remain deterministic (`Regression: #842`)
+  - invariant/fuzz/concurrency combined lane reason-code policy remains fail-closed (`Regression: #897`)
 - Performance:
   - bounded PR-lane runtime backpressure evaluation budget check
   - bounded PR-lane authenticated peer-frame validation budget check
@@ -309,6 +331,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - bounded PR-lane envelope mutation validation budget check
   - bounded PR-lane DID mutation validation budget check
   - bounded PR-lane concurrency mutation validation budget check
+  - bounded PR-lane combined invariant/fuzz/concurrency validation budget check
   - bounded PR-lane snapshot recovery budget check
   - scheduled chaos lane stress hook (`--ignored`)
   - scheduled concurrency stress deep lane hook (`--ignored`)
@@ -337,6 +360,8 @@ cargo test -p kamn-core --test task_state_machine task_lifecycle_property_genera
 cargo test -p kamn-core --test escrow_lifecycle escrow_property_generated_action_sequences_preserve_amount_and_status_invariants -- --exact
 cargo test -p kamn-core --test runtime_peer_lifecycle peer_lifecycle_property_generated_event_sequences_match_transition_contract -- --exact
 bash scripts/runtime/run_lifecycle_property_contract_lane.sh
+bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json
+bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /tmp/invariant-fuzz-concurrency-contract-report.json
 cargo test -p kamn-node --test node_runtime_cli_docs
 cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
 bash scripts/runtime/run_runtime_snapshot_contract_lane.sh
