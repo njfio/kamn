@@ -32,6 +32,7 @@ required_snippets=(
   "live-network-smoke-report.json"
   "make deep-live-network"
   "live-network-pilot-report.json"
+  "make demo"
   "make demo-localhost-transport"
   "run_localhost_signed_demo.sh"
   "run_localhost_signed_demo.sh --help"

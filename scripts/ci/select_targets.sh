@@ -150,6 +150,7 @@ CHANGED_COUNT="${#CHANGED_FILES[@]}"
 DOCS_ONLY=true
 RUST_CHANGED=false
 CI_INFRA_CHANGED=false
+CI_STRATEGY_DOC_CONTRACT_CHANGED=false
 DEPLOY_SCRIPT_CHANGED=false
 FRONTEND_DASHBOARD_CHANGED=false
 DASHBOARD_CONTRACT_CHANGED=false
@@ -220,6 +221,13 @@ for file in "${CHANGED_FILES[@]}"; do
     .github/workflows/*|scripts/ci/*)
       CI_INFRA_CHANGED=true
       CRITICAL_PATH_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
+    docs/ci/strategy.md)
+      CI_STRATEGY_DOC_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -863,6 +871,13 @@ fi
 
 if [ "$CI_INFRA_CHANGED" = true ]; then
   RUN_CI_TOOL_CHECKS=true
+fi
+
+if [ "$CI_STRATEGY_DOC_CONTRACT_CHANGED" = true ]; then
+  RUN_CI_TOOL_CHECKS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="ci-doc-contract"
+  fi
 fi
 
 write_output "docs_only" "$DOCS_ONLY"
