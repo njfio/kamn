@@ -48,12 +48,14 @@ across Kolme upgrades.
 
 - Known incompatible signature (`kamn 1.2.x` + `kolme v0.14.x`) remains blocked (`Regression: #775`).
 - Malformed runtime commit request shapes remain fail-closed (`Regression: #825`).
+- Runtime commit finality projection blocks invalid lifecycle regression to pending (`Regression: #826`).
 
 ## Local Validation
 
 ```bash
 bash scripts/kolme/test_validate_version_compatibility.sh
 bash scripts/kolme/test_run_version_compatibility_contract_lane.sh
+bash scripts/kolme/test_run_runtime_commit_contract_lane.sh
 bash scripts/ci/test_select_targets.sh
 bash scripts/ci/test_workflow_scope_policy.sh
 ```
