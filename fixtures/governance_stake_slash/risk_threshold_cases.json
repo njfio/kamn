@@ -1,0 +1,69 @@
+{
+  "schema_version": "kamn.governance.stake-slash-risk.replay-cases.v1",
+  "cases": [
+    {
+      "case_id": "go_thresholds_within_bounds",
+      "proposal_id": "gov-risk-001",
+      "simulation_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "stake_at_risk_bps": 120,
+      "max_stake_at_risk_bps": 300,
+      "slash_probability_bps": 40,
+      "max_slash_probability_bps": 150,
+      "validator_churn_bps": 60,
+      "max_validator_churn_bps": 180,
+      "quorum_safety_margin_bps": 220,
+      "min_quorum_safety_margin_bps": 150,
+      "evidence_complete": true,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "GO"
+    },
+    {
+      "case_id": "no_go_stake_at_risk_breach",
+      "proposal_id": "gov-risk-002",
+      "simulation_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "stake_at_risk_bps": 420,
+      "max_stake_at_risk_bps": 300,
+      "slash_probability_bps": 60,
+      "max_slash_probability_bps": 150,
+      "validator_churn_bps": 70,
+      "max_validator_churn_bps": 180,
+      "quorum_safety_margin_bps": 210,
+      "min_quorum_safety_margin_bps": 150,
+      "evidence_complete": true,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
+      "case_id": "no_go_quorum_margin_breach",
+      "proposal_id": "gov-risk-003",
+      "simulation_hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "stake_at_risk_bps": 140,
+      "max_stake_at_risk_bps": 300,
+      "slash_probability_bps": 50,
+      "max_slash_probability_bps": 150,
+      "validator_churn_bps": 80,
+      "max_validator_churn_bps": 180,
+      "quorum_safety_margin_bps": 90,
+      "min_quorum_safety_margin_bps": 150,
+      "evidence_complete": true,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
+      "case_id": "no_go_incomplete_evidence",
+      "proposal_id": "gov-risk-004",
+      "simulation_hash": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "stake_at_risk_bps": 100,
+      "max_stake_at_risk_bps": 300,
+      "slash_probability_bps": 45,
+      "max_slash_probability_bps": 150,
+      "validator_churn_bps": 75,
+      "max_validator_churn_bps": 180,
+      "quorum_safety_margin_bps": 200,
+      "min_quorum_safety_margin_bps": 150,
+      "evidence_complete": false,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    }
+  ]
+}

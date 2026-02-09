@@ -61,3 +61,22 @@ fn regression_requires_simulation_and_veto_bypass_guard_marker() {
         "simulation/veto bypass attempts and tampered evidence bundles force `NO-GO` (`Regression: #733`)."
     ));
 }
+
+#[test]
+fn doc_contains_stake_slash_risk_threshold_evidence_contract() {
+    assert!(DOC.contains("## Stake/Slash Risk Threshold Evidence Contract"));
+    assert!(DOC.contains("generate_stake_slash_risk_evidence_bundle.sh"));
+    assert!(DOC.contains("check_stake_slash_risk_policy.sh"));
+    assert!(DOC.contains("run_stake_slash_risk_contract_lane.sh"));
+    assert!(DOC.contains("run_stake_slash_risk_deep_lane.sh"));
+    assert!(DOC.contains("run_stake_slash_risk_matrix.py"));
+    assert!(DOC.contains("fixtures/governance_stake_slash/risk_threshold_cases.json"));
+}
+
+#[test]
+fn regression_requires_stake_slash_threshold_bypass_guard_marker() {
+    // Regression: #733
+    assert!(DOC.contains(
+        "unsafe threshold bypass attempts and tampered risk evidence force `NO-GO` (`Regression: #733`)."
+    ));
+}

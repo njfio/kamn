@@ -80,6 +80,22 @@ Governance activation must include deterministic simulation and veto/timelock ev
 - Regression policy:
   - simulation/veto bypass attempts and tampered evidence bundles force `NO-GO` (`Regression: #733`).
 
+## Stake/Slash Risk Threshold Evidence Contract (Issue #750)
+Governance activation also requires deterministic stake/slash risk thresholds to block unsafe economic outcomes.
+
+- Evidence bundle generator:
+  - `bash scripts/governance/generate_stake_slash_risk_evidence_bundle.sh --output-file /tmp/stake-slash-risk.json --proposal-id gov-risk-001 --simulation-hash sha256:1111111111111111111111111111111111111111111111111111111111111111 --stake-at-risk-bps 120 --max-stake-at-risk-bps 300 --slash-probability-bps 40 --max-slash-probability-bps 150 --validator-churn-bps 60 --max-validator-churn-bps 180 --quorum-safety-margin-bps 220 --min-quorum-safety-margin-bps 150 --evidence-complete true --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/governance/check_stake_slash_risk_policy.sh --bundle-file /tmp/stake-slash-risk.json`
+- PR fast contract lane:
+  - `bash scripts/governance/run_stake_slash_risk_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/governance/run_stake_slash_risk_deep_lane.sh --output-json governance-stake-slash-report.json`
+- Replay matrix runner:
+  - `python3 scripts/governance/run_stake_slash_risk_matrix.py --fixture fixtures/governance_stake_slash/risk_threshold_cases.json --output-json governance-stake-slash-report.json`
+- Regression policy:
+  - unsafe threshold bypass attempts and tampered risk evidence force `NO-GO` (`Regression: #733`).
+
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 
@@ -88,6 +104,10 @@ bash scripts/governance/test_generate_governance_simulation_evidence_bundle.sh
 bash scripts/governance/test_run_governance_simulation_contract_lane.sh
 bash scripts/governance/test_run_governance_simulation_matrix.sh
 bash scripts/governance/test_run_governance_simulation_deep_lane.sh
+bash scripts/governance/test_generate_stake_slash_risk_evidence_bundle.sh
+bash scripts/governance/test_run_stake_slash_risk_contract_lane.sh
+bash scripts/governance/test_run_stake_slash_risk_matrix.sh
+bash scripts/governance/test_run_stake_slash_risk_deep_lane.sh
 cargo test -p kamn-core --test governance_workflow --test governance_workflow_docs
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings

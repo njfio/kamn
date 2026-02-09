@@ -102,6 +102,17 @@ fn checklist_contains_governance_simulation_and_human_veto_evidence_contract() {
 }
 
 #[test]
+fn checklist_contains_governance_stake_slash_risk_threshold_contract() {
+    assert!(CHECKLIST.contains("## Governance Stake/Slash Risk Threshold Contract"));
+    assert!(CHECKLIST.contains("generate_stake_slash_risk_evidence_bundle.sh"));
+    assert!(CHECKLIST.contains("check_stake_slash_risk_policy.sh"));
+    assert!(CHECKLIST.contains("run_stake_slash_risk_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_stake_slash_risk_deep_lane.sh"));
+    assert!(CHECKLIST.contains("run_stake_slash_risk_matrix.py"));
+    assert!(CHECKLIST.contains("fixtures/governance_stake_slash/risk_threshold_cases.json"));
+}
+
+#[test]
 fn checklist_contains_token_launch_handoff_evidence_contract() {
     assert!(CHECKLIST.contains("## Token Launch Handoff Evidence Contract"));
     assert!(CHECKLIST.contains("generate_token_launch_handoff_evidence_bundle.sh"));
@@ -207,6 +218,14 @@ fn regression_requires_governance_simulation_and_veto_guard_marker() {
     // Regression: #733
     assert!(CHECKLIST.contains(
         "simulation/veto bypass attempts and tampered evidence bundles force `NO-GO` (`Regression: #733`)."
+    ));
+}
+
+#[test]
+fn regression_requires_governance_stake_slash_risk_guard_marker() {
+    // Regression: #733
+    assert!(CHECKLIST.contains(
+        "unsafe threshold bypass attempts and tampered risk evidence force `NO-GO` (`Regression: #733`)."
     ));
 }
 
