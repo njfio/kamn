@@ -12,6 +12,7 @@ pub mod content_replication;
 pub mod content_retrieval;
 pub mod content_storage;
 pub mod cross_chain_bridge;
+pub mod cross_chain_receipt;
 pub mod data_classification;
 pub mod did;
 pub mod did_registry;
@@ -118,6 +119,11 @@ pub use cross_chain_bridge::{
     CrossChainBridgeConfig, CrossChainBridgeEngine, CrossChainBridgeError,
     CrossChainInboundRequest, CrossChainNetwork, CrossChainOutboundApproval,
     CrossChainOutboundDispatch,
+};
+pub use cross_chain_receipt::{
+    normalize_cross_chain_receipt, CrossChainReceiptFinality, CrossChainReceiptNetwork,
+    CrossChainReceiptNormalizationError, CrossChainReceiptProof, CrossChainReceiptStatus,
+    NormalizedCrossChainReceipt, ETHEREUM_FINAL_CONFIRMATION_THRESHOLD,
 };
 pub use data_classification::{
     ClassificationPolicy, ClassificationStatus, DataClassificationEngine, DataClassificationError,
