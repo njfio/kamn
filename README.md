@@ -35,6 +35,21 @@ cargo test
 bash scripts/ci/test_ci_tools.sh
 ```
 
+### Fast Make Lanes
+
+```bash
+# Fast static gates
+make check
+
+# Default bounded test lane
+make test
+
+# Two-process localhost signed-message demo
+make demo
+```
+
+Deep/scheduled lanes remain opt-in via scripts in `scripts/sdk/` and `scripts/ci/`.
+
 ### Run A Focused Core Slice
 
 ```bash
