@@ -78,6 +78,7 @@ bash "$ROOT_DIR/scripts/escrow/test_generate_settlement_reconciliation_evidence_
 bash "$ROOT_DIR/scripts/escrow/test_run_settlement_reconciliation_contract_lane.sh"
 bash "$ROOT_DIR/scripts/escrow/test_run_settlement_reconciliation_race_matrix.sh"
 bash "$ROOT_DIR/scripts/reputation/test_run_weighted_decay_contract_lane.sh"
+bash "$ROOT_DIR/scripts/reputation/test_generate_weighted_decay_property_evidence_bundle.sh"
 bash "$ROOT_DIR/scripts/reputation/test_run_weighted_decay_matrix.sh"
 bash "$ROOT_DIR/scripts/reputation/test_run_weighted_decay_deep_lane.sh"
 bash "$ROOT_DIR/scripts/reputation/test_generate_reputation_dispute_evidence_bundle.sh"
