@@ -113,6 +113,18 @@ jobs:
           path: dsar-legal-hold-report.json
           if-no-files-found: error
 
+      - name: Run federated DID handshake deep lane
+        if: steps.detect.outputs.run_rust == 'true'
+        run: bash scripts/did/run_federated_did_handshake_deep_lane.sh --output-json federated-did-handshake-report.json
+
+      - name: Upload federated DID handshake deep report
+        if: always() && hashFiles('federated-did-handshake-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: federated-did-handshake-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: federated-did-handshake-report.json
+          if-no-files-found: error
+
       - name: Run governance simulation deep lane
         if: steps.detect.outputs.run_rust == 'true'
         run: bash scripts/governance/run_governance_simulation_deep_lane.sh --output-json governance-simulation-report.json

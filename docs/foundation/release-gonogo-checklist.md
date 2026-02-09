@@ -121,6 +121,22 @@ GDPR data-subject workflows require deterministic legal-hold precedence evidence
 - Regression policy:
   - legal-hold bypass attempts and tampered DSAR evidence force `NO-GO` (`Regression: #732`).
 
+## Federated DID Handshake Evidence Contract (Issue #752)
+Federated DID trust handshakes require deterministic replay, downgrade, and quorum evidence before cross-network approval.
+
+- Evidence bundle generator:
+  - `bash scripts/did/generate_federated_did_handshake_evidence_bundle.sh --output-file /tmp/federated-did-handshake.json --handshake-id federated-go-001 --subject-did kamn:did:agent:federated-worker-1 --local-network kolme-mainnet-a --remote-network kolme-mainnet-b --resolver-cache-hit true --resolver-version resolver-v1 --signature-policy PASS --nonce-monotonic true --downgrade-detected false --partition-sequence-monotonic true --required-quorum 2 --received-quorum 2 --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/did/check_federated_did_handshake_policy.sh --bundle-file /tmp/federated-did-handshake.json`
+- PR fast contract lane:
+  - `bash scripts/did/run_federated_did_handshake_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/did/run_federated_did_handshake_deep_lane.sh --output-json federated-did-handshake-report.json`
+- Partition replay matrix runner:
+  - `python3 scripts/did/run_federated_did_handshake_matrix.py --fixture fixtures/federated_did_handshake/partition_replay_cases.json --output-json federated-did-handshake-report.json`
+- Regression policy:
+  - replay/downgrade attempts, quorum shortfalls, and tampered final decisions force `NO-GO` (`Regression: #734`).
+
 ## Governance Simulation and Human-Veto Evidence Contract (Issue #748)
 Governance activation requires deterministic simulation, veto, timelock, and approval evidence before GO decisions.
 
@@ -272,6 +288,10 @@ bash scripts/compliance/test_generate_dsar_legal_hold_evidence_bundle.sh
 bash scripts/compliance/test_run_dsar_legal_hold_contract_lane.sh
 bash scripts/compliance/test_run_dsar_legal_hold_matrix.sh
 bash scripts/compliance/test_run_dsar_legal_hold_deep_lane.sh
+bash scripts/did/test_generate_federated_did_handshake_evidence_bundle.sh
+bash scripts/did/test_run_federated_did_handshake_contract_lane.sh
+bash scripts/did/test_run_federated_did_handshake_matrix.sh
+bash scripts/did/test_run_federated_did_handshake_deep_lane.sh
 bash scripts/governance/test_generate_governance_simulation_evidence_bundle.sh
 bash scripts/governance/test_run_governance_simulation_contract_lane.sh
 bash scripts/governance/test_run_governance_simulation_matrix.sh
