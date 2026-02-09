@@ -126,6 +126,11 @@ persistence/recovery contracts for the task operation registry.
 ## Federated Delegation Settlement Evidence Contract (Issue #754)
 Cross-network task delegation and settlement envelopes must emit deterministic evidence before release approval.
 
+- Stable shell wrappers:
+  - `scripts/task/generate_federated_delegation_settlement_evidence_bundle.sh`
+  - `scripts/task/check_federated_delegation_settlement_policy.sh`
+- Shared Python implementation:
+  - `scripts/task/federated_delegation_settlement_contract.py`
 - Evidence bundle generator:
   - `bash scripts/task/generate_federated_delegation_settlement_evidence_bundle.sh --output-file /tmp/federated-delegation-settlement.json --delegation-id delegation-go-001 --task-id task-go-001 --delegator-did kamn:did:agent:delegator-go-001 --delegatee-did kamn:did:agent:delegatee-go-001 --source-network kolme-mainnet-a --destination-network kolme-mainnet-b --settlement-reference-id settlement-ref-go-001 --expected-settlement-reference-id settlement-ref-go-001 --settlement-receipt-finality FINAL --nonce-monotonic true --replay-detected false --partition-sequence-monotonic true --required-attestors 2 --received-attestors 2 --ci-fast-gate PASS`
 - Policy checker:
