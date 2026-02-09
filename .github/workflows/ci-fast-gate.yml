@@ -117,6 +117,12 @@ jobs:
           bash scripts/did/test_run_federated_did_handshake_matrix.sh
           bash scripts/did/test_run_federated_did_handshake_deep_lane.sh
 
+      - name: Run Kolme snapshot drift contract lane
+        if: steps.scope.outputs.run_kolme_snapshot_drift_contract_tests == 'true'
+        run: |
+          bash scripts/kolme/test_check_snapshot_drift.sh
+          bash scripts/kolme/test_run_snapshot_drift_contract_lane.sh
+
       - name: Run federated delegation settlement contract lane
         if: steps.scope.outputs.run_federated_delegation_settlement_contract_tests == 'true'
         run: |
