@@ -55,6 +55,29 @@ Release promotion requires machine-validated DR drill evidence and SLO gate chec
 - Regression policy:
   - missing/incomplete DR evidence and SLO threshold violations force `NO-GO` (`Regression: #623`).
 
+## Deployment SLO Evidence and Rollback Automation Contract
+Deterministic deployment SLO/rollback policy checks are enforced through a bounded deployment lane:
+
+- Lane command:
+  - `bash scripts/deploy/run_deployment_slo_rollback_lane.sh --output-json /tmp/deployment-slo-rollback-report.json`
+- Policy checker command:
+  - `bash scripts/deploy/check_deployment_slo_rollback_policy.sh --report-file /tmp/deployment-slo-rollback-report.json`
+- Contract lane command:
+  - `bash scripts/deploy/run_deployment_slo_rollback_contract_lane.sh --output-file /tmp/deployment-slo-rollback-contract-report.json`
+
+Runtime budget controls:
+
+- `KAMN_DEPLOYMENT_SLO_ROLLBACK_MAX_SECONDS`
+- `KAMN_DEPLOYMENT_SLO_ROLLBACK_CONTRACT_MAX_SECONDS`
+
+Required schema/reason markers:
+
+- `kamn.deploy.slo-rollback-report.v1`
+- `deployment_slo_rollback_reason_codes:GO:v1`
+- `deployment_slo_rollback_reason_codes:NO-GO:v1`
+
+The lane fails closed: SLO gate drift, rollback automation evidence drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #944`).
+
 ## Live-Network Pilot Rollback Evidence Gate (Issue #830)
 Pilot rollback readiness requires deterministic deep-lane evidence and policy validation before release continuity is approved.
 

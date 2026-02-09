@@ -131,6 +131,27 @@ assert_eq "$(extract_output "$deploy_output" "live_transport_parity_languages")"
 assert_eq "$(extract_output "$deploy_output" "run_sdk_parity_matrix")" "false" "deploy-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$deploy_output" "test_scope")" "deploy" "deploy-only changes must use deploy scope"
 
+rollback_runbook_output="$(run_selector $'docs/foundation/upgrade-rollback-runbook.md')"
+assert_eq "$(extract_output "$rollback_runbook_output" "docs_only")" "true" "upgrade rollback runbook updates should remain docs-only"
+assert_eq "$(extract_output "$rollback_runbook_output" "run_rust")" "false" "upgrade rollback runbook updates should avoid rust lane"
+assert_eq "$(extract_output "$rollback_runbook_output" "run_deploy_preflight_tests")" "true" "upgrade rollback runbook updates must run deploy preflight tests"
+assert_eq "$(extract_output "$rollback_runbook_output" "test_scope")" "deploy" "upgrade rollback runbook updates should use deploy scope"
+
+deployment_slo_lane_output="$(run_selector $'scripts/deploy/run_deployment_slo_rollback_lane.sh')"
+assert_eq "$(extract_output "$deployment_slo_lane_output" "run_rust")" "false" "deployment slo/rollback lane changes should avoid rust lane"
+assert_eq "$(extract_output "$deployment_slo_lane_output" "run_deploy_preflight_tests")" "true" "deployment slo/rollback lane changes must run deploy preflight tests"
+assert_eq "$(extract_output "$deployment_slo_lane_output" "test_scope")" "deploy" "deployment slo/rollback lane changes should set deploy scope"
+
+deployment_slo_policy_output="$(run_selector $'scripts/deploy/check_deployment_slo_rollback_policy.sh')"
+assert_eq "$(extract_output "$deployment_slo_policy_output" "run_rust")" "false" "deployment slo/rollback policy checker changes should avoid rust lane"
+assert_eq "$(extract_output "$deployment_slo_policy_output" "run_deploy_preflight_tests")" "true" "deployment slo/rollback policy checker changes must run deploy preflight tests"
+assert_eq "$(extract_output "$deployment_slo_policy_output" "test_scope")" "deploy" "deployment slo/rollback policy checker changes should set deploy scope"
+
+deployment_slo_contract_output="$(run_selector $'scripts/deploy/run_deployment_slo_rollback_contract_lane.sh')"
+assert_eq "$(extract_output "$deployment_slo_contract_output" "run_rust")" "false" "deployment slo/rollback contract lane changes should avoid rust lane"
+assert_eq "$(extract_output "$deployment_slo_contract_output" "run_deploy_preflight_tests")" "true" "deployment slo/rollback contract lane changes must run deploy preflight tests"
+assert_eq "$(extract_output "$deployment_slo_contract_output" "test_scope")" "deploy" "deployment slo/rollback contract lane changes should set deploy scope"
+
 # Regression: #463
 runner_output_file="$(mktemp)"
 runner_docs_output="$(GITHUB_OUTPUT="$runner_output_file" run_selector $'docs/foundation/ci-caching-parallelism.md')"
