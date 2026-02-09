@@ -31,6 +31,11 @@ if ! printf '%s\n' "$generator_output" | grep -q "^status=generated$"; then
   exit 1
 fi
 
+if ! printf '%s\n' "$generator_output" | grep -q "^reason_key=reputation_dispute_reason_codes:GO:v1$"; then
+  echo "expected GO reason key for reputation dispute go case" >&2
+  exit 1
+fi
+
 if ! printf '%s\n' "$generator_output" | grep -q "^final_decision=GO$"; then
   echo "expected GO final decision for reputation dispute go case" >&2
   exit 1
@@ -45,6 +50,7 @@ bundle_path = pathlib.Path(sys.argv[1])
 payload = json.loads(bundle_path.read_text(encoding="utf-8"))
 
 assert payload["schema_version"] == "kamn.reputation.dispute-evidence.v1"
+assert payload["reason_key"] == "reputation_dispute_reason_codes:GO:v1"
 assert payload["policy_checks"]["evidence_hash_matches"] is True
 assert payload["policy_checks"]["score_adjustment_within_limit"] is True
 assert payload["final_decision"] == "GO"
@@ -82,6 +88,11 @@ tampered_output="$(
 
 if ! printf '%s\n' "$tampered_output" | grep -q "^final_decision=NO-GO$"; then
   echo "expected NO-GO decision for tampered evidence case" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$tampered_output" | grep -q "^reason_key=reputation_dispute_reason_codes:NO-GO:v1$"; then
+  echo "expected NO-GO reason key for tampered evidence case" >&2
   exit 1
 fi
 

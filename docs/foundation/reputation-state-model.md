@@ -47,6 +47,10 @@ Trust score boundary checks are inclusive for `1000`.
 ## Deterministic Reputation Dispute Evidence Contract (Issue #738)
 Dispute adjudication uses machine-verifiable bundles so resolution outcomes stay reproducible and tamper-evident.
 
+- Schema contract:
+  - `schema_version`: `kamn.reputation.dispute-evidence.v1`
+  - `reason_key`: `reputation_dispute_reason_codes:<final_decision>:v1`
+  - `reason_codes`: sorted deterministic policy failure codes
 - Evidence bundle generator:
   - `bash scripts/reputation/generate_reputation_dispute_evidence_bundle.sh --output-file /tmp/reputation-dispute.json --dispute-id dispute-001 --subject-did did:kamn:agent-001 --reviewer-did did:kamn:reviewer-001 --dispute-reason-code QUALITY --evidence-uri s3://kamn-audit/reputation/dispute-001.json --evidence-sha256 sha256:1111111111111111111111111111111111111111111111111111111111111111 --evidence-hash-verified PASS --original-trust-score 640 --proposed-trust-score 560 --max-adjustment-points 120 --policy-window-open true --approval-recorded true --ci-fast-gate PASS`
 - Policy checker:
@@ -57,8 +61,11 @@ Dispute adjudication uses machine-verifiable bundles so resolution outcomes stay
   - `bash scripts/reputation/run_reputation_dispute_deep_lane.sh --output-json reputation-dispute-report.json`
 - Replay matrix runner:
   - `python3 scripts/reputation/run_reputation_dispute_matrix.py --fixture fixtures/reputation_dispute/replay_cases.json --output-json reputation-dispute-report.json`
+- Runtime budget control:
+  - `REPUTATION_DISPUTE_MAX_SECONDS` (contract lane fails closed when runtime exceeds budget)
 - Regression policy:
   - tampered evidence hashes, score-adjustment limit bypasses, and closed-policy-window decisions force `NO-GO` (`Regression: #730`).
+  - reason-code mismatch or tampered dispute evidence payloads force `NO-GO` (`Regression: #934`).
 
 ## Weighted Decay and Anti-Gaming Threshold Contract (Issue #736)
 Trust-score updates apply deterministic weighted decay windows and typed abuse-threshold penalties before score persistence.
