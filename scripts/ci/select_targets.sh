@@ -32,6 +32,7 @@ append_summary() {
     echo "- Run dashboard contract tests: ${RUN_DASHBOARD_CONTRACT_TESTS}"
     echo "- Run signer emulator contract tests: ${RUN_SIGNER_EMULATOR_CONTRACT_TESTS}"
     echo "- Run DID registry contract tests: ${RUN_DID_REGISTRY_CONTRACT_TESTS}"
+    echo "- Run federated DID handshake contract tests: ${RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS}"
     echo "- Run runtime snapshot contract tests: ${RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS}"
     echo "- Run message lifecycle contract tests: ${RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS}"
     echo "- Run channel lifecycle contract tests: ${RUN_CHANNEL_LIFECYCLE_CONTRACT_TESTS}"
@@ -146,6 +147,7 @@ FRONTEND_DASHBOARD_CHANGED=false
 DASHBOARD_CONTRACT_CHANGED=false
 SIGNER_EMULATOR_CONTRACT_CHANGED=false
 DID_REGISTRY_CONTRACT_CHANGED=false
+FEDERATED_DID_HANDSHAKE_CONTRACT_CHANGED=false
 RUNTIME_SNAPSHOT_CONTRACT_CHANGED=false
 MESSAGE_LIFECYCLE_CONTRACT_CHANGED=false
 CHANNEL_LIFECYCLE_CONTRACT_CHANGED=false
@@ -237,8 +239,15 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    crates/kamn-core/src/did_registry.rs|crates/kamn-core/tests/did_registry_transactions.rs|crates/kamn-core/tests/did_registry_transactions_docs.rs|docs/foundation/did-registry-transactions.md|scripts/did/*)
+    crates/kamn-core/src/did_registry.rs|crates/kamn-core/tests/did_registry_transactions.rs|crates/kamn-core/tests/did_registry_transactions_docs.rs|docs/foundation/did-registry-transactions.md|scripts/did/*did_registry*)
       DID_REGISTRY_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
+    docs/foundation/did-method.md|scripts/did/*federated_did_handshake*|fixtures/federated_did_handshake/*|crates/kamn-core/tests/did_method_docs.rs)
+      FEDERATED_DID_HANDSHAKE_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -439,6 +448,7 @@ RUN_FRONTEND_DASHBOARD_TESTS=false
 RUN_DASHBOARD_CONTRACT_TESTS=false
 RUN_SIGNER_EMULATOR_CONTRACT_TESTS=false
 RUN_DID_REGISTRY_CONTRACT_TESTS=false
+RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS=false
 RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS=false
 RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS=false
 RUN_CHANNEL_LIFECYCLE_CONTRACT_TESTS=false
@@ -539,6 +549,13 @@ if [ "$DID_REGISTRY_CONTRACT_CHANGED" = true ]; then
   RUN_DID_REGISTRY_CONTRACT_TESTS=true
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
     TEST_SCOPE="did-contract"
+  fi
+fi
+
+if [ "$FEDERATED_DID_HANDSHAKE_CONTRACT_CHANGED" = true ]; then
+  RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="federated-did-contract"
   fi
 fi
 
@@ -746,6 +763,7 @@ write_output "run_frontend_dashboard_tests" "$RUN_FRONTEND_DASHBOARD_TESTS"
 write_output "run_dashboard_contract_tests" "$RUN_DASHBOARD_CONTRACT_TESTS"
 write_output "run_signer_emulator_contract_tests" "$RUN_SIGNER_EMULATOR_CONTRACT_TESTS"
 write_output "run_did_registry_contract_tests" "$RUN_DID_REGISTRY_CONTRACT_TESTS"
+write_output "run_federated_did_handshake_contract_tests" "$RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS"
 write_output "run_runtime_snapshot_contract_tests" "$RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS"
 write_output "run_message_lifecycle_contract_tests" "$RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS"
 write_output "run_channel_lifecycle_contract_tests" "$RUN_CHANNEL_LIFECYCLE_CONTRACT_TESTS"

@@ -1,0 +1,73 @@
+{
+  "schema_version": "kamn.did.federated-handshake.partition-replay-cases.v1",
+  "cases": [
+    {
+      "case_id": "go_quorum_cache_hit",
+      "handshake_id": "federated-go-001",
+      "subject_did": "kamn:did:agent:federated-worker-1",
+      "local_network": "kolme-mainnet-a",
+      "remote_network": "kolme-mainnet-b",
+      "resolver_cache_hit": true,
+      "resolver_version": "resolver-v1",
+      "signature_policy": "PASS",
+      "nonce_monotonic": true,
+      "downgrade_detected": false,
+      "partition_sequence_monotonic": true,
+      "required_quorum": 2,
+      "received_quorum": 2,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "GO"
+    },
+    {
+      "case_id": "no_go_partition_replay",
+      "handshake_id": "federated-replay-001",
+      "subject_did": "kamn:did:agent:federated-worker-2",
+      "local_network": "kolme-mainnet-a",
+      "remote_network": "kolme-mainnet-b",
+      "resolver_cache_hit": false,
+      "resolver_version": "resolver-v1",
+      "signature_policy": "PASS",
+      "nonce_monotonic": false,
+      "downgrade_detected": false,
+      "partition_sequence_monotonic": false,
+      "required_quorum": 2,
+      "received_quorum": 2,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
+      "case_id": "no_go_downgrade_attack",
+      "handshake_id": "federated-downgrade-001",
+      "subject_did": "kamn:did:agent:federated-worker-3",
+      "local_network": "kolme-mainnet-a",
+      "remote_network": "kolme-mainnet-b",
+      "resolver_cache_hit": true,
+      "resolver_version": "resolver-v1",
+      "signature_policy": "PASS",
+      "nonce_monotonic": true,
+      "downgrade_detected": true,
+      "partition_sequence_monotonic": true,
+      "required_quorum": 2,
+      "received_quorum": 2,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
+      "case_id": "no_go_quorum_shortfall",
+      "handshake_id": "federated-quorum-001",
+      "subject_did": "kamn:did:agent:federated-worker-4",
+      "local_network": "kolme-mainnet-a",
+      "remote_network": "kolme-mainnet-b",
+      "resolver_cache_hit": true,
+      "resolver_version": "resolver-v1",
+      "signature_policy": "PASS",
+      "nonce_monotonic": true,
+      "downgrade_detected": false,
+      "partition_sequence_monotonic": true,
+      "required_quorum": 3,
+      "received_quorum": 2,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    }
+  ]
+}

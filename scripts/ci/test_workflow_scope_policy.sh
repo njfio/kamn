@@ -135,6 +135,31 @@ if ! grep -Fq "bash scripts/did/run_did_registry_contract_lane.sh" "$FAST_WORKFL
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_federated_did_handshake_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected federated DID handshake contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/did/test_generate_federated_did_handshake_evidence_bundle.sh" "$FAST_WORKFLOW"; then
+  echo "expected federated DID handshake generator tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/did/test_run_federated_did_handshake_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected federated DID handshake contract lane tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/did/test_run_federated_did_handshake_matrix.sh" "$FAST_WORKFLOW"; then
+  echo "expected federated DID handshake matrix tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/did/test_run_federated_did_handshake_deep_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected federated DID handshake deep lane tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected runtime snapshot contract scope condition in ci-fast-gate.yml" >&2
   exit 1
@@ -429,6 +454,16 @@ fi
 
 if ! grep -Fq "dsar-legal-hold-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
   echo "expected DSAR legal-hold deep report artifact upload in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/did/run_federated_did_handshake_deep_lane.sh --output-json federated-did-handshake-report.json" "$DEEP_WORKFLOW"; then
+  echo "expected scheduled federated DID handshake deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "federated-did-handshake-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
+  echo "expected federated DID handshake deep report artifact upload in ci-deep-validate.yml" >&2
   exit 1
 fi
 

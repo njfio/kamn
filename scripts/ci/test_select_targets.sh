@@ -310,17 +310,38 @@ assert_eq "$(extract_output "$signer_contract_script_output" "test_scope")" "sig
 did_contract_docs_output="$(run_selector $'docs/foundation/did-registry-transactions.md')"
 assert_eq "$(extract_output "$did_contract_docs_output" "run_rust")" "false" "did contract docs should avoid rust lane"
 assert_eq "$(extract_output "$did_contract_docs_output" "run_did_registry_contract_tests")" "true" "did contract docs must run did registry contract lane"
+assert_eq "$(extract_output "$did_contract_docs_output" "run_federated_did_handshake_contract_tests")" "false" "did registry docs should not run federated DID handshake lane"
 assert_eq "$(extract_output "$did_contract_docs_output" "test_scope")" "did-contract" "did contract docs should set did-contract scope"
 
 did_contract_rust_output="$(run_selector $'crates/kamn-core/src/did_registry.rs')"
 assert_eq "$(extract_output "$did_contract_rust_output" "run_rust")" "true" "did registry rust changes should run rust lane"
 assert_eq "$(extract_output "$did_contract_rust_output" "run_did_registry_contract_tests")" "true" "did registry rust changes must run did registry contract lane"
+assert_eq "$(extract_output "$did_contract_rust_output" "run_federated_did_handshake_contract_tests")" "false" "did registry rust changes should not run federated DID handshake lane"
 assert_eq "$(extract_output "$did_contract_rust_output" "test_scope")" "targeted" "did registry rust changes should stay targeted"
 
 did_contract_script_output="$(run_selector $'scripts/did/run_did_registry_contract_lane.sh')"
 assert_eq "$(extract_output "$did_contract_script_output" "run_rust")" "false" "did contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$did_contract_script_output" "run_did_registry_contract_tests")" "true" "did contract script changes must run did registry contract lane"
+assert_eq "$(extract_output "$did_contract_script_output" "run_federated_did_handshake_contract_tests")" "false" "did registry script changes should not run federated DID handshake lane"
 assert_eq "$(extract_output "$did_contract_script_output" "test_scope")" "did-contract" "did contract script changes should set did-contract scope"
+
+federated_did_contract_docs_output="$(run_selector $'docs/foundation/did-method.md')"
+assert_eq "$(extract_output "$federated_did_contract_docs_output" "run_rust")" "false" "federated DID docs should avoid rust lane"
+assert_eq "$(extract_output "$federated_did_contract_docs_output" "run_did_registry_contract_tests")" "false" "federated DID docs should not trigger did registry contract lane"
+assert_eq "$(extract_output "$federated_did_contract_docs_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID docs must run federated DID handshake contract lane"
+assert_eq "$(extract_output "$federated_did_contract_docs_output" "test_scope")" "federated-did-contract" "federated DID docs should set federated-did-contract scope"
+
+federated_did_contract_script_output="$(run_selector $'scripts/did/run_federated_did_handshake_contract_lane.sh')"
+assert_eq "$(extract_output "$federated_did_contract_script_output" "run_rust")" "false" "federated DID contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$federated_did_contract_script_output" "run_did_registry_contract_tests")" "false" "federated DID contract script changes should not trigger did registry lane"
+assert_eq "$(extract_output "$federated_did_contract_script_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID contract script changes must run federated DID handshake lane"
+assert_eq "$(extract_output "$federated_did_contract_script_output" "test_scope")" "federated-did-contract" "federated DID contract script changes should set federated-did-contract scope"
+
+federated_did_contract_fixture_output="$(run_selector $'fixtures/federated_did_handshake/partition_replay_cases.json')"
+assert_eq "$(extract_output "$federated_did_contract_fixture_output" "run_rust")" "false" "federated DID fixture-only changes should avoid rust lane"
+assert_eq "$(extract_output "$federated_did_contract_fixture_output" "run_did_registry_contract_tests")" "false" "federated DID fixture changes should not trigger did registry lane"
+assert_eq "$(extract_output "$federated_did_contract_fixture_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID fixture changes must run federated DID handshake lane"
+assert_eq "$(extract_output "$federated_did_contract_fixture_output" "test_scope")" "federated-did-contract" "federated DID fixture changes should set federated-did-contract scope"
 
 runtime_contract_docs_output="$(run_selector $'docs/foundation/runtime-network.md')"
 assert_eq "$(extract_output "$runtime_contract_docs_output" "run_rust")" "false" "runtime contract docs should avoid rust lane"
