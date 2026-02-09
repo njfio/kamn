@@ -24,6 +24,11 @@ if ! grep -q "channel lifecycle snapshot contract lane tests passed." "$TMP_OUT"
   exit 1
 fi
 
+if ! grep -Fq "run_channel_policy_contract_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected channel lifecycle lane to execute channel policy lane checks" >&2
+  exit 1
+fi
+
 if ! grep -Fq "run_channel_lifecycle_contract_lane.sh" "$DEEP_SCRIPT"; then
   echo "expected deep-lane script to execute channel lifecycle fast-lane checks first" >&2
   exit 1
