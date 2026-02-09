@@ -9,6 +9,9 @@ fn doc_contains_prd_formula_components() {
     assert!(DOC.contains("dispute_penalty"));
     assert!(DOC.contains("volume_bonus"));
     assert!(DOC.contains("endorsement_bonus"));
+    assert!(DOC.contains("decayed_volume_bonus"));
+    assert!(DOC.contains("decayed_endorsement_bonus"));
+    assert!(DOC.contains("abuse_penalty_points"));
 }
 
 #[test]
@@ -17,6 +20,15 @@ fn doc_contains_bounds_and_versioning_controls() {
     assert!(DOC.contains("TRUST_SCORE_ENGINE_VERSION"));
     assert!(DOC.contains("clamped to `0..=1000`"));
     assert!(DOC.contains("delivery_rate and dispute_rate must be within `0.0..=1.0`"));
+}
+
+#[test]
+fn doc_contains_weighted_decay_and_antigaming_fixture_lanes() {
+    assert!(DOC.contains("## Weighted Decay and Anti-Gaming Fixture Lanes"));
+    assert!(DOC.contains("run_weighted_decay_contract_lane.sh"));
+    assert!(DOC.contains("run_weighted_decay_deep_lane.sh"));
+    assert!(DOC.contains("run_weighted_decay_matrix.py"));
+    assert!(DOC.contains("fixtures/reputation_decay/compact_cases.json"));
 }
 
 #[test]
@@ -30,4 +42,12 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
 fn regression_requires_1000ms_bucket_boundary_rule() {
     // Regression: #213
     assert!(DOC.contains("`1000ms` remains in the highest response bucket."));
+}
+
+#[test]
+fn regression_requires_weighted_decay_abuse_guard_marker() {
+    // Regression: #730
+    assert!(DOC.contains(
+        "replayed reciprocity/burst/churn abuse fixtures remain penalized (`Regression: #730`)."
+    ));
 }

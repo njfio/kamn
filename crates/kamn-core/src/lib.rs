@@ -300,8 +300,9 @@ pub use transaction::{
     BaselineTransaction, TransactionGuardError, TransactionGuards, GENESIS_STATE_HASH,
 };
 pub use trust_score::{
-    calculate_trust_score, recalculate_and_persist_trust_score, TrustScoreBreakdown,
-    TrustScoreError, TRUST_SCORE_ENGINE_VERSION, TRUST_SCORE_MAX, TRUST_SCORE_MIN,
+    calculate_trust_score, recalculate_and_persist_trust_score, AbusePenaltyKind,
+    TrustScoreBreakdown, TrustScoreError, TRUST_SCORE_ENGINE_VERSION, TRUST_SCORE_MAX,
+    TRUST_SCORE_MIN,
 };
 pub use upgrade_orchestration::{
     UpgradeAuditEvent, UpgradeAuditEventKind, UpgradeOrchestrationError, UpgradeProposalRecord,
