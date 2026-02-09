@@ -38,6 +38,7 @@ append_summary() {
     echo "- Run task operation snapshot contract tests: ${RUN_TASK_OPERATION_SNAPSHOT_CONTRACT_TESTS}"
     echo "- Run durable guard recovery contract tests: ${RUN_DURABLE_GUARD_RECOVERY_CONTRACT_TESTS}"
     echo "- Run settlement reconciliation contract tests: ${RUN_SETTLEMENT_RECONCILIATION_CONTRACT_TESTS}"
+    echo "- Run token launch contract tests: ${RUN_TOKEN_LAUNCH_CONTRACT_TESTS}"
     echo "- Run mainnet cutover contract tests: ${RUN_MAINNET_CUTOVER_CONTRACT_TESTS}"
     echo "- Run launch canary contract tests: ${RUN_LAUNCH_CANARY_CONTRACT_TESTS}"
     echo "- Run bridge replay harness: ${RUN_BRIDGE_REPLAY_HARNESS}"
@@ -144,6 +145,7 @@ CHANNEL_LIFECYCLE_CONTRACT_CHANGED=false
 TASK_OPERATION_SNAPSHOT_CONTRACT_CHANGED=false
 DURABLE_GUARD_RECOVERY_CONTRACT_CHANGED=false
 ESCROW_CONTRACT_CHANGED=false
+TOKEN_LAUNCH_CONTRACT_CHANGED=false
 MAINNET_CUTOVER_CONTRACT_CHANGED=false
 LAUNCH_CANARY_CONTRACT_CHANGED=false
 BRIDGE_REPLAY_RELATED_CHANGED=false
@@ -270,6 +272,13 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
+    crates/kamn-core/src/token.rs|crates/kamn-core/tests/token_config.rs|crates/kamn-core/tests/token_config_docs.rs|docs/foundation/token-config.md|docs/foundation/token-model.md|docs/foundation/release-gonogo-checklist.md|scripts/token/*|fixtures/token_launch/*)
+      TOKEN_LAUNCH_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
     docs/foundation/mainnet-cutover-runbook.md|crates/kamn-core/tests/mainnet_cutover_runbook_docs.rs|scripts/cutover/*|fixtures/mainnet_cutover/*)
       MAINNET_CUTOVER_CONTRACT_CHANGED=true
       classified=true
@@ -373,6 +382,7 @@ RUN_CHANNEL_LIFECYCLE_CONTRACT_TESTS=false
 RUN_TASK_OPERATION_SNAPSHOT_CONTRACT_TESTS=false
 RUN_DURABLE_GUARD_RECOVERY_CONTRACT_TESTS=false
 RUN_SETTLEMENT_RECONCILIATION_CONTRACT_TESTS=false
+RUN_TOKEN_LAUNCH_CONTRACT_TESTS=false
 RUN_MAINNET_CUTOVER_CONTRACT_TESTS=false
 RUN_LAUNCH_CANARY_CONTRACT_TESTS=false
 RUN_BRIDGE_REPLAY_HARNESS=false
@@ -504,6 +514,13 @@ if [ "$ESCROW_CONTRACT_CHANGED" = true ]; then
   fi
 fi
 
+if [ "$TOKEN_LAUNCH_CONTRACT_CHANGED" = true ]; then
+  RUN_TOKEN_LAUNCH_CONTRACT_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="token-contract"
+  fi
+fi
+
 if [ "$MAINNET_CUTOVER_CONTRACT_CHANGED" = true ]; then
   RUN_MAINNET_CUTOVER_CONTRACT_TESTS=true
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
@@ -616,6 +633,7 @@ write_output "run_channel_lifecycle_contract_tests" "$RUN_CHANNEL_LIFECYCLE_CONT
 write_output "run_task_operation_snapshot_contract_tests" "$RUN_TASK_OPERATION_SNAPSHOT_CONTRACT_TESTS"
 write_output "run_durable_guard_recovery_contract_tests" "$RUN_DURABLE_GUARD_RECOVERY_CONTRACT_TESTS"
 write_output "run_settlement_reconciliation_contract_tests" "$RUN_SETTLEMENT_RECONCILIATION_CONTRACT_TESTS"
+write_output "run_token_launch_contract_tests" "$RUN_TOKEN_LAUNCH_CONTRACT_TESTS"
 write_output "run_mainnet_cutover_contract_tests" "$RUN_MAINNET_CUTOVER_CONTRACT_TESTS"
 write_output "run_launch_canary_contract_tests" "$RUN_LAUNCH_CANARY_CONTRACT_TESTS"
 write_output "run_bridge_replay_harness" "$RUN_BRIDGE_REPLAY_HARNESS"

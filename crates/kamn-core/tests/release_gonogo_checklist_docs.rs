@@ -68,6 +68,15 @@ fn checklist_contains_settlement_reconciliation_evidence_contract() {
 }
 
 #[test]
+fn checklist_contains_token_launch_handoff_evidence_contract() {
+    assert!(CHECKLIST.contains("## Token Launch Handoff Evidence Contract"));
+    assert!(CHECKLIST.contains("generate_token_launch_handoff_evidence_bundle.sh"));
+    assert!(CHECKLIST.contains("check_token_launch_handoff_policy.sh"));
+    assert!(CHECKLIST.contains("run_token_launch_handoff_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_token_launch_handoff_deep_lane.sh"));
+}
+
+#[test]
 fn checklist_contains_mainnet_cutover_manifest_contract() {
     assert!(CHECKLIST.contains("## Mainnet Cutover Manifest Validation Contract"));
     assert!(CHECKLIST.contains("fixtures/mainnet_cutover/mainnet_cutover_manifest.schema.json"));
@@ -124,6 +133,14 @@ fn regression_requires_chain_receipt_evidence_guard_marker() {
     ));
     assert!(CHECKLIST.contains(
         "timeout-before-finality pending receipts and failed receipts force `NO-GO` (`Regression: #678`)."
+    ));
+}
+
+#[test]
+fn regression_requires_token_launch_handoff_evidence_guard_marker() {
+    // Regression: #714
+    assert!(CHECKLIST.contains(
+        "supply/allocation invariant drift and insufficient approvals force `NO-GO` (`Regression: #714`)."
     ));
 }
 

@@ -88,6 +88,20 @@ Escrow settlement outcomes require deterministic receipt/finality evidence befor
   - missing or invalid chain receipt evidence forces `NO-GO` (`Regression: #678`).
   - timeout-before-finality pending receipts and failed receipts force `NO-GO` (`Regression: #678`).
 
+## Token Launch Handoff Evidence Contract (Issue #714)
+Token launch readiness requires deterministic supply/allocation and approval evidence before activation.
+
+- Evidence bundle generator:
+  - `bash scripts/token/generate_token_launch_handoff_evidence_bundle.sh --output-file /tmp/token-launch-handoff.json --token-symbol KAMN --configured-total-supply 1000000000 --expected-total-supply 1000000000 --configured-allocation-sum 1000000000 --expected-allocation-sum 1000000000 --allocation-bucket-count 5 --expected-bucket-count 5 --genesis-hash sha256:token-launch-handoff-go-2026-02-09 --required-approvals 2 --received-approvals 2 --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/token/check_token_launch_handoff_policy.sh --bundle-file /tmp/token-launch-handoff.json`
+- PR fast contract lane:
+  - `bash scripts/token/run_token_launch_handoff_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/token/run_token_launch_handoff_deep_lane.sh --output-json token-launch-handoff-report.json`
+- Regression policy:
+  - supply/allocation invariant drift and insufficient approvals force `NO-GO` (`Regression: #714`).
+
 ## Mainnet Cutover Manifest Validation Contract (Issue #707)
 Mainnet cutover requires deterministic triadic checkpoint manifests with explicit approval and dependency evidence.
 
@@ -157,6 +171,9 @@ bash scripts/cutover/test_run_cutover_rollback_contract_lane.sh
 bash scripts/escrow/test_generate_settlement_reconciliation_evidence_bundle.sh
 bash scripts/escrow/test_run_settlement_reconciliation_contract_lane.sh
 bash scripts/escrow/test_run_settlement_reconciliation_race_matrix.sh
+bash scripts/token/test_generate_token_launch_handoff_evidence_bundle.sh
+bash scripts/token/test_run_token_launch_handoff_contract_lane.sh
+bash scripts/token/test_run_token_launch_handoff_deep_lane.sh
 bash scripts/guard/test_run_durable_guard_recovery_contract_lane.sh
 bash scripts/deploy/test_generate_gonogo_evidence_bundle.sh
 bash scripts/deploy/test_run_gonogo_evidence_contract_lane.sh
@@ -164,6 +181,7 @@ bash scripts/deploy/test_generate_staging_rehearsal_bundle.sh
 bash scripts/deploy/test_run_staging_rehearsal_contract_lane.sh
 cargo test -p kamn-core --test mainnet_cutover_runbook_docs
 cargo test -p kamn-core --test release_gonogo_checklist_docs
+cargo test -p kamn-core --test token_config_docs
 cargo test -p kamn-core --test durable_guard_recovery_matrix
 cargo test -p kamn-core --test durable_guard_snapshot_store
 cargo fmt --check

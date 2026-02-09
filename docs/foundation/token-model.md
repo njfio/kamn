@@ -1,6 +1,7 @@
 # Token Model and Genesis Allocation Controls (Issues #136, #137)
 
 This document captures the first implementation slice for PRD 9.1 token configuration.
+For launch-handoff policy and evidence contracts, see `docs/foundation/token-config.md`.
 
 ## Scope Delivered
 - Added `crates/kamn-core/src/token.rs` with:
