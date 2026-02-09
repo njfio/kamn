@@ -43,6 +43,7 @@ assert_eq "$(extract_output "$docs_output" "run_task_operation_snapshot_contract
 assert_eq "$(extract_output "$docs_output" "run_durable_guard_recovery_contract_tests")" "false" "docs_only should not run durable guard recovery contract tests for unrelated docs"
 assert_eq "$(extract_output "$docs_output" "run_settlement_reconciliation_contract_tests")" "false" "docs_only should not run settlement reconciliation contract tests for unrelated docs"
 assert_eq "$(extract_output "$docs_output" "run_mainnet_cutover_contract_tests")" "false" "docs_only should not run mainnet cutover contract tests for unrelated docs"
+assert_eq "$(extract_output "$docs_output" "run_launch_canary_contract_tests")" "false" "docs_only should not run launch canary contract tests for unrelated docs"
 assert_eq "$(extract_output "$docs_output" "run_bridge_replay_harness")" "false" "docs_only should not run bridge replay harness"
 assert_eq "$(extract_output "$docs_output" "bridge_replay_suites")" "" "docs_only should not select bridge replay suites"
 assert_eq "$(extract_output "$docs_output" "run_rust_live_transport_contract_tests")" "false" "docs_only should not run rust live transport lane"
@@ -69,6 +70,7 @@ assert_eq "$(extract_output "$deploy_output" "run_task_operation_snapshot_contra
 assert_eq "$(extract_output "$deploy_output" "run_durable_guard_recovery_contract_tests")" "false" "deploy-only changes should skip durable guard recovery contract tests"
 assert_eq "$(extract_output "$deploy_output" "run_settlement_reconciliation_contract_tests")" "false" "deploy-only changes should skip settlement reconciliation contract tests"
 assert_eq "$(extract_output "$deploy_output" "run_mainnet_cutover_contract_tests")" "false" "deploy-only changes should skip mainnet cutover contract tests"
+assert_eq "$(extract_output "$deploy_output" "run_launch_canary_contract_tests")" "false" "deploy-only changes should skip launch canary contract tests"
 assert_eq "$(extract_output "$deploy_output" "run_bridge_replay_harness")" "false" "deploy-only changes should skip bridge replay harness"
 assert_eq "$(extract_output "$deploy_output" "bridge_replay_suites")" "" "deploy-only changes should not select bridge replay suites"
 assert_eq "$(extract_output "$deploy_output" "run_rust_live_transport_contract_tests")" "false" "deploy-only changes should skip rust live transport lane"
@@ -105,6 +107,7 @@ assert_eq "$(extract_output "$unknown_output" "run_task_operation_snapshot_contr
 assert_eq "$(extract_output "$unknown_output" "run_durable_guard_recovery_contract_tests")" "false" "unknown paths should not trigger durable guard recovery contract tests"
 assert_eq "$(extract_output "$unknown_output" "run_settlement_reconciliation_contract_tests")" "false" "unknown paths should not trigger settlement reconciliation contract tests"
 assert_eq "$(extract_output "$unknown_output" "run_mainnet_cutover_contract_tests")" "false" "unknown paths should not trigger mainnet cutover contract tests"
+assert_eq "$(extract_output "$unknown_output" "run_launch_canary_contract_tests")" "false" "unknown paths should not trigger launch canary contract tests"
 assert_eq "$(extract_output "$unknown_output" "run_bridge_replay_harness")" "false" "unknown paths should not trigger bridge replay harness"
 assert_eq "$(extract_output "$unknown_output" "bridge_replay_suites")" "" "unknown paths should not select bridge replay suites"
 assert_eq "$(extract_output "$unknown_output" "run_rust_live_transport_contract_tests")" "false" "unknown paths should not trigger rust live transport lane"
@@ -352,6 +355,16 @@ assert_eq "$(extract_output "$cutover_contract_fixture_output" "run_rust")" "fal
 assert_eq "$(extract_output "$cutover_contract_fixture_output" "run_mainnet_cutover_contract_tests")" "true" "cutover fixture changes must run mainnet cutover contract lane"
 assert_eq "$(extract_output "$cutover_contract_fixture_output" "test_scope")" "cutover-contract" "cutover fixture changes should set cutover-contract scope"
 
+canary_contract_script_output="$(run_selector $'scripts/canary/run_launch_canary_contract_lane.sh')"
+assert_eq "$(extract_output "$canary_contract_script_output" "run_rust")" "false" "canary contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$canary_contract_script_output" "run_launch_canary_contract_tests")" "true" "canary contract script changes must run launch canary lane"
+assert_eq "$(extract_output "$canary_contract_script_output" "test_scope")" "canary-contract" "canary contract script changes should set canary-contract scope"
+
+canary_contract_fixture_output="$(run_selector $'fixtures/launch_canary/critical_path_probe_cases.json')"
+assert_eq "$(extract_output "$canary_contract_fixture_output" "run_rust")" "false" "canary fixture-only changes should avoid rust lane"
+assert_eq "$(extract_output "$canary_contract_fixture_output" "run_launch_canary_contract_tests")" "true" "canary fixture changes must run launch canary lane"
+assert_eq "$(extract_output "$canary_contract_fixture_output" "test_scope")" "canary-contract" "canary fixture changes should set canary-contract scope"
+
 escrow_rust_output="$(run_selector $'crates/kamn-core/src/escrow.rs')"
 assert_eq "$(extract_output "$escrow_rust_output" "run_rust")" "true" "escrow rust changes should run rust lane"
 assert_eq "$(extract_output "$escrow_rust_output" "run_settlement_reconciliation_contract_tests")" "true" "escrow rust changes must run settlement reconciliation contract lane"
@@ -365,6 +378,7 @@ assert_eq "$(extract_output "$guard_contract_docs_output" "test_scope")" "guard-
 guard_checklist_docs_output="$(run_selector $'docs/foundation/release-gonogo-checklist.md')"
 assert_eq "$(extract_output "$guard_checklist_docs_output" "run_rust")" "false" "release go/no-go checklist docs should avoid rust lane"
 assert_eq "$(extract_output "$guard_checklist_docs_output" "run_durable_guard_recovery_contract_tests")" "true" "release go/no-go checklist docs must run durable guard recovery contract lane"
+assert_eq "$(extract_output "$guard_checklist_docs_output" "run_launch_canary_contract_tests")" "true" "release go/no-go checklist docs must run launch canary contract lane"
 assert_eq "$(extract_output "$guard_checklist_docs_output" "test_scope")" "guard-contract" "release go/no-go checklist docs should set guard-contract scope"
 
 guard_contract_script_output="$(run_selector $'scripts/guard/run_durable_guard_recovery_contract_lane.sh')"

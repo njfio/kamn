@@ -1,0 +1,45 @@
+{
+  "schema_version": "kamn.launch-canary.probe-fixtures.v1",
+  "cases": [
+    {
+      "name": "all_probes_pass_within_budget",
+      "message_probe": "PASS",
+      "task_probe": "PASS",
+      "escrow_probe": "PASS",
+      "evidence_complete": true,
+      "latency_budget_ms": 250,
+      "observed_latency_ms": 180,
+      "expected_decision": "GO"
+    },
+    {
+      "name": "task_probe_failure",
+      "message_probe": "PASS",
+      "task_probe": "FAIL",
+      "escrow_probe": "PASS",
+      "evidence_complete": true,
+      "latency_budget_ms": 250,
+      "observed_latency_ms": 125,
+      "expected_decision": "NO-GO"
+    },
+    {
+      "name": "latency_budget_exceeded",
+      "message_probe": "PASS",
+      "task_probe": "PASS",
+      "escrow_probe": "PASS",
+      "evidence_complete": true,
+      "latency_budget_ms": 250,
+      "observed_latency_ms": 310,
+      "expected_decision": "NO-GO"
+    },
+    {
+      "name": "missing_probe_evidence",
+      "message_probe": "PASS",
+      "task_probe": "PASS",
+      "escrow_probe": "PASS",
+      "evidence_complete": false,
+      "latency_budget_ms": 250,
+      "observed_latency_ms": 140,
+      "expected_decision": "NO-GO"
+    }
+  ]
+}

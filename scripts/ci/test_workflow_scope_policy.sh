@@ -210,6 +210,16 @@ if ! grep -Fq "bash scripts/cutover/run_cutover_rollback_contract_lane.sh" "$FAS
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_launch_canary_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected launch canary contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/canary/run_launch_canary_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected launch canary contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected channel/task lifecycle rust setup/cache condition in ci-fast-gate.yml" >&2
   exit 1
@@ -264,6 +274,16 @@ fi
 
 if ! grep -Fq "cutover-rollback-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
   echo "expected cutover rollback deep report artifact upload in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/canary/run_launch_canary_deep_lane.sh --output-json launch-canary-report.json" "$DEEP_WORKFLOW"; then
+  echo "expected scheduled launch canary deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "launch-canary-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
+  echo "expected launch canary deep report artifact upload in ci-deep-validate.yml" >&2
   exit 1
 fi
 
