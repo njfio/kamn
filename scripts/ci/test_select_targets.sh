@@ -671,6 +671,11 @@ assert_eq "$(extract_output "$key_management_contract_docs_output" "run_rust")" 
 assert_eq "$(extract_output "$key_management_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "key management contract docs must run message lifecycle contract lane"
 assert_eq "$(extract_output "$key_management_contract_docs_output" "test_scope")" "message-contract" "key management contract docs should set message-contract scope"
 
+group_sender_contract_docs_output="$(run_selector $'docs/foundation/group-sender-key-rotation.md')"
+assert_eq "$(extract_output "$group_sender_contract_docs_output" "run_rust")" "false" "group sender contract docs should avoid rust lane"
+assert_eq "$(extract_output "$group_sender_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "group sender contract docs must run message lifecycle contract lane"
+assert_eq "$(extract_output "$group_sender_contract_docs_output" "test_scope")" "message-contract" "group sender contract docs should set message-contract scope"
+
 message_contract_script_output="$(run_selector $'scripts/message/run_message_lifecycle_contract_lane.sh')"
 assert_eq "$(extract_output "$message_contract_script_output" "run_rust")" "false" "message lifecycle contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$message_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "message lifecycle contract script changes must run message lifecycle contract lane"
@@ -680,6 +685,11 @@ key_lifecycle_invariant_contract_script_output="$(run_selector $'scripts/message
 assert_eq "$(extract_output "$key_lifecycle_invariant_contract_script_output" "run_rust")" "false" "key hierarchy invariant contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$key_lifecycle_invariant_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "key hierarchy invariant contract script changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$key_lifecycle_invariant_contract_script_output" "test_scope")" "message-contract" "key hierarchy invariant contract script changes should set message-contract scope"
+
+group_sender_replay_ratchet_contract_script_output="$(run_selector $'scripts/message/run_group_sender_replay_ratchet_contract_lane.sh')"
+assert_eq "$(extract_output "$group_sender_replay_ratchet_contract_script_output" "run_rust")" "false" "group sender replay/ratchet contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$group_sender_replay_ratchet_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "group sender replay/ratchet contract script changes must run message lifecycle contract lane"
+assert_eq "$(extract_output "$group_sender_replay_ratchet_contract_script_output" "test_scope")" "message-contract" "group sender replay/ratchet contract script changes should set message-contract scope"
 
 channel_contract_docs_output="$(run_selector $'docs/foundation/channel-models.md')"
 assert_eq "$(extract_output "$channel_contract_docs_output" "run_rust")" "false" "channel lifecycle contract docs should avoid rust lane"

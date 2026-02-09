@@ -29,6 +29,11 @@ if ! grep -Fq "run_key_hierarchy_invariant_contract_lane.sh" "$FAST_SCRIPT"; the
   exit 1
 fi
 
+if ! grep -Fq "run_group_sender_replay_ratchet_contract_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected message lifecycle lane to execute group sender replay/ratchet lane checks" >&2
+  exit 1
+fi
+
 if ! grep -Fq "run_message_lifecycle_contract_lane.sh" "$DEEP_SCRIPT"; then
   echo "expected deep-lane script to execute message lifecycle fast-lane checks first" >&2
   exit 1
