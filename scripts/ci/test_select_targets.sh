@@ -1113,6 +1113,12 @@ assert_eq "$(extract_output "$reputation_recovery_policy_checker_output" "run_re
 assert_eq "$(extract_output "$reputation_recovery_policy_checker_output" "run_reputation_dispute_contract_tests")" "true" "reputation recovery policy checker changes must run reputation dispute contract lane"
 assert_eq "$(extract_output "$reputation_recovery_policy_checker_output" "test_scope")" "reputation-contract" "reputation recovery policy checker changes should set reputation-contract scope"
 
+reputation_recovery_shared_contract_output="$(run_selector $'scripts/reputation/reputation_recovery_contract.py')"
+assert_eq "$(extract_output "$reputation_recovery_shared_contract_output" "run_rust")" "false" "reputation recovery shared contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$reputation_recovery_shared_contract_output" "run_reputation_decay_contract_tests")" "false" "reputation recovery shared contract changes should not run weighted decay contract lane"
+assert_eq "$(extract_output "$reputation_recovery_shared_contract_output" "run_reputation_dispute_contract_tests")" "true" "reputation recovery shared contract changes must run reputation dispute contract lane"
+assert_eq "$(extract_output "$reputation_recovery_shared_contract_output" "test_scope")" "reputation-contract" "reputation recovery shared contract changes should set reputation-contract scope"
+
 reputation_contract_fixture_output="$(run_selector $'fixtures/reputation_dispute/replay_cases.json')"
 assert_eq "$(extract_output "$reputation_contract_fixture_output" "run_rust")" "false" "reputation fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_contract_fixture_output" "run_reputation_decay_contract_tests")" "false" "dispute fixture changes should not run weighted decay contract lane"
@@ -1141,7 +1147,7 @@ assert_eq "$(extract_output "$token_framework_script_output" "run_soc2_control_e
 assert_eq "$(extract_output "$token_framework_script_output" "run_dsar_legal_hold_contract_tests")" "true" "contract framework changes must also run DSAR legal-hold contract lane"
 assert_eq "$(extract_output "$token_framework_script_output" "run_governance_simulation_contract_tests")" "true" "contract framework changes must also run governance simulation contract lane"
 assert_eq "$(extract_output "$token_framework_script_output" "run_governance_stake_slash_contract_tests")" "true" "contract framework changes must also run governance stake/slash contract lane"
-assert_eq "$(extract_output "$token_framework_script_output" "run_reputation_dispute_contract_tests")" "true" "contract framework changes must also run reputation dispute contract lane"
+assert_eq "$(extract_output "$token_framework_script_output" "run_reputation_dispute_contract_tests")" "true" "contract framework changes must also run reputation dispute/recovery contract lanes"
 assert_eq "$(extract_output "$token_framework_script_output" "test_scope")" "token-contract" "contract framework changes should set token-contract scope"
 
 token_contract_fixture_output="$(run_selector $'fixtures/token_launch/handoff_invariant_cases.json')"
