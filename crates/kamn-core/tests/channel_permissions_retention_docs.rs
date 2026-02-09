@@ -14,3 +14,14 @@ fn regression_requires_allowlist_validation_rule() {
     assert!(DOC.contains("allowlist entries must be valid `kamn:did:agent:*` identifiers"));
     assert!(DOC.contains("malformed allowlist configuration is rejected (`Regression: #458`)"));
 }
+
+#[test]
+fn regression_requires_durable_bundle_corruption_guard_marker() {
+    // Regression: #679
+    assert!(
+        DOC.contains(
+            "Truncated/corrupted durable bundle payloads fail closed (`Regression: #679`).",
+        )
+    );
+    assert!(DOC.contains("DurableGuardSnapshotBundle"));
+}

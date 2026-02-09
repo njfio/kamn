@@ -17,6 +17,7 @@ pub mod did;
 pub mod did_registry;
 pub mod direct_message_crypto;
 pub mod discord_bridge;
+pub mod durable_guard_store;
 pub mod escrow;
 pub mod governance_workflow;
 pub mod group_channel_crypto;
@@ -139,6 +140,11 @@ pub use direct_message_crypto::{
 pub use discord_bridge::{
     DiscordBridgeConfig, DiscordBridgeEngine, DiscordBridgeError, DiscordInboundRequest,
     DiscordOutboundApproval, DiscordOutboundDispatch,
+};
+pub use durable_guard_store::{
+    ChannelPolicySnapshotStore, DeliveryGuardSnapshotStore, DurableGuardBundleSnapshotStore,
+    DurableGuardSnapshotBundle, DurableGuardSnapshotStoreError, FileDurableGuardSnapshotStore,
+    InMemoryDurableGuardSnapshotStore, DURABLE_GUARD_BUNDLE_SCHEMA_VERSION,
 };
 pub use escrow::{EscrowLifecycle, EscrowLifecycleError, EscrowStatus};
 pub use governance_workflow::{

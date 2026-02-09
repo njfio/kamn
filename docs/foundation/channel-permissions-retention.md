@@ -43,6 +43,12 @@ evaluation and retention policy behavior.
 - Invalid policy guard:
   - `MaxMessageCount(0)` is rejected at registration.
 
+## Durable Policy Snapshot Contracts (Issue #701)
+- `ChannelPolicySnapshot` is schema-versioned and restored through explicit typed errors.
+- Channel policy retention state is persisted as part of `DurableGuardSnapshotBundle` for atomic replay/retention recovery.
+- `InMemoryDurableGuardSnapshotStore` and `FileDurableGuardSnapshotStore` provide deterministic save/load paths for policy snapshots.
+- Truncated/corrupted durable bundle payloads fail closed (`Regression: #679`).
+
 ## Local Validation
 Run from repository root:
 
@@ -50,6 +56,9 @@ Run from repository root:
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core --test channel_permissions_retention
+cargo test -p kamn-core --test channel_permissions_retention_docs
+cargo test -p kamn-core --test durable_guard_snapshot_store
+bash scripts/guard/run_durable_guard_recovery_contract_lane.sh
 cargo test -p kamn-core
 ```
 
