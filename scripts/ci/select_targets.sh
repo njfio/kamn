@@ -310,7 +310,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/channel-models.md|crates/kamn-core/tests/channel_models_docs.rs|scripts/channel/*)
+    docs/foundation/channel-models.md|docs/foundation/channel-models-and-permissions.md|crates/kamn-core/tests/channel_models_docs.rs|crates/kamn-core/tests/channel_models_and_permissions_docs.rs|scripts/channel/*)
       CHANNEL_LIFECYCLE_CONTRACT_CHANGED=true
       classified=true
       ;;

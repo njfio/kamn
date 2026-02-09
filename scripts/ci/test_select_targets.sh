@@ -676,10 +676,20 @@ assert_eq "$(extract_output "$channel_contract_docs_output" "run_rust")" "false"
 assert_eq "$(extract_output "$channel_contract_docs_output" "run_channel_lifecycle_contract_tests")" "true" "channel lifecycle contract docs must run channel lifecycle contract lane"
 assert_eq "$(extract_output "$channel_contract_docs_output" "test_scope")" "channel-contract" "channel lifecycle contract docs should set channel-contract scope"
 
+channel_policy_contract_docs_output="$(run_selector $'docs/foundation/channel-models-and-permissions.md')"
+assert_eq "$(extract_output "$channel_policy_contract_docs_output" "run_rust")" "false" "channel policy contract docs should avoid rust lane"
+assert_eq "$(extract_output "$channel_policy_contract_docs_output" "run_channel_lifecycle_contract_tests")" "true" "channel policy contract docs must run channel lifecycle contract lane"
+assert_eq "$(extract_output "$channel_policy_contract_docs_output" "test_scope")" "channel-contract" "channel policy contract docs should set channel-contract scope"
+
 channel_contract_script_output="$(run_selector $'scripts/channel/run_channel_lifecycle_contract_lane.sh')"
 assert_eq "$(extract_output "$channel_contract_script_output" "run_rust")" "false" "channel lifecycle contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$channel_contract_script_output" "run_channel_lifecycle_contract_tests")" "true" "channel lifecycle contract script changes must run channel lifecycle contract lane"
 assert_eq "$(extract_output "$channel_contract_script_output" "test_scope")" "channel-contract" "channel lifecycle contract script changes should set channel-contract scope"
+
+channel_policy_contract_script_output="$(run_selector $'scripts/channel/run_channel_policy_contract_lane.sh')"
+assert_eq "$(extract_output "$channel_policy_contract_script_output" "run_rust")" "false" "channel policy contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$channel_policy_contract_script_output" "run_channel_lifecycle_contract_tests")" "true" "channel policy contract script changes must run channel lifecycle contract lane"
+assert_eq "$(extract_output "$channel_policy_contract_script_output" "test_scope")" "channel-contract" "channel policy contract script changes should set channel-contract scope"
 
 task_contract_docs_output="$(run_selector $'docs/foundation/task-operations.md')"
 assert_eq "$(extract_output "$task_contract_docs_output" "run_rust")" "false" "task operation contract docs should avoid rust lane"
