@@ -78,6 +78,32 @@ Required schema/reason markers:
 
 The lane fails closed: SLO gate drift, rollback automation evidence drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #944`).
 
+## Governance Lifecycle and Rollback Integrity Contract Lane
+Governance transition safety now includes deterministic lifecycle/rollback integrity evidence to prevent illegal execution or rollback divergence.
+
+- Lifecycle/rollback lane command:
+  - `bash scripts/governance/run_governance_lifecycle_rollback_lane.sh --output-file /tmp/governance-lifecycle-rollback-report.json`
+- Lifecycle/rollback policy checker:
+  - `bash scripts/governance/check_governance_lifecycle_rollback_policy.sh --report-file /tmp/governance-lifecycle-rollback-report.json`
+- Lifecycle/rollback contract lane:
+  - `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
+
+Runtime budget controls:
+
+- `KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_MAX_SECONDS`
+- `KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_CONTRACT_MAX_SECONDS`
+- `KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_SKIP_COMMANDS`
+
+Required schema/reason markers:
+
+- `kamn.governance.lifecycle-rollback-report.v1`
+- `governance_lifecycle_rollback_reason_codes:GO:v1`
+- `governance_lifecycle_rollback_reason_codes:NO-GO:v1`
+
+Regression policy:
+
+- illegal lifecycle transitions and rollback integrity drift must fail closed (`Regression: #910`).
+
 ## Live-Network Pilot Rollback Evidence Gate (Issue #830)
 Pilot rollback readiness requires deterministic deep-lane evidence and policy validation before release continuity is approved.
 
@@ -107,6 +133,9 @@ Run from repository root:
 ```bash
 bash scripts/deploy/test_generate_dr_evidence_bundle.sh
 bash scripts/deploy/test_run_dr_evidence_contract_lane.sh
+bash scripts/governance/test_run_governance_lifecycle_rollback_lane.sh
+bash scripts/governance/test_check_governance_lifecycle_rollback_policy.sh
+bash scripts/governance/test_run_governance_lifecycle_rollback_contract_lane.sh
 cargo test -p kamn-core --test upgrade_rollback_runbook_docs
 cargo fmt --check
 cargo clippy -- -D warnings
