@@ -37,9 +37,26 @@ fn doc_contains_dispute_evidence_contract() {
 }
 
 #[test]
+fn doc_contains_signal_quarantine_evidence_contract() {
+    assert!(DOC.contains("## Signal Quarantine Evidence Contract"));
+    assert!(DOC.contains("generate_reputation_signal_quarantine_evidence_bundle.sh"));
+    assert!(DOC.contains("check_reputation_signal_quarantine_policy.sh"));
+    assert!(DOC.contains("run_reputation_signal_quarantine_contract_lane.sh"));
+    assert!(DOC.contains("reputation_signal_quarantine_contract.py"));
+}
+
+#[test]
 fn regression_requires_did_tiebreak_rule() {
     // Regression: #211
     assert!(DOC.contains("Tie scores are resolved by DID lexical order."));
+}
+
+#[test]
+fn regression_requires_signal_quarantine_guard_marker() {
+    // Regression: #935
+    assert!(DOC.contains(
+        "tampered reason keys/reason codes and ingestion-action mismatches force `NO-GO` (`Regression: #935`)."
+    ));
 }
 
 #[test]

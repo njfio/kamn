@@ -412,6 +412,7 @@ for file in "${CHANGED_FILES[@]}"; do
       DSAR_LEGAL_HOLD_CONTRACT_CHANGED=true
       GOVERNANCE_SIMULATION_CONTRACT_CHANGED=true
       GOVERNANCE_STAKE_SLASH_CONTRACT_CHANGED=true
+      REPUTATION_DISPUTE_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -751,7 +752,7 @@ fi
 
 if [ "$REPUTATION_DISPUTE_CONTRACT_CHANGED" = true ]; then
   RUN_REPUTATION_DISPUTE_CONTRACT_TESTS=true
-  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ] && [ "$TOKEN_LAUNCH_CONTRACT_CHANGED" != true ]; then
     TEST_SCOPE="reputation-contract"
   fi
 fi
