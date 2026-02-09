@@ -39,4 +39,14 @@ if ! grep -q "final_decision=NO-GO" "$DEEP_SCRIPT"; then
   exit 1
 fi
 
+if ! grep -q "run_settlement_reconciliation_race_matrix.py" "$DEEP_SCRIPT"; then
+  echo "expected deep-lane script to execute settlement reconciliation race matrix checks" >&2
+  exit 1
+fi
+
+if ! grep -q "fixtures/escrow_reconciliation/finality_race_cases.json" "$DEEP_SCRIPT"; then
+  echo "expected deep-lane script to consume settlement race fixture matrix" >&2
+  exit 1
+fi
+
 echo "settlement reconciliation contract lane script tests passed."

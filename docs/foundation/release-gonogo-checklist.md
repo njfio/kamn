@@ -82,8 +82,11 @@ Escrow settlement outcomes require deterministic receipt/finality evidence befor
   - `bash scripts/escrow/run_settlement_reconciliation_contract_lane.sh`
 - Scheduled deep lane entrypoint:
   - `bash scripts/escrow/run_settlement_reconciliation_deep_lane.sh --output-json settlement-reconciliation-report.json`
+- Race matrix runner:
+  - `python3 scripts/escrow/run_settlement_reconciliation_race_matrix.py --fixture fixtures/escrow_reconciliation/finality_race_cases.json --output-json settlement-reconciliation-report.json`
 - Regression policy:
   - missing or invalid chain receipt evidence forces `NO-GO` (`Regression: #678`).
+  - timeout-before-finality pending receipts and failed receipts force `NO-GO` (`Regression: #678`).
 
 ## Local Validation
 Run from repository root:
@@ -91,6 +94,7 @@ Run from repository root:
 ```bash
 bash scripts/escrow/test_generate_settlement_reconciliation_evidence_bundle.sh
 bash scripts/escrow/test_run_settlement_reconciliation_contract_lane.sh
+bash scripts/escrow/test_run_settlement_reconciliation_race_matrix.sh
 bash scripts/guard/test_run_durable_guard_recovery_contract_lane.sh
 bash scripts/deploy/test_generate_gonogo_evidence_bundle.sh
 bash scripts/deploy/test_run_gonogo_evidence_contract_lane.sh

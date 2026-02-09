@@ -1,0 +1,61 @@
+{
+  "schema_version": "kamn.escrow.settlement-race-fixtures.v1",
+  "cases": [
+    {
+      "name": "timeout_before_finality_pending",
+      "escrow_id": "escrow-race-001",
+      "settlement_outcome": "TIMEOUT_REFUNDED",
+      "receipt_id": "receipt-race-pending",
+      "receipt_finality": "PENDING",
+      "expected_release_amount": 0,
+      "expected_refund_amount": 120,
+      "observed_release_amount": 0,
+      "observed_refund_amount": 120,
+      "timeout_elapsed": true,
+      "ci_fast_gate": "PASS",
+      "expected_decision": "NO-GO"
+    },
+    {
+      "name": "late_finality_after_timeout_refund",
+      "escrow_id": "escrow-race-002",
+      "settlement_outcome": "TIMEOUT_REFUNDED",
+      "receipt_id": "receipt-race-final",
+      "receipt_finality": "FINAL",
+      "expected_release_amount": 0,
+      "expected_refund_amount": 120,
+      "observed_release_amount": 0,
+      "observed_refund_amount": 120,
+      "timeout_elapsed": true,
+      "ci_fast_gate": "PASS",
+      "expected_decision": "GO"
+    },
+    {
+      "name": "failed_receipt_after_timeout",
+      "escrow_id": "escrow-race-003",
+      "settlement_outcome": "TIMEOUT_REFUNDED",
+      "receipt_id": "receipt-race-failed",
+      "receipt_finality": "FAILED",
+      "expected_release_amount": 0,
+      "expected_refund_amount": 120,
+      "observed_release_amount": 0,
+      "observed_refund_amount": 120,
+      "timeout_elapsed": true,
+      "ci_fast_gate": "PASS",
+      "expected_decision": "NO-GO"
+    },
+    {
+      "name": "final_receipt_amount_mismatch",
+      "escrow_id": "escrow-race-004",
+      "settlement_outcome": "REFUNDED",
+      "receipt_id": "receipt-race-mismatch",
+      "receipt_finality": "FINAL",
+      "expected_release_amount": 0,
+      "expected_refund_amount": 100,
+      "observed_release_amount": 0,
+      "observed_refund_amount": 99,
+      "timeout_elapsed": true,
+      "ci_fast_gate": "PASS",
+      "expected_decision": "NO-GO"
+    }
+  ]
+}
