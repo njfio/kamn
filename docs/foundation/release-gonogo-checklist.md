@@ -92,6 +92,11 @@ Escrow settlement outcomes require deterministic receipt/finality evidence befor
 ## SOC2 Control Evidence Contract (Issue #744)
 SOC2 audit gates require deterministic control-evidence bundles and replay-safe checker outcomes before release progression.
 
+- Stable shell wrappers:
+  - `scripts/compliance/generate_soc2_control_evidence_bundle.sh`
+  - `scripts/compliance/check_soc2_control_evidence_policy.sh`
+- Shared Python implementation:
+  - `scripts/compliance/soc2_control_contract.py`
 - Evidence bundle generator:
   - `bash scripts/compliance/generate_soc2_control_evidence_bundle.sh --output-file /tmp/soc2-control-evidence.json --control-id CC6.1 --audit-period-start 2026-01-01 --audit-period-end 2026-01-31 --collector-did did:kamn:auditor-001 --evidence-uri s3://kamn-audit/soc2/cc6_1/jan-2026/evidence.json --evidence-sha256 sha256:1111111111111111111111111111111111111111111111111111111111111111 --tamper-check PASS --completeness-check PASS --ci-fast-gate PASS`
 - Policy checker:

@@ -1137,6 +1137,7 @@ assert_eq "$(extract_output "$token_framework_script_output" "run_launch_canary_
 assert_eq "$(extract_output "$token_framework_script_output" "run_settlement_reconciliation_contract_tests")" "true" "contract framework changes must also run settlement reconciliation contract lane"
 assert_eq "$(extract_output "$token_framework_script_output" "run_mainnet_cutover_contract_tests")" "true" "contract framework changes must also run mainnet cutover contract lane"
 assert_eq "$(extract_output "$token_framework_script_output" "run_federated_delegation_settlement_contract_tests")" "true" "contract framework changes must also run federated delegation settlement contract lane"
+assert_eq "$(extract_output "$token_framework_script_output" "run_soc2_control_evidence_contract_tests")" "true" "contract framework changes must also run SOC2 control evidence contract lane"
 assert_eq "$(extract_output "$token_framework_script_output" "test_scope")" "token-contract" "contract framework changes should set token-contract scope"
 
 token_contract_fixture_output="$(run_selector $'fixtures/token_launch/handoff_invariant_cases.json')"
