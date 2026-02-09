@@ -18,6 +18,9 @@ across Kolme upgrades.
   - `python3 scripts/kolme/validate_version_compatibility.py --kamn-version 1.1.0 --kolme-release-tag v0.15.2 --ci-fast-gate PASS --output-json /tmp/kolme-version-report.json`
 - Replay matrix command:
   - `python3 scripts/kolme/run_version_compatibility_replay.py --fixture fixtures/kolme_compatibility/version_compatibility_cases.json --output-json /tmp/kolme-version-replay-report.json`
+- Runtime commit contract lane:
+  - `bash scripts/kolme/run_runtime_commit_contract_lane.sh`
+  - fixture: `fixtures/kolme_commit/runtime_commit_request_cases.txt`
 - Fast contract lane:
   - `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
 - Scheduled deep lane:
@@ -44,6 +47,7 @@ across Kolme upgrades.
 ## Regression Guard
 
 - Known incompatible signature (`kamn 1.2.x` + `kolme v0.14.x`) remains blocked (`Regression: #775`).
+- Malformed runtime commit request shapes remain fail-closed (`Regression: #825`).
 
 ## Local Validation
 

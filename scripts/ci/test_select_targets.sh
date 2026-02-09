@@ -436,6 +436,20 @@ assert_eq "$(extract_output "$kolme_version_contract_fixture_output" "run_kolme_
 assert_eq "$(extract_output "$kolme_version_contract_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme version fixture changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_version_contract_fixture_output" "test_scope")" "kolme-version-contract" "Kolme version fixture changes should set kolme-version-contract scope"
 
+kolme_runtime_commit_contract_script_output="$(run_selector $'scripts/kolme/run_runtime_commit_contract_lane.sh')"
+assert_eq "$(extract_output "$kolme_runtime_commit_contract_script_output" "run_rust")" "false" "Kolme runtime commit contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_contract_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit contract script changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_contract_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit contract script changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_contract_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit contract script changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_contract_script_output" "test_scope")" "kolme-version-contract" "Kolme runtime commit contract script changes should set kolme-version-contract scope"
+
+kolme_runtime_commit_fixture_output="$(run_selector $'fixtures/kolme_commit/runtime_commit_request_cases.txt')"
+assert_eq "$(extract_output "$kolme_runtime_commit_fixture_output" "run_rust")" "false" "Kolme runtime commit fixture-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_fixture_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit fixture changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_fixture_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit fixture changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit fixture changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_fixture_output" "test_scope")" "kolme-version-contract" "Kolme runtime commit fixture changes should set kolme-version-contract scope"
+
 kolme_devnet_contract_docs_output="$(run_selector $'docs/planning/kolme-devnet-ops.md')"
 assert_eq "$(extract_output "$kolme_devnet_contract_docs_output" "run_rust")" "false" "Kolme devnet ops docs should avoid rust lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_docs_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme devnet ops docs should skip snapshot drift contract lane"
