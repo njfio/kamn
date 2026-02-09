@@ -44,3 +44,22 @@ fn regression_requires_task_snapshot_restore_guard_rules() {
         "dependency-completion tampering remains rejected during restore (`Regression: #502`)"
     ));
 }
+
+#[test]
+fn doc_contains_federated_delegation_settlement_contract() {
+    assert!(DOC.contains("## Federated Delegation Settlement Evidence Contract"));
+    assert!(DOC.contains("generate_federated_delegation_settlement_evidence_bundle.sh"));
+    assert!(DOC.contains("check_federated_delegation_settlement_policy.sh"));
+    assert!(DOC.contains("run_federated_delegation_settlement_contract_lane.sh"));
+    assert!(DOC.contains("run_federated_delegation_settlement_deep_lane.sh"));
+    assert!(DOC.contains("run_federated_delegation_settlement_matrix.py"));
+    assert!(DOC.contains("fixtures/federated_task_delegation/partition_replay_cases.json"));
+}
+
+#[test]
+fn regression_requires_federated_delegation_settlement_guard_marker() {
+    // Regression: #734
+    assert!(DOC.contains(
+        "settlement reference drift, replay attempts, and tampered final decisions force `NO-GO` (`Regression: #734`)."
+    ));
+}

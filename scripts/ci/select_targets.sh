@@ -33,6 +33,7 @@ append_summary() {
     echo "- Run signer emulator contract tests: ${RUN_SIGNER_EMULATOR_CONTRACT_TESTS}"
     echo "- Run DID registry contract tests: ${RUN_DID_REGISTRY_CONTRACT_TESTS}"
     echo "- Run federated DID handshake contract tests: ${RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS}"
+    echo "- Run federated delegation settlement contract tests: ${RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS}"
     echo "- Run runtime snapshot contract tests: ${RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS}"
     echo "- Run message lifecycle contract tests: ${RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS}"
     echo "- Run channel lifecycle contract tests: ${RUN_CHANNEL_LIFECYCLE_CONTRACT_TESTS}"
@@ -148,6 +149,7 @@ DASHBOARD_CONTRACT_CHANGED=false
 SIGNER_EMULATOR_CONTRACT_CHANGED=false
 DID_REGISTRY_CONTRACT_CHANGED=false
 FEDERATED_DID_HANDSHAKE_CONTRACT_CHANGED=false
+FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_CHANGED=false
 RUNTIME_SNAPSHOT_CONTRACT_CHANGED=false
 MESSAGE_LIFECYCLE_CONTRACT_CHANGED=false
 CHANNEL_LIFECYCLE_CONTRACT_CHANGED=false
@@ -274,8 +276,15 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/task-operations.md|crates/kamn-core/tests/task_operations_docs.rs|scripts/task/*)
+    docs/foundation/task-operations.md|crates/kamn-core/tests/task_operations_docs.rs|scripts/task/*task_operation_snapshot*)
       TASK_OPERATION_SNAPSHOT_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
+    docs/foundation/task-operations.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/task_operations_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/task/*federated_delegation_settlement*|fixtures/federated_task_delegation/*)
+      FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -449,6 +458,7 @@ RUN_DASHBOARD_CONTRACT_TESTS=false
 RUN_SIGNER_EMULATOR_CONTRACT_TESTS=false
 RUN_DID_REGISTRY_CONTRACT_TESTS=false
 RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS=false
+RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS=false
 RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS=false
 RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS=false
 RUN_CHANNEL_LIFECYCLE_CONTRACT_TESTS=false
@@ -591,6 +601,13 @@ if [ "$DURABLE_GUARD_RECOVERY_CONTRACT_CHANGED" = true ]; then
   RUN_DURABLE_GUARD_RECOVERY_CONTRACT_TESTS=true
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
     TEST_SCOPE="guard-contract"
+  fi
+fi
+
+if [ "$FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_CHANGED" = true ]; then
+  RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="federated-task-contract"
   fi
 fi
 
@@ -764,6 +781,7 @@ write_output "run_dashboard_contract_tests" "$RUN_DASHBOARD_CONTRACT_TESTS"
 write_output "run_signer_emulator_contract_tests" "$RUN_SIGNER_EMULATOR_CONTRACT_TESTS"
 write_output "run_did_registry_contract_tests" "$RUN_DID_REGISTRY_CONTRACT_TESTS"
 write_output "run_federated_did_handshake_contract_tests" "$RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS"
+write_output "run_federated_delegation_settlement_contract_tests" "$RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS"
 write_output "run_runtime_snapshot_contract_tests" "$RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS"
 write_output "run_message_lifecycle_contract_tests" "$RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS"
 write_output "run_channel_lifecycle_contract_tests" "$RUN_CHANNEL_LIFECYCLE_CONTRACT_TESTS"

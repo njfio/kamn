@@ -102,6 +102,17 @@ fn checklist_contains_federated_did_handshake_evidence_contract() {
 }
 
 #[test]
+fn checklist_contains_federated_delegation_settlement_evidence_contract() {
+    assert!(CHECKLIST.contains("## Federated Delegation Settlement Evidence Contract"));
+    assert!(CHECKLIST.contains("generate_federated_delegation_settlement_evidence_bundle.sh"));
+    assert!(CHECKLIST.contains("check_federated_delegation_settlement_policy.sh"));
+    assert!(CHECKLIST.contains("run_federated_delegation_settlement_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_federated_delegation_settlement_deep_lane.sh"));
+    assert!(CHECKLIST.contains("run_federated_delegation_settlement_matrix.py"));
+    assert!(CHECKLIST.contains("fixtures/federated_task_delegation/partition_replay_cases.json"));
+}
+
+#[test]
 fn checklist_contains_governance_simulation_and_human_veto_evidence_contract() {
     assert!(CHECKLIST.contains("## Governance Simulation and Human-Veto Evidence Contract"));
     assert!(CHECKLIST.contains("generate_governance_simulation_evidence_bundle.sh"));
@@ -240,6 +251,14 @@ fn regression_requires_federated_did_handshake_evidence_guard_marker() {
     // Regression: #734
     assert!(CHECKLIST.contains(
         "replay/downgrade attempts, quorum shortfalls, and tampered final decisions force `NO-GO` (`Regression: #734`)."
+    ));
+}
+
+#[test]
+fn regression_requires_federated_delegation_settlement_evidence_guard_marker() {
+    // Regression: #734
+    assert!(CHECKLIST.contains(
+        "settlement reference drift, replay attempts, quorum shortfalls, and tampered final decisions force `NO-GO` (`Regression: #734`)."
     ));
 }
 
