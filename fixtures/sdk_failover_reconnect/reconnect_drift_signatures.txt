@@ -1,0 +1,4 @@
+# scenario|expected_signature
+duplicate_nonce_same_route|tcp handshake replay detected
+forged_handshake_signature|handshake.signature
+missing_handshake_delimiter|missing handshake frame delimiter

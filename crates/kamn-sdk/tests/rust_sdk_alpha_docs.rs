@@ -13,6 +13,7 @@ fn doc_contains_live_transport_validation_commands() {
     assert!(DOC.contains("bash scripts/sdk/run_local_e2e_demo.sh"));
     assert!(DOC.contains("bash scripts/sdk/run_localhost_signed_demo.sh"));
     assert!(DOC.contains("bash scripts/sdk/run_tcp_signed_relay_demo.sh"));
+    assert!(DOC.contains("bash scripts/sdk/run_tcp_failover_reconnect_matrix.sh --lane fast"));
     assert!(DOC.contains("bash scripts/sdk/run_rust_live_transport_contract_lane.sh"));
     assert!(DOC.contains("bash scripts/sdk/run_rust_live_transport_deep_lane.sh"));
 }
@@ -54,4 +55,13 @@ fn regression_requires_tcp_handshake_replay_guard_contract() {
     assert!(DOC.contains("`Regression: #823`"));
     assert!(DOC.contains("Forged handshake frames are rejected"));
     assert!(DOC.contains("conflict: tcp handshake replay detected"));
+}
+
+#[test]
+fn regression_requires_tcp_failover_reconnect_matrix_contract() {
+    // Regression: #824
+    assert!(DOC.contains("`Regression: #824`"));
+    assert!(DOC.contains("kamn.sdk.tcp-failover-reconnect.matrix.v1"));
+    assert!(DOC.contains("fixtures/sdk_failover_reconnect/reconnect_drift_signatures.txt"));
+    assert!(DOC.contains("KAMN_TCP_FAILOVER_DEEP_CADENCE=scheduled"));
 }
