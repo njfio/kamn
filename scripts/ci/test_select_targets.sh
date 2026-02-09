@@ -316,6 +316,12 @@ assert_eq "$(extract_output "$bridge_ingress_lane_output" "run_bridge_replay_har
 assert_eq "$(extract_output "$bridge_ingress_lane_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge ingress lane script-only changes should select all bridge suites"
 assert_eq "$(extract_output "$bridge_ingress_lane_output" "test_scope")" "bridge" "bridge ingress lane script-only changes should set bridge scope"
 
+bridge_outbound_lane_output="$(run_selector $'scripts/bridge/run_bridge_outbound_quorum_contract_lane.sh')"
+assert_eq "$(extract_output "$bridge_outbound_lane_output" "run_rust")" "false" "bridge outbound lane script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$bridge_outbound_lane_output" "run_bridge_replay_harness")" "true" "bridge outbound lane script-only changes must run bridge replay harness"
+assert_eq "$(extract_output "$bridge_outbound_lane_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge outbound lane script-only changes should select all bridge suites"
+assert_eq "$(extract_output "$bridge_outbound_lane_output" "test_scope")" "bridge" "bridge outbound lane script-only changes should set bridge scope"
+
 telegram_bridge_output="$(run_selector $'crates/kamn-core/src/telegram_bridge.rs')"
 assert_eq "$(extract_output "$telegram_bridge_output" "run_bridge_replay_harness")" "true" "telegram bridge changes must run bridge replay harness"
 assert_eq "$(extract_output "$telegram_bridge_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge" "telegram bridge changes should select telegram subset plus bridge adapter suite"

@@ -21,6 +21,7 @@ fn doc_contains_bridge_quorum_fast_lane_commands() {
     assert!(DOC.contains("bridge_replay_matrix.sh"));
     assert!(DOC.contains("--suites bridge_adapter,discord_bridge"));
     assert!(DOC.contains("run_bridge_ingress_relay_contract_lane.sh"));
+    assert!(DOC.contains("run_bridge_outbound_quorum_contract_lane.sh"));
     assert!(DOC.contains("run_cross_chain_outbound_intent_contract_lane.sh"));
     assert!(DOC.contains("cargo fmt --check"));
     assert!(DOC.contains("cargo clippy -p kamn-core -- -D warnings"));
@@ -38,7 +39,10 @@ fn regression_requires_listener_and_approver_quorum_guard_rules() {
     assert!(DOC.contains("unauthorized approver signature-failure rejection"));
     assert!(DOC.contains("Canonical `envelope.id` and `proof.proof_value` remain bound"));
     assert!(DOC.contains("Malformed ingress payloads fail closed"));
+    assert!(DOC.contains("required/provided"));
+    assert!(DOC.contains("approver DID reason fields"));
     assert!(DOC.contains("Regression: #587"));
     assert!(DOC.contains("Regression: #742"));
     assert!(DOC.contains("Regression: #850"));
+    assert!(DOC.contains("Regression: #851"));
 }
