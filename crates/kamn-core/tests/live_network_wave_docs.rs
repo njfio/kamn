@@ -11,6 +11,9 @@ fn live_network_wave_doc_contains_smoke_commands_and_schema() {
     assert!(LIVE_NETWORK_WAVE_DOC.contains("run_bridge_replay_redaction_contract_lane.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("run_bridge_replay_redaction_deep_lane.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("check_bridge_replay_redaction_policy.sh"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("run_localhost_bridge_demo_evidence_contract_lane.sh"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("check_localhost_bridge_demo_policy.sh"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("kamn.bridge.localhost-demo-evidence.v1"));
 }
 
 #[test]

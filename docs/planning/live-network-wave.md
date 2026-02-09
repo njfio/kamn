@@ -30,10 +30,14 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
 
 - PR-fast bridge evidence lane (bounded):
   - `bash scripts/bridge/run_bridge_replay_redaction_contract_lane.sh --skip-replay --replay-report-file bridge-replay-report.json`
+- PR-fast localhost bridge demo evidence lane (bounded):
+  - `bash scripts/bridge/run_localhost_bridge_demo_evidence_contract_lane.sh`
 - Scheduled/manual bridge evidence lane (deep):
   - `bash scripts/bridge/run_bridge_replay_redaction_deep_lane.sh --output-json /tmp/bridge-replay-redaction-deep-report.json`
 - Bridge evidence bundle policy checker:
   - `bash scripts/bridge/check_bridge_replay_redaction_policy.sh --bundle-file /tmp/bridge-replay-redaction-deep-report.json`
+- Localhost bridge demo evidence policy checker:
+  - `bash scripts/bridge/check_localhost_bridge_demo_policy.sh --bundle-file /tmp/localhost-bridge-demo-evidence.json`
 
 ## Evidence Contract
 
@@ -41,6 +45,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `kamn.runtime.live-network-smoke-report.v1`
 - Pilot summary schema:
   - `kamn.runtime.live-network-pilot-artifact-summary.v1`
+- Localhost bridge demo evidence schema:
+  - `kamn.bridge.localhost-demo-evidence.v1`
 - Required smoke report fields:
   - `status`
   - `final_decision`
@@ -71,6 +77,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `run_live_network_pilot_deep_lane.sh` rejects non-`schedule` and non-`workflow_dispatch` events.
 - Bridge PR-fast budget:
   - `run_bridge_replay_redaction_contract_lane.sh` enforces a 120-second upper bound.
+- Localhost bridge demo evidence budget:
+  - `run_localhost_bridge_demo_evidence_contract_lane.sh` enforces a 120-second upper bound.
 - Bridge deep lane budget:
   - `run_bridge_replay_redaction_deep_lane.sh` enforces a 300-second upper bound.
 - Regression guard:
