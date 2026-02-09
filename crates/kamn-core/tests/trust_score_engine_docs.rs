@@ -26,9 +26,13 @@ fn doc_contains_bounds_and_versioning_controls() {
 fn doc_contains_weighted_decay_and_antigaming_fixture_lanes() {
     assert!(DOC.contains("## Weighted Decay and Anti-Gaming Fixture Lanes"));
     assert!(DOC.contains("run_weighted_decay_contract_lane.sh"));
+    assert!(DOC.contains("generate_weighted_decay_property_evidence_bundle.sh"));
+    assert!(DOC.contains("check_weighted_decay_property_policy.sh"));
     assert!(DOC.contains("run_weighted_decay_deep_lane.sh"));
     assert!(DOC.contains("run_weighted_decay_matrix.py"));
     assert!(DOC.contains("fixtures/reputation_decay/compact_cases.json"));
+    assert!(DOC.contains("fixtures/reputation_decay/adversarial_cases.json"));
+    assert!(DOC.contains("cargo test -p kamn-core --test trust_score_property_invariants"));
 }
 
 #[test]
@@ -58,4 +62,12 @@ fn regression_requires_stale_history_decay_guard_marker() {
     assert!(
         DOC.contains("stale-only history does not improve decay multiplier (`Regression: #768`).")
     );
+}
+
+#[test]
+fn regression_requires_weighted_decay_property_guard_marker() {
+    // Regression: #933
+    assert!(DOC.contains(
+        "reciprocity/burst/churn anti-gaming property drift is rejected (`Regression: #933`)."
+    ));
 }

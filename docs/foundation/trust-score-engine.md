@@ -44,14 +44,24 @@ Regression guards:
 - `1000ms` remains in the highest response bucket.
 - replayed reciprocity/burst/churn abuse fixtures remain penalized (`Regression: #730`).
 - stale-only history does not improve decay multiplier (`Regression: #768`).
+- reciprocity/burst/churn anti-gaming property drift is rejected (`Regression: #933`).
 
-## Weighted Decay and Anti-Gaming Fixture Lanes (Issue #736)
+## Weighted Decay and Anti-Gaming Fixture Lanes (Issue #736 / #933)
 - Compact PR lane entrypoint:
-  - `bash scripts/reputation/run_weighted_decay_contract_lane.sh`
+  - `bash scripts/reputation/run_weighted_decay_contract_lane.sh --output-file reputation-weighted-decay-property-contract-bundle.json`
+- Compact/deep evidence generator:
+  - `bash scripts/reputation/generate_weighted_decay_property_evidence_bundle.sh --help`
+- Compact/deep policy checker:
+  - `bash scripts/reputation/check_weighted_decay_property_policy.sh --help`
 - Scheduled deep lane entrypoint:
   - `bash scripts/reputation/run_weighted_decay_deep_lane.sh --output-json reputation-weighted-decay-report.json`
 - Fixture matrix runner:
   - `python3 scripts/reputation/run_weighted_decay_matrix.py --fixture fixtures/reputation_decay/compact_cases.json --output-json reputation-weighted-decay-report.json`
+  - `python3 scripts/reputation/run_weighted_decay_matrix.py --fixture fixtures/reputation_decay/adversarial_cases.json --output-json reputation-weighted-decay-adversarial-report.json`
+- Property invariant runner:
+  - `cargo test -p kamn-core --test trust_score_property_invariants`
+- Runtime budget control:
+  - `REPUTATION_WEIGHTED_DECAY_MAX_SECONDS` (lane fails closed when runtime exceeds budget).
 
 ## Validation and Error Handling
 - Invalid rate inputs return typed errors:
