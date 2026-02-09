@@ -68,6 +68,14 @@ fn checklist_contains_settlement_reconciliation_evidence_contract() {
 }
 
 #[test]
+fn checklist_contains_mainnet_cutover_manifest_contract() {
+    assert!(CHECKLIST.contains("## Mainnet Cutover Manifest Validation Contract"));
+    assert!(CHECKLIST.contains("fixtures/mainnet_cutover/mainnet_cutover_manifest.schema.json"));
+    assert!(CHECKLIST.contains("validate_mainnet_cutover_manifest.py"));
+    assert!(CHECKLIST.contains("run_mainnet_cutover_contract_lane.sh"));
+}
+
+#[test]
 fn regression_requires_rollback_precheck_in_checklist() {
     // Regression: #173
     assert!(CHECKLIST.contains("Rollback precheck result: PASS"));
@@ -89,5 +97,13 @@ fn regression_requires_chain_receipt_evidence_guard_marker() {
     ));
     assert!(CHECKLIST.contains(
         "timeout-before-finality pending receipts and failed receipts force `NO-GO` (`Regression: #678`)."
+    ));
+}
+
+#[test]
+fn regression_requires_mainnet_cutover_dependency_and_approval_guards() {
+    // Regression: #705
+    assert!(CHECKLIST.contains(
+        "unresolved/non-prior dependencies and insufficient approvals force `NO-GO` (`Regression: #705`)."
     ));
 }

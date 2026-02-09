@@ -88,10 +88,24 @@ Escrow settlement outcomes require deterministic receipt/finality evidence befor
   - missing or invalid chain receipt evidence forces `NO-GO` (`Regression: #678`).
   - timeout-before-finality pending receipts and failed receipts force `NO-GO` (`Regression: #678`).
 
+## Mainnet Cutover Manifest Validation Contract (Issue #707)
+Mainnet cutover requires deterministic triadic checkpoint manifests with explicit approval and dependency evidence.
+
+- Schema contract:
+  - `fixtures/mainnet_cutover/mainnet_cutover_manifest.schema.json`
+- Validator:
+  - `python3 scripts/cutover/validate_mainnet_cutover_manifest.py --manifest fixtures/mainnet_cutover/mainnet_cutover_manifest.valid.json --output-json /tmp/mainnet-cutover-validation-report.json`
+- PR fast contract lane:
+  - `bash scripts/cutover/run_mainnet_cutover_contract_lane.sh`
+- Regression policy:
+  - unresolved/non-prior dependencies and insufficient approvals force `NO-GO` (`Regression: #705`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
+bash scripts/cutover/test_validate_mainnet_cutover_manifest.sh
+bash scripts/cutover/test_run_mainnet_cutover_contract_lane.sh
 bash scripts/escrow/test_generate_settlement_reconciliation_evidence_bundle.sh
 bash scripts/escrow/test_run_settlement_reconciliation_contract_lane.sh
 bash scripts/escrow/test_run_settlement_reconciliation_race_matrix.sh
@@ -100,6 +114,7 @@ bash scripts/deploy/test_generate_gonogo_evidence_bundle.sh
 bash scripts/deploy/test_run_gonogo_evidence_contract_lane.sh
 bash scripts/deploy/test_generate_staging_rehearsal_bundle.sh
 bash scripts/deploy/test_run_staging_rehearsal_contract_lane.sh
+cargo test -p kamn-core --test mainnet_cutover_runbook_docs
 cargo test -p kamn-core --test release_gonogo_checklist_docs
 cargo test -p kamn-core --test durable_guard_recovery_matrix
 cargo test -p kamn-core --test durable_guard_snapshot_store
