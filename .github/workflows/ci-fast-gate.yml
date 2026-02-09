@@ -141,6 +141,10 @@ jobs:
         if: steps.scope.outputs.run_mainnet_cutover_contract_tests == 'true'
         run: bash scripts/cutover/run_cutover_rollback_contract_lane.sh
 
+      - name: Run launch canary contract lane
+        if: steps.scope.outputs.run_launch_canary_contract_tests == 'true'
+        run: bash scripts/canary/run_launch_canary_contract_lane.sh
+
       - name: Run bridge replay fixture harness
         if: steps.scope.outputs.run_bridge_replay_harness == 'true'
         run: |

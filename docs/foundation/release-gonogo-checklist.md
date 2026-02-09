@@ -114,10 +114,26 @@ Rollback readiness and trigger execution must emit deterministic evidence before
 - Regression policy:
   - missing failed-checkpoint evidence and rollback-target hash mismatch force `NO-GO` (`Regression: #708`).
 
+## Launch Canary Critical-Path Contract (Issue #710)
+Launch approval requires deterministic critical-path probe evidence covering message/task/escrow behavior.
+
+- Probe fixture matrix:
+  - `fixtures/launch_canary/critical_path_probe_cases.json`
+- Matrix runner:
+  - `python3 scripts/canary/run_launch_canary_matrix.py --fixture fixtures/launch_canary/critical_path_probe_cases.json --output-json /tmp/launch-canary-report.json`
+- PR fast contract lane:
+  - `bash scripts/canary/run_launch_canary_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/canary/run_launch_canary_deep_lane.sh --output-json launch-canary-report.json`
+- Regression policy:
+  - missing probe evidence and failing critical-path probes force `NO-GO` (`Regression: #710`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
+bash scripts/canary/test_run_launch_canary_matrix.sh
+bash scripts/canary/test_run_launch_canary_contract_lane.sh
 bash scripts/cutover/test_validate_mainnet_cutover_manifest.sh
 bash scripts/cutover/test_run_mainnet_cutover_contract_lane.sh
 bash scripts/cutover/test_generate_cutover_rollback_evidence_bundle.sh
