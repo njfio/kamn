@@ -113,6 +113,18 @@ jobs:
           path: launch-canary-report.json
           if-no-files-found: error
 
+      - name: Run post-cutover SLO deep lane
+        if: steps.detect.outputs.run_rust == 'true'
+        run: bash scripts/canary/run_post_cutover_slo_deep_lane.sh --output-json post-cutover-slo-report.json
+
+      - name: Upload post-cutover SLO deep report
+        if: always() && hashFiles('post-cutover-slo-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-cutover-slo-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: post-cutover-slo-report.json
+          if-no-files-found: error
+
       - name: Run SDK parity matrix (scheduled only)
         if: steps.detect.outputs.run_rust == 'true'
         run: bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json sdk-parity-report.json

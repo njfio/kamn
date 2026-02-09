@@ -360,10 +360,20 @@ assert_eq "$(extract_output "$canary_contract_script_output" "run_rust")" "false
 assert_eq "$(extract_output "$canary_contract_script_output" "run_launch_canary_contract_tests")" "true" "canary contract script changes must run launch canary lane"
 assert_eq "$(extract_output "$canary_contract_script_output" "test_scope")" "canary-contract" "canary contract script changes should set canary-contract scope"
 
+canary_slo_script_output="$(run_selector $'scripts/canary/run_post_cutover_slo_contract_lane.sh')"
+assert_eq "$(extract_output "$canary_slo_script_output" "run_rust")" "false" "post-cutover SLO script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$canary_slo_script_output" "run_launch_canary_contract_tests")" "true" "post-cutover SLO script changes must run launch canary lane"
+assert_eq "$(extract_output "$canary_slo_script_output" "test_scope")" "canary-contract" "post-cutover SLO script changes should set canary-contract scope"
+
 canary_contract_fixture_output="$(run_selector $'fixtures/launch_canary/critical_path_probe_cases.json')"
 assert_eq "$(extract_output "$canary_contract_fixture_output" "run_rust")" "false" "canary fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$canary_contract_fixture_output" "run_launch_canary_contract_tests")" "true" "canary fixture changes must run launch canary lane"
 assert_eq "$(extract_output "$canary_contract_fixture_output" "test_scope")" "canary-contract" "canary fixture changes should set canary-contract scope"
+
+canary_observability_docs_output="$(run_selector $'docs/foundation/observability-slo-dashboards.md')"
+assert_eq "$(extract_output "$canary_observability_docs_output" "run_rust")" "false" "observability SLO docs should avoid rust lane"
+assert_eq "$(extract_output "$canary_observability_docs_output" "run_launch_canary_contract_tests")" "true" "observability SLO docs must run launch canary lane"
+assert_eq "$(extract_output "$canary_observability_docs_output" "test_scope")" "frontend" "observability SLO docs should preserve frontend scope while enabling canary lane"
 
 escrow_rust_output="$(run_selector $'crates/kamn-core/src/escrow.rs')"
 assert_eq "$(extract_output "$escrow_rust_output" "run_rust")" "true" "escrow rust changes should run rust lane"

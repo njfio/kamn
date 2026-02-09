@@ -39,10 +39,26 @@ This document captures the first implementation slice for deterministic observab
   - unavailable sample fetch maps to `dashboard-error` state.
   - empty sample batches map to `dashboard-empty` state.
 
+## Post-Cutover SLO Gate Evidence Contract (Issue #711)
+Launch expansion decisions require deterministic SLO evidence export and fail-closed policy checks.
+
+- Evidence bundle generator:
+  - `bash scripts/canary/generate_post_cutover_slo_evidence_bundle.sh --output-file /tmp/post-cutover-slo.json --window-minutes 15 --p95-latency-ms 140 --max-p95-latency-ms 200 --error-rate-bps 18 --max-error-rate-bps 25 --delivery-success-bps 9992 --min-delivery-success-bps 9950 --snapshot-age-seconds 30 --max-snapshot-age-seconds 120 --evidence-complete true --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/canary/check_post_cutover_slo_policy.sh --bundle-file /tmp/post-cutover-slo.json`
+- Fast contract lane:
+  - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/canary/run_post_cutover_slo_deep_lane.sh --output-json post-cutover-slo-report.json`
+- Regression policy:
+  - stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
+bash scripts/canary/test_generate_post_cutover_slo_evidence_bundle.sh
+bash scripts/canary/test_run_post_cutover_slo_contract_lane.sh
 cargo test -p kamn-core --test observability_stack
 npm --prefix packages/kamn-dashboard test
 cargo fmt --check
