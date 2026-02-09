@@ -1,5 +1,128 @@
 use kamn_core::{TaskLifecycle, TaskLifecycleError, TaskState, TaskTransition};
 
+const TASK_TRANSITIONS: [TaskTransition; 8] = [
+    TaskTransition::Accept,
+    TaskTransition::Delegate,
+    TaskTransition::StartWork,
+    TaskTransition::RequestInput,
+    TaskTransition::Block,
+    TaskTransition::Complete,
+    TaskTransition::Fail,
+    TaskTransition::Cancel,
+];
+
+fn is_terminal_task_state(state: TaskState) -> bool {
+    matches!(
+        state,
+        TaskState::Completed | TaskState::Failed | TaskState::Cancelled
+    )
+}
+
+fn is_legal_task_state_step(from: TaskState, to: TaskState) -> bool {
+    matches!(
+        (from, to),
+        (TaskState::Submitted, TaskState::Accepted)
+            | (TaskState::Submitted, TaskState::Cancelled)
+            | (TaskState::Accepted, TaskState::Delegated)
+            | (TaskState::Accepted, TaskState::InProgress)
+            | (TaskState::Accepted, TaskState::Cancelled)
+            | (TaskState::Delegated, TaskState::InProgress)
+            | (TaskState::Delegated, TaskState::Cancelled)
+            | (TaskState::InProgress, TaskState::Blocked)
+            | (TaskState::InProgress, TaskState::InputRequired)
+            | (TaskState::InProgress, TaskState::Completed)
+            | (TaskState::InProgress, TaskState::Failed)
+            | (TaskState::InProgress, TaskState::Cancelled)
+            | (TaskState::InputRequired, TaskState::InProgress)
+            | (TaskState::InputRequired, TaskState::Failed)
+            | (TaskState::InputRequired, TaskState::Cancelled)
+            | (TaskState::Blocked, TaskState::InProgress)
+            | (TaskState::Blocked, TaskState::Failed)
+            | (TaskState::Blocked, TaskState::Cancelled)
+    )
+}
+
+fn for_each_task_transition_sequence(max_len: usize, mut f: impl FnMut(&[TaskTransition])) {
+    fn recurse(
+        target_len: usize,
+        current: &mut Vec<TaskTransition>,
+        f: &mut impl FnMut(&[TaskTransition]),
+    ) {
+        if current.len() == target_len {
+            f(current.as_slice());
+            return;
+        }
+
+        for transition in TASK_TRANSITIONS {
+            current.push(transition);
+            recurse(target_len, current, f);
+            current.pop();
+        }
+    }
+
+    let mut current = Vec::new();
+    for len in 1..=max_len {
+        recurse(len, &mut current, &mut f);
+    }
+}
+
+#[test]
+fn task_lifecycle_property_generated_sequences_preserve_transition_contracts() {
+    // Keep sequence depth bounded for fast CI while still exploring broad transition permutations.
+    for_each_task_transition_sequence(4, |sequence| {
+        let mut lifecycle =
+            TaskLifecycle::new("task-property").expect("task lifecycle should initialize");
+        let mut successful_transitions = 0_usize;
+
+        for transition in sequence {
+            let before_state = lifecycle.state();
+            let before_history = lifecycle.history();
+            match lifecycle.transition(*transition) {
+                Ok(()) => {
+                    successful_transitions += 1;
+                    let after_state = lifecycle.state();
+                    assert!(
+                        is_legal_task_state_step(before_state, after_state),
+                        "successful transition must be legal from {before_state:?} via \
+                         {transition:?} to {after_state:?}"
+                    );
+                    assert_eq!(
+                        lifecycle.history().len(),
+                        before_history.len() + 1,
+                        "successful transition must append one state to history"
+                    );
+                }
+                Err(TaskLifecycleError::InvalidTransition {
+                    from,
+                    transition: rejected,
+                }) => {
+                    assert_eq!(from, before_state);
+                    assert_eq!(rejected, *transition);
+                    assert_eq!(lifecycle.state(), before_state);
+                    assert_eq!(lifecycle.history(), before_history);
+                }
+                Err(TaskLifecycleError::TerminalState(state)) => {
+                    assert!(is_terminal_task_state(state));
+                    assert_eq!(state, before_state);
+                    assert_eq!(lifecycle.state(), before_state);
+                    assert_eq!(lifecycle.history(), before_history);
+                }
+                Err(error) => panic!("unexpected task lifecycle error in property lane: {error:?}"),
+            }
+
+            let history = lifecycle.history();
+            assert_eq!(history.first(), Some(&TaskState::Submitted));
+            assert_eq!(history.last().copied(), Some(lifecycle.state()));
+        }
+
+        assert_eq!(
+            lifecycle.history().len(),
+            successful_transitions + 1,
+            "history length must equal initial submitted state plus successful transitions"
+        );
+    });
+}
+
 #[test]
 fn new_task_starts_submitted_with_history() {
     let lifecycle = TaskLifecycle::new("task-1").expect("task lifecycle should initialize");
