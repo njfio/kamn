@@ -63,6 +63,7 @@ append_summary() {
     echo "- Run cross-language live transport parity contract tests: ${RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS}"
     echo "- Run cross-language live transport parity rust contract tests: ${RUN_LIVE_TRANSPORT_PARITY_RUST_CONTRACT_TESTS}"
     echo "- Run localhost signed integration contract lane tests: ${RUN_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_LANE_TESTS}"
+    echo "- Run kamn-core missing-docs policy contract tests: ${RUN_KAMN_CORE_MISSING_DOCS_POLICY_CONTRACT_TESTS}"
     echo "- Live transport parity languages: ${LIVE_TRANSPORT_PARITY_LANGUAGES}"
     echo "- Run SDK parity matrix: ${RUN_SDK_PARITY_MATRIX}"
     echo "- Run invariant harness: ${RUN_INVARIANT_HARNESS}"
@@ -186,6 +187,7 @@ SDK_TYPESCRIPT_LIVE_CHANGED=false
 SDK_LIVE_PARITY_SCRIPT_CHANGED=false
 SDK_SHARED_MATRIX_CHANGED=false
 SDK_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_CHANGED=false
+KAMN_CORE_MISSING_DOCS_POLICY_CHANGED=false
 CRITICAL_PATH_CHANGED=false
 UNKNOWN_RISK_CHANGED=false
 FULL_SUITE=false
@@ -461,6 +463,13 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
+    crates/kamn-core/src/lib.rs|crates/kamn-core/tests/missing_docs_policy.rs|crates/kamn-core/tests/engineering_hardening_wave_docs.rs|fixtures/ci/kamn_core_missing_docs_allowlist.txt|scripts/ci/check_kamn_core_missing_docs_policy.sh|scripts/ci/test_check_kamn_core_missing_docs_policy.sh|docs/planning/engineering-hardening-wave.md|README.md)
+      KAMN_CORE_MISSING_DOCS_POLICY_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
     crates/kamn-core/src/invariants.rs|crates/kamn-core/src/transaction.rs|crates/kamn-core/src/smoke.rs|crates/kamn-core/tests/invariant_*|crates/kamn-core/tests/transaction_guards.rs|docs/foundation/invariants.md|docs/foundation/transaction-guards.md|scripts/ci/run_invariant_harness.sh|scripts/ci/test_run_invariant_harness.sh)
       INVARIANT_RELATED_CHANGED=true
       ;;
@@ -522,6 +531,7 @@ RUN_TYPESCRIPT_LIVE_TRANSPORT_CONTRACT_TESTS=false
 RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS=false
 RUN_LIVE_TRANSPORT_PARITY_RUST_CONTRACT_TESTS=false
 RUN_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_LANE_TESTS=false
+RUN_KAMN_CORE_MISSING_DOCS_POLICY_CONTRACT_TESTS=false
 LIVE_TRANSPORT_PARITY_LANGUAGES=""
 RUN_SDK_PARITY_MATRIX=false
 FMT_CMD=":"
@@ -828,6 +838,13 @@ if [ "$SDK_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_CHANGED" = true ]; then
   RUN_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_LANE_TESTS=true
 fi
 
+if [ "$KAMN_CORE_MISSING_DOCS_POLICY_CHANGED" = true ]; then
+  RUN_KAMN_CORE_MISSING_DOCS_POLICY_CONTRACT_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="qa-doc-contract"
+  fi
+fi
+
 if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
   if [ "$RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS" = true ]; then
     TEST_SCOPE="sdk-live-parity"
@@ -887,6 +904,7 @@ write_output "run_typescript_live_transport_contract_tests" "$RUN_TYPESCRIPT_LIV
 write_output "run_live_transport_parity_contract_tests" "$RUN_LIVE_TRANSPORT_PARITY_CONTRACT_TESTS"
 write_output "run_live_transport_parity_rust_contract_tests" "$RUN_LIVE_TRANSPORT_PARITY_RUST_CONTRACT_TESTS"
 write_output "run_localhost_signed_integration_contract_lane_tests" "$RUN_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_LANE_TESTS"
+write_output "run_kamn_core_missing_docs_policy_contract_tests" "$RUN_KAMN_CORE_MISSING_DOCS_POLICY_CONTRACT_TESTS"
 write_output "live_transport_parity_languages" "$LIVE_TRANSPORT_PARITY_LANGUAGES"
 write_output "run_sdk_parity_matrix" "$RUN_SDK_PARITY_MATRIX"
 write_output "run_invariant_harness" "$RUN_INVARIANT_HARNESS"

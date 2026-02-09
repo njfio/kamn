@@ -1,0 +1,52 @@
+# Engineering Hardening Wave (Issues #894 / #895 / #896)
+
+This wave focuses on low-cost, fail-closed quality contracts that keep the
+default development loop green while tightening missing-doc policy controls for
+`kamn-core`.
+
+## Scope
+
+- Keep baseline local and CI checks deterministic and reproducible.
+- Enforce explicit `kamn-core` missing-doc policy allowlist drift checks.
+- Keep policy checks cheap enough for docs-only and script-only changes.
+
+## Commands
+
+- Baseline local checks:
+  - `cargo fmt --check`
+  - `cargo clippy -- -D warnings`
+  - `cargo test`
+- Missing-doc policy contract checker:
+  - `bash scripts/ci/check_kamn_core_missing_docs_policy.sh`
+- Missing-doc policy checker regression tests:
+  - `bash scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
+- CI helper regression suite:
+  - `bash scripts/ci/test_ci_tools.sh`
+
+## Missing-Docs Policy Contract
+
+- `crates/kamn-core/src/lib.rs` must declare `#![warn(missing_docs)]`.
+- Crate-wide `#![allow(missing_docs)]` is prohibited.
+- Legacy `#[allow(missing_docs)] pub mod ...` exemptions are tracked in:
+  - `fixtures/ci/kamn_core_missing_docs_allowlist.txt`
+- Any allowlist drift fails closed via:
+  - `scripts/ci/check_kamn_core_missing_docs_policy.sh`
+
+## Cost and Runtime Policy
+
+- The policy checker is shell-based (`grep`/`awk` + fixture diff) and avoids
+  full Rust builds when only documentation/policy files change.
+- CI scope routing only enables the checker for relevant files:
+  - `crates/kamn-core/src/lib.rs`
+  - `crates/kamn-core/tests/missing_docs_policy.rs`
+  - `crates/kamn-core/tests/engineering_hardening_wave_docs.rs`
+  - `fixtures/ci/kamn_core_missing_docs_allowlist.txt`
+  - `scripts/ci/check_kamn_core_missing_docs_policy.sh`
+  - `scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
+  - `docs/planning/engineering-hardening-wave.md`
+  - `README.md`
+
+## Regression Marker
+
+- `Regression: #896` — protect against missing-doc policy drift and undocumented
+  checker/documentation command changes.

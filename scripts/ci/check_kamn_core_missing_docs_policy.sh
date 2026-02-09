@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+CORE_LIB_PATH="${KAMN_CORE_LIB_PATH:-$ROOT_DIR/crates/kamn-core/src/lib.rs}"
+ALLOWLIST_PATH="${KAMN_CORE_MISSING_DOCS_ALLOWLIST_PATH:-$ROOT_DIR/fixtures/ci/kamn_core_missing_docs_allowlist.txt}"
+README_PATH="${KAMN_README_PATH:-$ROOT_DIR/README.md}"
+PLAN_DOC_PATH="${KAMN_ENGINEERING_HARDENING_DOC_PATH:-$ROOT_DIR/docs/planning/engineering-hardening-wave.md}"
+
+require_file() {
+  local file="$1"
+  local name="$2"
+  if [ ! -f "$file" ]; then
+    echo "missing-docs policy contract failed: missing ${name} at '${file}'." >&2
+    exit 1
+  fi
+}
+
+require_file "$CORE_LIB_PATH" "kamn-core lib"
+require_file "$ALLOWLIST_PATH" "missing-docs allowlist fixture"
+require_file "$README_PATH" "README"
+require_file "$PLAN_DOC_PATH" "engineering hardening plan"
+
+if ! grep -Fq "#![warn(missing_docs)]" "$CORE_LIB_PATH"; then
+  echo "missing-docs policy contract failed: kamn-core must declare #![warn(missing_docs)]." >&2
+  exit 1
+fi
+
+if grep -Eq '^#!\[allow\(missing_docs\)\]' "$CORE_LIB_PATH"; then
+  echo "missing-docs policy contract failed: crate-wide #![allow(missing_docs)] is not permitted." >&2
+  exit 1
+fi
+
+actual_allowlisted_modules="$(
+  awk '
+    /^[[:space:]]*#\[allow\(missing_docs\)\]/ {
+      allow = 1
+      next
+    }
+    /^[[:space:]]*pub mod / {
+      module_name = $3
+      sub(/;/, "", module_name)
+      if (allow == 1) {
+        print module_name
+      }
+      allow = 0
+      next
+    }
+    /^[[:space:]]*$/ { next }
+    { allow = 0 }
+  ' "$CORE_LIB_PATH" | sort
+)"
+
+expected_allowlisted_modules="$(
+  awk '
+    /^[[:space:]]*#/ { next }
+    /^[[:space:]]*$/ { next }
+    { print $1 }
+  ' "$ALLOWLIST_PATH" | sort
+)"
+
+if ! diff -u \
+  <(printf '%s\n' "$expected_allowlisted_modules") \
+  <(printf '%s\n' "$actual_allowlisted_modules") >/dev/null; then
+  echo "missing-docs policy contract failed: allowlisted module set drifted from fixture." >&2
+  diff -u \
+    <(printf '%s\n' "$expected_allowlisted_modules") \
+    <(printf '%s\n' "$actual_allowlisted_modules") >&2
+  exit 1
+fi
+
+if ! grep -Fq "check_kamn_core_missing_docs_policy.sh" "$README_PATH"; then
+  echo "missing-docs policy contract failed: README must document check_kamn_core_missing_docs_policy.sh." >&2
+  exit 1
+fi
+
+if ! grep -Fq "docs/planning/engineering-hardening-wave.md" "$README_PATH"; then
+  echo "missing-docs policy contract failed: README must link engineering-hardening-wave.md." >&2
+  exit 1
+fi
+
+if ! grep -Fq "check_kamn_core_missing_docs_policy.sh" "$PLAN_DOC_PATH"; then
+  echo "missing-docs policy contract failed: engineering hardening plan must include policy checker command." >&2
+  exit 1
+fi
+
+if ! grep -Fq "#![warn(missing_docs)]" "$PLAN_DOC_PATH"; then
+  echo "missing-docs policy contract failed: engineering hardening plan must include #![warn(missing_docs)] policy marker." >&2
+  exit 1
+fi
+
+echo "kamn-core missing-docs policy contract passed."

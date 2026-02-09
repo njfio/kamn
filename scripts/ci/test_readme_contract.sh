@@ -41,6 +41,7 @@ required_snippets=(
   "kamn.sdk.localhost-signed.integration-contract.v1"
   "run_localhost_signed_integration_contract_lane_tests"
   "check_localhost_signed_integration_evidence_policy.sh --report-file"
+  "check_kamn_core_missing_docs_policy.sh"
   "/tmp/localhost-signed-integration-contract-report.json"
   "run_localhost_bridge_demo_evidence_contract_lane.sh"
   "run_localhost_bridge_demo_evidence_deep_lane.sh"
@@ -51,6 +52,7 @@ required_snippets=(
   "KAMN_DASHBOARD_FALLBACK_NODE_CMD"
   "AGENTS.md"
   "PRD.md"
+  "docs/planning/engineering-hardening-wave.md"
 )
 
 for snippet in "${required_snippets[@]}"; do

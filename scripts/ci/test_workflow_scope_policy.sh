@@ -131,6 +131,16 @@ if [ "$localhost_signed_integration_scope_hits" -lt 3 ]; then
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_kamn_core_missing_docs_policy_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected kamn-core missing-docs policy scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/ci/check_kamn_core_missing_docs_policy.sh" "$FAST_WORKFLOW"; then
+  echo "expected kamn-core missing-docs policy command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_live_transport_parity_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected live transport parity scope condition in ci-fast-gate.yml" >&2
   exit 1

@@ -49,6 +49,10 @@ jobs:
         if: steps.scope.outputs.run_ci_tool_checks == 'true'
         run: bash scripts/ci/check_pr_ci_declaration.sh
 
+      - name: Run kamn-core missing-docs policy contract check
+        if: steps.scope.outputs.run_kamn_core_missing_docs_policy_contract_tests == 'true'
+        run: bash scripts/ci/check_kamn_core_missing_docs_policy.sh
+
       - name: Run CI tool regression tests
         if: steps.scope.outputs.run_ci_tool_checks == 'true'
         run: bash scripts/ci/test_ci_tools.sh
