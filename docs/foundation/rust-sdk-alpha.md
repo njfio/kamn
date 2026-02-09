@@ -25,6 +25,7 @@ Run from repository root:
 
 ```bash
 bash scripts/sdk/run_local_e2e_demo.sh
+bash scripts/sdk/run_localhost_signed_demo.sh
 bash scripts/sdk/run_rust_live_transport_contract_lane.sh
 bash scripts/sdk/run_rust_live_transport_deep_lane.sh
 cargo test -p kamn-sdk
@@ -32,6 +33,23 @@ cargo fmt --check
 cargo clippy -- -D warnings
 cargo test
 ```
+
+## Localhost Signed Two-Process Demo (Issue #807)
+The SDK now includes a localhost two-process signed-message demo:
+
+- One-command orchestrator:
+  - `bash scripts/sdk/run_localhost_signed_demo.sh`
+- Manual terminal split:
+  - Listener terminal:
+    - `cargo run --quiet -p kamn-sdk --example localhost_signed_listener -- --addr 127.0.0.1:17879`
+  - Sender terminal:
+    - `cargo run --quiet -p kamn-sdk --example localhost_signed_sender -- --addr 127.0.0.1:17879 --body "hello-from-localhost-demo"`
+- Expected markers:
+  - `status=ok` (sender and listener)
+  - `verified=true`
+  - `signature=sig:ed25519:baseline-v1:...`
+
+`Regression: #807` ensures the command remains executable and preserves signed-message verification markers.
 
 ## Local End-to-End Demo (Issue #770)
 The SDK now includes a deterministic one-command demo for first-run validation:
