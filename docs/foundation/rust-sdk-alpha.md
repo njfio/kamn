@@ -126,6 +126,24 @@ Runner entrypoints:
 - Python: `bash scripts/sdk/run_parity_python.sh`
 - TypeScript: `bash scripts/sdk/run_parity_typescript.sh`
 
+## SDK Schema Compatibility Contract
+Schema compatibility evidence is generated from the shared parity fixture and checked with a deterministic policy contract:
+
+- Fixture source: `fixtures/sdk_parity/register_validation_cases.json`
+- Matrix command:
+  - `bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json /tmp/sdk-parity-report.json`
+- Contract lane command:
+  - `bash scripts/sdk/run_sdk_schema_compatibility_contract_lane.sh --output-file /tmp/sdk-schema-compatibility-contract-bundle.json`
+- Policy checker command:
+  - `bash scripts/sdk/check_sdk_schema_compatibility_policy.sh --bundle-file /tmp/sdk-schema-compatibility-contract-bundle.json`
+
+Required schema markers:
+
+- `kamn.sdk.parity.matrix.v1`
+- `kamn.sdk.schema-compatibility-evidence.v1`
+
+The contract fails closed: schema-version drift, case mismatch, or tampered reason codes force `NO-GO` (`Regression: #937`).
+
 ## CI Routing Policy (Issue #635)
 PR checks use changed-language routing to keep cost and runtime bounded:
 
