@@ -221,6 +221,9 @@ jobs:
           bash scripts/reputation/test_generate_reputation_signal_quarantine_evidence_bundle.sh
           bash scripts/reputation/test_run_reputation_signal_quarantine_contract_lane.sh
           bash scripts/reputation/test_check_reputation_signal_quarantine_policy.sh
+          bash scripts/reputation/test_generate_reputation_recovery_evidence_bundle.sh
+          bash scripts/reputation/test_run_reputation_recovery_contract_lane.sh
+          bash scripts/reputation/test_check_reputation_recovery_policy.sh
           bash scripts/reputation/test_run_reputation_dispute_matrix.sh
 
       - name: Run token launch handoff contract lane
