@@ -1,0 +1,10 @@
+{
+  "schema_version": "kamn.kolme.triadic-devnet-smoke-markers.v1",
+  "required_markers": [
+    "marker_startup=ok",
+    "marker_tx_progression=ok",
+    "marker_block_commit=ok",
+    "marker_teardown=ok",
+    "status=pass"
+  ]
+}

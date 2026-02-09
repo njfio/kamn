@@ -48,6 +48,13 @@ bash scripts/ci/test_select_targets.sh
 bash scripts/sdk/run_local_e2e_demo.sh
 ```
 
+### Run Triadic Devnet Smoke (Kolme)
+
+```bash
+bash scripts/kolme/run_triadic_devnet_smoke.sh --output-file /tmp/triadic-devnet-markers.txt
+python3 scripts/kolme/validate_triadic_devnet_smoke.py --fixture fixtures/kolme_compatibility/devnet_smoke_markers.json --marker-file /tmp/triadic-devnet-markers.txt --output-json /tmp/triadic-devnet-report.json
+```
+
 ## Workflow
 
 All code changes are issue-first and follow strict Red → Green → Refactor → Regression TDD. Before implementation:
