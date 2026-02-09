@@ -65,7 +65,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - `run_dsar_legal_hold_contract_tests=true`
   - `run_channel_lifecycle_contract_tests=true`
   - `test_scope=channel-contract`
-- Governance lifecycle/rollback command changes map to governance scope:
+- Governance lifecycle/rollback and quorum attestation command changes map to governance scope:
   - `run_governance_simulation_contract_tests=true`
   - `test_scope=governance-contract`
 
@@ -79,6 +79,7 @@ Required demo lane command contract:
 - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
 - `bash scripts/compliance/run_classification_redaction_contract_lane.sh --output-file /tmp/classification-redaction-contract-report.json`
 - `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
+- `bash scripts/governance/run_quorum_attestation_replay_contract_lane.sh --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
 
 Regression policy:
 
@@ -91,6 +92,7 @@ Regression policy:
 - post-cutover slo/alert selector/docs parity remains fail-closed (`Regression: #913`).
 - classification/redaction compliance selector/docs parity remains fail-closed (`Regression: #914`).
 - governance lifecycle/rollback selector/docs parity remains fail-closed (`Regression: #910`).
+- governance quorum attestation selector/docs parity remains fail-closed (`Regression: #911`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:

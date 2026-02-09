@@ -50,3 +50,24 @@ fn regression_requires_stake_slash_tamper_and_threshold_fail_closed_rule() {
     // Regression: #733
     assert!(DOC.contains("tampered or incomplete risk evidence fails closed (`Regression: #733`)."));
 }
+
+#[test]
+fn doc_contains_quorum_attestation_replay_guard_contract_lane() {
+    assert!(DOC.contains("## Governance Quorum Attestation Replay-Guard Integration"));
+    assert!(DOC.contains("run_quorum_attestation_replay_guard_lane.sh"));
+    assert!(DOC.contains("check_quorum_attestation_replay_policy.sh"));
+    assert!(DOC.contains("run_quorum_attestation_replay_contract_lane.sh"));
+    assert!(DOC.contains("kamn.governance.quorum-attestation-replay-report.v1"));
+    assert!(DOC.contains("governance_quorum_attestation_reason_codes:GO:v1"));
+    assert!(DOC.contains("governance_quorum_attestation_reason_codes:NO-GO:v1"));
+}
+
+#[test]
+fn regression_requires_quorum_attestation_replay_fail_closed_rule() {
+    // Regression: #911
+    assert!(
+        DOC.contains(
+            "quorum attestation evidence drift and replay attempts must fail closed (`Regression: #911`)."
+        )
+    );
+}

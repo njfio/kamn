@@ -52,11 +52,35 @@ Validator lifecycle governance activation requires stake/slash risk evidence bef
   - quorum safety margin remains above minimum threshold before execution.
   - tampered or incomplete risk evidence fails closed (`Regression: #733`).
 
+## Governance Quorum Attestation Replay-Guard Integration (Issue #911)
+Sensitive governance approvals require deterministic quorum attestation evidence and replay-resilient approval validation before execution.
+
+- PR fast contract lane:
+  - `bash scripts/governance/run_quorum_attestation_replay_guard_lane.sh --output-file /tmp/governance-quorum-attestation-replay-report.json`
+- Policy checker:
+  - `bash scripts/governance/check_quorum_attestation_replay_policy.sh --report-file /tmp/governance-quorum-attestation-replay-report.json`
+- Contract lane:
+  - `bash scripts/governance/run_quorum_attestation_replay_contract_lane.sh --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
+- Required schema and reason-key markers:
+  - `kamn.governance.quorum-attestation-replay-report.v1`
+  - `governance_quorum_attestation_reason_codes:GO:v1`
+  - `governance_quorum_attestation_reason_codes:NO-GO:v1`
+- Required policy evidence:
+  - required attestation keys remain present (`proposal_id`, `approval_artifact_id`, `payload_hash`, `approver_dids`).
+  - signature metadata uses a supported algorithm with non-empty key id and positive signed-at timestamp.
+  - received approval signatures satisfy required quorum threshold.
+  - replayed approval artifacts force `NO-GO`.
+  - quorum attestation evidence drift and replay attempts must fail closed (`Regression: #911`).
+
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 
 ```bash
 cargo test -p kamn-core --test validator_lifecycle --test validator_lifecycle_docs
+cargo test -p kamn-core --test governance_workflow governance_workflow_regression_rejects_replayed_voter_approval_artifact -- --exact
+bash scripts/governance/test_run_quorum_attestation_replay_guard_lane.sh
+bash scripts/governance/test_check_quorum_attestation_replay_policy.sh
+bash scripts/governance/test_run_quorum_attestation_replay_contract_lane.sh
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
 ```
