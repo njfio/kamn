@@ -44,3 +44,17 @@ fn regression_requires_runtime_invariant_fuzz_concurrency_budget_contract() {
     assert!(DOC.contains("KAMN_RUNTIME_INVARIANT_FUZZ_CONCURRENCY_MAX_SECONDS=180"));
     assert!(DOC.contains("kamn.runtime.invariant-fuzz-concurrency-contract-report.v1"));
 }
+
+#[test]
+fn regression_requires_dispute_refund_runtime_budget_contract() {
+    // Regression: #904
+    assert!(DOC.contains(
+        "## Dispute/Refund Property and Concurrency Runtime Budget Contract (Issue #904)"
+    ));
+    assert!(DOC.contains("dispute_refund_transition_contracts"));
+    assert!(DOC.contains("performance_dispute_refund_property_contract_lane_stays_within_budget"));
+    assert!(DOC.contains(
+        "integration_escrow_dispute_refund_concurrency_replay_is_deterministic_across_rounds"
+    ));
+    assert!(DOC.contains("Regression: #904"));
+}

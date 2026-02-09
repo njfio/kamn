@@ -1,6 +1,6 @@
 use kamn_core::{
-    PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, RuntimeLifecycleError,
-    TaskOperationEngine, TaskOperationError, TaskState,
+    EscrowLifecycle, EscrowTransitionAction, PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState,
+    RuntimeLifecycleError, TaskOperationEngine, TaskOperationError, TaskState,
 };
 use std::sync::{Arc, Barrier, Mutex};
 use std::thread;
@@ -168,6 +168,107 @@ fn run_peer_lifecycle_race(peer_id: &str) -> ([usize; 3], [usize; 3], PeerLifecy
         .expect("peer lifecycle lock should acquire")
         .state();
     (success_by_phase, invalid_by_phase, final_state)
+}
+
+fn run_escrow_dispute_refund_race(total_amount: u128) -> (usize, usize, u128, u128, u128) {
+    let escrow = Arc::new(Mutex::new(
+        EscrowLifecycle::new(total_amount).expect("escrow should initialize"),
+    ));
+    let barrier = Arc::new(Barrier::new(2));
+    let actions = [
+        EscrowTransitionAction::Dispute,
+        EscrowTransitionAction::RefundRemaining,
+    ];
+    let mut handles = Vec::new();
+
+    for action in actions {
+        let escrow = Arc::clone(&escrow);
+        let barrier = Arc::clone(&barrier);
+        handles.push(thread::spawn(move || {
+            barrier.wait();
+            escrow
+                .lock()
+                .expect("escrow lock should acquire")
+                .apply_transition_with_evidence(action)
+        }));
+    }
+
+    let mut success_count = 0_usize;
+    let mut invalid_count = 0_usize;
+
+    for handle in handles {
+        match handle
+            .join()
+            .expect("escrow dispute/refund thread should join")
+        {
+            Ok(evidence) => {
+                success_count += 1;
+                assert_eq!(evidence.reason_code, "escrow_transition_allowed");
+            }
+            Err(error) => {
+                invalid_count += 1;
+                assert_eq!(error.reason_code(), "escrow_transition_invalid");
+            }
+        }
+    }
+
+    let escrow = escrow.lock().expect("escrow lock should acquire");
+    (
+        success_count,
+        invalid_count,
+        escrow.released_amount(),
+        escrow.refunded_amount(),
+        escrow.remaining_amount(),
+    )
+}
+
+fn run_escrow_refund_race(
+    total_amount: u128,
+) -> (usize, usize, Vec<&'static str>, u128, u128, u128) {
+    let escrow = Arc::new(Mutex::new(
+        EscrowLifecycle::new(total_amount).expect("escrow should initialize"),
+    ));
+    let barrier = Arc::new(Barrier::new(2));
+    let mut handles = Vec::new();
+
+    for _ in 0..2 {
+        let escrow = Arc::clone(&escrow);
+        let barrier = Arc::clone(&barrier);
+        handles.push(thread::spawn(move || {
+            barrier.wait();
+            escrow
+                .lock()
+                .expect("escrow lock should acquire")
+                .apply_transition_with_evidence(EscrowTransitionAction::RefundRemaining)
+        }));
+    }
+
+    let mut success_count = 0_usize;
+    let mut invalid_count = 0_usize;
+    let mut error_reason_codes = Vec::new();
+
+    for handle in handles {
+        match handle.join().expect("escrow refund thread should join") {
+            Ok(evidence) => {
+                success_count += 1;
+                assert_eq!(evidence.reason_code, "escrow_transition_allowed");
+            }
+            Err(error) => {
+                invalid_count += 1;
+                error_reason_codes.push(error.reason_code());
+            }
+        }
+    }
+
+    let escrow = escrow.lock().expect("escrow lock should acquire");
+    (
+        success_count,
+        invalid_count,
+        error_reason_codes,
+        escrow.released_amount(),
+        escrow.refunded_amount(),
+        escrow.remaining_amount(),
+    )
 }
 
 #[test]
@@ -353,6 +454,43 @@ fn integration_peer_lifecycle_concurrency_replay_is_deterministic_across_rounds(
 }
 
 #[test]
+fn functional_escrow_dispute_refund_concurrency_replay_fixture_preserves_terminal_snapshot() {
+    let totals = [3_u128, 5, 8, 13];
+
+    for total_amount in totals {
+        let (success_count, invalid_count, released, refunded, remaining) =
+            run_escrow_dispute_refund_race(total_amount);
+
+        assert!(success_count >= 1);
+        assert!(success_count <= 2);
+        assert_eq!(success_count + invalid_count, 2);
+        assert_eq!(released, 0);
+        assert_eq!(refunded, total_amount);
+        assert_eq!(remaining, 0);
+    }
+}
+
+#[test]
+fn integration_escrow_dispute_refund_concurrency_replay_is_deterministic_across_rounds() {
+    let mut baseline: Option<(u128, u128, u128)> = None;
+
+    for round in 0..24 {
+        let (_success_count, _invalid_count, released, refunded, remaining) =
+            run_escrow_dispute_refund_race(21);
+        let summary = (released, refunded, remaining);
+
+        if let Some(expected) = baseline {
+            assert_eq!(
+                summary, expected,
+                "escrow dispute/refund race snapshot drifted in round {round}"
+            );
+        } else {
+            baseline = Some(summary);
+        }
+    }
+}
+
+#[test]
 fn regression_concurrency_accept_race_never_allows_multiple_winners() {
     // Regression: #844
     let contenders = [
@@ -383,6 +521,27 @@ fn regression_concurrency_accept_race_never_allows_multiple_winners() {
 }
 
 #[test]
+fn regression_escrow_refund_race_never_allows_multiple_refund_winners() {
+    // Regression: #904
+    for round in 0..32 {
+        let (success_count, invalid_count, error_reason_codes, released, refunded, remaining) =
+            run_escrow_refund_race(34);
+        assert_eq!(
+            success_count, 1,
+            "round {round} must have one refund winner"
+        );
+        assert_eq!(
+            invalid_count, 1,
+            "round {round} must reject exactly one replayed refund attempt"
+        );
+        assert_eq!(released, 0);
+        assert_eq!(refunded, 34);
+        assert_eq!(remaining, 0);
+        assert_eq!(error_reason_codes, vec!["escrow_transition_invalid"]);
+    }
+}
+
+#[test]
 fn performance_concurrency_state_mutation_contract_lane_stays_within_budget() {
     let started = Instant::now();
     let contenders = [
@@ -402,6 +561,28 @@ fn performance_concurrency_state_mutation_contract_lane_stays_within_budget() {
     assert!(
         elapsed_millis < 800,
         "concurrency state mutation contract lane exceeded budget: {elapsed_millis}ms"
+    );
+}
+
+#[test]
+fn performance_escrow_dispute_refund_concurrency_lane_stays_within_budget() {
+    let started = Instant::now();
+
+    for _ in 0..64 {
+        let (success_count, invalid_count, released, refunded, remaining) =
+            run_escrow_dispute_refund_race(55);
+        assert!(success_count >= 1);
+        assert!(success_count <= 2);
+        assert_eq!(success_count + invalid_count, 2);
+        assert_eq!(released, 0);
+        assert_eq!(refunded, 55);
+        assert_eq!(remaining, 0);
+    }
+
+    let elapsed_millis = started.elapsed().as_millis();
+    assert!(
+        elapsed_millis < 600,
+        "escrow dispute/refund concurrency contract lane exceeded budget: {elapsed_millis}ms"
     );
 }
 

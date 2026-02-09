@@ -36,6 +36,19 @@ This document defines the canonical transaction invariant catalog and error taxo
 - Report schema:
   - `kamn.runtime.invariant-fuzz-concurrency-contract-report.v1`
 
+## Dispute/Refund Property and Concurrency Contracts (Issue #904)
+- Property + replay trace contract lane:
+  - `cargo test -p kamn-core --test dispute_refund_transition_contracts functional_property_dispute_refund_sequences_preserve_contracts -- --exact`
+  - `cargo test -p kamn-core --test dispute_refund_transition_contracts integration_dispute_refund_replay_traces_are_deterministic -- --exact`
+- Concurrency replay determinism contract lane:
+  - `cargo test -p kamn-core --test concurrency_state_mutation functional_escrow_dispute_refund_concurrency_replay_fixture_preserves_terminal_snapshot -- --exact`
+  - `cargo test -p kamn-core --test concurrency_state_mutation integration_escrow_dispute_refund_concurrency_replay_is_deterministic_across_rounds -- --exact`
+- Fast CI lane scripts:
+  - `bash scripts/runtime/run_lifecycle_property_contract_lane.sh`
+  - `bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh`
+- Fail-closed regression marker:
+  - dispute/refund replay mutation drift is rejected (`Regression: #904`).
+
 ## Validation
 Run from repository root:
 
