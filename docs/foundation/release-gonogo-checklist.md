@@ -71,10 +71,26 @@ Durable guard schema evolution and restart invariants must be proven before a re
   - nightly deep matrix executes `performance_durable_guard_recovery_matrix_deep_lane`.
   - nightly deep bundle store stress executes `performance_bundle_store_deep_lane_stress`.
 
+## Settlement Reconciliation Evidence Contract (Issue #687)
+Escrow settlement outcomes require deterministic receipt/finality evidence before release approval.
+
+- Evidence bundle generator:
+  - `bash scripts/escrow/generate_settlement_reconciliation_evidence_bundle.sh --output-file /tmp/settlement-evidence.json --escrow-id escrow-001 --settlement-outcome RELEASED --receipt-id receipt-001 --receipt-finality FINAL --expected-release-amount 120 --expected-refund-amount 0 --observed-release-amount 120 --observed-refund-amount 0 --timeout-elapsed false --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/escrow/check_settlement_reconciliation_evidence_policy.sh --bundle-file /tmp/settlement-evidence.json`
+- PR fast contract lane:
+  - `bash scripts/escrow/run_settlement_reconciliation_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/escrow/run_settlement_reconciliation_deep_lane.sh --output-json settlement-reconciliation-report.json`
+- Regression policy:
+  - missing or invalid chain receipt evidence forces `NO-GO` (`Regression: #678`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
+bash scripts/escrow/test_generate_settlement_reconciliation_evidence_bundle.sh
+bash scripts/escrow/test_run_settlement_reconciliation_contract_lane.sh
 bash scripts/guard/test_run_durable_guard_recovery_contract_lane.sh
 bash scripts/deploy/test_generate_gonogo_evidence_bundle.sh
 bash scripts/deploy/test_run_gonogo_evidence_contract_lane.sh

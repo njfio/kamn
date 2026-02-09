@@ -37,6 +37,7 @@ append_summary() {
     echo "- Run channel lifecycle contract tests: ${RUN_CHANNEL_LIFECYCLE_CONTRACT_TESTS}"
     echo "- Run task operation snapshot contract tests: ${RUN_TASK_OPERATION_SNAPSHOT_CONTRACT_TESTS}"
     echo "- Run durable guard recovery contract tests: ${RUN_DURABLE_GUARD_RECOVERY_CONTRACT_TESTS}"
+    echo "- Run settlement reconciliation contract tests: ${RUN_SETTLEMENT_RECONCILIATION_CONTRACT_TESTS}"
     echo "- Run bridge replay harness: ${RUN_BRIDGE_REPLAY_HARNESS}"
     echo "- Bridge replay suites: ${BRIDGE_REPLAY_SUITES}"
     echo "- Run Rust live transport contract tests: ${RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS}"
@@ -140,6 +141,7 @@ MESSAGE_LIFECYCLE_CONTRACT_CHANGED=false
 CHANNEL_LIFECYCLE_CONTRACT_CHANGED=false
 TASK_OPERATION_SNAPSHOT_CONTRACT_CHANGED=false
 DURABLE_GUARD_RECOVERY_CONTRACT_CHANGED=false
+ESCROW_CONTRACT_CHANGED=false
 BRIDGE_REPLAY_RELATED_CHANGED=false
 BRIDGE_SUITE_ADAPTER=false
 BRIDGE_SUITE_TELEGRAM=false
@@ -257,6 +259,13 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
+    crates/kamn-core/src/escrow.rs|crates/kamn-core/tests/escrow_lifecycle.rs|crates/kamn-core/tests/escrow_lifecycle_docs.rs|docs/foundation/escrow-lifecycle.md|scripts/escrow/*)
+      ESCROW_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
     crates/kamn-core/src/bridge_adapter.rs|crates/kamn-core/tests/bridge_adapter.rs|docs/foundation/bridge-adapter-abstraction.md|scripts/bridge/*|fixtures/bridge_replay/*)
       BRIDGE_REPLAY_RELATED_CHANGED=true
       BRIDGE_SUITE_ADAPTER=true
@@ -345,6 +354,7 @@ RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS=false
 RUN_CHANNEL_LIFECYCLE_CONTRACT_TESTS=false
 RUN_TASK_OPERATION_SNAPSHOT_CONTRACT_TESTS=false
 RUN_DURABLE_GUARD_RECOVERY_CONTRACT_TESTS=false
+RUN_SETTLEMENT_RECONCILIATION_CONTRACT_TESTS=false
 RUN_BRIDGE_REPLAY_HARNESS=false
 RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS=false
 RUN_PYTHON_LIVE_TRANSPORT_CONTRACT_TESTS=false
@@ -467,6 +477,13 @@ if [ "$DURABLE_GUARD_RECOVERY_CONTRACT_CHANGED" = true ]; then
   fi
 fi
 
+if [ "$ESCROW_CONTRACT_CHANGED" = true ]; then
+  RUN_SETTLEMENT_RECONCILIATION_CONTRACT_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="escrow-contract"
+  fi
+fi
+
 if [ "$BRIDGE_REPLAY_RELATED_CHANGED" = true ]; then
   RUN_BRIDGE_REPLAY_HARNESS=true
   bridge_suite_parts=()
@@ -564,6 +581,7 @@ write_output "run_message_lifecycle_contract_tests" "$RUN_MESSAGE_LIFECYCLE_CONT
 write_output "run_channel_lifecycle_contract_tests" "$RUN_CHANNEL_LIFECYCLE_CONTRACT_TESTS"
 write_output "run_task_operation_snapshot_contract_tests" "$RUN_TASK_OPERATION_SNAPSHOT_CONTRACT_TESTS"
 write_output "run_durable_guard_recovery_contract_tests" "$RUN_DURABLE_GUARD_RECOVERY_CONTRACT_TESTS"
+write_output "run_settlement_reconciliation_contract_tests" "$RUN_SETTLEMENT_RECONCILIATION_CONTRACT_TESTS"
 write_output "run_bridge_replay_harness" "$RUN_BRIDGE_REPLAY_HARNESS"
 write_output "bridge_replay_suites" "$BRIDGE_REPLAY_SUITES"
 write_output "run_rust_live_transport_contract_tests" "$RUN_RUST_LIVE_TRANSPORT_CONTRACT_TESTS"

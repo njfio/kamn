@@ -57,6 +57,15 @@ fn checklist_contains_durable_guard_recovery_evidence() {
 }
 
 #[test]
+fn checklist_contains_settlement_reconciliation_evidence_contract() {
+    assert!(CHECKLIST.contains("## Settlement Reconciliation Evidence Contract"));
+    assert!(CHECKLIST.contains("generate_settlement_reconciliation_evidence_bundle.sh",));
+    assert!(CHECKLIST.contains("check_settlement_reconciliation_evidence_policy.sh",));
+    assert!(CHECKLIST.contains("run_settlement_reconciliation_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_settlement_reconciliation_deep_lane.sh"));
+}
+
+#[test]
 fn regression_requires_rollback_precheck_in_checklist() {
     // Regression: #173
     assert!(CHECKLIST.contains("Rollback precheck result: PASS"));
@@ -67,5 +76,13 @@ fn regression_requires_staging_rehearsal_mismatch_guard() {
     // Regression: #623
     assert!(CHECKLIST.contains(
         "rollback target hash mismatch and incomplete rehearsal evidence force `NO-GO` (`Regression: #623`)."
+    ));
+}
+
+#[test]
+fn regression_requires_chain_receipt_evidence_guard_marker() {
+    // Regression: #678
+    assert!(CHECKLIST.contains(
+        "missing or invalid chain receipt evidence forces `NO-GO` (`Regression: #678`)."
     ));
 }

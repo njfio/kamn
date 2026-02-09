@@ -77,6 +77,18 @@ jobs:
         if: steps.detect.outputs.run_rust == 'true'
         run: bash scripts/guard/run_durable_guard_recovery_deep_lane.sh
 
+      - name: Run settlement reconciliation deep lane
+        if: steps.detect.outputs.run_rust == 'true'
+        run: bash scripts/escrow/run_settlement_reconciliation_deep_lane.sh --output-json settlement-reconciliation-report.json
+
+      - name: Upload settlement reconciliation deep report
+        if: always() && hashFiles('settlement-reconciliation-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: settlement-reconciliation-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: settlement-reconciliation-report.json
+          if-no-files-found: error
+
       - name: Run SDK parity matrix (scheduled only)
         if: steps.detect.outputs.run_rust == 'true'
         run: bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json sdk-parity-report.json
