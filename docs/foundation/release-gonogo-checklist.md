@@ -153,6 +153,20 @@ Cross-network task delegation requires deterministic envelope and settlement ref
 - Regression policy:
   - settlement reference drift, replay attempts, quorum shortfalls, and tampered final decisions force `NO-GO` (`Regression: #734`).
 
+## Kolme Version Compatibility Replay Evidence Contract (Issue #780)
+Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility validation and replay artifact evidence.
+
+- Version compatibility validator:
+  - `python3 scripts/kolme/validate_version_compatibility.py --kamn-version 1.1.0 --kolme-release-tag v0.15.2 --ci-fast-gate PASS --output-json /tmp/kolme-version-report.json`
+- Replay matrix runner:
+  - `python3 scripts/kolme/run_version_compatibility_replay.py --fixture fixtures/kolme_compatibility/version_compatibility_cases.json --output-json /tmp/kolme-version-replay-report.json`
+- PR fast contract lane:
+  - `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/kolme/run_version_compatibility_replay_deep_lane.sh --output-json kolme-version-compatibility-report.json`
+- Regression policy:
+  - incompatible upgrade signature (`kamn 1.2.x` + `kolme 0.14.x`) remains blocked (`Regression: #775`).
+
 ## Governance Simulation and Human-Veto Evidence Contract (Issue #748)
 Governance activation requires deterministic simulation, veto, timelock, and approval evidence before GO decisions.
 
@@ -312,6 +326,8 @@ bash scripts/task/test_generate_federated_delegation_settlement_evidence_bundle.
 bash scripts/task/test_run_federated_delegation_settlement_contract_lane.sh
 bash scripts/task/test_run_federated_delegation_settlement_matrix.sh
 bash scripts/task/test_run_federated_delegation_settlement_deep_lane.sh
+bash scripts/kolme/test_validate_version_compatibility.sh
+bash scripts/kolme/test_run_version_compatibility_contract_lane.sh
 bash scripts/governance/test_generate_governance_simulation_evidence_bundle.sh
 bash scripts/governance/test_run_governance_simulation_contract_lane.sh
 bash scripts/governance/test_run_governance_simulation_matrix.sh

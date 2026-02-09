@@ -34,6 +34,7 @@ append_summary() {
     echo "- Run DID registry contract tests: ${RUN_DID_REGISTRY_CONTRACT_TESTS}"
     echo "- Run federated DID handshake contract tests: ${RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS}"
     echo "- Run Kolme snapshot drift contract tests: ${RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS}"
+    echo "- Run Kolme version compatibility contract tests: ${RUN_KOLME_VERSION_COMPATIBILITY_CONTRACT_TESTS}"
     echo "- Run federated delegation settlement contract tests: ${RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS}"
     echo "- Run runtime snapshot contract tests: ${RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS}"
     echo "- Run message lifecycle contract tests: ${RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS}"
@@ -151,6 +152,7 @@ SIGNER_EMULATOR_CONTRACT_CHANGED=false
 DID_REGISTRY_CONTRACT_CHANGED=false
 FEDERATED_DID_HANDSHAKE_CONTRACT_CHANGED=false
 KOLME_SNAPSHOT_DRIFT_CONTRACT_CHANGED=false
+KOLME_VERSION_COMPATIBILITY_CONTRACT_CHANGED=false
 FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_CHANGED=false
 RUNTIME_SNAPSHOT_CONTRACT_CHANGED=false
 MESSAGE_LIFECYCLE_CONTRACT_CHANGED=false
@@ -257,8 +259,15 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/research/kolme-upstream-compatibility.md|scripts/kolme/*|fixtures/kolme_compatibility/*)
+    docs/research/kolme-upstream-compatibility.md|scripts/kolme/check_snapshot_drift.py|scripts/kolme/run_snapshot_drift_contract_lane.sh|scripts/kolme/test_check_snapshot_drift.sh|scripts/kolme/test_run_snapshot_drift_contract_lane.sh|fixtures/kolme_compatibility/snapshot_*)
       KOLME_SNAPSHOT_DRIFT_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
+    docs/planning/kolme-integration-roadmap.md|docs/foundation/release-gonogo-checklist.md|scripts/kolme/validate_version_compatibility.py|scripts/kolme/run_version_compatibility_replay.py|scripts/kolme/run_version_compatibility_contract_lane.sh|scripts/kolme/run_version_compatibility_replay_deep_lane.sh|scripts/kolme/test_validate_version_compatibility.sh|scripts/kolme/test_run_version_compatibility_contract_lane.sh|fixtures/kolme_compatibility/version_compatibility_cases.json)
+      KOLME_VERSION_COMPATIBILITY_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -468,6 +477,7 @@ RUN_SIGNER_EMULATOR_CONTRACT_TESTS=false
 RUN_DID_REGISTRY_CONTRACT_TESTS=false
 RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS=false
 RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS=false
+RUN_KOLME_VERSION_COMPATIBILITY_CONTRACT_TESTS=false
 RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS=false
 RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS=false
 RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS=false
@@ -625,6 +635,13 @@ if [ "$FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_CHANGED" = true ]; then
   RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS=true
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
     TEST_SCOPE="federated-task-contract"
+  fi
+fi
+
+if [ "$KOLME_VERSION_COMPATIBILITY_CONTRACT_CHANGED" = true ]; then
+  RUN_KOLME_VERSION_COMPATIBILITY_CONTRACT_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="kolme-version-contract"
   fi
 fi
 
@@ -799,6 +816,7 @@ write_output "run_signer_emulator_contract_tests" "$RUN_SIGNER_EMULATOR_CONTRACT
 write_output "run_did_registry_contract_tests" "$RUN_DID_REGISTRY_CONTRACT_TESTS"
 write_output "run_federated_did_handshake_contract_tests" "$RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS"
 write_output "run_kolme_snapshot_drift_contract_tests" "$RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS"
+write_output "run_kolme_version_compatibility_contract_tests" "$RUN_KOLME_VERSION_COMPATIBILITY_CONTRACT_TESTS"
 write_output "run_federated_delegation_settlement_contract_tests" "$RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS"
 write_output "run_runtime_snapshot_contract_tests" "$RUN_RUNTIME_SNAPSHOT_CONTRACT_TESTS"
 write_output "run_message_lifecycle_contract_tests" "$RUN_MESSAGE_LIFECYCLE_CONTRACT_TESTS"

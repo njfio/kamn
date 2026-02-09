@@ -175,6 +175,21 @@ if ! grep -Fq "bash scripts/kolme/test_run_snapshot_drift_contract_lane.sh" "$FA
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_kolme_version_compatibility_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected Kolme version compatibility contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/kolme/test_validate_version_compatibility.sh" "$FAST_WORKFLOW"; then
+  echo "expected Kolme version compatibility validator tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/kolme/test_run_version_compatibility_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected Kolme version compatibility contract lane tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_federated_delegation_settlement_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected federated delegation settlement contract scope condition in ci-fast-gate.yml" >&2
   exit 1
@@ -519,6 +534,16 @@ fi
 
 if ! grep -Fq "federated-delegation-settlement-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
   echo "expected federated delegation settlement deep report artifact upload in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/kolme/run_version_compatibility_replay_deep_lane.sh --output-json kolme-version-compatibility-report.json" "$DEEP_WORKFLOW"; then
+  echo "expected scheduled Kolme version compatibility replay deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "kolme-version-compatibility-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
+  echo "expected Kolme version compatibility replay report artifact upload in ci-deep-validate.yml" >&2
   exit 1
 fi
 

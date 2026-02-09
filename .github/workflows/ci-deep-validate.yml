@@ -137,6 +137,18 @@ jobs:
           path: federated-delegation-settlement-report.json
           if-no-files-found: error
 
+      - name: Run Kolme version compatibility replay deep lane
+        if: steps.detect.outputs.run_rust == 'true'
+        run: bash scripts/kolme/run_version_compatibility_replay_deep_lane.sh --output-json kolme-version-compatibility-report.json
+
+      - name: Upload Kolme version compatibility replay report
+        if: always() && hashFiles('kolme-version-compatibility-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: kolme-version-compatibility-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: kolme-version-compatibility-report.json
+          if-no-files-found: error
+
       - name: Run governance simulation deep lane
         if: steps.detect.outputs.run_rust == 'true'
         run: bash scripts/governance/run_governance_simulation_deep_lane.sh --output-json governance-simulation-report.json

@@ -123,6 +123,12 @@ jobs:
           bash scripts/kolme/test_check_snapshot_drift.sh
           bash scripts/kolme/test_run_snapshot_drift_contract_lane.sh
 
+      - name: Run Kolme version compatibility contract lane
+        if: steps.scope.outputs.run_kolme_version_compatibility_contract_tests == 'true'
+        run: |
+          bash scripts/kolme/test_validate_version_compatibility.sh
+          bash scripts/kolme/test_run_version_compatibility_contract_lane.sh
+
       - name: Run federated delegation settlement contract lane
         if: steps.scope.outputs.run_federated_delegation_settlement_contract_tests == 'true'
         run: |

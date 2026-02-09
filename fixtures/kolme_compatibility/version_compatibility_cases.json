@@ -1,0 +1,44 @@
+{
+  "schema_version": "kamn.kolme.version-compatibility-cases.v1",
+  "cases": [
+    {
+      "case_id": "go_supported_baseline",
+      "kamn_version": "1.1.0",
+      "kolme_release_tag": "v0.15.2",
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "GO",
+      "expected_reason_codes": []
+    },
+    {
+      "case_id": "no_go_minor_too_old_for_kamn_minor",
+      "kamn_version": "1.2.0",
+      "kolme_release_tag": "v0.14.9",
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO",
+      "expected_reason_codes": [
+        "kolme_minor_too_old_for_kamn_minor"
+      ]
+    },
+    {
+      "case_id": "no_go_kolme_major_unsupported",
+      "kamn_version": "1.0.3",
+      "kolme_release_tag": "v1.0.0",
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO",
+      "expected_reason_codes": [
+        "unsupported_kolme_major",
+        "kolme_minor_out_of_supported_window"
+      ]
+    },
+    {
+      "case_id": "no_go_ci_fast_gate_failed",
+      "kamn_version": "1.1.4",
+      "kolme_release_tag": "v0.16.1",
+      "ci_fast_gate": "FAIL",
+      "expected_final_decision": "NO-GO",
+      "expected_reason_codes": [
+        "ci_fast_gate_failed"
+      ]
+    }
+  ]
+}
