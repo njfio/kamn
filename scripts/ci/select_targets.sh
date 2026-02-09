@@ -42,6 +42,7 @@ append_summary() {
     echo "- Run DSAR legal-hold contract tests: ${RUN_DSAR_LEGAL_HOLD_CONTRACT_TESTS}"
     echo "- Run governance simulation contract tests: ${RUN_GOVERNANCE_SIMULATION_CONTRACT_TESTS}"
     echo "- Run governance stake/slash contract tests: ${RUN_GOVERNANCE_STAKE_SLASH_CONTRACT_TESTS}"
+    echo "- Run reputation weighted decay contract tests: ${RUN_REPUTATION_DECAY_CONTRACT_TESTS}"
     echo "- Run reputation dispute contract tests: ${RUN_REPUTATION_DISPUTE_CONTRACT_TESTS}"
     echo "- Run token launch contract tests: ${RUN_TOKEN_LAUNCH_CONTRACT_TESTS}"
     echo "- Run treasury disbursement contract tests: ${RUN_TREASURY_DISBURSEMENT_CONTRACT_TESTS}"
@@ -155,6 +156,7 @@ SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED=false
 DSAR_LEGAL_HOLD_CONTRACT_CHANGED=false
 GOVERNANCE_SIMULATION_CONTRACT_CHANGED=false
 GOVERNANCE_STAKE_SLASH_CONTRACT_CHANGED=false
+REPUTATION_DECAY_CONTRACT_CHANGED=false
 REPUTATION_DISPUTE_CONTRACT_CHANGED=false
 TOKEN_LAUNCH_CONTRACT_CHANGED=false
 TREASURY_DISBURSEMENT_CONTRACT_CHANGED=false
@@ -312,6 +314,13 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
+    docs/foundation/reputation-state-model.md|docs/foundation/trust-score-engine.md|crates/kamn-core/src/trust_score.rs|crates/kamn-core/tests/trust_score_engine.rs|crates/kamn-core/tests/trust_score_engine_docs.rs|crates/kamn-core/tests/reputation_state_model_docs.rs|scripts/reputation/*weighted_decay*|fixtures/reputation_decay/*)
+      REPUTATION_DECAY_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
     docs/foundation/reputation-state-model.md|docs/foundation/reputation-signal-routing.md|docs/foundation/audit-export-interfaces.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/reputation_state_model_docs.rs|crates/kamn-core/tests/reputation_signal_routing_docs.rs|crates/kamn-core/tests/audit_export_interfaces_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/reputation/*|fixtures/reputation_dispute/*)
       REPUTATION_DISPUTE_CONTRACT_CHANGED=true
       classified=true
@@ -440,6 +449,7 @@ RUN_SOC2_CONTROL_EVIDENCE_CONTRACT_TESTS=false
 RUN_DSAR_LEGAL_HOLD_CONTRACT_TESTS=false
 RUN_GOVERNANCE_SIMULATION_CONTRACT_TESTS=false
 RUN_GOVERNANCE_STAKE_SLASH_CONTRACT_TESTS=false
+RUN_REPUTATION_DECAY_CONTRACT_TESTS=false
 RUN_REPUTATION_DISPUTE_CONTRACT_TESTS=false
 RUN_TOKEN_LAUNCH_CONTRACT_TESTS=false
 RUN_TREASURY_DISBURSEMENT_CONTRACT_TESTS=false
@@ -602,6 +612,13 @@ if [ "$GOVERNANCE_STAKE_SLASH_CONTRACT_CHANGED" = true ]; then
   fi
 fi
 
+if [ "$REPUTATION_DECAY_CONTRACT_CHANGED" = true ]; then
+  RUN_REPUTATION_DECAY_CONTRACT_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="reputation-decay-contract"
+  fi
+fi
+
 if [ "$REPUTATION_DISPUTE_CONTRACT_CHANGED" = true ]; then
   RUN_REPUTATION_DISPUTE_CONTRACT_TESTS=true
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
@@ -739,6 +756,7 @@ write_output "run_soc2_control_evidence_contract_tests" "$RUN_SOC2_CONTROL_EVIDE
 write_output "run_dsar_legal_hold_contract_tests" "$RUN_DSAR_LEGAL_HOLD_CONTRACT_TESTS"
 write_output "run_governance_simulation_contract_tests" "$RUN_GOVERNANCE_SIMULATION_CONTRACT_TESTS"
 write_output "run_governance_stake_slash_contract_tests" "$RUN_GOVERNANCE_STAKE_SLASH_CONTRACT_TESTS"
+write_output "run_reputation_decay_contract_tests" "$RUN_REPUTATION_DECAY_CONTRACT_TESTS"
 write_output "run_reputation_dispute_contract_tests" "$RUN_REPUTATION_DISPUTE_CONTRACT_TESTS"
 write_output "run_token_launch_contract_tests" "$RUN_TOKEN_LAUNCH_CONTRACT_TESTS"
 write_output "run_treasury_disbursement_contract_tests" "$RUN_TREASURY_DISBURSEMENT_CONTRACT_TESTS"

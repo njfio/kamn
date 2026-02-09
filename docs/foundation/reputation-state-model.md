@@ -60,6 +60,20 @@ Dispute adjudication uses machine-verifiable bundles so resolution outcomes stay
 - Regression policy:
   - tampered evidence hashes, score-adjustment limit bypasses, and closed-policy-window decisions force `NO-GO` (`Regression: #730`).
 
+## Weighted Decay and Anti-Gaming Threshold Contract (Issue #736)
+Trust-score updates apply deterministic weighted decay windows and typed abuse-threshold penalties before score persistence.
+
+- Compact PR lane entrypoint:
+  - `bash scripts/reputation/run_weighted_decay_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/reputation/run_weighted_decay_deep_lane.sh --output-json reputation-weighted-decay-report.json`
+- Compact fixture matrix:
+  - `python3 scripts/reputation/run_weighted_decay_matrix.py --fixture fixtures/reputation_decay/compact_cases.json --output-json reputation-weighted-decay-report.json`
+- Deep adversarial fixture matrix:
+  - `python3 scripts/reputation/run_weighted_decay_matrix.py --fixture fixtures/reputation_decay/adversarial_cases.json --output-json reputation-weighted-decay-report.json`
+- Regression policy:
+  - replayed reciprocity, burst-spam, and churn abuse fixtures remain penalized (`Regression: #730`).
+
 ## Fast and Cost-Effective Validation
 Use the targeted lane first:
 
@@ -68,6 +82,8 @@ cargo test -p kamn-core --test reputation_state_model --test reputation_state_mo
 bash scripts/reputation/test_generate_reputation_dispute_evidence_bundle.sh
 bash scripts/reputation/test_run_reputation_dispute_contract_lane.sh
 bash scripts/reputation/test_run_reputation_dispute_matrix.sh
+bash scripts/reputation/test_run_weighted_decay_contract_lane.sh
+bash scripts/reputation/test_run_weighted_decay_matrix.sh
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
 ```
@@ -76,5 +92,6 @@ Then run regression coverage for the crate:
 
 ```bash
 bash scripts/reputation/test_run_reputation_dispute_deep_lane.sh
+bash scripts/reputation/test_run_weighted_decay_deep_lane.sh
 cargo test -p kamn-core
 ```

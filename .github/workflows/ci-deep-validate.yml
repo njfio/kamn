@@ -137,6 +137,18 @@ jobs:
           path: governance-stake-slash-report.json
           if-no-files-found: error
 
+      - name: Run weighted decay anti-gaming deep lane
+        if: steps.detect.outputs.run_rust == 'true'
+        run: bash scripts/reputation/run_weighted_decay_deep_lane.sh --output-json reputation-weighted-decay-report.json
+
+      - name: Upload weighted decay anti-gaming deep report
+        if: always() && hashFiles('reputation-weighted-decay-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: reputation-weighted-decay-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reputation-weighted-decay-report.json
+          if-no-files-found: error
+
       - name: Run reputation dispute deep lane
         if: steps.detect.outputs.run_rust == 'true'
         run: bash scripts/reputation/run_reputation_dispute_deep_lane.sh --output-json reputation-dispute-report.json

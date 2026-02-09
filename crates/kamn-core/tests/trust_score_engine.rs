@@ -1,6 +1,6 @@
 use kamn_core::{
-    recalculate_and_persist_trust_score, AgentReputation, CapabilityVerification, DisputeRecord,
-    Endorsement, ReputationStore, TrustScoreError,
+    recalculate_and_persist_trust_score, AbusePenaltyKind, AgentReputation, CapabilityVerification,
+    DisputeRecord, Endorsement, ReputationStore, ScoreSnapshot, TrustScoreError,
 };
 
 fn sample_reputation() -> AgentReputation {
@@ -75,7 +75,12 @@ fn trust_score_engine_matches_prd_8_2_formula() {
     assert_eq!(breakdown.dispute_penalty, 15);
     assert_eq!(breakdown.volume_bonus, 12);
     assert_eq!(breakdown.endorsement_bonus, 5);
-    assert_eq!(breakdown.final_score, 762);
+    assert_eq!(breakdown.decay_multiplier_bps, 950);
+    assert_eq!(breakdown.decayed_volume_bonus, 11);
+    assert_eq!(breakdown.decayed_endorsement_bonus, 4);
+    assert_eq!(breakdown.abuse_penalty_kind, AbusePenaltyKind::None);
+    assert_eq!(breakdown.abuse_penalty_points, 0);
+    assert_eq!(breakdown.final_score, 760);
 }
 
 #[test]
@@ -106,6 +111,8 @@ fn trust_score_engine_caps_volume_and_endorsement_bonus() {
         kamn_core::calculate_trust_score(&reputation).expect("calculation should succeed");
     assert_eq!(breakdown.volume_bonus, 100);
     assert_eq!(breakdown.endorsement_bonus, 50);
+    assert_eq!(breakdown.decayed_volume_bonus, 95);
+    assert_eq!(breakdown.decayed_endorsement_bonus, 47);
 }
 
 #[test]
@@ -175,4 +182,122 @@ fn trust_score_engine_regression_response_1000_uses_fastest_bucket() {
     let breakdown =
         kamn_core::calculate_trust_score(&reputation).expect("calculation should succeed");
     assert_eq!(breakdown.response_component, 100);
+}
+
+#[test]
+fn trust_score_engine_unit_decay_windows_prefer_recent_history() {
+    let mut recent = sample_reputation();
+    recent.last_updated_block = 2_000;
+    recent.score_history = vec![
+        ScoreSnapshot {
+            trust_score: 640,
+            block_height: 1_995,
+        },
+        ScoreSnapshot {
+            trust_score: 620,
+            block_height: 1_975,
+        },
+        ScoreSnapshot {
+            trust_score: 600,
+            block_height: 1_930,
+        },
+    ];
+
+    let mut stale = recent.clone();
+    stale.score_history = vec![
+        ScoreSnapshot {
+            trust_score: 640,
+            block_height: 500,
+        },
+        ScoreSnapshot {
+            trust_score: 620,
+            block_height: 400,
+        },
+        ScoreSnapshot {
+            trust_score: 600,
+            block_height: 300,
+        },
+    ];
+
+    let recent_breakdown =
+        kamn_core::calculate_trust_score(&recent).expect("recent score should calculate");
+    let stale_breakdown =
+        kamn_core::calculate_trust_score(&stale).expect("stale score should calculate");
+
+    assert!(recent_breakdown.decay_multiplier_bps > stale_breakdown.decay_multiplier_bps);
+    assert!(
+        recent_breakdown.decayed_endorsement_bonus >= stale_breakdown.decayed_endorsement_bonus
+    );
+}
+
+#[test]
+fn trust_score_engine_unit_abuse_threshold_maps_reciprocity_ring_penalty() {
+    let mut reputation = sample_reputation();
+    reputation.tasks_completed = 20;
+    reputation.tasks_failed = 3;
+    reputation.tasks_delegated = 15;
+
+    let breakdown =
+        kamn_core::calculate_trust_score(&reputation).expect("calculation should succeed");
+    assert_eq!(
+        breakdown.abuse_penalty_kind,
+        AbusePenaltyKind::ReciprocityRing
+    );
+    assert_eq!(breakdown.abuse_penalty_points, 80);
+}
+
+#[test]
+fn trust_score_engine_functional_clean_vs_abusive_cohorts_diverge() {
+    let clean = sample_reputation();
+
+    let mut abusive = sample_reputation();
+    abusive.tasks_completed = 18;
+    abusive.tasks_failed = 12;
+    abusive.tasks_delegated = 14;
+    abusive.disputes = (0..6)
+        .map(|index| DisputeRecord {
+            dispute_id: format!("abuse-dispute-{index}"),
+            opened_by: "kamn:did:agent:requester-abuse".to_owned(),
+            reason: "reciprocity loop".to_owned(),
+            block_height: 40 + index as u64,
+        })
+        .collect();
+    abusive.dispute_rate = 0.35;
+
+    let clean_breakdown =
+        kamn_core::calculate_trust_score(&clean).expect("clean score should calculate");
+    let abusive_breakdown =
+        kamn_core::calculate_trust_score(&abusive).expect("abusive score should calculate");
+
+    assert_eq!(clean_breakdown.abuse_penalty_kind, AbusePenaltyKind::None);
+    assert_eq!(
+        abusive_breakdown.abuse_penalty_kind,
+        AbusePenaltyKind::Compound
+    );
+    assert!(abusive_breakdown.final_score < clean_breakdown.final_score);
+}
+
+#[test]
+fn trust_score_engine_regression_compound_abuse_fixtures_remain_penalized() {
+    // Regression: #730
+    let mut reputation = sample_reputation();
+    reputation.tasks_completed = 10;
+    reputation.tasks_failed = 12;
+    reputation.tasks_delegated = 8;
+    reputation.disputes = (0..5)
+        .map(|index| DisputeRecord {
+            dispute_id: format!("regression-dispute-{index}"),
+            opened_by: "kamn:did:agent:requester-regression".to_owned(),
+            reason: "burst and churn replay".to_owned(),
+            block_height: 70 + index as u64,
+        })
+        .collect();
+    reputation.dispute_rate = 0.32;
+
+    let breakdown =
+        kamn_core::calculate_trust_score(&reputation).expect("calculation should succeed");
+
+    assert_eq!(breakdown.abuse_penalty_kind, AbusePenaltyKind::Compound);
+    assert_eq!(breakdown.abuse_penalty_points, 140);
+    assert!(breakdown.final_score < 600);
 }

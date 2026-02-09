@@ -38,6 +38,16 @@ fn doc_contains_dispute_evidence_bundle_contract() {
 }
 
 #[test]
+fn doc_contains_weighted_decay_and_antigaming_contract() {
+    assert!(DOC.contains("## Weighted Decay and Anti-Gaming Threshold Contract"));
+    assert!(DOC.contains("run_weighted_decay_contract_lane.sh"));
+    assert!(DOC.contains("run_weighted_decay_deep_lane.sh"));
+    assert!(DOC.contains("run_weighted_decay_matrix.py"));
+    assert!(DOC.contains("fixtures/reputation_decay/compact_cases.json"));
+    assert!(DOC.contains("fixtures/reputation_decay/adversarial_cases.json"));
+}
+
+#[test]
 fn regression_requires_upper_bound_score_inclusive_rule() {
     // Regression: #215
     assert!(DOC.contains("Trust score boundary checks are inclusive for `1000`."));
@@ -48,5 +58,13 @@ fn regression_requires_reputation_dispute_tamper_guard_marker() {
     // Regression: #730
     assert!(DOC.contains(
         "tampered evidence hashes, score-adjustment limit bypasses, and closed-policy-window decisions force `NO-GO` (`Regression: #730`)."
+    ));
+}
+
+#[test]
+fn regression_requires_weighted_decay_abuse_guard_marker() {
+    // Regression: #730
+    assert!(DOC.contains(
+        "replayed reciprocity, burst-spam, and churn abuse fixtures remain penalized (`Regression: #730`)."
     ));
 }
