@@ -14,6 +14,7 @@ Usage:
     --expected-refund-amount <n> \
     --observed-release-amount <n> \
     --observed-refund-amount <n> \
+    --ledger-reference-id <value> \
     --timeout-elapsed true|false \
     --ci-fast-gate PASS|FAIL
 EOF
@@ -42,6 +43,8 @@ expected_release_amount=""
 expected_refund_amount=""
 observed_release_amount=""
 observed_refund_amount=""
+ledger_reference_id=""
+ledger_reference_id_set=false
 timeout_elapsed=""
 ci_fast_gate=""
 
@@ -83,6 +86,11 @@ while [[ $# -gt 0 ]]; do
       observed_refund_amount="${2:-}"
       shift 2
       ;;
+    --ledger-reference-id)
+      ledger_reference_id="${2-}"
+      ledger_reference_id_set=true
+      shift 2
+      ;;
     --timeout-elapsed)
       timeout_elapsed="${2:-}"
       shift 2
@@ -101,7 +109,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$output_file" || -z "$escrow_id" || -z "$settlement_outcome" || -z "$receipt_id" || -z "$receipt_finality" || -z "$expected_release_amount" || -z "$expected_refund_amount" || -z "$observed_release_amount" || -z "$observed_refund_amount" || -z "$timeout_elapsed" || -z "$ci_fast_gate" ]]; then
+if [[ -z "$output_file" || -z "$escrow_id" || -z "$settlement_outcome" || -z "$receipt_id" || -z "$receipt_finality" || -z "$expected_release_amount" || -z "$expected_refund_amount" || -z "$observed_release_amount" || -z "$observed_refund_amount" || "$ledger_reference_id_set" != true || -z "$timeout_elapsed" || -z "$ci_fast_gate" ]]; then
   usage
   fail "all settlement evidence bundle arguments are required"
 fi
@@ -120,7 +128,7 @@ mkdir -p "$(dirname "$output_file")"
 generated_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 final_decision="$(
-  python3 - "$output_file" "$generated_at" "$escrow_id" "$settlement_outcome" "$receipt_id" "$receipt_finality" "$expected_release_amount" "$expected_refund_amount" "$observed_release_amount" "$observed_refund_amount" "$timeout_elapsed" "$ci_fast_gate" <<'PY'
+  python3 - "$output_file" "$generated_at" "$escrow_id" "$settlement_outcome" "$receipt_id" "$receipt_finality" "$expected_release_amount" "$expected_refund_amount" "$observed_release_amount" "$observed_refund_amount" "$ledger_reference_id" "$timeout_elapsed" "$ci_fast_gate" <<'PY'
 import json
 import pathlib
 import sys
@@ -141,6 +149,7 @@ def fail(message: str) -> None:
     expected_refund_raw,
     observed_release_raw,
     observed_refund_raw,
+    ledger_reference_id,
     timeout_elapsed_raw,
     ci_fast_gate,
 ) = sys.argv[1:]
@@ -169,7 +178,10 @@ if not receipt_id.strip() or receipt_finality != "FINAL":
     decision_reasons.append("missing or invalid receipt evidence")
 
 if expected_release != observed_release or expected_refund != observed_refund:
-    decision_reasons.append("settlement amount mismatch")
+    decision_reasons.append("ledger amount drift detected")
+
+if not ledger_reference_id.strip():
+    decision_reasons.append("missing ledger reference evidence")
 
 if settlement_outcome == "TIMEOUT_REFUNDED" and not timeout_elapsed:
     decision_reasons.append("timeout refund without elapsed timeout")
@@ -197,6 +209,9 @@ payload = {
     "observed_amounts": {
         "release": observed_release,
         "refund": observed_refund,
+    },
+    "ledger": {
+        "reference_id": ledger_reference_id,
     },
     "timeout_elapsed": timeout_elapsed,
     "ci_fast_gate": ci_fast_gate,

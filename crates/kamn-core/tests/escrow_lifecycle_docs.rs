@@ -14,6 +14,7 @@ fn doc_contains_settlement_reconciliation_evidence_contract() {
     assert!(DOC.contains("check_settlement_reconciliation_evidence_policy.sh"));
     assert!(DOC.contains("run_settlement_reconciliation_contract_lane.sh"));
     assert!(DOC.contains("run_settlement_reconciliation_deep_lane.sh"));
+    assert!(DOC.contains("--ledger-reference-id"));
 }
 
 #[test]
@@ -37,5 +38,13 @@ fn regression_requires_missing_receipt_evidence_guard_marker() {
     // Regression: #678
     assert!(DOC.contains(
         "missing or invalid chain receipt evidence forces `NO-GO` (`Regression: #678`).",
+    ));
+}
+
+#[test]
+fn regression_requires_ledger_reference_guard_marker() {
+    // Regression: #717
+    assert!(DOC.contains(
+        "missing ledger reference evidence and ledger amount drift force `NO-GO` (`Regression: #717`).",
     ));
 }

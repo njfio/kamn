@@ -22,6 +22,7 @@ class MatrixCase:
     expected_refund_amount: int
     observed_release_amount: int
     observed_refund_amount: int
+    ledger_reference_id: str
     timeout_elapsed: bool
     ci_fast_gate: str
     expected_decision: str
@@ -61,6 +62,7 @@ def _load_cases(fixture_file: Path) -> list[MatrixCase]:
             expected_refund_amount=int(item["expected_refund_amount"]),
             observed_release_amount=int(item["observed_release_amount"]),
             observed_refund_amount=int(item["observed_refund_amount"]),
+            ledger_reference_id=str(item["ledger_reference_id"]),
             timeout_elapsed=bool(item["timeout_elapsed"]),
             ci_fast_gate=str(item["ci_fast_gate"]),
             expected_decision=str(item["expected_decision"]),
@@ -128,6 +130,8 @@ def main() -> int:
                     str(case.observed_release_amount),
                     "--observed-refund-amount",
                     str(case.observed_refund_amount),
+                    "--ledger-reference-id",
+                    case.ledger_reference_id,
                     "--timeout-elapsed",
                     "true" if case.timeout_elapsed else "false",
                     "--ci-fast-gate",

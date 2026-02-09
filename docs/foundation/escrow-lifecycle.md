@@ -27,7 +27,7 @@ For PaymentOffer and PaymentConfirm workflow integration controls, see `docs/fou
 Settlement reconciliation evidence is captured as machine-readable JSON so release gates can audit escrow outcomes against receipt finality and timeout rules.
 
 - Evidence bundle generator:
-  - `bash scripts/escrow/generate_settlement_reconciliation_evidence_bundle.sh --output-file /tmp/settlement-evidence.json --escrow-id escrow-001 --settlement-outcome RELEASED --receipt-id receipt-001 --receipt-finality FINAL --expected-release-amount 120 --expected-refund-amount 0 --observed-release-amount 120 --observed-refund-amount 0 --timeout-elapsed false --ci-fast-gate PASS`
+  - `bash scripts/escrow/generate_settlement_reconciliation_evidence_bundle.sh --output-file /tmp/settlement-evidence.json --escrow-id escrow-001 --settlement-outcome RELEASED --receipt-id receipt-001 --receipt-finality FINAL --expected-release-amount 120 --expected-refund-amount 0 --observed-release-amount 120 --observed-refund-amount 0 --ledger-reference-id ledger-entry-001 --timeout-elapsed false --ci-fast-gate PASS`
 - Policy checker:
   - `bash scripts/escrow/check_settlement_reconciliation_evidence_policy.sh --bundle-file /tmp/settlement-evidence.json`
 - PR fast contract lane:
@@ -36,6 +36,7 @@ Settlement reconciliation evidence is captured as machine-readable JSON so relea
   - `bash scripts/escrow/run_settlement_reconciliation_deep_lane.sh --output-json settlement-reconciliation-report.json`
 - Regression policy:
   - missing or invalid chain receipt evidence forces `NO-GO` (`Regression: #678`).
+  - missing ledger reference evidence and ledger amount drift force `NO-GO` (`Regression: #717`).
 
 ## Chain Receipt Finality Adapter Contract (Issue #718)
 Escrow settlement transitions must map chain receipt finality to deterministic typed outcomes.

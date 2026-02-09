@@ -68,6 +68,7 @@ required_fields = (
     "receipt",
     "expected_amounts",
     "observed_amounts",
+    "ledger",
     "timeout_elapsed",
     "ci_fast_gate",
     "decision_reasons",
@@ -107,6 +108,14 @@ for section_name, section in (("expected_amounts", expected_amounts), ("observed
         if section[field] < 0:
             fail(f"{section_name}.{field} must be >= 0")
 
+ledger = payload["ledger"]
+if not isinstance(ledger, dict):
+    fail("bundle field 'ledger' must be an object")
+if "reference_id" not in ledger:
+    fail("missing ledger.reference_id")
+if not isinstance(ledger["reference_id"], str):
+    fail("ledger.reference_id must be a string")
+
 if not isinstance(payload["timeout_elapsed"], bool):
     fail("timeout_elapsed must be a boolean")
 if payload["ci_fast_gate"] not in {"PASS", "FAIL"}:
@@ -121,6 +130,8 @@ expected_go = True
 if not receipt["receipt_id"].strip() or receipt["finality"] != "FINAL":
     expected_go = False
 if expected_amounts["release"] != observed_amounts["release"] or expected_amounts["refund"] != observed_amounts["refund"]:
+    expected_go = False
+if not ledger["reference_id"].strip():
     expected_go = False
 if settlement_outcome == "TIMEOUT_REFUNDED" and not payload["timeout_elapsed"]:
     expected_go = False
@@ -140,6 +151,7 @@ if actual_decision != expected_decision:
 print("status=ok")
 print(f"bundle_file={bundle_path}")
 print(f"final_decision={actual_decision}")
+print(f"decision_reasons={'; '.join(payload['decision_reasons'])}")
 PY
 )"
 
