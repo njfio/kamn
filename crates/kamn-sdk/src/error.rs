@@ -1,24 +1,40 @@
 use std::fmt;
 
+/// Errors returned by SDK transport, validation, and workflow operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SdkError {
+    /// Indicates the requested capability is not implemented by this client.
     NotImplemented(&'static str),
+    /// Input validation failed for a specific field and reason.
     InvalidInput {
+        /// Input field name that failed validation.
         field: &'static str,
+        /// Validation failure reason.
         reason: &'static str,
     },
+    /// Underlying transport operation failed.
     TransportFailure(&'static str),
+    /// The caller expected one transport mode but the client uses another.
     TransportModeMismatch {
+        /// Expected transport mode identifier.
         expected: &'static str,
+        /// Actual transport mode identifier.
         found: &'static str,
     },
+    /// Requested entity could not be located.
     NotFound {
+        /// Entity type label.
         entity: &'static str,
+        /// Entity identifier string.
         id: String,
     },
+    /// Operation violated a conflict rule.
     Conflict(&'static str),
+    /// Account balance is below required amount.
     InsufficientFunds {
+        /// Available funds.
         available: u64,
+        /// Required funds.
         required: u64,
     },
 }

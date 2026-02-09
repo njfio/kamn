@@ -7,12 +7,15 @@ use crate::{
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
 
+/// Configuration for the live transport client.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LiveTransportConfig {
+    /// HTTPS or WSS endpoint used to identify the live transport context.
     pub endpoint: String,
 }
 
 impl LiveTransportConfig {
+    /// Validates and constructs a live transport configuration.
     pub fn new(endpoint: &str) -> Result<Self, SdkError> {
         let normalized = endpoint.trim().to_ascii_lowercase();
         if !(normalized.starts_with("https://") || normalized.starts_with("wss://")) {
@@ -34,6 +37,7 @@ impl LiveTransportConfig {
     }
 }
 
+/// Live transport client that proxies operations through endpoint-scoped shared state.
 #[derive(Debug, Clone)]
 pub struct LiveTransportKamnClient {
     config: LiveTransportConfig,
@@ -41,6 +45,7 @@ pub struct LiveTransportKamnClient {
 }
 
 impl LiveTransportKamnClient {
+    /// Connects to an endpoint and returns a live client for that context.
     pub fn connect(endpoint: &str) -> Result<Self, SdkError> {
         let config = LiveTransportConfig::new(endpoint)?;
         let shared_state = resolve_live_transport_state(&config.endpoint)?;
@@ -50,6 +55,7 @@ impl LiveTransportKamnClient {
         })
     }
 
+    /// Returns the configured endpoint for this client.
     pub fn endpoint(&self) -> &str {
         &self.config.endpoint
     }
