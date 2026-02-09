@@ -29,4 +29,6 @@ if ! grep -Fq "performance_live_transport_multi_client_deep_lane -- --ignored" "
   exit 1
 fi
 
+bash "$ROOT_DIR/scripts/sdk/test_run_local_e2e_demo.sh"
+
 echo "rust sdk live transport contract lane script tests passed."
