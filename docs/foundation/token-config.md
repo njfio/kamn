@@ -6,6 +6,8 @@ This document defines deterministic token launch handoff evidence required befor
 - Token launch handoff evidence generator and policy checker:
   - `scripts/token/generate_token_launch_handoff_evidence_bundle.sh`
   - `scripts/token/check_token_launch_handoff_policy.sh`
+- Shared Python implementation backing the token wrappers:
+  - `scripts/token/token_launch_handoff_contract.py`
 - Fast/deep lane entrypoints:
   - `scripts/token/run_token_launch_handoff_contract_lane.sh`
   - `scripts/token/run_token_launch_handoff_deep_lane.sh`
@@ -32,6 +34,7 @@ This document defines deterministic token launch handoff evidence required befor
 Run from repository root:
 
 ```bash
+bash scripts/framework/test_contract_framework.sh
 bash scripts/token/test_generate_token_launch_handoff_evidence_bundle.sh
 bash scripts/token/test_run_token_launch_handoff_contract_lane.sh
 bash scripts/token/test_run_token_launch_handoff_deep_lane.sh

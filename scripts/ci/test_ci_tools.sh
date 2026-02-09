@@ -122,6 +122,7 @@ bash "$ROOT_DIR/scripts/reputation/test_check_reputation_signal_quarantine_polic
 bash "$ROOT_DIR/scripts/reputation/test_generate_reputation_recovery_evidence_bundle.sh"
 bash "$ROOT_DIR/scripts/reputation/test_run_reputation_recovery_contract_lane.sh"
 bash "$ROOT_DIR/scripts/reputation/test_check_reputation_recovery_policy.sh"
+bash "$ROOT_DIR/scripts/framework/test_contract_framework.sh"
 bash "$ROOT_DIR/scripts/token/test_generate_token_launch_handoff_evidence_bundle.sh"
 bash "$ROOT_DIR/scripts/token/test_run_token_launch_handoff_contract_lane.sh"
 bash "$ROOT_DIR/scripts/token/test_run_token_launch_handoff_deep_lane.sh"

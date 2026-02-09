@@ -1129,6 +1129,11 @@ assert_eq "$(extract_output "$token_contract_script_output" "run_rust")" "false"
 assert_eq "$(extract_output "$token_contract_script_output" "run_token_launch_contract_tests")" "true" "token launch contract script changes must run token launch contract lane"
 assert_eq "$(extract_output "$token_contract_script_output" "test_scope")" "token-contract" "token launch contract script changes should set token-contract scope"
 
+token_framework_script_output="$(run_selector $'scripts/framework/contract_framework.py')"
+assert_eq "$(extract_output "$token_framework_script_output" "run_rust")" "false" "contract framework script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$token_framework_script_output" "run_token_launch_contract_tests")" "true" "contract framework changes must run token launch contract lane"
+assert_eq "$(extract_output "$token_framework_script_output" "test_scope")" "token-contract" "contract framework changes should set token-contract scope"
+
 token_contract_fixture_output="$(run_selector $'fixtures/token_launch/handoff_invariant_cases.json')"
 assert_eq "$(extract_output "$token_contract_fixture_output" "run_rust")" "false" "token launch fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$token_contract_fixture_output" "run_token_launch_contract_tests")" "true" "token launch fixture changes must run token launch contract lane"
