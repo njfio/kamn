@@ -506,6 +506,11 @@ if ! grep -Fq "bash scripts/bridge/run_bridge_replay_redaction_contract_lane.sh 
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/bridge/run_localhost_bridge_relay_demo_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected localhost bridge relay demo contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 # Regression: #689
 if grep -Fq "run_sdk_parity_matrix" "$FAST_WORKFLOW"; then
   echo "fast gate must not execute sdk parity matrix directly" >&2

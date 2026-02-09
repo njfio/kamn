@@ -334,6 +334,12 @@ assert_eq "$(extract_output "$bridge_outbound_lane_output" "run_bridge_replay_ha
 assert_eq "$(extract_output "$bridge_outbound_lane_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge outbound lane script-only changes should select all bridge suites"
 assert_eq "$(extract_output "$bridge_outbound_lane_output" "test_scope")" "bridge" "bridge outbound lane script-only changes should set bridge scope"
 
+bridge_localhost_demo_lane_output="$(run_selector $'scripts/bridge/run_localhost_bridge_relay_demo_contract_lane.sh')"
+assert_eq "$(extract_output "$bridge_localhost_demo_lane_output" "run_rust")" "false" "bridge localhost demo lane script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$bridge_localhost_demo_lane_output" "run_bridge_replay_harness")" "true" "bridge localhost demo lane script-only changes must run bridge replay harness"
+assert_eq "$(extract_output "$bridge_localhost_demo_lane_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge localhost demo lane script-only changes should select all bridge suites"
+assert_eq "$(extract_output "$bridge_localhost_demo_lane_output" "test_scope")" "bridge" "bridge localhost demo lane script-only changes should set bridge scope"
+
 bridge_deep_requested_output="$(run_selector_with_bridge_deep $'scripts/bridge/run_bridge_replay_redaction_deep_lane.sh' true)"
 assert_eq "$(extract_output "$bridge_deep_requested_output" "run_bridge_replay_harness")" "true" "bridge deep lane request should keep bridge replay harness enabled"
 assert_eq "$(extract_output "$bridge_deep_requested_output" "run_bridge_replay_deep_lane")" "true" "bridge deep lane request should enable bridge replay deep lane output"
