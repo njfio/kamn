@@ -2,6 +2,7 @@ use kamn_core::{
     canonical_did_document, AgentDid, AgentDidError, AgentDidMetadata, DidDocumentError,
 };
 use std::panic::catch_unwind;
+use std::time::Instant;
 
 fn mutation_slot(seed: u64, slots: usize) -> usize {
     let mixed = seed
@@ -83,6 +84,44 @@ fn metadata_from_seed(seed: u64) -> AgentDidMetadata {
         },
         _ => unreachable!("metadata slot is bounded"),
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DidMutationClass {
+    Normalization,
+    Encoding,
+    MethodMismatch,
+}
+
+#[derive(Debug, Clone)]
+struct DidMutationCase {
+    id: &'static str,
+    class: DidMutationClass,
+    did: &'static str,
+    expected_error: AgentDidError,
+}
+
+fn deterministic_did_mutation_cases() -> Vec<DidMutationCase> {
+    vec![
+        DidMutationCase {
+            id: "normalization-uppercase-prefix",
+            class: DidMutationClass::Normalization,
+            did: "KAMN:DID:AGENT:agent-1",
+            expected_error: AgentDidError::InvalidPrefix("KAMN:DID:AGENT:agent-1".to_owned()),
+        },
+        DidMutationCase {
+            id: "encoding-plus-character",
+            class: DidMutationClass::Encoding,
+            did: "kamn:did:agent:agent+1",
+            expected_error: AgentDidError::InvalidCharacter("agent+1".to_owned()),
+        },
+        DidMutationCase {
+            id: "method-mismatch-prefix",
+            class: DidMutationClass::MethodMismatch,
+            did: "did:example:agent-1",
+            expected_error: AgentDidError::InvalidPrefix("did:example:agent-1".to_owned()),
+        },
+    ]
 }
 
 #[test]
@@ -168,4 +207,97 @@ fn fuzz_smoke_did_document_generation_lane_is_panic_free_and_deterministic() {
             ) => {}
         }
     }
+}
+
+#[test]
+fn functional_did_mutation_suite_covers_normalization_encoding_and_method_mismatch_classes() {
+    let cases = deterministic_did_mutation_cases();
+    let mut saw_normalization = false;
+    let mut saw_encoding = false;
+    let mut saw_method_mismatch = false;
+
+    for case in &cases {
+        let actual = AgentDid::parse(case.did).expect_err("mutation case must fail closed");
+        assert_eq!(
+            actual, case.expected_error,
+            "unexpected fail-closed reason for did case {}",
+            case.id
+        );
+        match case.class {
+            DidMutationClass::Normalization => saw_normalization = true,
+            DidMutationClass::Encoding => saw_encoding = true,
+            DidMutationClass::MethodMismatch => saw_method_mismatch = true,
+        }
+    }
+
+    assert!(
+        saw_normalization,
+        "normalization mutation class must be covered"
+    );
+    assert!(saw_encoding, "encoding mutation class must be covered");
+    assert!(
+        saw_method_mismatch,
+        "method mismatch mutation class must be covered"
+    );
+}
+
+#[test]
+fn integration_did_mutation_fail_closed_reasons_are_explicit_and_deterministic() {
+    for case in deterministic_did_mutation_cases() {
+        let first = AgentDid::parse(case.did).expect_err("mutation case must fail closed");
+        let second = AgentDid::parse(case.did).expect_err("mutation case must fail closed");
+        assert_eq!(first, second, "did reason drifted for case {}", case.id);
+        let reason = first.to_string();
+        assert!(
+            !reason.trim().is_empty(),
+            "did fail-closed reason must be explicit for case {}",
+            case.id
+        );
+    }
+}
+
+#[test]
+fn regression_did_mutation_reason_signatures_remain_stable() {
+    // Regression: #843
+    let error =
+        AgentDid::parse("did:example:agent-1").expect_err("non-kamn DID method should fail closed");
+    assert_eq!(
+        error,
+        AgentDidError::InvalidPrefix("did:example:agent-1".to_owned())
+    );
+    assert_eq!(
+        error.to_string(),
+        "invalid agent did prefix: did:example:agent-1"
+    );
+}
+
+#[test]
+fn performance_did_mutation_contract_lane_stays_within_budget() {
+    let started = Instant::now();
+    let mut accepted = 0_u64;
+    let mut rejected = 0_u64;
+
+    for seed in 0_u64..2048 {
+        let did = mutate_did_case(seed);
+        if AgentDid::parse(&did).is_ok() {
+            accepted += 1;
+        } else {
+            rejected += 1;
+        }
+    }
+
+    assert!(
+        accepted > 0,
+        "mutation lane should retain valid DID samples"
+    );
+    assert!(
+        rejected > 0,
+        "mutation lane should reject invalid DID samples"
+    );
+
+    let elapsed_millis = started.elapsed().as_millis();
+    assert!(
+        elapsed_millis < 300,
+        "did mutation contract lane exceeded budget: {elapsed_millis}ms"
+    );
 }

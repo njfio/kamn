@@ -27,6 +27,7 @@ fn doc_contains_runtime_network_scope_and_models() {
 fn doc_contains_peer_lifecycle_and_queue_rules() {
     assert!(DOC.contains("## Peer Lifecycle Rules"));
     assert!(DOC.contains("## Authenticated Peer Transport Framing Rules"));
+    assert!(DOC.contains("## Deterministic Input Mutation Fail-Closed Rules"));
     assert!(DOC.contains("## Queue Guard Rules"));
     assert!(DOC.contains("## Deterministic Backpressure and Stale-Peer Queue Rules"));
     assert!(DOC.contains("## Scheduler Determinism Rules"));
@@ -44,6 +45,13 @@ fn doc_contains_peer_lifecycle_and_queue_rules() {
     assert!(DOC.contains("monotonic sender nonce progression"));
     assert!(DOC.contains("queue depth less than or equal to queue capacity"));
     assert!(DOC.contains("PurgeStalePeerQueue"));
+    assert!(DOC.contains("malformed payload shape/identity cases"));
+    assert!(DOC.contains("truncated scalar/list payload cases"));
+    assert!(DOC.contains("tampered proof-binding cases"));
+    assert!(DOC.contains("normalization drift cases"));
+    assert!(DOC.contains("encoding/character drift cases"));
+    assert!(DOC.contains("method mismatch prefix cases"));
+    assert!(DOC.contains("run_input_mutation_contract_lane.sh"));
 }
 
 #[test]
@@ -79,6 +87,13 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
     assert!(DOC.contains("cargo test -p kamn-core network_fault_simulation"));
     assert!(DOC.contains("cargo test -p kamn-core snapshot_store"));
     assert!(DOC.contains("cargo test -p kamn-core --test bridge_quorum_runtime_docs"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test message_envelope_fuzz_smoke functional_envelope_mutation_suite_covers_malformed_truncated_and_tampered_classes -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test did_fuzz_smoke functional_did_mutation_suite_covers_normalization_encoding_and_method_mismatch_classes -- --exact"
+    ));
+    assert!(DOC.contains("bash scripts/runtime/run_input_mutation_contract_lane.sh"));
     assert!(DOC.contains(
         "cargo test -p kamn-core --test task_state_machine task_lifecycle_property_generated_sequences_preserve_transition_contracts -- --exact"
     ));
@@ -126,6 +141,16 @@ fn regression_requires_rejoin_and_overflow_rejection_rules() {
     assert!(DOC.contains("snapshot stale metadata rejection (`Regression: #617`)"));
     assert!(DOC.contains("snapshot restore cursor mismatch rejection (`Regression: #617`)"));
     assert!(DOC.contains(
+        "deterministic envelope/DID mutation fail-closed reasons remain stable (`Regression: #843`)"
+    ));
+    assert!(DOC.contains(
         "task/escrow/peer lifecycle generated invariant lanes remain deterministic (`Regression: #842`)"
     ));
+}
+
+#[test]
+fn doc_contains_mutation_fail_closed_contract_rules() {
+    assert!(DOC.contains("All mutation corpus entries must fail closed"));
+    assert!(DOC.contains("typed errors and stable reason strings"));
+    assert!(DOC.contains("Regression: #843"));
 }

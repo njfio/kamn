@@ -59,6 +59,11 @@ if ! grep -q "live_network_wave_docs" "$FAST_SCRIPT"; then
   exit 1
 fi
 
+if ! grep -q "test_run_input_mutation_contract_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include input mutation contract coverage" >&2
+  exit 1
+fi
+
 if ! grep -q "test_run_lifecycle_property_contract_lane.sh" "$FAST_SCRIPT"; then
   echo "expected runtime snapshot contract lane to include lifecycle property contract coverage" >&2
   exit 1

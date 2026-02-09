@@ -4,6 +4,7 @@ use kamn_core::{
 };
 use std::collections::BTreeMap;
 use std::panic::catch_unwind;
+use std::time::Instant;
 
 fn base_body() -> BTreeMap<String, String> {
     let mut map = BTreeMap::new();
@@ -189,6 +190,58 @@ fn mutate_envelope_case(
     envelope
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EnvelopeMutationClass {
+    Malformed,
+    Truncated,
+    Tampered,
+}
+
+#[derive(Debug, Clone)]
+struct EnvelopeMutationCase {
+    id: &'static str,
+    class: EnvelopeMutationClass,
+    envelope: CanonicalMessageEnvelope,
+    expected_error: MessageEnvelopeError,
+}
+
+fn deterministic_mutation_cases() -> Vec<EnvelopeMutationCase> {
+    let mut malformed_sender = valid_envelope();
+    malformed_sender.envelope.from = "did:example:sender".to_owned();
+
+    let mut truncated_id = valid_envelope();
+    truncated_id.envelope.id.clear();
+
+    let mut tampered_proof_method = valid_envelope();
+    tampered_proof_method.proof.verification_method = "kamn:did:agent:attacker-1#keys-9".to_owned();
+
+    vec![
+        EnvelopeMutationCase {
+            id: "malformed-sender-prefix",
+            class: EnvelopeMutationClass::Malformed,
+            envelope: malformed_sender,
+            expected_error: MessageEnvelopeError::InvalidSenderDid(
+                "invalid agent did prefix: did:example:sender".to_owned(),
+            ),
+        },
+        EnvelopeMutationCase {
+            id: "truncated-envelope-id",
+            class: EnvelopeMutationClass::Truncated,
+            envelope: truncated_id,
+            expected_error: MessageEnvelopeError::EmptyField("envelope.id"),
+        },
+        EnvelopeMutationCase {
+            id: "tampered-proof-verification-method",
+            class: EnvelopeMutationClass::Tampered,
+            envelope: tampered_proof_method,
+            expected_error: MessageEnvelopeError::ProofVerificationMethodMismatch {
+                expected_prefix: "kamn:did:agent:sender-1#".to_owned(),
+                actual: "kamn:did:agent:attacker-1#keys-9".to_owned(),
+            },
+        },
+    ]
+}
+
 #[test]
 fn fuzz_smoke_envelope_mutation_lane_is_panic_free_and_deterministic() {
     for seed in 0_u64..512 {
@@ -249,4 +302,111 @@ fn fuzz_smoke_envelope_error_corpus_covers_expected_rejection_classes() {
         invalid_proof.validate(),
         Err(MessageEnvelopeError::InvalidProofPurpose(_))
     ));
+}
+
+#[test]
+fn functional_envelope_mutation_suite_covers_malformed_truncated_and_tampered_classes() {
+    let cases = deterministic_mutation_cases();
+    let mut saw_malformed = false;
+    let mut saw_truncated = false;
+    let mut saw_tampered = false;
+
+    for case in &cases {
+        let actual = case
+            .envelope
+            .validate()
+            .expect_err("mutation corpus entries must fail closed");
+        assert_eq!(
+            actual, case.expected_error,
+            "unexpected fail-closed reason for case {}",
+            case.id
+        );
+        match case.class {
+            EnvelopeMutationClass::Malformed => saw_malformed = true,
+            EnvelopeMutationClass::Truncated => saw_truncated = true,
+            EnvelopeMutationClass::Tampered => saw_tampered = true,
+        }
+    }
+
+    assert!(saw_malformed, "malformed envelope class must be covered");
+    assert!(saw_truncated, "truncated envelope class must be covered");
+    assert!(saw_tampered, "tampered envelope class must be covered");
+}
+
+#[test]
+fn integration_envelope_mutation_fail_closed_reasons_are_explicit_and_deterministic() {
+    for case in deterministic_mutation_cases() {
+        let first = case
+            .envelope
+            .validate()
+            .expect_err("mutation case must fail closed");
+        let second = case
+            .envelope
+            .validate()
+            .expect_err("mutation case must fail closed");
+        assert_eq!(
+            first, second,
+            "mutation reason drifted for case {}",
+            case.id
+        );
+        let reason = first.to_string();
+        assert!(
+            !reason.trim().is_empty(),
+            "fail-closed reason must be explicit for case {}",
+            case.id
+        );
+    }
+}
+
+#[test]
+fn regression_envelope_mutation_reason_signatures_remain_stable() {
+    // Regression: #843
+    let mut tampered_method = valid_envelope();
+    tampered_method.proof.verification_method = "kamn:did:agent:attacker-1#keys-9".to_owned();
+
+    let error = tampered_method
+        .validate()
+        .expect_err("tampered verification method must fail closed");
+    assert_eq!(
+        error,
+        MessageEnvelopeError::ProofVerificationMethodMismatch {
+            expected_prefix: "kamn:did:agent:sender-1#".to_owned(),
+            actual: "kamn:did:agent:attacker-1#keys-9".to_owned(),
+        }
+    );
+    assert_eq!(
+        error.to_string(),
+        "proof verification method mismatch, expected prefix kamn:did:agent:sender-1#, got kamn:did:agent:attacker-1#keys-9"
+    );
+}
+
+#[test]
+fn performance_envelope_mutation_contract_lane_stays_within_budget() {
+    let started = Instant::now();
+    let mut accepted = 0_u64;
+    let mut rejected = 0_u64;
+
+    for seed in 0_u64..1024 {
+        let envelope = mutate_envelope_case(valid_envelope(), seed);
+        if envelope.validate().is_ok() {
+            accepted += 1;
+        } else {
+            rejected += 1;
+        }
+    }
+
+    assert!(
+        accepted > 0,
+        "mutation lane should retain valid envelope samples"
+    );
+    assert!(
+        rejected > 0,
+        "mutation lane should reject invalid envelope samples"
+    );
+
+    let elapsed_millis = started.elapsed().as_millis();
+    assert!(
+        elapsed_millis < 350,
+        "envelope mutation contract lane exceeded budget: {elapsed_millis}ms"
+    );
 }
