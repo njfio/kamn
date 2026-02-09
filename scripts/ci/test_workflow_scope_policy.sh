@@ -50,6 +50,21 @@ if ! grep -Fq "bash scripts/deploy/test_run_dr_evidence_contract_lane.sh" "$FAST
   exit 1
 fi
 
+if ! grep -Fq "uses: actions/setup-node@v4" "$FAST_WORKFLOW"; then
+  echo "expected Node.js runtime setup step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "if: steps.scope.outputs.run_frontend_dashboard_tests == 'true' || steps.scope.outputs.run_dashboard_contract_tests == 'true' || steps.scope.outputs.run_typescript_live_transport_contract_tests == 'true' || steps.scope.outputs.run_live_transport_parity_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected Node.js runtime setup scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "node-version: '22'" "$FAST_WORKFLOW"; then
+  echo "expected Node.js 22 runtime pin in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_frontend_dashboard_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected frontend dashboard scope condition in ci-fast-gate.yml" >&2
   exit 1

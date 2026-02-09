@@ -50,6 +50,7 @@ make demo
 ```
 
 Deep/scheduled lanes remain opt-in via scripts in `scripts/sdk/` and `scripts/ci/`.
+CI fast gate provisions Node.js 22 for frontend and TypeScript contract lanes.
 
 ### Run A Focused Core Slice
 
