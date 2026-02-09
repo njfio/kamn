@@ -27,6 +27,15 @@ fn runbook_contains_fast_contract_lane() {
 }
 
 #[test]
+fn runbook_contains_cutover_rollback_evidence_contract() {
+    assert!(RUNBOOK.contains("## Cutover Rollback Evidence Contract"));
+    assert!(RUNBOOK.contains("generate_cutover_rollback_evidence_bundle.sh"));
+    assert!(RUNBOOK.contains("check_cutover_rollback_evidence_policy.sh"));
+    assert!(RUNBOOK.contains("run_cutover_rollback_contract_lane.sh"));
+    assert!(RUNBOOK.contains("run_cutover_rollback_deep_lane.sh"));
+}
+
+#[test]
 fn regression_requires_dependency_and_approval_rejection_policy() {
     // Regression: #705
     assert!(RUNBOOK.contains(
@@ -34,5 +43,13 @@ fn regression_requires_dependency_and_approval_rejection_policy() {
     ));
     assert!(RUNBOOK.contains(
         "missing or insufficient checkpoint approvals force `NO-GO` (`Regression: #705`)."
+    ));
+}
+
+#[test]
+fn regression_requires_rollback_evidence_guards() {
+    // Regression: #708
+    assert!(RUNBOOK.contains(
+        "missing failed-checkpoint rollback evidence and rollback-target hash mismatch force `NO-GO` (`Regression: #708`)."
     ));
 }
