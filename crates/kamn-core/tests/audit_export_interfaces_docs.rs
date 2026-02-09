@@ -54,3 +54,22 @@ fn regression_requires_dsar_legal_hold_evidence_guard_marker() {
         "legal-hold bypass attempts and tampered DSAR evidence force `NO-GO` (`Regression: #732`)."
     ));
 }
+
+#[test]
+fn doc_contains_reputation_dispute_evidence_export_contract() {
+    assert!(DOC.contains("## Reputation Dispute Evidence Export Contract"));
+    assert!(DOC.contains("generate_reputation_dispute_evidence_bundle.sh"));
+    assert!(DOC.contains("check_reputation_dispute_policy.sh"));
+    assert!(DOC.contains("run_reputation_dispute_contract_lane.sh"));
+    assert!(DOC.contains("run_reputation_dispute_deep_lane.sh"));
+    assert!(DOC.contains("run_reputation_dispute_matrix.py"));
+    assert!(DOC.contains("fixtures/reputation_dispute/replay_cases.json"));
+}
+
+#[test]
+fn regression_requires_reputation_dispute_evidence_guard_marker() {
+    // Regression: #730
+    assert!(DOC.contains(
+        "tampered evidence hashes, score-adjustment limit bypasses, and closed-policy-window decisions force `NO-GO` (`Regression: #730`)."
+    ));
+}

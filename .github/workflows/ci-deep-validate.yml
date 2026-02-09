@@ -137,6 +137,18 @@ jobs:
           path: governance-stake-slash-report.json
           if-no-files-found: error
 
+      - name: Run reputation dispute deep lane
+        if: steps.detect.outputs.run_rust == 'true'
+        run: bash scripts/reputation/run_reputation_dispute_deep_lane.sh --output-json reputation-dispute-report.json
+
+      - name: Upload reputation dispute deep report
+        if: always() && hashFiles('reputation-dispute-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: reputation-dispute-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reputation-dispute-report.json
+          if-no-files-found: error
+
       - name: Run token launch handoff deep lane
         if: steps.detect.outputs.run_rust == 'true'
         run: bash scripts/token/run_token_launch_handoff_deep_lane.sh --output-json token-launch-handoff-report.json

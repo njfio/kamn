@@ -27,7 +27,26 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
 }
 
 #[test]
+fn doc_contains_dispute_evidence_bundle_contract() {
+    assert!(DOC.contains("## Deterministic Reputation Dispute Evidence Contract"));
+    assert!(DOC.contains("generate_reputation_dispute_evidence_bundle.sh"));
+    assert!(DOC.contains("check_reputation_dispute_policy.sh"));
+    assert!(DOC.contains("run_reputation_dispute_contract_lane.sh"));
+    assert!(DOC.contains("run_reputation_dispute_deep_lane.sh"));
+    assert!(DOC.contains("run_reputation_dispute_matrix.py"));
+    assert!(DOC.contains("fixtures/reputation_dispute/replay_cases.json"));
+}
+
+#[test]
 fn regression_requires_upper_bound_score_inclusive_rule() {
     // Regression: #215
     assert!(DOC.contains("Trust score boundary checks are inclusive for `1000`."));
+}
+
+#[test]
+fn regression_requires_reputation_dispute_tamper_guard_marker() {
+    // Regression: #730
+    assert!(DOC.contains(
+        "tampered evidence hashes, score-adjustment limit bypasses, and closed-policy-window decisions force `NO-GO` (`Regression: #730`)."
+    ));
 }
