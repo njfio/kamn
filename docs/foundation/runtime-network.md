@@ -139,6 +139,17 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Fast contract lane command:
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh`
 
+## Deterministic Concurrency Harness Rules
+- Shared-state mutation harness in `crates/kamn-core/tests/concurrency_state_mutation.rs` must enforce:
+  - single-winner task accept races under parallel contender workloads
+  - deterministic duplicate-submit rejection outcomes under concurrent submit attempts
+  - deterministic peer lifecycle phase summaries across replayed concurrent transitions
+- Contract/deep lane commands:
+  - `bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh`
+  - `bash scripts/runtime/run_concurrency_state_mutation_deep_lane.sh`
+- Regression policy:
+  - concurrent accept races must never admit multiple winners (`Regression: #844`).
+
 ## Queue Guard Rules
 - `BoundedRuntimeQueue<T>` is FIFO and preserves insertion order.
 - Capacity must be greater than zero.
@@ -245,6 +256,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - deterministic signature mismatch rejection
   - deterministic malformed/truncated/tampered envelope mutation rejection
   - deterministic DID normalization/encoding/method mismatch mutation rejection
+  - deterministic concurrency replay fixture validity checks
   - invalid backpressure threshold ordering and queue-depth validation rejection
   - empty proposal candidate ID rejection
   - empty resume-token rejoin attempt rejection
@@ -254,6 +266,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - authenticated peer-frame wire roundtrip and signature verification
   - envelope mutation corpus fail-closed classification by malformed/truncated/tampered classes
   - DID mutation corpus fail-closed classification by normalization/encoding/method mismatch classes
+  - deterministic multi-thread task accept replay fixture invariant checks
   - deterministic queue saturation backpressure classification
   - planner deterministic ordering contract
   - rejoin acceptance with matching snapshot
@@ -266,6 +279,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - lagging-node catch-up guidance output
   - daemon network-fault simulation with queue-overflow/degradation reporting
   - deterministic runtime mutation contract lane command coverage
+  - deterministic concurrency replay summaries across peer lifecycle phase transitions
   - runtime snapshot contract lane wiring and docs mapping checks
 - Regression:
   - rejoin without disconnect is rejected (`Regression: #324`)
@@ -285,6 +299,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - stale disconnected peer queue purge decision remains deterministic (`Regression: #618`)
   - snapshot stale metadata rejection (`Regression: #617`)
   - snapshot restore cursor mismatch rejection (`Regression: #617`)
+  - concurrent accept races never allow multiple winners (`Regression: #844`)
   - deterministic envelope/DID mutation fail-closed reasons remain stable (`Regression: #843`)
   - task/escrow/peer lifecycle generated invariant lanes remain deterministic (`Regression: #842`)
 - Performance:
@@ -293,8 +308,10 @@ This document captures the initial runtime-network foundation slice for peer lif
   - bounded PR-lane deterministic fault simulation budget check
   - bounded PR-lane envelope mutation validation budget check
   - bounded PR-lane DID mutation validation budget check
+  - bounded PR-lane concurrency mutation validation budget check
   - bounded PR-lane snapshot recovery budget check
   - scheduled chaos lane stress hook (`--ignored`)
+  - scheduled concurrency stress deep lane hook (`--ignored`)
   - scheduled snapshot recovery deep lane stress hook (`--ignored`)
 
 ## Fast and Cost-Effective Validation
@@ -313,6 +330,9 @@ cargo test -p kamn-core --test bridge_quorum_runtime_docs
 cargo test -p kamn-core --test message_envelope_fuzz_smoke functional_envelope_mutation_suite_covers_malformed_truncated_and_tampered_classes -- --exact
 cargo test -p kamn-core --test did_fuzz_smoke functional_did_mutation_suite_covers_normalization_encoding_and_method_mismatch_classes -- --exact
 bash scripts/runtime/run_input_mutation_contract_lane.sh
+cargo test -p kamn-core --test concurrency_state_mutation functional_task_accept_concurrency_replay_fixture_preserves_invariants -- --exact
+cargo test -p kamn-core --test concurrency_state_mutation integration_peer_lifecycle_concurrency_replay_is_deterministic_across_rounds -- --exact
+bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh
 cargo test -p kamn-core --test task_state_machine task_lifecycle_property_generated_sequences_preserve_transition_contracts -- --exact
 cargo test -p kamn-core --test escrow_lifecycle escrow_property_generated_action_sequences_preserve_amount_and_status_invariants -- --exact
 cargo test -p kamn-core --test runtime_peer_lifecycle peer_lifecycle_property_generated_event_sequences_match_transition_contract -- --exact
@@ -326,6 +346,7 @@ Scheduled deep-lane command:
 
 ```bash
 cargo test -p kamn-core performance_network_fault_simulation_chaos_lane_stress -- --ignored
+bash scripts/runtime/run_concurrency_state_mutation_deep_lane.sh
 bash scripts/runtime/run_runtime_snapshot_deep_lane.sh
 ```
 
