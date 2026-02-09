@@ -74,6 +74,15 @@ fn runbook_contains_deployment_slo_rollback_contract_lane() {
 }
 
 #[test]
+fn runbook_contains_governance_lifecycle_rollback_contract_lane() {
+    assert!(RUNBOOK.contains("## Governance Lifecycle and Rollback Integrity Contract Lane"));
+    assert!(RUNBOOK.contains("run_governance_lifecycle_rollback_lane.sh"));
+    assert!(RUNBOOK.contains("check_governance_lifecycle_rollback_policy.sh"));
+    assert!(RUNBOOK.contains("run_governance_lifecycle_rollback_contract_lane.sh"));
+    assert!(RUNBOOK.contains("kamn.governance.lifecycle-rollback-report.v1"));
+}
+
+#[test]
 fn regression_requires_watchdog_evidence_capture_and_fast_lane() {
     // Regression: #383
     assert!(RUNBOOK.contains(
@@ -105,5 +114,13 @@ fn regression_requires_deployment_slo_rollback_fail_closed_rules() {
     // Regression: #944
     assert!(RUNBOOK.contains(
         "SLO gate drift, rollback automation evidence drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #944`)."
+    ));
+}
+
+#[test]
+fn regression_requires_governance_lifecycle_rollback_fail_closed_guard() {
+    // Regression: #910
+    assert!(RUNBOOK.contains(
+        "illegal lifecycle transitions and rollback integrity drift must fail closed (`Regression: #910`)."
     ));
 }

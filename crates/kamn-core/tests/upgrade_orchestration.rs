@@ -1,7 +1,7 @@
 use kamn_core::{
     GovernanceParameterChangeDraft, GovernanceProposalDraft, GovernanceProposalStatus,
     GovernanceVoteChoice, GovernanceWorkflow, UpgradeAuditEventKind, UpgradeOrchestrationError,
-    VersionUpgradeOrchestrator,
+    UpgradeProposalState, VersionUpgradeOrchestrator,
 };
 
 #[test]
@@ -161,5 +161,128 @@ fn upgrade_orchestration_regression_rejects_activation_without_quorum_approvals(
             required: 2,
             provided: 1,
         })
+    );
+}
+
+#[test]
+fn upgrade_orchestration_functional_activate_then_rollback_restores_version_and_audits_event() {
+    let mut orchestrator =
+        VersionUpgradeOrchestrator::new("v0.6.0").expect("orchestrator should initialize");
+    orchestrator
+        .propose_upgrade(
+            "gov-upgrade-5",
+            "v0.7.0",
+            "kamn:did:agent:validator-1",
+            2,
+            1_716_503_100,
+        )
+        .expect("proposal should register");
+    orchestrator
+        .approve_upgrade("gov-upgrade-5", "kamn:did:agent:validator-1", 1_716_503_110)
+        .expect("approval should pass");
+    orchestrator
+        .approve_upgrade("gov-upgrade-5", "kamn:did:agent:validator-2", 1_716_503_120)
+        .expect("approval should pass");
+    orchestrator
+        .mark_governance_status(
+            "gov-upgrade-5",
+            GovernanceProposalStatus::Approved,
+            1_716_503_130,
+        )
+        .expect("governance approved status should set");
+    orchestrator
+        .activate_upgrade("gov-upgrade-5", "kamn:did:agent:validator-1", 1_716_503_140)
+        .expect("activation should pass");
+    orchestrator
+        .rollback_upgrade(
+            "gov-upgrade-5",
+            "v0.6.0",
+            "kamn:did:agent:validator-1",
+            1_716_503_150,
+            "post-upgrade verification failed",
+        )
+        .expect("rollback should succeed for activated proposal");
+
+    assert_eq!(orchestrator.audit_view().current_version, "v0.6.0");
+    let proposal = orchestrator
+        .proposal("gov-upgrade-5")
+        .expect("proposal should exist");
+    assert_eq!(proposal.state, UpgradeProposalState::RolledBack);
+    assert_eq!(
+        orchestrator
+            .audit_view()
+            .events
+            .last()
+            .map(|event| event.kind),
+        Some(UpgradeAuditEventKind::RolledBack)
+    );
+}
+
+#[test]
+fn upgrade_orchestration_regression_rejects_rollback_before_activation() {
+    // Regression: #910
+    let mut orchestrator =
+        VersionUpgradeOrchestrator::new("v0.8.0").expect("orchestrator should initialize");
+    orchestrator
+        .propose_upgrade(
+            "gov-upgrade-6",
+            "v0.9.0",
+            "kamn:did:agent:validator-1",
+            2,
+            1_716_504_100,
+        )
+        .expect("proposal should register");
+
+    assert_eq!(
+        orchestrator.rollback_upgrade(
+            "gov-upgrade-6",
+            "v0.8.0",
+            "kamn:did:agent:validator-1",
+            1_716_504_110,
+            "activation gate was never satisfied",
+        ),
+        Err(UpgradeOrchestrationError::RollbackNotAllowed(
+            "gov-upgrade-6".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn upgrade_orchestration_regression_rejects_empty_rollback_reason() {
+    // Regression: #910
+    let mut orchestrator =
+        VersionUpgradeOrchestrator::new("v1.0.0").expect("orchestrator should initialize");
+    orchestrator
+        .propose_upgrade(
+            "gov-upgrade-7",
+            "v1.1.0",
+            "kamn:did:agent:validator-1",
+            1,
+            1_716_505_100,
+        )
+        .expect("proposal should register");
+    orchestrator
+        .approve_upgrade("gov-upgrade-7", "kamn:did:agent:validator-1", 1_716_505_110)
+        .expect("approval should pass");
+    orchestrator
+        .mark_governance_status(
+            "gov-upgrade-7",
+            GovernanceProposalStatus::Approved,
+            1_716_505_120,
+        )
+        .expect("governance approved status should set");
+    orchestrator
+        .activate_upgrade("gov-upgrade-7", "kamn:did:agent:validator-1", 1_716_505_130)
+        .expect("activation should pass");
+
+    assert_eq!(
+        orchestrator.rollback_upgrade(
+            "gov-upgrade-7",
+            "v1.0.0",
+            "kamn:did:agent:validator-1",
+            1_716_505_140,
+            "",
+        ),
+        Err(UpgradeOrchestrationError::EmptyField("reason"))
     );
 }

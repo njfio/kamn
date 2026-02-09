@@ -74,9 +74,29 @@ fn doc_contains_stake_slash_risk_threshold_evidence_contract() {
 }
 
 #[test]
+fn doc_contains_governance_lifecycle_rollback_contract_lane() {
+    assert!(DOC.contains("## Governance Lifecycle and Rollback Integrity Contract Lane"));
+    assert!(DOC.contains("run_governance_lifecycle_rollback_lane.sh"));
+    assert!(DOC.contains("check_governance_lifecycle_rollback_policy.sh"));
+    assert!(DOC.contains("run_governance_lifecycle_rollback_contract_lane.sh"));
+    assert!(DOC.contains("kamn.governance.lifecycle-rollback-report.v1"));
+    assert!(DOC.contains("governance_lifecycle_rollback_reason_codes:GO:v1"));
+    assert!(DOC.contains("governance_lifecycle_rollback_reason_codes:NO-GO:v1"));
+    assert!(DOC.contains("KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_MAX_SECONDS"));
+}
+
+#[test]
 fn regression_requires_stake_slash_threshold_bypass_guard_marker() {
     // Regression: #733
     assert!(DOC.contains(
         "unsafe threshold bypass attempts and tampered risk evidence force `NO-GO` (`Regression: #733`)."
+    ));
+}
+
+#[test]
+fn regression_requires_lifecycle_rollback_fail_closed_guard_marker() {
+    // Regression: #910
+    assert!(DOC.contains(
+        "illegal lifecycle transitions and rollback integrity drift must fail closed (`Regression: #910`)."
     ));
 }

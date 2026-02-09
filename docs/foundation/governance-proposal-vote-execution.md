@@ -96,6 +96,32 @@ Governance activation also requires deterministic stake/slash risk thresholds to
 - Regression policy:
   - unsafe threshold bypass attempts and tampered risk evidence force `NO-GO` (`Regression: #733`).
 
+## Governance Lifecycle and Rollback Integrity Contract Lane
+Governance execution paths now include deterministic lifecycle/rollback integrity checks with fail-closed reason-code evidence.
+
+- Lifecycle/rollback lane command:
+  - `bash scripts/governance/run_governance_lifecycle_rollback_lane.sh --output-file /tmp/governance-lifecycle-rollback-report.json`
+- Lifecycle/rollback policy checker:
+  - `bash scripts/governance/check_governance_lifecycle_rollback_policy.sh --report-file /tmp/governance-lifecycle-rollback-report.json`
+- Lifecycle/rollback contract lane:
+  - `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
+
+Runtime budget controls:
+
+- `KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_MAX_SECONDS`
+- `KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_CONTRACT_MAX_SECONDS`
+- `KAMN_GOVERNANCE_LIFECYCLE_ROLLBACK_SKIP_COMMANDS`
+
+Required schema/reason markers:
+
+- `kamn.governance.lifecycle-rollback-report.v1`
+- `governance_lifecycle_rollback_reason_codes:GO:v1`
+- `governance_lifecycle_rollback_reason_codes:NO-GO:v1`
+
+Regression policy:
+
+- illegal lifecycle transitions and rollback integrity drift must fail closed (`Regression: #910`).
+
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 
@@ -108,7 +134,11 @@ bash scripts/governance/test_generate_stake_slash_risk_evidence_bundle.sh
 bash scripts/governance/test_run_stake_slash_risk_contract_lane.sh
 bash scripts/governance/test_run_stake_slash_risk_matrix.sh
 bash scripts/governance/test_run_stake_slash_risk_deep_lane.sh
+bash scripts/governance/test_run_governance_lifecycle_rollback_lane.sh
+bash scripts/governance/test_check_governance_lifecycle_rollback_policy.sh
+bash scripts/governance/test_run_governance_lifecycle_rollback_contract_lane.sh
 cargo test -p kamn-core --test governance_workflow --test governance_workflow_docs
+cargo test -p kamn-core --test upgrade_orchestration
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
 ```
