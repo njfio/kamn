@@ -239,6 +239,12 @@ cross_chain_bridge_output="$(run_selector $'crates/kamn-core/src/cross_chain_bri
 assert_eq "$(extract_output "$cross_chain_bridge_output" "run_bridge_replay_harness")" "true" "cross-chain bridge changes must run bridge replay harness"
 assert_eq "$(extract_output "$cross_chain_bridge_output" "bridge_replay_suites")" "bridge_adapter,cross_chain_bridge" "cross-chain bridge changes should select cross-chain subset plus bridge adapter suite"
 
+bridge_outbound_fixture_output="$(run_selector $'fixtures/bridge_outbound_intent/approval_retry_cases.json')"
+assert_eq "$(extract_output "$bridge_outbound_fixture_output" "run_rust")" "false" "bridge outbound fixture-only changes should avoid rust lane"
+assert_eq "$(extract_output "$bridge_outbound_fixture_output" "run_bridge_replay_harness")" "true" "bridge outbound fixture-only changes must run bridge replay harness"
+assert_eq "$(extract_output "$bridge_outbound_fixture_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge outbound fixture-only changes should select all bridge suites"
+assert_eq "$(extract_output "$bridge_outbound_fixture_output" "test_scope")" "bridge" "bridge outbound fixture-only changes should set bridge scope"
+
 frontend_output="$(run_selector $'packages/kamn-dashboard/tests/dashboard.test.ts')"
 assert_eq "$(extract_output "$frontend_output" "run_rust")" "false" "frontend-only changes should avoid rust lane"
 assert_eq "$(extract_output "$frontend_output" "run_frontend_dashboard_tests")" "true" "frontend-only changes must run dashboard tests"

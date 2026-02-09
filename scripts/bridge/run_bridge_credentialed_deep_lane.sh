@@ -6,6 +6,22 @@ REPLAY_FIXTURE="$ROOT_DIR/fixtures/bridge_replay/replay_validation_cases.json"
 REPLAY_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_replay_matrix.sh"
 CONTRACT_LANE="$ROOT_DIR/scripts/bridge/run_bridge_credentialed_contract_lane.sh"
 REDACTION_CHECK_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_credential_redaction_check.py"
+OUTBOUND_INTENT_DEEP_SCRIPT="$ROOT_DIR/scripts/bridge/run_cross_chain_outbound_intent_deep_lane.sh"
+
+output_json=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --output-json)
+      output_json="${2:-}"
+      shift 2
+      ;;
+    *)
+      echo "unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -13,8 +29,10 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 BRIDGE_REPLAY_DEEP_REPORT="$TMP_DIR/bridge-replay-deep-report.json"
 BRIDGE_CREDENTIAL_REDACTION_DEEP_REPORT="$TMP_DIR/bridge-credential-redaction-report.json"
 BRIDGE_DEEP_STDOUT="$TMP_DIR/bridge-redaction-deep.out"
+BRIDGE_OUTBOUND_INTENT_DEEP_REPORT="$TMP_DIR/bridge-outbound-intent-deep-report.json"
 
 bash "$CONTRACT_LANE"
+bash "$OUTBOUND_INTENT_DEEP_SCRIPT" --output-json "$BRIDGE_OUTBOUND_INTENT_DEEP_REPORT" >/dev/null
 
 bash "$REPLAY_SCRIPT" \
   --fixture "$REPLAY_FIXTURE" \
@@ -40,6 +58,10 @@ fi
 if ! grep -q '"sample_count": 128' "$BRIDGE_CREDENTIAL_REDACTION_DEEP_REPORT"; then
   echo "expected deep-lane redaction report to include sample-count contract" >&2
   exit 1
+fi
+
+if [[ -n "$output_json" ]]; then
+  cp "$BRIDGE_OUTBOUND_INTENT_DEEP_REPORT" "$output_json"
 fi
 
 echo "bridge credentialed deep lane tests passed."

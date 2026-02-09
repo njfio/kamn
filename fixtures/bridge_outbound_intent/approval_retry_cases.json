@@ -1,0 +1,69 @@
+{
+  "schema_version": "kamn.bridge.cross-chain-outbound-intent.fixture.v1",
+  "cases": [
+    {
+      "case_id": "go-ethereum-first-attempt-approved",
+      "chain": "ethereum",
+      "request_id": "intent-go-001",
+      "destination_channel": "ethereum:sepolia:contract:escrow-v1",
+      "required_approvals": 2,
+      "received_approvals": 2,
+      "approval_quorum_hash": "sha256:intent-go-approvals-001",
+      "idempotency_key": "idemp:intent-go-001",
+      "attempt_number": 1,
+      "payload_hash": "sha256:payload-go-001",
+      "previous_payload_hash": "sha256:payload-go-001",
+      "duplicate_request": false,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "GO"
+    },
+    {
+      "case_id": "no-go-near-under-quorum",
+      "chain": "near",
+      "request_id": "intent-no-go-approvals",
+      "destination_channel": "near:testnet:contract:escrow-v1",
+      "required_approvals": 3,
+      "received_approvals": 2,
+      "approval_quorum_hash": "sha256:intent-no-go-approvals-001",
+      "idempotency_key": "idemp:intent-no-go-approvals",
+      "attempt_number": 1,
+      "payload_hash": "sha256:payload-no-go-approvals-001",
+      "previous_payload_hash": "sha256:payload-no-go-approvals-001",
+      "duplicate_request": false,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
+      "case_id": "no-go-retry-payload-drift",
+      "chain": "ethereum",
+      "request_id": "intent-no-go-retry-drift",
+      "destination_channel": "ethereum:sepolia:contract:escrow-v1",
+      "required_approvals": 2,
+      "received_approvals": 2,
+      "approval_quorum_hash": "sha256:intent-no-go-retry-drift-001",
+      "idempotency_key": "idemp:intent-no-go-retry-drift",
+      "attempt_number": 2,
+      "payload_hash": "sha256:payload-drift-new-001",
+      "previous_payload_hash": "sha256:payload-drift-old-001",
+      "duplicate_request": false,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
+      "case_id": "no-go-duplicate-request",
+      "chain": "near",
+      "request_id": "intent-no-go-duplicate",
+      "destination_channel": "near:testnet:contract:escrow-v1",
+      "required_approvals": 2,
+      "received_approvals": 2,
+      "approval_quorum_hash": "sha256:intent-no-go-duplicate-001",
+      "idempotency_key": "idemp:intent-no-go-duplicate",
+      "attempt_number": 1,
+      "payload_hash": "sha256:payload-duplicate-001",
+      "previous_payload_hash": "sha256:payload-duplicate-001",
+      "duplicate_request": true,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    }
+  ]
+}

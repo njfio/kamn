@@ -342,6 +342,16 @@ if ! grep -Fq "post-cutover-slo-report-\${{ github.run_id }}-\${{ github.run_att
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/bridge/run_bridge_credentialed_deep_lane.sh --output-json bridge-credentialed-deep-report.json" "$DEEP_WORKFLOW"; then
+  echo "expected bridge credentialed deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bridge-credentialed-deep-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
+  echo "expected bridge credentialed deep report artifact upload in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json sdk-parity-report.json" "$DEEP_WORKFLOW"; then
   echo "expected sdk parity matrix command in ci-deep-validate.yml" >&2
   exit 1

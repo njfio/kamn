@@ -1,4 +1,4 @@
-# Bridge Quorum Runtime Contracts (Issues #364 / #367 / #370 / #373)
+# Bridge Quorum Runtime Contracts (Issues #364 / #367 / #370 / #373 / #742)
 
 This document captures deterministic bridge quorum runtime contracts for listener-confirmed inbound events and approver-gated outbound actions.
 
@@ -36,6 +36,8 @@ This document captures deterministic bridge quorum runtime contracts for listene
 - Outbound bridge actions require canonical approver attestation set evaluation against configured quorum thresholds.
 - Outbound under-quorum approval sets are rejected.
 - Malformed approver attestation payload is rejected.
+- Cross-chain outbound retries require idempotency-key and payload-hash consistency across attempts.
+- Duplicate outbound replay requests are rejected with deterministic `NO-GO` policy evidence.
 - Outbound authorization decisions emit deterministic typed rejection reasons when quorum requirements are unmet.
 
 ## Test Coverage Mapping
@@ -48,6 +50,7 @@ This document captures deterministic bridge quorum runtime contracts for listene
   - malformed approver payload rejection (`Regression: #372`)
   - outbound under-quorum rejection (`Regression: #372`)
   - unauthorized approver signature-failure rejection in bridge replay fixtures (`Regression: #587`)
+  - outbound retry payload-drift and tampered final-decision rejection (`Regression: #742`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
@@ -57,6 +60,7 @@ cargo test -p kamn-core --test bridge_quorum_runtime_docs
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-core approver_quorum
 bash scripts/bridge/run_bridge_replay_matrix.sh --fixture fixtures/bridge_replay/replay_validation_cases.json --suites bridge_adapter,discord_bridge --output-json /tmp/bridge-replay-quorum-report.json
+bash scripts/bridge/run_cross_chain_outbound_intent_contract_lane.sh
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
 ```

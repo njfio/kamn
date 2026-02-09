@@ -302,7 +302,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    crates/kamn-core/src/bridge_adapter.rs|crates/kamn-core/tests/bridge_adapter.rs|docs/foundation/bridge-adapter-abstraction.md|scripts/bridge/*|fixtures/bridge_replay/*)
+    crates/kamn-core/src/bridge_adapter.rs|crates/kamn-core/tests/bridge_adapter.rs|crates/kamn-core/src/cross_chain_receipt.rs|crates/kamn-core/tests/cross_chain_receipt_finality.rs|crates/kamn-core/tests/cross_chain_bridge_adapters_docs.rs|docs/foundation/bridge-adapter-abstraction.md|docs/foundation/cross-chain-bridge-adapters.md|docs/foundation/bridge-quorum-runtime.md|scripts/bridge/*|fixtures/bridge_replay/*|fixtures/bridge_outbound_intent/*)
       BRIDGE_REPLAY_RELATED_CHANGED=true
       BRIDGE_SUITE_ADAPTER=true
       BRIDGE_SUITE_TELEGRAM=true
