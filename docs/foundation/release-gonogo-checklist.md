@@ -102,6 +102,18 @@ Token launch readiness requires deterministic supply/allocation and approval evi
 - Regression policy:
   - supply/allocation invariant drift and insufficient approvals force `NO-GO` (`Regression: #714`).
 
+## Treasury Disbursement Approval Evidence Contract (Issue #716)
+Treasury disbursement execution requires deterministic approval-threshold evidence and policy-window validation.
+
+- Evidence bundle generator:
+  - `bash scripts/treasury/generate_treasury_disbursement_evidence_bundle.sh --output-file /tmp/treasury-disbursement.json --disbursement-id disbursement-go-001 --treasury-account-id treasury-main-001 --destination-account-id ops-wallet-001 --asset-symbol KAMN --disbursement-amount 250000 --daily-limit-amount 500000 --required-approvals 2 --received-approvals 2 --approval-quorum-hash sha256:approval-go-001 --policy-window-open true --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/treasury/check_treasury_disbursement_policy.sh --bundle-file /tmp/treasury-disbursement.json`
+- PR fast contract lane:
+  - `bash scripts/treasury/run_treasury_disbursement_contract_lane.sh`
+- Regression policy:
+  - insufficient approvals, approval-window closure, and daily-limit overruns force `NO-GO` (`Regression: #716`).
+
 ## Mainnet Cutover Manifest Validation Contract (Issue #707)
 Mainnet cutover requires deterministic triadic checkpoint manifests with explicit approval and dependency evidence.
 
@@ -174,6 +186,8 @@ bash scripts/escrow/test_run_settlement_reconciliation_race_matrix.sh
 bash scripts/token/test_generate_token_launch_handoff_evidence_bundle.sh
 bash scripts/token/test_run_token_launch_handoff_contract_lane.sh
 bash scripts/token/test_run_token_launch_handoff_deep_lane.sh
+bash scripts/treasury/test_generate_treasury_disbursement_evidence_bundle.sh
+bash scripts/treasury/test_run_treasury_disbursement_contract_lane.sh
 bash scripts/guard/test_run_durable_guard_recovery_contract_lane.sh
 bash scripts/deploy/test_generate_gonogo_evidence_bundle.sh
 bash scripts/deploy/test_run_gonogo_evidence_contract_lane.sh

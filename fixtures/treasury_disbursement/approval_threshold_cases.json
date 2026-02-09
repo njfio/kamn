@@ -1,0 +1,25 @@
+{
+  "schema_version": "kamn.treasury.disbursement.fixture.v1",
+  "cases": [
+    {
+      "case_id": "go-approved-within-limit",
+      "disbursement_amount": 250000,
+      "daily_limit_amount": 500000,
+      "required_approvals": 2,
+      "received_approvals": 2,
+      "policy_window_open": true,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "GO"
+    },
+    {
+      "case_id": "no-go-limit-and-approval-mismatch",
+      "disbursement_amount": 750000,
+      "daily_limit_amount": 500000,
+      "required_approvals": 3,
+      "received_approvals": 2,
+      "policy_window_open": false,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    }
+  ]
+}

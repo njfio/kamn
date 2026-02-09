@@ -205,6 +205,16 @@ if ! grep -Fq "bash scripts/token/run_token_launch_handoff_contract_lane.sh" "$F
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_treasury_disbursement_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected treasury disbursement contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/treasury/run_treasury_disbursement_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected treasury disbursement contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_mainnet_cutover_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected mainnet cutover contract scope condition in ci-fast-gate.yml" >&2
   exit 1
@@ -242,6 +252,11 @@ fi
 
 if ! grep -Fq "steps.scope.outputs.run_settlement_reconciliation_contract_tests == 'true' || steps.scope.outputs.run_token_launch_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected token launch contract rust setup/cache condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "steps.scope.outputs.run_token_launch_contract_tests == 'true' || steps.scope.outputs.run_treasury_disbursement_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected treasury disbursement contract rust setup/cache condition in ci-fast-gate.yml" >&2
   exit 1
 fi
 
