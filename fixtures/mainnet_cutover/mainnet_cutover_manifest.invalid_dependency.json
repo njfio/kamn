@@ -1,0 +1,76 @@
+{
+  "schema_version": "kamn.mainnet-cutover.manifest.v1",
+  "manifest_id": "cutover-mainnet-2026-02-09-invalid-dependency",
+  "release_candidate": "v1.0.0-mainnet.1",
+  "quorum_policy": {
+    "processor": 2,
+    "listener": 2,
+    "approver": 2
+  },
+  "checkpoints": [
+    {
+      "id": "processor-ready",
+      "order": 1,
+      "role": "processor",
+      "status": "COMPLETED",
+      "approvals_required": 2,
+      "approvals_received": 2,
+      "approved_by": [
+        "processor-ops-a",
+        "processor-ops-b"
+      ],
+      "depends_on": [],
+      "rollback_ready": true
+    },
+    {
+      "id": "listener-ready",
+      "order": 2,
+      "role": "listener",
+      "status": "COMPLETED",
+      "approvals_required": 2,
+      "approvals_received": 2,
+      "approved_by": [
+        "listener-ops-a",
+        "listener-ops-b"
+      ],
+      "depends_on": [
+        "approver-ready"
+      ],
+      "rollback_ready": true
+    },
+    {
+      "id": "approver-ready",
+      "order": 3,
+      "role": "approver",
+      "status": "COMPLETED",
+      "approvals_required": 2,
+      "approvals_received": 2,
+      "approved_by": [
+        "approver-ops-a",
+        "approver-ops-b"
+      ],
+      "depends_on": [
+        "listener-ready"
+      ],
+      "rollback_ready": true
+    },
+    {
+      "id": "cutover-finalize",
+      "order": 4,
+      "role": "approver",
+      "status": "READY",
+      "approvals_required": 2,
+      "approvals_received": 2,
+      "approved_by": [
+        "release-manager-a",
+        "release-manager-b"
+      ],
+      "depends_on": [
+        "processor-ready",
+        "listener-ready",
+        "approver-ready"
+      ],
+      "rollback_ready": true
+    }
+  ]
+}

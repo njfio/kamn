@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kamn.dev/schemas/mainnet-cutover-manifest-v1.json",
+  "title": "KAMN Mainnet Cutover Manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "manifest_id",
+    "release_candidate",
+    "quorum_policy",
+    "checkpoints"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kamn.mainnet-cutover.manifest.v1"
+    },
+    "manifest_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "release_candidate": {
+      "type": "string",
+      "minLength": 1
+    },
+    "quorum_policy": {
+      "type": "object",
+      "required": [
+        "processor",
+        "listener",
+        "approver"
+      ],
+      "properties": {
+        "processor": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "listener": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "approver": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "checkpoints": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "order",
+          "role",
+          "status",
+          "approvals_required",
+          "approvals_received",
+          "approved_by",
+          "depends_on",
+          "rollback_ready"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "role": {
+            "enum": [
+              "processor",
+              "listener",
+              "approver"
+            ]
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "READY",
+              "COMPLETED",
+              "FAILED"
+            ]
+          },
+          "approvals_required": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "approvals_received": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "approved_by": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "rollback_ready": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

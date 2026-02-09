@@ -195,6 +195,16 @@ if ! grep -Fq "bash scripts/escrow/run_settlement_reconciliation_contract_lane.s
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_mainnet_cutover_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected mainnet cutover contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/cutover/run_mainnet_cutover_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected mainnet cutover contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected channel/task lifecycle rust setup/cache condition in ci-fast-gate.yml" >&2
   exit 1
