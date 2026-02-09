@@ -79,6 +79,16 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
     assert!(DOC.contains("cargo test -p kamn-core network_fault_simulation"));
     assert!(DOC.contains("cargo test -p kamn-core snapshot_store"));
     assert!(DOC.contains("cargo test -p kamn-core --test bridge_quorum_runtime_docs"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test task_state_machine task_lifecycle_property_generated_sequences_preserve_transition_contracts -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test escrow_lifecycle escrow_property_generated_action_sequences_preserve_amount_and_status_invariants -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test runtime_peer_lifecycle peer_lifecycle_property_generated_event_sequences_match_transition_contract -- --exact"
+    ));
+    assert!(DOC.contains("bash scripts/runtime/run_lifecycle_property_contract_lane.sh"));
     assert!(DOC.contains("cargo test -p kamn-node --test node_runtime_cli_docs"));
     assert!(DOC.contains("bash scripts/runtime/run_runtime_snapshot_contract_lane.sh"));
     assert!(DOC.contains(
@@ -115,4 +125,7 @@ fn regression_requires_rejoin_and_overflow_rejection_rules() {
     ));
     assert!(DOC.contains("snapshot stale metadata rejection (`Regression: #617`)"));
     assert!(DOC.contains("snapshot restore cursor mismatch rejection (`Regression: #617`)"));
+    assert!(DOC.contains(
+        "task/escrow/peer lifecycle generated invariant lanes remain deterministic (`Regression: #842`)"
+    ));
 }

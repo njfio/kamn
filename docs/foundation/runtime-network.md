@@ -267,6 +267,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - stale disconnected peer queue purge decision remains deterministic (`Regression: #618`)
   - snapshot stale metadata rejection (`Regression: #617`)
   - snapshot restore cursor mismatch rejection (`Regression: #617`)
+  - task/escrow/peer lifecycle generated invariant lanes remain deterministic (`Regression: #842`)
 - Performance:
   - bounded PR-lane runtime backpressure evaluation budget check
   - bounded PR-lane authenticated peer-frame validation budget check
@@ -288,6 +289,10 @@ cargo test -p kamn-core network_fault_simulation
 cargo test -p kamn-core snapshot_store
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-core --test bridge_quorum_runtime_docs
+cargo test -p kamn-core --test task_state_machine task_lifecycle_property_generated_sequences_preserve_transition_contracts -- --exact
+cargo test -p kamn-core --test escrow_lifecycle escrow_property_generated_action_sequences_preserve_amount_and_status_invariants -- --exact
+cargo test -p kamn-core --test runtime_peer_lifecycle peer_lifecycle_property_generated_event_sequences_match_transition_contract -- --exact
+bash scripts/runtime/run_lifecycle_property_contract_lane.sh
 cargo test -p kamn-node --test node_runtime_cli_docs
 cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
 bash scripts/runtime/run_runtime_snapshot_contract_lane.sh

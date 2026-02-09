@@ -134,6 +134,50 @@ fn escrow_property_generated_action_sequences_preserve_amount_and_status_invaria
     }
 }
 
+fn build_terminal_escrow_variants() -> Vec<EscrowLifecycle> {
+    let mut released = EscrowLifecycle::new(9).expect("released escrow should initialize");
+    released
+        .release(9)
+        .expect("funded->released path should succeed");
+
+    let mut refunded = EscrowLifecycle::new(9).expect("refunded escrow should initialize");
+    refunded
+        .refund_remaining()
+        .expect("funded->refunded path should succeed");
+
+    let mut resolved = EscrowLifecycle::new(10).expect("resolved escrow should initialize");
+    resolved
+        .dispute()
+        .expect("funded->disputed path should succeed");
+    resolved
+        .resolve(5, 5)
+        .expect("disputed->resolved path should succeed");
+
+    vec![released, refunded, resolved]
+}
+
+#[test]
+fn escrow_property_terminal_statuses_reject_all_mutating_actions() {
+    for mut escrow in build_terminal_escrow_variants() {
+        let terminal_status = escrow.status();
+        let before_released = escrow.released_amount();
+        let before_refunded = escrow.refunded_amount();
+        let before_remaining = escrow.remaining_amount();
+
+        for action in ESCROW_PROPERTY_ACTIONS {
+            let result = apply_escrow_action(&mut escrow, action);
+            assert!(
+                result.is_err(),
+                "terminal escrow state should reject action {action:?}"
+            );
+            assert_eq!(escrow.status(), terminal_status);
+            assert_eq!(escrow.released_amount(), before_released);
+            assert_eq!(escrow.refunded_amount(), before_refunded);
+            assert_eq!(escrow.remaining_amount(), before_remaining);
+        }
+    }
+}
+
 #[test]
 fn funded_to_partial_to_released_flow_is_valid() {
     let mut escrow = EscrowLifecycle::new(100).expect("escrow must initialize");

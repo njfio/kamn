@@ -541,6 +541,11 @@ assert_eq "$(extract_output "$live_network_deep_script_output" "run_rust")" "fal
 assert_eq "$(extract_output "$live_network_deep_script_output" "run_runtime_snapshot_contract_tests")" "true" "live-network deep script changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$live_network_deep_script_output" "test_scope")" "runtime-contract" "live-network deep script changes should set runtime-contract scope"
 
+lifecycle_property_script_output="$(run_selector $'scripts/runtime/run_lifecycle_property_contract_lane.sh')"
+assert_eq "$(extract_output "$lifecycle_property_script_output" "run_rust")" "false" "lifecycle property contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$lifecycle_property_script_output" "run_runtime_snapshot_contract_tests")" "true" "lifecycle property contract script changes must run runtime snapshot contract lane"
+assert_eq "$(extract_output "$lifecycle_property_script_output" "test_scope")" "runtime-contract" "lifecycle property contract script changes should set runtime-contract scope"
+
 message_contract_docs_output="$(run_selector $'docs/foundation/message-lifecycle.md')"
 assert_eq "$(extract_output "$message_contract_docs_output" "run_rust")" "false" "message lifecycle contract docs should avoid rust lane"
 assert_eq "$(extract_output "$message_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "message lifecycle contract docs must run message lifecycle contract lane"

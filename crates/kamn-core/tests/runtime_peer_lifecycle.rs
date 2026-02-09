@@ -119,3 +119,70 @@ fn peer_lifecycle_property_disconnected_state_accepts_only_connect_or_rejoin() {
         );
     }
 }
+
+fn replay_peer_sequence(
+    sequence: &[PeerLifecycleEvent],
+) -> (
+    PeerLifecycleState,
+    Vec<Result<PeerLifecycleState, RuntimeLifecycleError>>,
+) {
+    let mut lifecycle = PeerLifecycle::new("peer-replay").expect("peer should initialize");
+    let mut outcomes = Vec::with_capacity(sequence.len());
+    for event in sequence {
+        outcomes.push(lifecycle.transition(*event));
+    }
+    (lifecycle.state(), outcomes)
+}
+
+#[test]
+fn peer_lifecycle_property_sequence_replay_is_deterministic() {
+    // Bound sequence depth for fast CI while still exploring broad event permutations.
+    for_each_peer_event_sequence(5, |sequence| {
+        let (state_a, outcomes_a) = replay_peer_sequence(sequence);
+        let (state_b, outcomes_b) = replay_peer_sequence(sequence);
+
+        assert_eq!(
+            outcomes_a, outcomes_b,
+            "replaying identical peer lifecycle sequence must be deterministic"
+        );
+        assert_eq!(state_a, state_b);
+    });
+}
+
+#[test]
+fn peer_lifecycle_property_roundtrip_disconnect_recovers_connection_path() {
+    for reconnect_event in [PeerLifecycleEvent::StartConnect, PeerLifecycleEvent::Rejoin] {
+        let mut lifecycle =
+            PeerLifecycle::new("peer-roundtrip").expect("peer roundtrip case should initialize");
+
+        assert_eq!(
+            lifecycle.transition(reconnect_event),
+            Ok(PeerLifecycleState::Connecting)
+        );
+        assert_eq!(
+            lifecycle.transition(PeerLifecycleEvent::HandshakeSucceeded),
+            Ok(PeerLifecycleState::Active)
+        );
+        assert_eq!(
+            lifecycle.transition(PeerLifecycleEvent::HeartbeatMissed),
+            Ok(PeerLifecycleState::Degraded)
+        );
+        assert_eq!(
+            lifecycle.transition(PeerLifecycleEvent::HeartbeatRestored),
+            Ok(PeerLifecycleState::Active)
+        );
+        assert_eq!(
+            lifecycle.transition(PeerLifecycleEvent::Disconnect),
+            Ok(PeerLifecycleState::Disconnected)
+        );
+        assert_eq!(
+            lifecycle.transition(reconnect_event),
+            Ok(PeerLifecycleState::Connecting)
+        );
+        assert_eq!(
+            lifecycle.transition(PeerLifecycleEvent::HandshakeSucceeded),
+            Ok(PeerLifecycleState::Active)
+        );
+        assert_eq!(lifecycle.state(), PeerLifecycleState::Active);
+    }
+}

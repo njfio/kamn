@@ -124,6 +124,78 @@ fn task_lifecycle_property_generated_sequences_preserve_transition_contracts() {
 }
 
 #[test]
+fn task_lifecycle_property_restore_roundtrip_preserves_state_and_history() {
+    // Regression: #842
+    // Keep sequence depth bounded for deterministic CI runtime while still covering broad replay shapes.
+    for_each_task_transition_sequence(4, |sequence| {
+        let mut lifecycle =
+            TaskLifecycle::new("task-restore-property").expect("task lifecycle should initialize");
+
+        for transition in sequence {
+            let _ = lifecycle.transition(*transition);
+        }
+
+        let history = lifecycle.history();
+        let restored = TaskLifecycle::restore("task-restore-property-copy", history.clone())
+            .expect("history produced by successful transitions must be restorable");
+
+        assert_eq!(restored.state(), lifecycle.state());
+        assert_eq!(restored.history(), history);
+        assert_eq!(restored.history().first(), Some(&TaskState::Submitted));
+    });
+}
+
+fn reach_terminal_state(target: TaskState) -> TaskLifecycle {
+    let mut lifecycle = TaskLifecycle::new("task-terminal-property")
+        .expect("task lifecycle should initialize for terminal-state property");
+    lifecycle
+        .transition(TaskTransition::Accept)
+        .expect("accept should succeed");
+    lifecycle
+        .transition(TaskTransition::StartWork)
+        .expect("start work should succeed");
+
+    match target {
+        TaskState::Completed => lifecycle
+            .transition(TaskTransition::Complete)
+            .expect("in_progress->completed should succeed"),
+        TaskState::Failed => lifecycle
+            .transition(TaskTransition::Fail)
+            .expect("in_progress->failed should succeed"),
+        TaskState::Cancelled => lifecycle
+            .transition(TaskTransition::Cancel)
+            .expect("in_progress->cancelled should succeed"),
+        other => panic!("unsupported terminal state for property test: {other:?}"),
+    }
+
+    lifecycle
+}
+
+#[test]
+fn task_lifecycle_property_terminal_states_are_absorbing() {
+    // Regression: #842
+    let terminal_states = [
+        TaskState::Completed,
+        TaskState::Failed,
+        TaskState::Cancelled,
+    ];
+    for terminal_state in terminal_states {
+        let mut lifecycle = reach_terminal_state(terminal_state);
+        let terminal_history = lifecycle.history();
+
+        for transition in TASK_TRANSITIONS {
+            assert_eq!(
+                lifecycle.transition(transition),
+                Err(TaskLifecycleError::TerminalState(terminal_state)),
+                "terminal state should reject transition {transition:?}"
+            );
+            assert_eq!(lifecycle.state(), terminal_state);
+            assert_eq!(lifecycle.history(), terminal_history);
+        }
+    }
+}
+
+#[test]
 fn new_task_starts_submitted_with_history() {
     let lifecycle = TaskLifecycle::new("task-1").expect("task lifecycle should initialize");
     assert_eq!(lifecycle.state(), TaskState::Submitted);
