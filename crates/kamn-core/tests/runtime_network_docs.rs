@@ -28,6 +28,7 @@ fn doc_contains_peer_lifecycle_and_queue_rules() {
     assert!(DOC.contains("## Peer Lifecycle Rules"));
     assert!(DOC.contains("## Authenticated Peer Transport Framing Rules"));
     assert!(DOC.contains("## Deterministic Input Mutation Fail-Closed Rules"));
+    assert!(DOC.contains("## Deterministic Concurrency Harness Rules"));
     assert!(DOC.contains("## Queue Guard Rules"));
     assert!(DOC.contains("## Deterministic Backpressure and Stale-Peer Queue Rules"));
     assert!(DOC.contains("## Scheduler Determinism Rules"));
@@ -52,6 +53,10 @@ fn doc_contains_peer_lifecycle_and_queue_rules() {
     assert!(DOC.contains("encoding/character drift cases"));
     assert!(DOC.contains("method mismatch prefix cases"));
     assert!(DOC.contains("run_input_mutation_contract_lane.sh"));
+    assert!(DOC.contains("single-winner task accept races"));
+    assert!(DOC.contains("deterministic peer lifecycle phase summaries"));
+    assert!(DOC.contains("run_concurrency_state_mutation_contract_lane.sh"));
+    assert!(DOC.contains("run_concurrency_state_mutation_deep_lane.sh"));
 }
 
 #[test]
@@ -95,6 +100,13 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
     ));
     assert!(DOC.contains("bash scripts/runtime/run_input_mutation_contract_lane.sh"));
     assert!(DOC.contains(
+        "cargo test -p kamn-core --test concurrency_state_mutation functional_task_accept_concurrency_replay_fixture_preserves_invariants -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test concurrency_state_mutation integration_peer_lifecycle_concurrency_replay_is_deterministic_across_rounds -- --exact"
+    ));
+    assert!(DOC.contains("bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh"));
+    assert!(DOC.contains(
         "cargo test -p kamn-core --test task_state_machine task_lifecycle_property_generated_sequences_preserve_transition_contracts -- --exact"
     ));
     assert!(DOC.contains(
@@ -112,6 +124,7 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
     assert!(DOC.contains(
         "cargo test -p kamn-core performance_network_fault_simulation_chaos_lane_stress -- --ignored"
     ));
+    assert!(DOC.contains("bash scripts/runtime/run_concurrency_state_mutation_deep_lane.sh"));
     assert!(DOC.contains("bash scripts/runtime/run_runtime_snapshot_deep_lane.sh"));
     assert!(DOC.contains("cargo clippy -p kamn-core -- -D warnings"));
 }
@@ -140,6 +153,9 @@ fn regression_requires_rejoin_and_overflow_rejection_rules() {
     ));
     assert!(DOC.contains("snapshot stale metadata rejection (`Regression: #617`)"));
     assert!(DOC.contains("snapshot restore cursor mismatch rejection (`Regression: #617`)"));
+    assert!(
+        DOC.contains("concurrent accept races never allow multiple winners (`Regression: #844`)")
+    );
     assert!(DOC.contains(
         "deterministic envelope/DID mutation fail-closed reasons remain stable (`Regression: #843`)"
     ));
@@ -153,4 +169,14 @@ fn doc_contains_mutation_fail_closed_contract_rules() {
     assert!(DOC.contains("All mutation corpus entries must fail closed"));
     assert!(DOC.contains("typed errors and stable reason strings"));
     assert!(DOC.contains("Regression: #843"));
+}
+
+#[test]
+fn doc_contains_concurrency_harness_contract_rules() {
+    assert!(DOC.contains("single-winner task accept races under parallel contender workloads"));
+    assert!(DOC.contains("deterministic duplicate-submit rejection outcomes"));
+    assert!(DOC.contains("deterministic peer lifecycle phase summaries"));
+    assert!(DOC.contains("run_concurrency_state_mutation_contract_lane.sh"));
+    assert!(DOC.contains("run_concurrency_state_mutation_deep_lane.sh"));
+    assert!(DOC.contains("Regression: #844"));
 }
