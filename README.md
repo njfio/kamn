@@ -79,11 +79,12 @@ All code changes are issue-first and follow strict Red → Green → Refactor �
 3. Create a branch: `codex/issue-<id>-<short-slug>`.
 4. Log progress comments on the issue using the required status template.
 
-Full contributor rules are in `AGENTS.md`.
+Canonical contributor rules are in `.github/CONTRIBUTING.md` (`AGENTS.md` remains a compatibility redirect).
 
 ## Key Links
 
-- `AGENTS.md`: mandatory execution contract (issue hierarchy, TDD, PR standards).
+- `.github/CONTRIBUTING.md`: mandatory execution contract (issue hierarchy, TDD, PR standards).
+- `AGENTS.md`: compatibility redirect for agent tooling.
 - `PRD.md`: product requirements and phase scope baseline.
 - `docs/foundation/`: domain contracts used by docs tests and release gates.
 - `.github/workflows/`: CI lane orchestration.
