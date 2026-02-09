@@ -1,0 +1,57 @@
+{
+  "schema_version": "kamn.compliance.dsar-legal-hold.replay-cases.v1",
+  "cases": [
+    {
+      "case_id": "go_export_complete_evidence",
+      "request_id": "dsar-export-001",
+      "subject_did": "did:kamn:subject-001",
+      "request_type": "EXPORT",
+      "legal_hold_active": false,
+      "retention_expired": true,
+      "evidence_complete": true,
+      "approval_recorded": true,
+      "tamper_check": "PASS",
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "GO"
+    },
+    {
+      "case_id": "no_go_erasure_legal_hold_active",
+      "request_id": "dsar-erasure-002",
+      "subject_did": "did:kamn:subject-002",
+      "request_type": "ERASURE",
+      "legal_hold_active": true,
+      "retention_expired": true,
+      "evidence_complete": true,
+      "approval_recorded": true,
+      "tamper_check": "PASS",
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
+      "case_id": "no_go_erasure_retention_not_expired",
+      "request_id": "dsar-erasure-003",
+      "subject_did": "did:kamn:subject-003",
+      "request_type": "ERASURE",
+      "legal_hold_active": false,
+      "retention_expired": false,
+      "evidence_complete": true,
+      "approval_recorded": true,
+      "tamper_check": "PASS",
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
+      "case_id": "no_go_tampered_evidence",
+      "request_id": "dsar-access-004",
+      "subject_did": "did:kamn:subject-004",
+      "request_type": "ACCESS",
+      "legal_hold_active": false,
+      "retention_expired": true,
+      "evidence_complete": true,
+      "approval_recorded": true,
+      "tamper_check": "FAIL",
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    }
+  ]
+}

@@ -54,6 +54,22 @@ SOC2 audit readiness requires deterministic control evidence bundles with replay
 - Regression policy:
   - tampered final decisions and incomplete/tampered control evidence force `NO-GO` (`Regression: #732`).
 
+## DSAR Legal-Hold Evidence Contract (Issue #746)
+Data-subject access/export/erasure evidence must enforce legal-hold precedence through deterministic bundle policy checks.
+
+- Evidence bundle generator:
+  - `bash scripts/compliance/generate_dsar_legal_hold_evidence_bundle.sh --output-file /tmp/dsar-legal-hold.json --request-id dsar-erasure-001 --subject-did did:kamn:subject-001 --request-type ERASURE --legal-hold-active true --retention-expired true --evidence-complete true --approval-recorded true --tamper-check PASS --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/compliance/check_dsar_legal_hold_policy.sh --bundle-file /tmp/dsar-legal-hold.json`
+- PR fast contract lane:
+  - `bash scripts/compliance/run_dsar_legal_hold_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/compliance/run_dsar_legal_hold_deep_lane.sh --output-json dsar-legal-hold-report.json`
+- Replay matrix runner:
+  - `python3 scripts/compliance/run_dsar_legal_hold_matrix.py --fixture fixtures/compliance_dsar/legal_hold_precedence_cases.json --output-json dsar-legal-hold-report.json`
+- Regression policy:
+  - legal-hold bypass attempts and tampered DSAR evidence force `NO-GO` (`Regression: #732`).
+
 ## Local Validation
 Run from repository root:
 
@@ -62,6 +78,10 @@ bash scripts/compliance/test_generate_soc2_control_evidence_bundle.sh
 bash scripts/compliance/test_run_soc2_control_evidence_contract_lane.sh
 bash scripts/compliance/test_run_soc2_control_evidence_replay_matrix.sh
 bash scripts/compliance/test_run_soc2_control_evidence_deep_lane.sh
+bash scripts/compliance/test_generate_dsar_legal_hold_evidence_bundle.sh
+bash scripts/compliance/test_run_dsar_legal_hold_contract_lane.sh
+bash scripts/compliance/test_run_dsar_legal_hold_matrix.sh
+bash scripts/compliance/test_run_dsar_legal_hold_deep_lane.sh
 cargo test -p kamn-core --test audit_export_interfaces
 cargo test -p kamn-core --test audit_export_interfaces_docs
 cargo fmt --check

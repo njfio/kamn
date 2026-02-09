@@ -140,6 +140,13 @@ jobs:
           bash scripts/compliance/test_run_soc2_control_evidence_contract_lane.sh
           bash scripts/compliance/test_run_soc2_control_evidence_replay_matrix.sh
 
+      - name: Run DSAR legal-hold contract lane
+        if: steps.scope.outputs.run_dsar_legal_hold_contract_tests == 'true'
+        run: |
+          bash scripts/compliance/test_generate_dsar_legal_hold_evidence_bundle.sh
+          bash scripts/compliance/test_run_dsar_legal_hold_contract_lane.sh
+          bash scripts/compliance/test_run_dsar_legal_hold_matrix.sh
+
       - name: Run token launch handoff contract lane
         if: steps.scope.outputs.run_token_launch_contract_tests == 'true'
         run: bash scripts/token/run_token_launch_handoff_contract_lane.sh

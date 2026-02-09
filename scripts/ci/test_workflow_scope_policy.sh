@@ -215,6 +215,26 @@ if ! grep -Fq "bash scripts/compliance/test_run_soc2_control_evidence_replay_mat
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_dsar_legal_hold_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected DSAR legal-hold contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/compliance/test_generate_dsar_legal_hold_evidence_bundle.sh" "$FAST_WORKFLOW"; then
+  echo "expected DSAR legal-hold evidence bundle tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/compliance/test_run_dsar_legal_hold_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected DSAR legal-hold contract lane script tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/compliance/test_run_dsar_legal_hold_matrix.sh" "$FAST_WORKFLOW"; then
+  echo "expected DSAR legal-hold matrix tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_token_launch_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected token launch contract scope condition in ci-fast-gate.yml" >&2
   exit 1
@@ -329,6 +349,16 @@ fi
 
 if ! grep -Fq "soc2-control-evidence-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
   echo "expected SOC2 control evidence deep report artifact upload in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/compliance/run_dsar_legal_hold_deep_lane.sh --output-json dsar-legal-hold-report.json" "$DEEP_WORKFLOW"; then
+  echo "expected scheduled DSAR legal-hold deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "dsar-legal-hold-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
+  echo "expected DSAR legal-hold deep report artifact upload in ci-deep-validate.yml" >&2
   exit 1
 fi
 
