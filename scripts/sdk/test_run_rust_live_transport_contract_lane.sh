@@ -29,6 +29,14 @@ if ! grep -Fq "performance_live_transport_multi_client_deep_lane -- --ignored" "
   exit 1
 fi
 
-bash "$ROOT_DIR/scripts/sdk/test_run_local_e2e_demo.sh"
+if ! grep -Fq "tcp_transport_adapter" "$FAST_SCRIPT"; then
+  echo "expected rust sdk live transport fast-lane runner to include tcp transport adapter tests" >&2
+  exit 1
+fi
+
+if ! grep -Fq "test_run_tcp_signed_relay_demo.sh" "$FAST_SCRIPT"; then
+  echo "expected rust sdk live transport fast-lane runner to include tcp signed relay demo coverage" >&2
+  exit 1
+fi
 
 echo "rust sdk live transport contract lane script tests passed."
