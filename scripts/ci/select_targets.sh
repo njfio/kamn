@@ -387,14 +387,22 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    crates/kamn-core/src/token.rs|crates/kamn-core/tests/token_config.rs|crates/kamn-core/tests/token_config_docs.rs|docs/foundation/token-config.md|docs/foundation/token-model.md|docs/foundation/release-gonogo-checklist.md|scripts/token/*|scripts/framework/*|fixtures/token_launch/*)
+    crates/kamn-core/src/token.rs|crates/kamn-core/tests/token_config.rs|crates/kamn-core/tests/token_config_docs.rs|docs/foundation/token-config.md|docs/foundation/token-model.md|docs/foundation/release-gonogo-checklist.md|scripts/token/*|fixtures/token_launch/*)
       TOKEN_LAUNCH_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
 
   case "$file" in
-    crates/kamn-core/tests/release_gonogo_checklist_docs.rs|docs/foundation/release-gonogo-checklist.md|scripts/treasury/*|fixtures/treasury_disbursement/*)
+    crates/kamn-core/tests/release_gonogo_checklist_docs.rs|docs/foundation/release-gonogo-checklist.md|docs/foundation/treasury-disbursement-policy.md|scripts/treasury/*|fixtures/treasury_disbursement/*)
+      TREASURY_DISBURSEMENT_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
+    scripts/framework/*)
+      TOKEN_LAUNCH_CONTRACT_CHANGED=true
       TREASURY_DISBURSEMENT_CONTRACT_CHANGED=true
       classified=true
       ;;

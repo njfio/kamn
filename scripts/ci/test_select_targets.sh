@@ -1132,6 +1132,7 @@ assert_eq "$(extract_output "$token_contract_script_output" "test_scope")" "toke
 token_framework_script_output="$(run_selector $'scripts/framework/contract_framework.py')"
 assert_eq "$(extract_output "$token_framework_script_output" "run_rust")" "false" "contract framework script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$token_framework_script_output" "run_token_launch_contract_tests")" "true" "contract framework changes must run token launch contract lane"
+assert_eq "$(extract_output "$token_framework_script_output" "run_treasury_disbursement_contract_tests")" "true" "contract framework changes must also run treasury disbursement contract lane"
 assert_eq "$(extract_output "$token_framework_script_output" "test_scope")" "token-contract" "contract framework changes should set token-contract scope"
 
 token_contract_fixture_output="$(run_selector $'fixtures/token_launch/handoff_invariant_cases.json')"
@@ -1153,6 +1154,11 @@ treasury_contract_fixture_output="$(run_selector $'fixtures/treasury_disbursemen
 assert_eq "$(extract_output "$treasury_contract_fixture_output" "run_rust")" "false" "treasury fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$treasury_contract_fixture_output" "run_treasury_disbursement_contract_tests")" "true" "treasury fixture changes must run treasury contract lane"
 assert_eq "$(extract_output "$treasury_contract_fixture_output" "test_scope")" "treasury-contract" "treasury fixture changes should set treasury-contract scope"
+
+treasury_contract_docs_output="$(run_selector $'docs/foundation/treasury-disbursement-policy.md')"
+assert_eq "$(extract_output "$treasury_contract_docs_output" "run_rust")" "false" "treasury disbursement docs should avoid rust lane"
+assert_eq "$(extract_output "$treasury_contract_docs_output" "run_treasury_disbursement_contract_tests")" "true" "treasury disbursement docs must run treasury contract lane"
+assert_eq "$(extract_output "$treasury_contract_docs_output" "test_scope")" "treasury-contract" "treasury disbursement docs should set treasury-contract scope"
 
 cutover_contract_docs_output="$(run_selector $'docs/foundation/mainnet-cutover-runbook.md')"
 assert_eq "$(extract_output "$cutover_contract_docs_output" "run_rust")" "false" "cutover contract docs should avoid rust lane"
