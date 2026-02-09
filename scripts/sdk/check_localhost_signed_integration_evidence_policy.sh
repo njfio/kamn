@@ -63,11 +63,18 @@ except json.JSONDecodeError as exc:
 required_fields = (
     "schema_version",
     "status",
+    "contract_key",
     "success_scenario_status",
     "signature_mismatch_scenario_status",
     "timeout_scenario_status",
+    "success_evidence_key",
+    "signature_mismatch_evidence_key",
+    "timeout_evidence_key",
     "signature_mismatch_reason_code",
     "timeout_reason_code",
+    "success_reason_key",
+    "signature_mismatch_reason_key",
+    "timeout_reason_key",
     "success_elapsed_seconds",
     "signature_mismatch_elapsed_seconds",
     "timeout_elapsed_seconds",
@@ -82,6 +89,9 @@ if payload["schema_version"] != "kamn.sdk.localhost-signed.integration-contract.
 status = payload["status"]
 if status not in {"pass", "fail"}:
     fail("status must be pass or fail")
+
+if payload["contract_key"] != "localhost_signed_integration_contract:v1":
+    fail("contract_key must be localhost_signed_integration_contract:v1")
 
 for field in (
     "success_scenario_status",
@@ -98,6 +108,48 @@ if payload["signature_mismatch_reason_code"] != "signature_mismatch_detected":
 
 if payload["timeout_reason_code"] != "listener_timeout_detected":
     fail("timeout_reason_code must be listener_timeout_detected")
+
+if payload["success_evidence_key"] != "localhost_signed_integration:success:v1":
+    fail("success_evidence_key must be localhost_signed_integration:success:v1")
+
+if (
+    payload["signature_mismatch_evidence_key"]
+    != "localhost_signed_integration:signature-mismatch:v1"
+):
+    fail(
+        "signature_mismatch_evidence_key must be "
+        "localhost_signed_integration:signature-mismatch:v1"
+    )
+
+if payload["timeout_evidence_key"] != "localhost_signed_integration:timeout:v1":
+    fail("timeout_evidence_key must be localhost_signed_integration:timeout:v1")
+
+if (
+    payload["success_reason_key"]
+    != "localhost_signed_integration_reason:none:v1"
+):
+    fail(
+        "success_reason_key must be "
+        "localhost_signed_integration_reason:none:v1"
+    )
+
+if (
+    payload["signature_mismatch_reason_key"]
+    != "localhost_signed_integration_reason:signature_mismatch_detected:v1"
+):
+    fail(
+        "signature_mismatch_reason_key must be "
+        "localhost_signed_integration_reason:signature_mismatch_detected:v1"
+    )
+
+if (
+    payload["timeout_reason_key"]
+    != "localhost_signed_integration_reason:listener_timeout_detected:v1"
+):
+    fail(
+        "timeout_reason_key must be "
+        "localhost_signed_integration_reason:listener_timeout_detected:v1"
+    )
 
 for field in (
     "success_elapsed_seconds",

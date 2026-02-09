@@ -170,6 +170,23 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Regression policy:
   - reason-code policy remains fail-closed with stable `["none"]` success marker (`Regression: #897`).
 
+## Localhost Signed Integration Evidence Key Contract Rules
+- Harness command:
+  - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario success --output-json /tmp/localhost-signed-harness-success.json`
+- Contract lane command:
+  - `bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json`
+- Evidence policy checker:
+  - `bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-file /tmp/localhost-signed-integration-contract-report.json`
+- Contract report schema:
+  - `kamn.sdk.localhost-signed.integration-contract.v1`
+- Deterministic keys:
+  - `localhost_signed_integration_contract:v1`
+  - `localhost_signed_integration:success:v1`
+  - `localhost_signed_integration:signature-mismatch:v1`
+  - `localhost_signed_integration:timeout:v1`
+- Regression policy:
+  - deterministic evidence keys and reason keys remain fail-closed (`Regression: #899`).
+
 ## Queue Guard Rules
 - `BoundedRuntimeQueue<T>` is FIFO and preserves insertion order.
 - Capacity must be greater than zero.

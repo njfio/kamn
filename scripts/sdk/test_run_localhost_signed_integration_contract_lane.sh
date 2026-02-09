@@ -42,6 +42,22 @@ assert report["status"] == "pass"
 assert report["success_scenario_status"] == "pass"
 assert report["signature_mismatch_scenario_status"] == "pass"
 assert report["timeout_scenario_status"] == "pass"
+assert report["contract_key"] == "localhost_signed_integration_contract:v1"
+assert report["success_evidence_key"] == "localhost_signed_integration:success:v1"
+assert (
+    report["signature_mismatch_evidence_key"]
+    == "localhost_signed_integration:signature-mismatch:v1"
+)
+assert report["timeout_evidence_key"] == "localhost_signed_integration:timeout:v1"
+assert report["success_reason_key"] == "localhost_signed_integration_reason:none:v1"
+assert (
+    report["signature_mismatch_reason_key"]
+    == "localhost_signed_integration_reason:signature_mismatch_detected:v1"
+)
+assert (
+    report["timeout_reason_key"]
+    == "localhost_signed_integration_reason:listener_timeout_detected:v1"
+)
 # Regression: #878
 assert report["signature_mismatch_reason_code"] == "signature_mismatch_detected"
 assert report["timeout_reason_code"] == "listener_timeout_detected"
