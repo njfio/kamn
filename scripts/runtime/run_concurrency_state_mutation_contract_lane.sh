@@ -11,8 +11,12 @@ cargo test -p kamn-core --test concurrency_state_mutation task_submit_concurrenc
 cargo test -p kamn-core --test concurrency_state_mutation peer_lifecycle_concurrency_preserves_transition_contract_across_phases -- --exact >/dev/null
 cargo test -p kamn-core --test concurrency_state_mutation functional_task_accept_concurrency_replay_fixture_preserves_invariants -- --exact >/dev/null
 cargo test -p kamn-core --test concurrency_state_mutation integration_peer_lifecycle_concurrency_replay_is_deterministic_across_rounds -- --exact >/dev/null
+cargo test -p kamn-core --test concurrency_state_mutation functional_escrow_dispute_refund_concurrency_replay_fixture_preserves_terminal_snapshot -- --exact >/dev/null
+cargo test -p kamn-core --test concurrency_state_mutation integration_escrow_dispute_refund_concurrency_replay_is_deterministic_across_rounds -- --exact >/dev/null
 cargo test -p kamn-core --test concurrency_state_mutation regression_concurrency_accept_race_never_allows_multiple_winners -- --exact >/dev/null
+cargo test -p kamn-core --test concurrency_state_mutation regression_escrow_refund_race_never_allows_multiple_refund_winners -- --exact >/dev/null
 cargo test -p kamn-core --test concurrency_state_mutation performance_concurrency_state_mutation_contract_lane_stays_within_budget -- --exact >/dev/null
+cargo test -p kamn-core --test concurrency_state_mutation performance_escrow_dispute_refund_concurrency_lane_stays_within_budget -- --exact >/dev/null
 
 cargo test -p kamn-core --test runtime_network_docs doc_contains_concurrency_harness_contract_rules -- --exact >/dev/null
 

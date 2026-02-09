@@ -12,6 +12,11 @@ cargo test -p kamn-core --test task_state_machine task_lifecycle_property_termin
 cargo test -p kamn-core --test escrow_lifecycle escrow_property_generated_action_sequences_preserve_amount_and_status_invariants -- --exact >/dev/null
 cargo test -p kamn-core --test escrow_lifecycle escrow_property_terminal_statuses_reject_all_mutating_actions -- --exact >/dev/null
 
+cargo test -p kamn-core --test dispute_refund_transition_contracts functional_property_dispute_refund_sequences_preserve_contracts -- --exact >/dev/null
+cargo test -p kamn-core --test dispute_refund_transition_contracts integration_dispute_refund_replay_traces_are_deterministic -- --exact >/dev/null
+cargo test -p kamn-core --test dispute_refund_transition_contracts regression_replay_dispute_after_refund_fails_closed_with_reason_code -- --exact >/dev/null
+cargo test -p kamn-core --test dispute_refund_transition_contracts performance_dispute_refund_property_contract_lane_stays_within_budget -- --exact >/dev/null
+
 cargo test -p kamn-core --test runtime_peer_lifecycle peer_lifecycle_property_generated_event_sequences_match_transition_contract -- --exact >/dev/null
 cargo test -p kamn-core --test runtime_peer_lifecycle peer_lifecycle_property_sequence_replay_is_deterministic -- --exact >/dev/null
 cargo test -p kamn-core --test runtime_peer_lifecycle peer_lifecycle_property_roundtrip_disconnect_recovers_connection_path -- --exact >/dev/null

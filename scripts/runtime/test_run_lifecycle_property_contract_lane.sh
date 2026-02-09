@@ -24,6 +24,21 @@ if ! grep -q "peer_lifecycle_property_generated_event_sequences_match_transition
   exit 1
 fi
 
+if ! grep -q "dispute_refund_transition_contracts" "$CONTRACT_LANE"; then
+  echo "expected lifecycle property contract lane to cover dispute/refund property contracts" >&2
+  exit 1
+fi
+
+if ! grep -q "integration_dispute_refund_replay_traces_are_deterministic" "$CONTRACT_LANE"; then
+  echo "expected lifecycle property contract lane to cover dispute/refund replay determinism integration test" >&2
+  exit 1
+fi
+
+if ! grep -q "performance_dispute_refund_property_contract_lane_stays_within_budget" "$CONTRACT_LANE"; then
+  echo "expected lifecycle property contract lane to enforce dispute/refund property runtime budget contract" >&2
+  exit 1
+fi
+
 lane_output="$(bash "$CONTRACT_LANE")"
 if ! printf '%s\n' "$lane_output" | grep -q "runtime lifecycle property contract lane tests passed."; then
   echo "expected runtime lifecycle property contract lane success marker" >&2

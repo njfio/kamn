@@ -25,13 +25,33 @@ if ! grep -q "integration_peer_lifecycle_concurrency_replay_is_deterministic_acr
   exit 1
 fi
 
+if ! grep -q "functional_escrow_dispute_refund_concurrency_replay_fixture_preserves_terminal_snapshot" "$FAST_SCRIPT"; then
+  echo "expected concurrency contract lane to include escrow dispute/refund functional replay coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "integration_escrow_dispute_refund_concurrency_replay_is_deterministic_across_rounds" "$FAST_SCRIPT"; then
+  echo "expected concurrency contract lane to include escrow dispute/refund integration replay determinism coverage" >&2
+  exit 1
+fi
+
 if ! grep -q "regression_concurrency_accept_race_never_allows_multiple_winners" "$FAST_SCRIPT"; then
   echo "expected concurrency contract lane to include regression winner exclusivity coverage" >&2
   exit 1
 fi
 
+if ! grep -q "regression_escrow_refund_race_never_allows_multiple_refund_winners" "$FAST_SCRIPT"; then
+  echo "expected concurrency contract lane to include escrow refund race regression coverage" >&2
+  exit 1
+fi
+
 if ! grep -q "performance_concurrency_state_mutation_contract_lane_stays_within_budget" "$FAST_SCRIPT"; then
   echo "expected concurrency contract lane to include performance budget coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "performance_escrow_dispute_refund_concurrency_lane_stays_within_budget" "$FAST_SCRIPT"; then
+  echo "expected concurrency contract lane to include escrow dispute/refund performance budget coverage" >&2
   exit 1
 fi
 

@@ -63,6 +63,22 @@ Each failed metric includes:
   - lane fails closed when elapsed runtime exceeds the budget.
   - report schema remains deterministic: `kamn.runtime.invariant-fuzz-concurrency-contract-report.v1`.
 
+## Dispute/Refund Property and Concurrency Runtime Budget Contract (Issue #904)
+- Property lane budget test:
+  - `cargo test -p kamn-core --test dispute_refund_transition_contracts performance_dispute_refund_property_contract_lane_stays_within_budget -- --exact`
+  - bounded dataset: totals `[2, 3, 5]`, max sequence depth `4`.
+  - runtime target: `< 700ms`.
+- Concurrency lane budget and determinism tests:
+  - `cargo test -p kamn-core --test concurrency_state_mutation integration_escrow_dispute_refund_concurrency_replay_is_deterministic_across_rounds -- --exact`
+  - `cargo test -p kamn-core --test concurrency_state_mutation performance_escrow_dispute_refund_concurrency_lane_stays_within_budget -- --exact`
+  - bounded replay rounds: `24` determinism checks and `64` budget checks.
+  - runtime target: `< 600ms`.
+- Fast lane script coverage:
+  - `bash scripts/runtime/run_lifecycle_property_contract_lane.sh`
+  - `bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh`
+- Fail-closed regression marker:
+  - dispute/refund replay and refund-race multi-winner drift is rejected (`Regression: #904`).
+
 ## CI Threshold Gate Contract
 - Threshold profile source: `.ci/performance-targets.env`.
 - Required report metrics:

@@ -10,3 +10,13 @@ fn doc_contains_runtime_invariant_harness_coverage_contract() {
     assert!(DOC.contains("check_invariant_fuzz_concurrency_policy.sh"));
     assert!(DOC.contains("kamn.runtime.invariant-fuzz-concurrency-contract-report.v1"));
 }
+
+#[test]
+fn regression_requires_dispute_refund_property_and_concurrency_contract_markers() {
+    // Regression: #904
+    assert!(DOC.contains("## Dispute/Refund Property and Concurrency Contracts (Issue #904)"));
+    assert!(DOC.contains("dispute_refund_transition_contracts"));
+    assert!(DOC.contains("run_lifecycle_property_contract_lane.sh"));
+    assert!(DOC.contains("run_concurrency_state_mutation_contract_lane.sh"));
+    assert!(DOC.contains("Regression: #904"));
+}
