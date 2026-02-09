@@ -38,10 +38,30 @@ Escrow settlement accounting must include deterministic ledger-reference evidenc
 - Regression policy:
   - missing ledger reference evidence and ledger amount drift force `NO-GO` (`Regression: #717`).
 
+## SOC2 Control Evidence Bundle Contract (Issue #744)
+SOC2 audit readiness requires deterministic control evidence bundles with replay-safe policy verification.
+
+- Evidence bundle generator:
+  - `bash scripts/compliance/generate_soc2_control_evidence_bundle.sh --output-file /tmp/soc2-control-evidence.json --control-id CC6.1 --audit-period-start 2026-01-01 --audit-period-end 2026-01-31 --collector-did did:kamn:auditor-001 --evidence-uri s3://kamn-audit/soc2/cc6_1/jan-2026/evidence.json --evidence-sha256 sha256:1111111111111111111111111111111111111111111111111111111111111111 --tamper-check PASS --completeness-check PASS --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/compliance/check_soc2_control_evidence_policy.sh --bundle-file /tmp/soc2-control-evidence.json`
+- PR fast contract lane:
+  - `bash scripts/compliance/run_soc2_control_evidence_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/compliance/run_soc2_control_evidence_deep_lane.sh --output-json soc2-control-evidence-report.json`
+- Replay matrix runner:
+  - `python3 scripts/compliance/run_soc2_control_evidence_replay_matrix.py --fixture fixtures/compliance_soc2/control_evidence_replay_cases.json --output-json soc2-control-evidence-report.json`
+- Regression policy:
+  - tampered final decisions and incomplete/tampered control evidence force `NO-GO` (`Regression: #732`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
+bash scripts/compliance/test_generate_soc2_control_evidence_bundle.sh
+bash scripts/compliance/test_run_soc2_control_evidence_contract_lane.sh
+bash scripts/compliance/test_run_soc2_control_evidence_replay_matrix.sh
+bash scripts/compliance/test_run_soc2_control_evidence_deep_lane.sh
 cargo test -p kamn-core --test audit_export_interfaces
 cargo test -p kamn-core --test audit_export_interfaces_docs
 cargo fmt --check

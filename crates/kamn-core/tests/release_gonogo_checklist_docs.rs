@@ -69,6 +69,17 @@ fn checklist_contains_settlement_reconciliation_evidence_contract() {
 }
 
 #[test]
+fn checklist_contains_soc2_control_evidence_contract() {
+    assert!(CHECKLIST.contains("## SOC2 Control Evidence Contract"));
+    assert!(CHECKLIST.contains("generate_soc2_control_evidence_bundle.sh"));
+    assert!(CHECKLIST.contains("check_soc2_control_evidence_policy.sh"));
+    assert!(CHECKLIST.contains("run_soc2_control_evidence_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_soc2_control_evidence_deep_lane.sh"));
+    assert!(CHECKLIST.contains("run_soc2_control_evidence_replay_matrix.py"));
+    assert!(CHECKLIST.contains("fixtures/compliance_soc2/control_evidence_replay_cases.json"));
+}
+
+#[test]
 fn checklist_contains_token_launch_handoff_evidence_contract() {
     assert!(CHECKLIST.contains("## Token Launch Handoff Evidence Contract"));
     assert!(CHECKLIST.contains("generate_token_launch_handoff_evidence_bundle.sh"));
@@ -150,6 +161,14 @@ fn regression_requires_ledger_reference_evidence_guard_marker() {
     // Regression: #717
     assert!(CHECKLIST.contains(
         "missing ledger reference evidence and ledger amount drift force `NO-GO` (`Regression: #717`)."
+    ));
+}
+
+#[test]
+fn regression_requires_soc2_control_evidence_guard_marker() {
+    // Regression: #732
+    assert!(CHECKLIST.contains(
+        "tampered final decisions and incomplete/tampered control evidence force `NO-GO` (`Regression: #732`)."
     ));
 }
 
