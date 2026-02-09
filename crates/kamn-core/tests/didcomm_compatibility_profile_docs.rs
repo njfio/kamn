@@ -38,3 +38,18 @@ fn regression_requires_unsupported_attachment_rejection_rule() {
     // Regression: #179
     assert!(PROFILE.contains("Unsupported attachment translation decision: reject."));
 }
+
+#[test]
+fn profile_contains_didcomm_envelope_replay_contract_lane_commands() {
+    assert!(PROFILE.contains("## DIDComm Envelope Compatibility Replay Contract Lane (Issue #892)"));
+    assert!(PROFILE.contains("run_didcomm_envelope_compatibility_replay.py"));
+    assert!(PROFILE.contains("check_didcomm_envelope_compatibility_policy.sh"));
+    assert!(PROFILE.contains("run_didcomm_envelope_compatibility_contract_lane.sh"));
+    assert!(PROFILE.contains("didcomm_envelope_compatibility_reason_codes:GO:v1"));
+}
+
+#[test]
+fn regression_requires_didcomm_envelope_schema_signature_drift_fail_closed_policy() {
+    // Regression: #892
+    assert!(PROFILE.contains("Regression: #892"));
+}

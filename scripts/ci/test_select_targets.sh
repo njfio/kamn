@@ -823,6 +823,11 @@ assert_eq "$(extract_output "$message_contract_docs_output" "run_rust")" "false"
 assert_eq "$(extract_output "$message_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "message lifecycle contract docs must run message lifecycle contract lane"
 assert_eq "$(extract_output "$message_contract_docs_output" "test_scope")" "message-contract" "message lifecycle contract docs should set message-contract scope"
 
+didcomm_contract_docs_output="$(run_selector $'docs/foundation/didcomm-v2-compatibility-profile.md')"
+assert_eq "$(extract_output "$didcomm_contract_docs_output" "run_rust")" "false" "didcomm compatibility docs should avoid rust lane"
+assert_eq "$(extract_output "$didcomm_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "didcomm compatibility docs must run message lifecycle contract lane"
+assert_eq "$(extract_output "$didcomm_contract_docs_output" "test_scope")" "message-contract" "didcomm compatibility docs should set message-contract scope"
+
 key_management_contract_docs_output="$(run_selector $'docs/foundation/key-management-and-encryption.md')"
 assert_eq "$(extract_output "$key_management_contract_docs_output" "run_rust")" "false" "key management contract docs should avoid rust lane"
 assert_eq "$(extract_output "$key_management_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "key management contract docs must run message lifecycle contract lane"
@@ -837,6 +842,16 @@ message_contract_script_output="$(run_selector $'scripts/message/run_message_lif
 assert_eq "$(extract_output "$message_contract_script_output" "run_rust")" "false" "message lifecycle contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$message_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "message lifecycle contract script changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$message_contract_script_output" "test_scope")" "message-contract" "message lifecycle contract script changes should set message-contract scope"
+
+didcomm_contract_script_output="$(run_selector $'scripts/message/run_didcomm_envelope_compatibility_contract_lane.sh')"
+assert_eq "$(extract_output "$didcomm_contract_script_output" "run_rust")" "false" "didcomm envelope contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$didcomm_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "didcomm envelope contract script changes must run message lifecycle contract lane"
+assert_eq "$(extract_output "$didcomm_contract_script_output" "test_scope")" "message-contract" "didcomm envelope contract script changes should set message-contract scope"
+
+didcomm_contract_fixture_output="$(run_selector $'fixtures/didcomm_envelope_compatibility/replay_cases.json')"
+assert_eq "$(extract_output "$didcomm_contract_fixture_output" "run_rust")" "false" "didcomm envelope fixture-only changes should avoid rust lane"
+assert_eq "$(extract_output "$didcomm_contract_fixture_output" "run_message_lifecycle_contract_tests")" "true" "didcomm envelope fixture changes must run message lifecycle contract lane"
+assert_eq "$(extract_output "$didcomm_contract_fixture_output" "test_scope")" "message-contract" "didcomm envelope fixture changes should set message-contract scope"
 
 key_lifecycle_invariant_contract_script_output="$(run_selector $'scripts/message/run_key_hierarchy_invariant_contract_lane.sh')"
 assert_eq "$(extract_output "$key_lifecycle_invariant_contract_script_output" "run_rust")" "false" "key hierarchy invariant contract script-only changes should avoid rust lane"

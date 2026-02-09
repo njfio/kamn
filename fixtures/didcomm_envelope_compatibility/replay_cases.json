@@ -1,0 +1,45 @@
+{
+  "schema_version": "kamn.didcomm.envelope-compatibility-fixture.v1",
+  "cases": [
+    {
+      "attachment_mapping_supported": true,
+      "case_id": "vector_s1_plaintext_request",
+      "ci_fast_gate": "PASS",
+      "expected_decision": "GO",
+      "message_variant": "plaintext_request",
+      "metadata_version": "didcomm-v2-profile-1",
+      "recipient_key_reference_present": true,
+      "signature_status": "PASS"
+    },
+    {
+      "attachment_mapping_supported": true,
+      "case_id": "vector_s2_signed_response",
+      "ci_fast_gate": "PASS",
+      "expected_decision": "GO",
+      "message_variant": "signed_response",
+      "metadata_version": "didcomm-v2-profile-1",
+      "recipient_key_reference_present": true,
+      "signature_status": "PASS"
+    },
+    {
+      "attachment_mapping_supported": true,
+      "case_id": "vector_f1_missing_recipient_key",
+      "ci_fast_gate": "PASS",
+      "expected_decision": "NO-GO",
+      "message_variant": "encrypted_event",
+      "metadata_version": "didcomm-v2-profile-1",
+      "recipient_key_reference_present": false,
+      "signature_status": "PASS"
+    },
+    {
+      "attachment_mapping_supported": false,
+      "case_id": "vector_f2_unsupported_attachment_mapping",
+      "ci_fast_gate": "PASS",
+      "expected_decision": "NO-GO",
+      "message_variant": "encrypted_event",
+      "metadata_version": "didcomm-v2-profile-1",
+      "recipient_key_reference_present": true,
+      "signature_status": "PASS"
+    }
+  ]
+}
