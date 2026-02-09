@@ -387,7 +387,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    crates/kamn-core/src/token.rs|crates/kamn-core/tests/token_config.rs|crates/kamn-core/tests/token_config_docs.rs|docs/foundation/token-config.md|docs/foundation/token-model.md|docs/foundation/release-gonogo-checklist.md|scripts/token/*|fixtures/token_launch/*)
+    crates/kamn-core/src/token.rs|crates/kamn-core/tests/token_config.rs|crates/kamn-core/tests/token_config_docs.rs|docs/foundation/token-config.md|docs/foundation/token-model.md|docs/foundation/release-gonogo-checklist.md|scripts/token/*|scripts/framework/*|fixtures/token_launch/*)
       TOKEN_LAUNCH_CONTRACT_CHANGED=true
       classified=true
       ;;

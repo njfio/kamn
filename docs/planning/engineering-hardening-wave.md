@@ -22,6 +22,8 @@ default development loop green while tightening missing-doc policy controls for
   - `bash scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
 - CI helper regression suite:
   - `bash scripts/ci/test_ci_tools.sh`
+- Contract framework helper unit tests:
+  - `bash scripts/framework/test_contract_framework.sh`
 
 ## Missing-Docs Policy Contract
 
@@ -36,6 +38,8 @@ default development loop green while tightening missing-doc policy controls for
 
 - The policy checker is shell-based (`grep`/`awk` + fixture diff) and avoids
   full Rust builds when only documentation/policy files change.
+- The framework extraction pilot keeps legacy shell command surfaces stable while
+  moving reusable validation logic into shared Python helpers.
 - CI scope routing only enables the checker for relevant files:
   - `crates/kamn-core/src/lib.rs`
   - `crates/kamn-core/tests/missing_docs_policy.rs`
@@ -43,6 +47,9 @@ default development loop green while tightening missing-doc policy controls for
   - `fixtures/ci/kamn_core_missing_docs_allowlist.txt`
   - `scripts/ci/check_kamn_core_missing_docs_policy.sh`
   - `scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
+  - `scripts/framework/contract_framework.py`
+  - `scripts/framework/test_contract_framework.sh`
+  - `scripts/framework/test_contract_framework.py`
   - `docs/planning/engineering-hardening-wave.md`
   - `README.md`
 
