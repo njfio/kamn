@@ -1,12 +1,17 @@
 use crate::{AgentDid, SdkError};
+use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
 const DEFAULT_CONNECT_RETRIES: u32 = 20;
 const DEFAULT_RETRY_DELAY_MILLIS: u64 = 100;
 const DEFAULT_MAX_WIRE_BYTES: usize = 32 * 1024;
+const TCP_HANDSHAKE_VERSION: &str = "1";
+const TCP_HANDSHAKE_PROFILE: &str = "ed25519:baseline-v1";
+const TCP_FRAME_DELIMITER: &str = "\n\n";
 
 /// Deterministic signed envelope transported over TCP.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -231,6 +236,229 @@ pub fn signature_for_fields(from: &str, nonce: u64, state_hash: &str, body: &str
     )
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TcpHandshakeFrame {
+    from: AgentDid,
+    to: AgentDid,
+    nonce: u64,
+    signature: String,
+}
+
+impl TcpHandshakeFrame {
+    fn from_envelope(envelope: &TcpSignedEnvelope) -> Self {
+        Self {
+            from: envelope.from.clone(),
+            to: envelope.to.clone(),
+            nonce: envelope.nonce,
+            signature: envelope.signature.clone(),
+        }
+    }
+
+    fn to_wire_payload(&self) -> String {
+        format!(
+            "frame=handshake\nversion={TCP_HANDSHAKE_VERSION}\nprofile={TCP_HANDSHAKE_PROFILE}\nfrom={}\nto={}\nnonce={}\nsignature={}\n",
+            self.from.as_str(),
+            self.to.as_str(),
+            self.nonce,
+            self.signature
+        )
+    }
+
+    fn parse_wire_payload(payload: &str) -> Result<Self, SdkError> {
+        let mut frame: Option<String> = None;
+        let mut version: Option<String> = None;
+        let mut profile: Option<String> = None;
+        let mut from: Option<String> = None;
+        let mut to: Option<String> = None;
+        let mut nonce: Option<u64> = None;
+        let mut signature: Option<String> = None;
+
+        for raw_line in payload.lines() {
+            if raw_line.trim().is_empty() {
+                continue;
+            }
+
+            let (key, raw_value) = raw_line.split_once('=').ok_or(SdkError::InvalidInput {
+                field: "handshake_frame",
+                reason: "line must contain key=value",
+            })?;
+            let value = raw_value.trim_end_matches('\r');
+
+            match key {
+                "frame" => {
+                    if frame.is_some() {
+                        return Err(SdkError::InvalidInput {
+                            field: "handshake_frame",
+                            reason: "duplicate key: frame",
+                        });
+                    }
+                    frame = Some(value.to_owned());
+                }
+                "version" => {
+                    if version.is_some() {
+                        return Err(SdkError::InvalidInput {
+                            field: "handshake_frame",
+                            reason: "duplicate key: version",
+                        });
+                    }
+                    version = Some(value.to_owned());
+                }
+                "profile" => {
+                    if profile.is_some() {
+                        return Err(SdkError::InvalidInput {
+                            field: "handshake_frame",
+                            reason: "duplicate key: profile",
+                        });
+                    }
+                    profile = Some(value.to_owned());
+                }
+                "from" => {
+                    if from.is_some() {
+                        return Err(SdkError::InvalidInput {
+                            field: "handshake_frame",
+                            reason: "duplicate key: from",
+                        });
+                    }
+                    from = Some(value.to_owned());
+                }
+                "to" => {
+                    if to.is_some() {
+                        return Err(SdkError::InvalidInput {
+                            field: "handshake_frame",
+                            reason: "duplicate key: to",
+                        });
+                    }
+                    to = Some(value.to_owned());
+                }
+                "nonce" => {
+                    if nonce.is_some() {
+                        return Err(SdkError::InvalidInput {
+                            field: "handshake_frame",
+                            reason: "duplicate key: nonce",
+                        });
+                    }
+                    nonce = Some(value.parse::<u64>().map_err(|_| SdkError::InvalidInput {
+                        field: "handshake.nonce",
+                        reason: "must be an unsigned integer",
+                    })?);
+                }
+                "signature" => {
+                    if signature.is_some() {
+                        return Err(SdkError::InvalidInput {
+                            field: "handshake_frame",
+                            reason: "duplicate key: signature",
+                        });
+                    }
+                    signature = Some(value.to_owned());
+                }
+                _ => {
+                    return Err(SdkError::InvalidInput {
+                        field: "handshake_frame",
+                        reason: "unknown key",
+                    });
+                }
+            }
+        }
+
+        if frame.ok_or(SdkError::InvalidInput {
+            field: "handshake.frame",
+            reason: "missing required key",
+        })? != "handshake"
+        {
+            return Err(SdkError::InvalidInput {
+                field: "handshake.frame",
+                reason: "must equal handshake",
+            });
+        }
+        if version.ok_or(SdkError::InvalidInput {
+            field: "handshake.version",
+            reason: "missing required key",
+        })? != TCP_HANDSHAKE_VERSION
+        {
+            return Err(SdkError::InvalidInput {
+                field: "handshake.version",
+                reason: "unsupported handshake version",
+            });
+        }
+        if profile.ok_or(SdkError::InvalidInput {
+            field: "handshake.profile",
+            reason: "missing required key",
+        })? != TCP_HANDSHAKE_PROFILE
+        {
+            return Err(SdkError::InvalidInput {
+                field: "handshake.profile",
+                reason: "unsupported signature profile",
+            });
+        }
+
+        Ok(Self {
+            from: AgentDid::parse(from.ok_or(SdkError::InvalidInput {
+                field: "handshake.from",
+                reason: "missing required key",
+            })?)?,
+            to: AgentDid::parse(to.ok_or(SdkError::InvalidInput {
+                field: "handshake.to",
+                reason: "missing required key",
+            })?)?,
+            nonce: nonce.ok_or(SdkError::InvalidInput {
+                field: "handshake.nonce",
+                reason: "missing required key",
+            })?,
+            signature: signature.ok_or(SdkError::InvalidInput {
+                field: "handshake.signature",
+                reason: "missing required key",
+            })?,
+        })
+    }
+
+    fn verify_matches_envelope(&self, envelope: &TcpSignedEnvelope) -> Result<(), SdkError> {
+        if self.from != envelope.from {
+            return Err(SdkError::InvalidInput {
+                field: "handshake.from",
+                reason: "does not match envelope sender",
+            });
+        }
+        if self.to != envelope.to {
+            return Err(SdkError::InvalidInput {
+                field: "handshake.to",
+                reason: "does not match envelope recipient",
+            });
+        }
+        if self.nonce != envelope.nonce {
+            return Err(SdkError::InvalidInput {
+                field: "handshake.nonce",
+                reason: "does not match envelope nonce",
+            });
+        }
+        if self.signature != envelope.signature {
+            return Err(SdkError::InvalidInput {
+                field: "handshake.signature",
+                reason: "does not match envelope signature",
+            });
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default)]
+struct TcpReplayGuardState {
+    highest_nonce_by_route: HashMap<String, u64>,
+}
+
+impl TcpReplayGuardState {
+    fn verify_and_record(&mut self, envelope: &TcpSignedEnvelope) -> Result<(), SdkError> {
+        let route_key = format!("{}=>{}", envelope.from.as_str(), envelope.to.as_str());
+        if let Some(highest_nonce) = self.highest_nonce_by_route.get(&route_key) {
+            if envelope.nonce <= *highest_nonce {
+                return Err(SdkError::Conflict("tcp handshake replay detected"));
+            }
+        }
+        self.highest_nonce_by_route
+            .insert(route_key, envelope.nonce);
+        Ok(())
+    }
+}
+
 /// TCP transport configuration for local relay flows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TcpTransportConfig {
@@ -312,18 +540,23 @@ pub struct TcpReceivedEnvelope {
 #[derive(Debug, Clone)]
 pub struct TcpTransportAdapter {
     config: TcpTransportConfig,
+    replay_guard_state: Arc<Mutex<TcpReplayGuardState>>,
 }
 
 impl TcpTransportAdapter {
     /// Creates a new adapter for the provided transport config.
     pub fn new(config: TcpTransportConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            replay_guard_state: Arc::new(Mutex::new(TcpReplayGuardState::default())),
+        }
     }
 
     /// Sends a deterministic envelope to the configured TCP endpoint.
     pub fn send(&self, envelope: &TcpSignedEnvelope) -> Result<(), SdkError> {
         envelope.verify_integrity()?;
-        let payload = envelope.to_wire_payload();
+        let handshake = TcpHandshakeFrame::from_envelope(envelope);
+        let payload = serialize_transport_payload(&handshake, envelope);
 
         let mut stream = self.connect_with_retry()?;
         stream
@@ -383,6 +616,38 @@ impl TcpTransportAdapter {
             });
         }
 
-        TcpSignedEnvelope::parse_wire_payload(payload.as_str())
+        let (handshake_payload, envelope_payload) = split_transport_payload(payload.as_str())?;
+        let handshake = TcpHandshakeFrame::parse_wire_payload(handshake_payload)?;
+        let envelope = TcpSignedEnvelope::parse_wire_payload(envelope_payload)?;
+        handshake.verify_matches_envelope(&envelope)?;
+        self.verify_and_record_replay_guard(&envelope)?;
+        Ok(envelope)
     }
+
+    fn verify_and_record_replay_guard(&self, envelope: &TcpSignedEnvelope) -> Result<(), SdkError> {
+        let mut guard = self
+            .replay_guard_state
+            .lock()
+            .map_err(|_| SdkError::TransportFailure("tcp replay guard lock poisoned"))?;
+        guard.verify_and_record(envelope)
+    }
+}
+
+fn serialize_transport_payload(
+    handshake: &TcpHandshakeFrame,
+    envelope: &TcpSignedEnvelope,
+) -> String {
+    let mut payload = handshake.to_wire_payload();
+    payload.push('\n');
+    payload.push_str(&envelope.to_wire_payload());
+    payload
+}
+
+fn split_transport_payload(payload: &str) -> Result<(&str, &str), SdkError> {
+    payload
+        .split_once(TCP_FRAME_DELIMITER)
+        .ok_or(SdkError::InvalidInput {
+            field: "wire_payload",
+            reason: "missing handshake frame delimiter",
+        })
 }
