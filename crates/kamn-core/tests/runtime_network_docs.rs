@@ -196,3 +196,16 @@ fn doc_contains_invariant_fuzz_concurrency_contract_rules() {
     assert!(DOC.contains("check_invariant_fuzz_concurrency_policy.sh"));
     assert!(DOC.contains("kamn.runtime.invariant-fuzz-concurrency-contract-report.v1"));
 }
+
+#[test]
+fn doc_contains_localhost_signed_integration_evidence_key_contract_rules() {
+    assert!(DOC.contains("## Localhost Signed Integration Evidence Key Contract Rules"));
+    assert!(DOC.contains("run_localhost_signed_integration_harness.sh"));
+    assert!(DOC.contains("run_localhost_signed_integration_contract_lane.sh"));
+    assert!(DOC.contains("check_localhost_signed_integration_evidence_policy.sh"));
+    assert!(DOC.contains("localhost_signed_integration_contract:v1"));
+    assert!(DOC.contains("localhost_signed_integration:success:v1"));
+    assert!(DOC.contains("localhost_signed_integration:signature-mismatch:v1"));
+    assert!(DOC.contains("localhost_signed_integration:timeout:v1"));
+    assert!(DOC.contains("Regression: #899"));
+}

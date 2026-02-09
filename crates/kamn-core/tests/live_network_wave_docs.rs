@@ -19,6 +19,10 @@ fn live_network_wave_doc_contains_smoke_commands_and_schema() {
     assert!(LIVE_NETWORK_WAVE_DOC.contains("run_localhost_signed_integration_contract_lane.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("check_localhost_signed_integration_evidence_policy.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("kamn.sdk.localhost-signed.integration-contract.v1"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("contract_key"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("success_evidence_key"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("signature_mismatch_evidence_key"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("timeout_evidence_key"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("test_dashboard_package_runtime_compat.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("npx -y node@22"));
 }
@@ -39,6 +43,9 @@ fn regression_budget_guard_marker_is_documented() {
     // Regression: #880
     assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #880`"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("policy checker preserves schema and reason-code"));
+    // Regression: #899
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #899`"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("deterministic evidence keys"));
     // Regression: #868
     assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #868`"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("node@22"));

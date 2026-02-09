@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HARNESS_RUNNER="$ROOT_DIR/scripts/sdk/run_localhost_signed_integration_harness.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/sdk/check_localhost_signed_integration_evidence_policy.sh"
 LIVE_NETWORK_DOC="$ROOT_DIR/docs/planning/live-network-wave.md"
+RUNTIME_NETWORK_DOC="$ROOT_DIR/docs/foundation/runtime-network.md"
 README_FILE="$ROOT_DIR/README.md"
 
 output_json=""
@@ -37,6 +38,11 @@ if [ ! -f "$LIVE_NETWORK_DOC" ]; then
   exit 1
 fi
 
+if [ ! -f "$RUNTIME_NETWORK_DOC" ]; then
+  echo "expected runtime-network foundation doc to exist" >&2
+  exit 1
+fi
+
 if [ ! -f "$README_FILE" ]; then
   echo "expected README.md to exist" >&2
   exit 1
@@ -58,8 +64,16 @@ success_output="$(
     --scenario success \
     --output-json "$success_report"
 )"
-if ! printf '%s\n' "$success_output" | grep -Fq "status=pass; scenario=success; reason_code=none;"; then
-  echo "expected localhost signed integration success scenario to pass" >&2
+if ! printf '%s\n' "$success_output" | grep -Fq "status=pass; scenario=success;"; then
+  echo "expected localhost signed integration success scenario status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$success_output" | grep -Fq "reason_code=none;"; then
+  echo "expected localhost signed integration success scenario reason code marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$success_output" | grep -Fq "evidence_key=localhost_signed_integration:success:v1;"; then
+  echo "expected localhost signed integration success scenario evidence key" >&2
   exit 1
 fi
 
@@ -69,8 +83,16 @@ signature_output="$(
     --scenario signature-mismatch \
     --output-json "$signature_report"
 )"
-if ! printf '%s\n' "$signature_output" | grep -Fq "status=pass; scenario=signature-mismatch; reason_code=signature_mismatch_detected;"; then
-  echo "expected localhost signed integration signature mismatch scenario to pass" >&2
+if ! printf '%s\n' "$signature_output" | grep -Fq "status=pass; scenario=signature-mismatch;"; then
+  echo "expected localhost signed integration signature mismatch scenario status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$signature_output" | grep -Fq "reason_code=signature_mismatch_detected;"; then
+  echo "expected localhost signed integration signature mismatch scenario reason code marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$signature_output" | grep -Fq "evidence_key=localhost_signed_integration:signature-mismatch:v1;"; then
+  echo "expected localhost signed integration signature mismatch scenario evidence key" >&2
   exit 1
 fi
 
@@ -81,8 +103,16 @@ timeout_output="$(
     --timeout-seconds 1 \
     --output-json "$timeout_report"
 )"
-if ! printf '%s\n' "$timeout_output" | grep -Fq "status=pass; scenario=timeout; reason_code=listener_timeout_detected;"; then
-  echo "expected localhost signed integration timeout scenario to pass" >&2
+if ! printf '%s\n' "$timeout_output" | grep -Fq "status=pass; scenario=timeout;"; then
+  echo "expected localhost signed integration timeout scenario status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$timeout_output" | grep -Fq "reason_code=listener_timeout_detected;"; then
+  echo "expected localhost signed integration timeout scenario reason code marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$timeout_output" | grep -Fq "evidence_key=localhost_signed_integration:timeout:v1;"; then
+  echo "expected localhost signed integration timeout scenario evidence key" >&2
   exit 1
 fi
 
@@ -100,11 +130,18 @@ output_file = pathlib.Path(sys.argv[4])
 summary = {
     "schema_version": "kamn.sdk.localhost-signed.integration-contract.v1",
     "status": "pass",
+    "contract_key": "localhost_signed_integration_contract:v1",
     "success_scenario_status": success["status"],
     "signature_mismatch_scenario_status": signature["status"],
     "timeout_scenario_status": timeout["status"],
+    "success_evidence_key": success["evidence_key"],
+    "signature_mismatch_evidence_key": signature["evidence_key"],
+    "timeout_evidence_key": timeout["evidence_key"],
     "signature_mismatch_reason_code": signature["reason_code"],
     "timeout_reason_code": timeout["reason_code"],
+    "success_reason_key": success["reason_key"],
+    "signature_mismatch_reason_key": signature["reason_key"],
+    "timeout_reason_key": timeout["reason_key"],
     "success_elapsed_seconds": success["elapsed_seconds"],
     "signature_mismatch_elapsed_seconds": signature["elapsed_seconds"],
     "timeout_elapsed_seconds": timeout["elapsed_seconds"],
@@ -145,6 +182,16 @@ fi
 
 if ! grep -Fq "/tmp/localhost-signed-integration-contract-report.json" "$README_FILE"; then
   echo "expected README to reference localhost signed integration report artifact path" >&2
+  exit 1
+fi
+
+if ! grep -Fq "Localhost Signed Integration Evidence Key Contract Rules" "$RUNTIME_NETWORK_DOC"; then
+  echo "expected runtime-network doc to define localhost signed integration evidence key contract rules" >&2
+  exit 1
+fi
+
+if ! grep -Fq "localhost_signed_integration_contract:v1" "$RUNTIME_NETWORK_DOC"; then
+  echo "expected runtime-network doc to reference localhost signed integration contract key" >&2
   exit 1
 fi
 

@@ -117,14 +117,18 @@ emit_report() {
   local status="$1"
   local reason_code="$2"
   local elapsed
+  local evidence_key
+  local reason_key
   elapsed="$(elapsed_seconds)"
+  evidence_key="localhost_signed_integration:${SCENARIO}:v1"
+  reason_key="localhost_signed_integration_reason:${reason_code}:v1"
 
-  echo "status=$status; scenario=$SCENARIO; reason_code=$reason_code; elapsed_seconds=$elapsed;"
+  echo "status=$status; scenario=$SCENARIO; evidence_key=$evidence_key; reason_code=$reason_code; reason_key=$reason_key; elapsed_seconds=$elapsed;"
 
   if [ -n "$OUTPUT_JSON" ]; then
     mkdir -p "$(dirname "$OUTPUT_JSON")"
     cat >"$OUTPUT_JSON" <<EOF
-{"schema_version":"kamn.sdk.localhost-signed.integration-harness.v1","status":"$status","scenario":"$SCENARIO","reason_code":"$reason_code","addr":"$ADDR","timeout_seconds":$TIMEOUT_SECONDS,"elapsed_seconds":$elapsed}
+{"schema_version":"kamn.sdk.localhost-signed.integration-harness.v1","status":"$status","scenario":"$SCENARIO","evidence_key":"$evidence_key","reason_code":"$reason_code","reason_key":"$reason_key","addr":"$ADDR","timeout_seconds":$TIMEOUT_SECONDS,"elapsed_seconds":$elapsed}
 EOF
   fi
 }

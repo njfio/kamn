@@ -120,6 +120,11 @@ bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh \
   --output-json /tmp/localhost-signed-integration-contract-report.json
 bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-file /tmp/localhost-signed-integration-contract-report.json
 # schema: kamn.sdk.localhost-signed.integration-contract.v1
+# deterministic keys:
+# contract_key=localhost_signed_integration_contract:v1
+# success_evidence_key=localhost_signed_integration:success:v1
+# signature_mismatch_evidence_key=localhost_signed_integration:signature-mismatch:v1
+# timeout_evidence_key=localhost_signed_integration:timeout:v1
 ```
 
 CI fast-gate routes this lane when selector output

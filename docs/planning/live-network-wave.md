@@ -64,11 +64,18 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `kamn.sdk.localhost-signed.integration-contract.v1`
 - Required localhost signed integration report fields:
   - `status`
+  - `contract_key`
   - `success_scenario_status`
   - `signature_mismatch_scenario_status`
   - `timeout_scenario_status`
+  - `success_evidence_key`
+  - `signature_mismatch_evidence_key`
+  - `timeout_evidence_key`
   - `signature_mismatch_reason_code`
   - `timeout_reason_code`
+  - `success_reason_key`
+  - `signature_mismatch_reason_key`
+  - `timeout_reason_key`
 - Required smoke report fields:
   - `status`
   - `final_decision`
@@ -120,5 +127,7 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - localhost signed integration contract lane preserves signature-mismatch/timeout reason codes in report schema (`Regression: #878`).
 - Regression guard:
   - localhost signed integration policy checker preserves schema and reason-code contracts (`Regression: #880`).
+- Regression guard:
+  - localhost signed integration harness and contract lane preserve deterministic evidence keys (`Regression: #899`).
 - Regression guard:
   - dashboard runtime fallback contract remains pinned to `node@22` with local reproduction guidance (`Regression: #868`).
