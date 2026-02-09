@@ -65,6 +65,7 @@ fn checklist_contains_settlement_reconciliation_evidence_contract() {
     assert!(CHECKLIST.contains("run_settlement_reconciliation_deep_lane.sh"));
     assert!(CHECKLIST.contains("run_settlement_reconciliation_race_matrix.py"));
     assert!(CHECKLIST.contains("fixtures/escrow_reconciliation/finality_race_cases.json"));
+    assert!(CHECKLIST.contains("--ledger-reference-id"));
 }
 
 #[test]
@@ -141,6 +142,14 @@ fn regression_requires_chain_receipt_evidence_guard_marker() {
     ));
     assert!(CHECKLIST.contains(
         "timeout-before-finality pending receipts and failed receipts force `NO-GO` (`Regression: #678`)."
+    ));
+}
+
+#[test]
+fn regression_requires_ledger_reference_evidence_guard_marker() {
+    // Regression: #717
+    assert!(CHECKLIST.contains(
+        "missing ledger reference evidence and ledger amount drift force `NO-GO` (`Regression: #717`)."
     ));
 }
 

@@ -11,6 +11,7 @@
       "expected_refund_amount": 120,
       "observed_release_amount": 0,
       "observed_refund_amount": 120,
+      "ledger_reference_id": "ledger-race-001",
       "timeout_elapsed": true,
       "ci_fast_gate": "PASS",
       "expected_decision": "NO-GO"
@@ -25,6 +26,7 @@
       "expected_refund_amount": 120,
       "observed_release_amount": 0,
       "observed_refund_amount": 120,
+      "ledger_reference_id": "ledger-race-002",
       "timeout_elapsed": true,
       "ci_fast_gate": "PASS",
       "expected_decision": "GO"
@@ -39,6 +41,7 @@
       "expected_refund_amount": 120,
       "observed_release_amount": 0,
       "observed_refund_amount": 120,
+      "ledger_reference_id": "ledger-race-003",
       "timeout_elapsed": true,
       "ci_fast_gate": "PASS",
       "expected_decision": "NO-GO"
@@ -53,6 +56,7 @@
       "expected_refund_amount": 100,
       "observed_release_amount": 0,
       "observed_refund_amount": 99,
+      "ledger_reference_id": "ledger-race-004",
       "timeout_elapsed": true,
       "ci_fast_gate": "PASS",
       "expected_decision": "NO-GO"

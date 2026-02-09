@@ -23,6 +23,7 @@ generator_output="$(
     --expected-refund-amount 0 \
     --observed-release-amount 120 \
     --observed-refund-amount 0 \
+    --ledger-reference-id "ledger-entry-contract-001" \
     --timeout-elapsed false \
     --ci-fast-gate PASS
 )"
@@ -40,6 +41,8 @@ fi
 
 cargo test -p kamn-core --test escrow_lifecycle >/dev/null
 cargo test -p kamn-core --test escrow_lifecycle_docs >/dev/null
+cargo test -p kamn-core --test release_gonogo_checklist_docs >/dev/null
+cargo test -p kamn-core --test audit_export_interfaces_docs >/dev/null
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt 90 ]; then

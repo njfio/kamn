@@ -75,7 +75,7 @@ Durable guard schema evolution and restart invariants must be proven before a re
 Escrow settlement outcomes require deterministic receipt/finality evidence before release approval.
 
 - Evidence bundle generator:
-  - `bash scripts/escrow/generate_settlement_reconciliation_evidence_bundle.sh --output-file /tmp/settlement-evidence.json --escrow-id escrow-001 --settlement-outcome RELEASED --receipt-id receipt-001 --receipt-finality FINAL --expected-release-amount 120 --expected-refund-amount 0 --observed-release-amount 120 --observed-refund-amount 0 --timeout-elapsed false --ci-fast-gate PASS`
+  - `bash scripts/escrow/generate_settlement_reconciliation_evidence_bundle.sh --output-file /tmp/settlement-evidence.json --escrow-id escrow-001 --settlement-outcome RELEASED --receipt-id receipt-001 --receipt-finality FINAL --expected-release-amount 120 --expected-refund-amount 0 --observed-release-amount 120 --observed-refund-amount 0 --ledger-reference-id ledger-entry-001 --timeout-elapsed false --ci-fast-gate PASS`
 - Policy checker:
   - `bash scripts/escrow/check_settlement_reconciliation_evidence_policy.sh --bundle-file /tmp/settlement-evidence.json`
 - PR fast contract lane:
@@ -87,6 +87,7 @@ Escrow settlement outcomes require deterministic receipt/finality evidence befor
 - Regression policy:
   - missing or invalid chain receipt evidence forces `NO-GO` (`Regression: #678`).
   - timeout-before-finality pending receipts and failed receipts force `NO-GO` (`Regression: #678`).
+  - missing ledger reference evidence and ledger amount drift force `NO-GO` (`Regression: #717`).
 
 ## Token Launch Handoff Evidence Contract (Issue #714)
 Token launch readiness requires deterministic supply/allocation and approval evidence before activation.
@@ -196,6 +197,7 @@ bash scripts/deploy/test_run_staging_rehearsal_contract_lane.sh
 cargo test -p kamn-core --test mainnet_cutover_runbook_docs
 cargo test -p kamn-core --test release_gonogo_checklist_docs
 cargo test -p kamn-core --test token_config_docs
+cargo test -p kamn-core --test audit_export_interfaces_docs
 cargo test -p kamn-core --test durable_guard_recovery_matrix
 cargo test -p kamn-core --test durable_guard_snapshot_store
 cargo fmt --check

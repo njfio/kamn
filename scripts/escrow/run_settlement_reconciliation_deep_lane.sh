@@ -42,13 +42,14 @@ generator_output="$(
   bash "$GENERATOR" \
     --output-file "$no_go_bundle" \
     --escrow-id "escrow-deep-2026-02-09" \
-    --settlement-outcome TIMEOUT_REFUNDED \
-    --receipt-id "receipt-deep-pending" \
-    --receipt-finality PENDING \
-    --expected-release-amount 0 \
-    --expected-refund-amount 120 \
-    --observed-release-amount 0 \
-    --observed-refund-amount 120 \
+    --settlement-outcome RELEASED \
+    --receipt-id "receipt-deep-final" \
+    --receipt-finality FINAL \
+    --expected-release-amount 120 \
+    --expected-refund-amount 0 \
+    --observed-release-amount 95 \
+    --observed-refund-amount 0 \
+    --ledger-reference-id "" \
     --timeout-elapsed false \
     --ci-fast-gate PASS
 )"

@@ -45,6 +45,7 @@ go_output="$(
     --expected-refund-amount 0 \
     --observed-release-amount 55 \
     --observed-refund-amount 0 \
+    --ledger-reference-id "ledger-entry-go-001" \
     --timeout-elapsed false \
     --ci-fast-gate PASS
 )"
@@ -61,22 +62,27 @@ no_go_output="$(
   bash "$GENERATOR" \
     --output-file "$no_go_bundle" \
     --escrow-id "escrow-no-go-001" \
-    --settlement-outcome TIMEOUT_REFUNDED \
+    --settlement-outcome RELEASED \
     --receipt-id "receipt-no-go-001" \
-    --receipt-finality PENDING \
-    --expected-release-amount 0 \
-    --expected-refund-amount 55 \
-    --observed-release-amount 0 \
-    --observed-refund-amount 55 \
+    --receipt-finality FINAL \
+    --expected-release-amount 55 \
+    --expected-refund-amount 0 \
+    --observed-release-amount 55 \
+    --observed-refund-amount 0 \
+    --ledger-reference-id "" \
     --timeout-elapsed false \
     --ci-fast-gate PASS
 )"
 
-assert_eq "$(extract_value "$no_go_output" "final_decision")" "NO-GO" "expected NO-GO settlement decision for timeout/finality mismatch"
+assert_eq "$(extract_value "$no_go_output" "final_decision")" "NO-GO" "expected NO-GO settlement decision for missing ledger reference evidence"
 
 no_go_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$no_go_bundle")"
 assert_eq "$(extract_value "$no_go_policy_output" "status")" "ok" "expected NO-GO settlement bundle policy check to pass"
 assert_eq "$(extract_value "$no_go_policy_output" "final_decision")" "NO-GO" "expected NO-GO settlement policy decision"
+if ! printf '%s\n' "$no_go_policy_output" | grep -q "missing ledger reference evidence"; then
+  echo "expected policy output to include missing ledger reference evidence reason" >&2
+  exit 1
+fi
 
 tampered_bundle="$TMP_DIR/settlement-tampered.json"
 cp "$no_go_bundle" "$tampered_bundle"
