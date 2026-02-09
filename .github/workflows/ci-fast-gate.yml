@@ -65,6 +65,12 @@ jobs:
           bash scripts/deploy/test_generate_dr_evidence_bundle.sh
           bash scripts/deploy/test_run_dr_evidence_contract_lane.sh
 
+      - name: Set up Node.js runtime
+        if: steps.scope.outputs.run_frontend_dashboard_tests == 'true' || steps.scope.outputs.run_dashboard_contract_tests == 'true' || steps.scope.outputs.run_typescript_live_transport_contract_tests == 'true' || steps.scope.outputs.run_live_transport_parity_contract_tests == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Run frontend dashboard tests
         if: steps.scope.outputs.run_frontend_dashboard_tests == 'true'
         run: bash scripts/frontend/test_dashboard_package.sh
