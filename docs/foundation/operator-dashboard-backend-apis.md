@@ -46,6 +46,29 @@ This document captures the first implementation slice for backend read APIs that
   - role mismatches map to deterministic `dashboard-error` output.
   - backend requests carry `Authorization: Bearer <token>` and `X-KAMN-Role` headers.
 
+## Backend Session/Auth Freshness Contract
+Deterministic session/auth/freshness policy checks are enforced through a bounded backend dashboard lane:
+
+- Lane command:
+  - `bash scripts/dashboard/run_backend_session_auth_freshness_lane.sh --output-json /tmp/dashboard-backend-session-auth-freshness-report.json`
+- Policy checker command:
+  - `bash scripts/dashboard/check_backend_session_auth_freshness_policy.sh --report-file /tmp/dashboard-backend-session-auth-freshness-report.json`
+- Contract lane command:
+  - `bash scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh --output-file /tmp/dashboard-backend-session-auth-freshness-contract-report.json`
+
+Runtime budget controls:
+
+- `KAMN_DASHBOARD_BACKEND_SESSION_MAX_SECONDS`
+- `KAMN_DASHBOARD_BACKEND_SESSION_CONTRACT_MAX_SECONDS`
+
+Required schema/reason markers:
+
+- `kamn.dashboard.backend-session-auth-freshness-report.v1`
+- `dashboard_backend_session_auth_freshness_reason_codes:GO:v1`
+- `dashboard_backend_session_auth_freshness_reason_codes:NO-GO:v1`
+
+The lane fails closed: missing session guards, freshness guard drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #941`).
+
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 

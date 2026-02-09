@@ -46,15 +46,20 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 - Live transport parity command changes map to parity scope:
   - `run_live_transport_parity_contract_tests=true`
   - `live_transport_parity_languages=rust,python,typescript`
+- Dashboard backend session/auth freshness command changes map to dashboard contract scope:
+  - `run_dashboard_contract_tests=true`
+  - `test_scope=frontend-contract`
 
 Required demo lane command contract:
 
 - `bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json`
+- `bash scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh --output-file /tmp/dashboard-backend-session-auth-freshness-contract-report.json`
 
 Regression policy:
 
 - make-target and selector workflow drift remains fail-closed (`Regression: #900`).
 - command-surface parity drift remains fail-closed (`Regression: #939`).
+- dashboard backend session/auth freshness selector/docs parity remains fail-closed (`Regression: #941`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
