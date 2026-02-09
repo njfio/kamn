@@ -338,7 +338,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    crates/kamn-core/src/escrow.rs|crates/kamn-core/tests/escrow_lifecycle.rs|crates/kamn-core/tests/escrow_lifecycle_docs.rs|crates/kamn-core/tests/audit_export_interfaces_docs.rs|docs/foundation/escrow-lifecycle.md|docs/foundation/audit-export-interfaces.md|docs/foundation/release-gonogo-checklist.md|scripts/escrow/*|fixtures/escrow_reconciliation/*)
+    crates/kamn-core/src/escrow.rs|crates/kamn-core/tests/escrow_lifecycle.rs|crates/kamn-core/tests/escrow_lifecycle_docs.rs|crates/kamn-core/tests/audit_export_interfaces_docs.rs|crates/kamn-core/tests/task_payment_workflow_docs.rs|docs/foundation/escrow-lifecycle.md|docs/foundation/task-payment-workflow.md|docs/foundation/audit-export-interfaces.md|docs/foundation/release-gonogo-checklist.md|scripts/escrow/*|fixtures/escrow_reconciliation/*)
       ESCROW_CONTRACT_CHANGED=true
       classified=true
       ;;

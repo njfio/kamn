@@ -172,32 +172,46 @@ expected_refund = int(expected_refund_raw)
 observed_release = int(observed_release_raw)
 observed_refund = int(observed_refund_raw)
 
-decision_reasons: list[str] = []
+if settlement_outcome == "RELEASED":
+    settlement_path = "PAYOUT"
+    path_reason_code = "settlement_path_payout"
+elif settlement_outcome in {"REFUNDED", "TIMEOUT_REFUNDED"}:
+    settlement_path = "REFUND"
+    path_reason_code = "settlement_path_refund"
+else:
+    settlement_path = "DISPUTE"
+    path_reason_code = "settlement_path_dispute"
+
+failed_reason_codes: list[str] = []
 
 if not receipt_id.strip() or receipt_finality != "FINAL":
-    decision_reasons.append("missing or invalid receipt evidence")
+    failed_reason_codes.append("receipt_evidence_invalid")
 
 if expected_release != observed_release or expected_refund != observed_refund:
-    decision_reasons.append("ledger amount drift detected")
+    failed_reason_codes.append("ledger_amount_drift_detected")
 
 if not ledger_reference_id.strip():
-    decision_reasons.append("missing ledger reference evidence")
+    failed_reason_codes.append("ledger_reference_missing")
 
 if settlement_outcome == "TIMEOUT_REFUNDED" and not timeout_elapsed:
-    decision_reasons.append("timeout refund without elapsed timeout")
+    failed_reason_codes.append("timeout_not_elapsed")
 
 if ci_fast_gate != "PASS":
-    decision_reasons.append("ci-fast-gate-failed")
+    failed_reason_codes.append("ci_fast_gate_failed")
 
-final_decision = "GO" if not decision_reasons else "NO-GO"
-if not decision_reasons:
-    decision_reasons.append("all settlement reconciliation gates satisfied")
+final_decision = "GO" if not failed_reason_codes else "NO-GO"
+if final_decision == "GO":
+    reason_codes = [path_reason_code, "all_settlement_reconciliation_checks_passed"]
+else:
+    reason_codes = [path_reason_code] + failed_reason_codes
+reason_key = f"settlement_reconciliation_reason_codes:{final_decision}:v1"
 
 payload = {
     "schema_version": "kamn.escrow.settlement-reconciliation.v1",
     "generated_at": generated_at,
     "escrow_id": escrow_id,
     "settlement_outcome": settlement_outcome,
+    "settlement_path": settlement_path,
     "receipt": {
         "receipt_id": receipt_id,
         "finality": receipt_finality,
@@ -215,7 +229,9 @@ payload = {
     },
     "timeout_elapsed": timeout_elapsed,
     "ci_fast_gate": ci_fast_gate,
-    "decision_reasons": decision_reasons,
+    "reason_key": reason_key,
+    "reason_codes": reason_codes,
+    "decision_reasons": reason_codes,
     "final_decision": final_decision,
 }
 
@@ -225,6 +241,9 @@ print(final_decision)
 PY
 )"
 
+reason_key="settlement_reconciliation_reason_codes:${final_decision}:v1"
+
 printf 'status=generated\n'
 printf 'bundle_file=%s\n' "$output_file"
 printf 'final_decision=%s\n' "$final_decision"
+printf 'reason_key=%s\n' "$reason_key"
