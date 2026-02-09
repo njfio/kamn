@@ -24,6 +24,8 @@ This document captures deterministic bridge quorum runtime contracts for listene
   - `discord_bridge::outbound_rejects_unauthorized_approver`
   - `cross_chain_bridge::outbound_rejects_unauthorized_approver`
 - Added bridge replay subset command example for low-cost fast-gate execution.
+- Added deterministic bridge ingress relay fixture matrix for Telegram and Discord canonical envelope projection contracts.
+- Added bounded ingress relay contract lane command references for low-cost CI gate execution.
 
 ## Listener Quorum Workflow Rules
 - Inbound bridge decisions require canonical listener attestation normalization before threshold evaluation.
@@ -40,6 +42,12 @@ This document captures deterministic bridge quorum runtime contracts for listene
 - Duplicate outbound replay requests are rejected with deterministic `NO-GO` policy evidence.
 - Outbound authorization decisions emit deterministic typed rejection reasons when quorum requirements are unmet.
 
+## Ingress Relay Normalization Rules
+- Telegram and Discord ingress fixture classes normalize into deterministic canonical envelope outputs.
+- Canonical `envelope.id` and `proof.proof_value` remain bound (`proof:{envelope.id}`) for ingress relay projections.
+- Canonical body fields (`message`, `external_sender`, `external_channel`, `platform`) preserve normalized ingress payload bindings.
+- Malformed ingress payloads fail closed with typed bridge errors and do not produce canonical envelopes.
+
 ## Test Coverage Mapping
 - Unit: N/A (docs-focused scope).
 - Functional: listener and approver workflow rule assertions.
@@ -51,6 +59,7 @@ This document captures deterministic bridge quorum runtime contracts for listene
   - outbound under-quorum rejection (`Regression: #372`)
   - unauthorized approver signature-failure rejection in bridge replay fixtures (`Regression: #587`)
   - outbound retry payload-drift and tampered final-decision rejection (`Regression: #742`)
+  - malformed and replayed ingress relay payload rejection (`Regression: #850`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
@@ -60,6 +69,7 @@ cargo test -p kamn-core --test bridge_quorum_runtime_docs
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-core approver_quorum
 bash scripts/bridge/run_bridge_replay_matrix.sh --fixture fixtures/bridge_replay/replay_validation_cases.json --suites bridge_adapter,discord_bridge --output-json /tmp/bridge-replay-quorum-report.json
+bash scripts/bridge/run_bridge_ingress_relay_contract_lane.sh
 bash scripts/bridge/run_cross_chain_outbound_intent_contract_lane.sh
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
