@@ -866,6 +866,12 @@ assert_eq "$(extract_output "$reputation_policy_checker_output" "run_reputation_
 assert_eq "$(extract_output "$reputation_policy_checker_output" "run_reputation_dispute_contract_tests")" "true" "reputation policy checker changes must run reputation dispute contract lane"
 assert_eq "$(extract_output "$reputation_policy_checker_output" "test_scope")" "reputation-contract" "reputation policy checker changes should set reputation-contract scope"
 
+reputation_quarantine_policy_checker_output="$(run_selector $'scripts/reputation/check_reputation_signal_quarantine_policy.sh')"
+assert_eq "$(extract_output "$reputation_quarantine_policy_checker_output" "run_rust")" "false" "signal quarantine policy checker script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$reputation_quarantine_policy_checker_output" "run_reputation_decay_contract_tests")" "false" "signal quarantine policy checker changes should not run weighted decay contract lane"
+assert_eq "$(extract_output "$reputation_quarantine_policy_checker_output" "run_reputation_dispute_contract_tests")" "true" "signal quarantine policy checker changes must run reputation dispute contract lane"
+assert_eq "$(extract_output "$reputation_quarantine_policy_checker_output" "test_scope")" "reputation-contract" "signal quarantine policy checker changes should set reputation-contract scope"
+
 reputation_contract_fixture_output="$(run_selector $'fixtures/reputation_dispute/replay_cases.json')"
 assert_eq "$(extract_output "$reputation_contract_fixture_output" "run_rust")" "false" "reputation fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_contract_fixture_output" "run_reputation_decay_contract_tests")" "false" "dispute fixture changes should not run weighted decay contract lane"
