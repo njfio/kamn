@@ -123,7 +123,6 @@ fn calculate_decay_multiplier_bps(agent: &AgentReputation) -> u16 {
     } else {
         let mut recent = 0usize;
         let mut mid = 0usize;
-        let mut stale = 0usize;
         for snapshot in &agent.score_history {
             let age = agent
                 .last_updated_block
@@ -132,12 +131,10 @@ fn calculate_decay_multiplier_bps(agent: &AgentReputation) -> u16 {
                 recent += 1;
             } else if age <= DECAY_WINDOW_MID_BLOCKS {
                 mid += 1;
-            } else {
-                stale += 1;
             }
         }
 
-        550 + (recent.min(3) as i32 * 120) + (mid.min(4) as i32 * 40) + (stale.min(8) as i32 * 10)
+        550 + (recent.min(3) as i32 * 120) + (mid.min(4) as i32 * 40)
     };
 
     let total_activity = agent.tasks_completed + agent.tasks_failed + agent.tasks_delegated;
