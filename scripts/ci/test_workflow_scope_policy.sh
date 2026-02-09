@@ -235,6 +235,26 @@ if ! grep -Fq "bash scripts/compliance/test_run_dsar_legal_hold_matrix.sh" "$FAS
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_governance_simulation_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected governance simulation contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/governance/test_generate_governance_simulation_evidence_bundle.sh" "$FAST_WORKFLOW"; then
+  echo "expected governance simulation evidence bundle tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/governance/test_run_governance_simulation_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected governance simulation contract lane script tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/governance/test_run_governance_simulation_matrix.sh" "$FAST_WORKFLOW"; then
+  echo "expected governance simulation matrix tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_token_launch_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected token launch contract scope condition in ci-fast-gate.yml" >&2
   exit 1
@@ -359,6 +379,16 @@ fi
 
 if ! grep -Fq "dsar-legal-hold-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
   echo "expected DSAR legal-hold deep report artifact upload in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/governance/run_governance_simulation_deep_lane.sh --output-json governance-simulation-report.json" "$DEEP_WORKFLOW"; then
+  echo "expected scheduled governance simulation deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "governance-simulation-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
+  echo "expected governance simulation deep report artifact upload in ci-deep-validate.yml" >&2
   exit 1
 fi
 

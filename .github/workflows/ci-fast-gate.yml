@@ -147,6 +147,13 @@ jobs:
           bash scripts/compliance/test_run_dsar_legal_hold_contract_lane.sh
           bash scripts/compliance/test_run_dsar_legal_hold_matrix.sh
 
+      - name: Run governance simulation contract lane
+        if: steps.scope.outputs.run_governance_simulation_contract_tests == 'true'
+        run: |
+          bash scripts/governance/test_generate_governance_simulation_evidence_bundle.sh
+          bash scripts/governance/test_run_governance_simulation_contract_lane.sh
+          bash scripts/governance/test_run_governance_simulation_matrix.sh
+
       - name: Run token launch handoff contract lane
         if: steps.scope.outputs.run_token_launch_contract_tests == 'true'
         run: bash scripts/token/run_token_launch_handoff_contract_lane.sh

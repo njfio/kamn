@@ -121,6 +121,22 @@ GDPR data-subject workflows require deterministic legal-hold precedence evidence
 - Regression policy:
   - legal-hold bypass attempts and tampered DSAR evidence force `NO-GO` (`Regression: #732`).
 
+## Governance Simulation and Human-Veto Evidence Contract (Issue #748)
+Governance activation requires deterministic simulation, veto, timelock, and approval evidence before GO decisions.
+
+- Evidence bundle generator:
+  - `bash scripts/governance/generate_governance_simulation_evidence_bundle.sh --output-file /tmp/governance-simulation.json --proposal-id gov-proposal-activation-001 --simulation-hash sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --simulation-complete true --veto-window-open false --veto-recorded false --timelock-expired true --required-approvals 2 --received-approvals 2 --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/governance/check_governance_simulation_policy.sh --bundle-file /tmp/governance-simulation.json`
+- PR fast contract lane:
+  - `bash scripts/governance/run_governance_simulation_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/governance/run_governance_simulation_deep_lane.sh --output-json governance-simulation-report.json`
+- Replay matrix runner:
+  - `python3 scripts/governance/run_governance_simulation_matrix.py --fixture fixtures/governance_simulation/veto_timelock_cases.json --output-json governance-simulation-report.json`
+- Regression policy:
+  - simulation/veto bypass attempts and tampered evidence bundles force `NO-GO` (`Regression: #733`).
+
 ## Token Launch Handoff Evidence Contract (Issue #714)
 Token launch readiness requires deterministic supply/allocation and approval evidence before activation.
 
@@ -224,6 +240,10 @@ bash scripts/compliance/test_generate_dsar_legal_hold_evidence_bundle.sh
 bash scripts/compliance/test_run_dsar_legal_hold_contract_lane.sh
 bash scripts/compliance/test_run_dsar_legal_hold_matrix.sh
 bash scripts/compliance/test_run_dsar_legal_hold_deep_lane.sh
+bash scripts/governance/test_generate_governance_simulation_evidence_bundle.sh
+bash scripts/governance/test_run_governance_simulation_contract_lane.sh
+bash scripts/governance/test_run_governance_simulation_matrix.sh
+bash scripts/governance/test_run_governance_simulation_deep_lane.sh
 bash scripts/token/test_generate_token_launch_handoff_evidence_bundle.sh
 bash scripts/token/test_run_token_launch_handoff_contract_lane.sh
 bash scripts/token/test_run_token_launch_handoff_deep_lane.sh
