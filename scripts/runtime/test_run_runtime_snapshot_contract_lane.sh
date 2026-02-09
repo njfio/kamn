@@ -54,6 +54,26 @@ if ! grep -q "runtime_watchdog_attestation_docs" "$FAST_SCRIPT"; then
   exit 1
 fi
 
+if ! grep -q "test_select_failover_sync_drill_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include failover/sync selector contract coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "test_run_failover_sync_drill_preflight_contract_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include failover/sync preflight lane coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "test_run_failover_sync_drill_deep_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include failover/sync deep lane coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "test_run_failover_sync_drill_suite.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include failover/sync suite coverage" >&2
+  exit 1
+fi
+
 if ! grep -Fq "run_runtime_snapshot_contract_lane.sh" "$DEEP_SCRIPT"; then
   echo "expected deep-lane script to execute runtime snapshot fast-lane checks first" >&2
   exit 1

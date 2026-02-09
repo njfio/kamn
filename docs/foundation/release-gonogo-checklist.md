@@ -167,6 +167,21 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
 - Regression policy:
   - incompatible upgrade signature (`kamn 1.2.x` + `kolme 0.14.x`) remains blocked (`Regression: #775`).
 
+## Failover + Sync Drill Evidence Contract (Issues #787, #788)
+Runtime failover and sync readiness requires deterministic lane routing, budget guards, and scheduled-cadence enforcement before release approval.
+
+- Lane selector:
+  - `bash scripts/runtime/select_failover_sync_drill_lane.sh --event-name pull_request`
+- PR fast contract lane:
+  - `bash scripts/runtime/run_failover_sync_drill_preflight_contract_lane.sh --output-json /tmp/failover-sync-preflight-report.json`
+- Scheduled deep lane entrypoint:
+  - `KAMN_FAILOVER_SYNC_DEEP_CADENCE=scheduled bash scripts/runtime/run_failover_sync_drill_deep_lane.sh --output-json /tmp/failover-sync-deep-report.json`
+- Suite/artifact summary entrypoint:
+  - `bash scripts/runtime/run_failover_sync_drill_suite.sh --event-name schedule --output-json /tmp/failover-sync-suite-report.json`
+- Regression policy:
+  - preflight runtime budget overruns force lane failure (`Regression: #788`).
+  - unscheduled deep-lane execution force-fails via scheduled-only cadence guard (`Regression: #788`).
+
 ## Governance Simulation and Human-Veto Evidence Contract (Issue #748)
 Governance activation requires deterministic simulation, veto, timelock, and approval evidence before GO decisions.
 
