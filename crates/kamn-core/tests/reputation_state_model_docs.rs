@@ -39,6 +39,16 @@ fn doc_contains_dispute_evidence_bundle_contract() {
 }
 
 #[test]
+fn doc_contains_signal_quarantine_contract() {
+    assert!(DOC.contains("## Deterministic Reputation Signal Quarantine Contract"));
+    assert!(DOC.contains("generate_reputation_signal_quarantine_evidence_bundle.sh"));
+    assert!(DOC.contains("check_reputation_signal_quarantine_policy.sh"));
+    assert!(DOC.contains("run_reputation_signal_quarantine_contract_lane.sh"));
+    assert!(DOC.contains("REPUTATION_QUARANTINE_MAX_SECONDS"));
+    assert!(DOC.contains("reason_codes"));
+}
+
+#[test]
 fn doc_contains_weighted_decay_and_antigaming_contract() {
     assert!(DOC.contains("## Weighted Decay and Anti-Gaming Threshold Contract"));
     assert!(DOC.contains("run_weighted_decay_contract_lane.sh"));
@@ -75,5 +85,13 @@ fn regression_requires_dispute_reason_code_policy_guard_marker() {
     // Regression: #934
     assert!(DOC.contains(
         "reason-code mismatch or tampered dispute evidence payloads force `NO-GO` (`Regression: #934`)."
+    ));
+}
+
+#[test]
+fn regression_requires_signal_quarantine_tamper_guard_marker() {
+    // Regression: #935
+    assert!(DOC.contains(
+        "tampered quarantine reason codes, replayed nonces, and stale signal payloads force `NO-GO` quarantine (`Regression: #935`)."
     ));
 }

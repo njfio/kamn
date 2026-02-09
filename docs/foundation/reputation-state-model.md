@@ -67,6 +67,24 @@ Dispute adjudication uses machine-verifiable bundles so resolution outcomes stay
   - tampered evidence hashes, score-adjustment limit bypasses, and closed-policy-window decisions force `NO-GO` (`Regression: #730`).
   - reason-code mismatch or tampered dispute evidence payloads force `NO-GO` (`Regression: #934`).
 
+## Deterministic Reputation Signal Quarantine Contract (Issue #935)
+Signal ingestion is gated by deterministic quarantine checks before any reputation state mutation is accepted.
+
+- Schema contract:
+  - `schema_version`: `kamn.reputation.signal-quarantine-evidence.v1`
+  - `reason_key`: `reputation_signal_quarantine_reason_codes:<final_decision>:v1`
+  - `reason_codes`: sorted deterministic quarantine failure codes
+- Evidence bundle generator:
+  - `bash scripts/reputation/generate_reputation_signal_quarantine_evidence_bundle.sh --output-file /tmp/reputation-signal-quarantine.json --lane contract --signal-id signal-001 --subject-did did:kamn:agent-001 --signal-kind ENDORSEMENT --source-channel TELEGRAM --event-age-seconds 30 --payload-sha256 sha256:1111111111111111111111111111111111111111111111111111111111111111 --payload-signature-verified PASS --nonce-unique true --rate-within-threshold true --source-attested true --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/reputation/check_reputation_signal_quarantine_policy.sh --bundle-file /tmp/reputation-signal-quarantine.json`
+- PR fast contract lane:
+  - `bash scripts/reputation/run_reputation_signal_quarantine_contract_lane.sh`
+- Runtime budget control:
+  - `REPUTATION_QUARANTINE_MAX_SECONDS` (contract lane fails closed when runtime exceeds budget)
+- Regression policy:
+  - tampered quarantine reason codes, replayed nonces, and stale signal payloads force `NO-GO` quarantine (`Regression: #935`).
+
 ## Weighted Decay and Anti-Gaming Threshold Contract (Issue #736)
 Trust-score updates apply deterministic weighted decay windows and typed abuse-threshold penalties before score persistence.
 
@@ -88,6 +106,9 @@ Use the targeted lane first:
 cargo test -p kamn-core --test reputation_state_model --test reputation_state_model_docs
 bash scripts/reputation/test_generate_reputation_dispute_evidence_bundle.sh
 bash scripts/reputation/test_run_reputation_dispute_contract_lane.sh
+bash scripts/reputation/test_generate_reputation_signal_quarantine_evidence_bundle.sh
+bash scripts/reputation/test_run_reputation_signal_quarantine_contract_lane.sh
+bash scripts/reputation/test_check_reputation_signal_quarantine_policy.sh
 bash scripts/reputation/test_run_reputation_dispute_matrix.sh
 bash scripts/reputation/test_run_weighted_decay_contract_lane.sh
 bash scripts/reputation/test_run_weighted_decay_matrix.sh
