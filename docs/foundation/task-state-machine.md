@@ -45,6 +45,18 @@ Any transition outside this map is rejected.
 - Terminal states reject follow-up transitions (`TerminalState`).
 - Illegal transitions return `InvalidTransition { from, transition }`.
 
+## Transition Evidence and Reason-Code Contract
+- `TaskLifecycle::transition_with_evidence(TaskTransition)` emits deterministic evidence for authorized transitions:
+  - `TaskTransitionEvidence { from, transition, to, reason_code }`
+  - allowed transition reason code: `task_transition_allowed`
+- Rejected transition reason codes are deterministic via `TaskLifecycleError::reason_code()`:
+  - `task_id_empty`
+  - `task_history_invalid`
+  - `task_transition_invalid_edge`
+  - `task_transition_terminal_state`
+- Regression policy:
+  - transition reason-code drift and illegal transition acceptance fail closed (`Regression: #903`).
+
 ## Local Validation
 Run from repository root:
 
@@ -52,6 +64,8 @@ Run from repository root:
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core --test task_state_machine
+cargo test -p kamn-core --test task_escrow_transition_contracts
+cargo test -p kamn-core --test task_state_machine_docs
 cargo test -p kamn-core --test swarm_task_dag
 cargo test -p kamn-core --test task_operation_snapshot
 cargo test -p kamn-core

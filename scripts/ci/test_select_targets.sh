@@ -848,6 +848,12 @@ assert_eq "$(extract_output "$task_contract_docs_output" "run_task_operation_sna
 assert_eq "$(extract_output "$task_contract_docs_output" "run_federated_delegation_settlement_contract_tests")" "true" "task operation contract docs must run federated delegation settlement contract lane"
 assert_eq "$(extract_output "$task_contract_docs_output" "test_scope")" "task-contract" "task operation contract docs should set task-contract scope"
 
+task_state_machine_docs_output="$(run_selector $'docs/foundation/task-state-machine.md')"
+assert_eq "$(extract_output "$task_state_machine_docs_output" "run_rust")" "false" "task state machine docs should avoid rust lane"
+assert_eq "$(extract_output "$task_state_machine_docs_output" "run_task_operation_snapshot_contract_tests")" "true" "task state machine docs must run task operation snapshot contract lane"
+assert_eq "$(extract_output "$task_state_machine_docs_output" "run_federated_delegation_settlement_contract_tests")" "false" "task state machine docs should not force federated delegation settlement contract lane"
+assert_eq "$(extract_output "$task_state_machine_docs_output" "test_scope")" "task-contract" "task state machine docs should set task-contract scope"
+
 task_contract_script_output="$(run_selector $'scripts/task/run_task_operation_snapshot_contract_lane.sh')"
 assert_eq "$(extract_output "$task_contract_script_output" "run_rust")" "false" "task operation contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$task_contract_script_output" "run_task_operation_snapshot_contract_tests")" "true" "task operation contract script changes must run task operation snapshot contract lane"

@@ -24,6 +24,16 @@ if ! grep -q "task operation snapshot contract lane tests passed." "$TMP_OUT"; t
   exit 1
 fi
 
+if ! grep -q "task_state_machine" "$FAST_SCRIPT"; then
+  echo "expected task operation snapshot fast-lane to include task state machine contract tests" >&2
+  exit 1
+fi
+
+if ! grep -q "task_escrow_transition_contracts" "$FAST_SCRIPT"; then
+  echo "expected task operation snapshot fast-lane to include task/escrow transition contract tests" >&2
+  exit 1
+fi
+
 if ! grep -Fq "run_task_operation_snapshot_contract_lane.sh" "$DEEP_SCRIPT"; then
   echo "expected deep-lane script to execute task operation snapshot fast-lane checks first" >&2
   exit 1

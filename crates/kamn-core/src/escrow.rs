@@ -50,10 +50,41 @@ pub enum EscrowSettlementAction {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EscrowTransitionAction {
+    Release {
+        amount: u128,
+    },
+    RefundRemaining,
+    Dispute,
+    Resolve {
+        release_to_payee: u128,
+        refund_to_payer: u128,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EscrowTransitionEvidence {
+    pub from: EscrowStatus,
+    pub action: EscrowTransitionAction,
+    pub to: EscrowStatus,
+    pub reason_code: &'static str,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EscrowSettlementOutcome {
     Settled { status: EscrowStatus },
     Pending { reason: &'static str },
     Rejected { reason: &'static str },
+}
+
+impl EscrowSettlementOutcome {
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::Settled { .. } => "escrow_settlement_finalized",
+            Self::Pending { .. } => "escrow_settlement_pending_receipt_finality",
+            Self::Rejected { .. } => "escrow_settlement_rejected_receipt_finality",
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -206,6 +237,29 @@ impl EscrowLifecycle {
         Ok(())
     }
 
+    pub fn apply_transition_with_evidence(
+        &mut self,
+        action: EscrowTransitionAction,
+    ) -> Result<EscrowTransitionEvidence, EscrowLifecycleError> {
+        let from = self.status();
+        match action.clone() {
+            EscrowTransitionAction::Release { amount } => self.release(amount)?,
+            EscrowTransitionAction::RefundRemaining => self.refund_remaining()?,
+            EscrowTransitionAction::Dispute => self.dispute()?,
+            EscrowTransitionAction::Resolve {
+                release_to_payee,
+                refund_to_payer,
+            } => self.resolve(release_to_payee, refund_to_payer)?,
+        }
+
+        Ok(EscrowTransitionEvidence {
+            from,
+            action,
+            to: self.status(),
+            reason_code: "escrow_transition_allowed",
+        })
+    }
+
     pub fn reconcile_receipt_finality(
         &mut self,
         receipt_id: &str,
@@ -273,6 +327,21 @@ pub enum EscrowLifecycleError {
         timeout_unix: u64,
     },
     AmountOverflow,
+}
+
+impl EscrowLifecycleError {
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::ZeroAmount => "escrow_amount_zero",
+            Self::MissingReceiptEvidence => "escrow_receipt_missing",
+            Self::InvalidReceiptFinality { .. } => "escrow_receipt_finality_invalid",
+            Self::InvalidAmount { .. } => "escrow_amount_invalid",
+            Self::InvalidTransition { .. } => "escrow_transition_invalid",
+            Self::ResolutionMismatch { .. } => "escrow_resolution_mismatch",
+            Self::TimeoutNotElapsed { .. } => "escrow_timeout_not_elapsed",
+            Self::AmountOverflow => "escrow_amount_overflow",
+        }
+    }
 }
 
 impl fmt::Display for EscrowLifecycleError {

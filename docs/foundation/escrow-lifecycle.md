@@ -23,6 +23,26 @@ For PaymentOffer and PaymentConfirm workflow integration controls, see `docs/fou
 - Reject invalid transitions from terminal states.
 - Reject dispute resolution splits that do not reconcile exactly to remaining funds.
 
+## Transition Evidence and Reason-Code Contract (Issue #903)
+- `EscrowLifecycle::apply_transition_with_evidence(...)` emits deterministic mutation evidence for authorized transitions:
+  - `EscrowTransitionEvidence { from, action, to, reason_code }`
+  - allowed transition reason code: `escrow_transition_allowed`
+- Rejected transition reason codes are deterministic via `EscrowLifecycleError::reason_code()`:
+  - `escrow_amount_zero`
+  - `escrow_receipt_missing`
+  - `escrow_receipt_finality_invalid`
+  - `escrow_amount_invalid`
+  - `escrow_transition_invalid`
+  - `escrow_resolution_mismatch`
+  - `escrow_timeout_not_elapsed`
+  - `escrow_amount_overflow`
+- Receipt-finality settlement outcomes expose deterministic reason codes:
+  - `escrow_settlement_finalized`
+  - `escrow_settlement_pending_receipt_finality`
+  - `escrow_settlement_rejected_receipt_finality`
+- Regression policy:
+  - transition reason-code drift and illegal transition acceptance fail closed (`Regression: #903`).
+
 ## Settlement Reconciliation Evidence Contract (Issue #687)
 Settlement reconciliation evidence is captured as machine-readable JSON so release gates can audit escrow outcomes against receipt finality and timeout rules.
 
@@ -68,6 +88,7 @@ bash scripts/escrow/test_generate_settlement_reconciliation_evidence_bundle.sh
 bash scripts/escrow/test_run_settlement_reconciliation_contract_lane.sh
 bash scripts/escrow/test_run_settlement_reconciliation_race_matrix.sh
 cargo test -p kamn-core --test escrow_lifecycle
+cargo test -p kamn-core --test task_escrow_transition_contracts
 cargo test -p kamn-core --test escrow_lifecycle_docs
 cargo fmt --check
 cargo clippy -- -D warnings

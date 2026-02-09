@@ -224,7 +224,7 @@ pub use durable_guard_store::{
 };
 pub use escrow::{
     EscrowLifecycle, EscrowLifecycleError, EscrowReceiptFinality, EscrowSettlementAction,
-    EscrowSettlementOutcome, EscrowStatus,
+    EscrowSettlementOutcome, EscrowStatus, EscrowTransitionAction, EscrowTransitionEvidence,
 };
 pub use governance_workflow::{
     GovernanceExecutionRecord, GovernanceParameterChangeDraft, GovernanceProposalDraft,
@@ -356,7 +356,9 @@ pub use state::{
 pub use task_artifacts::{
     TaskArtifactError, TaskArtifactRecord, TaskArtifactRegistry, TaskArtifactSubmission,
 };
-pub use task_lifecycle::{TaskLifecycle, TaskLifecycleError, TaskState, TaskTransition};
+pub use task_lifecycle::{
+    TaskLifecycle, TaskLifecycleError, TaskState, TaskTransition, TaskTransitionEvidence,
+};
 pub use task_operations::{
     FileTaskOperationSnapshotStore, InMemoryTaskOperationSnapshotStore, SwarmTaskDraft,
     TaskOperationEngine, TaskOperationError, TaskOperationNoticeKind, TaskOperationRecord,
