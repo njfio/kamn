@@ -62,6 +62,11 @@ SOC2 audit readiness requires deterministic control evidence bundles with replay
 ## DSAR Legal-Hold Evidence Contract (Issue #746)
 Data-subject access/export/erasure evidence must enforce legal-hold precedence through deterministic bundle policy checks.
 
+- Stable shell wrappers:
+  - `scripts/compliance/generate_dsar_legal_hold_evidence_bundle.sh`
+  - `scripts/compliance/check_dsar_legal_hold_policy.sh`
+- Shared Python implementation:
+  - `scripts/compliance/dsar_legal_hold_contract.py`
 - Evidence bundle generator:
   - `bash scripts/compliance/generate_dsar_legal_hold_evidence_bundle.sh --output-file /tmp/dsar-legal-hold.json --request-id dsar-erasure-001 --subject-did did:kamn:subject-001 --request-type ERASURE --legal-hold-active true --retention-expired true --evidence-complete true --approval-recorded true --tamper-check PASS --ci-fast-gate PASS`
 - Policy checker:
