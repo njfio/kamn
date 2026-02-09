@@ -28,6 +28,12 @@ and failed-delivery notification controls.
   `notice:<message_id>:<code>:<recipient>:<received_at>:<nonce>`
 - Rejected deliveries do not mutate nonce progression state.
 
+## Durable Snapshot Stores (Issue #701)
+- `DeliveryGuardSnapshot` is schema-versioned and validates sender/nonce/message-id integrity on restore.
+- `DurableGuardSnapshotBundle::capture` and `restore_into` persist and restore delivery + channel policy guard state atomically.
+- `InMemoryDurableGuardSnapshotStore` and `FileDurableGuardSnapshotStore` provide deterministic save/load contracts.
+- Truncated/corrupted durable bundle payloads fail closed (`Regression: #679`).
+
 ## Local Validation
 Run from repository root:
 
@@ -35,9 +41,12 @@ Run from repository root:
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core --test message_delivery_guards
+cargo test -p kamn-core --test message_delivery_guards_docs
+cargo test -p kamn-core --test durable_guard_snapshot_store
+bash scripts/guard/run_durable_guard_recovery_contract_lane.sh
 cargo test -p kamn-core
 ```
 
 ## Notes
-This slice intentionally uses deterministic in-memory structures so CI remains
-fast and low-cost while safety controls are established.
+Guard validation remains deterministic and dependency-free while durable snapshot
+stores provide restart-safe persistence contracts with low-cost CI coverage.

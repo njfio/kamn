@@ -52,6 +52,8 @@ fn checklist_contains_durable_guard_recovery_evidence() {
     assert!(CHECKLIST.contains("run_durable_guard_recovery_deep_lane.sh"));
     assert!(CHECKLIST.contains("performance_durable_guard_recovery_contract_lane_budget"));
     assert!(CHECKLIST.contains("performance_durable_guard_recovery_matrix_deep_lane"));
+    assert!(CHECKLIST.contains("performance_bundle_contract_lane_budget"));
+    assert!(CHECKLIST.contains("performance_bundle_store_deep_lane_stress"));
 }
 
 #[test]

@@ -250,7 +250,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    crates/kamn-core/src/message_delivery_guards.rs|crates/kamn-core/src/channel_policies.rs|crates/kamn-core/tests/durable_guard_recovery_matrix.rs|docs/foundation/message-delivery-guards.md|docs/foundation/channel-permissions-retention.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/guard/*)
+    crates/kamn-core/src/message_delivery_guards.rs|crates/kamn-core/src/channel_policies.rs|crates/kamn-core/src/durable_guard_store.rs|crates/kamn-core/tests/durable_guard_recovery_matrix.rs|crates/kamn-core/tests/durable_guard_snapshot_store.rs|docs/foundation/message-delivery-guards.md|docs/foundation/channel-permissions-retention.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/guard/*)
       DURABLE_GUARD_RECOVERY_CONTRACT_CHANGED=true
       classified=true
       ;;

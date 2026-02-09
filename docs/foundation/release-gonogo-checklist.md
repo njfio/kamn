@@ -67,7 +67,9 @@ Durable guard schema evolution and restart invariants must be proven before a re
   - replay/nonce and retention invariants hold after restart recovery.
   - corrupted snapshot fixtures fail closed (`Regression: #679`).
   - PR budget check passes via `performance_durable_guard_recovery_contract_lane_budget`.
+  - durable bundle store contract checks pass via `durable_guard_snapshot_store` and `performance_bundle_contract_lane_budget`.
   - nightly deep matrix executes `performance_durable_guard_recovery_matrix_deep_lane`.
+  - nightly deep bundle store stress executes `performance_bundle_store_deep_lane_stress`.
 
 ## Local Validation
 Run from repository root:
@@ -80,6 +82,7 @@ bash scripts/deploy/test_generate_staging_rehearsal_bundle.sh
 bash scripts/deploy/test_run_staging_rehearsal_contract_lane.sh
 cargo test -p kamn-core --test release_gonogo_checklist_docs
 cargo test -p kamn-core --test durable_guard_recovery_matrix
+cargo test -p kamn-core --test durable_guard_snapshot_store
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core

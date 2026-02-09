@@ -330,6 +330,16 @@ assert_eq "$(extract_output "$guard_rust_output" "run_rust")" "true" "durable gu
 assert_eq "$(extract_output "$guard_rust_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard rust changes must run durable guard recovery contract lane"
 assert_eq "$(extract_output "$guard_rust_output" "test_scope")" "targeted" "durable guard rust changes should stay targeted"
 
+guard_store_rust_output="$(run_selector $'crates/kamn-core/src/durable_guard_store.rs')"
+assert_eq "$(extract_output "$guard_store_rust_output" "run_rust")" "true" "durable guard store rust changes should run rust lane"
+assert_eq "$(extract_output "$guard_store_rust_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard store rust changes must run durable guard recovery contract lane"
+assert_eq "$(extract_output "$guard_store_rust_output" "test_scope")" "targeted" "durable guard store rust changes should stay targeted"
+
+guard_store_test_output="$(run_selector $'crates/kamn-core/tests/durable_guard_snapshot_store.rs')"
+assert_eq "$(extract_output "$guard_store_test_output" "run_rust")" "true" "durable guard store test changes should run rust lane"
+assert_eq "$(extract_output "$guard_store_test_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard store test changes must run durable guard recovery contract lane"
+assert_eq "$(extract_output "$guard_store_test_output" "test_scope")" "targeted" "durable guard store test changes should stay targeted"
+
 runtime_rust_output="$(run_selector $'crates/kamn-core/src/runtime.rs')"
 assert_eq "$(extract_output "$runtime_rust_output" "run_rust")" "true" "runtime rust changes should run rust lane"
 assert_eq "$(extract_output "$runtime_rust_output" "run_runtime_snapshot_contract_tests")" "false" "runtime rust changes should avoid duplicate runtime contract lane"
