@@ -32,10 +32,18 @@ if ! printf '%s\n' "$generator_output" | grep -q "^final_decision=GO$"; then
   echo "expected settlement reconciliation contract lane decision to be GO" >&2
   exit 1
 fi
+if ! printf '%s\n' "$generator_output" | grep -q "^reason_key=settlement_reconciliation_reason_codes:GO:v1$"; then
+  echo "expected settlement reconciliation contract lane GO reason key" >&2
+  exit 1
+fi
 
 policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$BUNDLE_FILE")"
 if ! printf '%s\n' "$policy_output" | grep -q "^final_decision=GO$"; then
   echo "expected settlement reconciliation policy check decision to be GO" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q "^reason_key=settlement_reconciliation_reason_codes:GO:v1$"; then
+  echo "expected settlement reconciliation policy check GO reason key" >&2
   exit 1
 fi
 

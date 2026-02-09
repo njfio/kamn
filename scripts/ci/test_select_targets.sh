@@ -864,6 +864,11 @@ assert_eq "$(extract_output "$escrow_contract_docs_output" "run_rust")" "false" 
 assert_eq "$(extract_output "$escrow_contract_docs_output" "run_settlement_reconciliation_contract_tests")" "true" "escrow contract docs must run settlement reconciliation contract lane"
 assert_eq "$(extract_output "$escrow_contract_docs_output" "test_scope")" "escrow-contract" "escrow contract docs should set escrow-contract scope"
 
+task_payment_workflow_docs_output="$(run_selector $'docs/foundation/task-payment-workflow.md')"
+assert_eq "$(extract_output "$task_payment_workflow_docs_output" "run_rust")" "false" "task payment workflow docs should avoid rust lane"
+assert_eq "$(extract_output "$task_payment_workflow_docs_output" "run_settlement_reconciliation_contract_tests")" "true" "task payment workflow docs must run settlement reconciliation contract lane"
+assert_eq "$(extract_output "$task_payment_workflow_docs_output" "test_scope")" "escrow-contract" "task payment workflow docs should set escrow-contract scope"
+
 escrow_audit_docs_output="$(run_selector $'docs/foundation/audit-export-interfaces.md')"
 assert_eq "$(extract_output "$escrow_audit_docs_output" "run_rust")" "false" "audit export docs should avoid rust lane"
 assert_eq "$(extract_output "$escrow_audit_docs_output" "run_settlement_reconciliation_contract_tests")" "true" "audit export docs must run settlement reconciliation contract lane"

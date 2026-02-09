@@ -40,3 +40,18 @@ fn regression_requires_participant_binding_rules() {
     assert!(DOC.contains("`payer_did` equal to task requester DID."));
     assert!(DOC.contains("`payee_did` equal to task assignee DID."));
 }
+
+#[test]
+fn doc_contains_settlement_evidence_schema_and_checker_contract() {
+    assert!(DOC.contains("## Settlement Evidence Schema and Policy Checks"));
+    assert!(DOC.contains("generate_settlement_reconciliation_evidence_bundle.sh"));
+    assert!(DOC.contains("check_settlement_reconciliation_evidence_policy.sh"));
+    assert!(DOC.contains("settlement_reconciliation_reason_codes:GO:v1"));
+    assert!(DOC.contains("settlement_reconciliation_reason_codes:NO-GO:v1"));
+}
+
+#[test]
+fn regression_requires_settlement_evidence_schema_drift_fail_closed_rule() {
+    // Regression: #906
+    assert!(DOC.contains("settlement evidence schema drift must fail closed (`Regression: #906`)."));
+}
