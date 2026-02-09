@@ -49,6 +49,16 @@ fn doc_contains_signal_quarantine_contract() {
 }
 
 #[test]
+fn doc_contains_recovery_reversal_contract() {
+    assert!(DOC.contains("## Deterministic Reputation Recovery Reversal Contract"));
+    assert!(DOC.contains("generate_reputation_recovery_evidence_bundle.sh"));
+    assert!(DOC.contains("check_reputation_recovery_policy.sh"));
+    assert!(DOC.contains("run_reputation_recovery_contract_lane.sh"));
+    assert!(DOC.contains("REPUTATION_RECOVERY_MAX_SECONDS"));
+    assert!(DOC.contains("recovery_action"));
+}
+
+#[test]
 fn doc_contains_weighted_decay_and_antigaming_contract() {
     assert!(DOC.contains("## Weighted Decay and Anti-Gaming Threshold Contract"));
     assert!(DOC.contains("run_weighted_decay_contract_lane.sh"));
@@ -93,5 +103,13 @@ fn regression_requires_signal_quarantine_tamper_guard_marker() {
     // Regression: #935
     assert!(DOC.contains(
         "tampered quarantine reason codes, replayed nonces, and stale signal payloads force `NO-GO` quarantine (`Regression: #935`)."
+    ));
+}
+
+#[test]
+fn regression_requires_recovery_irreversible_penalty_guard_marker() {
+    // Regression: #936
+    assert!(DOC.contains(
+        "false-positive irreversible-penalty paths, replayed recovery nonces, and tampered recovery reason codes force `NO-GO` (`Regression: #936`)."
     ));
 }

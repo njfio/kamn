@@ -85,6 +85,25 @@ Signal ingestion is gated by deterministic quarantine checks before any reputati
 - Regression policy:
   - tampered quarantine reason codes, replayed nonces, and stale signal payloads force `NO-GO` quarantine (`Regression: #935`).
 
+## Deterministic Reputation Recovery Reversal Contract (Issue #936)
+False-positive penalties require deterministic reversal checks so recovery remains auditable and never drifts into irreversible state.
+
+- Schema contract:
+  - `schema_version`: `kamn.reputation.recovery-reversal-evidence.v1`
+  - `reason_key`: `reputation_recovery_reason_codes:<final_decision>:v1`
+  - `reason_codes`: sorted deterministic recovery failure codes
+  - `recovery_action`: `REVERSE_PENALTY` (GO) or `HOLD_PENALTY` (NO-GO)
+- Evidence bundle generator:
+  - `bash scripts/reputation/generate_reputation_recovery_evidence_bundle.sh --output-file /tmp/reputation-recovery.json --lane contract --recovery-id recovery-001 --subject-did did:kamn:agent-001 --reviewer-did did:kamn:reviewer-001 --pre-penalty-trust-score 700 --post-penalty-trust-score 540 --proposed-recovered-trust-score 660 --max-reversal-points 160 --false-positive-confirmed true --reviewer-quorum-satisfied true --audit-evidence-verified PASS --replay-guard-pass true --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/reputation/check_reputation_recovery_policy.sh --bundle-file /tmp/reputation-recovery.json`
+- PR fast contract lane:
+  - `bash scripts/reputation/run_reputation_recovery_contract_lane.sh`
+- Runtime budget control:
+  - `REPUTATION_RECOVERY_MAX_SECONDS` (contract lane fails closed when runtime exceeds budget)
+- Regression policy:
+  - false-positive irreversible-penalty paths, replayed recovery nonces, and tampered recovery reason codes force `NO-GO` (`Regression: #936`).
+
 ## Weighted Decay and Anti-Gaming Threshold Contract (Issue #736)
 Trust-score updates apply deterministic weighted decay windows and typed abuse-threshold penalties before score persistence.
 
@@ -109,6 +128,9 @@ bash scripts/reputation/test_run_reputation_dispute_contract_lane.sh
 bash scripts/reputation/test_generate_reputation_signal_quarantine_evidence_bundle.sh
 bash scripts/reputation/test_run_reputation_signal_quarantine_contract_lane.sh
 bash scripts/reputation/test_check_reputation_signal_quarantine_policy.sh
+bash scripts/reputation/test_generate_reputation_recovery_evidence_bundle.sh
+bash scripts/reputation/test_run_reputation_recovery_contract_lane.sh
+bash scripts/reputation/test_check_reputation_recovery_policy.sh
 bash scripts/reputation/test_run_reputation_dispute_matrix.sh
 bash scripts/reputation/test_run_weighted_decay_contract_lane.sh
 bash scripts/reputation/test_run_weighted_decay_matrix.sh
