@@ -324,6 +324,11 @@ assert_eq "$(extract_output "$escrow_contract_script_output" "run_rust")" "false
 assert_eq "$(extract_output "$escrow_contract_script_output" "run_settlement_reconciliation_contract_tests")" "true" "escrow contract script changes must run settlement reconciliation contract lane"
 assert_eq "$(extract_output "$escrow_contract_script_output" "test_scope")" "escrow-contract" "escrow contract script changes should set escrow-contract scope"
 
+escrow_contract_fixture_output="$(run_selector $'fixtures/escrow_reconciliation/finality_race_cases.json')"
+assert_eq "$(extract_output "$escrow_contract_fixture_output" "run_rust")" "false" "escrow race fixture-only changes should avoid rust lane"
+assert_eq "$(extract_output "$escrow_contract_fixture_output" "run_settlement_reconciliation_contract_tests")" "true" "escrow race fixture changes must run settlement reconciliation contract lane"
+assert_eq "$(extract_output "$escrow_contract_fixture_output" "test_scope")" "escrow-contract" "escrow race fixture changes should set escrow-contract scope"
+
 escrow_rust_output="$(run_selector $'crates/kamn-core/src/escrow.rs')"
 assert_eq "$(extract_output "$escrow_rust_output" "run_rust")" "true" "escrow rust changes should run rust lane"
 assert_eq "$(extract_output "$escrow_rust_output" "run_settlement_reconciliation_contract_tests")" "true" "escrow rust changes must run settlement reconciliation contract lane"

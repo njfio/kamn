@@ -26,6 +26,13 @@ fn doc_contains_chain_receipt_finality_adapter_contract() {
 }
 
 #[test]
+fn doc_contains_timeout_finality_race_matrix_contract() {
+    assert!(DOC.contains("## Timeout/Finality Race Matrix Evidence"));
+    assert!(DOC.contains("run_settlement_reconciliation_race_matrix.py"));
+    assert!(DOC.contains("fixtures/escrow_reconciliation/finality_race_cases.json"));
+}
+
+#[test]
 fn regression_requires_missing_receipt_evidence_guard_marker() {
     // Regression: #678
     assert!(DOC.contains(

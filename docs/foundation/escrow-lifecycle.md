@@ -49,12 +49,23 @@ Escrow settlement transitions must map chain receipt finality to deterministic t
   - pending/failed finality never mutates escrow state.
   - missing receipt evidence returns an explicit typed error.
 
+## Timeout/Finality Race Matrix Evidence (Issue #719)
+Timeout-conditioned settlement flows and delayed receipt finality are validated with deterministic race fixtures.
+
+- Race matrix runner:
+  - `python3 scripts/escrow/run_settlement_reconciliation_race_matrix.py --fixture fixtures/escrow_reconciliation/finality_race_cases.json --output-json /tmp/settlement-race-report.json`
+- Deep lane entrypoint:
+  - `bash scripts/escrow/run_settlement_reconciliation_deep_lane.sh --output-json settlement-reconciliation-report.json`
+- Regression policy:
+  - timeout-before-finality pending receipts and failed receipts force `NO-GO` (`Regression: #678`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
 bash scripts/escrow/test_generate_settlement_reconciliation_evidence_bundle.sh
 bash scripts/escrow/test_run_settlement_reconciliation_contract_lane.sh
+bash scripts/escrow/test_run_settlement_reconciliation_race_matrix.sh
 cargo test -p kamn-core --test escrow_lifecycle
 cargo test -p kamn-core --test escrow_lifecycle_docs
 cargo fmt --check
