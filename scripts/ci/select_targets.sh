@@ -317,7 +317,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/task-operations.md|crates/kamn-core/tests/task_operations_docs.rs|scripts/task/*task_operation_snapshot*)
+    docs/foundation/task-operations.md|docs/foundation/task-state-machine.md|crates/kamn-core/tests/task_operations_docs.rs|crates/kamn-core/tests/task_state_machine_docs.rs|crates/kamn-core/tests/task_escrow_transition_contracts.rs|scripts/task/*task_operation_snapshot*)
       TASK_OPERATION_SNAPSHOT_CONTRACT_CHANGED=true
       classified=true
       ;;

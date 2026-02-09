@@ -25,6 +25,14 @@ pub enum TaskTransition {
     Cancel,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TaskTransitionEvidence {
+    pub from: TaskState,
+    pub transition: TaskTransition,
+    pub to: TaskState,
+    pub reason_code: &'static str,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskLifecycle {
     task_id: String,
@@ -61,42 +69,29 @@ impl TaskLifecycle {
             return Err(TaskLifecycleError::TerminalState(self.state));
         }
 
-        let next = match (self.state, transition) {
-            (TaskState::Submitted, TaskTransition::Accept) => TaskState::Accepted,
-            (TaskState::Submitted, TaskTransition::Cancel) => TaskState::Cancelled,
-
-            (TaskState::Accepted, TaskTransition::Delegate) => TaskState::Delegated,
-            (TaskState::Accepted, TaskTransition::StartWork) => TaskState::InProgress,
-            (TaskState::Accepted, TaskTransition::Cancel) => TaskState::Cancelled,
-
-            (TaskState::Delegated, TaskTransition::StartWork) => TaskState::InProgress,
-            (TaskState::Delegated, TaskTransition::Cancel) => TaskState::Cancelled,
-
-            (TaskState::InProgress, TaskTransition::Block) => TaskState::Blocked,
-            (TaskState::InProgress, TaskTransition::RequestInput) => TaskState::InputRequired,
-            (TaskState::InProgress, TaskTransition::Complete) => TaskState::Completed,
-            (TaskState::InProgress, TaskTransition::Fail) => TaskState::Failed,
-            (TaskState::InProgress, TaskTransition::Cancel) => TaskState::Cancelled,
-
-            (TaskState::InputRequired, TaskTransition::StartWork) => TaskState::InProgress,
-            (TaskState::InputRequired, TaskTransition::Fail) => TaskState::Failed,
-            (TaskState::InputRequired, TaskTransition::Cancel) => TaskState::Cancelled,
-
-            (TaskState::Blocked, TaskTransition::StartWork) => TaskState::InProgress,
-            (TaskState::Blocked, TaskTransition::Fail) => TaskState::Failed,
-            (TaskState::Blocked, TaskTransition::Cancel) => TaskState::Cancelled,
-
-            _ => {
-                return Err(TaskLifecycleError::InvalidTransition {
-                    from: self.state,
-                    transition,
-                });
-            }
-        };
+        let next =
+            next_state(self.state, transition).ok_or(TaskLifecycleError::InvalidTransition {
+                from: self.state,
+                transition,
+            })?;
 
         self.state = next;
         self.history.push(next);
         Ok(())
+    }
+
+    pub fn transition_with_evidence(
+        &mut self,
+        transition: TaskTransition,
+    ) -> Result<TaskTransitionEvidence, TaskLifecycleError> {
+        let from = self.state();
+        self.transition(transition)?;
+        Ok(TaskTransitionEvidence {
+            from,
+            transition,
+            to: self.state(),
+            reason_code: "task_transition_allowed",
+        })
     }
 
     pub fn restore(task_id: &str, history: Vec<TaskState>) -> Result<Self, TaskLifecycleError> {
@@ -143,6 +138,17 @@ pub enum TaskLifecycleError {
     TerminalState(TaskState),
 }
 
+impl TaskLifecycleError {
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::EmptyTaskId => "task_id_empty",
+            Self::InvalidHistory(_) => "task_history_invalid",
+            Self::InvalidTransition { .. } => "task_transition_invalid_edge",
+            Self::TerminalState(_) => "task_transition_terminal_state",
+        }
+    }
+}
+
 impl fmt::Display for TaskLifecycleError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -161,6 +167,36 @@ impl fmt::Display for TaskLifecycleError {
 }
 
 impl std::error::Error for TaskLifecycleError {}
+
+fn next_state(from: TaskState, transition: TaskTransition) -> Option<TaskState> {
+    match (from, transition) {
+        (TaskState::Submitted, TaskTransition::Accept) => Some(TaskState::Accepted),
+        (TaskState::Submitted, TaskTransition::Cancel) => Some(TaskState::Cancelled),
+
+        (TaskState::Accepted, TaskTransition::Delegate) => Some(TaskState::Delegated),
+        (TaskState::Accepted, TaskTransition::StartWork) => Some(TaskState::InProgress),
+        (TaskState::Accepted, TaskTransition::Cancel) => Some(TaskState::Cancelled),
+
+        (TaskState::Delegated, TaskTransition::StartWork) => Some(TaskState::InProgress),
+        (TaskState::Delegated, TaskTransition::Cancel) => Some(TaskState::Cancelled),
+
+        (TaskState::InProgress, TaskTransition::Block) => Some(TaskState::Blocked),
+        (TaskState::InProgress, TaskTransition::RequestInput) => Some(TaskState::InputRequired),
+        (TaskState::InProgress, TaskTransition::Complete) => Some(TaskState::Completed),
+        (TaskState::InProgress, TaskTransition::Fail) => Some(TaskState::Failed),
+        (TaskState::InProgress, TaskTransition::Cancel) => Some(TaskState::Cancelled),
+
+        (TaskState::InputRequired, TaskTransition::StartWork) => Some(TaskState::InProgress),
+        (TaskState::InputRequired, TaskTransition::Fail) => Some(TaskState::Failed),
+        (TaskState::InputRequired, TaskTransition::Cancel) => Some(TaskState::Cancelled),
+
+        (TaskState::Blocked, TaskTransition::StartWork) => Some(TaskState::InProgress),
+        (TaskState::Blocked, TaskTransition::Fail) => Some(TaskState::Failed),
+        (TaskState::Blocked, TaskTransition::Cancel) => Some(TaskState::Cancelled),
+
+        _ => None,
+    }
+}
 
 fn transition_between(from: TaskState, to: TaskState) -> Option<TaskTransition> {
     match (from, to) {

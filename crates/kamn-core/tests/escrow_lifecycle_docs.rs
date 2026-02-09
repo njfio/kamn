@@ -27,6 +27,16 @@ fn doc_contains_chain_receipt_finality_adapter_contract() {
 }
 
 #[test]
+fn doc_contains_transition_evidence_reason_code_contract() {
+    assert!(DOC.contains("## Transition Evidence and Reason-Code Contract (Issue #903)"));
+    assert!(DOC.contains("apply_transition_with_evidence"));
+    assert!(DOC.contains("EscrowTransitionEvidence"));
+    assert!(DOC.contains("escrow_transition_allowed"));
+    assert!(DOC.contains("escrow_transition_invalid"));
+    assert!(DOC.contains("escrow_settlement_finalized"));
+}
+
+#[test]
 fn doc_contains_timeout_finality_race_matrix_contract() {
     assert!(DOC.contains("## Timeout/Finality Race Matrix Evidence"));
     assert!(DOC.contains("run_settlement_reconciliation_race_matrix.py"));
@@ -46,5 +56,13 @@ fn regression_requires_ledger_reference_guard_marker() {
     // Regression: #717
     assert!(DOC.contains(
         "missing ledger reference evidence and ledger amount drift force `NO-GO` (`Regression: #717`).",
+    ));
+}
+
+#[test]
+fn regression_requires_transition_reason_code_guard_marker() {
+    // Regression: #903
+    assert!(DOC.contains(
+        "transition reason-code drift and illegal transition acceptance fail closed (`Regression: #903`).",
     ));
 }
