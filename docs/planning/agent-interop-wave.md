@@ -26,9 +26,22 @@ This plan tracks deterministic DID lifecycle and protocol interop contract lanes
 Fail-closed regression marker:
 - replayed nonce, unauthorized actor mutation, and invalid revoked/active lifecycle transitions are rejected (`Regression: #889`).
 
+## Lifecycle Operator-Binding Policy Contract Lane (Issue #890)
+- Lifecycle operator-binding evidence contract scripts:
+  - `bash scripts/did/generate_lifecycle_operator_binding_evidence_bundle.sh --output-file /tmp/lifecycle-operator-binding.json --did kamn:did:agent:agent-001 --actor-did kamn:did:human:operator-001 --required-operator-did kamn:did:human:operator-001 --mutation-action rotate --mutation-nonce 51 --mutation-reason-code did_lifecycle_mutation_allowed --audit-export-id audit-export-001 --audit-record-count 3 --audit-digest sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --ci-fast-gate PASS`
+  - `bash scripts/did/check_lifecycle_operator_binding_policy.sh --bundle-file /tmp/lifecycle-operator-binding.json`
+  - `bash scripts/did/run_lifecycle_operator_binding_contract_lane.sh`
+- Deterministic decision key:
+  - `did_lifecycle_operator_binding_reason_codes:GO:v1`
+
+Fail-closed regression marker:
+- missing required evidence keys and final-decision drift are rejected (`Regression: #890`).
+
 ## CI Routing Contract
 - DID lifecycle-related docs and script changes must remain on bounded DID contract scope:
   - `docs/foundation/did-registry-transactions.md`
+  - `docs/foundation/key-lifecycle-audit-trails.md`
   - `docs/planning/agent-interop-wave.md`
   - `scripts/did/run_did_registry_contract_lane.sh`
+  - `scripts/did/run_lifecycle_operator_binding_contract_lane.sh`
   - `scripts/did/test_run_did_registry_contract_lane.sh`

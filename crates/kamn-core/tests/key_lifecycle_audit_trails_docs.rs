@@ -22,3 +22,18 @@ fn regression_requires_chain_link_mismatch_detection_rule() {
     // Regression: #158
     assert!(DOC.contains("chain links"));
 }
+
+#[test]
+fn doc_contains_lifecycle_operator_binding_audit_evidence_contract() {
+    assert!(DOC.contains("## DID Lifecycle Operator-Binding Audit Evidence Contract (Issue #890)"));
+    assert!(DOC.contains("generate_lifecycle_operator_binding_evidence_bundle.sh"));
+    assert!(DOC.contains("check_lifecycle_operator_binding_policy.sh"));
+    assert!(DOC.contains("run_lifecycle_operator_binding_contract_lane.sh"));
+    assert!(DOC.contains("did_lifecycle_operator_binding_reason_codes:GO:v1"));
+}
+
+#[test]
+fn regression_doc_marks_missing_keys_or_decision_drift_fail_closed_policy() {
+    // Regression: #890
+    assert!(DOC.contains("Regression: #890"));
+}

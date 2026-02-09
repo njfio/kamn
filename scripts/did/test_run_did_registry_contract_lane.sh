@@ -73,6 +73,16 @@ if ! grep -q "performance_lifecycle_mutation_contract_lane_stays_within_budget" 
   exit 1
 fi
 
+if ! grep -q "key_lifecycle_audit_trails_docs" "$SCRIPT"; then
+  echo "expected did registry lane to include key lifecycle audit doc contract coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "run_lifecycle_operator_binding_contract_lane.sh --skip-tests" "$SCRIPT"; then
+  echo "expected did registry lane to invoke lifecycle operator-binding contract lane coverage" >&2
+  exit 1
+fi
+
 if ! grep -q "agent_interop_wave_docs" "$SCRIPT"; then
   echo "expected did registry lane to include agent interop planning docs contract coverage" >&2
   exit 1
