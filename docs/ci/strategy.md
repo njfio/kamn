@@ -61,6 +61,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 - Post-cutover SLO/alert evidence command changes map to canary scope:
   - `run_launch_canary_contract_tests=true`
   - `test_scope=canary-contract`
+- Classification/redaction compliance command changes map to DSAR + channel scope:
+  - `run_dsar_legal_hold_contract_tests=true`
+  - `run_channel_lifecycle_contract_tests=true`
+  - `test_scope=channel-contract`
 
 Required demo lane command contract:
 
@@ -70,6 +74,7 @@ Required demo lane command contract:
 - `bash scripts/frontend/run_dashboard_shell_determinism_matrix_contract_lane.sh --output-file /tmp/dashboard-shell-matrix-contract-report.json`
 - `bash scripts/deploy/run_deployment_slo_rollback_contract_lane.sh --output-file /tmp/deployment-slo-rollback-contract-report.json`
 - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
+- `bash scripts/compliance/run_classification_redaction_contract_lane.sh --output-file /tmp/classification-redaction-contract-report.json`
 
 Regression policy:
 
@@ -80,6 +85,7 @@ Regression policy:
 - dashboard backend session/auth freshness selector/docs parity remains fail-closed (`Regression: #941`).
 - deployment slo/rollback selector/docs parity remains fail-closed (`Regression: #944`).
 - post-cutover slo/alert selector/docs parity remains fail-closed (`Regression: #913`).
+- classification/redaction compliance selector/docs parity remains fail-closed (`Regression: #914`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:

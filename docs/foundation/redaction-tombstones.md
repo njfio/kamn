@@ -16,11 +16,41 @@ This document describes the first implementation slice for PRD-aligned redaction
 - Added target protection guard preventing silent restore/override for already protected targets.
 - Integrated canonical state-key usage for target indexing.
 
+## Classification/Redaction Compliance Contract Lane
+Redaction and tombstone controls now share a deterministic compliance contract lane with classification evidence to keep audit posture reproducible.
+
+- Compliance lane command:
+  - `bash scripts/compliance/run_classification_redaction_lane.sh --output-file /tmp/classification-redaction-report.json`
+- Compliance policy checker:
+  - `bash scripts/compliance/check_classification_redaction_policy.sh --report-file /tmp/classification-redaction-report.json`
+- Compliance contract lane:
+  - `bash scripts/compliance/run_classification_redaction_contract_lane.sh --output-file /tmp/classification-redaction-contract-report.json`
+
+Runtime budget controls:
+
+- `KAMN_CLASSIFICATION_REDACTION_MAX_SECONDS`
+- `KAMN_CLASSIFICATION_REDACTION_CONTRACT_MAX_SECONDS`
+- `KAMN_CLASSIFICATION_REDACTION_SKIP_COMMANDS`
+
+Required schema/reason markers:
+
+- `kamn.compliance.classification-redaction-report.v1`
+- `classification_redaction_reason_codes:GO:v1`
+- `classification_redaction_reason_codes:NO-GO:v1`
+
+Regression policy:
+
+- classification/redaction contract drift must fail closed (`Regression: #914`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
 cargo test -p kamn-core --test redaction_tombstones
+cargo test -p kamn-core --test redaction_tombstones_docs
+bash scripts/compliance/test_run_classification_redaction_lane.sh
+bash scripts/compliance/test_check_classification_redaction_policy.sh
+bash scripts/compliance/test_run_classification_redaction_contract_lane.sh
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core

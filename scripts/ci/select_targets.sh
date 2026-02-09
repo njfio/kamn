@@ -310,7 +310,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/channel-models.md|docs/foundation/channel-models-and-permissions.md|docs/foundation/data-governance-retention.md|crates/kamn-core/tests/channel_models_docs.rs|crates/kamn-core/tests/channel_models_and_permissions_docs.rs|crates/kamn-core/tests/data_governance_retention_docs.rs|scripts/channel/*)
+    docs/foundation/channel-models.md|docs/foundation/channel-models-and-permissions.md|docs/foundation/data-governance-retention.md|docs/foundation/data-classification-tagging.md|docs/foundation/redaction-tombstones.md|crates/kamn-core/tests/channel_models_docs.rs|crates/kamn-core/tests/channel_models_and_permissions_docs.rs|crates/kamn-core/tests/data_governance_retention_docs.rs|crates/kamn-core/tests/redaction_tombstones_docs.rs|scripts/channel/*|scripts/compliance/*classification_redaction*)
       CHANNEL_LIFECYCLE_CONTRACT_CHANGED=true
       classified=true
       ;;
@@ -352,7 +352,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/data-classification-tagging.md|docs/foundation/audit-export-interfaces.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/audit_export_interfaces_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|crates/kamn-core/tests/data_classification_tagging_docs.rs|scripts/compliance/*dsar*|fixtures/compliance_dsar/*)
+    docs/foundation/data-classification-tagging.md|docs/foundation/redaction-tombstones.md|docs/foundation/audit-export-interfaces.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/audit_export_interfaces_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|crates/kamn-core/tests/data_classification_tagging_docs.rs|crates/kamn-core/tests/redaction_tombstones_docs.rs|scripts/compliance/*dsar*|scripts/compliance/*classification_redaction*|fixtures/compliance_dsar/*)
       DSAR_LEGAL_HOLD_CONTRACT_CHANGED=true
       classified=true
       ;;
