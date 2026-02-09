@@ -15,6 +15,7 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
 - Makefile developer entrypoints:
   - `make smoke-live-network`
   - `make deep-live-network`
+  - `make demo-localhost-transport`
 - Direct smoke runner:
   - `bash scripts/runtime/run_live_network_smoke_lane.sh --output-json /tmp/live-network-smoke-report.json`
 - Smoke contract lane:
@@ -25,6 +26,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `bash scripts/runtime/run_live_network_pilot_deep_contract_lane.sh`
 - Deep summary policy checker:
   - `bash scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh --summary-file /tmp/live-network-pilot-report.json`
+- Localhost signed sender/listener transport demo:
+  - `bash scripts/sdk/run_localhost_signed_demo.sh`
 
 ## Bridge Replay/Redaction Lane Matrix
 

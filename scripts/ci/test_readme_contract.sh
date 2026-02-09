@@ -32,6 +32,8 @@ required_snippets=(
   "live-network-smoke-report.json"
   "make deep-live-network"
   "live-network-pilot-report.json"
+  "make demo-localhost-transport"
+  "run_localhost_signed_demo.sh"
   "run_localhost_bridge_demo_evidence_contract_lane.sh"
   "run_localhost_bridge_demo_evidence_deep_lane.sh"
   "kamn.bridge.localhost-demo-evidence.v1"

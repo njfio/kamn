@@ -65,6 +65,9 @@ make test
 
 # Two-process localhost signed-message demo
 make demo
+
+# Explicit localhost transport sender/listener demo
+make demo-localhost-transport
 ```
 
 Deep/scheduled lanes remain opt-in via scripts in `scripts/sdk/` and `scripts/ci/`.
@@ -81,6 +84,8 @@ bash scripts/ci/test_select_targets.sh
 
 ```bash
 bash scripts/sdk/run_local_e2e_demo.sh
+# localhost signed sender/listener transport
+bash scripts/sdk/run_localhost_signed_demo.sh
 ```
 
 ### Run Localhost Bridge Relay Demo Lane
