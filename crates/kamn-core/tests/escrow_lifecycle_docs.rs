@@ -17,6 +17,15 @@ fn doc_contains_settlement_reconciliation_evidence_contract() {
 }
 
 #[test]
+fn doc_contains_chain_receipt_finality_adapter_contract() {
+    assert!(DOC.contains("## Chain Receipt Finality Adapter Contract"));
+    assert!(DOC.contains("EscrowReceiptFinality::{Final, Pending, Failed}"));
+    assert!(DOC.contains("reconcile_receipt_finality(receipt_id, finality, action)"));
+    assert!(DOC.contains("EscrowSettlementOutcome::{Settled, Pending, Rejected}"));
+    assert!(DOC.contains("EscrowReceiptFinality::parse(...)"));
+}
+
+#[test]
 fn regression_requires_missing_receipt_evidence_guard_marker() {
     // Regression: #678
     assert!(DOC.contains(

@@ -37,6 +37,18 @@ Settlement reconciliation evidence is captured as machine-readable JSON so relea
 - Regression policy:
   - missing or invalid chain receipt evidence forces `NO-GO` (`Regression: #678`).
 
+## Chain Receipt Finality Adapter Contract (Issue #718)
+Escrow settlement transitions must map chain receipt finality to deterministic typed outcomes.
+
+- Core adapter API:
+  - `EscrowReceiptFinality::{Final, Pending, Failed}`
+  - `EscrowLifecycle::reconcile_receipt_finality(receipt_id, finality, action)`
+  - `EscrowSettlementOutcome::{Settled, Pending, Rejected}`
+- Fail-closed policy:
+  - unknown finality values are rejected by `EscrowReceiptFinality::parse(...)`.
+  - pending/failed finality never mutates escrow state.
+  - missing receipt evidence returns an explicit typed error.
+
 ## Local Validation
 Run from repository root:
 

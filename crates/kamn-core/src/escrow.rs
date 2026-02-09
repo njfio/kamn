@@ -16,6 +16,46 @@ pub enum EscrowStatus {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EscrowReceiptFinality {
+    Final,
+    Pending,
+    Failed,
+}
+
+impl EscrowReceiptFinality {
+    pub fn parse(value: &str) -> Result<Self, EscrowLifecycleError> {
+        let normalized = value.trim().to_ascii_uppercase();
+        match normalized.as_str() {
+            "FINAL" => Ok(Self::Final),
+            "PENDING" => Ok(Self::Pending),
+            "FAILED" => Ok(Self::Failed),
+            _ => Err(EscrowLifecycleError::InvalidReceiptFinality {
+                found: value.to_owned(),
+            }),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EscrowSettlementAction {
+    Release {
+        amount: u128,
+    },
+    RefundRemaining,
+    TimeoutRefund {
+        current_unix: u64,
+        timeout_unix: u64,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EscrowSettlementOutcome {
+    Settled { status: EscrowStatus },
+    Pending { reason: &'static str },
+    Rejected { reason: &'static str },
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EscrowLifecycle {
     total_amount: u128,
@@ -166,6 +206,40 @@ impl EscrowLifecycle {
         Ok(())
     }
 
+    pub fn reconcile_receipt_finality(
+        &mut self,
+        receipt_id: &str,
+        finality: EscrowReceiptFinality,
+        action: EscrowSettlementAction,
+    ) -> Result<EscrowSettlementOutcome, EscrowLifecycleError> {
+        if receipt_id.trim().is_empty() {
+            return Err(EscrowLifecycleError::MissingReceiptEvidence);
+        }
+
+        match finality {
+            EscrowReceiptFinality::Pending => Ok(EscrowSettlementOutcome::Pending {
+                reason: "receipt finality pending",
+            }),
+            EscrowReceiptFinality::Failed => Ok(EscrowSettlementOutcome::Rejected {
+                reason: "receipt finality failed",
+            }),
+            EscrowReceiptFinality::Final => {
+                match action {
+                    EscrowSettlementAction::Release { amount } => self.release(amount)?,
+                    EscrowSettlementAction::RefundRemaining => self.refund_remaining()?,
+                    EscrowSettlementAction::TimeoutRefund {
+                        current_unix,
+                        timeout_unix,
+                    } => self.refund_after_timeout(current_unix, timeout_unix)?,
+                }
+
+                Ok(EscrowSettlementOutcome::Settled {
+                    status: self.status(),
+                })
+            }
+        }
+    }
+
     fn invalid_transition(&self, action: &'static str) -> EscrowLifecycleError {
         EscrowLifecycleError::InvalidTransition {
             from: self.status(),
@@ -177,6 +251,10 @@ impl EscrowLifecycle {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EscrowLifecycleError {
     ZeroAmount,
+    MissingReceiptEvidence,
+    InvalidReceiptFinality {
+        found: String,
+    },
     InvalidAmount {
         action: &'static str,
         amount: u128,
@@ -201,6 +279,10 @@ impl fmt::Display for EscrowLifecycleError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ZeroAmount => write!(f, "amount must be greater than zero"),
+            Self::MissingReceiptEvidence => write!(f, "missing receipt evidence"),
+            Self::InvalidReceiptFinality { found } => {
+                write!(f, "invalid receipt finality state: {found}")
+            }
             Self::InvalidAmount {
                 action,
                 amount,
