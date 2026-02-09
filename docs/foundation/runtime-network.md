@@ -126,6 +126,19 @@ This document captures the initial runtime-network foundation slice for peer lif
   - unauthorized sender DIDs are rejected (`Regression: #618`)
   - replayed sender nonces are rejected (`Regression: #618`)
 
+## Deterministic Input Mutation Fail-Closed Rules
+- Envelope mutation suite must deterministically cover:
+  - malformed payload shape/identity cases
+  - truncated scalar/list payload cases
+  - tampered proof-binding cases
+- DID mutation suite must deterministically cover:
+  - normalization drift cases
+  - encoding/character drift cases
+  - method mismatch prefix cases
+- All mutation corpus entries must fail closed with explicit typed errors and stable reason strings.
+- Fast contract lane command:
+  - `bash scripts/runtime/run_input_mutation_contract_lane.sh`
+
 ## Queue Guard Rules
 - `BoundedRuntimeQueue<T>` is FIFO and preserves insertion order.
 - Capacity must be greater than zero.
@@ -230,6 +243,8 @@ This document captures the initial runtime-network foundation slice for peer lif
   - empty peer ID and zero-capacity queue rejection
   - invalid peer-frame wire payload and delimiter rejection
   - deterministic signature mismatch rejection
+  - deterministic malformed/truncated/tampered envelope mutation rejection
+  - deterministic DID normalization/encoding/method mismatch mutation rejection
   - invalid backpressure threshold ordering and queue-depth validation rejection
   - empty proposal candidate ID rejection
   - empty resume-token rejoin attempt rejection
@@ -237,6 +252,8 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Functional:
   - peer lifecycle connect/degrade/recover/disconnect flow
   - authenticated peer-frame wire roundtrip and signature verification
+  - envelope mutation corpus fail-closed classification by malformed/truncated/tampered classes
+  - DID mutation corpus fail-closed classification by normalization/encoding/method mismatch classes
   - deterministic queue saturation backpressure classification
   - planner deterministic ordering contract
   - rejoin acceptance with matching snapshot
@@ -248,6 +265,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - queue-drain to planner ordering preservation
   - lagging-node catch-up guidance output
   - daemon network-fault simulation with queue-overflow/degradation reporting
+  - deterministic runtime mutation contract lane command coverage
   - runtime snapshot contract lane wiring and docs mapping checks
 - Regression:
   - rejoin without disconnect is rejected (`Regression: #324`)
@@ -267,11 +285,14 @@ This document captures the initial runtime-network foundation slice for peer lif
   - stale disconnected peer queue purge decision remains deterministic (`Regression: #618`)
   - snapshot stale metadata rejection (`Regression: #617`)
   - snapshot restore cursor mismatch rejection (`Regression: #617`)
+  - deterministic envelope/DID mutation fail-closed reasons remain stable (`Regression: #843`)
   - task/escrow/peer lifecycle generated invariant lanes remain deterministic (`Regression: #842`)
 - Performance:
   - bounded PR-lane runtime backpressure evaluation budget check
   - bounded PR-lane authenticated peer-frame validation budget check
   - bounded PR-lane deterministic fault simulation budget check
+  - bounded PR-lane envelope mutation validation budget check
+  - bounded PR-lane DID mutation validation budget check
   - bounded PR-lane snapshot recovery budget check
   - scheduled chaos lane stress hook (`--ignored`)
   - scheduled snapshot recovery deep lane stress hook (`--ignored`)
@@ -289,6 +310,9 @@ cargo test -p kamn-core network_fault_simulation
 cargo test -p kamn-core snapshot_store
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-core --test bridge_quorum_runtime_docs
+cargo test -p kamn-core --test message_envelope_fuzz_smoke functional_envelope_mutation_suite_covers_malformed_truncated_and_tampered_classes -- --exact
+cargo test -p kamn-core --test did_fuzz_smoke functional_did_mutation_suite_covers_normalization_encoding_and_method_mismatch_classes -- --exact
+bash scripts/runtime/run_input_mutation_contract_lane.sh
 cargo test -p kamn-core --test task_state_machine task_lifecycle_property_generated_sequences_preserve_transition_contracts -- --exact
 cargo test -p kamn-core --test escrow_lifecycle escrow_property_generated_action_sequences_preserve_amount_and_status_invariants -- --exact
 cargo test -p kamn-core --test runtime_peer_lifecycle peer_lifecycle_property_generated_event_sequences_match_transition_contract -- --exact
