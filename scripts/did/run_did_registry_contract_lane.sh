@@ -17,6 +17,8 @@ bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --t
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test did_registry_transactions performance_lifecycle_mutation_contract_lane_stays_within_budget
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test did_registry_transactions_docs
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test agent_interop_wave_docs
+bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test key_lifecycle_audit_trails_docs
+bash scripts/did/run_lifecycle_operator_binding_contract_lane.sh --skip-tests
 
 if ! grep -Fq "register_with_retry_guard" docs/foundation/did-registry-transactions.md; then
   echo "expected retry guard contract in did-registry-transactions.md" >&2
@@ -45,6 +47,41 @@ fi
 
 if ! grep -Fq "did_lifecycle_mutation_reason_codes:GO:v1" docs/planning/agent-interop-wave.md; then
   echo "expected lifecycle mutation reason-key contract in agent-interop-wave planning doc" >&2
+  exit 1
+fi
+
+if ! grep -Fq "did_lifecycle_operator_binding_reason_codes:GO:v1" docs/planning/agent-interop-wave.md; then
+  echo "expected lifecycle operator-binding reason-key contract in agent-interop-wave planning doc" >&2
+  exit 1
+fi
+
+if ! grep -Fq "Regression: #890" docs/planning/agent-interop-wave.md; then
+  echo "expected lifecycle operator-binding regression marker in agent-interop-wave planning doc" >&2
+  exit 1
+fi
+
+if ! grep -Fq "generate_lifecycle_operator_binding_evidence_bundle.sh" docs/foundation/key-lifecycle-audit-trails.md; then
+  echo "expected lifecycle operator-binding evidence generator command in key-lifecycle-audit-trails.md" >&2
+  exit 1
+fi
+
+if ! grep -Fq "check_lifecycle_operator_binding_policy.sh" docs/foundation/key-lifecycle-audit-trails.md; then
+  echo "expected lifecycle operator-binding policy checker command in key-lifecycle-audit-trails.md" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_lifecycle_operator_binding_contract_lane.sh" docs/foundation/key-lifecycle-audit-trails.md; then
+  echo "expected lifecycle operator-binding contract lane command in key-lifecycle-audit-trails.md" >&2
+  exit 1
+fi
+
+if ! grep -Fq "did_lifecycle_operator_binding_reason_codes:GO:v1" docs/foundation/key-lifecycle-audit-trails.md; then
+  echo "expected lifecycle operator-binding reason-key contract in key-lifecycle-audit-trails.md" >&2
+  exit 1
+fi
+
+if ! grep -Fq "Regression: #890" docs/foundation/key-lifecycle-audit-trails.md; then
+  echo "expected lifecycle operator-binding regression marker in key-lifecycle-audit-trails.md" >&2
   exit 1
 fi
 

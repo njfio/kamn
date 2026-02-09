@@ -597,6 +597,12 @@ assert_eq "$(extract_output "$did_contract_docs_output" "run_did_registry_contra
 assert_eq "$(extract_output "$did_contract_docs_output" "run_federated_did_handshake_contract_tests")" "false" "did registry docs should not run federated DID handshake lane"
 assert_eq "$(extract_output "$did_contract_docs_output" "test_scope")" "did-contract" "did contract docs should set did-contract scope"
 
+did_key_lifecycle_docs_output="$(run_selector $'docs/foundation/key-lifecycle-audit-trails.md')"
+assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "run_rust")" "false" "lifecycle audit docs should avoid rust lane"
+assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "run_did_registry_contract_tests")" "true" "lifecycle audit docs must run did registry contract lane"
+assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "run_federated_did_handshake_contract_tests")" "false" "lifecycle audit docs should not run federated DID handshake lane"
+assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "test_scope")" "did-contract" "lifecycle audit docs should set did-contract scope"
+
 did_contract_rust_output="$(run_selector $'crates/kamn-core/src/did_registry.rs')"
 assert_eq "$(extract_output "$did_contract_rust_output" "run_rust")" "true" "did registry rust changes should run rust lane"
 assert_eq "$(extract_output "$did_contract_rust_output" "run_did_registry_contract_tests")" "true" "did registry rust changes must run did registry contract lane"
@@ -608,6 +614,12 @@ assert_eq "$(extract_output "$did_contract_script_output" "run_rust")" "false" "
 assert_eq "$(extract_output "$did_contract_script_output" "run_did_registry_contract_tests")" "true" "did contract script changes must run did registry contract lane"
 assert_eq "$(extract_output "$did_contract_script_output" "run_federated_did_handshake_contract_tests")" "false" "did registry script changes should not run federated DID handshake lane"
 assert_eq "$(extract_output "$did_contract_script_output" "test_scope")" "did-contract" "did contract script changes should set did-contract scope"
+
+lifecycle_operator_binding_contract_script_output="$(run_selector $'scripts/did/run_lifecycle_operator_binding_contract_lane.sh')"
+assert_eq "$(extract_output "$lifecycle_operator_binding_contract_script_output" "run_rust")" "false" "lifecycle operator-binding contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$lifecycle_operator_binding_contract_script_output" "run_did_registry_contract_tests")" "true" "lifecycle operator-binding contract script changes must run did registry contract lane"
+assert_eq "$(extract_output "$lifecycle_operator_binding_contract_script_output" "run_federated_did_handshake_contract_tests")" "false" "lifecycle operator-binding contract script changes should not run federated DID handshake lane"
+assert_eq "$(extract_output "$lifecycle_operator_binding_contract_script_output" "test_scope")" "did-contract" "lifecycle operator-binding contract script changes should set did-contract scope"
 
 agent_interop_wave_doc_output="$(run_selector $'docs/planning/agent-interop-wave.md')"
 assert_eq "$(extract_output "$agent_interop_wave_doc_output" "run_rust")" "false" "agent interop planning doc-only changes should avoid rust lane"
