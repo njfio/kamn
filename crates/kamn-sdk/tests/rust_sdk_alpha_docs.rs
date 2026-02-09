@@ -42,6 +42,17 @@ fn doc_contains_sdk_schema_compatibility_contract_lane() {
 }
 
 #[test]
+fn doc_contains_live_transport_smoke_parity_budget_contract_lane() {
+    assert!(DOC.contains("## Live Transport Smoke Parity Budget Contract"));
+    assert!(DOC.contains("run_live_transport_smoke_parity_lane.sh"));
+    assert!(DOC.contains("check_live_transport_smoke_parity_policy.sh"));
+    assert!(DOC.contains("run_live_transport_smoke_parity_contract_lane.sh"));
+    assert!(DOC.contains("KAMN_SDK_SMOKE_PARITY_MAX_SECONDS"));
+    assert!(DOC.contains("KAMN_SDK_SMOKE_PARITY_MAX_RETRIES"));
+    assert!(DOC.contains("kamn.sdk.live-transport-smoke-parity-report.v1"));
+}
+
+#[test]
 fn regression_requires_localhost_signed_demo_marker_contract() {
     // Regression: #807
     assert!(DOC.contains("`Regression: #807`"));
@@ -80,5 +91,13 @@ fn regression_requires_sdk_schema_compatibility_drift_guard_contract() {
     // Regression: #937
     assert!(DOC.contains(
         "schema-version drift, case mismatch, or tampered reason codes force `NO-GO` (`Regression: #937`)."
+    ));
+}
+
+#[test]
+fn regression_requires_live_transport_smoke_parity_budget_guard_contract() {
+    // Regression: #938
+    assert!(DOC.contains(
+        "retry-budget exhaustion, runtime-budget breaches, or transport parity drift force `NO-GO` (`Regression: #938`)."
     ));
 }

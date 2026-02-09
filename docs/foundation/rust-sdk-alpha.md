@@ -144,6 +144,27 @@ Required schema markers:
 
 The contract fails closed: schema-version drift, case mismatch, or tampered reason codes force `NO-GO` (`Regression: #937`).
 
+## Live Transport Smoke Parity Budget Contract
+A bounded smoke-parity lane is available for deterministic cross-SDK live transport checks with explicit runtime/retry guardrails:
+
+- Smoke lane command:
+  - `bash scripts/sdk/run_live_transport_smoke_parity_lane.sh --output-json /tmp/sdk-live-transport-smoke-report.json`
+- Policy checker command:
+  - `bash scripts/sdk/check_live_transport_smoke_parity_policy.sh --report-file /tmp/sdk-live-transport-smoke-report.json`
+- Contract lane command:
+  - `bash scripts/sdk/run_live_transport_smoke_parity_contract_lane.sh --output-file /tmp/sdk-live-transport-smoke-contract-report.json`
+
+Runtime/retry budget controls:
+
+- `KAMN_SDK_SMOKE_PARITY_MAX_SECONDS`
+- `KAMN_SDK_SMOKE_PARITY_MAX_RETRIES`
+
+Smoke report schema marker:
+
+- `kamn.sdk.live-transport-smoke-parity-report.v1`
+
+The lane fails closed: retry-budget exhaustion, runtime-budget breaches, or transport parity drift force `NO-GO` (`Regression: #938`).
+
 ## CI Routing Policy (Issue #635)
 PR checks use changed-language routing to keep cost and runtime bounded:
 
