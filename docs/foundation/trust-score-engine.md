@@ -24,6 +24,7 @@ Engine constants and core components:
 - Weighted decay applies a deterministic `decay_multiplier_bps` to `volume_bonus` and `endorsement_bonus`:
   - `decayed_volume_bonus = volume_bonus * decay_multiplier_bps / 1000`
   - `decayed_endorsement_bonus = endorsement_bonus * decay_multiplier_bps / 1000`
+- Stale-only history entries do not increase `decay_multiplier_bps`; only recent and mid windows can lift the multiplier.
 - Abuse-threshold penalties map to typed outcomes:
   - `ReciprocityRing` when delegation ratio breaches threshold
   - `BurstSpam` when failure-burst ratio breaches threshold
@@ -42,6 +43,7 @@ Engine constants and core components:
 Regression guards:
 - `1000ms` remains in the highest response bucket.
 - replayed reciprocity/burst/churn abuse fixtures remain penalized (`Regression: #730`).
+- stale-only history does not improve decay multiplier (`Regression: #768`).
 
 ## Weighted Decay and Anti-Gaming Fixture Lanes (Issue #736)
 - Compact PR lane entrypoint:

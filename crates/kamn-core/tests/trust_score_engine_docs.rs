@@ -51,3 +51,11 @@ fn regression_requires_weighted_decay_abuse_guard_marker() {
         "replayed reciprocity/burst/churn abuse fixtures remain penalized (`Regression: #730`)."
     ));
 }
+
+#[test]
+fn regression_requires_stale_history_decay_guard_marker() {
+    // Regression: #768
+    assert!(
+        DOC.contains("stale-only history does not improve decay multiplier (`Regression: #768`).")
+    );
+}
