@@ -63,15 +63,21 @@ fn functional_pending_commit_receipt_sets_requeue_until_finalized() {
         .apply_receipt_finality(
             pending.operation_id.as_str(),
             KolmeCommitReceiptFinality::Final,
-            "kolme-local",
-            "receipt-final-op-requeue",
+            submitted
+                .receipt_provider
+                .as_deref()
+                .expect("submit must include receipt provider"),
+            submitted
+                .receipt_commit_id
+                .as_deref()
+                .expect("submit must include receipt commit id"),
         )
         .expect("finality update should succeed");
     assert_eq!(finalized.state, RuntimeCommitLifecycleState::Finalized);
     assert!(!finalized.needs_requeue);
     assert_eq!(
         finalized.receipt_commit_id.as_deref(),
-        Some("receipt-final-op-requeue")
+        submitted.receipt_commit_id.as_deref()
     );
 }
 
@@ -100,8 +106,14 @@ fn integration_commit_to_receipt_flow_is_deterministic() {
         .apply_receipt_finality(
             pending_then_failed.operation_id.as_str(),
             KolmeCommitReceiptFinality::Failed,
-            "kolme-local",
-            "receipt-failed-op-deterministic-failed",
+            pending
+                .receipt_provider
+                .as_deref()
+                .expect("submit must include receipt provider"),
+            pending
+                .receipt_commit_id
+                .as_deref()
+                .expect("submit must include receipt commit id"),
         )
         .expect("failed finality update should succeed");
     assert_eq!(failed.state, RuntimeCommitLifecycleState::Failed);
@@ -142,7 +154,7 @@ fn regression_finalized_operation_cannot_regress_to_pending() {
         request.idempotency_key(),
         KolmeCommitReceiptFinality::Final,
     );
-    pipeline
+    let submitted = pipeline
         .submit_with_client(&mut client, request.clone())
         .expect("submit should succeed");
 
@@ -150,12 +162,119 @@ fn regression_finalized_operation_cannot_regress_to_pending() {
         pipeline.apply_receipt_finality(
             request.operation_id.as_str(),
             KolmeCommitReceiptFinality::Pending,
-            "kolme-local",
-            "receipt-pending-op-no-regress",
+            submitted
+                .receipt_provider
+                .as_deref()
+                .expect("submit must include receipt provider"),
+            submitted
+                .receipt_commit_id
+                .as_deref()
+                .expect("submit must include receipt commit id"),
         ),
         Err(KolmeRuntimeCommitError::InvalidFinalityTransition {
             from: "finalized",
             to: "pending",
+        })
+    );
+}
+
+#[test]
+fn regression_receipt_provider_mismatch_is_rejected_fail_closed() {
+    // Regression: #827
+    let mut client =
+        InMemoryKolmeRuntimeCommitClient::new("kolme-local").expect("client should build");
+    let mut pipeline = RuntimeCommitPipeline::new();
+    let request = request("op-provider-mismatch", 8);
+
+    let submitted = pipeline
+        .submit_with_client(&mut client, request.clone())
+        .expect("submit should succeed");
+    assert_eq!(submitted.state, RuntimeCommitLifecycleState::Pending);
+
+    assert_eq!(
+        pipeline.apply_receipt_finality(
+            request.operation_id.as_str(),
+            KolmeCommitReceiptFinality::Final,
+            "kolme-tampered",
+            submitted
+                .receipt_commit_id
+                .as_deref()
+                .expect("submit must include receipt commit id"),
+        ),
+        Err(KolmeRuntimeCommitError::ReceiptFieldMismatch {
+            field: "receipt_provider",
+            expected: "kolme-local".to_owned(),
+            observed: "kolme-tampered".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn regression_receipt_commit_id_mismatch_is_rejected_fail_closed() {
+    // Regression: #827
+    let mut client =
+        InMemoryKolmeRuntimeCommitClient::new("kolme-local").expect("client should build");
+    let mut pipeline = RuntimeCommitPipeline::new();
+    let request = request("op-commit-id-mismatch", 9);
+
+    let submitted = pipeline
+        .submit_with_client(&mut client, request.clone())
+        .expect("submit should succeed");
+    assert_eq!(submitted.state, RuntimeCommitLifecycleState::Pending);
+
+    assert_eq!(
+        pipeline.apply_receipt_finality(
+            request.operation_id.as_str(),
+            KolmeCommitReceiptFinality::Final,
+            submitted
+                .receipt_provider
+                .as_deref()
+                .expect("submit must include receipt provider"),
+            "tampered-receipt-id",
+        ),
+        Err(KolmeRuntimeCommitError::ReceiptFieldMismatch {
+            field: "receipt_commit_id",
+            expected: submitted
+                .receipt_commit_id
+                .expect("submit must include receipt commit id"),
+            observed: "tampered-receipt-id".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn regression_finalized_operation_cannot_transition_to_failed() {
+    // Regression: #827
+    let mut client =
+        InMemoryKolmeRuntimeCommitClient::new("kolme-local").expect("client should build");
+    let mut pipeline = RuntimeCommitPipeline::new();
+    let request = request("op-finalized-to-failed", 10);
+
+    client.set_finality_for_idempotency_key(
+        request.idempotency_key(),
+        KolmeCommitReceiptFinality::Final,
+    );
+    let submitted = pipeline
+        .submit_with_client(&mut client, request.clone())
+        .expect("submit should succeed");
+    assert_eq!(submitted.state, RuntimeCommitLifecycleState::Finalized);
+
+    assert_eq!(
+        pipeline.apply_receipt_finality(
+            request.operation_id.as_str(),
+            KolmeCommitReceiptFinality::Failed,
+            submitted
+                .receipt_provider
+                .as_deref()
+                .expect("submit must include receipt provider"),
+            submitted
+                .receipt_commit_id
+                .as_deref()
+                .expect("submit must include receipt commit id"),
+        ),
+        Err(KolmeRuntimeCommitError::InvalidFinalityTransition {
+            from: "finalized",
+            to: "failed",
         })
     );
 }

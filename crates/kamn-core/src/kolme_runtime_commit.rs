@@ -235,19 +235,44 @@ impl RuntimeCommitPipeline {
                 operation_id: operation_id.to_owned(),
             },
         )?;
+
+        if let Some(expected_provider) = record.receipt_provider.as_deref() {
+            if expected_provider != receipt_provider {
+                return Err(KolmeRuntimeCommitError::ReceiptFieldMismatch {
+                    field: "receipt_provider",
+                    expected: expected_provider.to_owned(),
+                    observed: receipt_provider.to_owned(),
+                });
+            }
+        }
+        if let Some(expected_commit_id) = record.receipt_commit_id.as_deref() {
+            if expected_commit_id != receipt_commit_id {
+                return Err(KolmeRuntimeCommitError::ReceiptFieldMismatch {
+                    field: "receipt_commit_id",
+                    expected: expected_commit_id.to_owned(),
+                    observed: receipt_commit_id.to_owned(),
+                });
+            }
+        }
+
         let target_state = lifecycle_state_for_finality(finality);
 
-        if record.state != target_state {
-            match (record.state, target_state) {
-                (RuntimeCommitLifecycleState::Finalized, RuntimeCommitLifecycleState::Pending)
-                | (RuntimeCommitLifecycleState::Failed, RuntimeCommitLifecycleState::Pending) => {
-                    return Err(KolmeRuntimeCommitError::InvalidFinalityTransition {
-                        from: lifecycle_state_label(record.state),
-                        to: lifecycle_state_label(target_state),
-                    });
-                }
-                _ => {}
-            }
+        if record.state != target_state
+            && !matches!(
+                (record.state, target_state),
+                (
+                    RuntimeCommitLifecycleState::Pending,
+                    RuntimeCommitLifecycleState::Finalized
+                ) | (
+                    RuntimeCommitLifecycleState::Pending,
+                    RuntimeCommitLifecycleState::Failed
+                )
+            )
+        {
+            return Err(KolmeRuntimeCommitError::InvalidFinalityTransition {
+                from: lifecycle_state_label(record.state),
+                to: lifecycle_state_label(target_state),
+            });
         }
 
         record.state = target_state;
@@ -397,6 +422,15 @@ pub enum KolmeRuntimeCommitError {
         /// Target lifecycle state label.
         to: &'static str,
     },
+    /// Runtime receipt field differs from the operation's existing receipt marker.
+    ReceiptFieldMismatch {
+        /// Field name that mismatched.
+        field: &'static str,
+        /// Expected persisted value.
+        expected: String,
+        /// Observed incoming value.
+        observed: String,
+    },
 }
 
 impl fmt::Display for KolmeRuntimeCommitError {
@@ -411,6 +445,14 @@ impl fmt::Display for KolmeRuntimeCommitError {
             Self::InvalidFinalityTransition { from, to } => {
                 write!(f, "invalid finality transition from {from} to {to}")
             }
+            Self::ReceiptFieldMismatch {
+                field,
+                expected,
+                observed,
+            } => write!(
+                f,
+                "receipt field mismatch for {field}: expected '{expected}', observed '{observed}'"
+            ),
         }
     }
 }
