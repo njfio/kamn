@@ -123,6 +123,15 @@ fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
 }
 
 #[test]
+fn checklist_contains_failover_sync_drill_evidence_contract() {
+    assert!(CHECKLIST.contains("## Failover + Sync Drill Evidence Contract"));
+    assert!(CHECKLIST.contains("select_failover_sync_drill_lane.sh"));
+    assert!(CHECKLIST.contains("run_failover_sync_drill_preflight_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_failover_sync_drill_deep_lane.sh"));
+    assert!(CHECKLIST.contains("run_failover_sync_drill_suite.sh"));
+}
+
+#[test]
 fn checklist_contains_governance_simulation_and_human_veto_evidence_contract() {
     assert!(CHECKLIST.contains("## Governance Simulation and Human-Veto Evidence Contract"));
     assert!(CHECKLIST.contains("generate_governance_simulation_evidence_bundle.sh"));
@@ -237,6 +246,16 @@ fn regression_requires_ledger_reference_evidence_guard_marker() {
     // Regression: #717
     assert!(CHECKLIST.contains(
         "missing ledger reference evidence and ledger amount drift force `NO-GO` (`Regression: #717`)."
+    ));
+}
+
+#[test]
+fn regression_requires_failover_sync_budget_and_cadence_guard_markers() {
+    // Regression: #788
+    assert!(CHECKLIST
+        .contains("preflight runtime budget overruns force lane failure (`Regression: #788`)."));
+    assert!(CHECKLIST.contains(
+        "unscheduled deep-lane execution force-fails via scheduled-only cadence guard (`Regression: #788`)."
     ));
 }
 
