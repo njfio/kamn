@@ -1059,6 +1059,16 @@ assert_eq "$(extract_output "$canary_slo_script_output" "run_rust")" "false" "po
 assert_eq "$(extract_output "$canary_slo_script_output" "run_launch_canary_contract_tests")" "true" "post-cutover SLO script changes must run launch canary lane"
 assert_eq "$(extract_output "$canary_slo_script_output" "test_scope")" "canary-contract" "post-cutover SLO script changes should set canary-contract scope"
 
+canary_slo_policy_output="$(run_selector $'scripts/canary/check_post_cutover_slo_policy.sh')"
+assert_eq "$(extract_output "$canary_slo_policy_output" "run_rust")" "false" "post-cutover SLO policy checker script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$canary_slo_policy_output" "run_launch_canary_contract_tests")" "true" "post-cutover SLO policy checker changes must run launch canary lane"
+assert_eq "$(extract_output "$canary_slo_policy_output" "test_scope")" "canary-contract" "post-cutover SLO policy checker changes should set canary-contract scope"
+
+canary_slo_generator_output="$(run_selector $'scripts/canary/generate_post_cutover_slo_evidence_bundle.sh')"
+assert_eq "$(extract_output "$canary_slo_generator_output" "run_rust")" "false" "post-cutover SLO generator script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$canary_slo_generator_output" "run_launch_canary_contract_tests")" "true" "post-cutover SLO generator changes must run launch canary lane"
+assert_eq "$(extract_output "$canary_slo_generator_output" "test_scope")" "canary-contract" "post-cutover SLO generator changes should set canary-contract scope"
+
 canary_contract_fixture_output="$(run_selector $'fixtures/launch_canary/critical_path_probe_cases.json')"
 assert_eq "$(extract_output "$canary_contract_fixture_output" "run_rust")" "false" "canary fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$canary_contract_fixture_output" "run_launch_canary_contract_tests")" "true" "canary fixture changes must run launch canary lane"

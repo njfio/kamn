@@ -53,6 +53,28 @@ Launch expansion decisions require deterministic SLO evidence export and fail-cl
 - Regression policy:
   - stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`).
 
+## SLO/Alert Evidence Policy Checker Contract
+Operational launch readiness now enforces deterministic alert-schema evidence and fail-closed drift detection for SLO bundles.
+
+- Contract lane command:
+  - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
+- Deep lane command:
+  - `bash scripts/canary/run_post_cutover_slo_deep_lane.sh --output-json post-cutover-slo-report.json`
+
+Runtime budget controls:
+
+- `KAMN_POST_CUTOVER_SLO_MAX_SECONDS`
+- `KAMN_POST_CUTOVER_SLO_DEEP_MAX_SECONDS`
+
+Required reason-key markers:
+
+- `slo_alert_reason_codes:GO:v1`
+- `slo_alert_reason_codes:NO-GO:v1`
+
+Regression policy:
+
+- missing or drifted alert evidence schema/keys must fail closed (`Regression: #913`).
+
 ## Dashboard Stale/Error Budget Policy Checker Contract
 Deterministic stale-data and error-budget policy checks are enforced through a bounded dashboard evidence lane:
 

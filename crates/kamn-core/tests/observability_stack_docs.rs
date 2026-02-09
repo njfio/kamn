@@ -29,6 +29,14 @@ fn doc_contains_post_cutover_slo_evidence_contract() {
 }
 
 #[test]
+fn doc_contains_slo_alert_policy_checker_contract() {
+    assert!(DOC.contains("## SLO/Alert Evidence Policy Checker Contract"));
+    assert!(DOC.contains("slo_alert_reason_codes:GO:v1"));
+    assert!(DOC.contains("slo_alert_reason_codes:NO-GO:v1"));
+    assert!(DOC.contains("KAMN_POST_CUTOVER_SLO_MAX_SECONDS"));
+}
+
+#[test]
 fn doc_contains_dashboard_stale_error_budget_contract_lane() {
     assert!(DOC.contains("## Dashboard Stale/Error Budget Policy Checker Contract"));
     assert!(DOC.contains("run_dashboard_stale_error_budget_lane.sh"));
@@ -68,6 +76,14 @@ fn regression_requires_post_cutover_slo_stale_evidence_guard() {
     // Regression: #711
     assert!(DOC.contains(
         "stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`)."
+    ));
+}
+
+#[test]
+fn regression_requires_slo_alert_schema_fail_closed_guard() {
+    // Regression: #913
+    assert!(DOC.contains(
+        "missing or drifted alert evidence schema/keys must fail closed (`Regression: #913`)."
     ));
 }
 
