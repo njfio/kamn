@@ -118,6 +118,8 @@ persistence/recovery contracts for the task operation registry.
 ## Bounded Graph Benchmark
 - A bounded graph benchmark keeps CI cost low while validating DAG guard performance characteristics.
 - The benchmark covers a 128-task linear DAG registration path and enforces a generous local CI budget.
+- Run bounded graph benchmark lane:
+  - `cargo test -p kamn-core --test swarm_task_dag`
 - A snapshot roundtrip benchmark validates export+restore overhead for a bounded 128-task DAG without requiring expensive integration infrastructure.
 - A bounded snapshot-store roundtrip benchmark validates write/read overhead in PR lanes.
 
