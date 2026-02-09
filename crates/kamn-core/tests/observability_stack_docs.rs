@@ -29,6 +29,15 @@ fn doc_contains_post_cutover_slo_evidence_contract() {
 }
 
 #[test]
+fn doc_contains_moderation_recovery_observability_hooks() {
+    assert!(DOC.contains("## Moderation and Recovery Observability Hooks"));
+    assert!(DOC.contains("run_reputation_signal_quarantine_contract_lane.sh"));
+    assert!(DOC.contains("run_reputation_recovery_contract_lane.sh"));
+    assert!(DOC.contains("ingestion_action"));
+    assert!(DOC.contains("recovery_action"));
+}
+
+#[test]
 fn regression_requires_availability_critical_rule() {
     // Regression: #206
     assert!(DOC.contains("`Availability`: critical when below minimum threshold."));
@@ -48,5 +57,13 @@ fn regression_requires_post_cutover_slo_stale_evidence_guard() {
     // Regression: #711
     assert!(DOC.contains(
         "stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`)."
+    ));
+}
+
+#[test]
+fn regression_requires_moderation_recovery_observability_guard() {
+    // Regression: #924
+    assert!(DOC.contains(
+        "quarantined stale/replayed signals and irreversible recovery reversals must remain visible through deterministic evidence keys (`Regression: #924`)."
     ));
 }
