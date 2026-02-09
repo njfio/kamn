@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+LANE_SCRIPT="$ROOT_DIR/scripts/compliance/run_classification_redaction_lane.sh"
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+extract_value() {
+  local output="$1"
+  local key="$2"
+  printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
+}
+
+if [ ! -x "$LANE_SCRIPT" ]; then
+  echo "expected classification/redaction lane script to be executable" >&2
+  exit 1
+fi
+
+go_report="$TMP_DIR/classification-redaction-go.json"
+go_output="$(
+  KAMN_CLASSIFICATION_REDACTION_SKIP_COMMANDS=true \
+    bash "$LANE_SCRIPT" --output-file "$go_report"
+)"
+if [ "$(extract_value "$go_output" "status")" != "ok" ]; then
+  echo "expected classification/redaction lane GO path status=ok" >&2
+  exit 1
+fi
+if [ "$(extract_value "$go_output" "final_decision")" != "GO" ]; then
+  echo "expected classification/redaction lane GO path final_decision=GO" >&2
+  exit 1
+fi
+if [ "$(extract_value "$go_output" "reason_key")" != "classification_redaction_reason_codes:GO:v1" ]; then
+  echo "expected classification/redaction lane GO path reason_key marker" >&2
+  exit 1
+fi
+
+if ! grep -q '"schema_version": "kamn.compliance.classification-redaction-report.v1"' "$go_report"; then
+  echo "expected classification/redaction lane report schema marker" >&2
+  exit 1
+fi
+
+no_go_report="$TMP_DIR/classification-redaction-no-go.json"
+no_go_output="$(
+  KAMN_CLASSIFICATION_REDACTION_SKIP_COMMANDS=true \
+  KAMN_CLASSIFICATION_REDACTION_FORCE_REDACTION_MISSING=true \
+    bash "$LANE_SCRIPT" --output-file "$no_go_report"
+)"
+if [ "$(extract_value "$no_go_output" "final_decision")" != "NO-GO" ]; then
+  echo "expected classification/redaction lane forced missing redaction path final_decision=NO-GO" >&2
+  exit 1
+fi
+if [ "$(extract_value "$no_go_output" "reason_key")" != "classification_redaction_reason_codes:NO-GO:v1" ]; then
+  echo "expected classification/redaction lane forced missing redaction path reason_key marker" >&2
+  exit 1
+fi
+
+if ! grep -q '"redaction_contract_missing"' "$no_go_report"; then
+  echo "expected forced redaction-missing path to emit redaction_contract_missing reason" >&2
+  exit 1
+fi
+
+echo "classification/redaction lane script tests passed."

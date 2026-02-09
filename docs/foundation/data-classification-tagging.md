@@ -36,6 +36,32 @@ GDPR data-subject workflows require deterministic legal-hold precedence before e
 - Regression policy:
   - legal-hold bypass attempts and tampered DSAR evidence force `NO-GO` (`Regression: #732`).
 
+## Classification/Redaction Compliance Contract Lane
+Classification and redaction controls are validated together through a deterministic compliance lane that fails closed on schema or docs drift.
+
+- Compliance lane command:
+  - `bash scripts/compliance/run_classification_redaction_lane.sh --output-file /tmp/classification-redaction-report.json`
+- Compliance policy checker:
+  - `bash scripts/compliance/check_classification_redaction_policy.sh --report-file /tmp/classification-redaction-report.json`
+- Compliance contract lane:
+  - `bash scripts/compliance/run_classification_redaction_contract_lane.sh --output-file /tmp/classification-redaction-contract-report.json`
+
+Runtime budget controls:
+
+- `KAMN_CLASSIFICATION_REDACTION_MAX_SECONDS`
+- `KAMN_CLASSIFICATION_REDACTION_CONTRACT_MAX_SECONDS`
+- `KAMN_CLASSIFICATION_REDACTION_SKIP_COMMANDS`
+
+Required schema/reason markers:
+
+- `kamn.compliance.classification-redaction-report.v1`
+- `classification_redaction_reason_codes:GO:v1`
+- `classification_redaction_reason_codes:NO-GO:v1`
+
+Regression policy:
+
+- classification/redaction contract drift must fail closed (`Regression: #914`).
+
 ## Local Validation
 Run from repository root:
 
@@ -44,8 +70,12 @@ bash scripts/compliance/test_generate_dsar_legal_hold_evidence_bundle.sh
 bash scripts/compliance/test_run_dsar_legal_hold_contract_lane.sh
 bash scripts/compliance/test_run_dsar_legal_hold_matrix.sh
 bash scripts/compliance/test_run_dsar_legal_hold_deep_lane.sh
+bash scripts/compliance/test_run_classification_redaction_lane.sh
+bash scripts/compliance/test_check_classification_redaction_policy.sh
+bash scripts/compliance/test_run_classification_redaction_contract_lane.sh
 cargo test -p kamn-core --test data_classification_tagging
 cargo test -p kamn-core --test data_classification_tagging_docs
+cargo test -p kamn-core --test redaction_tombstones_docs
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test -p kamn-core
