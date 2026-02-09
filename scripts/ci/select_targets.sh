@@ -405,6 +405,7 @@ for file in "${CHANGED_FILES[@]}"; do
       TOKEN_LAUNCH_CONTRACT_CHANGED=true
       TREASURY_DISBURSEMENT_CONTRACT_CHANGED=true
       LAUNCH_CANARY_CONTRACT_CHANGED=true
+      ESCROW_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -702,7 +703,7 @@ fi
 
 if [ "$ESCROW_CONTRACT_CHANGED" = true ]; then
   RUN_SETTLEMENT_RECONCILIATION_CONTRACT_TESTS=true
-  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ] && [ "$TOKEN_LAUNCH_CONTRACT_CHANGED" != true ]; then
     TEST_SCOPE="escrow-contract"
   fi
 fi
