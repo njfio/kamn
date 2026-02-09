@@ -18,6 +18,9 @@ bash scripts/runtime/test_select_failover_sync_drill_lane.sh >/dev/null
 bash scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh >/dev/null
 bash scripts/runtime/test_run_failover_sync_drill_deep_lane.sh >/dev/null
 bash scripts/runtime/test_run_failover_sync_drill_suite.sh >/dev/null
+bash scripts/runtime/test_generate_live_network_pilot_artifact_summary.sh >/dev/null
+bash scripts/runtime/test_run_live_network_pilot_deep_lane.sh >/dev/null
+bash scripts/runtime/test_run_live_network_pilot_deep_contract_lane.sh >/dev/null
 bash "$ROOT_DIR/scripts/runtime/run_live_network_smoke_contract_lane.sh" >/dev/null
 
 echo "runtime snapshot contract lane tests passed."

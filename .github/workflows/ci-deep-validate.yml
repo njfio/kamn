@@ -257,6 +257,18 @@ jobs:
           path: bridge-credentialed-deep-report.json
           if-no-files-found: error
 
+      - name: Run live-network pilot deep lane
+        if: steps.detect.outputs.run_rust == 'true'
+        run: bash scripts/runtime/run_live_network_pilot_deep_lane.sh --event-name "${{ github.event_name }}" --output-json live-network-pilot-report.json
+
+      - name: Upload live-network pilot deep report
+        if: always() && hashFiles('live-network-pilot-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-network-pilot-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: live-network-pilot-report.json
+          if-no-files-found: error
+
       - name: Run SDK parity matrix (scheduled only)
         if: steps.detect.outputs.run_rust == 'true'
         run: bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json sdk-parity-report.json
