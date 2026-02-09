@@ -73,9 +73,16 @@ assert_eq "$(extract_output "$docs_output" "run_typescript_live_transport_contra
 assert_eq "$(extract_output "$docs_output" "run_live_transport_parity_contract_tests")" "false" "docs_only should not run live transport parity lane"
 assert_eq "$(extract_output "$docs_output" "run_live_transport_parity_rust_contract_tests")" "false" "docs_only should not require rust setup for parity lane"
 assert_eq "$(extract_output "$docs_output" "run_localhost_signed_integration_contract_lane_tests")" "false" "docs_only should not run localhost signed integration contract lane"
+assert_eq "$(extract_output "$docs_output" "run_kamn_core_missing_docs_policy_contract_tests")" "false" "docs_only should not run kamn-core missing-docs policy checks for unrelated docs"
 assert_eq "$(extract_output "$docs_output" "live_transport_parity_languages")" "" "docs_only should not select live transport parity languages"
 assert_eq "$(extract_output "$docs_output" "run_sdk_parity_matrix")" "false" "docs_only should not run sdk parity matrix"
 assert_eq "$(extract_output "$docs_output" "test_scope")" "none" "docs_only should keep none scope"
+
+hardening_docs_output="$(run_selector $'docs/planning/engineering-hardening-wave.md')"
+assert_eq "$(extract_output "$hardening_docs_output" "docs_only")" "true" "engineering hardening docs should remain docs-only"
+assert_eq "$(extract_output "$hardening_docs_output" "run_rust")" "false" "engineering hardening docs should avoid rust lane"
+assert_eq "$(extract_output "$hardening_docs_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "engineering hardening docs must run kamn-core missing-docs policy checks"
+assert_eq "$(extract_output "$hardening_docs_output" "test_scope")" "qa-doc-contract" "engineering hardening docs should set qa-doc-contract scope"
 
 deploy_output="$(run_selector $'scripts/deploy/preflight_topology.sh')"
 assert_eq "$(extract_output "$deploy_output" "docs_only")" "false" "deploy-only change must not be docs-only"
@@ -164,6 +171,7 @@ assert_eq "$(extract_output "$unknown_output" "run_typescript_live_transport_con
 assert_eq "$(extract_output "$unknown_output" "run_live_transport_parity_contract_tests")" "false" "unknown paths should not trigger live transport parity lane"
 assert_eq "$(extract_output "$unknown_output" "run_live_transport_parity_rust_contract_tests")" "false" "unknown paths should not require rust parity setup"
 assert_eq "$(extract_output "$unknown_output" "run_localhost_signed_integration_contract_lane_tests")" "false" "unknown paths should not trigger localhost signed integration contract lane"
+assert_eq "$(extract_output "$unknown_output" "run_kamn_core_missing_docs_policy_contract_tests")" "false" "unknown paths should not trigger kamn-core missing-docs policy checks"
 assert_eq "$(extract_output "$unknown_output" "live_transport_parity_languages")" "" "unknown paths should not select parity languages"
 assert_eq "$(extract_output "$unknown_output" "run_sdk_parity_matrix")" "false" "unknown paths should not trigger sdk parity matrix"
 assert_eq "$(extract_output "$unknown_output" "run_bridge_replay_deep_lane")" "false" "unknown paths should not trigger bridge replay deep lane"
@@ -196,8 +204,14 @@ assert_eq "$(extract_output "$targeted_output" "run_treasury_disbursement_contra
 assert_eq "$(extract_output "$targeted_output" "run_bridge_replay_harness")" "true" "bridge adapter rust paths should run bridge replay harness"
 assert_eq "$(extract_output "$targeted_output" "run_bridge_replay_deep_lane")" "false" "bridge adapter rust paths should not run bridge replay deep lane by default"
 assert_eq "$(extract_output "$targeted_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge adapter path should select all bridge suites"
+assert_eq "$(extract_output "$targeted_output" "run_kamn_core_missing_docs_policy_contract_tests")" "false" "bridge adapter paths should not trigger kamn-core missing-docs policy checks"
 assert_eq "$(extract_output "$targeted_output" "run_sdk_parity_matrix")" "false" "non-sdk rust paths should skip sdk parity matrix"
 assert_eq "$(extract_output "$targeted_output" "test_scope")" "targeted" "crate path should be targeted"
+
+core_lib_policy_output="$(run_selector $'crates/kamn-core/src/lib.rs')"
+assert_eq "$(extract_output "$core_lib_policy_output" "run_rust")" "true" "kamn-core lib changes should run rust lane"
+assert_eq "$(extract_output "$core_lib_policy_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "kamn-core lib changes must run missing-docs policy checks"
+assert_eq "$(extract_output "$core_lib_policy_output" "test_scope")" "targeted" "kamn-core lib changes should stay targeted"
 
 test_cmd="$(extract_output "$targeted_output" "test_cmd")"
 if ! printf '%s\n' "$test_cmd" | grep -q "run_cargo_test_with_quarantine.sh"; then

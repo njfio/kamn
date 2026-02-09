@@ -52,6 +52,9 @@ cargo test
 
 # CI tool regression suite (fast/deep routing guards, script contracts)
 bash scripts/ci/test_ci_tools.sh
+
+# kamn-core missing-docs policy contract checker
+bash scripts/ci/check_kamn_core_missing_docs_policy.sh
 ```
 
 ### Fast Make Lanes
@@ -173,6 +176,7 @@ Canonical contributor rules are in `.github/CONTRIBUTING.md` (`AGENTS.md` remain
 - `.github/CONTRIBUTING.md`: mandatory execution contract (issue hierarchy, TDD, PR standards).
 - `AGENTS.md`: compatibility redirect for agent tooling.
 - `PRD.md`: product requirements and phase scope baseline.
+- `docs/planning/engineering-hardening-wave.md`: baseline hardening and missing-doc policy contracts.
 - `docs/planning/live-network-wave.md`: pilot smoke/deep lane commands, budgets, and evidence contracts.
 - `docs/foundation/`: domain contracts used by docs tests and release gates.
 - `.github/workflows/`: CI lane orchestration.
