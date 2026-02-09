@@ -190,6 +190,21 @@ if ! grep -Fq "bash scripts/kolme/test_run_version_compatibility_contract_lane.s
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_kolme_triadic_devnet_smoke_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected Kolme triadic devnet smoke contract scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/kolme/test_validate_triadic_devnet_smoke.sh" "$FAST_WORKFLOW"; then
+  echo "expected Kolme triadic devnet smoke validator tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/kolme/test_run_triadic_devnet_smoke_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected Kolme triadic devnet smoke contract lane tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_federated_delegation_settlement_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected federated delegation settlement contract scope condition in ci-fast-gate.yml" >&2
   exit 1
