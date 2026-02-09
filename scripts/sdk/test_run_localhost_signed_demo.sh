@@ -10,7 +10,37 @@ if [ ! -x "$DEMO_SCRIPT" ]; then
 fi
 
 TMP_OUT="$(mktemp)"
-trap 'rm -f "$TMP_OUT"' EXIT
+TMP_HELP="$(mktemp)"
+TMP_ERR="$(mktemp)"
+trap 'rm -f "$TMP_OUT" "$TMP_HELP" "$TMP_ERR"' EXIT
+
+bash "$DEMO_SCRIPT" --help >"$TMP_HELP"
+
+if ! grep -Fq -- "Usage: run_localhost_signed_demo.sh" "$TMP_HELP"; then
+  echo "expected localhost signed demo help usage banner" >&2
+  exit 1
+fi
+
+if ! grep -Fq -- "--timeout-seconds" "$TMP_HELP"; then
+  echo "expected localhost signed demo help to document --timeout-seconds" >&2
+  exit 1
+fi
+
+set +e
+bash "$DEMO_SCRIPT" --timeout-seconds 0 >"$TMP_ERR" 2>&1
+error_code=$?
+set -e
+
+if [ "$error_code" -eq 0 ]; then
+  echo "expected localhost signed demo script to reject invalid timeout argument" >&2
+  exit 1
+fi
+
+# Regression: #875
+if ! grep -Fq -- "timeout-seconds must be a positive integer" "$TMP_ERR"; then
+  echo "expected explicit timeout validation failure message" >&2
+  exit 1
+fi
 
 bash "$DEMO_SCRIPT" >"$TMP_OUT"
 

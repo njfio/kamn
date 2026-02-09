@@ -86,6 +86,17 @@ bash scripts/ci/test_select_targets.sh
 bash scripts/sdk/run_local_e2e_demo.sh
 # localhost signed sender/listener transport
 bash scripts/sdk/run_localhost_signed_demo.sh
+
+# inspect CLI/session arguments
+bash scripts/sdk/run_localhost_signed_demo.sh --help
+
+# explicit deterministic session arguments
+bash scripts/sdk/run_localhost_signed_demo.sh \
+  --addr 127.0.0.1:17879 \
+  --from kamn:did:agent:sender-1 \
+  --to kamn:did:agent:listener-1 \
+  --nonce 1 \
+  --timeout-seconds 15
 ```
 
 ### Run Localhost Bridge Relay Demo Lane
