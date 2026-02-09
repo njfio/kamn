@@ -47,3 +47,11 @@ fn regression_requires_tcp_signed_relay_demo_marker_contract() {
     assert!(DOC.contains("tcp_signed_relay_listener"));
     assert!(DOC.contains("tcp_signed_relay_sender"));
 }
+
+#[test]
+fn regression_requires_tcp_handshake_replay_guard_contract() {
+    // Regression: #823
+    assert!(DOC.contains("`Regression: #823`"));
+    assert!(DOC.contains("Forged handshake frames are rejected"));
+    assert!(DOC.contains("conflict: tcp handshake replay detected"));
+}

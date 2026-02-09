@@ -67,8 +67,16 @@ The SDK now includes a deterministic TCP relay adapter demo backed by reusable w
   - `verified=true`
   - `adapter=tcp`
   - `signature=sig:ed25519:baseline-v1:...`
+  - handshake profile validation uses `ed25519:baseline-v1`
+
+Security guard behavior now fails closed across reconnect cycles:
+
+- Forged handshake frames are rejected with explicit handshake field classification.
+- Replayed nonces for the same `(from, to)` route are rejected with:
+  - `conflict: tcp handshake replay detected`
 
 `Regression: #822` ensures deterministic envelope parsing rejects malformed payloads and preserves signed relay markers.
+`Regression: #823` ensures forged handshake frames and replayed nonces are rejected across reconnect.
 
 ## Local End-to-End Demo (Issue #770)
 The SDK now includes a deterministic one-command demo for first-run validation:
