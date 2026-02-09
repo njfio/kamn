@@ -110,6 +110,13 @@ bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario timeout 
 bash scripts/bridge/run_localhost_bridge_relay_demo_contract_lane.sh
 ```
 
+### Run Localhost Signed Integration Contract Lane
+
+```bash
+bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh
+# schema: kamn.sdk.localhost-signed.integration-contract.v1
+```
+
 ### Run Localhost Bridge Demo Evidence Contract Lane (Fast)
 
 ```bash

@@ -32,6 +32,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario success`
   - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario signature-mismatch`
   - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario timeout --timeout-seconds 1`
+- Localhost signed integration contract lane:
+  - `bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh`
 
 ## Bridge Replay/Redaction Lane Matrix
 
@@ -56,6 +58,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `kamn.runtime.live-network-pilot-artifact-summary.v1`
 - Localhost bridge demo evidence schema:
   - `kamn.bridge.localhost-demo-evidence.v1`
+- Localhost signed integration contract schema:
+  - `kamn.sdk.localhost-signed.integration-contract.v1`
 - Required smoke report fields:
   - `status`
   - `final_decision`
@@ -95,11 +99,15 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
 - Dashboard runtime compatibility guard:
   - `bash scripts/frontend/test_dashboard_package_runtime_compat.sh` validates fallback behavior when local `node` lacks `--experimental-strip-types`.
   - `scripts/frontend/test_dashboard_package.sh` defaults fallback execution to `npx -y node@22` in fail-closed mode.
+- Localhost signed integration contract lane budget:
+  - `run_localhost_signed_integration_contract_lane.sh` enforces a 120-second upper bound.
 - Regression guard:
   - budget overflow remains fail-closed with explicit reason code `runtime_budget_exceeded` (`Regression: #828`).
 - Regression guard:
   - tampered pilot summary `final_decision` is rejected by policy checker (`Regression: #829`).
 - Regression guard:
   - localhost signed integration harness detects signature mismatch and timeout reason codes (`Regression: #876`).
+- Regression guard:
+  - localhost signed integration contract lane preserves signature-mismatch/timeout reason codes in report schema (`Regression: #878`).
 - Regression guard:
   - dashboard runtime fallback contract remains pinned to `node@22` with local reproduction guidance (`Regression: #868`).
