@@ -411,6 +411,7 @@ for file in "${CHANGED_FILES[@]}"; do
       SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED=true
       DSAR_LEGAL_HOLD_CONTRACT_CHANGED=true
       GOVERNANCE_SIMULATION_CONTRACT_CHANGED=true
+      GOVERNANCE_STAKE_SLASH_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -736,7 +737,7 @@ fi
 
 if [ "$GOVERNANCE_STAKE_SLASH_CONTRACT_CHANGED" = true ]; then
   RUN_GOVERNANCE_STAKE_SLASH_CONTRACT_TESTS=true
-  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ] && [ "$TOKEN_LAUNCH_CONTRACT_CHANGED" != true ]; then
     TEST_SCOPE="governance-risk-contract"
   fi
 fi
