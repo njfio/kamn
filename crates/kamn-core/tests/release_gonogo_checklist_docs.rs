@@ -91,6 +91,17 @@ fn checklist_contains_dsar_legal_hold_evidence_contract() {
 }
 
 #[test]
+fn checklist_contains_governance_simulation_and_human_veto_evidence_contract() {
+    assert!(CHECKLIST.contains("## Governance Simulation and Human-Veto Evidence Contract"));
+    assert!(CHECKLIST.contains("generate_governance_simulation_evidence_bundle.sh"));
+    assert!(CHECKLIST.contains("check_governance_simulation_policy.sh"));
+    assert!(CHECKLIST.contains("run_governance_simulation_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_governance_simulation_deep_lane.sh"));
+    assert!(CHECKLIST.contains("run_governance_simulation_matrix.py"));
+    assert!(CHECKLIST.contains("fixtures/governance_simulation/veto_timelock_cases.json"));
+}
+
+#[test]
 fn checklist_contains_token_launch_handoff_evidence_contract() {
     assert!(CHECKLIST.contains("## Token Launch Handoff Evidence Contract"));
     assert!(CHECKLIST.contains("generate_token_launch_handoff_evidence_bundle.sh"));
@@ -188,6 +199,14 @@ fn regression_requires_dsar_legal_hold_evidence_guard_marker() {
     // Regression: #732
     assert!(CHECKLIST.contains(
         "legal-hold bypass attempts and tampered DSAR evidence force `NO-GO` (`Regression: #732`)."
+    ));
+}
+
+#[test]
+fn regression_requires_governance_simulation_and_veto_guard_marker() {
+    // Regression: #733
+    assert!(CHECKLIST.contains(
+        "simulation/veto bypass attempts and tampered evidence bundles force `NO-GO` (`Regression: #733`)."
     ));
 }
 

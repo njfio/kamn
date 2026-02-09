@@ -1,0 +1,70 @@
+{
+  "schema_version": "kamn.governance.simulation-veto.replay-cases.v1",
+  "cases": [
+    {
+      "case_id": "go_activation_ready",
+      "proposal_id": "gov-proposal-activation-001",
+      "simulation_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "simulation_complete": true,
+      "veto_window_open": false,
+      "veto_recorded": false,
+      "timelock_expired": true,
+      "required_approvals": 2,
+      "received_approvals": 2,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "GO"
+    },
+    {
+      "case_id": "no_go_missing_simulation",
+      "proposal_id": "gov-proposal-activation-002",
+      "simulation_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "simulation_complete": false,
+      "veto_window_open": false,
+      "veto_recorded": false,
+      "timelock_expired": true,
+      "required_approvals": 2,
+      "received_approvals": 2,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
+      "case_id": "no_go_veto_recorded",
+      "proposal_id": "gov-proposal-activation-003",
+      "simulation_hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "simulation_complete": true,
+      "veto_window_open": false,
+      "veto_recorded": true,
+      "timelock_expired": true,
+      "required_approvals": 2,
+      "received_approvals": 2,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
+      "case_id": "no_go_timelock_not_expired",
+      "proposal_id": "gov-proposal-activation-004",
+      "simulation_hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "simulation_complete": true,
+      "veto_window_open": false,
+      "veto_recorded": false,
+      "timelock_expired": false,
+      "required_approvals": 2,
+      "received_approvals": 2,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
+      "case_id": "no_go_insufficient_approvals",
+      "proposal_id": "gov-proposal-activation-005",
+      "simulation_hash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "simulation_complete": true,
+      "veto_window_open": false,
+      "veto_recorded": false,
+      "timelock_expired": true,
+      "required_approvals": 3,
+      "received_approvals": 2,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    }
+  ]
+}

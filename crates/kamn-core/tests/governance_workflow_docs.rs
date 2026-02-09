@@ -42,3 +42,22 @@ fn doc_contains_parameter_catalog_and_compatibility_policy() {
     assert!(DOC.contains("watchdog.delivery_ratio_bps"));
     assert!(DOC.contains("supported from `1.1.0`"));
 }
+
+#[test]
+fn doc_contains_simulation_and_human_veto_evidence_contract() {
+    assert!(DOC.contains("## Proposal Simulation and Human-Veto Evidence Contract"));
+    assert!(DOC.contains("generate_governance_simulation_evidence_bundle.sh"));
+    assert!(DOC.contains("check_governance_simulation_policy.sh"));
+    assert!(DOC.contains("run_governance_simulation_contract_lane.sh"));
+    assert!(DOC.contains("run_governance_simulation_deep_lane.sh"));
+    assert!(DOC.contains("run_governance_simulation_matrix.py"));
+    assert!(DOC.contains("fixtures/governance_simulation/veto_timelock_cases.json"));
+}
+
+#[test]
+fn regression_requires_simulation_and_veto_bypass_guard_marker() {
+    // Regression: #733
+    assert!(DOC.contains(
+        "simulation/veto bypass attempts and tampered evidence bundles force `NO-GO` (`Regression: #733`)."
+    ));
+}

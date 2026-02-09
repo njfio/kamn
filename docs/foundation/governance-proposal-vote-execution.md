@@ -64,10 +64,30 @@ This document captures the first implementation slice for protocol governance me
 - Execution appends an immutable execution history record.
 - Late votes after deadline are rejected with `ProposalClosed` + `Expired` status.
 
+## Proposal Simulation and Human-Veto Evidence Contract (Issue #748)
+Governance activation must include deterministic simulation and veto/timelock evidence before automation can proceed.
+
+- Evidence bundle generator:
+  - `bash scripts/governance/generate_governance_simulation_evidence_bundle.sh --output-file /tmp/governance-simulation.json --proposal-id gov-proposal-activation-001 --simulation-hash sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --simulation-complete true --veto-window-open false --veto-recorded false --timelock-expired true --required-approvals 2 --received-approvals 2 --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/governance/check_governance_simulation_policy.sh --bundle-file /tmp/governance-simulation.json`
+- PR fast contract lane:
+  - `bash scripts/governance/run_governance_simulation_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/governance/run_governance_simulation_deep_lane.sh --output-json governance-simulation-report.json`
+- Replay matrix runner:
+  - `python3 scripts/governance/run_governance_simulation_matrix.py --fixture fixtures/governance_simulation/veto_timelock_cases.json --output-json governance-simulation-report.json`
+- Regression policy:
+  - simulation/veto bypass attempts and tampered evidence bundles force `NO-GO` (`Regression: #733`).
+
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 
 ```bash
+bash scripts/governance/test_generate_governance_simulation_evidence_bundle.sh
+bash scripts/governance/test_run_governance_simulation_contract_lane.sh
+bash scripts/governance/test_run_governance_simulation_matrix.sh
+bash scripts/governance/test_run_governance_simulation_deep_lane.sh
 cargo test -p kamn-core --test governance_workflow --test governance_workflow_docs
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
