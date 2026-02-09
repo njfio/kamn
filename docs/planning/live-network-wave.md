@@ -32,6 +32,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `bash scripts/bridge/run_bridge_replay_redaction_contract_lane.sh --skip-replay --replay-report-file bridge-replay-report.json`
 - PR-fast localhost bridge demo evidence lane (bounded):
   - `bash scripts/bridge/run_localhost_bridge_demo_evidence_contract_lane.sh`
+- Scheduled/manual localhost bridge demo evidence lane (deep):
+  - `bash scripts/bridge/run_localhost_bridge_demo_evidence_deep_lane.sh --output-json /tmp/localhost-bridge-demo-evidence-deep-report.json`
 - Scheduled/manual bridge evidence lane (deep):
   - `bash scripts/bridge/run_bridge_replay_redaction_deep_lane.sh --output-json /tmp/bridge-replay-redaction-deep-report.json`
 - Bridge evidence bundle policy checker:
@@ -79,6 +81,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `run_bridge_replay_redaction_contract_lane.sh` enforces a 120-second upper bound.
 - Localhost bridge demo evidence budget:
   - `run_localhost_bridge_demo_evidence_contract_lane.sh` enforces a 120-second upper bound.
+- Localhost bridge demo evidence deep budget:
+  - `run_localhost_bridge_demo_evidence_deep_lane.sh` enforces a 300-second upper bound.
 - Bridge deep lane budget:
   - `run_bridge_replay_redaction_deep_lane.sh` enforces a 300-second upper bound.
 - Regression guard:

@@ -269,6 +269,18 @@ jobs:
           path: bridge-replay-redaction-deep-report.json
           if-no-files-found: error
 
+      - name: Run localhost bridge demo evidence deep lane
+        if: steps.detect.outputs.run_rust == 'true'
+        run: bash scripts/bridge/run_localhost_bridge_demo_evidence_deep_lane.sh --output-json localhost-bridge-demo-evidence-deep-report.json
+
+      - name: Upload localhost bridge demo evidence deep report
+        if: always() && hashFiles('localhost-bridge-demo-evidence-deep-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: localhost-bridge-demo-evidence-deep-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: localhost-bridge-demo-evidence-deep-report.json
+          if-no-files-found: error
+
       - name: Run live-network pilot deep lane
         if: steps.detect.outputs.run_rust == 'true'
         run: bash scripts/runtime/run_live_network_pilot_deep_lane.sh --event-name "${{ github.event_name }}" --output-json live-network-pilot-report.json

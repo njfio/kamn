@@ -506,8 +506,8 @@ if ! grep -Fq "bash scripts/bridge/run_bridge_replay_redaction_contract_lane.sh 
   exit 1
 fi
 
-if ! grep -Fq "bash scripts/bridge/run_localhost_bridge_relay_demo_contract_lane.sh" "$FAST_WORKFLOW"; then
-  echo "expected localhost bridge relay demo contract lane command in ci-fast-gate.yml" >&2
+if ! grep -Fq "bash scripts/bridge/run_localhost_bridge_demo_evidence_contract_lane.sh --skip-replay --replay-report-file bridge-replay-report.json" "$FAST_WORKFLOW"; then
+  echo "expected localhost bridge demo evidence contract lane command in ci-fast-gate.yml" >&2
   exit 1
 fi
 
@@ -684,6 +684,16 @@ fi
 
 if ! grep -Fq "bridge-replay-redaction-deep-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
   echo "expected bridge replay/redaction deep report artifact upload in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/bridge/run_localhost_bridge_demo_evidence_deep_lane.sh --output-json localhost-bridge-demo-evidence-deep-report.json" "$DEEP_WORKFLOW"; then
+  echo "expected localhost bridge demo evidence deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "localhost-bridge-demo-evidence-deep-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
+  echo "expected localhost bridge demo evidence deep report artifact upload in ci-deep-validate.yml" >&2
   exit 1
 fi
 

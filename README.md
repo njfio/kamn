@@ -69,6 +69,20 @@ bash scripts/sdk/run_local_e2e_demo.sh
 bash scripts/bridge/run_localhost_bridge_relay_demo_contract_lane.sh
 ```
 
+### Run Localhost Bridge Demo Evidence Contract Lane (Fast)
+
+```bash
+bash scripts/bridge/run_localhost_bridge_demo_evidence_contract_lane.sh
+# 120-second budget guard, schema: kamn.bridge.localhost-demo-evidence.v1
+```
+
+### Run Localhost Bridge Demo Evidence Deep Lane (Scheduled/Manual)
+
+```bash
+bash scripts/bridge/run_localhost_bridge_demo_evidence_deep_lane.sh --output-json /tmp/localhost-bridge-demo-evidence-deep-report.json
+# 300-second budget guard, schema: kamn.bridge.localhost-demo-evidence.v1
+```
+
 ### Run Live-Network Pilot Smoke Lane
 
 ```bash
