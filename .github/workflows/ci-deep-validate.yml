@@ -89,6 +89,18 @@ jobs:
           path: settlement-reconciliation-report.json
           if-no-files-found: error
 
+      - name: Run cutover rollback deep lane
+        if: steps.detect.outputs.run_rust == 'true'
+        run: bash scripts/cutover/run_cutover_rollback_deep_lane.sh --output-json cutover-rollback-report.json
+
+      - name: Upload cutover rollback deep report
+        if: always() && hashFiles('cutover-rollback-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: cutover-rollback-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: cutover-rollback-report.json
+          if-no-files-found: error
+
       - name: Run SDK parity matrix (scheduled only)
         if: steps.detect.outputs.run_rust == 'true'
         run: bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json sdk-parity-report.json

@@ -342,6 +342,11 @@ assert_eq "$(extract_output "$cutover_contract_script_output" "run_rust")" "fals
 assert_eq "$(extract_output "$cutover_contract_script_output" "run_mainnet_cutover_contract_tests")" "true" "cutover contract script changes must run mainnet cutover contract lane"
 assert_eq "$(extract_output "$cutover_contract_script_output" "test_scope")" "cutover-contract" "cutover contract script changes should set cutover-contract scope"
 
+cutover_rollback_script_output="$(run_selector $'scripts/cutover/run_cutover_rollback_contract_lane.sh')"
+assert_eq "$(extract_output "$cutover_rollback_script_output" "run_rust")" "false" "cutover rollback script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$cutover_rollback_script_output" "run_mainnet_cutover_contract_tests")" "true" "cutover rollback script changes must run cutover contract scope"
+assert_eq "$(extract_output "$cutover_rollback_script_output" "test_scope")" "cutover-contract" "cutover rollback script changes should set cutover-contract scope"
+
 cutover_contract_fixture_output="$(run_selector $'fixtures/mainnet_cutover/mainnet_cutover_manifest.valid.json')"
 assert_eq "$(extract_output "$cutover_contract_fixture_output" "run_rust")" "false" "cutover fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$cutover_contract_fixture_output" "run_mainnet_cutover_contract_tests")" "true" "cutover fixture changes must run mainnet cutover contract lane"

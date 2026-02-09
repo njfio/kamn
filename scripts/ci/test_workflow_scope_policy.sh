@@ -205,6 +205,11 @@ if ! grep -Fq "bash scripts/cutover/run_mainnet_cutover_contract_lane.sh" "$FAST
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/cutover/run_cutover_rollback_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected cutover rollback contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected channel/task lifecycle rust setup/cache condition in ci-fast-gate.yml" >&2
   exit 1
@@ -249,6 +254,16 @@ fi
 
 if ! grep -Fq "bash scripts/escrow/run_settlement_reconciliation_deep_lane.sh" "$DEEP_WORKFLOW"; then
   echo "expected scheduled settlement reconciliation deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/cutover/run_cutover_rollback_deep_lane.sh --output-json cutover-rollback-report.json" "$DEEP_WORKFLOW"; then
+  echo "expected scheduled cutover rollback deep lane command in ci-deep-validate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "cutover-rollback-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$DEEP_WORKFLOW"; then
+  echo "expected cutover rollback deep report artifact upload in ci-deep-validate.yml" >&2
   exit 1
 fi
 

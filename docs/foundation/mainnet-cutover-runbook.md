@@ -37,9 +37,20 @@ The validator enforces ordering, dependency, quorum, and approval evidence const
   - non-prior/invalid dependency rejection
   - insufficient approval evidence rejection
 
+## Cutover Rollback Evidence Contract (Issue #708)
+- Evidence bundle generator:
+  - `bash scripts/cutover/generate_cutover_rollback_evidence_bundle.sh --output-file /tmp/cutover-rollback.json --cutover-manifest-id cutover-mainnet-2026-02-09 --rollback-trigger-status CLEAR --checkpoint-state READY --failed-checkpoint-id '' --rollback-target-hash state-hash-abc --post-rollback-hash state-hash-abc --evidence-complete true --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/cutover/check_cutover_rollback_evidence_policy.sh --bundle-file /tmp/cutover-rollback.json`
+- Fast contract lane:
+  - `bash scripts/cutover/run_cutover_rollback_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/cutover/run_cutover_rollback_deep_lane.sh --output-json /tmp/cutover-rollback-report.json`
+
 ## Regression Policy
 - out-of-order or unresolved checkpoint dependencies force `NO-GO` (`Regression: #705`).
 - missing or insufficient checkpoint approvals force `NO-GO` (`Regression: #705`).
+- missing failed-checkpoint rollback evidence and rollback-target hash mismatch force `NO-GO` (`Regression: #708`).
 
 ## Local Validation
 Run from repository root:
@@ -47,6 +58,8 @@ Run from repository root:
 ```bash
 bash scripts/cutover/test_validate_mainnet_cutover_manifest.sh
 bash scripts/cutover/test_run_mainnet_cutover_contract_lane.sh
+bash scripts/cutover/test_generate_cutover_rollback_evidence_bundle.sh
+bash scripts/cutover/test_run_cutover_rollback_contract_lane.sh
 cargo test -p kamn-core --test mainnet_cutover_runbook_docs
 cargo test -p kamn-core --test release_gonogo_checklist_docs
 cargo fmt --check

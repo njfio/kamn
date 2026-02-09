@@ -100,12 +100,28 @@ Mainnet cutover requires deterministic triadic checkpoint manifests with explici
 - Regression policy:
   - unresolved/non-prior dependencies and insufficient approvals force `NO-GO` (`Regression: #705`).
 
+## Cutover Rollback Evidence Contract (Issue #708)
+Rollback readiness and trigger execution must emit deterministic evidence before cutover approval.
+
+- Evidence bundle generator:
+  - `bash scripts/cutover/generate_cutover_rollback_evidence_bundle.sh --output-file /tmp/cutover-rollback.json --cutover-manifest-id cutover-mainnet-2026-02-09 --rollback-trigger-status CLEAR --checkpoint-state READY --failed-checkpoint-id '' --rollback-target-hash state-hash-abc --post-rollback-hash state-hash-abc --evidence-complete true --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/cutover/check_cutover_rollback_evidence_policy.sh --bundle-file /tmp/cutover-rollback.json`
+- PR fast contract lane:
+  - `bash scripts/cutover/run_cutover_rollback_contract_lane.sh`
+- Scheduled deep lane entrypoint:
+  - `bash scripts/cutover/run_cutover_rollback_deep_lane.sh --output-json cutover-rollback-report.json`
+- Regression policy:
+  - missing failed-checkpoint evidence and rollback-target hash mismatch force `NO-GO` (`Regression: #708`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
 bash scripts/cutover/test_validate_mainnet_cutover_manifest.sh
 bash scripts/cutover/test_run_mainnet_cutover_contract_lane.sh
+bash scripts/cutover/test_generate_cutover_rollback_evidence_bundle.sh
+bash scripts/cutover/test_run_cutover_rollback_contract_lane.sh
 bash scripts/escrow/test_generate_settlement_reconciliation_evidence_bundle.sh
 bash scripts/escrow/test_run_settlement_reconciliation_contract_lane.sh
 bash scripts/escrow/test_run_settlement_reconciliation_race_matrix.sh

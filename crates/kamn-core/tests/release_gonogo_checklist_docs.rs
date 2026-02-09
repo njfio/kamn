@@ -76,6 +76,15 @@ fn checklist_contains_mainnet_cutover_manifest_contract() {
 }
 
 #[test]
+fn checklist_contains_cutover_rollback_evidence_contract() {
+    assert!(CHECKLIST.contains("## Cutover Rollback Evidence Contract"));
+    assert!(CHECKLIST.contains("generate_cutover_rollback_evidence_bundle.sh"));
+    assert!(CHECKLIST.contains("check_cutover_rollback_evidence_policy.sh"));
+    assert!(CHECKLIST.contains("run_cutover_rollback_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_cutover_rollback_deep_lane.sh"));
+}
+
+#[test]
 fn regression_requires_rollback_precheck_in_checklist() {
     // Regression: #173
     assert!(CHECKLIST.contains("Rollback precheck result: PASS"));
@@ -105,5 +114,13 @@ fn regression_requires_mainnet_cutover_dependency_and_approval_guards() {
     // Regression: #705
     assert!(CHECKLIST.contains(
         "unresolved/non-prior dependencies and insufficient approvals force `NO-GO` (`Regression: #705`)."
+    ));
+}
+
+#[test]
+fn regression_requires_cutover_rollback_evidence_guard_marker() {
+    // Regression: #708
+    assert!(CHECKLIST.contains(
+        "missing failed-checkpoint evidence and rollback-target hash mismatch force `NO-GO` (`Regression: #708`)."
     ));
 }
