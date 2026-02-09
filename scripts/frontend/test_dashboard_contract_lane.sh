@@ -7,6 +7,9 @@ cd "$ROOT_DIR"
 bash scripts/dashboard/test_run_backend_session_auth_freshness_lane.sh
 bash scripts/dashboard/test_check_backend_session_auth_freshness_policy.sh
 bash scripts/dashboard/test_run_backend_session_auth_freshness_contract_lane.sh
+bash scripts/dashboard/test_run_dashboard_stale_error_budget_lane.sh
+bash scripts/dashboard/test_check_dashboard_stale_error_budget_policy.sh
+bash scripts/dashboard/test_run_dashboard_stale_error_budget_contract_lane.sh
 bash scripts/frontend/test_run_dashboard_shell_determinism_matrix_lane.sh
 bash scripts/frontend/test_check_dashboard_shell_determinism_matrix_policy.sh
 bash scripts/frontend/test_run_dashboard_shell_determinism_matrix_contract_lane.sh
@@ -43,6 +46,16 @@ fi
 
 if ! grep -Fq "Regression: #943" docs/foundation/operator-dashboard-ui-mvp.md; then
   echo "expected regression marker for dashboard shell determinism matrix in operator-dashboard-ui-mvp.md" >&2
+  exit 1
+fi
+
+if ! grep -Fq "## Dashboard Stale/Error Budget Policy Checker Contract" docs/foundation/observability-slo-dashboards.md; then
+  echo "expected dashboard stale/error budget policy checker section in observability-slo-dashboards.md" >&2
+  exit 1
+fi
+
+if ! grep -Fq "Regression: #942" docs/foundation/observability-slo-dashboards.md; then
+  echo "expected regression marker for dashboard stale/error budget checker in observability-slo-dashboards.md" >&2
   exit 1
 fi
 

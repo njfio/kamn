@@ -29,6 +29,17 @@ fn doc_contains_post_cutover_slo_evidence_contract() {
 }
 
 #[test]
+fn doc_contains_dashboard_stale_error_budget_contract_lane() {
+    assert!(DOC.contains("## Dashboard Stale/Error Budget Policy Checker Contract"));
+    assert!(DOC.contains("run_dashboard_stale_error_budget_lane.sh"));
+    assert!(DOC.contains("check_dashboard_stale_error_budget_policy.sh"));
+    assert!(DOC.contains("run_dashboard_stale_error_budget_contract_lane.sh"));
+    assert!(DOC.contains("kamn.dashboard.stale-error-budget-report.v1"));
+    assert!(DOC.contains("KAMN_DASHBOARD_STALE_ERROR_MAX_SECONDS"));
+    assert!(DOC.contains("KAMN_DASHBOARD_STALE_ERROR_CONTRACT_MAX_SECONDS"));
+}
+
+#[test]
 fn doc_contains_moderation_recovery_observability_hooks() {
     assert!(DOC.contains("## Moderation and Recovery Observability Hooks"));
     assert!(DOC.contains("run_reputation_signal_quarantine_contract_lane.sh"));
@@ -65,5 +76,13 @@ fn regression_requires_moderation_recovery_observability_guard() {
     // Regression: #924
     assert!(DOC.contains(
         "quarantined stale/replayed signals and irreversible recovery reversals must remain visible through deterministic evidence keys (`Regression: #924`)."
+    ));
+}
+
+#[test]
+fn regression_requires_dashboard_stale_error_budget_fail_closed_guard() {
+    // Regression: #942
+    assert!(DOC.contains(
+        "stale threshold drift, error-budget threshold drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #942`)."
     ));
 }
