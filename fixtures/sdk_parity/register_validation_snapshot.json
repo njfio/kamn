@@ -1,0 +1,80 @@
+{
+  "schema_version": "kamn.sdk.example-fixture-snapshot.v1",
+  "source_matrix_schema": "kamn.sdk.parity.matrix.v1",
+  "fixture": "fixtures/sdk_parity/register_validation_cases.json",
+  "case_count": 4,
+  "cases": [
+    {
+      "id": "register-reject-empty-agent-type",
+      "expected_status": "error",
+      "expected_error_code": "agent_type_empty",
+      "rust": {
+        "status": "error",
+        "error_code": "agent_type_empty"
+      },
+      "python": {
+        "status": "error",
+        "error_code": "agent_type_empty"
+      },
+      "typescript": {
+        "status": "error",
+        "error_code": "agent_type_empty"
+      },
+      "passed": true
+    },
+    {
+      "id": "register-reject-empty-capabilities",
+      "expected_status": "error",
+      "expected_error_code": "capabilities_empty",
+      "rust": {
+        "status": "error",
+        "error_code": "capabilities_empty"
+      },
+      "python": {
+        "status": "error",
+        "error_code": "capabilities_empty"
+      },
+      "typescript": {
+        "status": "error",
+        "error_code": "capabilities_empty"
+      },
+      "passed": true
+    },
+    {
+      "id": "register-reject-empty-capability-entry",
+      "expected_status": "error",
+      "expected_error_code": "capabilities_empty_entry",
+      "rust": {
+        "status": "error",
+        "error_code": "capabilities_empty_entry"
+      },
+      "python": {
+        "status": "error",
+        "error_code": "capabilities_empty_entry"
+      },
+      "typescript": {
+        "status": "error",
+        "error_code": "capabilities_empty_entry"
+      },
+      "passed": true
+    },
+    {
+      "id": "register-valid-baseline",
+      "expected_status": "ok",
+      "expected_error_code": "",
+      "rust": {
+        "status": "ok",
+        "error_code": ""
+      },
+      "python": {
+        "status": "ok",
+        "error_code": ""
+      },
+      "typescript": {
+        "status": "ok",
+        "error_code": ""
+      },
+      "passed": true
+    }
+  ]
+}

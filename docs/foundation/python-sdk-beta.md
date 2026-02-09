@@ -44,3 +44,16 @@ The Python SDK participates in shared cross-language parity checks:
 - Fixture source: `fixtures/sdk_parity/register_validation_cases.json`
 - Matrix command:
   - `bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json /tmp/sdk-parity-report.json`
+
+## SDK Example Fixture Drift Checker Contract
+Snapshot drift is guarded by deterministic checker + policy commands:
+
+- Snapshot source: `fixtures/sdk_parity/register_validation_snapshot.json`
+- Drift checker command:
+  - `python3 scripts/sdk/check_example_fixture_drift.py --fixture fixtures/sdk_parity/register_validation_cases.json --snapshot fixtures/sdk_parity/register_validation_snapshot.json --output-json /tmp/sdk-example-fixture-drift-report.json`
+- Policy checker command:
+  - `bash scripts/sdk/check_example_fixture_drift_policy.sh --report-file /tmp/sdk-example-fixture-drift-report.json`
+- Contract lane command:
+  - `bash scripts/sdk/run_example_fixture_drift_contract_lane.sh --output-report /tmp/sdk-example-fixture-drift-contract-report.json`
+
+Snapshot/report drift is fail-closed (`Regression: #940`).
