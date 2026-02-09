@@ -50,6 +50,29 @@ This document captures the first implementation slice for the operator dashboard
 - Denied operator actions are marked critical in the UI model.
 - Audit trace ordering is deterministic: newest `requested_at_unix` first.
 
+## Frontend Shell Determinism Matrix Contract
+Deterministic frontend shell state matrix checks are enforced through a bounded contract lane:
+
+- Lane command:
+  - `bash scripts/frontend/run_dashboard_shell_determinism_matrix_lane.sh --output-json /tmp/dashboard-shell-matrix-report.json`
+- Policy checker command:
+  - `bash scripts/frontend/check_dashboard_shell_determinism_matrix_policy.sh --report-file /tmp/dashboard-shell-matrix-report.json`
+- Contract lane command:
+  - `bash scripts/frontend/run_dashboard_shell_determinism_matrix_contract_lane.sh --output-file /tmp/dashboard-shell-matrix-contract-report.json`
+
+Runtime budget controls:
+
+- `KAMN_FRONTEND_SHELL_MATRIX_MAX_SECONDS`
+- `KAMN_FRONTEND_SHELL_MATRIX_CONTRACT_MAX_SECONDS`
+
+Required schema/reason markers:
+
+- `kamn.frontend.shell-matrix-report.v1`
+- `frontend_shell_matrix_reason_codes:GO:v1`
+- `frontend_shell_matrix_reason_codes:NO-GO:v1`
+
+The lane fails closed: healthy/stale-critical/error shell drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #943`).
+
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 
