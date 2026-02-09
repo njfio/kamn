@@ -430,7 +430,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    crates/kamn-sdk/*|docs/foundation/rust-sdk-alpha.md|scripts/sdk/run_rust_live_transport_contract_lane.sh|scripts/sdk/run_rust_live_transport_deep_lane.sh|scripts/sdk/test_run_rust_live_transport_contract_lane.sh|scripts/sdk/run_local_e2e_demo.sh|scripts/sdk/test_run_local_e2e_demo.sh|scripts/sdk/run_localhost_signed_demo.sh|scripts/sdk/test_run_localhost_signed_demo.sh|scripts/sdk/run_tcp_signed_relay_demo.sh|scripts/sdk/test_run_tcp_signed_relay_demo.sh)
+    crates/kamn-sdk/*|docs/foundation/rust-sdk-alpha.md|scripts/sdk/run_rust_live_transport_contract_lane.sh|scripts/sdk/run_rust_live_transport_deep_lane.sh|scripts/sdk/test_run_rust_live_transport_contract_lane.sh|scripts/sdk/run_local_e2e_demo.sh|scripts/sdk/test_run_local_e2e_demo.sh|scripts/sdk/run_localhost_signed_demo.sh|scripts/sdk/test_run_localhost_signed_demo.sh|scripts/sdk/run_tcp_signed_relay_demo.sh|scripts/sdk/test_run_tcp_signed_relay_demo.sh|scripts/sdk/run_tcp_failover_reconnect_matrix.sh|scripts/sdk/run_tcp_failover_reconnect_matrix.py|scripts/sdk/test_run_tcp_failover_reconnect_matrix.sh|fixtures/sdk_failover_reconnect/*)
       SDK_RUST_LIVE_CHANGED=true
       classified=true
       ;;

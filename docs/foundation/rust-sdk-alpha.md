@@ -27,6 +27,7 @@ Run from repository root:
 bash scripts/sdk/run_local_e2e_demo.sh
 bash scripts/sdk/run_localhost_signed_demo.sh
 bash scripts/sdk/run_tcp_signed_relay_demo.sh
+bash scripts/sdk/run_tcp_failover_reconnect_matrix.sh --lane fast --output-json /tmp/kamn-tcp-failover-reconnect-report.json
 bash scripts/sdk/run_rust_live_transport_contract_lane.sh
 bash scripts/sdk/run_rust_live_transport_deep_lane.sh
 cargo test -p kamn-sdk
@@ -77,6 +78,24 @@ Security guard behavior now fails closed across reconnect cycles:
 
 `Regression: #822` ensures deterministic envelope parsing rejects malformed payloads and preserves signed relay markers.
 `Regression: #823` ensures forged handshake frames and replayed nonces are rejected across reconnect.
+
+## TCP Failover/Reconnect Integration Matrix (Issue #824)
+Deterministic failover matrix coverage is available as a bounded fast lane with optional scheduled deep expansion:
+
+- Fast lane command:
+  - `bash scripts/sdk/run_tcp_failover_reconnect_matrix.sh --lane fast --output-json /tmp/kamn-tcp-failover-reconnect-report.json`
+- Deep lane (scheduled-only path through `run_rust_live_transport_deep_lane.sh`):
+  - `KAMN_TCP_FAILOVER_DEEP_CADENCE=scheduled bash scripts/sdk/run_rust_live_transport_deep_lane.sh`
+
+Fast-lane report schema marker:
+
+- `schema_version=kamn.sdk.tcp-failover-reconnect.matrix.v1`
+
+Regression fixture path:
+
+- `fixtures/sdk_failover_reconnect/reconnect_drift_signatures.txt`
+
+`Regression: #824` ensures reconnect drift signatures remain fail-closed and matrix reporting stays deterministic.
 
 ## Local End-to-End Demo (Issue #770)
 The SDK now includes a deterministic one-command demo for first-run validation:

@@ -39,4 +39,19 @@ if ! grep -Fq "test_run_tcp_signed_relay_demo.sh" "$FAST_SCRIPT"; then
   exit 1
 fi
 
+if ! grep -Fq "test_run_tcp_failover_reconnect_matrix.sh" "$FAST_SCRIPT"; then
+  echo "expected rust sdk live transport fast-lane runner to include tcp failover reconnect matrix coverage" >&2
+  exit 1
+fi
+
+if ! grep -Fq "KAMN_TCP_FAILOVER_DEEP_CADENCE" "$DEEP_SCRIPT"; then
+  echo "expected deep-lane script to gate tcp failover reconnect matrix by scheduled cadence" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_tcp_failover_reconnect_matrix.sh" "$DEEP_SCRIPT"; then
+  echo "expected deep-lane script to include tcp failover reconnect matrix execution path" >&2
+  exit 1
+fi
+
 echo "rust sdk live transport contract lane script tests passed."

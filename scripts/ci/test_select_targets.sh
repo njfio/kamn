@@ -251,6 +251,22 @@ assert_eq "$(extract_output "$tcp_signed_demo_script_output" "run_live_transport
 assert_eq "$(extract_output "$tcp_signed_demo_script_output" "run_sdk_parity_matrix")" "false" "tcp signed relay demo script-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$tcp_signed_demo_script_output" "test_scope")" "sdk-live-rust" "tcp signed relay demo script-only changes should set sdk-live-rust scope"
 
+tcp_failover_matrix_script_output="$(run_selector $'scripts/sdk/run_tcp_failover_reconnect_matrix.sh')"
+assert_eq "$(extract_output "$tcp_failover_matrix_script_output" "run_rust")" "false" "tcp failover matrix script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$tcp_failover_matrix_script_output" "run_rust_live_transport_contract_tests")" "true" "tcp failover matrix script-only changes must run rust sdk live transport lane"
+assert_eq "$(extract_output "$tcp_failover_matrix_script_output" "run_python_live_transport_contract_tests")" "false" "tcp failover matrix script-only changes should skip python live transport lane"
+assert_eq "$(extract_output "$tcp_failover_matrix_script_output" "run_typescript_live_transport_contract_tests")" "false" "tcp failover matrix script-only changes should skip typescript live transport lane"
+assert_eq "$(extract_output "$tcp_failover_matrix_script_output" "run_live_transport_parity_contract_tests")" "false" "tcp failover matrix script-only changes should skip parity lane"
+assert_eq "$(extract_output "$tcp_failover_matrix_script_output" "run_sdk_parity_matrix")" "false" "tcp failover matrix script-only changes should skip sdk parity matrix"
+assert_eq "$(extract_output "$tcp_failover_matrix_script_output" "test_scope")" "sdk-live-rust" "tcp failover matrix script-only changes should set sdk-live-rust scope"
+
+tcp_failover_fixture_output="$(run_selector $'fixtures/sdk_failover_reconnect/reconnect_drift_signatures.txt')"
+assert_eq "$(extract_output "$tcp_failover_fixture_output" "run_rust")" "false" "tcp failover fixture-only changes should avoid rust lane"
+assert_eq "$(extract_output "$tcp_failover_fixture_output" "run_rust_live_transport_contract_tests")" "true" "tcp failover fixture-only changes must run rust sdk live transport lane"
+assert_eq "$(extract_output "$tcp_failover_fixture_output" "run_live_transport_parity_contract_tests")" "false" "tcp failover fixture-only changes should skip parity lane"
+assert_eq "$(extract_output "$tcp_failover_fixture_output" "run_sdk_parity_matrix")" "false" "tcp failover fixture-only changes should skip sdk parity matrix"
+assert_eq "$(extract_output "$tcp_failover_fixture_output" "test_scope")" "sdk-live-rust" "tcp failover fixture-only changes should set sdk-live-rust scope"
+
 multi_lang_sdk_output="$(run_selector $'kamn_sdk.py\npackages/kamn-sdk/src/memory_client.ts')"
 assert_eq "$(extract_output "$multi_lang_sdk_output" "run_rust")" "false" "multi-language non-rust sdk changes should avoid rust lane"
 assert_eq "$(extract_output "$multi_lang_sdk_output" "run_rust_live_transport_contract_tests")" "false" "multi-language non-rust sdk changes should skip rust live lane"
