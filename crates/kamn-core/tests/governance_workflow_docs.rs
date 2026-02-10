@@ -78,6 +78,7 @@ fn doc_contains_governance_lifecycle_rollback_contract_lane() {
     assert!(DOC.contains("## Governance Lifecycle and Rollback Integrity Contract Lane"));
     assert!(DOC.contains("governance_lifecycle_rollback_policy_contract.py"));
     assert!(DOC.contains("governance_lifecycle_rollback_lane_contract.py"));
+    assert!(DOC.contains("governance_lifecycle_rollback_contract_lane_contract.py"));
     assert!(DOC.contains("run_governance_lifecycle_rollback_lane.sh"));
     assert!(DOC.contains("check_governance_lifecycle_rollback_policy.sh"));
     assert!(DOC.contains("run_governance_lifecycle_rollback_contract_lane.sh"));
@@ -100,5 +101,13 @@ fn regression_requires_lifecycle_rollback_fail_closed_guard_marker() {
     // Regression: #910
     assert!(DOC.contains(
         "illegal lifecycle transitions and rollback integrity drift must fail closed (`Regression: #910`)."
+    ));
+}
+
+#[test]
+fn regression_requires_lifecycle_rollback_shared_contract_marker() {
+    // Regression: #1246
+    assert!(DOC.contains(
+        "shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1246`)."
     ));
 }
