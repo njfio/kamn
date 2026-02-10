@@ -205,6 +205,8 @@ fn checklist_contains_governance_stake_slash_risk_threshold_contract() {
     assert!(CHECKLIST.contains("## Governance Stake/Slash Risk Threshold Contract"));
     assert!(CHECKLIST.contains("generate_stake_slash_risk_evidence_bundle.sh"));
     assert!(CHECKLIST.contains("check_stake_slash_risk_policy.sh"));
+    assert!(CHECKLIST.contains("stake_slash_risk_contract_lane_contract.py"));
+    assert!(CHECKLIST.contains("framework.contract_lane_helpers"));
     assert!(CHECKLIST.contains("run_stake_slash_risk_contract_lane.sh"));
     assert!(CHECKLIST.contains("run_stake_slash_risk_deep_lane.sh"));
     assert!(CHECKLIST.contains("run_stake_slash_risk_matrix.py"));
