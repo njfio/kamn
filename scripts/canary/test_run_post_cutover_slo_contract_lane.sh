@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_SCRIPT="$ROOT_DIR/scripts/canary/run_post_cutover_slo_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/canary/run_post_cutover_slo_deep_lane.sh"
+SHARED_CONTRACT="$ROOT_DIR/scripts/canary/post_cutover_slo_contract_lane_contract.py"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
   echo "expected post-cutover SLO fast-lane runner to be executable" >&2
@@ -12,6 +13,10 @@ fi
 
 if [ ! -x "$DEEP_SCRIPT" ]; then
   echo "expected post-cutover SLO deep-lane runner to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$SHARED_CONTRACT" ]; then
+  echo "expected post-cutover SLO shared contract-lane module to be executable" >&2
   exit 1
 fi
 
@@ -24,13 +29,18 @@ if ! grep -q "post-cutover SLO contract lane tests passed." "$tmp_out"; then
   exit 1
 fi
 
-if ! grep -q "alerts.alert_keys mismatch" "$FAST_SCRIPT"; then
-  echo "expected post-cutover SLO fast-lane script to enforce alert-key drift failures" >&2
+if ! grep -q "post_cutover_slo_contract_lane_contract.py" "$FAST_SCRIPT"; then
+  echo "expected post-cutover SLO fast-lane wrapper to dispatch to shared contract module" >&2
   exit 1
 fi
 
-if ! grep -q "KAMN_POST_CUTOVER_SLO_MAX_SECONDS" "$FAST_SCRIPT"; then
-  echo "expected post-cutover SLO fast-lane script to enforce runtime budget env guard" >&2
+if ! grep -q "alerts.alert_keys mismatch" "$SHARED_CONTRACT"; then
+  echo "expected post-cutover SLO shared contract-lane module to enforce alert-key drift failures" >&2
+  exit 1
+fi
+
+if ! grep -q "KAMN_POST_CUTOVER_SLO_MAX_SECONDS" "$SHARED_CONTRACT"; then
+  echo "expected post-cutover SLO shared contract-lane module to enforce runtime budget env guard" >&2
   exit 1
 fi
 
