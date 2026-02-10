@@ -36,6 +36,7 @@ fn rust_doc_references_sdk_schema_shared_contract_script() {
     assert!(RUST_DOC.contains("live_transport_smoke_parity_contract_lane_contract.py"));
     assert!(RUST_DOC.contains("live_transport_parity_contract_lane_contract.py"));
     assert!(RUST_DOC.contains("sdk_schema_compatibility_contract_lane_contract.py"));
+    assert!(RUST_DOC.contains("example_fixture_drift_contract_lane_contract.py"));
     // Regression: #1182
     assert!(RUST_DOC.contains("`Regression: #1182`"));
     // Regression: #1186
@@ -46,6 +47,8 @@ fn rust_doc_references_sdk_schema_shared_contract_script() {
     assert!(RUST_DOC.contains("`Regression: #1192`"));
     // Regression: #1198
     assert!(RUST_DOC.contains("`Regression: #1198`"));
+    // Regression: #1202
+    assert!(RUST_DOC.contains("`Regression: #1202`"));
     assert!(
         RUST_DOC.contains("smoke parity policy checker wrapper remains pinned to the shared contract implementation marker")
     );
@@ -60,5 +63,8 @@ fn rust_doc_references_sdk_schema_shared_contract_script() {
     ));
     assert!(RUST_DOC.contains(
         "sdk schema compatibility contract lane wrapper remains pinned to the shared contract implementation marker"
+    ));
+    assert!(RUST_DOC.contains(
+        "sdk example fixture drift contract lane wrapper remains pinned to the shared contract implementation marker"
     ));
 }

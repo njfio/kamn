@@ -163,8 +163,13 @@ Generated SDK example fixture outcomes are locked to a deterministic snapshot:
   - `bash scripts/sdk/check_example_fixture_drift_policy.sh --report-file /tmp/sdk-example-fixture-drift-report.json`
 - Contract lane command:
   - `bash scripts/sdk/run_example_fixture_drift_contract_lane.sh --output-report /tmp/sdk-example-fixture-drift-contract-report.json`
+- Stable shell wrapper:
+  - `scripts/sdk/run_example_fixture_drift_contract_lane.sh`
+- Shared Python implementation:
+  - `scripts/sdk/example_fixture_drift_contract_lane_contract.py`
 
 The lane fails closed on snapshot drift or report-schema mismatch (`Regression: #940`).
+The sdk example fixture drift contract lane wrapper remains pinned to the shared contract implementation marker (`Regression: #1202`).
 
 ## Live Transport Smoke Parity Budget Contract
 A bounded smoke-parity lane is available for deterministic cross-SDK live transport checks with explicit runtime/retry guardrails:
