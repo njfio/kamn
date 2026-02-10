@@ -885,6 +885,11 @@ assert_eq "$(extract_output "$live_network_deep_script_output" "run_rust")" "fal
 assert_eq "$(extract_output "$live_network_deep_script_output" "run_runtime_snapshot_contract_tests")" "true" "live-network deep script changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$live_network_deep_script_output" "test_scope")" "runtime-contract" "live-network deep script changes should set runtime-contract scope"
 
+live_network_summary_shared_contract_output="$(run_selector $'scripts/runtime/live_network_pilot_artifact_summary_contract.py')"
+assert_eq "$(extract_output "$live_network_summary_shared_contract_output" "run_rust")" "false" "live-network summary shared contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$live_network_summary_shared_contract_output" "run_runtime_snapshot_contract_tests")" "true" "live-network summary shared contract changes must run runtime snapshot contract lane"
+assert_eq "$(extract_output "$live_network_summary_shared_contract_output" "test_scope")" "runtime-contract" "live-network summary shared contract changes should set runtime-contract scope"
+
 lifecycle_property_script_output="$(run_selector $'scripts/runtime/run_lifecycle_property_contract_lane.sh')"
 assert_eq "$(extract_output "$lifecycle_property_script_output" "run_rust")" "false" "lifecycle property contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$lifecycle_property_script_output" "run_runtime_snapshot_contract_tests")" "true" "lifecycle property contract script changes must run runtime snapshot contract lane"

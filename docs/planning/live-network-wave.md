@@ -26,6 +26,10 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `bash scripts/runtime/run_live_network_pilot_deep_contract_lane.sh`
 - Deep summary policy checker:
   - `bash scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh --summary-file /tmp/live-network-pilot-report.json`
+- Stable shell wrapper:
+  - `scripts/runtime/generate_live_network_pilot_artifact_summary.sh`
+- Shared Python implementation:
+  - `scripts/runtime/live_network_pilot_artifact_summary_contract.py`
 - Localhost signed sender/listener transport demo:
   - `bash scripts/sdk/run_localhost_signed_demo.sh`
 - Localhost signed integration harness scenarios:
