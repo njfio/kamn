@@ -875,6 +875,11 @@ assert_eq "$(extract_output "$runtime_contract_script_output" "run_rust")" "fals
 assert_eq "$(extract_output "$runtime_contract_script_output" "run_runtime_snapshot_contract_tests")" "true" "runtime contract script changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$runtime_contract_script_output" "test_scope")" "runtime-contract" "runtime contract script changes should set runtime-contract scope"
 
+live_network_smoke_shared_contract_output="$(run_selector $'scripts/runtime/live_network_smoke_lane_contract.py')"
+assert_eq "$(extract_output "$live_network_smoke_shared_contract_output" "run_rust")" "false" "live-network smoke shared contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$live_network_smoke_shared_contract_output" "run_runtime_snapshot_contract_tests")" "true" "live-network smoke shared contract changes must run runtime snapshot contract lane"
+assert_eq "$(extract_output "$live_network_smoke_shared_contract_output" "test_scope")" "runtime-contract" "live-network smoke shared contract changes should set runtime-contract scope"
+
 live_network_smoke_script_output="$(run_selector $'scripts/runtime/run_live_network_smoke_lane.sh')"
 assert_eq "$(extract_output "$live_network_smoke_script_output" "run_rust")" "false" "live-network smoke script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$live_network_smoke_script_output" "run_runtime_snapshot_contract_tests")" "true" "live-network smoke script changes must run runtime snapshot contract lane"
