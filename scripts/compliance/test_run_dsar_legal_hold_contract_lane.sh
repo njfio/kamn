@@ -52,4 +52,9 @@ if ! grep -q "check_dsar_legal_hold_policy.sh" "$SHARED_CONTRACT"; then
   exit 1
 fi
 
+if ! grep -q "from framework.contract_lane_helpers import" "$SHARED_CONTRACT"; then
+  echo "expected shared DSAR contract-lane implementation to import framework lane helper utilities" >&2
+  exit 1
+fi
+
 echo "dsar legal-hold contract lane script tests passed."
