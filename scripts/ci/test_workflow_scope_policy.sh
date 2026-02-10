@@ -286,6 +286,16 @@ if ! grep -Fq "bash scripts/kolme/test_run_version_compatibility_contract_lane.s
   exit 1
 fi
 
+if grep -Fq "bash scripts/kolme/run_version_compatibility_replay_deep_lane.sh --output-json kolme-version-compatibility-report.json" "$FAST_WORKFLOW"; then
+  echo "expected Kolme version compatibility replay deep lane to remain excluded from ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if grep -Fq "kolme-version-compatibility-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$FAST_WORKFLOW"; then
+  echo "expected Kolme version compatibility replay deep artifact upload to remain excluded from ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_kolme_triadic_devnet_smoke_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected Kolme triadic devnet smoke contract scope condition in ci-fast-gate.yml" >&2
   exit 1
