@@ -56,6 +56,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - `run_kolme_version_compatibility_contract_tests=true`
   - `test_scope=kolme-version-contract`
   - command-surface tests stay on PR fast gate:
+    - `bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh`
     - `bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh`
@@ -66,6 +67,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh`
   - nonce/broadcast parity matrix fast-lane budget stays bounded:
     - `KAMN_KOLME_NONCE_BROADCAST_PARITY_MAX_SECONDS=60`
+  - fast-gate native API parity lane remains bounded:
+    - `bash scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json`
+    - `python3 scripts/kolme/check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-fast-gate-native-api-parity-policy.json`
+    - `KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS=120`
   - local-only heavy Kolme run-mode commands remain excluded from ci-fast-gate.
   - local-only fork sync/smoke run-mode commands remain excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
@@ -116,6 +121,8 @@ Required demo lane command contract:
 - `bash scripts/deploy/run_deployment_slo_rollback_contract_lane.sh --output-file /tmp/deployment-slo-rollback-contract-report.json`
 - `bash scripts/escrow/run_settlement_reconciliation_contract_lane.sh`
 - `bash scripts/bridge/run_bridge_adapter_conformance_contract_lane.sh --output-json /tmp/bridge-adapter-conformance-contract-report.json`
+- `bash scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json`
+- `python3 scripts/kolme/check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-fast-gate-native-api-parity-policy.json`
 - `bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode dry-run --output-json /tmp/kolme-local-bootstrap-summary.json`
 - `bash scripts/kolme/run_local_e2e_integration_lane.sh --mode dry-run --output-json /tmp/kolme-local-e2e-integration-summary.json`
 - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
@@ -143,6 +150,7 @@ Regression policy:
 - local Kolme API probe/smoke run-mode exclusion parity remains fail-closed (`Regression: #1441`).
 - local runtime-commit live run-mode exclusion parity remains fail-closed (`Regression: #1451`).
 - nonce/broadcast parity matrix selector/docs/runtime-budget drift remains fail-closed (`Regression: #1462`).
+- fast-gate native Kolme API parity lane schema/routing/runtime-budget drift remains fail-closed (`Regression: #1466`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:

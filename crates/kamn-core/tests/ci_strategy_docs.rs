@@ -10,6 +10,10 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("run_localhost_signed_integration_contract_lane.sh"));
     assert!(DOC.contains("scripts/ci/select_targets.sh"));
     assert!(DOC.contains("run_kolme_version_compatibility_contract_tests=true"));
+    assert!(DOC.contains("test_run_fast_gate_native_api_parity_contract_lane.sh"));
+    assert!(DOC.contains("run_fast_gate_native_api_parity_contract_lane.sh"));
+    assert!(DOC.contains("check_fast_gate_native_api_parity_policy.py"));
+    assert!(DOC.contains("KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS=120"));
     assert!(DOC.contains("run_local_fork_sync_metadata_lane.sh --mode run"));
     assert!(DOC.contains("run_local_fork_smoke_evidence_lane.sh --mode run"));
     assert!(DOC.contains("run_local_kolme_api_probe_lane.sh --mode run"));
@@ -46,4 +50,5 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("Regression: #1441"));
     assert!(DOC.contains("Regression: #1451"));
     assert!(DOC.contains("Regression: #1462"));
+    assert!(DOC.contains("Regression: #1466"));
 }

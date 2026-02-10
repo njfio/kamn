@@ -1111,6 +1111,27 @@ assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local native API parity live proof contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_native_api_parity_live_proof_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local native API parity live proof contract lane test script changes should set kolme-version-contract scope"
 
+kolme_fast_gate_native_api_parity_contract_lane_script_output="$(run_selector $'scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh')"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_script_output" "run_rust")" "false" "Kolme fast-gate native API parity contract lane script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme fast-gate native API parity contract lane script changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme fast-gate native API parity contract lane script changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme fast-gate native API parity contract lane script changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme fast-gate native API parity contract lane script changes should set kolme-version-contract scope"
+
+kolme_fast_gate_native_api_parity_policy_script_output="$(run_selector $'scripts/kolme/check_fast_gate_native_api_parity_policy.py')"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_policy_script_output" "run_rust")" "false" "Kolme fast-gate native API parity policy script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme fast-gate native API parity policy script changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_policy_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme fast-gate native API parity policy script changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme fast-gate native API parity policy script changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_policy_script_output" "test_scope")" "kolme-version-contract" "Kolme fast-gate native API parity policy script changes should set kolme-version-contract scope"
+
+kolme_fast_gate_native_api_parity_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh')"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_test_script_output" "run_rust")" "false" "Kolme fast-gate native API parity contract lane test script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme fast-gate native API parity contract lane test script changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme fast-gate native API parity contract lane test script changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme fast-gate native API parity contract lane test script changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme fast-gate native API parity contract lane test script changes should set kolme-version-contract scope"
+
 kolme_local_heavy_matrix_script_output="$(run_selector $'scripts/kolme/run_local_heavy_validation_matrix.sh')"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_script_output" "run_rust")" "false" "Kolme local heavy matrix script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local heavy matrix script changes should skip Kolme snapshot drift contract lane"
