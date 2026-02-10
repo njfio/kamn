@@ -32,6 +32,11 @@ This document defines the canonical transaction invariant catalog and error taxo
   - `lifecycle_property_replay:v1`
 - Fuzz/mutation fail-closed lane:
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh`
+  - `bash scripts/runtime/run_input_mutation_contract_lane.sh --output-json /tmp/input-mutation-contract-report.json`
+- Input mutation report schema:
+  - `kamn.runtime.input-mutation-contract-report.v1`
+- Input mutation replay artifact key:
+  - `input_mutation_replay:v1`
 - ZK witness mutation fast lane:
   - `bash scripts/runtime/run_zk_witness_mutation_contract_lane.sh`
 - ZK witness mutation deep lane (scheduled):
@@ -47,6 +52,8 @@ This document defines the canonical transaction invariant catalog and error taxo
   - `kamn.runtime.invariant-fuzz-concurrency-contract-report.v1`
 - Property lane runtime budget env:
   - `KAMN_RUNTIME_LIFECYCLE_PROPERTY_MAX_SECONDS` (default `120`)
+- Input mutation lane runtime budget env:
+  - `KAMN_RUNTIME_INPUT_MUTATION_MAX_SECONDS` (default `120`)
 
 ## Dispute/Refund Property and Concurrency Contracts (Issue #904)
 - Property + replay trace contract lane:

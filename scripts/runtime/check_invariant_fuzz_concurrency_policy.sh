@@ -69,6 +69,9 @@ required_fields = (
     "property_replay_schema_version",
     "property_replay_artifact_key",
     "property_replay_test_count",
+    "fuzz_replay_schema_version",
+    "fuzz_replay_artifact_key",
+    "fuzz_replay_test_count",
     "elapsed_seconds",
     "max_seconds",
     "reason_codes",
@@ -107,6 +110,26 @@ if property_replay_artifact_key != expected_property_replay_artifact_key:
 property_replay_test_count = payload["property_replay_test_count"]
 if not isinstance(property_replay_test_count, int) or property_replay_test_count < 12:
     fail("property_replay_test_count must be an integer >= 12")
+
+fuzz_replay_schema_version = payload["fuzz_replay_schema_version"]
+expected_fuzz_replay_schema_version = "kamn.runtime.input-mutation-contract-report.v1"
+if fuzz_replay_schema_version != expected_fuzz_replay_schema_version:
+    fail(
+        "fuzz_replay_schema_version mismatch: "
+        f"expected {expected_fuzz_replay_schema_version}, found {fuzz_replay_schema_version}"
+    )
+
+fuzz_replay_artifact_key = payload["fuzz_replay_artifact_key"]
+expected_fuzz_replay_artifact_key = "input_mutation_replay:v1"
+if fuzz_replay_artifact_key != expected_fuzz_replay_artifact_key:
+    fail(
+        "fuzz_replay_artifact_key mismatch: "
+        f"expected {expected_fuzz_replay_artifact_key}, found {fuzz_replay_artifact_key}"
+    )
+
+fuzz_replay_test_count = payload["fuzz_replay_test_count"]
+if not isinstance(fuzz_replay_test_count, int) or fuzz_replay_test_count < 10:
+    fail("fuzz_replay_test_count must be an integer >= 10")
 
 elapsed_seconds = payload["elapsed_seconds"]
 max_seconds = payload["max_seconds"]
