@@ -115,6 +115,21 @@ impl ProcessorProofArtifact {
         require_non_empty_artifact_field("message_id", message_id)?;
         require_non_empty_artifact_field("payload_commitment", payload_commitment)?;
         require_non_empty_artifact_field("proof_value", proof_value)?;
+        if !payload_commitment.starts_with("fnv1a64:") {
+            return Err(ZkDesignError::InvalidProofArtifact(
+                "payload_commitment must start with `fnv1a64:`".to_owned(),
+            ));
+        }
+        if payload_commitment == "fnv1a64:" {
+            return Err(ZkDesignError::InvalidProofArtifact(
+                "payload_commitment must include digest bytes".to_owned(),
+            ));
+        }
+        if !proof_value.starts_with("proof:") {
+            return Err(ZkDesignError::InvalidProofArtifact(
+                "proof_value must start with `proof:`".to_owned(),
+            ));
+        }
         Ok(Self {
             artifact_id: artifact_id.to_owned(),
             message_id: message_id.to_owned(),
@@ -914,6 +929,11 @@ pub fn build_message_witness(
                 "private field names must not be empty".to_owned(),
             ));
         }
+        if !is_valid_private_field_selector(field) {
+            return Err(ZkDesignError::InvalidPrivateField(format!(
+                "private field selector `{field}` must contain only [A-Za-z0-9_.-] and no empty path segments"
+            )));
+        }
         if !envelope.body.contains_key(*field) {
             return Err(ZkDesignError::MissingPrivateField((*field).to_owned()));
         }
@@ -967,6 +987,19 @@ fn require_non_empty_artifact_field(field: &str, value: &str) -> Result<(), ZkDe
         )));
     }
     Ok(())
+}
+
+fn is_valid_private_field_selector(selector: &str) -> bool {
+    let trimmed = selector.trim();
+    if trimmed.is_empty() || trimmed.starts_with('.') || trimmed.ends_with('.') {
+        return false;
+    }
+    if trimmed.contains("..") {
+        return false;
+    }
+    trimmed
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' || ch == '.')
 }
 
 fn require_non_empty_consensus_field(

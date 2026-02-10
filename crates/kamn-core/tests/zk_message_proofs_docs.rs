@@ -54,3 +54,11 @@ fn regression_requires_validator_watchdog_mismatch_projection_rule() {
         "invalid-proof mismatch propagation must project as a critical validator mismatch signal"
     ));
 }
+
+#[test]
+fn regression_requires_witness_artifact_contract_lane_marker() {
+    // Regression: #993
+    assert!(DOC.contains("## Witness and Artifact Schema Contract Lane"));
+    assert!(DOC.contains("run_processor_proof_artifact_contract_lane.sh"));
+    assert!(DOC.contains("private field selector syntax drift is rejected (`Regression: #993`)"));
+}
