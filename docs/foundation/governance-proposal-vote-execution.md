@@ -145,6 +145,45 @@ Regression policy:
 - illegal lifecycle transitions and rollback integrity drift must fail closed (`Regression: #910`).
 - shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1246`).
 
+## Governance Quorum Attestation Replay Contract Lane
+Governance quorum attestation and replay protections include deterministic reason-code evidence with fail-closed policy checks.
+
+- Quorum attestation replay lane command:
+  - `bash scripts/governance/run_quorum_attestation_replay_guard_lane.sh --output-file /tmp/governance-quorum-attestation-replay-report.json`
+- Stable shell wrapper:
+  - `scripts/governance/run_quorum_attestation_replay_guard_lane.sh`
+- Shared Python implementation:
+  - `scripts/governance/governance_quorum_attestation_replay_lane_contract.py`
+- Quorum attestation replay policy checker:
+  - `bash scripts/governance/check_quorum_attestation_replay_policy.sh --report-file /tmp/governance-quorum-attestation-replay-report.json`
+- Stable shell wrapper:
+  - `scripts/governance/check_quorum_attestation_replay_policy.sh`
+- Shared Python implementation:
+  - `scripts/governance/governance_quorum_attestation_replay_policy_contract.py`
+- Quorum attestation replay contract lane:
+  - `bash scripts/governance/run_quorum_attestation_replay_contract_lane.sh --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
+- Stable shell wrapper:
+  - `scripts/governance/run_quorum_attestation_replay_contract_lane.sh`
+- Shared Python implementation:
+  - `scripts/governance/governance_quorum_attestation_replay_contract_lane_contract.py`
+
+Runtime budget controls:
+
+- `KAMN_GOVERNANCE_QUORUM_ATTESTATION_MAX_SECONDS`
+- `KAMN_GOVERNANCE_QUORUM_ATTESTATION_CONTRACT_MAX_SECONDS`
+- `KAMN_GOVERNANCE_QUORUM_ATTESTATION_SKIP_COMMANDS`
+
+Required schema/reason markers:
+
+- `kamn.governance.quorum-attestation-replay-report.v1`
+- `governance_quorum_attestation_reason_codes:GO:v1`
+- `governance_quorum_attestation_reason_codes:NO-GO:v1`
+
+Regression policy:
+
+- quorum attestation evidence drift and replay attempts must fail closed (`Regression: #911`).
+- shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1254`).
+
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
 
@@ -160,6 +199,9 @@ bash scripts/governance/test_run_stake_slash_risk_deep_lane.sh
 bash scripts/governance/test_run_governance_lifecycle_rollback_lane.sh
 bash scripts/governance/test_check_governance_lifecycle_rollback_policy.sh
 bash scripts/governance/test_run_governance_lifecycle_rollback_contract_lane.sh
+bash scripts/governance/test_run_quorum_attestation_replay_guard_lane.sh
+bash scripts/governance/test_check_quorum_attestation_replay_policy.sh
+bash scripts/governance/test_run_quorum_attestation_replay_contract_lane.sh
 cargo test -p kamn-core --test governance_workflow --test governance_workflow_docs
 cargo test -p kamn-core --test upgrade_orchestration
 cargo fmt --check
