@@ -25,6 +25,7 @@ fn doc_contains_outbound_intent_attestation_and_idempotency_rules() {
 #[test]
 fn doc_includes_cross_chain_receipt_finality_test_command() {
     assert!(DOC.contains("cargo test -p kamn-core --test cross_chain_receipt_finality"));
+    assert!(DOC.contains("cross_chain_outbound_intent_contract.py"));
     assert!(DOC.contains("test_generate_cross_chain_outbound_intent_evidence_bundle.sh"));
     assert!(DOC.contains("test_run_cross_chain_outbound_intent_contract_lane.sh"));
 }

@@ -452,6 +452,12 @@ assert_eq "$(extract_output "$bridge_adapter_conformance_shared_contract_output"
 assert_eq "$(extract_output "$bridge_adapter_conformance_shared_contract_output" "run_bridge_replay_deep_lane")" "false" "bridge adapter conformance shared contract changes should not run deep lane by default"
 assert_eq "$(extract_output "$bridge_adapter_conformance_shared_contract_output" "test_scope")" "bridge" "bridge adapter conformance shared contract changes should set bridge scope"
 
+cross_chain_outbound_shared_contract_output="$(run_selector $'scripts/bridge/cross_chain_outbound_intent_contract.py')"
+assert_eq "$(extract_output "$cross_chain_outbound_shared_contract_output" "run_rust")" "false" "cross-chain outbound intent shared contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$cross_chain_outbound_shared_contract_output" "run_bridge_replay_harness")" "true" "cross-chain outbound intent shared contract changes must run bridge replay harness"
+assert_eq "$(extract_output "$cross_chain_outbound_shared_contract_output" "run_bridge_replay_deep_lane")" "false" "cross-chain outbound intent shared contract changes should not run deep lane by default"
+assert_eq "$(extract_output "$cross_chain_outbound_shared_contract_output" "test_scope")" "bridge" "cross-chain outbound intent shared contract changes should set bridge scope"
+
 bridge_ingress_lane_output="$(run_selector $'scripts/bridge/run_bridge_ingress_relay_contract_lane.sh')"
 assert_eq "$(extract_output "$bridge_ingress_lane_output" "run_rust")" "false" "bridge ingress lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$bridge_ingress_lane_output" "run_bridge_replay_harness")" "true" "bridge ingress lane script-only changes must run bridge replay harness"
