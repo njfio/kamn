@@ -71,3 +71,21 @@ fn namespaces_module_must_not_return_to_missing_docs_allowlist() {
         "allowlist fixture must keep namespaces module removed"
     );
 }
+
+#[test]
+fn graduated_wave_two_modules_must_not_return_to_missing_docs_allowlist() {
+    // Regression: #1365
+    let actual = allowlisted_modules_from_core_lib(CORE_LIB);
+    let expected = allowlisted_modules_from_fixture(ALLOWLIST_FIXTURE);
+
+    for module in ["bootstrap", "kolme_runtime_commit", "state"] {
+        assert!(
+            !actual.iter().any(|candidate| candidate == module),
+            "{module} must stay graduated from #[allow(missing_docs)]"
+        );
+        assert!(
+            !expected.iter().any(|candidate| candidate == module),
+            "allowlist fixture must keep {module} removed"
+        );
+    }
+}

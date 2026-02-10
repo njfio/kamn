@@ -1,16 +1,27 @@
+//! Canonical state schema/versioning and deterministic state-key construction.
+
 use std::fmt;
 
 use crate::namespaces::StateNamespaces;
 
+/// Monotonic schema version marker for persisted state layout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct StateVersion(pub u32);
+pub struct StateVersion(
+    /// Integer representation of the schema version.
+    pub u32,
+);
 
+/// Current application state schema version.
 pub const APP_STATE_VERSION: StateVersion = StateVersion(1);
+/// Maximum allowed length for each canonical state-key part.
 pub const MAX_STATE_KEY_PART_LEN: usize = 96;
 
+/// Canonical state schema metadata used by bootstrap and migration planning.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppStateSchema {
+    /// Schema version this node expects for persisted state.
     pub version: StateVersion,
+    /// Canonical namespace registry used for state-key composition.
     pub namespaces: StateNamespaces,
 }
 
@@ -23,6 +34,7 @@ impl Default for AppStateSchema {
     }
 }
 
+/// Builds a deterministic canonical state key `<namespace>:<entity>:<id>`.
 pub fn canonical_state_key(
     namespace: &str,
     entity: &str,
@@ -83,18 +95,28 @@ fn validate_key_part(part: &'static str, value: &str) -> Result<(), StateKeyErro
     Ok(())
 }
 
+/// Validation error for canonical state-key construction.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StateKeyError {
+    /// Required key part is empty.
     EmptyPart(&'static str),
+    /// One key part exceeds the configured max length.
     PartTooLong {
+        /// Part label that violated the constraint.
         part: &'static str,
+        /// Maximum supported character length.
         max: usize,
+        /// Observed character length.
         actual: usize,
     },
+    /// One key part contains unsupported characters.
     InvalidCharacter {
+        /// Part label that violated character rules.
         part: &'static str,
+        /// Raw value that failed validation.
         value: String,
     },
+    /// Namespace does not use the required `kamn.` prefix.
     NamespacePrefix(String),
 }
 

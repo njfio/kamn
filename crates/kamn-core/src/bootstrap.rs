@@ -1,3 +1,5 @@
+//! Bootstrap planning for validated config, schema migrations, and runtime wiring.
+
 use crate::config::{ConfigError, NodeConfig};
 use crate::migrations::{MigrationPlan, MigrationRegistry};
 use crate::namespaces::StateNamespaces;
@@ -5,20 +7,29 @@ use crate::runtime::{build_runtime_wiring, RuntimeWiring};
 use crate::state::{AppStateSchema, StateVersion, APP_STATE_VERSION};
 use crate::token::{default_token_config, TokenConfig};
 
+/// Deterministic bootstrap artifact bundling validated config, schema, and wiring.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BootstrapPlan {
+    /// Validated node configuration used to build the plan.
     pub config: NodeConfig,
+    /// Canonical state namespaces available to runtime services.
     pub namespaces: StateNamespaces,
+    /// State schema version and namespace metadata.
     pub state_schema: AppStateSchema,
+    /// Token configuration validated during bootstrap.
     pub token_config: TokenConfig,
+    /// Ordered migration plan from persisted to target state version.
     pub migration_plan: MigrationPlan,
+    /// Runtime wiring map for service/component initialization.
     pub wiring: RuntimeWiring,
 }
 
+/// Builds a bootstrap plan for the current application state version.
 pub fn bootstrap(config: NodeConfig) -> Result<BootstrapPlan, ConfigError> {
     bootstrap_from_state_version(config, APP_STATE_VERSION)
 }
 
+/// Builds a bootstrap plan from an explicit persisted state version.
 pub fn bootstrap_from_state_version(
     config: NodeConfig,
     persisted_state_version: StateVersion,
