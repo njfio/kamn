@@ -1,0 +1,87 @@
+{
+  "schema_version": "kamn.kolme.nonce-broadcast-parity-cases.v1",
+  "cases": [
+    {
+      "case_id": "nonce_success_go",
+      "operation": "nonce",
+      "http_status": 200,
+      "nonce_value": 91,
+      "broadcast_accepted": false,
+      "duplicate_detected": false,
+      "payload_valid": true,
+      "authorization_present": true,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "GO"
+    },
+    {
+      "case_id": "broadcast_success_go",
+      "operation": "broadcast",
+      "http_status": 200,
+      "nonce_value": 0,
+      "broadcast_accepted": true,
+      "duplicate_detected": false,
+      "payload_valid": true,
+      "authorization_present": true,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "GO"
+    },
+    {
+      "case_id": "broadcast_duplicate_idempotent_go",
+      "operation": "broadcast",
+      "http_status": 409,
+      "nonce_value": 0,
+      "broadcast_accepted": false,
+      "duplicate_detected": true,
+      "payload_valid": true,
+      "authorization_present": true,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "GO"
+    },
+    {
+      "case_id": "broadcast_rejected_no_go",
+      "operation": "broadcast",
+      "http_status": 422,
+      "nonce_value": 0,
+      "broadcast_accepted": false,
+      "duplicate_detected": false,
+      "payload_valid": true,
+      "authorization_present": true,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO",
+      "required_reason_codes": [
+        "rejected_by_backend"
+      ]
+    },
+    {
+      "case_id": "broadcast_unauthorized_no_go",
+      "operation": "broadcast",
+      "http_status": 401,
+      "nonce_value": 0,
+      "broadcast_accepted": false,
+      "duplicate_detected": false,
+      "payload_valid": true,
+      "authorization_present": false,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO",
+      "required_reason_codes": [
+        "unauthorized_status",
+        "authorization_missing"
+      ]
+    },
+    {
+      "case_id": "nonce_malformed_payload_no_go",
+      "operation": "nonce",
+      "http_status": 200,
+      "nonce_value": 17,
+      "broadcast_accepted": false,
+      "duplicate_detected": false,
+      "payload_valid": false,
+      "authorization_present": true,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO",
+      "required_reason_codes": [
+        "malformed_payload"
+      ]
+    }
+  ]
+}
