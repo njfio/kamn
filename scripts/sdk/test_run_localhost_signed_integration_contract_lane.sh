@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE_SCRIPT="$ROOT_DIR/scripts/sdk/run_localhost_signed_integration_contract_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/sdk/localhost_signed_integration_contract_lane_contract.py"
+FIXTURE_FILE="$ROOT_DIR/fixtures/runtime/localhost_signed_integration_cases.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -14,6 +15,11 @@ fi
 
 if [ ! -x "$SHARED_CONTRACT" ]; then
   echo "expected localhost signed integration shared contract lane module to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$FIXTURE_FILE" ]; then
+  echo "expected localhost signed integration fixture corpus to exist" >&2
   exit 1
 fi
 
@@ -47,11 +53,21 @@ import sys
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert report["schema_version"] == "kamn.sdk.localhost-signed.integration-contract.v1"
 assert report["status"] == "pass"
+assert report["final_decision"] == "GO"
 assert report["success_scenario_status"] == "pass"
 assert report["signature_mismatch_scenario_status"] == "pass"
 assert report["timeout_scenario_status"] == "pass"
 assert report["replay_nonce_scenario_status"] == "pass"
 assert report["admission_guards_scenario_status"] == "pass"
+assert (
+    report["scenario_fixture_schema_version"]
+    == "kamn.sdk.localhost-signed.integration-fixtures.v1"
+)
+assert report["scenario_fixture_ids"] == [
+    "success-v1",
+    "signature-mismatch-v1",
+    "timeout-v1",
+]
 assert report["contract_key"] == "localhost_signed_integration_contract:v1"
 assert report["success_evidence_key"] == "localhost_signed_integration:success:v1"
 assert (
@@ -98,6 +114,20 @@ assert report["admission_reason_codes"] == [
 ]
 PY
 
+python3 - "$FIXTURE_FILE" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["schema_version"] == "kamn.sdk.localhost-signed.integration-fixtures.v1"
+assert payload["scenario_ids"] == [
+    "success-v1",
+    "signature-mismatch-v1",
+    "timeout-v1",
+]
+PY
+
 if ! grep -Fq "localhost_signed_integration_contract_lane_contract.py" "$LANE_SCRIPT"; then
   echo "expected localhost signed integration contract lane wrapper to dispatch shared contract module" >&2
   exit 1
@@ -105,6 +135,11 @@ fi
 
 if ! grep -Fq "check_localhost_signed_integration_evidence_policy.sh" "$SHARED_CONTRACT"; then
   echo "expected localhost signed integration shared contract lane module to enforce evidence policy checker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "fixtures/runtime/localhost_signed_integration_cases.json" "$SHARED_CONTRACT"; then
+  echo "expected localhost signed integration shared contract lane module to enforce fixture corpus contract" >&2
   exit 1
 fi
 

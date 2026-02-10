@@ -188,6 +188,9 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-file /tmp/localhost-signed-integration-contract-report.json`
 - Contract report schema:
   - `kamn.sdk.localhost-signed.integration-contract.v1`
+- Deterministic fixture corpus:
+  - `fixtures/runtime/localhost_signed_integration_cases.json`
+  - `kamn.sdk.localhost-signed.integration-fixtures.v1`
 - Deterministic keys:
   - `localhost_signed_integration_contract:v1`
   - `localhost_signed_integration:success:v1`
@@ -201,6 +204,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `replay_nonce_detected`
   - `session_admission_guards_detected`
   - `admission_reason_codes=["stale_session_detected","unauthorized_sender_detected","malformed_payload_detected"]`
+  - `final_decision=GO` for pass reports
 - Regression policy:
   - deterministic evidence keys and reason keys remain fail-closed (`Regression: #899`).
   - replay nonce and session admission guards remain fail-closed (`Regression: #1382`).
