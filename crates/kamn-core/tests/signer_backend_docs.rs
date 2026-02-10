@@ -40,6 +40,7 @@ fn doc_contains_fallback_semantics_and_transaction_integration() {
 fn doc_contains_signer_emulator_contract_lane_policy() {
     assert!(DOC.contains("## Signer Emulator Contract Lanes"));
     assert!(DOC.contains("bash scripts/signer/run_signer_emulator_contract_lane.sh"));
+    assert!(DOC.contains("bash scripts/signer/run_signer_policy_contract_lane.sh"));
     assert!(DOC.contains("bash scripts/signer/run_signer_provider_deep_lane.sh"));
     assert!(DOC.contains(
         "functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider"
@@ -47,6 +48,9 @@ fn doc_contains_signer_emulator_contract_lane_policy() {
     assert!(
         DOC.contains("functional_router_uses_custom_provider_client_mapping_for_secure_provider")
     );
+    assert!(DOC.contains("functional_privileged_roles_deny_fallback_when_provider_unavailable"));
+    assert!(DOC
+        .contains("router_decision_matrix_distinguishes_unavailable_vs_policy_blocked_handshakes"));
     assert!(DOC.contains("regression_provider_handshake_policy_block_rejects_without_fallback"));
     assert!(
         DOC.contains("regression_provider_client_backend_mismatch_is_rejected_without_fallback")
@@ -80,6 +84,9 @@ fn regression_requires_no_fallback_on_unsupported_secure_key_reference() {
         "signer and transaction compatibility fixture matrix decisions stay aligned (`Regression: #677`)."
     ));
     assert!(DOC.contains("Contract lane guards remain required for signer provider compatibility (`Regression: #619`)."));
+    assert!(DOC.contains(
+        "Privileged-role fallback and handshake policy bypass attempts remain fail-closed (`Regression: #987`)."
+    ));
     assert!(DOC.contains(
         "fallback is denied for handshake policy blocks (`ProviderHandshakeRejected`) (`Regression: #677`)."
     ));

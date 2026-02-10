@@ -776,6 +776,11 @@ assert_eq "$(extract_output "$signer_contract_script_output" "run_rust")" "false
 assert_eq "$(extract_output "$signer_contract_script_output" "run_signer_emulator_contract_tests")" "true" "signer contract script changes must run signer emulator contract lane"
 assert_eq "$(extract_output "$signer_contract_script_output" "test_scope")" "signer-contract" "signer contract script changes should set signer-contract scope"
 
+signer_policy_contract_script_output="$(run_selector $'scripts/signer/run_signer_policy_contract_lane.sh')"
+assert_eq "$(extract_output "$signer_policy_contract_script_output" "run_rust")" "false" "signer policy contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$signer_policy_contract_script_output" "run_signer_emulator_contract_tests")" "true" "signer policy contract script changes must run signer emulator contract lane"
+assert_eq "$(extract_output "$signer_policy_contract_script_output" "test_scope")" "signer-contract" "signer policy contract script changes should set signer-contract scope"
+
 did_contract_docs_output="$(run_selector $'docs/foundation/did-registry-transactions.md')"
 assert_eq "$(extract_output "$did_contract_docs_output" "run_rust")" "false" "did contract docs should avoid rust lane"
 assert_eq "$(extract_output "$did_contract_docs_output" "run_did_registry_contract_tests")" "true" "did contract docs must run did registry contract lane"
@@ -1261,9 +1266,10 @@ assert_eq "$(extract_output "$validator_quorum_reconfiguration_docs_output" "tes
 
 threat_control_matrix_docs_output="$(run_selector $'docs/foundation/threat-control-matrix.md')"
 assert_eq "$(extract_output "$threat_control_matrix_docs_output" "run_rust")" "false" "threat control matrix docs should avoid rust lane"
+assert_eq "$(extract_output "$threat_control_matrix_docs_output" "run_signer_emulator_contract_tests")" "true" "threat control matrix docs must run signer contract lane"
 assert_eq "$(extract_output "$threat_control_matrix_docs_output" "run_governance_simulation_contract_tests")" "true" "threat control matrix docs must run governance simulation contract lane"
 assert_eq "$(extract_output "$threat_control_matrix_docs_output" "run_governance_stake_slash_contract_tests")" "false" "threat control matrix docs should not force governance stake/slash contract lane"
-assert_eq "$(extract_output "$threat_control_matrix_docs_output" "test_scope")" "governance-contract" "threat control matrix docs should set governance-contract scope"
+assert_eq "$(extract_output "$threat_control_matrix_docs_output" "test_scope")" "signer-contract" "threat control matrix docs should set signer-contract scope"
 
 escrow_contract_script_output="$(run_selector $'scripts/escrow/run_settlement_reconciliation_contract_lane.sh')"
 assert_eq "$(extract_output "$escrow_contract_script_output" "run_rust")" "false" "escrow contract script-only changes should avoid rust lane"

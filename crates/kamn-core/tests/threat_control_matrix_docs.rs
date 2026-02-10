@@ -15,6 +15,7 @@ fn matrix_contains_core_threat_entries() {
     assert!(CONTROL_MATRIX.contains("TM-004"));
     assert!(CONTROL_MATRIX.contains("TM-005"));
     assert!(CONTROL_MATRIX.contains("TM-006"));
+    assert!(CONTROL_MATRIX.contains("TM-007"));
 }
 
 #[test]
@@ -29,6 +30,13 @@ fn matrix_maps_controls_to_tests() {
     assert!(CONTROL_MATRIX.contains("governance_quorum_attestation_replay_policy_contract.py"));
     assert!(CONTROL_MATRIX.contains("governance_quorum_attestation_replay_lane_contract.py"));
     assert!(CONTROL_MATRIX.contains("run_quorum_attestation_replay_contract_lane.sh"));
+    assert!(CONTROL_MATRIX.contains("run_signer_policy_contract_lane.sh"));
+    assert!(CONTROL_MATRIX
+        .contains("functional_privileged_roles_deny_fallback_when_provider_unavailable"));
+    assert!(CONTROL_MATRIX
+        .contains("router_decision_matrix_distinguishes_unavailable_vs_policy_blocked_handshakes"));
+    assert!(CONTROL_MATRIX
+        .contains("regression_provider_client_backend_mismatch_is_rejected_without_fallback"));
 }
 
 #[test]
@@ -36,4 +44,11 @@ fn matrix_contains_quorum_attestation_replay_guard_entry_details() {
     assert!(
         CONTROL_MATRIX.contains("Quorum attestation evidence drift or replayed approval artifact")
     );
+}
+
+#[test]
+fn matrix_contains_signer_fallback_policy_entry_details() {
+    assert!(CONTROL_MATRIX
+        .contains("Privileged role fallback bypass under secure-provider degradation"));
+    assert!(CONTROL_MATRIX.contains("`Regression: #987`"));
 }
