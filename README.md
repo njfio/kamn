@@ -166,6 +166,16 @@ bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-
 CI fast-gate routes this lane when selector output
 `run_localhost_signed_integration_contract_lane_tests` is `true`.
 
+### Run Live Transport Replay/Tamper Contract Lane
+
+```bash
+bash scripts/sdk/run_live_transport_replay_tamper_contract_lane.sh \
+  --output-report /tmp/live-transport-replay-tamper-contract-report.json
+bash scripts/sdk/check_live_transport_replay_tamper_policy.sh \
+  --bundle-file /tmp/live-transport-replay-tamper-contract-report.json
+# schema: kamn.sdk.live-transport-replay-tamper-evidence.v1
+```
+
 ### Run Localhost Bridge Demo Evidence Contract Lane (Fast)
 
 ```bash

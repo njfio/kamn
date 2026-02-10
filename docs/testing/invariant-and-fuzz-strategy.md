@@ -24,6 +24,10 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
   - `bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json`
 - Combined policy checker:
   - `bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /tmp/invariant-fuzz-concurrency-contract-report.json`
+- Live transport replay/tamper contract lane:
+  - `bash scripts/sdk/run_live_transport_replay_tamper_contract_lane.sh --output-report /tmp/live-transport-replay-tamper-contract-report.json`
+- Live transport replay/tamper policy checker:
+  - `bash scripts/sdk/check_live_transport_replay_tamper_policy.sh --bundle-file /tmp/live-transport-replay-tamper-contract-report.json`
 
 ## Determinism Strategy
 
@@ -72,6 +76,8 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
   - `reason_codes`
 - Required pass reason code:
   - `none`
+- Live transport replay/tamper report schema:
+  - `kamn.sdk.live-transport-replay-tamper-evidence.v1`
 
 ## Runtime Budgets
 
