@@ -20,6 +20,8 @@ default development loop green while tightening missing-doc policy controls for
   - `bash scripts/ci/check_kamn_core_missing_docs_policy.sh`
 - Missing-doc policy checker regression tests:
   - `bash scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
+- Bounded rustdoc generation command (kamn-core only):
+  - `RUSTDOCFLAGS="-D warnings" cargo doc -p kamn-core --no-deps`
 - CI helper regression suite:
   - `bash scripts/ci/test_ci_tools.sh`
 - Contract framework helper unit tests:
@@ -33,6 +35,9 @@ default development loop green while tightening missing-doc policy controls for
   - `fixtures/ci/kamn_core_missing_docs_allowlist.txt`
 - Any allowlist drift fails closed via:
   - `scripts/ci/check_kamn_core_missing_docs_policy.sh`
+- Architecture/runtime flow and rustdoc publication docs are required:
+  - `docs/architecture/kamn-core-module-map.md`
+  - `docs/developer/rustdoc-publishing.md`
 
 ## Cost and Runtime Policy
 
@@ -78,6 +83,8 @@ default development loop green while tightening missing-doc policy controls for
   - `docs/foundation/audit-export-interfaces.md`
   - `docs/foundation/governance-proposal-vote-execution.md`
   - `docs/foundation/reputation-signal-routing.md`
+  - `docs/architecture/kamn-core-module-map.md`
+  - `docs/developer/rustdoc-publishing.md`
   - `docs/testing/invariant-and-fuzz-strategy.md`
   - `docs/planning/engineering-hardening-wave.md`
   - `README.md`

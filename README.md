@@ -202,6 +202,8 @@ Canonical contributor rules are in `.github/CONTRIBUTING.md` (`AGENTS.md` remain
 - `AGENTS.md`: compatibility redirect for agent tooling.
 - `PRD.md`: product requirements and phase scope baseline.
 - `docs/planning/engineering-hardening-wave.md`: baseline hardening and missing-doc policy contracts.
+- `docs/architecture/kamn-core-module-map.md`: `kamn-core` domain ownership map and runtime flow guide.
+- `docs/developer/rustdoc-publishing.md`: bounded rustdoc generation and publication workflow.
 - `docs/planning/live-network-wave.md`: pilot smoke/deep lane commands, budgets, and evidence contracts.
 - `docs/testing/invariant-and-fuzz-strategy.md`: bounded lifecycle property/fuzz/concurrency strategy and command contracts.
 - `docs/foundation/`: domain contracts used by docs tests and release gates.

@@ -31,7 +31,6 @@ message_delivery_guards
 message_envelope
 message_lifecycle
 migrations
-namespaces
 observability
 operator_actions
 operator_binding

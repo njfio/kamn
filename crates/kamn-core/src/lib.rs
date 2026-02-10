@@ -71,7 +71,6 @@ pub mod message_envelope;
 pub mod message_lifecycle;
 #[allow(missing_docs)]
 pub mod migrations;
-#[allow(missing_docs)]
 pub mod namespaces;
 #[allow(missing_docs)]
 pub mod observability;

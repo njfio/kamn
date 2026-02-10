@@ -99,6 +99,18 @@ assert_eq "$(extract_output "$hardening_docs_output" "run_rust")" "false" "engin
 assert_eq "$(extract_output "$hardening_docs_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "engineering hardening docs must run kamn-core missing-docs policy checks"
 assert_eq "$(extract_output "$hardening_docs_output" "test_scope")" "qa-doc-contract" "engineering hardening docs should set qa-doc-contract scope"
 
+module_map_docs_output="$(run_selector $'docs/architecture/kamn-core-module-map.md')"
+assert_eq "$(extract_output "$module_map_docs_output" "docs_only")" "true" "kamn-core module map docs should remain docs-only"
+assert_eq "$(extract_output "$module_map_docs_output" "run_rust")" "false" "kamn-core module map docs should avoid rust lane"
+assert_eq "$(extract_output "$module_map_docs_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "kamn-core module map docs must run missing-docs policy checks"
+assert_eq "$(extract_output "$module_map_docs_output" "test_scope")" "qa-doc-contract" "kamn-core module map docs should set qa-doc-contract scope"
+
+rustdoc_docs_output="$(run_selector $'docs/developer/rustdoc-publishing.md')"
+assert_eq "$(extract_output "$rustdoc_docs_output" "docs_only")" "true" "rustdoc publishing docs should remain docs-only"
+assert_eq "$(extract_output "$rustdoc_docs_output" "run_rust")" "false" "rustdoc publishing docs should avoid rust lane"
+assert_eq "$(extract_output "$rustdoc_docs_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "rustdoc publishing docs must run missing-docs policy checks"
+assert_eq "$(extract_output "$rustdoc_docs_output" "test_scope")" "qa-doc-contract" "rustdoc publishing docs should set qa-doc-contract scope"
+
 deploy_output="$(run_selector $'scripts/deploy/preflight_topology.sh')"
 assert_eq "$(extract_output "$deploy_output" "docs_only")" "false" "deploy-only change must not be docs-only"
 assert_eq "$(extract_output "$deploy_output" "run_rust")" "false" "deploy-only changes should avoid rust lane"
