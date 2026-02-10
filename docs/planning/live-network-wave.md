@@ -37,7 +37,7 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `scripts/runtime/live_network_pilot_artifact_summary_contract.py`
   - `scripts/runtime/live_network_pilot_artifact_summary_policy_contract.py`
 - Localhost signed sender/listener transport demo:
-  - `bash scripts/sdk/run_localhost_signed_demo.sh`
+  - `bash scripts/sdk/run_localhost_signed_demo.sh --output-json /tmp/localhost-signed-demo-artifact.json`
 - Localhost signed integration harness scenarios:
   - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario success`
   - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario signature-mismatch`
@@ -85,6 +85,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `kamn.bridge.localhost-demo-evidence.v1`
 - Localhost signed integration contract schema:
   - `kamn.sdk.localhost-signed.integration-contract.v1`
+- Localhost signed demo receipt artifact schema:
+  - `kamn.sdk.localhost-signed.demo-receipt-artifact.v1`
 - Required localhost signed integration report fields:
   - `status`
   - `contract_key`
@@ -99,6 +101,11 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `success_reason_key`
   - `signature_mismatch_reason_key`
   - `timeout_reason_key`
+- Required localhost signed demo receipt artifact fields:
+  - `status`
+  - `evidence_key`
+  - `signed_exchange`
+  - `receipt_reconciliation`
 - Required smoke report fields:
   - `status`
   - `final_decision`
@@ -140,6 +147,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `scripts/frontend/test_dashboard_package.sh` defaults fallback execution to `npx -y node@22` in fail-closed mode.
 - Localhost signed integration contract lane budget:
   - `run_localhost_signed_integration_contract_lane.sh` enforces a 120-second upper bound.
+- Localhost signed demo budget:
+  - `run_localhost_signed_demo.sh` keeps localhost sender/listener + receipt reconciliation within a 60-second smoke budget.
 - Regression guard:
   - budget overflow remains fail-closed with explicit reason code `runtime_budget_exceeded` (`Regression: #828`).
 - Regression guard:
@@ -158,6 +167,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - localhost signed integration contract lane wrapper remains pinned to shared contract implementation marker (`Regression: #1178`).
 - Regression guard:
   - localhost signed integration harness and contract lane preserve deterministic evidence keys (`Regression: #899`).
+- Regression guard:
+  - localhost signed demo receipt artifact schema drift and missing receipt reconciliation outcomes fail closed (`Regression: #981`).
 - Regression guard:
   - dashboard runtime fallback contract remains pinned to `node@22` with local reproduction guidance (`Regression: #868`).
 - Regression guard:
