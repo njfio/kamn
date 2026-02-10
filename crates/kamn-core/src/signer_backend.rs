@@ -78,7 +78,7 @@ pub enum SecureSignerProvider {
 
 impl SecureSignerProvider {
     pub fn from_key_id(key_id: &str) -> Result<Self, SignerBackendError> {
-        Ok(SecureKeyReference::parse(key_id)?.provider)
+        Ok(CanonicalSecureKeyReference::parse(key_id)?.provider)
     }
 
     pub fn backend_name(self) -> &'static str {
@@ -152,7 +152,7 @@ pub enum SignerKeyRole {
 
 impl SignerKeyRole {
     pub fn from_key_id(key_id: &str) -> Result<Self, SignerBackendError> {
-        Ok(SecureKeyReference::parse(key_id)?.key_role)
+        Ok(CanonicalSecureKeyReference::parse(key_id)?.key_role)
     }
 
     pub fn label(self) -> &'static str {
@@ -222,14 +222,14 @@ impl SignerKeyRole {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct SecureKeyReference {
-    provider: SecureSignerProvider,
-    key_role: SignerKeyRole,
-    _provider_key_id: String,
+pub struct CanonicalSecureKeyReference {
+    pub provider: SecureSignerProvider,
+    pub key_role: SignerKeyRole,
+    pub provider_key_id: String,
 }
 
-impl SecureKeyReference {
-    fn parse(key_id: &str) -> Result<Self, SignerBackendError> {
+impl CanonicalSecureKeyReference {
+    pub fn parse(key_id: &str) -> Result<Self, SignerBackendError> {
         if !key_id.starts_with("secure:") {
             return Err(SignerBackendError::UnsupportedKeyReference {
                 backend: SECURE_MOCK_BACKEND_NAME.to_owned(),
@@ -256,14 +256,14 @@ impl SecureKeyReference {
             return Ok(Self {
                 provider,
                 key_role,
-                _provider_key_id: provider_key_id.to_owned(),
+                provider_key_id: provider_key_id.to_owned(),
             });
         }
 
         Ok(Self {
             provider: SecureSignerProvider::Mock,
             key_role: SignerKeyRole::Operator,
-            _provider_key_id: suffix.to_owned(),
+            provider_key_id: suffix.to_owned(),
         })
     }
 }
@@ -272,6 +272,42 @@ pub trait SignerBackend {
     fn backend_name(&self) -> &'static str;
     fn sign(&self, request: &SigningRequest) -> Result<String, SignerBackendError>;
     fn verify(&self, request: &SigningRequest, signature: &str) -> Result<(), SignerBackendError>;
+}
+
+pub trait SecureSignerProviderClient {
+    fn sign_with_provider(
+        &self,
+        request: &SigningRequest,
+        key_reference: &CanonicalSecureKeyReference,
+    ) -> Result<BackendSignature, SignerBackendError>;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DeterministicSecureSignerProviderClient;
+
+impl SecureSignerProviderClient for DeterministicSecureSignerProviderClient {
+    fn sign_with_provider(
+        &self,
+        request: &SigningRequest,
+        key_reference: &CanonicalSecureKeyReference,
+    ) -> Result<BackendSignature, SignerBackendError> {
+        Ok(BackendSignature {
+            backend: key_reference.provider.backend_name().to_owned(),
+            signature: request.expected_signature(),
+        })
+    }
+}
+
+pub type SecureSignerProviderClientSignFn = fn(
+    request: &SigningRequest,
+    key_reference: &CanonicalSecureKeyReference,
+) -> Result<BackendSignature, SignerBackendError>;
+
+fn deterministic_secure_provider_client_sign(
+    request: &SigningRequest,
+    key_reference: &CanonicalSecureKeyReference,
+) -> Result<BackendSignature, SignerBackendError> {
+    DeterministicSecureSignerProviderClient.sign_with_provider(request, key_reference)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -306,9 +342,10 @@ impl SignerBackend for LocalSignerBackend {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct SecureSignerBackend {
     provider_handshake_matrix: SignerProviderHandshakeMatrix,
+    provider_client_sign: SecureSignerProviderClientSignFn,
 }
 
 impl SecureSignerBackend {
@@ -321,15 +358,26 @@ impl SecureSignerBackend {
     pub fn with_provider_handshake_matrix(
         provider_handshake_matrix: SignerProviderHandshakeMatrix,
     ) -> Self {
+        Self::with_provider_client(
+            provider_handshake_matrix,
+            deterministic_secure_provider_client_sign,
+        )
+    }
+
+    pub fn with_provider_client(
+        provider_handshake_matrix: SignerProviderHandshakeMatrix,
+        provider_client_sign: SecureSignerProviderClientSignFn,
+    ) -> Self {
         Self {
             provider_handshake_matrix,
+            provider_client_sign,
         }
     }
 
     fn enforce_key_role_segregation(
         &self,
         request: &SigningRequest,
-        secure_key: &SecureKeyReference,
+        secure_key: &CanonicalSecureKeyReference,
     ) -> Result<(), SignerBackendError> {
         let sender_role = SignerKeyRole::from_sender(&request.sender);
         if sender_role != secure_key.key_role {
@@ -367,14 +415,21 @@ impl SecureSignerBackend {
         &self,
         request: &SigningRequest,
     ) -> Result<BackendSignature, SignerBackendError> {
-        let secure_key = SecureKeyReference::parse(&request.key_id)?;
+        let secure_key = CanonicalSecureKeyReference::parse(&request.key_id)?;
         self.enforce_key_role_segregation(request, &secure_key)?;
         self.enforce_provider_handshake(secure_key.provider)?;
 
-        Ok(BackendSignature {
-            backend: secure_key.provider.backend_name().to_owned(),
-            signature: request.expected_signature(),
-        })
+        let signed = (self.provider_client_sign)(request, &secure_key)?;
+        let expected_backend = secure_key.provider.backend_name().to_owned();
+        if signed.backend != expected_backend {
+            return Err(SignerBackendError::ProviderClientBackendMismatch {
+                expected_backend,
+                provided_backend: signed.backend,
+                key_id: request.key_id.clone(),
+            });
+        }
+
+        Ok(signed)
     }
 
     fn verify_with_backend_name(
@@ -383,7 +438,7 @@ impl SecureSignerBackend {
         request: &SigningRequest,
         signature: &str,
     ) -> Result<(), SignerBackendError> {
-        let secure_key = SecureKeyReference::parse(&request.key_id)?;
+        let secure_key = CanonicalSecureKeyReference::parse(&request.key_id)?;
         let expected_backend = secure_key.provider.backend_name();
         if backend != expected_backend {
             return Err(SignerBackendError::SecureProviderBackendMismatch {
@@ -407,7 +462,7 @@ impl SignerBackend for SecureSignerBackend {
     }
 
     fn verify(&self, request: &SigningRequest, signature: &str) -> Result<(), SignerBackendError> {
-        let secure_key = SecureKeyReference::parse(&request.key_id)?;
+        let secure_key = CanonicalSecureKeyReference::parse(&request.key_id)?;
         self.enforce_key_role_segregation(request, &secure_key)?;
         self.enforce_provider_handshake(secure_key.provider)?;
 
@@ -430,7 +485,7 @@ impl SignerBackend for SecureSignerBackend {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct SignerBackendRouter {
     local: LocalSignerBackend,
     secure: SecureSignerBackend,
@@ -446,9 +501,22 @@ impl SignerBackendRouter {
     pub fn with_provider_handshake_matrix(
         provider_handshake_matrix: SignerProviderHandshakeMatrix,
     ) -> Self {
+        Self::with_provider_client(
+            provider_handshake_matrix,
+            deterministic_secure_provider_client_sign,
+        )
+    }
+
+    pub fn with_provider_client(
+        provider_handshake_matrix: SignerProviderHandshakeMatrix,
+        provider_client_sign: SecureSignerProviderClientSignFn,
+    ) -> Self {
         Self {
             local: LocalSignerBackend,
-            secure: SecureSignerBackend::with_provider_handshake_matrix(provider_handshake_matrix),
+            secure: SecureSignerBackend::with_provider_client(
+                provider_handshake_matrix,
+                provider_client_sign,
+            ),
         }
     }
 
@@ -522,6 +590,11 @@ pub enum SignerBackendError {
     ProviderUnavailable {
         backend: String,
     },
+    ProviderClientBackendMismatch {
+        expected_backend: String,
+        provided_backend: String,
+        key_id: String,
+    },
     SecureProviderBackendMismatch {
         expected_backend: String,
         provided_backend: String,
@@ -579,6 +652,14 @@ impl std::fmt::Display for SignerBackendError {
             Self::ProviderUnavailable { backend } => {
                 write!(f, "signer backend unavailable: {backend}")
             }
+            Self::ProviderClientBackendMismatch {
+                expected_backend,
+                provided_backend,
+                key_id,
+            } => write!(
+                f,
+                "provider client backend mismatch for key {key_id}; expected {expected_backend}, found {provided_backend}"
+            ),
             Self::SecureProviderBackendMismatch {
                 expected_backend,
                 provided_backend,
@@ -622,6 +703,7 @@ impl std::error::Error for SignerBackendError {}
 #[cfg(test)]
 mod tests {
     use super::{
+        deterministic_secure_provider_client_sign, CanonicalSecureKeyReference,
         SecureSignerBackend, SecureSignerProvider, SignerBackend, SignerBackendError,
         SignerKeyRole, SignerProviderHandshakeMatrix, SignerProviderHandshakeStatus,
         SigningRequest,
@@ -701,6 +783,15 @@ mod tests {
     }
 
     #[test]
+    fn canonical_secure_key_reference_parser_preserves_provider_key_scope() {
+        let parsed = CanonicalSecureKeyReference::parse("secure:AWS-KMS:role-TREASURY/key-prod-9")
+            .expect("canonical parser should accept provider + role scoped keys");
+        assert_eq!(parsed.provider, SecureSignerProvider::AwsKmsEmulator);
+        assert_eq!(parsed.key_role, SignerKeyRole::Treasury);
+        assert_eq!(parsed.provider_key_id, "role-TREASURY/key-prod-9");
+    }
+
+    #[test]
     fn handshake_matrix_maps_provider_statuses() {
         let matrix = SignerProviderHandshakeMatrix::with_statuses(
             SignerProviderHandshakeStatus::Available,
@@ -738,6 +829,59 @@ mod tests {
             Err(SignerBackendError::ProviderHandshakeRejected {
                 backend: "secure-aws-kms-emulator".to_owned(),
                 failure_class: "policy-blocked".to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn provider_client_maps_backend_from_canonical_reference() {
+        let request = SigningRequest::new(
+            "secure:aws-kms:key-prod-1",
+            "agent-a",
+            1,
+            "payload-1",
+            "state:genesis",
+        )
+        .expect("request should be valid");
+        let key_reference = CanonicalSecureKeyReference::parse(&request.key_id)
+            .expect("canonical parser should parse secure provider key");
+
+        let signed = deterministic_secure_provider_client_sign(&request, &key_reference)
+            .expect("deterministic provider client should sign");
+        assert_eq!(signed.backend, "secure-aws-kms-emulator");
+    }
+
+    #[test]
+    fn secure_backend_rejects_provider_client_backend_mismatch() {
+        fn mismatched_provider_client(
+            request: &SigningRequest,
+            _key_reference: &CanonicalSecureKeyReference,
+        ) -> Result<super::BackendSignature, SignerBackendError> {
+            Ok(super::BackendSignature {
+                backend: "secure-mock".to_owned(),
+                signature: request.expected_signature(),
+            })
+        }
+
+        let backend = SecureSignerBackend::with_provider_client(
+            SignerProviderHandshakeMatrix::with_uniform_availability(true),
+            mismatched_provider_client,
+        );
+        let request = SigningRequest::new(
+            "secure:aws-kms:key-prod-1",
+            "agent-a",
+            1,
+            "payload-1",
+            "state:genesis",
+        )
+        .expect("request should be valid");
+
+        assert_eq!(
+            backend.sign(&request),
+            Err(SignerBackendError::ProviderClientBackendMismatch {
+                expected_backend: "secure-aws-kms-emulator".to_owned(),
+                provided_backend: "secure-mock".to_owned(),
+                key_id: "secure:aws-kms:key-prod-1".to_owned(),
             })
         );
     }

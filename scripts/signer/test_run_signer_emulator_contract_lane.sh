@@ -29,8 +29,18 @@ if ! grep -q "functional_provider_handshake_matrix_routes_operator_fallback_for_
   exit 1
 fi
 
+if ! grep -q "functional_router_uses_custom_provider_client_mapping_for_secure_provider" "$FAST_SCRIPT"; then
+  echo "expected signer emulator contract lane to include provider client mapping functional coverage" >&2
+  exit 1
+fi
+
 if ! grep -q "regression_provider_handshake_policy_block_rejects_without_fallback" "$FAST_SCRIPT"; then
   echo "expected signer emulator contract lane to include provider handshake policy-block regression coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "regression_provider_client_backend_mismatch_is_rejected_without_fallback" "$FAST_SCRIPT"; then
+  echo "expected signer emulator contract lane to include provider client backend mismatch regression coverage" >&2
   exit 1
 fi
 
