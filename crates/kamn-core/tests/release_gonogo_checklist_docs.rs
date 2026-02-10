@@ -123,6 +123,9 @@ fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
     assert!(CHECKLIST.contains("run_version_compatibility_replay.py"));
     assert!(CHECKLIST.contains("check_runtime_commit_replay_policy.py"));
     assert!(CHECKLIST.contains("run_runtime_commit_replay_tamper_matrix.py"));
+    assert!(CHECKLIST.contains("run_runtime_commit_adapter_contract_lane.sh"));
+    assert!(CHECKLIST.contains("receipt_provider_mismatch"));
+    assert!(CHECKLIST.contains("receipt_not_final"));
     assert!(CHECKLIST.contains("run_version_compatibility_contract_lane.sh"));
     assert!(CHECKLIST.contains("run_runtime_commit_replay_contract_lane.sh"));
     assert!(CHECKLIST.contains("run_version_compatibility_replay_deep_lane.sh"));
@@ -340,6 +343,14 @@ fn regression_requires_kolme_runtime_commit_replay_guard_marker() {
     // Regression: #827
     assert!(CHECKLIST.contains(
         "runtime commit replay/tamper mismatches and non-final receipts force `NO-GO` (`Regression: #827`)."
+    ));
+}
+
+#[test]
+fn regression_requires_adapter_runtime_commit_replay_guard_marker() {
+    // Regression: #980
+    assert!(CHECKLIST.contains(
+        "adapter transport/provider mismatch and non-final receipt reason-code checks remain fail-closed (`Regression: #980`)."
     ));
 }
 

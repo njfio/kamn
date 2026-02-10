@@ -194,6 +194,11 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - `python3 scripts/kolme/check_runtime_commit_replay_policy.py --operation-id op-go-001 --idempotency-key kolme-runtime-commit:op-go-001:state:agent:1:12 --receipt-provider kolme-local --expected-receipt-provider kolme-local --receipt-commit-id kolme-commit:op-go-001:agent:1:12 --expected-receipt-commit-id kolme-commit:op-go-001:agent:1:12 --nonce-monotonic true --replay-detected false --payload-hash-match true --receipt-finality FINAL --ci-fast-gate PASS --output-json /tmp/kolme-runtime-commit-replay-policy.json`
 - Runtime commit replay matrix runner:
   - `python3 scripts/kolme/run_runtime_commit_replay_tamper_matrix.py --fixture fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json --output-json /tmp/kolme-runtime-commit-replay-report.json`
+- Runtime commit adapter replay/finality fast lane:
+  - `bash scripts/kolme/run_runtime_commit_adapter_contract_lane.sh`
+  - adapter reason-code checks include:
+    - `receipt_provider_mismatch`
+    - `receipt_not_final`
 - PR fast contract lane:
   - `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
   - `bash scripts/kolme/run_runtime_commit_replay_contract_lane.sh`
@@ -202,6 +207,7 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
 - Regression policy:
   - incompatible upgrade signature (`kamn 1.2.x` + `kolme 0.14.x`) remains blocked (`Regression: #775`).
   - runtime commit replay/tamper mismatches and non-final receipts force `NO-GO` (`Regression: #827`).
+  - adapter transport/provider mismatch and non-final receipt reason-code checks remain fail-closed (`Regression: #980`).
 
 ## Failover + Sync Drill Evidence Contract (Issues #787, #788)
 Runtime failover and sync readiness requires deterministic lane routing, budget guards, and scheduled-cadence enforcement before release approval.

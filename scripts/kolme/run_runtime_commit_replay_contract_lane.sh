@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 POLICY_CHECKER="$ROOT_DIR/scripts/kolme/check_runtime_commit_replay_policy.py"
 MATRIX_RUNNER="$ROOT_DIR/scripts/kolme/run_runtime_commit_replay_tamper_matrix.py"
+ADAPTER_CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_runtime_commit_adapter_contract_lane.sh"
 FIXTURE_FILE="$ROOT_DIR/fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json"
 ROADMAP_DOC="$ROOT_DIR/docs/planning/kolme-integration-roadmap.md"
 GONOGO_DOC="$ROOT_DIR/docs/foundation/release-gonogo-checklist.md"
@@ -17,6 +18,11 @@ fi
 
 if [ ! -x "$MATRIX_RUNNER" ]; then
   echo "expected runtime commit replay matrix runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$ADAPTER_CONTRACT_LANE" ]; then
+  echo "expected runtime commit adapter contract lane script to be executable" >&2
   exit 1
 fi
 
@@ -90,6 +96,12 @@ if ! printf '%s\n' "$matrix_output" | grep -q '^status=pass;'; then
   exit 1
 fi
 
+adapter_output="$(bash "$ADAPTER_CONTRACT_LANE")"
+if ! printf '%s\n' "$adapter_output" | grep -q "Kolme runtime commit adapter contract lane tests passed."; then
+  echo "expected runtime commit adapter contract lane success marker" >&2
+  exit 1
+fi
+
 python3 - "$TMP_REPORT" <<'PY'
 import json
 import pathlib
@@ -120,8 +132,18 @@ if ! grep -q "run_runtime_commit_replay_contract_lane.sh" "$ROADMAP_DOC"; then
   exit 1
 fi
 
+if ! grep -q "run_runtime_commit_adapter_contract_lane.sh" "$ROADMAP_DOC"; then
+  echo "expected Kolme integration roadmap to reference runtime commit adapter contract lane command" >&2
+  exit 1
+fi
+
 if ! grep -q "run_runtime_commit_replay_tamper_matrix.py" "$GONOGO_DOC"; then
   echo "expected release go/no-go doc to reference runtime commit replay matrix command" >&2
+  exit 1
+fi
+
+if ! grep -q "run_runtime_commit_adapter_contract_lane.sh" "$GONOGO_DOC"; then
+  echo "expected release go/no-go doc to reference runtime commit adapter contract lane command" >&2
   exit 1
 fi
 
