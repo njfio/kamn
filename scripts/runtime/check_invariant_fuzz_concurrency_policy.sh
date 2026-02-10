@@ -72,6 +72,9 @@ required_fields = (
     "fuzz_replay_schema_version",
     "fuzz_replay_artifact_key",
     "fuzz_replay_test_count",
+    "concurrency_replay_schema_version",
+    "concurrency_replay_artifact_key",
+    "concurrency_replay_test_count",
     "elapsed_seconds",
     "max_seconds",
     "reason_codes",
@@ -130,6 +133,26 @@ if fuzz_replay_artifact_key != expected_fuzz_replay_artifact_key:
 fuzz_replay_test_count = payload["fuzz_replay_test_count"]
 if not isinstance(fuzz_replay_test_count, int) or fuzz_replay_test_count < 10:
     fail("fuzz_replay_test_count must be an integer >= 10")
+
+concurrency_replay_schema_version = payload["concurrency_replay_schema_version"]
+expected_concurrency_replay_schema_version = "kamn.runtime.concurrency-mutation-contract-report.v1"
+if concurrency_replay_schema_version != expected_concurrency_replay_schema_version:
+    fail(
+        "concurrency_replay_schema_version mismatch: "
+        f"expected {expected_concurrency_replay_schema_version}, found {concurrency_replay_schema_version}"
+    )
+
+concurrency_replay_artifact_key = payload["concurrency_replay_artifact_key"]
+expected_concurrency_replay_artifact_key = "concurrency_mutation_replay:v1"
+if concurrency_replay_artifact_key != expected_concurrency_replay_artifact_key:
+    fail(
+        "concurrency_replay_artifact_key mismatch: "
+        f"expected {expected_concurrency_replay_artifact_key}, found {concurrency_replay_artifact_key}"
+    )
+
+concurrency_replay_test_count = payload["concurrency_replay_test_count"]
+if not isinstance(concurrency_replay_test_count, int) or concurrency_replay_test_count < 12:
+    fail("concurrency_replay_test_count must be an integer >= 12")
 
 elapsed_seconds = payload["elapsed_seconds"]
 max_seconds = payload["max_seconds"]

@@ -44,6 +44,11 @@ This document defines the canonical transaction invariant catalog and error taxo
   - route via `KAMN_RUNTIME_ZK_WITNESS_MUTATION_DEEP=true` when running `run_input_mutation_contract_lane.sh`.
 - Concurrency state-mutation lane:
   - `bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh`
+  - `bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh --output-json /tmp/concurrency-mutation-contract-report.json`
+- Concurrency mutation report schema:
+  - `kamn.runtime.concurrency-mutation-contract-report.v1`
+- Concurrency mutation replay artifact key:
+  - `concurrency_mutation_replay:v1`
 - Combined bounded lane with evidence output:
   - `bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json`
 - Combined lane policy checker:
@@ -54,6 +59,8 @@ This document defines the canonical transaction invariant catalog and error taxo
   - `KAMN_RUNTIME_LIFECYCLE_PROPERTY_MAX_SECONDS` (default `120`)
 - Input mutation lane runtime budget env:
   - `KAMN_RUNTIME_INPUT_MUTATION_MAX_SECONDS` (default `120`)
+- Concurrency mutation lane runtime budget env:
+  - `KAMN_RUNTIME_CONCURRENCY_MUTATION_MAX_SECONDS` (default `120`)
 
 ## Dispute/Refund Property and Concurrency Contracts (Issue #904)
 - Property + replay trace contract lane:
