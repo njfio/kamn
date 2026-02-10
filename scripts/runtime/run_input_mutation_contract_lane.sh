@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ZK_WITNESS_MUTATION_LANE="$ROOT_DIR/scripts/runtime/run_zk_witness_mutation_contract_lane.sh"
+ZK_WITNESS_MUTATION_DEEP_LANE="$ROOT_DIR/scripts/runtime/run_zk_witness_mutation_deep_lane.sh"
 cd "$ROOT_DIR"
 
 # Keep deterministic mutation coverage bounded for fast, low-cost PR validation.
@@ -16,6 +18,12 @@ cargo test -p kamn-core --test did_fuzz_smoke functional_did_mutation_suite_cove
 cargo test -p kamn-core --test did_fuzz_smoke integration_did_mutation_fail_closed_reasons_are_explicit_and_deterministic -- --exact >/dev/null
 cargo test -p kamn-core --test did_fuzz_smoke regression_did_mutation_reason_signatures_remain_stable -- --exact >/dev/null
 cargo test -p kamn-core --test did_fuzz_smoke performance_did_mutation_contract_lane_stays_within_budget -- --exact >/dev/null
+
+if [ "${KAMN_RUNTIME_ZK_WITNESS_MUTATION_DEEP:-false}" = "true" ]; then
+  bash "$ZK_WITNESS_MUTATION_DEEP_LANE" >/dev/null
+else
+  bash "$ZK_WITNESS_MUTATION_LANE" >/dev/null
+fi
 
 cargo test -p kamn-core --test runtime_network_docs doc_contains_mutation_fail_closed_contract_rules -- --exact >/dev/null
 

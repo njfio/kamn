@@ -16,6 +16,8 @@ cargo test -p kamn-core --test runtime_watchdog_attestation_docs >/dev/null
 cargo test -p kamn-core --test live_network_wave_docs >/dev/null
 bash scripts/runtime/test_run_invariant_fuzz_concurrency_contract_lane.sh >/dev/null
 bash scripts/runtime/test_check_invariant_fuzz_concurrency_policy.sh >/dev/null
+bash scripts/runtime/test_run_zk_witness_mutation_contract_lane.sh >/dev/null
+bash scripts/runtime/test_run_zk_witness_mutation_deep_lane.sh >/dev/null
 bash scripts/runtime/test_select_failover_sync_drill_lane.sh >/dev/null
 bash scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh >/dev/null
 bash scripts/runtime/test_run_failover_sync_drill_deep_lane.sh >/dev/null

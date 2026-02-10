@@ -62,3 +62,12 @@ fn regression_requires_witness_artifact_contract_lane_marker() {
     assert!(DOC.contains("run_processor_proof_artifact_contract_lane.sh"));
     assert!(DOC.contains("private field selector syntax drift is rejected (`Regression: #993`)"));
 }
+
+#[test]
+fn regression_requires_witness_mutation_fast_and_deep_lane_markers() {
+    // Regression: #994
+    assert!(DOC.contains("## Witness Mutation Property and Fuzz Lanes"));
+    assert!(DOC.contains("run_zk_witness_mutation_contract_lane.sh"));
+    assert!(DOC.contains("run_zk_witness_mutation_deep_lane.sh"));
+    assert!(DOC.contains("performance_zk_witness_mutation_deep_lane_stress -- --ignored"));
+}
