@@ -167,6 +167,11 @@ assert_eq "$(extract_output "$dr_shared_contract_output" "run_rust")" "false" "D
 assert_eq "$(extract_output "$dr_shared_contract_output" "run_deploy_preflight_tests")" "true" "DR shared contract changes must run deploy preflight tests"
 assert_eq "$(extract_output "$dr_shared_contract_output" "test_scope")" "deploy" "DR shared contract changes should set deploy scope"
 
+deployment_policy_shared_contract_output="$(run_selector $'scripts/deploy/deployment_slo_rollback_policy_contract.py')"
+assert_eq "$(extract_output "$deployment_policy_shared_contract_output" "run_rust")" "false" "deployment SLO rollback shared policy contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$deployment_policy_shared_contract_output" "run_deploy_preflight_tests")" "true" "deployment SLO rollback shared policy contract changes must run deploy preflight tests"
+assert_eq "$(extract_output "$deployment_policy_shared_contract_output" "test_scope")" "deploy" "deployment SLO rollback shared policy contract changes should set deploy scope"
+
 # Regression: #463
 runner_output_file="$(mktemp)"
 runner_docs_output="$(GITHUB_OUTPUT="$runner_output_file" run_selector $'docs/foundation/ci-caching-parallelism.md')"
