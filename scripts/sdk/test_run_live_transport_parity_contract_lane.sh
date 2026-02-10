@@ -3,11 +3,22 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_SCRIPT="$ROOT_DIR/scripts/sdk/run_live_transport_parity_contract_lane.sh"
+SHARED_FAST_SCRIPT="$ROOT_DIR/scripts/sdk/live_transport_parity_contract_lane_contract.py"
 DEEP_SCRIPT="$ROOT_DIR/scripts/sdk/run_live_transport_parity_deep_lane.sh"
 PROFILE_DRIFT_SCRIPT="$ROOT_DIR/scripts/sdk/run_transport_profile_parity_matrix.sh"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
   echo "expected live transport parity fast-lane runner to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q 'live_transport_parity_contract_lane_contract.py' "$FAST_SCRIPT"; then
+  echo "expected live transport parity fast-lane wrapper to delegate to shared implementation" >&2
+  exit 1
+fi
+
+if [ ! -x "$SHARED_FAST_SCRIPT" ]; then
+  echo "expected shared live transport parity fast-lane implementation to be executable" >&2
   exit 1
 fi
 
@@ -45,8 +56,8 @@ if grep -q "running rust live transport contract lane tests" "$TMP_OUT"; then
   exit 1
 fi
 
-if ! grep -q 'run_transport_profile_parity_matrix.sh" --languages "\$SELECTED_LANGUAGES"' "$FAST_SCRIPT"; then
-  echo "expected parity fast lane to run transport profile parity drift matrix for selected languages" >&2
+if ! grep -q 'run_transport_profile_parity_matrix.sh' "$SHARED_FAST_SCRIPT"; then
+  echo "expected shared parity fast-lane implementation to run transport profile parity drift matrix" >&2
   exit 1
 fi
 
