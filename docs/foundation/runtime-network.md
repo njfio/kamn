@@ -249,6 +249,34 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `lane_mode=deep`
   - `deep_no_go_status=verified` (deep lane only)
 
+## Live Transport Demo Failure Taxonomy and Troubleshooting
+- Primary transport failure taxonomy markers:
+  - `signature_mismatch_detected`
+  - `malformed_signature_detected`
+  - `listener_timeout_detected`
+  - `session_expired_detected`
+  - `replay_nonce_detected`
+  - `session_admission_guards_detected`
+  - `tamper_payload_detected`
+  - `ci_fast_gate_failed`
+- Deterministic troubleshooting command loop:
+  - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario malformed-signature`
+  - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario session-expired`
+  - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario replay-nonce`
+  - `bash scripts/sdk/run_live_transport_replay_tamper_fast_lane.sh --output-report /tmp/live-transport-replay-tamper-fast-report.json`
+  - `bash scripts/sdk/check_live_transport_replay_tamper_policy.sh --bundle-file /tmp/live-transport-replay-tamper-fast-report.json`
+  - `bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json`
+  - `bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-file /tmp/localhost-signed-integration-contract-report.json`
+- Artifact checkpoints:
+  - `/tmp/live-transport-replay-tamper-fast-report.json`
+  - `/tmp/localhost-signed-integration-contract-report.json`
+- Failure triage guidance:
+  - `signature_mismatch_detected`/`malformed_signature_detected`: verify sender DID, nonce binding, payload canonicalization, and signature envelope encoding.
+  - `listener_timeout_detected`: verify listener endpoint reachability and increase harness `--timeout-seconds` only for local diagnostics.
+  - `session_expired_detected`/`session_admission_guards_detected`: confirm `session_epoch_seconds`, sender authorization, and payload shape before rerun.
+  - `replay_nonce_detected`: reset/reseed nonce progression; ensure monotonic nonce sequence across retries.
+  - `tamper_payload_detected`/`ci_fast_gate_failed`: treat as NO-GO until payload integrity and fast-gate contract status are restored.
+
 ## Queue Guard Rules
 - `BoundedRuntimeQueue<T>` is FIFO and preserves insertion order.
 - Capacity must be greater than zero.

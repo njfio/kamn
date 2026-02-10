@@ -182,6 +182,26 @@ bash scripts/sdk/check_live_transport_replay_tamper_policy.sh \
 # deep lane marker: deep_no_go_status=verified
 ```
 
+### Troubleshoot Localhost Transport Failures
+
+- Troubleshooting taxonomy and remediation details:
+  - `docs/foundation/runtime-network.md#live-transport-demo-failure-taxonomy-and-troubleshooting`
+  - `docs/planning/live-network-wave.md#troubleshooting-runbook`
+- Primary failure taxonomy markers:
+  - `signature_mismatch_detected`
+  - `session_expired_detected`
+  - `tamper_payload_detected`
+- Deterministic repro + policy loop:
+
+```bash
+bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario malformed-signature
+bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario session-expired
+bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario replay-nonce
+bash scripts/sdk/run_live_transport_replay_tamper_fast_lane.sh --output-report /tmp/live-transport-replay-tamper-fast-report.json
+bash scripts/sdk/check_live_transport_replay_tamper_policy.sh --bundle-file /tmp/live-transport-replay-tamper-fast-report.json
+bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json
+```
+
 ### Run Localhost Bridge Demo Evidence Contract Lane (Fast)
 
 ```bash

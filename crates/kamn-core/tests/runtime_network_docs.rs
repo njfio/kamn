@@ -232,3 +232,29 @@ fn doc_contains_live_transport_replay_tamper_evidence_contract_rules() {
     assert!(DOC.contains("deep_no_go_status=verified"));
     assert!(DOC.contains("Regression: #1380"));
 }
+
+#[test]
+fn doc_contains_live_transport_troubleshooting_taxonomy_and_runbook_commands() {
+    assert!(DOC.contains("## Live Transport Demo Failure Taxonomy and Troubleshooting"));
+    assert!(DOC.contains("signature_mismatch_detected"));
+    assert!(DOC.contains("malformed_signature_detected"));
+    assert!(DOC.contains("listener_timeout_detected"));
+    assert!(DOC.contains("session_expired_detected"));
+    assert!(DOC.contains("replay_nonce_detected"));
+    assert!(DOC.contains("session_admission_guards_detected"));
+    assert!(DOC.contains("tamper_payload_detected"));
+    assert!(DOC.contains("ci_fast_gate_failed"));
+    assert!(
+        DOC.contains("run_localhost_signed_integration_harness.sh --scenario malformed-signature")
+    );
+    assert!(DOC.contains("run_localhost_signed_integration_harness.sh --scenario session-expired"));
+    assert!(DOC.contains("run_localhost_signed_integration_harness.sh --scenario replay-nonce"));
+    assert!(DOC.contains(
+        "run_live_transport_replay_tamper_fast_lane.sh --output-report /tmp/live-transport-replay-tamper-fast-report.json"
+    ));
+    assert!(DOC.contains(
+        "check_live_transport_replay_tamper_policy.sh --bundle-file /tmp/live-transport-replay-tamper-fast-report.json"
+    ));
+    assert!(DOC.contains("/tmp/localhost-signed-integration-contract-report.json"));
+    assert!(DOC.contains("/tmp/live-transport-replay-tamper-fast-report.json"));
+}
