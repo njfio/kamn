@@ -30,6 +30,7 @@ fn checklist_contains_go_no_go_evidence_template() {
 #[test]
 fn checklist_contains_machine_readable_bundle_contract() {
     assert!(CHECKLIST.contains("## Machine-Readable Evidence Bundle Contract"));
+    assert!(CHECKLIST.contains("gonogo_evidence_contract.py"));
     assert!(CHECKLIST.contains("generate_gonogo_evidence_bundle.sh"));
     assert!(CHECKLIST.contains("check_gonogo_evidence_policy.sh"));
     assert!(CHECKLIST.contains("run_gonogo_evidence_contract_lane.sh"));
