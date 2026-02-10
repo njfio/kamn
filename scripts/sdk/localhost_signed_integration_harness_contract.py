@@ -228,6 +228,19 @@ class HarnessContext:
         )
         return self._send_payload(payload)
 
+    def send_malformed_signature_payload(self) -> bool:
+        payload = self._build_wire_payload(
+            from_did=FROM_DID,
+            to_did=TO_DID,
+            session_id=SESSION_ID,
+            session_epoch_seconds=int(time.time()),
+            nonce=1,
+            state_hash=STATE_HASH,
+            body=BODY,
+            signature="malformed-signature",
+        )
+        return self._send_payload(payload)
+
     def run_sender(
         self,
         *,
@@ -339,6 +352,21 @@ class HarnessContext:
         self.emit_report(
             "pass",
             "signature_mismatch_detected",
+            extra_fields={"signature_guard_status": "pass"},
+        )
+
+    def run_malformed_signature_scenario(self) -> None:
+        self.start_listener()
+        if not self.send_malformed_signature_payload():
+            self.fail_with_reason("payload_send_failed")
+
+        listener_status = self.wait_for_listener()
+        if listener_status == 124:
+            self.fail_with_reason("listener_timeout")
+        self._require_listener_failure("malformed signature format", "malformed_signature")
+        self.emit_report(
+            "pass",
+            "malformed_signature_detected",
             extra_fields={"signature_guard_status": "pass"},
         )
 
@@ -467,14 +495,15 @@ def run_harness(args: argparse.Namespace) -> int:
     if scenario not in {
         "success",
         "signature-mismatch",
+        "malformed-signature",
         "timeout",
         "session-expired",
         "replay-nonce",
         "admission-guards",
     }:
         fail(
-            "scenario must be one of: success, signature-mismatch, timeout, "
-            "session-expired, replay-nonce, admission-guards"
+            "scenario must be one of: success, signature-mismatch, malformed-signature, "
+            "timeout, session-expired, replay-nonce, admission-guards"
         )
 
     addr = args.addr
@@ -495,6 +524,8 @@ def run_harness(args: argparse.Namespace) -> int:
                 context.run_success_scenario()
             elif scenario == "signature-mismatch":
                 context.run_signature_mismatch_scenario()
+            elif scenario == "malformed-signature":
+                context.run_malformed_signature_scenario()
             elif scenario == "timeout":
                 context.run_timeout_scenario()
             elif scenario == "session-expired":

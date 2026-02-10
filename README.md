@@ -146,6 +146,7 @@ bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-
 # contract_key=localhost_signed_integration_contract:v1
 # success_evidence_key=localhost_signed_integration:success:v1
 # signature_mismatch_evidence_key=localhost_signed_integration:signature-mismatch:v1
+# malformed_signature_evidence_key=localhost_signed_integration:malformed-signature:v1
 # timeout_evidence_key=localhost_signed_integration:timeout:v1
 # session_expired_evidence_key=localhost_signed_integration:session-expired:v1
 # replay_nonce_evidence_key=localhost_signed_integration:replay-nonce:v1
@@ -153,6 +154,7 @@ bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-
 # final_decision=GO
 # scenario_fixture_schema_version=kamn.sdk.localhost-signed.integration-fixtures.v1
 # scenario_fixture_ids=["success-v1","signature-mismatch-v1","timeout-v1"]
+# malformed_signature_reason_code=malformed_signature_detected
 # session_expired_reason_code=session_expired_detected
 # replay_nonce_reason_code=replay_nonce_detected
 # admission_guards_reason_code=session_admission_guards_detected
