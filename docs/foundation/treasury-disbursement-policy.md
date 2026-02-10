@@ -10,6 +10,8 @@ required before executing treasury payouts.
   - `scripts/treasury/check_treasury_disbursement_policy.sh`
 - Shared Python implementation backing the wrappers:
   - `scripts/treasury/treasury_disbursement_contract.py`
+- Shared Python implementation (contract lane):
+  - `scripts/treasury/treasury_disbursement_contract_lane_contract.py`
 - Contract lane entrypoint:
   - `scripts/treasury/run_treasury_disbursement_contract_lane.sh`
 - Deterministic fixture cases:
@@ -32,6 +34,7 @@ required before executing treasury payouts.
 - Treasury contract lane runs only for treasury-related docs/scripts/fixtures and
   shared framework helper changes.
 - Runtime budget guard remains capped at 90 seconds in the contract lane.
+- Shared contract-lane marker remains required for docs/contracts drift guard (`Regression: #1278`).
 
 ## Local Validation
 
@@ -46,4 +49,3 @@ bash scripts/ci/test_ci_tools.sh
 cargo fmt --check
 cargo clippy -- -D warnings
 ```
-

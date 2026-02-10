@@ -1512,6 +1512,11 @@ assert_eq "$(extract_output "$treasury_contract_script_output" "run_rust")" "fal
 assert_eq "$(extract_output "$treasury_contract_script_output" "run_treasury_disbursement_contract_tests")" "true" "treasury contract script changes must run treasury contract lane"
 assert_eq "$(extract_output "$treasury_contract_script_output" "test_scope")" "treasury-contract" "treasury contract script changes should set treasury-contract scope"
 
+treasury_contract_shared_script_output="$(run_selector $'scripts/treasury/treasury_disbursement_contract_lane_contract.py')"
+assert_eq "$(extract_output "$treasury_contract_shared_script_output" "run_rust")" "false" "treasury shared contract-lane script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$treasury_contract_shared_script_output" "run_treasury_disbursement_contract_tests")" "true" "treasury shared contract-lane changes must run treasury contract lane"
+assert_eq "$(extract_output "$treasury_contract_shared_script_output" "test_scope")" "treasury-contract" "treasury shared contract-lane changes should set treasury-contract scope"
+
 treasury_contract_fixture_output="$(run_selector $'fixtures/treasury_disbursement/approval_threshold_cases.json')"
 assert_eq "$(extract_output "$treasury_contract_fixture_output" "run_rust")" "false" "treasury fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$treasury_contract_fixture_output" "run_treasury_disbursement_contract_tests")" "true" "treasury fixture changes must run treasury contract lane"
