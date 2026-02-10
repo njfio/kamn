@@ -1,8 +1,9 @@
 use kamn_core::{
     AdapterBackedKolmeRuntimeCommitClient, InMemoryKolmeRuntimeCommitClient,
     KolmeCommitReceiptFinality, KolmeRuntimeCommitClient, KolmeRuntimeCommitError,
-    KolmeRuntimeCommitOutcome, KolmeRuntimeCommitProvider, KolmeRuntimeCommitProviderError,
-    KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderReceipt,
+    KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitOutcome, KolmeRuntimeCommitProvider,
+    KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderOutcome,
+    KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderTransport,
     KolmeRuntimeCommitRequest, KolmeRuntimeCommitTransportErrorKind, RuntimeCommitLifecycleState,
     RuntimeCommitPipeline,
 };
@@ -26,6 +27,7 @@ struct FixtureCase {
 }
 
 type ProviderCalls = Rc<RefCell<Vec<(String, String)>>>;
+type TransportCalls = Rc<RefCell<Vec<(String, String, String, String)>>>;
 
 #[derive(Debug, Clone)]
 struct RecordingProvider {
@@ -57,6 +59,45 @@ impl KolmeRuntimeCommitProvider for RecordingProvider {
         self.calls
             .borrow_mut()
             .push((wire_payload.to_owned(), idempotency_key.to_owned()));
+        self.result.clone()
+    }
+}
+
+#[derive(Debug, Clone)]
+struct RecordingTransport {
+    calls: TransportCalls,
+    result: Result<String, KolmeRuntimeCommitProviderError>,
+}
+
+impl RecordingTransport {
+    fn with_result(
+        result: Result<String, KolmeRuntimeCommitProviderError>,
+    ) -> (Self, TransportCalls) {
+        let calls = Rc::new(RefCell::new(Vec::new()));
+        (
+            Self {
+                calls: calls.clone(),
+                result,
+            },
+            calls,
+        )
+    }
+}
+
+impl KolmeRuntimeCommitProviderTransport for RecordingTransport {
+    fn submit_runtime_commit(
+        &mut self,
+        base_url: &str,
+        submit_path: &str,
+        wire_payload: &str,
+        idempotency_key: &str,
+    ) -> Result<String, KolmeRuntimeCommitProviderError> {
+        self.calls.borrow_mut().push((
+            base_url.to_owned(),
+            submit_path.to_owned(),
+            wire_payload.to_owned(),
+            idempotency_key.to_owned(),
+        ));
         self.result.clone()
     }
 }
@@ -399,5 +440,103 @@ fn regression_adapter_path_keeps_receipt_provider_mismatch_fail_closed() {
             expected: "kolme-local".to_owned(),
             observed: "kolme-remote".to_owned(),
         })
+    );
+}
+
+#[test]
+fn unit_live_provider_rejects_empty_endpoint_or_submit_path() {
+    let (transport, _calls) = RecordingTransport::with_result(Ok(String::new()));
+    assert!(
+        matches!(
+            KolmeRuntimeCommitLiveProvider::new("", "/broadcast/runtime-commit", transport),
+            Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "provider_base_url",
+                reason: "must not be empty",
+            })
+        ),
+        "provider base URL should fail validation when empty"
+    );
+
+    let (transport, _calls) = RecordingTransport::with_result(Ok(String::new()));
+    assert!(
+        matches!(
+            KolmeRuntimeCommitLiveProvider::new("http://127.0.0.1:3030", "", transport),
+            Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "provider_submit_path",
+                reason: "must not be empty",
+            })
+        ),
+        "provider submit path should fail validation when empty"
+    );
+}
+
+#[test]
+fn functional_live_provider_maps_submitted_json_response_to_provider_outcome() {
+    let response = r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:runtime:55","finality":"final"}"#.to_owned();
+    let (transport, calls) = RecordingTransport::with_result(Ok(response));
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        "http://127.0.0.1:3030",
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-live-provider-001",
+        "state:live",
+        "kamn:did:agent:live-provider-1",
+        55,
+        "payload:live-provider",
+    )
+    .expect("request should build");
+
+    let outcome = provider
+        .submit_runtime_commit(&request.to_wire_payload(), request.idempotency_key())
+        .expect("provider should return a parsed outcome");
+    assert_eq!(
+        outcome,
+        KolmeRuntimeCommitProviderOutcome::Submitted(KolmeRuntimeCommitProviderReceipt {
+            provider: "kolme-fork-local".to_owned(),
+            commit_id: "kolme-commit:runtime:55".to_owned(),
+            finality: KolmeCommitReceiptFinality::Final,
+        })
+    );
+
+    let calls = calls.borrow();
+    assert_eq!(calls.len(), 1, "provider transport should be called once");
+    assert_eq!(calls[0].0, "http://127.0.0.1:3030");
+    assert_eq!(calls[0].1, "/broadcast/runtime-commit");
+    assert_eq!(calls[0].2, request.to_wire_payload());
+    assert_eq!(calls[0].3, request.idempotency_key());
+}
+
+#[test]
+fn regression_live_provider_fails_closed_for_malformed_response_shape() {
+    // Regression: #1411
+    let malformed_response =
+        r#"{"status":"submitted","provider":"kolme-fork-local","finality":"final"}"#.to_owned();
+    let (transport, _calls) = RecordingTransport::with_result(Ok(malformed_response));
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        "http://127.0.0.1:3030",
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-live-provider-002",
+        "state:live",
+        "kamn:did:agent:live-provider-2",
+        56,
+        "payload:live-provider",
+    )
+    .expect("request should build");
+
+    assert!(
+        matches!(
+            provider.submit_runtime_commit(&request.to_wire_payload(), request.idempotency_key()),
+            Err(KolmeRuntimeCommitProviderError::MalformedResponse { .. })
+        ),
+        "provider must fail closed for malformed backend responses"
     );
 }
