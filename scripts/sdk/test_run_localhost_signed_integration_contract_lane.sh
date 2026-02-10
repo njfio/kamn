@@ -3,11 +3,17 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE_SCRIPT="$ROOT_DIR/scripts/sdk/run_localhost_signed_integration_contract_lane.sh"
+SHARED_CONTRACT="$ROOT_DIR/scripts/sdk/localhost_signed_integration_contract_lane_contract.py"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [ ! -x "$LANE_SCRIPT" ]; then
   echo "expected localhost signed integration contract lane script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$SHARED_CONTRACT" ]; then
+  echo "expected localhost signed integration shared contract lane module to be executable" >&2
   exit 1
 fi
 
@@ -63,8 +69,13 @@ assert report["signature_mismatch_reason_code"] == "signature_mismatch_detected"
 assert report["timeout_reason_code"] == "listener_timeout_detected"
 PY
 
-if ! grep -Fq "check_localhost_signed_integration_evidence_policy.sh" "$LANE_SCRIPT"; then
-  echo "expected localhost signed integration contract lane to enforce evidence policy checker" >&2
+if ! grep -Fq "localhost_signed_integration_contract_lane_contract.py" "$LANE_SCRIPT"; then
+  echo "expected localhost signed integration contract lane wrapper to dispatch shared contract module" >&2
+  exit 1
+fi
+
+if ! grep -Fq "check_localhost_signed_integration_evidence_policy.sh" "$SHARED_CONTRACT"; then
+  echo "expected localhost signed integration shared contract lane module to enforce evidence policy checker" >&2
   exit 1
 fi
 

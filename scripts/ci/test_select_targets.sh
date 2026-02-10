@@ -343,6 +343,13 @@ assert_eq "$(extract_output "$localhost_signed_integration_contract_script_outpu
 assert_eq "$(extract_output "$localhost_signed_integration_contract_script_output" "run_sdk_parity_matrix")" "false" "localhost signed integration contract lane script-only changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$localhost_signed_integration_contract_script_output" "test_scope")" "sdk-live-localhost-integration" "localhost signed integration contract lane script-only changes should set localhost integration scope"
 
+localhost_signed_integration_contract_shared_contract_output="$(run_selector $'scripts/sdk/localhost_signed_integration_contract_lane_contract.py')"
+assert_eq "$(extract_output "$localhost_signed_integration_contract_shared_contract_output" "run_rust")" "false" "localhost signed integration shared contract lane module script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$localhost_signed_integration_contract_shared_contract_output" "run_rust_live_transport_contract_tests")" "false" "localhost signed integration shared contract lane module script-only changes should skip rust live transport lane"
+assert_eq "$(extract_output "$localhost_signed_integration_contract_shared_contract_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "localhost signed integration shared contract lane module changes must run localhost signed integration contract lane"
+assert_eq "$(extract_output "$localhost_signed_integration_contract_shared_contract_output" "run_sdk_parity_matrix")" "false" "localhost signed integration shared contract lane module changes should skip sdk parity matrix"
+assert_eq "$(extract_output "$localhost_signed_integration_contract_shared_contract_output" "test_scope")" "sdk-live-localhost-integration" "localhost signed integration shared contract lane module changes should set localhost integration scope"
+
 localhost_signed_integration_policy_checker_output="$(run_selector $'scripts/sdk/check_localhost_signed_integration_evidence_policy.sh')"
 assert_eq "$(extract_output "$localhost_signed_integration_policy_checker_output" "run_rust")" "false" "localhost signed integration policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$localhost_signed_integration_policy_checker_output" "run_rust_live_transport_contract_tests")" "false" "localhost signed integration policy checker script-only changes should skip rust live transport lane"
