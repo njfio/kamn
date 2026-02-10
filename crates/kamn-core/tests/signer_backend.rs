@@ -1,8 +1,9 @@
+use kamn_core::signer_backend::CanonicalSecureKeyReference;
 use kamn_core::{
     baseline_signature_for_fields, signature_profile_compatibility_fixtures_for_fields,
-    BaselineTransaction, RoleSmokeNetwork, SignerBackendError, SignerBackendRouter,
-    SignerProviderHandshakeMatrix, SignerProviderHandshakeStatus, SigningRequest,
-    TransactionGuards, GENESIS_STATE_HASH,
+    BackendSignature, BaselineTransaction, RoleSmokeNetwork, SignerBackendError,
+    SignerBackendRouter, SignerProviderHandshakeMatrix, SignerProviderHandshakeStatus,
+    SigningRequest, TransactionGuards, GENESIS_STATE_HASH,
 };
 use std::time::Instant;
 
@@ -48,6 +49,48 @@ fn functional_aws_kms_provider_routes_to_production_adapter_backend() {
     router
         .verify_with_backend(&signed.backend, &request, &signed.signature)
         .expect("signature should verify");
+}
+
+#[test]
+fn functional_router_uses_custom_provider_client_mapping_for_secure_provider() {
+    fn custom_provider_client(
+        request: &SigningRequest,
+        key_reference: &CanonicalSecureKeyReference,
+    ) -> Result<BackendSignature, SignerBackendError> {
+        Ok(BackendSignature {
+            backend: key_reference.provider.backend_name().to_owned(),
+            signature: format!(
+                "provider-client:{}",
+                baseline_signature_for_fields(
+                    &request.sender,
+                    request.nonce,
+                    &request.state_hash,
+                    &request.payload,
+                )
+            ),
+        })
+    }
+
+    let router = SignerBackendRouter::with_provider_client(
+        SignerProviderHandshakeMatrix::with_uniform_availability(true),
+        custom_provider_client,
+    );
+    let request = SigningRequest::new(
+        "secure:aws-kms:key-ops-1",
+        "agent-a",
+        1,
+        "payload-1",
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+
+    let signed = router
+        .sign_with_secure_fallback(&request)
+        .expect("provider client should sign through secure router");
+    assert_eq!(signed.backend, "secure-aws-kms-emulator");
+    assert!(signed
+        .signature
+        .starts_with("provider-client:sig:ed25519:baseline-v1"));
 }
 
 #[test]
@@ -274,6 +317,47 @@ fn regression_provider_handshake_policy_block_rejects_without_fallback() {
         Err(SignerBackendError::ProviderHandshakeRejected {
             backend: "secure-aws-kms-emulator".to_owned(),
             failure_class: "policy-blocked".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn regression_provider_client_backend_mismatch_is_rejected_without_fallback() {
+    // Regression: #986
+    fn mismatched_provider_client(
+        request: &SigningRequest,
+        _key_reference: &CanonicalSecureKeyReference,
+    ) -> Result<BackendSignature, SignerBackendError> {
+        Ok(BackendSignature {
+            backend: "secure-mock".to_owned(),
+            signature: baseline_signature_for_fields(
+                &request.sender,
+                request.nonce,
+                &request.state_hash,
+                &request.payload,
+            ),
+        })
+    }
+
+    let router = SignerBackendRouter::with_provider_client(
+        SignerProviderHandshakeMatrix::with_uniform_availability(true),
+        mismatched_provider_client,
+    );
+    let request = SigningRequest::new(
+        "secure:aws-kms:key-ops-1",
+        "agent-a",
+        1,
+        "payload-1",
+        GENESIS_STATE_HASH,
+    )
+    .expect("request should be valid");
+
+    assert_eq!(
+        router.sign_with_secure_fallback(&request),
+        Err(SignerBackendError::ProviderClientBackendMismatch {
+            expected_backend: "secure-aws-kms-emulator".to_owned(),
+            provided_backend: "secure-mock".to_owned(),
+            key_id: "secure:aws-kms:key-ops-1".to_owned(),
         })
     );
 }

@@ -4,7 +4,9 @@ const DOC: &str = include_str!("../../../docs/foundation/signer-backend-abstract
 fn doc_contains_signer_backend_contract_and_router_rules() {
     assert!(DOC.contains("## Scope Delivered"));
     assert!(DOC.contains("SigningRequest"));
+    assert!(DOC.contains("CanonicalSecureKeyReference::parse(...)"));
     assert!(DOC.contains("SignerBackend"));
+    assert!(DOC.contains("SecureSignerProviderClient"));
     assert!(DOC.contains("LocalSignerBackend"));
     assert!(DOC.contains("SecureSignerBackend"));
     assert!(DOC.contains("sign_with_secure_fallback"));
@@ -42,7 +44,13 @@ fn doc_contains_signer_emulator_contract_lane_policy() {
     assert!(DOC.contains(
         "functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider"
     ));
+    assert!(
+        DOC.contains("functional_router_uses_custom_provider_client_mapping_for_secure_provider")
+    );
     assert!(DOC.contains("regression_provider_handshake_policy_block_rejects_without_fallback"));
+    assert!(
+        DOC.contains("regression_provider_client_backend_mismatch_is_rejected_without_fallback")
+    );
     assert!(DOC.contains(
         "integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards"
     ));
@@ -58,6 +66,7 @@ fn doc_contains_production_style_secure_provider_adapter_rules() {
     assert!(DOC.contains("UnsupportedSecureProvider"));
     assert!(DOC.contains("UnsupportedSignerKeyRole"));
     assert!(DOC.contains("MalformedSecureKeyReference"));
+    assert!(DOC.contains("ProviderClientBackendMismatch"));
 }
 
 #[test]

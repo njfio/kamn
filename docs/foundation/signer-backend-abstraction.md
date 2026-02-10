@@ -5,9 +5,11 @@ This document captures the first implementation slice for signer backend abstrac
 ## Scope Delivered
 - Added `crates/kamn-core/src/signer_backend.rs` with:
   - `SigningRequest` contract and validation.
+  - `CanonicalSecureKeyReference::parse(...)` for deterministic provider/role key-reference normalization.
   - `SignerBackend` trait (`sign` and `verify`).
+  - `SecureSignerProviderClient` interface with deterministic provider adapter mapping.
   - `LocalSignerBackend` and `SecureSignerBackend`.
-  - `SignerBackendRouter` with deterministic `sign_with_secure_fallback(...)` semantics.
+  - `SignerBackendRouter` with deterministic `sign_with_secure_fallback(...)` semantics plus provider-client injection.
   - `BackendSignature` and typed `SignerBackendError`.
 - Added integration tests in `crates/kamn-core/tests/signer_backend.rs`.
 
@@ -33,6 +35,7 @@ This document captures the first implementation slice for signer backend abstrac
   - malformed secure key references are rejected with typed `MalformedSecureKeyReference`.
   - provider handshake policy blocks are rejected with typed `ProviderHandshakeRejected`.
   - `ProviderUnavailable` reports the provider-specific backend when the secure path is disabled.
+  - provider-client backend mismatches are rejected with typed `ProviderClientBackendMismatch`.
 - Router fallback:
   - falls back from secure to local only for `ProviderUnavailable` and `operator` role keys.
   - fallback is denied for privileged roles with typed `FallbackDeniedByRolePolicy`.
@@ -60,7 +63,9 @@ This document captures the first implementation slice for signer backend abstrac
   - `bash scripts/signer/run_signer_emulator_contract_lane.sh`
   - includes provider handshake matrix functional + regression checks:
     - `cargo test -p kamn-core --test signer_backend functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider`
+    - `cargo test -p kamn-core --test signer_backend functional_router_uses_custom_provider_client_mapping_for_secure_provider`
     - `cargo test -p kamn-core --test signer_backend regression_provider_handshake_policy_block_rejects_without_fallback`
+    - `cargo test -p kamn-core --test signer_backend regression_provider_client_backend_mismatch_is_rejected_without_fallback`
     - `cargo test -p kamn-core --test signer_backend integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards`
 - Scheduled provider-integration deep lane:
   - `bash scripts/signer/run_signer_provider_deep_lane.sh`
