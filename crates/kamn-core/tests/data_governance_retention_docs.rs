@@ -4,6 +4,7 @@ const DOC: &str = include_str!("../../../docs/foundation/data-governance-retenti
 fn doc_contains_retention_redaction_contract_scope() {
     assert!(DOC.contains("# Data Governance Retention and Redaction Contracts"));
     assert!(DOC.contains("run_channel_retention_redaction_contract_lane.sh"));
+    assert!(DOC.contains("channel_retention_redaction_contract.py"));
     assert!(DOC.contains("kamn.channel.retention-redaction-evidence.v1"));
 }
 

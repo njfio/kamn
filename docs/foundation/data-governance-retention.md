@@ -13,6 +13,11 @@ and redaction checks used by fast CI lanes.
 - `evidence_key`: `channel_retention_redaction:<lane>:v1`
 - `reason_key`: `channel_retention_redaction_reason:<final_decision>:v1`
 - `final_decision`: `GO|NO-GO`
+- Stable shell wrappers:
+  - `scripts/channel/generate_channel_retention_redaction_evidence_bundle.sh`
+  - `scripts/channel/check_channel_retention_redaction_policy.sh`
+- Shared Python implementation:
+  - `scripts/channel/channel_retention_redaction_contract.py`
 
 ## Local Validation Commands
 Run from repository root:
