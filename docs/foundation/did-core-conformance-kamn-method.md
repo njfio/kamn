@@ -12,18 +12,21 @@ This profile maps the `kamn:did` method schema to DID Core 1.1 conformance requi
 | capabilityInvocation | RECOMMENDED | covered | Required by profile for operator-bound actions. |
 | service | OPTIONAL | partial | Service rules remain profile-constrained. |
 
-## Conformance Decisions and Open Questions
+## Conformance Decisions
 - Decision: require verificationMethod and capabilityInvocation.
 - Decision: reject unsupported DID method prefixes.
 - Decision: treat empty capability relationship arrays as invalid.
-- Open question: service endpoint canonicalization strategy.
-- Open question: multi-key algorithm mixing policy for future revisions.
+- Decision: canonical service endpoint is `kamn://messaging/<method-specific-id>` with lowercase scheme/authority and a single normalized path segment.
+- Decision: endpoint queries/fragments and multi-segment paths are non-conformant.
+- Decision: unsupported or mixed verification method algorithms remain non-conformant for `kamn:did` baseline profile.
 
 ## Candidate Test Vectors
 - Vector-C1: valid kamn:did document with required relationships.
 - Vector-C2: valid update preserving DID subject continuity.
+- Vector-C3: canonicalization normalizes uppercase scheme/authority/identifier to canonical endpoint form.
 - Vector-N1: document missing id is rejected.
 - Vector-N2: unsupported verification method algorithm is rejected.
+- Vector-N3: service endpoint with unsupported scheme, query/fragment, or multi-segment path is rejected.
 - Previously non-conformant document (missing id) must be rejected.
 
 ## Downstream Test Category Mapping
@@ -32,10 +35,30 @@ This profile maps the `kamn:did` method schema to DID Core 1.1 conformance requi
 - Integration: DID registry interaction expectations.
 - Regression: previously non-conformant examples remain rejected.
 
+## Service Endpoint Canonicalization Conformance Contract
+- Vector fixture:
+  - `fixtures/did_core_conformance/service_endpoint_canonicalization_vectors.json`
+- Matrix runner:
+  - `python3 scripts/did/run_service_endpoint_canonicalization_matrix.py --fixture fixtures/did_core_conformance/service_endpoint_canonicalization_vectors.json --output-json /tmp/did-service-endpoint-canonicalization-matrix-report.json`
+- Evidence bundle generator:
+  - `bash scripts/did/generate_service_endpoint_canonicalization_evidence_bundle.sh --output-file /tmp/did-service-endpoint-canonicalization.json --fixture fixtures/did_core_conformance/service_endpoint_canonicalization_vectors.json --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/did/check_service_endpoint_canonicalization_policy.sh --bundle-file /tmp/did-service-endpoint-canonicalization.json`
+- PR fast contract lane:
+  - `bash scripts/did/run_service_endpoint_canonicalization_contract_lane.sh --output-file /tmp/did-service-endpoint-canonicalization-contract.json`
+- Required reason-key markers:
+  - `did_service_endpoint_canonicalization_reason_codes:GO:v1`
+  - `did_service_endpoint_canonicalization_reason_codes:NO-GO:v1`
+- Required fail-closed policy:
+  - non-canonical service endpoint scheme/authority/path combinations must remain rejected (`Regression: #1000`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
+bash scripts/did/test_generate_service_endpoint_canonicalization_evidence_bundle.sh
+bash scripts/did/test_run_service_endpoint_canonicalization_matrix.sh
+bash scripts/did/test_run_service_endpoint_canonicalization_contract_lane.sh
 cargo test -p kamn-core --test did_core_conformance_docs
 cargo fmt --check
 cargo clippy -- -D warnings

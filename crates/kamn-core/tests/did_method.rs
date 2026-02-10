@@ -1,5 +1,6 @@
 use kamn_core::{
-    canonical_did_document, AgentDid, AgentDidError, AgentDidMetadata, DidDocumentError,
+    canonical_did_document, canonical_service_endpoint, AgentDid, AgentDidError, AgentDidMetadata,
+    DidDocumentError,
 };
 
 fn metadata() -> AgentDidMetadata {
@@ -72,5 +73,33 @@ fn canonical_document_rejects_empty_capability_entry() {
     assert_eq!(
         canonical_did_document(&did, "z6Mkey", invalid),
         Err(DidDocumentError::InvalidCapability)
+    );
+}
+
+#[test]
+fn unit_service_endpoint_canonicalization_normalizes_case_and_whitespace() {
+    let endpoint = canonical_service_endpoint("  KAMN://MESSAGING/Agent_77  ")
+        .expect("service endpoint canonicalization should succeed");
+    assert_eq!(endpoint, "kamn://messaging/agent_77".to_owned());
+}
+
+#[test]
+fn functional_service_endpoint_canonicalization_rejects_non_kamn_scheme() {
+    assert_eq!(
+        canonical_service_endpoint("https://messaging/agent-77"),
+        Err(DidDocumentError::InvalidServiceEndpoint(
+            "service endpoint scheme must be kamn".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn regression_service_endpoint_canonicalization_rejects_non_single_segment_path() {
+    // Regression: #1000
+    assert_eq!(
+        canonical_service_endpoint("kamn://messaging/agent-77/extra"),
+        Err(DidDocumentError::InvalidServiceEndpoint(
+            "service endpoint path must be a single segment".to_owned()
+        ))
     );
 }

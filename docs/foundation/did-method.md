@@ -25,6 +25,9 @@ For DID Core 1.1 conformance mapping of `kamn:did`, see `docs/foundation/did-cor
 - Default verification key id: `<did>#keys-1`.
 - Default service id: `<did>#messaging`.
 - Default service endpoint: `kamn://messaging/<method-specific-id>`.
+- Canonical service endpoint policy enforces `kamn://messaging/<method-specific-id>`.
+- Service endpoint canonicalization normalizes scheme/authority/identifier to lowercase.
+- Service endpoints with query/fragment or multi-segment paths are rejected.
 - Public key and capability entries must be non-empty.
 
 ## Federated DID Handshake Evidence Contract (Issue #752)
@@ -47,6 +50,7 @@ Cross-network DID trust handshakes must emit deterministic evidence before relea
   - `python3 scripts/did/run_federated_did_handshake_matrix.py --fixture fixtures/federated_did_handshake/partition_replay_cases.json --output-json federated-did-handshake-report.json`
 - Regression policy:
   - replay/downgrade/tamper attempts force `NO-GO` (`Regression: #734`).
+  - non-canonical service endpoint scheme/authority/path combinations must remain rejected (`Regression: #1000`).
 
 ## Local Validation
 Run from repository root:
@@ -56,7 +60,11 @@ bash scripts/did/test_generate_federated_did_handshake_evidence_bundle.sh
 bash scripts/did/test_run_federated_did_handshake_contract_lane.sh
 bash scripts/did/test_run_federated_did_handshake_matrix.sh
 bash scripts/did/test_run_federated_did_handshake_deep_lane.sh
+bash scripts/did/test_generate_service_endpoint_canonicalization_evidence_bundle.sh
+bash scripts/did/test_run_service_endpoint_canonicalization_matrix.sh
+bash scripts/did/test_run_service_endpoint_canonicalization_contract_lane.sh
 cargo test -p kamn-core --test did_method
+cargo test -p kamn-core --test did_method_docs
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo test
