@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""Localhost signed integration evidence policy checker."""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+import sys
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR.parent))
+
+from framework.contract_framework import ContractError, fail  # noqa: E402
+
+
+def check_report(args: argparse.Namespace) -> int:
+    if not args.report_file:
+        fail("--report-file is required")
+
+    report_path = Path(args.report_file)
+    if not report_path.is_file():
+        fail(f"report file not found: {report_path}")
+
+    try:
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        fail(f"report file is not valid JSON: {exc}")
+
+    required_fields = (
+        "schema_version",
+        "status",
+        "contract_key",
+        "success_scenario_status",
+        "signature_mismatch_scenario_status",
+        "timeout_scenario_status",
+        "success_evidence_key",
+        "signature_mismatch_evidence_key",
+        "timeout_evidence_key",
+        "signature_mismatch_reason_code",
+        "timeout_reason_code",
+        "success_reason_key",
+        "signature_mismatch_reason_key",
+        "timeout_reason_key",
+        "success_elapsed_seconds",
+        "signature_mismatch_elapsed_seconds",
+        "timeout_elapsed_seconds",
+    )
+    for field_name in required_fields:
+        if field_name not in payload:
+            fail(f"missing report field: {field_name}")
+
+    if payload["schema_version"] != "kamn.sdk.localhost-signed.integration-contract.v1":
+        fail("unexpected schema_version for localhost signed integration contract report")
+
+    status = payload["status"]
+    if status not in {"pass", "fail"}:
+        fail("status must be pass or fail")
+
+    if payload["contract_key"] != "localhost_signed_integration_contract:v1":
+        fail("contract_key must be localhost_signed_integration_contract:v1")
+
+    for field_name in (
+        "success_scenario_status",
+        "signature_mismatch_scenario_status",
+        "timeout_scenario_status",
+    ):
+        if payload[field_name] not in {"pass", "fail"}:
+            fail(f"{field_name} must be pass or fail")
+
+    if payload["signature_mismatch_reason_code"] != "signature_mismatch_detected":
+        fail("signature_mismatch_reason_code must be signature_mismatch_detected")
+
+    if payload["timeout_reason_code"] != "listener_timeout_detected":
+        fail("timeout_reason_code must be listener_timeout_detected")
+
+    if payload["success_evidence_key"] != "localhost_signed_integration:success:v1":
+        fail("success_evidence_key must be localhost_signed_integration:success:v1")
+
+    if (
+        payload["signature_mismatch_evidence_key"]
+        != "localhost_signed_integration:signature-mismatch:v1"
+    ):
+        fail(
+            "signature_mismatch_evidence_key must be "
+            "localhost_signed_integration:signature-mismatch:v1"
+        )
+
+    if payload["timeout_evidence_key"] != "localhost_signed_integration:timeout:v1":
+        fail("timeout_evidence_key must be localhost_signed_integration:timeout:v1")
+
+    if payload["success_reason_key"] != "localhost_signed_integration_reason:none:v1":
+        fail("success_reason_key must be localhost_signed_integration_reason:none:v1")
+
+    if (
+        payload["signature_mismatch_reason_key"]
+        != "localhost_signed_integration_reason:signature_mismatch_detected:v1"
+    ):
+        fail(
+            "signature_mismatch_reason_key must be "
+            "localhost_signed_integration_reason:signature_mismatch_detected:v1"
+        )
+
+    if (
+        payload["timeout_reason_key"]
+        != "localhost_signed_integration_reason:listener_timeout_detected:v1"
+    ):
+        fail(
+            "timeout_reason_key must be "
+            "localhost_signed_integration_reason:listener_timeout_detected:v1"
+        )
+
+    for field_name in (
+        "success_elapsed_seconds",
+        "signature_mismatch_elapsed_seconds",
+        "timeout_elapsed_seconds",
+    ):
+        value = payload[field_name]
+        if not isinstance(value, int):
+            fail(f"{field_name} must be an integer")
+        if value < 0:
+            fail(f"{field_name} must be non-negative")
+
+    expected_status = "pass"
+    if payload["success_scenario_status"] != "pass":
+        expected_status = "fail"
+    if payload["signature_mismatch_scenario_status"] != "pass":
+        expected_status = "fail"
+    if payload["timeout_scenario_status"] != "pass":
+        expected_status = "fail"
+
+    if status != expected_status:
+        fail(
+            "policy status mismatch: "
+            f"expected status={expected_status}, found {status}"
+        )
+
+    final_decision = "GO" if status == "pass" else "NO-GO"
+    print("status=ok")
+    print(f"report_file={report_path}")
+    print(f"final_decision={final_decision}")
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Localhost signed integration evidence policy checker."
+    )
+    parser.add_argument("--report-file")
+    parser.set_defaults(handler=check_report)
+    return parser
+
+
+def main(argv: list[str]) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    return args.handler(args)
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main(sys.argv[1:]))
+    except ContractError as error:
+        print(error, file=sys.stderr)
+        raise SystemExit(1)
