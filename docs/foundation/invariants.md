@@ -25,6 +25,11 @@ This document defines the canonical transaction invariant catalog and error taxo
 ## Runtime Invariant Harness Coverage (Issue #897)
 - Property-based lifecycle invariant lane:
   - `bash scripts/runtime/run_lifecycle_property_contract_lane.sh`
+  - `bash scripts/runtime/run_lifecycle_property_contract_lane.sh --output-json /tmp/lifecycle-property-contract-report.json`
+- Lifecycle property report schema:
+  - `kamn.runtime.lifecycle-property-contract-report.v1`
+- Lifecycle property replay artifact key:
+  - `lifecycle_property_replay:v1`
 - Fuzz/mutation fail-closed lane:
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh`
 - ZK witness mutation fast lane:
@@ -40,6 +45,8 @@ This document defines the canonical transaction invariant catalog and error taxo
   - `bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /tmp/invariant-fuzz-concurrency-contract-report.json`
 - Report schema:
   - `kamn.runtime.invariant-fuzz-concurrency-contract-report.v1`
+- Property lane runtime budget env:
+  - `KAMN_RUNTIME_LIFECYCLE_PROPERTY_MAX_SECONDS` (default `120`)
 
 ## Dispute/Refund Property and Concurrency Contracts (Issue #904)
 - Property + replay trace contract lane:

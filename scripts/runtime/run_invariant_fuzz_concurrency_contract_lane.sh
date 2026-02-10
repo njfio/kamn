@@ -47,10 +47,17 @@ if [[ ! "$max_seconds" =~ ^[1-9][0-9]*$ ]]; then
 fi
 
 start_epoch="$(date +%s)"
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+property_report="$TMP_DIR/lifecycle-property-contract-report.json"
 
-property_output="$(bash "$PROPERTY_LANE")"
+property_output="$(bash "$PROPERTY_LANE" --output-json "$property_report")"
 if ! printf '%s\n' "$property_output" | grep -Fq "runtime lifecycle property contract lane tests passed."; then
   echo "expected lifecycle property lane success marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$property_output" | grep -Fq "runtime_lifecycle_property_contract_report=$property_report"; then
+  echo "expected lifecycle property lane report marker" >&2
   exit 1
 fi
 
@@ -72,18 +79,30 @@ if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
   exit 1
 fi
 
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
 summary_report="$TMP_DIR/invariant-fuzz-concurrency-contract-report.json"
 
-python3 - "$summary_report" "$elapsed_seconds" "$max_seconds" <<'PY'
+python3 - "$summary_report" "$property_report" "$elapsed_seconds" "$max_seconds" <<'PY'
 import json
 import pathlib
 import sys
 
 report_file = pathlib.Path(sys.argv[1])
-elapsed_seconds = int(sys.argv[2])
-max_seconds = int(sys.argv[3])
+property_report_file = pathlib.Path(sys.argv[2])
+elapsed_seconds = int(sys.argv[3])
+max_seconds = int(sys.argv[4])
+
+property_report = json.loads(property_report_file.read_text(encoding="utf-8"))
+schema_version = property_report.get("schema_version")
+if schema_version != "kamn.runtime.lifecycle-property-contract-report.v1":
+    raise SystemExit("unexpected lifecycle property report schema")
+if property_report.get("status") != "pass":
+    raise SystemExit("lifecycle property report status must be pass")
+artifact_key = property_report.get("replay_artifact_key")
+if artifact_key != "lifecycle_property_replay:v1":
+    raise SystemExit("unexpected lifecycle property replay artifact key")
+executed_tests = property_report.get("executed_tests")
+if not isinstance(executed_tests, list) or not executed_tests:
+    raise SystemExit("lifecycle property report must include non-empty executed_tests")
 
 summary = {
     "schema_version": "kamn.runtime.invariant-fuzz-concurrency-contract-report.v1",
@@ -91,6 +110,9 @@ summary = {
     "property_lane_status": "pass",
     "fuzz_lane_status": "pass",
     "concurrency_lane_status": "pass",
+    "property_replay_schema_version": schema_version,
+    "property_replay_artifact_key": artifact_key,
+    "property_replay_test_count": len(executed_tests),
     "elapsed_seconds": elapsed_seconds,
     "max_seconds": max_seconds,
     "reason_codes": ["none"],
@@ -124,6 +146,16 @@ if ! grep -Fq "run_invariant_fuzz_concurrency_contract_lane.sh" "$INVARIANTS_DOC
   exit 1
 fi
 
+if ! grep -Fq "kamn.runtime.lifecycle-property-contract-report.v1" "$INVARIANTS_DOC"; then
+  echo "expected invariants docs to reference lifecycle property report schema" >&2
+  exit 1
+fi
+
+if ! grep -Fq "lifecycle_property_replay:v1" "$INVARIANTS_DOC"; then
+  echo "expected invariants docs to reference lifecycle property replay artifact key" >&2
+  exit 1
+fi
+
 if ! grep -Fq "KAMN_RUNTIME_INVARIANT_FUZZ_CONCURRENCY_MAX_SECONDS" "$PERFORMANCE_DOC"; then
   echo "expected performance benchmarking docs to reference invariant/fuzz/concurrency runtime budget env" >&2
   exit 1
@@ -131,6 +163,16 @@ fi
 
 if ! grep -Fq "run_lifecycle_property_contract_lane.sh" "$TESTING_STRATEGY_DOC"; then
   echo "expected invariant/fuzz strategy doc to reference lifecycle property lane command" >&2
+  exit 1
+fi
+
+if ! grep -Fq "kamn.runtime.lifecycle-property-contract-report.v1" "$TESTING_STRATEGY_DOC"; then
+  echo "expected invariant/fuzz strategy doc to reference lifecycle property report schema" >&2
+  exit 1
+fi
+
+if ! grep -Fq "lifecycle_property_replay:v1" "$TESTING_STRATEGY_DOC"; then
+  echo "expected invariant/fuzz strategy doc to reference lifecycle property replay artifact key" >&2
   exit 1
 fi
 
@@ -161,6 +203,11 @@ fi
 
 if ! grep -Fq "KAMN_RUNTIME_INVARIANT_FUZZ_CONCURRENCY_MAX_SECONDS" "$TESTING_STRATEGY_DOC"; then
   echo "expected invariant/fuzz strategy doc to reference combined lane runtime budget env" >&2
+  exit 1
+fi
+
+if ! grep -Fq "KAMN_RUNTIME_LIFECYCLE_PROPERTY_MAX_SECONDS" "$TESTING_STRATEGY_DOC"; then
+  echo "expected invariant/fuzz strategy doc to reference lifecycle property runtime budget env" >&2
   exit 1
 fi
 

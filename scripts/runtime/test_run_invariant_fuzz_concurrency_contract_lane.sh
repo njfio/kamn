@@ -54,6 +54,9 @@ assert report["status"] == "pass"
 assert report["property_lane_status"] == "pass"
 assert report["fuzz_lane_status"] == "pass"
 assert report["concurrency_lane_status"] == "pass"
+assert report["property_replay_schema_version"] == "kamn.runtime.lifecycle-property-contract-report.v1"
+assert report["property_replay_artifact_key"] == "lifecycle_property_replay:v1"
+assert report["property_replay_test_count"] >= 12
 # Regression: #897
 assert report["reason_codes"] == ["none"]
 PY
