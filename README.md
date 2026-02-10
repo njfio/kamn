@@ -117,6 +117,10 @@ bash scripts/sdk/run_localhost_signed_demo.sh \
   --nonce 1 \
   --timeout-seconds 15
 
+# emit signed exchange + receipt reconciliation artifact
+bash scripts/sdk/run_localhost_signed_demo.sh --output-json /tmp/localhost-signed-demo-artifact.json
+# schema: kamn.sdk.localhost-signed.demo-receipt-artifact.v1
+
 # integration harness scenarios
 bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario success
 bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario signature-mismatch

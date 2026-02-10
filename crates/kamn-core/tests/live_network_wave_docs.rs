@@ -37,6 +37,9 @@ fn live_network_wave_doc_contains_smoke_commands_and_schema() {
     assert!(LIVE_NETWORK_WAVE_DOC.contains("success_evidence_key"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("signature_mismatch_evidence_key"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("timeout_evidence_key"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("run_localhost_signed_demo.sh --output-json"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("kamn.sdk.localhost-signed.demo-receipt-artifact.v1"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("receipt_reconciliation"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("test_dashboard_package_runtime_compat.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("npx -y node@22"));
 }
@@ -104,6 +107,8 @@ fn readme_and_makefile_expose_live_network_entrypoints() {
     assert!(README.contains("/tmp/localhost-signed-integration-contract-report.json"));
     assert!(README.contains("run_localhost_bridge_demo_evidence_contract_lane.sh"));
     assert!(README.contains("run_localhost_bridge_demo_evidence_deep_lane.sh"));
+    assert!(README.contains("/tmp/localhost-signed-demo-artifact.json"));
+    assert!(README.contains("kamn.sdk.localhost-signed.demo-receipt-artifact.v1"));
     assert!(MAKEFILE.contains("smoke-live-network:"));
     assert!(MAKEFILE.contains("deep-live-network:"));
     assert!(MAKEFILE.contains("run_live_network_smoke_lane.sh"));
@@ -115,4 +120,12 @@ fn regression_localhost_transport_demo_entrypoint_is_documented() {
     // Regression: #877
     assert!(README.contains("run_localhost_signed_demo.sh"));
     assert!(MAKEFILE.contains("demo-localhost-transport:"));
+}
+
+#[test]
+fn regression_localhost_transport_demo_receipt_artifact_contract_is_documented() {
+    // Regression: #981
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #981`"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("receipt artifact schema drift"));
+    assert!(README.contains("run_localhost_signed_demo.sh --output-json"));
 }
