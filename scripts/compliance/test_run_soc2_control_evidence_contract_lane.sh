@@ -3,10 +3,21 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/compliance/run_soc2_control_evidence_contract_lane.sh"
+SHARED_CONTRACT="$ROOT_DIR/scripts/compliance/soc2_control_evidence_contract_lane_contract.py"
 DEEP_LANE="$ROOT_DIR/scripts/compliance/run_soc2_control_evidence_deep_lane.sh"
 
 if [ ! -x "$CONTRACT_LANE" ]; then
   echo "expected SOC2 control evidence contract lane script to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q 'soc2_control_evidence_contract_lane_contract.py' "$CONTRACT_LANE"; then
+  echo "expected SOC2 contract-lane wrapper to delegate to shared implementation" >&2
+  exit 1
+fi
+
+if [ ! -x "$SHARED_CONTRACT" ]; then
+  echo "expected shared SOC2 contract-lane implementation to be executable" >&2
   exit 1
 fi
 
@@ -31,5 +42,14 @@ if ! grep -q "soc2-control-evidence-report.json" "$DEEP_LANE"; then
   exit 1
 fi
 
-echo "soc2 control evidence contract lane script tests passed."
+if ! grep -q "generate_soc2_control_evidence_bundle.sh" "$SHARED_CONTRACT"; then
+  echo "expected shared SOC2 contract-lane implementation to execute bundle generator" >&2
+  exit 1
+fi
 
+if ! grep -q "check_soc2_control_evidence_policy.sh" "$SHARED_CONTRACT"; then
+  echo "expected shared SOC2 contract-lane implementation to execute policy checker" >&2
+  exit 1
+fi
+
+echo "soc2 control evidence contract lane script tests passed."

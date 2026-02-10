@@ -52,12 +52,15 @@ SOC2 audit readiness requires deterministic control evidence bundles with replay
   - `bash scripts/compliance/check_soc2_control_evidence_policy.sh --bundle-file /tmp/soc2-control-evidence.json`
 - PR fast contract lane:
   - `bash scripts/compliance/run_soc2_control_evidence_contract_lane.sh`
+- Shared contract-lane module:
+  - `scripts/compliance/soc2_control_evidence_contract_lane_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/compliance/run_soc2_control_evidence_deep_lane.sh --output-json soc2-control-evidence-report.json`
 - Replay matrix runner:
   - `python3 scripts/compliance/run_soc2_control_evidence_replay_matrix.py --fixture fixtures/compliance_soc2/control_evidence_replay_cases.json --output-json soc2-control-evidence-report.json`
 - Regression policy:
   - tampered final decisions and incomplete/tampered control evidence force `NO-GO` (`Regression: #732`).
+  - the shell contract-lane wrapper delegates orchestration logic to `soc2_control_evidence_contract_lane_contract.py` (`Regression: #1238`).
 
 ## DSAR Legal-Hold Evidence Contract (Issue #746)
 Data-subject access/export/erasure evidence must enforce legal-hold precedence through deterministic bundle policy checks.

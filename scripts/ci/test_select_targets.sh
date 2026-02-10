@@ -1232,6 +1232,11 @@ assert_eq "$(extract_output "$soc2_contract_script_output" "run_rust")" "false" 
 assert_eq "$(extract_output "$soc2_contract_script_output" "run_soc2_control_evidence_contract_tests")" "true" "SOC2 contract script changes must run SOC2 contract lane"
 assert_eq "$(extract_output "$soc2_contract_script_output" "test_scope")" "soc2-contract" "SOC2 contract script changes should set soc2-contract scope"
 
+soc2_contract_shared_script_output="$(run_selector $'scripts/compliance/soc2_control_evidence_contract_lane_contract.py')"
+assert_eq "$(extract_output "$soc2_contract_shared_script_output" "run_rust")" "false" "SOC2 shared contract-lane changes should avoid rust lane"
+assert_eq "$(extract_output "$soc2_contract_shared_script_output" "run_soc2_control_evidence_contract_tests")" "true" "SOC2 shared contract-lane changes must run SOC2 contract lane"
+assert_eq "$(extract_output "$soc2_contract_shared_script_output" "test_scope")" "soc2-contract" "SOC2 shared contract-lane changes should set soc2-contract scope"
+
 soc2_contract_fixture_output="$(run_selector $'fixtures/compliance_soc2/control_evidence_replay_cases.json')"
 assert_eq "$(extract_output "$soc2_contract_fixture_output" "run_rust")" "false" "SOC2 fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$soc2_contract_fixture_output" "run_soc2_control_evidence_contract_tests")" "true" "SOC2 fixture changes must run SOC2 contract lane"
