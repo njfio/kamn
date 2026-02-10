@@ -49,6 +49,8 @@ Classification and redaction controls are validated together through a determini
   - `scripts/compliance/classification_redaction_policy_contract.py`
 - Compliance contract lane:
   - `bash scripts/compliance/run_classification_redaction_contract_lane.sh --output-file /tmp/classification-redaction-contract-report.json`
+- Shared compliance contract-lane module:
+  - `scripts/compliance/classification_redaction_contract_lane_contract.py`
 
 Runtime budget controls:
 
@@ -67,6 +69,7 @@ Regression policy:
 - classification/redaction contract drift must fail closed (`Regression: #914`).
 - the shell lane wrapper delegates orchestration logic to `classification_redaction_lane_contract.py` (`Regression: #1226`).
 - the shell policy wrapper delegates validation logic to `classification_redaction_policy_contract.py` (`Regression: #1222`).
+- the shell contract-lane wrapper delegates orchestration logic to `classification_redaction_contract_lane_contract.py` (`Regression: #1230`).
 
 ## Local Validation
 Run from repository root:
