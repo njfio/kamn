@@ -16,6 +16,7 @@ fn matrix_contains_core_threat_entries() {
     assert!(CONTROL_MATRIX.contains("TM-005"));
     assert!(CONTROL_MATRIX.contains("TM-006"));
     assert!(CONTROL_MATRIX.contains("TM-007"));
+    assert!(CONTROL_MATRIX.contains("TM-008"));
 }
 
 #[test]
@@ -37,6 +38,11 @@ fn matrix_maps_controls_to_tests() {
         .contains("router_decision_matrix_distinguishes_unavailable_vs_policy_blocked_handshakes"));
     assert!(CONTROL_MATRIX
         .contains("regression_provider_client_backend_mismatch_is_rejected_without_fallback"));
+    assert!(CONTROL_MATRIX.contains("run_watchdog_proof_consensus_contract_lane.sh"));
+    assert!(CONTROL_MATRIX.contains("run_watchdog_proof_consensus_deep_lane.sh"));
+    assert!(CONTROL_MATRIX.contains("check_watchdog_proof_consensus_policy.sh"));
+    assert!(CONTROL_MATRIX.contains("watchdog_proof_consensus_reason_codes:GO:v1"));
+    assert!(CONTROL_MATRIX.contains("watchdog_proof_consensus_reason_codes:NO-GO:v1"));
 }
 
 #[test]
@@ -51,4 +57,12 @@ fn matrix_contains_signer_fallback_policy_entry_details() {
     assert!(CONTROL_MATRIX
         .contains("Privileged role fallback bypass under secure-provider degradation"));
     assert!(CONTROL_MATRIX.contains("`Regression: #987`"));
+}
+
+#[test]
+fn matrix_contains_watchdog_proof_consensus_entry_details() {
+    assert!(CONTROL_MATRIX.contains(
+        "Validator/watchdog proof-consensus anomaly evidence missing or cadence/budget guard bypass"
+    ));
+    assert!(CONTROL_MATRIX.contains("`Regression: #996`"));
 }
