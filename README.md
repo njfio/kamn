@@ -295,6 +295,11 @@ bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode run --output-json
 # schema: kamn.kolme.local-heavy-validation-summary.v1
 ```
 
+Local-only heavy Kolme run-mode commands stay excluded from ci-fast-gate.
+Fast-gate validates only command surfaces:
+- `bash scripts/kolme/test_run_local_bootstrap_health_checks.sh`
+- `bash scripts/kolme/test_run_local_e2e_integration_lane.sh`
+
 ## Workflow
 
 All code changes are issue-first and follow strict Red → Green → Refactor → Regression TDD. Before implementation:

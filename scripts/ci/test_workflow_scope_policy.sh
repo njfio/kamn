@@ -286,6 +286,16 @@ if ! grep -Fq "bash scripts/kolme/test_run_local_heavy_validation_matrix.sh" "$F
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/kolme/test_run_local_bootstrap_health_checks.sh" "$FAST_WORKFLOW"; then
+  echo "expected local-only Kolme bootstrap health-check command-surface tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/kolme/test_run_local_e2e_integration_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected local-only Kolme E2E integration lane command-surface tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/kolme/test_run_version_compatibility_contract_lane.sh" "$FAST_WORKFLOW"; then
   echo "expected Kolme version compatibility contract lane tests in ci-fast-gate.yml" >&2
   exit 1
@@ -298,6 +308,16 @@ fi
 
 if grep -Fq "kolme-version-compatibility-report-\${{ github.run_id }}-\${{ github.run_attempt }}" "$FAST_WORKFLOW"; then
   echo "expected Kolme version compatibility replay deep artifact upload to remain excluded from ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if grep -Fq "bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode run" "$FAST_WORKFLOW"; then
+  echo "expected local-only bootstrap run-mode lane to remain excluded from ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if grep -Fq "bash scripts/kolme/run_local_e2e_integration_lane.sh --mode run" "$FAST_WORKFLOW"; then
+  echo "expected local-only E2E run-mode lane to remain excluded from ci-fast-gate.yml" >&2
   exit 1
 fi
 
