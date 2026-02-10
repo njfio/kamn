@@ -484,6 +484,12 @@ assert_eq "$(extract_output "$sdk_schema_contract_lane_output" "run_live_transpo
 assert_eq "$(extract_output "$sdk_schema_contract_lane_output" "run_sdk_parity_matrix")" "true" "sdk schema contract lane changes must run sdk parity matrix"
 assert_eq "$(extract_output "$sdk_schema_contract_lane_output" "test_scope")" "sdk" "sdk schema contract lane changes should set sdk scope"
 
+sdk_schema_contract_lane_shared_contract_output="$(run_selector $'scripts/sdk/sdk_schema_compatibility_contract_lane_contract.py')"
+assert_eq "$(extract_output "$sdk_schema_contract_lane_shared_contract_output" "run_rust")" "false" "sdk schema shared contract lane module script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$sdk_schema_contract_lane_shared_contract_output" "run_live_transport_parity_contract_tests")" "false" "sdk schema shared contract lane module changes should not run live transport parity lane"
+assert_eq "$(extract_output "$sdk_schema_contract_lane_shared_contract_output" "run_sdk_parity_matrix")" "true" "sdk schema shared contract lane module changes must run sdk parity matrix"
+assert_eq "$(extract_output "$sdk_schema_contract_lane_shared_contract_output" "test_scope")" "sdk" "sdk schema shared contract lane module changes should set sdk scope"
+
 sdk_fixture_drift_checker_output="$(run_selector $'scripts/sdk/check_example_fixture_drift.py')"
 assert_eq "$(extract_output "$sdk_fixture_drift_checker_output" "run_rust")" "false" "sdk fixture drift checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_fixture_drift_checker_output" "run_live_transport_parity_contract_tests")" "false" "sdk fixture drift checker changes should not run live transport parity lane"

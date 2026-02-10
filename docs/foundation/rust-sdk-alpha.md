@@ -139,8 +139,10 @@ Schema compatibility evidence is generated from the shared parity fixture and ch
 - Stable shell wrappers:
   - `scripts/sdk/generate_sdk_schema_compatibility_evidence_bundle.sh`
   - `scripts/sdk/check_sdk_schema_compatibility_policy.sh`
-- Shared Python implementation:
+  - `scripts/sdk/run_sdk_schema_compatibility_contract_lane.sh`
+- Shared Python implementations:
   - `scripts/sdk/sdk_schema_compatibility_contract.py`
+  - `scripts/sdk/sdk_schema_compatibility_contract_lane_contract.py`
 
 Required schema markers:
 
@@ -148,6 +150,7 @@ Required schema markers:
 - `kamn.sdk.schema-compatibility-evidence.v1`
 
 The contract fails closed: schema-version drift, case mismatch, or tampered reason codes force `NO-GO` (`Regression: #937`).
+The sdk schema compatibility contract lane wrapper remains pinned to the shared contract implementation marker (`Regression: #1198`).
 
 ## SDK Example Fixture Drift Checker Contract
 Generated SDK example fixture outcomes are locked to a deterministic snapshot:
