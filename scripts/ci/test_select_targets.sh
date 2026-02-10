@@ -502,6 +502,12 @@ assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_output" "run_live_
 assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_output" "run_sdk_parity_matrix")" "true" "sdk fixture drift contract lane changes must run sdk parity matrix"
 assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_output" "test_scope")" "sdk" "sdk fixture drift contract lane changes should set sdk scope"
 
+sdk_fixture_drift_contract_lane_shared_contract_output="$(run_selector $'scripts/sdk/example_fixture_drift_contract_lane_contract.py')"
+assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_shared_contract_output" "run_rust")" "false" "sdk fixture drift shared contract lane module script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_shared_contract_output" "run_live_transport_parity_contract_tests")" "false" "sdk fixture drift shared contract lane module changes should not run live transport parity lane"
+assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_shared_contract_output" "run_sdk_parity_matrix")" "true" "sdk fixture drift shared contract lane module changes must run sdk parity matrix"
+assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_shared_contract_output" "test_scope")" "sdk" "sdk fixture drift shared contract lane module changes should set sdk scope"
+
 sdk_parity_wave_doc_output="$(run_selector $'docs/planning/sdk-parity-wave.md')"
 assert_eq "$(extract_output "$sdk_parity_wave_doc_output" "run_rust")" "false" "sdk parity wave doc-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_parity_wave_doc_output" "run_live_transport_parity_contract_tests")" "false" "sdk parity wave doc-only changes should not run live transport parity lane"
