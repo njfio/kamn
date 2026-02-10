@@ -1313,6 +1313,12 @@ assert_eq "$(extract_output "$governance_lifecycle_lane_shared_contract_output" 
 assert_eq "$(extract_output "$governance_lifecycle_lane_shared_contract_output" "run_governance_stake_slash_contract_tests")" "false" "governance lifecycle rollback shared lane contract changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_lifecycle_lane_shared_contract_output" "test_scope")" "governance-contract" "governance lifecycle rollback shared lane contract changes should set governance-contract scope"
 
+governance_lifecycle_contract_lane_shared_contract_output="$(run_selector $'scripts/governance/governance_lifecycle_rollback_contract_lane_contract.py')"
+assert_eq "$(extract_output "$governance_lifecycle_contract_lane_shared_contract_output" "run_rust")" "false" "governance lifecycle rollback shared contract-lane script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$governance_lifecycle_contract_lane_shared_contract_output" "run_governance_simulation_contract_tests")" "true" "governance lifecycle rollback shared contract-lane changes must run governance simulation lane"
+assert_eq "$(extract_output "$governance_lifecycle_contract_lane_shared_contract_output" "run_governance_stake_slash_contract_tests")" "false" "governance lifecycle rollback shared contract-lane changes should not trigger governance stake/slash lane"
+assert_eq "$(extract_output "$governance_lifecycle_contract_lane_shared_contract_output" "test_scope")" "governance-contract" "governance lifecycle rollback shared contract-lane changes should set governance-contract scope"
+
 governance_quorum_contract_script_output="$(run_selector $'scripts/governance/run_quorum_attestation_replay_contract_lane.sh')"
 assert_eq "$(extract_output "$governance_quorum_contract_script_output" "run_rust")" "false" "governance quorum attestation contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_quorum_contract_script_output" "run_governance_simulation_contract_tests")" "true" "governance quorum attestation contract script changes must run governance simulation lane"

@@ -123,6 +123,10 @@ Governance execution paths now include deterministic lifecycle/rollback integrit
   - `scripts/governance/governance_lifecycle_rollback_policy_contract.py`
 - Lifecycle/rollback contract lane:
   - `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
+- Stable shell wrapper:
+  - `scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh`
+- Shared Python implementation:
+  - `scripts/governance/governance_lifecycle_rollback_contract_lane_contract.py`
 
 Runtime budget controls:
 
@@ -139,6 +143,7 @@ Required schema/reason markers:
 Regression policy:
 
 - illegal lifecycle transitions and rollback integrity drift must fail closed (`Regression: #910`).
+- shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1246`).
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
