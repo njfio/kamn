@@ -57,6 +57,10 @@ Sensitive governance approvals require deterministic quorum attestation evidence
 
 - PR fast contract lane:
   - `bash scripts/governance/run_quorum_attestation_replay_guard_lane.sh --output-file /tmp/governance-quorum-attestation-replay-report.json`
+- Stable shell wrapper:
+  - `scripts/governance/run_quorum_attestation_replay_guard_lane.sh`
+- Shared Python implementation:
+  - `scripts/governance/governance_quorum_attestation_replay_lane_contract.py`
 - Policy checker:
   - `bash scripts/governance/check_quorum_attestation_replay_policy.sh --report-file /tmp/governance-quorum-attestation-replay-report.json`
 - Stable shell wrapper:

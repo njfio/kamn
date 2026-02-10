@@ -55,6 +55,7 @@ fn regression_requires_stake_slash_tamper_and_threshold_fail_closed_rule() {
 fn doc_contains_quorum_attestation_replay_guard_contract_lane() {
     assert!(DOC.contains("## Governance Quorum Attestation Replay-Guard Integration"));
     assert!(DOC.contains("governance_quorum_attestation_replay_policy_contract.py"));
+    assert!(DOC.contains("governance_quorum_attestation_replay_lane_contract.py"));
     assert!(DOC.contains("run_quorum_attestation_replay_guard_lane.sh"));
     assert!(DOC.contains("check_quorum_attestation_replay_policy.sh"));
     assert!(DOC.contains("run_quorum_attestation_replay_contract_lane.sh"));
