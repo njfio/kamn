@@ -33,11 +33,56 @@ def _require_file_contains(path: Path, marker: str, message: str) -> None:
     _require_contains(path.read_text(encoding="utf-8"), marker, message)
 
 
+def _load_fixture_contract(
+    fixture_file: Path,
+) -> tuple[str, list[str], dict[str, dict[str, str]]]:
+    payload = load_json(fixture_file)
+    schema_version = payload.get("schema_version")
+    if schema_version != "kamn.sdk.localhost-signed.integration-fixtures.v1":
+        fail("unexpected localhost signed integration fixture schema_version")
+
+    scenario_ids = payload.get("scenario_ids")
+    if scenario_ids != ["success-v1", "signature-mismatch-v1", "timeout-v1"]:
+        fail("scenario_ids must match deterministic localhost fixture contract")
+
+    scenarios = payload.get("scenarios")
+    if not isinstance(scenarios, list):
+        fail("fixture scenarios must be an array")
+
+    fixture_by_scenario: dict[str, dict[str, str]] = {}
+    for scenario_entry in scenarios:
+        if not isinstance(scenario_entry, dict):
+            fail("each fixture scenario entry must be an object")
+        scenario_name = scenario_entry.get("scenario")
+        if not isinstance(scenario_name, str) or not scenario_name:
+            fail("fixture scenario entry must include non-empty scenario")
+        normalized_entry: dict[str, str] = {}
+        for field_name in (
+            "id",
+            "expected_status",
+            "expected_reason_code",
+            "expected_evidence_key",
+            "expected_reason_key",
+        ):
+            value = scenario_entry.get(field_name)
+            if not isinstance(value, str) or not value:
+                fail(f"fixture scenario '{scenario_name}' missing field '{field_name}'")
+            normalized_entry[field_name] = value
+        fixture_by_scenario[scenario_name] = normalized_entry
+
+    for required_scenario in ("success", "signature-mismatch", "timeout"):
+        if required_scenario not in fixture_by_scenario:
+            fail(f"fixture scenarios missing required scenario '{required_scenario}'")
+
+    return schema_version, scenario_ids, fixture_by_scenario
+
+
 def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> int:
     output_json = args.output_json
 
     harness_runner = ROOT_DIR / "scripts/sdk/run_localhost_signed_integration_harness.sh"
     policy_checker = ROOT_DIR / "scripts/sdk/check_localhost_signed_integration_evidence_policy.sh"
+    fixture_file = ROOT_DIR / "fixtures/runtime/localhost_signed_integration_cases.json"
     live_network_doc = ROOT_DIR / "docs/planning/live-network-wave.md"
     runtime_network_doc = ROOT_DIR / "docs/foundation/runtime-network.md"
     readme_file = ROOT_DIR / "README.md"
@@ -46,6 +91,8 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
         fail("expected localhost signed integration harness runner to be executable")
     if not _is_executable(policy_checker):
         fail("expected localhost signed integration evidence policy checker to be executable")
+    if not fixture_file.is_file():
+        fail("expected localhost signed integration fixture corpus file to exist")
     if not live_network_doc.is_file():
         fail("expected live-network planning doc to exist")
     if not runtime_network_doc.is_file():
@@ -57,6 +104,9 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
     if not max_seconds_raw.isdigit() or int(max_seconds_raw) <= 0:
         fail("contract max seconds must be a positive integer")
     max_seconds = int(max_seconds_raw)
+    fixture_schema_version, scenario_fixture_ids, fixture_by_scenario = _load_fixture_contract(
+        fixture_file
+    )
 
     start_epoch = int(time.time())
     tmp_dir = Path(tempfile.mkdtemp())
@@ -91,12 +141,12 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
         )
         _require_contains(
             success_output,
-            "reason_code=none;",
+            f"reason_code={fixture_by_scenario['success']['expected_reason_code']};",
             "expected localhost signed integration success scenario reason code marker",
         )
         _require_contains(
             success_output,
-            "evidence_key=localhost_signed_integration:success:v1;",
+            f"evidence_key={fixture_by_scenario['success']['expected_evidence_key']};",
             "expected localhost signed integration success scenario evidence key",
         )
 
@@ -129,12 +179,12 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
         )
         _require_contains(
             signature_output,
-            "reason_code=signature_mismatch_detected;",
+            f"reason_code={fixture_by_scenario['signature-mismatch']['expected_reason_code']};",
             "expected localhost signed integration signature mismatch scenario reason code marker",
         )
         _require_contains(
             signature_output,
-            "evidence_key=localhost_signed_integration:signature-mismatch:v1;",
+            f"evidence_key={fixture_by_scenario['signature-mismatch']['expected_evidence_key']};",
             "expected localhost signed integration signature mismatch scenario evidence key",
         )
 
@@ -163,12 +213,12 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
         )
         _require_contains(
             timeout_output,
-            "reason_code=listener_timeout_detected;",
+            f"reason_code={fixture_by_scenario['timeout']['expected_reason_code']};",
             "expected localhost signed integration timeout scenario reason code marker",
         )
         _require_contains(
             timeout_output,
-            "evidence_key=localhost_signed_integration:timeout:v1;",
+            f"evidence_key={fixture_by_scenario['timeout']['expected_evidence_key']};",
             "expected localhost signed integration timeout scenario evidence key",
         )
 
@@ -250,7 +300,10 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
         summary = {
             "schema_version": "kamn.sdk.localhost-signed.integration-contract.v1",
             "status": "pass",
+            "final_decision": "GO",
             "contract_key": "localhost_signed_integration_contract:v1",
+            "scenario_fixture_schema_version": fixture_schema_version,
+            "scenario_fixture_ids": scenario_fixture_ids,
             "success_scenario_status": success_payload["status"],
             "signature_mismatch_scenario_status": signature_payload["status"],
             "timeout_scenario_status": timeout_payload["status"],

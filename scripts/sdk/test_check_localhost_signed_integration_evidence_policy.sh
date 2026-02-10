@@ -25,6 +25,10 @@ if ! printf '%s\n' "$go_output" | grep -Fq "status=ok"; then
   echo "expected localhost signed integration evidence policy checker success status" >&2
   exit 1
 fi
+if ! printf '%s\n' "$go_output" | grep -Fq "final_decision=GO"; then
+  echo "expected localhost signed integration evidence policy checker final decision GO marker" >&2
+  exit 1
+fi
 
 tampered_report="$TMP_DIR/localhost-signed-integration-contract-report.tampered.json"
 cp "$report_file" "$tampered_report"
@@ -57,6 +61,34 @@ fi
 # Regression: #880
 if ! printf '%s\n' "$tampered_output" | grep -Fq "stale_session_detected"; then
   echo "expected deterministic admission reason markers in localhost signed integration policy regression path" >&2
+  exit 1
+fi
+
+decision_tampered_report="$TMP_DIR/localhost-signed-integration-contract-report.decision-tampered.json"
+cp "$report_file" "$decision_tampered_report"
+python3 - "$decision_tampered_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["final_decision"] = "NO-GO"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+decision_tampered_output="$(bash "$CHECKER" --report-file "$decision_tampered_report" 2>&1)"
+decision_tampered_code=$?
+set -e
+
+if [ "$decision_tampered_code" -eq 0 ]; then
+  echo "expected final-decision drift report to fail policy checker" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$decision_tampered_output" | grep -Fq "final_decision"; then
+  echo "expected explicit final decision mismatch error from policy checker" >&2
   exit 1
 fi
 

@@ -30,7 +30,10 @@ def check_report(args: argparse.Namespace) -> int:
     required_fields = (
         "schema_version",
         "status",
+        "final_decision",
         "contract_key",
+        "scenario_fixture_schema_version",
+        "scenario_fixture_ids",
         "success_scenario_status",
         "signature_mismatch_scenario_status",
         "timeout_scenario_status",
@@ -70,9 +73,29 @@ def check_report(args: argparse.Namespace) -> int:
     status = payload["status"]
     if status not in {"pass", "fail"}:
         fail("status must be pass or fail")
+    final_decision = payload["final_decision"]
+    if final_decision not in {"GO", "NO-GO"}:
+        fail("final_decision must be GO or NO-GO")
 
     if payload["contract_key"] != "localhost_signed_integration_contract:v1":
         fail("contract_key must be localhost_signed_integration_contract:v1")
+    if (
+        payload["scenario_fixture_schema_version"]
+        != "kamn.sdk.localhost-signed.integration-fixtures.v1"
+    ):
+        fail(
+            "scenario_fixture_schema_version must be "
+            "kamn.sdk.localhost-signed.integration-fixtures.v1"
+        )
+    if payload["scenario_fixture_ids"] != [
+        "success-v1",
+        "signature-mismatch-v1",
+        "timeout-v1",
+    ]:
+        fail(
+            "scenario_fixture_ids must match deterministic fixture ids: "
+            "['success-v1', 'signature-mismatch-v1', 'timeout-v1']"
+        )
 
     for field_name in (
         "success_scenario_status",
@@ -208,8 +231,13 @@ def check_report(args: argparse.Namespace) -> int:
             "policy status mismatch: "
             f"expected status={expected_status}, found {status}"
         )
+    expected_decision = "GO" if expected_status == "pass" else "NO-GO"
+    if final_decision != expected_decision:
+        fail(
+            "final_decision mismatch: "
+            f"expected final_decision={expected_decision}, found {final_decision}"
+        )
 
-    final_decision = "GO" if status == "pass" else "NO-GO"
     print("status=ok")
     print(f"report_file={report_path}")
     print(f"final_decision={final_decision}")
