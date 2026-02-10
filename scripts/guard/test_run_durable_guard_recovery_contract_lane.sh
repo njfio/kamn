@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_SCRIPT="$ROOT_DIR/scripts/guard/run_durable_guard_recovery_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/guard/run_durable_guard_recovery_deep_lane.sh"
+SHARED_CONTRACT="$ROOT_DIR/scripts/guard/durable_guard_recovery_contract_lane_contract.py"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
   echo "expected durable guard recovery fast-lane runner to be executable" >&2
@@ -12,6 +13,16 @@ fi
 
 if [ ! -x "$DEEP_SCRIPT" ]; then
   echo "expected durable guard recovery deep-lane runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$SHARED_CONTRACT" ]; then
+  echo "expected durable guard recovery shared contract module to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "durable_guard_recovery_contract_lane_contract.py" "$FAST_SCRIPT"; then
+  echo "expected durable guard fast-lane wrapper to dispatch to shared contract module" >&2
   exit 1
 fi
 
@@ -24,47 +35,47 @@ if ! grep -q "durable guard recovery contract lane tests passed." "$TMP_OUT"; th
   exit 1
 fi
 
-if ! grep -q "unit_delivery_guard_snapshot_rejects_schema_mismatch" "$FAST_SCRIPT"; then
+if ! grep -q "unit_delivery_guard_snapshot_rejects_schema_mismatch" "$SHARED_CONTRACT"; then
   echo "expected durable guard recovery contract lane to include delivery schema mismatch unit coverage" >&2
   exit 1
 fi
 
-if ! grep -q "unit_channel_policy_snapshot_rejects_schema_mismatch" "$FAST_SCRIPT"; then
+if ! grep -q "unit_channel_policy_snapshot_rejects_schema_mismatch" "$SHARED_CONTRACT"; then
   echo "expected durable guard recovery contract lane to include channel policy schema mismatch unit coverage" >&2
   exit 1
 fi
 
-if ! grep -q "integration_durable_guard_recovery_matrix_restores_delivery_and_retention_invariants" "$FAST_SCRIPT"; then
+if ! grep -q "integration_durable_guard_recovery_matrix_restores_delivery_and_retention_invariants" "$SHARED_CONTRACT"; then
   echo "expected durable guard recovery contract lane to include integration recovery matrix coverage" >&2
   exit 1
 fi
 
-if ! grep -q "performance_durable_guard_recovery_contract_lane_budget" "$FAST_SCRIPT"; then
+if ! grep -q "performance_durable_guard_recovery_contract_lane_budget" "$SHARED_CONTRACT"; then
   echo "expected durable guard recovery contract lane to include PR budget performance coverage" >&2
   exit 1
 fi
 
-if ! grep -q "integration_file_bundle_restore_preserves_invariants" "$FAST_SCRIPT"; then
+if ! grep -q "integration_file_bundle_restore_preserves_invariants" "$SHARED_CONTRACT"; then
   echo "expected durable guard recovery contract lane to include durable guard snapshot store integration coverage" >&2
   exit 1
 fi
 
-if ! grep -q "performance_bundle_contract_lane_budget" "$FAST_SCRIPT"; then
+if ! grep -q "performance_bundle_contract_lane_budget" "$SHARED_CONTRACT"; then
   echo "expected durable guard recovery contract lane to include durable guard snapshot store performance budget coverage" >&2
   exit 1
 fi
 
-if ! grep -q "release_gonogo_checklist_docs" "$FAST_SCRIPT"; then
+if ! grep -q "release_gonogo_checklist_docs" "$SHARED_CONTRACT"; then
   echo "expected durable guard recovery contract lane to include release checklist docs coverage" >&2
   exit 1
 fi
 
-if ! grep -q "message_delivery_guards_docs" "$FAST_SCRIPT"; then
+if ! grep -q "message_delivery_guards_docs" "$SHARED_CONTRACT"; then
   echo "expected durable guard recovery contract lane to include message delivery docs coverage" >&2
   exit 1
 fi
 
-if ! grep -q "channel_permissions_retention_docs" "$FAST_SCRIPT"; then
+if ! grep -q "channel_permissions_retention_docs" "$SHARED_CONTRACT"; then
   echo "expected durable guard recovery contract lane to include channel permissions docs coverage" >&2
   exit 1
 fi

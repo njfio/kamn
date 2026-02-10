@@ -70,6 +70,10 @@ Durable guard schema evolution and restart invariants must be proven before a re
 
 - PR fast contract lane:
   - `bash scripts/guard/run_durable_guard_recovery_contract_lane.sh`
+- Stable shell wrapper:
+  - `scripts/guard/run_durable_guard_recovery_contract_lane.sh`
+- Shared Python implementation:
+  - `scripts/guard/durable_guard_recovery_contract_lane_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/guard/run_durable_guard_recovery_deep_lane.sh`
 - Required evidence:
@@ -80,6 +84,7 @@ Durable guard schema evolution and restart invariants must be proven before a re
   - durable bundle store contract checks pass via `durable_guard_snapshot_store` and `performance_bundle_contract_lane_budget`.
   - nightly deep matrix executes `performance_durable_guard_recovery_matrix_deep_lane`.
   - nightly deep bundle store stress executes `performance_bundle_store_deep_lane_stress`.
+  - shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1242`).
 
 ## Settlement Reconciliation Evidence Contract (Issue #687)
 Escrow settlement outcomes require deterministic receipt/finality evidence before release approval.
