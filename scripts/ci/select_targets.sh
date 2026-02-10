@@ -343,7 +343,7 @@ for file in "${CHANGED_FILES[@]}"; do
       RUST_CHANGED=true
       classified=true
       ;;
-    docs/foundation/message-delivery-guards.md|docs/foundation/channel-permissions-retention.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/guard/*)
+    docs/foundation/message-delivery-guards.md|docs/foundation/channel-permissions-retention.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/guard/*|scripts/framework/manifests/guard_durable_guard_recovery_*)
       DURABLE_GUARD_RECOVERY_CONTRACT_CHANGED=true
       classified=true
       ;;
@@ -379,6 +379,10 @@ for file in "${CHANGED_FILES[@]}"; do
       GOVERNANCE_SIMULATION_CONTRACT_CHANGED=true
       GOVERNANCE_STAKE_SLASH_CONTRACT_CHANGED=true
       REPUTATION_DISPUTE_CONTRACT_CHANGED=true
+      TOKEN_LAUNCH_CONTRACT_CHANGED=true
+      TREASURY_DISBURSEMENT_CONTRACT_CHANGED=true
+      LAUNCH_CANARY_CONTRACT_CHANGED=true
+      DURABLE_GUARD_RECOVERY_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -412,14 +416,14 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    crates/kamn-core/src/token.rs|crates/kamn-core/tests/token_config.rs|crates/kamn-core/tests/token_config_docs.rs|docs/foundation/token-config.md|docs/foundation/token-model.md|docs/foundation/release-gonogo-checklist.md|scripts/token/*|fixtures/token_launch/*)
+    crates/kamn-core/src/token.rs|crates/kamn-core/tests/token_config.rs|crates/kamn-core/tests/token_config_docs.rs|docs/foundation/token-config.md|docs/foundation/token-model.md|docs/foundation/release-gonogo-checklist.md|scripts/token/*|fixtures/token_launch/*|scripts/framework/manifests/token_launch_handoff_*)
       TOKEN_LAUNCH_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
 
   case "$file" in
-    crates/kamn-core/tests/release_gonogo_checklist_docs.rs|docs/foundation/release-gonogo-checklist.md|docs/foundation/treasury-disbursement-policy.md|scripts/treasury/*|fixtures/treasury_disbursement/*)
+    crates/kamn-core/tests/release_gonogo_checklist_docs.rs|docs/foundation/release-gonogo-checklist.md|docs/foundation/treasury-disbursement-policy.md|scripts/treasury/*|fixtures/treasury_disbursement/*|scripts/framework/manifests/treasury_disbursement_*)
       TREASURY_DISBURSEMENT_CONTRACT_CHANGED=true
       classified=true
       ;;
@@ -427,12 +431,14 @@ for file in "${CHANGED_FILES[@]}"; do
 
   case "$file" in
     scripts/framework/contract_lane_helpers.py|scripts/framework/test_contract_lane_helpers.py)
-      # Framework helper rollout is scoped to migrated compliance/governance/reputation lanes.
+      # Framework helper rollout is scoped to migrated compliance/governance/reputation/token/treasury lanes.
       SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED=true
       DSAR_LEGAL_HOLD_CONTRACT_CHANGED=true
       GOVERNANCE_SIMULATION_CONTRACT_CHANGED=true
       GOVERNANCE_STAKE_SLASH_CONTRACT_CHANGED=true
       REPUTATION_DISPUTE_CONTRACT_CHANGED=true
+      TOKEN_LAUNCH_CONTRACT_CHANGED=true
+      TREASURY_DISBURSEMENT_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
@@ -463,7 +469,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/release-gonogo-checklist.md|docs/foundation/observability-slo-dashboards.md|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/canary/*|fixtures/launch_canary/*)
+    docs/foundation/release-gonogo-checklist.md|docs/foundation/observability-slo-dashboards.md|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/canary/*|fixtures/launch_canary/*|scripts/framework/manifests/canary_launch_canary_*|scripts/framework/manifests/canary_post_cutover_slo_*)
       LAUNCH_CANARY_CONTRACT_CHANGED=true
       classified=true
       ;;

@@ -65,6 +65,31 @@ class PilotLaneManifestTests(unittest.TestCase):
                 "reputation.dispute.contract",
                 "scripts/reputation/reputation_dispute_contract_lane_contract.py",
             ),
+            (
+                "canary_launch_canary_contract_lane.json",
+                "canary.launch_canary.contract",
+                "scripts/canary/launch_canary_contract_lane_contract.py",
+            ),
+            (
+                "canary_post_cutover_slo_contract_lane.json",
+                "canary.post_cutover_slo.contract",
+                "scripts/canary/post_cutover_slo_contract_lane_contract.py",
+            ),
+            (
+                "token_launch_handoff_contract_lane.json",
+                "token.launch_handoff.contract",
+                "scripts/token/token_launch_handoff_contract_lane_contract.py",
+            ),
+            (
+                "treasury_disbursement_contract_lane.json",
+                "treasury.disbursement.contract",
+                "scripts/treasury/treasury_disbursement_contract_lane_contract.py",
+            ),
+            (
+                "guard_durable_guard_recovery_contract_lane.json",
+                "guard.durable_guard_recovery.contract",
+                "scripts/guard/durable_guard_recovery_contract_lane_contract.py",
+            ),
         )
 
         for manifest_name, expected_lane_id, expected_script in cases:

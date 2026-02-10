@@ -1623,6 +1623,11 @@ assert_eq "$(extract_output "$token_contract_script_output" "run_rust")" "false"
 assert_eq "$(extract_output "$token_contract_script_output" "run_token_launch_contract_tests")" "true" "token launch contract script changes must run token launch contract lane"
 assert_eq "$(extract_output "$token_contract_script_output" "test_scope")" "token-contract" "token launch contract script changes should set token-contract scope"
 
+token_contract_manifest_output="$(run_selector $'scripts/framework/manifests/token_launch_handoff_contract_lane.json')"
+assert_eq "$(extract_output "$token_contract_manifest_output" "run_rust")" "false" "token launch manifest changes should avoid rust lane"
+assert_eq "$(extract_output "$token_contract_manifest_output" "run_token_launch_contract_tests")" "true" "token launch manifest changes must run token launch contract lane"
+assert_eq "$(extract_output "$token_contract_manifest_output" "test_scope")" "token-contract" "token launch manifest changes should set token-contract scope"
+
 token_contract_shared_script_output="$(run_selector $'scripts/token/token_launch_handoff_contract_lane_contract.py')"
 assert_eq "$(extract_output "$token_contract_shared_script_output" "run_rust")" "false" "token launch shared contract-lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$token_contract_shared_script_output" "run_token_launch_contract_tests")" "true" "token launch shared contract-lane changes must run token launch contract lane"
@@ -1648,8 +1653,8 @@ assert_eq "$(extract_output "$compliance_framework_helper_output" "run_rust")" "
 assert_eq "$(extract_output "$compliance_framework_helper_output" "run_soc2_control_evidence_contract_tests")" "true" "contract lane helper changes must run SOC2 contract lane"
 assert_eq "$(extract_output "$compliance_framework_helper_output" "run_dsar_legal_hold_contract_tests")" "true" "contract lane helper changes must run DSAR contract lane"
 assert_eq "$(extract_output "$compliance_framework_helper_output" "run_channel_lifecycle_contract_tests")" "false" "contract lane helper changes should not run channel lifecycle lane"
-assert_eq "$(extract_output "$compliance_framework_helper_output" "run_token_launch_contract_tests")" "false" "contract lane helper changes should not run token launch lane"
-assert_eq "$(extract_output "$compliance_framework_helper_output" "run_treasury_disbursement_contract_tests")" "false" "contract lane helper changes should not run treasury lane"
+assert_eq "$(extract_output "$compliance_framework_helper_output" "run_token_launch_contract_tests")" "true" "contract lane helper changes must run token launch lane"
+assert_eq "$(extract_output "$compliance_framework_helper_output" "run_treasury_disbursement_contract_tests")" "true" "contract lane helper changes must run treasury lane"
 assert_eq "$(extract_output "$compliance_framework_helper_output" "run_launch_canary_contract_tests")" "false" "contract lane helper changes should not run canary lane"
 assert_eq "$(extract_output "$compliance_framework_helper_output" "run_settlement_reconciliation_contract_tests")" "false" "contract lane helper changes should not run escrow lane"
 assert_eq "$(extract_output "$compliance_framework_helper_output" "run_mainnet_cutover_contract_tests")" "false" "contract lane helper changes should not run cutover lane"
@@ -1657,7 +1662,7 @@ assert_eq "$(extract_output "$compliance_framework_helper_output" "run_federated
 assert_eq "$(extract_output "$compliance_framework_helper_output" "run_governance_simulation_contract_tests")" "true" "contract lane helper changes must run governance simulation lane"
 assert_eq "$(extract_output "$compliance_framework_helper_output" "run_governance_stake_slash_contract_tests")" "true" "contract lane helper changes must run governance stake/slash lane"
 assert_eq "$(extract_output "$compliance_framework_helper_output" "run_reputation_dispute_contract_tests")" "true" "contract lane helper changes must run reputation dispute lane"
-assert_eq "$(extract_output "$compliance_framework_helper_output" "test_scope")" "soc2-contract" "contract lane helper changes should set soc2-contract scope"
+assert_eq "$(extract_output "$compliance_framework_helper_output" "test_scope")" "token-contract" "contract lane helper changes should set token-contract scope under selector precedence"
 
 compliance_framework_helper_test_output="$(run_selector $'scripts/framework/test_contract_lane_helpers.py')"
 assert_eq "$(extract_output "$compliance_framework_helper_test_output" "run_rust")" "false" "contract lane helper test changes should avoid rust lane"
@@ -1666,8 +1671,9 @@ assert_eq "$(extract_output "$compliance_framework_helper_test_output" "run_dsar
 assert_eq "$(extract_output "$compliance_framework_helper_test_output" "run_governance_simulation_contract_tests")" "true" "contract lane helper test changes must run governance simulation lane"
 assert_eq "$(extract_output "$compliance_framework_helper_test_output" "run_governance_stake_slash_contract_tests")" "true" "contract lane helper test changes must run governance stake/slash lane"
 assert_eq "$(extract_output "$compliance_framework_helper_test_output" "run_reputation_dispute_contract_tests")" "true" "contract lane helper test changes must run reputation dispute lane"
-assert_eq "$(extract_output "$compliance_framework_helper_test_output" "run_token_launch_contract_tests")" "false" "contract lane helper test changes should not run token launch lane"
-assert_eq "$(extract_output "$compliance_framework_helper_test_output" "test_scope")" "soc2-contract" "contract lane helper test changes should set soc2-contract scope"
+assert_eq "$(extract_output "$compliance_framework_helper_test_output" "run_token_launch_contract_tests")" "true" "contract lane helper test changes must run token launch lane"
+assert_eq "$(extract_output "$compliance_framework_helper_test_output" "run_treasury_disbursement_contract_tests")" "true" "contract lane helper test changes must run treasury lane"
+assert_eq "$(extract_output "$compliance_framework_helper_test_output" "test_scope")" "token-contract" "contract lane helper test changes should set token-contract scope under selector precedence"
 
 manifest_runner_framework_output="$(run_selector $'scripts/framework/run_lane_from_manifest.py')"
 assert_eq "$(extract_output "$manifest_runner_framework_output" "run_rust")" "false" "manifest runner framework changes should avoid rust lane"
@@ -1679,7 +1685,10 @@ assert_eq "$(extract_output "$manifest_runner_framework_output" "run_governance_
 assert_eq "$(extract_output "$manifest_runner_framework_output" "run_governance_stake_slash_contract_tests")" "true" "manifest runner framework changes must run governance stake/slash lane"
 assert_eq "$(extract_output "$manifest_runner_framework_output" "run_reputation_decay_contract_tests")" "false" "manifest runner framework changes should not run weighted decay lane"
 assert_eq "$(extract_output "$manifest_runner_framework_output" "run_reputation_dispute_contract_tests")" "true" "manifest runner framework changes must run reputation dispute lane"
-assert_eq "$(extract_output "$manifest_runner_framework_output" "run_token_launch_contract_tests")" "false" "manifest runner framework changes should not run token launch lane"
+assert_eq "$(extract_output "$manifest_runner_framework_output" "run_token_launch_contract_tests")" "true" "manifest runner framework changes must run token launch lane"
+assert_eq "$(extract_output "$manifest_runner_framework_output" "run_treasury_disbursement_contract_tests")" "true" "manifest runner framework changes must run treasury lane"
+assert_eq "$(extract_output "$manifest_runner_framework_output" "run_launch_canary_contract_tests")" "true" "manifest runner framework changes must run canary lane"
+assert_eq "$(extract_output "$manifest_runner_framework_output" "run_durable_guard_recovery_contract_tests")" "true" "manifest runner framework changes must run durable guard recovery lane"
 assert_eq "$(extract_output "$manifest_runner_framework_output" "test_scope")" "frontend-contract" "manifest runner framework changes should keep bounded frontend-contract scope"
 
 token_contract_fixture_output="$(run_selector $'fixtures/token_launch/handoff_invariant_cases.json')"
@@ -1696,6 +1705,11 @@ treasury_contract_script_output="$(run_selector $'scripts/treasury/run_treasury_
 assert_eq "$(extract_output "$treasury_contract_script_output" "run_rust")" "false" "treasury contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$treasury_contract_script_output" "run_treasury_disbursement_contract_tests")" "true" "treasury contract script changes must run treasury contract lane"
 assert_eq "$(extract_output "$treasury_contract_script_output" "test_scope")" "treasury-contract" "treasury contract script changes should set treasury-contract scope"
+
+treasury_contract_manifest_output="$(run_selector $'scripts/framework/manifests/treasury_disbursement_contract_lane.json')"
+assert_eq "$(extract_output "$treasury_contract_manifest_output" "run_rust")" "false" "treasury manifest changes should avoid rust lane"
+assert_eq "$(extract_output "$treasury_contract_manifest_output" "run_treasury_disbursement_contract_tests")" "true" "treasury manifest changes must run treasury contract lane"
+assert_eq "$(extract_output "$treasury_contract_manifest_output" "test_scope")" "treasury-contract" "treasury manifest changes should set treasury-contract scope"
 
 treasury_contract_shared_script_output="$(run_selector $'scripts/treasury/treasury_disbursement_contract_lane_contract.py')"
 assert_eq "$(extract_output "$treasury_contract_shared_script_output" "run_rust")" "false" "treasury shared contract-lane script-only changes should avoid rust lane"
@@ -1737,6 +1751,11 @@ assert_eq "$(extract_output "$canary_contract_script_output" "run_rust")" "false
 assert_eq "$(extract_output "$canary_contract_script_output" "run_launch_canary_contract_tests")" "true" "canary contract script changes must run launch canary lane"
 assert_eq "$(extract_output "$canary_contract_script_output" "test_scope")" "canary-contract" "canary contract script changes should set canary-contract scope"
 
+canary_contract_manifest_output="$(run_selector $'scripts/framework/manifests/canary_launch_canary_contract_lane.json')"
+assert_eq "$(extract_output "$canary_contract_manifest_output" "run_rust")" "false" "canary launch manifest changes should avoid rust lane"
+assert_eq "$(extract_output "$canary_contract_manifest_output" "run_launch_canary_contract_tests")" "true" "canary launch manifest changes must run launch canary lane"
+assert_eq "$(extract_output "$canary_contract_manifest_output" "test_scope")" "canary-contract" "canary launch manifest changes should set canary-contract scope"
+
 canary_contract_shared_script_output="$(run_selector $'scripts/canary/launch_canary_contract_lane_contract.py')"
 assert_eq "$(extract_output "$canary_contract_shared_script_output" "run_rust")" "false" "canary shared contract-lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$canary_contract_shared_script_output" "run_launch_canary_contract_tests")" "true" "canary shared contract-lane changes must run launch canary lane"
@@ -1746,6 +1765,11 @@ canary_slo_script_output="$(run_selector $'scripts/canary/run_post_cutover_slo_c
 assert_eq "$(extract_output "$canary_slo_script_output" "run_rust")" "false" "post-cutover SLO script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$canary_slo_script_output" "run_launch_canary_contract_tests")" "true" "post-cutover SLO script changes must run launch canary lane"
 assert_eq "$(extract_output "$canary_slo_script_output" "test_scope")" "canary-contract" "post-cutover SLO script changes should set canary-contract scope"
+
+canary_slo_manifest_output="$(run_selector $'scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json')"
+assert_eq "$(extract_output "$canary_slo_manifest_output" "run_rust")" "false" "post-cutover SLO manifest changes should avoid rust lane"
+assert_eq "$(extract_output "$canary_slo_manifest_output" "run_launch_canary_contract_tests")" "true" "post-cutover SLO manifest changes must run launch canary lane"
+assert_eq "$(extract_output "$canary_slo_manifest_output" "test_scope")" "canary-contract" "post-cutover SLO manifest changes should set canary-contract scope"
 
 canary_slo_shared_contract_output="$(run_selector $'scripts/canary/post_cutover_slo_contract_lane_contract.py')"
 assert_eq "$(extract_output "$canary_slo_shared_contract_output" "run_rust")" "false" "post-cutover SLO shared contract-lane script-only changes should avoid rust lane"
@@ -1803,6 +1827,11 @@ guard_contract_script_output="$(run_selector $'scripts/guard/run_durable_guard_r
 assert_eq "$(extract_output "$guard_contract_script_output" "run_rust")" "false" "durable guard contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$guard_contract_script_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard contract script changes must run durable guard recovery contract lane"
 assert_eq "$(extract_output "$guard_contract_script_output" "test_scope")" "guard-contract" "durable guard contract script changes should set guard-contract scope"
+
+guard_contract_manifest_output="$(run_selector $'scripts/framework/manifests/guard_durable_guard_recovery_contract_lane.json')"
+assert_eq "$(extract_output "$guard_contract_manifest_output" "run_rust")" "false" "durable guard manifest changes should avoid rust lane"
+assert_eq "$(extract_output "$guard_contract_manifest_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard manifest changes must run durable guard recovery contract lane"
+assert_eq "$(extract_output "$guard_contract_manifest_output" "test_scope")" "guard-contract" "durable guard manifest changes should set guard-contract scope"
 
 guard_shared_contract_output="$(run_selector $'scripts/guard/durable_guard_recovery_contract_lane_contract.py')"
 assert_eq "$(extract_output "$guard_shared_contract_output" "run_rust")" "false" "durable guard shared contract module changes should avoid rust lane"
