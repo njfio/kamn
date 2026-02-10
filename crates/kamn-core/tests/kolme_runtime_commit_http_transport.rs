@@ -239,3 +239,87 @@ fn regression_http_transport_fails_closed_on_content_length_mismatch() {
         })
     );
 }
+
+#[test]
+fn functional_http_transport_includes_authorization_header_when_configured() {
+    let wire_payload = "operation_id=op-auth\nstate_root=state-auth\n";
+    let idempotency_key = "kolme-runtime-commit:op-auth:state-auth:agent-1:1:payload-auth";
+    let response_body =
+        "status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:auth\nfinality=final\n";
+    let base_url = spawn_single_request_server(
+        response_body.to_owned(),
+        "HTTP/1.1 200 OK",
+        move |request| {
+            assert!(request.contains("Authorization: Bearer integration-token"));
+        },
+    );
+
+    let transport =
+        KolmeRuntimeCommitHttpTransport::new_with_authorization(2, "Bearer integration-token")
+            .expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        base_url.as_str(),
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    let outcome = provider
+        .submit_runtime_commit(wire_payload, idempotency_key)
+        .expect("submit should succeed");
+    match outcome {
+        KolmeRuntimeCommitProviderOutcome::Submitted(receipt) => {
+            assert_eq!(receipt.provider, "kolme-local");
+            assert_eq!(receipt.commit_id, "kolme-commit:auth");
+        }
+        other => panic!("unexpected provider outcome: {other:?}"),
+    }
+}
+
+#[test]
+fn regression_http_transport_maps_401_to_authorization_unavailable_error() {
+    let base_url = spawn_single_request_server(
+        "{\"error\":\"unauthorized\"}".to_owned(),
+        "HTTP/1.1 401 Unauthorized",
+        |_| {},
+    );
+
+    let transport = KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        base_url.as_str(),
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    assert_eq!(
+        provider.submit_runtime_commit("operation_id=op-1\n", "idempotency-key-1"),
+        Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "http response status indicates authorization failure: 401".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn regression_http_transport_maps_422_to_invalid_request_malformed_error() {
+    let base_url = spawn_single_request_server(
+        "{\"error\":\"validation failed\"}".to_owned(),
+        "HTTP/1.1 422 Unprocessable Entity",
+        |_| {},
+    );
+
+    let transport = KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        base_url.as_str(),
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    assert_eq!(
+        provider.submit_runtime_commit("operation_id=op-1\n", "idempotency-key-1"),
+        Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "http response status indicates invalid request: 422".to_owned(),
+        })
+    );
+}

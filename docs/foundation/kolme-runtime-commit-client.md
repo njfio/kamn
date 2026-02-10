@@ -29,10 +29,17 @@ handling.
 - `KolmeRuntimeCommitHttpTransport` provides a dependency-free `http://` transport for:
   - `KolmeRuntimeCommitProviderTransport::submit_runtime_commit(...)`
   - `KolmeRuntimeCommitFinalityTransport::fetch_runtime_commit_finality(...)`
+- Optional auth-aware constructor:
+  - `KolmeRuntimeCommitHttpTransport::new_with_authorization(...)`
+  - emits `Authorization: <value>` header on submit/finality requests.
 - Deterministic runtime behavior:
   - query parameter encoding for `commit_id` in finality polling
   - timeout mapping to `KolmeRuntimeCommitProviderError::Timeout`
   - network and protocol failures mapped fail-closed to provider transport errors
+  - deterministic 4xx classification:
+    - `401`/`403` => authorization failure (`Unavailable`)
+    - `400`/`404`/`409`/`422` => invalid request (`MalformedResponse`)
+    - `429` => rate limited (`Unavailable`)
 
 ## Typed Kolme Nonce/Broadcast Codecs
 
