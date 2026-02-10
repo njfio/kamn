@@ -1,0 +1,39 @@
+{
+  "schema_version": "kamn.kolme.fork-compatibility-cases.v1",
+  "cases": [
+    {
+      "case_id": "fork-match-go-001",
+      "upstream_release_tag": "v0.15.2",
+      "fork_release_tag": "v0.15.2",
+      "fork_repo": "njfio/kolme_fork",
+      "fork_ref": "refs/heads/main",
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "GO",
+      "expected_reason_codes": []
+    },
+    {
+      "case_id": "fork-drift-no-go-001",
+      "upstream_release_tag": "v0.15.2",
+      "fork_release_tag": "v0.14.9",
+      "fork_repo": "njfio/kolme_fork",
+      "fork_ref": "refs/heads/main",
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO",
+      "expected_reason_codes": [
+        "fork_release_tag_mismatch"
+      ]
+    },
+    {
+      "case_id": "fast-gate-no-go-001",
+      "upstream_release_tag": "v0.15.2",
+      "fork_release_tag": "v0.15.2",
+      "fork_repo": "njfio/kolme_fork",
+      "fork_ref": "refs/heads/main",
+      "ci_fast_gate": "FAIL",
+      "expected_final_decision": "NO-GO",
+      "expected_reason_codes": [
+        "ci_fast_gate_failed"
+      ]
+    }
+  ]
+}

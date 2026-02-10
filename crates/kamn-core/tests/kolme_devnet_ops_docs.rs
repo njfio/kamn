@@ -26,6 +26,14 @@ fn plan_contains_runtime_commit_adapter_replay_lane_policy() {
 }
 
 #[test]
+fn plan_contains_local_only_heavy_validation_matrix() {
+    assert!(PLAN.contains("## Local-Only Heavy Kolme Validation Matrix"));
+    assert!(PLAN.contains("run_local_heavy_validation_matrix.sh"));
+    assert!(PLAN.contains("run_version_compatibility_replay_deep_lane.sh"));
+    assert!(PLAN.contains("kamn.kolme.local-heavy-validation-summary.v1"));
+}
+
+#[test]
 fn regression_requires_failover_sync_budget_and_scheduled_cadence_guards() {
     // Regression: #788
     assert!(PLAN
@@ -37,5 +45,13 @@ fn regression_requires_runtime_commit_adapter_reason_code_guard() {
     // Regression: #980
     assert!(PLAN.contains(
         "runtime commit adapter replay/finality reason-code drift fails closed (`Regression: #980`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_only_heavy_matrix_guard_marker() {
+    // Regression: #1405
+    assert!(PLAN.contains(
+        "local-only heavy validation matrix requires explicit opt-in and remains excluded from PR fast-gate workflows (`Regression: #1405`)."
     ));
 }

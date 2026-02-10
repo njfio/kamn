@@ -185,6 +185,7 @@ jobs:
         if: steps.scope.outputs.run_kolme_version_compatibility_contract_tests == 'true'
         run: |
           bash scripts/kolme/test_validate_version_compatibility.sh
+          bash scripts/kolme/test_run_local_heavy_validation_matrix.sh
           bash scripts/kolme/test_run_version_compatibility_contract_lane.sh
 
       - name: Run Kolme triadic devnet smoke contract lane

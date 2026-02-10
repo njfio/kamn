@@ -27,6 +27,16 @@ if ! grep -q "run_runtime_commit_replay_contract_lane.sh" "$CONTRACT_LANE"; then
   exit 1
 fi
 
+if ! grep -q "generate_fork_compatibility_evidence.py" "$CONTRACT_LANE"; then
+  echo "expected Kolme version compatibility contract lane to include fork compatibility evidence coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "check_fork_compatibility_policy.py" "$CONTRACT_LANE"; then
+  echo "expected Kolme version compatibility contract lane to include fork compatibility policy coverage" >&2
+  exit 1
+fi
+
 contract_output="$(bash "$CONTRACT_LANE")"
 if ! printf '%s\n' "$contract_output" | grep -q "Kolme version compatibility contract lane tests passed."; then
   echo "expected Kolme version compatibility contract lane success marker" >&2
