@@ -67,6 +67,11 @@ This document captures cross-chain adapter and receipt-finality normalization sl
 - Policy checker behavior:
   - recomputes expected final decision from bundle fields.
   - rejects tampered `final_decision` mismatches fail closed (`Regression: #742`).
+- Stable shell wrappers:
+  - `scripts/bridge/generate_cross_chain_outbound_intent_evidence_bundle.sh`
+  - `scripts/bridge/check_cross_chain_outbound_intent_policy.sh`
+- Shared Python implementation:
+  - `scripts/bridge/cross_chain_outbound_intent_contract.py`
 
 ## Bridge Adapter Dry-Run Conformance Contract (Issue #907)
 - Dry-run bridge adapter conformance evidence schema:
