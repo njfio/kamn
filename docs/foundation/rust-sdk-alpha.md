@@ -203,6 +203,10 @@ PR checks use changed-language routing to keep cost and runtime bounded:
 - TypeScript SDK diffs route to `npm --prefix packages/kamn-sdk test`.
 - Multi-language SDK diffs (or parity-lane runner changes) route to
   `bash scripts/sdk/run_live_transport_parity_contract_lane.sh`.
+- Stable shell wrapper:
+  - `scripts/sdk/run_live_transport_parity_contract_lane.sh`
+- Shared Python implementation:
+  - `scripts/sdk/live_transport_parity_contract_lane_contract.py`
 - Shared fixture and matrix runner diffs route to
   `bash scripts/sdk/run_sdk_parity_matrix.sh --fixture fixtures/sdk_parity/register_validation_cases.json --output-json /tmp/sdk-parity-report.json`.
 
@@ -210,3 +214,5 @@ Deep-lane entrypoints are defined for scheduled execution and are intentionally 
 
 - `bash scripts/sdk/run_rust_live_transport_deep_lane.sh`
 - `bash scripts/sdk/run_live_transport_parity_deep_lane.sh`
+
+The parity fast-lane wrapper remains pinned to the shared contract implementation marker (`Regression: #1192`).
