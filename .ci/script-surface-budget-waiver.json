@@ -1,0 +1,7 @@
+{
+  "reason": "Temporary waiver for elevated shell script line surface while lane/evidence framework consolidation is scheduled; keep all other script budget metrics fail-closed.",
+  "expires_on": "2026-04-30",
+  "allow_metrics": [
+    "shell_line_total"
+  ]
+}
