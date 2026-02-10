@@ -3,6 +3,8 @@
 ## Goal
 Keep CI feedback fast and runner cost low while preserving confidence.
 
+Detailed policy and script-surface budget rules live in `docs/ci/ci-cost-and-lane-framework.md`.
+
 ## Lane Split
 - `ci-fast-gate` (PR required): minimal critical path for merge decisions.
 - `ci-deep-validate` (nightly/manual): heavier suites outside PR hot path.
@@ -137,6 +139,7 @@ Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 ## Script Regression Coverage
 `ci-fast-gate` runs `scripts/ci/test_ci_tools.sh` to locally regression-test CI helper scripts:
 - Budget evaluator (`test_evaluate_budget.sh`)
+- Script duplication/surface budget checker (`test_check_script_duplication_budget.sh`)
 - Retry helper (`test_run_with_retry.sh`)
 - Invariant harness runner (`test_run_invariant_harness.sh`)
 - Selector matrix runner with output-env isolation (`test_select_targets.sh`, `Regression: #463`)

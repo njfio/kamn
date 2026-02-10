@@ -60,7 +60,9 @@ fi
 
 mkdir -p "$(dirname "$output_json")"
 
-selection="$(bash "$SELECTOR" --event-name "$event_name")"
+# In GitHub Actions, GITHUB_OUTPUT is set for the parent step. Force stdout mode so
+# selector key/value lines can be captured reliably inside this script.
+selection="$(env -u GITHUB_OUTPUT bash "$SELECTOR" --event-name "$event_name")"
 selected_lane="$(printf '%s\n' "$selection" | awk -F= '/^lane=/{print $2}')"
 cadence="$(printf '%s\n' "$selection" | awk -F= '/^cadence=/{print $2}')"
 

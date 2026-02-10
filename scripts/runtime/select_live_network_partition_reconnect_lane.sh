@@ -4,12 +4,11 @@ set -euo pipefail
 write_output() {
   local key="$1"
   local value="$2"
+  printf '%s=%s\n' "$key" "$value"
   if [ -n "${GITHUB_OUTPUT:-}" ]; then
     {
       echo "${key}=${value}"
     } >>"$GITHUB_OUTPUT"
-  else
-    printf '%s=%s\n' "$key" "$value"
   fi
 }
 

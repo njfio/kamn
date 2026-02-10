@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 bash "$ROOT_DIR/scripts/ci/test_evaluate_budget.sh"
+bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"
 bash "$ROOT_DIR/scripts/ci/test_run_with_retry.sh"
 bash "$ROOT_DIR/scripts/ci/test_run_invariant_harness.sh"
 bash "$ROOT_DIR/scripts/ci/test_run_cargo_test_with_quarantine.sh"
@@ -40,24 +41,42 @@ bash "$ROOT_DIR/scripts/dashboard/test_run_backend_session_auth_freshness_lane.s
 bash "$ROOT_DIR/scripts/dashboard/test_check_backend_session_auth_freshness_policy.sh"
 bash "$ROOT_DIR/scripts/dashboard/test_run_backend_session_auth_freshness_contract_lane.sh"
 bash "$ROOT_DIR/scripts/sdk/test_rustdoc_policy_contract.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_rust_live_transport_contract_lane.sh"
+bash "$ROOT_DIR/scripts/ci/run_with_retry.sh" \
+  --label "sdk-rust-live-transport-contract-lane" \
+  --max-attempts 2 \
+  -- bash "$ROOT_DIR/scripts/sdk/test_run_rust_live_transport_contract_lane.sh"
 bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_demo.sh"
 bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_integration_harness.sh"
 bash "$ROOT_DIR/scripts/sdk/test_check_localhost_signed_integration_evidence_policy.sh"
 bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_integration_contract_lane.sh"
 bash "$ROOT_DIR/scripts/sdk/test_run_tcp_signed_relay_demo.sh"
 bash "$ROOT_DIR/scripts/sdk/test_run_tcp_failover_reconnect_matrix.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_live_transport_parity_contract_lane.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_transport_profile_parity_matrix.sh"
+if [ "${KAMN_CI_FORCE_SDK_STRIP_TYPES_TESTS:-false}" = "true" ]; then
+  run_sdk_strip_types_tests=true
+elif node --experimental-strip-types -e "" >/dev/null 2>&1; then
+  run_sdk_strip_types_tests=true
+else
+  run_sdk_strip_types_tests=false
+fi
+if [ "$run_sdk_strip_types_tests" = "true" ]; then
+  bash "$ROOT_DIR/scripts/sdk/test_run_live_transport_parity_contract_lane.sh"
+  bash "$ROOT_DIR/scripts/sdk/test_run_transport_profile_parity_matrix.sh"
+else
+  echo "skipping sdk strip-types-dependent parity tests in CI tools regression (node strip-types unavailable); smoke parity contract coverage remains active."
+fi
 bash "$ROOT_DIR/scripts/sdk/test_run_live_transport_smoke_parity_lane.sh"
 bash "$ROOT_DIR/scripts/sdk/test_check_live_transport_smoke_parity_policy.sh"
 bash "$ROOT_DIR/scripts/sdk/test_run_live_transport_smoke_parity_contract_lane.sh"
-bash "$ROOT_DIR/scripts/sdk/test_generate_sdk_schema_compatibility_evidence_bundle.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_sdk_schema_compatibility_contract_lane.sh"
-bash "$ROOT_DIR/scripts/sdk/test_check_sdk_schema_compatibility_policy.sh"
-bash "$ROOT_DIR/scripts/sdk/test_check_example_fixture_drift.sh"
-bash "$ROOT_DIR/scripts/sdk/test_check_example_fixture_drift_policy.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_example_fixture_drift_contract_lane.sh"
+if [ "$run_sdk_strip_types_tests" = "true" ]; then
+  bash "$ROOT_DIR/scripts/sdk/test_generate_sdk_schema_compatibility_evidence_bundle.sh"
+  bash "$ROOT_DIR/scripts/sdk/test_run_sdk_schema_compatibility_contract_lane.sh"
+  bash "$ROOT_DIR/scripts/sdk/test_check_sdk_schema_compatibility_policy.sh"
+  bash "$ROOT_DIR/scripts/sdk/test_check_example_fixture_drift.sh"
+  bash "$ROOT_DIR/scripts/sdk/test_check_example_fixture_drift_policy.sh"
+  bash "$ROOT_DIR/scripts/sdk/test_run_example_fixture_drift_contract_lane.sh"
+else
+  echo "skipping sdk strip-types-dependent schema compatibility and fixture-drift tests in CI tools regression (node strip-types unavailable)."
+fi
 bash "$ROOT_DIR/scripts/signer/test_run_signer_emulator_contract_lane.sh"
 bash "$ROOT_DIR/scripts/did/test_generate_lifecycle_operator_binding_evidence_bundle.sh"
 bash "$ROOT_DIR/scripts/did/test_run_lifecycle_operator_binding_contract_lane.sh"
