@@ -245,3 +245,25 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - live-network pilot deep lane wrapper remains pinned to shared contract implementation marker (`Regression: #1162`).
 - Regression guard:
   - live-network smoke lane wrapper remains pinned to shared contract implementation marker (`Regression: #1166`).
+
+## Troubleshooting Runbook
+
+- Canonical troubleshooting references:
+  - `docs/foundation/runtime-network.md#live-transport-demo-failure-taxonomy-and-troubleshooting`
+  - `README.md#troubleshoot-localhost-transport-failures`
+- Fast repro and policy validation commands:
+  - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario malformed-signature`
+  - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario session-expired`
+  - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario replay-nonce`
+  - `bash scripts/sdk/run_live_transport_replay_tamper_fast_lane.sh --output-report /tmp/live-transport-replay-tamper-fast-report.json`
+  - `bash scripts/sdk/check_live_transport_replay_tamper_policy.sh --bundle-file /tmp/live-transport-replay-tamper-fast-report.json`
+  - `bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json`
+- Failure taxonomy markers:
+  - `signature_mismatch_detected`
+  - `session_expired_detected`
+  - `tamper_payload_detected`
+  - `replay_nonce_detected`
+  - `session_admission_guards_detected`
+- Expected artifacts:
+  - `/tmp/live-transport-replay-tamper-fast-report.json`
+  - `/tmp/localhost-signed-integration-contract-report.json`
