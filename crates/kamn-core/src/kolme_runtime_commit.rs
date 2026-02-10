@@ -501,6 +501,56 @@ pub struct KolmeRuntimeCommitProviderReceipt {
     pub finality: KolmeCommitReceiptFinality,
 }
 
+/// Typed notification event emitted by Kolme `/notifications` websocket.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum KolmeRuntimeCommitNotificationEvent {
+    /// Finalized transaction notification emitted from a new block event.
+    NewBlock {
+        /// Transaction hash observed in the block payload.
+        txhash: String,
+        /// Optional block height where the transaction finalized.
+        block_height: Option<u64>,
+    },
+    /// Failed transaction notification emitted by processor execution path.
+    FailedTransaction {
+        /// Transaction hash observed in failed-transaction payload.
+        txhash: String,
+        /// Optional proposed block height for the failed transaction.
+        proposed_height: Option<u64>,
+    },
+    /// Latest block watermark notification.
+    LatestBlock {
+        /// Latest observed block height.
+        height: u64,
+    },
+}
+
+impl KolmeRuntimeCommitNotificationEvent {
+    /// Converts notification event to a provider receipt when it carries tx finality information.
+    pub fn to_provider_receipt(&self, provider: &str) -> Option<KolmeRuntimeCommitProviderReceipt> {
+        let provider = provider.trim();
+        if provider.is_empty() {
+            return None;
+        }
+        match self {
+            Self::NewBlock {
+                txhash,
+                block_height,
+            } => Some(KolmeRuntimeCommitProviderReceipt {
+                provider: provider.to_owned(),
+                commit_id: deterministic_backend_commit_id(txhash.as_str(), *block_height),
+                finality: KolmeCommitReceiptFinality::Final,
+            }),
+            Self::FailedTransaction { txhash, .. } => Some(KolmeRuntimeCommitProviderReceipt {
+                provider: provider.to_owned(),
+                commit_id: deterministic_backend_commit_id(txhash.as_str(), None),
+                finality: KolmeCommitReceiptFinality::Failed,
+            }),
+            Self::LatestBlock { .. } => None,
+        }
+    }
+}
+
 /// Provider submission outcome used by adapter-backed runtime commit clients.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KolmeRuntimeCommitProviderOutcome {
@@ -513,6 +563,26 @@ pub enum KolmeRuntimeCommitProviderOutcome {
         /// Deterministic provider rejection reason.
         reason: String,
     },
+}
+
+/// Transport connection abstraction for consuming notifications text messages.
+pub trait KolmeRuntimeCommitNotificationsConnection {
+    /// Reads the next notifications text message.
+    ///
+    /// Returns `Ok(None)` when the current websocket connection is closed.
+    fn read_text_message(&mut self) -> Result<Option<String>, KolmeRuntimeCommitProviderError>;
+}
+
+/// Connector abstraction for establishing notifications websocket connections.
+pub trait KolmeRuntimeCommitNotificationsConnector {
+    /// Concrete connection type returned by the connector.
+    type Connection: KolmeRuntimeCommitNotificationsConnection;
+
+    /// Connects to one websocket notifications URL.
+    fn connect(
+        &mut self,
+        notifications_url: &str,
+    ) -> Result<Self::Connection, KolmeRuntimeCommitProviderError>;
 }
 
 /// Provider interface consumed by the adapter-backed runtime commit client.
@@ -548,6 +618,15 @@ pub struct KolmeRuntimeCommitLiveProvider<T> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ParsedHttpEndpoint {
     scheme: HttpScheme,
+    host: String,
+    host_header: String,
+    port: u16,
+    target_path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ParsedWebsocketEndpoint {
+    secure: bool,
     host: String,
     host_header: String,
     port: u16,
@@ -895,6 +974,223 @@ impl<T: KolmeRuntimeCommitFinalityTransport> KolmeRuntimeCommitFinalityChecker<T
     }
 }
 
+/// Minimal websocket connector for Kolme `/notifications` consumption.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KolmeRuntimeCommitWebsocketConnector {
+    timeout_seconds: u64,
+}
+
+impl KolmeRuntimeCommitWebsocketConnector {
+    /// Builds a websocket connector with deterministic timeout validation.
+    pub fn new(timeout_seconds: u64) -> Result<Self, KolmeRuntimeCommitError> {
+        if timeout_seconds == 0 {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "notifications_timeout_seconds",
+                reason: "must be positive",
+            });
+        }
+        Ok(Self { timeout_seconds })
+    }
+}
+
+/// Websocket connection implementation used by the default notifications connector.
+#[derive(Debug)]
+pub struct KolmeRuntimeCommitWebsocketConnection {
+    stream: TcpStream,
+    read_buffer: Vec<u8>,
+}
+
+impl KolmeRuntimeCommitWebsocketConnection {
+    fn new(stream: TcpStream, read_buffer: Vec<u8>) -> Self {
+        Self {
+            stream,
+            read_buffer,
+        }
+    }
+}
+
+impl KolmeRuntimeCommitNotificationsConnection for KolmeRuntimeCommitWebsocketConnection {
+    fn read_text_message(&mut self) -> Result<Option<String>, KolmeRuntimeCommitProviderError> {
+        loop {
+            if let Some(frame) = try_take_websocket_frame(&mut self.read_buffer)? {
+                match frame {
+                    WebsocketFrame::Text(payload_bytes) => {
+                        let payload = String::from_utf8(payload_bytes).map_err(|error| {
+                            KolmeRuntimeCommitProviderError::MalformedResponse {
+                                reason: format!(
+                                    "websocket text payload is not valid utf-8: {error}"
+                                ),
+                            }
+                        })?;
+                        return Ok(Some(payload));
+                    }
+                    WebsocketFrame::Close => return Ok(None),
+                    WebsocketFrame::Ping | WebsocketFrame::Pong => continue,
+                }
+            }
+
+            let mut chunk = [0_u8; 1024];
+            let read = self
+                .stream
+                .read(&mut chunk)
+                .map_err(map_transport_io_error)?;
+            if read == 0 {
+                return Ok(None);
+            }
+            self.read_buffer.extend_from_slice(&chunk[..read]);
+        }
+    }
+}
+
+impl KolmeRuntimeCommitNotificationsConnector for KolmeRuntimeCommitWebsocketConnector {
+    type Connection = KolmeRuntimeCommitWebsocketConnection;
+
+    fn connect(
+        &mut self,
+        notifications_url: &str,
+    ) -> Result<Self::Connection, KolmeRuntimeCommitProviderError> {
+        let endpoint = parse_websocket_endpoint(notifications_url)?;
+        if endpoint.secure {
+            return Err(KolmeRuntimeCommitProviderError::Unavailable {
+                reason: "wss:// notifications are not supported by this transport".to_owned(),
+            });
+        }
+
+        let mut stream = TcpStream::connect((endpoint.host.as_str(), endpoint.port))
+            .map_err(map_transport_io_error)?;
+        let timeout = Duration::from_secs(self.timeout_seconds);
+        stream
+            .set_read_timeout(Some(timeout))
+            .map_err(map_transport_io_error)?;
+        stream
+            .set_write_timeout(Some(timeout))
+            .map_err(map_transport_io_error)?;
+
+        let handshake = format!(
+            concat!(
+                "GET {} HTTP/1.1\r\n",
+                "Host: {}\r\n",
+                "Upgrade: websocket\r\n",
+                "Connection: Upgrade\r\n",
+                "Sec-WebSocket-Key: {}\r\n",
+                "Sec-WebSocket-Version: 13\r\n",
+                "\r\n"
+            ),
+            endpoint.target_path, endpoint.host_header, "dGhlIHNhbXBsZSBub25jZQ=="
+        );
+        stream
+            .write_all(handshake.as_bytes())
+            .map_err(map_transport_io_error)?;
+
+        let mut response_bytes = Vec::new();
+        let header_end = read_http_header_boundary(&mut stream, &mut response_bytes)?;
+        let (header_bytes, trailing) = response_bytes.split_at(header_end + 4);
+        validate_websocket_handshake_response(header_bytes)?;
+        Ok(KolmeRuntimeCommitWebsocketConnection::new(
+            stream,
+            trailing.to_vec(),
+        ))
+    }
+}
+
+/// Deterministic notifications consumer for Kolme websocket events with bounded reconnect policy.
+pub struct KolmeRuntimeCommitNotificationsConsumer<C>
+where
+    C: KolmeRuntimeCommitNotificationsConnector,
+{
+    notifications_url: String,
+    provider: String,
+    max_reconnect_attempts: u32,
+    connector: C,
+    connection: Option<C::Connection>,
+}
+
+impl<C> KolmeRuntimeCommitNotificationsConsumer<C>
+where
+    C: KolmeRuntimeCommitNotificationsConnector,
+{
+    /// Builds notifications consumer from HTTP base URL and notifications path.
+    pub fn new(
+        base_url: &str,
+        notifications_path: &str,
+        provider: &str,
+        max_reconnect_attempts: u32,
+        connector: C,
+    ) -> Result<Self, KolmeRuntimeCommitError> {
+        if provider.trim().is_empty() {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "notifications_provider",
+                reason: "must not be empty",
+            });
+        }
+        if max_reconnect_attempts == 0 {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "notifications_max_reconnect_attempts",
+                reason: "must be positive",
+            });
+        }
+        let notifications_url = compose_notifications_websocket_url(base_url, notifications_path)
+            .map_err(map_provider_error)?;
+        Ok(Self {
+            notifications_url,
+            provider: provider.trim().to_owned(),
+            max_reconnect_attempts,
+            connector,
+            connection: None,
+        })
+    }
+
+    /// Reads and parses one notifications event, reconnecting when the stream drops.
+    pub fn next_notification_event(
+        &mut self,
+    ) -> Result<KolmeRuntimeCommitNotificationEvent, KolmeRuntimeCommitProviderError> {
+        let mut reconnect_attempts = 0_u32;
+
+        loop {
+            if self.connection.is_none() {
+                match self.connector.connect(self.notifications_url.as_str()) {
+                    Ok(connection) => self.connection = Some(connection),
+                    Err(_) => {
+                        reconnect_attempts += 1;
+                        if reconnect_attempts >= self.max_reconnect_attempts {
+                            return Err(reconnect_exhausted_error(self.max_reconnect_attempts));
+                        }
+                        continue;
+                    }
+                }
+            }
+
+            let result = self
+                .connection
+                .as_mut()
+                .expect("connection should exist before read")
+                .read_text_message();
+            match result {
+                Ok(Some(payload)) => return parse_kolme_notification_event(payload.as_str()),
+                Ok(None) | Err(_) => {
+                    self.connection = None;
+                    reconnect_attempts += 1;
+                    if reconnect_attempts >= self.max_reconnect_attempts {
+                        return Err(reconnect_exhausted_error(self.max_reconnect_attempts));
+                    }
+                }
+            }
+        }
+    }
+
+    /// Reads notification events until one can be mapped to a commit receipt.
+    pub fn next_commit_receipt(
+        &mut self,
+    ) -> Result<KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderError> {
+        loop {
+            let event = self.next_notification_event()?;
+            if let Some(receipt) = event.to_provider_receipt(self.provider.as_str()) {
+                return Ok(receipt);
+            }
+        }
+    }
+}
+
 impl<T: KolmeRuntimeCommitProviderTransport> KolmeRuntimeCommitLiveProvider<T> {
     /// Builds a live provider with deterministic endpoint validation.
     pub fn new(
@@ -1071,6 +1367,464 @@ fn parse_authority(
         }
     }
     Ok((authority.to_owned(), default_port))
+}
+
+fn compose_notifications_websocket_url(
+    base_url: &str,
+    notifications_path: &str,
+) -> Result<String, KolmeRuntimeCommitProviderError> {
+    if notifications_path.trim().is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "notifications_path must not be empty".to_owned(),
+        });
+    }
+    let endpoint = parse_http_endpoint(base_url, notifications_path)?;
+    let scheme = match endpoint.scheme {
+        HttpScheme::Http => "ws",
+        HttpScheme::Https => "wss",
+    };
+    Ok(format!(
+        "{scheme}://{}{}",
+        endpoint.host_header, endpoint.target_path
+    ))
+}
+
+fn parse_websocket_endpoint(
+    notifications_url: &str,
+) -> Result<ParsedWebsocketEndpoint, KolmeRuntimeCommitProviderError> {
+    let raw = notifications_url.trim();
+    if raw.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "notifications_url must not be empty".to_owned(),
+        });
+    }
+    let (secure, remainder) = if let Some(remainder) = raw.strip_prefix("ws://") {
+        (false, remainder)
+    } else if let Some(remainder) = raw.strip_prefix("wss://") {
+        (true, remainder)
+    } else {
+        return Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "notifications_url scheme must be ws:// or wss://".to_owned(),
+        });
+    };
+
+    let (authority, target_path) = match remainder.split_once('/') {
+        Some((left, right)) => (left, format!("/{}", right.trim_start_matches('/'))),
+        None => (remainder, "/".to_owned()),
+    };
+    if authority.trim().is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "notifications_url host must not be empty".to_owned(),
+        });
+    }
+    let default_port = if secure { 443 } else { 80 };
+    let (host, port) = parse_authority(authority, default_port)?;
+    Ok(ParsedWebsocketEndpoint {
+        secure,
+        host,
+        host_header: authority.to_owned(),
+        port,
+        target_path,
+    })
+}
+
+fn reconnect_exhausted_error(max_reconnect_attempts: u32) -> KolmeRuntimeCommitProviderError {
+    KolmeRuntimeCommitProviderError::Unavailable {
+        reason: format!(
+            "notification reconnect attempts exhausted after {max_reconnect_attempts} retries"
+        ),
+    }
+}
+
+fn read_http_header_boundary(
+    stream: &mut TcpStream,
+    response_bytes: &mut Vec<u8>,
+) -> Result<usize, KolmeRuntimeCommitProviderError> {
+    loop {
+        if let Some(position) = response_bytes
+            .windows(4)
+            .position(|window| window == b"\r\n\r\n")
+        {
+            return Ok(position);
+        }
+        if response_bytes.len() > 32 * 1024 {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "websocket handshake response headers are too large".to_owned(),
+            });
+        }
+        let mut chunk = [0_u8; 1024];
+        let read = stream.read(&mut chunk).map_err(map_transport_io_error)?;
+        if read == 0 {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "websocket handshake response is incomplete".to_owned(),
+            });
+        }
+        response_bytes.extend_from_slice(&chunk[..read]);
+    }
+}
+
+fn validate_websocket_handshake_response(
+    header_bytes: &[u8],
+) -> Result<(), KolmeRuntimeCommitProviderError> {
+    let header_text = String::from_utf8(header_bytes.to_vec()).map_err(|error| {
+        KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: format!("websocket handshake response is not valid utf-8: {error}"),
+        }
+    })?;
+    let raw_headers = header_text
+        .split_once("\r\n\r\n")
+        .map(|(headers, _)| headers)
+        .unwrap_or(header_text.as_str());
+
+    let mut lines = raw_headers.lines();
+    let status_line =
+        lines
+            .next()
+            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "websocket handshake response missing status line".to_owned(),
+            })?;
+    let mut status_parts = status_line.split_whitespace();
+    let _http_version =
+        status_parts
+            .next()
+            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "websocket handshake status line is malformed".to_owned(),
+            })?;
+    let status_code_raw =
+        status_parts
+            .next()
+            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "websocket handshake status code is missing".to_owned(),
+            })?;
+    let status_code = status_code_raw.parse::<u16>().map_err(|_| {
+        KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: format!("websocket handshake status code is invalid: {status_code_raw}"),
+        }
+    })?;
+    if status_code != 101 {
+        return Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: format!("websocket handshake rejected with status {status_code}"),
+        });
+    }
+
+    let mut has_upgrade_websocket = false;
+    let mut has_connection_upgrade = false;
+    for line in lines {
+        let Some((name, value)) = line.split_once(':') else {
+            continue;
+        };
+        if name.eq_ignore_ascii_case("Upgrade")
+            && value.trim().to_ascii_lowercase().contains("websocket")
+        {
+            has_upgrade_websocket = true;
+        }
+        if name.eq_ignore_ascii_case("Connection")
+            && value.trim().to_ascii_lowercase().contains("upgrade")
+        {
+            has_connection_upgrade = true;
+        }
+    }
+    if !has_upgrade_websocket || !has_connection_upgrade {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "websocket handshake response missing upgrade headers".to_owned(),
+        });
+    }
+    Ok(())
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum WebsocketFrame {
+    Text(Vec<u8>),
+    Ping,
+    Pong,
+    Close,
+}
+
+fn try_take_websocket_frame(
+    read_buffer: &mut Vec<u8>,
+) -> Result<Option<WebsocketFrame>, KolmeRuntimeCommitProviderError> {
+    if read_buffer.len() < 2 {
+        return Ok(None);
+    }
+    let first = read_buffer[0];
+    let second = read_buffer[1];
+    let fin = (first & 0x80) != 0;
+    if !fin {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "fragmented websocket frames are not supported".to_owned(),
+        });
+    }
+    let opcode = first & 0x0f;
+    let masked = (second & 0x80) != 0;
+    let mut payload_len = usize::from(second & 0x7f);
+    let mut cursor = 2_usize;
+
+    if payload_len == 126 {
+        if read_buffer.len() < cursor + 2 {
+            return Ok(None);
+        }
+        payload_len = usize::from(u16::from_be_bytes([
+            read_buffer[cursor],
+            read_buffer[cursor + 1],
+        ]));
+        cursor += 2;
+    } else if payload_len == 127 {
+        if read_buffer.len() < cursor + 8 {
+            return Ok(None);
+        }
+        let raw = u64::from_be_bytes([
+            read_buffer[cursor],
+            read_buffer[cursor + 1],
+            read_buffer[cursor + 2],
+            read_buffer[cursor + 3],
+            read_buffer[cursor + 4],
+            read_buffer[cursor + 5],
+            read_buffer[cursor + 6],
+            read_buffer[cursor + 7],
+        ]);
+        payload_len = usize::try_from(raw).map_err(|_| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "websocket payload length exceeds platform limits".to_owned(),
+            }
+        })?;
+        cursor += 8;
+    }
+
+    let masking_key = if masked {
+        if read_buffer.len() < cursor + 4 {
+            return Ok(None);
+        }
+        let key = [
+            read_buffer[cursor],
+            read_buffer[cursor + 1],
+            read_buffer[cursor + 2],
+            read_buffer[cursor + 3],
+        ];
+        cursor += 4;
+        Some(key)
+    } else {
+        None
+    };
+
+    if read_buffer.len() < cursor + payload_len {
+        return Ok(None);
+    }
+    let mut payload = read_buffer[cursor..cursor + payload_len].to_vec();
+    if let Some(masking_key) = masking_key {
+        for (index, byte) in payload.iter_mut().enumerate() {
+            *byte ^= masking_key[index % 4];
+        }
+    }
+    read_buffer.drain(0..cursor + payload_len);
+
+    let frame = match opcode {
+        0x1 => WebsocketFrame::Text(payload),
+        0x8 => WebsocketFrame::Close,
+        0x9 => WebsocketFrame::Ping,
+        0xA => WebsocketFrame::Pong,
+        _ => {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("unsupported websocket opcode: {opcode}"),
+            })
+        }
+    };
+    Ok(Some(frame))
+}
+
+fn parse_kolme_notification_event(
+    payload: &str,
+) -> Result<KolmeRuntimeCommitNotificationEvent, KolmeRuntimeCommitProviderError> {
+    let trimmed = payload.trim();
+    if trimmed.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "notification payload must not be empty".to_owned(),
+        });
+    }
+    if trimmed.contains("\"NewBlock\"") {
+        let txhash = find_notification_string_field(trimmed, "txhash")?.ok_or_else(|| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "notification txhash field is missing".to_owned(),
+            }
+        })?;
+        let block_height = find_notification_u64_field(trimmed, "height")?;
+        return Ok(KolmeRuntimeCommitNotificationEvent::NewBlock {
+            txhash,
+            block_height,
+        });
+    }
+    if trimmed.contains("\"FailedTransaction\"") {
+        let txhash = find_notification_string_field(trimmed, "txhash")?.ok_or_else(|| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "notification txhash field is missing".to_owned(),
+            }
+        })?;
+        let proposed_height = find_notification_u64_field(trimmed, "proposed_height")?;
+        return Ok(KolmeRuntimeCommitNotificationEvent::FailedTransaction {
+            txhash,
+            proposed_height,
+        });
+    }
+    if trimmed.contains("\"LatestBlock\"") {
+        let height = find_notification_u64_field(trimmed, "height")?.ok_or_else(|| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "notification latest block height is missing".to_owned(),
+            }
+        })?;
+        return Ok(KolmeRuntimeCommitNotificationEvent::LatestBlock { height });
+    }
+    Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+        reason: "notification variant is unsupported".to_owned(),
+    })
+}
+
+fn find_notification_string_field(
+    payload: &str,
+    field: &str,
+) -> Result<Option<String>, KolmeRuntimeCommitProviderError> {
+    let pattern = format!("\"{field}\"");
+    for (index, _) in payload.match_indices(pattern.as_str()) {
+        let mut cursor = index + pattern.len();
+        cursor = skip_ascii_whitespace(payload, cursor);
+        if payload.as_bytes().get(cursor).copied() != Some(b':') {
+            continue;
+        }
+        cursor += 1;
+        cursor = skip_ascii_whitespace(payload, cursor);
+        if payload.as_bytes().get(cursor).copied() != Some(b'"') {
+            continue;
+        }
+        let mut end = cursor + 1;
+        let mut escape = false;
+        while let Some(byte) = payload.as_bytes().get(end).copied() {
+            if escape {
+                escape = false;
+                end += 1;
+                continue;
+            }
+            if byte == b'\\' {
+                escape = true;
+                end += 1;
+                continue;
+            }
+            if byte == b'"' {
+                let token = &payload[cursor..=end];
+                let parsed = parse_json_string(token).map_err(|reason| {
+                    KolmeRuntimeCommitProviderError::MalformedResponse {
+                        reason: format!("notification field '{field}' is invalid: {reason}"),
+                    }
+                })?;
+                if parsed.trim().is_empty() {
+                    return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                        reason: format!("notification field '{field}' must not be empty"),
+                    });
+                }
+                return Ok(Some(parsed));
+            }
+            end += 1;
+        }
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: format!("notification field '{field}' is unterminated"),
+        });
+    }
+    Ok(None)
+}
+
+fn find_notification_u64_field(
+    payload: &str,
+    field: &str,
+) -> Result<Option<u64>, KolmeRuntimeCommitProviderError> {
+    let pattern = format!("\"{field}\"");
+    for (index, _) in payload.match_indices(pattern.as_str()) {
+        let mut cursor = index + pattern.len();
+        cursor = skip_ascii_whitespace(payload, cursor);
+        if payload.as_bytes().get(cursor).copied() != Some(b':') {
+            continue;
+        }
+        cursor += 1;
+        cursor = skip_ascii_whitespace(payload, cursor);
+        let Some(first) = payload.as_bytes().get(cursor).copied() else {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("notification field '{field}' value is missing"),
+            });
+        };
+
+        if first == b'"' {
+            let mut end = cursor + 1;
+            let mut escape = false;
+            while let Some(byte) = payload.as_bytes().get(end).copied() {
+                if escape {
+                    escape = false;
+                    end += 1;
+                    continue;
+                }
+                if byte == b'\\' {
+                    escape = true;
+                    end += 1;
+                    continue;
+                }
+                if byte == b'"' {
+                    let token = &payload[cursor..=end];
+                    let parsed = parse_json_string(token).map_err(|reason| {
+                        KolmeRuntimeCommitProviderError::MalformedResponse {
+                            reason: format!("notification field '{field}' is invalid: {reason}"),
+                        }
+                    })?;
+                    return parse_notification_positive_u64(parsed.as_str(), field).map(Some);
+                }
+                end += 1;
+            }
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("notification field '{field}' is unterminated"),
+            });
+        }
+
+        let mut end = cursor;
+        while let Some(byte) = payload.as_bytes().get(end).copied() {
+            if byte.is_ascii_digit() {
+                end += 1;
+                continue;
+            }
+            break;
+        }
+        if end == cursor {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("notification field '{field}' must be a positive integer"),
+            });
+        }
+        let token = &payload[cursor..end];
+        return parse_notification_positive_u64(token, field).map(Some);
+    }
+    Ok(None)
+}
+
+fn parse_notification_positive_u64(
+    token: &str,
+    field: &str,
+) -> Result<u64, KolmeRuntimeCommitProviderError> {
+    let trimmed = token.trim();
+    let parsed =
+        trimmed
+            .parse::<u64>()
+            .map_err(|_| KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("notification field '{field}' must be a positive integer"),
+            })?;
+    if parsed == 0 {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: format!("notification field '{field}' must be a positive integer"),
+        });
+    }
+    Ok(parsed)
+}
+
+fn skip_ascii_whitespace(value: &str, mut cursor: usize) -> usize {
+    while let Some(byte) = value.as_bytes().get(cursor).copied() {
+        if byte.is_ascii_whitespace() {
+            cursor += 1;
+            continue;
+        }
+        break;
+    }
+    cursor
 }
 
 fn parse_authorization_header(value: &str) -> Result<String, KolmeRuntimeCommitError> {

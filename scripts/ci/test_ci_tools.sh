@@ -40,6 +40,7 @@ bash "$ROOT_DIR/scripts/kolme/test_check_nonce_broadcast_parity_policy.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_runtime_commit_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh"
+bash "$ROOT_DIR/scripts/kolme/test_run_notifications_consumer_contract_lane.sh"
 if [ "${KAMN_CI_FORCE_DASHBOARD_PACKAGE_TESTS:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/frontend/test_dashboard_package.sh"
 elif node --experimental-strip-types -e "" >/dev/null 2>&1; then

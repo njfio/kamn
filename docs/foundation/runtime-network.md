@@ -375,6 +375,27 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `watchdog_severity`
   - delivery/liveness per-mille ratios
 
+## Kolme Notifications Websocket Consumer Contract Rules
+- Notifications endpoint contract:
+  - `GET /notifications` websocket stream from Kolme API server.
+  - known notification variants are `NewBlock`, `FailedTransaction`, and `LatestBlock`.
+- `KolmeRuntimeCommitNotificationsConsumer` in `crates/kamn-core/src/kolme_runtime_commit.rs` enforces deterministic behavior:
+  - `NewBlock` events require `txhash` and map to `finality=Final`.
+  - `FailedTransaction` events require `txhash` and map to `finality=Failed`.
+  - `LatestBlock` events are decoded for watermark tracking and do not emit commit receipts.
+- Reconnect policy:
+  - dropped or failed websocket connections trigger bounded reconnect attempts.
+  - retry exhaustion fails closed with deterministic reason:
+    - `notification reconnect attempts exhausted after <retries> retries`
+- Validation commands:
+  - `cargo test -p kamn-core --test kolme_runtime_commit_notifications`
+  - `bash scripts/kolme/run_notifications_consumer_contract_lane.sh`
+  - `bash scripts/kolme/test_run_notifications_consumer_contract_lane.sh`
+- Runtime budget:
+  - `KAMN_KOLME_NOTIFICATIONS_CONSUMER_MAX_SECONDS=60` (default)
+- Regression policy:
+  - unsupported notification variants and reconnect-budget drift remain fail-closed (`Regression: #1463`).
+
 ## Test Coverage Mapping
 - Unit:
   - invalid transition checks
@@ -388,6 +409,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - empty proposal candidate ID rejection
   - empty resume-token rejoin attempt rejection
   - snapshot cursor/hash validation and continuity regression checks
+  - websocket notification variant decode and txhash extraction invariants
 - Functional:
   - peer lifecycle connect/degrade/recover/disconnect flow
   - authenticated peer-frame wire roundtrip and signature verification
@@ -398,6 +420,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - planner deterministic ordering contract
   - rejoin acceptance with matching snapshot
   - snapshot recovery truncation with stale metadata suffix
+  - websocket reconnect-after-close receipt continuation behavior
 - Integration:
   - bounded FIFO queue behavior under capacity
   - inbound peer-frame authenticator monotonic nonce acceptance flow
@@ -409,6 +432,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - deterministic concurrency replay summaries across peer lifecycle phase transitions
   - combined invariant/fuzz/concurrency lane + policy checker contract coverage
   - runtime snapshot contract lane wiring and docs mapping checks
+  - notifications consumer websocket handshake + text-frame decode with mock endpoint
 - Regression:
   - rejoin without disconnect is rejected (`Regression: #324`)
   - queue overflow rejects new event (`Regression: #324`)
@@ -432,6 +456,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - processor proof admission message/commitment/replay/format guards remain fail-closed (`Regression: #995`)
   - task/escrow/peer lifecycle generated invariant lanes remain deterministic (`Regression: #842`)
   - invariant/fuzz/concurrency combined lane reason-code policy remains fail-closed (`Regression: #897`)
+  - notifications websocket variant/reconnect fail-closed contract remains stable (`Regression: #1463`)
 - Performance:
   - bounded PR-lane runtime backpressure evaluation budget check
   - bounded PR-lane authenticated peer-frame validation budget check
@@ -458,6 +483,7 @@ cargo test -p kamn-core network_fault_simulation
 cargo test -p kamn-core snapshot_store
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-core --test bridge_quorum_runtime_docs
+cargo test -p kamn-core --test kolme_runtime_commit_notifications
 cargo test -p kamn-core --test message_envelope_fuzz_smoke functional_envelope_mutation_suite_covers_malformed_truncated_and_tampered_classes -- --exact
 cargo test -p kamn-core --test did_fuzz_smoke functional_did_mutation_suite_covers_normalization_encoding_and_method_mismatch_classes -- --exact
 bash scripts/runtime/run_input_mutation_contract_lane.sh
@@ -474,6 +500,7 @@ bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /t
 cargo test -p kamn-node --test node_runtime_cli_docs
 cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
 bash scripts/runtime/run_runtime_snapshot_contract_lane.sh
+bash scripts/kolme/run_notifications_consumer_contract_lane.sh
 ```
 
 Scheduled deep-lane command:

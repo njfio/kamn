@@ -256,12 +256,14 @@ pub use kolme_runtime_commit::{
     KolmeApiNextNonceResponse, KolmeCommitReceiptFinality, KolmeRuntimeCommitClient,
     KolmeRuntimeCommitError, KolmeRuntimeCommitFinalityChecker,
     KolmeRuntimeCommitFinalityTransport, KolmeRuntimeCommitHttpTransport,
-    KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitOutcome, KolmeRuntimeCommitProvider,
+    KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitNotificationEvent,
+    KolmeRuntimeCommitNotificationsConnection, KolmeRuntimeCommitNotificationsConnector,
+    KolmeRuntimeCommitNotificationsConsumer, KolmeRuntimeCommitOutcome, KolmeRuntimeCommitProvider,
     KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderOutcome,
     KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderTransport,
     KolmeRuntimeCommitReceipt, KolmeRuntimeCommitRequest, KolmeRuntimeCommitTransportErrorKind,
-    RuntimeCommitFinalityProjection, RuntimeCommitLifecycleRecord, RuntimeCommitLifecycleState,
-    RuntimeCommitPipeline,
+    KolmeRuntimeCommitWebsocketConnector, RuntimeCommitFinalityProjection,
+    RuntimeCommitLifecycleRecord, RuntimeCommitLifecycleState, RuntimeCommitPipeline,
 };
 pub use message_delivery_guards::{
     DeliveryFailureCode, DeliveryGuardInput, DeliveryGuardSnapshot, DeliveryGuardSnapshotError,
