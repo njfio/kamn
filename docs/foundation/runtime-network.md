@@ -180,6 +180,7 @@ This document captures the initial runtime-network foundation slice for peer lif
 ## Localhost Signed Integration Evidence Key Contract Rules
 - Harness command:
   - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario success --output-json /tmp/localhost-signed-harness-success.json`
+  - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario session-expired --output-json /tmp/localhost-signed-harness-session-expired.json`
   - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario replay-nonce --output-json /tmp/localhost-signed-harness-replay.json`
   - `bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario admission-guards --output-json /tmp/localhost-signed-harness-admission.json`
 - Contract lane command:
@@ -196,15 +197,22 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `localhost_signed_integration:success:v1`
   - `localhost_signed_integration:signature-mismatch:v1`
   - `localhost_signed_integration:timeout:v1`
+  - `localhost_signed_integration:session-expired:v1`
   - `localhost_signed_integration:replay-nonce:v1`
   - `localhost_signed_integration:admission-guards:v1`
 - Deterministic reason markers:
   - `signature_mismatch_detected`
   - `listener_timeout_detected`
+  - `session_expired_detected`
   - `replay_nonce_detected`
   - `session_admission_guards_detected`
+  - `expiry_guard_status=pass`
   - `admission_reason_codes=["stale_session_detected","unauthorized_sender_detected","malformed_payload_detected"]`
   - `final_decision=GO` for pass reports
+- Session nonce/expiry guard rules:
+  - payload must include `session_epoch_seconds`
+  - listener enforces `--session-max-age-seconds` fail-closed admission checks
+  - stale session epochs are rejected before delivery acceptance
 - Regression policy:
   - deterministic evidence keys and reason keys remain fail-closed (`Regression: #899`).
   - replay nonce and session admission guards remain fail-closed (`Regression: #1382`).

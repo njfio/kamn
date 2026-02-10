@@ -32,6 +32,7 @@ required_markers=(
   "localhost_signed_integration_success=pass"
   "localhost_signed_integration_signature_mismatch=pass"
   "localhost_signed_integration_timeout=pass"
+  "localhost_signed_integration_session_expired=pass"
   "localhost_signed_integration_replay_nonce=pass"
   "localhost_signed_integration_admission_guards=pass"
   "localhost_signed_integration_policy=ok"
@@ -57,6 +58,7 @@ assert report["final_decision"] == "GO"
 assert report["success_scenario_status"] == "pass"
 assert report["signature_mismatch_scenario_status"] == "pass"
 assert report["timeout_scenario_status"] == "pass"
+assert report["session_expired_scenario_status"] == "pass"
 assert report["replay_nonce_scenario_status"] == "pass"
 assert report["admission_guards_scenario_status"] == "pass"
 assert (
@@ -75,6 +77,10 @@ assert (
     == "localhost_signed_integration:signature-mismatch:v1"
 )
 assert report["timeout_evidence_key"] == "localhost_signed_integration:timeout:v1"
+assert (
+    report["session_expired_evidence_key"]
+    == "localhost_signed_integration:session-expired:v1"
+)
 assert report["replay_nonce_evidence_key"] == "localhost_signed_integration:replay-nonce:v1"
 assert (
     report["admission_guards_evidence_key"]
@@ -90,6 +96,10 @@ assert (
     == "localhost_signed_integration_reason:listener_timeout_detected:v1"
 )
 assert (
+    report["session_expired_reason_key"]
+    == "localhost_signed_integration_reason:session_expired_detected:v1"
+)
+assert (
     report["replay_nonce_reason_key"]
     == "localhost_signed_integration_reason:replay_nonce_detected:v1"
 )
@@ -100,10 +110,12 @@ assert (
 # Regression: #878
 assert report["signature_mismatch_reason_code"] == "signature_mismatch_detected"
 assert report["timeout_reason_code"] == "listener_timeout_detected"
+assert report["session_expired_reason_code"] == "session_expired_detected"
 assert report["replay_nonce_reason_code"] == "replay_nonce_detected"
 assert (
     report["admission_guards_reason_code"] == "session_admission_guards_detected"
 )
+assert report["expiry_guard_status"] == "pass"
 assert report["replay_guard_status"] == "pass"
 assert report["replay_rejected_nonce"] == 7
 assert report["admission_guard_status"] == "pass"

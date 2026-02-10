@@ -69,6 +69,25 @@ if ! printf '%s\n' "$timeout_output" | grep -Fq "evidence_key=localhost_signed_i
   exit 1
 fi
 
+session_expired_report="$TMP_DIR/session-expired.json"
+session_expired_output="$(
+  bash "$RUNNER" \
+    --scenario session-expired \
+    --output-json "$session_expired_report"
+)"
+if ! printf '%s\n' "$session_expired_output" | grep -Fq "status=pass; scenario=session-expired;"; then
+  echo "expected session-expired scenario status summary from localhost signed integration harness" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$session_expired_output" | grep -Fq "reason_code=session_expired_detected;"; then
+  echo "expected session-expired scenario reason code from localhost signed integration harness" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$session_expired_output" | grep -Fq "evidence_key=localhost_signed_integration:session-expired:v1;"; then
+  echo "expected session-expired scenario evidence key from localhost signed integration harness" >&2
+  exit 1
+fi
+
 replay_report="$TMP_DIR/replay-nonce.json"
 replay_output="$(
   bash "$RUNNER" \
@@ -111,6 +130,7 @@ python3 - \
   "$success_report" \
   "$signature_report" \
   "$timeout_report" \
+  "$session_expired_report" \
   "$replay_report" \
   "$admission_report" <<'PY'
 import json
@@ -120,8 +140,9 @@ import sys
 success_report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 signature_report = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
 timeout_report = json.loads(pathlib.Path(sys.argv[3]).read_text(encoding="utf-8"))
-replay_report = json.loads(pathlib.Path(sys.argv[4]).read_text(encoding="utf-8"))
-admission_report = json.loads(pathlib.Path(sys.argv[5]).read_text(encoding="utf-8"))
+session_expired_report = json.loads(pathlib.Path(sys.argv[4]).read_text(encoding="utf-8"))
+replay_report = json.loads(pathlib.Path(sys.argv[5]).read_text(encoding="utf-8"))
+admission_report = json.loads(pathlib.Path(sys.argv[6]).read_text(encoding="utf-8"))
 
 assert success_report["schema_version"] == "kamn.sdk.localhost-signed.integration-harness.v1"
 assert success_report["status"] == "pass"
@@ -151,6 +172,19 @@ assert timeout_report["evidence_key"] == "localhost_signed_integration:timeout:v
 assert (
     timeout_report["reason_key"]
     == "localhost_signed_integration_reason:listener_timeout_detected:v1"
+)
+
+assert session_expired_report["status"] == "pass"
+assert session_expired_report["scenario"] == "session-expired"
+assert session_expired_report["reason_code"] == "session_expired_detected"
+assert (
+    session_expired_report["evidence_key"]
+    == "localhost_signed_integration:session-expired:v1"
+)
+assert session_expired_report["expiry_guard_status"] == "pass"
+assert (
+    session_expired_report["reason_key"]
+    == "localhost_signed_integration_reason:session_expired_detected:v1"
 )
 
 assert replay_report["status"] == "pass"

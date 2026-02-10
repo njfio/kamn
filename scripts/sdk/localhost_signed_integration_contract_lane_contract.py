@@ -114,6 +114,7 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
         success_report = tmp_dir / "success.json"
         signature_report = tmp_dir / "signature-mismatch.json"
         timeout_report = tmp_dir / "timeout.json"
+        session_expired_report = tmp_dir / "session-expired.json"
         replay_report = tmp_dir / "replay-nonce.json"
         admission_report = tmp_dir / "admission-guards.json"
         summary_report = tmp_dir / "localhost-signed-integration-contract.json"
@@ -222,6 +223,44 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
             "expected localhost signed integration timeout scenario evidence key",
         )
 
+        session_expired_run = subprocess.run(
+            [
+                "bash",
+                str(harness_runner),
+                "--scenario",
+                "session-expired",
+                "--output-json",
+                str(session_expired_report),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if session_expired_run.returncode != 0:
+            fail(
+                (
+                    session_expired_run.stderr
+                    or session_expired_run.stdout
+                    or "session-expired scenario failed"
+                ).strip()
+            )
+        session_expired_output = session_expired_run.stdout
+        _require_contains(
+            session_expired_output,
+            "status=pass; scenario=session-expired;",
+            "expected localhost signed integration session-expired scenario status marker",
+        )
+        _require_contains(
+            session_expired_output,
+            "reason_code=session_expired_detected;",
+            "expected localhost signed integration session-expired scenario reason code marker",
+        )
+        _require_contains(
+            session_expired_output,
+            "evidence_key=localhost_signed_integration:session-expired:v1;",
+            "expected localhost signed integration session-expired scenario evidence key",
+        )
+
         replay_run = subprocess.run(
             [
                 "bash",
@@ -295,6 +334,7 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
         success_payload = load_json(success_report)
         signature_payload = load_json(signature_report)
         timeout_payload = load_json(timeout_report)
+        session_expired_payload = load_json(session_expired_report)
         replay_payload = load_json(replay_report)
         admission_payload = load_json(admission_report)
         summary = {
@@ -307,27 +347,33 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
             "success_scenario_status": success_payload["status"],
             "signature_mismatch_scenario_status": signature_payload["status"],
             "timeout_scenario_status": timeout_payload["status"],
+            "session_expired_scenario_status": session_expired_payload["status"],
             "replay_nonce_scenario_status": replay_payload["status"],
             "admission_guards_scenario_status": admission_payload["status"],
             "success_evidence_key": success_payload["evidence_key"],
             "signature_mismatch_evidence_key": signature_payload["evidence_key"],
             "timeout_evidence_key": timeout_payload["evidence_key"],
+            "session_expired_evidence_key": session_expired_payload["evidence_key"],
             "replay_nonce_evidence_key": replay_payload["evidence_key"],
             "admission_guards_evidence_key": admission_payload["evidence_key"],
             "signature_mismatch_reason_code": signature_payload["reason_code"],
             "timeout_reason_code": timeout_payload["reason_code"],
+            "session_expired_reason_code": session_expired_payload["reason_code"],
             "replay_nonce_reason_code": replay_payload["reason_code"],
             "admission_guards_reason_code": admission_payload["reason_code"],
             "success_reason_key": success_payload["reason_key"],
             "signature_mismatch_reason_key": signature_payload["reason_key"],
             "timeout_reason_key": timeout_payload["reason_key"],
+            "session_expired_reason_key": session_expired_payload["reason_key"],
             "replay_nonce_reason_key": replay_payload["reason_key"],
             "admission_guards_reason_key": admission_payload["reason_key"],
             "success_elapsed_seconds": success_payload["elapsed_seconds"],
             "signature_mismatch_elapsed_seconds": signature_payload["elapsed_seconds"],
             "timeout_elapsed_seconds": timeout_payload["elapsed_seconds"],
+            "session_expired_elapsed_seconds": session_expired_payload["elapsed_seconds"],
             "replay_nonce_elapsed_seconds": replay_payload["elapsed_seconds"],
             "admission_guards_elapsed_seconds": admission_payload["elapsed_seconds"],
+            "expiry_guard_status": session_expired_payload["expiry_guard_status"],
             "replay_guard_status": replay_payload["replay_guard_status"],
             "replay_rejected_nonce": replay_payload["replay_rejected_nonce"],
             "admission_guard_status": admission_payload["admission_guard_status"],
@@ -408,6 +454,7 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
         print("localhost_signed_integration_success=pass")
         print("localhost_signed_integration_signature_mismatch=pass")
         print("localhost_signed_integration_timeout=pass")
+        print("localhost_signed_integration_session_expired=pass")
         print("localhost_signed_integration_replay_nonce=pass")
         print("localhost_signed_integration_admission_guards=pass")
         print("localhost_signed_integration_policy=ok")
