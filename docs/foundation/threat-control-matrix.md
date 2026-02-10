@@ -18,6 +18,10 @@ This matrix translates PRD threat model concerns into enforceable controls, owne
   - `bash scripts/governance/run_quorum_attestation_replay_guard_lane.sh --output-file /tmp/governance-quorum-attestation-replay-report.json`
 - Policy checker:
   - `bash scripts/governance/check_quorum_attestation_replay_policy.sh --report-file /tmp/governance-quorum-attestation-replay-report.json`
+- Stable shell wrapper:
+  - `scripts/governance/check_quorum_attestation_replay_policy.sh`
+- Shared Python implementation:
+  - `scripts/governance/governance_quorum_attestation_replay_policy_contract.py`
 - Contract lane:
   - `bash scripts/governance/run_quorum_attestation_replay_contract_lane.sh --output-file /tmp/governance-quorum-attestation-replay-contract-report.json`
 - Required schema and reason-key markers:

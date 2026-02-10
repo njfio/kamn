@@ -1155,6 +1155,12 @@ assert_eq "$(extract_output "$governance_quorum_contract_script_output" "run_gov
 assert_eq "$(extract_output "$governance_quorum_contract_script_output" "run_governance_stake_slash_contract_tests")" "false" "governance quorum attestation script changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_quorum_contract_script_output" "test_scope")" "governance-contract" "governance quorum attestation contract script changes should set governance-contract scope"
 
+governance_quorum_policy_shared_contract_output="$(run_selector $'scripts/governance/governance_quorum_attestation_replay_policy_contract.py')"
+assert_eq "$(extract_output "$governance_quorum_policy_shared_contract_output" "run_rust")" "false" "governance quorum attestation shared policy contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$governance_quorum_policy_shared_contract_output" "run_governance_simulation_contract_tests")" "true" "governance quorum attestation shared policy contract changes must run governance simulation lane"
+assert_eq "$(extract_output "$governance_quorum_policy_shared_contract_output" "run_governance_stake_slash_contract_tests")" "false" "governance quorum attestation shared policy contract changes should not trigger governance stake/slash lane"
+assert_eq "$(extract_output "$governance_quorum_policy_shared_contract_output" "test_scope")" "governance-contract" "governance quorum attestation shared policy contract changes should set governance-contract scope"
+
 governance_contract_fixture_output="$(run_selector $'fixtures/governance_simulation/veto_timelock_cases.json')"
 assert_eq "$(extract_output "$governance_contract_fixture_output" "run_rust")" "false" "governance fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_contract_fixture_output" "run_governance_simulation_contract_tests")" "true" "governance fixture changes must run governance simulation lane"

@@ -26,6 +26,7 @@ fn matrix_maps_controls_to_tests() {
         "integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards"
     ));
     assert!(CONTROL_MATRIX.contains("quorum_attestation_replay_guard_policy_contract"));
+    assert!(CONTROL_MATRIX.contains("governance_quorum_attestation_replay_policy_contract.py"));
     assert!(CONTROL_MATRIX.contains("run_quorum_attestation_replay_contract_lane.sh"));
 }
 
