@@ -34,6 +34,7 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
 fn doc_contains_frontend_shell_matrix_contract_lane() {
     assert!(DOC.contains("## Frontend Shell Determinism Matrix Contract"));
     assert!(DOC.contains("run_dashboard_shell_determinism_matrix_lane.sh"));
+    assert!(DOC.contains("dashboard_shell_determinism_matrix_lane_contract.py"));
     assert!(DOC.contains("check_dashboard_shell_determinism_matrix_policy.sh"));
     assert!(DOC.contains("dashboard_shell_determinism_matrix_policy_contract.py"));
     assert!(DOC.contains("run_dashboard_shell_determinism_matrix_contract_lane.sh"));
@@ -84,4 +85,11 @@ fn regression_requires_frontend_shell_matrix_policy_wrapper_delegation_rule() {
     // Regression: #1210
     assert!(DOC.contains("dashboard_shell_determinism_matrix_policy_contract.py"));
     assert!(DOC.contains("Regression: #1210"));
+}
+
+#[test]
+fn regression_requires_frontend_shell_matrix_lane_wrapper_delegation_rule() {
+    // Regression: #1214
+    assert!(DOC.contains("dashboard_shell_determinism_matrix_lane_contract.py"));
+    assert!(DOC.contains("Regression: #1214"));
 }
