@@ -52,4 +52,9 @@ if ! grep -q "check_soc2_control_evidence_policy.sh" "$SHARED_CONTRACT"; then
   exit 1
 fi
 
+if ! grep -q "from framework.contract_lane_helpers import" "$SHARED_CONTRACT"; then
+  echo "expected shared SOC2 contract-lane implementation to import framework lane helper utilities" >&2
+  exit 1
+fi
+
 echo "soc2 control evidence contract lane script tests passed."

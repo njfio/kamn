@@ -3,10 +3,17 @@
 
 from __future__ import annotations
 
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR.parent))
+
+from framework.contract_lane_helpers import (  # noqa: E402
+    build_default_bundle_args,
+    run_capture,
+)
 
 
 def usage() -> None:
@@ -18,12 +25,6 @@ def fail(message: str) -> int:
     """Emit stable error and return non-zero."""
     print(message, file=sys.stderr)
     return 1
-
-
-def run_capture(command: list[str]) -> tuple[int, str]:
-    """Run command and return exit code + merged output."""
-    result = subprocess.run(command, capture_output=True, text=True, check=False)
-    return result.returncode, (result.stdout or "") + (result.stderr or "")
 
 
 def main(argv: list[str]) -> int:
@@ -40,37 +41,36 @@ def main(argv: list[str]) -> int:
 
     with tempfile.TemporaryDirectory() as temp_dir:
         bundle_file = Path(temp_dir) / "soc2-control-contract.json"
+        generator_args = build_default_bundle_args(
+            output_file=str(bundle_file),
+            pairs=(
+                ("--control-id", "CC6.1"),
+                ("--audit-period-start", "2026-01-01"),
+                ("--audit-period-end", "2026-01-31"),
+                ("--collector-did", "did:kamn:auditor-contract"),
+                (
+                    "--evidence-uri",
+                    "s3://kamn-audit/soc2/cc6_1/contract/evidence.json",
+                ),
+                (
+                    "--evidence-sha256",
+                    "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                ),
+                ("--tamper-check", "PASS"),
+                ("--completeness-check", "PASS"),
+                ("--ci-fast-gate", "PASS"),
+            ),
+        )
         generator_code, generator_output = run_capture(
-            [
-                "bash",
-                str(generator),
-                "--output-file",
-                str(bundle_file),
-                "--control-id",
-                "CC6.1",
-                "--audit-period-start",
-                "2026-01-01",
-                "--audit-period-end",
-                "2026-01-31",
-                "--collector-did",
-                "did:kamn:auditor-contract",
-                "--evidence-uri",
-                "s3://kamn-audit/soc2/cc6_1/contract/evidence.json",
-                "--evidence-sha256",
-                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                "--tamper-check",
-                "PASS",
-                "--completeness-check",
-                "PASS",
-                "--ci-fast-gate",
-                "PASS",
-            ]
+            ["bash", str(generator), *generator_args],
+            cwd=root_dir,
         )
         if generator_code != 0 or "final_decision=GO" not in generator_output:
             return fail("expected SOC2 contract lane bundle decision to be GO")
 
         policy_code, policy_output = run_capture(
-            ["bash", str(policy_checker), "--bundle-file", str(bundle_file)]
+            ["bash", str(policy_checker), "--bundle-file", str(bundle_file)],
+            cwd=root_dir,
         )
         if policy_code != 0 or "final_decision=GO" not in policy_output:
             return fail("expected SOC2 contract lane policy check decision to be GO")
