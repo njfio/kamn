@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT="$ROOT_DIR/scripts/ci/check_script_duplication_budget.sh"
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+if [ ! -x "$SCRIPT" ]; then
+  echo "expected script duplication budget checker to be executable" >&2
+  exit 1
+fi
+
+SCRIPTS_ROOT="$TMP_DIR/scripts"
+mkdir -p "$SCRIPTS_ROOT/a" "$SCRIPTS_ROOT/b"
+cat >"$SCRIPTS_ROOT/a/run_alpha.sh" <<'EOF_SCRIPT'
+#!/usr/bin/env bash
+echo "alpha"
+EOF_SCRIPT
+cat >"$SCRIPTS_ROOT/b/run_beta.sh" <<'EOF_SCRIPT'
+#!/usr/bin/env bash
+echo "beta"
+EOF_SCRIPT
+
+PASS_BUDGET="$TMP_DIR/pass-budget.env"
+cat >"$PASS_BUDGET" <<'EOF_BUDGET'
+SCRIPT_COUNT_MAX=5
+SHELL_LINE_TOTAL_MAX=20
+DUPLICATE_BASENAME_MAX=0
+DUPLICATE_CONTENT_MAX=0
+EOF_BUDGET
+
+pass_output="$(
+  bash "$SCRIPT" \
+    --scripts-root "$SCRIPTS_ROOT" \
+    --budget-file "$PASS_BUDGET"
+)"
+
+if ! printf '%s\n' "$pass_output" | grep -q '^status=pass$'; then
+  echo "expected pass status for script duplication budget checker pass path" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$pass_output" | grep -q '^violations=none$'; then
+  echo "expected no violations on pass path" >&2
+  exit 1
+fi
+
+FAIL_BUDGET="$TMP_DIR/fail-budget.env"
+cat >"$FAIL_BUDGET" <<'EOF_BUDGET'
+SCRIPT_COUNT_MAX=1
+SHELL_LINE_TOTAL_MAX=20
+DUPLICATE_BASENAME_MAX=0
+DUPLICATE_CONTENT_MAX=0
+EOF_BUDGET
+
+set +e
+fail_output="$(
+  bash "$SCRIPT" \
+    --scripts-root "$SCRIPTS_ROOT" \
+    --budget-file "$FAIL_BUDGET" 2>&1
+)"
+fail_code=$?
+set -e
+
+if [ "$fail_code" -eq 0 ]; then
+  echo "expected checker to fail when script_count exceeds threshold" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$fail_output" | grep -q '^status=fail$'; then
+  echo "expected fail status on threshold exceed path" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$fail_output" | grep -q 'violations=script_count'; then
+  echo "expected script_count violation marker" >&2
+  exit 1
+fi
+
+WAIVER_FILE="$TMP_DIR/waiver.json"
+cat >"$WAIVER_FILE" <<'EOF_WAIVER'
+{
+  "reason": "temporary migration burst",
+  "expires_on": "2099-12-31",
+  "allow_metrics": ["script_count"]
+}
+EOF_WAIVER
+
+waived_output="$(
+  bash "$SCRIPT" \
+    --scripts-root "$SCRIPTS_ROOT" \
+    --budget-file "$FAIL_BUDGET" \
+    --waiver-file "$WAIVER_FILE"
+)"
+
+if ! printf '%s\n' "$waived_output" | grep -q '^status=pass$'; then
+  echo "expected waiver path to pass when script_count is explicitly allowed" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$waived_output" | grep -q '^waived=script_count$'; then
+  echo "expected waived metric marker for script_count" >&2
+  exit 1
+fi
+
+cat >"$WAIVER_FILE" <<'EOF_WAIVER'
+{
+  "reason": "expired exception",
+  "expires_on": "2020-01-01",
+  "allow_metrics": ["script_count"]
+}
+EOF_WAIVER
+
+set +e
+expired_waiver_output="$(
+  bash "$SCRIPT" \
+    --scripts-root "$SCRIPTS_ROOT" \
+    --budget-file "$FAIL_BUDGET" \
+    --waiver-file "$WAIVER_FILE" \
+    --today "2026-02-10" 2>&1
+)"
+expired_waiver_code=$?
+set -e
+
+if [ "$expired_waiver_code" -eq 0 ]; then
+  echo "expected expired waiver path to fail closed" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$expired_waiver_output" | grep -q 'waiver_error=waiver has expired'; then
+  echo "expected explicit expired waiver error output" >&2
+  exit 1
+fi
+
+echo "script duplication budget checker tests passed."
