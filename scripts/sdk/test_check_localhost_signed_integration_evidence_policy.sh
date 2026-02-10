@@ -64,6 +64,39 @@ if ! printf '%s\n' "$tampered_output" | grep -Fq "stale_session_detected"; then
   exit 1
 fi
 
+malformed_signature_tampered_report="$TMP_DIR/localhost-signed-integration-contract-report.malformed-signature-tampered.json"
+cp "$report_file" "$malformed_signature_tampered_report"
+python3 - "$malformed_signature_tampered_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["malformed_signature_reason_code"] = "tampered_signature_reason"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+malformed_signature_tampered_output="$(bash "$CHECKER" --report-file "$malformed_signature_tampered_report" 2>&1)"
+malformed_signature_tampered_code=$?
+set -e
+
+if [ "$malformed_signature_tampered_code" -eq 0 ]; then
+  echo "expected malformed-signature reason drift report to fail policy checker" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$malformed_signature_tampered_output" | grep -Fq "malformed_signature_reason_code"; then
+  echo "expected explicit malformed signature reason-code policy error" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$malformed_signature_tampered_output" | grep -Fq "malformed_signature_detected"; then
+  echo "expected deterministic malformed-signature reason marker in policy regression path" >&2
+  exit 1
+fi
+
 expiry_tampered_report="$TMP_DIR/localhost-signed-integration-contract-report.expiry-tampered.json"
 cp "$report_file" "$expiry_tampered_report"
 python3 - "$expiry_tampered_report" <<'PY'

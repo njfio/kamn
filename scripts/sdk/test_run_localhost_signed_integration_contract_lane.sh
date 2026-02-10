@@ -31,6 +31,7 @@ lane_output="$(
 required_markers=(
   "localhost_signed_integration_success=pass"
   "localhost_signed_integration_signature_mismatch=pass"
+  "localhost_signed_integration_malformed_signature=pass"
   "localhost_signed_integration_timeout=pass"
   "localhost_signed_integration_session_expired=pass"
   "localhost_signed_integration_replay_nonce=pass"
@@ -57,6 +58,7 @@ assert report["status"] == "pass"
 assert report["final_decision"] == "GO"
 assert report["success_scenario_status"] == "pass"
 assert report["signature_mismatch_scenario_status"] == "pass"
+assert report["malformed_signature_scenario_status"] == "pass"
 assert report["timeout_scenario_status"] == "pass"
 assert report["session_expired_scenario_status"] == "pass"
 assert report["replay_nonce_scenario_status"] == "pass"
@@ -76,6 +78,10 @@ assert (
     report["signature_mismatch_evidence_key"]
     == "localhost_signed_integration:signature-mismatch:v1"
 )
+assert (
+    report["malformed_signature_evidence_key"]
+    == "localhost_signed_integration:malformed-signature:v1"
+)
 assert report["timeout_evidence_key"] == "localhost_signed_integration:timeout:v1"
 assert (
     report["session_expired_evidence_key"]
@@ -90,6 +96,10 @@ assert report["success_reason_key"] == "localhost_signed_integration_reason:none
 assert (
     report["signature_mismatch_reason_key"]
     == "localhost_signed_integration_reason:signature_mismatch_detected:v1"
+)
+assert (
+    report["malformed_signature_reason_key"]
+    == "localhost_signed_integration_reason:malformed_signature_detected:v1"
 )
 assert (
     report["timeout_reason_key"]
@@ -109,6 +119,7 @@ assert (
 )
 # Regression: #878
 assert report["signature_mismatch_reason_code"] == "signature_mismatch_detected"
+assert report["malformed_signature_reason_code"] == "malformed_signature_detected"
 assert report["timeout_reason_code"] == "listener_timeout_detected"
 assert report["session_expired_reason_code"] == "session_expired_detected"
 assert report["replay_nonce_reason_code"] == "replay_nonce_detected"

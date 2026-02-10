@@ -196,12 +196,14 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `localhost_signed_integration_contract:v1`
   - `localhost_signed_integration:success:v1`
   - `localhost_signed_integration:signature-mismatch:v1`
+  - `localhost_signed_integration:malformed-signature:v1`
   - `localhost_signed_integration:timeout:v1`
   - `localhost_signed_integration:session-expired:v1`
   - `localhost_signed_integration:replay-nonce:v1`
   - `localhost_signed_integration:admission-guards:v1`
 - Deterministic reason markers:
   - `signature_mismatch_detected`
+  - `malformed_signature_detected`
   - `listener_timeout_detected`
   - `session_expired_detected`
   - `replay_nonce_detected`
@@ -213,6 +215,9 @@ This document captures the initial runtime-network foundation slice for peer lif
   - payload must include `session_epoch_seconds`
   - listener enforces `--session-max-age-seconds` fail-closed admission checks
   - stale session epochs are rejected before delivery acceptance
+- Signature failure taxonomy:
+  - malformed signature encoding/profile -> `malformed_signature_detected`
+  - deterministic signature mismatch against expected fields -> `signature_mismatch_detected`
 - Regression policy:
   - deterministic evidence keys and reason keys remain fail-closed (`Regression: #899`).
   - replay nonce and session admission guards remain fail-closed (`Regression: #1382`).

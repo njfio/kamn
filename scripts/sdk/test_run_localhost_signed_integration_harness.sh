@@ -49,6 +49,25 @@ if ! printf '%s\n' "$signature_output" | grep -Fq "evidence_key=localhost_signed
   exit 1
 fi
 
+malformed_signature_report="$TMP_DIR/malformed-signature.json"
+malformed_signature_output="$(
+  bash "$RUNNER" \
+    --scenario malformed-signature \
+    --output-json "$malformed_signature_report"
+)"
+if ! printf '%s\n' "$malformed_signature_output" | grep -Fq "status=pass; scenario=malformed-signature;"; then
+  echo "expected malformed signature scenario status summary from localhost signed integration harness" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$malformed_signature_output" | grep -Fq "reason_code=malformed_signature_detected;"; then
+  echo "expected malformed signature scenario reason code from localhost signed integration harness" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$malformed_signature_output" | grep -Fq "evidence_key=localhost_signed_integration:malformed-signature:v1;"; then
+  echo "expected malformed signature scenario evidence key from localhost signed integration harness" >&2
+  exit 1
+fi
+
 timeout_report="$TMP_DIR/timeout.json"
 timeout_output="$(
   bash "$RUNNER" \
@@ -129,6 +148,7 @@ fi
 python3 - \
   "$success_report" \
   "$signature_report" \
+  "$malformed_signature_report" \
   "$timeout_report" \
   "$session_expired_report" \
   "$replay_report" \
@@ -139,10 +159,11 @@ import sys
 
 success_report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 signature_report = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
-timeout_report = json.loads(pathlib.Path(sys.argv[3]).read_text(encoding="utf-8"))
-session_expired_report = json.loads(pathlib.Path(sys.argv[4]).read_text(encoding="utf-8"))
-replay_report = json.loads(pathlib.Path(sys.argv[5]).read_text(encoding="utf-8"))
-admission_report = json.loads(pathlib.Path(sys.argv[6]).read_text(encoding="utf-8"))
+malformed_signature_report = json.loads(pathlib.Path(sys.argv[3]).read_text(encoding="utf-8"))
+timeout_report = json.loads(pathlib.Path(sys.argv[4]).read_text(encoding="utf-8"))
+session_expired_report = json.loads(pathlib.Path(sys.argv[5]).read_text(encoding="utf-8"))
+replay_report = json.loads(pathlib.Path(sys.argv[6]).read_text(encoding="utf-8"))
+admission_report = json.loads(pathlib.Path(sys.argv[7]).read_text(encoding="utf-8"))
 
 assert success_report["schema_version"] == "kamn.sdk.localhost-signed.integration-harness.v1"
 assert success_report["status"] == "pass"
@@ -163,6 +184,19 @@ assert (
 assert (
     signature_report["reason_key"]
     == "localhost_signed_integration_reason:signature_mismatch_detected:v1"
+)
+
+assert malformed_signature_report["status"] == "pass"
+assert malformed_signature_report["scenario"] == "malformed-signature"
+assert malformed_signature_report["reason_code"] == "malformed_signature_detected"
+assert (
+    malformed_signature_report["evidence_key"]
+    == "localhost_signed_integration:malformed-signature:v1"
+)
+assert malformed_signature_report["signature_guard_status"] == "pass"
+assert (
+    malformed_signature_report["reason_key"]
+    == "localhost_signed_integration_reason:malformed_signature_detected:v1"
 )
 
 assert timeout_report["status"] == "pass"

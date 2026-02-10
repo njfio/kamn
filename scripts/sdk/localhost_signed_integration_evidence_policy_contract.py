@@ -36,29 +36,34 @@ def check_report(args: argparse.Namespace) -> int:
         "scenario_fixture_ids",
         "success_scenario_status",
         "signature_mismatch_scenario_status",
+        "malformed_signature_scenario_status",
         "timeout_scenario_status",
         "session_expired_scenario_status",
         "replay_nonce_scenario_status",
         "admission_guards_scenario_status",
         "success_evidence_key",
         "signature_mismatch_evidence_key",
+        "malformed_signature_evidence_key",
         "timeout_evidence_key",
         "session_expired_evidence_key",
         "replay_nonce_evidence_key",
         "admission_guards_evidence_key",
         "signature_mismatch_reason_code",
+        "malformed_signature_reason_code",
         "timeout_reason_code",
         "session_expired_reason_code",
         "replay_nonce_reason_code",
         "admission_guards_reason_code",
         "success_reason_key",
         "signature_mismatch_reason_key",
+        "malformed_signature_reason_key",
         "timeout_reason_key",
         "session_expired_reason_key",
         "replay_nonce_reason_key",
         "admission_guards_reason_key",
         "success_elapsed_seconds",
         "signature_mismatch_elapsed_seconds",
+        "malformed_signature_elapsed_seconds",
         "timeout_elapsed_seconds",
         "session_expired_elapsed_seconds",
         "replay_nonce_elapsed_seconds",
@@ -106,6 +111,7 @@ def check_report(args: argparse.Namespace) -> int:
     for field_name in (
         "success_scenario_status",
         "signature_mismatch_scenario_status",
+        "malformed_signature_scenario_status",
         "timeout_scenario_status",
         "session_expired_scenario_status",
         "replay_nonce_scenario_status",
@@ -116,6 +122,8 @@ def check_report(args: argparse.Namespace) -> int:
 
     if payload["signature_mismatch_reason_code"] != "signature_mismatch_detected":
         fail("signature_mismatch_reason_code must be signature_mismatch_detected")
+    if payload["malformed_signature_reason_code"] != "malformed_signature_detected":
+        fail("malformed_signature_reason_code must be malformed_signature_detected")
 
     if payload["timeout_reason_code"] != "listener_timeout_detected":
         fail("timeout_reason_code must be listener_timeout_detected")
@@ -139,6 +147,14 @@ def check_report(args: argparse.Namespace) -> int:
         fail(
             "signature_mismatch_evidence_key must be "
             "localhost_signed_integration:signature-mismatch:v1"
+        )
+    if (
+        payload["malformed_signature_evidence_key"]
+        != "localhost_signed_integration:malformed-signature:v1"
+    ):
+        fail(
+            "malformed_signature_evidence_key must be "
+            "localhost_signed_integration:malformed-signature:v1"
         )
 
     if payload["timeout_evidence_key"] != "localhost_signed_integration:timeout:v1":
@@ -172,6 +188,14 @@ def check_report(args: argparse.Namespace) -> int:
         fail(
             "signature_mismatch_reason_key must be "
             "localhost_signed_integration_reason:signature_mismatch_detected:v1"
+        )
+    if (
+        payload["malformed_signature_reason_key"]
+        != "localhost_signed_integration_reason:malformed_signature_detected:v1"
+    ):
+        fail(
+            "malformed_signature_reason_key must be "
+            "localhost_signed_integration_reason:malformed_signature_detected:v1"
         )
 
     if (
@@ -210,6 +234,7 @@ def check_report(args: argparse.Namespace) -> int:
     for field_name in (
         "success_elapsed_seconds",
         "signature_mismatch_elapsed_seconds",
+        "malformed_signature_elapsed_seconds",
         "timeout_elapsed_seconds",
         "session_expired_elapsed_seconds",
         "replay_nonce_elapsed_seconds",
@@ -246,6 +271,8 @@ def check_report(args: argparse.Namespace) -> int:
     if payload["success_scenario_status"] != "pass":
         expected_status = "fail"
     if payload["signature_mismatch_scenario_status"] != "pass":
+        expected_status = "fail"
+    if payload["malformed_signature_scenario_status"] != "pass":
         expected_status = "fail"
     if payload["timeout_scenario_status"] != "pass":
         expected_status = "fail"

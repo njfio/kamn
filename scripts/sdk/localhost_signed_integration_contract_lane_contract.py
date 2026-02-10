@@ -113,6 +113,7 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
     try:
         success_report = tmp_dir / "success.json"
         signature_report = tmp_dir / "signature-mismatch.json"
+        malformed_signature_report = tmp_dir / "malformed-signature.json"
         timeout_report = tmp_dir / "timeout.json"
         session_expired_report = tmp_dir / "session-expired.json"
         replay_report = tmp_dir / "replay-nonce.json"
@@ -187,6 +188,44 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
             signature_output,
             f"evidence_key={fixture_by_scenario['signature-mismatch']['expected_evidence_key']};",
             "expected localhost signed integration signature mismatch scenario evidence key",
+        )
+
+        malformed_signature_run = subprocess.run(
+            [
+                "bash",
+                str(harness_runner),
+                "--scenario",
+                "malformed-signature",
+                "--output-json",
+                str(malformed_signature_report),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if malformed_signature_run.returncode != 0:
+            fail(
+                (
+                    malformed_signature_run.stderr
+                    or malformed_signature_run.stdout
+                    or "malformed-signature scenario failed"
+                ).strip()
+            )
+        malformed_signature_output = malformed_signature_run.stdout
+        _require_contains(
+            malformed_signature_output,
+            "status=pass; scenario=malformed-signature;",
+            "expected localhost signed integration malformed signature scenario status marker",
+        )
+        _require_contains(
+            malformed_signature_output,
+            "reason_code=malformed_signature_detected;",
+            "expected localhost signed integration malformed signature scenario reason code marker",
+        )
+        _require_contains(
+            malformed_signature_output,
+            "evidence_key=localhost_signed_integration:malformed-signature:v1;",
+            "expected localhost signed integration malformed signature scenario evidence key",
         )
 
         timeout_run = subprocess.run(
@@ -333,6 +372,7 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
 
         success_payload = load_json(success_report)
         signature_payload = load_json(signature_report)
+        malformed_signature_payload = load_json(malformed_signature_report)
         timeout_payload = load_json(timeout_report)
         session_expired_payload = load_json(session_expired_report)
         replay_payload = load_json(replay_report)
@@ -346,29 +386,34 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
             "scenario_fixture_ids": scenario_fixture_ids,
             "success_scenario_status": success_payload["status"],
             "signature_mismatch_scenario_status": signature_payload["status"],
+            "malformed_signature_scenario_status": malformed_signature_payload["status"],
             "timeout_scenario_status": timeout_payload["status"],
             "session_expired_scenario_status": session_expired_payload["status"],
             "replay_nonce_scenario_status": replay_payload["status"],
             "admission_guards_scenario_status": admission_payload["status"],
             "success_evidence_key": success_payload["evidence_key"],
             "signature_mismatch_evidence_key": signature_payload["evidence_key"],
+            "malformed_signature_evidence_key": malformed_signature_payload["evidence_key"],
             "timeout_evidence_key": timeout_payload["evidence_key"],
             "session_expired_evidence_key": session_expired_payload["evidence_key"],
             "replay_nonce_evidence_key": replay_payload["evidence_key"],
             "admission_guards_evidence_key": admission_payload["evidence_key"],
             "signature_mismatch_reason_code": signature_payload["reason_code"],
+            "malformed_signature_reason_code": malformed_signature_payload["reason_code"],
             "timeout_reason_code": timeout_payload["reason_code"],
             "session_expired_reason_code": session_expired_payload["reason_code"],
             "replay_nonce_reason_code": replay_payload["reason_code"],
             "admission_guards_reason_code": admission_payload["reason_code"],
             "success_reason_key": success_payload["reason_key"],
             "signature_mismatch_reason_key": signature_payload["reason_key"],
+            "malformed_signature_reason_key": malformed_signature_payload["reason_key"],
             "timeout_reason_key": timeout_payload["reason_key"],
             "session_expired_reason_key": session_expired_payload["reason_key"],
             "replay_nonce_reason_key": replay_payload["reason_key"],
             "admission_guards_reason_key": admission_payload["reason_key"],
             "success_elapsed_seconds": success_payload["elapsed_seconds"],
             "signature_mismatch_elapsed_seconds": signature_payload["elapsed_seconds"],
+            "malformed_signature_elapsed_seconds": malformed_signature_payload["elapsed_seconds"],
             "timeout_elapsed_seconds": timeout_payload["elapsed_seconds"],
             "session_expired_elapsed_seconds": session_expired_payload["elapsed_seconds"],
             "replay_nonce_elapsed_seconds": replay_payload["elapsed_seconds"],
@@ -453,6 +498,7 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
 
         print("localhost_signed_integration_success=pass")
         print("localhost_signed_integration_signature_mismatch=pass")
+        print("localhost_signed_integration_malformed_signature=pass")
         print("localhost_signed_integration_timeout=pass")
         print("localhost_signed_integration_session_expired=pass")
         print("localhost_signed_integration_replay_nonce=pass")

@@ -97,6 +97,10 @@ fn signature_for_fields(
     )
 }
 
+fn has_supported_signature_prefix(signature: &str) -> bool {
+    signature.starts_with("sig:ed25519:baseline-v1:")
+}
+
 fn parse_wire_message(payload: &str) -> Result<WireMessage, String> {
     let mut from: Option<String> = None;
     let mut to: Option<String> = None;
@@ -252,6 +256,9 @@ fn run() -> Result<(), String> {
         &wire.state_hash,
         &wire.body,
     );
+    if !has_supported_signature_prefix(&wire.signature) {
+        return Err("malformed signature format".to_owned());
+    }
     if wire.signature != expected_signature {
         return Err("signature verification failed".to_owned());
     }
