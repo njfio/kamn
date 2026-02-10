@@ -1,0 +1,20 @@
+const DOC: &str = include_str!("../../../docs/foundation/kolme-runtime-commit-client.md");
+
+#[test]
+fn doc_contains_adapter_types_and_validation_commands() {
+    assert!(DOC.contains("AdapterBackedKolmeRuntimeCommitClient"));
+    assert!(DOC.contains("KolmeRuntimeCommitProvider"));
+    assert!(DOC.contains("KolmeRuntimeCommitProviderOutcome"));
+    assert!(DOC.contains("KolmeRuntimeCommitProviderReceipt"));
+    assert!(DOC.contains("KolmeRuntimeCommitProviderError"));
+    assert!(DOC.contains("KolmeRuntimeCommitTransportErrorKind"));
+    assert!(DOC.contains("cargo test -p kamn-core --test kolme_runtime_commit_client"));
+    assert!(DOC.contains("scripts/kolme/run_runtime_commit_contract_lane.sh"));
+}
+
+#[test]
+fn regression_requires_adapter_provider_mismatch_and_non_final_fail_closed_marker() {
+    // Regression: #979
+    assert!(DOC.contains("`Regression: #979`"));
+    assert!(DOC.contains("provider mismatch/non-final receipts remain fail-closed"));
+}

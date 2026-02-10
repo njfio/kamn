@@ -313,6 +313,182 @@ pub trait KolmeRuntimeCommitClient {
     ) -> Result<KolmeRuntimeCommitOutcome, KolmeRuntimeCommitError>;
 }
 
+/// Typed transport error class emitted when adapter-backed provider calls fail.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KolmeRuntimeCommitTransportErrorKind {
+    /// Provider call timed out.
+    Timeout,
+    /// Provider transport/channel is unavailable.
+    Unavailable,
+    /// Provider response payload is malformed.
+    MalformedResponse,
+}
+
+/// Provider-facing error for runtime commit adapter wiring.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum KolmeRuntimeCommitProviderError {
+    /// Provider call timed out before a response.
+    Timeout,
+    /// Provider transport/channel is unavailable.
+    Unavailable { reason: String },
+    /// Provider emitted malformed payload/shape.
+    MalformedResponse { reason: String },
+}
+
+impl fmt::Display for KolmeRuntimeCommitProviderError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Timeout => write!(f, "provider request timed out"),
+            Self::Unavailable { reason } => write!(f, "provider unavailable: {reason}"),
+            Self::MalformedResponse { reason } => {
+                write!(f, "provider malformed response: {reason}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for KolmeRuntimeCommitProviderError {}
+
+/// Provider receipt payload returned by adapter-facing transport.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KolmeRuntimeCommitProviderReceipt {
+    /// Provider identifier returned by upstream.
+    pub provider: String,
+    /// Commit identifier returned by upstream.
+    pub commit_id: String,
+    /// Receipt finality classification returned by upstream.
+    pub finality: KolmeCommitReceiptFinality,
+}
+
+/// Provider submission outcome used by adapter-backed runtime commit clients.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum KolmeRuntimeCommitProviderOutcome {
+    /// Provider accepted the submission.
+    Submitted(KolmeRuntimeCommitProviderReceipt),
+    /// Provider detected duplicate idempotency key.
+    Duplicate(KolmeRuntimeCommitProviderReceipt),
+    /// Provider rejected the submission with explicit reason.
+    Rejected { reason: String },
+}
+
+/// Provider interface consumed by the adapter-backed runtime commit client.
+pub trait KolmeRuntimeCommitProvider {
+    /// Submits canonical wire payload with deterministic idempotency key.
+    fn submit_runtime_commit(
+        &mut self,
+        wire_payload: &str,
+        idempotency_key: &str,
+    ) -> Result<KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderError>;
+}
+
+/// Adapter-backed runtime commit client that enforces provider and finality policies.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AdapterBackedKolmeRuntimeCommitClient<P> {
+    expected_provider: String,
+    provider: P,
+}
+
+impl<P: KolmeRuntimeCommitProvider> AdapterBackedKolmeRuntimeCommitClient<P> {
+    /// Builds adapter-backed client with expected provider identifier.
+    pub fn new(expected_provider: &str, provider: P) -> Result<Self, KolmeRuntimeCommitError> {
+        if expected_provider.trim().is_empty() {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "expected_provider",
+                reason: "must not be empty",
+            });
+        }
+        Ok(Self {
+            expected_provider: expected_provider.to_owned(),
+            provider,
+        })
+    }
+}
+
+impl<P: KolmeRuntimeCommitProvider> KolmeRuntimeCommitClient
+    for AdapterBackedKolmeRuntimeCommitClient<P>
+{
+    fn submit_commit(
+        &mut self,
+        request: &KolmeRuntimeCommitRequest,
+    ) -> Result<KolmeRuntimeCommitOutcome, KolmeRuntimeCommitError> {
+        request.validate()?;
+        let provider_outcome = self
+            .provider
+            .submit_runtime_commit(&request.to_wire_payload(), request.idempotency_key())
+            .map_err(map_provider_error)?;
+        map_provider_outcome(provider_outcome, self.expected_provider.as_str())
+    }
+}
+
+fn map_provider_error(error: KolmeRuntimeCommitProviderError) -> KolmeRuntimeCommitError {
+    match error {
+        KolmeRuntimeCommitProviderError::Timeout => KolmeRuntimeCommitError::ProviderTransport {
+            kind: KolmeRuntimeCommitTransportErrorKind::Timeout,
+            detail: "provider request timed out".to_owned(),
+        },
+        KolmeRuntimeCommitProviderError::Unavailable { reason } => {
+            KolmeRuntimeCommitError::ProviderTransport {
+                kind: KolmeRuntimeCommitTransportErrorKind::Unavailable,
+                detail: reason,
+            }
+        }
+        KolmeRuntimeCommitProviderError::MalformedResponse { reason } => {
+            KolmeRuntimeCommitError::ProviderTransport {
+                kind: KolmeRuntimeCommitTransportErrorKind::MalformedResponse,
+                detail: reason,
+            }
+        }
+    }
+}
+
+fn map_provider_outcome(
+    outcome: KolmeRuntimeCommitProviderOutcome,
+    expected_provider: &str,
+) -> Result<KolmeRuntimeCommitOutcome, KolmeRuntimeCommitError> {
+    match outcome {
+        KolmeRuntimeCommitProviderOutcome::Submitted(receipt) => {
+            let runtime_receipt = map_provider_receipt(receipt, expected_provider)?;
+            Ok(KolmeRuntimeCommitOutcome::Submitted(runtime_receipt))
+        }
+        KolmeRuntimeCommitProviderOutcome::Duplicate(receipt) => {
+            let runtime_receipt = map_provider_receipt(receipt, expected_provider)?;
+            Ok(KolmeRuntimeCommitOutcome::Duplicate(runtime_receipt))
+        }
+        KolmeRuntimeCommitProviderOutcome::Rejected { reason } => {
+            Ok(KolmeRuntimeCommitOutcome::Rejected { reason })
+        }
+    }
+}
+
+fn map_provider_receipt(
+    receipt: KolmeRuntimeCommitProviderReceipt,
+    expected_provider: &str,
+) -> Result<KolmeRuntimeCommitReceipt, KolmeRuntimeCommitError> {
+    if receipt.provider != expected_provider {
+        return Err(KolmeRuntimeCommitError::ProviderMismatch {
+            expected: expected_provider.to_owned(),
+            observed: receipt.provider,
+        });
+    }
+    if receipt.commit_id.trim().is_empty() {
+        return Err(KolmeRuntimeCommitError::InvalidRequest {
+            field: "receipt_commit_id",
+            reason: "must not be empty",
+        });
+    }
+    if !matches!(receipt.finality, KolmeCommitReceiptFinality::Final) {
+        return Err(KolmeRuntimeCommitError::NonFinalReceipt {
+            commit_id: receipt.commit_id,
+            finality: receipt.finality,
+        });
+    }
+    Ok(KolmeRuntimeCommitReceipt {
+        provider: receipt.provider,
+        commit_id: receipt.commit_id,
+        finality: receipt.finality,
+    })
+}
+
 /// Deterministic in-memory commit client used for contract tests and local development.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct InMemoryKolmeRuntimeCommitClient {
@@ -431,6 +607,27 @@ pub enum KolmeRuntimeCommitError {
         /// Observed incoming value.
         observed: String,
     },
+    /// Provider transport failed while submitting runtime commit payload.
+    ProviderTransport {
+        /// Typed transport error kind.
+        kind: KolmeRuntimeCommitTransportErrorKind,
+        /// Deterministic detail text for the transport error.
+        detail: String,
+    },
+    /// Provider identifier did not match configured expected provider.
+    ProviderMismatch {
+        /// Configured provider identifier.
+        expected: String,
+        /// Observed provider identifier from response.
+        observed: String,
+    },
+    /// Provider returned a non-final receipt which is rejected in adapter mode.
+    NonFinalReceipt {
+        /// Commit identifier returned by provider.
+        commit_id: String,
+        /// Observed non-final receipt state.
+        finality: KolmeCommitReceiptFinality,
+    },
 }
 
 impl fmt::Display for KolmeRuntimeCommitError {
@@ -452,6 +649,21 @@ impl fmt::Display for KolmeRuntimeCommitError {
             } => write!(
                 f,
                 "receipt field mismatch for {field}: expected '{expected}', observed '{observed}'"
+            ),
+            Self::ProviderTransport { kind, detail } => {
+                write!(f, "provider transport failure ({kind:?}): {detail}")
+            }
+            Self::ProviderMismatch { expected, observed } => write!(
+                f,
+                "provider mismatch: expected '{expected}', observed '{observed}'"
+            ),
+            Self::NonFinalReceipt {
+                commit_id,
+                finality,
+            } => write!(
+                f,
+                "provider receipt must be final for commit '{commit_id}', observed {}",
+                commit_finality_label(*finality)
             ),
         }
     }
@@ -506,6 +718,14 @@ fn lifecycle_state_label(state: RuntimeCommitLifecycleState) -> &'static str {
         RuntimeCommitLifecycleState::Pending => "pending",
         RuntimeCommitLifecycleState::Finalized => "finalized",
         RuntimeCommitLifecycleState::Failed => "failed",
+    }
+}
+
+fn commit_finality_label(finality: KolmeCommitReceiptFinality) -> &'static str {
+    match finality {
+        KolmeCommitReceiptFinality::Pending => "pending",
+        KolmeCommitReceiptFinality::Final => "final",
+        KolmeCommitReceiptFinality::Failed => "failed",
     }
 }
 
