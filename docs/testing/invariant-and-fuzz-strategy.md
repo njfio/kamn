@@ -13,6 +13,7 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
 
 - Property/invariant lane:
   - `bash scripts/runtime/run_lifecycle_property_contract_lane.sh`
+  - `bash scripts/runtime/run_lifecycle_property_contract_lane.sh --output-json /tmp/lifecycle-property-contract-report.json`
 - Mutation/fuzz smoke lane:
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh`
 - Concurrency race lane:
@@ -25,7 +26,8 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
 ## Determinism Strategy
 
 - Property coverage uses deterministic generated-sequence tests for task,
-  escrow/dispute-refund, and peer lifecycle transitions.
+  escrow/dispute-refund, and peer lifecycle transitions, and emits replay
+  metadata artifact key `lifecycle_property_replay:v1`.
 - Mutation/fuzz smoke lanes use fixed malformed/tampered classes with stable
   fail-closed reason signatures.
 - Concurrency lanes use replay fixtures and deterministic round-based checks to
@@ -33,6 +35,10 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
 
 ## Evidence and Policy Contracts
 
+- Lifecycle property report schema:
+  - `kamn.runtime.lifecycle-property-contract-report.v1`
+- Lifecycle property replay artifact key:
+  - `lifecycle_property_replay:v1`
 - Combined lane report schema:
   - `kamn.runtime.invariant-fuzz-concurrency-contract-report.v1`
 - Required summary fields:
@@ -40,6 +46,9 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
   - `property_lane_status`
   - `fuzz_lane_status`
   - `concurrency_lane_status`
+  - `property_replay_schema_version`
+  - `property_replay_artifact_key`
+  - `property_replay_test_count`
   - `elapsed_seconds`
   - `max_seconds`
   - `reason_codes`
@@ -48,6 +57,8 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
 
 ## Runtime Budgets
 
+- Property lane runtime budget env:
+  - `KAMN_RUNTIME_LIFECYCLE_PROPERTY_MAX_SECONDS` (default `120`)
 - Combined lane runtime budget env:
   - `KAMN_RUNTIME_INVARIANT_FUZZ_CONCURRENCY_MAX_SECONDS` (default `180`)
 - ZK witness mutation routing control:

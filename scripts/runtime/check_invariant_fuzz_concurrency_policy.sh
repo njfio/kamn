@@ -66,6 +66,9 @@ required_fields = (
     "property_lane_status",
     "fuzz_lane_status",
     "concurrency_lane_status",
+    "property_replay_schema_version",
+    "property_replay_artifact_key",
+    "property_replay_test_count",
     "elapsed_seconds",
     "max_seconds",
     "reason_codes",
@@ -84,6 +87,26 @@ if status not in {"pass", "fail"}:
 for field in ("property_lane_status", "fuzz_lane_status", "concurrency_lane_status"):
     if payload[field] not in {"pass", "fail"}:
         fail(f"{field} must be pass or fail")
+
+property_replay_schema_version = payload["property_replay_schema_version"]
+expected_property_replay_schema_version = "kamn.runtime.lifecycle-property-contract-report.v1"
+if property_replay_schema_version != expected_property_replay_schema_version:
+    fail(
+        "property_replay_schema_version mismatch: "
+        f"expected {expected_property_replay_schema_version}, found {property_replay_schema_version}"
+    )
+
+property_replay_artifact_key = payload["property_replay_artifact_key"]
+expected_property_replay_artifact_key = "lifecycle_property_replay:v1"
+if property_replay_artifact_key != expected_property_replay_artifact_key:
+    fail(
+        "property_replay_artifact_key mismatch: "
+        f"expected {expected_property_replay_artifact_key}, found {property_replay_artifact_key}"
+    )
+
+property_replay_test_count = payload["property_replay_test_count"]
+if not isinstance(property_replay_test_count, int) or property_replay_test_count < 12:
+    fail("property_replay_test_count must be an integer >= 12")
 
 elapsed_seconds = payload["elapsed_seconds"]
 max_seconds = payload["max_seconds"]

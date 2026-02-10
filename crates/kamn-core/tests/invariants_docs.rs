@@ -4,6 +4,8 @@ const DOC: &str = include_str!("../../../docs/foundation/invariants.md");
 fn doc_contains_runtime_invariant_harness_coverage_contract() {
     assert!(DOC.contains("## Runtime Invariant Harness Coverage (Issue #897)"));
     assert!(DOC.contains("run_lifecycle_property_contract_lane.sh"));
+    assert!(DOC.contains("kamn.runtime.lifecycle-property-contract-report.v1"));
+    assert!(DOC.contains("lifecycle_property_replay:v1"));
     assert!(DOC.contains("run_input_mutation_contract_lane.sh"));
     assert!(DOC.contains("run_concurrency_state_mutation_contract_lane.sh"));
     assert!(DOC.contains("run_invariant_fuzz_concurrency_contract_lane.sh"));

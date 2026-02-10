@@ -35,7 +35,7 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 payload = json.loads(path.read_text(encoding="utf-8"))
-payload["reason_codes"] = ["unexpected_reason_code"]
+payload["property_replay_artifact_key"] = "tampered_artifact_key"
 path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
@@ -49,14 +49,14 @@ if [ "$tampered_code" -eq 0 ]; then
   exit 1
 fi
 
-if ! printf '%s\n' "$tampered_output" | grep -Fq "reason_codes mismatch"; then
-  echo "expected explicit reason_codes mismatch policy error" >&2
+if ! printf '%s\n' "$tampered_output" | grep -Fq "property_replay_artifact_key mismatch"; then
+  echo "expected explicit property replay artifact mismatch policy error" >&2
   exit 1
 fi
 
-# Regression: #897
-if ! printf '%s\n' "$tampered_output" | grep -Fq "['none']"; then
-  echo "expected required reason-code marker in invariant/fuzz/concurrency policy regression path" >&2
+# Regression: #1360
+if ! printf '%s\n' "$tampered_output" | grep -Fq "lifecycle_property_replay:v1"; then
+  echo "expected required property replay artifact key marker in policy regression path" >&2
   exit 1
 fi
 
