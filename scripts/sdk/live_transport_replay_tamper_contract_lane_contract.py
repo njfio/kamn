@@ -34,6 +34,7 @@ def _require_contains_text(output: str, marker: str, message: str) -> None:
 
 
 def run_lane(args: argparse.Namespace) -> int:
+    mode = args.mode
     generator = ROOT_DIR / "scripts/sdk/generate_live_transport_replay_tamper_evidence_bundle.sh"
     checker = ROOT_DIR / "scripts/sdk/check_live_transport_replay_tamper_policy.sh"
     runtime_doc = ROOT_DIR / "docs/foundation/runtime-network.md"
@@ -201,6 +202,10 @@ def run_lane(args: argparse.Namespace) -> int:
         runtime_doc_text = runtime_doc.read_text(encoding="utf-8")
         if "run_live_transport_replay_tamper_contract_lane.sh" not in runtime_doc_text:
             fail("expected runtime-network doc to reference replay/tamper contract lane command")
+        if "run_live_transport_replay_tamper_fast_lane.sh" not in runtime_doc_text:
+            fail("expected runtime-network doc to reference replay/tamper fast lane command")
+        if "run_live_transport_replay_tamper_deep_lane.sh" not in runtime_doc_text:
+            fail("expected runtime-network doc to reference replay/tamper deep lane command")
         if "generate_live_transport_replay_tamper_evidence_bundle.sh" not in runtime_doc_text:
             fail("expected runtime-network doc to reference replay/tamper generator command")
         if "check_live_transport_replay_tamper_policy.sh" not in runtime_doc_text:
@@ -211,8 +216,77 @@ def run_lane(args: argparse.Namespace) -> int:
         invariant_doc_text = invariant_doc.read_text(encoding="utf-8")
         if "run_live_transport_replay_tamper_contract_lane.sh" not in invariant_doc_text:
             fail("expected invariant-and-fuzz strategy doc to reference replay/tamper contract lane")
+        if "run_live_transport_replay_tamper_fast_lane.sh" not in invariant_doc_text:
+            fail("expected invariant-and-fuzz strategy doc to reference replay/tamper fast lane")
+        if "run_live_transport_replay_tamper_deep_lane.sh" not in invariant_doc_text:
+            fail("expected invariant-and-fuzz strategy doc to reference replay/tamper deep lane")
         if "check_live_transport_replay_tamper_policy.sh" not in invariant_doc_text:
             fail("expected invariant-and-fuzz strategy doc to reference replay/tamper policy checker")
+
+        if mode == "deep":
+            deep_no_go_bundle = tmp_path / "live-transport-replay-tamper-deep-no-go.json"
+            deep_no_go_generate = subprocess.run(
+                [
+                    "bash",
+                    str(generator),
+                    "--output-file",
+                    str(deep_no_go_bundle),
+                    "--transport-lane-id",
+                    "localhost-signed-integration",
+                    "--message-id",
+                    "msg-deep-no-go-001",
+                    "--from-did",
+                    "kamn:did:agent:sender-1",
+                    "--to-did",
+                    "kamn:did:agent:listener-1",
+                    "--nonce",
+                    "42",
+                    "--signature-status",
+                    "mismatch",
+                    "--replay-detected",
+                    "false",
+                    "--tamper-detected",
+                    "false",
+                    "--ci-fast-gate",
+                    "FAIL",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if deep_no_go_generate.returncode != 0:
+                fail(
+                    (
+                        deep_no_go_generate.stderr
+                        or deep_no_go_generate.stdout
+                        or "deep NO-GO generation failed"
+                    ).strip()
+                )
+            _require_contains_line(
+                deep_no_go_generate.stdout,
+                "final_decision=NO-GO",
+                "expected deep replay/tamper generation to produce NO-GO",
+            )
+
+            deep_no_go_check = subprocess.run(
+                ["bash", str(checker), "--bundle-file", str(deep_no_go_bundle)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if deep_no_go_check.returncode != 0:
+                fail(
+                    (
+                        deep_no_go_check.stderr
+                        or deep_no_go_check.stdout
+                        or "deep NO-GO policy check failed"
+                    ).strip()
+                )
+            _require_contains_line(
+                deep_no_go_check.stdout,
+                "final_decision=NO-GO",
+                "expected deep replay/tamper policy checker to keep NO-GO decision",
+            )
 
         elapsed_seconds = int(time.time()) - start_epoch
         if elapsed_seconds > max_seconds:
@@ -220,6 +294,9 @@ def run_lane(args: argparse.Namespace) -> int:
 
         print("status=ok")
         print(f"report_file={go_bundle}")
+        print(f"lane_mode={mode}")
+        if mode == "deep":
+            print("deep_no_go_status=verified")
         print("final_decision=GO")
         print("live transport replay/tamper contract lane tests passed.")
         return 0
@@ -230,6 +307,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Run live transport replay/tamper evidence contract lane."
     )
     parser.add_argument("--output-report", default="")
+    parser.add_argument("--mode", default="fast", choices=("fast", "deep"))
     parser.set_defaults(handler=run_lane)
     return parser
 
