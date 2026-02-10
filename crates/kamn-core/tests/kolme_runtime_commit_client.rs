@@ -540,3 +540,70 @@ fn regression_live_provider_fails_closed_for_malformed_response_shape() {
         "provider must fail closed for malformed backend responses"
     );
 }
+
+#[test]
+fn functional_live_provider_maps_tx_hash_and_block_height_to_deterministic_commit_id() {
+    let response = r#"{"status":"submitted","provider":"kolme-fork-local","tx_hash":"ab12cd34","block_height":"42","finality":"confirmed"}"#.to_owned();
+    let (transport, _calls) = RecordingTransport::with_result(Ok(response));
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        "http://127.0.0.1:3030",
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-live-provider-003",
+        "state:live",
+        "kamn:did:agent:live-provider-3",
+        57,
+        "payload:live-provider",
+    )
+    .expect("request should build");
+
+    let outcome = provider
+        .submit_runtime_commit(&request.to_wire_payload(), request.idempotency_key())
+        .expect("provider should map tx_hash response");
+    assert_eq!(
+        outcome,
+        KolmeRuntimeCommitProviderOutcome::Submitted(KolmeRuntimeCommitProviderReceipt {
+            provider: "kolme-fork-local".to_owned(),
+            commit_id: "kolme-commit:ab12cd34:h42".to_owned(),
+            finality: KolmeCommitReceiptFinality::Final,
+        })
+    );
+}
+
+#[test]
+fn regression_live_provider_normalizes_backend_finality_aliases() {
+    // Regression: #1412
+    let response = r#"{"status":"duplicate","provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34:h42","finality":"accepted"}"#.to_owned();
+    let (transport, _calls) = RecordingTransport::with_result(Ok(response));
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        "http://127.0.0.1:3030",
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-live-provider-004",
+        "state:live",
+        "kamn:did:agent:live-provider-4",
+        58,
+        "payload:live-provider",
+    )
+    .expect("request should build");
+
+    let outcome = provider
+        .submit_runtime_commit(&request.to_wire_payload(), request.idempotency_key())
+        .expect("provider should map finality alias");
+    assert_eq!(
+        outcome,
+        KolmeRuntimeCommitProviderOutcome::Duplicate(KolmeRuntimeCommitProviderReceipt {
+            provider: "kolme-fork-local".to_owned(),
+            commit_id: "kolme-commit:ab12cd34:h42".to_owned(),
+            finality: KolmeCommitReceiptFinality::Pending,
+        })
+    );
+}
