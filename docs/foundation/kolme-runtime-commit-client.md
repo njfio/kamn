@@ -26,12 +26,18 @@ handling.
 
 ## Concrete HTTP Transport
 
-- `KolmeRuntimeCommitHttpTransport` provides a dependency-free `http://` transport for:
+- `KolmeRuntimeCommitHttpTransport` provides deterministic `http://` and `https://` transport paths for:
   - `KolmeRuntimeCommitProviderTransport::submit_runtime_commit(...)`
   - `KolmeRuntimeCommitFinalityTransport::fetch_runtime_commit_finality(...)`
 - Optional auth-aware constructor:
   - `KolmeRuntimeCommitHttpTransport::new_with_authorization(...)`
   - emits `Authorization: <value>` header on submit/finality requests.
+- HTTPS/TLS behavior:
+  - `https://` requests execute through TLS-backed `openssl s_client` command wiring.
+  - optional custom CA trust file is read from `KAMN_KOLME_TLS_CA_FILE`.
+  - deterministic TLS failure mapping:
+    - certificate verification failures => `Unavailable("tls certificate verification failed")`
+    - handshake/protocol failures => `Unavailable("tls handshake failed")`
 - Deterministic runtime behavior:
   - query parameter encoding for `commit_id` in finality polling
   - timeout mapping to `KolmeRuntimeCommitProviderError::Timeout`
@@ -98,6 +104,8 @@ Run targeted checks first:
 ```bash
 cargo test -p kamn-core --test kolme_runtime_commit_client
 cargo test -p kamn-core --test kolme_runtime_commit_finality
+cargo test -p kamn-core --test kolme_runtime_commit_http_transport functional_https_transport_submit_with_trusted_ca_succeeds -- --exact
+cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_https_transport_maps_certificate_errors_to_unavailable -- --exact
 bash scripts/kolme/run_runtime_commit_contract_lane.sh
 ```
 
@@ -112,3 +120,4 @@ cargo test -p kamn-core
 - Mutated invalid runtime commit requests remain fail-closed (`Regression: #825`).
 - Replay/tamper mismatch policy remains fail-closed (`Regression: #827`).
 - Adapter provider mismatch/non-final receipts remain fail-closed (`Regression: #979`).
+- HTTPS TLS certificate/handshake drift remains fail-closed (`Regression: #1471`).

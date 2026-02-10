@@ -3,10 +3,205 @@ use kamn_core::{
     KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitProvider, KolmeRuntimeCommitProviderError,
     KolmeRuntimeCommitProviderOutcome,
 };
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
+use std::path::{Path, PathBuf};
+use std::process::{Child, Command, Stdio};
+use std::sync::{Mutex, OnceLock};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::{env, fs};
+
+const TLS_CA_FILE_ENV: &str = "KAMN_KOLME_TLS_CA_FILE";
+
+fn tls_env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
+struct EnvVarGuard {
+    key: &'static str,
+    previous: Option<String>,
+}
+
+impl EnvVarGuard {
+    fn set(key: &'static str, value: Option<&str>) -> Self {
+        let previous = env::var(key).ok();
+        match value {
+            Some(value) => env::set_var(key, value),
+            None => env::remove_var(key),
+        }
+        Self { key, previous }
+    }
+}
+
+impl Drop for EnvVarGuard {
+    fn drop(&mut self) {
+        if let Some(previous) = self.previous.as_deref() {
+            env::set_var(self.key, previous);
+        } else {
+            env::remove_var(self.key);
+        }
+    }
+}
+
+struct HttpsSingleRequestServer {
+    base_url: String,
+    cert_path: PathBuf,
+    child: Child,
+    temp_dir: PathBuf,
+}
+
+impl HttpsSingleRequestServer {
+    fn wait_for_exit(&mut self) {
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            match self.child.try_wait() {
+                Ok(Some(_)) => return,
+                Ok(None) => {
+                    if Instant::now() >= deadline {
+                        let _ = self.child.kill();
+                        let _ = self.child.wait();
+                        panic!("https test server did not exit after handling request");
+                    }
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(error) => panic!("failed to wait for https test server exit: {error}"),
+            }
+        }
+    }
+}
+
+impl Drop for HttpsSingleRequestServer {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+        let _ = fs::remove_dir_all(&self.temp_dir);
+    }
+}
+
+fn unique_temp_dir(prefix: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system clock should be after unix epoch")
+        .as_nanos();
+    let path = env::temp_dir().join(format!("{prefix}-{}-{nanos}", std::process::id()));
+    fs::create_dir_all(&path).expect("temporary directory should be created");
+    path
+}
+
+fn generate_self_signed_certificate(temp_dir: &Path) -> (PathBuf, PathBuf) {
+    let cert_path = temp_dir.join("cert.pem");
+    let key_path = temp_dir.join("key.pem");
+
+    let status = Command::new("openssl")
+        .arg("req")
+        .arg("-x509")
+        .arg("-newkey")
+        .arg("rsa:2048")
+        .arg("-keyout")
+        .arg(key_path.as_os_str())
+        .arg("-out")
+        .arg(cert_path.as_os_str())
+        .arg("-days")
+        .arg("1")
+        .arg("-nodes")
+        .arg("-subj")
+        .arg("/CN=127.0.0.1")
+        .arg("-addext")
+        .arg("subjectAltName = DNS:localhost,IP:127.0.0.1")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .expect("openssl should run");
+    assert!(
+        status.success(),
+        "openssl self-signed certificate generation should succeed"
+    );
+
+    (cert_path, key_path)
+}
+
+fn spawn_https_single_request_server(
+    status_code: u16,
+    response_body: &str,
+) -> HttpsSingleRequestServer {
+    let temp_dir = unique_temp_dir("kolme-https-server");
+    let (cert_path, key_path) = generate_self_signed_certificate(temp_dir.as_path());
+    let server_script = r#"
+import http.server
+import ssl
+import sys
+
+port = int(sys.argv[1])
+cert_file = sys.argv[2]
+key_file = sys.argv[3]
+status_code = int(sys.argv[4])
+response_body = sys.argv[5].encode("utf-8")
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    def _reply(self):
+        if "Content-Length" in self.headers:
+            _ = self.rfile.read(int(self.headers["Content-Length"]))
+        self.send_response(status_code)
+        self.send_header("Content-Length", str(len(response_body)))
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.wfile.write(response_body)
+
+    def do_POST(self):
+        self._reply()
+
+    def do_GET(self):
+        self._reply()
+
+    def log_message(self, _format, *args):
+        return
+
+httpd = http.server.HTTPServer(("127.0.0.1", port), Handler)
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
+print(httpd.server_address[1], flush=True)
+httpd.handle_request()
+"#;
+
+    let mut child = Command::new("python3")
+        .arg("-u")
+        .arg("-c")
+        .arg(server_script)
+        .arg("0")
+        .arg(cert_path.as_os_str())
+        .arg(key_path.as_os_str())
+        .arg(status_code.to_string())
+        .arg(response_body)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("python https test server should spawn");
+
+    let stdout = child
+        .stdout
+        .take()
+        .expect("python https test server stdout should be piped");
+    let mut stdout_reader = BufReader::new(stdout);
+    let mut port_line = String::new();
+    stdout_reader
+        .read_line(&mut port_line)
+        .expect("python https test server should emit bound port");
+    child.stdout = Some(stdout_reader.into_inner());
+
+    let port = port_line
+        .trim()
+        .parse::<u16>()
+        .expect("python https test server should emit a valid port");
+    HttpsSingleRequestServer {
+        base_url: format!("https://127.0.0.1:{port}"),
+        cert_path,
+        child,
+        temp_dir,
+    }
+}
 
 fn read_http_request(stream: &mut std::net::TcpStream) -> String {
     let mut buffer = Vec::new();
@@ -320,6 +515,105 @@ fn regression_http_transport_maps_422_to_invalid_request_malformed_error() {
         provider.submit_runtime_commit("operation_id=op-1\n", "idempotency-key-1"),
         Err(KolmeRuntimeCommitProviderError::MalformedResponse {
             reason: "http response status indicates invalid request: 422".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn functional_https_transport_submit_with_trusted_ca_succeeds() {
+    let _guard = tls_env_lock()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut server = spawn_https_single_request_server(
+        200,
+        "status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:https\nfinality=final\n",
+    );
+    let cert_path = server
+        .cert_path
+        .to_str()
+        .expect("temporary cert path should be valid utf-8")
+        .to_owned();
+    let _env_guard = EnvVarGuard::set(TLS_CA_FILE_ENV, Some(cert_path.as_str()));
+
+    let transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        server.base_url.as_str(),
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    let outcome = provider
+        .submit_runtime_commit("operation_id=op-https\n", "idempotency-key-https")
+        .expect("https submit should succeed");
+    match outcome {
+        KolmeRuntimeCommitProviderOutcome::Submitted(receipt) => {
+            assert_eq!(receipt.provider, "kolme-local");
+            assert_eq!(receipt.commit_id, "kolme-commit:https");
+            assert_eq!(receipt.finality, KolmeCommitReceiptFinality::Final);
+        }
+        other => panic!("unexpected provider outcome: {other:?}"),
+    }
+
+    server.wait_for_exit();
+}
+
+#[test]
+fn regression_https_transport_maps_certificate_errors_to_unavailable() {
+    let _guard = tls_env_lock()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut server = spawn_https_single_request_server(
+        200,
+        "status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:https\nfinality=final\n",
+    );
+    let _env_guard = EnvVarGuard::set(TLS_CA_FILE_ENV, None);
+
+    let transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        server.base_url.as_str(),
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    assert_eq!(
+        provider.submit_runtime_commit("operation_id=op-https\n", "idempotency-key-https"),
+        Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "tls certificate verification failed".to_owned(),
+        })
+    );
+
+    server.wait_for_exit();
+}
+
+#[test]
+fn regression_https_transport_maps_tls_handshake_failures_to_unavailable() {
+    let _guard = tls_env_lock()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let _env_guard = EnvVarGuard::set(TLS_CA_FILE_ENV, None);
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
+    let addr = listener.local_addr().expect("local addr should resolve");
+    thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("connection should be accepted");
+        let _ = stream.read(&mut [0_u8; 64]);
+        let _ =
+            stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+    });
+
+    let transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        format!("https://{addr}").as_str(),
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    assert_eq!(
+        provider.submit_runtime_commit("operation_id=op-https\n", "idempotency-key-https"),
+        Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "tls handshake failed".to_owned(),
         })
     );
 }
