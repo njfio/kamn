@@ -3,11 +3,22 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/frontend/run_dashboard_shell_determinism_matrix_contract_lane.sh"
+SHARED_SCRIPT="$ROOT_DIR/scripts/frontend/dashboard_shell_determinism_matrix_contract_lane_contract.py"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [ ! -x "$SCRIPT" ]; then
   echo "expected dashboard shell matrix contract lane script to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q 'dashboard_shell_determinism_matrix_contract_lane_contract.py' "$SCRIPT"; then
+  echo "expected dashboard shell matrix contract lane wrapper to delegate to shared implementation" >&2
+  exit 1
+fi
+
+if [ ! -x "$SHARED_SCRIPT" ]; then
+  echo "expected shared dashboard shell matrix contract lane implementation to be executable" >&2
   exit 1
 fi
 
@@ -37,8 +48,8 @@ if ! grep -q '"final_decision": "GO"' "$report_file"; then
   exit 1
 fi
 
-if ! grep -q 'check_dashboard_shell_determinism_matrix_policy.sh' "$SCRIPT"; then
-  echo "expected dashboard shell matrix contract lane to execute policy checker" >&2
+if ! grep -q 'check_dashboard_shell_determinism_matrix_policy.sh' "$SHARED_SCRIPT"; then
+  echo "expected dashboard shell matrix contract lane implementation to execute policy checker" >&2
   exit 1
 fi
 
