@@ -3,10 +3,21 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/compliance/run_dsar_legal_hold_contract_lane.sh"
+SHARED_CONTRACT="$ROOT_DIR/scripts/compliance/dsar_legal_hold_contract_lane_contract.py"
 DEEP_LANE="$ROOT_DIR/scripts/compliance/run_dsar_legal_hold_deep_lane.sh"
 
 if [ ! -x "$CONTRACT_LANE" ]; then
   echo "expected DSAR legal-hold contract lane script to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q 'dsar_legal_hold_contract_lane_contract.py' "$CONTRACT_LANE"; then
+  echo "expected DSAR legal-hold contract lane wrapper to delegate to shared implementation" >&2
+  exit 1
+fi
+
+if [ ! -x "$SHARED_CONTRACT" ]; then
+  echo "expected shared DSAR legal-hold contract lane implementation to be executable" >&2
   exit 1
 fi
 
@@ -31,5 +42,14 @@ if ! grep -q "dsar-legal-hold-report.json" "$DEEP_LANE"; then
   exit 1
 fi
 
-echo "dsar legal-hold contract lane script tests passed."
+if ! grep -q "generate_dsar_legal_hold_evidence_bundle.sh" "$SHARED_CONTRACT"; then
+  echo "expected shared DSAR contract lane implementation to execute DSAR bundle generator" >&2
+  exit 1
+fi
 
+if ! grep -q "check_dsar_legal_hold_policy.sh" "$SHARED_CONTRACT"; then
+  echo "expected shared DSAR contract lane implementation to execute DSAR policy checker" >&2
+  exit 1
+fi
+
+echo "dsar legal-hold contract lane script tests passed."

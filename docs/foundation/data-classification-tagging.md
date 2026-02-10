@@ -29,12 +29,15 @@ GDPR data-subject workflows require deterministic legal-hold precedence before e
   - `bash scripts/compliance/check_dsar_legal_hold_policy.sh --bundle-file /tmp/dsar-legal-hold.json`
 - PR fast contract lane:
   - `bash scripts/compliance/run_dsar_legal_hold_contract_lane.sh`
+- Shared contract-lane module:
+  - `scripts/compliance/dsar_legal_hold_contract_lane_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/compliance/run_dsar_legal_hold_deep_lane.sh --output-json dsar-legal-hold-report.json`
 - Replay matrix runner:
   - `python3 scripts/compliance/run_dsar_legal_hold_matrix.py --fixture fixtures/compliance_dsar/legal_hold_precedence_cases.json --output-json dsar-legal-hold-report.json`
 - Regression policy:
   - legal-hold bypass attempts and tampered DSAR evidence force `NO-GO` (`Regression: #732`).
+  - the shell contract-lane wrapper delegates orchestration logic to `dsar_legal_hold_contract_lane_contract.py` (`Regression: #1234`).
 
 ## Classification/Redaction Compliance Contract Lane
 Classification and redaction controls are validated together through a deterministic compliance lane that fails closed on schema or docs drift.

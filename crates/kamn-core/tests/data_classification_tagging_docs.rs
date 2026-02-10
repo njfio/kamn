@@ -13,6 +13,7 @@ fn doc_contains_dsar_legal_hold_evidence_contract() {
     assert!(DOC.contains("generate_dsar_legal_hold_evidence_bundle.sh"));
     assert!(DOC.contains("check_dsar_legal_hold_policy.sh"));
     assert!(DOC.contains("run_dsar_legal_hold_contract_lane.sh"));
+    assert!(DOC.contains("dsar_legal_hold_contract_lane_contract.py"));
     assert!(DOC.contains("run_dsar_legal_hold_deep_lane.sh"));
     assert!(DOC.contains("run_dsar_legal_hold_matrix.py"));
     assert!(DOC.contains("fixtures/compliance_dsar/legal_hold_precedence_cases.json"));
@@ -66,4 +67,11 @@ fn regression_requires_classification_redaction_contract_lane_wrapper_marker() {
     // Regression: #1230
     assert!(DOC.contains("classification_redaction_contract_lane_contract.py"));
     assert!(DOC.contains("Regression: #1230"));
+}
+
+#[test]
+fn regression_requires_dsar_contract_lane_wrapper_marker() {
+    // Regression: #1234
+    assert!(DOC.contains("dsar_legal_hold_contract_lane_contract.py"));
+    assert!(DOC.contains("Regression: #1234"));
 }
