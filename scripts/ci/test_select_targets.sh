@@ -608,6 +608,12 @@ assert_eq "$(extract_output "$dashboard_backend_session_policy_output" "run_fron
 assert_eq "$(extract_output "$dashboard_backend_session_policy_output" "run_dashboard_contract_tests")" "true" "dashboard backend session/auth freshness policy checker changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_backend_session_policy_output" "test_scope")" "frontend-contract" "dashboard backend session/auth freshness policy checker changes should set frontend-contract scope"
 
+dashboard_backend_session_shared_policy_output="$(run_selector $'scripts/dashboard/backend_session_auth_freshness_policy_contract.py')"
+assert_eq "$(extract_output "$dashboard_backend_session_shared_policy_output" "run_rust")" "false" "dashboard backend session/auth freshness shared policy contract changes should avoid rust lane"
+assert_eq "$(extract_output "$dashboard_backend_session_shared_policy_output" "run_frontend_dashboard_tests")" "false" "dashboard backend session/auth freshness shared policy contract changes should skip frontend dashboard tests"
+assert_eq "$(extract_output "$dashboard_backend_session_shared_policy_output" "run_dashboard_contract_tests")" "true" "dashboard backend session/auth freshness shared policy contract changes must run dashboard contract lane"
+assert_eq "$(extract_output "$dashboard_backend_session_shared_policy_output" "test_scope")" "frontend-contract" "dashboard backend session/auth freshness shared policy contract changes should set frontend-contract scope"
+
 dashboard_backend_session_contract_output="$(run_selector $'scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh')"
 assert_eq "$(extract_output "$dashboard_backend_session_contract_output" "run_rust")" "false" "dashboard backend session/auth freshness contract lane changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_backend_session_contract_output" "run_frontend_dashboard_tests")" "false" "dashboard backend session/auth freshness contract lane changes should skip frontend dashboard tests"
