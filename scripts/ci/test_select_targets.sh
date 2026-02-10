@@ -444,6 +444,14 @@ assert_eq "$(extract_output "$smoke_parity_policy_shared_contract_output" "live_
 assert_eq "$(extract_output "$smoke_parity_policy_shared_contract_output" "run_sdk_parity_matrix")" "false" "sdk smoke parity shared policy contract changes should skip sdk parity matrix"
 assert_eq "$(extract_output "$smoke_parity_policy_shared_contract_output" "test_scope")" "sdk-live-parity" "sdk smoke parity shared policy contract changes should set sdk-live-parity scope"
 
+smoke_parity_contract_lane_shared_contract_output="$(run_selector $'scripts/sdk/live_transport_smoke_parity_contract_lane_contract.py')"
+assert_eq "$(extract_output "$smoke_parity_contract_lane_shared_contract_output" "run_rust")" "false" "sdk smoke parity shared contract lane module script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$smoke_parity_contract_lane_shared_contract_output" "run_live_transport_parity_contract_tests")" "true" "sdk smoke parity shared contract lane module changes should run parity lane"
+assert_eq "$(extract_output "$smoke_parity_contract_lane_shared_contract_output" "run_live_transport_parity_rust_contract_tests")" "true" "sdk smoke parity shared contract lane module changes should require rust parity setup"
+assert_eq "$(extract_output "$smoke_parity_contract_lane_shared_contract_output" "live_transport_parity_languages")" "rust,python,typescript" "sdk smoke parity shared contract lane module changes should run full parity language set"
+assert_eq "$(extract_output "$smoke_parity_contract_lane_shared_contract_output" "run_sdk_parity_matrix")" "false" "sdk smoke parity shared contract lane module changes should skip sdk parity matrix"
+assert_eq "$(extract_output "$smoke_parity_contract_lane_shared_contract_output" "test_scope")" "sdk-live-parity" "sdk smoke parity shared contract lane module changes should set sdk-live-parity scope"
+
 sdk_schema_policy_output="$(run_selector $'scripts/sdk/check_sdk_schema_compatibility_policy.sh')"
 assert_eq "$(extract_output "$sdk_schema_policy_output" "run_rust")" "false" "sdk schema policy checker script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_schema_policy_output" "run_live_transport_parity_contract_tests")" "false" "sdk schema policy checker changes should not run live transport parity lane"

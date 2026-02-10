@@ -33,14 +33,20 @@ fn rust_doc_references_sdk_schema_shared_contract_script() {
     assert!(RUST_DOC.contains("sdk_schema_compatibility_contract.py"));
     assert!(RUST_DOC.contains("live_transport_smoke_parity_policy_contract.py"));
     assert!(RUST_DOC.contains("live_transport_smoke_parity_lane_contract.py"));
+    assert!(RUST_DOC.contains("live_transport_smoke_parity_contract_lane_contract.py"));
     // Regression: #1182
     assert!(RUST_DOC.contains("`Regression: #1182`"));
     // Regression: #1186
     assert!(RUST_DOC.contains("`Regression: #1186`"));
+    // Regression: #1190
+    assert!(RUST_DOC.contains("`Regression: #1190`"));
     assert!(
         RUST_DOC.contains("smoke parity policy checker wrapper remains pinned to the shared contract implementation marker")
     );
     assert!(RUST_DOC.contains(
         "smoke parity lane wrapper remains pinned to the shared contract implementation marker"
+    ));
+    assert!(RUST_DOC.contains(
+        "smoke parity contract lane wrapper remains pinned to the shared contract implementation marker"
     ));
 }
