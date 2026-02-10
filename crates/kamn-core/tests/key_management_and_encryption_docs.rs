@@ -4,6 +4,7 @@ const DOC: &str = include_str!("../../../docs/foundation/key-management-and-encr
 fn doc_contains_key_lifecycle_contract_scope() {
     assert!(DOC.contains("# Key Management and Encryption Contract Rules"));
     assert!(DOC.contains("run_key_hierarchy_invariant_contract_lane.sh"));
+    assert!(DOC.contains("key_lifecycle_invariant_contract.py"));
     assert!(DOC.contains("kamn.key-lifecycle.invariant-evidence.v1"));
 }
 
