@@ -25,6 +25,36 @@ if ! grep -q "check_performance_thresholds.sh --lane smoke --report-json perform
   exit 1
 fi
 
+if ! grep -q "Generate fast-gate budget delta report" "$FAST_WORKFLOW"; then
+  echo "expected fast-gate budget delta generation step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -q "generate_fast_gate_budget_delta_report.sh --current-json ci-budget-fast-gate.json --baseline-file .ci/fast-gate-budget-delta.env --output-json ci-budget-fast-gate-delta.json" "$FAST_WORKFLOW"; then
+  echo "expected fast-gate budget delta generation command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -q "Check fast-gate budget delta thresholds" "$FAST_WORKFLOW"; then
+  echo "expected fast-gate budget delta threshold step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -q "check_fast_gate_budget_delta_threshold.sh --report-json ci-budget-fast-gate-delta.json --threshold-file .ci/fast-gate-budget-delta.env --waiver-file .ci/fast-gate-budget-delta-waiver.json" "$FAST_WORKFLOW"; then
+  echo "expected fast-gate budget delta threshold command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -q "Upload fast-gate budget delta telemetry" "$FAST_WORKFLOW"; then
+  echo "expected fast-gate budget delta artifact upload step in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -q "ci-budget-fast-gate-delta-\${{ github.run_id }}-\${{ github.run_attempt }}" "$FAST_WORKFLOW"; then
+  echo "expected fast-gate budget delta artifact naming contract in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -q "Generate performance smoke report" "$DEEP_WORKFLOW"; then
   echo "expected performance smoke report generation step in ci-deep-validate.yml" >&2
   exit 1

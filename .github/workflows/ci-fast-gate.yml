@@ -343,3 +343,19 @@ jobs:
           name: ci-budget-fast-gate-${{ github.run_id }}-${{ github.run_attempt }}
           path: ci-budget-fast-gate.json
           if-no-files-found: error
+
+      - name: Generate fast-gate budget delta report
+        if: always() && hashFiles('ci-budget-fast-gate.json') != ''
+        run: bash scripts/ci/generate_fast_gate_budget_delta_report.sh --current-json ci-budget-fast-gate.json --baseline-file .ci/fast-gate-budget-delta.env --output-json ci-budget-fast-gate-delta.json
+
+      - name: Check fast-gate budget delta thresholds
+        if: always() && hashFiles('ci-budget-fast-gate-delta.json') != ''
+        run: bash scripts/ci/check_fast_gate_budget_delta_threshold.sh --report-json ci-budget-fast-gate-delta.json --threshold-file .ci/fast-gate-budget-delta.env --waiver-file .ci/fast-gate-budget-delta-waiver.json
+
+      - name: Upload fast-gate budget delta telemetry
+        if: always() && hashFiles('ci-budget-fast-gate-delta.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-budget-fast-gate-delta-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-budget-fast-gate-delta.json
+          if-no-files-found: error

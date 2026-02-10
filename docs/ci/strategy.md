@@ -114,9 +114,16 @@ Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
 - Emit step-summary metrics for quick inspection.
 - Upload JSON telemetry artifacts (`ci-budget-*.json`) for historical comparisons.
 
+`ci-fast-gate` also generates and enforces a baseline delta report:
+
+- `scripts/ci/generate_fast_gate_budget_delta_report.sh` emits baseline/current/variance metrics.
+- `scripts/ci/check_fast_gate_budget_delta_threshold.sh` fails closed on unapproved regressions.
+- `ci-budget-fast-gate-delta-*.json` artifacts are uploaded for auditability.
+
 Policy:
 - Warning at 90% of configured budget.
 - Failure at 100% of configured budget for `ci-fast-gate` (merge-critical lane).
+- Delta threshold overruns require a time-bounded waiver in `.ci/fast-gate-budget-delta-waiver.json` with tracked follow-up.
 
 ## Cache and Retry Telemetry
 Telemetry includes:
