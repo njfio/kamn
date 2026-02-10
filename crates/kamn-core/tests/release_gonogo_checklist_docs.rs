@@ -216,6 +216,8 @@ fn checklist_contains_governance_stake_slash_risk_threshold_contract() {
 #[test]
 fn checklist_contains_reputation_dispute_evidence_contract() {
     assert!(CHECKLIST.contains("## Reputation Dispute Evidence Contract"));
+    assert!(CHECKLIST.contains("reputation_dispute_contract_lane_contract.py"));
+    assert!(CHECKLIST.contains("framework.contract_lane_helpers"));
     assert!(CHECKLIST.contains("generate_reputation_dispute_evidence_bundle.sh"));
     assert!(CHECKLIST.contains("check_reputation_dispute_policy.sh"));
     assert!(CHECKLIST.contains("run_reputation_dispute_contract_lane.sh"));
