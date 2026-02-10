@@ -56,6 +56,17 @@ fn runbook_contains_dr_evidence_and_slo_gate_contract() {
 }
 
 #[test]
+fn runbook_contains_signer_incident_recovery_contract_lanes() {
+    assert!(RUNBOOK.contains("## Secure-Signer Incident Recovery Contract Lanes (Issue #989)"));
+    assert!(RUNBOOK.contains("run_signer_incident_recovery_lane.sh"));
+    assert!(RUNBOOK.contains("check_signer_incident_recovery_policy.sh"));
+    assert!(RUNBOOK.contains("run_signer_incident_recovery_contract_lane.sh"));
+    assert!(RUNBOOK.contains("run_signer_incident_recovery_deep_lane.sh"));
+    assert!(RUNBOOK.contains("signer_incident_recovery_reason_codes:GO:v1"));
+    assert!(RUNBOOK.contains("KAMN_SIGNER_INCIDENT_RECOVERY_DEEP_CADENCE"));
+}
+
+#[test]
 fn runbook_contains_live_network_pilot_rollback_evidence_gate() {
     assert!(RUNBOOK.contains("## Live-Network Pilot Rollback Evidence Gate"));
     assert!(RUNBOOK.contains("run_live_network_pilot_deep_lane.sh"));
@@ -127,5 +138,13 @@ fn regression_requires_governance_lifecycle_rollback_fail_closed_guard() {
     // Regression: #910
     assert!(RUNBOOK.contains(
         "illegal lifecycle transitions and rollback integrity drift must fail closed (`Regression: #910`)."
+    ));
+}
+
+#[test]
+fn regression_requires_signer_incident_recovery_fail_closed_guard() {
+    // Regression: #989
+    assert!(RUNBOOK.contains(
+        "runbook-step drift, revocation propagation gaps, stale deep-lane artifacts, or cadence violations force `NO-GO` (`Regression: #989`)."
     ));
 }

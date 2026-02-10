@@ -135,6 +135,7 @@ rollback_runbook_output="$(run_selector $'docs/foundation/upgrade-rollback-runbo
 assert_eq "$(extract_output "$rollback_runbook_output" "docs_only")" "true" "upgrade rollback runbook updates should remain docs-only"
 assert_eq "$(extract_output "$rollback_runbook_output" "run_rust")" "false" "upgrade rollback runbook updates should avoid rust lane"
 assert_eq "$(extract_output "$rollback_runbook_output" "run_deploy_preflight_tests")" "true" "upgrade rollback runbook updates must run deploy preflight tests"
+assert_eq "$(extract_output "$rollback_runbook_output" "run_signer_emulator_contract_tests")" "true" "upgrade rollback runbook updates must run signer contract lane"
 assert_eq "$(extract_output "$rollback_runbook_output" "test_scope")" "deploy" "upgrade rollback runbook updates should use deploy scope"
 
 deployment_slo_lane_output="$(run_selector $'scripts/deploy/run_deployment_slo_rollback_lane.sh')"
@@ -785,6 +786,16 @@ signer_key_lifecycle_contract_script_output="$(run_selector $'scripts/signer/run
 assert_eq "$(extract_output "$signer_key_lifecycle_contract_script_output" "run_rust")" "false" "signer key lifecycle contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$signer_key_lifecycle_contract_script_output" "run_signer_emulator_contract_tests")" "true" "signer key lifecycle contract script changes must run signer emulator contract lane"
 assert_eq "$(extract_output "$signer_key_lifecycle_contract_script_output" "test_scope")" "signer-contract" "signer key lifecycle contract script changes should set signer-contract scope"
+
+signer_incident_recovery_contract_script_output="$(run_selector $'scripts/signer/run_signer_incident_recovery_contract_lane.sh')"
+assert_eq "$(extract_output "$signer_incident_recovery_contract_script_output" "run_rust")" "false" "signer incident recovery contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$signer_incident_recovery_contract_script_output" "run_signer_emulator_contract_tests")" "true" "signer incident recovery contract script changes must run signer emulator contract lane"
+assert_eq "$(extract_output "$signer_incident_recovery_contract_script_output" "test_scope")" "signer-contract" "signer incident recovery contract script changes should set signer-contract scope"
+
+signer_incident_recovery_deep_script_output="$(run_selector $'scripts/signer/run_signer_incident_recovery_deep_lane.sh')"
+assert_eq "$(extract_output "$signer_incident_recovery_deep_script_output" "run_rust")" "false" "signer incident recovery deep script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$signer_incident_recovery_deep_script_output" "run_signer_emulator_contract_tests")" "true" "signer incident recovery deep script changes must run signer emulator contract lane"
+assert_eq "$(extract_output "$signer_incident_recovery_deep_script_output" "test_scope")" "signer-contract" "signer incident recovery deep script changes should set signer-contract scope"
 
 did_contract_docs_output="$(run_selector $'docs/foundation/did-registry-transactions.md')"
 assert_eq "$(extract_output "$did_contract_docs_output" "run_rust")" "false" "did contract docs should avoid rust lane"

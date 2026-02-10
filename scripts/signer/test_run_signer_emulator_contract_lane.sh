@@ -6,6 +6,8 @@ FAST_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_emulator_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_provider_deep_lane.sh"
 POLICY_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_policy_contract_lane.sh"
 LIFECYCLE_SCRIPT="$ROOT_DIR/scripts/signer/run_secure_provider_key_lifecycle_contract_lane.sh"
+INCIDENT_CONTRACT_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_incident_recovery_contract_lane.sh"
+INCIDENT_DEEP_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_incident_recovery_deep_lane.sh"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
   echo "expected signer emulator fast-lane runner to be executable" >&2
@@ -24,6 +26,16 @@ fi
 
 if [ ! -x "$LIFECYCLE_SCRIPT" ]; then
   echo "expected signer secure-provider key-lifecycle contract lane runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$INCIDENT_CONTRACT_SCRIPT" ]; then
+  echo "expected signer incident recovery contract lane runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$INCIDENT_DEEP_SCRIPT" ]; then
+  echo "expected signer incident recovery deep lane runner to be executable" >&2
   exit 1
 fi
 
@@ -71,8 +83,23 @@ if ! grep -q "run_secure_provider_key_lifecycle_contract_lane.sh" "$FAST_SCRIPT"
   exit 1
 fi
 
+if ! grep -q "run_signer_incident_recovery_contract_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected signer emulator contract lane to invoke signer incident recovery contract lane" >&2
+  exit 1
+fi
+
 if ! grep -Fq "performance_signer_emulator_bulk_signing_deep_lane -- --ignored" "$DEEP_SCRIPT"; then
   echo "expected deep-lane script to execute ignored signer provider stress test" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_signer_incident_recovery_deep_lane.sh" "$DEEP_SCRIPT"; then
+  echo "expected signer provider deep lane script to execute signer incident recovery deep lane" >&2
+  exit 1
+fi
+
+if ! grep -Fq "KAMN_SIGNER_INCIDENT_RECOVERY_DEEP_CADENCE=scheduled" "$DEEP_SCRIPT"; then
+  echo "expected signer provider deep lane script to set scheduled cadence guard for incident recovery deep lane" >&2
   exit 1
 fi
 
