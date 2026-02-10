@@ -50,6 +50,12 @@ Cross-network DID trust handshakes must emit deterministic evidence before relea
   - `bash scripts/did/run_federated_did_handshake_deep_lane.sh --output-json federated-did-handshake-report.json`
 - Partition replay matrix runner:
   - `python3 scripts/did/run_federated_did_handshake_matrix.py --fixture fixtures/federated_did_handshake/partition_replay_cases.json --output-json federated-did-handshake-report.json`
+- Deep-lane summary policy checker:
+  - `bash scripts/did/check_federated_did_handshake_deep_policy.sh --report-file federated-did-handshake-report.json`
+- Deep-lane shared Python policy implementation:
+  - `scripts/did/federated_did_handshake_deep_policy_contract.py`
+- Deep-lane policy matrix runner:
+  - `python3 scripts/did/run_federated_did_handshake_deep_policy_matrix.py --fixture fixtures/federated_did_handshake/deep_lane_policy_cases.json --output-json federated-did-handshake-deep-policy-report.json`
 - Runtime trust-store handshake evaluator:
   - Federated runtime trust-store handshake evaluator fail-closes on trust-store misses and quorum shortfalls.
   - `cargo test -p kamn-core --test federated_did_handshake_runtime`
@@ -58,6 +64,7 @@ Cross-network DID trust handshakes must emit deterministic evidence before relea
   - non-canonical service endpoint scheme/authority/path combinations must remain rejected (`Regression: #1000`).
   - mixed or unsupported verification method algorithm sets must remain rejected under migration policy checks (`Regression: #1001`).
   - runtime trust-store misses and quorum shortfalls must remain fail-closed with deterministic reason codes (`Regression: #1002`).
+  - stale/tampered federated handshake deep-lane summary artifacts must remain `NO-GO` (`Regression: #1003`).
 
 ## Local Validation
 Run from repository root:
@@ -67,6 +74,8 @@ bash scripts/did/test_generate_federated_did_handshake_evidence_bundle.sh
 bash scripts/did/test_run_federated_did_handshake_contract_lane.sh
 bash scripts/did/test_run_federated_did_handshake_matrix.sh
 bash scripts/did/test_run_federated_did_handshake_deep_lane.sh
+bash scripts/did/test_check_federated_did_handshake_deep_policy.sh
+bash scripts/did/test_run_federated_did_handshake_deep_policy_matrix.sh
 bash scripts/did/test_generate_service_endpoint_canonicalization_evidence_bundle.sh
 bash scripts/did/test_run_service_endpoint_canonicalization_matrix.sh
 bash scripts/did/test_run_service_endpoint_canonicalization_contract_lane.sh

@@ -23,16 +23,24 @@ assert_eq() {
 run_selector_with_bridge_deep() {
   local changed_files="$1"
   local bridge_deep="${2:-false}"
+  local federated_did_deep="${3:-false}"
   env -u GITHUB_OUTPUT -u GITHUB_STEP_SUMMARY \
     CI_CHANGED_FILES="$changed_files" \
     CI_ENABLE_BRIDGE_REPLAY_DEEP_LANE="$bridge_deep" \
+    CI_ENABLE_FEDERATED_DID_HANDSHAKE_DEEP_LANE="$federated_did_deep" \
     GITHUB_BASE_REF=__missing__ \
     bash "$SCRIPT"
 }
 
 run_selector() {
   local changed_files="$1"
-  run_selector_with_bridge_deep "$changed_files" "false"
+  run_selector_with_bridge_deep "$changed_files" "false" "false"
+}
+
+run_selector_with_federated_did_deep() {
+  local changed_files="$1"
+  local federated_did_deep="${2:-false}"
+  run_selector_with_bridge_deep "$changed_files" "false" "$federated_did_deep"
 }
 
 docs_output="$(run_selector $'docs/foundation/ci-caching-parallelism.md')"
@@ -66,6 +74,7 @@ assert_eq "$(extract_output "$docs_output" "run_launch_canary_contract_tests")" 
 assert_eq "$(extract_output "$docs_output" "run_bridge_replay_harness")" "false" "docs_only should not run bridge replay harness"
 assert_eq "$(extract_output "$docs_output" "run_bridge_replay_deep_lane")" "false" "docs_only should not run bridge replay deep lane"
 assert_eq "$(extract_output "$docs_output" "run_localhost_bridge_demo_evidence_deep_lane")" "false" "docs_only should not run localhost bridge demo evidence deep lane"
+assert_eq "$(extract_output "$docs_output" "run_federated_did_handshake_deep_lane")" "false" "docs_only should not run federated DID handshake deep lane"
 assert_eq "$(extract_output "$docs_output" "bridge_replay_suites")" "" "docs_only should not select bridge replay suites"
 assert_eq "$(extract_output "$docs_output" "run_rust_live_transport_contract_tests")" "false" "docs_only should not run rust live transport lane"
 assert_eq "$(extract_output "$docs_output" "run_python_live_transport_contract_tests")" "false" "docs_only should not run python live transport lane"
@@ -120,6 +129,7 @@ assert_eq "$(extract_output "$deploy_output" "run_mainnet_cutover_contract_tests
 assert_eq "$(extract_output "$deploy_output" "run_launch_canary_contract_tests")" "false" "deploy-only changes should skip launch canary contract tests"
 assert_eq "$(extract_output "$deploy_output" "run_bridge_replay_harness")" "false" "deploy-only changes should skip bridge replay harness"
 assert_eq "$(extract_output "$deploy_output" "run_bridge_replay_deep_lane")" "false" "deploy-only changes should skip bridge replay deep lane"
+assert_eq "$(extract_output "$deploy_output" "run_federated_did_handshake_deep_lane")" "false" "deploy-only changes should skip federated DID handshake deep lane"
 assert_eq "$(extract_output "$deploy_output" "bridge_replay_suites")" "" "deploy-only changes should not select bridge replay suites"
 assert_eq "$(extract_output "$deploy_output" "run_rust_live_transport_contract_tests")" "false" "deploy-only changes should skip rust live transport lane"
 assert_eq "$(extract_output "$deploy_output" "run_python_live_transport_contract_tests")" "false" "deploy-only changes should skip python live transport lane"
@@ -218,6 +228,7 @@ assert_eq "$(extract_output "$unknown_output" "run_mainnet_cutover_contract_test
 assert_eq "$(extract_output "$unknown_output" "run_launch_canary_contract_tests")" "false" "unknown paths should not trigger launch canary contract tests"
 assert_eq "$(extract_output "$unknown_output" "run_bridge_replay_harness")" "false" "unknown paths should not trigger bridge replay harness"
 assert_eq "$(extract_output "$unknown_output" "bridge_replay_suites")" "" "unknown paths should not select bridge replay suites"
+assert_eq "$(extract_output "$unknown_output" "run_federated_did_handshake_deep_lane")" "false" "unknown paths should not trigger federated DID handshake deep lane"
 assert_eq "$(extract_output "$unknown_output" "run_rust_live_transport_contract_tests")" "false" "unknown paths should not trigger rust live transport lane"
 assert_eq "$(extract_output "$unknown_output" "run_python_live_transport_contract_tests")" "false" "unknown paths should not trigger python live transport lane"
 assert_eq "$(extract_output "$unknown_output" "run_typescript_live_transport_contract_tests")" "false" "unknown paths should not trigger typescript live transport lane"
@@ -256,6 +267,7 @@ assert_eq "$(extract_output "$targeted_output" "run_token_launch_contract_tests"
 assert_eq "$(extract_output "$targeted_output" "run_treasury_disbursement_contract_tests")" "false" "bridge adapter paths should skip treasury disbursement contract tests"
 assert_eq "$(extract_output "$targeted_output" "run_bridge_replay_harness")" "true" "bridge adapter rust paths should run bridge replay harness"
 assert_eq "$(extract_output "$targeted_output" "run_bridge_replay_deep_lane")" "false" "bridge adapter rust paths should not run bridge replay deep lane by default"
+assert_eq "$(extract_output "$targeted_output" "run_federated_did_handshake_deep_lane")" "false" "bridge adapter rust paths should not run federated DID handshake deep lane"
 assert_eq "$(extract_output "$targeted_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge adapter path should select all bridge suites"
 assert_eq "$(extract_output "$targeted_output" "run_kamn_core_missing_docs_policy_contract_tests")" "false" "bridge adapter paths should not trigger kamn-core missing-docs policy checks"
 assert_eq "$(extract_output "$targeted_output" "run_sdk_parity_matrix")" "false" "non-sdk rust paths should skip sdk parity matrix"
@@ -844,25 +856,34 @@ federated_did_contract_docs_output="$(run_selector $'docs/foundation/did-method.
 assert_eq "$(extract_output "$federated_did_contract_docs_output" "run_rust")" "false" "federated DID docs should avoid rust lane"
 assert_eq "$(extract_output "$federated_did_contract_docs_output" "run_did_registry_contract_tests")" "false" "federated DID docs should not trigger did registry contract lane"
 assert_eq "$(extract_output "$federated_did_contract_docs_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID docs must run federated DID handshake contract lane"
+assert_eq "$(extract_output "$federated_did_contract_docs_output" "run_federated_did_handshake_deep_lane")" "false" "federated DID docs should not run deep lane by default"
 assert_eq "$(extract_output "$federated_did_contract_docs_output" "test_scope")" "federated-did-contract" "federated DID docs should set federated-did-contract scope"
 
 federated_did_contract_script_output="$(run_selector $'scripts/did/run_federated_did_handshake_contract_lane.sh')"
 assert_eq "$(extract_output "$federated_did_contract_script_output" "run_rust")" "false" "federated DID contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$federated_did_contract_script_output" "run_did_registry_contract_tests")" "false" "federated DID contract script changes should not trigger did registry lane"
 assert_eq "$(extract_output "$federated_did_contract_script_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID contract script changes must run federated DID handshake lane"
+assert_eq "$(extract_output "$federated_did_contract_script_output" "run_federated_did_handshake_deep_lane")" "false" "federated DID contract script changes should not run deep lane by default"
 assert_eq "$(extract_output "$federated_did_contract_script_output" "test_scope")" "federated-did-contract" "federated DID contract script changes should set federated-did-contract scope"
 
 federated_did_shared_contract_output="$(run_selector $'scripts/did/federated_did_handshake_contract.py')"
 assert_eq "$(extract_output "$federated_did_shared_contract_output" "run_rust")" "false" "federated DID shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$federated_did_shared_contract_output" "run_did_registry_contract_tests")" "false" "federated DID shared contract changes should not trigger did registry lane"
 assert_eq "$(extract_output "$federated_did_shared_contract_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID shared contract changes must run federated DID handshake lane"
+assert_eq "$(extract_output "$federated_did_shared_contract_output" "run_federated_did_handshake_deep_lane")" "false" "federated DID shared contract changes should not run deep lane by default"
 assert_eq "$(extract_output "$federated_did_shared_contract_output" "test_scope")" "federated-did-contract" "federated DID shared contract changes should set federated-did-contract scope"
 
 federated_did_contract_fixture_output="$(run_selector $'fixtures/federated_did_handshake/partition_replay_cases.json')"
 assert_eq "$(extract_output "$federated_did_contract_fixture_output" "run_rust")" "false" "federated DID fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$federated_did_contract_fixture_output" "run_did_registry_contract_tests")" "false" "federated DID fixture changes should not trigger did registry lane"
 assert_eq "$(extract_output "$federated_did_contract_fixture_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID fixture changes must run federated DID handshake lane"
+assert_eq "$(extract_output "$federated_did_contract_fixture_output" "run_federated_did_handshake_deep_lane")" "false" "federated DID fixture changes should not run deep lane by default"
 assert_eq "$(extract_output "$federated_did_contract_fixture_output" "test_scope")" "federated-did-contract" "federated DID fixture changes should set federated-did-contract scope"
+
+federated_did_deep_requested_output="$(run_selector_with_federated_did_deep $'scripts/did/run_federated_did_handshake_deep_lane.sh' 'true')"
+assert_eq "$(extract_output "$federated_did_deep_requested_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID deep lane request should keep federated handshake contract lane enabled"
+assert_eq "$(extract_output "$federated_did_deep_requested_output" "run_federated_did_handshake_deep_lane")" "true" "federated DID deep lane request should enable deep lane output"
+assert_eq "$(extract_output "$federated_did_deep_requested_output" "test_scope")" "federated-did-deep" "federated DID deep lane request should set federated-did-deep scope"
 
 kolme_contract_docs_output="$(run_selector $'docs/research/kolme-upstream-compatibility.md')"
 assert_eq "$(extract_output "$kolme_contract_docs_output" "run_rust")" "false" "Kolme compatibility docs should avoid rust lane"

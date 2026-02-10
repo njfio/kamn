@@ -41,4 +41,14 @@ if ! grep -q "regression_requires_federated_runtime_trust_store_guard_marker" "$
   exit 1
 fi
 
+if ! grep -q "test_check_federated_did_handshake_deep_policy.sh" "$CONTRACT_LANE"; then
+  echo "expected federated DID handshake contract lane to include deep policy checker tests" >&2
+  exit 1
+fi
+
+if ! grep -q "test_run_federated_did_handshake_deep_policy_matrix.sh" "$CONTRACT_LANE"; then
+  echo "expected federated DID handshake contract lane to include deep policy matrix tests" >&2
+  exit 1
+fi
+
 echo "federated DID handshake contract lane script tests passed."

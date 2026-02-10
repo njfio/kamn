@@ -30,6 +30,9 @@ fn did_method_doc_contains_federated_handshake_contract() {
     assert!(DID_METHOD_DOC.contains("run_federated_did_handshake_contract_lane.sh"));
     assert!(DID_METHOD_DOC.contains("run_federated_did_handshake_deep_lane.sh"));
     assert!(DID_METHOD_DOC.contains("run_federated_did_handshake_matrix.py"));
+    assert!(DID_METHOD_DOC.contains("check_federated_did_handshake_deep_policy.sh"));
+    assert!(DID_METHOD_DOC.contains("federated_did_handshake_deep_policy_contract.py"));
+    assert!(DID_METHOD_DOC.contains("run_federated_did_handshake_deep_policy_matrix.py"));
     assert!(DID_METHOD_DOC.contains("fixtures/federated_did_handshake/partition_replay_cases.json"));
     assert!(DID_METHOD_DOC.contains(
         "Federated runtime trust-store handshake evaluator fail-closes on trust-store misses and quorum shortfalls."
@@ -67,5 +70,13 @@ fn regression_requires_federated_runtime_trust_store_guard_marker() {
     // Regression: #1002
     assert!(DID_METHOD_DOC.contains(
         "runtime trust-store misses and quorum shortfalls must remain fail-closed with deterministic reason codes (`Regression: #1002`)."
+    ));
+}
+
+#[test]
+fn regression_requires_federated_deep_lane_tamper_guard_marker() {
+    // Regression: #1003
+    assert!(DID_METHOD_DOC.contains(
+        "stale/tampered federated handshake deep-lane summary artifacts must remain `NO-GO` (`Regression: #1003`)."
     ));
 }

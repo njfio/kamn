@@ -180,6 +180,14 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `run_localhost_bridge_demo_evidence_deep_lane.sh` enforces a 300-second upper bound.
 - Bridge deep lane budget:
   - `run_bridge_replay_redaction_deep_lane.sh` enforces a 300-second upper bound.
+- Federated DID handshake PR-fast budget:
+  - `run_federated_did_handshake_contract_lane.sh` enforces a 120-second upper bound.
+- Federated DID handshake deep budget:
+  - `run_federated_did_handshake_deep_lane.sh` enforces a 300-second upper bound.
+- Federated DID handshake deep cadence policy:
+  - `run_federated_did_handshake_deep_lane.sh` rejects non-`schedule` and non-`workflow_dispatch` events.
+- Federated DID handshake fast/deep selector routing:
+  - `scripts/ci/select_targets.sh` keeps `run_federated_did_handshake_deep_lane=false` by default and enables it only when `CI_ENABLE_FEDERATED_DID_HANDSHAKE_DEEP_LANE=true`.
 - Dashboard runtime compatibility guard:
   - `bash scripts/frontend/test_dashboard_package_runtime_compat.sh` validates fallback behavior when local `node` lacks `--experimental-strip-types`.
   - `scripts/frontend/test_dashboard_package.sh` defaults fallback execution to `npx -y node@22` in fail-closed mode.
@@ -207,6 +215,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - localhost signed integration harness and contract lane preserve deterministic evidence keys (`Regression: #899`).
 - Regression guard:
   - localhost signed demo receipt artifact schema drift and missing receipt reconciliation outcomes fail closed (`Regression: #981`).
+- Regression guard:
+  - stale/tampered federated handshake deep-lane summary artifacts fail closed under policy checks (`Regression: #1003`).
 - Regression guard:
   - stale/tampered partition/reconnect matrix artifacts and replay anomalies are rejected (`Regression: #982`).
 - Regression guard:

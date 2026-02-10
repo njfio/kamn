@@ -33,6 +33,7 @@ append_summary() {
     echo "- Run signer emulator contract tests: ${RUN_SIGNER_EMULATOR_CONTRACT_TESTS}"
     echo "- Run DID registry contract tests: ${RUN_DID_REGISTRY_CONTRACT_TESTS}"
     echo "- Run federated DID handshake contract tests: ${RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS}"
+    echo "- Run federated DID handshake deep lane: ${RUN_FEDERATED_DID_HANDSHAKE_DEEP_LANE}"
     echo "- Run Kolme snapshot drift contract tests: ${RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS}"
     echo "- Run Kolme version compatibility contract tests: ${RUN_KOLME_VERSION_COMPATIBILITY_CONTRACT_TESTS}"
     echo "- Run Kolme triadic devnet smoke contract tests: ${RUN_KOLME_TRIADIC_DEVNET_SMOKE_CONTRACT_TESTS}"
@@ -539,6 +540,7 @@ RUN_DASHBOARD_CONTRACT_TESTS=false
 RUN_SIGNER_EMULATOR_CONTRACT_TESTS=false
 RUN_DID_REGISTRY_CONTRACT_TESTS=false
 RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS=false
+RUN_FEDERATED_DID_HANDSHAKE_DEEP_LANE=false
 RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS=false
 RUN_KOLME_VERSION_COMPATIBILITY_CONTRACT_TESTS=false
 RUN_KOLME_TRIADIC_DEVNET_SMOKE_CONTRACT_TESTS=false
@@ -654,6 +656,13 @@ if [ "$FEDERATED_DID_HANDSHAKE_CONTRACT_CHANGED" = true ]; then
   RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS=true
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
     TEST_SCOPE="federated-did-contract"
+  fi
+fi
+
+if [ "$FEDERATED_DID_HANDSHAKE_CONTRACT_CHANGED" = true ] && [ "${CI_ENABLE_FEDERATED_DID_HANDSHAKE_DEEP_LANE:-false}" = "true" ]; then
+  RUN_FEDERATED_DID_HANDSHAKE_DEEP_LANE=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "federated-did-contract" ]; then
+    TEST_SCOPE="federated-did-deep"
   fi
 fi
 
@@ -918,6 +927,7 @@ write_output "run_dashboard_contract_tests" "$RUN_DASHBOARD_CONTRACT_TESTS"
 write_output "run_signer_emulator_contract_tests" "$RUN_SIGNER_EMULATOR_CONTRACT_TESTS"
 write_output "run_did_registry_contract_tests" "$RUN_DID_REGISTRY_CONTRACT_TESTS"
 write_output "run_federated_did_handshake_contract_tests" "$RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS"
+write_output "run_federated_did_handshake_deep_lane" "$RUN_FEDERATED_DID_HANDSHAKE_DEEP_LANE"
 write_output "run_kolme_snapshot_drift_contract_tests" "$RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS"
 write_output "run_kolme_version_compatibility_contract_tests" "$RUN_KOLME_VERSION_COMPATIBILITY_CONTRACT_TESTS"
 write_output "run_kolme_triadic_devnet_smoke_contract_tests" "$RUN_KOLME_TRIADIC_DEVNET_SMOKE_CONTRACT_TESTS"

@@ -129,7 +129,12 @@ jobs:
           bash scripts/did/test_generate_federated_did_handshake_evidence_bundle.sh
           bash scripts/did/test_run_federated_did_handshake_contract_lane.sh
           bash scripts/did/test_run_federated_did_handshake_matrix.sh
-          bash scripts/did/test_run_federated_did_handshake_deep_lane.sh
+
+      - name: Run federated DID handshake deep lane
+        if: steps.scope.outputs.run_federated_did_handshake_deep_lane == 'true'
+        run: |
+          KAMN_FEDERATED_DID_HANDSHAKE_DEEP_CADENCE=scheduled \
+            bash scripts/did/test_run_federated_did_handshake_deep_lane.sh
 
       - name: Run Kolme snapshot drift contract lane
         if: steps.scope.outputs.run_kolme_snapshot_drift_contract_tests == 'true'
