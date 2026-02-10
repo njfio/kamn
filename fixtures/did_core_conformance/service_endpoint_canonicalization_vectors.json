@@ -1,0 +1,38 @@
+[
+  {
+    "vector_id": "Vector-C1",
+    "input_endpoint": "kamn://messaging/agent-1",
+    "expect_valid": true,
+    "expected_endpoint": "kamn://messaging/agent-1"
+  },
+  {
+    "vector_id": "Vector-C3",
+    "input_endpoint": "  KAMN://MESSAGING/Agent_2  ",
+    "expect_valid": true,
+    "expected_endpoint": "kamn://messaging/agent_2"
+  },
+  {
+    "vector_id": "Vector-N3-scheme",
+    "input_endpoint": "https://messaging/agent-3",
+    "expect_valid": false,
+    "expected_reason": "invalid_scheme"
+  },
+  {
+    "vector_id": "Vector-N3-authority",
+    "input_endpoint": "kamn://relay/agent-4",
+    "expect_valid": false,
+    "expected_reason": "invalid_authority"
+  },
+  {
+    "vector_id": "Vector-N3-path",
+    "input_endpoint": "kamn://messaging/agent-5/extra",
+    "expect_valid": false,
+    "expected_reason": "invalid_path"
+  },
+  {
+    "vector_id": "Vector-N3-query",
+    "input_endpoint": "kamn://messaging/agent-6?channel=dm",
+    "expect_valid": false,
+    "expected_reason": "invalid_query_or_fragment"
+  }
+]

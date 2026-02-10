@@ -203,7 +203,8 @@ fn fuzz_smoke_did_document_generation_lane_is_panic_free_and_deterministic() {
                 | DidDocumentError::EmptyAgentType
                 | DidDocumentError::EmptyModelFamily
                 | DidDocumentError::MissingCapabilities
-                | DidDocumentError::InvalidCapability,
+                | DidDocumentError::InvalidCapability
+                | DidDocumentError::InvalidServiceEndpoint(_),
             ) => {}
         }
     }
