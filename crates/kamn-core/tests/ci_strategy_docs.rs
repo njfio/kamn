@@ -14,6 +14,8 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("run_local_fork_smoke_evidence_lane.sh --mode run"));
     assert!(DOC.contains("run_local_kolme_api_probe_lane.sh --mode run"));
     assert!(DOC.contains("run_local_kolme_api_smoke_lane.sh --mode run"));
+    assert!(DOC.contains("run_local_runtime_commit_live_lane.sh --mode run"));
+    assert!(DOC.contains("test_run_local_runtime_commit_live_lane.sh"));
     assert!(DOC.contains("run_local_bootstrap_health_checks.sh"));
     assert!(DOC.contains("run_local_e2e_integration_lane.sh"));
     assert!(DOC.contains("KAMN_KOLME_LOCAL_HEAVY=1"));
@@ -26,6 +28,9 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains(
         "local Kolme API probe/smoke run-mode commands remain excluded from ci-fast-gate."
     ));
+    assert!(DOC.contains(
+        "local runtime-commit live run-mode commands remain excluded from ci-fast-gate."
+    ));
 }
 
 #[test]
@@ -36,4 +41,5 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("Regression: #1419"));
     assert!(DOC.contains("Regression: #1431"));
     assert!(DOC.contains("Regression: #1441"));
+    assert!(DOC.contains("Regression: #1451"));
 }

@@ -301,6 +301,11 @@ if ! grep -Fq "bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh" "$FAST
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected local runtime-commit live lane command-surface tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/kolme/test_run_local_heavy_validation_matrix.sh" "$FAST_WORKFLOW"; then
   echo "expected local-only heavy Kolme validation matrix command-surface tests in ci-fast-gate.yml" >&2
   exit 1
@@ -358,6 +363,11 @@ fi
 
 if grep -Fq "bash scripts/kolme/run_local_kolme_api_smoke_lane.sh --mode run" "$FAST_WORKFLOW"; then
   echo "expected local-only Kolme API smoke run-mode lane to remain excluded from ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if grep -Fq "bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run" "$FAST_WORKFLOW"; then
+  echo "expected local runtime-commit live run-mode lane to remain excluded from ci-fast-gate.yml" >&2
   exit 1
 fi
 

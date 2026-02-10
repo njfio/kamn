@@ -32,12 +32,15 @@ required_snippets=(
   "run_local_fork_smoke_evidence_lane.sh --mode run"
   "run_local_kolme_api_probe_lane.sh --mode run"
   "run_local_kolme_api_smoke_lane.sh --mode run"
+  "run_local_runtime_commit_live_lane.sh --mode run"
+  "test_run_local_runtime_commit_live_lane.sh"
   "run_local_bootstrap_health_checks.sh"
   "run_local_e2e_integration_lane.sh"
   "KAMN_KOLME_LOCAL_HEAVY=1"
   "local-only heavy Kolme run-mode commands remain excluded from ci-fast-gate."
   "local-only fork sync/smoke run-mode commands remain excluded from ci-fast-gate."
   "local Kolme API probe/smoke run-mode commands remain excluded from ci-fast-gate."
+  "local runtime-commit live run-mode commands remain excluded from ci-fast-gate."
   "run_dashboard_contract_tests=true"
   "test_scope=frontend-contract"
   "run_frontend_dashboard_tests=true"
@@ -76,6 +79,7 @@ required_snippets=(
   "Regression: #1419"
   "Regression: #1431"
   "Regression: #1441"
+  "Regression: #1451"
 )
 
 for snippet in "${required_snippets[@]}"; do
