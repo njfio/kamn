@@ -47,6 +47,8 @@ Launch expansion decisions require deterministic SLO evidence export and fail-cl
   - `scripts/canary/check_post_cutover_slo_policy.sh`
 - Shared Python implementation:
   - `scripts/canary/post_cutover_slo_contract.py`
+- Shared Python implementation (contract lane):
+  - `scripts/canary/post_cutover_slo_contract_lane_contract.py`
 - Evidence bundle generator:
   - `bash scripts/canary/generate_post_cutover_slo_evidence_bundle.sh --output-file /tmp/post-cutover-slo.json --window-minutes 15 --p95-latency-ms 140 --max-p95-latency-ms 200 --error-rate-bps 18 --max-error-rate-bps 25 --delivery-success-bps 9992 --min-delivery-success-bps 9950 --snapshot-age-seconds 30 --max-snapshot-age-seconds 120 --evidence-complete true --ci-fast-gate PASS`
 - Policy checker:
@@ -57,6 +59,7 @@ Launch expansion decisions require deterministic SLO evidence export and fail-cl
   - `bash scripts/canary/run_post_cutover_slo_deep_lane.sh --output-json post-cutover-slo-report.json`
 - Regression policy:
   - stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`).
+  - shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1282`).
 
 ## SLO/Alert Evidence Policy Checker Contract
 Operational launch readiness now enforces deterministic alert-schema evidence and fail-closed drift detection for SLO bundles.

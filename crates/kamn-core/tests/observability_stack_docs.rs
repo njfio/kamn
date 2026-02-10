@@ -24,6 +24,7 @@ fn doc_contains_post_cutover_slo_evidence_contract() {
     assert!(DOC.contains("## Post-Cutover SLO Gate Evidence Contract"));
     assert!(DOC.contains("generate_post_cutover_slo_evidence_bundle.sh"));
     assert!(DOC.contains("check_post_cutover_slo_policy.sh"));
+    assert!(DOC.contains("post_cutover_slo_contract_lane_contract.py"));
     assert!(DOC.contains("run_post_cutover_slo_contract_lane.sh"));
     assert!(DOC.contains("run_post_cutover_slo_deep_lane.sh"));
 }
@@ -79,6 +80,14 @@ fn regression_requires_post_cutover_slo_stale_evidence_guard() {
     // Regression: #711
     assert!(DOC.contains(
         "stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`)."
+    ));
+}
+
+#[test]
+fn regression_requires_post_cutover_slo_shared_contract_marker() {
+    // Regression: #1282
+    assert!(DOC.contains(
+        "shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1282`)."
     ));
 }
 

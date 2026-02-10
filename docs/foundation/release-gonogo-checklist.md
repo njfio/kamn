@@ -368,10 +368,13 @@ Post-cutover launch gates require deterministic SLO evidence export with stale/p
   - `bash scripts/canary/check_post_cutover_slo_policy.sh --bundle-file /tmp/post-cutover-slo.json`
 - PR fast contract lane:
   - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
+- Shared Python implementation (contract lane):
+  - `scripts/canary/post_cutover_slo_contract_lane_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/canary/run_post_cutover_slo_deep_lane.sh --output-json post-cutover-slo-report.json`
 - Regression policy:
   - stale snapshots and incomplete SLO evidence force `NO-GO` (`Regression: #711`).
+  - shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1282`).
 
 ## Local Validation
 Run from repository root:
