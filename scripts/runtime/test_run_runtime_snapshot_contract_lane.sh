@@ -89,6 +89,21 @@ if ! grep -q "test_generate_processor_proof_admission_evidence_bundle.sh" "$FAST
   exit 1
 fi
 
+if ! grep -q "test_generate_watchdog_proof_consensus_evidence_bundle.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include watchdog proof consensus evidence bundle coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "test_run_watchdog_proof_consensus_contract_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include watchdog proof consensus contract lane coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "test_run_watchdog_proof_consensus_deep_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include watchdog proof consensus deep-lane coverage" >&2
+  exit 1
+fi
+
 if ! grep -q "test_select_failover_sync_drill_lane.sh" "$FAST_SCRIPT"; then
   echo "expected runtime snapshot contract lane to include failover/sync selector contract coverage" >&2
   exit 1

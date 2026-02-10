@@ -174,6 +174,16 @@ fn checklist_contains_live_network_pilot_launch_and_rollback_evidence_gates() {
 }
 
 #[test]
+fn checklist_contains_watchdog_proof_consensus_evidence_contract() {
+    assert!(CHECKLIST.contains("## Validator/Watchdog Proof Consensus Evidence Contract"));
+    assert!(CHECKLIST.contains("run_watchdog_proof_consensus_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_watchdog_proof_consensus_deep_lane.sh"));
+    assert!(CHECKLIST.contains("generate_watchdog_proof_consensus_evidence_bundle.sh"));
+    assert!(CHECKLIST.contains("check_watchdog_proof_consensus_policy.sh"));
+    assert!(CHECKLIST.contains("KAMN_WATCHDOG_PROOF_CONSENSUS_DEEP_CADENCE"));
+}
+
+#[test]
 fn checklist_contains_governance_simulation_and_human_veto_evidence_contract() {
     assert!(CHECKLIST.contains("## Governance Simulation and Human-Veto Evidence Contract"));
     assert!(CHECKLIST.contains("generate_governance_simulation_evidence_bundle.sh"));
@@ -325,6 +335,14 @@ fn regression_requires_live_network_partition_reconnect_guard_marker() {
     // Regression: #982
     assert!(CHECKLIST.contains(
         "stale/tampered partition/reconnect matrix artifacts and replay anomalies force `NO-GO` (`Regression: #982`)."
+    ));
+}
+
+#[test]
+fn regression_requires_watchdog_proof_consensus_budget_and_cadence_guard_marker() {
+    // Regression: #996
+    assert!(CHECKLIST.contains(
+        "proof-consensus deep-lane budget overruns and unscheduled cadence execution force `NO-GO` (`Regression: #996`)."
     ));
 }
 

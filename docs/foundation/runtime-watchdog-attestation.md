@@ -65,6 +65,23 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
 - backpressure overflow sample validation rejects queue depth above capacity (`Regression: #618`).
 - stale disconnected peer queue purge mapping remains deterministic (`Regression: #618`).
 
+## Validator/Watchdog Proof Consensus Deep-Lane Contract
+- PR-fast contract lane:
+  - `bash scripts/runtime/run_watchdog_proof_consensus_contract_lane.sh`
+- Scheduled/manual deep lane entrypoint:
+  - `KAMN_WATCHDOG_PROOF_CONSENSUS_DEEP_CADENCE=scheduled bash scripts/runtime/run_watchdog_proof_consensus_deep_lane.sh --event-name schedule --output-json /tmp/watchdog-proof-consensus-deep-summary.json`
+- Evidence generator:
+  - `bash scripts/runtime/generate_watchdog_proof_consensus_evidence_bundle.sh --output-file /tmp/watchdog-proof-consensus-go.json --message-id urn:uuid:watchdog-proof-go-996 --artifact-id artifact-watchdog-go-996 --consensus-status ConsensusValid --required-quorum 2 --valid-attestation-count 2 --invalid-attestation-count 0 --replay-attestation-count 0 --cadence fast --runtime-seconds 4 --max-seconds 90 --evidence-complete true --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/runtime/check_watchdog_proof_consensus_policy.sh --bundle-file /tmp/watchdog-proof-consensus-go.json`
+- Runtime/cadence controls:
+  - `KAMN_WATCHDOG_PROOF_CONSENSUS_MAX_SECONDS`
+  - `KAMN_WATCHDOG_PROOF_CONSENSUS_DEEP_CADENCE`
+  - `KAMN_WATCHDOG_PROOF_CONSENSUS_DEEP_MAX_SECONDS`
+- Regression policy:
+  - unscheduled proof-consensus deep-lane execution force-fails via scheduled/manual cadence guard (`Regression: #996`).
+  - invalid, replay, and mismatch proof-consensus anomaly artifacts must remain `NO-GO` under policy checks (`Regression: #996`).
+
 ## Incident Response Mapping
 - Runtime watchdog output is triaged with `WatchdogSeverity` and `incident_fingerprint`.
 - Incident operators execute deterministic response workflow from `docs/foundation/upgrade-rollback-runbook.md`.
@@ -81,6 +98,9 @@ cargo test -p kamn-core --test upgrade_rollback_runbook_docs
 cargo test -p kamn-core divergence_watchdog
 cargo test -p kamn-core watchdog_anomaly
 cargo test -p kamn-core runtime::tests::functional_runtime_backpressure_classifies_queue_saturation
+bash scripts/runtime/test_generate_watchdog_proof_consensus_evidence_bundle.sh
+bash scripts/runtime/test_run_watchdog_proof_consensus_contract_lane.sh
+bash scripts/runtime/test_run_watchdog_proof_consensus_deep_lane.sh
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
 ```
