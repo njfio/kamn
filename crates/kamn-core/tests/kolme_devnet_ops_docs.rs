@@ -79,6 +79,16 @@ fn plan_contains_local_native_api_parity_live_proof_lane() {
 }
 
 #[test]
+fn plan_contains_fast_gate_native_api_parity_lane() {
+    assert!(PLAN.contains("## Fast-Gate Native API Parity Contract Lane"));
+    assert!(PLAN.contains("run_fast_gate_native_api_parity_contract_lane.sh"));
+    assert!(PLAN.contains("check_fast_gate_native_api_parity_policy.py"));
+    assert!(PLAN.contains("kamn.kolme.fast-gate-native-api-parity-summary.v1"));
+    assert!(PLAN.contains("KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS"));
+    assert!(PLAN.contains("test_run_fast_gate_native_api_parity_contract_lane.sh"));
+}
+
+#[test]
 fn plan_contains_local_only_heavy_validation_matrix() {
     assert!(PLAN.contains("## Local-Only Heavy Kolme Validation Matrix"));
     assert!(PLAN.contains("run_local_heavy_validation_matrix.sh"));
@@ -196,5 +206,13 @@ fn regression_requires_local_native_api_parity_live_proof_guard_marker() {
     // Regression: #1465
     assert!(PLAN.contains(
         "local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`)."
+    ));
+}
+
+#[test]
+fn regression_requires_native_parity_docs_matrix_guard_marker() {
+    // Regression: #1468
+    assert!(PLAN.contains(
+        "native parity fast/local command matrix docs drift remains fail-closed (`Regression: #1468`)."
     ));
 }

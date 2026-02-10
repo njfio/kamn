@@ -40,6 +40,12 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains(
         "local runtime-commit live run-mode commands remain excluded from ci-fast-gate."
     ));
+    assert!(DOC.contains(
+        "local native API parity live-proof run-mode commands remain excluded from ci-fast-gate."
+    ));
+    assert!(DOC.contains(
+        "native parity fast/local command matrix remains synchronized across `README.md` and `docs/planning/kolme-devnet-ops.md`."
+    ));
 }
 
 #[test]
@@ -52,6 +58,7 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("Regression: #1441"));
     assert!(DOC.contains("Regression: #1451"));
     assert!(DOC.contains("Regression: #1467"));
+    assert!(DOC.contains("Regression: #1468"));
     assert!(DOC.contains("Regression: #1462"));
     assert!(DOC.contains("Regression: #1466"));
 }
