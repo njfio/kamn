@@ -555,6 +555,7 @@ struct ParsedHttpEndpoint {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KolmeRuntimeCommitHttpTransport {
     timeout_seconds: u64,
+    authorization_header: Option<String>,
 }
 
 impl KolmeRuntimeCommitHttpTransport {
@@ -566,7 +567,20 @@ impl KolmeRuntimeCommitHttpTransport {
                 reason: "must be positive",
             });
         }
-        Ok(Self { timeout_seconds })
+        Ok(Self {
+            timeout_seconds,
+            authorization_header: None,
+        })
+    }
+
+    /// Builds a concrete HTTP transport with deterministic authorization header configuration.
+    pub fn new_with_authorization(
+        timeout_seconds: u64,
+        authorization_header: &str,
+    ) -> Result<Self, KolmeRuntimeCommitError> {
+        let mut transport = Self::new(timeout_seconds)?;
+        transport.authorization_header = Some(parse_authorization_header(authorization_header)?);
+        Ok(transport)
     }
 
     fn execute_request(
@@ -598,6 +612,11 @@ impl KolmeRuntimeCommitHttpTransport {
             request.push_str(header_name);
             request.push_str(": ");
             request.push_str(header_value);
+            request.push_str("\r\n");
+        }
+        if let Some(authorization_header) = self.authorization_header.as_deref() {
+            request.push_str("Authorization: ");
+            request.push_str(authorization_header);
             request.push_str("\r\n");
         }
         if body.is_some() {
@@ -943,6 +962,23 @@ fn parse_authority(authority: &str) -> Result<(String, u16), KolmeRuntimeCommitP
     Ok((authority.to_owned(), 80))
 }
 
+fn parse_authorization_header(value: &str) -> Result<String, KolmeRuntimeCommitError> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(KolmeRuntimeCommitError::InvalidRequest {
+            field: "transport_authorization_header",
+            reason: "must not be empty",
+        });
+    }
+    if trimmed.contains('\r') || trimmed.contains('\n') {
+        return Err(KolmeRuntimeCommitError::InvalidRequest {
+            field: "transport_authorization_header",
+            reason: "must be single-line",
+        });
+    }
+    Ok(trimmed.to_owned())
+}
+
 fn join_http_paths(base_path: &str, request_path: &str) -> String {
     let base = if base_path.trim().is_empty() {
         "/".to_owned()
@@ -1030,6 +1066,9 @@ fn parse_http_response(response_bytes: Vec<u8>) -> Result<String, KolmeRuntimeCo
             reason: format!("http response status indicates upstream failure: {status_code}"),
         });
     }
+    if status_code >= 400 {
+        return Err(map_http_client_status_error(status_code));
+    }
 
     let mut declared_content_length = None;
     for line in header_lines {
@@ -1058,6 +1097,23 @@ fn parse_http_response(response_bytes: Vec<u8>) -> Result<String, KolmeRuntimeCo
     }
 
     Ok(raw_body.to_owned())
+}
+
+fn map_http_client_status_error(status_code: u16) -> KolmeRuntimeCommitProviderError {
+    match status_code {
+        401 | 403 => KolmeRuntimeCommitProviderError::Unavailable {
+            reason: format!("http response status indicates authorization failure: {status_code}"),
+        },
+        400 | 404 | 409 | 422 => KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: format!("http response status indicates invalid request: {status_code}"),
+        },
+        429 => KolmeRuntimeCommitProviderError::Unavailable {
+            reason: format!("http response status indicates rate limited: {status_code}"),
+        },
+        _ => KolmeRuntimeCommitProviderError::Unavailable {
+            reason: format!("http response status indicates client failure: {status_code}"),
+        },
+    }
 }
 
 fn percent_encode(value: &str) -> String {
