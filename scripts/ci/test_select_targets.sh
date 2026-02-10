@@ -755,6 +755,12 @@ assert_eq "$(extract_output "$dashboard_stale_error_contract_output" "run_fronte
 assert_eq "$(extract_output "$dashboard_stale_error_contract_output" "run_dashboard_contract_tests")" "true" "dashboard stale/error budget contract lane changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_stale_error_contract_output" "test_scope")" "frontend-contract" "dashboard stale/error budget contract lane changes should set frontend-contract scope"
 
+dashboard_stale_error_shared_contract_lane_output="$(run_selector $'scripts/dashboard/stale_error_budget_contract_lane_contract.py')"
+assert_eq "$(extract_output "$dashboard_stale_error_shared_contract_lane_output" "run_rust")" "false" "dashboard stale/error shared contract-lane changes should avoid rust lane"
+assert_eq "$(extract_output "$dashboard_stale_error_shared_contract_lane_output" "run_frontend_dashboard_tests")" "false" "dashboard stale/error shared contract-lane changes should skip frontend dashboard tests"
+assert_eq "$(extract_output "$dashboard_stale_error_shared_contract_lane_output" "run_dashboard_contract_tests")" "true" "dashboard stale/error shared contract-lane changes must run dashboard contract lane"
+assert_eq "$(extract_output "$dashboard_stale_error_shared_contract_lane_output" "test_scope")" "frontend-contract" "dashboard stale/error shared contract-lane changes should set frontend-contract scope"
+
 signer_contract_output="$(run_selector $'docs/foundation/signer-backend-abstraction.md')"
 assert_eq "$(extract_output "$signer_contract_output" "run_rust")" "false" "signer contract docs should avoid rust lane"
 assert_eq "$(extract_output "$signer_contract_output" "run_signer_emulator_contract_tests")" "true" "signer contract docs must run signer emulator contract lane"
