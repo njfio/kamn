@@ -27,3 +27,8 @@ fn regression_requires_sdk_fixture_snapshot_drift_checker_commands() {
     assert!(PYTHON_DOC.contains("run_example_fixture_drift_contract_lane.sh"));
     assert!(TYPESCRIPT_DOC.contains("run_example_fixture_drift_contract_lane.sh"));
 }
+
+#[test]
+fn rust_doc_references_sdk_schema_shared_contract_script() {
+    assert!(RUST_DOC.contains("sdk_schema_compatibility_contract.py"));
+}
