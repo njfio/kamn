@@ -270,10 +270,18 @@ python3 scripts/kolme/validate_triadic_devnet_smoke.py --fixture fixtures/kolme_
 ### Run Local-Only Heavy Kolme Validation Matrix
 
 ```bash
+# deterministic bootstrap health-check plan (no command execution)
+bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode dry-run --output-json /tmp/kolme-local-bootstrap-summary.json
+
+# deterministic bootstrap health checks (explicit local-only opt-in)
+KAMN_KOLME_LOCAL_HEAVY=1 \
+bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode run --output-json /tmp/kolme-local-bootstrap-summary.json
+# schema: kamn.kolme.local-bootstrap-summary.v1
+
 # command surface + artifact schema validation (no heavy execution)
 bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode dry-run --output-json /tmp/kolme-local-heavy-validation-summary.json
 
-# explicit local-only heavy execution (deep replay + devnet smoke)
+# explicit local-only heavy execution (bootstrap preflight + deep replay)
 KAMN_KOLME_LOCAL_HEAVY=1 \
 bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode run --output-json /tmp/kolme-local-heavy-validation-summary.json
 # schema: kamn.kolme.local-heavy-validation-summary.v1

@@ -29,8 +29,17 @@ fn plan_contains_runtime_commit_adapter_replay_lane_policy() {
 fn plan_contains_local_only_heavy_validation_matrix() {
     assert!(PLAN.contains("## Local-Only Heavy Kolme Validation Matrix"));
     assert!(PLAN.contains("run_local_heavy_validation_matrix.sh"));
+    assert!(PLAN.contains("run_local_bootstrap_health_checks.sh"));
     assert!(PLAN.contains("run_version_compatibility_replay_deep_lane.sh"));
     assert!(PLAN.contains("kamn.kolme.local-heavy-validation-summary.v1"));
+}
+
+#[test]
+fn plan_contains_deterministic_local_bootstrap_health_checks() {
+    assert!(PLAN.contains("## Deterministic Local Bootstrap Health Checks"));
+    assert!(PLAN.contains("run_local_bootstrap_health_checks.sh"));
+    assert!(PLAN.contains("kamn.kolme.local-bootstrap-summary.v1"));
+    assert!(PLAN.contains("KAMN_KOLME_LOCAL_HEAVY=1"));
 }
 
 #[test]
@@ -53,5 +62,13 @@ fn regression_requires_local_only_heavy_matrix_guard_marker() {
     // Regression: #1405
     assert!(PLAN.contains(
         "local-only heavy validation matrix requires explicit opt-in and remains excluded from PR fast-gate workflows (`Regression: #1405`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_bootstrap_opt_in_guard_marker() {
+    // Regression: #1417
+    assert!(PLAN.contains(
+        "deterministic bootstrap run mode fails closed without explicit local-only opt-in (`Regression: #1417`)."
     ));
 }

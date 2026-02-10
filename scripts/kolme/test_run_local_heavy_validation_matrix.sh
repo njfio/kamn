@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MATRIX_RUNNER="$ROOT_DIR/scripts/kolme/run_local_heavy_validation_matrix.sh"
+BOOTSTRAP_RUNNER="$ROOT_DIR/scripts/kolme/run_local_bootstrap_health_checks.sh"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
@@ -24,6 +25,11 @@ assert_eq() {
 
 if [ ! -x "$MATRIX_RUNNER" ]; then
   echo "expected Kolme local heavy validation matrix runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$BOOTSTRAP_RUNNER" ]; then
+  echo "expected Kolme local bootstrap health-check runner to be executable" >&2
   exit 1
 fi
 
@@ -50,8 +56,10 @@ if report.get("mode") != "dry-run":
 if report.get("local_only_enforced") is not True:
     raise SystemExit("expected local_only_enforced=true in local heavy matrix summary")
 commands = report.get("commands")
-if not isinstance(commands, list) or len(commands) < 3:
+if not isinstance(commands, list) or len(commands) < 2:
     raise SystemExit("expected local heavy matrix summary to contain command entries")
+if not any("run_local_bootstrap_health_checks.sh" in cmd for cmd in commands):
+    raise SystemExit("expected bootstrap health-check command marker in local heavy matrix summary")
 if not any("run_version_compatibility_replay_deep_lane.sh" in cmd for cmd in commands):
     raise SystemExit("expected deep replay command marker in local heavy matrix summary")
 PY
