@@ -335,6 +335,8 @@ Governance activation requires deterministic stake/slash risk thresholds to bloc
   - `scripts/governance/check_stake_slash_risk_policy.sh`
 - Shared Python implementation:
   - `scripts/governance/stake_slash_risk_contract.py`
+- Shared Python contract-lane implementation:
+  - `scripts/governance/stake_slash_risk_contract_lane_contract.py` (uses `framework.contract_lane_helpers`)
 - Evidence bundle generator:
   - `bash scripts/governance/generate_stake_slash_risk_evidence_bundle.sh --output-file /tmp/stake-slash-risk.json --proposal-id gov-risk-001 --simulation-hash sha256:1111111111111111111111111111111111111111111111111111111111111111 --stake-at-risk-bps 120 --max-stake-at-risk-bps 300 --slash-probability-bps 40 --max-slash-probability-bps 150 --validator-churn-bps 60 --max-validator-churn-bps 180 --quorum-safety-margin-bps 220 --min-quorum-safety-margin-bps 150 --evidence-complete true --ci-fast-gate PASS`
 - Policy checker:

@@ -40,6 +40,10 @@ if ! grep -q "check_stake_slash_risk_policy.sh" "$SHARED_CONTRACT"; then
   echo "expected stake/slash shared contract-lane module to run policy checker" >&2
   exit 1
 fi
+if ! grep -q "from framework.contract_lane_helpers import" "$SHARED_CONTRACT"; then
+  echo "expected stake/slash shared contract-lane module to use framework lane helpers" >&2
+  exit 1
+fi
 
 if ! grep -Fq "run_stake_slash_risk_contract_lane.sh" "$DEEP_LANE"; then
   echo "expected deep lane script to invoke stake/slash contract lane checks first" >&2
