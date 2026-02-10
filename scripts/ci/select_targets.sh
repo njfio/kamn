@@ -413,7 +413,16 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    scripts/framework/*)
+    scripts/framework/contract_lane_helpers.py|scripts/framework/test_contract_lane_helpers.py)
+      # Framework helper rollout is currently scoped to compliance lanes.
+      SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED=true
+      DSAR_LEGAL_HOLD_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
+    scripts/framework/contract_framework.py|scripts/framework/test_contract_framework.py|scripts/framework/test_contract_framework.sh|scripts/framework/__init__.py)
       # Includes dispute, signal-quarantine, and recovery reputation lanes.
       TOKEN_LAUNCH_CONTRACT_CHANGED=true
       TREASURY_DISBURSEMENT_CONTRACT_CHANGED=true

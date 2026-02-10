@@ -49,6 +49,8 @@ default development loop green while tightening missing-doc policy controls for
   - `scripts/ci/check_kamn_core_missing_docs_policy.sh`
   - `scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
   - `scripts/framework/contract_framework.py`
+  - `scripts/framework/contract_lane_helpers.py` (compliance-only routing)
+  - `scripts/framework/test_contract_lane_helpers.py` (compliance-only routing)
   - `scripts/framework/test_contract_framework.sh`
   - `scripts/framework/test_contract_framework.py`
   - `docs/foundation/treasury-disbursement-policy.md`
@@ -62,6 +64,12 @@ default development loop green while tightening missing-doc policy controls for
   - `docs/foundation/reputation-signal-routing.md`
   - `docs/planning/engineering-hardening-wave.md`
   - `README.md`
+- Selector lock for framework helper migration:
+  - `scripts/framework/contract_lane_helpers.py` and
+    `scripts/framework/test_contract_lane_helpers.py` route only SOC2 and DSAR
+    contract lanes in `scripts/ci/select_targets.sh`.
+  - Broad framework fan-out remains pinned to `scripts/framework/contract_framework.py`
+    and its framework test harness files.
 
 ## Regression Marker
 
