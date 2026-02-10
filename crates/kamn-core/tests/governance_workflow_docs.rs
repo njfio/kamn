@@ -89,6 +89,21 @@ fn doc_contains_governance_lifecycle_rollback_contract_lane() {
 }
 
 #[test]
+fn doc_contains_governance_quorum_attestation_contract_lane() {
+    assert!(DOC.contains("## Governance Quorum Attestation Replay Contract Lane"));
+    assert!(DOC.contains("governance_quorum_attestation_replay_policy_contract.py"));
+    assert!(DOC.contains("governance_quorum_attestation_replay_lane_contract.py"));
+    assert!(DOC.contains("governance_quorum_attestation_replay_contract_lane_contract.py"));
+    assert!(DOC.contains("run_quorum_attestation_replay_guard_lane.sh"));
+    assert!(DOC.contains("check_quorum_attestation_replay_policy.sh"));
+    assert!(DOC.contains("run_quorum_attestation_replay_contract_lane.sh"));
+    assert!(DOC.contains("kamn.governance.quorum-attestation-replay-report.v1"));
+    assert!(DOC.contains("governance_quorum_attestation_reason_codes:GO:v1"));
+    assert!(DOC.contains("governance_quorum_attestation_reason_codes:NO-GO:v1"));
+    assert!(DOC.contains("KAMN_GOVERNANCE_QUORUM_ATTESTATION_MAX_SECONDS"));
+}
+
+#[test]
 fn regression_requires_stake_slash_threshold_bypass_guard_marker() {
     // Regression: #733
     assert!(DOC.contains(
@@ -109,5 +124,13 @@ fn regression_requires_lifecycle_rollback_shared_contract_marker() {
     // Regression: #1246
     assert!(DOC.contains(
         "shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1246`)."
+    ));
+}
+
+#[test]
+fn regression_requires_quorum_attestation_shared_contract_marker() {
+    // Regression: #1254
+    assert!(DOC.contains(
+        "shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1254`)."
     ));
 }
