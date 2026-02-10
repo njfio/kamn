@@ -23,6 +23,8 @@ Redaction and tombstone controls now share a deterministic compliance contract l
   - `bash scripts/compliance/run_classification_redaction_lane.sh --output-file /tmp/classification-redaction-report.json`
 - Compliance policy checker:
   - `bash scripts/compliance/check_classification_redaction_policy.sh --report-file /tmp/classification-redaction-report.json`
+- Shared compliance policy module:
+  - `scripts/compliance/classification_redaction_policy_contract.py`
 - Compliance contract lane:
   - `bash scripts/compliance/run_classification_redaction_contract_lane.sh --output-file /tmp/classification-redaction-contract-report.json`
 
@@ -41,6 +43,7 @@ Required schema/reason markers:
 Regression policy:
 
 - classification/redaction contract drift must fail closed (`Regression: #914`).
+- the shell policy wrapper delegates validation logic to `classification_redaction_policy_contract.py` (`Regression: #1222`).
 
 ## Local Validation
 Run from repository root:

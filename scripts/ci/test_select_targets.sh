@@ -1255,6 +1255,12 @@ assert_eq "$(extract_output "$classification_redaction_policy_script_output" "ru
 assert_eq "$(extract_output "$classification_redaction_policy_script_output" "run_channel_lifecycle_contract_tests")" "true" "classification/redaction policy checker changes must run channel retention/redaction contract lane"
 assert_eq "$(extract_output "$classification_redaction_policy_script_output" "test_scope")" "channel-contract" "classification/redaction policy checker changes should set channel-contract scope"
 
+classification_redaction_shared_policy_output="$(run_selector $'scripts/compliance/classification_redaction_policy_contract.py')"
+assert_eq "$(extract_output "$classification_redaction_shared_policy_output" "run_rust")" "false" "classification/redaction shared policy contract changes should avoid rust lane"
+assert_eq "$(extract_output "$classification_redaction_shared_policy_output" "run_dsar_legal_hold_contract_tests")" "true" "classification/redaction shared policy contract changes must run DSAR contract lane"
+assert_eq "$(extract_output "$classification_redaction_shared_policy_output" "run_channel_lifecycle_contract_tests")" "true" "classification/redaction shared policy contract changes must run channel retention/redaction contract lane"
+assert_eq "$(extract_output "$classification_redaction_shared_policy_output" "test_scope")" "channel-contract" "classification/redaction shared policy contract changes should set channel-contract scope"
+
 dsar_contract_fixture_output="$(run_selector $'fixtures/compliance_dsar/legal_hold_precedence_cases.json')"
 assert_eq "$(extract_output "$dsar_contract_fixture_output" "run_rust")" "false" "DSAR fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$dsar_contract_fixture_output" "run_dsar_legal_hold_contract_tests")" "true" "DSAR fixture changes must run DSAR contract lane"

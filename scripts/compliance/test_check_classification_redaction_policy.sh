@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE_SCRIPT="$ROOT_DIR/scripts/compliance/run_classification_redaction_lane.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/compliance/check_classification_redaction_policy.sh"
+SHARED_POLICY="$ROOT_DIR/scripts/compliance/classification_redaction_policy_contract.py"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -19,6 +20,16 @@ if [ ! -x "$LANE_SCRIPT" ]; then
 fi
 if [ ! -x "$POLICY_CHECKER" ]; then
   echo "expected classification/redaction policy checker script to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q 'classification_redaction_policy_contract.py' "$POLICY_CHECKER"; then
+  echo "expected classification/redaction policy checker wrapper to delegate to shared implementation" >&2
+  exit 1
+fi
+
+if [ ! -x "$SHARED_POLICY" ]; then
+  echo "expected shared classification/redaction policy checker implementation to be executable" >&2
   exit 1
 fi
 
