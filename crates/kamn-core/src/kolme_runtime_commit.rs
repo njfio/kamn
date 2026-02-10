@@ -809,6 +809,11 @@ fn parse_authority(authority: &str) -> Result<(String, u16), KolmeRuntimeCommitP
             }
             return Ok((host.to_owned(), port));
         }
+        if !port_raw.is_empty() {
+            return Err(KolmeRuntimeCommitProviderError::Unavailable {
+                reason: "base_url port is invalid".to_owned(),
+            });
+        }
     }
     Ok((authority.to_owned(), 80))
 }
@@ -900,6 +905,33 @@ fn parse_http_response(response_bytes: Vec<u8>) -> Result<String, KolmeRuntimeCo
             reason: format!("http response status indicates upstream failure: {status_code}"),
         });
     }
+
+    let mut declared_content_length = None;
+    for line in header_lines {
+        let Some((name, value)) = line.split_once(':') else {
+            continue;
+        };
+        if name.eq_ignore_ascii_case("Content-Length") {
+            let parsed = value.trim().parse::<usize>().map_err(|_| {
+                KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: "http response content-length is invalid".to_owned(),
+                }
+            })?;
+            declared_content_length = Some(parsed);
+            break;
+        }
+    }
+    if let Some(declared) = declared_content_length {
+        let observed = raw_body.len();
+        if declared != observed {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!(
+                    "http response content-length mismatch: declared {declared}, observed {observed}"
+                ),
+            });
+        }
+    }
+
     Ok(raw_body.to_owned())
 }
 

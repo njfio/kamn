@@ -83,6 +83,23 @@ fn spawn_single_request_server(
     format!("http://{addr}")
 }
 
+fn spawn_server_with_raw_response(
+    raw_response: String,
+    handler: impl Fn(String) + Send + 'static,
+) -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
+    let addr = listener.local_addr().expect("local addr should resolve");
+    thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("connection should be accepted");
+        let request = read_http_request(&mut stream);
+        handler(request);
+        stream
+            .write_all(raw_response.as_bytes())
+            .expect("response should write");
+    });
+    format!("http://{addr}")
+}
+
 #[test]
 fn integration_http_transport_submit_and_response_mapping() {
     let wire_payload = "operation_id=op-1\nstate_root=state-1\n";
@@ -171,5 +188,54 @@ fn regression_http_transport_timeout_maps_to_provider_timeout() {
     assert_eq!(
         provider.submit_runtime_commit("operation_id=op-1\n", "idempotency-key-1"),
         Err(KolmeRuntimeCommitProviderError::Timeout)
+    );
+}
+
+#[test]
+fn regression_http_transport_rejects_invalid_port_before_network_io() {
+    let transport = KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        "http://127.0.0.1:abc",
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    assert_eq!(
+        provider.submit_runtime_commit("operation_id=op-1\n", "idempotency-key-1"),
+        Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "base_url port is invalid".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn regression_http_transport_fails_closed_on_content_length_mismatch() {
+    let body = "status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:1\nfinality=final\n";
+    let declared_length = body.len() + 9;
+    let raw_response = format!(
+        "HTTP/1.1 200 OK\r\nContent-Length: {declared_length}\r\nConnection: close\r\n\r\n{body}"
+    );
+
+    let base_url = spawn_server_with_raw_response(raw_response, |request| {
+        assert!(request.contains("POST /broadcast/runtime-commit HTTP/1.1"));
+    });
+
+    let transport = KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        base_url.as_str(),
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    assert_eq!(
+        provider.submit_runtime_commit("operation_id=op-1\n", "idempotency-key-1"),
+        Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: format!(
+                "http response content-length mismatch: declared {declared_length}, observed {}",
+                body.len()
+            ),
+        })
     );
 }
