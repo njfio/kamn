@@ -1313,6 +1313,12 @@ assert_eq "$(extract_output "$governance_contract_script_output" "run_governance
 assert_eq "$(extract_output "$governance_contract_script_output" "run_governance_stake_slash_contract_tests")" "false" "governance simulation script changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_contract_script_output" "test_scope")" "governance-contract" "governance contract script changes should set governance-contract scope"
 
+governance_contract_shared_script_output="$(run_selector $'scripts/governance/governance_simulation_contract_lane_contract.py')"
+assert_eq "$(extract_output "$governance_contract_shared_script_output" "run_rust")" "false" "governance shared contract-lane script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$governance_contract_shared_script_output" "run_governance_simulation_contract_tests")" "true" "governance shared contract-lane changes must run governance simulation lane"
+assert_eq "$(extract_output "$governance_contract_shared_script_output" "run_governance_stake_slash_contract_tests")" "false" "governance shared contract-lane changes should not trigger governance stake/slash lane"
+assert_eq "$(extract_output "$governance_contract_shared_script_output" "test_scope")" "governance-contract" "governance shared contract-lane changes should set governance-contract scope"
+
 governance_lifecycle_policy_shared_contract_output="$(run_selector $'scripts/governance/governance_lifecycle_rollback_policy_contract.py')"
 assert_eq "$(extract_output "$governance_lifecycle_policy_shared_contract_output" "run_rust")" "false" "governance lifecycle rollback shared policy contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_lifecycle_policy_shared_contract_output" "run_governance_simulation_contract_tests")" "true" "governance lifecycle rollback shared policy contract changes must run governance simulation lane"

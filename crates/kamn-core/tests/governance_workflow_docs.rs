@@ -48,6 +48,7 @@ fn doc_contains_simulation_and_human_veto_evidence_contract() {
     assert!(DOC.contains("## Proposal Simulation and Human-Veto Evidence Contract"));
     assert!(DOC.contains("generate_governance_simulation_evidence_bundle.sh"));
     assert!(DOC.contains("check_governance_simulation_policy.sh"));
+    assert!(DOC.contains("governance_simulation_contract_lane_contract.py"));
     assert!(DOC.contains("run_governance_simulation_contract_lane.sh"));
     assert!(DOC.contains("run_governance_simulation_deep_lane.sh"));
     assert!(DOC.contains("run_governance_simulation_matrix.py"));
@@ -59,6 +60,14 @@ fn regression_requires_simulation_and_veto_bypass_guard_marker() {
     // Regression: #733
     assert!(DOC.contains(
         "simulation/veto bypass attempts and tampered evidence bundles force `NO-GO` (`Regression: #733`)."
+    ));
+}
+
+#[test]
+fn regression_requires_simulation_shared_contract_marker() {
+    // Regression: #1266
+    assert!(DOC.contains(
+        "shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1266`)."
     ));
 }
 

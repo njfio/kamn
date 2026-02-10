@@ -70,6 +70,8 @@ Governance activation must include deterministic simulation and veto/timelock ev
 - Stable shell wrappers:
   - `scripts/governance/generate_governance_simulation_evidence_bundle.sh`
   - `scripts/governance/check_governance_simulation_policy.sh`
+- Shared Python implementation (contract lane):
+  - `scripts/governance/governance_simulation_contract_lane_contract.py`
 - Shared Python implementation:
   - `scripts/governance/governance_simulation_contract.py`
 - Evidence bundle generator:
@@ -84,6 +86,7 @@ Governance activation must include deterministic simulation and veto/timelock ev
   - `python3 scripts/governance/run_governance_simulation_matrix.py --fixture fixtures/governance_simulation/veto_timelock_cases.json --output-json governance-simulation-report.json`
 - Regression policy:
   - simulation/veto bypass attempts and tampered evidence bundles force `NO-GO` (`Regression: #733`).
+  - shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1266`).
 
 ## Stake/Slash Risk Threshold Evidence Contract (Issue #750)
 Governance activation also requires deterministic stake/slash risk thresholds to block unsafe economic outcomes.
