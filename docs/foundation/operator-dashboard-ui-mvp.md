@@ -53,6 +53,8 @@ This document captures the first implementation slice for the operator dashboard
 ## Frontend Shell Determinism Matrix Contract
 Deterministic frontend shell state matrix checks are enforced through a bounded contract lane:
 
+- Shared lane contract module:
+  - `scripts/frontend/dashboard_shell_determinism_matrix_lane_contract.py`
 - Lane command:
   - `bash scripts/frontend/run_dashboard_shell_determinism_matrix_lane.sh --output-json /tmp/dashboard-shell-matrix-report.json`
 - Policy checker command:
@@ -74,6 +76,7 @@ Required schema/reason markers:
 - `frontend_shell_matrix_reason_codes:NO-GO:v1`
 
 The lane fails closed: healthy/stale-critical/error shell drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #943`).
+The shell lane wrapper remains compatibility-only and delegates orchestration logic to `dashboard_shell_determinism_matrix_lane_contract.py` (`Regression: #1214`).
 The shell policy wrapper remains compatibility-only and delegates validation logic to `dashboard_shell_determinism_matrix_policy_contract.py` (`Regression: #1210`).
 
 ## Fast and Cost-Effective Validation

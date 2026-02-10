@@ -647,6 +647,12 @@ assert_eq "$(extract_output "$frontend_matrix_lane_output" "run_frontend_dashboa
 assert_eq "$(extract_output "$frontend_matrix_lane_output" "run_dashboard_contract_tests")" "false" "frontend shell matrix lane script changes should skip dashboard contract lane"
 assert_eq "$(extract_output "$frontend_matrix_lane_output" "test_scope")" "frontend" "frontend shell matrix lane script changes should set frontend scope"
 
+frontend_matrix_shared_lane_output="$(run_selector $'scripts/frontend/dashboard_shell_determinism_matrix_lane_contract.py')"
+assert_eq "$(extract_output "$frontend_matrix_shared_lane_output" "run_rust")" "false" "frontend shell matrix shared lane contract changes should avoid rust lane"
+assert_eq "$(extract_output "$frontend_matrix_shared_lane_output" "run_frontend_dashboard_tests")" "true" "frontend shell matrix shared lane contract changes must run dashboard tests"
+assert_eq "$(extract_output "$frontend_matrix_shared_lane_output" "run_dashboard_contract_tests")" "false" "frontend shell matrix shared lane contract changes should skip dashboard contract lane"
+assert_eq "$(extract_output "$frontend_matrix_shared_lane_output" "test_scope")" "frontend" "frontend shell matrix shared lane contract changes should set frontend scope"
+
 frontend_matrix_policy_output="$(run_selector $'scripts/frontend/check_dashboard_shell_determinism_matrix_policy.sh')"
 assert_eq "$(extract_output "$frontend_matrix_policy_output" "run_rust")" "false" "frontend shell matrix policy script changes should avoid rust lane"
 assert_eq "$(extract_output "$frontend_matrix_policy_output" "run_frontend_dashboard_tests")" "true" "frontend shell matrix policy script changes must run dashboard tests"
