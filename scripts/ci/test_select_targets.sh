@@ -945,6 +945,11 @@ assert_eq "$(extract_output "$didcomm_contract_script_output" "run_rust")" "fals
 assert_eq "$(extract_output "$didcomm_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "didcomm envelope contract script changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$didcomm_contract_script_output" "test_scope")" "message-contract" "didcomm envelope contract script changes should set message-contract scope"
 
+didcomm_policy_shared_contract_output="$(run_selector $'scripts/message/didcomm_envelope_compatibility_policy_contract.py')"
+assert_eq "$(extract_output "$didcomm_policy_shared_contract_output" "run_rust")" "false" "didcomm envelope shared policy contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$didcomm_policy_shared_contract_output" "run_message_lifecycle_contract_tests")" "true" "didcomm envelope shared policy contract changes must run message lifecycle contract lane"
+assert_eq "$(extract_output "$didcomm_policy_shared_contract_output" "test_scope")" "message-contract" "didcomm envelope shared policy contract changes should set message-contract scope"
+
 a2a_mcp_contract_script_output="$(run_selector $'scripts/message/run_a2a_mcp_conformance_contract_lane.sh')"
 assert_eq "$(extract_output "$a2a_mcp_contract_script_output" "run_rust")" "false" "a2a/mcp contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$a2a_mcp_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "a2a/mcp contract script changes must run message lifecycle contract lane"
