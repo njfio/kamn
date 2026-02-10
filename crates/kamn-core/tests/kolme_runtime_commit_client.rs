@@ -1,7 +1,13 @@
 use kamn_core::{
-    InMemoryKolmeRuntimeCommitClient, KolmeRuntimeCommitClient, KolmeRuntimeCommitError,
-    KolmeRuntimeCommitOutcome, KolmeRuntimeCommitRequest,
+    AdapterBackedKolmeRuntimeCommitClient, InMemoryKolmeRuntimeCommitClient,
+    KolmeCommitReceiptFinality, KolmeRuntimeCommitClient, KolmeRuntimeCommitError,
+    KolmeRuntimeCommitOutcome, KolmeRuntimeCommitProvider, KolmeRuntimeCommitProviderError,
+    KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderReceipt,
+    KolmeRuntimeCommitRequest, KolmeRuntimeCommitTransportErrorKind, RuntimeCommitLifecycleState,
+    RuntimeCommitPipeline,
 };
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Instant;
 
 const FIXTURE: &str =
@@ -17,6 +23,42 @@ struct FixtureCase {
     payload_hash: String,
     expected_status: String,
     expected_reason: String,
+}
+
+type ProviderCalls = Rc<RefCell<Vec<(String, String)>>>;
+
+#[derive(Debug, Clone)]
+struct RecordingProvider {
+    calls: ProviderCalls,
+    result: Result<KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderError>,
+}
+
+impl RecordingProvider {
+    fn with_result(
+        result: Result<KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderError>,
+    ) -> (Self, ProviderCalls) {
+        let calls = Rc::new(RefCell::new(Vec::new()));
+        (
+            Self {
+                calls: calls.clone(),
+                result,
+            },
+            calls,
+        )
+    }
+}
+
+impl KolmeRuntimeCommitProvider for RecordingProvider {
+    fn submit_runtime_commit(
+        &mut self,
+        wire_payload: &str,
+        idempotency_key: &str,
+    ) -> Result<KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderError> {
+        self.calls
+            .borrow_mut()
+            .push((wire_payload.to_owned(), idempotency_key.to_owned()));
+        self.result.clone()
+    }
 }
 
 fn parse_fixture_cases() -> Vec<FixtureCase> {
@@ -187,5 +229,175 @@ fn performance_runtime_commit_contract_lane_stays_within_budget() {
     assert!(
         elapsed_millis < 300,
         "runtime commit contract lane exceeded budget: {elapsed_millis}ms"
+    );
+}
+
+#[test]
+fn unit_adapter_normalizes_wire_payload_and_idempotency_key_before_submit() {
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-sync-adapter-100",
+        "state:adapter",
+        "kamn:did:agent:runtime-node-adapter-1",
+        9,
+        "payload:adapter",
+    )
+    .expect("request should build");
+    let expected_payload = request.to_wire_payload();
+    let expected_key = request.idempotency_key().to_owned();
+
+    let (provider, calls) = RecordingProvider::with_result(Ok(
+        KolmeRuntimeCommitProviderOutcome::Submitted(KolmeRuntimeCommitProviderReceipt {
+            provider: "kolme-local".to_owned(),
+            commit_id: "kolme-commit:adapter-100".to_owned(),
+            finality: KolmeCommitReceiptFinality::Final,
+        }),
+    ));
+    let mut client =
+        AdapterBackedKolmeRuntimeCommitClient::new("kolme-local", provider).expect("client");
+
+    let outcome = client
+        .submit_commit(&request)
+        .expect("adapter submit should succeed");
+    assert!(matches!(outcome, KolmeRuntimeCommitOutcome::Submitted(_)));
+
+    let calls = calls.borrow();
+    assert_eq!(
+        calls.len(),
+        1,
+        "adapter must submit exactly one provider call"
+    );
+    assert_eq!(calls[0].0, expected_payload);
+    assert_eq!(calls[0].1, expected_key);
+}
+
+#[test]
+fn functional_adapter_maps_transport_provider_and_finality_failures_to_typed_errors() {
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-sync-adapter-101",
+        "state:adapter",
+        "kamn:did:agent:runtime-node-adapter-2",
+        4,
+        "payload:adapter",
+    )
+    .expect("request should build");
+
+    let (timeout_provider, _calls) =
+        RecordingProvider::with_result(Err(KolmeRuntimeCommitProviderError::Timeout));
+    let mut timeout_client =
+        AdapterBackedKolmeRuntimeCommitClient::new("kolme-local", timeout_provider)
+            .expect("client");
+    assert_eq!(
+        timeout_client.submit_commit(&request),
+        Err(KolmeRuntimeCommitError::ProviderTransport {
+            kind: KolmeRuntimeCommitTransportErrorKind::Timeout,
+            detail: "provider request timed out".to_owned(),
+        })
+    );
+
+    let (mismatch_provider, _calls) = RecordingProvider::with_result(Ok(
+        KolmeRuntimeCommitProviderOutcome::Submitted(KolmeRuntimeCommitProviderReceipt {
+            provider: "kolme-remote".to_owned(),
+            commit_id: "kolme-commit:adapter-101".to_owned(),
+            finality: KolmeCommitReceiptFinality::Final,
+        }),
+    ));
+    let mut mismatch_client =
+        AdapterBackedKolmeRuntimeCommitClient::new("kolme-local", mismatch_provider)
+            .expect("client");
+    assert_eq!(
+        mismatch_client.submit_commit(&request),
+        Err(KolmeRuntimeCommitError::ProviderMismatch {
+            expected: "kolme-local".to_owned(),
+            observed: "kolme-remote".to_owned(),
+        })
+    );
+
+    let (pending_provider, _calls) = RecordingProvider::with_result(Ok(
+        KolmeRuntimeCommitProviderOutcome::Submitted(KolmeRuntimeCommitProviderReceipt {
+            provider: "kolme-local".to_owned(),
+            commit_id: "kolme-commit:adapter-102".to_owned(),
+            finality: KolmeCommitReceiptFinality::Pending,
+        }),
+    ));
+    let mut pending_client =
+        AdapterBackedKolmeRuntimeCommitClient::new("kolme-local", pending_provider)
+            .expect("client");
+    assert_eq!(
+        pending_client.submit_commit(&request),
+        Err(KolmeRuntimeCommitError::NonFinalReceipt {
+            commit_id: "kolme-commit:adapter-102".to_owned(),
+            finality: KolmeCommitReceiptFinality::Pending,
+        })
+    );
+}
+
+#[test]
+fn integration_runtime_pipeline_accepts_adapter_backed_final_receipts() {
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-sync-adapter-103",
+        "state:adapter",
+        "kamn:did:agent:runtime-node-adapter-3",
+        5,
+        "payload:adapter",
+    )
+    .expect("request should build");
+
+    let (provider, _calls) = RecordingProvider::with_result(Ok(
+        KolmeRuntimeCommitProviderOutcome::Submitted(KolmeRuntimeCommitProviderReceipt {
+            provider: "kolme-local".to_owned(),
+            commit_id: "kolme-commit:adapter-103".to_owned(),
+            finality: KolmeCommitReceiptFinality::Final,
+        }),
+    ));
+    let mut client =
+        AdapterBackedKolmeRuntimeCommitClient::new("kolme-local", provider).expect("client");
+    let mut pipeline = RuntimeCommitPipeline::new();
+
+    let record = pipeline
+        .submit_with_client(&mut client, request)
+        .expect("pipeline submit should succeed");
+    assert_eq!(record.state, RuntimeCommitLifecycleState::Finalized);
+    assert!(!record.needs_requeue);
+}
+
+#[test]
+fn regression_adapter_path_keeps_receipt_provider_mismatch_fail_closed() {
+    // Regression: #979
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-sync-adapter-104",
+        "state:adapter",
+        "kamn:did:agent:runtime-node-adapter-4",
+        6,
+        "payload:adapter",
+    )
+    .expect("request should build");
+
+    let (provider, _calls) = RecordingProvider::with_result(Ok(
+        KolmeRuntimeCommitProviderOutcome::Submitted(KolmeRuntimeCommitProviderReceipt {
+            provider: "kolme-local".to_owned(),
+            commit_id: "kolme-commit:adapter-104".to_owned(),
+            finality: KolmeCommitReceiptFinality::Final,
+        }),
+    ));
+    let mut client =
+        AdapterBackedKolmeRuntimeCommitClient::new("kolme-local", provider).expect("client");
+    let mut pipeline = RuntimeCommitPipeline::new();
+
+    let record = pipeline
+        .submit_with_client(&mut client, request)
+        .expect("pipeline submit should succeed");
+    assert_eq!(record.receipt_provider.as_deref(), Some("kolme-local"));
+    assert_eq!(
+        pipeline.apply_receipt_finality(
+            "op-sync-adapter-104",
+            KolmeCommitReceiptFinality::Final,
+            "kolme-remote",
+            "kolme-commit:adapter-104",
+        ),
+        Err(KolmeRuntimeCommitError::ReceiptFieldMismatch {
+            field: "receipt_provider",
+            expected: "kolme-local".to_owned(),
+            observed: "kolme-remote".to_owned(),
+        })
     );
 }

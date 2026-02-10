@@ -871,6 +871,13 @@ assert_eq "$(extract_output "$kolme_version_contract_docs_output" "run_kolme_ver
 assert_eq "$(extract_output "$kolme_version_contract_docs_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme version roadmap docs should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_version_contract_docs_output" "test_scope")" "kolme-version-contract" "Kolme version roadmap docs should set kolme-version-contract scope"
 
+kolme_runtime_commit_client_docs_output="$(run_selector $'docs/foundation/kolme-runtime-commit-client.md')"
+assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_output" "run_rust")" "false" "Kolme runtime commit client docs should avoid rust lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit client docs should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit client docs must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit client docs should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_output" "test_scope")" "kolme-version-contract" "Kolme runtime commit client docs should set kolme-version-contract scope"
+
 kolme_version_contract_script_output="$(run_selector $'scripts/kolme/validate_version_compatibility.py')"
 assert_eq "$(extract_output "$kolme_version_contract_script_output" "run_rust")" "false" "Kolme version validator script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_version_contract_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme version validator script changes should skip Kolme snapshot drift contract lane"
@@ -905,6 +912,13 @@ assert_eq "$(extract_output "$kolme_runtime_commit_finality_test_output" "run_ko
 assert_eq "$(extract_output "$kolme_runtime_commit_finality_test_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit finality rust tests must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_finality_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit finality rust tests should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_finality_test_output" "test_scope")" "targeted" "Kolme runtime commit finality rust tests should keep targeted scope"
+
+kolme_runtime_commit_client_docs_test_output="$(run_selector $'crates/kamn-core/tests/kolme_runtime_commit_client_docs.rs')"
+assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_test_output" "run_rust")" "true" "Kolme runtime commit client docs rust tests should run rust lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_test_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit client docs rust tests should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_test_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit client docs rust tests must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit client docs rust tests should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_client_docs_test_output" "test_scope")" "targeted" "Kolme runtime commit client docs rust tests should keep targeted scope"
 
 kolme_runtime_commit_replay_policy_script_output="$(run_selector $'scripts/kolme/check_runtime_commit_replay_policy.py')"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_policy_script_output" "run_rust")" "false" "Kolme runtime commit replay policy script-only changes should avoid rust lane"

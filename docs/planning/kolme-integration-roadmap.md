@@ -21,6 +21,8 @@ across Kolme upgrades.
 - Runtime commit contract lane:
   - `bash scripts/kolme/run_runtime_commit_contract_lane.sh`
   - fixture: `fixtures/kolme_commit/runtime_commit_request_cases.txt`
+- Runtime commit adapter contract reference:
+  - `docs/foundation/kolme-runtime-commit-client.md`
 - Runtime commit replay policy checker:
   - `python3 scripts/kolme/check_runtime_commit_replay_policy.py --operation-id op-go-001 --idempotency-key kolme-runtime-commit:op-go-001:state:agent:1:12 --receipt-provider kolme-local --expected-receipt-provider kolme-local --receipt-commit-id kolme-commit:op-go-001:agent:1:12 --expected-receipt-commit-id kolme-commit:op-go-001:agent:1:12 --nonce-monotonic true --replay-detected false --payload-hash-match true --receipt-finality FINAL --ci-fast-gate PASS --output-json /tmp/kolme-runtime-commit-replay-policy.json`
 - Runtime commit replay matrix command:
@@ -57,6 +59,7 @@ across Kolme upgrades.
 - Malformed runtime commit request shapes remain fail-closed (`Regression: #825`).
 - Runtime commit finality projection blocks invalid lifecycle regression to pending (`Regression: #826`).
 - Runtime commit replay/tamper mismatch policy emits fail-closed reason codes (`Regression: #827`).
+- Adapter provider mismatch and non-final receipt handling remain fail-closed (`Regression: #979`).
 
 ## Local Validation
 
