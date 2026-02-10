@@ -1,6 +1,7 @@
 use kamn_core::{
     AdapterBackedKolmeRuntimeCommitClient, InMemoryKolmeRuntimeCommitClient,
     KolmeCommitReceiptFinality, KolmeRuntimeCommitClient, KolmeRuntimeCommitError,
+    KolmeRuntimeCommitFinalityChecker, KolmeRuntimeCommitFinalityTransport,
     KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitOutcome, KolmeRuntimeCommitProvider,
     KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderOutcome,
     KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderTransport,
@@ -8,6 +9,7 @@ use kamn_core::{
     RuntimeCommitPipeline,
 };
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -28,6 +30,7 @@ struct FixtureCase {
 
 type ProviderCalls = Rc<RefCell<Vec<(String, String)>>>;
 type TransportCalls = Rc<RefCell<Vec<(String, String, String, String)>>>;
+type FinalityTransportCalls = Rc<RefCell<Vec<(String, String, String)>>>;
 
 #[derive(Debug, Clone)]
 struct RecordingProvider {
@@ -99,6 +102,47 @@ impl KolmeRuntimeCommitProviderTransport for RecordingTransport {
             idempotency_key.to_owned(),
         ));
         self.result.clone()
+    }
+}
+
+#[derive(Debug, Clone)]
+struct RecordingFinalityTransport {
+    calls: FinalityTransportCalls,
+    responses: Rc<RefCell<VecDeque<Result<String, KolmeRuntimeCommitProviderError>>>>,
+}
+
+impl RecordingFinalityTransport {
+    fn with_responses(
+        responses: Vec<Result<String, KolmeRuntimeCommitProviderError>>,
+    ) -> (Self, FinalityTransportCalls) {
+        let calls = Rc::new(RefCell::new(Vec::new()));
+        (
+            Self {
+                calls: calls.clone(),
+                responses: Rc::new(RefCell::new(VecDeque::from(responses))),
+            },
+            calls,
+        )
+    }
+}
+
+impl KolmeRuntimeCommitFinalityTransport for RecordingFinalityTransport {
+    fn fetch_runtime_commit_finality(
+        &mut self,
+        base_url: &str,
+        status_path: &str,
+        commit_id: &str,
+    ) -> Result<String, KolmeRuntimeCommitProviderError> {
+        self.calls.borrow_mut().push((
+            base_url.to_owned(),
+            status_path.to_owned(),
+            commit_id.to_owned(),
+        ));
+        self.responses.borrow_mut().pop_front().unwrap_or_else(|| {
+            Err(KolmeRuntimeCommitProviderError::Unavailable {
+                reason: "no queued finality response".to_owned(),
+            })
+        })
     }
 }
 
@@ -605,5 +649,125 @@ fn regression_live_provider_normalizes_backend_finality_aliases() {
             commit_id: "kolme-commit:ab12cd34:h42".to_owned(),
             finality: KolmeCommitReceiptFinality::Pending,
         })
+    );
+}
+
+#[test]
+fn unit_finality_checker_rejects_empty_endpoint_or_status_path() {
+    let (transport, _calls) = RecordingFinalityTransport::with_responses(Vec::new());
+    assert!(
+        matches!(
+            KolmeRuntimeCommitFinalityChecker::new("", "/commit/finality", transport),
+            Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "provider_base_url",
+                reason: "must not be empty",
+            })
+        ),
+        "finality checker base URL should fail validation when empty"
+    );
+
+    let (transport, _calls) = RecordingFinalityTransport::with_responses(Vec::new());
+    assert!(
+        matches!(
+            KolmeRuntimeCommitFinalityChecker::new("http://127.0.0.1:3030", "", transport),
+            Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "provider_status_path",
+                reason: "must not be empty",
+            })
+        ),
+        "finality checker status path should fail validation when empty"
+    );
+}
+
+#[test]
+fn functional_finality_checker_maps_confirmed_alias_to_final_receipt() {
+    let response = r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34:h42","finality":"confirmed"}"#.to_owned();
+    let (transport, calls) = RecordingFinalityTransport::with_responses(vec![Ok(response)]);
+    let mut checker = KolmeRuntimeCommitFinalityChecker::new(
+        "http://127.0.0.1:3030",
+        "/commit/finality",
+        transport,
+    )
+    .expect("checker should build");
+
+    let receipt = checker
+        .check_commit_finality("kolme-commit:ab12cd34:h42")
+        .expect("checker should parse finality response");
+    assert_eq!(
+        receipt,
+        KolmeRuntimeCommitProviderReceipt {
+            provider: "kolme-fork-local".to_owned(),
+            commit_id: "kolme-commit:ab12cd34:h42".to_owned(),
+            finality: KolmeCommitReceiptFinality::Final,
+        }
+    );
+
+    let calls = calls.borrow();
+    assert_eq!(calls.len(), 1, "finality transport should be called once");
+    assert_eq!(calls[0].0, "http://127.0.0.1:3030");
+    assert_eq!(calls[0].1, "/commit/finality");
+    assert_eq!(calls[0].2, "kolme-commit:ab12cd34:h42");
+}
+
+#[test]
+fn functional_finality_checker_polls_pending_then_final() {
+    let pending =
+        r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34:h42","finality":"pending"}"#.to_owned();
+    let confirmed =
+        r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34:h42","finality":"confirmed"}"#.to_owned();
+    let (transport, _calls) =
+        RecordingFinalityTransport::with_responses(vec![Ok(pending), Ok(confirmed)]);
+    let mut checker = KolmeRuntimeCommitFinalityChecker::new(
+        "http://127.0.0.1:3030",
+        "/commit/finality",
+        transport,
+    )
+    .expect("checker should build");
+
+    let receipt = checker
+        .poll_finality("kolme-commit:ab12cd34:h42", 2)
+        .expect("checker should return first non-pending finality");
+    assert_eq!(receipt.finality, KolmeCommitReceiptFinality::Final);
+}
+
+#[test]
+fn regression_finality_checker_fails_closed_for_commit_id_mismatch() {
+    // Regression: #1413
+    let mismatch =
+        r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:other:h42","finality":"final"}"#.to_owned();
+    let (transport, _calls) = RecordingFinalityTransport::with_responses(vec![Ok(mismatch)]);
+    let mut checker = KolmeRuntimeCommitFinalityChecker::new(
+        "http://127.0.0.1:3030",
+        "/commit/finality",
+        transport,
+    )
+    .expect("checker should build");
+
+    assert!(
+        matches!(
+            checker.check_commit_finality("kolme-commit:ab12cd34:h42"),
+            Err(KolmeRuntimeCommitProviderError::MalformedResponse { .. })
+        ),
+        "checker must fail closed when response commit id mismatches requested commit id"
+    );
+}
+
+#[test]
+fn regression_finality_checker_times_out_when_pending_budget_exhausted() {
+    // Regression: #1413
+    let pending =
+        r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34:h42","finality":"pending"}"#.to_owned();
+    let (transport, _calls) =
+        RecordingFinalityTransport::with_responses(vec![Ok(pending.clone()), Ok(pending)]);
+    let mut checker = KolmeRuntimeCommitFinalityChecker::new(
+        "http://127.0.0.1:3030",
+        "/commit/finality",
+        transport,
+    )
+    .expect("checker should build");
+
+    assert_eq!(
+        checker.poll_finality("kolme-commit:ab12cd34:h42", 2),
+        Err(KolmeRuntimeCommitProviderError::Timeout)
     );
 }
