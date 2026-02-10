@@ -1243,6 +1243,18 @@ assert_eq "$(extract_output "$dsar_contract_script_output" "run_dsar_legal_hold_
 assert_eq "$(extract_output "$dsar_contract_script_output" "run_soc2_control_evidence_contract_tests")" "false" "DSAR contract script changes should not trigger SOC2 contract lane"
 assert_eq "$(extract_output "$dsar_contract_script_output" "test_scope")" "dsar-contract" "DSAR contract script changes should set dsar-contract scope"
 
+classification_redaction_lane_script_output="$(run_selector $'scripts/compliance/run_classification_redaction_lane.sh')"
+assert_eq "$(extract_output "$classification_redaction_lane_script_output" "run_rust")" "false" "classification/redaction lane script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$classification_redaction_lane_script_output" "run_dsar_legal_hold_contract_tests")" "true" "classification/redaction lane script changes must run DSAR contract lane"
+assert_eq "$(extract_output "$classification_redaction_lane_script_output" "run_channel_lifecycle_contract_tests")" "true" "classification/redaction lane script changes must run channel retention/redaction contract lane"
+assert_eq "$(extract_output "$classification_redaction_lane_script_output" "test_scope")" "channel-contract" "classification/redaction lane script changes should set channel-contract scope"
+
+classification_redaction_shared_lane_output="$(run_selector $'scripts/compliance/classification_redaction_lane_contract.py')"
+assert_eq "$(extract_output "$classification_redaction_shared_lane_output" "run_rust")" "false" "classification/redaction shared lane contract changes should avoid rust lane"
+assert_eq "$(extract_output "$classification_redaction_shared_lane_output" "run_dsar_legal_hold_contract_tests")" "true" "classification/redaction shared lane contract changes must run DSAR contract lane"
+assert_eq "$(extract_output "$classification_redaction_shared_lane_output" "run_channel_lifecycle_contract_tests")" "true" "classification/redaction shared lane contract changes must run channel retention/redaction contract lane"
+assert_eq "$(extract_output "$classification_redaction_shared_lane_output" "test_scope")" "channel-contract" "classification/redaction shared lane contract changes should set channel-contract scope"
+
 classification_redaction_contract_script_output="$(run_selector $'scripts/compliance/run_classification_redaction_contract_lane.sh')"
 assert_eq "$(extract_output "$classification_redaction_contract_script_output" "run_rust")" "false" "classification/redaction contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$classification_redaction_contract_script_output" "run_dsar_legal_hold_contract_tests")" "true" "classification/redaction contract script changes must run DSAR contract lane"

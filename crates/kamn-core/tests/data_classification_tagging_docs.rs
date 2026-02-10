@@ -21,6 +21,7 @@ fn doc_contains_dsar_legal_hold_evidence_contract() {
 #[test]
 fn doc_contains_classification_redaction_compliance_contract_lane() {
     assert!(DOC.contains("## Classification/Redaction Compliance Contract Lane"));
+    assert!(DOC.contains("classification_redaction_lane_contract.py"));
     assert!(DOC.contains("run_classification_redaction_contract_lane.sh"));
     assert!(DOC.contains("check_classification_redaction_policy.sh"));
     assert!(DOC.contains("classification_redaction_policy_contract.py"));
@@ -50,4 +51,11 @@ fn regression_requires_classification_redaction_policy_wrapper_marker() {
     // Regression: #1222
     assert!(DOC.contains("classification_redaction_policy_contract.py"));
     assert!(DOC.contains("Regression: #1222"));
+}
+
+#[test]
+fn regression_requires_classification_redaction_lane_wrapper_marker() {
+    // Regression: #1226
+    assert!(DOC.contains("classification_redaction_lane_contract.py"));
+    assert!(DOC.contains("Regression: #1226"));
 }
