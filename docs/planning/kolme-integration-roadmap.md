@@ -45,6 +45,9 @@ across Kolme upgrades.
 - Nonce/broadcast parity contract lane:
   - `bash scripts/kolme/run_nonce_broadcast_parity_contract_lane.sh`
   - fixture: `fixtures/kolme_commit/nonce_broadcast_parity_cases.json`
+- Notifications websocket consumer contract lane:
+  - `bash scripts/kolme/run_notifications_consumer_contract_lane.sh`
+  - rust integration target: `cargo test -p kamn-core --test kolme_runtime_commit_notifications`
 - Fast contract lane:
   - `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
 - Scheduled deep lane:
@@ -54,6 +57,7 @@ across Kolme upgrades.
 
 - Fast lane budget:
   - `run_version_compatibility_contract_lane.sh` enforces a hard budget of 60 seconds.
+  - `run_notifications_consumer_contract_lane.sh` enforces `KAMN_KOLME_NOTIFICATIONS_CONSUMER_MAX_SECONDS=60`.
 - PR safety:
   - replay smoke uses `--max-cases 2` via contract lane to keep cost low.
 - Scheduled-only work:
@@ -79,6 +83,7 @@ across Kolme upgrades.
 - Fork release-tag drift remains fail-closed (`Regression: #1401`).
 - Fork compatibility policy mismatches and malformed evidence remain fail-closed (`Regression: #1402`).
 - Nonce/broadcast duplicate-idempotent, unauthorized, and malformed payload drift remains fail-closed (`Regression: #1462`).
+- Notifications websocket variant decode and reconnect-budget exhaustion remain fail-closed (`Regression: #1463`).
 
 ## Local Validation
 
@@ -92,6 +97,7 @@ bash scripts/kolme/test_check_runtime_commit_replay_policy.sh
 bash scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh
 bash scripts/kolme/test_check_nonce_broadcast_parity_policy.sh
 bash scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh
+bash scripts/kolme/test_run_notifications_consumer_contract_lane.sh
 bash scripts/ci/test_select_targets.sh
 bash scripts/ci/test_workflow_scope_policy.sh
 ```
