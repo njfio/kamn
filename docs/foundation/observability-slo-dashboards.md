@@ -89,6 +89,10 @@ Deterministic stale-data and error-budget policy checks are enforced through a b
   - `bash scripts/dashboard/check_dashboard_stale_error_budget_policy.sh --report-file /tmp/dashboard-stale-error-report.json`
 - Contract lane command:
   - `bash scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh --output-file /tmp/dashboard-stale-error-contract-report.json`
+- Stable shell wrapper:
+  - `scripts/dashboard/check_dashboard_stale_error_budget_policy.sh`
+- Shared Python implementation:
+  - `scripts/dashboard/stale_error_budget_policy_contract.py`
 
 Runtime budget controls:
 

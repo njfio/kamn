@@ -632,6 +632,12 @@ assert_eq "$(extract_output "$dashboard_stale_error_policy_output" "run_frontend
 assert_eq "$(extract_output "$dashboard_stale_error_policy_output" "run_dashboard_contract_tests")" "true" "dashboard stale/error budget policy checker changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_stale_error_policy_output" "test_scope")" "frontend-contract" "dashboard stale/error budget policy checker changes should set frontend-contract scope"
 
+dashboard_stale_error_shared_policy_output="$(run_selector $'scripts/dashboard/stale_error_budget_policy_contract.py')"
+assert_eq "$(extract_output "$dashboard_stale_error_shared_policy_output" "run_rust")" "false" "dashboard stale/error budget shared policy contract changes should avoid rust lane"
+assert_eq "$(extract_output "$dashboard_stale_error_shared_policy_output" "run_frontend_dashboard_tests")" "false" "dashboard stale/error budget shared policy contract changes should skip frontend dashboard tests"
+assert_eq "$(extract_output "$dashboard_stale_error_shared_policy_output" "run_dashboard_contract_tests")" "true" "dashboard stale/error budget shared policy contract changes must run dashboard contract lane"
+assert_eq "$(extract_output "$dashboard_stale_error_shared_policy_output" "test_scope")" "frontend-contract" "dashboard stale/error budget shared policy contract changes should set frontend-contract scope"
+
 dashboard_stale_error_contract_output="$(run_selector $'scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh')"
 assert_eq "$(extract_output "$dashboard_stale_error_contract_output" "run_rust")" "false" "dashboard stale/error budget contract lane changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_stale_error_contract_output" "run_frontend_dashboard_tests")" "false" "dashboard stale/error budget contract lane changes should skip frontend dashboard tests"
