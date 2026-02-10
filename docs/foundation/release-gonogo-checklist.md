@@ -140,6 +140,11 @@ Federated DID trust handshakes require deterministic replay, downgrade, and quor
   - `bash scripts/did/check_federated_did_handshake_policy.sh --bundle-file /tmp/federated-did-handshake.json`
 - PR fast contract lane:
   - `bash scripts/did/run_federated_did_handshake_contract_lane.sh`
+- Stable shell wrappers:
+  - `scripts/did/generate_federated_did_handshake_evidence_bundle.sh`
+  - `scripts/did/check_federated_did_handshake_policy.sh`
+- Shared Python implementation:
+  - `scripts/did/federated_did_handshake_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/did/run_federated_did_handshake_deep_lane.sh --output-json federated-did-handshake-report.json`
 - Partition replay matrix runner:

@@ -10,6 +10,7 @@ fn did_method_doc_contains_core_rules() {
 #[test]
 fn did_method_doc_contains_federated_handshake_contract() {
     assert!(DID_METHOD_DOC.contains("## Federated DID Handshake Evidence Contract"));
+    assert!(DID_METHOD_DOC.contains("federated_did_handshake_contract.py"));
     assert!(DID_METHOD_DOC.contains("generate_federated_did_handshake_evidence_bundle.sh"));
     assert!(DID_METHOD_DOC.contains("check_federated_did_handshake_policy.sh"));
     assert!(DID_METHOD_DOC.contains("run_federated_did_handshake_contract_lane.sh"));
