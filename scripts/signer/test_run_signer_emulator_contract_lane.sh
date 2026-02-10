@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_emulator_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_provider_deep_lane.sh"
+POLICY_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_policy_contract_lane.sh"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
   echo "expected signer emulator fast-lane runner to be executable" >&2
@@ -12,6 +13,11 @@ fi
 
 if [ ! -x "$DEEP_SCRIPT" ]; then
   echo "expected signer provider deep-lane runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$POLICY_SCRIPT" ]; then
+  echo "expected signer policy contract lane runner to be executable" >&2
   exit 1
 fi
 
@@ -46,6 +52,11 @@ fi
 
 if ! grep -q "integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards" "$FAST_SCRIPT"; then
   echo "expected signer emulator contract lane to include signature profile compatibility matrix integration coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "run_signer_policy_contract_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected signer emulator contract lane to invoke signer policy contract lane" >&2
   exit 1
 fi
 

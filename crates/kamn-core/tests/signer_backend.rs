@@ -256,6 +256,46 @@ fn regression_admin_key_does_not_fallback_when_secure_provider_unavailable() {
 }
 
 #[test]
+fn functional_privileged_roles_deny_fallback_when_provider_unavailable() {
+    let router = SignerBackendRouter::with_provider_handshake_matrix(
+        SignerProviderHandshakeMatrix::with_statuses(
+            SignerProviderHandshakeStatus::Available,
+            SignerProviderHandshakeStatus::Unavailable,
+        ),
+    );
+    let privileged_cases = [
+        (
+            "secure:aws-kms:role-admin/key-ops-1",
+            "admin-agent-a",
+            "admin",
+        ),
+        (
+            "secure:aws-kms:role-treasury/key-ops-1",
+            "treasury-agent-a",
+            "treasury",
+        ),
+        (
+            "secure:aws-kms:role-auditor/key-ops-1",
+            "auditor-agent-a",
+            "auditor",
+        ),
+    ];
+
+    for (key_id, sender, role) in privileged_cases {
+        let request = SigningRequest::new(key_id, sender, 1, "payload-1", GENESIS_STATE_HASH)
+            .expect("request should be valid");
+
+        assert_eq!(
+            router.sign_with_secure_fallback(&request),
+            Err(SignerBackendError::FallbackDeniedByRolePolicy {
+                key_role: role.to_owned(),
+                key_id: key_id.to_owned(),
+            })
+        );
+    }
+}
+
+#[test]
 fn regression_unsupported_secure_key_reference_does_not_fallback() {
     // Regression: #160
     let router = SignerBackendRouter::default();

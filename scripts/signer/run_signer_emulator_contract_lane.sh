@@ -12,6 +12,7 @@ bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --t
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test signer_backend regression_secure_provider_backend_mismatch_is_rejected
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test signer_backend performance_signer_emulator_contract_lane_stays_within_budget
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test signer_backend_docs
+bash scripts/signer/run_signer_policy_contract_lane.sh
 
 if ! grep -Fq "## Signer Emulator Contract Lanes" docs/foundation/signer-backend-abstraction.md; then
   echo "expected signer emulator contract lane section in signer-backend-abstraction.md" >&2

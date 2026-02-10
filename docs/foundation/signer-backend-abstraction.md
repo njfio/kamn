@@ -69,13 +69,21 @@ This document captures the first implementation slice for signer backend abstrac
     - `cargo test -p kamn-core --test signer_backend integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards`
 - Scheduled provider-integration deep lane:
   - `bash scripts/signer/run_signer_provider_deep_lane.sh`
+- Signer policy fast lane:
+  - `bash scripts/signer/run_signer_policy_contract_lane.sh`
+  - includes privileged-role fallback denial + handshake decision matrix checks:
+    - `cargo test -p kamn-core --test signer_backend functional_privileged_roles_deny_fallback_when_provider_unavailable`
+    - `cargo test -p kamn-core signer_backend::tests::router_decision_matrix_distinguishes_unavailable_vs_policy_blocked_handshakes`
+    - `cargo test -p kamn-core --test signer_backend regression_provider_client_backend_mismatch_is_rejected_without_fallback`
 - Contract lane guards remain required for signer provider compatibility (`Regression: #619`).
+- Privileged-role fallback and handshake policy bypass attempts remain fail-closed (`Regression: #987`).
 
 ## Local Validation
 Run from repository root:
 
 ```bash
 bash scripts/signer/run_signer_emulator_contract_lane.sh
+bash scripts/signer/run_signer_policy_contract_lane.sh
 bash scripts/signer/run_signer_provider_deep_lane.sh
 cargo fmt --check
 cargo clippy -- -D warnings

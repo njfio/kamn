@@ -12,6 +12,7 @@ This matrix translates PRD threat model concerns into enforceable controls, owne
 | TM-004 | Invalid failover action during degraded quorum | Require listener/approver quorum checks before processor promotion | Failover runbook execution gate | DevOps + Governance | `failover_runbook_contains_failover_steps` |
 | TM-005 | Signature metadata downgrade or algorithm drift | Enforce explicit signature algorithm/profile parsing and reject unsupported metadata pairs | Shared signer + transaction profile verification | Security + Backend | `integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards` |
 | TM-006 | Quorum attestation evidence drift or replayed approval artifact | Require deterministic quorum attestation schema checks and replay-guard policy validation before governance execution | Governance quorum attestation lane + policy checker | Governance + Security | `quorum_attestation_replay_guard_policy_contract` |
+| TM-007 | Privileged role fallback bypass under secure-provider degradation | Deny local fallback for privileged signer roles and reject policy-blocked handshake downgrades | Signer policy contract lane + signer backend router | Security + Backend | `functional_privileged_roles_deny_fallback_when_provider_unavailable` |
 
 ## Governance Quorum Attestation Replay Contract
 - Fast lane:
@@ -34,6 +35,18 @@ This matrix translates PRD threat model concerns into enforceable controls, owne
   - `governance_quorum_attestation_reason_codes:NO-GO:v1`
 - Required fail-closed policy:
   - quorum attestation evidence drift and replay attempts must fail closed (`Regression: #911`).
+
+## Signer Privileged Fallback and Handshake Policy Contract
+- Fast lane:
+  - `bash scripts/signer/run_signer_policy_contract_lane.sh`
+- Stable shell wrapper:
+  - `scripts/signer/run_signer_policy_contract_lane.sh`
+- Required signer policy checks:
+  - `cargo test -p kamn-core --test signer_backend functional_privileged_roles_deny_fallback_when_provider_unavailable`
+  - `cargo test -p kamn-core signer_backend::tests::router_decision_matrix_distinguishes_unavailable_vs_policy_blocked_handshakes`
+  - `cargo test -p kamn-core --test signer_backend regression_provider_client_backend_mismatch_is_rejected_without_fallback`
+- Required fail-closed policy:
+  - privileged-role fallback bypass attempts and policy-blocked handshake downgrades must fail closed (`Regression: #987`).
 
 ## Ownership and Review Cadence
 - Security owner reviews this matrix each milestone and when new threat classes are introduced.

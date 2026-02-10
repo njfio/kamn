@@ -705,8 +705,8 @@ mod tests {
     use super::{
         deterministic_secure_provider_client_sign, CanonicalSecureKeyReference,
         SecureSignerBackend, SecureSignerProvider, SignerBackend, SignerBackendError,
-        SignerKeyRole, SignerProviderHandshakeMatrix, SignerProviderHandshakeStatus,
-        SigningRequest,
+        SignerBackendRouter, SignerKeyRole, SignerProviderHandshakeMatrix,
+        SignerProviderHandshakeStatus, SigningRequest,
     };
 
     #[test]
@@ -804,6 +804,43 @@ mod tests {
         assert_eq!(
             matrix.status_for_provider(SecureSignerProvider::AwsKmsEmulator),
             SignerProviderHandshakeStatus::PolicyBlocked
+        );
+    }
+
+    #[test]
+    fn router_decision_matrix_distinguishes_unavailable_vs_policy_blocked_handshakes() {
+        let request = SigningRequest::new(
+            "secure:aws-kms:key-ops-1",
+            "agent-a",
+            1,
+            "payload-1",
+            "state:genesis",
+        )
+        .expect("request should be valid");
+
+        let unavailable_router = SignerBackendRouter::with_provider_handshake_matrix(
+            SignerProviderHandshakeMatrix::with_statuses(
+                SignerProviderHandshakeStatus::Available,
+                SignerProviderHandshakeStatus::Unavailable,
+            ),
+        );
+        let signed = unavailable_router
+            .sign_with_secure_fallback(&request)
+            .expect("unavailable provider should allow operator fallback");
+        assert_eq!(signed.backend, "local-software");
+
+        let policy_blocked_router = SignerBackendRouter::with_provider_handshake_matrix(
+            SignerProviderHandshakeMatrix::with_statuses(
+                SignerProviderHandshakeStatus::Available,
+                SignerProviderHandshakeStatus::PolicyBlocked,
+            ),
+        );
+        assert_eq!(
+            policy_blocked_router.sign_with_secure_fallback(&request),
+            Err(SignerBackendError::ProviderHandshakeRejected {
+                backend: "secure-aws-kms-emulator".to_owned(),
+                failure_class: "policy-blocked".to_owned(),
+            })
         );
     }
 
