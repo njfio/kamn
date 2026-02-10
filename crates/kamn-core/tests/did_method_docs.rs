@@ -31,6 +31,12 @@ fn did_method_doc_contains_federated_handshake_contract() {
     assert!(DID_METHOD_DOC.contains("run_federated_did_handshake_deep_lane.sh"));
     assert!(DID_METHOD_DOC.contains("run_federated_did_handshake_matrix.py"));
     assert!(DID_METHOD_DOC.contains("fixtures/federated_did_handshake/partition_replay_cases.json"));
+    assert!(DID_METHOD_DOC.contains(
+        "Federated runtime trust-store handshake evaluator fail-closes on trust-store misses and quorum shortfalls."
+    ));
+    assert!(
+        DID_METHOD_DOC.contains("cargo test -p kamn-core --test federated_did_handshake_runtime")
+    );
 }
 
 #[test]
@@ -53,5 +59,13 @@ fn regression_requires_multikey_algorithm_policy_guard_marker() {
     // Regression: #1001
     assert!(DID_METHOD_DOC.contains(
         "mixed or unsupported verification method algorithm sets must remain rejected under migration policy checks (`Regression: #1001`)."
+    ));
+}
+
+#[test]
+fn regression_requires_federated_runtime_trust_store_guard_marker() {
+    // Regression: #1002
+    assert!(DID_METHOD_DOC.contains(
+        "runtime trust-store misses and quorum shortfalls must remain fail-closed with deterministic reason codes (`Regression: #1002`)."
     ));
 }

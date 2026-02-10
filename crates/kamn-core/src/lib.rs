@@ -203,6 +203,8 @@ pub use did::{
     canonical_did_document, canonical_service_endpoint,
     validate_did_verification_method_algorithms, AgentDid, AgentDidError, AgentDidMetadata,
     DidDocument, DidDocumentError, DidService, DidVerificationMethod,
+    FederatedDidHandshakeDecision, FederatedDidHandshakeError, FederatedDidHandshakeEvaluator,
+    FederatedDidHandshakeInput, FederatedDidTrustStore, InMemoryFederatedDidTrustStore,
 };
 pub use did_registry::{
     DidChainSubmissionOutcome, DidChainSubmissionReceipt, DidChainSubmissionRequest,

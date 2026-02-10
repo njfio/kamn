@@ -31,4 +31,14 @@ if ! grep -q "federated-did-handshake-report.json" "$DEEP_LANE"; then
   exit 1
 fi
 
+if ! grep -Fq -- "--test federated_did_handshake_runtime" "$CONTRACT_LANE"; then
+  echo "expected federated DID handshake contract lane to include runtime trust-store handshake tests" >&2
+  exit 1
+fi
+
+if ! grep -q "regression_requires_federated_runtime_trust_store_guard_marker" "$CONTRACT_LANE"; then
+  echo "expected federated DID handshake contract lane to verify runtime trust-store regression doc guards" >&2
+  exit 1
+fi
+
 echo "federated DID handshake contract lane script tests passed."

@@ -117,6 +117,7 @@ fn checklist_contains_federated_did_handshake_evidence_contract() {
     assert!(CHECKLIST.contains("run_federated_did_handshake_deep_lane.sh"));
     assert!(CHECKLIST.contains("run_federated_did_handshake_matrix.py"));
     assert!(CHECKLIST.contains("fixtures/federated_did_handshake/partition_replay_cases.json"));
+    assert!(CHECKLIST.contains("cargo test -p kamn-core --test federated_did_handshake_runtime"));
 }
 
 #[test]
@@ -367,6 +368,14 @@ fn regression_requires_federated_did_handshake_evidence_guard_marker() {
     // Regression: #734
     assert!(CHECKLIST.contains(
         "replay/downgrade attempts, quorum shortfalls, and tampered final decisions force `NO-GO` (`Regression: #734`)."
+    ));
+}
+
+#[test]
+fn regression_requires_federated_runtime_trust_store_guard_marker() {
+    // Regression: #1002
+    assert!(CHECKLIST.contains(
+        "runtime trust-store misses and quorum shortfalls must remain fail-closed with deterministic reason codes (`Regression: #1002`)."
     ));
 }
 

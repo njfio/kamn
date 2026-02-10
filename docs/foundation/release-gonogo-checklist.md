@@ -189,8 +189,11 @@ Federated DID trust handshakes require deterministic replay, downgrade, and quor
   - `bash scripts/did/run_federated_did_handshake_deep_lane.sh --output-json federated-did-handshake-report.json`
 - Partition replay matrix runner:
   - `python3 scripts/did/run_federated_did_handshake_matrix.py --fixture fixtures/federated_did_handshake/partition_replay_cases.json --output-json federated-did-handshake-report.json`
+- Runtime trust-store handshake evaluator:
+  - `cargo test -p kamn-core --test federated_did_handshake_runtime`
 - Regression policy:
   - replay/downgrade attempts, quorum shortfalls, and tampered final decisions force `NO-GO` (`Regression: #734`).
+  - runtime trust-store misses and quorum shortfalls must remain fail-closed with deterministic reason codes (`Regression: #1002`).
 
 ## Federated Delegation Settlement Evidence Contract (Issue #754)
 Cross-network task delegation requires deterministic envelope and settlement reference evidence before cross-network approvals.

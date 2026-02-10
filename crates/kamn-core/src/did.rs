@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{collections::BTreeSet, fmt};
 
 const AGENT_DID_PREFIX: &str = "kamn:did:agent:";
 
@@ -91,6 +91,282 @@ pub struct DidDocument {
     pub assertion_method: Vec<String>,
     pub service: Vec<DidService>,
     pub metadata: AgentDidMetadata,
+}
+
+pub trait FederatedDidTrustStore {
+    fn is_trusted(&self, network: &str, subject_did: &str) -> bool;
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct InMemoryFederatedDidTrustStore {
+    entries: BTreeSet<(String, String)>,
+}
+
+impl InMemoryFederatedDidTrustStore {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn from_entries<I, N, D>(entries: I) -> Self
+    where
+        I: IntoIterator<Item = (N, D)>,
+        N: Into<String>,
+        D: Into<String>,
+    {
+        let mut trust_store = Self::new();
+        for (network, subject_did) in entries {
+            trust_store.insert(network.into().as_str(), subject_did.into().as_str());
+        }
+        trust_store
+    }
+
+    pub fn insert(&mut self, network: &str, subject_did: &str) {
+        self.entries
+            .insert((network.trim().to_owned(), subject_did.trim().to_owned()));
+    }
+}
+
+impl FederatedDidTrustStore for InMemoryFederatedDidTrustStore {
+    fn is_trusted(&self, network: &str, subject_did: &str) -> bool {
+        self.entries
+            .contains(&(network.trim().to_owned(), subject_did.trim().to_owned()))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FederatedDidHandshakeInput {
+    pub handshake_id: String,
+    pub subject_did: String,
+    pub local_network: String,
+    pub remote_network: String,
+    pub resolver_version: String,
+    pub signature_policy_passed: bool,
+    pub nonce_monotonic: bool,
+    pub downgrade_detected: bool,
+    pub partition_sequence_monotonic: bool,
+    pub required_quorum: u16,
+    pub received_quorum: u16,
+}
+
+impl FederatedDidHandshakeInput {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        handshake_id: &str,
+        subject_did: &str,
+        local_network: &str,
+        remote_network: &str,
+        resolver_version: &str,
+        signature_policy_passed: bool,
+        nonce_monotonic: bool,
+        downgrade_detected: bool,
+        partition_sequence_monotonic: bool,
+        required_quorum: u16,
+        received_quorum: u16,
+    ) -> Result<Self, FederatedDidHandshakeError> {
+        if handshake_id.trim().is_empty() {
+            return Err(FederatedDidHandshakeError::EmptyField("handshake_id"));
+        }
+        if subject_did.trim().is_empty() {
+            return Err(FederatedDidHandshakeError::EmptyField("subject_did"));
+        }
+        if local_network.trim().is_empty() {
+            return Err(FederatedDidHandshakeError::EmptyField("local_network"));
+        }
+        if remote_network.trim().is_empty() {
+            return Err(FederatedDidHandshakeError::EmptyField("remote_network"));
+        }
+        if required_quorum == 0 {
+            return Err(FederatedDidHandshakeError::InvalidRequiredQuorum {
+                required: required_quorum,
+            });
+        }
+
+        Ok(Self {
+            handshake_id: handshake_id.trim().to_owned(),
+            subject_did: subject_did.trim().to_owned(),
+            local_network: local_network.trim().to_owned(),
+            remote_network: remote_network.trim().to_owned(),
+            resolver_version: resolver_version.trim().to_owned(),
+            signature_policy_passed,
+            nonce_monotonic,
+            downgrade_detected,
+            partition_sequence_monotonic,
+            required_quorum,
+            received_quorum,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FederatedDidHandshakeDecision {
+    pub handshake_id: String,
+    pub subject_did: String,
+    pub local_network: String,
+    pub remote_network: String,
+}
+
+impl FederatedDidHandshakeDecision {
+    pub fn reason_code(&self) -> &'static str {
+        "federated_did_handshake_ok"
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FederatedDidHandshakeError {
+    EmptyField(&'static str),
+    InvalidRequiredQuorum {
+        required: u16,
+    },
+    ResolverVersionMissing {
+        handshake_id: String,
+    },
+    TrustStoreMiss {
+        subject_did: String,
+        network: String,
+    },
+    SignaturePolicyFailed {
+        handshake_id: String,
+    },
+    QuorumShortfall {
+        required: u16,
+        received: u16,
+    },
+    NonceReplayDetected {
+        handshake_id: String,
+    },
+    PartitionSequenceReplayDetected {
+        handshake_id: String,
+    },
+    DowngradeDetected {
+        handshake_id: String,
+    },
+}
+
+impl FederatedDidHandshakeError {
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::EmptyField(_) => "federated_did_handshake_invalid_input",
+            Self::InvalidRequiredQuorum { .. } => "federated_did_handshake_invalid_quorum",
+            Self::ResolverVersionMissing { .. } => "federated_did_handshake_resolver_missing",
+            Self::TrustStoreMiss { .. } => "federated_did_handshake_trust_store_miss",
+            Self::SignaturePolicyFailed { .. } => "federated_did_handshake_signature_policy_failed",
+            Self::QuorumShortfall { .. } => "federated_did_handshake_quorum_shortfall",
+            Self::NonceReplayDetected { .. } => "federated_did_handshake_nonce_replay",
+            Self::PartitionSequenceReplayDetected { .. } => {
+                "federated_did_handshake_partition_replay"
+            }
+            Self::DowngradeDetected { .. } => "federated_did_handshake_downgrade_detected",
+        }
+    }
+}
+
+impl fmt::Display for FederatedDidHandshakeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::EmptyField(field) => write!(f, "federated did handshake field is empty: {field}"),
+            Self::InvalidRequiredQuorum { required } => {
+                write!(f, "invalid required quorum for federated did handshake: {required}")
+            }
+            Self::ResolverVersionMissing { handshake_id } => write!(
+                f,
+                "resolver version missing for federated did handshake: {handshake_id}"
+            ),
+            Self::TrustStoreMiss {
+                subject_did,
+                network,
+            } => write!(
+                f,
+                "federated did handshake trust-store miss for did {subject_did} on network {network}"
+            ),
+            Self::SignaturePolicyFailed { handshake_id } => write!(
+                f,
+                "federated did handshake signature policy failed: {handshake_id}"
+            ),
+            Self::QuorumShortfall { required, received } => write!(
+                f,
+                "federated did handshake quorum shortfall: required {required}, received {received}"
+            ),
+            Self::NonceReplayDetected { handshake_id } => {
+                write!(f, "federated did handshake nonce replay detected: {handshake_id}")
+            }
+            Self::PartitionSequenceReplayDetected { handshake_id } => write!(
+                f,
+                "federated did handshake partition sequence replay detected: {handshake_id}"
+            ),
+            Self::DowngradeDetected { handshake_id } => write!(
+                f,
+                "federated did handshake downgrade detected: {handshake_id}"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for FederatedDidHandshakeError {}
+
+#[derive(Debug, Clone)]
+pub struct FederatedDidHandshakeEvaluator<T: FederatedDidTrustStore> {
+    trust_store: T,
+}
+
+impl<T: FederatedDidTrustStore> FederatedDidHandshakeEvaluator<T> {
+    pub fn new(trust_store: T) -> Self {
+        Self { trust_store }
+    }
+
+    pub fn evaluate(
+        &mut self,
+        input: FederatedDidHandshakeInput,
+    ) -> Result<FederatedDidHandshakeDecision, FederatedDidHandshakeError> {
+        if !self
+            .trust_store
+            .is_trusted(&input.remote_network, &input.subject_did)
+        {
+            return Err(FederatedDidHandshakeError::TrustStoreMiss {
+                subject_did: input.subject_did,
+                network: input.remote_network,
+            });
+        }
+        if input.resolver_version.trim().is_empty() {
+            return Err(FederatedDidHandshakeError::ResolverVersionMissing {
+                handshake_id: input.handshake_id,
+            });
+        }
+        if !input.signature_policy_passed {
+            return Err(FederatedDidHandshakeError::SignaturePolicyFailed {
+                handshake_id: input.handshake_id,
+            });
+        }
+        if input.received_quorum < input.required_quorum {
+            return Err(FederatedDidHandshakeError::QuorumShortfall {
+                required: input.required_quorum,
+                received: input.received_quorum,
+            });
+        }
+        if !input.nonce_monotonic {
+            return Err(FederatedDidHandshakeError::NonceReplayDetected {
+                handshake_id: input.handshake_id,
+            });
+        }
+        if !input.partition_sequence_monotonic {
+            return Err(
+                FederatedDidHandshakeError::PartitionSequenceReplayDetected {
+                    handshake_id: input.handshake_id,
+                },
+            );
+        }
+        if input.downgrade_detected {
+            return Err(FederatedDidHandshakeError::DowngradeDetected {
+                handshake_id: input.handshake_id,
+            });
+        }
+
+        Ok(FederatedDidHandshakeDecision {
+            handshake_id: input.handshake_id,
+            subject_did: input.subject_did,
+            local_network: input.local_network,
+            remote_network: input.remote_network,
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

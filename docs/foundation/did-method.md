@@ -50,10 +50,14 @@ Cross-network DID trust handshakes must emit deterministic evidence before relea
   - `bash scripts/did/run_federated_did_handshake_deep_lane.sh --output-json federated-did-handshake-report.json`
 - Partition replay matrix runner:
   - `python3 scripts/did/run_federated_did_handshake_matrix.py --fixture fixtures/federated_did_handshake/partition_replay_cases.json --output-json federated-did-handshake-report.json`
+- Runtime trust-store handshake evaluator:
+  - Federated runtime trust-store handshake evaluator fail-closes on trust-store misses and quorum shortfalls.
+  - `cargo test -p kamn-core --test federated_did_handshake_runtime`
 - Regression policy:
   - replay/downgrade/tamper attempts force `NO-GO` (`Regression: #734`).
   - non-canonical service endpoint scheme/authority/path combinations must remain rejected (`Regression: #1000`).
   - mixed or unsupported verification method algorithm sets must remain rejected under migration policy checks (`Regression: #1001`).
+  - runtime trust-store misses and quorum shortfalls must remain fail-closed with deterministic reason codes (`Regression: #1002`).
 
 ## Local Validation
 Run from repository root:
