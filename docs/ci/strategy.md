@@ -56,9 +56,14 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - `run_kolme_version_compatibility_contract_tests=true`
   - `test_scope=kolme-version-contract`
   - command-surface tests stay on PR fast gate:
+    - `bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh`
+    - `bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh`
     - `bash scripts/kolme/test_run_local_bootstrap_health_checks.sh`
     - `bash scripts/kolme/test_run_local_e2e_integration_lane.sh`
   - local-only heavy Kolme run-mode commands remain excluded from ci-fast-gate.
+  - local-only fork sync/smoke run-mode commands remain excluded from ci-fast-gate.
+    - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
+    - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_fork_smoke_evidence_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --smoke-command "cargo test -p merkle-map --test version -- --exact load_from_zero_example" --max-seconds 120 --output-json /tmp/kolme-local-fork-smoke-evidence-summary.json`
   - heavy execution keeps explicit opt-in: `KAMN_KOLME_LOCAL_HEAVY=1`
 - Dashboard backend session/auth freshness command changes map to dashboard contract scope:
   - `run_dashboard_contract_tests=true`
@@ -123,6 +128,7 @@ Regression policy:
 - governance lifecycle/rollback selector/docs parity remains fail-closed (`Regression: #910`).
 - governance quorum attestation selector/docs parity remains fail-closed (`Regression: #911`).
 - local-only heavy Kolme selector/workflow/docs parity remains fail-closed (`Regression: #1419`).
+- local-only fork sync/smoke run-mode exclusion parity remains fail-closed (`Regression: #1431`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:

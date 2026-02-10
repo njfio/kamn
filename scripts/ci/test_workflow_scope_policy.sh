@@ -331,6 +331,16 @@ if grep -Fq "bash scripts/kolme/run_local_e2e_integration_lane.sh --mode run" "$
   exit 1
 fi
 
+if grep -Fq "bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run" "$FAST_WORKFLOW"; then
+  echo "expected local-only fork sync metadata run-mode lane to remain excluded from ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if grep -Fq "bash scripts/kolme/run_local_fork_smoke_evidence_lane.sh --mode run" "$FAST_WORKFLOW"; then
+  echo "expected local-only fork smoke evidence run-mode lane to remain excluded from ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_kolme_triadic_devnet_smoke_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected Kolme triadic devnet smoke contract scope condition in ci-fast-gate.yml" >&2
   exit 1
