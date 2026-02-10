@@ -4,6 +4,7 @@ import asyncio
 from kamn_sdk import (
     KAMNClient,
     LiveKAMNClient,
+    LiveTransportBackendAdapterError,
     SDKError,
     TransportMode,
     TransportModeMismatchError,
@@ -158,6 +159,91 @@ class PythonLiveTransportSDKTests(unittest.TestCase):
             client.send(sender, receiver, f"python-live-perf-{nonce}")
         received = client.receive(receiver)
         self.assertEqual(len(received), 256)
+
+    def test_functional_live_transport_backend_adapter_mode_normalizes_success_payloads(
+        self,
+    ) -> None:
+        endpoint = "https://live.kamn.testnet/python-backend-adapter"
+        operations: list[str] = []
+
+        class Adapter:
+            def invoke(self, request: dict[str, object]) -> dict[str, object]:
+                operation = str(request["operation"])
+                operations.append(operation)
+                if operation == "register":
+                    return {"status": "ok", "value": "kamn:did:agent:backend-1"}
+                if operation == "send":
+                    return {"status": "ok", "value": "msg_backend_1"}
+                if operation == "receive":
+                    return {
+                        "status": "ok",
+                        "value": [
+                            {
+                                "id": "msg_backend_1",
+                                "from": "kamn:did:agent:backend-1",
+                                "to": "kamn:did:agent:backend-2",
+                                "body": "backend hello",
+                            }
+                        ],
+                    }
+                return {"status": "ok", "value": None}
+
+        LiveKAMNClient.register_backend_adapter(endpoint, Adapter())
+        try:
+            client = LiveKAMNClient(endpoint)
+            sender = client.register("autonomous", "claude-4", ["text"])
+            self.assertEqual(sender, "kamn:did:agent:backend-1")
+
+            message_id = client.send(
+                "kamn:did:agent:backend-1",
+                "kamn:did:agent:backend-2",
+                "backend hello",
+            )
+            self.assertEqual(message_id, "msg_backend_1")
+
+            received = client.receive("kamn:did:agent:backend-2")
+            self.assertEqual(len(received), 1)
+            self.assertEqual(received[0]["body"], "backend hello")
+            self.assertEqual(operations, ["register", "send", "receive"])
+        finally:
+            LiveKAMNClient.clear_backend_adapters()
+
+    def test_regression_backend_adapter_errors_and_invalid_payloads_fail_closed(
+        self,
+    ) -> None:
+        # Regression: #1415
+        endpoint = "https://live.kamn.testnet/python-backend-adapter-fail"
+
+        class Adapter:
+            def invoke(self, request: dict[str, object]) -> dict[str, object]:
+                operation = str(request["operation"])
+                if operation == "register":
+                    return {"status": "ok", "value": 42}
+                if operation == "send":
+                    return {"status": "error", "reason": "backend_timeout"}
+                return {"status": "error", "reason": "policy_denied"}
+
+        LiveKAMNClient.register_backend_adapter(endpoint, Adapter())
+        try:
+            client = LiveKAMNClient(endpoint)
+            with self.assertRaises(SDKError) as invalid_response:
+                client.register("autonomous", "claude-4", ["text"])
+            self.assertEqual(
+                str(invalid_response.exception),
+                "backend adapter invalid response for operation register: expected string value",
+            )
+
+            with self.assertRaises(LiveTransportBackendAdapterError) as timeout_error:
+                client.send("kamn:did:agent:x", "kamn:did:agent:y", "hello")
+            self.assertEqual(timeout_error.exception.operation, "send")
+            self.assertEqual(timeout_error.exception.reason, "backend_timeout")
+
+            with self.assertRaises(LiveTransportBackendAdapterError) as policy_error:
+                client.receive("kamn:did:agent:y")
+            self.assertEqual(policy_error.exception.operation, "receive")
+            self.assertEqual(policy_error.exception.reason, "policy_denied")
+        finally:
+            LiveKAMNClient.clear_backend_adapters()
 
 
 if __name__ == "__main__":

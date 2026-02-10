@@ -1,8 +1,18 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import AsyncIterator, Dict, List, Optional
+from typing import (
+    AsyncIterator,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Protocol,
+    TypedDict,
+    TypeVar,
+)
 
 
 class SDKError(Exception):
@@ -33,6 +43,55 @@ class LiveTransportConfig:
             raise SDKError("transport endpoint must start with https:// or wss://")
         if len(normalized) <= len("https://a"):
             raise SDKError("transport endpoint must include host information")
+
+
+LiveTransportOperation = Literal[
+    "register",
+    "resolve",
+    "send",
+    "receive",
+    "createTask",
+    "acceptTask",
+    "createEscrow",
+    "releaseEscrow",
+    "balance",
+    "searchAgents",
+    "getReputation",
+]
+
+
+class LiveTransportBackendRequest(TypedDict):
+    endpoint: str
+    operation: LiveTransportOperation
+    payload: Dict[str, object]
+
+
+class LiveTransportBackendResponseOk(TypedDict):
+    status: Literal["ok"]
+    value: object
+
+
+class LiveTransportBackendResponseError(TypedDict):
+    status: Literal["error"]
+    reason: str
+
+
+LiveTransportBackendResponse = (
+    LiveTransportBackendResponseOk | LiveTransportBackendResponseError
+)
+
+
+class LiveTransportBackendAdapter(Protocol):
+    def invoke(
+        self, request: LiveTransportBackendRequest
+    ) -> LiveTransportBackendResponse: ...
+
+
+class LiveTransportBackendAdapterError(SDKError):
+    def __init__(self, operation: LiveTransportOperation, reason: str) -> None:
+        self.operation = operation
+        self.reason = reason
+        super().__init__(f"backend adapter operation {operation} failed: {reason}")
 
 
 @dataclass
@@ -218,8 +277,23 @@ class KAMNClient:
             raise SDKError(f"unknown did: {did}")
 
 
+_T = TypeVar("_T")
+
+
 class LiveKAMNClient:
     _live_endpoints: Dict[str, KAMNClient] = {}
+    _backend_adapters: Dict[str, LiveTransportBackendAdapter] = {}
+
+    @classmethod
+    def register_backend_adapter(
+        cls, endpoint: str, adapter: LiveTransportBackendAdapter
+    ) -> None:
+        config = LiveTransportConfig(endpoint=endpoint)
+        cls._backend_adapters[config.endpoint] = adapter
+
+    @classmethod
+    def clear_backend_adapters(cls) -> None:
+        cls._backend_adapters.clear()
 
     def __init__(self, endpoint: str) -> None:
         self.config = LiveTransportConfig(endpoint=endpoint)
@@ -227,6 +301,7 @@ class LiveKAMNClient:
         if self._endpoint not in self._live_endpoints:
             self._live_endpoints[self._endpoint] = KAMNClient()
         self._delegate = self._live_endpoints[self._endpoint]
+        self._backend_adapter = self._backend_adapters.get(self._endpoint)
 
     @property
     def endpoint(self) -> str:
@@ -240,5 +315,262 @@ class LiveKAMNClient:
         if found != expected:
             raise TransportModeMismatchError(expected, found)
 
+    def register(
+        self, agent_type: str, model_family: str, capabilities: List[str]
+    ) -> str:
+        return self._invoke_with_adapter(
+            "register",
+            {
+                "agentType": agent_type,
+                "modelFamily": model_family,
+                "capabilities": list(capabilities),
+            },
+            lambda value: self._require_string_value("register", value),
+            lambda: self._delegate.register(agent_type, model_family, capabilities),
+        )
+
+    def resolve(self, did: str) -> Dict[str, object]:
+        return self._invoke_with_adapter(
+            "resolve",
+            {"did": did},
+            lambda value: self._require_resolve_value("resolve", value),
+            lambda: self._delegate.resolve(did),
+        )
+
+    def send(self, from_did: str, to_did: str, body: str) -> str:
+        return self._invoke_with_adapter(
+            "send",
+            {"fromDid": from_did, "toDid": to_did, "body": body},
+            lambda value: self._require_string_value("send", value),
+            lambda: self._delegate.send(from_did, to_did, body),
+        )
+
+    def receive(self, did: str) -> List[Dict[str, object]]:
+        return self._invoke_with_adapter(
+            "receive",
+            {"did": did},
+            lambda value: self._require_inbox_messages_value("receive", value),
+            lambda: self._delegate.receive(did),
+        )
+
+    async def receive_stream(self, did: str) -> AsyncIterator[Dict[str, object]]:
+        for message in self.receive(did):
+            yield dict(message)
+
+    def create_task(self, creator_did: str, task_type: str, description: str) -> str:
+        return self._invoke_with_adapter(
+            "createTask",
+            {"creatorDid": creator_did, "taskType": task_type, "description": description},
+            lambda value: self._require_string_value("createTask", value),
+            lambda: self._delegate.create_task(creator_did, task_type, description),
+        )
+
+    def accept_task(self, task_id: str, assignee_did: str) -> None:
+        self._invoke_with_adapter(
+            "acceptTask",
+            {"taskId": task_id, "assigneeDid": assignee_did},
+            lambda _: None,
+            lambda: self._delegate.accept_task(task_id, assignee_did),
+        )
+
+    def create_escrow(self, payer_did: str, payee_did: str, amount: int) -> str:
+        return self._invoke_with_adapter(
+            "createEscrow",
+            {"payerDid": payer_did, "payeeDid": payee_did, "amount": amount},
+            lambda value: self._require_string_value("createEscrow", value),
+            lambda: self._delegate.create_escrow(payer_did, payee_did, amount),
+        )
+
+    def release_escrow(self, escrow_id: str) -> None:
+        self._invoke_with_adapter(
+            "releaseEscrow",
+            {"escrowId": escrow_id},
+            lambda _: None,
+            lambda: self._delegate.release_escrow(escrow_id),
+        )
+
+    def balance(self, did: str) -> int:
+        return self._invoke_with_adapter(
+            "balance",
+            {"did": did},
+            lambda value: self._require_int_value("balance", value),
+            lambda: self._delegate.balance(did),
+        )
+
+    def search_agents(
+        self, capability: Optional[str] = None, model_family: Optional[str] = None
+    ) -> List[Dict[str, object]]:
+        payload: Dict[str, object] = {}
+        if capability is not None:
+            payload["capability"] = capability
+        if model_family is not None:
+            payload["modelFamily"] = model_family
+        return self._invoke_with_adapter(
+            "searchAgents",
+            payload,
+            lambda value: self._require_search_agents_value("searchAgents", value),
+            lambda: self._delegate.search_agents(capability=capability, model_family=model_family),
+        )
+
+    def get_reputation(self, did: str) -> Dict[str, object]:
+        return self._invoke_with_adapter(
+            "getReputation",
+            {"did": did},
+            lambda value: self._require_reputation_value("getReputation", value),
+            lambda: self._delegate.get_reputation(did),
+        )
+
     def __getattr__(self, name: str):
         return getattr(self._delegate, name)
+
+    def _invoke_with_adapter(
+        self,
+        operation: LiveTransportOperation,
+        payload: Dict[str, object],
+        normalize: Callable[[object], _T],
+        fallback: Callable[[], _T],
+    ) -> _T:
+        if self._backend_adapter is None:
+            return fallback()
+
+        response = self._backend_adapter.invoke(
+            {"endpoint": self._endpoint, "operation": operation, "payload": payload}
+        )
+        if not isinstance(response, dict):
+            self._raise_invalid_adapter_response(operation, "expected mapping response")
+
+        status = response.get("status")
+        if status == "error":
+            reason_raw = response.get("reason")
+            reason = (
+                reason_raw.strip()
+                if isinstance(reason_raw, str) and reason_raw.strip()
+                else "backend adapter returned unknown error"
+            )
+            raise LiveTransportBackendAdapterError(operation, reason)
+
+        if status != "ok":
+            self._raise_invalid_adapter_response(operation, "expected status ok|error")
+        return normalize(response.get("value"))
+
+    def _raise_invalid_adapter_response(
+        self, operation: LiveTransportOperation, reason: str
+    ) -> None:
+        raise SDKError(
+            f"backend adapter invalid response for operation {operation}: {reason}"
+        )
+
+    def _require_string_value(
+        self, operation: LiveTransportOperation, value: object
+    ) -> str:
+        if not isinstance(value, str) or not value.strip():
+            self._raise_invalid_adapter_response(operation, "expected string value")
+        return value
+
+    def _require_int_value(self, operation: LiveTransportOperation, value: object) -> int:
+        if not isinstance(value, int) or isinstance(value, bool):
+            self._raise_invalid_adapter_response(operation, "expected integer value")
+        return value
+
+    def _require_resolve_value(
+        self, operation: LiveTransportOperation, value: object
+    ) -> Dict[str, object]:
+        if not isinstance(value, dict):
+            self._raise_invalid_adapter_response(operation, "expected resolve record")
+
+        agent_id = value.get("id")
+        service_endpoint = value.get("service_endpoint")
+        metadata = value.get("metadata", {})
+        if not isinstance(agent_id, str) or not isinstance(service_endpoint, str):
+            self._raise_invalid_adapter_response(operation, "expected resolve record")
+        if not isinstance(metadata, dict):
+            self._raise_invalid_adapter_response(operation, "expected resolve metadata map")
+        return {
+            "id": agent_id,
+            "metadata": dict(metadata),
+            "service_endpoint": service_endpoint,
+        }
+
+    def _require_inbox_messages_value(
+        self, operation: LiveTransportOperation, value: object
+    ) -> List[Dict[str, object]]:
+        if not isinstance(value, list):
+            self._raise_invalid_adapter_response(operation, "expected inbox message array")
+        normalized: List[Dict[str, object]] = []
+        for entry in value:
+            if not isinstance(entry, dict):
+                self._raise_invalid_adapter_response(
+                    operation, "expected inbox message object"
+                )
+
+            message_id = entry.get("id")
+            from_did = entry.get("from")
+            to_did = entry.get("to")
+            body = entry.get("body")
+            if not isinstance(message_id, str):
+                self._raise_invalid_adapter_response(
+                    operation, "expected inbox message string fields"
+                )
+            if not isinstance(from_did, str):
+                self._raise_invalid_adapter_response(
+                    operation, "expected inbox message string fields"
+                )
+            if not isinstance(to_did, str):
+                self._raise_invalid_adapter_response(
+                    operation, "expected inbox message string fields"
+                )
+            if not isinstance(body, str):
+                self._raise_invalid_adapter_response(
+                    operation, "expected inbox message string fields"
+                )
+
+            envelope = entry.get("envelope")
+            if envelope is None:
+                envelope = {"id": message_id}
+            normalized.append(
+                {
+                    "id": message_id,
+                    "from": from_did,
+                    "to": to_did,
+                    "body": body,
+                    "envelope": envelope,
+                }
+            )
+        return normalized
+
+    def _require_search_agents_value(
+        self, operation: LiveTransportOperation, value: object
+    ) -> List[Dict[str, object]]:
+        if not isinstance(value, list):
+            self._raise_invalid_adapter_response(
+                operation, "expected search agent result array"
+            )
+
+        normalized: List[Dict[str, object]] = []
+        for entry in value:
+            if not isinstance(entry, dict):
+                self._raise_invalid_adapter_response(
+                    operation, "expected search agent result object"
+                )
+            agent_id = entry.get("id")
+            metadata = entry.get("metadata", {})
+            if not isinstance(agent_id, str) or not isinstance(metadata, dict):
+                self._raise_invalid_adapter_response(
+                    operation, "expected search agent result object"
+                )
+            normalized.append({"id": agent_id, "metadata": dict(metadata)})
+        return normalized
+
+    def _require_reputation_value(
+        self, operation: LiveTransportOperation, value: object
+    ) -> Dict[str, object]:
+        if not isinstance(value, dict):
+            self._raise_invalid_adapter_response(operation, "expected reputation record")
+
+        agent_id = value.get("id")
+        score = value.get("score")
+        if not isinstance(agent_id, str):
+            self._raise_invalid_adapter_response(operation, "expected reputation record")
+        if not isinstance(score, (int, float)) or isinstance(score, bool):
+            self._raise_invalid_adapter_response(operation, "expected reputation record")
+        return {"id": agent_id, "score": score}
