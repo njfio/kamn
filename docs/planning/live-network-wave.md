@@ -48,9 +48,11 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-file /tmp/localhost-signed-integration-contract-report.json`
 - Stable shell wrappers:
   - `scripts/sdk/run_localhost_signed_integration_harness.sh`
+  - `scripts/sdk/run_localhost_signed_integration_contract_lane.sh`
   - `scripts/sdk/check_localhost_signed_integration_evidence_policy.sh`
 - Shared Python implementations:
   - `scripts/sdk/localhost_signed_integration_harness_contract.py`
+  - `scripts/sdk/localhost_signed_integration_contract_lane_contract.py`
   - `scripts/sdk/localhost_signed_integration_evidence_policy_contract.py`
 
 ## Bridge Replay/Redaction Lane Matrix
@@ -152,6 +154,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - localhost signed integration policy checker wrapper remains pinned to shared contract implementation marker (`Regression: #1170`).
 - Regression guard:
   - localhost signed integration harness wrapper remains pinned to shared contract implementation marker (`Regression: #1174`).
+- Regression guard:
+  - localhost signed integration contract lane wrapper remains pinned to shared contract implementation marker (`Regression: #1178`).
 - Regression guard:
   - localhost signed integration harness and contract lane preserve deterministic evidence keys (`Regression: #899`).
 - Regression guard:
