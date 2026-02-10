@@ -93,6 +93,21 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - Cost policy:
   - run mode enforces a deterministic runtime budget ceiling via `--max-seconds`.
 
+## Bounded Local-Only Kolme API Smoke Lane (Issue #1440)
+
+- Local API smoke runner:
+  - `bash scripts/kolme/run_local_kolme_api_smoke_lane.sh --mode dry-run --base-url http://127.0.0.1:3000 --smoke-command "curl --silent --show-error --fail http://127.0.0.1:3000/healthz" --output-json /tmp/kolme-local-api-smoke-summary.json`
+- Explicit local-only API smoke execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_api_smoke_lane.sh --mode run --base-url http://127.0.0.1:3000 --smoke-command "curl --silent --show-error --fail http://127.0.0.1:3000/healthz" --max-seconds 60 --output-json /tmp/kolme-local-api-smoke-summary.json`
+- Summary schema:
+  - `kamn.kolme.local-api-smoke-summary.v1`
+- Deterministic checkpoints include:
+  - `run_local_kolme_api_probe_lane.sh` prerequisite run-mode verification.
+  - bounded smoke command execution with timeout budget guard.
+- Cost policy:
+  - run mode fails closed without explicit local-only opt-in.
+  - smoke command timeout/exceeded budget is reported as `smoke_command_timeout`.
+
 ## Deterministic Local Bootstrap Health Checks (Issue #1417)
 
 - Bootstrap health-check runner:
@@ -164,6 +179,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
 - local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
 - local Kolme API probe lane fails closed on unavailable health endpoint, invalid fork-info payload, and runtime budget overruns (`Regression: #1439`).
+- local Kolme API smoke lane fails closed without explicit local opt-in, probe prerequisite failure, smoke-command timeout, and smoke-command errors (`Regression: #1440`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
 ## Local Validation
@@ -174,6 +190,7 @@ bash scripts/kolme/test_run_triadic_devnet_smoke_contract_lane.sh
 bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh
 bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh
 bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh
+bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh
 bash scripts/kolme/test_run_local_bootstrap_health_checks.sh
 bash scripts/kolme/test_run_local_e2e_integration_lane.sh
 bash scripts/kolme/test_run_local_heavy_validation_matrix.sh
