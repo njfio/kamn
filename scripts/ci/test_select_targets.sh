@@ -157,6 +157,11 @@ assert_eq "$(extract_output "$gonogo_shared_contract_output" "run_rust")" "false
 assert_eq "$(extract_output "$gonogo_shared_contract_output" "run_deploy_preflight_tests")" "true" "go/no-go shared contract changes must run deploy preflight tests"
 assert_eq "$(extract_output "$gonogo_shared_contract_output" "test_scope")" "deploy" "go/no-go shared contract changes should set deploy scope"
 
+staging_shared_contract_output="$(run_selector $'scripts/deploy/staging_rehearsal_contract.py')"
+assert_eq "$(extract_output "$staging_shared_contract_output" "run_rust")" "false" "staging rehearsal shared contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$staging_shared_contract_output" "run_deploy_preflight_tests")" "true" "staging rehearsal shared contract changes must run deploy preflight tests"
+assert_eq "$(extract_output "$staging_shared_contract_output" "test_scope")" "deploy" "staging rehearsal shared contract changes should set deploy scope"
+
 # Regression: #463
 runner_output_file="$(mktemp)"
 runner_docs_output="$(GITHUB_OUTPUT="$runner_output_file" run_selector $'docs/foundation/ci-caching-parallelism.md')"
