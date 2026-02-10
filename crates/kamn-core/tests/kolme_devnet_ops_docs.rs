@@ -52,6 +52,8 @@ fn plan_contains_local_fork_smoke_evidence_lane() {
 fn plan_contains_local_kolme_api_probe_lane() {
     assert!(PLAN.contains("## Deterministic Local Kolme API Probe Lane"));
     assert!(PLAN.contains("run_local_kolme_api_probe_lane.sh"));
+    assert!(PLAN.contains("--fork-chain-version v0.15.2"));
+    assert!(PLAN.contains("GET /fork-info?chain_version=<version>"));
     assert!(PLAN.contains("kamn.kolme.local-api-probe-summary.v1"));
 }
 
@@ -73,6 +75,9 @@ fn plan_contains_local_runtime_commit_live_lane() {
 fn plan_contains_local_native_api_parity_live_proof_lane() {
     assert!(PLAN.contains("## Local Native API Parity Live Proof Lane"));
     assert!(PLAN.contains("run_local_native_api_parity_live_proof_lane.sh"));
+    assert!(
+        PLAN.contains("--request PUT --data '{\\\"message\\\":\\\"native-parity\\\",\\\"signature\\\":\\\"sig\\\",\\\"recovery_id\\\":1}' http://127.0.0.1:3000/broadcast")
+    );
     assert!(PLAN.contains("check_local_native_api_parity_live_proof_policy.py"));
     assert!(PLAN.contains("run_local_native_api_parity_live_proof_contract_lane.sh"));
     assert!(PLAN.contains("kamn.kolme.local-native-api-parity-live-proof-summary.v1"));
@@ -214,5 +219,13 @@ fn regression_requires_native_parity_docs_matrix_guard_marker() {
     // Regression: #1468
     assert!(PLAN.contains(
         "native parity fast/local command matrix docs drift remains fail-closed (`Regression: #1468`)."
+    ));
+}
+
+#[test]
+fn regression_requires_live_kolme_method_and_query_guard_marker() {
+    // Regression: #1482
+    assert!(PLAN.contains(
+        "local probe fork-info query semantics and native parity broadcast method drift remain fail-closed (`Regression: #1482`)."
     ));
 }

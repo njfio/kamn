@@ -91,14 +91,14 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 ## Deterministic Local Kolme API Probe Lane (Issue #1439)
 
 - Local API probe runner:
-  - `bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode dry-run --base-url http://127.0.0.1:3000 --output-json /tmp/kolme-local-api-probe-summary.json`
+  - `bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode dry-run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-api-probe-summary.json`
 - Active local API probe:
-  - `bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode run --base-url http://127.0.0.1:3000 --max-seconds 30 --output-json /tmp/kolme-local-api-probe-summary.json`
+  - `bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 30 --output-json /tmp/kolme-local-api-probe-summary.json`
 - Summary schema:
   - `kamn.kolme.local-api-probe-summary.v1`
 - Deterministic checks include:
   - `GET /healthz` response body matches expected health marker (`Healthy!` by default).
-  - `GET /fork-info` returns valid JSON object with integer `first_block` and `last_block`.
+  - `GET /fork-info?chain_version=<version>` returns valid JSON object with integer `first_block` and `last_block`.
 - Cost policy:
   - run mode enforces a deterministic runtime budget ceiling via `--max-seconds`.
 
@@ -138,7 +138,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - Native API parity live-proof lane runner:
   - `bash scripts/kolme/run_local_native_api_parity_live_proof_lane.sh --mode dry-run --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json`
 - Explicit opt-in live proof execution:
-  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_native_api_parity_live_proof_lane.sh --mode run --nonce-command "curl --silent --show-error --fail http://127.0.0.1:3000/get-next-nonce?pubkey=test-key" --broadcast-command "curl --silent --show-error --fail --request POST --data '{\"message\":\"native-parity\",\"signature\":\"sig\",\"recovery_id\":1}' http://127.0.0.1:3000/broadcast" --finality-command "curl --silent --show-error --fail http://127.0.0.1:3000/block/1" --max-seconds 180 --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json`
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_native_api_parity_live_proof_lane.sh --mode run --nonce-command "curl --silent --show-error --fail http://127.0.0.1:3000/get-next-nonce?pubkey=test-key" --broadcast-command "curl --silent --show-error --fail --request PUT --data '{\"message\":\"native-parity\",\"signature\":\"sig\",\"recovery_id\":1}' http://127.0.0.1:3000/broadcast" --finality-command "curl --silent --show-error --fail http://127.0.0.1:3000/block/1" --max-seconds 180 --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_native_api_parity_live_proof_policy.py --report-file /tmp/kolme-local-native-api-parity-live-proof-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-native-api-parity-live-proof-policy.json`
 - Contract lane command:
@@ -243,6 +243,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
 - local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`).
 - native parity fast/local command matrix docs drift remains fail-closed (`Regression: #1468`).
+- local probe fork-info query semantics and native parity broadcast method drift remain fail-closed (`Regression: #1482`).
 - block fallback stale-window and response-height drift remains fail-closed (`Regression: #1464`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
