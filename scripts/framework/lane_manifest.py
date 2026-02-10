@@ -7,7 +7,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 from dataclasses import dataclass
 
 MANIFEST_SCHEMA_VERSION = "kamn.contract-lane.manifest.v1"
@@ -96,6 +96,7 @@ def run_lane_phase(
     manifest: LaneManifest,
     phase: str,
     *,
+    phase_args: Sequence[str] | None = None,
     cwd: Path | None = None,
     env: Mapping[str, str] | None = None,
 ) -> tuple[int, str]:
@@ -104,6 +105,8 @@ def run_lane_phase(
         raise ValueError(f"phase '{phase}' is not defined in manifest '{manifest.lane_id}'")
 
     phase_command = list(manifest.phases[phase])
+    if phase_args:
+        phase_command.extend(phase_args)
     run_env = os.environ.copy()
     if env is not None:
         run_env.update(env)

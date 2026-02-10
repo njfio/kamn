@@ -23,7 +23,11 @@ class ManifestWrapperDispatchTests(unittest.TestCase):
                     "evidence_key": "framework_dispatch:v1",
                     "reason_key": "framework_dispatch_reason_codes:GO:v1",
                     "phases": {
-                        "generate": ["python3", "-c", "print('dispatch-ok')"],
+                        "generate": [
+                            "python3",
+                            "-c",
+                            "import sys; print('dispatch-ok'); print('args=' + ' '.join(sys.argv[1:]))",
+                        ],
                     },
                 }
             ),
@@ -36,7 +40,17 @@ class ManifestWrapperDispatchTests(unittest.TestCase):
             self._write_manifest(manifest_path)
 
             completed = subprocess.run(
-                ["bash", str(WRAPPER_SCRIPT), "--manifest", str(manifest_path), "--phase", "generate"],
+                [
+                    "bash",
+                    str(WRAPPER_SCRIPT),
+                    "--manifest",
+                    str(manifest_path),
+                    "--phase",
+                    "generate",
+                    "--",
+                    "--demo",
+                    "value",
+                ],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -46,6 +60,7 @@ class ManifestWrapperDispatchTests(unittest.TestCase):
         self.assertIn("status=ok", completed.stdout)
         self.assertIn("lane_id=framework.dispatch", completed.stdout)
         self.assertIn("dispatch-ok", completed.stdout)
+        self.assertIn("args=--demo value", completed.stdout)
 
     def test_wrapper_fails_for_unknown_phase(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

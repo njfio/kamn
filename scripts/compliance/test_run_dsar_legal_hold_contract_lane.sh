@@ -5,19 +5,30 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/compliance/run_dsar_legal_hold_contract_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/compliance/dsar_legal_hold_contract_lane_contract.py"
 DEEP_LANE="$ROOT_DIR/scripts/compliance/run_dsar_legal_hold_deep_lane.sh"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/compliance_dsar_legal_hold_contract_lane.json"
 
 if [ ! -x "$CONTRACT_LANE" ]; then
   echo "expected DSAR legal-hold contract lane script to be executable" >&2
   exit 1
 fi
 
-if ! grep -q 'dsar_legal_hold_contract_lane_contract.py' "$CONTRACT_LANE"; then
-  echo "expected DSAR legal-hold contract lane wrapper to delegate to shared implementation" >&2
+if ! grep -q 'run_manifest_lane.sh' "$CONTRACT_LANE"; then
+  echo "expected DSAR legal-hold contract lane wrapper to delegate via manifest runner" >&2
+  exit 1
+fi
+
+if ! grep -q 'compliance_dsar_legal_hold_contract_lane.json' "$CONTRACT_LANE"; then
+  echo "expected DSAR legal-hold contract lane wrapper to reference DSAR manifest" >&2
   exit 1
 fi
 
 if [ ! -x "$SHARED_CONTRACT" ]; then
   echo "expected shared DSAR legal-hold contract lane implementation to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected DSAR legal-hold contract lane manifest to exist" >&2
   exit 1
 fi
 
@@ -44,6 +55,11 @@ fi
 
 if ! grep -q "generate_dsar_legal_hold_evidence_bundle.sh" "$SHARED_CONTRACT"; then
   echo "expected shared DSAR contract lane implementation to execute DSAR bundle generator" >&2
+  exit 1
+fi
+
+if ! grep -q "dsar_legal_hold_contract_lane_contract.py" "$MANIFEST"; then
+  echo "expected DSAR contract-lane manifest to dispatch to shared implementation" >&2
   exit 1
 fi
 

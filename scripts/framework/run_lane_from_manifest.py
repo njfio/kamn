@@ -22,6 +22,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default="",
         help="Optional working directory for the phase command.",
     )
+    parser.add_argument(
+        "phase_args",
+        nargs=argparse.REMAINDER,
+        help="Optional arguments forwarded to the phase command after '--'.",
+    )
     return parser.parse_args(argv)
 
 
@@ -33,7 +38,10 @@ def main(argv: list[str]) -> int:
     try:
         manifest = load_manifest_file(manifest_path)
         cwd = Path(args.cwd) if args.cwd else None
-        code, output = run_lane_phase(manifest, args.phase, cwd=cwd)
+        phase_args = list(args.phase_args)
+        if phase_args and phase_args[0] == "--":
+            phase_args = phase_args[1:]
+        code, output = run_lane_phase(manifest, args.phase, phase_args=phase_args, cwd=cwd)
     except Exception as exc:  # noqa: BLE001
         print("status=fail")
         print(f"error={exc}")
