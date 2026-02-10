@@ -136,6 +136,11 @@ Schema compatibility evidence is generated from the shared parity fixture and ch
   - `bash scripts/sdk/run_sdk_schema_compatibility_contract_lane.sh --output-file /tmp/sdk-schema-compatibility-contract-bundle.json`
 - Policy checker command:
   - `bash scripts/sdk/check_sdk_schema_compatibility_policy.sh --bundle-file /tmp/sdk-schema-compatibility-contract-bundle.json`
+- Stable shell wrappers:
+  - `scripts/sdk/generate_sdk_schema_compatibility_evidence_bundle.sh`
+  - `scripts/sdk/check_sdk_schema_compatibility_policy.sh`
+- Shared Python implementation:
+  - `scripts/sdk/sdk_schema_compatibility_contract.py`
 
 Required schema markers:
 
