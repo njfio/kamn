@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE_SCRIPT="$ROOT_DIR/scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_invariant_fuzz_concurrency_policy.sh"
+TESTING_STRATEGY_DOC="$ROOT_DIR/docs/testing/invariant-and-fuzz-strategy.md"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -14,6 +15,11 @@ fi
 
 if [ ! -x "$POLICY_CHECKER" ]; then
   echo "expected invariant/fuzz/concurrency policy checker script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$TESTING_STRATEGY_DOC" ]; then
+  echo "expected invariant/fuzz strategy doc to exist" >&2
   exit 1
 fi
 
@@ -54,6 +60,11 @@ PY
 
 if ! grep -Fq "check_invariant_fuzz_concurrency_policy.sh" "$LANE_SCRIPT"; then
   echo "expected invariant/fuzz/concurrency lane to enforce policy checker" >&2
+  exit 1
+fi
+
+if ! grep -Fq "docs/testing/invariant-and-fuzz-strategy.md" "$LANE_SCRIPT"; then
+  echo "expected invariant/fuzz/concurrency lane to enforce testing strategy doc contract" >&2
   exit 1
 fi
 

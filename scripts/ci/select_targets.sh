@@ -303,7 +303,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/runtime-network.md|docs/foundation/runtime-watchdog-attestation.md|docs/planning/live-network-wave.md|Makefile|crates/kamn-core/tests/runtime_network_docs.rs|crates/kamn-core/tests/runtime_watchdog_attestation_docs.rs|crates/kamn-core/tests/live_network_wave_docs.rs|scripts/runtime/*|fixtures/runtime/*)
+    docs/foundation/runtime-network.md|docs/foundation/runtime-watchdog-attestation.md|docs/planning/live-network-wave.md|docs/testing/invariant-and-fuzz-strategy.md|Makefile|crates/kamn-core/tests/runtime_network_docs.rs|crates/kamn-core/tests/runtime_watchdog_attestation_docs.rs|crates/kamn-core/tests/live_network_wave_docs.rs|scripts/runtime/*|fixtures/runtime/*)
       RUNTIME_SNAPSHOT_CONTRACT_CHANGED=true
       classified=true
       ;;
