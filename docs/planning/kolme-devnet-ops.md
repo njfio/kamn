@@ -79,6 +79,20 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
   - run mode fails closed without explicit local-only opt-in.
   - smoke command timeout/exceeded budget is reported as `fork_smoke_command_timeout`.
 
+## Deterministic Local Kolme API Probe Lane (Issue #1439)
+
+- Local API probe runner:
+  - `bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode dry-run --base-url http://127.0.0.1:3000 --output-json /tmp/kolme-local-api-probe-summary.json`
+- Active local API probe:
+  - `bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode run --base-url http://127.0.0.1:3000 --max-seconds 30 --output-json /tmp/kolme-local-api-probe-summary.json`
+- Summary schema:
+  - `kamn.kolme.local-api-probe-summary.v1`
+- Deterministic checks include:
+  - `GET /healthz` response body matches expected health marker (`Healthy!` by default).
+  - `GET /fork-info` returns valid JSON object with integer `first_block` and `last_block`.
+- Cost policy:
+  - run mode enforces a deterministic runtime budget ceiling via `--max-seconds`.
+
 ## Deterministic Local Bootstrap Health Checks (Issue #1417)
 
 - Bootstrap health-check runner:
@@ -149,6 +163,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - local-only heavy validation matrix requires explicit opt-in and remains excluded from PR fast-gate workflows (`Regression: #1405`).
 - local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
 - local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
+- local Kolme API probe lane fails closed on unavailable health endpoint, invalid fork-info payload, and runtime budget overruns (`Regression: #1439`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
 ## Local Validation
@@ -158,6 +173,7 @@ bash scripts/kolme/test_validate_triadic_devnet_smoke.sh
 bash scripts/kolme/test_run_triadic_devnet_smoke_contract_lane.sh
 bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh
 bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh
+bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh
 bash scripts/kolme/test_run_local_bootstrap_health_checks.sh
 bash scripts/kolme/test_run_local_e2e_integration_lane.sh
 bash scripts/kolme/test_run_local_heavy_validation_matrix.sh
