@@ -119,6 +119,50 @@ fn zk_message_proofs_reject_missing_hidden_field() {
 }
 
 #[test]
+fn zk_message_proofs_regression_rejects_malformed_private_field_selector() {
+    // Regression: #993
+    let result = build_message_witness(&valid_envelope(), &["task description"]);
+    assert_eq!(
+        result,
+        Err(ZkDesignError::InvalidPrivateField(
+            "private field selector `task description` must contain only [A-Za-z0-9_.-] and no empty path segments".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn zk_message_proofs_reject_invalid_processor_artifact_commitment_shape() {
+    let result = ProcessorProofArtifact::new(
+        "artifact-shape-1",
+        "urn:uuid:msg-shape-1",
+        "sha256:not-a-witness-commitment",
+        "proof:ok:artifact-shape-1",
+    );
+    assert_eq!(
+        result,
+        Err(ZkDesignError::InvalidProofArtifact(
+            "payload_commitment must start with `fnv1a64:`".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn zk_message_proofs_reject_invalid_processor_artifact_proof_value_shape() {
+    let result = ProcessorProofArtifact::new(
+        "artifact-shape-2",
+        "urn:uuid:msg-shape-2",
+        "fnv1a64:abc",
+        "artifact-shape-2",
+    );
+    assert_eq!(
+        result,
+        Err(ZkDesignError::InvalidProofArtifact(
+            "proof_value must start with `proof:`".to_owned()
+        ))
+    );
+}
+
+#[test]
 fn zk_message_proofs_reports_envelope_validation_failures() {
     let mut envelope = valid_envelope();
     envelope.envelope.type_name = "kamn:message:v2".to_owned();

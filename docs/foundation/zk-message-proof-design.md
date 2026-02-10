@@ -74,6 +74,20 @@ This spike evaluates feasible zero-knowledge (ZK) message-proof designs for PRD 
   - proof value fails deterministic verification format checks
 - Regression guard: tampered processor proof artifacts are rejected before admission (`Regression: #509`).
 
+## Witness and Artifact Schema Contract Lane
+- Contract lane entrypoint:
+  - `bash scripts/message/run_processor_proof_artifact_contract_lane.sh`
+- Evidence and policy helpers:
+  - `scripts/message/generate_processor_proof_artifact_evidence_bundle.sh`
+  - `scripts/message/check_processor_proof_artifact_policy.sh`
+- Schema and reason-code coverage:
+  - artifact fields (`artifact_id`, `message_id`, `payload_commitment`, `proof_value`) are evaluated with deterministic pass/fail checks.
+  - private selectors are required, deduplicated, and syntax-validated.
+  - policy output emits stable `reason_key` and `failed_checks` projections for GO/NO-GO decisions.
+- Runtime budget:
+  - fast contract lane enforces `PROCESSOR_PROOF_ARTIFACT_MAX_SECONDS` (default `90`) to keep PR cost bounded.
+- Regression guard: private field selector syntax drift is rejected (`Regression: #993`).
+
 ## Validator Quorum and Watchdog Projection Contract
 - Validator proof consensus introduces deterministic attestation artifacts:
   - `ValidatorProofAttestation`
@@ -98,6 +112,7 @@ Run the smallest lane needed for rapid feedback:
 
 ```bash
 cargo test -p kamn-core --test zk_message_proofs --test zk_message_proofs_docs
+bash scripts/message/run_processor_proof_artifact_contract_lane.sh
 cargo fmt --check
 cargo clippy -- -D warnings
 ```
