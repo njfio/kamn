@@ -1,0 +1,9 @@
+{
+  "backend_adapter_register_id": "kamn:did:agent:backend-1",
+  "backend_adapter_message_id": "msg_backend_1",
+  "backend_adapter_receive_body": "backend hello",
+  "backend_adapter_invalid_response_message": "backend adapter invalid response for operation register: expected string value",
+  "backend_adapter_error_operation": "send",
+  "backend_adapter_error_reason": "backend_timeout",
+  "backend_adapter_policy_reason": "policy_denied"
+}
