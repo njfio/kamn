@@ -27,6 +27,8 @@ BODY = "hello-from-localhost-demo"
 NONCE_REPLAY_TEST_VALUE = 7
 UNAUTHORIZED_FROM_DID = "kamn:did:agent:rogue-1"
 STALE_STATE_HASH = "state:localhost-stale"
+SESSION_MAX_AGE_SECONDS = 300
+SESSION_EXPIRED_MAX_AGE_SECONDS = 1
 
 
 class ScenarioFailure(Exception):
@@ -103,6 +105,7 @@ class HarnessContext:
         expected_from: str = FROM_DID,
         expected_to: str = TO_DID,
         expected_session_id: str = SESSION_ID,
+        session_max_age_seconds: int = SESSION_MAX_AGE_SECONDS,
         expected_state_hash: str = STATE_HASH,
         nonce_state_file: Path | None = None,
     ) -> None:
@@ -123,6 +126,8 @@ class HarnessContext:
             expected_to,
             "--expected-session-id",
             expected_session_id,
+            "--session-max-age-seconds",
+            str(session_max_age_seconds),
             "--state-hash",
             expected_state_hash,
         ]
@@ -168,13 +173,14 @@ class HarnessContext:
         *,
         from_did: str,
         session_id: str,
+        session_epoch_seconds: int,
         nonce: int,
         state_hash: str,
         body: str,
     ) -> str:
         return (
             "sig:ed25519:baseline-v1:"
-            f"{from_did}:{session_id}:{nonce}:{state_hash}:{len(body)}"
+            f"{from_did}:{session_id}:{session_epoch_seconds}:{nonce}:{state_hash}:{len(body)}"
         )
 
     def _build_wire_payload(
@@ -183,6 +189,7 @@ class HarnessContext:
         from_did: str,
         to_did: str,
         session_id: str,
+        session_epoch_seconds: int,
         nonce: int,
         state_hash: str,
         body: str,
@@ -191,6 +198,7 @@ class HarnessContext:
         signature_value = signature or self._signature_for_fields(
             from_did=from_did,
             session_id=session_id,
+            session_epoch_seconds=session_epoch_seconds,
             nonce=nonce,
             state_hash=state_hash,
             body=body,
@@ -199,6 +207,7 @@ class HarnessContext:
             f"from={from_did}\n"
             f"to={to_did}\n"
             f"session_id={session_id}\n"
+            f"session_epoch_seconds={session_epoch_seconds}\n"
             f"nonce={nonce}\n"
             f"state_hash={state_hash}\n"
             f"body={body}\n"
@@ -211,6 +220,7 @@ class HarnessContext:
             from_did=FROM_DID,
             to_did=TO_DID,
             session_id=SESSION_ID,
+            session_epoch_seconds=int(time.time()),
             nonce=1,
             state_hash=STATE_HASH,
             body=BODY,
@@ -224,10 +234,12 @@ class HarnessContext:
         from_did: str = FROM_DID,
         to_did: str = TO_DID,
         session_id: str = SESSION_ID,
+        session_epoch_seconds: int | None = None,
         nonce: int = 1,
         state_hash: str = STATE_HASH,
         body: str = BODY,
     ) -> int:
+        epoch_value = session_epoch_seconds if session_epoch_seconds is not None else int(time.time())
         with self.sender_out.open("w", encoding="utf-8") as sender_stream:
             sender_result = subprocess.run(
                 [
@@ -247,6 +259,8 @@ class HarnessContext:
                     to_did,
                     "--session-id",
                     session_id,
+                    "--session-epoch-seconds",
+                    str(epoch_value),
                     "--nonce",
                     str(nonce),
                     "--state-hash",
@@ -297,6 +311,10 @@ class HarnessContext:
             self.fail_with_reason("sender_session_id_missing")
         if f"session_id={SESSION_ID}" not in listener_text:
             self.fail_with_reason("listener_session_id_missing")
+        if "session_epoch_seconds=" not in sender_text:
+            self.fail_with_reason("sender_session_epoch_missing")
+        if "session_epoch_seconds=" not in listener_text:
+            self.fail_with_reason("listener_session_epoch_missing")
 
         self.emit_report(
             "pass",
@@ -304,6 +322,7 @@ class HarnessContext:
             extra_fields={
                 "signature_guard_status": "pass",
                 "admission_guard_status": "pass",
+                "expiry_guard_status": "pass",
                 "session_id": SESSION_ID,
             },
         )
@@ -334,6 +353,22 @@ class HarnessContext:
             self.listener_proc.wait(timeout=2)
 
         self.emit_report("pass", "listener_timeout_detected")
+
+    def run_session_expired_scenario(self) -> None:
+        self.start_listener(session_max_age_seconds=SESSION_EXPIRED_MAX_AGE_SECONDS)
+        if self.run_sender(nonce=2, session_epoch_seconds=1) != 0:
+            self.fail_with_reason("sender_failed")
+
+        listener_status = self.wait_for_listener()
+        if listener_status == 124:
+            self.fail_with_reason("listener_timeout")
+        self._require_listener_failure("session expired", "session_expired")
+
+        self.emit_report(
+            "pass",
+            "session_expired_detected",
+            extra_fields={"expiry_guard_status": "pass"},
+        )
 
     def run_replay_nonce_scenario(self) -> None:
         nonce_state_file = self.tmp_dir / "replay-nonce.state"
@@ -395,6 +430,7 @@ class HarnessContext:
             f"from={FROM_DID}\n"
             f"to={TO_DID}\n"
             f"session_id={SESSION_ID}\n"
+            f"session_epoch_seconds={int(time.time())}\n"
             f"state_hash={STATE_HASH}\n"
             f"body={BODY}\n"
             "signature=sig:ed25519:baseline-v1:malformed\n"
@@ -432,12 +468,13 @@ def run_harness(args: argparse.Namespace) -> int:
         "success",
         "signature-mismatch",
         "timeout",
+        "session-expired",
         "replay-nonce",
         "admission-guards",
     }:
         fail(
             "scenario must be one of: success, signature-mismatch, timeout, "
-            "replay-nonce, admission-guards"
+            "session-expired, replay-nonce, admission-guards"
         )
 
     addr = args.addr
@@ -460,6 +497,8 @@ def run_harness(args: argparse.Namespace) -> int:
                 context.run_signature_mismatch_scenario()
             elif scenario == "timeout":
                 context.run_timeout_scenario()
+            elif scenario == "session-expired":
+                context.run_session_expired_scenario()
             elif scenario == "replay-nonce":
                 context.run_replay_nonce_scenario()
             else:

@@ -4,6 +4,7 @@ use std::fs;
 use std::io::Read;
 use std::net::TcpListener;
 use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone)]
 struct ListenerConfig {
@@ -11,6 +12,7 @@ struct ListenerConfig {
     expected_from: String,
     expected_to: String,
     expected_session_id: String,
+    session_max_age_seconds: u64,
     expected_state_hash: String,
     nonce_state_file: Option<String>,
 }
@@ -20,6 +22,7 @@ struct WireMessage {
     from: String,
     to: String,
     session_id: String,
+    session_epoch_seconds: u64,
     nonce: u64,
     state_hash: String,
     body: String,
@@ -32,6 +35,7 @@ fn parse_args() -> Result<ListenerConfig, String> {
         expected_from: "kamn:did:agent:sender-1".to_owned(),
         expected_to: "kamn:did:agent:listener-1".to_owned(),
         expected_session_id: "session:localhost-demo:v1".to_owned(),
+        session_max_age_seconds: 300,
         expected_state_hash: "state:localhost-demo".to_owned(),
         nonce_state_file: None,
     };
@@ -46,6 +50,11 @@ fn parse_args() -> Result<ListenerConfig, String> {
             "--expected-from" => config.expected_from = value,
             "--expected-to" => config.expected_to = value,
             "--expected-session-id" => config.expected_session_id = value,
+            "--session-max-age-seconds" => {
+                config.session_max_age_seconds = value
+                    .parse::<u64>()
+                    .map_err(|_| "session max age seconds must be an unsigned integer".to_owned())?
+            }
             "--state-hash" => config.expected_state_hash = value,
             "--nonce-state-file" => config.nonce_state_file = Some(value),
             other => return Err(format!("unknown argument: {other}")),
@@ -63,6 +72,9 @@ fn parse_args() -> Result<ListenerConfig, String> {
     if config.expected_session_id.trim().is_empty() {
         return Err("expected session id must not be empty".to_owned());
     }
+    if config.session_max_age_seconds == 0 {
+        return Err("session max age seconds must be greater than zero".to_owned());
+    }
     if let Some(path) = config.nonce_state_file.as_ref() {
         if path.trim().is_empty() {
             return Err("nonce state file path must not be empty".to_owned());
@@ -74,12 +86,13 @@ fn parse_args() -> Result<ListenerConfig, String> {
 fn signature_for_fields(
     from: &str,
     session_id: &str,
+    session_epoch_seconds: u64,
     nonce: u64,
     state_hash: &str,
     body: &str,
 ) -> String {
     format!(
-        "sig:ed25519:baseline-v1:{from}:{session_id}:{nonce}:{state_hash}:{}",
+        "sig:ed25519:baseline-v1:{from}:{session_id}:{session_epoch_seconds}:{nonce}:{state_hash}:{}",
         body.len()
     )
 }
@@ -88,6 +101,7 @@ fn parse_wire_message(payload: &str) -> Result<WireMessage, String> {
     let mut from: Option<String> = None;
     let mut to: Option<String> = None;
     let mut session_id: Option<String> = None;
+    let mut session_epoch_seconds: Option<u64> = None;
     let mut nonce: Option<u64> = None;
     let mut state_hash: Option<String> = None;
     let mut body: Option<String> = None;
@@ -101,6 +115,12 @@ fn parse_wire_message(payload: &str) -> Result<WireMessage, String> {
             "from" => from = Some(value.to_owned()),
             "to" => to = Some(value.to_owned()),
             "session_id" => session_id = Some(value.to_owned()),
+            "session_epoch_seconds" => {
+                let parsed = value
+                    .parse::<u64>()
+                    .map_err(|_| "session epoch seconds must be an unsigned integer".to_owned())?;
+                session_epoch_seconds = Some(parsed);
+            }
             "nonce" => {
                 let parsed = value
                     .parse::<u64>()
@@ -118,6 +138,8 @@ fn parse_wire_message(payload: &str) -> Result<WireMessage, String> {
         from: from.ok_or_else(|| "wire message missing from".to_owned())?,
         to: to.ok_or_else(|| "wire message missing to".to_owned())?,
         session_id: session_id.ok_or_else(|| "wire message missing session_id".to_owned())?,
+        session_epoch_seconds: session_epoch_seconds
+            .ok_or_else(|| "wire message missing session_epoch_seconds".to_owned())?,
         nonce: nonce.ok_or_else(|| "wire message missing nonce".to_owned())?,
         state_hash: state_hash.ok_or_else(|| "wire message missing state_hash".to_owned())?,
         body: body.ok_or_else(|| "wire message missing body".to_owned())?,
@@ -170,6 +192,13 @@ fn sanitize(value: &str) -> String {
     value.replace('\n', " ")
 }
 
+fn now_epoch_seconds() -> Result<u64, String> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .map_err(|_| "failed to compute current epoch seconds".to_owned())
+}
+
 fn run() -> Result<(), String> {
     let config = parse_args()?;
     let listener = TcpListener::bind(&config.addr)
@@ -218,12 +247,27 @@ fn run() -> Result<(), String> {
     let expected_signature = signature_for_fields(
         &wire.from,
         &wire.session_id,
+        wire.session_epoch_seconds,
         wire.nonce,
         &wire.state_hash,
         &wire.body,
     );
     if wire.signature != expected_signature {
         return Err("signature verification failed".to_owned());
+    }
+    let now_epoch = now_epoch_seconds()?;
+    if wire.session_epoch_seconds > now_epoch {
+        return Err(format!(
+            "session epoch is in the future: {} > {}",
+            wire.session_epoch_seconds, now_epoch
+        ));
+    }
+    let session_age_seconds = now_epoch - wire.session_epoch_seconds;
+    if session_age_seconds > config.session_max_age_seconds {
+        return Err(format!(
+            "session expired: age {}s exceeds max_age {}s",
+            session_age_seconds, config.session_max_age_seconds
+        ));
     }
     if let Some(nonce_state_file) = config.nonce_state_file.as_deref() {
         if let Some(highest_nonce) = read_highest_nonce(nonce_state_file)? {
@@ -243,6 +287,7 @@ fn run() -> Result<(), String> {
     println!("from={}", wire.from);
     println!("to={}", wire.to);
     println!("session_id={}", wire.session_id);
+    println!("session_epoch_seconds={}", wire.session_epoch_seconds);
     println!("nonce={}", wire.nonce);
     println!("state_hash={}", wire.state_hash);
     println!("body={}", wire.body);
