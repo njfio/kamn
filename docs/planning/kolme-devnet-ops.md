@@ -48,6 +48,22 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - Cost policy:
   - lane enforces a 60-second fast-gate budget and runs only targeted adapter/replay checks.
 
+## Deterministic Local Fork Sync Metadata Lane (Issue #1429)
+
+- Local fork metadata sync runner:
+  - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
+- Local fork metadata validation:
+  - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
+- Summary schema:
+  - `kamn.kolme.local-fork-sync-metadata-summary.v1`
+- Deterministic checks include:
+  - checkout path exists
+  - checkout is a git work tree
+  - `origin` remote URL matches expected fork repository
+  - symbolic HEAD ref matches expected ref
+  - HEAD commit is non-empty
+  - checkout dirty-state guard remains fail-closed unless explicit `--allow-dirty` is set
+
 ## Deterministic Local Bootstrap Health Checks (Issue #1417)
 
 - Bootstrap health-check runner:
@@ -116,6 +132,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - deterministic bootstrap run mode fails closed without explicit local-only opt-in (`Regression: #1417`).
 - local-only heavy E2E lane run mode fails closed without explicit local-only opt-in (`Regression: #1418`).
 - local-only heavy validation matrix requires explicit opt-in and remains excluded from PR fast-gate workflows (`Regression: #1405`).
+- local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
 ## Local Validation
@@ -123,6 +140,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 ```bash
 bash scripts/kolme/test_validate_triadic_devnet_smoke.sh
 bash scripts/kolme/test_run_triadic_devnet_smoke_contract_lane.sh
+bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh
 bash scripts/kolme/test_run_local_bootstrap_health_checks.sh
 bash scripts/kolme/test_run_local_e2e_integration_lane.sh
 bash scripts/kolme/test_run_local_heavy_validation_matrix.sh

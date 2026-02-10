@@ -267,6 +267,17 @@ bash scripts/kolme/run_triadic_devnet_smoke.sh --output-file /tmp/triadic-devnet
 python3 scripts/kolme/validate_triadic_devnet_smoke.py --fixture fixtures/kolme_compatibility/devnet_smoke_markers.json --marker-file /tmp/triadic-devnet-markers.txt --output-json /tmp/triadic-devnet-report.json
 ```
 
+### Run Local Fork Sync Metadata Lane (Kolme)
+
+```bash
+# deterministic metadata sync plan (no command execution)
+bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-sync-metadata-summary.json
+
+# deterministic metadata validation for local fork checkout
+bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-sync-metadata-summary.json
+# schema: kamn.kolme.local-fork-sync-metadata-summary.v1
+```
+
 ### Run Local-Only Heavy Kolme Validation Matrix
 
 ```bash

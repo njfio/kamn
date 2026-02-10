@@ -26,6 +26,14 @@ fn plan_contains_runtime_commit_adapter_replay_lane_policy() {
 }
 
 #[test]
+fn plan_contains_local_fork_sync_metadata_lane() {
+    assert!(PLAN.contains("## Deterministic Local Fork Sync Metadata Lane"));
+    assert!(PLAN.contains("run_local_fork_sync_metadata_lane.sh"));
+    assert!(PLAN.contains("kamn.kolme.local-fork-sync-metadata-summary.v1"));
+    assert!(PLAN.contains("expected-remote-url https://github.com/njfio/kolme_fork.git"));
+}
+
+#[test]
 fn plan_contains_local_only_heavy_validation_matrix() {
     assert!(PLAN.contains("## Local-Only Heavy Kolme Validation Matrix"));
     assert!(PLAN.contains("run_local_heavy_validation_matrix.sh"));
@@ -87,5 +95,13 @@ fn regression_requires_local_e2e_opt_in_guard_marker() {
     // Regression: #1418
     assert!(PLAN.contains(
         "local-only heavy E2E lane run mode fails closed without explicit local-only opt-in (`Regression: #1418`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_fork_sync_metadata_guard_marker() {
+    // Regression: #1429
+    assert!(PLAN.contains(
+        "local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`)."
     ));
 }
