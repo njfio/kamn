@@ -88,6 +88,21 @@ This spike evaluates feasible zero-knowledge (ZK) message-proof designs for PRD 
   - fast contract lane enforces `PROCESSOR_PROOF_ARTIFACT_MAX_SECONDS` (default `90`) to keep PR cost bounded.
 - Regression guard: private field selector syntax drift is rejected (`Regression: #993`).
 
+## Witness Mutation Property and Fuzz Lanes
+- Fast mutation lane (PR-safe):
+  - `bash scripts/runtime/run_zk_witness_mutation_contract_lane.sh`
+- Scheduled deep mutation lane:
+  - `bash scripts/runtime/run_zk_witness_mutation_deep_lane.sh`
+  - runs `performance_zk_witness_mutation_deep_lane_stress -- --ignored` after fast-lane checks.
+- Mutation classes covered:
+  - malformed selector syntax
+  - missing selector field references
+  - tampered canonical envelope fields
+- Routing:
+  - `scripts/runtime/run_input_mutation_contract_lane.sh` defaults to fast ZK witness mutation checks.
+  - set `KAMN_RUNTIME_ZK_WITNESS_MUTATION_DEEP=true` to route to deep mutation coverage in scheduled lanes.
+- Regression guard: deterministic witness mutation reason signatures remain stable (`Regression: #994`).
+
 ## Validator Quorum and Watchdog Projection Contract
 - Validator proof consensus introduces deterministic attestation artifacts:
   - `ValidatorProofAttestation`
@@ -113,6 +128,7 @@ Run the smallest lane needed for rapid feedback:
 ```bash
 cargo test -p kamn-core --test zk_message_proofs --test zk_message_proofs_docs
 bash scripts/message/run_processor_proof_artifact_contract_lane.sh
+bash scripts/runtime/run_zk_witness_mutation_contract_lane.sh
 cargo fmt --check
 cargo clippy -- -D warnings
 ```
@@ -121,4 +137,10 @@ Then run the crate regression lane:
 
 ```bash
 cargo test -p kamn-core
+```
+
+Scheduled deep-lane mutation command:
+
+```bash
+bash scripts/runtime/run_zk_witness_mutation_deep_lane.sh
 ```

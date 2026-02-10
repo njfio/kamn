@@ -69,6 +69,16 @@ if ! grep -q "test_check_invariant_fuzz_concurrency_policy.sh" "$FAST_SCRIPT"; t
   exit 1
 fi
 
+if ! grep -q "test_run_zk_witness_mutation_contract_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include zk witness mutation fast-lane coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "test_run_zk_witness_mutation_deep_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include zk witness mutation deep-lane coverage" >&2
+  exit 1
+fi
+
 if ! grep -q "test_select_failover_sync_drill_lane.sh" "$FAST_SCRIPT"; then
   echo "expected runtime snapshot contract lane to include failover/sync selector contract coverage" >&2
   exit 1

@@ -20,3 +20,11 @@ fn regression_requires_dispute_refund_property_and_concurrency_contract_markers(
     assert!(DOC.contains("run_concurrency_state_mutation_contract_lane.sh"));
     assert!(DOC.contains("Regression: #904"));
 }
+
+#[test]
+fn regression_requires_zk_witness_mutation_contract_markers() {
+    // Regression: #994
+    assert!(DOC.contains("run_zk_witness_mutation_contract_lane.sh"));
+    assert!(DOC.contains("run_zk_witness_mutation_deep_lane.sh"));
+    assert!(DOC.contains("KAMN_RUNTIME_ZK_WITNESS_MUTATION_DEEP"));
+}

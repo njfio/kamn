@@ -29,6 +29,16 @@ if ! grep -q "regression_did_mutation_reason_signatures_remain_stable" "$CONTRAC
   exit 1
 fi
 
+if ! grep -q "run_zk_witness_mutation_contract_lane.sh" "$CONTRACT_LANE"; then
+  echo "expected mutation lane to include ZK witness mutation contract lane coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "KAMN_RUNTIME_ZK_WITNESS_MUTATION_DEEP" "$CONTRACT_LANE"; then
+  echo "expected mutation lane to support fast/deep ZK witness mutation routing" >&2
+  exit 1
+fi
+
 lane_output="$(bash "$CONTRACT_LANE")"
 if ! printf '%s\n' "$lane_output" | grep -q "runtime input mutation contract lane tests passed."; then
   echo "expected runtime input mutation contract lane success marker" >&2

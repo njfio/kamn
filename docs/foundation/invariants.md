@@ -27,6 +27,11 @@ This document defines the canonical transaction invariant catalog and error taxo
   - `bash scripts/runtime/run_lifecycle_property_contract_lane.sh`
 - Fuzz/mutation fail-closed lane:
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh`
+- ZK witness mutation fast lane:
+  - `bash scripts/runtime/run_zk_witness_mutation_contract_lane.sh`
+- ZK witness mutation deep lane (scheduled):
+  - `bash scripts/runtime/run_zk_witness_mutation_deep_lane.sh`
+  - route via `KAMN_RUNTIME_ZK_WITNESS_MUTATION_DEEP=true` when running `run_input_mutation_contract_lane.sh`.
 - Concurrency state-mutation lane:
   - `bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh`
 - Combined bounded lane with evidence output:
@@ -48,6 +53,16 @@ This document defines the canonical transaction invariant catalog and error taxo
   - `bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh`
 - Fail-closed regression marker:
   - dispute/refund replay mutation drift is rejected (`Regression: #904`).
+
+## ZK Witness Mutation Contracts (Issue #994)
+- Fast smoke/property lane:
+  - `cargo test -p kamn-core --test zk_witness_fuzz_smoke fuzz_smoke_zk_witness_mutation_lane_is_panic_free_and_deterministic -- --exact`
+  - `cargo test -p kamn-core --test zk_witness_fuzz_smoke functional_zk_witness_mutation_suite_covers_malformed_missing_and_tampered_classes -- --exact`
+- Deep scheduled lane:
+  - `cargo test -p kamn-core --test zk_witness_fuzz_smoke performance_zk_witness_mutation_deep_lane_stress -- --ignored`
+  - `bash scripts/runtime/run_zk_witness_mutation_deep_lane.sh`
+- Fail-closed regression marker:
+  - selector/envelope mutation reason signatures remain stable (`Regression: #994`).
 
 ## Validation
 Run from repository root:
