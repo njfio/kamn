@@ -403,6 +403,36 @@ assert_eq "$(extract_output "$localhost_signed_integration_policy_shared_contrac
 assert_eq "$(extract_output "$localhost_signed_integration_policy_shared_contract_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "localhost signed integration shared policy contract changes must run localhost signed integration contract lane"
 assert_eq "$(extract_output "$localhost_signed_integration_policy_shared_contract_output" "test_scope")" "sdk-live-localhost-integration" "localhost signed integration shared policy contract changes should set localhost integration scope"
 
+live_transport_replay_tamper_generator_output="$(run_selector $'scripts/sdk/generate_live_transport_replay_tamper_evidence_bundle.sh')"
+assert_eq "$(extract_output "$live_transport_replay_tamper_generator_output" "run_rust")" "false" "live transport replay/tamper generator script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$live_transport_replay_tamper_generator_output" "run_rust_live_transport_contract_tests")" "false" "live transport replay/tamper generator script-only changes should skip rust live transport lane"
+assert_eq "$(extract_output "$live_transport_replay_tamper_generator_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "live transport replay/tamper generator script-only changes must run localhost signed integration contract lane scope"
+assert_eq "$(extract_output "$live_transport_replay_tamper_generator_output" "test_scope")" "sdk-live-localhost-integration" "live transport replay/tamper generator script-only changes should set localhost integration scope"
+
+live_transport_replay_tamper_policy_output="$(run_selector $'scripts/sdk/check_live_transport_replay_tamper_policy.sh')"
+assert_eq "$(extract_output "$live_transport_replay_tamper_policy_output" "run_rust")" "false" "live transport replay/tamper policy checker script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$live_transport_replay_tamper_policy_output" "run_rust_live_transport_contract_tests")" "false" "live transport replay/tamper policy checker script-only changes should skip rust live transport lane"
+assert_eq "$(extract_output "$live_transport_replay_tamper_policy_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "live transport replay/tamper policy checker script-only changes must run localhost signed integration contract lane scope"
+assert_eq "$(extract_output "$live_transport_replay_tamper_policy_output" "test_scope")" "sdk-live-localhost-integration" "live transport replay/tamper policy checker script-only changes should set localhost integration scope"
+
+live_transport_replay_tamper_contract_lane_output="$(run_selector $'scripts/sdk/run_live_transport_replay_tamper_contract_lane.sh')"
+assert_eq "$(extract_output "$live_transport_replay_tamper_contract_lane_output" "run_rust")" "false" "live transport replay/tamper contract lane script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$live_transport_replay_tamper_contract_lane_output" "run_rust_live_transport_contract_tests")" "false" "live transport replay/tamper contract lane script-only changes should skip rust live transport lane"
+assert_eq "$(extract_output "$live_transport_replay_tamper_contract_lane_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "live transport replay/tamper contract lane script-only changes must run localhost signed integration contract lane scope"
+assert_eq "$(extract_output "$live_transport_replay_tamper_contract_lane_output" "test_scope")" "sdk-live-localhost-integration" "live transport replay/tamper contract lane script-only changes should set localhost integration scope"
+
+live_transport_replay_tamper_fast_lane_output="$(run_selector $'scripts/sdk/run_live_transport_replay_tamper_fast_lane.sh')"
+assert_eq "$(extract_output "$live_transport_replay_tamper_fast_lane_output" "run_rust")" "false" "live transport replay/tamper fast lane script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$live_transport_replay_tamper_fast_lane_output" "run_rust_live_transport_contract_tests")" "false" "live transport replay/tamper fast lane script-only changes should skip rust live transport lane"
+assert_eq "$(extract_output "$live_transport_replay_tamper_fast_lane_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "live transport replay/tamper fast lane script-only changes must run localhost signed integration contract lane scope"
+assert_eq "$(extract_output "$live_transport_replay_tamper_fast_lane_output" "test_scope")" "sdk-live-localhost-integration" "live transport replay/tamper fast lane script-only changes should set localhost integration scope"
+
+live_transport_replay_tamper_shared_contract_output="$(run_selector $'scripts/sdk/live_transport_replay_tamper_contract_lane_contract.py')"
+assert_eq "$(extract_output "$live_transport_replay_tamper_shared_contract_output" "run_rust")" "false" "live transport replay/tamper shared contract lane module changes should avoid rust lane"
+assert_eq "$(extract_output "$live_transport_replay_tamper_shared_contract_output" "run_rust_live_transport_contract_tests")" "false" "live transport replay/tamper shared contract lane module changes should skip rust live transport lane"
+assert_eq "$(extract_output "$live_transport_replay_tamper_shared_contract_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "live transport replay/tamper shared contract lane module changes must run localhost signed integration contract lane scope"
+assert_eq "$(extract_output "$live_transport_replay_tamper_shared_contract_output" "test_scope")" "sdk-live-localhost-integration" "live transport replay/tamper shared contract lane module changes should set localhost integration scope"
+
 tcp_signed_demo_script_output="$(run_selector $'scripts/sdk/run_tcp_signed_relay_demo.sh')"
 assert_eq "$(extract_output "$tcp_signed_demo_script_output" "run_rust")" "false" "tcp signed relay demo script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$tcp_signed_demo_script_output" "run_rust_live_transport_contract_tests")" "true" "tcp signed relay demo script-only changes must run rust sdk live transport lane"

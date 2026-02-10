@@ -21,6 +21,9 @@ required_snippets=(
   "test_scope=runtime-contract"
   "run_localhost_signed_integration_contract_lane_tests"
   "sdk-live-localhost-integration"
+  "run_live_transport_replay_tamper_fast_lane.sh"
+  "check_live_transport_replay_tamper_policy.sh"
+  "KAMN_SDK_REPLAY_TAMPER_CONTRACT_MAX_SECONDS=60"
   "run_live_transport_parity_contract_tests=true"
   "live_transport_parity_languages=rust,python,typescript"
   "run_dashboard_contract_tests=true"
@@ -57,6 +60,7 @@ required_snippets=(
   "Regression: #941"
   "Regression: #944"
   "Regression: #907"
+  "Regression: #1386"
 )
 
 for snippet in "${required_snippets[@]}"; do

@@ -141,9 +141,14 @@ jobs:
         if: steps.scope.outputs.run_rust_live_transport_contract_tests == 'true'
         run: bash scripts/sdk/run_rust_live_transport_contract_lane.sh
 
-      - name: Run localhost signed integration contract lane
+      - name: Run localhost signed integration and replay/tamper fast lanes
         if: steps.scope.outputs.run_localhost_signed_integration_contract_lane_tests == 'true'
-        run: bash scripts/sdk/test_run_localhost_signed_integration_contract_lane.sh
+        env:
+          KAMN_SDK_REPLAY_TAMPER_CONTRACT_MAX_SECONDS: '60'
+        run: |
+          bash scripts/sdk/test_run_localhost_signed_integration_contract_lane.sh
+          bash scripts/sdk/test_run_live_transport_replay_tamper_fast_lane.sh
+          bash scripts/sdk/test_check_live_transport_replay_tamper_policy.sh
 
       - name: Run cross-language live transport parity contract lane
         if: steps.scope.outputs.run_live_transport_parity_contract_tests == 'true'
