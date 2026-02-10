@@ -195,6 +195,7 @@ fn checklist_contains_treasury_disbursement_approval_evidence_contract() {
     assert!(CHECKLIST.contains("## Treasury Disbursement Approval Evidence Contract"));
     assert!(CHECKLIST.contains("generate_treasury_disbursement_evidence_bundle.sh"));
     assert!(CHECKLIST.contains("check_treasury_disbursement_policy.sh"));
+    assert!(CHECKLIST.contains("treasury_disbursement_contract_lane_contract.py"));
     assert!(CHECKLIST.contains("run_treasury_disbursement_contract_lane.sh"));
 }
 
@@ -377,6 +378,14 @@ fn regression_requires_treasury_disbursement_approval_guard_marker() {
     // Regression: #716
     assert!(CHECKLIST.contains(
         "insufficient approvals, approval-window closure, and daily-limit overruns force `NO-GO` (`Regression: #716`)."
+    ));
+}
+
+#[test]
+fn regression_requires_treasury_shared_contract_lane_marker() {
+    // Regression: #1278
+    assert!(CHECKLIST.contains(
+        "shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1278`)."
     ));
 }
 

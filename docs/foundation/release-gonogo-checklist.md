@@ -313,8 +313,11 @@ Treasury disbursement execution requires deterministic approval-threshold eviden
   - `bash scripts/treasury/check_treasury_disbursement_policy.sh --bundle-file /tmp/treasury-disbursement.json`
 - PR fast contract lane:
   - `bash scripts/treasury/run_treasury_disbursement_contract_lane.sh`
+- Shared Python implementation (contract lane):
+  - `scripts/treasury/treasury_disbursement_contract_lane_contract.py`
 - Regression policy:
   - insufficient approvals, approval-window closure, and daily-limit overruns force `NO-GO` (`Regression: #716`).
+  - shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1278`).
 
 ## Mainnet Cutover Manifest Validation Contract (Issue #707)
 Mainnet cutover requires deterministic triadic checkpoint manifests with explicit approval and dependency evidence.
