@@ -5,7 +5,9 @@ use std::collections::HashMap;
 use std::fmt;
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::time::Duration;
+use std::process::{Command, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
 
 /// Runtime commit submission request for the Kolme execution path.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -545,10 +547,26 @@ pub struct KolmeRuntimeCommitLiveProvider<T> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ParsedHttpEndpoint {
+    scheme: HttpScheme,
     host: String,
     host_header: String,
     port: u16,
     target_path: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum HttpScheme {
+    Http,
+    Https,
+}
+
+impl HttpScheme {
+    fn default_port(self) -> u16 {
+        match self {
+            Self::Http => 80,
+            Self::Https => 443,
+        }
+    }
 }
 
 /// Dependency-free HTTP transport implementation for runtime commit submit/finality calls.
@@ -592,17 +610,6 @@ impl KolmeRuntimeCommitHttpTransport {
         headers: &[(&str, &str)],
     ) -> Result<String, KolmeRuntimeCommitProviderError> {
         let endpoint = parse_http_endpoint(base_url, path)?;
-        let mut stream = TcpStream::connect((endpoint.host.as_str(), endpoint.port))
-            .map_err(map_transport_io_error)?;
-
-        let timeout = Duration::from_secs(self.timeout_seconds);
-        stream
-            .set_read_timeout(Some(timeout))
-            .map_err(map_transport_io_error)?;
-        stream
-            .set_write_timeout(Some(timeout))
-            .map_err(map_transport_io_error)?;
-
         let payload = body.unwrap_or("");
         let mut request = format!(
             "{method} {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n",
@@ -627,15 +634,113 @@ impl KolmeRuntimeCommitHttpTransport {
             request.push_str(payload);
         }
 
-        stream
-            .write_all(request.as_bytes())
+        let response_bytes = match endpoint.scheme {
+            HttpScheme::Http => self.execute_http_request(endpoint, request.as_bytes())?,
+            HttpScheme::Https => self.execute_https_request(endpoint, request.as_bytes())?,
+        };
+        parse_http_response(response_bytes)
+    }
+
+    fn execute_http_request(
+        &self,
+        endpoint: ParsedHttpEndpoint,
+        request: &[u8],
+    ) -> Result<Vec<u8>, KolmeRuntimeCommitProviderError> {
+        let mut stream = TcpStream::connect((endpoint.host.as_str(), endpoint.port))
             .map_err(map_transport_io_error)?;
+        let timeout = Duration::from_secs(self.timeout_seconds);
+        stream
+            .set_read_timeout(Some(timeout))
+            .map_err(map_transport_io_error)?;
+        stream
+            .set_write_timeout(Some(timeout))
+            .map_err(map_transport_io_error)?;
+        stream.write_all(request).map_err(map_transport_io_error)?;
 
         let mut response_bytes = Vec::new();
         stream
             .read_to_end(&mut response_bytes)
             .map_err(map_transport_io_error)?;
-        parse_http_response(response_bytes)
+        Ok(response_bytes)
+    }
+
+    fn execute_https_request(
+        &self,
+        endpoint: ParsedHttpEndpoint,
+        request: &[u8],
+    ) -> Result<Vec<u8>, KolmeRuntimeCommitProviderError> {
+        let connect_target = format!("{}:{}", endpoint.host, endpoint.port);
+        let mut command = Command::new("openssl");
+        command
+            .arg("s_client")
+            .arg("-quiet")
+            .arg("-verify_return_error")
+            .arg("-servername")
+            .arg(endpoint.host.as_str())
+            .arg("-connect")
+            .arg(connect_target.as_str())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        if let Some(ca_file) = configured_tls_ca_file()? {
+            command.arg("-CAfile").arg(ca_file);
+        }
+
+        let mut child =
+            command
+                .spawn()
+                .map_err(|error| KolmeRuntimeCommitProviderError::Unavailable {
+                    reason: format!("tls command spawn failed: {error}"),
+                })?;
+        {
+            let mut stdin =
+                child
+                    .stdin
+                    .take()
+                    .ok_or_else(|| KolmeRuntimeCommitProviderError::Unavailable {
+                        reason: "tls command stdin unavailable".to_owned(),
+                    })?;
+            stdin.write_all(request).map_err(map_transport_io_error)?;
+        }
+
+        let timeout = Duration::from_secs(self.timeout_seconds);
+        let started = Instant::now();
+        loop {
+            match child.try_wait() {
+                Ok(Some(_)) => break,
+                Ok(None) => {
+                    if started.elapsed() >= timeout {
+                        let _ = child.kill();
+                        let _ = child.wait();
+                        return Err(KolmeRuntimeCommitProviderError::Timeout);
+                    }
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(error) => {
+                    return Err(KolmeRuntimeCommitProviderError::Unavailable {
+                        reason: format!("tls command wait failed: {error}"),
+                    });
+                }
+            }
+        }
+
+        let output = child.wait_with_output().map_err(map_transport_io_error)?;
+        let looks_like_http_response = output.stdout.starts_with(b"HTTP/1.")
+            && output.stdout.windows(4).any(|window| window == b"\r\n\r\n");
+        if !output.status.success() && !looks_like_http_response {
+            return Err(KolmeRuntimeCommitProviderError::Unavailable {
+                reason: classify_tls_failure_reason(
+                    String::from_utf8_lossy(&output.stderr).as_ref(),
+                ),
+            });
+        }
+        if output.stdout.is_empty() {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "tls response body is empty".to_owned(),
+            });
+        }
+        Ok(output.stdout)
     }
 }
 
@@ -905,13 +1010,15 @@ fn parse_http_endpoint(
             reason: "base_url must not be empty".to_owned(),
         });
     }
-    if !base.starts_with("http://") {
+    let (scheme, remainder) = if let Some(remainder) = base.strip_prefix("http://") {
+        (HttpScheme::Http, remainder)
+    } else if let Some(remainder) = base.strip_prefix("https://") {
+        (HttpScheme::Https, remainder)
+    } else {
         return Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "only http:// base_url is supported".to_owned(),
+            reason: "base_url scheme must be http:// or https://".to_owned(),
         });
-    }
-
-    let remainder = &base["http://".len()..];
+    };
     let (authority, base_path) = match remainder.split_once('/') {
         Some((left, right)) => (left, format!("/{}", right.trim_start_matches('/'))),
         None => (remainder, "/".to_owned()),
@@ -923,9 +1030,10 @@ fn parse_http_endpoint(
         });
     }
 
-    let (host, port) = parse_authority(authority)?;
+    let (host, port) = parse_authority(authority, scheme.default_port())?;
     let target_path = join_http_paths(base_path.as_str(), path);
     Ok(ParsedHttpEndpoint {
+        scheme,
         host,
         host_header: authority.to_owned(),
         port,
@@ -933,7 +1041,10 @@ fn parse_http_endpoint(
     })
 }
 
-fn parse_authority(authority: &str) -> Result<(String, u16), KolmeRuntimeCommitProviderError> {
+fn parse_authority(
+    authority: &str,
+    default_port: u16,
+) -> Result<(String, u16), KolmeRuntimeCommitProviderError> {
     if authority.starts_with('[') {
         return Err(KolmeRuntimeCommitProviderError::Unavailable {
             reason: "ipv6 host syntax is not supported".to_owned(),
@@ -959,7 +1070,7 @@ fn parse_authority(authority: &str) -> Result<(String, u16), KolmeRuntimeCommitP
             });
         }
     }
-    Ok((authority.to_owned(), 80))
+    Ok((authority.to_owned(), default_port))
 }
 
 fn parse_authorization_header(value: &str) -> Result<String, KolmeRuntimeCommitError> {
@@ -1017,6 +1128,48 @@ fn map_transport_io_error(error: std::io::Error) -> KolmeRuntimeCommitProviderEr
     KolmeRuntimeCommitProviderError::Unavailable {
         reason: format!("transport io error: {error}"),
     }
+}
+
+fn configured_tls_ca_file() -> Result<Option<String>, KolmeRuntimeCommitProviderError> {
+    let value = match std::env::var("KAMN_KOLME_TLS_CA_FILE") {
+        Ok(value) => value,
+        Err(std::env::VarError::NotPresent) => return Ok(None),
+        Err(std::env::VarError::NotUnicode(_)) => {
+            return Err(KolmeRuntimeCommitProviderError::Unavailable {
+                reason: "KAMN_KOLME_TLS_CA_FILE must be valid utf-8".to_owned(),
+            });
+        }
+    };
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "KAMN_KOLME_TLS_CA_FILE must not be empty".to_owned(),
+        });
+    }
+    Ok(Some(trimmed.to_owned()))
+}
+
+fn classify_tls_failure_reason(stderr: &str) -> String {
+    let normalized = stderr.to_ascii_lowercase();
+    if normalized.contains("certificate verify failed")
+        || normalized.contains("self-signed certificate")
+        || normalized.contains("unable to get local issuer certificate")
+        || normalized.contains("unable to verify the first certificate")
+    {
+        return "tls certificate verification failed".to_owned();
+    }
+    if normalized.contains("handshake failure")
+        || normalized.contains("wrong version number")
+        || normalized.contains("tlsv")
+        || normalized.contains("ssl routines")
+    {
+        return "tls handshake failed".to_owned();
+    }
+    let first_line = stderr
+        .lines()
+        .find(|line| !line.trim().is_empty())
+        .unwrap_or("tls request failed");
+    format!("tls request failed: {}", first_line.trim())
 }
 
 fn parse_http_response(response_bytes: Vec<u8>) -> Result<String, KolmeRuntimeCommitProviderError> {
@@ -1942,7 +2095,7 @@ fn lifecycle_record_from_outcome(
 
 #[cfg(test)]
 mod tests {
-    use super::{KolmeRuntimeCommitError, KolmeRuntimeCommitRequest};
+    use super::{classify_tls_failure_reason, KolmeRuntimeCommitError, KolmeRuntimeCommitRequest};
 
     #[test]
     fn deterministic_request_rejects_empty_operation_id() {
@@ -1959,5 +2112,20 @@ mod tests {
                 reason: "must not be empty",
             })
         );
+    }
+
+    #[test]
+    fn tls_failure_reason_classifier_detects_certificate_errors() {
+        let reason = classify_tls_failure_reason(
+            "verify error:num=18:self-signed certificate\ncertificate verify failed",
+        );
+        assert_eq!(reason, "tls certificate verification failed");
+    }
+
+    #[test]
+    fn tls_failure_reason_classifier_detects_handshake_errors() {
+        let reason =
+            classify_tls_failure_reason("ssl routines:ssl3_get_record:wrong version number");
+        assert_eq!(reason, "tls handshake failed");
     }
 }
