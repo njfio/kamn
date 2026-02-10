@@ -101,6 +101,7 @@ if [[ "${KAMN_GOVERNANCE_LIFECYCLE_FORCE_LANE_FAILURE:-false}" == "true" ]]; the
 fi
 
 required_doc_markers=(
+  "governance_lifecycle_rollback_policy_contract.py"
   "run_governance_lifecycle_rollback_lane.sh"
   "check_governance_lifecycle_rollback_policy.sh"
   "run_governance_lifecycle_rollback_contract_lane.sh"
