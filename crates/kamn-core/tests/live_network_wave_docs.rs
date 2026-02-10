@@ -6,6 +6,7 @@ const MAKEFILE: &str = include_str!("../../../Makefile");
 fn live_network_wave_doc_contains_smoke_commands_and_schema() {
     assert!(LIVE_NETWORK_WAVE_DOC.contains("run_live_network_smoke_lane.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("run_live_network_smoke_contract_lane.sh"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("live_network_pilot_artifact_summary_contract.py"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("make smoke-live-network"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("kamn.runtime.live-network-smoke-report.v1"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("run_bridge_replay_redaction_contract_lane.sh"));
