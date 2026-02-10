@@ -528,7 +528,7 @@ fn parse_live_provider_response(
     match status.as_str() {
         "submitted" | "duplicate" => {
             let provider = required_response_field(&fields, "provider")?;
-            let commit_id = required_response_field(&fields, "commit_id")?;
+            let commit_id = resolve_commit_id(&fields)?;
             let finality_value = required_response_field(&fields, "finality")?;
             let finality = parse_receipt_finality(finality_value.as_str())?;
             let receipt = KolmeRuntimeCommitProviderReceipt {
@@ -747,13 +747,74 @@ fn required_response_field(
     Ok(trimmed.to_owned())
 }
 
+fn resolve_commit_id(
+    fields: &HashMap<String, String>,
+) -> Result<String, KolmeRuntimeCommitProviderError> {
+    if let Some(commit_id) = fields.get("commit_id") {
+        let trimmed = commit_id.trim();
+        if trimmed.is_empty() {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "field must not be empty: commit_id".to_owned(),
+            });
+        }
+        return Ok(trimmed.to_owned());
+    }
+
+    let tx_hash = fields
+        .get("tx_hash")
+        .or_else(|| fields.get("txhash"))
+        .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "missing required field: commit_id".to_owned(),
+        })?;
+    let tx_hash = tx_hash.trim();
+    if tx_hash.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "field must not be empty: tx_hash".to_owned(),
+        });
+    }
+
+    let block_height = match fields.get("block_height") {
+        Some(raw_height) => Some(parse_block_height(raw_height.as_str())?),
+        None => None,
+    };
+    Ok(deterministic_backend_commit_id(tx_hash, block_height))
+}
+
+fn parse_block_height(raw: &str) -> Result<u64, KolmeRuntimeCommitProviderError> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "field must not be empty: block_height".to_owned(),
+        });
+    }
+    let height =
+        trimmed
+            .parse::<u64>()
+            .map_err(|_| KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("invalid block_height value: {trimmed}"),
+            })?;
+    if height == 0 {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "block_height must be positive".to_owned(),
+        });
+    }
+    Ok(height)
+}
+
+fn deterministic_backend_commit_id(tx_hash: &str, block_height: Option<u64>) -> String {
+    match block_height {
+        Some(height) => format!("kolme-commit:{tx_hash}:h{height}"),
+        None => format!("kolme-commit:{tx_hash}"),
+    }
+}
+
 fn parse_receipt_finality(
     value: &str,
 ) -> Result<KolmeCommitReceiptFinality, KolmeRuntimeCommitProviderError> {
     match value {
-        "pending" => Ok(KolmeCommitReceiptFinality::Pending),
-        "final" => Ok(KolmeCommitReceiptFinality::Final),
-        "failed" => Ok(KolmeCommitReceiptFinality::Failed),
+        "pending" | "accepted" | "mempool" => Ok(KolmeCommitReceiptFinality::Pending),
+        "final" | "confirmed" | "finalized" => Ok(KolmeCommitReceiptFinality::Final),
+        "failed" | "rejected" => Ok(KolmeCommitReceiptFinality::Failed),
         _ => Err(KolmeRuntimeCommitProviderError::MalformedResponse {
             reason: format!("invalid finality value: {value}"),
         }),
