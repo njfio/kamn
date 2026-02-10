@@ -111,6 +111,10 @@ Governance execution paths now include deterministic lifecycle/rollback integrit
 
 - Lifecycle/rollback lane command:
   - `bash scripts/governance/run_governance_lifecycle_rollback_lane.sh --output-file /tmp/governance-lifecycle-rollback-report.json`
+- Stable shell wrapper:
+  - `scripts/governance/run_governance_lifecycle_rollback_lane.sh`
+- Shared Python implementation:
+  - `scripts/governance/governance_lifecycle_rollback_lane_contract.py`
 - Lifecycle/rollback policy checker:
   - `bash scripts/governance/check_governance_lifecycle_rollback_policy.sh --report-file /tmp/governance-lifecycle-rollback-report.json`
 - Stable shell wrapper:
