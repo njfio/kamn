@@ -77,6 +77,7 @@ fn doc_contains_stake_slash_risk_threshold_evidence_contract() {
 fn doc_contains_governance_lifecycle_rollback_contract_lane() {
     assert!(DOC.contains("## Governance Lifecycle and Rollback Integrity Contract Lane"));
     assert!(DOC.contains("governance_lifecycle_rollback_policy_contract.py"));
+    assert!(DOC.contains("governance_lifecycle_rollback_lane_contract.py"));
     assert!(DOC.contains("run_governance_lifecycle_rollback_lane.sh"));
     assert!(DOC.contains("check_governance_lifecycle_rollback_policy.sh"));
     assert!(DOC.contains("run_governance_lifecycle_rollback_contract_lane.sh"));

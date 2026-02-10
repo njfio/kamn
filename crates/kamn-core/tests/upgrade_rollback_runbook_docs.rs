@@ -80,6 +80,7 @@ fn runbook_contains_deployment_slo_rollback_contract_lane() {
 fn runbook_contains_governance_lifecycle_rollback_contract_lane() {
     assert!(RUNBOOK.contains("## Governance Lifecycle and Rollback Integrity Contract Lane"));
     assert!(RUNBOOK.contains("governance_lifecycle_rollback_policy_contract.py"));
+    assert!(RUNBOOK.contains("governance_lifecycle_rollback_lane_contract.py"));
     assert!(RUNBOOK.contains("run_governance_lifecycle_rollback_lane.sh"));
     assert!(RUNBOOK.contains("check_governance_lifecycle_rollback_policy.sh"));
     assert!(RUNBOOK.contains("run_governance_lifecycle_rollback_contract_lane.sh"));
