@@ -138,6 +138,13 @@ This document captures the initial runtime-network foundation slice for peer lif
 - All mutation corpus entries must fail closed with explicit typed errors and stable reason strings.
 - Fast contract lane command:
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh`
+- Processor proof admission guard lane command:
+  - `bash scripts/runtime/run_processor_proof_admission_contract_lane.sh`
+- Processor proof admission fail-closed rules:
+  - message-id mismatch
+  - payload commitment mismatch
+  - invalid proof format
+  - replayed artifact id
 
 ## Deterministic Concurrency Harness Rules
 - Shared-state mutation harness in `crates/kamn-core/tests/concurrency_state_mutation.rs` must enforce:
@@ -339,6 +346,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - snapshot restore cursor mismatch rejection (`Regression: #617`)
   - concurrent accept races never allow multiple winners (`Regression: #844`)
   - deterministic envelope/DID mutation fail-closed reasons remain stable (`Regression: #843`)
+  - processor proof admission message/commitment/replay/format guards remain fail-closed (`Regression: #995`)
   - task/escrow/peer lifecycle generated invariant lanes remain deterministic (`Regression: #842`)
   - invariant/fuzz/concurrency combined lane reason-code policy remains fail-closed (`Regression: #897`)
 - Performance:
@@ -370,6 +378,7 @@ cargo test -p kamn-core --test bridge_quorum_runtime_docs
 cargo test -p kamn-core --test message_envelope_fuzz_smoke functional_envelope_mutation_suite_covers_malformed_truncated_and_tampered_classes -- --exact
 cargo test -p kamn-core --test did_fuzz_smoke functional_did_mutation_suite_covers_normalization_encoding_and_method_mismatch_classes -- --exact
 bash scripts/runtime/run_input_mutation_contract_lane.sh
+bash scripts/runtime/run_processor_proof_admission_contract_lane.sh
 cargo test -p kamn-core --test concurrency_state_mutation functional_task_accept_concurrency_replay_fixture_preserves_invariants -- --exact
 cargo test -p kamn-core --test concurrency_state_mutation integration_peer_lifecycle_concurrency_replay_is_deterministic_across_rounds -- --exact
 bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh
