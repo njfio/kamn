@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for pilot dashboard/compliance lane manifests."""
+"""Unit tests for pilot lane manifests."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ MANIFEST_DIR = ROOT_DIR / "scripts/framework/manifests"
 
 
 class PilotLaneManifestTests(unittest.TestCase):
-    def test_dashboard_and_compliance_manifests_parse_and_route(self) -> None:
+    def test_pilot_manifests_parse_and_route(self) -> None:
         cases = (
             (
                 "dashboard_backend_session_auth_freshness_contract_lane.json",
@@ -39,6 +39,31 @@ class PilotLaneManifestTests(unittest.TestCase):
                 "compliance_classification_redaction_contract_lane.json",
                 "compliance.classification_redaction.contract",
                 "scripts/compliance/classification_redaction_contract_lane_contract.py",
+            ),
+            (
+                "governance_simulation_contract_lane.json",
+                "governance.simulation.contract",
+                "scripts/governance/governance_simulation_contract_lane_contract.py",
+            ),
+            (
+                "governance_lifecycle_rollback_contract_lane.json",
+                "governance.lifecycle_rollback.contract",
+                "scripts/governance/governance_lifecycle_rollback_contract_lane_contract.py",
+            ),
+            (
+                "governance_quorum_attestation_replay_contract_lane.json",
+                "governance.quorum_attestation_replay.contract",
+                "scripts/governance/governance_quorum_attestation_replay_contract_lane_contract.py",
+            ),
+            (
+                "governance_stake_slash_risk_contract_lane.json",
+                "governance.stake_slash_risk.contract",
+                "scripts/governance/stake_slash_risk_contract_lane_contract.py",
+            ),
+            (
+                "reputation_dispute_contract_lane.json",
+                "reputation.dispute.contract",
+                "scripts/reputation/reputation_dispute_contract_lane_contract.py",
             ),
         )
 

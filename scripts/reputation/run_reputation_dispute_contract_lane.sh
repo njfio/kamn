@@ -2,4 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-exec python3 "$ROOT_DIR/scripts/reputation/reputation_dispute_contract_lane_contract.py" "$@"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/reputation_dispute_contract_lane.json"
+
+exec bash "$ROOT_DIR/scripts/framework/run_manifest_lane.sh" \
+  --manifest "$MANIFEST" \
+  --phase contract \
+  --cwd "$ROOT_DIR" \
+  -- "$@"

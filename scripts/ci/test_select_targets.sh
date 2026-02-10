@@ -1417,6 +1417,12 @@ assert_eq "$(extract_output "$governance_contract_script_output" "run_governance
 assert_eq "$(extract_output "$governance_contract_script_output" "run_governance_stake_slash_contract_tests")" "false" "governance simulation script changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_contract_script_output" "test_scope")" "governance-contract" "governance contract script changes should set governance-contract scope"
 
+governance_simulation_manifest_output="$(run_selector $'scripts/framework/manifests/governance_simulation_contract_lane.json')"
+assert_eq "$(extract_output "$governance_simulation_manifest_output" "run_rust")" "false" "governance simulation manifest changes should avoid rust lane"
+assert_eq "$(extract_output "$governance_simulation_manifest_output" "run_governance_simulation_contract_tests")" "true" "governance simulation manifest changes must run governance simulation lane"
+assert_eq "$(extract_output "$governance_simulation_manifest_output" "run_governance_stake_slash_contract_tests")" "false" "governance simulation manifest changes should not trigger governance stake/slash lane"
+assert_eq "$(extract_output "$governance_simulation_manifest_output" "test_scope")" "governance-contract" "governance simulation manifest changes should set governance-contract scope"
+
 governance_contract_shared_script_output="$(run_selector $'scripts/governance/governance_simulation_contract_lane_contract.py')"
 assert_eq "$(extract_output "$governance_contract_shared_script_output" "run_rust")" "false" "governance shared contract-lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_contract_shared_script_output" "run_governance_simulation_contract_tests")" "true" "governance shared contract-lane changes must run governance simulation lane"
@@ -1440,6 +1446,12 @@ assert_eq "$(extract_output "$governance_lifecycle_contract_lane_shared_contract
 assert_eq "$(extract_output "$governance_lifecycle_contract_lane_shared_contract_output" "run_governance_simulation_contract_tests")" "true" "governance lifecycle rollback shared contract-lane changes must run governance simulation lane"
 assert_eq "$(extract_output "$governance_lifecycle_contract_lane_shared_contract_output" "run_governance_stake_slash_contract_tests")" "false" "governance lifecycle rollback shared contract-lane changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_lifecycle_contract_lane_shared_contract_output" "test_scope")" "governance-contract" "governance lifecycle rollback shared contract-lane changes should set governance-contract scope"
+
+governance_lifecycle_manifest_output="$(run_selector $'scripts/framework/manifests/governance_lifecycle_rollback_contract_lane.json')"
+assert_eq "$(extract_output "$governance_lifecycle_manifest_output" "run_rust")" "false" "governance lifecycle manifest changes should avoid rust lane"
+assert_eq "$(extract_output "$governance_lifecycle_manifest_output" "run_governance_simulation_contract_tests")" "true" "governance lifecycle manifest changes must run governance simulation lane"
+assert_eq "$(extract_output "$governance_lifecycle_manifest_output" "run_governance_stake_slash_contract_tests")" "false" "governance lifecycle manifest changes should not trigger governance stake/slash lane"
+assert_eq "$(extract_output "$governance_lifecycle_manifest_output" "test_scope")" "governance-contract" "governance lifecycle manifest changes should set governance-contract scope"
 
 governance_quorum_contract_script_output="$(run_selector $'scripts/governance/run_quorum_attestation_replay_contract_lane.sh')"
 assert_eq "$(extract_output "$governance_quorum_contract_script_output" "run_rust")" "false" "governance quorum attestation contract script-only changes should avoid rust lane"
@@ -1465,6 +1477,12 @@ assert_eq "$(extract_output "$governance_quorum_contract_lane_shared_contract_ou
 assert_eq "$(extract_output "$governance_quorum_contract_lane_shared_contract_output" "run_governance_stake_slash_contract_tests")" "false" "governance quorum attestation shared contract-lane changes should not trigger governance stake/slash lane"
 assert_eq "$(extract_output "$governance_quorum_contract_lane_shared_contract_output" "test_scope")" "governance-contract" "governance quorum attestation shared contract-lane changes should set governance-contract scope"
 
+governance_quorum_manifest_output="$(run_selector $'scripts/framework/manifests/governance_quorum_attestation_replay_contract_lane.json')"
+assert_eq "$(extract_output "$governance_quorum_manifest_output" "run_rust")" "false" "governance quorum manifest changes should avoid rust lane"
+assert_eq "$(extract_output "$governance_quorum_manifest_output" "run_governance_simulation_contract_tests")" "true" "governance quorum manifest changes must run governance simulation lane"
+assert_eq "$(extract_output "$governance_quorum_manifest_output" "run_governance_stake_slash_contract_tests")" "false" "governance quorum manifest changes should not trigger governance stake/slash lane"
+assert_eq "$(extract_output "$governance_quorum_manifest_output" "test_scope")" "governance-contract" "governance quorum manifest changes should set governance-contract scope"
+
 governance_contract_fixture_output="$(run_selector $'fixtures/governance_simulation/veto_timelock_cases.json')"
 assert_eq "$(extract_output "$governance_contract_fixture_output" "run_rust")" "false" "governance fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$governance_contract_fixture_output" "run_governance_simulation_contract_tests")" "true" "governance fixture changes must run governance simulation lane"
@@ -1476,6 +1494,12 @@ assert_eq "$(extract_output "$stake_slash_contract_script_output" "run_rust")" "
 assert_eq "$(extract_output "$stake_slash_contract_script_output" "run_governance_simulation_contract_tests")" "false" "stake/slash contract script changes should not trigger governance simulation lane"
 assert_eq "$(extract_output "$stake_slash_contract_script_output" "run_governance_stake_slash_contract_tests")" "true" "stake/slash contract script changes must run governance stake/slash lane"
 assert_eq "$(extract_output "$stake_slash_contract_script_output" "test_scope")" "governance-risk-contract" "stake/slash contract script changes should set governance-risk-contract scope"
+
+stake_slash_manifest_output="$(run_selector $'scripts/framework/manifests/governance_stake_slash_risk_contract_lane.json')"
+assert_eq "$(extract_output "$stake_slash_manifest_output" "run_rust")" "false" "stake/slash manifest changes should avoid rust lane"
+assert_eq "$(extract_output "$stake_slash_manifest_output" "run_governance_simulation_contract_tests")" "false" "stake/slash manifest changes should not trigger governance simulation lane"
+assert_eq "$(extract_output "$stake_slash_manifest_output" "run_governance_stake_slash_contract_tests")" "true" "stake/slash manifest changes must run governance stake/slash lane"
+assert_eq "$(extract_output "$stake_slash_manifest_output" "test_scope")" "governance-risk-contract" "stake/slash manifest changes should set governance-risk-contract scope"
 
 stake_slash_shared_contract_lane_output="$(run_selector $'scripts/governance/stake_slash_risk_contract_lane_contract.py')"
 assert_eq "$(extract_output "$stake_slash_shared_contract_lane_output" "run_rust")" "false" "stake/slash shared contract-lane changes should avoid rust lane"
@@ -1529,6 +1553,12 @@ assert_eq "$(extract_output "$reputation_contract_script_output" "run_rust")" "f
 assert_eq "$(extract_output "$reputation_contract_script_output" "run_reputation_decay_contract_tests")" "false" "dispute contract script changes should not run weighted decay contract lane"
 assert_eq "$(extract_output "$reputation_contract_script_output" "run_reputation_dispute_contract_tests")" "true" "reputation contract script changes must run reputation dispute contract lane"
 assert_eq "$(extract_output "$reputation_contract_script_output" "test_scope")" "reputation-contract" "reputation contract script changes should set reputation-contract scope"
+
+reputation_dispute_manifest_output="$(run_selector $'scripts/framework/manifests/reputation_dispute_contract_lane.json')"
+assert_eq "$(extract_output "$reputation_dispute_manifest_output" "run_rust")" "false" "reputation dispute manifest changes should avoid rust lane"
+assert_eq "$(extract_output "$reputation_dispute_manifest_output" "run_reputation_decay_contract_tests")" "false" "reputation dispute manifest changes should not run weighted decay contract lane"
+assert_eq "$(extract_output "$reputation_dispute_manifest_output" "run_reputation_dispute_contract_tests")" "true" "reputation dispute manifest changes must run reputation dispute contract lane"
+assert_eq "$(extract_output "$reputation_dispute_manifest_output" "test_scope")" "reputation-contract" "reputation dispute manifest changes should set reputation-contract scope"
 
 reputation_policy_checker_output="$(run_selector $'scripts/reputation/check_reputation_dispute_policy.sh')"
 assert_eq "$(extract_output "$reputation_policy_checker_output" "run_rust")" "false" "reputation policy checker script-only changes should avoid rust lane"
@@ -1628,6 +1658,10 @@ assert_eq "$(extract_output "$manifest_runner_framework_output" "run_dashboard_c
 assert_eq "$(extract_output "$manifest_runner_framework_output" "run_soc2_control_evidence_contract_tests")" "true" "manifest runner framework changes must run SOC2 contract lane"
 assert_eq "$(extract_output "$manifest_runner_framework_output" "run_dsar_legal_hold_contract_tests")" "true" "manifest runner framework changes must run DSAR contract lane"
 assert_eq "$(extract_output "$manifest_runner_framework_output" "run_channel_lifecycle_contract_tests")" "true" "manifest runner framework changes must run channel lifecycle lane"
+assert_eq "$(extract_output "$manifest_runner_framework_output" "run_governance_simulation_contract_tests")" "true" "manifest runner framework changes must run governance simulation lane"
+assert_eq "$(extract_output "$manifest_runner_framework_output" "run_governance_stake_slash_contract_tests")" "true" "manifest runner framework changes must run governance stake/slash lane"
+assert_eq "$(extract_output "$manifest_runner_framework_output" "run_reputation_decay_contract_tests")" "false" "manifest runner framework changes should not run weighted decay lane"
+assert_eq "$(extract_output "$manifest_runner_framework_output" "run_reputation_dispute_contract_tests")" "true" "manifest runner framework changes must run reputation dispute lane"
 assert_eq "$(extract_output "$manifest_runner_framework_output" "run_token_launch_contract_tests")" "false" "manifest runner framework changes should not run token launch lane"
 assert_eq "$(extract_output "$manifest_runner_framework_output" "test_scope")" "frontend-contract" "manifest runner framework changes should keep bounded frontend-contract scope"
 
