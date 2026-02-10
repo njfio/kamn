@@ -9,6 +9,7 @@ fn doc_contains_runtime_network_scope_and_models() {
     assert!(DOC.contains("## Snapshot Persistence and Restore Contract Rules"));
     assert!(DOC.contains("## Deterministic Fault Simulation Harness Rules"));
     assert!(DOC.contains("## Kolme Notifications Websocket Consumer Contract Rules"));
+    assert!(DOC.contains("## Kolme Block Fallback Finality Reconciliation Contract Rules"));
     assert!(DOC.contains("PeerLifecycle"));
     assert!(DOC.contains("AuthenticatedPeerFrame"));
     assert!(DOC.contains("PeerFrameAuthenticator"));
@@ -95,6 +96,7 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
     assert!(DOC.contains("cargo test -p kamn-core snapshot_store"));
     assert!(DOC.contains("cargo test -p kamn-core --test bridge_quorum_runtime_docs"));
     assert!(DOC.contains("cargo test -p kamn-core --test kolme_runtime_commit_notifications"));
+    assert!(DOC.contains("cargo test -p kamn-core --test kolme_runtime_commit_block_fallback"));
     assert!(DOC.contains(
         "cargo test -p kamn-core --test message_envelope_fuzz_smoke functional_envelope_mutation_suite_covers_malformed_truncated_and_tampered_classes -- --exact"
     ));
@@ -129,6 +131,7 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
     assert!(DOC.contains("cargo test -p kamn-node --test node_runtime_cli_docs"));
     assert!(DOC.contains("bash scripts/runtime/run_runtime_snapshot_contract_lane.sh"));
     assert!(DOC.contains("bash scripts/kolme/run_notifications_consumer_contract_lane.sh"));
+    assert!(DOC.contains("bash scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh"));
     assert!(DOC.contains(
         "cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition"
     ));
@@ -178,6 +181,9 @@ fn regression_requires_rejoin_and_overflow_rejection_rules() {
     ));
     assert!(DOC.contains(
         "notifications websocket variant/reconnect fail-closed contract remains stable (`Regression: #1463`)"
+    ));
+    assert!(DOC.contains(
+        "block fallback stale-window/height-mismatch fail-closed contract remains stable (`Regression: #1464`)"
     ));
     assert!(DOC.contains(
         "processor proof admission message/commitment/replay/format guards remain fail-closed (`Regression: #995`)"
