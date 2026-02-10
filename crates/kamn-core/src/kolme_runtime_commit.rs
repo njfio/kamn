@@ -415,6 +415,107 @@ pub struct KolmeRuntimeCommitLiveProvider<T> {
     transport: T,
 }
 
+/// Transport abstraction for querying runtime commit finality from a live backend.
+pub trait KolmeRuntimeCommitFinalityTransport {
+    /// Fetches one finality response payload for the provided commit identifier.
+    fn fetch_runtime_commit_finality(
+        &mut self,
+        base_url: &str,
+        status_path: &str,
+        commit_id: &str,
+    ) -> Result<String, KolmeRuntimeCommitProviderError>;
+}
+
+/// Deterministic finality checker for live backend runtime commit receipts.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KolmeRuntimeCommitFinalityChecker<T> {
+    base_url: String,
+    status_path: String,
+    transport: T,
+}
+
+impl<T: KolmeRuntimeCommitFinalityTransport> KolmeRuntimeCommitFinalityChecker<T> {
+    /// Builds a finality checker with deterministic endpoint validation.
+    pub fn new(
+        base_url: &str,
+        status_path: &str,
+        transport: T,
+    ) -> Result<Self, KolmeRuntimeCommitError> {
+        if base_url.trim().is_empty() {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "provider_base_url",
+                reason: "must not be empty",
+            });
+        }
+        if status_path.trim().is_empty() {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "provider_status_path",
+                reason: "must not be empty",
+            });
+        }
+        Ok(Self {
+            base_url: base_url.trim().to_owned(),
+            status_path: status_path.trim().to_owned(),
+            transport,
+        })
+    }
+
+    /// Fetches and parses one backend finality response for the provided commit.
+    pub fn check_commit_finality(
+        &mut self,
+        commit_id: &str,
+    ) -> Result<KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderError> {
+        if commit_id.trim().is_empty() {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "commit_id must not be empty".to_owned(),
+            });
+        }
+
+        let response = self.transport.fetch_runtime_commit_finality(
+            self.base_url.as_str(),
+            self.status_path.as_str(),
+            commit_id,
+        )?;
+        let fields = parse_response_fields(response.as_str())?;
+        let provider = required_response_field(&fields, "provider")?;
+        let observed_commit_id = resolve_commit_id(&fields)?;
+        if observed_commit_id != commit_id {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!(
+                    "commit_id mismatch: expected '{commit_id}', observed '{observed_commit_id}'"
+                ),
+            });
+        }
+        let finality_value = required_response_field(&fields, "finality")?;
+        let finality = parse_receipt_finality(finality_value.as_str())?;
+        Ok(KolmeRuntimeCommitProviderReceipt {
+            provider,
+            commit_id: observed_commit_id,
+            finality,
+        })
+    }
+
+    /// Polls backend finality and returns the first non-pending receipt.
+    pub fn poll_finality(
+        &mut self,
+        commit_id: &str,
+        max_attempts: u32,
+    ) -> Result<KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderError> {
+        if max_attempts == 0 {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "max_attempts must be positive".to_owned(),
+            });
+        }
+        for _ in 0..max_attempts {
+            let receipt = self.check_commit_finality(commit_id)?;
+            if !matches!(receipt.finality, KolmeCommitReceiptFinality::Pending) {
+                return Ok(receipt);
+            }
+        }
+        Err(KolmeRuntimeCommitProviderError::Timeout)
+    }
+}
+
 impl<T: KolmeRuntimeCommitProviderTransport> KolmeRuntimeCommitLiveProvider<T> {
     /// Builds a live provider with deterministic endpoint validation.
     pub fn new(
