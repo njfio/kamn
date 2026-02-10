@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_SCRIPT="$ROOT_DIR/scripts/channel/run_channel_lifecycle_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/channel/run_channel_lifecycle_deep_lane.sh"
+SHARED_CONTRACT="$ROOT_DIR/scripts/channel/channel_lifecycle_contract_lane_contract.py"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
   echo "expected channel lifecycle fast-lane runner to be executable" >&2
@@ -12,6 +13,10 @@ fi
 
 if [ ! -x "$DEEP_SCRIPT" ]; then
   echo "expected channel lifecycle deep-lane runner to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$SHARED_CONTRACT" ]; then
+  echo "expected channel lifecycle shared contract-lane module to be executable" >&2
   exit 1
 fi
 
@@ -24,8 +29,12 @@ if ! grep -q "channel lifecycle snapshot contract lane tests passed." "$TMP_OUT"
   exit 1
 fi
 
-if ! grep -Fq "run_channel_policy_contract_lane.sh" "$FAST_SCRIPT"; then
-  echo "expected channel lifecycle lane to execute channel policy lane checks" >&2
+if ! grep -q "channel_lifecycle_contract_lane_contract.py" "$FAST_SCRIPT"; then
+  echo "expected channel lifecycle fast-lane wrapper to dispatch to shared contract module" >&2
+  exit 1
+fi
+if ! grep -Fq "run_channel_policy_contract_lane.sh" "$SHARED_CONTRACT"; then
+  echo "expected channel lifecycle shared contract-lane module to execute channel policy lane checks" >&2
   exit 1
 fi
 
