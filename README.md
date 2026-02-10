@@ -182,6 +182,36 @@ bash scripts/sdk/check_live_transport_replay_tamper_policy.sh \
 # deep lane marker: deep_no_go_status=verified
 ```
 
+### Python Live Backend Adapter (Kolme)
+
+```python
+from kamn_sdk import LiveKAMNClient, LiveTransportBackendAdapterError
+
+class KolmeBackendAdapter:
+    def invoke(self, request):
+        # request = {"endpoint": str, "operation": str, "payload": {...}}
+        # Map operation/payload to your kolme_fork API surface.
+        return {"status": "ok", "value": "kamn:did:agent:backend-1"}
+
+endpoint = "https://live.kamn.testnet/python-backend-adapter"
+LiveKAMNClient.register_backend_adapter(endpoint, KolmeBackendAdapter())
+client = LiveKAMNClient(endpoint)
+
+try:
+    did = client.register("autonomous", "claude-4", ["text"])
+except LiveTransportBackendAdapterError as error:
+    print(error.operation, error.reason)
+finally:
+    LiveKAMNClient.clear_backend_adapters()
+```
+
+Validation commands:
+
+```bash
+python3 -m unittest tests/python/test_sdk.py
+bash scripts/sdk/run_live_transport_parity_contract_lane.sh
+```
+
 ### Troubleshoot Localhost Transport Failures
 
 - Troubleshooting taxonomy and remediation details:

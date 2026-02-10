@@ -14,6 +14,8 @@ This document captures the first Python SDK implementation slice for MVP workflo
   - `LiveTransportConfig` endpoint contract.
   - `LiveKAMNClient` endpoint-scoped shared-state live path.
   - transport mode contracts (`TransportMode`) and mismatch rejection (`TransportModeMismatchError`, `Regression: #620`).
+  - Backend adapter mode via `LiveKAMNClient.register_backend_adapter(...)` and `LiveKAMNClient.clear_backend_adapters()`.
+  - Fail-closed backend adapter error taxonomy (`LiveTransportBackendAdapterError`) and invalid response rejection (`Regression: #1415`).
 - Added Python test coverage: `tests/python/test_sdk.py`.
 - Added scheduled deep-lane coverage: `tests/python/test_sdk_live_transport_deep.py`.
 
@@ -24,6 +26,7 @@ This document captures the first Python SDK implementation slice for MVP workflo
 - Escrow release is one-time and guarded against duplicate release.
 - Unknown DID/task/escrow access returns explicit `SDKError`.
 - Transport mode mismatch (`in-memory` vs `live`) is explicitly rejected to prevent cross-language contract drift (`Regression: #620`).
+- Backend adapter responses are fail-closed: malformed payloads raise `SDKError`; adapter errors surface deterministic operation+reason details via `LiveTransportBackendAdapterError`.
 
 ## Local Validation
 Run from repository root:
