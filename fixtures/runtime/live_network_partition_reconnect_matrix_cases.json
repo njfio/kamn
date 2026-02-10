@@ -1,0 +1,16 @@
+{
+  "schema_version": "kamn.runtime.live-network-partition-reconnect-cases.v1",
+  "smoke_required_scenarios": [
+    "fixture_contract",
+    "primary_loss_reconnect_catchup",
+    "three_process_failover"
+  ],
+  "deep_required_scenarios": [
+    "fixture_contract",
+    "primary_loss_reconnect_catchup",
+    "three_process_failover",
+    "reconnect_drift_regression",
+    "fast_lane_budget",
+    "deep_reconnect_stress"
+  ]
+}

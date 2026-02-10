@@ -235,8 +235,21 @@ Pilot launch gates require deterministic smoke and scheduled/manual deep-lane ev
   - `bash scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh --summary-file /tmp/live-network-pilot-report.json`
 - Contract lane:
   - `bash scripts/runtime/run_live_network_pilot_deep_contract_lane.sh`
+- Partition/reconnect lane selector:
+  - `bash scripts/runtime/select_live_network_partition_reconnect_lane.sh --event-name pull_request`
+- Partition/reconnect matrix smoke lane:
+  - `bash scripts/runtime/run_live_network_partition_reconnect_smoke_lane.sh --event-name pull_request --output-json /tmp/live-network-partition-reconnect-smoke-report.json`
+- Partition/reconnect matrix deep lane:
+  - `bash scripts/runtime/run_live_network_partition_reconnect_deep_lane.sh --event-name schedule --output-json /tmp/live-network-partition-reconnect-deep-report.json`
+- Partition/reconnect matrix policy checker:
+  - `bash scripts/runtime/check_live_network_partition_reconnect_policy.sh --report-file /tmp/live-network-partition-reconnect-smoke-report.json`
+- Partition/reconnect matrix contract lane:
+  - `bash scripts/runtime/run_live_network_partition_reconnect_contract_lane.sh --event-name pull_request --output-json /tmp/live-network-partition-reconnect-contract-report.json`
+- Partition/reconnect matrix fixture:
+  - `fixtures/runtime/live_network_partition_reconnect_matrix_cases.json`
 - Regression policy:
   - missing smoke/deep pilot evidence or non-`GO` pilot decisions force launch `NO-GO` and trigger rollback review (`Regression: #830`).
+  - stale/tampered partition/reconnect matrix artifacts and replay anomalies force `NO-GO` (`Regression: #982`).
 
 ## Governance Simulation and Human-Veto Evidence Contract (Issue #748)
 Governance activation requires deterministic simulation, veto, timelock, and approval evidence before GO decisions.

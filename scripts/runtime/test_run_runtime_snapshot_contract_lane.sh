@@ -89,6 +89,31 @@ if ! grep -q "test_run_failover_sync_drill_suite.sh" "$FAST_SCRIPT"; then
   exit 1
 fi
 
+if ! grep -q "test_select_live_network_partition_reconnect_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include partition/reconnect lane selector coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "test_run_live_network_partition_reconnect_smoke_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include partition/reconnect smoke lane coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "test_run_live_network_partition_reconnect_deep_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include partition/reconnect deep lane coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "test_check_live_network_partition_reconnect_policy.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include partition/reconnect policy checker coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "test_run_live_network_partition_reconnect_contract_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include partition/reconnect contract lane coverage" >&2
+  exit 1
+fi
+
 if ! grep -q "test_generate_live_network_pilot_artifact_summary.sh" "$FAST_SCRIPT"; then
   echo "expected runtime snapshot contract lane to include live-network pilot artifact summary coverage" >&2
   exit 1

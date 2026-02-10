@@ -149,6 +149,14 @@ fn checklist_contains_live_network_pilot_launch_and_rollback_evidence_gates() {
     assert!(CHECKLIST.contains("run_live_network_pilot_deep_lane.sh"));
     assert!(CHECKLIST.contains("check_live_network_pilot_artifact_summary_policy.sh"));
     assert!(CHECKLIST.contains("run_live_network_pilot_deep_contract_lane.sh"));
+    assert!(CHECKLIST.contains("select_live_network_partition_reconnect_lane.sh"));
+    assert!(CHECKLIST.contains("run_live_network_partition_reconnect_smoke_lane.sh"));
+    assert!(CHECKLIST.contains("run_live_network_partition_reconnect_deep_lane.sh"));
+    assert!(CHECKLIST.contains("check_live_network_partition_reconnect_policy.sh"));
+    assert!(CHECKLIST.contains("run_live_network_partition_reconnect_contract_lane.sh"));
+    assert!(
+        CHECKLIST.contains("fixtures/runtime/live_network_partition_reconnect_matrix_cases.json")
+    );
 }
 
 #[test]
@@ -295,6 +303,14 @@ fn regression_requires_live_network_pilot_launch_and_rollback_guard_marker() {
     // Regression: #830
     assert!(CHECKLIST.contains(
         "missing smoke/deep pilot evidence or non-`GO` pilot decisions force launch `NO-GO` and trigger rollback review (`Regression: #830`)."
+    ));
+}
+
+#[test]
+fn regression_requires_live_network_partition_reconnect_guard_marker() {
+    // Regression: #982
+    assert!(CHECKLIST.contains(
+        "stale/tampered partition/reconnect matrix artifacts and replay anomalies force `NO-GO` (`Regression: #982`)."
     ));
 }
 

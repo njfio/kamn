@@ -1056,6 +1056,11 @@ assert_eq "$(extract_output "$invariant_fuzz_concurrency_policy_checker_output" 
 assert_eq "$(extract_output "$invariant_fuzz_concurrency_policy_checker_output" "run_runtime_snapshot_contract_tests")" "true" "invariant/fuzz/concurrency policy checker changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$invariant_fuzz_concurrency_policy_checker_output" "test_scope")" "runtime-contract" "invariant/fuzz/concurrency policy checker changes should set runtime-contract scope"
 
+runtime_partition_fixture_output="$(run_selector $'fixtures/runtime/live_network_partition_reconnect_matrix_cases.json')"
+assert_eq "$(extract_output "$runtime_partition_fixture_output" "run_rust")" "false" "runtime partition/reconnect fixture-only changes should avoid rust lane"
+assert_eq "$(extract_output "$runtime_partition_fixture_output" "run_runtime_snapshot_contract_tests")" "true" "runtime partition/reconnect fixture changes must run runtime snapshot contract lane"
+assert_eq "$(extract_output "$runtime_partition_fixture_output" "test_scope")" "runtime-contract" "runtime partition/reconnect fixture changes should set runtime-contract scope"
+
 message_contract_docs_output="$(run_selector $'docs/foundation/message-lifecycle.md')"
 assert_eq "$(extract_output "$message_contract_docs_output" "run_rust")" "false" "message lifecycle contract docs should avoid rust lane"
 assert_eq "$(extract_output "$message_contract_docs_output" "run_message_lifecycle_contract_tests")" "true" "message lifecycle contract docs must run message lifecycle contract lane"

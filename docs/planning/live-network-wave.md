@@ -26,16 +26,34 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `bash scripts/runtime/run_live_network_pilot_deep_contract_lane.sh`
 - Deep summary policy checker:
   - `bash scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh --summary-file /tmp/live-network-pilot-report.json`
+- Partition/reconnect matrix smoke lane:
+  - `bash scripts/runtime/run_live_network_partition_reconnect_smoke_lane.sh --event-name pull_request --output-json /tmp/live-network-partition-reconnect-smoke-report.json`
+- Partition/reconnect matrix deep lane:
+  - `bash scripts/runtime/run_live_network_partition_reconnect_deep_lane.sh --event-name schedule --output-json /tmp/live-network-partition-reconnect-deep-report.json`
+- Partition/reconnect lane selector:
+  - `bash scripts/runtime/select_live_network_partition_reconnect_lane.sh --event-name pull_request`
+- Partition/reconnect matrix policy checker:
+  - `bash scripts/runtime/check_live_network_partition_reconnect_policy.sh --report-file /tmp/live-network-partition-reconnect-smoke-report.json`
+- Partition/reconnect matrix contract lane:
+  - `bash scripts/runtime/run_live_network_partition_reconnect_contract_lane.sh --event-name pull_request --output-json /tmp/live-network-partition-reconnect-contract-report.json`
+- Partition/reconnect matrix fixture:
+  - `fixtures/runtime/live_network_partition_reconnect_matrix_cases.json`
 - Stable shell wrappers:
   - `scripts/runtime/run_live_network_smoke_lane.sh`
   - `scripts/runtime/run_live_network_pilot_deep_lane.sh`
   - `scripts/runtime/generate_live_network_pilot_artifact_summary.sh`
   - `scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh`
+  - `scripts/runtime/select_live_network_partition_reconnect_lane.sh`
+  - `scripts/runtime/run_live_network_partition_reconnect_smoke_lane.sh`
+  - `scripts/runtime/run_live_network_partition_reconnect_deep_lane.sh`
+  - `scripts/runtime/check_live_network_partition_reconnect_policy.sh`
+  - `scripts/runtime/run_live_network_partition_reconnect_contract_lane.sh`
 - Shared Python implementations:
   - `scripts/runtime/live_network_smoke_lane_contract.py`
   - `scripts/runtime/live_network_pilot_deep_lane_contract.py`
   - `scripts/runtime/live_network_pilot_artifact_summary_contract.py`
   - `scripts/runtime/live_network_pilot_artifact_summary_policy_contract.py`
+  - `scripts/runtime/live_network_partition_reconnect_contract.py`
 - Localhost signed sender/listener transport demo:
   - `bash scripts/sdk/run_localhost_signed_demo.sh --output-json /tmp/localhost-signed-demo-artifact.json`
 - Localhost signed integration harness scenarios:
@@ -81,6 +99,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `kamn.runtime.live-network-smoke-report.v1`
 - Pilot summary schema:
   - `kamn.runtime.live-network-pilot-artifact-summary.v1`
+- Partition/reconnect matrix report schema:
+  - `kamn.runtime.live-network-partition-reconnect-matrix-report.v1`
 - Localhost bridge demo evidence schema:
   - `kamn.bridge.localhost-demo-evidence.v1`
 - Localhost signed integration contract schema:
@@ -123,6 +143,16 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `evidence_complete`
   - `decision_reasons`
   - `final_decision`
+- Required partition/reconnect matrix report fields:
+  - `lane`
+  - `event_name`
+  - `cadence`
+  - `status`
+  - `final_decision`
+  - `reason_codes`
+  - `required_scenarios`
+  - `scenario_results`
+  - `artifact_signature`
 
 ## Runtime and Cost Policy
 
@@ -130,10 +160,18 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `KAMN_LIVE_NETWORK_SMOKE_MAX_SECONDS=120`
 - Default deep lane budget:
   - `KAMN_LIVE_NETWORK_PILOT_DEEP_MAX_SECONDS=300`
+- Partition/reconnect smoke budget:
+  - `KAMN_LIVE_NETWORK_PARTITION_RECONNECT_SMOKE_MAX_SECONDS=120`
+- Partition/reconnect deep budget:
+  - `KAMN_LIVE_NETWORK_PARTITION_RECONNECT_DEEP_MAX_SECONDS=300`
+- Partition/reconnect artifact freshness policy:
+  - `KAMN_LIVE_NETWORK_PARTITION_RECONNECT_MAX_ARTIFACT_AGE_SECONDS=900`
 - Smoke contract lane ceiling:
   - `run_live_network_smoke_contract_lane.sh` enforces a 180-second upper bound.
 - Deep cadence policy:
   - `run_live_network_pilot_deep_lane.sh` rejects non-`schedule` and non-`workflow_dispatch` events.
+- Partition/reconnect deep cadence policy:
+  - `run_live_network_partition_reconnect_deep_lane.sh` rejects non-`schedule` and non-`workflow_dispatch` events.
 - Bridge PR-fast budget:
   - `run_bridge_replay_redaction_contract_lane.sh` enforces a 120-second upper bound.
 - Localhost bridge demo evidence budget:
@@ -169,6 +207,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - localhost signed integration harness and contract lane preserve deterministic evidence keys (`Regression: #899`).
 - Regression guard:
   - localhost signed demo receipt artifact schema drift and missing receipt reconciliation outcomes fail closed (`Regression: #981`).
+- Regression guard:
+  - stale/tampered partition/reconnect matrix artifacts and replay anomalies are rejected (`Regression: #982`).
 - Regression guard:
   - dashboard runtime fallback contract remains pinned to `node@22` with local reproduction guidance (`Regression: #868`).
 - Regression guard:
