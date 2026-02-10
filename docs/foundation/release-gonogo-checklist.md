@@ -354,10 +354,13 @@ Launch approval requires deterministic critical-path probe evidence covering mes
   - `python3 scripts/canary/run_launch_canary_matrix.py --fixture fixtures/launch_canary/critical_path_probe_cases.json --output-json /tmp/launch-canary-report.json`
 - PR fast contract lane:
   - `bash scripts/canary/run_launch_canary_contract_lane.sh`
+- Shared Python implementation (contract lane):
+  - `scripts/canary/launch_canary_contract_lane_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/canary/run_launch_canary_deep_lane.sh --output-json launch-canary-report.json`
 - Regression policy:
   - missing probe evidence and failing critical-path probes force `NO-GO` (`Regression: #710`).
+  - shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1286`).
 
 ## Post-Cutover SLO Gate Evidence Contract (Issue #711)
 Post-cutover launch gates require deterministic SLO evidence export with stale/partial evidence rejection.

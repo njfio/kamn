@@ -221,6 +221,7 @@ fn checklist_contains_launch_canary_critical_path_contract() {
     assert!(CHECKLIST.contains("## Launch Canary Critical-Path Contract"));
     assert!(CHECKLIST.contains("fixtures/launch_canary/critical_path_probe_cases.json"));
     assert!(CHECKLIST.contains("run_launch_canary_matrix.py"));
+    assert!(CHECKLIST.contains("launch_canary_contract_lane_contract.py"));
     assert!(CHECKLIST.contains("run_launch_canary_contract_lane.sh"));
     assert!(CHECKLIST.contains("run_launch_canary_deep_lane.sh"));
 }
@@ -411,6 +412,14 @@ fn regression_requires_launch_canary_evidence_guard_marker() {
     // Regression: #710
     assert!(CHECKLIST.contains(
         "missing probe evidence and failing critical-path probes force `NO-GO` (`Regression: #710`)."
+    ));
+}
+
+#[test]
+fn regression_requires_launch_canary_shared_contract_lane_marker() {
+    // Regression: #1286
+    assert!(CHECKLIST.contains(
+        "shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1286`)."
     ));
 }
 
