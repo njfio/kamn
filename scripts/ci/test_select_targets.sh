@@ -1188,6 +1188,13 @@ assert_eq "$(extract_output "$kolme_runtime_commit_notifications_test_output" "r
 assert_eq "$(extract_output "$kolme_runtime_commit_notifications_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit notifications rust tests should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_notifications_test_output" "test_scope")" "targeted" "Kolme runtime commit notifications rust tests should keep targeted scope"
 
+kolme_runtime_commit_block_fallback_test_output="$(run_selector $'crates/kamn-core/tests/kolme_runtime_commit_block_fallback.rs')"
+assert_eq "$(extract_output "$kolme_runtime_commit_block_fallback_test_output" "run_rust")" "true" "Kolme runtime commit block fallback rust tests should run rust lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_block_fallback_test_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit block fallback rust tests should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_block_fallback_test_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime commit block fallback rust tests must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_block_fallback_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime commit block fallback rust tests should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_runtime_commit_block_fallback_test_output" "test_scope")" "targeted" "Kolme runtime commit block fallback rust tests should keep targeted scope"
+
 kolme_runtime_commit_replay_policy_script_output="$(run_selector $'scripts/kolme/check_runtime_commit_replay_policy.py')"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_policy_script_output" "run_rust")" "false" "Kolme runtime commit replay policy script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_replay_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit replay policy script changes should skip Kolme snapshot drift contract lane"
@@ -1257,6 +1264,20 @@ assert_eq "$(extract_output "$kolme_notifications_consumer_contract_lane_test_sc
 assert_eq "$(extract_output "$kolme_notifications_consumer_contract_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme notifications consumer contract lane test script changes must run Kolme version compatibility contract lane"
 assert_eq "$(extract_output "$kolme_notifications_consumer_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme notifications consumer contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_notifications_consumer_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme notifications consumer contract lane test script changes should set kolme-version-contract scope"
+
+kolme_block_fallback_contract_lane_script_output="$(run_selector $'scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh')"
+assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_script_output" "run_rust")" "false" "Kolme block fallback reconciliation contract lane script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme block fallback reconciliation contract lane script changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme block fallback reconciliation contract lane script changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme block fallback reconciliation contract lane script changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme block fallback reconciliation contract lane script changes should set kolme-version-contract scope"
+
+kolme_block_fallback_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh')"
+assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_test_script_output" "run_rust")" "false" "Kolme block fallback reconciliation contract lane test script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme block fallback reconciliation contract lane test script changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme block fallback reconciliation contract lane test script changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme block fallback reconciliation contract lane test script changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_block_fallback_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme block fallback reconciliation contract lane test script changes should set kolme-version-contract scope"
 
 kolme_nonce_broadcast_fixture_output="$(run_selector $'fixtures/kolme_commit/nonce_broadcast_parity_cases.json')"
 assert_eq "$(extract_output "$kolme_nonce_broadcast_fixture_output" "run_rust")" "false" "Kolme nonce/broadcast parity fixture-only changes should avoid rust lane"

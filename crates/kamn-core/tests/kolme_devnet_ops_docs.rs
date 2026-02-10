@@ -26,6 +26,13 @@ fn plan_contains_runtime_commit_adapter_replay_lane_policy() {
 }
 
 #[test]
+fn plan_contains_runtime_commit_block_fallback_fast_lane_policy() {
+    assert!(PLAN.contains("## Runtime Commit Block Fallback Reconciliation Fast Lane"));
+    assert!(PLAN.contains("run_block_fallback_reconciliation_contract_lane.sh"));
+    assert!(PLAN.contains("kolme_runtime_commit_block_fallback"));
+}
+
+#[test]
 fn plan_contains_local_fork_sync_metadata_lane() {
     assert!(PLAN.contains("## Deterministic Local Fork Sync Metadata Lane"));
     assert!(PLAN.contains("run_local_fork_sync_metadata_lane.sh"));
@@ -164,5 +171,13 @@ fn regression_requires_local_runtime_commit_live_guard_marker() {
     // Regression: #1450
     assert!(PLAN.contains(
         "local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`)."
+    ));
+}
+
+#[test]
+fn regression_requires_runtime_commit_block_fallback_guard_marker() {
+    // Regression: #1464
+    assert!(PLAN.contains(
+        "block fallback stale-window and response-height drift remains fail-closed (`Regression: #1464`)."
     ));
 }

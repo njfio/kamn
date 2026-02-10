@@ -396,6 +396,29 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Regression policy:
   - unsupported notification variants and reconnect-budget drift remain fail-closed (`Regression: #1463`).
 
+## Kolme Block Fallback Finality Reconciliation Contract Rules
+- Block fallback endpoint contract:
+  - `GET /block/{height}` lookup is used when notification windows are missed.
+  - deterministic payload fields: `provider`, `block_height` (or `height`), optional `tx_hashes`, optional `failed_tx_hashes`.
+- `KolmeRuntimeCommitBlockFallbackReconciler` in `crates/kamn-core/src/kolme_runtime_commit.rs` enforces deterministic behavior:
+  - lookup window must be bounded by `max_block_lookups`.
+  - provider value must match expected provider.
+  - response block height must match requested lookup height.
+  - first matching `tx_hashes` entry maps to `finality=Final`.
+  - matching `failed_tx_hashes` entry maps to `finality=Failed`.
+- Fail-closed policy:
+  - stale lookup windows above max budget fail closed.
+  - malformed block payloads and mismatched response heights fail closed.
+  - unresolved txhash across bounded lookup window fails closed.
+- Validation commands:
+  - `cargo test -p kamn-core --test kolme_runtime_commit_block_fallback`
+  - `bash scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh`
+  - `bash scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh`
+- Runtime budget:
+  - `KAMN_KOLME_BLOCK_FALLBACK_MAX_SECONDS=75` (default)
+- Regression policy:
+  - stale-window and block-height mismatch drift remain fail-closed (`Regression: #1464`).
+
 ## Test Coverage Mapping
 - Unit:
   - invalid transition checks
@@ -410,6 +433,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - empty resume-token rejoin attempt rejection
   - snapshot cursor/hash validation and continuity regression checks
   - websocket notification variant decode and txhash extraction invariants
+  - block fallback lookup-window and response-height guard validation
 - Functional:
   - peer lifecycle connect/degrade/recover/disconnect flow
   - authenticated peer-frame wire roundtrip and signature verification
@@ -421,6 +445,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - rejoin acceptance with matching snapshot
   - snapshot recovery truncation with stale metadata suffix
   - websocket reconnect-after-close receipt continuation behavior
+  - missed-notification block fallback reconciliation to final/failed receipts
 - Integration:
   - bounded FIFO queue behavior under capacity
   - inbound peer-frame authenticator monotonic nonce acceptance flow
@@ -433,6 +458,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - combined invariant/fuzz/concurrency lane + policy checker contract coverage
   - runtime snapshot contract lane wiring and docs mapping checks
   - notifications consumer websocket handshake + text-frame decode with mock endpoint
+  - block fallback reconciler with mock block API and HTTP transport wiring
 - Regression:
   - rejoin without disconnect is rejected (`Regression: #324`)
   - queue overflow rejects new event (`Regression: #324`)
@@ -457,6 +483,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - task/escrow/peer lifecycle generated invariant lanes remain deterministic (`Regression: #842`)
   - invariant/fuzz/concurrency combined lane reason-code policy remains fail-closed (`Regression: #897`)
   - notifications websocket variant/reconnect fail-closed contract remains stable (`Regression: #1463`)
+  - block fallback stale-window/height-mismatch fail-closed contract remains stable (`Regression: #1464`)
 - Performance:
   - bounded PR-lane runtime backpressure evaluation budget check
   - bounded PR-lane authenticated peer-frame validation budget check
@@ -466,6 +493,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - bounded PR-lane concurrency mutation validation budget check
   - bounded PR-lane combined invariant/fuzz/concurrency validation budget check
   - bounded PR-lane snapshot recovery budget check
+  - bounded PR-lane block fallback reconciliation budget check
   - scheduled chaos lane stress hook (`--ignored`)
   - scheduled concurrency stress deep lane hook (`--ignored`)
   - scheduled snapshot recovery deep lane stress hook (`--ignored`)
@@ -484,6 +512,7 @@ cargo test -p kamn-core snapshot_store
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-core --test bridge_quorum_runtime_docs
 cargo test -p kamn-core --test kolme_runtime_commit_notifications
+cargo test -p kamn-core --test kolme_runtime_commit_block_fallback
 cargo test -p kamn-core --test message_envelope_fuzz_smoke functional_envelope_mutation_suite_covers_malformed_truncated_and_tampered_classes -- --exact
 cargo test -p kamn-core --test did_fuzz_smoke functional_did_mutation_suite_covers_normalization_encoding_and_method_mismatch_classes -- --exact
 bash scripts/runtime/run_input_mutation_contract_lane.sh
@@ -501,6 +530,7 @@ cargo test -p kamn-node --test node_runtime_cli_docs
 cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
 bash scripts/runtime/run_runtime_snapshot_contract_lane.sh
 bash scripts/kolme/run_notifications_consumer_contract_lane.sh
+bash scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh
 ```
 
 Scheduled deep-lane command:

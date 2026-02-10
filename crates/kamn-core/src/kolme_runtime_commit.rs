@@ -633,6 +633,14 @@ struct ParsedWebsocketEndpoint {
     target_path: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ParsedBlockFallbackResponse {
+    provider: String,
+    block_height: u64,
+    finalized_tx_hashes: Vec<String>,
+    failed_tx_hashes: Vec<String>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum HttpScheme {
     Http,
@@ -834,6 +842,17 @@ pub trait KolmeRuntimeCommitFinalityTransport {
     ) -> Result<String, KolmeRuntimeCommitProviderError>;
 }
 
+/// Transport abstraction for querying `/block/{height}` fallback responses.
+pub trait KolmeRuntimeCommitBlockFallbackTransport {
+    /// Fetches one block response payload for the provided height.
+    fn fetch_block_by_height(
+        &mut self,
+        base_url: &str,
+        block_path_template: &str,
+        height: u64,
+    ) -> Result<String, KolmeRuntimeCommitProviderError>;
+}
+
 impl KolmeRuntimeCommitProviderTransport for KolmeRuntimeCommitHttpTransport {
     fn submit_runtime_commit(
         &mut self,
@@ -881,6 +900,23 @@ impl KolmeRuntimeCommitFinalityTransport for KolmeRuntimeCommitHttpTransport {
         let separator = if status_path.contains('?') { "&" } else { "?" };
         let path = format!("{status_path}{separator}commit_id={encoded_commit_id}");
         self.execute_request(base_url, path.as_str(), "GET", None, &[])
+    }
+}
+
+impl KolmeRuntimeCommitBlockFallbackTransport for KolmeRuntimeCommitHttpTransport {
+    fn fetch_block_by_height(
+        &mut self,
+        base_url: &str,
+        block_path_template: &str,
+        height: u64,
+    ) -> Result<String, KolmeRuntimeCommitProviderError> {
+        if height == 0 {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "block height must be positive".to_owned(),
+            });
+        }
+        let block_path = render_block_path(block_path_template, height)?;
+        self.execute_request(base_url, block_path.as_str(), "GET", None, &[])
     }
 }
 
@@ -971,6 +1007,145 @@ impl<T: KolmeRuntimeCommitFinalityTransport> KolmeRuntimeCommitFinalityChecker<T
             }
         }
         Err(KolmeRuntimeCommitProviderError::Timeout)
+    }
+}
+
+/// Deterministic `/block/{height}` fallback reconciler for missed notification windows.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KolmeRuntimeCommitBlockFallbackReconciler<T> {
+    base_url: String,
+    block_path_template: String,
+    provider: String,
+    max_block_lookups: u64,
+    transport: T,
+}
+
+impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbackReconciler<T> {
+    /// Builds a block-fallback reconciler with deterministic validation.
+    pub fn new(
+        base_url: &str,
+        block_path_template: &str,
+        provider: &str,
+        max_block_lookups: u64,
+        transport: T,
+    ) -> Result<Self, KolmeRuntimeCommitError> {
+        if base_url.trim().is_empty() {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "provider_base_url",
+                reason: "must not be empty",
+            });
+        }
+        if provider.trim().is_empty() {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "provider",
+                reason: "must not be empty",
+            });
+        }
+        if max_block_lookups == 0 {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "max_block_lookups",
+                reason: "must be positive",
+            });
+        }
+        validate_block_path_template(block_path_template).map_err(map_provider_error)?;
+        Ok(Self {
+            base_url: base_url.trim().to_owned(),
+            block_path_template: block_path_template.trim().to_owned(),
+            provider: provider.trim().to_owned(),
+            max_block_lookups,
+            transport,
+        })
+    }
+
+    /// Reconciles one tx hash by scanning block responses in the provided height window.
+    pub fn reconcile_txhash(
+        &mut self,
+        txhash: &str,
+        from_height: u64,
+        latest_height: u64,
+    ) -> Result<KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderError> {
+        let txhash = txhash.trim();
+        if txhash.is_empty() {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "txhash must not be empty".to_owned(),
+            });
+        }
+        if from_height == 0 {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "from_height must be positive".to_owned(),
+            });
+        }
+        if latest_height == 0 {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "latest_height must be positive".to_owned(),
+            });
+        }
+        if latest_height < from_height {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "latest_height must be greater than or equal to from_height".to_owned(),
+            });
+        }
+
+        let lookup_span = latest_height - from_height + 1;
+        if lookup_span > self.max_block_lookups {
+            return Err(KolmeRuntimeCommitProviderError::Unavailable {
+                reason: format!(
+                    "block fallback window exceeds max lookups: from_height={from_height} latest_height={latest_height} max_lookups={}",
+                    self.max_block_lookups
+                ),
+            });
+        }
+
+        for height in from_height..=latest_height {
+            let response = self.transport.fetch_block_by_height(
+                self.base_url.as_str(),
+                self.block_path_template.as_str(),
+                height,
+            )?;
+            let block = parse_block_fallback_response(response.as_str())?;
+
+            if block.provider != self.provider {
+                return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: format!(
+                        "block fallback provider mismatch: expected {} observed {}",
+                        self.provider, block.provider
+                    ),
+                });
+            }
+            if block.block_height != height {
+                return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: format!(
+                        "block fallback response height mismatch: expected {height} observed {}",
+                        block.block_height
+                    ),
+                });
+            }
+
+            if block
+                .finalized_tx_hashes
+                .iter()
+                .any(|value| value == txhash)
+            {
+                return Ok(KolmeRuntimeCommitProviderReceipt {
+                    provider: self.provider.clone(),
+                    commit_id: deterministic_backend_commit_id(txhash, Some(height)),
+                    finality: KolmeCommitReceiptFinality::Final,
+                });
+            }
+            if block.failed_tx_hashes.iter().any(|value| value == txhash) {
+                return Ok(KolmeRuntimeCommitProviderReceipt {
+                    provider: self.provider.clone(),
+                    commit_id: deterministic_backend_commit_id(txhash, None),
+                    finality: KolmeCommitReceiptFinality::Failed,
+                });
+            }
+        }
+
+        Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: format!(
+                "block fallback did not resolve txhash '{txhash}' between heights {from_height} and {latest_height}"
+            ),
+        })
     }
 }
 
@@ -1367,6 +1542,132 @@ fn parse_authority(
         }
     }
     Ok((authority.to_owned(), default_port))
+}
+
+fn validate_block_path_template(
+    block_path_template: &str,
+) -> Result<(), KolmeRuntimeCommitProviderError> {
+    let trimmed = block_path_template.trim();
+    if trimmed.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "block_path_template must not be empty".to_owned(),
+        });
+    }
+    if !trimmed.contains("{height}") {
+        return Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "block_path_template must include '{height}' placeholder".to_owned(),
+        });
+    }
+    Ok(())
+}
+
+fn render_block_path(
+    block_path_template: &str,
+    height: u64,
+) -> Result<String, KolmeRuntimeCommitProviderError> {
+    validate_block_path_template(block_path_template)?;
+    Ok(block_path_template
+        .trim()
+        .replace("{height}", height.to_string().as_str()))
+}
+
+fn parse_block_fallback_response(
+    response: &str,
+) -> Result<ParsedBlockFallbackResponse, KolmeRuntimeCommitProviderError> {
+    let trimmed = response.trim();
+    if trimmed.starts_with('{') {
+        let fields = parse_flat_json_value_fields(trimmed)?;
+        let provider = required_json_string_field(&fields, "provider")?;
+        let block_height = required_block_height_json_field(&fields)?;
+        let finalized_tx_hashes = optional_json_block_tx_hashes(&fields, "tx_hashes")?;
+        let failed_tx_hashes = optional_json_block_tx_hashes(&fields, "failed_tx_hashes")?;
+        return Ok(ParsedBlockFallbackResponse {
+            provider,
+            block_height,
+            finalized_tx_hashes,
+            failed_tx_hashes,
+        });
+    }
+
+    let fields = parse_response_fields(trimmed)?;
+    let provider = required_response_field(&fields, "provider")?;
+    let block_height = fields
+        .get("block_height")
+        .or_else(|| fields.get("height"))
+        .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "missing required field: block_height".to_owned(),
+        })
+        .and_then(|value| parse_block_height(value.as_str()))?;
+    let finalized_tx_hashes = optional_block_tx_hashes(&fields, "tx_hashes")?;
+    let failed_tx_hashes = optional_block_tx_hashes(&fields, "failed_tx_hashes")?;
+    Ok(ParsedBlockFallbackResponse {
+        provider,
+        block_height,
+        finalized_tx_hashes,
+        failed_tx_hashes,
+    })
+}
+
+fn optional_block_tx_hashes(
+    fields: &HashMap<String, String>,
+    field: &'static str,
+) -> Result<Vec<String>, KolmeRuntimeCommitProviderError> {
+    let Some(value) = fields.get(field) else {
+        return Ok(Vec::new());
+    };
+    parse_tx_hash_list(value, field)
+}
+
+fn parse_tx_hash_list(
+    raw: &str,
+    field: &'static str,
+) -> Result<Vec<String>, KolmeRuntimeCommitProviderError> {
+    if raw.trim().is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: format!("field must not be empty: {field}"),
+        });
+    }
+    let mut values = Vec::new();
+    for token in raw.split(',') {
+        let txhash = token.trim();
+        if txhash.is_empty() {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("field contains empty tx hash token: {field}"),
+            });
+        }
+        values.push(txhash.to_owned());
+    }
+    Ok(values)
+}
+
+fn required_block_height_json_field(
+    fields: &HashMap<String, FlatJsonValue>,
+) -> Result<u64, KolmeRuntimeCommitProviderError> {
+    if fields.contains_key("block_height") {
+        return required_positive_u64_json_field(fields, "block_height");
+    }
+    if fields.contains_key("height") {
+        return required_positive_u64_json_field(fields, "height");
+    }
+    Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+        reason: "missing required field: block_height".to_owned(),
+    })
+}
+
+fn optional_json_block_tx_hashes(
+    fields: &HashMap<String, FlatJsonValue>,
+    field: &'static str,
+) -> Result<Vec<String>, KolmeRuntimeCommitProviderError> {
+    let Some(value) = fields.get(field) else {
+        return Ok(Vec::new());
+    };
+    match value {
+        FlatJsonValue::Null => Ok(Vec::new()),
+        FlatJsonValue::String(raw) => parse_tx_hash_list(raw, field),
+        _ => Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: format!("field must be string|null: {field}"),
+        }),
+    }
 }
 
 fn compose_notifications_websocket_url(

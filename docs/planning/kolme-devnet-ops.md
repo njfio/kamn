@@ -48,6 +48,15 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - Cost policy:
   - lane enforces a 60-second fast-gate budget and runs only targeted adapter/replay checks.
 
+## Runtime Commit Block Fallback Reconciliation Fast Lane (Issue #1464)
+
+- Block fallback reconciliation contract lane:
+  - `bash scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh`
+- Targeted rust fallback reconciliation test:
+  - `cargo test -p kamn-core --test kolme_runtime_commit_block_fallback`
+- Cost policy:
+  - lane enforces a 75-second fast-gate budget via `KAMN_KOLME_BLOCK_FALLBACK_MAX_SECONDS`.
+
 ## Deterministic Local Fork Sync Metadata Lane (Issue #1429)
 
 - Local fork metadata sync runner:
@@ -197,6 +206,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - local Kolme API probe lane fails closed on unavailable health endpoint, invalid fork-info payload, and runtime budget overruns (`Regression: #1439`).
 - local Kolme API smoke lane fails closed without explicit local opt-in, probe prerequisite failure, smoke-command timeout, and smoke-command errors (`Regression: #1440`).
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
+- block fallback stale-window and response-height drift remains fail-closed (`Regression: #1464`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
 ## Local Validation
@@ -209,6 +219,7 @@ bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh
 bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh
 bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh
 bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh
+bash scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh
 bash scripts/kolme/test_run_local_bootstrap_health_checks.sh
 bash scripts/kolme/test_run_local_e2e_integration_lane.sh
 bash scripts/kolme/test_run_local_heavy_validation_matrix.sh
