@@ -103,6 +103,31 @@ class LaneManifestTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             run_lane_phase(manifest, "missing-phase")
 
+    def test_run_lane_phase_forwards_phase_args(self) -> None:
+        manifest = parse_manifest(
+            {
+                "schema_version": MANIFEST_SCHEMA_VERSION,
+                "lane_id": "contract.framework",
+                "evidence_key": "contract_framework:v1",
+                "reason_key": "contract_framework_reason_codes:GO:v1",
+                "phases": {
+                    "test": [
+                        "python3",
+                        "-c",
+                        "import sys; print('args=' + ' '.join(sys.argv[1:]))",
+                    ],
+                },
+            }
+        )
+        code, output = run_lane_phase(
+            manifest,
+            "test",
+            phase_args=["--output-file", "report.json"],
+        )
+
+        self.assertEqual(code, 0)
+        self.assertIn("args=--output-file report.json", output)
+
 
 if __name__ == "__main__":
     unittest.main()

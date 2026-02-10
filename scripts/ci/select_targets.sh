@@ -249,7 +249,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/operator-dashboard-backend-apis.md|docs/foundation/operator-dashboard-ui-mvp.md|docs/foundation/observability-slo-dashboards.md|crates/kamn-core/tests/operator_dashboard_api_docs.rs|crates/kamn-core/tests/operator_dashboard_ui_docs.rs|crates/kamn-core/tests/observability_stack_docs.rs|scripts/dashboard/*)
+    docs/foundation/operator-dashboard-backend-apis.md|docs/foundation/operator-dashboard-ui-mvp.md|docs/foundation/observability-slo-dashboards.md|crates/kamn-core/tests/operator_dashboard_api_docs.rs|crates/kamn-core/tests/operator_dashboard_ui_docs.rs|crates/kamn-core/tests/observability_stack_docs.rs|scripts/dashboard/*|scripts/framework/manifests/dashboard_*)
       DASHBOARD_CONTRACT_CHANGED=true
       classified=true
       ;;
@@ -317,7 +317,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/channel-models.md|docs/foundation/channel-models-and-permissions.md|docs/foundation/data-governance-retention.md|docs/foundation/data-classification-tagging.md|docs/foundation/redaction-tombstones.md|crates/kamn-core/tests/channel_models_docs.rs|crates/kamn-core/tests/channel_models_and_permissions_docs.rs|crates/kamn-core/tests/data_governance_retention_docs.rs|crates/kamn-core/tests/redaction_tombstones_docs.rs|scripts/channel/*|scripts/compliance/*classification_redaction*)
+    docs/foundation/channel-models.md|docs/foundation/channel-models-and-permissions.md|docs/foundation/data-governance-retention.md|docs/foundation/data-classification-tagging.md|docs/foundation/redaction-tombstones.md|crates/kamn-core/tests/channel_models_docs.rs|crates/kamn-core/tests/channel_models_and_permissions_docs.rs|crates/kamn-core/tests/data_governance_retention_docs.rs|crates/kamn-core/tests/redaction_tombstones_docs.rs|scripts/channel/*|scripts/compliance/*classification_redaction*|scripts/framework/manifests/compliance_classification_redaction_*)
       CHANNEL_LIFECYCLE_CONTRACT_CHANGED=true
       classified=true
       ;;
@@ -357,15 +357,25 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/audit-export-interfaces.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/audit_export_interfaces_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/compliance/*soc2*|fixtures/compliance_soc2/*)
+    docs/foundation/audit-export-interfaces.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/audit_export_interfaces_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/compliance/*soc2*|fixtures/compliance_soc2/*|scripts/framework/manifests/compliance_soc2_*)
       SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
 
   case "$file" in
-    docs/foundation/data-classification-tagging.md|docs/foundation/redaction-tombstones.md|docs/foundation/audit-export-interfaces.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/audit_export_interfaces_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|crates/kamn-core/tests/data_classification_tagging_docs.rs|crates/kamn-core/tests/redaction_tombstones_docs.rs|scripts/compliance/*dsar*|scripts/compliance/*classification_redaction*|fixtures/compliance_dsar/*)
+    docs/foundation/data-classification-tagging.md|docs/foundation/redaction-tombstones.md|docs/foundation/audit-export-interfaces.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/audit_export_interfaces_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|crates/kamn-core/tests/data_classification_tagging_docs.rs|crates/kamn-core/tests/redaction_tombstones_docs.rs|scripts/compliance/*dsar*|scripts/compliance/*classification_redaction*|fixtures/compliance_dsar/*|scripts/framework/manifests/compliance_dsar_*|scripts/framework/manifests/compliance_classification_redaction_*)
       DSAR_LEGAL_HOLD_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
+    scripts/framework/lane_manifest.py|scripts/framework/run_lane_from_manifest.py|scripts/framework/run_manifest_lane.sh|scripts/framework/test_lane_manifest.py|scripts/framework/test_manifest_wrapper_dispatch.py|scripts/framework/test_pilot_lane_manifests.py)
+      DASHBOARD_CONTRACT_CHANGED=true
+      SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED=true
+      DSAR_LEGAL_HOLD_CONTRACT_CHANGED=true
+      CHANNEL_LIFECYCLE_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac

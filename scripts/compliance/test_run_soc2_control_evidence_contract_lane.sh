@@ -5,19 +5,30 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/compliance/run_soc2_control_evidence_contract_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/compliance/soc2_control_evidence_contract_lane_contract.py"
 DEEP_LANE="$ROOT_DIR/scripts/compliance/run_soc2_control_evidence_deep_lane.sh"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/compliance_soc2_control_evidence_contract_lane.json"
 
 if [ ! -x "$CONTRACT_LANE" ]; then
   echo "expected SOC2 control evidence contract lane script to be executable" >&2
   exit 1
 fi
 
-if ! grep -q 'soc2_control_evidence_contract_lane_contract.py' "$CONTRACT_LANE"; then
-  echo "expected SOC2 contract-lane wrapper to delegate to shared implementation" >&2
+if ! grep -q 'run_manifest_lane.sh' "$CONTRACT_LANE"; then
+  echo "expected SOC2 contract-lane wrapper to delegate via manifest runner" >&2
+  exit 1
+fi
+
+if ! grep -q 'compliance_soc2_control_evidence_contract_lane.json' "$CONTRACT_LANE"; then
+  echo "expected SOC2 contract-lane wrapper to reference SOC2 manifest" >&2
   exit 1
 fi
 
 if [ ! -x "$SHARED_CONTRACT" ]; then
   echo "expected shared SOC2 contract-lane implementation to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected SOC2 contract-lane manifest to exist" >&2
   exit 1
 fi
 
@@ -44,6 +55,11 @@ fi
 
 if ! grep -q "generate_soc2_control_evidence_bundle.sh" "$SHARED_CONTRACT"; then
   echo "expected shared SOC2 contract-lane implementation to execute bundle generator" >&2
+  exit 1
+fi
+
+if ! grep -q "soc2_control_evidence_contract_lane_contract.py" "$MANIFEST"; then
+  echo "expected SOC2 contract-lane manifest to dispatch to shared implementation" >&2
   exit 1
 fi
 

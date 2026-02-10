@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "compliance.soc2_control_evidence.contract",
+  "evidence_key": "compliance_soc2_control_evidence_contract_lane:v1",
+  "reason_key": "compliance_soc2_control_evidence_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "python3",
+      "scripts/compliance/soc2_control_evidence_contract_lane_contract.py"
+    ]
+  }
+}

@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/dashboard/stale_error_budget_contract_lane_contract.py"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/dashboard_stale_error_budget_contract_lane.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -13,6 +14,10 @@ if [ ! -x "$SCRIPT" ]; then
 fi
 if [ ! -x "$SHARED_CONTRACT" ]; then
   echo "expected dashboard stale/error shared contract-lane module to be executable" >&2
+  exit 1
+fi
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected dashboard stale/error contract lane manifest to exist" >&2
   exit 1
 fi
 
@@ -42,8 +47,18 @@ if ! grep -q '"final_decision": "GO"' "$report_file"; then
   exit 1
 fi
 
-if ! grep -q 'stale_error_budget_contract_lane_contract.py' "$SCRIPT"; then
-  echo "expected dashboard stale/error contract lane wrapper to dispatch to shared module" >&2
+if ! grep -q 'run_manifest_lane.sh' "$SCRIPT"; then
+  echo "expected dashboard stale/error contract lane wrapper to dispatch via manifest runner" >&2
+  exit 1
+fi
+
+if ! grep -q 'dashboard_stale_error_budget_contract_lane.json' "$SCRIPT"; then
+  echo "expected dashboard stale/error contract lane wrapper to reference dashboard manifest" >&2
+  exit 1
+fi
+
+if ! grep -q 'stale_error_budget_contract_lane_contract.py' "$MANIFEST"; then
+  echo "expected dashboard stale/error manifest to dispatch to shared module" >&2
   exit 1
 fi
 
