@@ -13,6 +13,7 @@ This matrix translates PRD threat model concerns into enforceable controls, owne
 | TM-005 | Signature metadata downgrade or algorithm drift | Enforce explicit signature algorithm/profile parsing and reject unsupported metadata pairs | Shared signer + transaction profile verification | Security + Backend | `integration_signature_profile_fixture_matrix_remains_consistent_with_transaction_guards` |
 | TM-006 | Quorum attestation evidence drift or replayed approval artifact | Require deterministic quorum attestation schema checks and replay-guard policy validation before governance execution | Governance quorum attestation lane + policy checker | Governance + Security | `quorum_attestation_replay_guard_policy_contract` |
 | TM-007 | Privileged role fallback bypass under secure-provider degradation | Deny local fallback for privileged signer roles and reject policy-blocked handshake downgrades | Signer policy contract lane + signer backend router | Security + Backend | `functional_privileged_roles_deny_fallback_when_provider_unavailable` |
+| TM-008 | Validator/watchdog proof-consensus anomaly evidence missing or cadence/budget guard bypass | Require deterministic proof-consensus anomaly evidence with scheduled/manual deep-lane cadence and runtime budget policy checks | Runtime watchdog proof-consensus contract lane + deep lane policy checker | Runtime + Security | `run_watchdog_proof_consensus_contract_lane.sh` |
 
 ## Governance Quorum Attestation Replay Contract
 - Fast lane:
@@ -47,6 +48,20 @@ This matrix translates PRD threat model concerns into enforceable controls, owne
   - `cargo test -p kamn-core --test signer_backend regression_provider_client_backend_mismatch_is_rejected_without_fallback`
 - Required fail-closed policy:
   - privileged-role fallback bypass attempts and policy-blocked handshake downgrades must fail closed (`Regression: #987`).
+
+## Runtime Watchdog Proof-Consensus Policy Contract
+- Fast lane:
+  - `bash scripts/runtime/run_watchdog_proof_consensus_contract_lane.sh --output-file /tmp/watchdog-proof-consensus-contract.json`
+- Scheduled/manual deep lane:
+  - `KAMN_WATCHDOG_PROOF_CONSENSUS_DEEP_CADENCE=scheduled bash scripts/runtime/run_watchdog_proof_consensus_deep_lane.sh --event-name schedule --output-json /tmp/watchdog-proof-consensus-deep-summary.json`
+- Policy checker:
+  - `bash scripts/runtime/check_watchdog_proof_consensus_policy.sh --bundle-file /tmp/watchdog-proof-consensus-contract.json`
+- Required schema and reason-key markers:
+  - `watchdog_proof_consensus_reason_codes:GO:v1`
+  - `watchdog_proof_consensus_reason_codes:NO-GO:v1`
+- Required fail-closed policy:
+  - validator/watchdog proof-consensus anomaly evidence must fail closed for invalid/replay/mismatch outcomes.
+  - cadence/budget guard bypass attempts must fail closed (`Regression: #996`).
 
 ## Ownership and Review Cadence
 - Security owner reviews this matrix each milestone and when new threat classes are introduced.
