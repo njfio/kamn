@@ -63,6 +63,8 @@ Deterministic frontend shell state matrix checks are enforced through a bounded 
   - `scripts/frontend/dashboard_shell_determinism_matrix_policy_contract.py`
 - Contract lane command:
   - `bash scripts/frontend/run_dashboard_shell_determinism_matrix_contract_lane.sh --output-file /tmp/dashboard-shell-matrix-contract-report.json`
+- Shared contract-lane module:
+  - `scripts/frontend/dashboard_shell_determinism_matrix_contract_lane_contract.py`
 
 Runtime budget controls:
 
@@ -78,6 +80,7 @@ Required schema/reason markers:
 The lane fails closed: healthy/stale-critical/error shell drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #943`).
 The shell lane wrapper remains compatibility-only and delegates orchestration logic to `dashboard_shell_determinism_matrix_lane_contract.py` (`Regression: #1214`).
 The shell policy wrapper remains compatibility-only and delegates validation logic to `dashboard_shell_determinism_matrix_policy_contract.py` (`Regression: #1210`).
+The shell contract-lane wrapper remains compatibility-only and delegates orchestration logic to `dashboard_shell_determinism_matrix_contract_lane_contract.py` (`Regression: #1218`).
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:

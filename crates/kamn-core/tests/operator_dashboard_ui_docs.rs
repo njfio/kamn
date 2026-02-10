@@ -38,6 +38,7 @@ fn doc_contains_frontend_shell_matrix_contract_lane() {
     assert!(DOC.contains("check_dashboard_shell_determinism_matrix_policy.sh"));
     assert!(DOC.contains("dashboard_shell_determinism_matrix_policy_contract.py"));
     assert!(DOC.contains("run_dashboard_shell_determinism_matrix_contract_lane.sh"));
+    assert!(DOC.contains("dashboard_shell_determinism_matrix_contract_lane_contract.py"));
     assert!(DOC.contains("kamn.frontend.shell-matrix-report.v1"));
     assert!(DOC.contains("KAMN_FRONTEND_SHELL_MATRIX_MAX_SECONDS"));
     assert!(DOC.contains("KAMN_FRONTEND_SHELL_MATRIX_CONTRACT_MAX_SECONDS"));
@@ -92,4 +93,11 @@ fn regression_requires_frontend_shell_matrix_lane_wrapper_delegation_rule() {
     // Regression: #1214
     assert!(DOC.contains("dashboard_shell_determinism_matrix_lane_contract.py"));
     assert!(DOC.contains("Regression: #1214"));
+}
+
+#[test]
+fn regression_requires_frontend_shell_matrix_contract_lane_wrapper_delegation_rule() {
+    // Regression: #1218
+    assert!(DOC.contains("dashboard_shell_determinism_matrix_contract_lane_contract.py"));
+    assert!(DOC.contains("Regression: #1218"));
 }
