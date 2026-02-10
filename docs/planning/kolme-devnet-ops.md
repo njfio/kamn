@@ -117,6 +117,27 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
   - run mode fails closed without explicit local-only opt-in.
   - smoke command timeout/exceeded budget is reported as `smoke_command_timeout`.
 
+## Local-Only Live Kolme API Conformance Harness (Issue #1483)
+
+- Local live API conformance harness runner:
+  - `bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode dry-run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-api-conformance-summary.json`
+- Explicit local-only live conformance execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 180 --probe-max-seconds 30 --native-max-seconds 120 --output-json /tmp/kolme-local-live-api-conformance-summary.json`
+- Policy checker command:
+  - `python3 scripts/kolme/check_local_kolme_live_api_conformance_policy.py --report-file /tmp/kolme-local-live-api-conformance-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-api-conformance-policy.json`
+- Contract lane command:
+  - `bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json`
+- Summary schema:
+  - `kamn.kolme.local-live-api-conformance-summary.v1`
+- Deterministic checkpoints include:
+  - `run_local_kolme_api_probe_lane.sh` run-mode verification for `GET /healthz` and `GET /fork-info?chain_version=<version>`.
+  - `run_local_native_api_parity_live_proof_lane.sh` run-mode verification for `GET /get-next-nonce` and `PUT /broadcast`.
+  - deterministic fail-closed reason codes for missing opt-in, probe/native prerequisite failures, and runtime budget overruns.
+- Cost policy:
+  - run mode fails closed without explicit local-only opt-in.
+  - lane default budget is bounded to 180 seconds.
+  - local live conformance run-mode execution remains excluded from PR fast-gate workflow routing.
+
 ## Local Runtime Commit Live Proof Lane (Issue #1450)
 
 - Local runtime-commit live lane runner:
@@ -240,6 +261,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
 - local Kolme API probe lane fails closed on unavailable health endpoint, invalid fork-info payload, and runtime budget overruns (`Regression: #1439`).
 - local Kolme API smoke lane fails closed without explicit local opt-in, probe prerequisite failure, smoke-command timeout, and smoke-command errors (`Regression: #1440`).
+- local live API conformance harness fails closed for probe/native parity prerequisite failures, runtime budget overruns, and endpoint contract drift (`Regression: #1483`).
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
 - local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`).
 - native parity fast/local command matrix docs drift remains fail-closed (`Regression: #1468`).
@@ -256,6 +278,7 @@ bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh
 bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh
 bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh
 bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh
+bash scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh
 bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh
 bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh
 bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh

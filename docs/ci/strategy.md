@@ -61,6 +61,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh`
+    - `bash scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh`
     - `bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_bootstrap_health_checks.sh`
@@ -79,6 +80,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - local Kolme API probe/smoke run-mode commands remain excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 30 --output-json /tmp/kolme-local-api-probe-summary.json`
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_api_smoke_lane.sh --mode run --base-url http://127.0.0.1:3000 --smoke-command "curl --silent --show-error --fail http://127.0.0.1:3000/healthz" --max-seconds 60 --output-json /tmp/kolme-local-api-smoke-summary.json`
+  - local live API conformance harness run-mode commands remain excluded from ci-fast-gate.
+    - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 180 --probe-max-seconds 30 --native-max-seconds 120 --output-json /tmp/kolme-local-live-api-conformance-summary.json`
+    - `python3 scripts/kolme/check_local_kolme_live_api_conformance_policy.py --report-file /tmp/kolme-local-live-api-conformance-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-api-conformance-policy.json`
+    - `bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json`
   - local runtime-commit live run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --live-command "cargo test -p kamn-core --test kolme_runtime_commit_http_transport" --max-seconds 90 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt`
   - local native API parity live-proof run-mode commands remain excluded from ci-fast-gate.
@@ -129,6 +134,7 @@ Required demo lane command contract:
 - `python3 scripts/kolme/check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-fast-gate-native-api-parity-policy.json`
 - `bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode dry-run --output-json /tmp/kolme-local-bootstrap-summary.json`
 - `bash scripts/kolme/run_local_e2e_integration_lane.sh --mode dry-run --output-json /tmp/kolme-local-e2e-integration-summary.json`
+- `bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode dry-run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-api-conformance-summary.json`
 - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
 - `bash scripts/compliance/run_classification_redaction_contract_lane.sh --output-file /tmp/classification-redaction-contract-report.json`
 - `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
@@ -152,6 +158,7 @@ Regression policy:
 - local-only heavy Kolme selector/workflow/docs parity remains fail-closed (`Regression: #1419`).
 - local-only fork sync/smoke run-mode exclusion parity remains fail-closed (`Regression: #1431`).
 - local Kolme API probe/smoke run-mode exclusion parity remains fail-closed (`Regression: #1441`).
+- local live API conformance harness run-mode exclusion parity remains fail-closed (`Regression: #1483`).
 - local runtime-commit live run-mode exclusion parity remains fail-closed (`Regression: #1451`).
 - local native API parity live-proof run-mode exclusion parity remains fail-closed (`Regression: #1467`).
 - native parity fast/local command matrix docs parity remains fail-closed (`Regression: #1468`).
