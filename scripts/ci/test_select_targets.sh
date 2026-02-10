@@ -890,6 +890,11 @@ assert_eq "$(extract_output "$live_network_summary_shared_contract_output" "run_
 assert_eq "$(extract_output "$live_network_summary_shared_contract_output" "run_runtime_snapshot_contract_tests")" "true" "live-network summary shared contract changes must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$live_network_summary_shared_contract_output" "test_scope")" "runtime-contract" "live-network summary shared contract changes should set runtime-contract scope"
 
+live_network_deep_shared_contract_output="$(run_selector $'scripts/runtime/live_network_pilot_deep_lane_contract.py')"
+assert_eq "$(extract_output "$live_network_deep_shared_contract_output" "run_rust")" "false" "live-network deep shared contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$live_network_deep_shared_contract_output" "run_runtime_snapshot_contract_tests")" "true" "live-network deep shared contract changes must run runtime snapshot contract lane"
+assert_eq "$(extract_output "$live_network_deep_shared_contract_output" "test_scope")" "runtime-contract" "live-network deep shared contract changes should set runtime-contract scope"
+
 live_network_summary_policy_shared_contract_output="$(run_selector $'scripts/runtime/live_network_pilot_artifact_summary_policy_contract.py')"
 assert_eq "$(extract_output "$live_network_summary_policy_shared_contract_output" "run_rust")" "false" "live-network summary policy shared contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$live_network_summary_policy_shared_contract_output" "run_runtime_snapshot_contract_tests")" "true" "live-network summary policy shared contract changes must run runtime snapshot contract lane"
