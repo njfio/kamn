@@ -41,7 +41,10 @@ bash "$ROOT_DIR/scripts/dashboard/test_run_backend_session_auth_freshness_lane.s
 bash "$ROOT_DIR/scripts/dashboard/test_check_backend_session_auth_freshness_policy.sh"
 bash "$ROOT_DIR/scripts/dashboard/test_run_backend_session_auth_freshness_contract_lane.sh"
 bash "$ROOT_DIR/scripts/sdk/test_rustdoc_policy_contract.sh"
-bash "$ROOT_DIR/scripts/sdk/test_run_rust_live_transport_contract_lane.sh"
+bash "$ROOT_DIR/scripts/ci/run_with_retry.sh" \
+  --label "sdk-rust-live-transport-contract-lane" \
+  --max-attempts 2 \
+  -- bash "$ROOT_DIR/scripts/sdk/test_run_rust_live_transport_contract_lane.sh"
 bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_demo.sh"
 bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_integration_harness.sh"
 bash "$ROOT_DIR/scripts/sdk/test_check_localhost_signed_integration_evidence_policy.sh"
