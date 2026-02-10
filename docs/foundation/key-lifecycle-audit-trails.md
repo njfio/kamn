@@ -43,12 +43,35 @@ Lifecycle-sensitive DID mutations must carry deterministic operator-binding auth
 - Regression policy:
   - missing required evidence fields and final-decision drift force `NO-GO` (`Regression: #890`).
 
+## Secure-Provider Key Rotation/Revocation Evidence Contract (Issue #988)
+Secure-provider signer lifecycle events (rotation/revocation) must emit deterministic custody evidence and fail-closed policy outputs before privileged operations proceed.
+
+- Evidence bundle generator:
+  - `bash scripts/signer/generate_secure_provider_key_lifecycle_evidence_bundle.sh --output-file /tmp/secure-provider-key-lifecycle.json --secure-key-reference secure:aws-kms:role-operator/key-ops-rotation-988 --provider aws-kms --key-role operator --lifecycle-action rotate --previous-version 8 --target-version 9 --incident-ticket INC-5988 --revocation-reason-code operator-requested --required-approvals 2 --received-approvals 2 --custody-attestation-hash sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --approval-quorum-hash sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/signer/check_secure_provider_key_lifecycle_policy.sh --bundle-file /tmp/secure-provider-key-lifecycle.json`
+- PR fast contract lane:
+  - `bash scripts/signer/run_secure_provider_key_lifecycle_contract_lane.sh`
+- Stable shell wrappers:
+  - `scripts/signer/generate_secure_provider_key_lifecycle_evidence_bundle.sh`
+  - `scripts/signer/check_secure_provider_key_lifecycle_policy.sh`
+  - `scripts/signer/run_secure_provider_key_lifecycle_contract_lane.sh`
+- Shared Python implementation:
+  - `scripts/signer/secure_provider_key_lifecycle_contract.py`
+- Decision key contract:
+  - `secure_provider_key_lifecycle_reason_codes:GO:v1`
+- Regression policy:
+  - tampered lifecycle decisions and missing `policy_checks` fail closed (`Regression: #988`).
+
 ## Local Validation
 Run from repository root:
 
 ```bash
 bash scripts/did/test_generate_lifecycle_operator_binding_evidence_bundle.sh
 bash scripts/did/test_run_lifecycle_operator_binding_contract_lane.sh
+bash scripts/signer/test_generate_secure_provider_key_lifecycle_evidence_bundle.sh
+bash scripts/signer/test_run_secure_provider_key_lifecycle_contract_lane.sh
+bash scripts/signer/run_secure_provider_key_lifecycle_contract_lane.sh
 cargo test -p kamn-core --test key_lifecycle
 cargo test -p kamn-core --test key_lifecycle_audit_trails_docs
 cargo fmt --check

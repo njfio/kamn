@@ -38,3 +38,21 @@ fn regression_doc_marks_missing_keys_or_decision_drift_fail_closed_policy() {
     // Regression: #890
     assert!(DOC.contains("Regression: #890"));
 }
+
+#[test]
+fn doc_contains_secure_provider_key_lifecycle_evidence_contract() {
+    assert!(
+        DOC.contains("## Secure-Provider Key Rotation/Revocation Evidence Contract (Issue #988)")
+    );
+    assert!(DOC.contains("secure_provider_key_lifecycle_contract.py"));
+    assert!(DOC.contains("generate_secure_provider_key_lifecycle_evidence_bundle.sh"));
+    assert!(DOC.contains("check_secure_provider_key_lifecycle_policy.sh"));
+    assert!(DOC.contains("run_secure_provider_key_lifecycle_contract_lane.sh"));
+    assert!(DOC.contains("secure_provider_key_lifecycle_reason_codes:GO:v1"));
+}
+
+#[test]
+fn regression_doc_marks_secure_provider_lifecycle_fail_closed_policy() {
+    // Regression: #988
+    assert!(DOC.contains("Regression: #988"));
+}

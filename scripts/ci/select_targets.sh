@@ -255,7 +255,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    crates/kamn-core/src/signer_backend.rs|crates/kamn-core/tests/signer_backend.rs|crates/kamn-core/tests/signer_backend_docs.rs|docs/foundation/signer-backend-abstraction.md|docs/foundation/threat-control-matrix.md|crates/kamn-core/tests/threat_control_matrix_docs.rs|scripts/signer/*)
+    crates/kamn-core/src/signer_backend.rs|crates/kamn-core/tests/signer_backend.rs|crates/kamn-core/tests/signer_backend_docs.rs|crates/kamn-core/tests/key_lifecycle_audit_trails_docs.rs|docs/foundation/signer-backend-abstraction.md|docs/foundation/threat-control-matrix.md|docs/foundation/key-lifecycle-audit-trails.md|crates/kamn-core/tests/threat_control_matrix_docs.rs|scripts/signer/*)
       SIGNER_EMULATOR_CONTRACT_CHANGED=true
       classified=true
       ;;

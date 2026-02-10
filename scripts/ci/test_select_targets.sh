@@ -781,6 +781,11 @@ assert_eq "$(extract_output "$signer_policy_contract_script_output" "run_rust")"
 assert_eq "$(extract_output "$signer_policy_contract_script_output" "run_signer_emulator_contract_tests")" "true" "signer policy contract script changes must run signer emulator contract lane"
 assert_eq "$(extract_output "$signer_policy_contract_script_output" "test_scope")" "signer-contract" "signer policy contract script changes should set signer-contract scope"
 
+signer_key_lifecycle_contract_script_output="$(run_selector $'scripts/signer/run_secure_provider_key_lifecycle_contract_lane.sh')"
+assert_eq "$(extract_output "$signer_key_lifecycle_contract_script_output" "run_rust")" "false" "signer key lifecycle contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$signer_key_lifecycle_contract_script_output" "run_signer_emulator_contract_tests")" "true" "signer key lifecycle contract script changes must run signer emulator contract lane"
+assert_eq "$(extract_output "$signer_key_lifecycle_contract_script_output" "test_scope")" "signer-contract" "signer key lifecycle contract script changes should set signer-contract scope"
+
 did_contract_docs_output="$(run_selector $'docs/foundation/did-registry-transactions.md')"
 assert_eq "$(extract_output "$did_contract_docs_output" "run_rust")" "false" "did contract docs should avoid rust lane"
 assert_eq "$(extract_output "$did_contract_docs_output" "run_did_registry_contract_tests")" "true" "did contract docs must run did registry contract lane"
@@ -789,9 +794,10 @@ assert_eq "$(extract_output "$did_contract_docs_output" "test_scope")" "did-cont
 
 did_key_lifecycle_docs_output="$(run_selector $'docs/foundation/key-lifecycle-audit-trails.md')"
 assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "run_rust")" "false" "lifecycle audit docs should avoid rust lane"
+assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "run_signer_emulator_contract_tests")" "true" "lifecycle audit docs must run signer emulator contract lane"
 assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "run_did_registry_contract_tests")" "true" "lifecycle audit docs must run did registry contract lane"
 assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "run_federated_did_handshake_contract_tests")" "false" "lifecycle audit docs should not run federated DID handshake lane"
-assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "test_scope")" "did-contract" "lifecycle audit docs should set did-contract scope"
+assert_eq "$(extract_output "$did_key_lifecycle_docs_output" "test_scope")" "signer-contract" "lifecycle audit docs should set signer-contract scope"
 
 did_contract_rust_output="$(run_selector $'crates/kamn-core/src/did_registry.rs')"
 assert_eq "$(extract_output "$did_contract_rust_output" "run_rust")" "true" "did registry rust changes should run rust lane"
