@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+RUNNER="$ROOT_DIR/scripts/kolme/run_local_fork_sync_metadata_lane.sh"
+DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
+TMP_REPORT="$(mktemp)"
+TMP_ERR="$(mktemp)"
+TMP_REPO="$(mktemp -d)"
+trap 'rm -f "$TMP_REPORT" "$TMP_ERR"; rm -rf "$TMP_REPO"' EXIT
+
+extract_value() {
+  local output="$1"
+  local key="$2"
+  printf '%s\n' "$output" | awk -F= -v key="$key" '$1 == key { print $2; exit }'
+}
+
+assert_eq() {
+  local actual="$1"
+  local expected="$2"
+  local message="$3"
+  if [ "$actual" != "$expected" ]; then
+    echo "$message: expected '$expected', got '$actual'" >&2
+    exit 1
+  fi
+}
+
+if [ ! -x "$RUNNER" ]; then
+  echo "expected local fork sync metadata runner to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "run_local_fork_sync_metadata_lane.sh" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local fork sync metadata runner" >&2
+  exit 1
+fi
+
+git -C "$TMP_REPO" init -q
+git -C "$TMP_REPO" checkout -q -b main
+git -C "$TMP_REPO" config user.email "ci@example.com"
+git -C "$TMP_REPO" config user.name "CI Runner"
+cat >"$TMP_REPO/README.md" <<'EOF'
+local fork sync metadata test fixture
+EOF
+git -C "$TMP_REPO" add README.md
+git -C "$TMP_REPO" commit -q -m "init metadata fixture"
+git -C "$TMP_REPO" remote add origin "https://github.com/njfio/kolme_fork.git"
+
+dry_run_output="$(
+  bash "$RUNNER" \
+    --mode dry-run \
+    --checkout-path "$TMP_REPO" \
+    --expected-remote-url "https://github.com/njfio/kolme_fork.git" \
+    --expected-ref "refs/heads/main" \
+    --output-json "$TMP_REPORT"
+)"
+
+assert_eq "$(extract_value "$dry_run_output" "status")" "ok" "expected dry-run metadata sync to pass"
+assert_eq "$(extract_value "$dry_run_output" "sync_mode")" "dry-run" "expected dry-run mode marker"
+assert_eq "$(extract_value "$dry_run_output" "reason_code")" "dry_run_no_commands_executed" "expected dry-run reason code"
+assert_eq "$(extract_value "$dry_run_output" "metadata_verified")" "false" "expected dry-run metadata verification marker"
+
+python3 - "$TMP_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if report.get("schema_version") != "kamn.kolme.local-fork-sync-metadata-summary.v1":
+    raise SystemExit("unexpected metadata sync summary schema")
+if report.get("mode") != "dry-run":
+    raise SystemExit("expected dry-run mode in metadata sync summary")
+checks = report.get("checks")
+if not isinstance(checks, list) or len(checks) < 4:
+    raise SystemExit("expected deterministic metadata sync checks in summary")
+if not any(entry.get("id") == "origin_remote_matches" for entry in checks if isinstance(entry, dict)):
+    raise SystemExit("expected origin_remote_matches check id in metadata summary")
+PY
+
+run_output="$(
+  bash "$RUNNER" \
+    --mode run \
+    --checkout-path "$TMP_REPO" \
+    --expected-remote-url "https://github.com/njfio/kolme_fork.git" \
+    --expected-ref "refs/heads/main" \
+    --output-json "$TMP_REPORT"
+)"
+
+assert_eq "$(extract_value "$run_output" "status")" "ok" "expected metadata sync run mode to pass for matching repo/ref"
+assert_eq "$(extract_value "$run_output" "sync_mode")" "run" "expected run mode marker"
+assert_eq "$(extract_value "$run_output" "reason_code")" "fork_metadata_verified" "expected verified reason code"
+assert_eq "$(extract_value "$run_output" "metadata_verified")" "true" "expected metadata verification marker"
+
+python3 - "$TMP_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+metadata = report.get("metadata", {})
+if report.get("mode") != "run":
+    raise SystemExit("expected run mode in metadata sync summary")
+if report.get("status") != "ok":
+    raise SystemExit("expected ok status for matching metadata run")
+if metadata.get("head_ref") != "refs/heads/main":
+    raise SystemExit("expected refs/heads/main in metadata head_ref")
+if metadata.get("dirty_checkout") is not False:
+    raise SystemExit("expected clean checkout metadata")
+if not metadata.get("head_commit"):
+    raise SystemExit("expected non-empty head_commit metadata")
+PY
+
+set +e
+bash "$RUNNER" \
+  --mode run \
+  --checkout-path "$TMP_REPO" \
+  --expected-remote-url "https://github.com/fpco/kolme.git" \
+  --expected-ref "refs/heads/main" \
+  --output-json "$TMP_REPORT" >"$TMP_ERR" 2>&1
+run_mismatch_code=$?
+set -e
+
+if [ "$run_mismatch_code" -eq 0 ]; then
+  echo "expected metadata sync run mode to fail on remote URL mismatch" >&2
+  exit 1
+fi
+
+if ! grep -q "reason_code=remote_url_mismatch" "$TMP_ERR"; then
+  echo "expected remote_url_mismatch reason marker for URL mismatch failure" >&2
+  exit 1
+fi
+
+echo "local fork sync metadata lane tests passed."
