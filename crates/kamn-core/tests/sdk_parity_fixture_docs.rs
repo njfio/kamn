@@ -31,4 +31,10 @@ fn regression_requires_sdk_fixture_snapshot_drift_checker_commands() {
 #[test]
 fn rust_doc_references_sdk_schema_shared_contract_script() {
     assert!(RUST_DOC.contains("sdk_schema_compatibility_contract.py"));
+    assert!(RUST_DOC.contains("live_transport_smoke_parity_policy_contract.py"));
+    // Regression: #1182
+    assert!(RUST_DOC.contains("`Regression: #1182`"));
+    assert!(
+        RUST_DOC.contains("smoke parity policy checker wrapper remains pinned to the shared contract implementation marker")
+    );
 }
