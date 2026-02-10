@@ -76,6 +76,32 @@ def load_thresholds(path: Path) -> BudgetThresholds:
     )
 
 
+def load_baseline_metrics(path: Path) -> ScriptMetrics:
+    values = _parse_key_value_budget_file(path)
+    required_keys = (
+        "SCRIPT_COUNT_BASELINE",
+        "SHELL_LINE_TOTAL_BASELINE",
+        "DUPLICATE_BASENAME_BASELINE",
+        "DUPLICATE_CONTENT_BASELINE",
+    )
+    for key in required_keys:
+        if key not in values:
+            raise ValueError(f"missing required baseline key: {key}")
+
+    return ScriptMetrics(
+        script_count=_to_positive_int(values["SCRIPT_COUNT_BASELINE"], "SCRIPT_COUNT_BASELINE"),
+        shell_line_total=_to_positive_int(
+            values["SHELL_LINE_TOTAL_BASELINE"], "SHELL_LINE_TOTAL_BASELINE"
+        ),
+        duplicate_basename=_to_positive_int(
+            values["DUPLICATE_BASENAME_BASELINE"], "DUPLICATE_BASENAME_BASELINE"
+        ),
+        duplicate_content=_to_positive_int(
+            values["DUPLICATE_CONTENT_BASELINE"], "DUPLICATE_CONTENT_BASELINE"
+        ),
+    )
+
+
 def compute_metrics(scripts_root: Path) -> ScriptMetrics:
     scripts = sorted(
         path for path in scripts_root.rglob("*.sh") if path.is_file()
@@ -103,6 +129,15 @@ def compute_metrics(scripts_root: Path) -> ScriptMetrics:
         shell_line_total=shell_line_total,
         duplicate_basename=duplicate_basename,
         duplicate_content=duplicate_content,
+    )
+
+
+def compute_metric_deltas(metrics: ScriptMetrics, baseline: ScriptMetrics) -> ScriptMetrics:
+    return ScriptMetrics(
+        script_count=metrics.script_count - baseline.script_count,
+        shell_line_total=metrics.shell_line_total - baseline.shell_line_total,
+        duplicate_basename=metrics.duplicate_basename - baseline.duplicate_basename,
+        duplicate_content=metrics.duplicate_content - baseline.duplicate_content,
     )
 
 
@@ -151,6 +186,23 @@ def parse_waiver(path: Path, today: date) -> set[str]:
     return allowed
 
 
+def build_remediation_guidance(pending: list[str], waiver_error: str, budget_file: Path, waiver_file: Path) -> str:
+    if not pending and waiver_error == "":
+        return "none"
+
+    if pending:
+        metrics = ",".join(sorted(pending))
+        return (
+            f"reduce metrics ({metrics}) under thresholds in {budget_file} "
+            f"or add temporary waiver in {waiver_file} with reason/expires_on/allow_metrics"
+        )
+
+    return (
+        f"fix waiver in {waiver_file} (reason, expires_on=YYYY-MM-DD, allow_metrics) "
+        f"or remove it to enforce thresholds in {budget_file}"
+    )
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Check script-surface duplication budgets."
@@ -164,6 +216,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--budget-file",
         default=".ci/script-surface-budget.env",
         help="Budget config file path.",
+    )
+    parser.add_argument(
+        "--baseline-file",
+        default=".ci/script-surface-baseline.env",
+        help="Baseline metric file path for delta reporting.",
     )
     parser.add_argument(
         "--waiver-file",
@@ -187,6 +244,7 @@ def main(argv: list[str]) -> int:
     args = parse_args(argv)
     scripts_root = Path(args.scripts_root)
     budget_file = Path(args.budget_file)
+    baseline_file = Path(args.baseline_file)
     waiver_file = Path(args.waiver_file)
 
     if not scripts_root.is_dir():
@@ -196,6 +254,10 @@ def main(argv: list[str]) -> int:
     if not budget_file.is_file():
         print("status=fail")
         print(f"error=budget file not found: {budget_file}")
+        return 1
+    if not baseline_file.is_file():
+        print("status=fail")
+        print(f"error=baseline file not found: {baseline_file}")
         return 1
 
     try:
@@ -207,7 +269,9 @@ def main(argv: list[str]) -> int:
 
     try:
         thresholds = load_thresholds(budget_file)
+        baseline_metrics = load_baseline_metrics(baseline_file)
         metrics = compute_metrics(scripts_root)
+        deltas = compute_metric_deltas(metrics, baseline_metrics)
         violations = evaluate_violations(metrics, thresholds)
     except ValueError as exc:
         print("status=fail")
@@ -229,15 +293,21 @@ def main(argv: list[str]) -> int:
     violations_csv = "none" if not violations else ",".join(sorted(violations))
     waived_csv = "none" if not waived else ",".join(waived)
     pending_csv = "none" if not pending else ",".join(sorted(pending))
+    remediation = build_remediation_guidance(pending, waiver_error, budget_file, waiver_file)
 
     print(f"status={status}")
     print(f"script_count={metrics.script_count}")
     print(f"shell_line_total={metrics.shell_line_total}")
     print(f"duplicate_basename={metrics.duplicate_basename}")
     print(f"duplicate_content={metrics.duplicate_content}")
+    print(f"delta_script_count={deltas.script_count}")
+    print(f"delta_shell_line_total={deltas.shell_line_total}")
+    print(f"delta_duplicate_basename={deltas.duplicate_basename}")
+    print(f"delta_duplicate_content={deltas.duplicate_content}")
     print(f"violations={violations_csv}")
     print(f"waived={waived_csv}")
     print(f"pending={pending_csv}")
+    print(f"remediation={remediation}")
     if waiver_error:
         print(f"waiver_error={waiver_error}")
 
@@ -247,12 +317,25 @@ def main(argv: list[str]) -> int:
             "status": status,
             "scripts_root": str(scripts_root),
             "budget_file": str(budget_file),
+            "baseline_file": str(baseline_file),
             "waiver_file": str(waiver_file),
             "metrics": {
                 "script_count": metrics.script_count,
                 "shell_line_total": metrics.shell_line_total,
                 "duplicate_basename": metrics.duplicate_basename,
                 "duplicate_content": metrics.duplicate_content,
+            },
+            "baseline_metrics": {
+                "script_count": baseline_metrics.script_count,
+                "shell_line_total": baseline_metrics.shell_line_total,
+                "duplicate_basename": baseline_metrics.duplicate_basename,
+                "duplicate_content": baseline_metrics.duplicate_content,
+            },
+            "deltas": {
+                "script_count": deltas.script_count,
+                "shell_line_total": deltas.shell_line_total,
+                "duplicate_basename": deltas.duplicate_basename,
+                "duplicate_content": deltas.duplicate_content,
             },
             "thresholds": {
                 "script_count_max": thresholds.script_count_max,
@@ -263,6 +346,7 @@ def main(argv: list[str]) -> int:
             "violations": sorted(violations),
             "waived": waived,
             "pending": sorted(pending),
+            "remediation": remediation,
             "waiver_error": waiver_error,
         }
         output_path = Path(args.output_json)

@@ -27,6 +27,7 @@ append_summary() {
     echo "- Docs only: ${DOCS_ONLY}"
     echo "- Run Rust checks: ${RUN_RUST}"
     echo "- Run CI tool checks: ${RUN_CI_TOOL_CHECKS}"
+    echo "- Run script-surface budget checks: ${RUN_SCRIPT_SURFACE_BUDGET_CHECKS}"
     echo "- Run deploy preflight checks: ${RUN_DEPLOY_PREFLIGHT_TESTS}"
     echo "- Run frontend dashboard tests: ${RUN_FRONTEND_DASHBOARD_TESTS}"
     echo "- Run dashboard contract tests: ${RUN_DASHBOARD_CONTRACT_TESTS}"
@@ -153,6 +154,7 @@ DOCS_ONLY=true
 RUST_CHANGED=false
 CI_INFRA_CHANGED=false
 CI_STRATEGY_DOC_CONTRACT_CHANGED=false
+SCRIPT_SURFACE_BUDGET_CHANGED=false
 DEPLOY_SCRIPT_CHANGED=false
 FRONTEND_DASHBOARD_CHANGED=false
 DASHBOARD_CONTRACT_CHANGED=false
@@ -223,6 +225,17 @@ for file in "${CHANGED_FILES[@]}"; do
     .github/workflows/*|scripts/ci/*)
       CI_INFRA_CHANGED=true
       CRITICAL_PATH_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  if [[ "$file" == scripts/* ]] && [[ "$file" == *.sh ]]; then
+    SCRIPT_SURFACE_BUDGET_CHANGED=true
+  fi
+
+  case "$file" in
+    .ci/script-surface-budget.env|.ci/script-surface-baseline.env|.ci/script-surface-budget-waiver.json)
+      SCRIPT_SURFACE_BUDGET_CHANGED=true
       classified=true
       ;;
   esac
@@ -565,6 +578,7 @@ fi
 
 RUN_RUST=false
 RUN_CI_TOOL_CHECKS=false
+RUN_SCRIPT_SURFACE_BUDGET_CHECKS=false
 RUN_DEPLOY_PREFLIGHT_TESTS=false
 RUN_FRONTEND_DASHBOARD_TESTS=false
 RUN_DASHBOARD_CONTRACT_TESTS=false
@@ -949,9 +963,14 @@ if [ "$CI_STRATEGY_DOC_CONTRACT_CHANGED" = true ]; then
   fi
 fi
 
+if [ "$SCRIPT_SURFACE_BUDGET_CHANGED" = true ] || [ "$CI_INFRA_CHANGED" = true ]; then
+  RUN_SCRIPT_SURFACE_BUDGET_CHECKS=true
+fi
+
 write_output "docs_only" "$DOCS_ONLY"
 write_output "run_rust" "$RUN_RUST"
 write_output "run_ci_tool_checks" "$RUN_CI_TOOL_CHECKS"
+write_output "run_script_surface_budget_checks" "$RUN_SCRIPT_SURFACE_BUDGET_CHECKS"
 write_output "run_deploy_preflight_tests" "$RUN_DEPLOY_PREFLIGHT_TESTS"
 write_output "run_frontend_dashboard_tests" "$RUN_FRONTEND_DASHBOARD_TESTS"
 write_output "run_dashboard_contract_tests" "$RUN_DASHBOARD_CONTRACT_TESTS"

@@ -30,10 +30,19 @@ DUPLICATE_BASENAME_MAX=0
 DUPLICATE_CONTENT_MAX=0
 EOF_BUDGET
 
+BASELINE_FILE="$TMP_DIR/baseline.env"
+cat >"$BASELINE_FILE" <<'EOF_BASELINE'
+SCRIPT_COUNT_BASELINE=1
+SHELL_LINE_TOTAL_BASELINE=4
+DUPLICATE_BASENAME_BASELINE=0
+DUPLICATE_CONTENT_BASELINE=0
+EOF_BASELINE
+
 pass_output="$(
   bash "$SCRIPT" \
     --scripts-root "$SCRIPTS_ROOT" \
-    --budget-file "$PASS_BUDGET"
+    --budget-file "$PASS_BUDGET" \
+    --baseline-file "$BASELINE_FILE"
 )"
 
 if ! printf '%s\n' "$pass_output" | grep -q '^status=pass$'; then
@@ -42,6 +51,14 @@ if ! printf '%s\n' "$pass_output" | grep -q '^status=pass$'; then
 fi
 if ! printf '%s\n' "$pass_output" | grep -q '^violations=none$'; then
   echo "expected no violations on pass path" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$pass_output" | grep -q '^delta_script_count=1$'; then
+  echo "expected deterministic script_count delta output on pass path" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$pass_output" | grep -q '^remediation=none$'; then
+  echo "expected remediation marker to be none on pass path" >&2
   exit 1
 fi
 
@@ -57,7 +74,8 @@ set +e
 fail_output="$(
   bash "$SCRIPT" \
     --scripts-root "$SCRIPTS_ROOT" \
-    --budget-file "$FAIL_BUDGET" 2>&1
+    --budget-file "$FAIL_BUDGET" \
+    --baseline-file "$BASELINE_FILE" 2>&1
 )"
 fail_code=$?
 set -e
@@ -74,6 +92,29 @@ if ! printf '%s\n' "$fail_output" | grep -q 'violations=script_count'; then
   echo "expected script_count violation marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$fail_output" | grep -q '^remediation=reduce metrics (script_count) under thresholds in '; then
+  echo "expected deterministic remediation guidance on fail path" >&2
+  exit 1
+fi
+
+set +e
+missing_baseline_output="$(
+  bash "$SCRIPT" \
+    --scripts-root "$SCRIPTS_ROOT" \
+    --budget-file "$FAIL_BUDGET" \
+    --baseline-file "$TMP_DIR/missing-baseline.env" 2>&1
+)"
+missing_baseline_code=$?
+set -e
+
+if [ "$missing_baseline_code" -eq 0 ]; then
+  echo "expected checker to fail when baseline file is missing" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_baseline_output" | grep -q '^error=baseline file not found:'; then
+  echo "expected explicit missing baseline error output" >&2
+  exit 1
+fi
 
 WAIVER_FILE="$TMP_DIR/waiver.json"
 cat >"$WAIVER_FILE" <<'EOF_WAIVER'
@@ -88,6 +129,7 @@ waived_output="$(
   bash "$SCRIPT" \
     --scripts-root "$SCRIPTS_ROOT" \
     --budget-file "$FAIL_BUDGET" \
+    --baseline-file "$BASELINE_FILE" \
     --waiver-file "$WAIVER_FILE"
 )"
 
@@ -113,6 +155,7 @@ expired_waiver_output="$(
   bash "$SCRIPT" \
     --scripts-root "$SCRIPTS_ROOT" \
     --budget-file "$FAIL_BUDGET" \
+    --baseline-file "$BASELINE_FILE" \
     --waiver-file "$WAIVER_FILE" \
     --today "2026-02-10" 2>&1
 )"
