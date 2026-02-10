@@ -36,6 +36,10 @@ Compatibility vectors must replay through a deterministic fixture matrix and fai
   - `python3 scripts/message/run_didcomm_envelope_compatibility_replay.py --fixture fixtures/didcomm_envelope_compatibility/replay_cases.json --output-json /tmp/didcomm-envelope-compatibility-report.json`
 - Policy checker:
   - `bash scripts/message/check_didcomm_envelope_compatibility_policy.sh --report-file /tmp/didcomm-envelope-compatibility-report.json`
+- Stable shell wrapper:
+  - `scripts/message/check_didcomm_envelope_compatibility_policy.sh`
+- Shared Python implementation:
+  - `scripts/message/didcomm_envelope_compatibility_policy_contract.py`
 - PR fast contract lane:
   - `bash scripts/message/run_didcomm_envelope_compatibility_contract_lane.sh`
 - Decision key contract:
