@@ -414,9 +414,12 @@ for file in "${CHANGED_FILES[@]}"; do
 
   case "$file" in
     scripts/framework/contract_lane_helpers.py|scripts/framework/test_contract_lane_helpers.py)
-      # Framework helper rollout is currently scoped to compliance lanes.
+      # Framework helper rollout is scoped to migrated compliance/governance/reputation lanes.
       SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED=true
       DSAR_LEGAL_HOLD_CONTRACT_CHANGED=true
+      GOVERNANCE_SIMULATION_CONTRACT_CHANGED=true
+      GOVERNANCE_STAKE_SLASH_CONTRACT_CHANGED=true
+      REPUTATION_DISPUTE_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac

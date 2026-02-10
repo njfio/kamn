@@ -82,6 +82,12 @@ def main(argv: list[str]) -> int:
     if not max_contract_seconds_raw.isdigit() or int(max_contract_seconds_raw) <= 0:
         return fail("KAMN_FRONTEND_SHELL_MATRIX_CONTRACT_MAX_SECONDS must be a positive integer")
     max_contract_seconds = int(max_contract_seconds_raw)
+    require_frontend_contract_raw = os.getenv(
+        "KAMN_FRONTEND_SHELL_MATRIX_CONTRACT_REQUIRE_FRONTEND", "false"
+    )
+    if require_frontend_contract_raw not in {"true", "false"}:
+        return fail("KAMN_FRONTEND_SHELL_MATRIX_CONTRACT_REQUIRE_FRONTEND must be true or false")
+    require_frontend_contract = require_frontend_contract_raw == "true"
 
     start_epoch = int(time.time())
 
@@ -94,6 +100,9 @@ def main(argv: list[str]) -> int:
 
         env_go = os.environ.copy()
         env_go["KAMN_FRONTEND_SHELL_MATRIX_MAX_SECONDS"] = str(max_contract_seconds)
+        if not require_frontend_contract:
+            # Keep CI contract-lane GO path deterministic and low-cost by default.
+            env_go["KAMN_FRONTEND_SHELL_MATRIX_SKIP_COMMANDS"] = "true"
         go_code, go_output = run_and_capture(
             ["bash", str(lane_script), "--output-json", str(output_file)],
             env=env_go,

@@ -27,7 +27,13 @@ bash "$ROOT_DIR/scripts/kolme/test_validate_triadic_devnet_smoke.sh"
 bash "$ROOT_DIR/scripts/kolme/test_check_runtime_commit_replay_policy.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_runtime_commit_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh"
-bash "$ROOT_DIR/scripts/frontend/test_dashboard_package.sh"
+if [ "${KAMN_CI_FORCE_DASHBOARD_PACKAGE_TESTS:-false}" = "true" ]; then
+  bash "$ROOT_DIR/scripts/frontend/test_dashboard_package.sh"
+elif node --experimental-strip-types -e "" >/dev/null 2>&1; then
+  bash "$ROOT_DIR/scripts/frontend/test_dashboard_package.sh"
+else
+  echo "skipping dashboard package runtime test in CI tools regression (node strip-types unavailable); runtime fallback contract remains covered."
+fi
 bash "$ROOT_DIR/scripts/frontend/test_dashboard_package_runtime_compat.sh"
 bash "$ROOT_DIR/scripts/frontend/test_dashboard_contract_lane.sh"
 bash "$ROOT_DIR/scripts/dashboard/test_run_backend_session_auth_freshness_lane.sh"
