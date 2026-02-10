@@ -50,6 +50,26 @@ if ! grep -Fq "bash scripts/deploy/test_run_dr_evidence_contract_lane.sh" "$FAST
   exit 1
 fi
 
+if ! grep -Fq "if: steps.scope.outputs.run_script_surface_budget_checks == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected script-surface budget scope condition in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/ci/check_script_duplication_budget.sh" "$FAST_WORKFLOW"; then
+  echo "expected script-surface budget checker command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq -- "--baseline-file .ci/script-surface-baseline.env" "$FAST_WORKFLOW"; then
+  echo "expected script-surface baseline input in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "ci-script-surface-budget.json" "$FAST_WORKFLOW"; then
+  echo "expected script-surface budget telemetry artifact wiring in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "uses: actions/setup-node@v4" "$FAST_WORKFLOW"; then
   echo "expected Node.js runtime setup step in ci-fast-gate.yml" >&2
   exit 1

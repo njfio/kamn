@@ -7,6 +7,7 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 - Runtime/runner budgets: `.ci/ci-budget.env`
 - Fast-gate delta baseline/thresholds: `.ci/fast-gate-budget-delta.env`
 - Script-surface budgets: `.ci/script-surface-budget.env`
+- Script-surface delta baseline: `.ci/script-surface-baseline.env`
 
 ## Enforcers
 - Runtime budget gate: `scripts/ci/evaluate_budget.sh`
@@ -32,7 +33,14 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 - `duplicate_basename`
 - `duplicate_content`
 
-The checker fails closed when any metric exceeds its configured threshold.
+The checker also computes per-PR deltas against `.ci/script-surface-baseline.env` and emits:
+
+- `delta_script_count`
+- `delta_shell_line_total`
+- `delta_duplicate_basename`
+- `delta_duplicate_content`
+
+The checker fails closed when any metric exceeds its configured threshold and emits deterministic remediation guidance.
 
 ## Waiver Rules
 Temporary exceptions are allowed through `.ci/script-surface-budget-waiver.json`.
@@ -77,7 +85,10 @@ bash scripts/ci/test_ci_tools.sh
 
 - `schema_version=kamn.ci.script-surface-budget-report.v1`
 - metric values
+- baseline metric values
+- metric deltas
 - threshold values
 - violation/waiver state
+- remediation guidance
 
 This keeps cost governance machine-verifiable for CI and audits.

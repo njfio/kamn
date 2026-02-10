@@ -57,6 +57,23 @@ jobs:
         if: steps.scope.outputs.run_ci_tool_checks == 'true'
         run: bash scripts/ci/test_ci_tools.sh
 
+      - name: Check script-surface budget policy
+        if: steps.scope.outputs.run_script_surface_budget_checks == 'true'
+        run: |
+          bash scripts/ci/check_script_duplication_budget.sh \
+            --budget-file .ci/script-surface-budget.env \
+            --baseline-file .ci/script-surface-baseline.env \
+            --waiver-file .ci/script-surface-budget-waiver.json \
+            --output-json ci-script-surface-budget.json
+
+      - name: Upload script-surface budget telemetry
+        if: always() && hashFiles('ci-script-surface-budget.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-script-surface-budget-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-script-surface-budget.json
+          if-no-files-found: error
+
       - name: Run deploy preflight tests
         if: steps.scope.outputs.run_deploy_preflight_tests == 'true'
         run: |
