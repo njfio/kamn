@@ -1,63 +1,141 @@
 # KAMN Core Module Map
 
 This map provides a high-level architecture guide for `crates/kamn-core` so
-contributors can locate runtime/domain responsibilities quickly.
+contributors can locate runtime/domain ownership responsibilities quickly.
 
-## Domain Clusters
+## Ownership Matrix
 
-### Identity and Keying
+### Identity and Key Management
 
-- `did`, `did_registry`, `agent_key_hierarchy`, `key_lifecycle`, `key_recovery`
-- Purpose:
-  - DID registration, lifecycle mutation policy, and key hierarchy/recovery
-    controls.
+- Modules:
+  - `did`, `did_registry`, `agent_key_hierarchy`, `key_lifecycle`,
+    `key_recovery`, `signature_profile`, `operator_binding`
+- Ownership boundary:
+  - Agent identity roots, DID lifecycle mutation controls, operator/agent
+    binding, and key rotation/recovery constraints.
+- Runtime/data-flow ownership:
+  - Establishes caller identity and key legitimacy before any mutating
+    protocol action is admitted.
 
-### Messaging and Channels
+### Messaging and Channel Control Plane
 
-- `message_envelope`, `message_lifecycle`, `message_delivery_guards`,
-  `channel_models`, `channel_policies`, `group_channel_crypto`,
-  `direct_message_crypto`
-- Purpose:
-  - Envelope validation, lifecycle tracking, delivery guard contracts, and
-    channel/membership policy enforcement.
+- Modules:
+  - `message_envelope`, `message_lifecycle`, `message_delivery_guards`,
+    `channel_models`, `channel_policies`, `group_channel_crypto`,
+    `direct_message_crypto`, `anti_spam`, `instruction_verify`
+- Ownership boundary:
+  - Message schema validity, channel permissions, sender-key distribution, and
+    delivery admission/rejection policy.
+- Runtime/data-flow ownership:
+  - Governs ingress message checks and channel-level policy before state writes
+    and delivery fan-out.
 
-### Task and Escrow Lifecycle
+### Task, Escrow, and Economic Settlement
 
-- `task_operations`, `task_lifecycle`, `task_payment`, `escrow`,
-  `service_marketplace`, `reputation_state`, `reputation_signals`
-- Purpose:
-  - Task DAG and state transitions, payment/escrow settlement flow, and
-    reputation signal routing.
+- Modules:
+  - `task_operations`, `task_lifecycle`, `task_payment`, `task_artifacts`,
+    `escrow`, `service_marketplace`, `token`
+- Ownership boundary:
+  - Task DAG progression, payout/refund transitions, escrow finality, and
+    settlement artifacts.
+- Runtime/data-flow ownership:
+  - Owns task lifecycle mutation and settlement state transitions used by
+    audit/reconciliation lanes.
 
-### Runtime and Observability
+### Reputation and Abuse Response
 
-- `runtime`, `state`, `migrations`, `bootstrap`, `observability`, `smoke`,
-  `performance_targets`, `invariants`, `transaction`
-- Purpose:
-  - Runtime wiring, state versioning/migrations, health/SLO surfaces, and
-    fail-closed invariant enforcement.
+- Modules:
+  - `reputation_state`, `reputation_signals`, `trust_score`, `transaction`,
+    `retention_engine`
+- Ownership boundary:
+  - Reputation signal ingestion, weighted trust updates, and abuse/penalty
+    routing.
+- Runtime/data-flow ownership:
+  - Feeds trust and risk posture into guard/admission decisions for messaging,
+    tasks, and governance actions.
 
-### External Adapters and Bridges
+### Runtime, State, and Safety
 
-- `bridge_adapter`, `cross_chain_bridge`, `cross_chain_receipt`,
-  `telegram_bridge`, `discord_bridge`, `kolme_runtime_commit`
-- Purpose:
-  - Platform adapters, cross-chain receipt normalization/finality, and Kolme
-    commit client abstractions.
+- Modules:
+  - `runtime`, `state`, `bootstrap`, `migrations`, `namespaces`, `config`,
+    `durable_guard_store`, `invariants`, `performance_targets`, `smoke`,
+    `validator_lifecycle`, `watchdog`, `upgrade_orchestration`
+- Ownership boundary:
+  - Runtime orchestration, state schema/version handling, invariant taxonomy,
+    and resilience/failover controls.
+- Runtime/data-flow ownership:
+  - Coordinates deterministic mutation ordering and durable snapshots, while
+    enforcing safety checks and upgrade/cutover posture.
+
+### Storage, Content, and Compliance
+
+- Modules:
+  - `content_storage`, `content_retrieval`, `content_lifecycle`,
+    `content_replication`, `data_classification`, `redaction_compliance`,
+    `audit_exports`
+- Ownership boundary:
+  - Content persistence/lookup, replication health, retention/redaction policy,
+    and audit evidence export contracts.
+- Runtime/data-flow ownership:
+  - Owns data-plane storage + retrieval behaviors and compliance policy
+    enforcement for classified content.
+
+### Governance and Operator Control Plane
+
+- Modules:
+  - `governance_workflow`, `operator_actions`, `operator_dashboard_api`,
+    `operator_dashboard_ui`, `observability`
+- Ownership boundary:
+  - Proposal/vote/execution lifecycle, privileged operator action policy, and
+    dashboard/reporting surfaces.
+- Runtime/data-flow ownership:
+  - Controls policy-driven governance transitions and exposes read-only
+    operational state for operators.
+
+### External Integration and Bridge Surface
+
+- Modules:
+  - `bridge_adapter`, `cross_chain_bridge`, `cross_chain_receipt`,
+    `telegram_bridge`, `discord_bridge`, `kolme_runtime_commit`
+- Ownership boundary:
+  - Platform ingress/egress normalization, cross-chain finality checks, and
+    Kolme commit receipt projection.
+- Runtime/data-flow ownership:
+  - Mediates external transport and settlement confirmations into normalized
+    internal state mutations.
+
+### Cryptographic Signer and ZK Surface
+
+- Modules:
+  - `signer_backend`, `zk_message_proofs`
+- Ownership boundary:
+  - Deterministic signing provider integration and zero-knowledge proof
+    representation/verification surfaces.
+- Runtime/data-flow ownership:
+  - Provides cryptographic assurance artifacts consumed by message and
+    settlement safety lanes.
 
 ## Runtime Flow (Condensed)
 
-1. Identity verification and key checks gate actor eligibility.
-2. Message/channel/task actions pass guard + invariant checks.
-3. State mutations are committed through runtime/store surfaces.
-4. Observability/performance lanes evaluate SLO and contract outcomes.
-5. Adapter/bridge layers emit normalized external receipts/events.
+1. Identity and key modules (`did`, `agent_key_hierarchy`, `key_lifecycle`)
+   establish actor legitimacy.
+2. Messaging/channel control modules validate envelopes, permissions, and abuse
+   posture before admitting actions.
+3. Task/escrow/economic modules execute mutation flows and settlement outcomes.
+4. Runtime/state/safety modules commit and persist validated state transitions.
+5. Governance/operator surfaces publish execution state and operator-facing APIs.
+6. Bridge/adapters and signer/ZK surfaces emit external receipts and proof
+   artifacts for reconciliation.
 
-## Contributor Entry Points
+## Contributor Entrypoint Matrix
 
-- Public export surface:
-  - `crates/kamn-core/src/lib.rs`
-- Missing-doc policy and graduation checks:
-  - `scripts/ci/check_kamn_core_missing_docs_policy.sh`
-- Verification lanes:
-  - `scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh`
+| Contributor need | Entrypoint | Why it exists |
+| --- | --- | --- |
+| See ownership boundaries across core modules | `docs/architecture/kamn-core-module-map.md#ownership-matrix` | Canonical map for domain ownership and runtime/data-flow responsibilities. |
+| Understand high-level runtime path | `docs/architecture/kamn-core-module-map.md#runtime-flow-condensed` | Condensed sequence from identity checks to external receipts. |
+| Find exported public API surface | `crates/kamn-core/src/lib.rs` | Canonical `pub mod` and `pub use` inventory for `kamn-core`. |
+| Run missing-doc drift policy | `scripts/ci/check_kamn_core_missing_docs_policy.sh` | Fail-closed lint allowlist checker for docs hardening. |
+| Generate bounded rustdoc artifact evidence | `scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh` | Deterministic rustdoc report/artifact lane used in CI and local checks. |
+| Enforce rustdoc artifact policy schema | `scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh` | Validates report schema, digest, artifact path, and runtime budget. |
+| Review hardening command surface | `docs/planning/engineering-hardening-wave.md#commands` | Planning baseline for docs hardening and CI contract commands. |
+| Review rustdoc publication policy contract | `docs/developer/rustdoc-publishing.md#contract-enforcement` | Contributor-facing rustdoc publication + policy checker contract. |

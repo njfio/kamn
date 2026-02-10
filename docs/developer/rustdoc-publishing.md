@@ -3,6 +3,15 @@
 This guide defines the bounded `kamn-core` rustdoc generation and publication
 path used by local contributors and CI lanes.
 
+## Related Architecture Entrypoints
+
+- Ownership boundaries:
+  - `docs/architecture/kamn-core-module-map.md#ownership-matrix`
+- Contributor command/reference map:
+  - `docs/architecture/kamn-core-module-map.md#contributor-entrypoint-matrix`
+- Hardening command baseline:
+  - `docs/planning/engineering-hardening-wave.md#commands`
+
 ## Command Surface
 
 - Generate docs for `kamn-core` only (no dependency docs):
