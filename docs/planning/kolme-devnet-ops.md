@@ -38,6 +38,16 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - CI compatibility:
   - lane is non-interactive and emits machine-readable validation report output.
 
+## Runtime Commit Adapter Replay/Finality Fast Lane (Issue #980)
+
+- Adapter replay/finality contract lane:
+  - `bash scripts/kolme/run_runtime_commit_adapter_contract_lane.sh`
+- Reason-code checks:
+  - `receipt_provider_mismatch`
+  - `receipt_not_final`
+- Cost policy:
+  - lane enforces a 60-second fast-gate budget and runs only targeted adapter/replay checks.
+
 ## Failover + Sync Drill Lane Policy (Issues #787, #788)
 
 - Selector policy:
@@ -56,6 +66,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 ## Regression Guard
 
 - Marker drift remains fail-closed via fixture-backed validation (`Regression: #785`).
+- runtime commit adapter replay/finality reason-code drift fails closed (`Regression: #980`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
 ## Local Validation

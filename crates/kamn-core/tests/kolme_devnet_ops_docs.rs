@@ -18,8 +18,24 @@ fn plan_contains_failover_sync_drill_lane_policy() {
 }
 
 #[test]
+fn plan_contains_runtime_commit_adapter_replay_lane_policy() {
+    assert!(PLAN.contains("## Runtime Commit Adapter Replay/Finality Fast Lane"));
+    assert!(PLAN.contains("run_runtime_commit_adapter_contract_lane.sh"));
+    assert!(PLAN.contains("receipt_provider_mismatch"));
+    assert!(PLAN.contains("receipt_not_final"));
+}
+
+#[test]
 fn regression_requires_failover_sync_budget_and_scheduled_cadence_guards() {
     // Regression: #788
     assert!(PLAN
         .contains("Failover/sync budget overruns and unscheduled deep-lane execution fail closed"));
+}
+
+#[test]
+fn regression_requires_runtime_commit_adapter_reason_code_guard() {
+    // Regression: #980
+    assert!(PLAN.contains(
+        "runtime commit adapter replay/finality reason-code drift fails closed (`Regression: #980`)."
+    ));
 }

@@ -30,6 +30,8 @@ across Kolme upgrades.
 - Runtime commit replay contract lane:
   - `bash scripts/kolme/run_runtime_commit_replay_contract_lane.sh`
   - fixture: `fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json`
+- Runtime commit adapter replay/finality contract lane:
+  - `bash scripts/kolme/run_runtime_commit_adapter_contract_lane.sh`
 - Fast contract lane:
   - `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
 - Scheduled deep lane:
@@ -60,6 +62,7 @@ across Kolme upgrades.
 - Runtime commit finality projection blocks invalid lifecycle regression to pending (`Regression: #826`).
 - Runtime commit replay/tamper mismatch policy emits fail-closed reason codes (`Regression: #827`).
 - Adapter provider mismatch and non-final receipt handling remain fail-closed (`Regression: #979`).
+- Adapter replay/finality reason-code drift remains fail-closed (`Regression: #980`).
 
 ## Local Validation
 

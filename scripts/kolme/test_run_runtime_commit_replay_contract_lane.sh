@@ -14,6 +14,11 @@ if ! grep -q "run_runtime_commit_replay_tamper_matrix.py" "$CONTRACT_LANE"; then
   exit 1
 fi
 
+if ! grep -q "run_runtime_commit_adapter_contract_lane.sh" "$CONTRACT_LANE"; then
+  echo "expected runtime commit replay contract lane to include adapter replay/finality coverage" >&2
+  exit 1
+fi
+
 lane_output="$(bash "$CONTRACT_LANE")"
 if ! printf '%s\n' "$lane_output" | grep -q "Kolme runtime commit replay contract lane tests passed."; then
   echo "expected runtime commit replay contract lane success marker" >&2
