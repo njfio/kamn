@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE_SCRIPT="$ROOT_DIR/scripts/compliance/run_classification_redaction_lane.sh"
+SHARED_LANE="$ROOT_DIR/scripts/compliance/classification_redaction_lane_contract.py"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -14,6 +15,16 @@ extract_value() {
 
 if [ ! -x "$LANE_SCRIPT" ]; then
   echo "expected classification/redaction lane script to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q 'classification_redaction_lane_contract.py' "$LANE_SCRIPT"; then
+  echo "expected classification/redaction lane wrapper to delegate to shared implementation" >&2
+  exit 1
+fi
+
+if [ ! -x "$SHARED_LANE" ]; then
+  echo "expected shared classification/redaction lane implementation to be executable" >&2
   exit 1
 fi
 
