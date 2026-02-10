@@ -40,6 +40,7 @@ default development loop green while tightening missing-doc policy controls for
   - `scripts/ci/check_kamn_core_missing_docs_policy.sh`
 - Architecture/runtime flow and rustdoc publication docs are required:
   - `docs/architecture/kamn-core-module-map.md`
+  - `docs/architecture/kamn-core-module-map.md#contributor-entrypoint-matrix`
   - `docs/developer/rustdoc-publishing.md`
 
 ## Cost and Runtime Policy
