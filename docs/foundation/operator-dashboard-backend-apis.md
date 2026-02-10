@@ -56,6 +56,10 @@ Deterministic session/auth/freshness policy checks are enforced through a bounde
 - Contract lane command:
   - `bash scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh --output-file /tmp/dashboard-backend-session-auth-freshness-contract-report.json`
 - Stable shell wrapper:
+  - `scripts/dashboard/run_backend_session_auth_freshness_lane.sh`
+- Shared Python implementation:
+  - `scripts/dashboard/backend_session_auth_freshness_lane_contract.py`
+- Stable shell wrapper:
   - `scripts/dashboard/check_backend_session_auth_freshness_policy.sh`
 - Shared Python implementation:
   - `scripts/dashboard/backend_session_auth_freshness_policy_contract.py`

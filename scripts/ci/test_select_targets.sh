@@ -602,6 +602,12 @@ assert_eq "$(extract_output "$dashboard_backend_session_lane_output" "run_fronte
 assert_eq "$(extract_output "$dashboard_backend_session_lane_output" "run_dashboard_contract_tests")" "true" "dashboard backend session/auth freshness lane script changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_backend_session_lane_output" "test_scope")" "frontend-contract" "dashboard backend session/auth freshness lane script changes should set frontend-contract scope"
 
+dashboard_backend_session_shared_lane_output="$(run_selector $'scripts/dashboard/backend_session_auth_freshness_lane_contract.py')"
+assert_eq "$(extract_output "$dashboard_backend_session_shared_lane_output" "run_rust")" "false" "dashboard backend session/auth freshness shared lane contract changes should avoid rust lane"
+assert_eq "$(extract_output "$dashboard_backend_session_shared_lane_output" "run_frontend_dashboard_tests")" "false" "dashboard backend session/auth freshness shared lane contract changes should skip frontend dashboard tests"
+assert_eq "$(extract_output "$dashboard_backend_session_shared_lane_output" "run_dashboard_contract_tests")" "true" "dashboard backend session/auth freshness shared lane contract changes must run dashboard contract lane"
+assert_eq "$(extract_output "$dashboard_backend_session_shared_lane_output" "test_scope")" "frontend-contract" "dashboard backend session/auth freshness shared lane contract changes should set frontend-contract scope"
+
 dashboard_backend_session_policy_output="$(run_selector $'scripts/dashboard/check_backend_session_auth_freshness_policy.sh')"
 assert_eq "$(extract_output "$dashboard_backend_session_policy_output" "run_rust")" "false" "dashboard backend session/auth freshness policy checker changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_backend_session_policy_output" "run_frontend_dashboard_tests")" "false" "dashboard backend session/auth freshness policy checker changes should skip frontend dashboard tests"
