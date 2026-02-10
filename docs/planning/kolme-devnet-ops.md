@@ -1,4 +1,4 @@
-# Kolme Triadic Devnet Operability Plan (Issues #784, #785, #787, #788, #1405, #1417)
+# Kolme Triadic Devnet Operability Plan (Issues #784, #785, #787, #788, #1405, #1417, #1418)
 
 This plan defines the deterministic, low-cost local smoke contract for triadic
 runtime roles (processor/listener/approver) and its CI-compatible validation.
@@ -65,6 +65,21 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.
 
+## Local-Only Heavy End-to-End Lane (Issue #1418)
+
+- Local-only E2E lane runner:
+  - `bash scripts/kolme/run_local_e2e_integration_lane.sh --mode dry-run --output-json /tmp/kolme-local-e2e-integration-summary.json`
+- Explicit opt-in E2E execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_e2e_integration_lane.sh --mode run --output-json /tmp/kolme-local-e2e-integration-summary.json`
+- Summary schema:
+  - `kamn.kolme.local-e2e-integration-summary.v1`
+- Deterministic checkpoints include:
+  - `run_local_bootstrap_health_checks.sh`
+  - `run_runtime_commit_adapter_contract_lane.sh`
+  - `run_live_transport_parity_contract_lane.sh --languages python,typescript`
+- Cost policy:
+  - lane enforces explicit local-only opt-in and a deterministic runtime budget ceiling.
+
 ## Local-Only Heavy Kolme Validation Matrix (Issue #1405)
 
 - Local-only matrix runner:
@@ -99,6 +114,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - Marker drift remains fail-closed via fixture-backed validation (`Regression: #785`).
 - runtime commit adapter replay/finality reason-code drift fails closed (`Regression: #980`).
 - deterministic bootstrap run mode fails closed without explicit local-only opt-in (`Regression: #1417`).
+- local-only heavy E2E lane run mode fails closed without explicit local-only opt-in (`Regression: #1418`).
 - local-only heavy validation matrix requires explicit opt-in and remains excluded from PR fast-gate workflows (`Regression: #1405`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
@@ -108,6 +124,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 bash scripts/kolme/test_validate_triadic_devnet_smoke.sh
 bash scripts/kolme/test_run_triadic_devnet_smoke_contract_lane.sh
 bash scripts/kolme/test_run_local_bootstrap_health_checks.sh
+bash scripts/kolme/test_run_local_e2e_integration_lane.sh
 bash scripts/kolme/test_run_local_heavy_validation_matrix.sh
 bash scripts/runtime/test_select_failover_sync_drill_lane.sh
 bash scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh
