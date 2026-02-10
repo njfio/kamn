@@ -34,6 +34,24 @@ handling.
   - timeout mapping to `KolmeRuntimeCommitProviderError::Timeout`
   - network and protocol failures mapped fail-closed to provider transport errors
 
+## Typed Kolme Nonce/Broadcast Codecs
+
+- Added typed Kolme API codec contracts in `kamn-core`:
+  - `KolmeApiNextNonceRequest`
+  - `KolmeApiNextNonceResponse`
+  - `KolmeApiBroadcastRequest`
+  - `KolmeApiBroadcastResponse`
+- Deterministic nonce request behavior:
+  - `KolmeApiNextNonceRequest::query_path(...)` percent-encodes the `pubkey` query
+    value and preserves deterministic path composition.
+- Deterministic response parsing behavior:
+  - `KolmeApiNextNonceResponse::parse_json(...)` requires positive `next_nonce`
+    and supports nullable `account_id`.
+  - `KolmeApiBroadcastResponse::parse_json(...)` requires non-empty `txhash`.
+- Deterministic broadcast payload behavior:
+  - `KolmeApiBroadcastRequest::to_json_payload()` emits canonical JSON field order
+    (`message`, `signature`, `recovery_id`) and applies JSON string escaping.
+
 ## Deterministic Request Normalization Rules
 
 - Adapter submissions call provider transport with:
