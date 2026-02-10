@@ -41,6 +41,7 @@ fn doc_contains_dashboard_stale_error_budget_contract_lane() {
     assert!(DOC.contains("## Dashboard Stale/Error Budget Policy Checker Contract"));
     assert!(DOC.contains("stale_error_budget_policy_contract.py"));
     assert!(DOC.contains("stale_error_budget_lane_contract.py"));
+    assert!(DOC.contains("stale_error_budget_contract_lane_contract.py"));
     assert!(DOC.contains("run_dashboard_stale_error_budget_lane.sh"));
     assert!(DOC.contains("check_dashboard_stale_error_budget_policy.sh"));
     assert!(DOC.contains("run_dashboard_stale_error_budget_contract_lane.sh"));
@@ -102,5 +103,13 @@ fn regression_requires_dashboard_stale_error_budget_fail_closed_guard() {
     // Regression: #942
     assert!(DOC.contains(
         "stale threshold drift, error-budget threshold drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #942`)."
+    ));
+}
+
+#[test]
+fn regression_requires_dashboard_stale_error_shared_contract_marker() {
+    // Regression: #1258
+    assert!(DOC.contains(
+        "shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1258`)."
     ));
 }

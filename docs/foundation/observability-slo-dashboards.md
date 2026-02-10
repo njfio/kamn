@@ -90,6 +90,10 @@ Deterministic stale-data and error-budget policy checks are enforced through a b
 - Contract lane command:
   - `bash scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh --output-file /tmp/dashboard-stale-error-contract-report.json`
 - Stable shell wrapper:
+  - `scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh`
+- Shared Python implementation:
+  - `scripts/dashboard/stale_error_budget_contract_lane_contract.py`
+- Stable shell wrapper:
   - `scripts/dashboard/run_dashboard_stale_error_budget_lane.sh`
 - Shared Python implementation:
   - `scripts/dashboard/stale_error_budget_lane_contract.py`
@@ -110,6 +114,7 @@ Required schema/reason markers:
 - `dashboard_stale_error_budget_reason_codes:NO-GO:v1`
 
 The lane fails closed: stale threshold drift, error-budget threshold drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #942`).
+The shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1258`).
 
 ## Moderation and Recovery Observability Hooks (Issue #924)
 Reputation moderation actions publish deterministic quarantine/recovery evidence so operator dashboards can audit why signals were held or penalties reversed.
