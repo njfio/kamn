@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SUITE="$ROOT_DIR/scripts/runtime/run_failover_sync_drill_suite.sh"
 TMP_REPORT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT"' EXIT
+TMP_GITHUB_OUTPUT="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_GITHUB_OUTPUT"' EXIT
 
 if [ ! -x "$SUITE" ]; then
   echo "expected failover/sync drill suite script to be executable" >&2
@@ -60,6 +61,30 @@ if payload.get("status") != "pass":
 lane_report = payload.get("lane_report", {})
 if lane_report.get("lane") != "deep":
     raise SystemExit("expected deep lane report payload")
+PY
+
+ci_output="$(
+  GITHUB_OUTPUT="$TMP_GITHUB_OUTPUT" \
+    bash "$SUITE" \
+      --event-name schedule \
+      --skip-suite \
+      --output-json "$TMP_REPORT"
+)"
+if ! printf '%s\n' "$ci_output" | grep -q "failover/sync drill suite tests passed."; then
+  echo "expected failover/sync suite success marker under GitHub output env" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text())
+if payload.get("selected_lane") != "deep":
+    raise SystemExit("expected deep lane under GitHub output env")
+if payload.get("status") != "pass":
+    raise SystemExit("expected deep suite status to pass under GitHub output env")
 PY
 
 echo "failover/sync suite script tests passed."
