@@ -7,6 +7,8 @@ and channel-permission safety checks in fast CI.
 - Channel lifecycle model contracts from `channel_models`.
 - Membership and permission fail-closed contracts from `channel_policies`.
 - Retention policy behavior checks from `channel_permissions_retention`.
+- Shared Python implementation (contract lane):
+  - `scripts/channel/channel_policy_contract_lane_contract.py`
 
 ## Contract Lane Commands
 Run from repository root:
@@ -31,3 +33,4 @@ cargo test -p kamn-core --test channel_models_and_permissions_docs
 
 ## Regression Marker
 - unauthorized channel policy bypass is rejected (`Regression: #929`)
+- shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1274`)

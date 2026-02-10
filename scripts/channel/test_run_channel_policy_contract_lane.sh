@@ -3,9 +3,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/channel/run_channel_policy_contract_lane.sh"
+SHARED_CONTRACT="$ROOT_DIR/scripts/channel/channel_policy_contract_lane_contract.py"
 
 if [ ! -x "$SCRIPT" ]; then
   echo "expected channel policy contract lane script to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$SHARED_CONTRACT" ]; then
+  echo "expected channel policy shared contract-lane module to be executable" >&2
   exit 1
 fi
 
@@ -19,8 +24,12 @@ if ! grep -q "channel policy contract lane tests passed." "$TMP_OUT"; then
   exit 1
 fi
 
-if ! grep -Fq "run_channel_retention_redaction_contract_lane.sh" "$SCRIPT"; then
-  echo "expected channel policy lane to execute retention/redaction contract lane checks" >&2
+if ! grep -q "channel_policy_contract_lane_contract.py" "$SCRIPT"; then
+  echo "expected channel policy lane wrapper to dispatch to shared contract module" >&2
+  exit 1
+fi
+if ! grep -Fq "run_channel_retention_redaction_contract_lane.sh" "$SHARED_CONTRACT"; then
+  echo "expected channel policy shared contract-lane module to execute retention/redaction contract lane checks" >&2
   exit 1
 fi
 
