@@ -2,7 +2,6 @@ agent_key_hierarchy
 agent_upgrade_workflow
 anti_spam
 audit_exports
-bootstrap
 bridge_adapter
 channel_models
 channel_policies
@@ -26,7 +25,6 @@ instruction_verify
 invariants
 key_lifecycle
 key_recovery
-kolme_runtime_commit
 message_delivery_guards
 message_envelope
 message_lifecycle
@@ -46,7 +44,6 @@ service_marketplace
 signature_profile
 signer_backend
 smoke
-state
 task_artifacts
 task_lifecycle
 task_operations

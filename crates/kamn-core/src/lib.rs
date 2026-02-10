@@ -13,7 +13,6 @@ pub mod agent_upgrade_workflow;
 pub mod anti_spam;
 #[allow(missing_docs)]
 pub mod audit_exports;
-#[allow(missing_docs)]
 pub mod bootstrap;
 #[allow(missing_docs)]
 pub mod bridge_adapter;
@@ -61,7 +60,6 @@ pub mod invariants;
 pub mod key_lifecycle;
 #[allow(missing_docs)]
 pub mod key_recovery;
-#[allow(missing_docs)]
 pub mod kolme_runtime_commit;
 #[allow(missing_docs)]
 pub mod message_delivery_guards;
@@ -102,7 +100,6 @@ pub mod signature_profile;
 pub mod signer_backend;
 #[allow(missing_docs)]
 pub mod smoke;
-#[allow(missing_docs)]
 pub mod state;
 #[allow(missing_docs)]
 pub mod task_artifacts;

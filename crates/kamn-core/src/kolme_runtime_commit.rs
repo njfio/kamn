@@ -1,3 +1,5 @@
+//! Deterministic runtime-commit request/receipt contracts for Kolme integration.
+
 use crate::AgentDid;
 use std::collections::HashMap;
 use std::fmt;
@@ -140,7 +142,10 @@ pub enum KolmeRuntimeCommitOutcome {
     /// Request matched an existing idempotency key.
     Duplicate(KolmeRuntimeCommitReceipt),
     /// Request was rejected with an explicit reason.
-    Rejected { reason: String },
+    Rejected {
+        /// Deterministic rejection reason from provider/runtime policy.
+        reason: String,
+    },
 }
 
 /// Runtime lifecycle state projected from commit receipt outcomes.
@@ -330,9 +335,15 @@ pub enum KolmeRuntimeCommitProviderError {
     /// Provider call timed out before a response.
     Timeout,
     /// Provider transport/channel is unavailable.
-    Unavailable { reason: String },
+    Unavailable {
+        /// Provider-specific availability failure reason.
+        reason: String,
+    },
     /// Provider emitted malformed payload/shape.
-    MalformedResponse { reason: String },
+    MalformedResponse {
+        /// Provider-specific malformed payload reason.
+        reason: String,
+    },
 }
 
 impl fmt::Display for KolmeRuntimeCommitProviderError {
@@ -368,7 +379,10 @@ pub enum KolmeRuntimeCommitProviderOutcome {
     /// Provider detected duplicate idempotency key.
     Duplicate(KolmeRuntimeCommitProviderReceipt),
     /// Provider rejected the submission with explicit reason.
-    Rejected { reason: String },
+    Rejected {
+        /// Deterministic provider rejection reason.
+        reason: String,
+    },
 }
 
 /// Provider interface consumed by the adapter-backed runtime commit client.
