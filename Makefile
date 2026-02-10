@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help check test smoke-live-network deep-live-network demo demo-localhost-transport ci-tools
+.PHONY: help check test smoke-live-network deep-live-network demo demo-localhost-transport ci-tools kolme-local-heavy
 
 help:
 	@echo "KAMN developer lanes"
@@ -11,6 +11,7 @@ help:
 	@echo "  make demo   - two-process localhost signed-message demo"
 	@echo "  make demo-localhost-transport - explicit localhost sender/listener transport demo"
 	@echo "  make ci-tools - CI helper regression suite"
+	@echo "  make kolme-local-heavy - local-only Kolme heavy validation matrix (requires explicit opt-in for run mode)"
 	@echo "Deep/scheduled lanes remain opt-in via scripts/sdk/run_rust_live_transport_deep_lane.sh and related scripts."
 
 check:
@@ -34,3 +35,6 @@ demo-localhost-transport:
 
 ci-tools:
 	bash scripts/ci/test_ci_tools.sh
+
+kolme-local-heavy:
+	bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode dry-run --output-json /tmp/kolme-local-heavy-validation-summary.json

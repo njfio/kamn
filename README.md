@@ -237,6 +237,18 @@ bash scripts/kolme/run_triadic_devnet_smoke.sh --output-file /tmp/triadic-devnet
 python3 scripts/kolme/validate_triadic_devnet_smoke.py --fixture fixtures/kolme_compatibility/devnet_smoke_markers.json --marker-file /tmp/triadic-devnet-markers.txt --output-json /tmp/triadic-devnet-report.json
 ```
 
+### Run Local-Only Heavy Kolme Validation Matrix
+
+```bash
+# command surface + artifact schema validation (no heavy execution)
+bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode dry-run --output-json /tmp/kolme-local-heavy-validation-summary.json
+
+# explicit local-only heavy execution (deep replay + devnet smoke)
+KAMN_KOLME_LOCAL_HEAVY=1 \
+bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode run --output-json /tmp/kolme-local-heavy-validation-summary.json
+# schema: kamn.kolme.local-heavy-validation-summary.v1
+```
+
 ## Workflow
 
 All code changes are issue-first and follow strict Red → Green → Refactor → Regression TDD. Before implementation:

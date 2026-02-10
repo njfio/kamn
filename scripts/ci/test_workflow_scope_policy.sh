@@ -281,6 +281,11 @@ if ! grep -Fq "bash scripts/kolme/test_validate_version_compatibility.sh" "$FAST
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/kolme/test_run_local_heavy_validation_matrix.sh" "$FAST_WORKFLOW"; then
+  echo "expected local-only heavy Kolme validation matrix command-surface tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/kolme/test_run_version_compatibility_contract_lane.sh" "$FAST_WORKFLOW"; then
   echo "expected Kolme version compatibility contract lane tests in ci-fast-gate.yml" >&2
   exit 1
