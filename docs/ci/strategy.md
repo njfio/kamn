@@ -58,12 +58,17 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - command-surface tests stay on PR fast gate:
     - `bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh`
     - `bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh`
+    - `bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh`
+    - `bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh`
     - `bash scripts/kolme/test_run_local_bootstrap_health_checks.sh`
     - `bash scripts/kolme/test_run_local_e2e_integration_lane.sh`
   - local-only heavy Kolme run-mode commands remain excluded from ci-fast-gate.
   - local-only fork sync/smoke run-mode commands remain excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_fork_smoke_evidence_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --smoke-command "cargo test -p merkle-map --test version -- --exact load_from_zero_example" --max-seconds 120 --output-json /tmp/kolme-local-fork-smoke-evidence-summary.json`
+  - local Kolme API probe/smoke run-mode commands remain excluded from ci-fast-gate.
+    - `bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode run --base-url http://127.0.0.1:3000 --max-seconds 30 --output-json /tmp/kolme-local-api-probe-summary.json`
+    - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_api_smoke_lane.sh --mode run --base-url http://127.0.0.1:3000 --smoke-command "curl --silent --show-error --fail http://127.0.0.1:3000/healthz" --max-seconds 60 --output-json /tmp/kolme-local-api-smoke-summary.json`
   - heavy execution keeps explicit opt-in: `KAMN_KOLME_LOCAL_HEAVY=1`
 - Dashboard backend session/auth freshness command changes map to dashboard contract scope:
   - `run_dashboard_contract_tests=true`
@@ -129,6 +134,7 @@ Regression policy:
 - governance quorum attestation selector/docs parity remains fail-closed (`Regression: #911`).
 - local-only heavy Kolme selector/workflow/docs parity remains fail-closed (`Regression: #1419`).
 - local-only fork sync/smoke run-mode exclusion parity remains fail-closed (`Regression: #1431`).
+- local Kolme API probe/smoke run-mode exclusion parity remains fail-closed (`Regression: #1441`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
