@@ -192,6 +192,8 @@ fn checklist_contains_governance_simulation_and_human_veto_evidence_contract() {
     assert!(CHECKLIST.contains("## Governance Simulation and Human-Veto Evidence Contract"));
     assert!(CHECKLIST.contains("generate_governance_simulation_evidence_bundle.sh"));
     assert!(CHECKLIST.contains("check_governance_simulation_policy.sh"));
+    assert!(CHECKLIST.contains("governance_simulation_contract_lane_contract.py"));
+    assert!(CHECKLIST.contains("framework.contract_lane_helpers"));
     assert!(CHECKLIST.contains("run_governance_simulation_contract_lane.sh"));
     assert!(CHECKLIST.contains("run_governance_simulation_deep_lane.sh"));
     assert!(CHECKLIST.contains("run_governance_simulation_matrix.py"));
