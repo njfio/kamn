@@ -98,6 +98,10 @@ Governance transition safety now includes deterministic lifecycle/rollback integ
   - `bash scripts/governance/run_governance_lifecycle_rollback_lane.sh --output-file /tmp/governance-lifecycle-rollback-report.json`
 - Lifecycle/rollback policy checker:
   - `bash scripts/governance/check_governance_lifecycle_rollback_policy.sh --report-file /tmp/governance-lifecycle-rollback-report.json`
+- Stable shell wrapper:
+  - `scripts/governance/check_governance_lifecycle_rollback_policy.sh`
+- Shared Python implementation:
+  - `scripts/governance/governance_lifecycle_rollback_policy_contract.py`
 - Lifecycle/rollback contract lane:
   - `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
 
