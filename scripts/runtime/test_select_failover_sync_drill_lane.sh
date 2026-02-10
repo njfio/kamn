@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SELECTOR="$ROOT_DIR/scripts/runtime/select_failover_sync_drill_lane.sh"
+TMP_GITHUB_OUTPUT="$(mktemp)"
+trap 'rm -f "$TMP_GITHUB_OUTPUT"' EXIT
 
 if [ ! -x "$SELECTOR" ]; then
   echo "expected failover/sync selector script to be executable" >&2
@@ -47,6 +49,19 @@ fi
 unknown_output="$(bash "$SELECTOR" --event-name release)"
 if ! printf '%s\n' "$unknown_output" | grep -q '^lane=preflight$'; then
   echo "expected unknown events to fail-safe to preflight lane" >&2
+  exit 1
+fi
+
+github_output_mode="$(
+  GITHUB_OUTPUT="$TMP_GITHUB_OUTPUT" \
+    bash "$SELECTOR" --event-name pull_request
+)"
+if ! printf '%s\n' "$github_output_mode" | grep -q '^lane=preflight$'; then
+  echo "expected selector stdout output under GitHub output env" >&2
+  exit 1
+fi
+if ! grep -q '^lane=preflight$' "$TMP_GITHUB_OUTPUT"; then
+  echo "expected selector to mirror lane output to GITHUB_OUTPUT file" >&2
   exit 1
 fi
 
