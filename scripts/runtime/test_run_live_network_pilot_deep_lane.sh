@@ -13,7 +13,6 @@ fi
 
 report_json="$TMP_DIR/live-network-pilot-deep-summary.json"
 lane_output="$(
-  KAMN_LIVE_NETWORK_SMOKE_SKIP_COMMANDS=true \
   bash "$DEEP_LANE" \
     --event-name schedule \
     --skip-suite \
@@ -58,6 +57,27 @@ fi
 
 if ! printf '%s\n' "$invalid_event_output" | grep -q "scheduled/manual-only cadence policy"; then
   echo "expected cadence policy rejection marker for live-network pilot deep lane" >&2
+  exit 1
+fi
+
+set +e
+invalid_skip_output="$(
+  KAMN_LIVE_NETWORK_PILOT_DEEP_SMOKE_SKIP_COMMANDS=maybe \
+  bash "$DEEP_LANE" \
+    --event-name schedule \
+    --skip-suite \
+    --output-json "$TMP_DIR/invalid-smoke-skip-flag.json" 2>&1
+)"
+invalid_skip_code=$?
+set -e
+
+if [[ "$invalid_skip_code" -eq 0 ]]; then
+  echo "expected live-network pilot deep lane to reject invalid smoke skip flag value" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$invalid_skip_output" | grep -q "KAMN_LIVE_NETWORK_PILOT_DEEP_SMOKE_SKIP_COMMANDS must be true or false"; then
+  echo "expected explicit invalid smoke skip flag marker for live-network pilot deep lane" >&2
   exit 1
 fi
 

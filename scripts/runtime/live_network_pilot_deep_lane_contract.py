@@ -35,6 +35,12 @@ def _is_executable(path: Path) -> bool:
     return path.is_file() and os.access(path, os.X_OK)
 
 
+def _require_bool_flag(name: str, raw_value: str) -> str:
+    if raw_value not in {"true", "false"}:
+        fail(f"{name} must be true or false")
+    return raw_value
+
+
 def run_live_network_pilot_deep_lane(args: argparse.Namespace) -> int:
     if not args.max_seconds.isdigit():
         fail("--max-seconds must be a non-negative integer")
@@ -44,6 +50,10 @@ def run_live_network_pilot_deep_lane(args: argparse.Namespace) -> int:
     if event_name not in {"schedule", "workflow_dispatch"}:
         fail("scheduled/manual-only cadence policy requires event schedule or workflow_dispatch")
     cadence = "scheduled" if event_name == "schedule" else "manual"
+    smoke_skip_commands = _require_bool_flag(
+        "KAMN_LIVE_NETWORK_PILOT_DEEP_SMOKE_SKIP_COMMANDS",
+        os.environ.get("KAMN_LIVE_NETWORK_PILOT_DEEP_SMOKE_SKIP_COMMANDS", "true"),
+    )
 
     smoke_lane = ROOT_DIR / "scripts/runtime/run_live_network_smoke_lane.sh"
     failover_suite = ROOT_DIR / "scripts/runtime/run_failover_sync_drill_suite.sh"
@@ -70,6 +80,10 @@ def run_live_network_pilot_deep_lane(args: argparse.Namespace) -> int:
     try:
         smoke_run = subprocess.run(
             ["bash", str(smoke_lane), "--output-json", str(smoke_report)],
+            env={
+                **os.environ,
+                "KAMN_LIVE_NETWORK_SMOKE_SKIP_COMMANDS": smoke_skip_commands,
+            },
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=False,
