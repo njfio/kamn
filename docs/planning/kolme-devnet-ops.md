@@ -108,6 +108,22 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
   - run mode fails closed without explicit local-only opt-in.
   - smoke command timeout/exceeded budget is reported as `smoke_command_timeout`.
 
+## Local Runtime Commit Live Proof Lane (Issue #1450)
+
+- Local runtime-commit live lane runner:
+  - `bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode dry-run --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt`
+- Explicit opt-in live execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --live-command "cargo test -p kamn-core --test kolme_runtime_commit_http_transport" --max-seconds 90 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt`
+- Summary schema:
+  - `kamn.kolme.local-runtime-commit-live-summary.v1`
+- Deterministic checkpoints include:
+  - explicit local-only opt-in marker (`KAMN_KOLME_LOCAL_HEAVY=1`)
+  - bounded live command timeout via `--max-seconds`
+  - machine-readable pass/fail reason codes for missing opt-in, command failure, and timeout
+- Cost policy:
+  - run mode fails closed without explicit local-only opt-in.
+  - live command timeout/exceeded budget is reported as `live_runtime_commit_command_timeout`.
+
 ## Deterministic Local Bootstrap Health Checks (Issue #1417)
 
 - Bootstrap health-check runner:
@@ -180,6 +196,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
 - local Kolme API probe lane fails closed on unavailable health endpoint, invalid fork-info payload, and runtime budget overruns (`Regression: #1439`).
 - local Kolme API smoke lane fails closed without explicit local opt-in, probe prerequisite failure, smoke-command timeout, and smoke-command errors (`Regression: #1440`).
+- local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
 ## Local Validation
@@ -191,6 +208,7 @@ bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh
 bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh
 bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh
 bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh
+bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh
 bash scripts/kolme/test_run_local_bootstrap_health_checks.sh
 bash scripts/kolme/test_run_local_e2e_integration_lane.sh
 bash scripts/kolme/test_run_local_heavy_validation_matrix.sh
