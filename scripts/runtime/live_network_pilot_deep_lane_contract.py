@@ -197,8 +197,12 @@ def run_live_network_pilot_deep_lane(args: argparse.Namespace) -> int:
         final_decision = _extract_line_value(check_run.stdout, "final_decision")
         if not final_decision:
             fail("live-network pilot summary checker did not emit final_decision")
+        failed_checks = _extract_line_value(check_run.stdout, "failed_checks")
         if final_decision != "GO":
-            fail(f"live-network pilot deep lane produced final_decision={final_decision}")
+            detail = ""
+            if failed_checks:
+                detail = f"; failed_checks={failed_checks}"
+            fail(f"live-network pilot deep lane produced final_decision={final_decision}{detail}")
 
         print("live-network pilot deep lane tests passed.")
         return 0
