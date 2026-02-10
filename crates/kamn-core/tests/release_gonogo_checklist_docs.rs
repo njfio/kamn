@@ -51,6 +51,7 @@ fn checklist_contains_staging_rehearsal_contract() {
 fn checklist_contains_durable_guard_recovery_evidence() {
     assert!(CHECKLIST.contains("## Durable Guard Migration + Recovery Matrix Evidence"));
     assert!(CHECKLIST.contains("run_durable_guard_recovery_contract_lane.sh"));
+    assert!(CHECKLIST.contains("durable_guard_recovery_contract_lane_contract.py"));
     assert!(CHECKLIST.contains("run_durable_guard_recovery_deep_lane.sh"));
     assert!(CHECKLIST.contains("performance_durable_guard_recovery_contract_lane_budget"));
     assert!(CHECKLIST.contains("performance_durable_guard_recovery_matrix_deep_lane"));
@@ -262,6 +263,14 @@ fn regression_requires_ledger_reference_evidence_guard_marker() {
     // Regression: #717
     assert!(CHECKLIST.contains(
         "missing ledger reference evidence and ledger amount drift force `NO-GO` (`Regression: #717`)."
+    ));
+}
+
+#[test]
+fn regression_requires_durable_guard_shared_contract_marker() {
+    // Regression: #1242
+    assert!(CHECKLIST.contains(
+        "shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1242`)."
     ));
 }
 

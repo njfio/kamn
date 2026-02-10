@@ -1558,6 +1558,11 @@ assert_eq "$(extract_output "$guard_contract_script_output" "run_rust")" "false"
 assert_eq "$(extract_output "$guard_contract_script_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard contract script changes must run durable guard recovery contract lane"
 assert_eq "$(extract_output "$guard_contract_script_output" "test_scope")" "guard-contract" "durable guard contract script changes should set guard-contract scope"
 
+guard_shared_contract_output="$(run_selector $'scripts/guard/durable_guard_recovery_contract_lane_contract.py')"
+assert_eq "$(extract_output "$guard_shared_contract_output" "run_rust")" "false" "durable guard shared contract module changes should avoid rust lane"
+assert_eq "$(extract_output "$guard_shared_contract_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard shared contract module changes must run durable guard recovery contract lane"
+assert_eq "$(extract_output "$guard_shared_contract_output" "test_scope")" "guard-contract" "durable guard shared contract module changes should set guard-contract scope"
+
 guard_rust_output="$(run_selector $'crates/kamn-core/src/message_delivery_guards.rs')"
 assert_eq "$(extract_output "$guard_rust_output" "run_rust")" "true" "durable guard rust changes should run rust lane"
 assert_eq "$(extract_output "$guard_rust_output" "run_durable_guard_recovery_contract_tests")" "true" "durable guard rust changes must run durable guard recovery contract lane"
