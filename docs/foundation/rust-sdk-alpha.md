@@ -172,6 +172,10 @@ A bounded smoke-parity lane is available for deterministic cross-SDK live transp
   - `bash scripts/sdk/check_live_transport_smoke_parity_policy.sh --report-file /tmp/sdk-live-transport-smoke-report.json`
 - Contract lane command:
   - `bash scripts/sdk/run_live_transport_smoke_parity_contract_lane.sh --output-file /tmp/sdk-live-transport-smoke-contract-report.json`
+- Stable shell wrapper:
+  - `scripts/sdk/check_live_transport_smoke_parity_policy.sh`
+- Shared Python implementation:
+  - `scripts/sdk/live_transport_smoke_parity_policy_contract.py`
 
 Runtime/retry budget controls:
 
@@ -183,6 +187,7 @@ Smoke report schema marker:
 - `kamn.sdk.live-transport-smoke-parity-report.v1`
 
 The lane fails closed: retry-budget exhaustion, runtime-budget breaches, or transport parity drift force `NO-GO` (`Regression: #938`).
+The smoke parity policy checker wrapper remains pinned to the shared contract implementation marker (`Regression: #1182`).
 
 ## CI Routing Policy (Issue #635)
 PR checks use changed-language routing to keep cost and runtime bounded:

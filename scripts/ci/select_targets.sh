@@ -116,7 +116,8 @@ join_with_and() {
   printf '%s\n' "$joined"
 }
 
-if git ls-files | grep -Eq '(^|/)Cargo.toml$'; then
+mapfile -t RUST_MANIFEST_FILES < <(git ls-files -- 'Cargo.toml' '**/Cargo.toml')
+if [ "${#RUST_MANIFEST_FILES[@]}" -gt 0 ]; then
   REPO_HAS_RUST=true
 else
   REPO_HAS_RUST=false
@@ -282,7 +283,12 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/planning/kolme-integration-roadmap.md|docs/foundation/release-gonogo-checklist.md|scripts/kolme/validate_version_compatibility.py|scripts/kolme/run_version_compatibility_replay.py|scripts/kolme/run_version_compatibility_contract_lane.sh|scripts/kolme/run_version_compatibility_replay_deep_lane.sh|scripts/kolme/run_runtime_commit_contract_lane.sh|scripts/kolme/check_runtime_commit_replay_policy.py|scripts/kolme/run_runtime_commit_replay_tamper_matrix.py|scripts/kolme/run_runtime_commit_replay_contract_lane.sh|scripts/kolme/test_validate_version_compatibility.sh|scripts/kolme/test_check_runtime_commit_replay_policy.sh|scripts/kolme/test_run_version_compatibility_contract_lane.sh|scripts/kolme/test_run_runtime_commit_contract_lane.sh|scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh|fixtures/kolme_compatibility/version_compatibility_cases.json|fixtures/kolme_commit/runtime_commit_request_cases.txt|fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json|crates/kamn-core/src/kolme_runtime_commit.rs|crates/kamn-core/tests/kolme_runtime_commit_client.rs|crates/kamn-core/tests/kolme_runtime_commit_finality.rs|crates/kamn-core/tests/kolme_integration_roadmap_docs.rs)
+    crates/kamn-core/src/kolme_runtime_commit.rs|crates/kamn-core/tests/kolme_runtime_commit_client.rs|crates/kamn-core/tests/kolme_runtime_commit_finality.rs)
+      KOLME_VERSION_COMPATIBILITY_CONTRACT_CHANGED=true
+      RUST_CHANGED=true
+      classified=true
+      ;;
+    docs/planning/kolme-integration-roadmap.md|docs/foundation/release-gonogo-checklist.md|scripts/kolme/validate_version_compatibility.py|scripts/kolme/run_version_compatibility_replay.py|scripts/kolme/run_version_compatibility_contract_lane.sh|scripts/kolme/run_version_compatibility_replay_deep_lane.sh|scripts/kolme/run_runtime_commit_contract_lane.sh|scripts/kolme/check_runtime_commit_replay_policy.py|scripts/kolme/run_runtime_commit_replay_tamper_matrix.py|scripts/kolme/run_runtime_commit_replay_contract_lane.sh|scripts/kolme/test_validate_version_compatibility.sh|scripts/kolme/test_check_runtime_commit_replay_policy.sh|scripts/kolme/test_run_version_compatibility_contract_lane.sh|scripts/kolme/test_run_runtime_commit_contract_lane.sh|scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh|fixtures/kolme_compatibility/version_compatibility_cases.json|fixtures/kolme_commit/runtime_commit_request_cases.txt|fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json|crates/kamn-core/tests/kolme_integration_roadmap_docs.rs)
       KOLME_VERSION_COMPATIBILITY_CONTRACT_CHANGED=true
       classified=true
       ;;
@@ -331,7 +337,12 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    crates/kamn-core/src/message_delivery_guards.rs|crates/kamn-core/src/channel_policies.rs|crates/kamn-core/src/durable_guard_store.rs|crates/kamn-core/tests/durable_guard_recovery_matrix.rs|crates/kamn-core/tests/durable_guard_snapshot_store.rs|docs/foundation/message-delivery-guards.md|docs/foundation/channel-permissions-retention.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/guard/*)
+    crates/kamn-core/src/message_delivery_guards.rs|crates/kamn-core/src/channel_policies.rs|crates/kamn-core/src/durable_guard_store.rs|crates/kamn-core/tests/durable_guard_recovery_matrix.rs|crates/kamn-core/tests/durable_guard_snapshot_store.rs)
+      DURABLE_GUARD_RECOVERY_CONTRACT_CHANGED=true
+      RUST_CHANGED=true
+      classified=true
+      ;;
+    docs/foundation/message-delivery-guards.md|docs/foundation/channel-permissions-retention.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/guard/*)
       DURABLE_GUARD_RECOVERY_CONTRACT_CHANGED=true
       classified=true
       ;;
@@ -474,7 +485,7 @@ for file in "${CHANGED_FILES[@]}"; do
       SDK_TYPESCRIPT_LIVE_CHANGED=true
       classified=true
       ;;
-    scripts/sdk/run_live_transport_parity_contract_lane.sh|scripts/sdk/run_live_transport_parity_deep_lane.sh|scripts/sdk/test_run_live_transport_parity_contract_lane.sh|scripts/sdk/run_transport_profile_parity_matrix.py|scripts/sdk/run_transport_profile_parity_matrix.sh|scripts/sdk/test_run_transport_profile_parity_matrix.sh|scripts/sdk/transport_profile_probe.py|scripts/sdk/transport_profile_probe.ts|scripts/sdk/run_transport_profile_probe_python.sh|scripts/sdk/run_transport_profile_probe_typescript.sh|scripts/sdk/run_transport_profile_probe_rust.sh|scripts/sdk/run_live_transport_smoke_parity_lane.sh|scripts/sdk/check_live_transport_smoke_parity_policy.sh|scripts/sdk/run_live_transport_smoke_parity_contract_lane.sh|scripts/sdk/test_run_live_transport_smoke_parity_lane.sh|scripts/sdk/test_check_live_transport_smoke_parity_policy.sh|scripts/sdk/test_run_live_transport_smoke_parity_contract_lane.sh)
+    scripts/sdk/run_live_transport_parity_contract_lane.sh|scripts/sdk/run_live_transport_parity_deep_lane.sh|scripts/sdk/test_run_live_transport_parity_contract_lane.sh|scripts/sdk/run_transport_profile_parity_matrix.py|scripts/sdk/run_transport_profile_parity_matrix.sh|scripts/sdk/test_run_transport_profile_parity_matrix.sh|scripts/sdk/transport_profile_probe.py|scripts/sdk/transport_profile_probe.ts|scripts/sdk/run_transport_profile_probe_python.sh|scripts/sdk/run_transport_profile_probe_typescript.sh|scripts/sdk/run_transport_profile_probe_rust.sh|scripts/sdk/run_live_transport_smoke_parity_lane.sh|scripts/sdk/check_live_transport_smoke_parity_policy.sh|scripts/sdk/live_transport_smoke_parity_policy_contract.py|scripts/sdk/run_live_transport_smoke_parity_contract_lane.sh|scripts/sdk/test_run_live_transport_smoke_parity_lane.sh|scripts/sdk/test_check_live_transport_smoke_parity_policy.sh|scripts/sdk/test_run_live_transport_smoke_parity_contract_lane.sh)
       SDK_LIVE_PARITY_SCRIPT_CHANGED=true
       classified=true
       ;;
