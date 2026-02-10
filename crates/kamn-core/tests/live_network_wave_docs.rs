@@ -6,6 +6,7 @@ const MAKEFILE: &str = include_str!("../../../Makefile");
 fn live_network_wave_doc_contains_smoke_commands_and_schema() {
     assert!(LIVE_NETWORK_WAVE_DOC.contains("run_live_network_smoke_lane.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("run_live_network_smoke_contract_lane.sh"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("live_network_smoke_lane_contract.py"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("live_network_pilot_artifact_summary_contract.py"));
     assert!(
         LIVE_NETWORK_WAVE_DOC.contains("live_network_pilot_artifact_summary_policy_contract.py")
@@ -64,6 +65,11 @@ fn regression_budget_guard_marker_is_documented() {
     assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #1162`"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains(
         "pilot deep lane wrapper remains pinned to shared contract implementation marker"
+    ));
+    // Regression: #1166
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #1166`"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains(
+        "live-network smoke lane wrapper remains pinned to shared contract implementation marker"
     ));
 }
 
