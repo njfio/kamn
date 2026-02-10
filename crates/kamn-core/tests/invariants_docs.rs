@@ -10,6 +10,8 @@ fn doc_contains_runtime_invariant_harness_coverage_contract() {
     assert!(DOC.contains("kamn.runtime.input-mutation-contract-report.v1"));
     assert!(DOC.contains("input_mutation_replay:v1"));
     assert!(DOC.contains("run_concurrency_state_mutation_contract_lane.sh"));
+    assert!(DOC.contains("kamn.runtime.concurrency-mutation-contract-report.v1"));
+    assert!(DOC.contains("concurrency_mutation_replay:v1"));
     assert!(DOC.contains("run_invariant_fuzz_concurrency_contract_lane.sh"));
     assert!(DOC.contains("check_invariant_fuzz_concurrency_policy.sh"));
     assert!(DOC.contains("kamn.runtime.invariant-fuzz-concurrency-contract-report.v1"));

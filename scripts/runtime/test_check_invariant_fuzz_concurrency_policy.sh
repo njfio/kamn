@@ -35,7 +35,7 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 payload = json.loads(path.read_text(encoding="utf-8"))
-payload["fuzz_replay_artifact_key"] = "tampered_fuzz_artifact_key"
+payload["concurrency_replay_artifact_key"] = "tampered_concurrency_artifact_key"
 path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
@@ -49,14 +49,14 @@ if [ "$tampered_code" -eq 0 ]; then
   exit 1
 fi
 
-if ! printf '%s\n' "$tampered_output" | grep -Fq "fuzz_replay_artifact_key mismatch"; then
-  echo "expected explicit fuzz replay artifact mismatch policy error" >&2
+if ! printf '%s\n' "$tampered_output" | grep -Fq "concurrency_replay_artifact_key mismatch"; then
+  echo "expected explicit concurrency replay artifact mismatch policy error" >&2
   exit 1
 fi
 
-# Regression: #1361
-if ! printf '%s\n' "$tampered_output" | grep -Fq "input_mutation_replay:v1"; then
-  echo "expected required fuzz replay artifact key marker in policy regression path" >&2
+# Regression: #1363
+if ! printf '%s\n' "$tampered_output" | grep -Fq "concurrency_mutation_replay:v1"; then
+  echo "expected required concurrency replay artifact key marker in policy regression path" >&2
   exit 1
 fi
 

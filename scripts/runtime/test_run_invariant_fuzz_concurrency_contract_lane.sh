@@ -60,6 +60,9 @@ assert report["property_replay_test_count"] >= 12
 assert report["fuzz_replay_schema_version"] == "kamn.runtime.input-mutation-contract-report.v1"
 assert report["fuzz_replay_artifact_key"] == "input_mutation_replay:v1"
 assert report["fuzz_replay_test_count"] >= 10
+assert report["concurrency_replay_schema_version"] == "kamn.runtime.concurrency-mutation-contract-report.v1"
+assert report["concurrency_replay_artifact_key"] == "concurrency_mutation_replay:v1"
+assert report["concurrency_replay_test_count"] >= 12
 # Regression: #897
 assert report["reason_codes"] == ["none"]
 PY

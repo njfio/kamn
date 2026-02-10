@@ -51,6 +51,7 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 property_report="$TMP_DIR/lifecycle-property-contract-report.json"
 fuzz_report="$TMP_DIR/input-mutation-contract-report.json"
+concurrency_report="$TMP_DIR/concurrency-mutation-contract-report.json"
 
 property_output="$(bash "$PROPERTY_LANE" --output-json "$property_report")"
 if ! printf '%s\n' "$property_output" | grep -Fq "runtime lifecycle property contract lane tests passed."; then
@@ -72,9 +73,13 @@ if ! printf '%s\n' "$fuzz_output" | grep -Fq "runtime_input_mutation_contract_re
   exit 1
 fi
 
-concurrency_output="$(bash "$CONCURRENCY_LANE")"
+concurrency_output="$(bash "$CONCURRENCY_LANE" --output-json "$concurrency_report")"
 if ! printf '%s\n' "$concurrency_output" | grep -Fq "runtime concurrency state mutation contract lane tests passed."; then
   echo "expected concurrency state mutation lane success marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$concurrency_output" | grep -Fq "runtime_concurrency_mutation_contract_report=$concurrency_report"; then
+  echo "expected concurrency state mutation lane report marker" >&2
   exit 1
 fi
 
@@ -86,7 +91,7 @@ fi
 
 summary_report="$TMP_DIR/invariant-fuzz-concurrency-contract-report.json"
 
-python3 - "$summary_report" "$property_report" "$fuzz_report" "$elapsed_seconds" "$max_seconds" <<'PY'
+python3 - "$summary_report" "$property_report" "$fuzz_report" "$concurrency_report" "$elapsed_seconds" "$max_seconds" <<'PY'
 import json
 import pathlib
 import sys
@@ -94,8 +99,9 @@ import sys
 report_file = pathlib.Path(sys.argv[1])
 property_report_file = pathlib.Path(sys.argv[2])
 fuzz_report_file = pathlib.Path(sys.argv[3])
-elapsed_seconds = int(sys.argv[4])
-max_seconds = int(sys.argv[5])
+concurrency_report_file = pathlib.Path(sys.argv[4])
+elapsed_seconds = int(sys.argv[5])
+max_seconds = int(sys.argv[6])
 
 property_report = json.loads(property_report_file.read_text(encoding="utf-8"))
 schema_version = property_report.get("schema_version")
@@ -129,6 +135,19 @@ if (
 ):
     raise SystemExit("input mutation report must include positive envelope/did test counts")
 
+concurrency_report = json.loads(concurrency_report_file.read_text(encoding="utf-8"))
+concurrency_schema_version = concurrency_report.get("schema_version")
+if concurrency_schema_version != "kamn.runtime.concurrency-mutation-contract-report.v1":
+    raise SystemExit("unexpected concurrency mutation report schema")
+if concurrency_report.get("status") != "pass":
+    raise SystemExit("concurrency mutation report status must be pass")
+concurrency_artifact_key = concurrency_report.get("replay_artifact_key")
+if concurrency_artifact_key != "concurrency_mutation_replay:v1":
+    raise SystemExit("unexpected concurrency mutation replay artifact key")
+concurrency_test_count = concurrency_report.get("test_count")
+if not isinstance(concurrency_test_count, int) or concurrency_test_count <= 0:
+    raise SystemExit("concurrency mutation report must include positive test_count")
+
 summary = {
     "schema_version": "kamn.runtime.invariant-fuzz-concurrency-contract-report.v1",
     "status": "pass",
@@ -141,6 +160,9 @@ summary = {
     "fuzz_replay_schema_version": fuzz_schema_version,
     "fuzz_replay_artifact_key": fuzz_artifact_key,
     "fuzz_replay_test_count": envelope_test_count + did_test_count,
+    "concurrency_replay_schema_version": concurrency_schema_version,
+    "concurrency_replay_artifact_key": concurrency_artifact_key,
+    "concurrency_replay_test_count": concurrency_test_count,
     "elapsed_seconds": elapsed_seconds,
     "max_seconds": max_seconds,
     "reason_codes": ["none"],
@@ -194,6 +216,16 @@ if ! grep -Fq "input_mutation_replay:v1" "$INVARIANTS_DOC"; then
   exit 1
 fi
 
+if ! grep -Fq "kamn.runtime.concurrency-mutation-contract-report.v1" "$INVARIANTS_DOC"; then
+  echo "expected invariants docs to reference concurrency mutation report schema" >&2
+  exit 1
+fi
+
+if ! grep -Fq "concurrency_mutation_replay:v1" "$INVARIANTS_DOC"; then
+  echo "expected invariants docs to reference concurrency mutation replay artifact key" >&2
+  exit 1
+fi
+
 if ! grep -Fq "KAMN_RUNTIME_INVARIANT_FUZZ_CONCURRENCY_MAX_SECONDS" "$PERFORMANCE_DOC"; then
   echo "expected performance benchmarking docs to reference invariant/fuzz/concurrency runtime budget env" >&2
   exit 1
@@ -221,6 +253,16 @@ fi
 
 if ! grep -Fq "input_mutation_replay:v1" "$TESTING_STRATEGY_DOC"; then
   echo "expected invariant/fuzz strategy doc to reference input mutation replay artifact key" >&2
+  exit 1
+fi
+
+if ! grep -Fq "kamn.runtime.concurrency-mutation-contract-report.v1" "$TESTING_STRATEGY_DOC"; then
+  echo "expected invariant/fuzz strategy doc to reference concurrency mutation report schema" >&2
+  exit 1
+fi
+
+if ! grep -Fq "concurrency_mutation_replay:v1" "$TESTING_STRATEGY_DOC"; then
+  echo "expected invariant/fuzz strategy doc to reference concurrency mutation replay artifact key" >&2
   exit 1
 fi
 
@@ -261,6 +303,11 @@ fi
 
 if ! grep -Fq "KAMN_RUNTIME_INPUT_MUTATION_MAX_SECONDS" "$TESTING_STRATEGY_DOC"; then
   echo "expected invariant/fuzz strategy doc to reference input mutation runtime budget env" >&2
+  exit 1
+fi
+
+if ! grep -Fq "KAMN_RUNTIME_CONCURRENCY_MUTATION_MAX_SECONDS" "$TESTING_STRATEGY_DOC"; then
+  echo "expected invariant/fuzz strategy doc to reference concurrency mutation runtime budget env" >&2
   exit 1
 fi
 
