@@ -145,6 +145,21 @@ if ! grep -Fq "bash scripts/sdk/test_run_localhost_signed_integration_contract_l
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/sdk/test_run_live_transport_replay_tamper_fast_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected live transport replay/tamper fast lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/sdk/test_check_live_transport_replay_tamper_policy.sh" "$FAST_WORKFLOW"; then
+  echo "expected live transport replay/tamper policy checker command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "KAMN_SDK_REPLAY_TAMPER_CONTRACT_MAX_SECONDS: '60'" "$FAST_WORKFLOW"; then
+  echo "expected bounded replay/tamper fast-lane runtime budget in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 localhost_signed_integration_scope_hits="$(grep -Fc "steps.scope.outputs.run_localhost_signed_integration_contract_lane_tests == 'true'" "$FAST_WORKFLOW")"
 if [ "$localhost_signed_integration_scope_hits" -lt 3 ]; then
   echo "expected localhost signed integration contract lane scope guard in rust setup/cache and lane step" >&2

@@ -64,14 +64,25 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json`
 - Localhost signed integration evidence policy checker:
   - `bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-file /tmp/localhost-signed-integration-contract-report.json`
+- Live transport replay/tamper fast lane:
+  - `bash scripts/sdk/run_live_transport_replay_tamper_fast_lane.sh --output-report /tmp/live-transport-replay-tamper-fast-report.json`
+- Live transport replay/tamper policy checker:
+  - `bash scripts/sdk/check_live_transport_replay_tamper_policy.sh --bundle-file /tmp/live-transport-replay-tamper-fast-report.json`
 - Stable shell wrappers:
   - `scripts/sdk/run_localhost_signed_integration_harness.sh`
   - `scripts/sdk/run_localhost_signed_integration_contract_lane.sh`
   - `scripts/sdk/check_localhost_signed_integration_evidence_policy.sh`
+  - `scripts/sdk/generate_live_transport_replay_tamper_evidence_bundle.sh`
+  - `scripts/sdk/check_live_transport_replay_tamper_policy.sh`
+  - `scripts/sdk/run_live_transport_replay_tamper_contract_lane.sh`
+  - `scripts/sdk/run_live_transport_replay_tamper_fast_lane.sh`
+  - `scripts/sdk/run_live_transport_replay_tamper_deep_lane.sh`
 - Shared Python implementations:
   - `scripts/sdk/localhost_signed_integration_harness_contract.py`
   - `scripts/sdk/localhost_signed_integration_contract_lane_contract.py`
   - `scripts/sdk/localhost_signed_integration_evidence_policy_contract.py`
+  - `scripts/sdk/live_transport_replay_tamper_contract.py`
+  - `scripts/sdk/live_transport_replay_tamper_contract_lane_contract.py`
 
 ## Bridge Replay/Redaction Lane Matrix
 
@@ -107,6 +118,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `kamn.sdk.localhost-signed.integration-contract.v1`
 - Localhost signed demo receipt artifact schema:
   - `kamn.sdk.localhost-signed.demo-receipt-artifact.v1`
+- Live transport replay/tamper evidence schema:
+  - `kamn.sdk.live-transport-replay-tamper-evidence.v1`
 - Required localhost signed integration report fields:
   - `status`
   - `contract_key`
@@ -193,8 +206,13 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `scripts/frontend/test_dashboard_package.sh` defaults fallback execution to `npx -y node@22` in fail-closed mode.
 - Localhost signed integration contract lane budget:
   - `run_localhost_signed_integration_contract_lane.sh` enforces a 120-second upper bound.
+- Localhost replay/tamper fast lane budget:
+  - `KAMN_SDK_REPLAY_TAMPER_CONTRACT_MAX_SECONDS=60` for CI fast-gate replay/tamper runs.
+  - `run_live_transport_replay_tamper_fast_lane.sh` fails closed on budget overflow.
 - Localhost signed demo budget:
   - `run_localhost_signed_demo.sh` keeps localhost sender/listener + receipt reconciliation within a 60-second smoke budget.
+- Localhost replay/tamper selector routing:
+  - `scripts/ci/select_targets.sh` routes replay/tamper generator/checker/contract/fast-lane changes to `run_localhost_signed_integration_contract_lane_tests=true` with `test_scope=sdk-live-localhost-integration`.
 - Regression guard:
   - budget overflow remains fail-closed with explicit reason code `runtime_budget_exceeded` (`Regression: #828`).
 - Regression guard:

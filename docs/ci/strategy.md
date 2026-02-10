@@ -45,6 +45,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 - Localhost signed integration command changes map to dedicated scope:
   - `run_localhost_signed_integration_contract_lane_tests=true`
   - `test_scope=sdk-live-localhost-integration`
+- Live transport replay/tamper command changes stay on the bounded localhost transport scope:
+  - `run_localhost_signed_integration_contract_lane_tests=true`
+  - `test_scope=sdk-live-localhost-integration`
+  - `KAMN_SDK_REPLAY_TAMPER_CONTRACT_MAX_SECONDS=60`
 - Live transport parity command changes map to parity scope:
   - `run_live_transport_parity_contract_tests=true`
   - `live_transport_parity_languages=rust,python,typescript`
@@ -80,6 +84,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 Required demo lane command contract:
 
 - `bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json`
+- `bash scripts/sdk/run_live_transport_replay_tamper_fast_lane.sh --output-report /tmp/live-transport-replay-tamper-fast-report.json`
+- `bash scripts/sdk/check_live_transport_replay_tamper_policy.sh --bundle-file /tmp/live-transport-replay-tamper-fast-report.json`
 - `bash scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh --output-file /tmp/dashboard-backend-session-auth-freshness-contract-report.json`
 - `bash scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh --output-file /tmp/dashboard-stale-error-contract-report.json`
 - `bash scripts/frontend/run_dashboard_shell_determinism_matrix_contract_lane.sh --output-file /tmp/dashboard-shell-matrix-contract-report.json`
@@ -101,6 +107,7 @@ Regression policy:
 - deployment slo/rollback selector/docs parity remains fail-closed (`Regression: #944`).
 - settlement evidence selector/docs parity remains fail-closed (`Regression: #906`).
 - bridge adapter conformance selector/docs parity remains fail-closed (`Regression: #907`).
+- live transport replay/tamper selector/workflow/docs parity remains fail-closed (`Regression: #1386`).
 - post-cutover slo/alert selector/docs parity remains fail-closed (`Regression: #913`).
 - classification/redaction compliance selector/docs parity remains fail-closed (`Regression: #914`).
 - governance lifecycle/rollback selector/docs parity remains fail-closed (`Regression: #910`).
