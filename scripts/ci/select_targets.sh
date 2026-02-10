@@ -482,7 +482,7 @@ for file in "${CHANGED_FILES[@]}"; do
       SDK_SHARED_MATRIX_CHANGED=true
       classified=true
       ;;
-    scripts/sdk/run_localhost_signed_integration_harness.sh|scripts/sdk/test_run_localhost_signed_integration_harness.sh|scripts/sdk/check_localhost_signed_integration_evidence_policy.sh|scripts/sdk/localhost_signed_integration_evidence_policy_contract.py|scripts/sdk/test_check_localhost_signed_integration_evidence_policy.sh|scripts/sdk/run_localhost_signed_integration_contract_lane.sh|scripts/sdk/test_run_localhost_signed_integration_contract_lane.sh)
+    scripts/sdk/run_localhost_signed_integration_harness.sh|scripts/sdk/localhost_signed_integration_harness_contract.py|scripts/sdk/test_run_localhost_signed_integration_harness.sh|scripts/sdk/check_localhost_signed_integration_evidence_policy.sh|scripts/sdk/localhost_signed_integration_evidence_policy_contract.py|scripts/sdk/test_check_localhost_signed_integration_evidence_policy.sh|scripts/sdk/run_localhost_signed_integration_contract_lane.sh|scripts/sdk/test_run_localhost_signed_integration_contract_lane.sh)
       SDK_LOCALHOST_SIGNED_INTEGRATION_CONTRACT_CHANGED=true
       classified=true
       ;;

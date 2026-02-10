@@ -330,6 +330,12 @@ assert_eq "$(extract_output "$localhost_signed_integration_harness_script_output
 assert_eq "$(extract_output "$localhost_signed_integration_harness_script_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "localhost signed integration harness script-only changes must run localhost signed integration contract lane"
 assert_eq "$(extract_output "$localhost_signed_integration_harness_script_output" "test_scope")" "sdk-live-localhost-integration" "localhost signed integration harness script-only changes should set localhost integration scope"
 
+localhost_signed_integration_harness_shared_contract_output="$(run_selector $'scripts/sdk/localhost_signed_integration_harness_contract.py')"
+assert_eq "$(extract_output "$localhost_signed_integration_harness_shared_contract_output" "run_rust")" "false" "localhost signed integration shared harness contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$localhost_signed_integration_harness_shared_contract_output" "run_rust_live_transport_contract_tests")" "false" "localhost signed integration shared harness contract script-only changes should skip rust live transport lane"
+assert_eq "$(extract_output "$localhost_signed_integration_harness_shared_contract_output" "run_localhost_signed_integration_contract_lane_tests")" "true" "localhost signed integration shared harness contract changes must run localhost signed integration contract lane"
+assert_eq "$(extract_output "$localhost_signed_integration_harness_shared_contract_output" "test_scope")" "sdk-live-localhost-integration" "localhost signed integration shared harness contract changes should set localhost integration scope"
+
 localhost_signed_integration_contract_script_output="$(run_selector $'scripts/sdk/run_localhost_signed_integration_contract_lane.sh')"
 assert_eq "$(extract_output "$localhost_signed_integration_contract_script_output" "run_rust")" "false" "localhost signed integration contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$localhost_signed_integration_contract_script_output" "run_rust_live_transport_contract_tests")" "false" "localhost signed integration contract lane script-only changes should skip rust live transport lane"
