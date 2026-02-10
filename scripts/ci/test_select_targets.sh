@@ -440,6 +440,12 @@ assert_eq "$(extract_output "$bridge_script_output" "run_localhost_bridge_demo_e
 assert_eq "$(extract_output "$bridge_script_output" "bridge_replay_suites")" "bridge_adapter,telegram_bridge,discord_bridge,cross_chain_bridge" "bridge script-only changes should select all bridge suites"
 assert_eq "$(extract_output "$bridge_script_output" "test_scope")" "bridge" "bridge script-only changes should set bridge scope"
 
+bridge_replay_redaction_shared_contract_output="$(run_selector $'scripts/bridge/bridge_replay_redaction_contract.py')"
+assert_eq "$(extract_output "$bridge_replay_redaction_shared_contract_output" "run_rust")" "false" "bridge replay/redaction shared contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$bridge_replay_redaction_shared_contract_output" "run_bridge_replay_harness")" "true" "bridge replay/redaction shared contract changes must run bridge replay harness"
+assert_eq "$(extract_output "$bridge_replay_redaction_shared_contract_output" "run_bridge_replay_deep_lane")" "false" "bridge replay/redaction shared contract changes should not run deep lane by default"
+assert_eq "$(extract_output "$bridge_replay_redaction_shared_contract_output" "test_scope")" "bridge" "bridge replay/redaction shared contract changes should set bridge scope"
+
 bridge_ingress_lane_output="$(run_selector $'scripts/bridge/run_bridge_ingress_relay_contract_lane.sh')"
 assert_eq "$(extract_output "$bridge_ingress_lane_output" "run_rust")" "false" "bridge ingress lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$bridge_ingress_lane_output" "run_bridge_replay_harness")" "true" "bridge ingress lane script-only changes must run bridge replay harness"

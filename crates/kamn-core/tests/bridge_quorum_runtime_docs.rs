@@ -19,6 +19,7 @@ fn doc_contains_bridge_quorum_fast_lane_commands() {
     assert!(DOC.contains("cargo test -p kamn-core --test bridge_quorum_runtime_docs"));
     assert!(DOC.contains("cargo test -p kamn-core --test runtime_network_docs"));
     assert!(DOC.contains("cargo test -p kamn-core approver_quorum"));
+    assert!(DOC.contains("bridge_replay_redaction_contract.py"));
     assert!(DOC.contains("bridge_replay_matrix.sh"));
     assert!(DOC.contains("--suites bridge_adapter,discord_bridge"));
     assert!(DOC.contains("run_bridge_ingress_relay_contract_lane.sh"));
