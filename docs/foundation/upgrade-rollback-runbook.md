@@ -70,6 +70,10 @@ Deterministic deployment SLO/rollback policy checks are enforced through a bound
 - Contract lane command:
   - `bash scripts/deploy/run_deployment_slo_rollback_contract_lane.sh --output-file /tmp/deployment-slo-rollback-contract-report.json`
 - Stable shell wrapper:
+  - `scripts/deploy/run_deployment_slo_rollback_lane.sh`
+- Shared Python implementation:
+  - `scripts/deploy/deployment_slo_rollback_lane_contract.py`
+- Stable shell wrapper:
   - `scripts/deploy/check_deployment_slo_rollback_policy.sh`
 - Shared Python implementation:
   - `scripts/deploy/deployment_slo_rollback_policy_contract.py`
