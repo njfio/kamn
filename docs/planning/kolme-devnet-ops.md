@@ -1,4 +1,4 @@
-# Kolme Triadic Devnet Operability Plan (Issues #784, #785, #787, #788, #1405)
+# Kolme Triadic Devnet Operability Plan (Issues #784, #785, #787, #788, #1405, #1417)
 
 This plan defines the deterministic, low-cost local smoke contract for triadic
 runtime roles (processor/listener/approver) and its CI-compatible validation.
@@ -48,6 +48,23 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - Cost policy:
   - lane enforces a 60-second fast-gate budget and runs only targeted adapter/replay checks.
 
+## Deterministic Local Bootstrap Health Checks (Issue #1417)
+
+- Bootstrap health-check runner:
+  - `bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode dry-run --output-json /tmp/kolme-local-bootstrap-summary.json`
+- Explicit opt-in bootstrap execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode run --output-json /tmp/kolme-local-bootstrap-summary.json`
+- Summary schema:
+  - `kamn.kolme.local-bootstrap-summary.v1`
+- Deterministic readiness checks include:
+  - `validate_version_compatibility.py`
+  - `generate_fork_compatibility_evidence.py`
+  - `check_fork_compatibility_policy.py`
+  - `run_triadic_devnet_smoke.sh`
+  - `validate_triadic_devnet_smoke.py`
+- Cost policy:
+  - run mode fails closed without explicit local-only opt-in.
+
 ## Local-Only Heavy Kolme Validation Matrix (Issue #1405)
 
 - Local-only matrix runner:
@@ -57,9 +74,8 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - Summary schema:
   - `kamn.kolme.local-heavy-validation-summary.v1`
 - Heavy command set includes:
+  - `scripts/kolme/run_local_bootstrap_health_checks.sh`
   - `scripts/kolme/run_version_compatibility_replay_deep_lane.sh`
-  - `scripts/kolme/run_triadic_devnet_smoke.sh`
-  - `scripts/kolme/validate_triadic_devnet_smoke.py`
 - Cost policy:
   - matrix execution remains local-only and is excluded from PR fast-gate workflow routing.
 
@@ -82,6 +98,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 
 - Marker drift remains fail-closed via fixture-backed validation (`Regression: #785`).
 - runtime commit adapter replay/finality reason-code drift fails closed (`Regression: #980`).
+- deterministic bootstrap run mode fails closed without explicit local-only opt-in (`Regression: #1417`).
 - local-only heavy validation matrix requires explicit opt-in and remains excluded from PR fast-gate workflows (`Regression: #1405`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
@@ -90,6 +107,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 ```bash
 bash scripts/kolme/test_validate_triadic_devnet_smoke.sh
 bash scripts/kolme/test_run_triadic_devnet_smoke_contract_lane.sh
+bash scripts/kolme/test_run_local_bootstrap_health_checks.sh
 bash scripts/kolme/test_run_local_heavy_validation_matrix.sh
 bash scripts/runtime/test_select_failover_sync_drill_lane.sh
 bash scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh
