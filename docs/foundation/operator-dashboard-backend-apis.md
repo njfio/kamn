@@ -56,6 +56,10 @@ Deterministic session/auth/freshness policy checks are enforced through a bounde
 - Contract lane command:
   - `bash scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh --output-file /tmp/dashboard-backend-session-auth-freshness-contract-report.json`
 - Stable shell wrapper:
+  - `scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh`
+- Shared Python implementation:
+  - `scripts/dashboard/backend_session_auth_freshness_contract_lane_contract.py`
+- Stable shell wrapper:
   - `scripts/dashboard/run_backend_session_auth_freshness_lane.sh`
 - Shared Python implementation:
   - `scripts/dashboard/backend_session_auth_freshness_lane_contract.py`
@@ -76,6 +80,7 @@ Required schema/reason markers:
 - `dashboard_backend_session_auth_freshness_reason_codes:NO-GO:v1`
 
 The lane fails closed: missing session guards, freshness guard drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #941`).
+The shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1250`).
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
