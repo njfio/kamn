@@ -38,6 +38,11 @@ Go/no-go decisions are captured as machine-readable JSON so release policy check
   - `bash scripts/deploy/check_gonogo_evidence_policy.sh --bundle-file /tmp/gonogo.json`
 - Fast contract lane:
   - `bash scripts/deploy/run_gonogo_evidence_contract_lane.sh`
+- Stable shell wrappers:
+  - `scripts/deploy/generate_gonogo_evidence_bundle.sh`
+  - `scripts/deploy/check_gonogo_evidence_policy.sh`
+- Shared Python implementation:
+  - `scripts/deploy/gonogo_evidence_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/deploy/run_gonogo_evidence_deep_lane.sh`
 
