@@ -43,6 +43,8 @@ required_snippets=(
   "run_post_cutover_slo_contract_lane.sh"
   "run_classification_redaction_contract_lane.sh"
   "run_quorum_attestation_replay_contract_lane.sh"
+  "test_run_kamn_core_rustdoc_artifact_contract_lane.sh"
+  "test_check_kamn_core_rustdoc_artifact_policy.sh"
   "scripts/ci/select_targets.sh"
   "Regression: #900"
   "Regression: #939"

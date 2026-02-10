@@ -112,6 +112,12 @@ assert_eq "$(extract_output "$rustdoc_docs_output" "run_rust")" "false" "rustdoc
 assert_eq "$(extract_output "$rustdoc_docs_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "rustdoc publishing docs must run missing-docs policy checks"
 assert_eq "$(extract_output "$rustdoc_docs_output" "test_scope")" "qa-doc-contract" "rustdoc publishing docs should set qa-doc-contract scope"
 
+rustdoc_lane_script_output="$(run_selector $'scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh')"
+assert_eq "$(extract_output "$rustdoc_lane_script_output" "run_rust")" "true" "rustdoc artifact lane script changes should run rust tooling setup"
+assert_eq "$(extract_output "$rustdoc_lane_script_output" "run_ci_tool_checks")" "true" "rustdoc artifact lane script changes must run CI tool checks"
+assert_eq "$(extract_output "$rustdoc_lane_script_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "rustdoc artifact lane script changes must run kamn-core docs-policy lane"
+assert_eq "$(extract_output "$rustdoc_lane_script_output" "test_scope")" "full" "ci script changes should keep full fallback scope"
+
 deploy_output="$(run_selector $'scripts/deploy/preflight_topology.sh')"
 assert_eq "$(extract_output "$deploy_output" "docs_only")" "false" "deploy-only change must not be docs-only"
 assert_eq "$(extract_output "$deploy_output" "run_rust")" "false" "deploy-only changes should avoid rust lane"
