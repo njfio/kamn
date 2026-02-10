@@ -34,6 +34,8 @@ required_snippets=(
   "run_local_kolme_api_smoke_lane.sh --mode run"
   "run_local_runtime_commit_live_lane.sh --mode run"
   "test_run_local_runtime_commit_live_lane.sh"
+  "test_run_nonce_broadcast_parity_contract_lane.sh"
+  "KAMN_KOLME_NONCE_BROADCAST_PARITY_MAX_SECONDS=60"
   "run_local_bootstrap_health_checks.sh"
   "run_local_e2e_integration_lane.sh"
   "KAMN_KOLME_LOCAL_HEAVY=1"
@@ -80,6 +82,7 @@ required_snippets=(
   "Regression: #1431"
   "Regression: #1441"
   "Regression: #1451"
+  "Regression: #1462"
 )
 
 for snippet in "${required_snippets[@]}"; do

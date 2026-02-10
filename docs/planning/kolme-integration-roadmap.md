@@ -38,6 +38,13 @@ across Kolme upgrades.
   - fixture: `fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json`
 - Runtime commit adapter replay/finality contract lane:
   - `bash scripts/kolme/run_runtime_commit_adapter_contract_lane.sh`
+- Nonce/broadcast parity policy checker:
+  - `python3 scripts/kolme/check_nonce_broadcast_parity_policy.py --case-id nonce-go-001 --operation nonce --http-status 200 --nonce-value 42 --broadcast-accepted false --duplicate-detected false --payload-valid true --authorization-present true --ci-fast-gate PASS --output-json /tmp/kolme-nonce-broadcast-policy.json`
+- Nonce/broadcast parity matrix command:
+  - `python3 scripts/kolme/run_nonce_broadcast_parity_matrix.py --fixture fixtures/kolme_commit/nonce_broadcast_parity_cases.json --output-json /tmp/kolme-nonce-broadcast-parity-report.json`
+- Nonce/broadcast parity contract lane:
+  - `bash scripts/kolme/run_nonce_broadcast_parity_contract_lane.sh`
+  - fixture: `fixtures/kolme_commit/nonce_broadcast_parity_cases.json`
 - Fast contract lane:
   - `bash scripts/kolme/run_version_compatibility_contract_lane.sh`
 - Scheduled deep lane:
@@ -71,6 +78,7 @@ across Kolme upgrades.
 - Adapter replay/finality reason-code drift remains fail-closed (`Regression: #980`).
 - Fork release-tag drift remains fail-closed (`Regression: #1401`).
 - Fork compatibility policy mismatches and malformed evidence remain fail-closed (`Regression: #1402`).
+- Nonce/broadcast duplicate-idempotent, unauthorized, and malformed payload drift remains fail-closed (`Regression: #1462`).
 
 ## Local Validation
 
@@ -82,6 +90,8 @@ bash scripts/kolme/test_run_version_compatibility_contract_lane.sh
 bash scripts/kolme/test_run_runtime_commit_contract_lane.sh
 bash scripts/kolme/test_check_runtime_commit_replay_policy.sh
 bash scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh
+bash scripts/kolme/test_check_nonce_broadcast_parity_policy.sh
+bash scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh
 bash scripts/ci/test_select_targets.sh
 bash scripts/ci/test_workflow_scope_policy.sh
 ```

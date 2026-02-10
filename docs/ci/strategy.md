@@ -63,6 +63,9 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh`
     - `bash scripts/kolme/test_run_local_bootstrap_health_checks.sh`
     - `bash scripts/kolme/test_run_local_e2e_integration_lane.sh`
+    - `bash scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh`
+  - nonce/broadcast parity matrix fast-lane budget stays bounded:
+    - `KAMN_KOLME_NONCE_BROADCAST_PARITY_MAX_SECONDS=60`
   - local-only heavy Kolme run-mode commands remain excluded from ci-fast-gate.
   - local-only fork sync/smoke run-mode commands remain excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
@@ -139,6 +142,7 @@ Regression policy:
 - local-only fork sync/smoke run-mode exclusion parity remains fail-closed (`Regression: #1431`).
 - local Kolme API probe/smoke run-mode exclusion parity remains fail-closed (`Regression: #1441`).
 - local runtime-commit live run-mode exclusion parity remains fail-closed (`Regression: #1451`).
+- nonce/broadcast parity matrix selector/docs/runtime-budget drift remains fail-closed (`Regression: #1462`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:

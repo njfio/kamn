@@ -27,6 +27,11 @@ if ! grep -q "run_runtime_commit_replay_contract_lane.sh" "$CONTRACT_LANE"; then
   exit 1
 fi
 
+if ! grep -q "run_nonce_broadcast_parity_contract_lane.sh" "$CONTRACT_LANE"; then
+  echo "expected Kolme version compatibility contract lane to include nonce/broadcast parity contract lane coverage" >&2
+  exit 1
+fi
+
 if ! grep -q "generate_fork_compatibility_evidence.py" "$CONTRACT_LANE"; then
   echo "expected Kolme version compatibility contract lane to include fork compatibility evidence coverage" >&2
   exit 1
