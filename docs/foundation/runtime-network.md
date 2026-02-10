@@ -222,6 +222,25 @@ This document captures the initial runtime-network foundation slice for peer lif
   - deterministic evidence keys and reason keys remain fail-closed (`Regression: #899`).
   - replay nonce and session admission guards remain fail-closed (`Regression: #1382`).
 
+## Live Transport Replay/Tamper Evidence Contract Rules
+- Evidence generator command:
+  - `bash scripts/sdk/generate_live_transport_replay_tamper_evidence_bundle.sh --output-file /tmp/live-transport-replay-tamper-bundle.json --transport-lane-id localhost-signed-integration --message-id msg-001 --from-did kamn:did:agent:sender-1 --to-did kamn:did:agent:listener-1 --nonce 41 --signature-status valid --replay-detected false --tamper-detected false --ci-fast-gate PASS`
+- Evidence policy checker:
+  - `bash scripts/sdk/check_live_transport_replay_tamper_policy.sh --bundle-file /tmp/live-transport-replay-tamper-bundle.json`
+- Contract lane command:
+  - `bash scripts/sdk/run_live_transport_replay_tamper_contract_lane.sh --output-report /tmp/live-transport-replay-tamper-contract-report.json`
+- Evidence schema:
+  - `kamn.sdk.live-transport-replay-tamper-evidence.v1`
+- Deterministic replay/tamper reason codes:
+  - `none`
+  - `signature_mismatch_detected`
+  - `malformed_signature_detected`
+  - `replay_nonce_detected`
+  - `tamper_payload_detected`
+  - `ci_fast_gate_failed`
+- Regression policy:
+  - tampered final decision, reason-key drift, and replay/tamper marker drift fail closed (`Regression: #1380`).
+
 ## Queue Guard Rules
 - `BoundedRuntimeQueue<T>` is FIFO and preserves insertion order.
 - Capacity must be greater than zero.
