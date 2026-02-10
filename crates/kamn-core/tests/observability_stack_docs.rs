@@ -39,6 +39,7 @@ fn doc_contains_slo_alert_policy_checker_contract() {
 #[test]
 fn doc_contains_dashboard_stale_error_budget_contract_lane() {
     assert!(DOC.contains("## Dashboard Stale/Error Budget Policy Checker Contract"));
+    assert!(DOC.contains("stale_error_budget_policy_contract.py"));
     assert!(DOC.contains("run_dashboard_stale_error_budget_lane.sh"));
     assert!(DOC.contains("check_dashboard_stale_error_budget_policy.sh"));
     assert!(DOC.contains("run_dashboard_stale_error_budget_contract_lane.sh"));
