@@ -47,6 +47,8 @@ if ! grep -q "run_local_kolme_api_probe_lane.sh" "$DOC_FILE"; then
   exit 1
 fi
 
+FORK_CHAIN_VERSION="v0.15.2"
+
 cat >"$TMP_DIR/mock_kolme_api.py" <<'PY'
 from __future__ import annotations
 
@@ -70,7 +72,7 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
-        if self.path == "/fork-info":
+        if self.path.startswith("/fork-info?chain_version="):
             payload = {"first_block": 1, "last_block": 2}
             body = json.dumps(payload, sort_keys=True).encode("utf-8")
             self.send_response(200)
@@ -106,6 +108,7 @@ dry_run_output="$(
   bash "$RUNNER" \
     --mode dry-run \
     --base-url "http://127.0.0.1:${PORT}" \
+    --fork-chain-version "$FORK_CHAIN_VERSION" \
     --output-json "$TMP_REPORT"
 )"
 
@@ -128,6 +131,8 @@ if report.get("mode") != "dry-run":
     raise SystemExit("expected dry-run mode in summary")
 if report.get("local_only_enforced") is not True:
     raise SystemExit("expected local_only_enforced=true")
+if report.get("fork_chain_version") != "v0.15.2":
+    raise SystemExit("expected deterministic fork_chain_version in summary")
 checks = report.get("checks")
 if not isinstance(checks, list) or len(checks) < 2:
     raise SystemExit("expected deterministic probe checks")
@@ -139,6 +144,7 @@ run_output="$(
   bash "$RUNNER" \
     --mode run \
     --base-url "http://127.0.0.1:${PORT}" \
+    --fork-chain-version "$FORK_CHAIN_VERSION" \
     --max-seconds 15 \
     --output-json "$TMP_REPORT"
 )"
@@ -162,6 +168,8 @@ if report.get("status") != "ok":
     raise SystemExit("expected ok status for run mode")
 if report.get("reason_code") != "probe_checks_passed":
     raise SystemExit("expected probe_checks_passed reason code")
+if report.get("fork_chain_version") != "v0.15.2":
+    raise SystemExit("expected deterministic fork_chain_version in run summary")
 fork_info = report.get("fork_info")
 if not isinstance(fork_info, dict):
     raise SystemExit("expected fork_info object in summary")
@@ -173,6 +181,7 @@ set +e
 bash "$RUNNER" \
   --mode run \
   --base-url "http://127.0.0.1:1" \
+  --fork-chain-version "$FORK_CHAIN_VERSION" \
   --max-seconds 5 \
   --output-json "$TMP_REPORT" >"$TMP_ERR" 2>&1
 unreachable_code=$?

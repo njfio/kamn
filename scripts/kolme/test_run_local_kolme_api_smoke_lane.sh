@@ -49,6 +49,8 @@ if ! grep -q "run_local_kolme_api_smoke_lane.sh" "$DOC_FILE"; then
   exit 1
 fi
 
+FORK_CHAIN_VERSION="v0.15.2"
+
 cat >"$TMP_DIR/mock_kolme_api.py" <<'PY'
 from __future__ import annotations
 
@@ -72,7 +74,7 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
-        if self.path == "/fork-info":
+        if self.path.startswith("/fork-info?chain_version="):
             payload = {"first_block": 10, "last_block": 15}
             body = json.dumps(payload, sort_keys=True).encode("utf-8")
             self.send_response(200)
@@ -109,6 +111,7 @@ dry_run_output="$(
     --mode dry-run \
     --base-url "http://127.0.0.1:${PORT}" \
     --smoke-command "curl --silent --show-error --fail http://127.0.0.1:${PORT}/healthz" \
+    --fork-chain-version "$FORK_CHAIN_VERSION" \
     --output-json "$TMP_REPORT" \
     --probe-report "$TMP_PROBE_REPORT" \
     --smoke-output-file "$TMP_SMOKE_OUTPUT"
@@ -133,6 +136,8 @@ if report.get("mode") != "dry-run":
     raise SystemExit("expected dry-run mode in summary")
 if report.get("local_only_enforced") is not True:
     raise SystemExit("expected local_only_enforced=true")
+if report.get("fork_chain_version") != "v0.15.2":
+    raise SystemExit("expected deterministic fork_chain_version in summary")
 checks = report.get("checks")
 if not isinstance(checks, list) or len(checks) < 2:
     raise SystemExit("expected deterministic smoke checks")
@@ -141,13 +146,14 @@ if not any(entry.get("id") == "api_probe" for entry in checks if isinstance(entr
 PY
 
 set +e
-bash "$RUNNER" \
-  --mode run \
-  --base-url "http://127.0.0.1:${PORT}" \
-  --smoke-command "curl --silent --show-error --fail http://127.0.0.1:${PORT}/healthz" \
-  --output-json "$TMP_REPORT" \
-  --probe-report "$TMP_PROBE_REPORT" \
-  --smoke-output-file "$TMP_SMOKE_OUTPUT" >"$TMP_ERR" 2>&1
+  bash "$RUNNER" \
+    --mode run \
+    --base-url "http://127.0.0.1:${PORT}" \
+    --smoke-command "curl --silent --show-error --fail http://127.0.0.1:${PORT}/healthz" \
+    --fork-chain-version "$FORK_CHAIN_VERSION" \
+    --output-json "$TMP_REPORT" \
+    --probe-report "$TMP_PROBE_REPORT" \
+    --smoke-output-file "$TMP_SMOKE_OUTPUT" >"$TMP_ERR" 2>&1
 run_without_opt_in_code=$?
 set -e
 
@@ -167,6 +173,7 @@ run_output="$(
       --mode run \
       --base-url "http://127.0.0.1:${PORT}" \
       --smoke-command "curl --silent --show-error --fail http://127.0.0.1:${PORT}/healthz" \
+      --fork-chain-version "$FORK_CHAIN_VERSION" \
       --max-seconds 20 \
       --output-json "$TMP_REPORT" \
       --probe-report "$TMP_PROBE_REPORT" \
@@ -193,6 +200,8 @@ if report.get("status") != "ok":
     raise SystemExit("expected ok status in run summary")
 if report.get("reason_code") != "smoke_command_passed":
     raise SystemExit("expected smoke_command_passed reason code")
+if report.get("fork_chain_version") != "v0.15.2":
+    raise SystemExit("expected deterministic fork_chain_version in run summary")
 if report.get("max_seconds") != 20:
     raise SystemExit("expected max_seconds=20 in run summary")
 if "Healthy!" not in smoke_output:
@@ -205,6 +214,7 @@ KAMN_KOLME_LOCAL_HEAVY=1 \
     --mode run \
     --base-url "http://127.0.0.1:${PORT}" \
     --smoke-command "sleep 2" \
+    --fork-chain-version "$FORK_CHAIN_VERSION" \
     --max-seconds 1 \
     --output-json "$TMP_REPORT" \
     --probe-report "$TMP_PROBE_REPORT" \

@@ -16,10 +16,15 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS=120"));
     assert!(DOC.contains("run_local_fork_sync_metadata_lane.sh --mode run"));
     assert!(DOC.contains("run_local_fork_smoke_evidence_lane.sh --mode run"));
-    assert!(DOC.contains("run_local_kolme_api_probe_lane.sh --mode run"));
+    assert!(DOC.contains(
+        "run_local_kolme_api_probe_lane.sh --mode run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2"
+    ));
     assert!(DOC.contains("run_local_kolme_api_smoke_lane.sh --mode run"));
     assert!(DOC.contains("run_local_runtime_commit_live_lane.sh --mode run"));
     assert!(DOC.contains("run_local_native_api_parity_live_proof_lane.sh --mode run"));
+    assert!(
+        DOC.contains("--request PUT --data '{\\\"message\\\":\\\"native-parity\\\",\\\"signature\\\":\\\"sig\\\",\\\"recovery_id\\\":1}' http://127.0.0.1:3000/broadcast")
+    );
     assert!(DOC.contains("test_run_local_runtime_commit_live_lane.sh"));
     assert!(DOC.contains("test_run_local_native_api_parity_live_proof_contract_lane.sh"));
     assert!(DOC.contains("run_nonce_broadcast_parity_contract_lane.sh"));
@@ -59,6 +64,7 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("Regression: #1451"));
     assert!(DOC.contains("Regression: #1467"));
     assert!(DOC.contains("Regression: #1468"));
+    assert!(DOC.contains("Regression: #1482"));
     assert!(DOC.contains("Regression: #1462"));
     assert!(DOC.contains("Regression: #1466"));
 }

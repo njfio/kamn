@@ -10,6 +10,7 @@ PROBE_REPORT="/tmp/kolme-local-api-probe-summary.json"
 SMOKE_OUTPUT_FILE="/tmp/kolme-local-api-smoke-output.txt"
 BASE_URL="http://127.0.0.1:3000"
 SMOKE_COMMAND="curl --silent --show-error --fail http://127.0.0.1:3000/healthz"
+FORK_CHAIN_VERSION="v0.15.2"
 MAX_SECONDS=60
 PROBE_MAX_SECONDS=15
 
@@ -63,6 +64,14 @@ while [ "$#" -gt 0 ]; do
       SMOKE_COMMAND="$2"
       shift 2
       ;;
+    --fork-chain-version)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --fork-chain-version" >&2
+        exit 1
+      fi
+      FORK_CHAIN_VERSION="$2"
+      shift 2
+      ;;
     --max-seconds)
       if [ "$#" -lt 2 ]; then
         echo "missing value for --max-seconds" >&2
@@ -90,6 +99,7 @@ Options:
   --smoke-output-file <path>      Captured stdout/stderr for smoke command.
   --base-url <url>                Base URL for local Kolme API server.
   --smoke-command <command>       Bounded smoke command to execute.
+  --fork-chain-version <value>    Required chain_version query value for probe prerequisite.
   --max-seconds <n>               Max runtime budget for smoke command.
   --probe-max-seconds <n>         Max runtime budget for probe prerequisite.
 USAGE
@@ -109,6 +119,11 @@ fi
 
 if [ -z "$BASE_URL" ]; then
   echo "base-url must not be empty" >&2
+  exit 1
+fi
+
+if [ -z "$FORK_CHAIN_VERSION" ]; then
+  echo "fork-chain-version must not be empty" >&2
   exit 1
 fi
 
@@ -138,7 +153,7 @@ budget_status="not_run"
 elapsed_seconds=0
 local_only_enforced="true"
 
-probe_command="bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode run --base-url ${BASE_URL} --max-seconds ${PROBE_MAX_SECONDS} --output-json ${PROBE_REPORT}"
+probe_command="bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode run --base-url ${BASE_URL} --fork-chain-version ${FORK_CHAIN_VERSION} --max-seconds ${PROBE_MAX_SECONDS} --output-json ${PROBE_REPORT}"
 record_check "api_probe" "$probe_command" "planned"
 record_check "api_smoke_command" "$SMOKE_COMMAND" "planned"
 
@@ -161,6 +176,7 @@ if [ "$MODE" = "run" ]; then
     if bash "$PROBE_RUNNER" \
       --mode run \
       --base-url "$BASE_URL" \
+      --fork-chain-version "$FORK_CHAIN_VERSION" \
       --max-seconds "$PROBE_MAX_SECONDS" \
       --output-json "$PROBE_REPORT" >/dev/null; then
       record_check "api_probe" "$probe_command" "pass"
@@ -204,7 +220,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$BASE_URL" "$SMOKE_COMMAND" "$PROBE_REPORT" "$SMOKE_OUTPUT_FILE" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$BASE_URL" "$SMOKE_COMMAND" "$FORK_CHAIN_VERSION" "$PROBE_REPORT" "$SMOKE_OUTPUT_FILE" "$CHECK_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -221,9 +237,10 @@ max_seconds = int(sys.argv[7])
 budget_status = sys.argv[8]
 base_url = sys.argv[9]
 smoke_command = sys.argv[10]
-probe_report = sys.argv[11]
-smoke_output_file = sys.argv[12]
-checks_path = pathlib.Path(sys.argv[13])
+fork_chain_version = sys.argv[11]
+probe_report = sys.argv[12]
+smoke_output_file = sys.argv[13]
+checks_path = pathlib.Path(sys.argv[14])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -252,6 +269,7 @@ summary = {
     "budget_status": budget_status,
     "base_url": base_url,
     "smoke_command": smoke_command,
+    "fork_chain_version": fork_chain_version,
     "probe_report": probe_report,
     "smoke_output_file": smoke_output_file,
     "checks": checks,

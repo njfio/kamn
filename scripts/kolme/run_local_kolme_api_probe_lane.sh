@@ -6,6 +6,7 @@ OUTPUT_JSON="/tmp/kolme-local-api-probe-summary.json"
 BASE_URL="http://127.0.0.1:3000"
 HEALTHZ_PATH="/healthz"
 FORK_INFO_PATH="/fork-info"
+FORK_CHAIN_VERSION="v0.15.2"
 EXPECTED_HEALTHZ="Healthy!"
 MAX_SECONDS=30
 
@@ -51,6 +52,14 @@ while [ "$#" -gt 0 ]; do
       FORK_INFO_PATH="$2"
       shift 2
       ;;
+    --fork-chain-version)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --fork-chain-version" >&2
+        exit 1
+      fi
+      FORK_CHAIN_VERSION="$2"
+      shift 2
+      ;;
     --expected-healthz)
       if [ "$#" -lt 2 ]; then
         echo "missing value for --expected-healthz" >&2
@@ -77,6 +86,7 @@ Options:
   --base-url <url>              Base URL for local Kolme API server.
   --healthz-path <path>         Health endpoint path (default: /healthz).
   --fork-info-path <path>       Fork-info endpoint path (default: /fork-info).
+  --fork-chain-version <value>  Required chain_version query value for fork-info checks.
   --expected-healthz <text>     Expected health endpoint body.
   --max-seconds <n>             Max runtime budget in seconds for run mode.
 USAGE
@@ -101,6 +111,11 @@ fi
 
 if [ -z "$HEALTHZ_PATH" ] || [ -z "$FORK_INFO_PATH" ]; then
   echo "endpoint paths must not be empty" >&2
+  exit 1
+fi
+
+if [ -z "$FORK_CHAIN_VERSION" ]; then
+  echo "fork-chain-version must not be empty" >&2
   exit 1
 fi
 
@@ -130,7 +145,11 @@ fork_first_block=""
 fork_last_block=""
 
 healthz_url="${BASE_URL%/}${HEALTHZ_PATH}"
-fork_info_url="${BASE_URL%/}${FORK_INFO_PATH}"
+fork_info_separator="?"
+if [[ "$FORK_INFO_PATH" == *"?"* ]]; then
+  fork_info_separator="&"
+fi
+fork_info_url="${BASE_URL%/}${FORK_INFO_PATH}${fork_info_separator}chain_version=${FORK_CHAIN_VERSION}"
 
 record_check "healthz_endpoint" "curl --silent --show-error --max-time ${MAX_SECONDS} ${healthz_url}" "planned"
 record_check "fork_info_endpoint" "curl --silent --show-error --max-time ${MAX_SECONDS} ${fork_info_url}" "planned"
@@ -225,7 +244,7 @@ PY
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$BASE_URL" "$HEALTHZ_PATH" "$FORK_INFO_PATH" "$EXPECTED_HEALTHZ" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$fork_first_block" "$fork_last_block" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$BASE_URL" "$HEALTHZ_PATH" "$FORK_INFO_PATH" "$FORK_CHAIN_VERSION" "$EXPECTED_HEALTHZ" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$fork_first_block" "$fork_last_block" "$CHECK_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -239,13 +258,14 @@ reason_code = sys.argv[4]
 base_url = sys.argv[5]
 healthz_path = sys.argv[6]
 fork_info_path = sys.argv[7]
-expected_healthz = sys.argv[8]
-elapsed_seconds = int(sys.argv[9])
-max_seconds = int(sys.argv[10])
-budget_status = sys.argv[11]
-fork_first_block_raw = sys.argv[12]
-fork_last_block_raw = sys.argv[13]
-checks_path = pathlib.Path(sys.argv[14])
+fork_chain_version = sys.argv[8]
+expected_healthz = sys.argv[9]
+elapsed_seconds = int(sys.argv[10])
+max_seconds = int(sys.argv[11])
+budget_status = sys.argv[12]
+fork_first_block_raw = sys.argv[13]
+fork_last_block_raw = sys.argv[14]
+checks_path = pathlib.Path(sys.argv[15])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -271,6 +291,7 @@ summary = {
     "base_url": base_url,
     "healthz_path": healthz_path,
     "fork_info_path": fork_info_path,
+    "fork_chain_version": fork_chain_version,
     "expected_healthz": expected_healthz,
     "elapsed_seconds": elapsed_seconds,
     "max_seconds": max_seconds,
