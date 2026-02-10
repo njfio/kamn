@@ -920,6 +920,11 @@ assert_eq "$(extract_output "$group_sender_replay_ratchet_contract_script_output
 assert_eq "$(extract_output "$group_sender_replay_ratchet_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "group sender replay/ratchet contract script changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$group_sender_replay_ratchet_contract_script_output" "test_scope")" "message-contract" "group sender replay/ratchet contract script changes should set message-contract scope"
 
+group_sender_replay_ratchet_shared_contract_output="$(run_selector $'scripts/message/group_sender_replay_ratchet_contract.py')"
+assert_eq "$(extract_output "$group_sender_replay_ratchet_shared_contract_output" "run_rust")" "false" "group sender replay/ratchet shared contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$group_sender_replay_ratchet_shared_contract_output" "run_message_lifecycle_contract_tests")" "true" "group sender replay/ratchet shared contract changes must run message lifecycle contract lane"
+assert_eq "$(extract_output "$group_sender_replay_ratchet_shared_contract_output" "test_scope")" "message-contract" "group sender replay/ratchet shared contract changes should set message-contract scope"
+
 channel_contract_docs_output="$(run_selector $'docs/foundation/channel-models.md')"
 assert_eq "$(extract_output "$channel_contract_docs_output" "run_rust")" "false" "channel lifecycle contract docs should avoid rust lane"
 assert_eq "$(extract_output "$channel_contract_docs_output" "run_channel_lifecycle_contract_tests")" "true" "channel lifecycle contract docs must run channel lifecycle contract lane"

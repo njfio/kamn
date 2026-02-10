@@ -13,6 +13,11 @@ ratchet generation monotonicity, and stale-generation fail-closed behavior.
 - `evidence_key`: `group_sender_replay_ratchet:<lane>:v1`
 - `reason_key`: `group_sender_replay_ratchet_reason:<final_decision>:v1`
 - `final_decision`: `GO|NO-GO`
+- Stable shell wrappers:
+  - `scripts/message/generate_group_sender_replay_ratchet_evidence_bundle.sh`
+  - `scripts/message/check_group_sender_replay_ratchet_policy.sh`
+- Shared Python implementation:
+  - `scripts/message/group_sender_replay_ratchet_contract.py`
 
 ## Local Validation Commands
 Run from repository root:
