@@ -88,6 +88,11 @@ if ! grep -q "run_service_endpoint_canonicalization_contract_lane.sh --skip-test
   exit 1
 fi
 
+if ! grep -q "run_multikey_algorithm_policy_contract_lane.sh --skip-tests" "$SCRIPT"; then
+  echo "expected did registry lane to invoke multikey algorithm policy contract lane coverage" >&2
+  exit 1
+fi
+
 if ! grep -q "agent_interop_wave_docs" "$SCRIPT"; then
   echo "expected did registry lane to include agent interop planning docs contract coverage" >&2
   exit 1

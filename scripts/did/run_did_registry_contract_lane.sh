@@ -20,6 +20,7 @@ bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --t
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test key_lifecycle_audit_trails_docs
 bash scripts/did/run_lifecycle_operator_binding_contract_lane.sh --skip-tests
 bash scripts/did/run_service_endpoint_canonicalization_contract_lane.sh --skip-tests
+bash scripts/did/run_multikey_algorithm_policy_contract_lane.sh --skip-tests
 
 if ! grep -Fq "register_with_retry_guard" docs/foundation/did-registry-transactions.md; then
   echo "expected retry guard contract in did-registry-transactions.md" >&2
@@ -78,6 +79,26 @@ fi
 
 if ! grep -Fq "Regression: #1000" docs/foundation/did-core-conformance-kamn-method.md; then
   echo "expected service endpoint canonicalization regression marker in did core conformance doc" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_multikey_algorithm_policy_contract_lane.sh" docs/foundation/did-core-conformance-kamn-method.md; then
+  echo "expected multikey algorithm policy contract lane command in did core conformance doc" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_multikey_algorithm_migration_matrix.py" docs/foundation/did-core-conformance-kamn-method.md; then
+  echo "expected multikey algorithm migration matrix runner command in did core conformance doc" >&2
+  exit 1
+fi
+
+if ! grep -Fq "did_multikey_algorithm_policy_reason_codes:GO:v1" docs/foundation/did-core-conformance-kamn-method.md; then
+  echo "expected multikey algorithm policy GO reason-key marker in did core conformance doc" >&2
+  exit 1
+fi
+
+if ! grep -Fq "Regression: #1001" docs/foundation/did-core-conformance-kamn-method.md; then
+  echo "expected multikey algorithm policy regression marker in did core conformance doc" >&2
   exit 1
 fi
 

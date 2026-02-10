@@ -13,6 +13,12 @@ fn did_method_doc_contains_core_rules() {
     ));
     assert!(DID_METHOD_DOC
         .contains("Service endpoints with query/fragment or multi-segment paths are rejected."));
+    assert!(DID_METHOD_DOC.contains(
+        "Verification method algorithm policy is baseline `Multikey` and disallows mixed algorithm sets."
+    ));
+    assert!(DID_METHOD_DOC.contains(
+        "Migration policy permits approved forward transitions and blocks unsupported/downgrade mixes."
+    ));
 }
 
 #[test]
@@ -39,5 +45,13 @@ fn regression_requires_service_endpoint_canonicalization_guard_marker() {
     // Regression: #1000
     assert!(DID_METHOD_DOC.contains(
         "non-canonical service endpoint scheme/authority/path combinations must remain rejected (`Regression: #1000`)."
+    ));
+}
+
+#[test]
+fn regression_requires_multikey_algorithm_policy_guard_marker() {
+    // Regression: #1001
+    assert!(DID_METHOD_DOC.contains(
+        "mixed or unsupported verification method algorithm sets must remain rejected under migration policy checks (`Regression: #1001`)."
     ));
 }

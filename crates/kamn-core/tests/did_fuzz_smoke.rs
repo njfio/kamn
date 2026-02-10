@@ -204,7 +204,8 @@ fn fuzz_smoke_did_document_generation_lane_is_panic_free_and_deterministic() {
                 | DidDocumentError::EmptyModelFamily
                 | DidDocumentError::MissingCapabilities
                 | DidDocumentError::InvalidCapability
-                | DidDocumentError::InvalidServiceEndpoint(_),
+                | DidDocumentError::InvalidServiceEndpoint(_)
+                | DidDocumentError::InvalidVerificationMethodAlgorithm(_),
             ) => {}
         }
     }
