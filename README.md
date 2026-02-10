@@ -125,6 +125,8 @@ bash scripts/sdk/run_localhost_signed_demo.sh --output-json /tmp/localhost-signe
 bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario success
 bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario signature-mismatch
 bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario timeout --timeout-seconds 1
+bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario replay-nonce
+bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario admission-guards
 ```
 
 ### Run Localhost Bridge Relay Demo Lane
@@ -145,6 +147,11 @@ bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-
 # success_evidence_key=localhost_signed_integration:success:v1
 # signature_mismatch_evidence_key=localhost_signed_integration:signature-mismatch:v1
 # timeout_evidence_key=localhost_signed_integration:timeout:v1
+# replay_nonce_evidence_key=localhost_signed_integration:replay-nonce:v1
+# admission_guards_evidence_key=localhost_signed_integration:admission-guards:v1
+# replay_nonce_reason_code=replay_nonce_detected
+# admission_guards_reason_code=session_admission_guards_detected
+# admission_reason_codes=["stale_session_detected","unauthorized_sender_detected","malformed_payload_detected"]
 ```
 
 CI fast-gate routes this lane when selector output

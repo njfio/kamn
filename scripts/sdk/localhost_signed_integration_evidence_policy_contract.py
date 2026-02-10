@@ -34,17 +34,31 @@ def check_report(args: argparse.Namespace) -> int:
         "success_scenario_status",
         "signature_mismatch_scenario_status",
         "timeout_scenario_status",
+        "replay_nonce_scenario_status",
+        "admission_guards_scenario_status",
         "success_evidence_key",
         "signature_mismatch_evidence_key",
         "timeout_evidence_key",
+        "replay_nonce_evidence_key",
+        "admission_guards_evidence_key",
         "signature_mismatch_reason_code",
         "timeout_reason_code",
+        "replay_nonce_reason_code",
+        "admission_guards_reason_code",
         "success_reason_key",
         "signature_mismatch_reason_key",
         "timeout_reason_key",
+        "replay_nonce_reason_key",
+        "admission_guards_reason_key",
         "success_elapsed_seconds",
         "signature_mismatch_elapsed_seconds",
         "timeout_elapsed_seconds",
+        "replay_nonce_elapsed_seconds",
+        "admission_guards_elapsed_seconds",
+        "replay_guard_status",
+        "replay_rejected_nonce",
+        "admission_guard_status",
+        "admission_reason_codes",
     )
     for field_name in required_fields:
         if field_name not in payload:
@@ -64,6 +78,8 @@ def check_report(args: argparse.Namespace) -> int:
         "success_scenario_status",
         "signature_mismatch_scenario_status",
         "timeout_scenario_status",
+        "replay_nonce_scenario_status",
+        "admission_guards_scenario_status",
     ):
         if payload[field_name] not in {"pass", "fail"}:
             fail(f"{field_name} must be pass or fail")
@@ -73,6 +89,13 @@ def check_report(args: argparse.Namespace) -> int:
 
     if payload["timeout_reason_code"] != "listener_timeout_detected":
         fail("timeout_reason_code must be listener_timeout_detected")
+    if payload["replay_nonce_reason_code"] != "replay_nonce_detected":
+        fail("replay_nonce_reason_code must be replay_nonce_detected")
+    if payload["admission_guards_reason_code"] != "session_admission_guards_detected":
+        fail(
+            "admission_guards_reason_code must be "
+            "session_admission_guards_detected"
+        )
 
     if payload["success_evidence_key"] != "localhost_signed_integration:success:v1":
         fail("success_evidence_key must be localhost_signed_integration:success:v1")
@@ -88,6 +111,16 @@ def check_report(args: argparse.Namespace) -> int:
 
     if payload["timeout_evidence_key"] != "localhost_signed_integration:timeout:v1":
         fail("timeout_evidence_key must be localhost_signed_integration:timeout:v1")
+    if payload["replay_nonce_evidence_key"] != "localhost_signed_integration:replay-nonce:v1":
+        fail("replay_nonce_evidence_key must be localhost_signed_integration:replay-nonce:v1")
+    if (
+        payload["admission_guards_evidence_key"]
+        != "localhost_signed_integration:admission-guards:v1"
+    ):
+        fail(
+            "admission_guards_evidence_key must be "
+            "localhost_signed_integration:admission-guards:v1"
+        )
 
     if payload["success_reason_key"] != "localhost_signed_integration_reason:none:v1":
         fail("success_reason_key must be localhost_signed_integration_reason:none:v1")
@@ -109,11 +142,29 @@ def check_report(args: argparse.Namespace) -> int:
             "timeout_reason_key must be "
             "localhost_signed_integration_reason:listener_timeout_detected:v1"
         )
+    if (
+        payload["replay_nonce_reason_key"]
+        != "localhost_signed_integration_reason:replay_nonce_detected:v1"
+    ):
+        fail(
+            "replay_nonce_reason_key must be "
+            "localhost_signed_integration_reason:replay_nonce_detected:v1"
+        )
+    if (
+        payload["admission_guards_reason_key"]
+        != "localhost_signed_integration_reason:session_admission_guards_detected:v1"
+    ):
+        fail(
+            "admission_guards_reason_key must be "
+            "localhost_signed_integration_reason:session_admission_guards_detected:v1"
+        )
 
     for field_name in (
         "success_elapsed_seconds",
         "signature_mismatch_elapsed_seconds",
         "timeout_elapsed_seconds",
+        "replay_nonce_elapsed_seconds",
+        "admission_guards_elapsed_seconds",
     ):
         value = payload[field_name]
         if not isinstance(value, int):
@@ -121,12 +172,35 @@ def check_report(args: argparse.Namespace) -> int:
         if value < 0:
             fail(f"{field_name} must be non-negative")
 
+    if payload["replay_guard_status"] != "pass":
+        fail("replay_guard_status must be pass")
+    replay_rejected_nonce = payload["replay_rejected_nonce"]
+    if not isinstance(replay_rejected_nonce, int) or replay_rejected_nonce <= 0:
+        fail("replay_rejected_nonce must be a positive integer")
+
+    if payload["admission_guard_status"] != "pass":
+        fail("admission_guard_status must be pass")
+    expected_admission_reason_codes = [
+        "stale_session_detected",
+        "unauthorized_sender_detected",
+        "malformed_payload_detected",
+    ]
+    if payload["admission_reason_codes"] != expected_admission_reason_codes:
+        fail(
+            "admission_reason_codes must match deterministic sequence: "
+            f"{expected_admission_reason_codes}"
+        )
+
     expected_status = "pass"
     if payload["success_scenario_status"] != "pass":
         expected_status = "fail"
     if payload["signature_mismatch_scenario_status"] != "pass":
         expected_status = "fail"
     if payload["timeout_scenario_status"] != "pass":
+        expected_status = "fail"
+    if payload["replay_nonce_scenario_status"] != "pass":
+        expected_status = "fail"
+    if payload["admission_guards_scenario_status"] != "pass":
         expected_status = "fail"
 
     if status != expected_status:

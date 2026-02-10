@@ -21,8 +21,12 @@ from framework.contract_framework import ContractError, fail, write_json  # noqa
 
 FROM_DID = "kamn:did:agent:sender-1"
 TO_DID = "kamn:did:agent:listener-1"
+SESSION_ID = "session:localhost-demo:v1"
 STATE_HASH = "state:localhost-demo"
 BODY = "hello-from-localhost-demo"
+NONCE_REPLAY_TEST_VALUE = 7
+UNAUTHORIZED_FROM_DID = "kamn:did:agent:rogue-1"
+STALE_STATE_HASH = "state:localhost-stale"
 
 
 class ScenarioFailure(Exception):
@@ -59,10 +63,28 @@ class HarnessContext:
                 pass
         shutil.rmtree(self.tmp_dir, ignore_errors=True)
 
-    def emit_report(self, status: str, reason_code: str) -> None:
+    def emit_report(
+        self,
+        status: str,
+        reason_code: str,
+        extra_fields: dict[str, object] | None = None,
+    ) -> None:
         elapsed = self.elapsed_seconds()
         evidence_key = f"localhost_signed_integration:{self.scenario}:v1"
         reason_key = f"localhost_signed_integration_reason:{reason_code}:v1"
+        report: dict[str, object] = {
+            "schema_version": "kamn.sdk.localhost-signed.integration-harness.v1",
+            "status": status,
+            "scenario": self.scenario,
+            "evidence_key": evidence_key,
+            "reason_code": reason_code,
+            "reason_key": reason_key,
+            "addr": self.addr,
+            "timeout_seconds": self.timeout_seconds,
+            "elapsed_seconds": elapsed,
+        }
+        if extra_fields:
+            report.update(extra_fields)
 
         print(
             f"status={status}; scenario={self.scenario}; evidence_key={evidence_key}; "
@@ -70,45 +92,46 @@ class HarnessContext:
         )
 
         if self.output_json:
-            write_json(
-                Path(self.output_json),
-                {
-                    "schema_version": "kamn.sdk.localhost-signed.integration-harness.v1",
-                    "status": status,
-                    "scenario": self.scenario,
-                    "evidence_key": evidence_key,
-                    "reason_code": reason_code,
-                    "reason_key": reason_key,
-                    "addr": self.addr,
-                    "timeout_seconds": self.timeout_seconds,
-                    "elapsed_seconds": elapsed,
-                },
-            )
+            write_json(Path(self.output_json), report)
 
     def fail_with_reason(self, reason_code: str) -> None:
         raise ScenarioFailure(reason_code)
 
-    def start_listener(self) -> None:
+    def start_listener(
+        self,
+        *,
+        expected_from: str = FROM_DID,
+        expected_to: str = TO_DID,
+        expected_session_id: str = SESSION_ID,
+        expected_state_hash: str = STATE_HASH,
+        nonce_state_file: Path | None = None,
+    ) -> None:
+        args = [
+            "cargo",
+            "run",
+            "--quiet",
+            "-p",
+            "kamn-sdk",
+            "--example",
+            "localhost_signed_listener",
+            "--",
+            "--addr",
+            self.addr,
+            "--expected-from",
+            expected_from,
+            "--expected-to",
+            expected_to,
+            "--expected-session-id",
+            expected_session_id,
+            "--state-hash",
+            expected_state_hash,
+        ]
+        if nonce_state_file is not None:
+            args.extend(["--nonce-state-file", str(nonce_state_file)])
+
         with self.listener_out.open("w", encoding="utf-8") as listener_stream:
             self.listener_proc = subprocess.Popen(
-                [
-                    "cargo",
-                    "run",
-                    "--quiet",
-                    "-p",
-                    "kamn-sdk",
-                    "--example",
-                    "localhost_signed_listener",
-                    "--",
-                    "--addr",
-                    self.addr,
-                    "--expected-from",
-                    FROM_DID,
-                    "--expected-to",
-                    TO_DID,
-                    "--state-hash",
-                    STATE_HASH,
-                ],
+                args,
                 cwd=ROOT_DIR,
                 stdout=listener_stream,
                 stderr=subprocess.STDOUT,
@@ -128,18 +151,9 @@ class HarnessContext:
 
         return self.listener_proc.returncode or 0
 
-    def send_invalid_signature_payload(self) -> bool:
+    def _send_payload(self, payload: str) -> bool:
         host, port_raw = self.addr.rsplit(":", 1)
         port = int(port_raw)
-        payload = (
-            f"from={FROM_DID}\n"
-            f"to={TO_DID}\n"
-            "nonce=1\n"
-            f"state_hash={STATE_HASH}\n"
-            f"body={BODY}\n"
-            "signature=sig:ed25519:baseline-v1:invalid\n"
-        )
-
         for _ in range(20):
             try:
                 with socket.create_connection((host, port), timeout=1.0) as connection:
@@ -149,8 +163,71 @@ class HarnessContext:
                 time.sleep(0.1)
         return False
 
-    def run_success_scenario(self) -> None:
-        self.start_listener()
+    def _signature_for_fields(
+        self,
+        *,
+        from_did: str,
+        session_id: str,
+        nonce: int,
+        state_hash: str,
+        body: str,
+    ) -> str:
+        return (
+            "sig:ed25519:baseline-v1:"
+            f"{from_did}:{session_id}:{nonce}:{state_hash}:{len(body)}"
+        )
+
+    def _build_wire_payload(
+        self,
+        *,
+        from_did: str,
+        to_did: str,
+        session_id: str,
+        nonce: int,
+        state_hash: str,
+        body: str,
+        signature: str | None = None,
+    ) -> str:
+        signature_value = signature or self._signature_for_fields(
+            from_did=from_did,
+            session_id=session_id,
+            nonce=nonce,
+            state_hash=state_hash,
+            body=body,
+        )
+        payload = (
+            f"from={from_did}\n"
+            f"to={to_did}\n"
+            f"session_id={session_id}\n"
+            f"nonce={nonce}\n"
+            f"state_hash={state_hash}\n"
+            f"body={body}\n"
+            f"signature={signature_value}\n"
+        )
+        return payload
+
+    def send_invalid_signature_payload(self) -> bool:
+        payload = self._build_wire_payload(
+            from_did=FROM_DID,
+            to_did=TO_DID,
+            session_id=SESSION_ID,
+            nonce=1,
+            state_hash=STATE_HASH,
+            body=BODY,
+            signature="sig:ed25519:baseline-v1:invalid",
+        )
+        return self._send_payload(payload)
+
+    def run_sender(
+        self,
+        *,
+        from_did: str = FROM_DID,
+        to_did: str = TO_DID,
+        session_id: str = SESSION_ID,
+        nonce: int = 1,
+        state_hash: str = STATE_HASH,
+        body: str = BODY,
+    ) -> int:
         with self.sender_out.open("w", encoding="utf-8") as sender_stream:
             sender_result = subprocess.run(
                 [
@@ -165,15 +242,17 @@ class HarnessContext:
                     "--addr",
                     self.addr,
                     "--from",
-                    FROM_DID,
+                    from_did,
                     "--to",
-                    TO_DID,
+                    to_did,
+                    "--session-id",
+                    session_id,
                     "--nonce",
-                    "1",
+                    str(nonce),
                     "--state-hash",
-                    STATE_HASH,
+                    state_hash,
                     "--body",
-                    BODY,
+                    body,
                 ],
                 cwd=ROOT_DIR,
                 stdout=sender_stream,
@@ -181,14 +260,30 @@ class HarnessContext:
                 check=False,
                 text=True,
             )
-        if sender_result.returncode != 0:
-            self.fail_with_reason("sender_failed")
+        return sender_result.returncode
 
+    def _require_listener_failure(self, marker: str, failure_reason: str) -> None:
+        listener_text = self.listener_out.read_text(encoding="utf-8")
+        if "status=error" not in listener_text:
+            self.fail_with_reason("listener_error_status_missing")
+        if marker not in listener_text:
+            if "status=ok" in listener_text:
+                self.fail_with_reason(failure_reason)
+            self.fail_with_reason(f"{failure_reason}_not_reported")
+
+    def _wait_listener_success(self) -> None:
         listener_status = self.wait_for_listener()
         if listener_status == 124:
             self.fail_with_reason("listener_timeout")
         if listener_status != 0:
             self.fail_with_reason("listener_failed")
+
+    def run_success_scenario(self) -> None:
+        self.start_listener()
+        if self.run_sender(nonce=1) != 0:
+            self.fail_with_reason("sender_failed")
+
+        self._wait_listener_success()
 
         sender_text = self.sender_out.read_text(encoding="utf-8")
         listener_text = self.listener_out.read_text(encoding="utf-8")
@@ -198,8 +293,20 @@ class HarnessContext:
             self.fail_with_reason("listener_status_missing")
         if "verified=true" not in listener_text:
             self.fail_with_reason("listener_verification_missing")
+        if f"session_id={SESSION_ID}" not in sender_text:
+            self.fail_with_reason("sender_session_id_missing")
+        if f"session_id={SESSION_ID}" not in listener_text:
+            self.fail_with_reason("listener_session_id_missing")
 
-        self.emit_report("pass", "none")
+        self.emit_report(
+            "pass",
+            "none",
+            extra_fields={
+                "signature_guard_status": "pass",
+                "admission_guard_status": "pass",
+                "session_id": SESSION_ID,
+            },
+        )
 
     def run_signature_mismatch_scenario(self) -> None:
         self.start_listener()
@@ -209,16 +316,12 @@ class HarnessContext:
         listener_status = self.wait_for_listener()
         if listener_status == 124:
             self.fail_with_reason("listener_timeout")
-
-        listener_text = self.listener_out.read_text(encoding="utf-8")
-        if "status=error" not in listener_text:
-            self.fail_with_reason("listener_error_status_missing")
-        if "signature verification failed" not in listener_text:
-            if "status=ok" in listener_text:
-                self.fail_with_reason("mismatch_not_detected")
-            self.fail_with_reason("signature_mismatch_not_reported")
-
-        self.emit_report("pass", "signature_mismatch_detected")
+        self._require_listener_failure("signature verification failed", "mismatch_not_detected")
+        self.emit_report(
+            "pass",
+            "signature_mismatch_detected",
+            extra_fields={"signature_guard_status": "pass"},
+        )
 
     def run_timeout_scenario(self) -> None:
         self.start_listener()
@@ -232,6 +335,90 @@ class HarnessContext:
 
         self.emit_report("pass", "listener_timeout_detected")
 
+    def run_replay_nonce_scenario(self) -> None:
+        nonce_state_file = self.tmp_dir / "replay-nonce.state"
+        self.start_listener(nonce_state_file=nonce_state_file)
+        if self.run_sender(nonce=NONCE_REPLAY_TEST_VALUE) != 0:
+            self.fail_with_reason("sender_failed")
+        self._wait_listener_success()
+
+        first_listener_text = self.listener_out.read_text(encoding="utf-8")
+        if "status=ok" not in first_listener_text:
+            self.fail_with_reason("listener_status_missing")
+
+        self.start_listener(nonce_state_file=nonce_state_file)
+        if self.run_sender(nonce=NONCE_REPLAY_TEST_VALUE) != 0:
+            self.fail_with_reason("sender_failed")
+
+        listener_status = self.wait_for_listener()
+        if listener_status == 124:
+            self.fail_with_reason("listener_timeout")
+        self._require_listener_failure("replay nonce detected", "replay_not_detected")
+
+        self.emit_report(
+            "pass",
+            "replay_nonce_detected",
+            extra_fields={
+                "replay_guard_status": "pass",
+                "replay_rejected_nonce": NONCE_REPLAY_TEST_VALUE,
+            },
+        )
+
+    def run_admission_guards_scenario(self) -> None:
+        expected_reason_codes = [
+            "stale_session_detected",
+            "unauthorized_sender_detected",
+            "malformed_payload_detected",
+        ]
+        observed_reason_codes: list[str] = []
+
+        self.start_listener(expected_state_hash=STATE_HASH)
+        if self.run_sender(nonce=3, state_hash=STALE_STATE_HASH) != 0:
+            self.fail_with_reason("sender_failed")
+        listener_status = self.wait_for_listener()
+        if listener_status == 124:
+            self.fail_with_reason("listener_timeout")
+        self._require_listener_failure("unexpected state hash", "stale_session")
+        observed_reason_codes.append("stale_session_detected")
+
+        self.start_listener(expected_from=FROM_DID)
+        if self.run_sender(from_did=UNAUTHORIZED_FROM_DID, nonce=4) != 0:
+            self.fail_with_reason("sender_failed")
+        listener_status = self.wait_for_listener()
+        if listener_status == 124:
+            self.fail_with_reason("listener_timeout")
+        self._require_listener_failure("unexpected sender did", "unauthorized_sender")
+        observed_reason_codes.append("unauthorized_sender_detected")
+
+        self.start_listener()
+        malformed_payload = (
+            f"from={FROM_DID}\n"
+            f"to={TO_DID}\n"
+            f"session_id={SESSION_ID}\n"
+            f"state_hash={STATE_HASH}\n"
+            f"body={BODY}\n"
+            "signature=sig:ed25519:baseline-v1:malformed\n"
+        )
+        if not self._send_payload(malformed_payload):
+            self.fail_with_reason("payload_send_failed")
+        listener_status = self.wait_for_listener()
+        if listener_status == 124:
+            self.fail_with_reason("listener_timeout")
+        self._require_listener_failure("wire message missing nonce", "malformed_payload")
+        observed_reason_codes.append("malformed_payload_detected")
+
+        if observed_reason_codes != expected_reason_codes:
+            self.fail_with_reason("admission_reason_codes_mismatch")
+
+        self.emit_report(
+            "pass",
+            "session_admission_guards_detected",
+            extra_fields={
+                "admission_guard_status": "pass",
+                "admission_reason_codes": observed_reason_codes,
+            },
+        )
+
 
 def _require_positive_int(name: str, raw_value: str) -> int:
     if not raw_value.isdigit() or int(raw_value) <= 0:
@@ -241,8 +428,17 @@ def _require_positive_int(name: str, raw_value: str) -> int:
 
 def run_harness(args: argparse.Namespace) -> int:
     scenario = args.scenario
-    if scenario not in {"success", "signature-mismatch", "timeout"}:
-        fail("scenario must be one of: success, signature-mismatch, timeout")
+    if scenario not in {
+        "success",
+        "signature-mismatch",
+        "timeout",
+        "replay-nonce",
+        "admission-guards",
+    }:
+        fail(
+            "scenario must be one of: success, signature-mismatch, timeout, "
+            "replay-nonce, admission-guards"
+        )
 
     addr = args.addr
     if not addr or ":" not in addr:
@@ -262,8 +458,12 @@ def run_harness(args: argparse.Namespace) -> int:
                 context.run_success_scenario()
             elif scenario == "signature-mismatch":
                 context.run_signature_mismatch_scenario()
-            else:
+            elif scenario == "timeout":
                 context.run_timeout_scenario()
+            elif scenario == "replay-nonce":
+                context.run_replay_nonce_scenario()
+            else:
+                context.run_admission_guards_scenario()
             return 0
         except ScenarioFailure as error:
             context.emit_report("fail", error.reason_code)

@@ -69,7 +69,50 @@ if ! printf '%s\n' "$timeout_output" | grep -Fq "evidence_key=localhost_signed_i
   exit 1
 fi
 
-python3 - "$success_report" "$signature_report" "$timeout_report" <<'PY'
+replay_report="$TMP_DIR/replay-nonce.json"
+replay_output="$(
+  bash "$RUNNER" \
+    --scenario replay-nonce \
+    --output-json "$replay_report"
+)"
+if ! printf '%s\n' "$replay_output" | grep -Fq "status=pass; scenario=replay-nonce;"; then
+  echo "expected replay nonce scenario status summary from localhost signed integration harness" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$replay_output" | grep -Fq "reason_code=replay_nonce_detected;"; then
+  echo "expected replay nonce scenario reason code from localhost signed integration harness" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$replay_output" | grep -Fq "evidence_key=localhost_signed_integration:replay-nonce:v1;"; then
+  echo "expected replay nonce scenario evidence key from localhost signed integration harness" >&2
+  exit 1
+fi
+
+admission_report="$TMP_DIR/admission-guards.json"
+admission_output="$(
+  bash "$RUNNER" \
+    --scenario admission-guards \
+    --output-json "$admission_report"
+)"
+if ! printf '%s\n' "$admission_output" | grep -Fq "status=pass; scenario=admission-guards;"; then
+  echo "expected admission guards scenario status summary from localhost signed integration harness" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$admission_output" | grep -Fq "reason_code=session_admission_guards_detected;"; then
+  echo "expected admission guards scenario reason code from localhost signed integration harness" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$admission_output" | grep -Fq "evidence_key=localhost_signed_integration:admission-guards:v1;"; then
+  echo "expected admission guards scenario evidence key from localhost signed integration harness" >&2
+  exit 1
+fi
+
+python3 - \
+  "$success_report" \
+  "$signature_report" \
+  "$timeout_report" \
+  "$replay_report" \
+  "$admission_report" <<'PY'
 import json
 import pathlib
 import sys
@@ -77,6 +120,8 @@ import sys
 success_report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 signature_report = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
 timeout_report = json.loads(pathlib.Path(sys.argv[3]).read_text(encoding="utf-8"))
+replay_report = json.loads(pathlib.Path(sys.argv[4]).read_text(encoding="utf-8"))
+admission_report = json.loads(pathlib.Path(sys.argv[5]).read_text(encoding="utf-8"))
 
 assert success_report["schema_version"] == "kamn.sdk.localhost-signed.integration-harness.v1"
 assert success_report["status"] == "pass"
@@ -106,6 +151,35 @@ assert timeout_report["evidence_key"] == "localhost_signed_integration:timeout:v
 assert (
     timeout_report["reason_key"]
     == "localhost_signed_integration_reason:listener_timeout_detected:v1"
+)
+
+assert replay_report["status"] == "pass"
+assert replay_report["scenario"] == "replay-nonce"
+assert replay_report["reason_code"] == "replay_nonce_detected"
+assert replay_report["evidence_key"] == "localhost_signed_integration:replay-nonce:v1"
+assert replay_report["replay_guard_status"] == "pass"
+assert replay_report["replay_rejected_nonce"] == 7
+assert (
+    replay_report["reason_key"]
+    == "localhost_signed_integration_reason:replay_nonce_detected:v1"
+)
+
+assert admission_report["status"] == "pass"
+assert admission_report["scenario"] == "admission-guards"
+assert admission_report["reason_code"] == "session_admission_guards_detected"
+assert (
+    admission_report["evidence_key"]
+    == "localhost_signed_integration:admission-guards:v1"
+)
+assert admission_report["admission_guard_status"] == "pass"
+assert admission_report["admission_reason_codes"] == [
+    "stale_session_detected",
+    "unauthorized_sender_detected",
+    "malformed_payload_detected",
+]
+assert (
+    admission_report["reason_key"]
+    == "localhost_signed_integration_reason:session_admission_guards_detected:v1"
 )
 PY
 
