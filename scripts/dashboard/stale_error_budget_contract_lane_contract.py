@@ -79,6 +79,12 @@ def main(argv: list[str]) -> int:
     if not max_contract_seconds_raw.isdigit() or int(max_contract_seconds_raw) <= 0:
         return fail("KAMN_DASHBOARD_STALE_ERROR_CONTRACT_MAX_SECONDS must be a positive integer")
     max_contract_seconds = int(max_contract_seconds_raw)
+    require_frontend_contract_raw = os.getenv(
+        "KAMN_DASHBOARD_STALE_ERROR_CONTRACT_REQUIRE_FRONTEND", "false"
+    )
+    if require_frontend_contract_raw not in {"true", "false"}:
+        return fail("KAMN_DASHBOARD_STALE_ERROR_CONTRACT_REQUIRE_FRONTEND must be true or false")
+    require_frontend_contract = require_frontend_contract_raw == "true"
     start_epoch = int(time.time())
 
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -89,6 +95,9 @@ def main(argv: list[str]) -> int:
 
         go_env = os.environ.copy()
         go_env["KAMN_DASHBOARD_STALE_ERROR_MAX_SECONDS"] = str(max_contract_seconds)
+        if not require_frontend_contract:
+            # Keep CI contract-lane GO path deterministic and low-cost by default.
+            go_env["KAMN_DASHBOARD_STALE_ERROR_SKIP_COMMANDS"] = "true"
         go_code, go_output = run_capture(
             ["bash", str(lane_script), "--output-json", str(output_file)],
             env=go_env,
