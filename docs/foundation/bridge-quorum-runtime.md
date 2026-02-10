@@ -58,6 +58,11 @@ This document captures deterministic bridge quorum runtime contracts for listene
 - Scheduled deep validation executes full replay suite evidence generation and policy checks for bridge replay/redaction drift.
 - Evidence bundles must satisfy schema `kamn.bridge.replay-redaction-evidence.v1`.
 - Tampered replay/redaction evidence `final_decision` is rejected by policy checker with explicit decision-mismatch errors.
+- Stable shell wrappers:
+  - `scripts/bridge/generate_bridge_replay_redaction_evidence_bundle.sh`
+  - `scripts/bridge/check_bridge_replay_redaction_policy.sh`
+- Shared Python implementation:
+  - `scripts/bridge/bridge_replay_redaction_contract.py`
 
 ## Test Coverage Mapping
 - Unit: N/A (docs-focused scope).
