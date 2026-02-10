@@ -908,6 +908,11 @@ assert_eq "$(extract_output "$channel_retention_redaction_contract_script_output
 assert_eq "$(extract_output "$channel_retention_redaction_contract_script_output" "run_channel_lifecycle_contract_tests")" "true" "channel retention/redaction contract script changes must run channel lifecycle contract lane"
 assert_eq "$(extract_output "$channel_retention_redaction_contract_script_output" "test_scope")" "channel-contract" "channel retention/redaction contract script changes should set channel-contract scope"
 
+channel_retention_redaction_shared_contract_output="$(run_selector $'scripts/channel/channel_retention_redaction_contract.py')"
+assert_eq "$(extract_output "$channel_retention_redaction_shared_contract_output" "run_rust")" "false" "channel retention/redaction shared contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$channel_retention_redaction_shared_contract_output" "run_channel_lifecycle_contract_tests")" "true" "channel retention/redaction shared contract changes must run channel lifecycle contract lane"
+assert_eq "$(extract_output "$channel_retention_redaction_shared_contract_output" "test_scope")" "channel-contract" "channel retention/redaction shared contract changes should set channel-contract scope"
+
 task_contract_docs_output="$(run_selector $'docs/foundation/task-operations.md')"
 assert_eq "$(extract_output "$task_contract_docs_output" "run_rust")" "false" "task operation contract docs should avoid rust lane"
 assert_eq "$(extract_output "$task_contract_docs_output" "run_task_operation_snapshot_contract_tests")" "true" "task operation contract docs must run task operation snapshot contract lane"
