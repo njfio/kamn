@@ -1,5 +1,8 @@
 const ENGINEERING_HARDENING_WAVE_DOC: &str =
     include_str!("../../../docs/planning/engineering-hardening-wave.md");
+const ARCHITECTURE_MODULE_MAP_DOC: &str =
+    include_str!("../../../docs/architecture/kamn-core-module-map.md");
+const RUSTDOC_PUBLISHING_DOC: &str = include_str!("../../../docs/developer/rustdoc-publishing.md");
 const README: &str = include_str!("../../../README.md");
 
 #[test]
@@ -7,10 +10,29 @@ fn engineering_hardening_wave_doc_declares_missing_docs_policy_contract() {
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("check_kamn_core_missing_docs_policy.sh"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("kamn-core"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("#![warn(missing_docs)]"));
+    assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("docs/architecture/kamn-core-module-map.md"));
+    assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("docs/developer/rustdoc-publishing.md"));
+}
+
+#[test]
+fn architecture_module_map_documents_runtime_flow_and_entrypoints() {
+    assert!(ARCHITECTURE_MODULE_MAP_DOC.contains("KAMN Core Module Map"));
+    assert!(ARCHITECTURE_MODULE_MAP_DOC.contains("## Runtime Flow (Condensed)"));
+    assert!(ARCHITECTURE_MODULE_MAP_DOC.contains("crates/kamn-core/src/lib.rs"));
+}
+
+#[test]
+fn rustdoc_publishing_doc_declares_bounded_command_surface() {
+    assert!(RUSTDOC_PUBLISHING_DOC.contains("cargo doc -p kamn-core --no-deps"));
+    assert!(RUSTDOC_PUBLISHING_DOC
+        .contains("RUSTDOCFLAGS=\"-D warnings\" cargo doc -p kamn-core --no-deps"));
+    assert!(RUSTDOC_PUBLISHING_DOC.contains("target/doc"));
 }
 
 #[test]
 fn readme_references_engineering_hardening_wave_and_policy_checker() {
     assert!(README.contains("docs/planning/engineering-hardening-wave.md"));
     assert!(README.contains("check_kamn_core_missing_docs_policy.sh"));
+    assert!(README.contains("docs/architecture/kamn-core-module-map.md"));
+    assert!(README.contains("docs/developer/rustdoc-publishing.md"));
 }

@@ -6,6 +6,8 @@ CORE_LIB_PATH="${KAMN_CORE_LIB_PATH:-$ROOT_DIR/crates/kamn-core/src/lib.rs}"
 ALLOWLIST_PATH="${KAMN_CORE_MISSING_DOCS_ALLOWLIST_PATH:-$ROOT_DIR/fixtures/ci/kamn_core_missing_docs_allowlist.txt}"
 README_PATH="${KAMN_README_PATH:-$ROOT_DIR/README.md}"
 PLAN_DOC_PATH="${KAMN_ENGINEERING_HARDENING_DOC_PATH:-$ROOT_DIR/docs/planning/engineering-hardening-wave.md}"
+ARCH_DOC_PATH="${KAMN_CORE_MODULE_MAP_DOC_PATH:-$ROOT_DIR/docs/architecture/kamn-core-module-map.md}"
+RUSTDOC_GUIDE_PATH="${KAMN_RUSTDOC_PUBLISHING_DOC_PATH:-$ROOT_DIR/docs/developer/rustdoc-publishing.md}"
 
 require_file() {
   local file="$1"
@@ -20,6 +22,8 @@ require_file "$CORE_LIB_PATH" "kamn-core lib"
 require_file "$ALLOWLIST_PATH" "missing-docs allowlist fixture"
 require_file "$README_PATH" "README"
 require_file "$PLAN_DOC_PATH" "engineering hardening plan"
+require_file "$ARCH_DOC_PATH" "kamn-core module map"
+require_file "$RUSTDOC_GUIDE_PATH" "rustdoc publishing guide"
 
 if ! grep -Fq "#![warn(missing_docs)]" "$CORE_LIB_PATH"; then
   echo "missing-docs policy contract failed: kamn-core must declare #![warn(missing_docs)]." >&2
@@ -79,6 +83,16 @@ if ! grep -Fq "docs/planning/engineering-hardening-wave.md" "$README_PATH"; then
   exit 1
 fi
 
+if ! grep -Fq "docs/architecture/kamn-core-module-map.md" "$README_PATH"; then
+  echo "missing-docs policy contract failed: README must link kamn-core module map." >&2
+  exit 1
+fi
+
+if ! grep -Fq "docs/developer/rustdoc-publishing.md" "$README_PATH"; then
+  echo "missing-docs policy contract failed: README must link rustdoc publishing guide." >&2
+  exit 1
+fi
+
 if ! grep -Fq "check_kamn_core_missing_docs_policy.sh" "$PLAN_DOC_PATH"; then
   echo "missing-docs policy contract failed: engineering hardening plan must include policy checker command." >&2
   exit 1
@@ -86,6 +100,46 @@ fi
 
 if ! grep -Fq "#![warn(missing_docs)]" "$PLAN_DOC_PATH"; then
   echo "missing-docs policy contract failed: engineering hardening plan must include #![warn(missing_docs)] policy marker." >&2
+  exit 1
+fi
+
+if ! grep -Fq "docs/architecture/kamn-core-module-map.md" "$PLAN_DOC_PATH"; then
+  echo "missing-docs policy contract failed: engineering hardening plan must include module map doc path." >&2
+  exit 1
+fi
+
+if ! grep -Fq "docs/developer/rustdoc-publishing.md" "$PLAN_DOC_PATH"; then
+  echo "missing-docs policy contract failed: engineering hardening plan must include rustdoc publishing doc path." >&2
+  exit 1
+fi
+
+if ! grep -Fq "KAMN Core Module Map" "$ARCH_DOC_PATH"; then
+  echo "missing-docs policy contract failed: module map must declare title marker." >&2
+  exit 1
+fi
+
+if ! grep -Fq "## Runtime Flow (Condensed)" "$ARCH_DOC_PATH"; then
+  echo "missing-docs policy contract failed: module map must document runtime flow." >&2
+  exit 1
+fi
+
+if ! grep -Fq "crates/kamn-core/src/lib.rs" "$ARCH_DOC_PATH"; then
+  echo "missing-docs policy contract failed: module map must document contributor entrypoint." >&2
+  exit 1
+fi
+
+if ! grep -Fq "cargo doc -p kamn-core --no-deps" "$RUSTDOC_GUIDE_PATH"; then
+  echo "missing-docs policy contract failed: rustdoc guide must include bounded cargo doc command." >&2
+  exit 1
+fi
+
+if ! grep -Fq "RUSTDOCFLAGS=\"-D warnings\" cargo doc -p kamn-core --no-deps" "$RUSTDOC_GUIDE_PATH"; then
+  echo "missing-docs policy contract failed: rustdoc guide must include warning-fail command." >&2
+  exit 1
+fi
+
+if ! grep -Fq "target/doc" "$RUSTDOC_GUIDE_PATH"; then
+  echo "missing-docs policy contract failed: rustdoc guide must include publication artifact path." >&2
   exit 1
 fi
 

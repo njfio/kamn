@@ -10,12 +10,16 @@ CORE_LIB_FIXTURE="$TMP_DIR/lib.rs"
 ALLOWLIST_FIXTURE="$TMP_DIR/allowlist.txt"
 README_FIXTURE="$TMP_DIR/README.md"
 PLAN_DOC_FIXTURE="$TMP_DIR/engineering-hardening-wave.md"
+ARCH_DOC_FIXTURE="$TMP_DIR/kamn-core-module-map.md"
+RUSTDOC_GUIDE_FIXTURE="$TMP_DIR/rustdoc-publishing.md"
 
 run_checker() {
   KAMN_CORE_LIB_PATH="$CORE_LIB_FIXTURE" \
   KAMN_CORE_MISSING_DOCS_ALLOWLIST_PATH="$ALLOWLIST_FIXTURE" \
   KAMN_README_PATH="$README_FIXTURE" \
   KAMN_ENGINEERING_HARDENING_DOC_PATH="$PLAN_DOC_FIXTURE" \
+  KAMN_CORE_MODULE_MAP_DOC_PATH="$ARCH_DOC_FIXTURE" \
+  KAMN_RUSTDOC_PUBLISHING_DOC_PATH="$RUSTDOC_GUIDE_FIXTURE" \
     bash "$SCRIPT"
 }
 
@@ -24,6 +28,8 @@ reset_fixtures() {
   cp "$ROOT_DIR/fixtures/ci/kamn_core_missing_docs_allowlist.txt" "$ALLOWLIST_FIXTURE"
   cp "$ROOT_DIR/README.md" "$README_FIXTURE"
   cp "$ROOT_DIR/docs/planning/engineering-hardening-wave.md" "$PLAN_DOC_FIXTURE"
+  cp "$ROOT_DIR/docs/architecture/kamn-core-module-map.md" "$ARCH_DOC_FIXTURE"
+  cp "$ROOT_DIR/docs/developer/rustdoc-publishing.md" "$RUSTDOC_GUIDE_FIXTURE"
 }
 
 expect_failure() {
@@ -55,5 +61,17 @@ expect_failure "README drift should fail"
 reset_fixtures
 sed -i '/#!\[warn(missing_docs)\]/d' "$PLAN_DOC_FIXTURE"
 expect_failure "plan doc marker drift should fail"
+
+reset_fixtures
+sed -i '/## Runtime Flow (Condensed)/d' "$ARCH_DOC_FIXTURE"
+expect_failure "architecture map runtime flow marker drift should fail"
+
+reset_fixtures
+sed -i '/cargo doc -p kamn-core --no-deps/d' "$RUSTDOC_GUIDE_FIXTURE"
+expect_failure "rustdoc publishing command drift should fail"
+
+reset_fixtures
+sed -i '/docs\/developer\/rustdoc-publishing.md/d' "$README_FIXTURE"
+expect_failure "README rustdoc link drift should fail"
 
 echo "kamn-core missing-docs policy checker tests passed."

@@ -55,3 +55,19 @@ fn kamn_core_missing_docs_allowlist_matches_fixture() {
 
     assert_eq!(actual, expected);
 }
+
+#[test]
+fn namespaces_module_must_not_return_to_missing_docs_allowlist() {
+    // Regression: #1334
+    let actual = allowlisted_modules_from_core_lib(CORE_LIB);
+    let expected = allowlisted_modules_from_fixture(ALLOWLIST_FIXTURE);
+
+    assert!(
+        !actual.iter().any(|module| module == "namespaces"),
+        "namespaces module must stay graduated from #[allow(missing_docs)]"
+    );
+    assert!(
+        !expected.iter().any(|module| module == "namespaces"),
+        "allowlist fixture must keep namespaces module removed"
+    );
+}
