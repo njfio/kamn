@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "token.launch_handoff.contract",
+  "evidence_key": "token_launch_handoff_contract_lane:v1",
+  "reason_key": "token_launch_handoff_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "python3",
+      "scripts/token/token_launch_handoff_contract_lane_contract.py"
+    ]
+  }
+}

@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_SCRIPT="$ROOT_DIR/scripts/canary/run_post_cutover_slo_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/canary/run_post_cutover_slo_deep_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/canary/post_cutover_slo_contract_lane_contract.py"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
   echo "expected post-cutover SLO fast-lane runner to be executable" >&2
@@ -19,6 +20,10 @@ if [ ! -x "$SHARED_CONTRACT" ]; then
   echo "expected post-cutover SLO shared contract-lane module to be executable" >&2
   exit 1
 fi
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected post-cutover SLO contract-lane manifest to exist" >&2
+  exit 1
+fi
 
 tmp_out="$(mktemp)"
 trap 'rm -f "$tmp_out"' EXIT
@@ -29,8 +34,16 @@ if ! grep -q "post-cutover SLO contract lane tests passed." "$tmp_out"; then
   exit 1
 fi
 
-if ! grep -q "post_cutover_slo_contract_lane_contract.py" "$FAST_SCRIPT"; then
-  echo "expected post-cutover SLO fast-lane wrapper to dispatch to shared contract module" >&2
+if ! grep -q "run_manifest_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected post-cutover SLO fast-lane wrapper to delegate via manifest runner" >&2
+  exit 1
+fi
+if ! grep -q "canary_post_cutover_slo_contract_lane.json" "$FAST_SCRIPT"; then
+  echo "expected post-cutover SLO fast-lane wrapper to reference post-cutover SLO manifest" >&2
+  exit 1
+fi
+if ! grep -q "post_cutover_slo_contract_lane_contract.py" "$MANIFEST"; then
+  echo "expected post-cutover SLO manifest to dispatch to shared contract module" >&2
   exit 1
 fi
 

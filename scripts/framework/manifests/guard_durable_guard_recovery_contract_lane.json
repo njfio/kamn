@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "guard.durable_guard_recovery.contract",
+  "evidence_key": "durable_guard_recovery_contract_lane:v1",
+  "reason_key": "durable_guard_recovery_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "python3",
+      "scripts/guard/durable_guard_recovery_contract_lane_contract.py"
+    ]
+  }
+}
