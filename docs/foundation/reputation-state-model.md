@@ -51,6 +51,11 @@ Dispute adjudication uses machine-verifiable bundles so resolution outcomes stay
   - `schema_version`: `kamn.reputation.dispute-evidence.v1`
   - `reason_key`: `reputation_dispute_reason_codes:<final_decision>:v1`
   - `reason_codes`: sorted deterministic policy failure codes
+- Stable shell wrappers:
+  - `scripts/reputation/generate_reputation_dispute_evidence_bundle.sh`
+  - `scripts/reputation/check_reputation_dispute_policy.sh`
+- Shared Python implementation:
+  - `scripts/reputation/reputation_dispute_contract.py`
 - Evidence bundle generator:
   - `bash scripts/reputation/generate_reputation_dispute_evidence_bundle.sh --output-file /tmp/reputation-dispute.json --dispute-id dispute-001 --subject-did did:kamn:agent-001 --reviewer-did did:kamn:reviewer-001 --dispute-reason-code QUALITY --evidence-uri s3://kamn-audit/reputation/dispute-001.json --evidence-sha256 sha256:1111111111111111111111111111111111111111111111111111111111111111 --evidence-hash-verified PASS --original-trust-score 640 --proposed-trust-score 560 --max-adjustment-points 120 --policy-window-open true --approval-recorded true --ci-fast-gate PASS`
 - Policy checker:

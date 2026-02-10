@@ -83,6 +83,11 @@ Data-subject access/export/erasure evidence must enforce legal-hold precedence t
 ## Reputation Dispute Evidence Export Contract (Issue #737 / #738)
 Reputation dispute exports require deterministic evidence bundles and checker outputs before score overrides are accepted.
 
+- Stable shell wrappers:
+  - `scripts/reputation/generate_reputation_dispute_evidence_bundle.sh`
+  - `scripts/reputation/check_reputation_dispute_policy.sh`
+- Shared Python implementation:
+  - `scripts/reputation/reputation_dispute_contract.py`
 - Evidence bundle generator:
   - `bash scripts/reputation/generate_reputation_dispute_evidence_bundle.sh --output-file /tmp/reputation-dispute.json --dispute-id dispute-001 --subject-did did:kamn:agent-001 --reviewer-did did:kamn:reviewer-001 --dispute-reason-code QUALITY --evidence-uri s3://kamn-audit/reputation/dispute-001.json --evidence-sha256 sha256:1111111111111111111111111111111111111111111111111111111111111111 --evidence-hash-verified PASS --original-trust-score 640 --proposed-trust-score 560 --max-adjustment-points 120 --policy-window-open true --approval-recorded true --ci-fast-gate PASS`
 - Policy checker:

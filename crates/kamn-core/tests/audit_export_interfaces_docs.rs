@@ -63,6 +63,7 @@ fn doc_contains_reputation_dispute_evidence_export_contract() {
     assert!(DOC.contains("run_reputation_dispute_contract_lane.sh"));
     assert!(DOC.contains("run_reputation_dispute_deep_lane.sh"));
     assert!(DOC.contains("run_reputation_dispute_matrix.py"));
+    assert!(DOC.contains("reputation_dispute_contract.py"));
     assert!(DOC.contains("fixtures/reputation_dispute/replay_cases.json"));
 }
 

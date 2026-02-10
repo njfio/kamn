@@ -31,6 +31,7 @@ fn doc_contains_dispute_evidence_bundle_contract() {
     assert!(DOC.contains("## Deterministic Reputation Dispute Evidence Contract"));
     assert!(DOC.contains("generate_reputation_dispute_evidence_bundle.sh"));
     assert!(DOC.contains("check_reputation_dispute_policy.sh"));
+    assert!(DOC.contains("reputation_dispute_contract.py"));
     assert!(DOC.contains("reason_key"));
     assert!(DOC.contains("run_reputation_dispute_contract_lane.sh"));
     assert!(DOC.contains("run_reputation_dispute_deep_lane.sh"));
