@@ -34,6 +34,14 @@ fn plan_contains_local_fork_sync_metadata_lane() {
 }
 
 #[test]
+fn plan_contains_local_fork_smoke_evidence_lane() {
+    assert!(PLAN.contains("## Bounded Local Fork Smoke Evidence Lane"));
+    assert!(PLAN.contains("run_local_fork_smoke_evidence_lane.sh"));
+    assert!(PLAN.contains("kamn.kolme.local-fork-smoke-evidence-summary.v1"));
+    assert!(PLAN.contains("fork_smoke_command_timeout"));
+}
+
+#[test]
 fn plan_contains_local_only_heavy_validation_matrix() {
     assert!(PLAN.contains("## Local-Only Heavy Kolme Validation Matrix"));
     assert!(PLAN.contains("run_local_heavy_validation_matrix.sh"));
@@ -103,5 +111,13 @@ fn regression_requires_local_fork_sync_metadata_guard_marker() {
     // Regression: #1429
     assert!(PLAN.contains(
         "local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_fork_smoke_evidence_guard_marker() {
+    // Regression: #1430
+    assert!(PLAN.contains(
+        "local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`)."
     ));
 }

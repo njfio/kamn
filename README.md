@@ -278,6 +278,18 @@ bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-pa
 # schema: kamn.kolme.local-fork-sync-metadata-summary.v1
 ```
 
+### Run Local Fork Smoke Evidence Lane (Kolme)
+
+```bash
+# deterministic smoke lane plan (no command execution)
+bash scripts/kolme/run_local_fork_smoke_evidence_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-smoke-evidence-summary.json
+
+# bounded local-only smoke run against fork checkout
+KAMN_KOLME_LOCAL_HEAVY=1 \
+bash scripts/kolme/run_local_fork_smoke_evidence_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --smoke-command "cargo test -p merkle-map --test version -- --exact load_from_zero_example" --max-seconds 120 --output-json /tmp/kolme-local-fork-smoke-evidence-summary.json
+# schema: kamn.kolme.local-fork-smoke-evidence-summary.v1
+```
+
 ### Run Local-Only Heavy Kolme Validation Matrix
 
 ```bash

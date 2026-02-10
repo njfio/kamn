@@ -64,6 +64,21 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
   - HEAD commit is non-empty
   - checkout dirty-state guard remains fail-closed unless explicit `--allow-dirty` is set
 
+## Bounded Local Fork Smoke Evidence Lane (Issue #1430)
+
+- Local fork smoke evidence runner:
+  - `bash scripts/kolme/run_local_fork_smoke_evidence_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-smoke-evidence-summary.json`
+- Explicit local-only smoke execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_fork_smoke_evidence_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --smoke-command "cargo test -p merkle-map --test version -- --exact load_from_zero_example" --max-seconds 120 --output-json /tmp/kolme-local-fork-smoke-evidence-summary.json`
+- Summary schema:
+  - `kamn.kolme.local-fork-smoke-evidence-summary.v1`
+- Deterministic checkpoints include:
+  - `run_local_fork_sync_metadata_lane.sh` metadata validation
+  - bounded smoke command execution with timeout budget guard
+- Cost policy:
+  - run mode fails closed without explicit local-only opt-in.
+  - smoke command timeout/exceeded budget is reported as `fork_smoke_command_timeout`.
+
 ## Deterministic Local Bootstrap Health Checks (Issue #1417)
 
 - Bootstrap health-check runner:
@@ -133,6 +148,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - local-only heavy E2E lane run mode fails closed without explicit local-only opt-in (`Regression: #1418`).
 - local-only heavy validation matrix requires explicit opt-in and remains excluded from PR fast-gate workflows (`Regression: #1405`).
 - local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
+- local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
 ## Local Validation
@@ -141,6 +157,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 bash scripts/kolme/test_validate_triadic_devnet_smoke.sh
 bash scripts/kolme/test_run_triadic_devnet_smoke_contract_lane.sh
 bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh
+bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh
 bash scripts/kolme/test_run_local_bootstrap_health_checks.sh
 bash scripts/kolme/test_run_local_e2e_integration_lane.sh
 bash scripts/kolme/test_run_local_heavy_validation_matrix.sh
