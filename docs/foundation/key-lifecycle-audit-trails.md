@@ -33,6 +33,11 @@ Lifecycle-sensitive DID mutations must carry deterministic operator-binding auth
   - `bash scripts/did/check_lifecycle_operator_binding_policy.sh --bundle-file /tmp/lifecycle-operator-binding.json`
 - PR fast contract lane:
   - `bash scripts/did/run_lifecycle_operator_binding_contract_lane.sh`
+- Stable shell wrappers:
+  - `scripts/did/generate_lifecycle_operator_binding_evidence_bundle.sh`
+  - `scripts/did/check_lifecycle_operator_binding_policy.sh`
+- Shared Python implementation:
+  - `scripts/did/lifecycle_operator_binding_contract.py`
 - Decision key contract:
   - `did_lifecycle_operator_binding_reason_codes:GO:v1`
 - Regression policy:

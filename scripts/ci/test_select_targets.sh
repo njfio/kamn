@@ -646,6 +646,12 @@ assert_eq "$(extract_output "$lifecycle_operator_binding_contract_script_output"
 assert_eq "$(extract_output "$lifecycle_operator_binding_contract_script_output" "run_federated_did_handshake_contract_tests")" "false" "lifecycle operator-binding contract script changes should not run federated DID handshake lane"
 assert_eq "$(extract_output "$lifecycle_operator_binding_contract_script_output" "test_scope")" "did-contract" "lifecycle operator-binding contract script changes should set did-contract scope"
 
+lifecycle_operator_binding_shared_contract_output="$(run_selector $'scripts/did/lifecycle_operator_binding_contract.py')"
+assert_eq "$(extract_output "$lifecycle_operator_binding_shared_contract_output" "run_rust")" "false" "lifecycle operator-binding shared contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$lifecycle_operator_binding_shared_contract_output" "run_did_registry_contract_tests")" "true" "lifecycle operator-binding shared contract changes must run did registry contract lane"
+assert_eq "$(extract_output "$lifecycle_operator_binding_shared_contract_output" "run_federated_did_handshake_contract_tests")" "false" "lifecycle operator-binding shared contract changes should not run federated DID handshake lane"
+assert_eq "$(extract_output "$lifecycle_operator_binding_shared_contract_output" "test_scope")" "did-contract" "lifecycle operator-binding shared contract changes should set did-contract scope"
+
 agent_interop_wave_doc_output="$(run_selector $'docs/planning/agent-interop-wave.md')"
 assert_eq "$(extract_output "$agent_interop_wave_doc_output" "run_rust")" "false" "agent interop planning doc-only changes should avoid rust lane"
 assert_eq "$(extract_output "$agent_interop_wave_doc_output" "run_did_registry_contract_tests")" "true" "agent interop planning docs must run did registry contract lane"
