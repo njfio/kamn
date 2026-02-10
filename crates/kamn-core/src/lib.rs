@@ -253,8 +253,9 @@ pub use key_recovery::{KeyRecoveryManager, RecoveryError, RecoveryState};
 pub use kolme_runtime_commit::{
     AdapterBackedKolmeRuntimeCommitClient, InMemoryKolmeRuntimeCommitClient,
     KolmeCommitReceiptFinality, KolmeRuntimeCommitClient, KolmeRuntimeCommitError,
-    KolmeRuntimeCommitOutcome, KolmeRuntimeCommitProvider, KolmeRuntimeCommitProviderError,
-    KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderReceipt,
+    KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitOutcome, KolmeRuntimeCommitProvider,
+    KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderOutcome,
+    KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderTransport,
     KolmeRuntimeCommitReceipt, KolmeRuntimeCommitRequest, KolmeRuntimeCommitTransportErrorKind,
     RuntimeCommitFinalityProjection, RuntimeCommitLifecycleRecord, RuntimeCommitLifecycleState,
     RuntimeCommitPipeline,

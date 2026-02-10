@@ -395,6 +395,71 @@ pub trait KolmeRuntimeCommitProvider {
     ) -> Result<KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderError>;
 }
 
+/// Transport abstraction used by the live provider bridge to reach Kolme backends.
+pub trait KolmeRuntimeCommitProviderTransport {
+    /// Submits one runtime commit payload to the configured provider endpoint.
+    fn submit_runtime_commit(
+        &mut self,
+        base_url: &str,
+        submit_path: &str,
+        wire_payload: &str,
+        idempotency_key: &str,
+    ) -> Result<String, KolmeRuntimeCommitProviderError>;
+}
+
+/// Provider implementation that bridges runtime commit requests through a live transport.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KolmeRuntimeCommitLiveProvider<T> {
+    base_url: String,
+    submit_path: String,
+    transport: T,
+}
+
+impl<T: KolmeRuntimeCommitProviderTransport> KolmeRuntimeCommitLiveProvider<T> {
+    /// Builds a live provider with deterministic endpoint validation.
+    pub fn new(
+        base_url: &str,
+        submit_path: &str,
+        transport: T,
+    ) -> Result<Self, KolmeRuntimeCommitError> {
+        if base_url.trim().is_empty() {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "provider_base_url",
+                reason: "must not be empty",
+            });
+        }
+        if submit_path.trim().is_empty() {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "provider_submit_path",
+                reason: "must not be empty",
+            });
+        }
+        Ok(Self {
+            base_url: base_url.trim().to_owned(),
+            submit_path: submit_path.trim().to_owned(),
+            transport,
+        })
+    }
+}
+
+impl<T: KolmeRuntimeCommitProviderTransport> KolmeRuntimeCommitProvider
+    for KolmeRuntimeCommitLiveProvider<T>
+{
+    fn submit_runtime_commit(
+        &mut self,
+        wire_payload: &str,
+        idempotency_key: &str,
+    ) -> Result<KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderError> {
+        let response = self.transport.submit_runtime_commit(
+            self.base_url.as_str(),
+            self.submit_path.as_str(),
+            wire_payload,
+            idempotency_key,
+        )?;
+        parse_live_provider_response(response.as_str())
+    }
+}
+
 /// Adapter-backed runtime commit client that enforces provider and finality policies.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AdapterBackedKolmeRuntimeCommitClient<P> {
@@ -452,6 +517,246 @@ fn map_provider_error(error: KolmeRuntimeCommitProviderError) -> KolmeRuntimeCom
                 detail: reason,
             }
         }
+    }
+}
+
+fn parse_live_provider_response(
+    response: &str,
+) -> Result<KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderError> {
+    let fields = parse_response_fields(response)?;
+    let status = required_response_field(&fields, "status")?;
+    match status.as_str() {
+        "submitted" | "duplicate" => {
+            let provider = required_response_field(&fields, "provider")?;
+            let commit_id = required_response_field(&fields, "commit_id")?;
+            let finality_value = required_response_field(&fields, "finality")?;
+            let finality = parse_receipt_finality(finality_value.as_str())?;
+            let receipt = KolmeRuntimeCommitProviderReceipt {
+                provider,
+                commit_id,
+                finality,
+            };
+            if status == "submitted" {
+                Ok(KolmeRuntimeCommitProviderOutcome::Submitted(receipt))
+            } else {
+                Ok(KolmeRuntimeCommitProviderOutcome::Duplicate(receipt))
+            }
+        }
+        "rejected" => {
+            let reason = required_response_field(&fields, "reason")?;
+            Ok(KolmeRuntimeCommitProviderOutcome::Rejected { reason })
+        }
+        _ => Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: format!("invalid status value: {status}"),
+        }),
+    }
+}
+
+fn parse_response_fields(
+    response: &str,
+) -> Result<HashMap<String, String>, KolmeRuntimeCommitProviderError> {
+    let trimmed = response.trim();
+    if trimmed.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "response body must not be empty".to_owned(),
+        });
+    }
+
+    if trimmed.starts_with('{') {
+        return parse_flat_json_response_fields(trimmed);
+    }
+
+    parse_key_value_response_fields(trimmed)
+}
+
+fn parse_key_value_response_fields(
+    response: &str,
+) -> Result<HashMap<String, String>, KolmeRuntimeCommitProviderError> {
+    let mut fields = HashMap::new();
+    for line in response.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let (key, value) = trimmed.split_once('=').ok_or_else(|| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("invalid key/value response line: {trimmed}"),
+            }
+        })?;
+        let key = key.trim();
+        let value = value.trim();
+        if key.is_empty() || value.is_empty() {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("invalid key/value response line: {trimmed}"),
+            });
+        }
+        fields.insert(key.to_owned(), value.to_owned());
+    }
+    if fields.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "response body must contain at least one field".to_owned(),
+        });
+    }
+    Ok(fields)
+}
+
+fn parse_flat_json_response_fields(
+    response: &str,
+) -> Result<HashMap<String, String>, KolmeRuntimeCommitProviderError> {
+    let body = response.trim();
+    if !(body.starts_with('{') && body.ends_with('}')) {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "json response must be an object".to_owned(),
+        });
+    }
+    let inner = &body[1..body.len() - 1];
+    if inner.trim().is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let entries = split_unquoted(inner, ',').map_err(|reason| {
+        KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: format!("invalid json response: {reason}"),
+        }
+    })?;
+
+    let mut fields = HashMap::new();
+    for entry in entries {
+        let pair = split_unquoted(entry.as_str(), ':').map_err(|reason| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("invalid json response pair: {reason}"),
+            }
+        })?;
+        if pair.len() != 2 {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "json response pair must contain exactly one ':'".to_owned(),
+            });
+        }
+
+        let key = parse_json_string(pair[0].trim()).map_err(|reason| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("invalid json key: {reason}"),
+            }
+        })?;
+        let value = parse_json_string(pair[1].trim()).map_err(|reason| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("invalid json value: {reason}"),
+            }
+        })?;
+        fields.insert(key, value);
+    }
+    Ok(fields)
+}
+
+fn split_unquoted(input: &str, delimiter: char) -> Result<Vec<String>, &'static str> {
+    let mut parts = Vec::new();
+    let mut current = String::new();
+    let mut in_quotes = false;
+    let mut escape = false;
+
+    for ch in input.chars() {
+        if escape {
+            current.push(ch);
+            escape = false;
+            continue;
+        }
+
+        if ch == '\\' && in_quotes {
+            current.push(ch);
+            escape = true;
+            continue;
+        }
+
+        if ch == '"' {
+            in_quotes = !in_quotes;
+            current.push(ch);
+            continue;
+        }
+
+        if ch == delimiter && !in_quotes {
+            if current.trim().is_empty() {
+                return Err("empty segment");
+            }
+            parts.push(current.trim().to_owned());
+            current.clear();
+            continue;
+        }
+
+        current.push(ch);
+    }
+
+    if in_quotes {
+        return Err("unterminated quoted string");
+    }
+    if current.trim().is_empty() {
+        return Err("empty trailing segment");
+    }
+    parts.push(current.trim().to_owned());
+    Ok(parts)
+}
+
+fn parse_json_string(token: &str) -> Result<String, &'static str> {
+    let trimmed = token.trim();
+    if !(trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2) {
+        return Err("token must be a quoted string");
+    }
+    let mut output = String::new();
+    let mut escape = false;
+    for ch in trimmed[1..trimmed.len() - 1].chars() {
+        if escape {
+            let mapped = match ch {
+                '\\' => '\\',
+                '"' => '"',
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                _ => return Err("unsupported escape sequence"),
+            };
+            output.push(mapped);
+            escape = false;
+            continue;
+        }
+        if ch == '\\' {
+            escape = true;
+            continue;
+        }
+        output.push(ch);
+    }
+    if escape {
+        return Err("unterminated escape sequence");
+    }
+    Ok(output)
+}
+
+fn required_response_field(
+    fields: &HashMap<String, String>,
+    field: &'static str,
+) -> Result<String, KolmeRuntimeCommitProviderError> {
+    let value =
+        fields
+            .get(field)
+            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("missing required field: {field}"),
+            })?;
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: format!("field must not be empty: {field}"),
+        });
+    }
+    Ok(trimmed.to_owned())
+}
+
+fn parse_receipt_finality(
+    value: &str,
+) -> Result<KolmeCommitReceiptFinality, KolmeRuntimeCommitProviderError> {
+    match value {
+        "pending" => Ok(KolmeCommitReceiptFinality::Pending),
+        "final" => Ok(KolmeCommitReceiptFinality::Final),
+        "failed" => Ok(KolmeCommitReceiptFinality::Failed),
+        _ => Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: format!("invalid finality value: {value}"),
+        }),
     }
 }
 
