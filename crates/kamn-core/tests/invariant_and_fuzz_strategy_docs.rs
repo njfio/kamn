@@ -3,6 +3,8 @@ const DOC: &str = include_str!("../../../docs/testing/invariant-and-fuzz-strateg
 #[test]
 fn doc_contains_live_transport_replay_tamper_contract_commands() {
     assert!(DOC.contains("run_live_transport_replay_tamper_contract_lane.sh"));
+    assert!(DOC.contains("run_live_transport_replay_tamper_fast_lane.sh"));
+    assert!(DOC.contains("run_live_transport_replay_tamper_deep_lane.sh"));
     assert!(DOC.contains("check_live_transport_replay_tamper_policy.sh"));
     assert!(DOC.contains("kamn.sdk.live-transport-replay-tamper-evidence.v1"));
 }

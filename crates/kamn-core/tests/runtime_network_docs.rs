@@ -221,9 +221,14 @@ fn doc_contains_live_transport_replay_tamper_evidence_contract_rules() {
     assert!(DOC.contains("generate_live_transport_replay_tamper_evidence_bundle.sh"));
     assert!(DOC.contains("check_live_transport_replay_tamper_policy.sh"));
     assert!(DOC.contains("run_live_transport_replay_tamper_contract_lane.sh"));
+    assert!(DOC.contains("run_live_transport_replay_tamper_fast_lane.sh"));
+    assert!(DOC.contains("run_live_transport_replay_tamper_deep_lane.sh"));
     assert!(DOC.contains("kamn.sdk.live-transport-replay-tamper-evidence.v1"));
     assert!(DOC.contains("malformed_signature_detected"));
     assert!(DOC.contains("replay_nonce_detected"));
     assert!(DOC.contains("tamper_payload_detected"));
+    assert!(DOC.contains("lane_mode=fast"));
+    assert!(DOC.contains("lane_mode=deep"));
+    assert!(DOC.contains("deep_no_go_status=verified"));
     assert!(DOC.contains("Regression: #1380"));
 }

@@ -171,9 +171,15 @@ CI fast-gate routes this lane when selector output
 ```bash
 bash scripts/sdk/run_live_transport_replay_tamper_contract_lane.sh \
   --output-report /tmp/live-transport-replay-tamper-contract-report.json
+bash scripts/sdk/run_live_transport_replay_tamper_fast_lane.sh \
+  --output-report /tmp/live-transport-replay-tamper-fast-report.json
+bash scripts/sdk/run_live_transport_replay_tamper_deep_lane.sh \
+  --output-report /tmp/live-transport-replay-tamper-deep-report.json
 bash scripts/sdk/check_live_transport_replay_tamper_policy.sh \
   --bundle-file /tmp/live-transport-replay-tamper-contract-report.json
 # schema: kamn.sdk.live-transport-replay-tamper-evidence.v1
+# lane_mode markers: fast/deep
+# deep lane marker: deep_no_go_status=verified
 ```
 
 ### Run Localhost Bridge Demo Evidence Contract Lane (Fast)

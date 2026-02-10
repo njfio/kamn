@@ -229,6 +229,10 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `bash scripts/sdk/check_live_transport_replay_tamper_policy.sh --bundle-file /tmp/live-transport-replay-tamper-bundle.json`
 - Contract lane command:
   - `bash scripts/sdk/run_live_transport_replay_tamper_contract_lane.sh --output-report /tmp/live-transport-replay-tamper-contract-report.json`
+- Fast lane wrapper:
+  - `bash scripts/sdk/run_live_transport_replay_tamper_fast_lane.sh --output-report /tmp/live-transport-replay-tamper-fast-report.json`
+- Deep lane wrapper:
+  - `bash scripts/sdk/run_live_transport_replay_tamper_deep_lane.sh --output-report /tmp/live-transport-replay-tamper-deep-report.json`
 - Evidence schema:
   - `kamn.sdk.live-transport-replay-tamper-evidence.v1`
 - Deterministic replay/tamper reason codes:
@@ -240,6 +244,10 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `ci_fast_gate_failed`
 - Regression policy:
   - tampered final decision, reason-key drift, and replay/tamper marker drift fail closed (`Regression: #1380`).
+- Lane mode markers:
+  - `lane_mode=fast`
+  - `lane_mode=deep`
+  - `deep_no_go_status=verified` (deep lane only)
 
 ## Queue Guard Rules
 - `BoundedRuntimeQueue<T>` is FIFO and preserves insertion order.
