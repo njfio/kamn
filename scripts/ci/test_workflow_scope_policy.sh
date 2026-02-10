@@ -161,6 +161,26 @@ if ! grep -Fq "bash scripts/ci/check_kamn_core_missing_docs_policy.sh" "$FAST_WO
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected kamn-core rustdoc artifact contract lane command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh" "$FAST_WORKFLOW"; then
+  echo "expected kamn-core rustdoc artifact policy checker command in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "kamn-core-rustdoc-artifact-report.json" "$FAST_WORKFLOW"; then
+  echo "expected kamn-core rustdoc artifact report upload wiring in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "steps.scope.outputs.run_localhost_signed_integration_contract_lane_tests == 'true' || steps.scope.outputs.run_kamn_core_missing_docs_policy_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected rust setup/cache condition to include kamn-core rustdoc docs-policy lane" >&2
+  exit 1
+fi
+
 if ! grep -Fq "if: steps.scope.outputs.run_live_transport_parity_contract_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected live transport parity scope condition in ci-fast-gate.yml" >&2
   exit 1

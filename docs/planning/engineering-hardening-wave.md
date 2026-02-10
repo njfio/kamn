@@ -22,6 +22,9 @@ default development loop green while tightening missing-doc policy controls for
   - `bash scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
 - Bounded rustdoc generation command (kamn-core only):
   - `RUSTDOCFLAGS="-D warnings" cargo doc -p kamn-core --no-deps`
+- Rustdoc artifact contract lane and policy checker:
+  - `bash scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh --output-json /tmp/kamn-core-rustdoc-artifact-report.json`
+  - `bash scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh --report-file /tmp/kamn-core-rustdoc-artifact-report.json`
 - CI helper regression suite:
   - `bash scripts/ci/test_ci_tools.sh`
 - Contract framework helper unit tests:
@@ -56,6 +59,10 @@ default development loop green while tightening missing-doc policy controls for
   - `fixtures/ci/kamn_core_missing_docs_allowlist.txt`
   - `scripts/ci/check_kamn_core_missing_docs_policy.sh`
   - `scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
+  - `scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh`
+  - `scripts/ci/test_run_kamn_core_rustdoc_artifact_contract_lane.sh`
+  - `scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh`
+  - `scripts/ci/test_check_kamn_core_rustdoc_artifact_policy.sh`
   - `scripts/framework/contract_framework.py`
   - `scripts/framework/contract_lane_helpers.py` (compliance/governance/reputation routing)
   - `scripts/framework/test_contract_lane_helpers.py` (compliance/governance/reputation routing)

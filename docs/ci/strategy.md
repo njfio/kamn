@@ -155,6 +155,8 @@ Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 - PR CI declaration checker (`test_check_pr_ci_declaration.sh`)
 - Flaky report commenter (`test_post_flaky_report_comment.sh`)
 - Flaky issue syncer (`test_sync_flaky_registry_issues.sh`)
+- Rustdoc artifact lane contract (`test_run_kamn_core_rustdoc_artifact_contract_lane.sh`)
+- Rustdoc artifact policy checker (`test_check_kamn_core_rustdoc_artifact_policy.sh`)
 
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.

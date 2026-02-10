@@ -545,7 +545,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    crates/kamn-core/src/lib.rs|crates/kamn-core/tests/missing_docs_policy.rs|crates/kamn-core/tests/engineering_hardening_wave_docs.rs|fixtures/ci/kamn_core_missing_docs_allowlist.txt|scripts/ci/check_kamn_core_missing_docs_policy.sh|scripts/ci/test_check_kamn_core_missing_docs_policy.sh|docs/planning/engineering-hardening-wave.md|docs/architecture/kamn-core-module-map.md|docs/developer/rustdoc-publishing.md|README.md)
+    crates/kamn-core/src/lib.rs|crates/kamn-core/tests/missing_docs_policy.rs|crates/kamn-core/tests/engineering_hardening_wave_docs.rs|fixtures/ci/kamn_core_missing_docs_allowlist.txt|scripts/ci/check_kamn_core_missing_docs_policy.sh|scripts/ci/test_check_kamn_core_missing_docs_policy.sh|scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh|scripts/ci/test_run_kamn_core_rustdoc_artifact_contract_lane.sh|scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh|scripts/ci/test_check_kamn_core_rustdoc_artifact_policy.sh|docs/planning/engineering-hardening-wave.md|docs/architecture/kamn-core-module-map.md|docs/developer/rustdoc-publishing.md|README.md)
       KAMN_CORE_MISSING_DOCS_POLICY_CHANGED=true
       classified=true
       ;;

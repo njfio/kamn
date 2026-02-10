@@ -109,16 +109,33 @@ jobs:
         run: npm --prefix packages/kamn-sdk test
 
       - name: Set up Rust toolchain
-        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_signer_emulator_contract_tests == 'true' || steps.scope.outputs.run_did_registry_contract_tests == 'true' || steps.scope.outputs.run_federated_did_handshake_contract_tests == 'true' || steps.scope.outputs.run_federated_delegation_settlement_contract_tests == 'true' || steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true' || steps.scope.outputs.run_message_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true' || steps.scope.outputs.run_durable_guard_recovery_contract_tests == 'true' || steps.scope.outputs.run_settlement_reconciliation_contract_tests == 'true' || steps.scope.outputs.run_token_launch_contract_tests == 'true' || steps.scope.outputs.run_treasury_disbursement_contract_tests == 'true' || steps.scope.outputs.run_reputation_decay_contract_tests == 'true' || steps.scope.outputs.run_kolme_triadic_devnet_smoke_contract_tests == 'true' || steps.scope.outputs.run_rust_live_transport_contract_tests == 'true' || steps.scope.outputs.run_live_transport_parity_rust_contract_tests == 'true' || steps.scope.outputs.run_localhost_signed_integration_contract_lane_tests == 'true'
+        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_signer_emulator_contract_tests == 'true' || steps.scope.outputs.run_did_registry_contract_tests == 'true' || steps.scope.outputs.run_federated_did_handshake_contract_tests == 'true' || steps.scope.outputs.run_federated_delegation_settlement_contract_tests == 'true' || steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true' || steps.scope.outputs.run_message_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true' || steps.scope.outputs.run_durable_guard_recovery_contract_tests == 'true' || steps.scope.outputs.run_settlement_reconciliation_contract_tests == 'true' || steps.scope.outputs.run_token_launch_contract_tests == 'true' || steps.scope.outputs.run_treasury_disbursement_contract_tests == 'true' || steps.scope.outputs.run_reputation_decay_contract_tests == 'true' || steps.scope.outputs.run_kolme_triadic_devnet_smoke_contract_tests == 'true' || steps.scope.outputs.run_rust_live_transport_contract_tests == 'true' || steps.scope.outputs.run_live_transport_parity_rust_contract_tests == 'true' || steps.scope.outputs.run_localhost_signed_integration_contract_lane_tests == 'true' || steps.scope.outputs.run_kamn_core_missing_docs_policy_contract_tests == 'true'
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Rust build artifacts
         id: rust_cache
-        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_signer_emulator_contract_tests == 'true' || steps.scope.outputs.run_did_registry_contract_tests == 'true' || steps.scope.outputs.run_federated_did_handshake_contract_tests == 'true' || steps.scope.outputs.run_federated_delegation_settlement_contract_tests == 'true' || steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true' || steps.scope.outputs.run_message_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true' || steps.scope.outputs.run_durable_guard_recovery_contract_tests == 'true' || steps.scope.outputs.run_settlement_reconciliation_contract_tests == 'true' || steps.scope.outputs.run_token_launch_contract_tests == 'true' || steps.scope.outputs.run_treasury_disbursement_contract_tests == 'true' || steps.scope.outputs.run_reputation_decay_contract_tests == 'true' || steps.scope.outputs.run_kolme_triadic_devnet_smoke_contract_tests == 'true' || steps.scope.outputs.run_rust_live_transport_contract_tests == 'true' || steps.scope.outputs.run_live_transport_parity_rust_contract_tests == 'true' || steps.scope.outputs.run_localhost_signed_integration_contract_lane_tests == 'true'
+        if: steps.scope.outputs.run_rust == 'true' || steps.scope.outputs.run_bridge_replay_harness == 'true' || steps.scope.outputs.run_signer_emulator_contract_tests == 'true' || steps.scope.outputs.run_did_registry_contract_tests == 'true' || steps.scope.outputs.run_federated_did_handshake_contract_tests == 'true' || steps.scope.outputs.run_federated_delegation_settlement_contract_tests == 'true' || steps.scope.outputs.run_runtime_snapshot_contract_tests == 'true' || steps.scope.outputs.run_message_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_channel_lifecycle_contract_tests == 'true' || steps.scope.outputs.run_task_operation_snapshot_contract_tests == 'true' || steps.scope.outputs.run_durable_guard_recovery_contract_tests == 'true' || steps.scope.outputs.run_settlement_reconciliation_contract_tests == 'true' || steps.scope.outputs.run_token_launch_contract_tests == 'true' || steps.scope.outputs.run_treasury_disbursement_contract_tests == 'true' || steps.scope.outputs.run_reputation_decay_contract_tests == 'true' || steps.scope.outputs.run_kolme_triadic_devnet_smoke_contract_tests == 'true' || steps.scope.outputs.run_rust_live_transport_contract_tests == 'true' || steps.scope.outputs.run_live_transport_parity_rust_contract_tests == 'true' || steps.scope.outputs.run_localhost_signed_integration_contract_lane_tests == 'true' || steps.scope.outputs.run_kamn_core_missing_docs_policy_contract_tests == 'true'
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: kamn-rust-ci-v1
           save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Run kamn-core rustdoc artifact contract lane
+        if: steps.scope.outputs.run_kamn_core_missing_docs_policy_contract_tests == 'true'
+        run: |
+          bash scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh \
+            --artifact-dir "${RUNNER_TEMP:-/tmp}" \
+            --output-json kamn-core-rustdoc-artifact-report.json
+          bash scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh \
+            --report-file kamn-core-rustdoc-artifact-report.json
+
+      - name: Upload kamn-core rustdoc artifact contract report
+        if: always() && hashFiles('kamn-core-rustdoc-artifact-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: kamn-core-rustdoc-artifact-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: kamn-core-rustdoc-artifact-report.json
+          if-no-files-found: error
 
       - name: Run Rust live transport contract lane
         if: steps.scope.outputs.run_rust_live_transport_contract_tests == 'true'

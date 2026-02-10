@@ -8,6 +8,10 @@ const README: &str = include_str!("../../../README.md");
 #[test]
 fn engineering_hardening_wave_doc_declares_missing_docs_policy_contract() {
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("check_kamn_core_missing_docs_policy.sh"));
+    assert!(
+        ENGINEERING_HARDENING_WAVE_DOC.contains("run_kamn_core_rustdoc_artifact_contract_lane.sh")
+    );
+    assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("check_kamn_core_rustdoc_artifact_policy.sh"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("kamn-core"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("#![warn(missing_docs)]"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("docs/architecture/kamn-core-module-map.md"));
@@ -27,6 +31,9 @@ fn rustdoc_publishing_doc_declares_bounded_command_surface() {
     assert!(RUSTDOC_PUBLISHING_DOC
         .contains("RUSTDOCFLAGS=\"-D warnings\" cargo doc -p kamn-core --no-deps"));
     assert!(RUSTDOC_PUBLISHING_DOC.contains("target/doc"));
+    assert!(RUSTDOC_PUBLISHING_DOC.contains("run_kamn_core_rustdoc_artifact_contract_lane.sh"));
+    assert!(RUSTDOC_PUBLISHING_DOC.contains("check_kamn_core_rustdoc_artifact_policy.sh"));
+    assert!(RUSTDOC_PUBLISHING_DOC.contains("kamn.ci.kamn-core-rustdoc-artifact-report.v1"));
 }
 
 #[test]
