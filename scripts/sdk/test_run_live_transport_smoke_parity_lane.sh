@@ -11,6 +11,11 @@ if [ ! -x "$SMOKE_SCRIPT" ]; then
   exit 1
 fi
 
+if ! grep -q 'live_transport_smoke_parity_lane_contract.py' "$SMOKE_SCRIPT"; then
+  echo "expected sdk smoke parity lane runner to delegate to shared lane contract implementation" >&2
+  exit 1
+fi
+
 smoke_output="$(
   KAMN_SDK_SMOKE_PARITY_SKIP_COMMANDS=true \
   bash "$SMOKE_SCRIPT" --output-json "$TMP_REPORT"
