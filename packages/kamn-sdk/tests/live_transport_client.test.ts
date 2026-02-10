@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   KAMNClient,
+  LiveTransportBackendAdapterError,
   LiveTransportConfig,
   LiveTransportKAMNClient,
   TransportModeMismatchError,
@@ -68,4 +69,84 @@ test("performance live transport contract lane stays within budget", () => {
     elapsedMillis < 300,
     `typescript sdk live transport contract lane exceeded budget: ${elapsedMillis}ms`,
   );
+});
+
+test("functional live transport backend adapter mode normalizes success payloads", () => {
+  const endpoint = "https://live.kamn.testnet/ts-backend-adapter";
+  const requests: string[] = [];
+
+  LiveTransportKAMNClient.registerBackendAdapter(endpoint, {
+    invoke(request) {
+      requests.push(request.operation);
+      if (request.operation === "register") {
+        return { status: "ok", value: "kamn:did:agent:backend-1" };
+      }
+      if (request.operation === "send") {
+        return { status: "ok", value: "msg_backend_1" };
+      }
+      if (request.operation === "receive") {
+        return {
+          status: "ok",
+          value: [
+            {
+              id: "msg_backend_1",
+              from: "kamn:did:agent:backend-1",
+              to: "kamn:did:agent:backend-2",
+              body: "backend hello",
+            },
+          ],
+        };
+      }
+      return { status: "ok", value: null };
+    },
+  });
+
+  try {
+    const client = new LiveTransportKAMNClient(endpoint);
+    const sender = client.register("autonomous", "claude-4", ["text"]);
+    assert.equal(sender, "kamn:did:agent:backend-1");
+
+    const messageId = client.send(
+      "kamn:did:agent:backend-1",
+      "kamn:did:agent:backend-2",
+      "backend hello",
+    );
+    assert.equal(messageId, "msg_backend_1");
+
+    const received = client.receive("kamn:did:agent:backend-2");
+    assert.equal(received.length, 1);
+    assert.equal(received[0].body, "backend hello");
+    assert.deepEqual(requests, ["register", "send", "receive"]);
+  } finally {
+    LiveTransportKAMNClient.clearBackendAdapters();
+  }
+});
+
+test("regression backend adapter errors and invalid payloads fail closed", () => {
+  // Regression: #1414
+  const endpoint = "https://live.kamn.testnet/ts-backend-adapter-fail";
+
+  LiveTransportKAMNClient.registerBackendAdapter(endpoint, {
+    invoke(request) {
+      if (request.operation === "register") {
+        return { status: "ok", value: 99 };
+      }
+      return { status: "error", reason: "backend_timeout" };
+    },
+  });
+
+  try {
+    const client = new LiveTransportKAMNClient(endpoint);
+    assert.throws(() => client.register("autonomous", "claude-4", ["text"]), {
+      name: "SDKError",
+      message: "backend adapter invalid response for operation register: expected string value",
+    });
+
+    assert.throws(
+      () => client.send("kamn:did:agent:x", "kamn:did:agent:y", "hello"),
+      LiveTransportBackendAdapterError,
+    );
+  } finally {
+    LiveTransportKAMNClient.clearBackendAdapters();
+  }
 });
