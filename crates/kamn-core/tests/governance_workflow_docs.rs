@@ -67,6 +67,7 @@ fn doc_contains_stake_slash_risk_threshold_evidence_contract() {
     assert!(DOC.contains("## Stake/Slash Risk Threshold Evidence Contract"));
     assert!(DOC.contains("generate_stake_slash_risk_evidence_bundle.sh"));
     assert!(DOC.contains("check_stake_slash_risk_policy.sh"));
+    assert!(DOC.contains("stake_slash_risk_contract_lane_contract.py"));
     assert!(DOC.contains("run_stake_slash_risk_contract_lane.sh"));
     assert!(DOC.contains("run_stake_slash_risk_deep_lane.sh"));
     assert!(DOC.contains("run_stake_slash_risk_matrix.py"));
@@ -108,6 +109,14 @@ fn regression_requires_stake_slash_threshold_bypass_guard_marker() {
     // Regression: #733
     assert!(DOC.contains(
         "unsafe threshold bypass attempts and tampered risk evidence force `NO-GO` (`Regression: #733`)."
+    ));
+}
+
+#[test]
+fn regression_requires_stake_slash_shared_contract_marker() {
+    // Regression: #1262
+    assert!(DOC.contains(
+        "shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1262`)."
     ));
 }
 

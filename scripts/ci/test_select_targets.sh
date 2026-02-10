@@ -1367,6 +1367,12 @@ assert_eq "$(extract_output "$stake_slash_contract_script_output" "run_governanc
 assert_eq "$(extract_output "$stake_slash_contract_script_output" "run_governance_stake_slash_contract_tests")" "true" "stake/slash contract script changes must run governance stake/slash lane"
 assert_eq "$(extract_output "$stake_slash_contract_script_output" "test_scope")" "governance-risk-contract" "stake/slash contract script changes should set governance-risk-contract scope"
 
+stake_slash_shared_contract_lane_output="$(run_selector $'scripts/governance/stake_slash_risk_contract_lane_contract.py')"
+assert_eq "$(extract_output "$stake_slash_shared_contract_lane_output" "run_rust")" "false" "stake/slash shared contract-lane changes should avoid rust lane"
+assert_eq "$(extract_output "$stake_slash_shared_contract_lane_output" "run_governance_simulation_contract_tests")" "false" "stake/slash shared contract-lane changes should not trigger governance simulation lane"
+assert_eq "$(extract_output "$stake_slash_shared_contract_lane_output" "run_governance_stake_slash_contract_tests")" "true" "stake/slash shared contract-lane changes must run governance stake/slash lane"
+assert_eq "$(extract_output "$stake_slash_shared_contract_lane_output" "test_scope")" "governance-risk-contract" "stake/slash shared contract-lane changes should set governance-risk-contract scope"
+
 stake_slash_contract_fixture_output="$(run_selector $'fixtures/governance_stake_slash/risk_threshold_cases.json')"
 assert_eq "$(extract_output "$stake_slash_contract_fixture_output" "run_rust")" "false" "stake/slash fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$stake_slash_contract_fixture_output" "run_governance_stake_slash_contract_tests")" "true" "stake/slash fixture changes must run governance stake/slash lane"

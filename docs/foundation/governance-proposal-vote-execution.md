@@ -99,12 +99,17 @@ Governance activation also requires deterministic stake/slash risk thresholds to
   - `bash scripts/governance/check_stake_slash_risk_policy.sh --bundle-file /tmp/stake-slash-risk.json`
 - PR fast contract lane:
   - `bash scripts/governance/run_stake_slash_risk_contract_lane.sh`
+- Stable shell wrapper:
+  - `scripts/governance/run_stake_slash_risk_contract_lane.sh`
+- Shared Python implementation:
+  - `scripts/governance/stake_slash_risk_contract_lane_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/governance/run_stake_slash_risk_deep_lane.sh --output-json governance-stake-slash-report.json`
 - Replay matrix runner:
   - `python3 scripts/governance/run_stake_slash_risk_matrix.py --fixture fixtures/governance_stake_slash/risk_threshold_cases.json --output-json governance-stake-slash-report.json`
 - Regression policy:
   - unsafe threshold bypass attempts and tampered risk evidence force `NO-GO` (`Regression: #733`).
+  - shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1262`).
 
 ## Governance Lifecycle and Rollback Integrity Contract Lane
 Governance execution paths now include deterministic lifecycle/rollback integrity checks with fail-closed reason-code evidence.
