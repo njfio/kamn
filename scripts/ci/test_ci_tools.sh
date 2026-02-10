@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 bash "$ROOT_DIR/scripts/ci/test_evaluate_budget.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"
+bash "$ROOT_DIR/scripts/ci/test_generate_fast_gate_budget_delta_report.sh"
+bash "$ROOT_DIR/scripts/ci/test_check_fast_gate_budget_delta_threshold.sh"
 bash "$ROOT_DIR/scripts/ci/test_run_with_retry.sh"
 bash "$ROOT_DIR/scripts/ci/test_run_invariant_harness.sh"
 bash "$ROOT_DIR/scripts/ci/test_run_cargo_test_with_quarantine.sh"
