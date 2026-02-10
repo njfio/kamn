@@ -40,6 +40,12 @@ fn profile_contains_candidate_test_vectors_and_downstream_categories() {
     assert!(PROFILE.contains("Vector-N1: document missing id is rejected."));
     assert!(PROFILE.contains("Vector-N2: unsupported verification method algorithm is rejected."));
     assert!(PROFILE.contains(
+        "Vector-N4: mixed verification method algorithm sets are rejected for baseline profile."
+    ));
+    assert!(PROFILE.contains(
+        "Vector-M1: migration matrix allows approved multikey transitions and blocks downgrade/unsupported paths."
+    ));
+    assert!(PROFILE.contains(
         "Vector-N3: service endpoint with unsupported scheme, query/fragment, or multi-segment path is rejected."
     ));
     assert!(PROFILE.contains("## Downstream Test Category Mapping"));
@@ -73,5 +79,27 @@ fn regression_requires_service_endpoint_non_canonical_rejection_rule() {
     // Regression: #1000
     assert!(PROFILE.contains(
         "non-canonical service endpoint scheme/authority/path combinations must remain rejected (`Regression: #1000`)."
+    ));
+}
+
+#[test]
+fn profile_contains_multikey_algorithm_migration_contract_lane() {
+    assert!(PROFILE.contains("## Multi-Key Algorithm Mixing and Migration Matrix Contract"));
+    assert!(PROFILE.contains("run_multikey_algorithm_policy_contract_lane.sh"));
+    assert!(PROFILE.contains("generate_multikey_algorithm_policy_evidence_bundle.sh"));
+    assert!(PROFILE.contains("check_multikey_algorithm_policy.sh"));
+    assert!(PROFILE.contains("run_multikey_algorithm_migration_matrix.py"));
+    assert!(
+        PROFILE.contains("fixtures/did_core_conformance/multikey_algorithm_migration_vectors.json")
+    );
+    assert!(PROFILE.contains("did_multikey_algorithm_policy_reason_codes:GO:v1"));
+    assert!(PROFILE.contains("did_multikey_algorithm_policy_reason_codes:NO-GO:v1"));
+}
+
+#[test]
+fn regression_requires_multikey_algorithm_mixing_rejection_rule() {
+    // Regression: #1001
+    assert!(PROFILE.contains(
+        "mixed or unsupported verification method algorithm sets must remain rejected under migration policy checks (`Regression: #1001`)."
     ));
 }

@@ -1,5 +1,6 @@
 use kamn_core::{
-    canonical_did_document, canonical_service_endpoint, AgentDid, AgentDidError, AgentDidMetadata,
+    canonical_did_document, canonical_service_endpoint,
+    validate_did_verification_method_algorithms, AgentDid, AgentDidError, AgentDidMetadata,
     DidDocumentError,
 };
 
@@ -100,6 +101,38 @@ fn regression_service_endpoint_canonicalization_rejects_non_single_segment_path(
         canonical_service_endpoint("kamn://messaging/agent-77/extra"),
         Err(DidDocumentError::InvalidServiceEndpoint(
             "service endpoint path must be a single segment".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn unit_multikey_algorithm_policy_accepts_uniform_baseline_algorithms() {
+    let algorithms = vec!["Multikey".to_owned(), "Multikey".to_owned()];
+    assert_eq!(
+        validate_did_verification_method_algorithms(&algorithms),
+        Ok(())
+    );
+}
+
+#[test]
+fn functional_multikey_algorithm_policy_rejects_unsupported_algorithm() {
+    let algorithms = vec!["Ed25519VerificationKey2020".to_owned()];
+    assert_eq!(
+        validate_did_verification_method_algorithms(&algorithms),
+        Err(DidDocumentError::InvalidVerificationMethodAlgorithm(
+            "unsupported verification method algorithm: Ed25519VerificationKey2020".to_owned()
+        ))
+    );
+}
+
+#[test]
+fn regression_multikey_algorithm_policy_rejects_mixed_algorithm_sets() {
+    // Regression: #1001
+    let algorithms = vec!["Multikey".to_owned(), "MultikeyV2".to_owned()];
+    assert_eq!(
+        validate_did_verification_method_algorithms(&algorithms),
+        Err(DidDocumentError::InvalidVerificationMethodAlgorithm(
+            "mixed verification method algorithms are not allowed".to_owned()
         ))
     );
 }

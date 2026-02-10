@@ -1,0 +1,35 @@
+[
+  {
+    "vector_id": "Vector-A1",
+    "current_algorithms": ["Multikey"],
+    "target_algorithms": ["Multikey"],
+    "expect_allowed": true
+  },
+  {
+    "vector_id": "Vector-M1-forward",
+    "current_algorithms": ["Multikey"],
+    "target_algorithms": ["MultikeyV2"],
+    "expect_allowed": true
+  },
+  {
+    "vector_id": "Vector-N4-mixed",
+    "current_algorithms": ["Multikey", "MultikeyV2"],
+    "target_algorithms": ["MultikeyV2"],
+    "expect_allowed": false,
+    "expected_reason": "mixed_algorithms"
+  },
+  {
+    "vector_id": "Vector-N4-unsupported",
+    "current_algorithms": ["Ed25519VerificationKey2020"],
+    "target_algorithms": ["Multikey"],
+    "expect_allowed": false,
+    "expected_reason": "unsupported_algorithm"
+  },
+  {
+    "vector_id": "Vector-M1-downgrade",
+    "current_algorithms": ["MultikeyV2"],
+    "target_algorithms": ["Multikey"],
+    "expect_allowed": false,
+    "expected_reason": "downgrade_blocked"
+  }
+]

@@ -101,6 +101,7 @@ pub enum DidDocumentError {
     MissingCapabilities,
     InvalidCapability,
     InvalidServiceEndpoint(String),
+    InvalidVerificationMethodAlgorithm(String),
 }
 
 impl fmt::Display for DidDocumentError {
@@ -113,6 +114,9 @@ impl fmt::Display for DidDocumentError {
             Self::InvalidCapability => write!(f, "capability entries must not be empty"),
             Self::InvalidServiceEndpoint(message) => {
                 write!(f, "invalid service endpoint: {message}")
+            }
+            Self::InvalidVerificationMethodAlgorithm(message) => {
+                write!(f, "invalid verification method algorithm: {message}")
             }
         }
     }
@@ -173,6 +177,44 @@ pub fn canonical_service_endpoint(raw_endpoint: &str) -> Result<String, DidDocum
     Ok(format!("kamn://messaging/{normalized_path}"))
 }
 
+pub fn validate_did_verification_method_algorithms(
+    algorithms: &[String],
+) -> Result<(), DidDocumentError> {
+    if algorithms.is_empty() {
+        return Err(DidDocumentError::InvalidVerificationMethodAlgorithm(
+            "at least one verification method algorithm is required".to_owned(),
+        ));
+    }
+
+    let mut normalized_algorithms: Vec<String> = Vec::with_capacity(algorithms.len());
+    for algorithm in algorithms {
+        let normalized = algorithm.trim();
+        if normalized.is_empty() {
+            return Err(DidDocumentError::InvalidVerificationMethodAlgorithm(
+                "verification method algorithm entries must not be empty".to_owned(),
+            ));
+        }
+        if normalized != "Multikey" && normalized != "MultikeyV2" {
+            return Err(DidDocumentError::InvalidVerificationMethodAlgorithm(
+                format!("unsupported verification method algorithm: {normalized}"),
+            ));
+        }
+        normalized_algorithms.push(normalized.to_owned());
+    }
+
+    let first_algorithm = &normalized_algorithms[0];
+    if normalized_algorithms
+        .iter()
+        .any(|algorithm| algorithm != first_algorithm)
+    {
+        return Err(DidDocumentError::InvalidVerificationMethodAlgorithm(
+            "mixed verification method algorithms are not allowed".to_owned(),
+        ));
+    }
+
+    Ok(())
+}
+
 pub fn canonical_did_document(
     did: &AgentDid,
     public_key_multibase: &str,
@@ -202,6 +244,8 @@ pub fn canonical_did_document(
     let service_id = format!("{}#messaging", did.as_str());
     let service_endpoint =
         canonical_service_endpoint(&format!("kamn://messaging/{}", did.method_specific_id()))?;
+    let algorithm_set = vec!["Multikey".to_owned()];
+    validate_did_verification_method_algorithms(&algorithm_set)?;
 
     Ok(DidDocument {
         context: vec![
@@ -230,8 +274,9 @@ pub fn canonical_did_document(
 #[cfg(test)]
 mod tests {
     use super::{
-        canonical_did_document, canonical_service_endpoint, AgentDid, AgentDidError,
-        AgentDidMetadata, DidDocumentError,
+        canonical_did_document, canonical_service_endpoint,
+        validate_did_verification_method_algorithms, AgentDid, AgentDidError, AgentDidMetadata,
+        DidDocumentError,
     };
 
     fn metadata() -> AgentDidMetadata {
@@ -279,6 +324,26 @@ mod tests {
             canonical_service_endpoint("kamn://messaging/agent-1?channel=dm"),
             Err(DidDocumentError::InvalidServiceEndpoint(
                 "service endpoint must not include query or fragment".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn validate_did_verification_method_algorithms_accepts_uniform_multikey_set() {
+        let algorithms = vec!["Multikey".to_owned(), "Multikey".to_owned()];
+        assert_eq!(
+            validate_did_verification_method_algorithms(&algorithms),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn validate_did_verification_method_algorithms_rejects_mixed_algorithms() {
+        let algorithms = vec!["Multikey".to_owned(), "MultikeyV2".to_owned()];
+        assert_eq!(
+            validate_did_verification_method_algorithms(&algorithms),
+            Err(DidDocumentError::InvalidVerificationMethodAlgorithm(
+                "mixed verification method algorithms are not allowed".to_owned()
             ))
         );
     }

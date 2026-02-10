@@ -27,6 +27,8 @@ This profile maps the `kamn:did` method schema to DID Core 1.1 conformance requi
 - Vector-N1: document missing id is rejected.
 - Vector-N2: unsupported verification method algorithm is rejected.
 - Vector-N3: service endpoint with unsupported scheme, query/fragment, or multi-segment path is rejected.
+- Vector-N4: mixed verification method algorithm sets are rejected for baseline profile.
+- Vector-M1: migration matrix allows approved multikey transitions and blocks downgrade/unsupported paths.
 - Previously non-conformant document (missing id) must be rejected.
 
 ## Downstream Test Category Mapping
@@ -52,6 +54,23 @@ This profile maps the `kamn:did` method schema to DID Core 1.1 conformance requi
 - Required fail-closed policy:
   - non-canonical service endpoint scheme/authority/path combinations must remain rejected (`Regression: #1000`).
 
+## Multi-Key Algorithm Mixing and Migration Matrix Contract
+- Vector fixture:
+  - `fixtures/did_core_conformance/multikey_algorithm_migration_vectors.json`
+- Matrix runner:
+  - `python3 scripts/did/run_multikey_algorithm_migration_matrix.py --fixture fixtures/did_core_conformance/multikey_algorithm_migration_vectors.json --output-json /tmp/did-multikey-algorithm-migration-matrix-report.json`
+- Evidence bundle generator:
+  - `bash scripts/did/generate_multikey_algorithm_policy_evidence_bundle.sh --output-file /tmp/did-multikey-algorithm-policy.json --fixture fixtures/did_core_conformance/multikey_algorithm_migration_vectors.json --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/did/check_multikey_algorithm_policy.sh --bundle-file /tmp/did-multikey-algorithm-policy.json`
+- PR fast contract lane:
+  - `bash scripts/did/run_multikey_algorithm_policy_contract_lane.sh --output-file /tmp/did-multikey-algorithm-policy-contract.json`
+- Required reason-key markers:
+  - `did_multikey_algorithm_policy_reason_codes:GO:v1`
+  - `did_multikey_algorithm_policy_reason_codes:NO-GO:v1`
+- Required fail-closed policy:
+  - mixed or unsupported verification method algorithm sets must remain rejected under migration policy checks (`Regression: #1001`).
+
 ## Local Validation
 Run from repository root:
 
@@ -59,6 +78,9 @@ Run from repository root:
 bash scripts/did/test_generate_service_endpoint_canonicalization_evidence_bundle.sh
 bash scripts/did/test_run_service_endpoint_canonicalization_matrix.sh
 bash scripts/did/test_run_service_endpoint_canonicalization_contract_lane.sh
+bash scripts/did/test_generate_multikey_algorithm_policy_evidence_bundle.sh
+bash scripts/did/test_run_multikey_algorithm_migration_matrix.sh
+bash scripts/did/test_run_multikey_algorithm_policy_contract_lane.sh
 cargo test -p kamn-core --test did_core_conformance_docs
 cargo fmt --check
 cargo clippy -- -D warnings

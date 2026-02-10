@@ -200,7 +200,8 @@ pub use data_classification::{
     DataClassificationLevel, WriteDomain, WriteRequestContext, WriteTag,
 };
 pub use did::{
-    canonical_did_document, canonical_service_endpoint, AgentDid, AgentDidError, AgentDidMetadata,
+    canonical_did_document, canonical_service_endpoint,
+    validate_did_verification_method_algorithms, AgentDid, AgentDidError, AgentDidMetadata,
     DidDocument, DidDocumentError, DidService, DidVerificationMethod,
 };
 pub use did_registry::{

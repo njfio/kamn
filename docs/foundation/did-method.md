@@ -28,6 +28,8 @@ For DID Core 1.1 conformance mapping of `kamn:did`, see `docs/foundation/did-cor
 - Canonical service endpoint policy enforces `kamn://messaging/<method-specific-id>`.
 - Service endpoint canonicalization normalizes scheme/authority/identifier to lowercase.
 - Service endpoints with query/fragment or multi-segment paths are rejected.
+- Verification method algorithm policy is baseline `Multikey` and disallows mixed algorithm sets.
+- Migration policy permits approved forward transitions and blocks unsupported/downgrade mixes.
 - Public key and capability entries must be non-empty.
 
 ## Federated DID Handshake Evidence Contract (Issue #752)
@@ -51,6 +53,7 @@ Cross-network DID trust handshakes must emit deterministic evidence before relea
 - Regression policy:
   - replay/downgrade/tamper attempts force `NO-GO` (`Regression: #734`).
   - non-canonical service endpoint scheme/authority/path combinations must remain rejected (`Regression: #1000`).
+  - mixed or unsupported verification method algorithm sets must remain rejected under migration policy checks (`Regression: #1001`).
 
 ## Local Validation
 Run from repository root:
@@ -63,6 +66,9 @@ bash scripts/did/test_run_federated_did_handshake_deep_lane.sh
 bash scripts/did/test_generate_service_endpoint_canonicalization_evidence_bundle.sh
 bash scripts/did/test_run_service_endpoint_canonicalization_matrix.sh
 bash scripts/did/test_run_service_endpoint_canonicalization_contract_lane.sh
+bash scripts/did/test_generate_multikey_algorithm_policy_evidence_bundle.sh
+bash scripts/did/test_run_multikey_algorithm_migration_matrix.sh
+bash scripts/did/test_run_multikey_algorithm_policy_contract_lane.sh
 cargo test -p kamn-core --test did_method
 cargo test -p kamn-core --test did_method_docs
 cargo fmt --check
