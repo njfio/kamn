@@ -10,6 +10,7 @@ struct SenderConfig {
     addr: String,
     from: String,
     to: String,
+    session_id: String,
     nonce: u64,
     state_hash: String,
     body: String,
@@ -20,6 +21,7 @@ fn parse_args() -> Result<SenderConfig, String> {
         addr: "127.0.0.1:17879".to_owned(),
         from: "kamn:did:agent:sender-1".to_owned(),
         to: "kamn:did:agent:listener-1".to_owned(),
+        session_id: "session:localhost-demo:v1".to_owned(),
         nonce: 1,
         state_hash: "state:localhost-demo".to_owned(),
         body: "hello-from-localhost-demo".to_owned(),
@@ -34,6 +36,7 @@ fn parse_args() -> Result<SenderConfig, String> {
             "--addr" => config.addr = value,
             "--from" => config.from = value,
             "--to" => config.to = value,
+            "--session-id" => config.session_id = value,
             "--nonce" => {
                 config.nonce = value
                     .parse::<u64>()
@@ -54,12 +57,21 @@ fn parse_args() -> Result<SenderConfig, String> {
     if config.state_hash.trim().is_empty() {
         return Err("state hash must not be empty".to_owned());
     }
+    if config.session_id.trim().is_empty() {
+        return Err("session id must not be empty".to_owned());
+    }
     Ok(config)
 }
 
-fn signature_for_fields(from: &str, nonce: u64, state_hash: &str, body: &str) -> String {
+fn signature_for_fields(
+    from: &str,
+    session_id: &str,
+    nonce: u64,
+    state_hash: &str,
+    body: &str,
+) -> String {
     format!(
-        "sig:ed25519:baseline-v1:{from}:{nonce}:{state_hash}:{}",
+        "sig:ed25519:baseline-v1:{from}:{session_id}:{nonce}:{state_hash}:{}",
         body.len()
     )
 }
@@ -86,11 +98,22 @@ fn sanitize(value: &str) -> String {
 
 fn run() -> Result<(), String> {
     let config = parse_args()?;
-    let signature =
-        signature_for_fields(&config.from, config.nonce, &config.state_hash, &config.body);
+    let signature = signature_for_fields(
+        &config.from,
+        &config.session_id,
+        config.nonce,
+        &config.state_hash,
+        &config.body,
+    );
     let wire_payload = format!(
-        "from={}\nto={}\nnonce={}\nstate_hash={}\nbody={}\nsignature={}\n",
-        config.from, config.to, config.nonce, config.state_hash, config.body, signature
+        "from={}\nto={}\nsession_id={}\nnonce={}\nstate_hash={}\nbody={}\nsignature={}\n",
+        config.from,
+        config.to,
+        config.session_id,
+        config.nonce,
+        config.state_hash,
+        config.body,
+        signature
     );
 
     let mut stream = connect_with_retry(&config.addr)?;
@@ -108,6 +131,7 @@ fn run() -> Result<(), String> {
     println!("addr={}", config.addr);
     println!("from={}", config.from);
     println!("to={}", config.to);
+    println!("session_id={}", config.session_id);
     println!("nonce={}", config.nonce);
     println!("state_hash={}", config.state_hash);
     println!("body={}", config.body);

@@ -64,6 +64,8 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
         success_report = tmp_dir / "success.json"
         signature_report = tmp_dir / "signature-mismatch.json"
         timeout_report = tmp_dir / "timeout.json"
+        replay_report = tmp_dir / "replay-nonce.json"
+        admission_report = tmp_dir / "admission-guards.json"
         summary_report = tmp_dir / "localhost-signed-integration-contract.json"
 
         success_run = subprocess.run(
@@ -170,9 +172,81 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
             "expected localhost signed integration timeout scenario evidence key",
         )
 
+        replay_run = subprocess.run(
+            [
+                "bash",
+                str(harness_runner),
+                "--scenario",
+                "replay-nonce",
+                "--output-json",
+                str(replay_report),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if replay_run.returncode != 0:
+            fail((replay_run.stderr or replay_run.stdout or "replay-nonce scenario failed").strip())
+        replay_output = replay_run.stdout
+        _require_contains(
+            replay_output,
+            "status=pass; scenario=replay-nonce;",
+            "expected localhost signed integration replay nonce scenario status marker",
+        )
+        _require_contains(
+            replay_output,
+            "reason_code=replay_nonce_detected;",
+            "expected localhost signed integration replay nonce scenario reason code marker",
+        )
+        _require_contains(
+            replay_output,
+            "evidence_key=localhost_signed_integration:replay-nonce:v1;",
+            "expected localhost signed integration replay nonce scenario evidence key",
+        )
+
+        admission_run = subprocess.run(
+            [
+                "bash",
+                str(harness_runner),
+                "--scenario",
+                "admission-guards",
+                "--output-json",
+                str(admission_report),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if admission_run.returncode != 0:
+            fail(
+                (
+                    admission_run.stderr
+                    or admission_run.stdout
+                    or "admission-guards scenario failed"
+                ).strip()
+            )
+        admission_output = admission_run.stdout
+        _require_contains(
+            admission_output,
+            "status=pass; scenario=admission-guards;",
+            "expected localhost signed integration admission guards scenario status marker",
+        )
+        _require_contains(
+            admission_output,
+            "reason_code=session_admission_guards_detected;",
+            "expected localhost signed integration admission guards scenario reason code marker",
+        )
+        _require_contains(
+            admission_output,
+            "evidence_key=localhost_signed_integration:admission-guards:v1;",
+            "expected localhost signed integration admission guards scenario evidence key",
+        )
+
         success_payload = load_json(success_report)
         signature_payload = load_json(signature_report)
         timeout_payload = load_json(timeout_report)
+        replay_payload = load_json(replay_report)
+        admission_payload = load_json(admission_report)
         summary = {
             "schema_version": "kamn.sdk.localhost-signed.integration-contract.v1",
             "status": "pass",
@@ -180,17 +254,31 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
             "success_scenario_status": success_payload["status"],
             "signature_mismatch_scenario_status": signature_payload["status"],
             "timeout_scenario_status": timeout_payload["status"],
+            "replay_nonce_scenario_status": replay_payload["status"],
+            "admission_guards_scenario_status": admission_payload["status"],
             "success_evidence_key": success_payload["evidence_key"],
             "signature_mismatch_evidence_key": signature_payload["evidence_key"],
             "timeout_evidence_key": timeout_payload["evidence_key"],
+            "replay_nonce_evidence_key": replay_payload["evidence_key"],
+            "admission_guards_evidence_key": admission_payload["evidence_key"],
             "signature_mismatch_reason_code": signature_payload["reason_code"],
             "timeout_reason_code": timeout_payload["reason_code"],
+            "replay_nonce_reason_code": replay_payload["reason_code"],
+            "admission_guards_reason_code": admission_payload["reason_code"],
             "success_reason_key": success_payload["reason_key"],
             "signature_mismatch_reason_key": signature_payload["reason_key"],
             "timeout_reason_key": timeout_payload["reason_key"],
+            "replay_nonce_reason_key": replay_payload["reason_key"],
+            "admission_guards_reason_key": admission_payload["reason_key"],
             "success_elapsed_seconds": success_payload["elapsed_seconds"],
             "signature_mismatch_elapsed_seconds": signature_payload["elapsed_seconds"],
             "timeout_elapsed_seconds": timeout_payload["elapsed_seconds"],
+            "replay_nonce_elapsed_seconds": replay_payload["elapsed_seconds"],
+            "admission_guards_elapsed_seconds": admission_payload["elapsed_seconds"],
+            "replay_guard_status": replay_payload["replay_guard_status"],
+            "replay_rejected_nonce": replay_payload["replay_rejected_nonce"],
+            "admission_guard_status": admission_payload["admission_guard_status"],
+            "admission_reason_codes": admission_payload["admission_reason_codes"],
         }
         summary_report.write_text(
             json.dumps(summary, separators=(",", ":")),
@@ -267,6 +355,8 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
         print("localhost_signed_integration_success=pass")
         print("localhost_signed_integration_signature_mismatch=pass")
         print("localhost_signed_integration_timeout=pass")
+        print("localhost_signed_integration_replay_nonce=pass")
+        print("localhost_signed_integration_admission_guards=pass")
         print("localhost_signed_integration_policy=ok")
         print("localhost signed integration contract lane tests passed.")
         return 0

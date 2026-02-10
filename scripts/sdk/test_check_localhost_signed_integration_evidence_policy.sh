@@ -35,7 +35,7 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 payload = json.loads(path.read_text(encoding="utf-8"))
-payload["signature_mismatch_evidence_key"] = "unexpected_evidence_key"
+payload["admission_reason_codes"] = ["tampered_reason_code"]
 path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
@@ -49,14 +49,14 @@ if [ "$tampered_code" -eq 0 ]; then
   exit 1
 fi
 
-if ! printf '%s\n' "$tampered_output" | grep -Fq "signature_mismatch_evidence_key"; then
-  echo "expected explicit signature mismatch evidence-key policy error" >&2
+if ! printf '%s\n' "$tampered_output" | grep -Fq "admission_reason_codes"; then
+  echo "expected explicit admission reason-code policy error" >&2
   exit 1
 fi
 
 # Regression: #880
-if ! printf '%s\n' "$tampered_output" | grep -Fq "localhost_signed_integration:signature-mismatch:v1"; then
-  echo "expected expected evidence-key marker in localhost signed integration policy regression path" >&2
+if ! printf '%s\n' "$tampered_output" | grep -Fq "stale_session_detected"; then
+  echo "expected deterministic admission reason markers in localhost signed integration policy regression path" >&2
   exit 1
 fi
 
