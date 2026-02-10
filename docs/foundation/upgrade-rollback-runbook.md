@@ -60,6 +60,40 @@ Release promotion requires machine-validated DR drill evidence and SLO gate chec
 - Regression policy:
   - missing/incomplete DR evidence and SLO threshold violations force `NO-GO` (`Regression: #623`).
 
+## Secure-Signer Incident Recovery Contract Lanes (Issue #989)
+Signer incident response requires deterministic lane reports, fail-closed policy checks, and scheduled deep-lane cadence enforcement.
+
+- Incident recovery lane:
+  - `bash scripts/signer/run_signer_incident_recovery_lane.sh --output-json /tmp/signer-incident-recovery-report.json`
+- Policy checker:
+  - `bash scripts/signer/check_signer_incident_recovery_policy.sh --report-file /tmp/signer-incident-recovery-report.json`
+- PR fast contract lane:
+  - `bash scripts/signer/run_signer_incident_recovery_contract_lane.sh --output-file /tmp/signer-incident-recovery-contract-report.json`
+- Scheduled deep lane:
+  - `KAMN_SIGNER_INCIDENT_RECOVERY_DEEP_CADENCE=scheduled bash scripts/signer/run_signer_incident_recovery_deep_lane.sh --output-json /tmp/signer-incident-recovery-deep-report.json`
+- Stable shell wrappers:
+  - `scripts/signer/run_signer_incident_recovery_lane.sh`
+  - `scripts/signer/check_signer_incident_recovery_policy.sh`
+  - `scripts/signer/run_signer_incident_recovery_contract_lane.sh`
+  - `scripts/signer/run_signer_incident_recovery_deep_lane.sh`
+- Shared Python implementation:
+  - `scripts/signer/signer_incident_recovery_lane.py`
+  - `scripts/signer/signer_incident_recovery_policy_contract.py`
+  - `scripts/signer/signer_incident_recovery_contract_lane_contract.py`
+- Runtime and cadence controls:
+  - `KAMN_SIGNER_INCIDENT_RECOVERY_MAX_SECONDS`
+  - `KAMN_SIGNER_INCIDENT_RECOVERY_CONTRACT_MAX_SECONDS`
+  - `KAMN_SIGNER_INCIDENT_RECOVERY_DEEP_CADENCE`
+  - `KAMN_SIGNER_INCIDENT_RECOVERY_DEEP_MAX_SECONDS`
+  - `KAMN_SIGNER_INCIDENT_RECOVERY_DEEP_MAX_ARTIFACT_AGE_SECONDS`
+- Required schema/reason markers:
+  - `kamn.signer.incident-recovery-report.v1`
+  - `kamn.signer.incident-recovery-deep-summary.v1`
+  - `signer_incident_recovery_reason_codes:GO:v1`
+  - `signer_incident_recovery_deep_reason_codes:GO:v1`
+- Regression policy:
+  - runbook-step drift, revocation propagation gaps, stale deep-lane artifacts, or cadence violations force `NO-GO` (`Regression: #989`).
+
 ## Deployment SLO Evidence and Rollback Automation Contract
 Deterministic deployment SLO/rollback policy checks are enforced through a bounded deployment lane:
 
@@ -154,6 +188,10 @@ Run from repository root:
 ```bash
 bash scripts/deploy/test_generate_dr_evidence_bundle.sh
 bash scripts/deploy/test_run_dr_evidence_contract_lane.sh
+bash scripts/signer/test_run_signer_incident_recovery_lane.sh
+bash scripts/signer/test_check_signer_incident_recovery_policy.sh
+bash scripts/signer/test_run_signer_incident_recovery_contract_lane.sh
+bash scripts/signer/test_run_signer_incident_recovery_deep_lane.sh
 bash scripts/governance/test_run_governance_lifecycle_rollback_lane.sh
 bash scripts/governance/test_check_governance_lifecycle_rollback_policy.sh
 bash scripts/governance/test_run_governance_lifecycle_rollback_contract_lane.sh

@@ -60,6 +60,20 @@ fn checklist_contains_durable_guard_recovery_evidence() {
 }
 
 #[test]
+fn checklist_contains_signer_incident_recovery_contract_and_cadence() {
+    assert!(CHECKLIST
+        .contains("## Signer Incident Recovery Contract and Deep-Lane Cadence (Issue #989)"));
+    assert!(CHECKLIST.contains("run_signer_incident_recovery_lane.sh"));
+    assert!(CHECKLIST.contains("check_signer_incident_recovery_policy.sh"));
+    assert!(CHECKLIST.contains("run_signer_incident_recovery_contract_lane.sh"));
+    assert!(CHECKLIST.contains("run_signer_incident_recovery_deep_lane.sh"));
+    assert!(CHECKLIST.contains("kamn.signer.incident-recovery-report.v1"));
+    assert!(CHECKLIST.contains("kamn.signer.incident-recovery-deep-summary.v1"));
+    assert!(CHECKLIST.contains("signer_incident_recovery_reason_codes:GO:v1"));
+    assert!(CHECKLIST.contains("KAMN_SIGNER_INCIDENT_RECOVERY_DEEP_CADENCE"));
+}
+
+#[test]
 fn checklist_contains_settlement_reconciliation_evidence_contract() {
     assert!(CHECKLIST.contains("## Settlement Reconciliation Evidence Contract"));
     assert!(CHECKLIST.contains("generate_settlement_reconciliation_evidence_bundle.sh",));
@@ -463,5 +477,13 @@ fn regression_requires_post_cutover_slo_shared_contract_lane_marker() {
     // Regression: #1282
     assert!(CHECKLIST.contains(
         "shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1282`)."
+    ));
+}
+
+#[test]
+fn regression_requires_signer_incident_recovery_stale_artifact_guard_marker() {
+    // Regression: #989
+    assert!(CHECKLIST.contains(
+        "stale deep-lane artifacts, unscheduled deep-lane execution, and incident recovery policy drift force `NO-GO` (`Regression: #989`)."
     ));
 }

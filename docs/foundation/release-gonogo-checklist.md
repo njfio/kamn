@@ -86,6 +86,31 @@ Durable guard schema evolution and restart invariants must be proven before a re
   - nightly deep bundle store stress executes `performance_bundle_store_deep_lane_stress`.
   - shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1242`).
 
+## Signer Incident Recovery Contract and Deep-Lane Cadence (Issue #989)
+Signer incident response readiness must remain deterministic while keeping PR fast-gate cost bounded.
+
+- Incident recovery lane:
+  - `bash scripts/signer/run_signer_incident_recovery_lane.sh --output-json /tmp/signer-incident-recovery-report.json`
+- Policy checker:
+  - `bash scripts/signer/check_signer_incident_recovery_policy.sh --report-file /tmp/signer-incident-recovery-report.json`
+- PR fast contract lane:
+  - `bash scripts/signer/run_signer_incident_recovery_contract_lane.sh --output-file /tmp/signer-incident-recovery-contract-report.json`
+- Scheduled deep lane entrypoint:
+  - `KAMN_SIGNER_INCIDENT_RECOVERY_DEEP_CADENCE=scheduled bash scripts/signer/run_signer_incident_recovery_deep_lane.sh --output-json /tmp/signer-incident-recovery-deep-report.json`
+- Required schema/reason markers:
+  - `kamn.signer.incident-recovery-report.v1`
+  - `kamn.signer.incident-recovery-deep-summary.v1`
+  - `signer_incident_recovery_reason_codes:GO:v1`
+  - `signer_incident_recovery_deep_reason_codes:GO:v1`
+- Runtime/cadence controls:
+  - `KAMN_SIGNER_INCIDENT_RECOVERY_MAX_SECONDS`
+  - `KAMN_SIGNER_INCIDENT_RECOVERY_CONTRACT_MAX_SECONDS`
+  - `KAMN_SIGNER_INCIDENT_RECOVERY_DEEP_CADENCE`
+  - `KAMN_SIGNER_INCIDENT_RECOVERY_DEEP_MAX_SECONDS`
+  - `KAMN_SIGNER_INCIDENT_RECOVERY_DEEP_MAX_ARTIFACT_AGE_SECONDS`
+- Regression policy:
+  - stale deep-lane artifacts, unscheduled deep-lane execution, and incident recovery policy drift force `NO-GO` (`Regression: #989`).
+
 ## Settlement Reconciliation Evidence Contract (Issue #687)
 Escrow settlement outcomes require deterministic receipt/finality evidence before release approval.
 
