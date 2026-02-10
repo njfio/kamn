@@ -153,6 +153,21 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
   - run mode fails closed without explicit local-only opt-in.
   - lane default budget is bounded to 180 seconds.
 
+## Fast-Gate Native API Parity Contract Lane (Issues #1466, #1468)
+
+- Fast-gate parity lane runner:
+  - `bash scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json`
+- Fast-gate parity policy checker:
+  - `python3 scripts/kolme/check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-fast-gate-native-api-parity-policy.json`
+- Summary schema:
+  - `kamn.kolme.fast-gate-native-api-parity-summary.v1`
+- Deterministic checkpoints include:
+  - bounded composition of nonce/broadcast parity, notifications consumer, and block fallback contract lanes
+  - fail-closed reason codes for command timeout/failure and budget overrun
+- Cost policy:
+  - lane default budget is bounded to 120 seconds via `KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS`.
+  - local-heavy run-mode parity commands remain excluded from PR fast-gate workflow routing.
+
 ## Deterministic Local Bootstrap Health Checks (Issue #1417)
 
 - Bootstrap health-check runner:
@@ -227,6 +242,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - local Kolme API smoke lane fails closed without explicit local opt-in, probe prerequisite failure, smoke-command timeout, and smoke-command errors (`Regression: #1440`).
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
 - local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`).
+- native parity fast/local command matrix docs drift remains fail-closed (`Regression: #1468`).
 - block fallback stale-window and response-height drift remains fail-closed (`Regression: #1464`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
@@ -241,6 +257,7 @@ bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh
 bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh
 bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh
 bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh
+bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh
 bash scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh
 bash scripts/kolme/test_run_local_bootstrap_health_checks.sh
 bash scripts/kolme/test_run_local_e2e_integration_lane.sh

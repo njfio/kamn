@@ -84,6 +84,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - local native API parity live-proof run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_native_api_parity_live_proof_lane.sh --mode run --nonce-command "curl --silent --show-error --fail http://127.0.0.1:3000/get-next-nonce?pubkey=test-key" --broadcast-command "curl --silent --show-error --fail --request POST --data '{\"message\":\"native-parity\",\"signature\":\"sig\",\"recovery_id\":1}' http://127.0.0.1:3000/broadcast" --finality-command "curl --silent --show-error --fail http://127.0.0.1:3000/block/1" --max-seconds 180 --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json`
   - heavy execution keeps explicit opt-in: `KAMN_KOLME_LOCAL_HEAVY=1`
+  - native parity fast/local command matrix remains synchronized across `README.md` and `docs/planning/kolme-devnet-ops.md`.
 - Dashboard backend session/auth freshness command changes map to dashboard contract scope:
   - `run_dashboard_contract_tests=true`
   - `test_scope=frontend-contract`
@@ -153,6 +154,7 @@ Regression policy:
 - local Kolme API probe/smoke run-mode exclusion parity remains fail-closed (`Regression: #1441`).
 - local runtime-commit live run-mode exclusion parity remains fail-closed (`Regression: #1451`).
 - local native API parity live-proof run-mode exclusion parity remains fail-closed (`Regression: #1467`).
+- native parity fast/local command matrix docs parity remains fail-closed (`Regression: #1468`).
 - nonce/broadcast parity matrix selector/docs/runtime-budget drift remains fail-closed (`Regression: #1462`).
 - fast-gate native Kolme API parity lane schema/routing/runtime-budget drift remains fail-closed (`Regression: #1466`).
 

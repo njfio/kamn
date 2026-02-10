@@ -33,7 +33,13 @@ required_snippets=(
   "run_local_kolme_api_probe_lane.sh --mode run"
   "run_local_kolme_api_smoke_lane.sh --mode run"
   "run_local_runtime_commit_live_lane.sh --mode run"
+  "run_local_native_api_parity_live_proof_lane.sh --mode run"
   "test_run_local_runtime_commit_live_lane.sh"
+  "test_run_local_native_api_parity_live_proof_contract_lane.sh"
+  "test_run_fast_gate_native_api_parity_contract_lane.sh"
+  "run_fast_gate_native_api_parity_contract_lane.sh --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json"
+  "check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json"
+  "KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS=120"
   "test_run_nonce_broadcast_parity_contract_lane.sh"
   "KAMN_KOLME_NONCE_BROADCAST_PARITY_MAX_SECONDS=60"
   "run_local_bootstrap_health_checks.sh"
@@ -43,6 +49,8 @@ required_snippets=(
   "local-only fork sync/smoke run-mode commands remain excluded from ci-fast-gate."
   "local Kolme API probe/smoke run-mode commands remain excluded from ci-fast-gate."
   "local runtime-commit live run-mode commands remain excluded from ci-fast-gate."
+  "local native API parity live-proof run-mode commands remain excluded from ci-fast-gate."
+  "native parity fast/local command matrix remains synchronized across"
   "run_dashboard_contract_tests=true"
   "test_scope=frontend-contract"
   "run_frontend_dashboard_tests=true"
@@ -82,7 +90,10 @@ required_snippets=(
   "Regression: #1431"
   "Regression: #1441"
   "Regression: #1451"
+  "Regression: #1467"
+  "Regression: #1468"
   "Regression: #1462"
+  "Regression: #1466"
 )
 
 for snippet in "${required_snippets[@]}"; do
