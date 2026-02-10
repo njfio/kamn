@@ -496,6 +496,18 @@ assert_eq "$(extract_output "$sdk_fixture_drift_checker_output" "run_live_transp
 assert_eq "$(extract_output "$sdk_fixture_drift_checker_output" "run_sdk_parity_matrix")" "true" "sdk fixture drift checker changes must run sdk parity matrix"
 assert_eq "$(extract_output "$sdk_fixture_drift_checker_output" "test_scope")" "sdk" "sdk fixture drift checker changes should set sdk scope"
 
+sdk_fixture_drift_policy_checker_output="$(run_selector $'scripts/sdk/check_example_fixture_drift_policy.sh')"
+assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_output" "run_rust")" "false" "sdk fixture drift policy checker script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_output" "run_live_transport_parity_contract_tests")" "false" "sdk fixture drift policy checker changes should not run live transport parity lane"
+assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_output" "run_sdk_parity_matrix")" "true" "sdk fixture drift policy checker changes must run sdk parity matrix"
+assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_output" "test_scope")" "sdk" "sdk fixture drift policy checker changes should set sdk scope"
+
+sdk_fixture_drift_policy_checker_shared_contract_output="$(run_selector $'scripts/sdk/example_fixture_drift_policy_contract.py')"
+assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_shared_contract_output" "run_rust")" "false" "sdk fixture drift shared policy module script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_shared_contract_output" "run_live_transport_parity_contract_tests")" "false" "sdk fixture drift shared policy module changes should not run live transport parity lane"
+assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_shared_contract_output" "run_sdk_parity_matrix")" "true" "sdk fixture drift shared policy module changes must run sdk parity matrix"
+assert_eq "$(extract_output "$sdk_fixture_drift_policy_checker_shared_contract_output" "test_scope")" "sdk" "sdk fixture drift shared policy module changes should set sdk scope"
+
 sdk_fixture_drift_contract_lane_output="$(run_selector $'scripts/sdk/run_example_fixture_drift_contract_lane.sh')"
 assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_output" "run_rust")" "false" "sdk fixture drift contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$sdk_fixture_drift_contract_lane_output" "run_live_transport_parity_contract_tests")" "false" "sdk fixture drift contract lane changes should not run live transport parity lane"
