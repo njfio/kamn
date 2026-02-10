@@ -136,6 +136,7 @@ fi
 
 docs_contract_present=true
 required_doc_markers=(
+  "governance_quorum_attestation_replay_policy_contract.py"
   "run_quorum_attestation_replay_guard_lane.sh"
   "check_quorum_attestation_replay_policy.sh"
   "run_quorum_attestation_replay_contract_lane.sh"
