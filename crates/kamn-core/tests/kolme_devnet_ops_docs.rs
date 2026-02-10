@@ -43,6 +43,15 @@ fn plan_contains_deterministic_local_bootstrap_health_checks() {
 }
 
 #[test]
+fn plan_contains_local_only_heavy_e2e_lane() {
+    assert!(PLAN.contains("## Local-Only Heavy End-to-End Lane"));
+    assert!(PLAN.contains("run_local_e2e_integration_lane.sh"));
+    assert!(PLAN.contains("kamn.kolme.local-e2e-integration-summary.v1"));
+    assert!(PLAN.contains("run_runtime_commit_adapter_contract_lane.sh"));
+    assert!(PLAN.contains("run_live_transport_parity_contract_lane.sh"));
+}
+
+#[test]
 fn regression_requires_failover_sync_budget_and_scheduled_cadence_guards() {
     // Regression: #788
     assert!(PLAN
@@ -70,5 +79,13 @@ fn regression_requires_local_bootstrap_opt_in_guard_marker() {
     // Regression: #1417
     assert!(PLAN.contains(
         "deterministic bootstrap run mode fails closed without explicit local-only opt-in (`Regression: #1417`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_e2e_opt_in_guard_marker() {
+    // Regression: #1418
+    assert!(PLAN.contains(
+        "local-only heavy E2E lane run mode fails closed without explicit local-only opt-in (`Regression: #1418`)."
     ));
 }

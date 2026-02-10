@@ -278,6 +278,14 @@ KAMN_KOLME_LOCAL_HEAVY=1 \
 bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode run --output-json /tmp/kolme-local-bootstrap-summary.json
 # schema: kamn.kolme.local-bootstrap-summary.v1
 
+# local-only heavy end-to-end lane plan (no command execution)
+bash scripts/kolme/run_local_e2e_integration_lane.sh --mode dry-run --output-json /tmp/kolme-local-e2e-integration-summary.json
+
+# local-only heavy end-to-end lane execution (bootstrap + runtime commit + sdk parity)
+KAMN_KOLME_LOCAL_HEAVY=1 \
+bash scripts/kolme/run_local_e2e_integration_lane.sh --mode run --output-json /tmp/kolme-local-e2e-integration-summary.json
+# schema: kamn.kolme.local-e2e-integration-summary.v1
+
 # command surface + artifact schema validation (no heavy execution)
 bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode dry-run --output-json /tmp/kolme-local-heavy-validation-summary.json
 
