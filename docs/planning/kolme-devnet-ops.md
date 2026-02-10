@@ -133,6 +133,26 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
   - run mode fails closed without explicit local-only opt-in.
   - live command timeout/exceeded budget is reported as `live_runtime_commit_command_timeout`.
 
+## Local Native API Parity Live Proof Lane (Issue #1465)
+
+- Native API parity live-proof lane runner:
+  - `bash scripts/kolme/run_local_native_api_parity_live_proof_lane.sh --mode dry-run --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json`
+- Explicit opt-in live proof execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_native_api_parity_live_proof_lane.sh --mode run --nonce-command "curl --silent --show-error --fail http://127.0.0.1:3000/get-next-nonce?pubkey=test-key" --broadcast-command "curl --silent --show-error --fail --request POST --data '{\"message\":\"native-parity\",\"signature\":\"sig\",\"recovery_id\":1}' http://127.0.0.1:3000/broadcast" --finality-command "curl --silent --show-error --fail http://127.0.0.1:3000/block/1" --max-seconds 180 --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json`
+- Policy checker command:
+  - `python3 scripts/kolme/check_local_native_api_parity_live_proof_policy.py --report-file /tmp/kolme-local-native-api-parity-live-proof-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-native-api-parity-live-proof-policy.json`
+- Contract lane command:
+  - `bash scripts/kolme/run_local_native_api_parity_live_proof_contract_lane.sh --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json --policy-output-json /tmp/kolme-local-native-api-parity-live-proof-policy.json`
+- Summary schema:
+  - `kamn.kolme.local-native-api-parity-live-proof-summary.v1`
+- Deterministic checkpoints include:
+  - explicit local-only opt-in marker (`KAMN_KOLME_LOCAL_HEAVY=1`)
+  - bounded native parity proof budget via `--max-seconds`
+  - deterministic pass/fail reason codes for missing opt-in, command missing, timeout, and command failures
+- Cost policy:
+  - run mode fails closed without explicit local-only opt-in.
+  - lane default budget is bounded to 180 seconds.
+
 ## Deterministic Local Bootstrap Health Checks (Issue #1417)
 
 - Bootstrap health-check runner:
@@ -206,6 +226,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - local Kolme API probe lane fails closed on unavailable health endpoint, invalid fork-info payload, and runtime budget overruns (`Regression: #1439`).
 - local Kolme API smoke lane fails closed without explicit local opt-in, probe prerequisite failure, smoke-command timeout, and smoke-command errors (`Regression: #1440`).
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
+- local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`).
 - block fallback stale-window and response-height drift remains fail-closed (`Regression: #1464`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
@@ -219,6 +240,7 @@ bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh
 bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh
 bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh
 bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh
+bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh
 bash scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh
 bash scripts/kolme/test_run_local_bootstrap_health_checks.sh
 bash scripts/kolme/test_run_local_e2e_integration_lane.sh

@@ -70,6 +70,15 @@ fn plan_contains_local_runtime_commit_live_lane() {
 }
 
 #[test]
+fn plan_contains_local_native_api_parity_live_proof_lane() {
+    assert!(PLAN.contains("## Local Native API Parity Live Proof Lane"));
+    assert!(PLAN.contains("run_local_native_api_parity_live_proof_lane.sh"));
+    assert!(PLAN.contains("check_local_native_api_parity_live_proof_policy.py"));
+    assert!(PLAN.contains("run_local_native_api_parity_live_proof_contract_lane.sh"));
+    assert!(PLAN.contains("kamn.kolme.local-native-api-parity-live-proof-summary.v1"));
+}
+
+#[test]
 fn plan_contains_local_only_heavy_validation_matrix() {
     assert!(PLAN.contains("## Local-Only Heavy Kolme Validation Matrix"));
     assert!(PLAN.contains("run_local_heavy_validation_matrix.sh"));
@@ -179,5 +188,13 @@ fn regression_requires_runtime_commit_block_fallback_guard_marker() {
     // Regression: #1464
     assert!(PLAN.contains(
         "block fallback stale-window and response-height drift remains fail-closed (`Regression: #1464`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_native_api_parity_live_proof_guard_marker() {
+    // Regression: #1465
+    assert!(PLAN.contains(
+        "local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`)."
     ));
 }
