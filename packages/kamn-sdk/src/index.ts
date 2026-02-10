@@ -1,5 +1,9 @@
 export { KAMNClient, SDKError, TransportModeMismatchError } from "./memory_client.ts";
-export { LiveTransportConfig, LiveTransportKAMNClient } from "./live_transport_client.ts";
+export {
+  LiveTransportBackendAdapterError,
+  LiveTransportConfig,
+  LiveTransportKAMNClient,
+} from "./live_transport_client.ts";
 export { OpenClawConnector } from "./openclaw_connector.ts";
 
 export type {
