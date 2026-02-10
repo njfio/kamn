@@ -41,6 +41,10 @@ A2A/MCP request-response interoperability must run through deterministic fixture
   - `python3 scripts/message/run_a2a_mcp_conformance_harness.py --fixture fixtures/a2a_mcp_conformance/replay_cases.json --output-json /tmp/a2a-mcp-conformance-report.json`
 - Policy checker:
   - `bash scripts/message/check_a2a_mcp_conformance_policy.sh --report-file /tmp/a2a-mcp-conformance-report.json`
+- Stable shell wrapper:
+  - `scripts/message/check_a2a_mcp_conformance_policy.sh`
+- Shared Python implementation:
+  - `scripts/message/a2a_mcp_conformance_policy_contract.py`
 - PR fast contract lane:
   - `bash scripts/message/run_a2a_mcp_conformance_contract_lane.sh`
 - Decision key contract:

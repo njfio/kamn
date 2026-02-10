@@ -955,6 +955,11 @@ assert_eq "$(extract_output "$a2a_mcp_contract_script_output" "run_rust")" "fals
 assert_eq "$(extract_output "$a2a_mcp_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "a2a/mcp contract script changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$a2a_mcp_contract_script_output" "test_scope")" "message-contract" "a2a/mcp contract script changes should set message-contract scope"
 
+a2a_mcp_policy_shared_contract_output="$(run_selector $'scripts/message/a2a_mcp_conformance_policy_contract.py')"
+assert_eq "$(extract_output "$a2a_mcp_policy_shared_contract_output" "run_rust")" "false" "a2a/mcp shared policy contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$a2a_mcp_policy_shared_contract_output" "run_message_lifecycle_contract_tests")" "true" "a2a/mcp shared policy contract changes must run message lifecycle contract lane"
+assert_eq "$(extract_output "$a2a_mcp_policy_shared_contract_output" "test_scope")" "message-contract" "a2a/mcp shared policy contract changes should set message-contract scope"
+
 didcomm_contract_fixture_output="$(run_selector $'fixtures/didcomm_envelope_compatibility/replay_cases.json')"
 assert_eq "$(extract_output "$didcomm_contract_fixture_output" "run_rust")" "false" "didcomm envelope fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$didcomm_contract_fixture_output" "run_message_lifecycle_contract_tests")" "true" "didcomm envelope fixture changes must run message lifecycle contract lane"
