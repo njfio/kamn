@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE_SCRIPT="$ROOT_DIR/scripts/frontend/run_dashboard_shell_determinism_matrix_lane.sh"
 CHECKER="$ROOT_DIR/scripts/frontend/check_dashboard_shell_determinism_matrix_policy.sh"
+SHARED_SCRIPT="$ROOT_DIR/scripts/frontend/dashboard_shell_determinism_matrix_policy_contract.py"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -14,6 +15,16 @@ fi
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected dashboard shell matrix policy checker script to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q 'dashboard_shell_determinism_matrix_policy_contract.py' "$CHECKER"; then
+  echo "expected dashboard shell matrix policy checker wrapper to delegate to shared implementation" >&2
+  exit 1
+fi
+
+if [ ! -x "$SHARED_SCRIPT" ]; then
+  echo "expected shared dashboard shell matrix policy checker implementation to be executable" >&2
   exit 1
 fi
 

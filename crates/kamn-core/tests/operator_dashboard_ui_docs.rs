@@ -35,6 +35,7 @@ fn doc_contains_frontend_shell_matrix_contract_lane() {
     assert!(DOC.contains("## Frontend Shell Determinism Matrix Contract"));
     assert!(DOC.contains("run_dashboard_shell_determinism_matrix_lane.sh"));
     assert!(DOC.contains("check_dashboard_shell_determinism_matrix_policy.sh"));
+    assert!(DOC.contains("dashboard_shell_determinism_matrix_policy_contract.py"));
     assert!(DOC.contains("run_dashboard_shell_determinism_matrix_contract_lane.sh"));
     assert!(DOC.contains("kamn.frontend.shell-matrix-report.v1"));
     assert!(DOC.contains("KAMN_FRONTEND_SHELL_MATRIX_MAX_SECONDS"));
@@ -76,4 +77,11 @@ fn regression_requires_frontend_shell_matrix_fail_closed_rules() {
     assert!(DOC.contains(
         "healthy/stale-critical/error shell drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #943`)."
     ));
+}
+
+#[test]
+fn regression_requires_frontend_shell_matrix_policy_wrapper_delegation_rule() {
+    // Regression: #1210
+    assert!(DOC.contains("dashboard_shell_determinism_matrix_policy_contract.py"));
+    assert!(DOC.contains("Regression: #1210"));
 }
