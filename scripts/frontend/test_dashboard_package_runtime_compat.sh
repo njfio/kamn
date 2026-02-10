@@ -144,11 +144,16 @@ if [[ "${1:-}" != "-y" || "${2:-}" != "node@22" ]]; then
   exit 33
 fi
 
-if [[ "${3:-}" == "--experimental-strip-types" && "${4:-}" == "-e" ]]; then
+shift 2
+if [[ "${1:-}" == "--" ]]; then
+  shift
+fi
+
+if [[ "${1:-}" == "--experimental-strip-types" && "${2:-}" == "-e" ]]; then
   exit 0
 fi
 
-if [[ "${3:-}" == "--experimental-strip-types" && "${4:-}" == "--test" ]]; then
+if [[ "${1:-}" == "--experimental-strip-types" && "${2:-}" == "--test" ]]; then
   printf '%s\n' "default-fallback" >>"$MARKER_FILE"
   exit 0
 fi

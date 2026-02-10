@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 NODE_BIN="${KAMN_DASHBOARD_NODE_BIN:-node}"
-FALLBACK_NODE_CMD="${KAMN_DASHBOARD_FALLBACK_NODE_CMD:-npx -y node@22}"
+FALLBACK_NODE_CMD="${KAMN_DASHBOARD_FALLBACK_NODE_CMD:-npx -y node@22 --}"
 TEST_TARGET_GLOB="${KAMN_DASHBOARD_TEST_TARGET_GLOB:-./packages/kamn-dashboard/tests/*.test.ts}"
 
 supports_strip_types() {
