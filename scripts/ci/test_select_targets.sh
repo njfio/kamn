@@ -1140,6 +1140,11 @@ assert_eq "$(extract_output "$channel_policy_contract_script_output" "run_rust")
 assert_eq "$(extract_output "$channel_policy_contract_script_output" "run_channel_lifecycle_contract_tests")" "true" "channel policy contract script changes must run channel lifecycle contract lane"
 assert_eq "$(extract_output "$channel_policy_contract_script_output" "test_scope")" "channel-contract" "channel policy contract script changes should set channel-contract scope"
 
+channel_policy_contract_shared_script_output="$(run_selector $'scripts/channel/channel_policy_contract_lane_contract.py')"
+assert_eq "$(extract_output "$channel_policy_contract_shared_script_output" "run_rust")" "false" "channel policy shared contract-lane script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$channel_policy_contract_shared_script_output" "run_channel_lifecycle_contract_tests")" "true" "channel policy shared contract-lane changes must run channel lifecycle contract lane"
+assert_eq "$(extract_output "$channel_policy_contract_shared_script_output" "test_scope")" "channel-contract" "channel policy shared contract-lane changes should set channel-contract scope"
+
 channel_retention_redaction_contract_script_output="$(run_selector $'scripts/channel/run_channel_retention_redaction_contract_lane.sh')"
 assert_eq "$(extract_output "$channel_retention_redaction_contract_script_output" "run_rust")" "false" "channel retention/redaction contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$channel_retention_redaction_contract_script_output" "run_channel_lifecycle_contract_tests")" "true" "channel retention/redaction contract script changes must run channel lifecycle contract lane"

@@ -4,6 +4,7 @@ const DOC: &str = include_str!("../../../docs/foundation/channel-models-and-perm
 fn doc_contains_channel_models_and_permissions_scope() {
     assert!(DOC.contains("# Channel Models and Permissions Contract Rules"));
     assert!(DOC.contains("run_channel_policy_contract_lane.sh"));
+    assert!(DOC.contains("channel_policy_contract_lane_contract.py"));
     assert!(DOC.contains("run_channel_retention_redaction_contract_lane.sh"));
     assert!(DOC.contains("channel_permissions_retention"));
 }
@@ -13,4 +14,12 @@ fn regression_requires_channel_policy_bypass_marker() {
     // Regression: #929
     assert!(DOC.contains("unauthorized channel policy bypass is rejected (`Regression: #929`)"));
     assert!(DOC.contains("test_run_channel_policy_contract_lane.sh"));
+}
+
+#[test]
+fn regression_requires_channel_policy_shared_contract_marker() {
+    // Regression: #1274
+    assert!(DOC.contains(
+        "shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1274`)"
+    ));
 }
