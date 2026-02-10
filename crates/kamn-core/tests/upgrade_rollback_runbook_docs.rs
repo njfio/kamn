@@ -66,6 +66,7 @@ fn runbook_contains_live_network_pilot_rollback_evidence_gate() {
 #[test]
 fn runbook_contains_deployment_slo_rollback_contract_lane() {
     assert!(RUNBOOK.contains("## Deployment SLO Evidence and Rollback Automation Contract"));
+    assert!(RUNBOOK.contains("deployment_slo_rollback_policy_contract.py"));
     assert!(RUNBOOK.contains("run_deployment_slo_rollback_lane.sh"));
     assert!(RUNBOOK.contains("check_deployment_slo_rollback_policy.sh"));
     assert!(RUNBOOK.contains("run_deployment_slo_rollback_contract_lane.sh"));
