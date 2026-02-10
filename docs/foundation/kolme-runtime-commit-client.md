@@ -11,6 +11,7 @@ handling.
   - `KolmeRuntimeCommitProviderOutcome`
   - `KolmeRuntimeCommitProviderReceipt`
   - `KolmeRuntimeCommitProviderError`
+  - `KolmeRuntimeCommitHttpTransport`
 - Added adapter-backed runtime commit client:
   - `AdapterBackedKolmeRuntimeCommitClient<P>`
 - Added typed transport error classification:
@@ -21,6 +22,17 @@ handling.
   - `KolmeRuntimeCommitError::NonFinalReceipt`
 - Added adapter integration coverage in:
   - `crates/kamn-core/tests/kolme_runtime_commit_client.rs`
+  - `crates/kamn-core/tests/kolme_runtime_commit_http_transport.rs`
+
+## Concrete HTTP Transport
+
+- `KolmeRuntimeCommitHttpTransport` provides a dependency-free `http://` transport for:
+  - `KolmeRuntimeCommitProviderTransport::submit_runtime_commit(...)`
+  - `KolmeRuntimeCommitFinalityTransport::fetch_runtime_commit_finality(...)`
+- Deterministic runtime behavior:
+  - query parameter encoding for `commit_id` in finality polling
+  - timeout mapping to `KolmeRuntimeCommitProviderError::Timeout`
+  - network and protocol failures mapped fail-closed to provider transport errors
 
 ## Deterministic Request Normalization Rules
 

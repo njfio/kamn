@@ -3,6 +3,9 @@
 use crate::AgentDid;
 use std::collections::HashMap;
 use std::fmt;
+use std::io::{Read, Write};
+use std::net::TcpStream;
+use std::time::Duration;
 
 /// Runtime commit submission request for the Kolme execution path.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -415,6 +418,83 @@ pub struct KolmeRuntimeCommitLiveProvider<T> {
     transport: T,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ParsedHttpEndpoint {
+    host: String,
+    host_header: String,
+    port: u16,
+    target_path: String,
+}
+
+/// Dependency-free HTTP transport implementation for runtime commit submit/finality calls.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KolmeRuntimeCommitHttpTransport {
+    timeout_seconds: u64,
+}
+
+impl KolmeRuntimeCommitHttpTransport {
+    /// Builds a concrete HTTP transport with deterministic timeout validation.
+    pub fn new(timeout_seconds: u64) -> Result<Self, KolmeRuntimeCommitError> {
+        if timeout_seconds == 0 {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "transport_timeout_seconds",
+                reason: "must be positive",
+            });
+        }
+        Ok(Self { timeout_seconds })
+    }
+
+    fn execute_request(
+        &self,
+        base_url: &str,
+        path: &str,
+        method: &str,
+        body: Option<&str>,
+        headers: &[(&str, &str)],
+    ) -> Result<String, KolmeRuntimeCommitProviderError> {
+        let endpoint = parse_http_endpoint(base_url, path)?;
+        let mut stream = TcpStream::connect((endpoint.host.as_str(), endpoint.port))
+            .map_err(map_transport_io_error)?;
+
+        let timeout = Duration::from_secs(self.timeout_seconds);
+        stream
+            .set_read_timeout(Some(timeout))
+            .map_err(map_transport_io_error)?;
+        stream
+            .set_write_timeout(Some(timeout))
+            .map_err(map_transport_io_error)?;
+
+        let payload = body.unwrap_or("");
+        let mut request = format!(
+            "{method} {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n",
+            endpoint.target_path, endpoint.host_header
+        );
+        for (header_name, header_value) in headers {
+            request.push_str(header_name);
+            request.push_str(": ");
+            request.push_str(header_value);
+            request.push_str("\r\n");
+        }
+        if body.is_some() {
+            request.push_str(format!("Content-Length: {}\r\n", payload.len()).as_str());
+        }
+        request.push_str("\r\n");
+        if body.is_some() {
+            request.push_str(payload);
+        }
+
+        stream
+            .write_all(request.as_bytes())
+            .map_err(map_transport_io_error)?;
+
+        let mut response_bytes = Vec::new();
+        stream
+            .read_to_end(&mut response_bytes)
+            .map_err(map_transport_io_error)?;
+        parse_http_response(response_bytes)
+    }
+}
+
 /// Transport abstraction for querying runtime commit finality from a live backend.
 pub trait KolmeRuntimeCommitFinalityTransport {
     /// Fetches one finality response payload for the provided commit identifier.
@@ -424,6 +504,56 @@ pub trait KolmeRuntimeCommitFinalityTransport {
         status_path: &str,
         commit_id: &str,
     ) -> Result<String, KolmeRuntimeCommitProviderError>;
+}
+
+impl KolmeRuntimeCommitProviderTransport for KolmeRuntimeCommitHttpTransport {
+    fn submit_runtime_commit(
+        &mut self,
+        base_url: &str,
+        submit_path: &str,
+        wire_payload: &str,
+        idempotency_key: &str,
+    ) -> Result<String, KolmeRuntimeCommitProviderError> {
+        if wire_payload.trim().is_empty() {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "wire_payload must not be empty".to_owned(),
+            });
+        }
+        if idempotency_key.trim().is_empty() {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "idempotency_key must not be empty".to_owned(),
+            });
+        }
+        self.execute_request(
+            base_url,
+            submit_path,
+            "POST",
+            Some(wire_payload),
+            &[
+                ("Content-Type", "text/plain"),
+                ("X-Idempotency-Key", idempotency_key),
+            ],
+        )
+    }
+}
+
+impl KolmeRuntimeCommitFinalityTransport for KolmeRuntimeCommitHttpTransport {
+    fn fetch_runtime_commit_finality(
+        &mut self,
+        base_url: &str,
+        status_path: &str,
+        commit_id: &str,
+    ) -> Result<String, KolmeRuntimeCommitProviderError> {
+        if commit_id.trim().is_empty() {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "commit_id must not be empty".to_owned(),
+            });
+        }
+        let encoded_commit_id = percent_encode(commit_id);
+        let separator = if status_path.contains('?') { "&" } else { "?" };
+        let path = format!("{status_path}{separator}commit_id={encoded_commit_id}");
+        self.execute_request(base_url, path.as_str(), "GET", None, &[])
+    }
 }
 
 /// Deterministic finality checker for live backend runtime commit receipts.
@@ -619,6 +749,172 @@ fn map_provider_error(error: KolmeRuntimeCommitProviderError) -> KolmeRuntimeCom
             }
         }
     }
+}
+
+fn parse_http_endpoint(
+    base_url: &str,
+    path: &str,
+) -> Result<ParsedHttpEndpoint, KolmeRuntimeCommitProviderError> {
+    let base = base_url.trim();
+    if base.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "base_url must not be empty".to_owned(),
+        });
+    }
+    if !base.starts_with("http://") {
+        return Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "only http:// base_url is supported".to_owned(),
+        });
+    }
+
+    let remainder = &base["http://".len()..];
+    let (authority, base_path) = match remainder.split_once('/') {
+        Some((left, right)) => (left, format!("/{}", right.trim_start_matches('/'))),
+        None => (remainder, "/".to_owned()),
+    };
+
+    if authority.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "base_url host must not be empty".to_owned(),
+        });
+    }
+
+    let (host, port) = parse_authority(authority)?;
+    let target_path = join_http_paths(base_path.as_str(), path);
+    Ok(ParsedHttpEndpoint {
+        host,
+        host_header: authority.to_owned(),
+        port,
+        target_path,
+    })
+}
+
+fn parse_authority(authority: &str) -> Result<(String, u16), KolmeRuntimeCommitProviderError> {
+    if authority.starts_with('[') {
+        return Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "ipv6 host syntax is not supported".to_owned(),
+        });
+    }
+    if let Some((host, port_raw)) = authority.rsplit_once(':') {
+        if !port_raw.is_empty() && port_raw.chars().all(|ch| ch.is_ascii_digit()) {
+            let port = port_raw.parse::<u16>().map_err(|_| {
+                KolmeRuntimeCommitProviderError::Unavailable {
+                    reason: "base_url port is invalid".to_owned(),
+                }
+            })?;
+            if host.trim().is_empty() {
+                return Err(KolmeRuntimeCommitProviderError::Unavailable {
+                    reason: "base_url host must not be empty".to_owned(),
+                });
+            }
+            return Ok((host.to_owned(), port));
+        }
+    }
+    Ok((authority.to_owned(), 80))
+}
+
+fn join_http_paths(base_path: &str, request_path: &str) -> String {
+    let base = if base_path.trim().is_empty() {
+        "/".to_owned()
+    } else if base_path.starts_with('/') {
+        base_path.to_owned()
+    } else {
+        format!("/{base_path}")
+    };
+
+    let request = request_path.trim();
+    if request.is_empty() || request == "/" {
+        return base;
+    }
+
+    if request.starts_with('/') {
+        if base == "/" {
+            return request.to_owned();
+        }
+        return format!("{}{}", base.trim_end_matches('/'), request);
+    }
+
+    if base == "/" {
+        format!("/{request}")
+    } else {
+        format!("{}/{}", base.trim_end_matches('/'), request)
+    }
+}
+
+fn map_transport_io_error(error: std::io::Error) -> KolmeRuntimeCommitProviderError {
+    if matches!(
+        error.kind(),
+        std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock
+    ) {
+        return KolmeRuntimeCommitProviderError::Timeout;
+    }
+    KolmeRuntimeCommitProviderError::Unavailable {
+        reason: format!("transport io error: {error}"),
+    }
+}
+
+fn parse_http_response(response_bytes: Vec<u8>) -> Result<String, KolmeRuntimeCommitProviderError> {
+    let response_text = String::from_utf8(response_bytes).map_err(|error| {
+        KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: format!("http response body is not valid utf-8: {error}"),
+        }
+    })?;
+
+    let (raw_headers, raw_body) = response_text.split_once("\r\n\r\n").ok_or_else(|| {
+        KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "http response missing header/body separator".to_owned(),
+        }
+    })?;
+
+    let mut header_lines = raw_headers.lines();
+    let status_line =
+        header_lines
+            .next()
+            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "http response missing status line".to_owned(),
+            })?;
+    let mut status_parts = status_line.split_whitespace();
+    let _http_version =
+        status_parts
+            .next()
+            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "http response status line is malformed".to_owned(),
+            })?;
+    let status_code_raw =
+        status_parts
+            .next()
+            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "http response status code is missing".to_owned(),
+            })?;
+    let status_code = status_code_raw.parse::<u16>().map_err(|_| {
+        KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: format!("http response status code is invalid: {status_code_raw}"),
+        }
+    })?;
+
+    if status_code == 408 || status_code == 504 {
+        return Err(KolmeRuntimeCommitProviderError::Timeout);
+    }
+    if status_code >= 500 {
+        return Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: format!("http response status indicates upstream failure: {status_code}"),
+        });
+    }
+    Ok(raw_body.to_owned())
+}
+
+fn percent_encode(value: &str) -> String {
+    let mut encoded = String::new();
+    for byte in value.bytes() {
+        let ch = byte as char;
+        if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.' | '~') {
+            encoded.push(ch);
+        } else {
+            encoded.push('%');
+            encoded.push_str(format!("{byte:02X}").as_str());
+        }
+    }
+    encoded
 }
 
 fn parse_live_provider_response(
