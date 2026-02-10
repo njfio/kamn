@@ -41,6 +41,7 @@ fn doc_includes_bridge_adapter_conformance_contract() {
 
 #[test]
 fn doc_includes_bridge_adapter_conformance_test_commands() {
+    assert!(DOC.contains("bridge_adapter_conformance_contract.py"));
     assert!(DOC.contains("test_generate_bridge_adapter_conformance_evidence_bundle.sh"));
     assert!(DOC.contains("test_run_bridge_adapter_conformance_contract_lane.sh"));
 }

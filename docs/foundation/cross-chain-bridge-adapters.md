@@ -81,6 +81,11 @@ This document captures cross-chain adapter and receipt-finality normalization sl
   - `bridge_adapter_conformance_reason_codes:NO-GO:v1`
 - Drift handling:
   - checker recomputes final decision and reason key from payload facts and fails closed on tampering (`Regression: #907`).
+- Stable shell wrappers:
+  - `scripts/bridge/generate_bridge_adapter_conformance_evidence_bundle.sh`
+  - `scripts/bridge/check_bridge_adapter_conformance_policy.sh`
+- Shared Python implementation:
+  - `scripts/bridge/bridge_adapter_conformance_contract.py`
 
 ## Processing Flow
 - `process_inbound(...)`:
