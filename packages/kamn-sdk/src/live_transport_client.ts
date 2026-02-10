@@ -37,11 +37,13 @@ export interface LiveTransportBackendAdapter {
 
 export class LiveTransportBackendAdapterError extends SDKError {
   readonly operation: LiveTransportOperation;
+  readonly reason: string;
 
   constructor(operation: LiveTransportOperation, reason: string) {
     super(`backend adapter operation ${operation} failed: ${reason}`);
     this.name = "LiveTransportBackendAdapterError";
     this.operation = operation;
+    this.reason = reason;
   }
 }
 

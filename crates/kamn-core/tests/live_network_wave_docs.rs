@@ -56,6 +56,10 @@ fn live_network_wave_doc_contains_smoke_commands_and_schema() {
     assert!(LIVE_NETWORK_WAVE_DOC.contains("tamper_payload_detected"));
     assert!(LIVE_NETWORK_WAVE_DOC
         .contains("run_live_transport_replay_tamper_fast_lane.sh --output-report"));
+    assert!(LIVE_NETWORK_WAVE_DOC
+        .contains("run_transport_profile_parity_matrix.sh --languages python,typescript"));
+    assert!(LIVE_NETWORK_WAVE_DOC
+        .contains("fixtures/sdk_parity/live_backend_adapter_profile_expectations.json"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("test_dashboard_package_runtime_compat.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("npx -y node@22"));
 }
@@ -155,6 +159,9 @@ fn regression_localhost_transport_demo_receipt_artifact_contract_is_documented()
     // Regression: #981
     assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #981`"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("receipt artifact schema drift"));
+    // Regression: #1416
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #1416`"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("backend adapter reason-code drift fails closed"));
     // Regression: #982
     assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #982`"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains(

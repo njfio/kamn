@@ -68,6 +68,10 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `bash scripts/sdk/run_live_transport_replay_tamper_fast_lane.sh --output-report /tmp/live-transport-replay-tamper-fast-report.json`
 - Live transport replay/tamper policy checker:
   - `bash scripts/sdk/check_live_transport_replay_tamper_policy.sh --bundle-file /tmp/live-transport-replay-tamper-fast-report.json`
+- Cross-SDK live backend adapter parity matrix:
+  - `bash scripts/sdk/run_transport_profile_parity_matrix.sh --languages python,typescript --output-json /tmp/sdk-transport-profile-parity-report.json`
+- Cross-SDK live backend adapter parity fixture:
+  - `fixtures/sdk_parity/live_backend_adapter_profile_expectations.json`
 - Stable shell wrappers:
   - `scripts/sdk/run_localhost_signed_integration_harness.sh`
   - `scripts/sdk/run_localhost_signed_integration_contract_lane.sh`
@@ -83,6 +87,9 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `scripts/sdk/localhost_signed_integration_evidence_policy_contract.py`
   - `scripts/sdk/live_transport_replay_tamper_contract.py`
   - `scripts/sdk/live_transport_replay_tamper_contract_lane_contract.py`
+  - `scripts/sdk/run_transport_profile_parity_matrix.py`
+  - `scripts/sdk/transport_profile_probe.py`
+  - `scripts/sdk/transport_profile_probe.ts`
 
 ## Bridge Replay/Redaction Lane Matrix
 
@@ -120,6 +127,14 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `kamn.sdk.localhost-signed.demo-receipt-artifact.v1`
 - Live transport replay/tamper evidence schema:
   - `kamn.sdk.live-transport-replay-tamper-evidence.v1`
+- Cross-SDK transport profile parity report fields:
+  - `backend_adapter_register_id`
+  - `backend_adapter_message_id`
+  - `backend_adapter_receive_body`
+  - `backend_adapter_invalid_response_message`
+  - `backend_adapter_error_operation`
+  - `backend_adapter_error_reason`
+  - `backend_adapter_policy_reason`
 - Required localhost signed integration report fields:
   - `status`
   - `contract_key`
@@ -233,6 +248,8 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - localhost signed integration harness and contract lane preserve deterministic evidence keys (`Regression: #899`).
 - Regression guard:
   - localhost signed demo receipt artifact schema drift and missing receipt reconciliation outcomes fail closed (`Regression: #981`).
+- Regression guard:
+  - cross-SDK backend adapter reason-code drift fails closed in transport profile parity matrix (`Regression: #1416`).
 - Regression guard:
   - stale/tampered federated handshake deep-lane summary artifacts fail closed under policy checks (`Regression: #1003`).
 - Regression guard:

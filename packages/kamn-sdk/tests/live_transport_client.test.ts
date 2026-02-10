@@ -142,10 +142,16 @@ test("regression backend adapter errors and invalid payloads fail closed", () =>
       message: "backend adapter invalid response for operation register: expected string value",
     });
 
-    assert.throws(
-      () => client.send("kamn:did:agent:x", "kamn:did:agent:y", "hello"),
-      LiveTransportBackendAdapterError,
-    );
+    let sendError: unknown;
+    try {
+      client.send("kamn:did:agent:x", "kamn:did:agent:y", "hello");
+      assert.fail("expected backend adapter send failure");
+    } catch (error: unknown) {
+      sendError = error;
+    }
+    assert.ok(sendError instanceof LiveTransportBackendAdapterError);
+    assert.equal(sendError.operation, "send");
+    assert.equal(sendError.reason, "backend_timeout");
   } finally {
     LiveTransportKAMNClient.clearBackendAdapters();
   }
