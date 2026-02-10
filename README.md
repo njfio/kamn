@@ -290,6 +290,29 @@ bash scripts/kolme/run_local_fork_smoke_evidence_lane.sh --mode run --checkout-p
 # schema: kamn.kolme.local-fork-smoke-evidence-summary.v1
 ```
 
+### Run Local Kolme API Probe Lane
+
+```bash
+# deterministic local API probe plan (no endpoint execution)
+bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode dry-run --base-url http://127.0.0.1:3000 --output-json /tmp/kolme-local-api-probe-summary.json
+
+# bounded local API probe execution (healthz + fork-info checks)
+bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode run --base-url http://127.0.0.1:3000 --max-seconds 30 --output-json /tmp/kolme-local-api-probe-summary.json
+# schema: kamn.kolme.local-api-probe-summary.v1
+```
+
+### Run Local-Only Kolme API Smoke Lane
+
+```bash
+# deterministic local API smoke plan (no command execution)
+bash scripts/kolme/run_local_kolme_api_smoke_lane.sh --mode dry-run --base-url http://127.0.0.1:3000 --smoke-command "curl --silent --show-error --fail http://127.0.0.1:3000/healthz" --output-json /tmp/kolme-local-api-smoke-summary.json
+
+# bounded local-only API smoke execution (requires explicit opt-in)
+KAMN_KOLME_LOCAL_HEAVY=1 \
+bash scripts/kolme/run_local_kolme_api_smoke_lane.sh --mode run --base-url http://127.0.0.1:3000 --smoke-command "curl --silent --show-error --fail http://127.0.0.1:3000/healthz" --max-seconds 60 --output-json /tmp/kolme-local-api-smoke-summary.json
+# schema: kamn.kolme.local-api-smoke-summary.v1
+```
+
 ### Run Local-Only Heavy Kolme Validation Matrix
 
 ```bash
@@ -322,6 +345,10 @@ Local-only heavy Kolme run-mode commands stay excluded from ci-fast-gate.
 Fast-gate validates only command surfaces:
 - `bash scripts/kolme/test_run_local_bootstrap_health_checks.sh`
 - `bash scripts/kolme/test_run_local_e2e_integration_lane.sh`
+
+Local Kolme API probe/smoke lane contract tests:
+- `bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh`
+- `bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh`
 
 ## Workflow
 
