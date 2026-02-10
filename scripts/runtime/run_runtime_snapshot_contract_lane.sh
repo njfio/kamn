@@ -20,6 +20,9 @@ bash scripts/runtime/test_run_zk_witness_mutation_contract_lane.sh >/dev/null
 bash scripts/runtime/test_run_zk_witness_mutation_deep_lane.sh >/dev/null
 bash scripts/runtime/test_generate_processor_proof_admission_evidence_bundle.sh >/dev/null
 bash scripts/runtime/test_run_processor_proof_admission_contract_lane.sh >/dev/null
+bash scripts/runtime/test_generate_watchdog_proof_consensus_evidence_bundle.sh >/dev/null
+bash scripts/runtime/test_run_watchdog_proof_consensus_contract_lane.sh >/dev/null
+bash scripts/runtime/test_run_watchdog_proof_consensus_deep_lane.sh >/dev/null
 bash scripts/runtime/test_select_failover_sync_drill_lane.sh >/dev/null
 bash scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh >/dev/null
 bash scripts/runtime/test_run_failover_sync_drill_deep_lane.sh >/dev/null

@@ -276,6 +276,24 @@ Pilot launch gates require deterministic smoke and scheduled/manual deep-lane ev
   - missing smoke/deep pilot evidence or non-`GO` pilot decisions force launch `NO-GO` and trigger rollback review (`Regression: #830`).
   - stale/tampered partition/reconnect matrix artifacts and replay anomalies force `NO-GO` (`Regression: #982`).
 
+## Validator/Watchdog Proof Consensus Evidence Contract (Issue #996)
+Validator/watchdog proof-consensus rollout requires deterministic anomaly evidence and deep-lane budget/cadence controls before release approval.
+
+- Evidence bundle generator:
+  - `bash scripts/runtime/generate_watchdog_proof_consensus_evidence_bundle.sh --output-file /tmp/watchdog-proof-consensus-go.json --message-id urn:uuid:watchdog-proof-go-996 --artifact-id artifact-watchdog-go-996 --consensus-status ConsensusValid --required-quorum 2 --valid-attestation-count 2 --invalid-attestation-count 0 --replay-attestation-count 0 --cadence fast --runtime-seconds 4 --max-seconds 90 --evidence-complete true --ci-fast-gate PASS`
+- Policy checker:
+  - `bash scripts/runtime/check_watchdog_proof_consensus_policy.sh --bundle-file /tmp/watchdog-proof-consensus-go.json`
+- PR fast contract lane:
+  - `bash scripts/runtime/run_watchdog_proof_consensus_contract_lane.sh --output-file /tmp/watchdog-proof-consensus-contract.json`
+- Scheduled/manual deep lane entrypoint:
+  - `KAMN_WATCHDOG_PROOF_CONSENSUS_DEEP_CADENCE=scheduled bash scripts/runtime/run_watchdog_proof_consensus_deep_lane.sh --event-name schedule --output-json /tmp/watchdog-proof-consensus-deep-summary.json`
+- Runtime/cadence controls:
+  - `KAMN_WATCHDOG_PROOF_CONSENSUS_MAX_SECONDS`
+  - `KAMN_WATCHDOG_PROOF_CONSENSUS_DEEP_CADENCE`
+  - `KAMN_WATCHDOG_PROOF_CONSENSUS_DEEP_MAX_SECONDS`
+- Regression policy:
+  - proof-consensus deep-lane budget overruns and unscheduled cadence execution force `NO-GO` (`Regression: #996`).
+
 ## Governance Simulation and Human-Veto Evidence Contract (Issue #748)
 Governance activation requires deterministic simulation, veto, timelock, and approval evidence before GO decisions.
 

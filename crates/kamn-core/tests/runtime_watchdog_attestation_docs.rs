@@ -46,6 +46,18 @@ fn doc_contains_incident_response_mapping_and_fast_lane() {
 }
 
 #[test]
+fn doc_contains_validator_watchdog_proof_consensus_deep_lane_contract() {
+    assert!(DOC.contains("## Validator/Watchdog Proof Consensus Deep-Lane Contract"));
+    assert!(DOC.contains("run_watchdog_proof_consensus_contract_lane.sh"));
+    assert!(DOC.contains("run_watchdog_proof_consensus_deep_lane.sh"));
+    assert!(DOC.contains("generate_watchdog_proof_consensus_evidence_bundle.sh"));
+    assert!(DOC.contains("check_watchdog_proof_consensus_policy.sh"));
+    assert!(DOC.contains("KAMN_WATCHDOG_PROOF_CONSENSUS_DEEP_CADENCE"));
+    assert!(DOC.contains("KAMN_WATCHDOG_PROOF_CONSENSUS_MAX_SECONDS"));
+    assert!(DOC.contains("KAMN_WATCHDOG_PROOF_CONSENSUS_DEEP_MAX_SECONDS"));
+}
+
+#[test]
 fn regression_requires_divergence_and_censorship_guard_rules() {
     // Regression: #383
     assert!(DOC
@@ -69,5 +81,11 @@ fn regression_requires_divergence_and_censorship_guard_rules() {
     assert!(DOC.contains("proof consensus alignment (`ConsensusValid`) projects `info` severity."));
     assert!(DOC.contains(
         "proof consensus invalid/replay/mismatch projects `critical` severity with deterministic fingerprint fields."
+    ));
+    assert!(DOC.contains(
+        "unscheduled proof-consensus deep-lane execution force-fails via scheduled/manual cadence guard (`Regression: #996`)."
+    ));
+    assert!(DOC.contains(
+        "invalid, replay, and mismatch proof-consensus anomaly artifacts must remain `NO-GO` under policy checks (`Regression: #996`)."
     ));
 }
