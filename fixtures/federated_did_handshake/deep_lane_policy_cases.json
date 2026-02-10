@@ -1,0 +1,93 @@
+{
+  "schema_version": "kamn.did.federated-handshake.deep-policy-cases.v1",
+  "cases": [
+    {
+      "case_id": "go_scheduled",
+      "expected_policy_status": "pass",
+      "expected_final_decision": "GO",
+      "report": {
+        "schema_version": "kamn.did.federated-handshake.deep-summary.v1",
+        "event_name": "schedule",
+        "cadence": "scheduled",
+        "contract_lane_status": "pass",
+        "matrix_status": "pass",
+        "matrix_case_count": 5,
+        "matrix_failed_count": 0,
+        "matrix_report_file": "/tmp/federated-did-handshake-report.json",
+        "elapsed_seconds": 7,
+        "max_seconds": 180,
+        "budget_status": "within",
+        "reason_codes": [],
+        "final_decision": "GO",
+        "policy_status": "pending"
+      }
+    },
+    {
+      "case_id": "no_go_matrix_failed",
+      "expected_policy_status": "pass",
+      "expected_final_decision": "NO-GO",
+      "report": {
+        "schema_version": "kamn.did.federated-handshake.deep-summary.v1",
+        "event_name": "schedule",
+        "cadence": "scheduled",
+        "contract_lane_status": "pass",
+        "matrix_status": "fail",
+        "matrix_case_count": 5,
+        "matrix_failed_count": 1,
+        "matrix_report_file": "/tmp/federated-did-handshake-report.json",
+        "elapsed_seconds": 11,
+        "max_seconds": 180,
+        "budget_status": "within",
+        "reason_codes": [
+          "matrix_failed"
+        ],
+        "final_decision": "NO-GO",
+        "policy_status": "pending"
+      }
+    },
+    {
+      "case_id": "no_go_budget_exceeded",
+      "expected_policy_status": "pass",
+      "expected_final_decision": "NO-GO",
+      "report": {
+        "schema_version": "kamn.did.federated-handshake.deep-summary.v1",
+        "event_name": "workflow_dispatch",
+        "cadence": "manual",
+        "contract_lane_status": "pass",
+        "matrix_status": "pass",
+        "matrix_case_count": 5,
+        "matrix_failed_count": 0,
+        "matrix_report_file": "/tmp/federated-did-handshake-report.json",
+        "elapsed_seconds": 241,
+        "max_seconds": 180,
+        "budget_status": "exceeded",
+        "reason_codes": [
+          "runtime_budget_exceeded"
+        ],
+        "final_decision": "NO-GO",
+        "policy_status": "pending"
+      }
+    },
+    {
+      "case_id": "tampered_final_decision_go",
+      "expected_policy_status": "fail",
+      "expected_final_decision": "NO-GO",
+      "report": {
+        "schema_version": "kamn.did.federated-handshake.deep-summary.v1",
+        "event_name": "schedule",
+        "cadence": "scheduled",
+        "contract_lane_status": "pass",
+        "matrix_status": "fail",
+        "matrix_case_count": 5,
+        "matrix_failed_count": 2,
+        "matrix_report_file": "/tmp/federated-did-handshake-report.json",
+        "elapsed_seconds": 19,
+        "max_seconds": 180,
+        "budget_status": "within",
+        "reason_codes": [],
+        "final_decision": "GO",
+        "policy_status": "pending"
+      }
+    }
+  ]
+}

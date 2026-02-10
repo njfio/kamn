@@ -116,6 +116,9 @@ fn checklist_contains_federated_did_handshake_evidence_contract() {
     assert!(CHECKLIST.contains("run_federated_did_handshake_contract_lane.sh"));
     assert!(CHECKLIST.contains("run_federated_did_handshake_deep_lane.sh"));
     assert!(CHECKLIST.contains("run_federated_did_handshake_matrix.py"));
+    assert!(CHECKLIST.contains("check_federated_did_handshake_deep_policy.sh"));
+    assert!(CHECKLIST.contains("federated_did_handshake_deep_policy_contract.py"));
+    assert!(CHECKLIST.contains("run_federated_did_handshake_deep_policy_matrix.py"));
     assert!(CHECKLIST.contains("fixtures/federated_did_handshake/partition_replay_cases.json"));
     assert!(CHECKLIST.contains("cargo test -p kamn-core --test federated_did_handshake_runtime"));
 }
@@ -376,6 +379,14 @@ fn regression_requires_federated_runtime_trust_store_guard_marker() {
     // Regression: #1002
     assert!(CHECKLIST.contains(
         "runtime trust-store misses and quorum shortfalls must remain fail-closed with deterministic reason codes (`Regression: #1002`)."
+    ));
+}
+
+#[test]
+fn regression_requires_federated_deep_lane_tamper_guard_marker() {
+    // Regression: #1003
+    assert!(CHECKLIST.contains(
+        "stale/tampered federated handshake deep-lane summary artifacts must remain `NO-GO` (`Regression: #1003`)."
     ));
 }
 

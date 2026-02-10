@@ -39,6 +39,12 @@ if not cases:
 
 if not any(case.get("case_id") == "no_go_partition_replay" for case in cases):
     raise SystemExit("expected no_go_partition_replay case in federated DID handshake matrix report")
+
+if not any(case.get("case_id") == "no_go_partition_sequence_replay" for case in cases):
+    raise SystemExit("expected no_go_partition_sequence_replay case in federated DID handshake matrix report")
+
+if not any(case.get("case_id") == "no_go_downgrade_attack" for case in cases):
+    raise SystemExit("expected no_go_downgrade_attack case in federated DID handshake matrix report")
 PY
 
 echo "federated DID handshake matrix tests passed."

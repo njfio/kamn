@@ -37,6 +37,8 @@ cargo test -p kamn-core --test did_method >/dev/null
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test federated_did_handshake_runtime >/dev/null
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test did_method_docs regression_requires_federated_runtime_trust_store_guard_marker -- --exact >/dev/null
 bash scripts/ci/run_cargo_test_with_quarantine.sh -- cargo test -p kamn-core --test release_gonogo_checklist_docs regression_requires_federated_runtime_trust_store_guard_marker -- --exact >/dev/null
+bash scripts/did/test_check_federated_did_handshake_deep_policy.sh >/dev/null
+bash scripts/did/test_run_federated_did_handshake_deep_policy_matrix.sh >/dev/null
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt 120 ]; then

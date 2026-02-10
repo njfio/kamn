@@ -36,6 +36,23 @@
       "expected_final_decision": "NO-GO"
     },
     {
+      "case_id": "no_go_partition_sequence_replay",
+      "handshake_id": "federated-partition-replay-001",
+      "subject_did": "kamn:did:agent:federated-worker-2b",
+      "local_network": "kolme-mainnet-a",
+      "remote_network": "kolme-mainnet-b",
+      "resolver_cache_hit": true,
+      "resolver_version": "resolver-v1",
+      "signature_policy": "PASS",
+      "nonce_monotonic": true,
+      "downgrade_detected": false,
+      "partition_sequence_monotonic": false,
+      "required_quorum": 2,
+      "received_quorum": 2,
+      "ci_fast_gate": "PASS",
+      "expected_final_decision": "NO-GO"
+    },
+    {
       "case_id": "no_go_downgrade_attack",
       "handshake_id": "federated-downgrade-001",
       "subject_did": "kamn:did:agent:federated-worker-3",

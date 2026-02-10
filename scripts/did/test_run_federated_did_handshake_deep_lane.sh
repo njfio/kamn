@@ -11,7 +11,13 @@ if [ ! -x "$DEEP_LANE" ]; then
   exit 1
 fi
 
-output="$(bash "$DEEP_LANE" --output-json "$TMP_REPORT")"
+output="$(
+  KAMN_FEDERATED_DID_HANDSHAKE_DEEP_CADENCE=scheduled \
+  bash "$DEEP_LANE" \
+    --event-name schedule \
+    --skip-contract-tests \
+    --output-json "$TMP_REPORT"
+)"
 if ! printf '%s\n' "$output" | grep -q "federated DID handshake deep lane tests passed."; then
   echo "expected federated DID handshake deep lane success marker" >&2
   exit 1
@@ -22,16 +28,48 @@ if [ ! -s "$TMP_REPORT" ]; then
   exit 1
 fi
 
+if ! grep -Fq "check_federated_did_handshake_deep_policy.sh" "$DEEP_LANE"; then
+  echo "expected federated DID handshake deep lane to invoke deep policy checker" >&2
+  exit 1
+fi
+
 python3 - "$TMP_REPORT" <<'PY'
 import json
 import pathlib
 import sys
 
 report = json.loads(pathlib.Path(sys.argv[1]).read_text())
-if report.get("schema_version") != "kamn.did.federated-handshake.partition-replay-matrix.v1":
-    raise SystemExit("unexpected federated DID handshake deep report schema version")
-if report.get("status") != "pass":
-    raise SystemExit("expected federated DID handshake deep report to pass")
+if report.get("schema_version") != "kamn.did.federated-handshake.deep-summary.v1":
+    raise SystemExit("unexpected federated DID handshake deep summary schema version")
+if report.get("event_name") != "schedule":
+    raise SystemExit("expected schedule event in federated DID handshake deep summary")
+if report.get("cadence") != "scheduled":
+    raise SystemExit("expected scheduled cadence in federated DID handshake deep summary")
+if report.get("policy_status") != "pass":
+    raise SystemExit("expected federated DID handshake deep policy status to pass")
+if report.get("final_decision") != "GO":
+    raise SystemExit("expected federated DID handshake deep summary to conclude GO")
+if report.get("budget_status") != "within":
+    raise SystemExit("expected federated DID handshake deep summary budget status within")
 PY
+
+set +e
+invalid_event_output="$(
+  bash "$DEEP_LANE" \
+    --event-name pull_request \
+    --output-json "$TMP_REPORT" 2>&1
+)"
+invalid_event_code=$?
+set -e
+
+if [[ "$invalid_event_code" -eq 0 ]]; then
+  echo "expected federated DID handshake deep lane to reject pull_request cadence" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$invalid_event_output" | grep -q "scheduled/manual-only cadence policy"; then
+  echo "expected cadence policy rejection marker for federated DID handshake deep lane" >&2
+  exit 1
+fi
 
 echo "federated DID handshake deep lane script tests passed."
