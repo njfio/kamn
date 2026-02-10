@@ -4,6 +4,7 @@ const DOC: &str = include_str!("../../../docs/foundation/group-sender-key-rotati
 fn doc_contains_group_sender_replay_ratchet_contract_scope() {
     assert!(DOC.contains("# Group Sender-Key Replay and Ratchet Contract Rules"));
     assert!(DOC.contains("run_group_sender_replay_ratchet_contract_lane.sh"));
+    assert!(DOC.contains("group_sender_replay_ratchet_contract.py"));
     assert!(DOC.contains("kamn.group-sender.replay-ratchet-evidence.v1"));
 }
 
