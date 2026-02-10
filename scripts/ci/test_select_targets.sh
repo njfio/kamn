@@ -910,6 +910,11 @@ assert_eq "$(extract_output "$key_lifecycle_invariant_contract_script_output" "r
 assert_eq "$(extract_output "$key_lifecycle_invariant_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "key hierarchy invariant contract script changes must run message lifecycle contract lane"
 assert_eq "$(extract_output "$key_lifecycle_invariant_contract_script_output" "test_scope")" "message-contract" "key hierarchy invariant contract script changes should set message-contract scope"
 
+key_lifecycle_invariant_shared_contract_output="$(run_selector $'scripts/message/key_lifecycle_invariant_contract.py')"
+assert_eq "$(extract_output "$key_lifecycle_invariant_shared_contract_output" "run_rust")" "false" "key lifecycle invariant shared contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$key_lifecycle_invariant_shared_contract_output" "run_message_lifecycle_contract_tests")" "true" "key lifecycle invariant shared contract changes must run message lifecycle contract lane"
+assert_eq "$(extract_output "$key_lifecycle_invariant_shared_contract_output" "test_scope")" "message-contract" "key lifecycle invariant shared contract changes should set message-contract scope"
+
 group_sender_replay_ratchet_contract_script_output="$(run_selector $'scripts/message/run_group_sender_replay_ratchet_contract_lane.sh')"
 assert_eq "$(extract_output "$group_sender_replay_ratchet_contract_script_output" "run_rust")" "false" "group sender replay/ratchet contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$group_sender_replay_ratchet_contract_script_output" "run_message_lifecycle_contract_tests")" "true" "group sender replay/ratchet contract script changes must run message lifecycle contract lane"

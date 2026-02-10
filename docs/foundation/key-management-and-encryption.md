@@ -14,6 +14,11 @@ revocation invariants, and replay/stale-state rejection policies.
 - `evidence_key`: `key_lifecycle_invariant:<lane>:v1`
 - `reason_key`: `key_lifecycle_invariant_reason:<final_decision>:v1`
 - `final_decision`: `GO|NO-GO`
+- Stable shell wrappers:
+  - `scripts/message/generate_key_lifecycle_invariant_evidence_bundle.sh`
+  - `scripts/message/check_key_lifecycle_invariant_policy.sh`
+- Shared Python implementation:
+  - `scripts/message/key_lifecycle_invariant_contract.py`
 
 ## Local Validation Commands
 Run from repository root:
