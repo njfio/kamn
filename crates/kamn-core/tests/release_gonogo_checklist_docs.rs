@@ -40,6 +40,7 @@ fn checklist_contains_machine_readable_bundle_contract() {
 #[test]
 fn checklist_contains_staging_rehearsal_contract() {
     assert!(CHECKLIST.contains("## Staging Deploy + Rollback Rehearsal Contract"));
+    assert!(CHECKLIST.contains("staging_rehearsal_contract.py"));
     assert!(CHECKLIST.contains("generate_staging_rehearsal_bundle.sh"));
     assert!(CHECKLIST.contains("check_staging_rehearsal_policy.sh"));
     assert!(CHECKLIST.contains("run_staging_rehearsal_contract_lane.sh"));

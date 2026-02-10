@@ -55,6 +55,11 @@ Staging rehearsal automation must verify deploy and rollback outcomes before rel
   - `bash scripts/deploy/check_staging_rehearsal_policy.sh --bundle-file /tmp/staging-rehearsal.json`
 - Fast contract lane:
   - `bash scripts/deploy/run_staging_rehearsal_contract_lane.sh`
+- Stable shell wrappers:
+  - `scripts/deploy/generate_staging_rehearsal_bundle.sh`
+  - `scripts/deploy/check_staging_rehearsal_policy.sh`
+- Shared Python implementation:
+  - `scripts/deploy/staging_rehearsal_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/deploy/run_staging_rehearsal_deep_lane.sh`
 - Regression policy:
