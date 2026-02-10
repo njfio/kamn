@@ -1069,6 +1069,20 @@ assert_eq "$(extract_output "$kolme_local_api_smoke_test_script_output" "run_kol
 assert_eq "$(extract_output "$kolme_local_api_smoke_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local api smoke test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_api_smoke_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local api smoke test script changes should set kolme-version-contract scope"
 
+kolme_local_runtime_commit_live_script_output="$(run_selector $'scripts/kolme/run_local_runtime_commit_live_lane.sh')"
+assert_eq "$(extract_output "$kolme_local_runtime_commit_live_script_output" "run_rust")" "false" "Kolme local runtime commit live script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_local_runtime_commit_live_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local runtime commit live script changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_local_runtime_commit_live_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local runtime commit live script changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_local_runtime_commit_live_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local runtime commit live script changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_local_runtime_commit_live_script_output" "test_scope")" "kolme-version-contract" "Kolme local runtime commit live script changes should set kolme-version-contract scope"
+
+kolme_local_runtime_commit_live_test_script_output="$(run_selector $'scripts/kolme/test_run_local_runtime_commit_live_lane.sh')"
+assert_eq "$(extract_output "$kolme_local_runtime_commit_live_test_script_output" "run_rust")" "false" "Kolme local runtime commit live test script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_local_runtime_commit_live_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local runtime commit live test script changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_local_runtime_commit_live_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local runtime commit live test script changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_local_runtime_commit_live_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local runtime commit live test script changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_local_runtime_commit_live_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local runtime commit live test script changes should set kolme-version-contract scope"
+
 kolme_local_heavy_matrix_script_output="$(run_selector $'scripts/kolme/run_local_heavy_validation_matrix.sh')"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_script_output" "run_rust")" "false" "Kolme local heavy matrix script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_heavy_matrix_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local heavy matrix script changes should skip Kolme snapshot drift contract lane"
