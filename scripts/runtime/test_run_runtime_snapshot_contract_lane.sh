@@ -79,6 +79,16 @@ if ! grep -q "test_run_zk_witness_mutation_deep_lane.sh" "$FAST_SCRIPT"; then
   exit 1
 fi
 
+if ! grep -q "test_run_processor_proof_admission_contract_lane.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include processor proof admission contract coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "test_generate_processor_proof_admission_evidence_bundle.sh" "$FAST_SCRIPT"; then
+  echo "expected runtime snapshot contract lane to include processor proof admission evidence bundle coverage" >&2
+  exit 1
+fi
+
 if ! grep -q "test_select_failover_sync_drill_lane.sh" "$FAST_SCRIPT"; then
   echo "expected runtime snapshot contract lane to include failover/sync selector contract coverage" >&2
   exit 1

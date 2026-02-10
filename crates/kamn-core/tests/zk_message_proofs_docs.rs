@@ -71,3 +71,13 @@ fn regression_requires_witness_mutation_fast_and_deep_lane_markers() {
     assert!(DOC.contains("run_zk_witness_mutation_deep_lane.sh"));
     assert!(DOC.contains("performance_zk_witness_mutation_deep_lane_stress -- --ignored"));
 }
+
+#[test]
+fn regression_requires_processor_admission_runtime_lane_markers() {
+    // Regression: #995
+    assert!(DOC.contains("## Processor Admission Runtime Contract Lane"));
+    assert!(DOC.contains("run_processor_proof_admission_contract_lane.sh"));
+    assert!(DOC.contains(
+        "processor proof admission reason signatures remain fail-closed (`Regression: #995`)"
+    ));
+}

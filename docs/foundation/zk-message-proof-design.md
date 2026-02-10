@@ -74,6 +74,21 @@ This spike evaluates feasible zero-knowledge (ZK) message-proof designs for PRD 
   - proof value fails deterministic verification format checks
 - Regression guard: tampered processor proof artifacts are rejected before admission (`Regression: #509`).
 
+## Processor Admission Runtime Contract Lane
+- Runtime lane entrypoint:
+  - `bash scripts/runtime/run_processor_proof_admission_contract_lane.sh`
+- Evidence and policy helpers:
+  - `scripts/runtime/generate_processor_proof_admission_evidence_bundle.sh`
+  - `scripts/runtime/check_processor_proof_admission_policy.sh`
+- Runtime lane checks enforce deterministic guards for:
+  - artifact/message identity mismatch rejection
+  - payload commitment mismatch rejection
+  - proof-format invalid payload rejection
+  - replayed artifact ID rejection
+- Runtime budget:
+  - fast contract lane enforces `PROCESSOR_PROOF_ADMISSION_MAX_SECONDS` (default `90`).
+- Regression guard: processor proof admission reason signatures remain fail-closed (`Regression: #995`).
+
 ## Witness and Artifact Schema Contract Lane
 - Contract lane entrypoint:
   - `bash scripts/message/run_processor_proof_artifact_contract_lane.sh`
@@ -127,6 +142,7 @@ Run the smallest lane needed for rapid feedback:
 
 ```bash
 cargo test -p kamn-core --test zk_message_proofs --test zk_message_proofs_docs
+bash scripts/runtime/run_processor_proof_admission_contract_lane.sh
 bash scripts/message/run_processor_proof_artifact_contract_lane.sh
 bash scripts/runtime/run_zk_witness_mutation_contract_lane.sh
 cargo fmt --check
