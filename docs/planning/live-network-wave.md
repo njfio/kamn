@@ -26,10 +26,12 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `bash scripts/runtime/run_live_network_pilot_deep_contract_lane.sh`
 - Deep summary policy checker:
   - `bash scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh --summary-file /tmp/live-network-pilot-report.json`
-- Stable shell wrapper:
+- Stable shell wrappers:
   - `scripts/runtime/generate_live_network_pilot_artifact_summary.sh`
-- Shared Python implementation:
+  - `scripts/runtime/check_live_network_pilot_artifact_summary_policy.sh`
+- Shared Python implementations:
   - `scripts/runtime/live_network_pilot_artifact_summary_contract.py`
+  - `scripts/runtime/live_network_pilot_artifact_summary_policy_contract.py`
 - Localhost signed sender/listener transport demo:
   - `bash scripts/sdk/run_localhost_signed_demo.sh`
 - Localhost signed integration harness scenarios:
@@ -140,3 +142,5 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - localhost signed integration harness and contract lane preserve deterministic evidence keys (`Regression: #899`).
 - Regression guard:
   - dashboard runtime fallback contract remains pinned to `node@22` with local reproduction guidance (`Regression: #868`).
+- Regression guard:
+  - live-network pilot summary policy checker wrapper remains pinned to shared contract implementation marker (`Regression: #1158`).
