@@ -47,6 +47,11 @@ Regression guards:
 - reciprocity/burst/churn anti-gaming property drift is rejected (`Regression: #933`).
 
 ## Weighted Decay and Anti-Gaming Fixture Lanes (Issue #736 / #933)
+- Stable shell wrappers:
+  - `scripts/reputation/generate_weighted_decay_property_evidence_bundle.sh`
+  - `scripts/reputation/check_weighted_decay_property_policy.sh`
+- Shared Python implementation:
+  - `scripts/reputation/weighted_decay_contract.py`
 - Compact PR lane entrypoint:
   - `bash scripts/reputation/run_weighted_decay_contract_lane.sh --output-file reputation-weighted-decay-property-contract-bundle.json`
 - Compact/deep evidence generator:

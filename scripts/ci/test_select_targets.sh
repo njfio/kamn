@@ -1083,6 +1083,12 @@ assert_eq "$(extract_output "$reputation_decay_policy_checker_output" "run_reput
 assert_eq "$(extract_output "$reputation_decay_policy_checker_output" "run_reputation_dispute_contract_tests")" "true" "weighted decay policy checker changes must also run dispute contract lane"
 assert_eq "$(extract_output "$reputation_decay_policy_checker_output" "test_scope")" "reputation-decay-contract" "weighted decay policy checker changes should set reputation-decay-contract scope"
 
+reputation_decay_shared_contract_output="$(run_selector $'scripts/reputation/weighted_decay_contract.py')"
+assert_eq "$(extract_output "$reputation_decay_shared_contract_output" "run_rust")" "false" "weighted decay shared contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$reputation_decay_shared_contract_output" "run_reputation_decay_contract_tests")" "true" "weighted decay shared contract changes must run weighted decay contract lane"
+assert_eq "$(extract_output "$reputation_decay_shared_contract_output" "run_reputation_dispute_contract_tests")" "true" "weighted decay shared contract changes must also run dispute contract lane"
+assert_eq "$(extract_output "$reputation_decay_shared_contract_output" "test_scope")" "reputation-decay-contract" "weighted decay shared contract changes should set reputation-decay-contract scope"
+
 reputation_decay_contract_fixture_output="$(run_selector $'fixtures/reputation_decay/compact_cases.json')"
 assert_eq "$(extract_output "$reputation_decay_contract_fixture_output" "run_rust")" "false" "weighted decay fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$reputation_decay_contract_fixture_output" "run_reputation_decay_contract_tests")" "true" "weighted decay fixture changes must run weighted decay contract lane"
