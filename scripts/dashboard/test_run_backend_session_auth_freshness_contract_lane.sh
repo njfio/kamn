@@ -3,11 +3,16 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh"
+SHARED_CONTRACT="$ROOT_DIR/scripts/dashboard/backend_session_auth_freshness_contract_lane_contract.py"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [ ! -x "$SCRIPT" ]; then
   echo "expected dashboard backend session/auth freshness contract lane script to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$SHARED_CONTRACT" ]; then
+  echo "expected dashboard backend session/auth freshness shared contract-lane module to be executable" >&2
   exit 1
 fi
 
@@ -37,8 +42,23 @@ if ! grep -q '"final_decision": "GO"' "$report_file"; then
   exit 1
 fi
 
-if ! grep -q 'check_backend_session_auth_freshness_policy.sh' "$SCRIPT"; then
-  echo "expected dashboard backend session/auth freshness contract lane to execute policy checker" >&2
+if ! grep -q 'backend_session_auth_freshness_contract_lane_contract.py' "$SCRIPT"; then
+  echo "expected dashboard backend session/auth freshness contract lane wrapper to dispatch to shared module" >&2
+  exit 1
+fi
+
+if ! grep -q 'check_backend_session_auth_freshness_policy.sh' "$SHARED_CONTRACT"; then
+  echo "expected dashboard backend session/auth freshness shared contract-lane module to execute policy checker" >&2
+  exit 1
+fi
+
+if ! grep -q 'KAMN_DASHBOARD_BACKEND_SESSION_CONTRACT_MAX_SECONDS' "$SHARED_CONTRACT"; then
+  echo "expected dashboard backend session/auth freshness shared contract-lane module to enforce runtime guard env marker" >&2
+  exit 1
+fi
+
+if ! grep -q 'KAMN_DASHBOARD_BACKEND_SESSION_FORCE_SESSION_GUARD_MISSING' "$SHARED_CONTRACT"; then
+  echo "expected dashboard backend session/auth freshness shared contract-lane module to cover forced session-guard path" >&2
   exit 1
 fi
 

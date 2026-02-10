@@ -29,6 +29,7 @@ fn doc_contains_backend_session_auth_freshness_contract_lane() {
     assert!(DOC.contains("## Backend Session/Auth Freshness Contract"));
     assert!(DOC.contains("backend_session_auth_freshness_policy_contract.py"));
     assert!(DOC.contains("backend_session_auth_freshness_lane_contract.py"));
+    assert!(DOC.contains("backend_session_auth_freshness_contract_lane_contract.py"));
     assert!(DOC.contains("run_backend_session_auth_freshness_lane.sh"));
     assert!(DOC.contains("check_backend_session_auth_freshness_policy.sh"));
     assert!(DOC.contains("run_backend_session_auth_freshness_contract_lane.sh"));
@@ -65,5 +66,13 @@ fn regression_requires_backend_session_auth_freshness_fail_closed_rules() {
     // Regression: #941
     assert!(DOC.contains(
         "missing session guards, freshness guard drift, docs parity drift, or runtime budget overflow force `NO-GO` (`Regression: #941`)."
+    ));
+}
+
+#[test]
+fn regression_requires_backend_session_auth_shared_contract_marker() {
+    // Regression: #1250
+    assert!(DOC.contains(
+        "shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1250`)."
     ));
 }

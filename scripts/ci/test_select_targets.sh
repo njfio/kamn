@@ -719,6 +719,12 @@ assert_eq "$(extract_output "$dashboard_backend_session_contract_output" "run_fr
 assert_eq "$(extract_output "$dashboard_backend_session_contract_output" "run_dashboard_contract_tests")" "true" "dashboard backend session/auth freshness contract lane changes must run dashboard contract lane"
 assert_eq "$(extract_output "$dashboard_backend_session_contract_output" "test_scope")" "frontend-contract" "dashboard backend session/auth freshness contract lane changes should set frontend-contract scope"
 
+dashboard_backend_session_shared_contract_lane_output="$(run_selector $'scripts/dashboard/backend_session_auth_freshness_contract_lane_contract.py')"
+assert_eq "$(extract_output "$dashboard_backend_session_shared_contract_lane_output" "run_rust")" "false" "dashboard backend session/auth freshness shared contract-lane changes should avoid rust lane"
+assert_eq "$(extract_output "$dashboard_backend_session_shared_contract_lane_output" "run_frontend_dashboard_tests")" "false" "dashboard backend session/auth freshness shared contract-lane changes should skip frontend dashboard tests"
+assert_eq "$(extract_output "$dashboard_backend_session_shared_contract_lane_output" "run_dashboard_contract_tests")" "true" "dashboard backend session/auth freshness shared contract-lane changes must run dashboard contract lane"
+assert_eq "$(extract_output "$dashboard_backend_session_shared_contract_lane_output" "test_scope")" "frontend-contract" "dashboard backend session/auth freshness shared contract-lane changes should set frontend-contract scope"
+
 dashboard_stale_error_lane_output="$(run_selector $'scripts/dashboard/run_dashboard_stale_error_budget_lane.sh')"
 assert_eq "$(extract_output "$dashboard_stale_error_lane_output" "run_rust")" "false" "dashboard stale/error budget lane changes should avoid rust lane"
 assert_eq "$(extract_output "$dashboard_stale_error_lane_output" "run_frontend_dashboard_tests")" "false" "dashboard stale/error budget lane changes should skip frontend dashboard tests"
