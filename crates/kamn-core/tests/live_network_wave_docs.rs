@@ -12,8 +12,18 @@ fn live_network_wave_doc_contains_smoke_commands_and_schema() {
         LIVE_NETWORK_WAVE_DOC.contains("live_network_pilot_artifact_summary_policy_contract.py")
     );
     assert!(LIVE_NETWORK_WAVE_DOC.contains("live_network_pilot_deep_lane_contract.py"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("select_live_network_partition_reconnect_lane.sh"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("run_live_network_partition_reconnect_smoke_lane.sh"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("run_live_network_partition_reconnect_deep_lane.sh"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("check_live_network_partition_reconnect_policy.sh"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("run_live_network_partition_reconnect_contract_lane.sh"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("live_network_partition_reconnect_contract.py"));
+    assert!(LIVE_NETWORK_WAVE_DOC
+        .contains("fixtures/runtime/live_network_partition_reconnect_matrix_cases.json"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("make smoke-live-network"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("kamn.runtime.live-network-smoke-report.v1"));
+    assert!(LIVE_NETWORK_WAVE_DOC
+        .contains("kamn.runtime.live-network-partition-reconnect-matrix-report.v1"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("run_bridge_replay_redaction_contract_lane.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("run_bridge_replay_redaction_deep_lane.sh"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("check_bridge_replay_redaction_policy.sh"));
@@ -127,5 +137,10 @@ fn regression_localhost_transport_demo_receipt_artifact_contract_is_documented()
     // Regression: #981
     assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #981`"));
     assert!(LIVE_NETWORK_WAVE_DOC.contains("receipt artifact schema drift"));
+    // Regression: #982
+    assert!(LIVE_NETWORK_WAVE_DOC.contains("`Regression: #982`"));
+    assert!(LIVE_NETWORK_WAVE_DOC.contains(
+        "stale/tampered partition/reconnect matrix artifacts and replay anomalies are rejected"
+    ));
     assert!(README.contains("run_localhost_signed_demo.sh --output-json"));
 }
