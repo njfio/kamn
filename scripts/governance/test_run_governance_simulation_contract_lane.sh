@@ -37,6 +37,10 @@ if ! grep -q "check_governance_simulation_policy.sh" "$SHARED_CONTRACT"; then
   echo "expected governance simulation shared contract-lane module to run policy checker" >&2
   exit 1
 fi
+if ! grep -q "from framework.contract_lane_helpers import" "$SHARED_CONTRACT"; then
+  echo "expected governance simulation shared contract-lane module to use framework lane helpers" >&2
+  exit 1
+fi
 
 if ! grep -Fq "run_governance_simulation_contract_lane.sh" "$DEEP_LANE"; then
   echo "expected deep lane script to invoke governance contract lane checks first" >&2

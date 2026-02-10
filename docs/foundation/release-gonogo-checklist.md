@@ -312,6 +312,8 @@ Governance activation requires deterministic simulation, veto, timelock, and app
   - `scripts/governance/check_governance_simulation_policy.sh`
 - Shared Python implementation:
   - `scripts/governance/governance_simulation_contract.py`
+- Shared Python contract-lane implementation:
+  - `scripts/governance/governance_simulation_contract_lane_contract.py` (uses `framework.contract_lane_helpers`)
 - Evidence bundle generator:
   - `bash scripts/governance/generate_governance_simulation_evidence_bundle.sh --output-file /tmp/governance-simulation.json --proposal-id gov-proposal-activation-001 --simulation-hash sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --simulation-complete true --veto-window-open false --veto-recorded false --timelock-expired true --required-approvals 2 --received-approvals 2 --ci-fast-gate PASS`
 - Policy checker:
