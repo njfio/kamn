@@ -7,6 +7,8 @@ fn doc_contains_runtime_invariant_harness_coverage_contract() {
     assert!(DOC.contains("kamn.runtime.lifecycle-property-contract-report.v1"));
     assert!(DOC.contains("lifecycle_property_replay:v1"));
     assert!(DOC.contains("run_input_mutation_contract_lane.sh"));
+    assert!(DOC.contains("kamn.runtime.input-mutation-contract-report.v1"));
+    assert!(DOC.contains("input_mutation_replay:v1"));
     assert!(DOC.contains("run_concurrency_state_mutation_contract_lane.sh"));
     assert!(DOC.contains("run_invariant_fuzz_concurrency_contract_lane.sh"));
     assert!(DOC.contains("check_invariant_fuzz_concurrency_policy.sh"));

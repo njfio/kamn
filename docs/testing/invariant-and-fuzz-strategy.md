@@ -16,6 +16,7 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
   - `bash scripts/runtime/run_lifecycle_property_contract_lane.sh --output-json /tmp/lifecycle-property-contract-report.json`
 - Mutation/fuzz smoke lane:
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh`
+  - `bash scripts/runtime/run_input_mutation_contract_lane.sh --output-json /tmp/input-mutation-contract-report.json`
 - Concurrency race lane:
   - `bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh`
 - Combined contract lane:
@@ -29,7 +30,8 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
   escrow/dispute-refund, and peer lifecycle transitions, and emits replay
   metadata artifact key `lifecycle_property_replay:v1`.
 - Mutation/fuzz smoke lanes use fixed malformed/tampered classes with stable
-  fail-closed reason signatures.
+  fail-closed reason signatures and emit replay metadata artifact key
+  `input_mutation_replay:v1`.
 - Concurrency lanes use replay fixtures and deterministic round-based checks to
   guard winner exclusivity and terminal-state safety.
 
@@ -39,6 +41,10 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
   - `kamn.runtime.lifecycle-property-contract-report.v1`
 - Lifecycle property replay artifact key:
   - `lifecycle_property_replay:v1`
+- Input mutation report schema:
+  - `kamn.runtime.input-mutation-contract-report.v1`
+- Input mutation replay artifact key:
+  - `input_mutation_replay:v1`
 - Combined lane report schema:
   - `kamn.runtime.invariant-fuzz-concurrency-contract-report.v1`
 - Required summary fields:
@@ -49,6 +55,9 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
   - `property_replay_schema_version`
   - `property_replay_artifact_key`
   - `property_replay_test_count`
+  - `fuzz_replay_schema_version`
+  - `fuzz_replay_artifact_key`
+  - `fuzz_replay_test_count`
   - `elapsed_seconds`
   - `max_seconds`
   - `reason_codes`
@@ -59,6 +68,8 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
 
 - Property lane runtime budget env:
   - `KAMN_RUNTIME_LIFECYCLE_PROPERTY_MAX_SECONDS` (default `120`)
+- Input mutation lane runtime budget env:
+  - `KAMN_RUNTIME_INPUT_MUTATION_MAX_SECONDS` (default `120`)
 - Combined lane runtime budget env:
   - `KAMN_RUNTIME_INVARIANT_FUZZ_CONCURRENCY_MAX_SECONDS` (default `180`)
 - ZK witness mutation routing control:
