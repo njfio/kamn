@@ -458,6 +458,13 @@ assert_eq "$(extract_output "$cross_chain_outbound_shared_contract_output" "run_
 assert_eq "$(extract_output "$cross_chain_outbound_shared_contract_output" "run_bridge_replay_deep_lane")" "false" "cross-chain outbound intent shared contract changes should not run deep lane by default"
 assert_eq "$(extract_output "$cross_chain_outbound_shared_contract_output" "test_scope")" "bridge" "cross-chain outbound intent shared contract changes should set bridge scope"
 
+localhost_bridge_demo_shared_contract_output="$(run_selector $'scripts/bridge/localhost_bridge_demo_contract.py')"
+assert_eq "$(extract_output "$localhost_bridge_demo_shared_contract_output" "run_rust")" "false" "localhost bridge demo shared contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$localhost_bridge_demo_shared_contract_output" "run_bridge_replay_harness")" "true" "localhost bridge demo shared contract changes must run bridge replay harness"
+assert_eq "$(extract_output "$localhost_bridge_demo_shared_contract_output" "run_bridge_replay_deep_lane")" "false" "localhost bridge demo shared contract changes should not run deep lane by default"
+assert_eq "$(extract_output "$localhost_bridge_demo_shared_contract_output" "run_localhost_bridge_demo_evidence_deep_lane")" "false" "localhost bridge demo shared contract changes should not run localhost bridge demo deep lane by default"
+assert_eq "$(extract_output "$localhost_bridge_demo_shared_contract_output" "test_scope")" "bridge" "localhost bridge demo shared contract changes should set bridge scope"
+
 bridge_ingress_lane_output="$(run_selector $'scripts/bridge/run_bridge_ingress_relay_contract_lane.sh')"
 assert_eq "$(extract_output "$bridge_ingress_lane_output" "run_rust")" "false" "bridge ingress lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$bridge_ingress_lane_output" "run_bridge_replay_harness")" "true" "bridge ingress lane script-only changes must run bridge replay harness"

@@ -51,6 +51,11 @@ lane used to validate live-network pilot readiness while keeping PR cost low.
   - `bash scripts/bridge/check_bridge_replay_redaction_policy.sh --bundle-file /tmp/bridge-replay-redaction-deep-report.json`
 - Localhost bridge demo evidence policy checker:
   - `bash scripts/bridge/check_localhost_bridge_demo_policy.sh --bundle-file /tmp/localhost-bridge-demo-evidence.json`
+- Stable shell wrappers:
+  - `scripts/bridge/generate_localhost_bridge_demo_evidence_bundle.sh`
+  - `scripts/bridge/check_localhost_bridge_demo_policy.sh`
+- Shared Python implementation:
+  - `scripts/bridge/localhost_bridge_demo_contract.py`
 
 ## Evidence Contract
 
