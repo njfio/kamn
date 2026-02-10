@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VALIDATOR="$ROOT_DIR/scripts/kolme/validate_version_compatibility.py"
 FORK_EVIDENCE_GENERATOR="$ROOT_DIR/scripts/kolme/generate_fork_compatibility_evidence.py"
+FORK_POLICY_CHECKER="$ROOT_DIR/scripts/kolme/check_fork_compatibility_policy.py"
 REPLAY_RUNNER="$ROOT_DIR/scripts/kolme/run_version_compatibility_replay.py"
 RUNTIME_COMMIT_LANE="$ROOT_DIR/scripts/kolme/run_runtime_commit_contract_lane.sh"
 RUNTIME_COMMIT_REPLAY_LANE="$ROOT_DIR/scripts/kolme/run_runtime_commit_replay_contract_lane.sh"
@@ -21,6 +22,11 @@ fi
 
 if [ ! -x "$FORK_EVIDENCE_GENERATOR" ]; then
   echo "expected Kolme fork compatibility evidence generator to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$FORK_POLICY_CHECKER" ]; then
+  echo "expected Kolme fork compatibility policy checker to be executable" >&2
   exit 1
 fi
 
@@ -126,6 +132,37 @@ if ! printf '%s\n' "$fork_no_go_output" | grep -q 'fork_release_tag_mismatch'; t
   exit 1
 fi
 
+fork_policy_go_output="$(
+  python3 "$FORK_POLICY_CHECKER" \
+    --report-file "$TMP_DIR/fork-go-report.json" \
+    --expected-upstream-release-tag "v0.15.2" \
+    --expected-fork-release-tag "v0.15.2" \
+    --expected-fork-repo "njfio/kolme_fork" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/fork-policy-go-report.json"
+)"
+if ! printf '%s\n' "$fork_policy_go_output" | grep -q '^final_decision=GO$'; then
+  echo "expected fork policy checker GO path to pass" >&2
+  exit 1
+fi
+
+fork_policy_no_go_output="$(
+  python3 "$FORK_POLICY_CHECKER" \
+    --report-file "$TMP_DIR/fork-no-go-report.json" \
+    --expected-upstream-release-tag "v0.15.2" \
+    --expected-fork-release-tag "v0.14.9" \
+    --expected-fork-repo "njfio/kolme_fork" \
+    --expected-final-decision NO-GO \
+    --require-reason-code fork_release_tag_mismatch \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/fork-policy-no-go-report.json"
+)"
+if ! printf '%s\n' "$fork_policy_no_go_output" | grep -q '^final_decision=GO$'; then
+  echo "expected fork policy checker expected-NO-GO path to pass" >&2
+  exit 1
+fi
+
 python3 "$REPLAY_RUNNER" \
   --fixture "$FIXTURE_FILE" \
   --max-cases 2 \
@@ -150,6 +187,11 @@ if ! grep -q "generate_fork_compatibility_evidence.py" "$ROADMAP_DOC"; then
   exit 1
 fi
 
+if ! grep -q "check_fork_compatibility_policy.py" "$ROADMAP_DOC"; then
+  echo "expected Kolme roadmap doc to reference fork compatibility policy checker command" >&2
+  exit 1
+fi
+
 if ! grep -q "fixtures/kolme_compatibility/fork_compatibility_cases.json" "$ROADMAP_DOC"; then
   echo "expected Kolme roadmap doc to reference fork compatibility fixture path" >&2
   exit 1
@@ -162,6 +204,11 @@ fi
 
 if ! grep -q "run_version_compatibility_replay_deep_lane.sh" "$GONOGO_DOC"; then
   echo "expected release go/no-go doc to reference scheduled version replay lane" >&2
+  exit 1
+fi
+
+if ! grep -q "check_fork_compatibility_policy.py" "$GONOGO_DOC"; then
+  echo "expected release go/no-go doc to reference fork compatibility policy checker command" >&2
   exit 1
 fi
 

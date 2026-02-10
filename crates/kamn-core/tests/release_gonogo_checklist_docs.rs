@@ -138,6 +138,8 @@ fn checklist_contains_federated_delegation_settlement_evidence_contract() {
 fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
     assert!(CHECKLIST.contains("## Kolme Version Compatibility Replay Evidence Contract"));
     assert!(CHECKLIST.contains("validate_version_compatibility.py"));
+    assert!(CHECKLIST.contains("generate_fork_compatibility_evidence.py"));
+    assert!(CHECKLIST.contains("check_fork_compatibility_policy.py"));
     assert!(CHECKLIST.contains("run_version_compatibility_replay.py"));
     assert!(CHECKLIST.contains("check_runtime_commit_replay_policy.py"));
     assert!(CHECKLIST.contains("run_runtime_commit_replay_tamper_matrix.py"));
@@ -425,6 +427,20 @@ fn regression_requires_adapter_runtime_commit_replay_guard_marker() {
     // Regression: #980
     assert!(CHECKLIST.contains(
         "adapter transport/provider mismatch and non-final receipt reason-code checks remain fail-closed (`Regression: #980`)."
+    ));
+}
+
+#[test]
+fn regression_requires_kolme_fork_release_drift_guard_marker() {
+    // Regression: #1401
+    assert!(CHECKLIST.contains("fork release-tag drift remains blocked (`Regression: #1401`)."));
+}
+
+#[test]
+fn regression_requires_kolme_fork_policy_checker_guard_marker() {
+    // Regression: #1402
+    assert!(CHECKLIST.contains(
+        "fork policy checker rejects malformed schema, tuple mismatch, and missing required reason codes (`Regression: #1402`)."
     ));
 }
 
