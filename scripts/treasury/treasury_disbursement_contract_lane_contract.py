@@ -3,11 +3,20 @@
 
 from __future__ import annotations
 
-import subprocess
 import sys
 import tempfile
 import time
 from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR.parent))
+
+from framework.contract_lane_helpers import (  # noqa: E402
+    ContractLaneError,
+    enforce_runtime_budget,
+    run_capture,
+    run_go_bundle_policy_pair,
+)
 
 MAX_RUNTIME_SECONDS = 90
 
@@ -21,18 +30,6 @@ def fail(message: str) -> int:
     """Emit stable error and return non-zero."""
     print(message, file=sys.stderr)
     return 1
-
-
-def run_capture(command: list[str], *, cwd: Path) -> tuple[int, str]:
-    """Run command and return exit code + merged output."""
-    result = subprocess.run(
-        command,
-        capture_output=True,
-        text=True,
-        check=False,
-        cwd=str(cwd),
-    )
-    return result.returncode, (result.stdout or "") + (result.stderr or "")
 
 
 def main(argv: list[str]) -> int:
@@ -50,10 +47,10 @@ def main(argv: list[str]) -> int:
 
     with tempfile.TemporaryDirectory() as temp_dir:
         bundle_file = Path(temp_dir) / "treasury-disbursement-go.json"
-        generator_code, generator_output = run_capture(
-            [
-                "bash",
-                str(generator),
+        run_go_bundle_policy_pair(
+            root_dir=root_dir,
+            generator=generator,
+            generator_args=(
                 "--output-file",
                 str(bundle_file),
                 "--disbursement-id",
@@ -78,36 +75,33 @@ def main(argv: list[str]) -> int:
                 "true",
                 "--ci-fast-gate",
                 "PASS",
-            ],
-            cwd=root_dir,
+            ),
+            policy_checker=policy_checker,
+            bundle_file=bundle_file,
         )
-        if generator_code != 0 or "final_decision=GO" not in generator_output:
-            return fail("expected treasury disbursement contract lane decision to be GO")
-
-        policy_code, policy_output = run_capture(
-            ["bash", str(policy_checker), "--bundle-file", str(bundle_file)],
-            cwd=root_dir,
-        )
-        if policy_code != 0 or "final_decision=GO" not in policy_output:
-            return fail("expected treasury disbursement policy check decision to be GO")
 
     test_code, _test_output = run_capture(
         ["cargo", "test", "-p", "kamn-core", "--test", "release_gonogo_checklist_docs"],
         cwd=root_dir,
     )
     if test_code != 0:
-        return fail("expected cargo test -p kamn-core --test release_gonogo_checklist_docs to pass")
-
-    elapsed_seconds = int(time.monotonic() - start_time)
-    if elapsed_seconds > MAX_RUNTIME_SECONDS:
-        return fail(
-            "treasury disbursement contract lane exceeded runtime budget: "
-            f"{elapsed_seconds}s"
+        raise ContractLaneError(
+            "expected cargo test -p kamn-core --test release_gonogo_checklist_docs to pass"
         )
+
+    enforce_runtime_budget(
+        lane_name="treasury disbursement contract lane",
+        started_at=start_time,
+        max_runtime_seconds=MAX_RUNTIME_SECONDS,
+    )
 
     print("treasury disbursement contract lane tests passed.")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    try:
+        raise SystemExit(main(sys.argv[1:]))
+    except ContractLaneError as error:
+        print(error, file=sys.stderr)
+        raise SystemExit(1)
