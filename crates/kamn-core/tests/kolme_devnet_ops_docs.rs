@@ -42,6 +42,13 @@ fn plan_contains_local_fork_smoke_evidence_lane() {
 }
 
 #[test]
+fn plan_contains_local_kolme_api_probe_lane() {
+    assert!(PLAN.contains("## Deterministic Local Kolme API Probe Lane"));
+    assert!(PLAN.contains("run_local_kolme_api_probe_lane.sh"));
+    assert!(PLAN.contains("kamn.kolme.local-api-probe-summary.v1"));
+}
+
+#[test]
 fn plan_contains_local_only_heavy_validation_matrix() {
     assert!(PLAN.contains("## Local-Only Heavy Kolme Validation Matrix"));
     assert!(PLAN.contains("run_local_heavy_validation_matrix.sh"));
@@ -119,5 +126,13 @@ fn regression_requires_local_fork_smoke_evidence_guard_marker() {
     // Regression: #1430
     assert!(PLAN.contains(
         "local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_kolme_api_probe_guard_marker() {
+    // Regression: #1439
+    assert!(PLAN.contains(
+        "local Kolme API probe lane fails closed on unavailable health endpoint, invalid fork-info payload, and runtime budget overruns (`Regression: #1439`)."
     ));
 }
