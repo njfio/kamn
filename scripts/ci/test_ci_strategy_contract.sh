@@ -26,6 +26,12 @@ required_snippets=(
   "KAMN_SDK_REPLAY_TAMPER_CONTRACT_MAX_SECONDS=60"
   "run_live_transport_parity_contract_tests=true"
   "live_transport_parity_languages=rust,python,typescript"
+  "run_kolme_version_compatibility_contract_tests=true"
+  "test_scope=kolme-version-contract"
+  "run_local_bootstrap_health_checks.sh"
+  "run_local_e2e_integration_lane.sh"
+  "KAMN_KOLME_LOCAL_HEAVY=1"
+  "local-only heavy Kolme run-mode commands remain excluded from ci-fast-gate."
   "run_dashboard_contract_tests=true"
   "test_scope=frontend-contract"
   "run_frontend_dashboard_tests=true"
@@ -61,6 +67,7 @@ required_snippets=(
   "Regression: #944"
   "Regression: #907"
   "Regression: #1386"
+  "Regression: #1419"
 )
 
 for snippet in "${required_snippets[@]}"; do

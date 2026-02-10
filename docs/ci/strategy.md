@@ -52,6 +52,14 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 - Live transport parity command changes map to parity scope:
   - `run_live_transport_parity_contract_tests=true`
   - `live_transport_parity_languages=rust,python,typescript`
+- Local-only heavy Kolme command changes map to version-compatibility command-surface scope:
+  - `run_kolme_version_compatibility_contract_tests=true`
+  - `test_scope=kolme-version-contract`
+  - command-surface tests stay on PR fast gate:
+    - `bash scripts/kolme/test_run_local_bootstrap_health_checks.sh`
+    - `bash scripts/kolme/test_run_local_e2e_integration_lane.sh`
+  - local-only heavy Kolme run-mode commands remain excluded from ci-fast-gate.
+  - heavy execution keeps explicit opt-in: `KAMN_KOLME_LOCAL_HEAVY=1`
 - Dashboard backend session/auth freshness command changes map to dashboard contract scope:
   - `run_dashboard_contract_tests=true`
   - `test_scope=frontend-contract`
@@ -92,6 +100,8 @@ Required demo lane command contract:
 - `bash scripts/deploy/run_deployment_slo_rollback_contract_lane.sh --output-file /tmp/deployment-slo-rollback-contract-report.json`
 - `bash scripts/escrow/run_settlement_reconciliation_contract_lane.sh`
 - `bash scripts/bridge/run_bridge_adapter_conformance_contract_lane.sh --output-json /tmp/bridge-adapter-conformance-contract-report.json`
+- `bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode dry-run --output-json /tmp/kolme-local-bootstrap-summary.json`
+- `bash scripts/kolme/run_local_e2e_integration_lane.sh --mode dry-run --output-json /tmp/kolme-local-e2e-integration-summary.json`
 - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
 - `bash scripts/compliance/run_classification_redaction_contract_lane.sh --output-file /tmp/classification-redaction-contract-report.json`
 - `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
@@ -112,6 +122,7 @@ Regression policy:
 - classification/redaction compliance selector/docs parity remains fail-closed (`Regression: #914`).
 - governance lifecycle/rollback selector/docs parity remains fail-closed (`Regression: #910`).
 - governance quorum attestation selector/docs parity remains fail-closed (`Regression: #911`).
+- local-only heavy Kolme selector/workflow/docs parity remains fail-closed (`Regression: #1419`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
