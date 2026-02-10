@@ -286,6 +286,11 @@ if ! grep -Fq "bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh" "$F
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected local-only Kolme fork smoke evidence command-surface tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/kolme/test_run_local_heavy_validation_matrix.sh" "$FAST_WORKFLOW"; then
   echo "expected local-only heavy Kolme validation matrix command-surface tests in ci-fast-gate.yml" >&2
   exit 1
