@@ -376,19 +376,22 @@ for file in "${CHANGED_FILES[@]}"; do
       SOC2_CONTROL_EVIDENCE_CONTRACT_CHANGED=true
       DSAR_LEGAL_HOLD_CONTRACT_CHANGED=true
       CHANNEL_LIFECYCLE_CONTRACT_CHANGED=true
+      GOVERNANCE_SIMULATION_CONTRACT_CHANGED=true
+      GOVERNANCE_STAKE_SLASH_CONTRACT_CHANGED=true
+      REPUTATION_DISPUTE_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
 
   case "$file" in
-    docs/foundation/governance-proposal-vote-execution.md|docs/foundation/upgrade-rollback-runbook.md|docs/foundation/release-gonogo-checklist.md|docs/foundation/validator-lifecycle-quorum-reconfiguration.md|docs/foundation/threat-control-matrix.md|crates/kamn-core/src/governance_workflow.rs|crates/kamn-core/tests/governance_workflow.rs|crates/kamn-core/tests/governance_workflow_docs.rs|crates/kamn-core/tests/upgrade_rollback_runbook_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|crates/kamn-core/tests/validator_lifecycle_docs.rs|crates/kamn-core/tests/threat_control_matrix_docs.rs|scripts/governance/*governance_simulation*|scripts/governance/*lifecycle_rollback*|scripts/governance/*quorum_attestation_replay*|fixtures/governance_simulation/*)
+    docs/foundation/governance-proposal-vote-execution.md|docs/foundation/upgrade-rollback-runbook.md|docs/foundation/release-gonogo-checklist.md|docs/foundation/validator-lifecycle-quorum-reconfiguration.md|docs/foundation/threat-control-matrix.md|crates/kamn-core/src/governance_workflow.rs|crates/kamn-core/tests/governance_workflow.rs|crates/kamn-core/tests/governance_workflow_docs.rs|crates/kamn-core/tests/upgrade_rollback_runbook_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|crates/kamn-core/tests/validator_lifecycle_docs.rs|crates/kamn-core/tests/threat_control_matrix_docs.rs|scripts/governance/*governance_simulation*|scripts/governance/*lifecycle_rollback*|scripts/governance/*quorum_attestation_replay*|fixtures/governance_simulation/*|scripts/framework/manifests/governance_simulation_*|scripts/framework/manifests/governance_lifecycle_rollback_*|scripts/framework/manifests/governance_quorum_attestation_replay_*)
       GOVERNANCE_SIMULATION_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
 
   case "$file" in
-    docs/foundation/governance-proposal-vote-execution.md|docs/foundation/release-gonogo-checklist.md|docs/foundation/validator-lifecycle-quorum-reconfiguration.md|crates/kamn-core/tests/governance_workflow_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|crates/kamn-core/tests/validator_lifecycle_docs.rs|scripts/governance/*stake_slash*|fixtures/governance_stake_slash/*)
+    docs/foundation/governance-proposal-vote-execution.md|docs/foundation/release-gonogo-checklist.md|docs/foundation/validator-lifecycle-quorum-reconfiguration.md|crates/kamn-core/tests/governance_workflow_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|crates/kamn-core/tests/validator_lifecycle_docs.rs|scripts/governance/*stake_slash*|fixtures/governance_stake_slash/*|scripts/framework/manifests/governance_stake_slash_risk_*)
       GOVERNANCE_STAKE_SLASH_CONTRACT_CHANGED=true
       classified=true
       ;;
@@ -402,7 +405,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    docs/foundation/reputation-state-model.md|docs/foundation/reputation-signal-routing.md|docs/foundation/audit-export-interfaces.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/reputation_state_model_docs.rs|crates/kamn-core/tests/reputation_signal_routing_docs.rs|crates/kamn-core/tests/audit_export_interfaces_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/reputation/*|fixtures/reputation_dispute/*)
+    docs/foundation/reputation-state-model.md|docs/foundation/reputation-signal-routing.md|docs/foundation/audit-export-interfaces.md|docs/foundation/release-gonogo-checklist.md|crates/kamn-core/tests/reputation_state_model_docs.rs|crates/kamn-core/tests/reputation_signal_routing_docs.rs|crates/kamn-core/tests/audit_export_interfaces_docs.rs|crates/kamn-core/tests/release_gonogo_checklist_docs.rs|scripts/reputation/*|fixtures/reputation_dispute/*|scripts/framework/manifests/reputation_dispute_*)
       REPUTATION_DISPUTE_CONTRACT_CHANGED=true
       classified=true
       ;;

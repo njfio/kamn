@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/governance/run_governance_simulation_contract_lane.sh"
 DEEP_LANE="$ROOT_DIR/scripts/governance/run_governance_simulation_deep_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/governance/governance_simulation_contract_lane_contract.py"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/governance_simulation_contract_lane.json"
 
 if [ ! -x "$CONTRACT_LANE" ]; then
   echo "expected governance simulation contract lane script to be executable" >&2
@@ -19,14 +20,26 @@ if [ ! -x "$SHARED_CONTRACT" ]; then
   echo "expected governance simulation shared contract-lane module to be executable" >&2
   exit 1
 fi
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected governance simulation manifest to exist" >&2
+  exit 1
+fi
 
 lane_output="$(bash "$CONTRACT_LANE")"
 if ! printf '%s\n' "$lane_output" | grep -q "governance simulation contract lane tests passed."; then
   echo "expected governance simulation contract lane success marker" >&2
   exit 1
 fi
-if ! grep -q "governance_simulation_contract_lane_contract.py" "$CONTRACT_LANE"; then
-  echo "expected governance simulation contract lane wrapper to dispatch to shared module" >&2
+if ! grep -q "run_manifest_lane.sh" "$CONTRACT_LANE"; then
+  echo "expected governance simulation contract lane wrapper to dispatch via manifest runner" >&2
+  exit 1
+fi
+if ! grep -q "governance_simulation_contract_lane.json" "$CONTRACT_LANE"; then
+  echo "expected governance simulation contract lane wrapper to reference governance manifest" >&2
+  exit 1
+fi
+if ! grep -q "governance_simulation_contract_lane_contract.py" "$MANIFEST"; then
+  echo "expected governance simulation manifest to dispatch to shared module" >&2
   exit 1
 fi
 if ! grep -q "generate_governance_simulation_evidence_bundle.sh" "$SHARED_CONTRACT"; then

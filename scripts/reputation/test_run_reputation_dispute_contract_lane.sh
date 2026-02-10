@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/reputation/run_reputation_dispute_contract_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/reputation/reputation_dispute_contract_lane_contract.py"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/reputation_dispute_contract_lane.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -16,9 +17,21 @@ if [ ! -x "$SHARED_CONTRACT" ]; then
   echo "expected reputation dispute shared contract-lane module to be executable" >&2
   exit 1
 fi
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected reputation dispute contract lane manifest to exist" >&2
+  exit 1
+fi
 
-if ! grep -q "reputation_dispute_contract_lane_contract.py" "$CONTRACT_LANE"; then
-  echo "expected reputation dispute contract lane wrapper to dispatch to shared module" >&2
+if ! grep -q "run_manifest_lane.sh" "$CONTRACT_LANE"; then
+  echo "expected reputation dispute contract lane wrapper to dispatch via manifest runner" >&2
+  exit 1
+fi
+if ! grep -q "reputation_dispute_contract_lane.json" "$CONTRACT_LANE"; then
+  echo "expected reputation dispute contract lane wrapper to reference reputation manifest" >&2
+  exit 1
+fi
+if ! grep -q "reputation_dispute_contract_lane_contract.py" "$MANIFEST"; then
+  echo "expected reputation dispute manifest to dispatch to shared module" >&2
   exit 1
 fi
 
