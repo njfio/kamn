@@ -56,6 +56,13 @@ fn plan_contains_local_kolme_api_smoke_lane() {
 }
 
 #[test]
+fn plan_contains_local_runtime_commit_live_lane() {
+    assert!(PLAN.contains("## Local Runtime Commit Live Proof Lane"));
+    assert!(PLAN.contains("run_local_runtime_commit_live_lane.sh"));
+    assert!(PLAN.contains("kamn.kolme.local-runtime-commit-live-summary.v1"));
+}
+
+#[test]
 fn plan_contains_local_only_heavy_validation_matrix() {
     assert!(PLAN.contains("## Local-Only Heavy Kolme Validation Matrix"));
     assert!(PLAN.contains("run_local_heavy_validation_matrix.sh"));
@@ -149,5 +156,13 @@ fn regression_requires_local_kolme_api_smoke_guard_marker() {
     // Regression: #1440
     assert!(PLAN.contains(
         "local Kolme API smoke lane fails closed without explicit local opt-in, probe prerequisite failure, smoke-command timeout, and smoke-command errors (`Regression: #1440`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_runtime_commit_live_guard_marker() {
+    // Regression: #1450
+    assert!(PLAN.contains(
+        "local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`)."
     ));
 }
