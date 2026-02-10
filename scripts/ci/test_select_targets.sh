@@ -1472,6 +1472,11 @@ assert_eq "$(extract_output "$token_contract_script_output" "run_rust")" "false"
 assert_eq "$(extract_output "$token_contract_script_output" "run_token_launch_contract_tests")" "true" "token launch contract script changes must run token launch contract lane"
 assert_eq "$(extract_output "$token_contract_script_output" "test_scope")" "token-contract" "token launch contract script changes should set token-contract scope"
 
+token_contract_shared_script_output="$(run_selector $'scripts/token/token_launch_handoff_contract_lane_contract.py')"
+assert_eq "$(extract_output "$token_contract_shared_script_output" "run_rust")" "false" "token launch shared contract-lane script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$token_contract_shared_script_output" "run_token_launch_contract_tests")" "true" "token launch shared contract-lane changes must run token launch contract lane"
+assert_eq "$(extract_output "$token_contract_shared_script_output" "test_scope")" "token-contract" "token launch shared contract-lane changes should set token-contract scope"
+
 token_framework_script_output="$(run_selector $'scripts/framework/contract_framework.py')"
 assert_eq "$(extract_output "$token_framework_script_output" "run_rust")" "false" "contract framework script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$token_framework_script_output" "run_token_launch_contract_tests")" "true" "contract framework changes must run token launch contract lane"

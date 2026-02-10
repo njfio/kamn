@@ -8,6 +8,8 @@ This document defines deterministic token launch handoff evidence required befor
   - `scripts/token/check_token_launch_handoff_policy.sh`
 - Shared Python implementation backing the token wrappers:
   - `scripts/token/token_launch_handoff_contract.py`
+- Shared Python implementation (contract lane):
+  - `scripts/token/token_launch_handoff_contract_lane_contract.py`
 - Fast/deep lane entrypoints:
   - `scripts/token/run_token_launch_handoff_contract_lane.sh`
   - `scripts/token/run_token_launch_handoff_deep_lane.sh`
@@ -25,6 +27,7 @@ This document defines deterministic token launch handoff evidence required befor
   - `bash scripts/token/run_token_launch_handoff_deep_lane.sh --output-json token-launch-handoff-report.json`
 - Regression policy:
   - supply/allocation invariant drift and insufficient approvals force `NO-GO` (`Regression: #714`).
+  - shared contract-lane module marker remains required for docs/contracts drift guard (`Regression: #1270`).
 
 ## CI Cost Strategy
 - Fast lane runs only for token-launch-relevant changes (token core, token docs/contracts, token scripts/fixtures).
