@@ -9,6 +9,7 @@ POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_invariant_fuzz_concurrency_polic
 RUNTIME_NETWORK_DOC="$ROOT_DIR/docs/foundation/runtime-network.md"
 INVARIANTS_DOC="$ROOT_DIR/docs/foundation/invariants.md"
 PERFORMANCE_DOC="$ROOT_DIR/docs/foundation/performance-target-benchmarking.md"
+TESTING_STRATEGY_DOC="$ROOT_DIR/docs/testing/invariant-and-fuzz-strategy.md"
 
 output_json=""
 
@@ -32,7 +33,7 @@ for required_exec in "$PROPERTY_LANE" "$FUZZ_LANE" "$CONCURRENCY_LANE" "$POLICY_
   fi
 done
 
-for required_doc in "$RUNTIME_NETWORK_DOC" "$INVARIANTS_DOC" "$PERFORMANCE_DOC"; do
+for required_doc in "$RUNTIME_NETWORK_DOC" "$INVARIANTS_DOC" "$PERFORMANCE_DOC" "$TESTING_STRATEGY_DOC"; do
   if [ ! -f "$required_doc" ]; then
     echo "expected required documentation file '$required_doc'" >&2
     exit 1
@@ -125,6 +126,41 @@ fi
 
 if ! grep -Fq "KAMN_RUNTIME_INVARIANT_FUZZ_CONCURRENCY_MAX_SECONDS" "$PERFORMANCE_DOC"; then
   echo "expected performance benchmarking docs to reference invariant/fuzz/concurrency runtime budget env" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_lifecycle_property_contract_lane.sh" "$TESTING_STRATEGY_DOC"; then
+  echo "expected invariant/fuzz strategy doc to reference lifecycle property lane command" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_input_mutation_contract_lane.sh" "$TESTING_STRATEGY_DOC"; then
+  echo "expected invariant/fuzz strategy doc to reference input mutation lane command" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_concurrency_state_mutation_contract_lane.sh" "$TESTING_STRATEGY_DOC"; then
+  echo "expected invariant/fuzz strategy doc to reference concurrency state mutation lane command" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_invariant_fuzz_concurrency_contract_lane.sh" "$TESTING_STRATEGY_DOC"; then
+  echo "expected invariant/fuzz strategy doc to reference combined contract lane command" >&2
+  exit 1
+fi
+
+if ! grep -Fq "check_invariant_fuzz_concurrency_policy.sh" "$TESTING_STRATEGY_DOC"; then
+  echo "expected invariant/fuzz strategy doc to reference combined policy checker command" >&2
+  exit 1
+fi
+
+if ! grep -Fq "kamn.runtime.invariant-fuzz-concurrency-contract-report.v1" "$TESTING_STRATEGY_DOC"; then
+  echo "expected invariant/fuzz strategy doc to reference combined report schema" >&2
+  exit 1
+fi
+
+if ! grep -Fq "KAMN_RUNTIME_INVARIANT_FUZZ_CONCURRENCY_MAX_SECONDS" "$TESTING_STRATEGY_DOC"; then
+  echo "expected invariant/fuzz strategy doc to reference combined lane runtime budget env" >&2
   exit 1
 fi
 

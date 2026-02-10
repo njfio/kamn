@@ -1030,6 +1030,11 @@ assert_eq "$(extract_output "$runtime_contract_docs_output" "run_rust")" "false"
 assert_eq "$(extract_output "$runtime_contract_docs_output" "run_runtime_snapshot_contract_tests")" "true" "runtime contract docs must run runtime snapshot contract lane"
 assert_eq "$(extract_output "$runtime_contract_docs_output" "test_scope")" "runtime-contract" "runtime contract docs should set runtime-contract scope"
 
+runtime_invariant_strategy_docs_output="$(run_selector $'docs/testing/invariant-and-fuzz-strategy.md')"
+assert_eq "$(extract_output "$runtime_invariant_strategy_docs_output" "run_rust")" "false" "runtime invariant/fuzz strategy docs should avoid rust lane"
+assert_eq "$(extract_output "$runtime_invariant_strategy_docs_output" "run_runtime_snapshot_contract_tests")" "true" "runtime invariant/fuzz strategy docs must run runtime snapshot contract lane"
+assert_eq "$(extract_output "$runtime_invariant_strategy_docs_output" "test_scope")" "runtime-contract" "runtime invariant/fuzz strategy docs should set runtime-contract scope"
+
 runtime_watchdog_contract_docs_output="$(run_selector $'docs/foundation/runtime-watchdog-attestation.md')"
 assert_eq "$(extract_output "$runtime_watchdog_contract_docs_output" "run_rust")" "false" "runtime watchdog contract docs should avoid rust lane"
 assert_eq "$(extract_output "$runtime_watchdog_contract_docs_output" "run_runtime_snapshot_contract_tests")" "true" "runtime watchdog contract docs must run runtime snapshot contract lane"
