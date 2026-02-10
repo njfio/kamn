@@ -28,6 +28,7 @@ fn doc_contains_weighted_decay_and_antigaming_fixture_lanes() {
     assert!(DOC.contains("run_weighted_decay_contract_lane.sh"));
     assert!(DOC.contains("generate_weighted_decay_property_evidence_bundle.sh"));
     assert!(DOC.contains("check_weighted_decay_property_policy.sh"));
+    assert!(DOC.contains("weighted_decay_contract.py"));
     assert!(DOC.contains("run_weighted_decay_deep_lane.sh"));
     assert!(DOC.contains("run_weighted_decay_matrix.py"));
     assert!(DOC.contains("fixtures/reputation_decay/compact_cases.json"));

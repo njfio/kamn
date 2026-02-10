@@ -63,6 +63,7 @@ fn doc_contains_recovery_reversal_contract() {
 #[test]
 fn doc_contains_weighted_decay_and_antigaming_contract() {
     assert!(DOC.contains("## Weighted Decay and Anti-Gaming Threshold Contract"));
+    assert!(DOC.contains("weighted_decay_contract.py"));
     assert!(DOC.contains("run_weighted_decay_contract_lane.sh"));
     assert!(DOC.contains("run_weighted_decay_deep_lane.sh"));
     assert!(DOC.contains("run_weighted_decay_matrix.py"));

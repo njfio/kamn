@@ -117,6 +117,11 @@ False-positive penalties require deterministic reversal checks so recovery remai
 ## Weighted Decay and Anti-Gaming Threshold Contract (Issue #736)
 Trust-score updates apply deterministic weighted decay windows and typed abuse-threshold penalties before score persistence.
 
+- Stable shell wrappers:
+  - `scripts/reputation/generate_weighted_decay_property_evidence_bundle.sh`
+  - `scripts/reputation/check_weighted_decay_property_policy.sh`
+- Shared Python implementation:
+  - `scripts/reputation/weighted_decay_contract.py`
 - Compact PR lane entrypoint:
   - `bash scripts/reputation/run_weighted_decay_contract_lane.sh`
 - Scheduled deep lane entrypoint:
