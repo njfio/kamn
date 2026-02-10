@@ -48,6 +48,7 @@ fn runbook_contains_watchdog_incident_response_flow() {
 #[test]
 fn runbook_contains_dr_evidence_and_slo_gate_contract() {
     assert!(RUNBOOK.contains("## DR Drill Evidence and Release SLO Gate Contract"));
+    assert!(RUNBOOK.contains("dr_evidence_contract.py"));
     assert!(RUNBOOK.contains("generate_dr_evidence_bundle.sh"));
     assert!(RUNBOOK.contains("check_release_slo_gates.sh"));
     assert!(RUNBOOK.contains("run_dr_evidence_contract_lane.sh"));

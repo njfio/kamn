@@ -50,6 +50,11 @@ Release promotion requires machine-validated DR drill evidence and SLO gate chec
   - `bash scripts/deploy/check_release_slo_gates.sh --bundle-file /tmp/dr-evidence.json`
 - Fast contract lane:
   - `bash scripts/deploy/run_dr_evidence_contract_lane.sh`
+- Stable shell wrappers:
+  - `scripts/deploy/generate_dr_evidence_bundle.sh`
+  - `scripts/deploy/check_release_slo_gates.sh`
+- Shared Python implementation:
+  - `scripts/deploy/dr_evidence_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/deploy/run_dr_evidence_deep_lane.sh`
 - Regression policy:
