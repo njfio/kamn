@@ -328,6 +328,24 @@ bash scripts/kolme/run_local_kolme_api_smoke_lane.sh --mode run --base-url http:
 # schema: kamn.kolme.local-api-smoke-summary.v1
 ```
 
+### Run Local-Only Live Kolme API Conformance Harness
+
+```bash
+# deterministic local live conformance plan (no command execution)
+bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode dry-run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-api-conformance-summary.json
+
+# local-only live conformance execution (probe + native parity checks)
+KAMN_KOLME_LOCAL_HEAVY=1 \
+bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 180 --probe-max-seconds 30 --native-max-seconds 120 --output-json /tmp/kolme-local-live-api-conformance-summary.json
+# schema: kamn.kolme.local-live-api-conformance-summary.v1
+
+# policy checker contract
+python3 scripts/kolme/check_local_kolme_live_api_conformance_policy.py --report-file /tmp/kolme-local-live-api-conformance-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-api-conformance-policy.json
+
+# bounded contract lane (spawns local mock API server for deterministic integration validation)
+bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json
+```
+
 ### Run Local-Only Heavy Kolme Validation Matrix
 
 ```bash
@@ -364,6 +382,7 @@ Fast-gate validates only command surfaces:
 Local Kolme API probe/smoke lane contract tests:
 - `bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh`
+- `bash scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh`
 
 ## Workflow
 

@@ -65,6 +65,15 @@ fn plan_contains_local_kolme_api_smoke_lane() {
 }
 
 #[test]
+fn plan_contains_local_live_api_conformance_harness() {
+    assert!(PLAN.contains("## Local-Only Live Kolme API Conformance Harness"));
+    assert!(PLAN.contains("run_local_kolme_live_api_conformance_harness.sh"));
+    assert!(PLAN.contains("check_local_kolme_live_api_conformance_policy.py"));
+    assert!(PLAN.contains("run_local_kolme_live_api_conformance_contract_lane.sh"));
+    assert!(PLAN.contains("kamn.kolme.local-live-api-conformance-summary.v1"));
+}
+
+#[test]
 fn plan_contains_local_runtime_commit_live_lane() {
     assert!(PLAN.contains("## Local Runtime Commit Live Proof Lane"));
     assert!(PLAN.contains("run_local_runtime_commit_live_lane.sh"));
@@ -227,5 +236,13 @@ fn regression_requires_live_kolme_method_and_query_guard_marker() {
     // Regression: #1482
     assert!(PLAN.contains(
         "local probe fork-info query semantics and native parity broadcast method drift remain fail-closed (`Regression: #1482`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_live_api_conformance_harness_guard_marker() {
+    // Regression: #1483
+    assert!(PLAN.contains(
+        "local live API conformance harness fails closed for probe/native parity prerequisite failures, runtime budget overruns, and endpoint contract drift (`Regression: #1483`)."
     ));
 }
