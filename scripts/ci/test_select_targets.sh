@@ -670,6 +670,12 @@ assert_eq "$(extract_output "$federated_did_contract_script_output" "run_did_reg
 assert_eq "$(extract_output "$federated_did_contract_script_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID contract script changes must run federated DID handshake lane"
 assert_eq "$(extract_output "$federated_did_contract_script_output" "test_scope")" "federated-did-contract" "federated DID contract script changes should set federated-did-contract scope"
 
+federated_did_shared_contract_output="$(run_selector $'scripts/did/federated_did_handshake_contract.py')"
+assert_eq "$(extract_output "$federated_did_shared_contract_output" "run_rust")" "false" "federated DID shared contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$federated_did_shared_contract_output" "run_did_registry_contract_tests")" "false" "federated DID shared contract changes should not trigger did registry lane"
+assert_eq "$(extract_output "$federated_did_shared_contract_output" "run_federated_did_handshake_contract_tests")" "true" "federated DID shared contract changes must run federated DID handshake lane"
+assert_eq "$(extract_output "$federated_did_shared_contract_output" "test_scope")" "federated-did-contract" "federated DID shared contract changes should set federated-did-contract scope"
+
 federated_did_contract_fixture_output="$(run_selector $'fixtures/federated_did_handshake/partition_replay_cases.json')"
 assert_eq "$(extract_output "$federated_did_contract_fixture_output" "run_rust")" "false" "federated DID fixture-only changes should avoid rust lane"
 assert_eq "$(extract_output "$federated_did_contract_fixture_output" "run_did_registry_contract_tests")" "false" "federated DID fixture changes should not trigger did registry lane"

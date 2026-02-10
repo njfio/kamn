@@ -93,6 +93,7 @@ fn checklist_contains_dsar_legal_hold_evidence_contract() {
 #[test]
 fn checklist_contains_federated_did_handshake_evidence_contract() {
     assert!(CHECKLIST.contains("## Federated DID Handshake Evidence Contract"));
+    assert!(CHECKLIST.contains("federated_did_handshake_contract.py"));
     assert!(CHECKLIST.contains("generate_federated_did_handshake_evidence_bundle.sh"));
     assert!(CHECKLIST.contains("check_federated_did_handshake_policy.sh"));
     assert!(CHECKLIST.contains("run_federated_did_handshake_contract_lane.sh"));
