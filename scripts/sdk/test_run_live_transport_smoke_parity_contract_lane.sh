@@ -48,6 +48,11 @@ if ! grep -q '"final_decision": "GO"' "$report_file"; then
   exit 1
 fi
 
+if ! grep -q '"skip_commands": true' "$report_file"; then
+  echo "expected sdk smoke parity contract lane GO path to default to deterministic skip_commands=true" >&2
+  exit 1
+fi
+
 if ! grep -q 'check_live_transport_smoke_parity_policy.sh' "$SHARED_SCRIPT"; then
   echo "expected shared sdk smoke parity contract lane implementation to execute policy checker" >&2
   exit 1

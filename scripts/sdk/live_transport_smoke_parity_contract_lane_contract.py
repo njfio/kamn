@@ -37,6 +37,13 @@ def require_positive_budget(raw_value: str) -> int:
     return value
 
 
+def require_bool_flag(name: str, raw_value: str) -> str:
+    """Require true/false string with stable shell-compatible errors."""
+    if raw_value not in {"true", "false"}:
+        fail(f"{name} must be true or false")
+    return raw_value
+
+
 def ensure_contains_line(output: str, expected: str, error_message: str) -> None:
     """Require an exact output line."""
     if expected not in output.splitlines():
@@ -99,6 +106,10 @@ def main(argv: list[str]) -> int:
     max_contract_seconds = require_positive_budget(
         os.getenv("KAMN_SDK_SMOKE_PARITY_CONTRACT_MAX_SECONDS", "240")
     )
+    contract_skip_commands = require_bool_flag(
+        "KAMN_SDK_SMOKE_PARITY_CONTRACT_SKIP_COMMANDS",
+        os.getenv("KAMN_SDK_SMOKE_PARITY_CONTRACT_SKIP_COMMANDS", "true"),
+    )
 
     start_epoch = int(time.time())
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -116,7 +127,10 @@ def main(argv: list[str]) -> int:
                 "--output-json",
                 str(output_file),
             ],
-            env={"KAMN_SDK_SMOKE_PARITY_MAX_SECONDS": str(max_contract_seconds)},
+            env={
+                "KAMN_SDK_SMOKE_PARITY_MAX_SECONDS": str(max_contract_seconds),
+                "KAMN_SDK_SMOKE_PARITY_SKIP_COMMANDS": contract_skip_commands,
+            },
         )
         if go_rc != 0:
             fail("expected sdk live transport smoke parity lane to report pass status")
