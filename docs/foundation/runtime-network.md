@@ -138,6 +138,8 @@ This document captures the initial runtime-network foundation slice for peer lif
 - All mutation corpus entries must fail closed with explicit typed errors and stable reason strings.
 - Fast contract lane command:
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh`
+  - `bash scripts/runtime/run_input_mutation_contract_lane.sh --target envelope --output-json /tmp/input-mutation-envelope-smoke-report.json`
+  - `bash scripts/runtime/run_input_mutation_contract_lane.sh --target did --output-json /tmp/input-mutation-did-smoke-report.json`
 - Processor proof admission guard lane command:
   - `bash scripts/runtime/run_processor_proof_admission_contract_lane.sh`
 - Processor proof admission fail-closed rules:
@@ -145,6 +147,11 @@ This document captures the initial runtime-network foundation slice for peer lif
   - payload commitment mismatch
   - invalid proof format
   - replayed artifact id
+- Input mutation replay metadata schema:
+  - `kamn.runtime.input-mutation-replay-metadata.v1`
+- Input mutation seed corpus keys:
+  - `input_mutation_envelope_seed:v1`
+  - `input_mutation_did_seed:v1`
 
 ## Deterministic Concurrency Harness Rules
 - Shared-state mutation harness in `crates/kamn-core/tests/concurrency_state_mutation.rs` must enforce:

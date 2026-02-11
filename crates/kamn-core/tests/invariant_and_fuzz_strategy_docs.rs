@@ -23,3 +23,13 @@ fn regression_requires_lifecycle_property_replay_metadata_markers() {
     assert!(DOC.contains("generated_sequence_bounds"));
     assert!(DOC.contains("executed_cases"));
 }
+
+#[test]
+fn regression_requires_input_mutation_targeted_smoke_markers() {
+    // Regression: #1607
+    assert!(DOC.contains("--target envelope"));
+    assert!(DOC.contains("--target did"));
+    assert!(DOC.contains("kamn.runtime.input-mutation-replay-metadata.v1"));
+    assert!(DOC.contains("input_mutation_envelope_seed:v1"));
+    assert!(DOC.contains("input_mutation_did_seed:v1"));
+}

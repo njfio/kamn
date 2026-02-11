@@ -194,6 +194,11 @@ fn regression_requires_rejoin_and_overflow_rejection_rules() {
 fn doc_contains_mutation_fail_closed_contract_rules() {
     assert!(DOC.contains("All mutation corpus entries must fail closed"));
     assert!(DOC.contains("typed errors and stable reason strings"));
+    assert!(DOC.contains("--target envelope"));
+    assert!(DOC.contains("--target did"));
+    assert!(DOC.contains("kamn.runtime.input-mutation-replay-metadata.v1"));
+    assert!(DOC.contains("input_mutation_envelope_seed:v1"));
+    assert!(DOC.contains("input_mutation_did_seed:v1"));
     assert!(DOC.contains("Regression: #843"));
 }
 
