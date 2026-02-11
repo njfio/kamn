@@ -281,6 +281,21 @@ if ! grep -Fq "bash scripts/kolme/test_validate_version_compatibility.sh" "$FAST
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/kolme/test_generate_fork_compatibility_evidence.sh" "$FAST_WORKFLOW"; then
+  echo "expected fork compatibility evidence generator tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/kolme/test_check_fork_compatibility_policy.sh" "$FAST_WORKFLOW"; then
+  echo "expected fork compatibility policy checker tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/kolme/test_run_runtime_commit_adapter_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected runtime commit adapter contract lane tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh" "$FAST_WORKFLOW"; then
   echo "expected local-only Kolme fork sync metadata command-surface tests in ci-fast-gate.yml" >&2
   exit 1
