@@ -98,6 +98,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/test_run_local_bootstrap_health_checks_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_fork_profile_preflight_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_fork_self_test_contract_lane.sh`
+    - `bash scripts/kolme/test_run_local_kolme_fork_portability_preflight_contract_lane.sh`
   - nonce/broadcast parity matrix fast-lane budget stays bounded:
     - `KAMN_KOLME_NONCE_BROADCAST_PARITY_MAX_SECONDS=60`
   - fast-gate native API parity lane remains bounded:
@@ -137,6 +138,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --matrix-max-seconds 60 --matrix-cargo-profile portable --output-json /tmp/kolme-local-fork-self-test-summary.json`
     - `python3 scripts/kolme/check_local_kolme_fork_self_test_policy.py --report-file /tmp/kolme-local-fork-self-test-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code fork_self_test_passed --output-json /tmp/kolme-local-fork-self-test-policy.json`
     - `bash scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh --output-json /tmp/kolme-local-fork-self-test-summary.json --policy-output-json /tmp/kolme-local-fork-self-test-policy.json`
+  - local fork portability preflight run-mode commands remain excluded from ci-fast-gate.
+    - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_portability_preflight_lane.sh --mode run --checkout-path /tmp/kolme_fork --max-seconds 300 --output-json /tmp/kolme-local-fork-portability-preflight-summary.json`
+    - `python3 scripts/kolme/check_local_kolme_fork_portability_preflight_policy.py --report-file /tmp/kolme-local-fork-portability-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code portability_preflight_passed --output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
+    - `bash scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
   - local runtime-commit live run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --live-command "cargo test -p kamn-core --test kolme_runtime_commit_http_transport" --max-seconds 90 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt`
   - local native API parity live-proof run-mode commands remain excluded from ci-fast-gate.
@@ -200,6 +205,7 @@ Required demo lane command contract:
 - `bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json`
 - `bash scripts/kolme/run_local_kolme_fork_profile_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-profile-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
 - `bash scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh --output-json /tmp/kolme-local-fork-self-test-summary.json --policy-output-json /tmp/kolme-local-fork-self-test-policy.json`
+- `bash scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
 - `bash scripts/canary/run_post_cutover_slo_contract_lane.sh`
 - `bash scripts/compliance/run_classification_redaction_contract_lane.sh --output-file /tmp/classification-redaction-contract-report.json`
 - `bash scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh --output-file /tmp/governance-lifecycle-rollback-contract-report.json`
@@ -227,6 +233,7 @@ Regression policy:
 - local-only heavy matrix policy and contract lane command-surface parity remains fail-closed (`Regression: #1687`).
 - local fork profile preflight policy and contract lane command-surface parity remains fail-closed (`Regression: #1697`).
 - local fork self-test policy and contract lane command-surface parity remains fail-closed (`Regression: #1702`).
+- local fork portability preflight policy and contract lane command-surface parity remains fail-closed (`Regression: #1707`).
 - local bootstrap health policy and contract lane command-surface parity remains fail-closed (`Regression: #1692`).
 - local Kolme API probe/smoke run-mode exclusion parity remains fail-closed (`Regression: #1441`).
 - local live API conformance harness run-mode exclusion parity remains fail-closed (`Regression: #1483`).
@@ -282,7 +289,9 @@ When CI-sensitive files are modified (`.github/workflows/*`, `scripts/ci/*`, `.c
 Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 
 ## Script Regression Coverage
-`ci-fast-gate` runs `scripts/ci/test_ci_tools.sh` to locally regression-test CI helper scripts:
+`ci-fast-gate` runs `scripts/ci/test_ci_tools.sh` with `KAMN_CI_TOOLS_FAST_MODE=true` to keep PR-critical CI tooling checks bounded and cost-effective, while local/deep lanes continue to run the full script.
+
+Fast-mode CI tooling regression coverage includes:
 - Budget evaluator (`test_evaluate_budget.sh`)
 - Script duplication/surface budget checker (`test_check_script_duplication_budget.sh`)
 - Retry helper (`test_run_with_retry.sh`)
@@ -293,9 +302,11 @@ Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 - PR CI declaration checker (`test_check_pr_ci_declaration.sh`)
 - Flaky report commenter (`test_post_flaky_report_comment.sh`)
 - Flaky issue syncer (`test_sync_flaky_registry_issues.sh`)
+- Workflow guard contracts (`test_workflow_retry_policy.sh`, `test_workflow_cache_policy.sh`, `test_workflow_scope_policy.sh`, `test_workflow_performance_policy.sh`)
 - Rustdoc artifact lane contract (`test_run_kamn_core_rustdoc_artifact_contract_lane.sh`)
 - Rustdoc artifact policy checker (`test_check_kamn_core_rustdoc_artifact_policy.sh`)
 - Makefile execution contract checker (`test_makefile_execution_contract.sh`)
+- Local fork portability preflight lane/policy/contract checks (`test_run_local_kolme_fork_portability_preflight_lane.sh`, `test_check_local_kolme_fork_portability_preflight_policy.sh`, `test_run_local_kolme_fork_portability_preflight_contract_lane.sh`)
 
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.

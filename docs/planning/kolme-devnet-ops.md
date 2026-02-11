@@ -325,6 +325,30 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - nested matrix budget and total lane budget remain bounded and local-only.
   - self-test run-mode execution remains excluded from PR fast-gate workflow routing.
 
+## Local Fork Portability Preflight Lane (Issue #1706)
+
+- Local fork portability preflight runner:
+  - `bash scripts/kolme/run_local_kolme_fork_portability_preflight_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-portability-preflight-summary.json`
+- Explicit local-only portability preflight execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_portability_preflight_lane.sh --mode run --checkout-path /tmp/kolme_fork --max-seconds 300 --output-json /tmp/kolme-local-fork-portability-preflight-summary.json`
+- Policy checker command:
+  - `python3 scripts/kolme/check_local_kolme_fork_portability_preflight_policy.py --report-file /tmp/kolme-local-fork-portability-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
+- Contract lane command:
+  - `bash scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
+- Summary schema:
+  - `kamn.kolme.local-fork-portability-preflight-summary.v1`
+  - policy schema: `kamn.kolme.local-fork-portability-preflight-policy-report.v1`
+- Deterministic checkpoints include:
+  - local-only opt-in guard before active probes.
+  - `mold` linker probe when checkout toolchain config requires `-fuse-ld=mold`.
+  - portable `kolme` compile probe using `RUSTFLAGS=''`.
+  - `libudev` probe prior to integration-test compile probe.
+  - `integration-tests` compile probe (`six-sigma`) to surface host dependency drift.
+- Cost policy:
+  - run mode fails closed without explicit local-only opt-in.
+  - compile probes remain local-only and bounded by explicit runtime budgets.
+  - portability preflight run-mode execution remains excluded from PR fast-gate workflow routing.
+
 ## Local Fork Checkout Bootstrap Lane (Issue #1663)
 
 - Local fork checkout bootstrap runner:
@@ -546,6 +570,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local fork profile preflight policy and contract-lane command/report drift remains fail-closed (`Regression: #1697`).
 - local fork self-test lane fails closed for local opt-in, nested matrix/policy checkpoint failures, and runtime budget overruns (`Regression: #1652`).
 - local fork self-test policy and contract-lane command/report drift remains fail-closed (`Regression: #1702`).
+- local fork portability preflight lane fails closed for local opt-in, mold linker drift, libudev dependency drift, and compile probe failures (`Regression: #1707`).
 - local fork checkout bootstrap lane fails closed for local opt-in, checkout provenance drift, diagnostics command failures, and runtime budget overruns (`Regression: #1663`).
 - real-fork local process wrapper bootstrap-first prerequisite ordering remains fail-closed for bootstrap lane/policy checkpoint drift (`Regression: #1667`).
 - local-only heavy E2E lane checkout-bootstrap contract checkpoint composition remains fail-closed for command/id ordering drift (`Regression: #1677`).
@@ -586,6 +611,9 @@ bash scripts/kolme/test_run_local_kolme_fork_profile_preflight_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_profile_preflight_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_self_test_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_self_test_contract_lane.sh
+bash scripts/kolme/test_run_local_kolme_fork_portability_preflight_lane.sh
+bash scripts/kolme/test_check_local_kolme_fork_portability_preflight_policy.sh
+bash scripts/kolme/test_run_local_kolme_fork_portability_preflight_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_lane.sh
 bash scripts/kolme/test_check_local_kolme_fork_checkout_bootstrap_policy.sh
 bash scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_contract_lane.sh

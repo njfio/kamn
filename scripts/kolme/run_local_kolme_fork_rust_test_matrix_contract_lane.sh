@@ -7,6 +7,7 @@ CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 OUTPUT_JSON="/tmp/kolme-local-fork-rust-test-matrix-summary.json"
 POLICY_OUTPUT_JSON="/tmp/kolme-local-fork-rust-test-matrix-policy.json"
+CHECKOUT_PATH="/tmp/kolme_fork"
 MAX_SECONDS="${KAMN_KOLME_LOCAL_FORK_RUST_MATRIX_MAX_SECONDS:-120}"
 
 while [ "$#" -gt 0 ]; do
@@ -27,6 +28,14 @@ while [ "$#" -gt 0 ]; do
       POLICY_OUTPUT_JSON="$2"
       shift 2
       ;;
+    --checkout-path)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --checkout-path" >&2
+        exit 1
+      fi
+      CHECKOUT_PATH="$2"
+      shift 2
+      ;;
     --help|-h)
       cat <<'USAGE'
 Usage: run_local_kolme_fork_rust_test_matrix_contract_lane.sh [options]
@@ -34,6 +43,7 @@ Usage: run_local_kolme_fork_rust_test_matrix_contract_lane.sh [options]
 Options:
   --output-json <path>         Matrix summary output.
   --policy-output-json <path>  Policy report output.
+  --checkout-path <path>       Local fork checkout path used for run-mode metadata checks.
 USAGE
       exit 0
       ;;
@@ -68,7 +78,7 @@ start_epoch="$(date +%s)"
 
 bash "$RUNNER" \
   --mode dry-run \
-  --checkout-path /tmp/kolme_fork \
+  --checkout-path "$CHECKOUT_PATH" \
   --max-seconds "$MAX_SECONDS" \
   --output-json "$OUTPUT_JSON" \
   >/dev/null
@@ -84,7 +94,7 @@ python3 "$CHECKER" \
 KAMN_KOLME_LOCAL_HEAVY=1 \
   bash "$RUNNER" \
     --mode run \
-    --checkout-path /tmp/kolme_fork \
+    --checkout-path "$CHECKOUT_PATH" \
     --matrix-command "printf 'matrix_contract_ok_1\\n'" \
     --matrix-command "printf 'matrix_contract_ok_2\\n'" \
     --max-seconds "$MAX_SECONDS" \

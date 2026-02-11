@@ -55,6 +55,8 @@ jobs:
 
       - name: Run CI tool regression tests
         if: steps.scope.outputs.run_ci_tool_checks == 'true'
+        env:
+          KAMN_CI_TOOLS_FAST_MODE: 'true'
         run: bash scripts/ci/test_ci_tools.sh
 
       - name: Check script-surface budget policy
@@ -209,6 +211,9 @@ jobs:
           bash scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh
           bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh
           bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh
+          bash scripts/kolme/test_run_local_kolme_fork_portability_preflight_lane.sh
+          bash scripts/kolme/test_check_local_kolme_fork_portability_preflight_policy.sh
+          bash scripts/kolme/test_run_local_kolme_fork_portability_preflight_contract_lane.sh
           bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh
           bash scripts/kolme/test_run_version_compatibility_contract_lane.sh
 

@@ -28,4 +28,9 @@ if ! grep -Fq "if: steps.scope.outputs.run_ci_tool_checks == 'true'" "$FAST_WORK
   exit 1
 fi
 
+if ! grep -Fq "KAMN_CI_TOOLS_FAST_MODE: 'true'" "$FAST_WORKFLOW"; then
+  echo "expected ci-fast-gate CI tool checks to run with fast-mode budget guard" >&2
+  exit 1
+fi
+
 echo "workflow cache policy tests passed."

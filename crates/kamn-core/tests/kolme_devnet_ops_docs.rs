@@ -138,6 +138,16 @@ fn plan_contains_local_fork_self_test_lane() {
 }
 
 #[test]
+fn plan_contains_local_fork_portability_preflight_lane() {
+    assert!(PLAN.contains("## Local Fork Portability Preflight Lane"));
+    assert!(PLAN.contains("run_local_kolme_fork_portability_preflight_lane.sh"));
+    assert!(PLAN.contains("check_local_kolme_fork_portability_preflight_policy.py"));
+    assert!(PLAN.contains("run_local_kolme_fork_portability_preflight_contract_lane.sh"));
+    assert!(PLAN.contains("kamn.kolme.local-fork-portability-preflight-summary.v1"));
+    assert!(PLAN.contains("kamn.kolme.local-fork-portability-preflight-policy-report.v1"));
+}
+
+#[test]
 fn plan_contains_local_fork_checkout_bootstrap_lane() {
     assert!(PLAN.contains("## Local Fork Checkout Bootstrap Lane"));
     assert!(PLAN.contains("run_local_kolme_fork_checkout_bootstrap_lane.sh"));
@@ -466,6 +476,14 @@ fn regression_requires_local_fork_self_test_contract_lane_guard_marker() {
     // Regression: #1702
     assert!(PLAN.contains(
         "local fork self-test policy and contract-lane command/report drift remains fail-closed (`Regression: #1702`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_fork_portability_preflight_contract_lane_guard_marker() {
+    // Regression: #1707
+    assert!(PLAN.contains(
+        "local fork portability preflight lane fails closed for local opt-in, mold linker drift, libudev dependency drift, and compile probe failures (`Regression: #1707`)."
     ));
 }
 
