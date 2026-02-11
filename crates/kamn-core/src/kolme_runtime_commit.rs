@@ -16,6 +16,7 @@ use kamn_kolme::{
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
     lifecycle_state_label as lifecycle_state_label_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
+    notification_event_to_receipt as notification_event_to_kolme_receipt_contract,
     parse_authorization_header_value as parse_kolme_authorization_header_value,
     parse_http_endpoint as parse_kolme_http_endpoint,
     parse_http_response_body as parse_kolme_http_response_body,
@@ -693,22 +694,31 @@ impl KolmeRuntimeCommitNotificationEvent {
         if provider.is_empty() {
             return None;
         }
-        match self {
+        let event = match self {
             Self::NewBlock {
                 txhash,
                 block_height,
-            } => Some(KolmeRuntimeCommitProviderReceipt {
-                provider: provider.to_owned(),
-                commit_id: deterministic_kolme_backend_commit_id(txhash.as_str(), *block_height),
-                finality: KolmeCommitReceiptFinality::Final,
-            }),
-            Self::FailedTransaction { txhash, .. } => Some(KolmeRuntimeCommitProviderReceipt {
-                provider: provider.to_owned(),
-                commit_id: deterministic_kolme_backend_commit_id(txhash.as_str(), None),
-                finality: KolmeCommitReceiptFinality::Failed,
-            }),
-            Self::LatestBlock { .. } => None,
-        }
+            } => KamnKolmeNotificationEvent::NewBlock {
+                txhash: txhash.clone(),
+                block_height: *block_height,
+            },
+            Self::FailedTransaction {
+                txhash,
+                proposed_height,
+            } => KamnKolmeNotificationEvent::FailedTransaction {
+                txhash: txhash.clone(),
+                proposed_height: *proposed_height,
+            },
+            Self::LatestBlock { height } => {
+                KamnKolmeNotificationEvent::LatestBlock { height: *height }
+            }
+        };
+        let receipt = notification_event_to_kolme_receipt_contract(&event)?;
+        Some(KolmeRuntimeCommitProviderReceipt {
+            provider: provider.to_owned(),
+            commit_id: receipt.commit_id,
+            finality: receipt.finality,
+        })
     }
 }
 

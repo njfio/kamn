@@ -59,7 +59,8 @@ pub use flat_json_policy::{
 };
 pub use http_response_policy::{parse_http_response_body, KolmeHttpResponsePolicyError};
 pub use notification_policy::{
-    parse_notification_event, KolmeNotificationEvent, KolmeNotificationPolicyError,
+    notification_event_to_receipt, parse_notification_event, KolmeNotificationEvent,
+    KolmeNotificationPolicyError, KolmeNotificationReceipt,
 };
 pub use pipeline::{PipelineError, RuntimeCommitPipeline};
 pub use provider_outcome_policy::{
