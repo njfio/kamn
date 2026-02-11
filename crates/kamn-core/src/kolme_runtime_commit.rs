@@ -772,8 +772,13 @@ impl KolmeRuntimeCommitHttpTransport {
     ) -> Result<Self, KolmeRuntimeCommitError> {
         let mut transport = Self::new(timeout_seconds)?;
         transport.authorization_header = Some(
-            parse_kolme_authorization_header_value(authorization_header)
-                .map_err(map_transport_request_policy_error)?,
+            parse_kolme_authorization_header_value(authorization_header).map_err(|error| {
+                match error {
+                    KamnKolmeTransportRequestPolicyError::InvalidRequest { field, reason } => {
+                        KolmeRuntimeCommitError::InvalidRequest { field, reason }
+                    }
+                }
+            })?,
         );
         Ok(transport)
     }
@@ -1850,24 +1855,6 @@ fn map_http_response_policy_error(
     }
 }
 
-fn map_tls_policy_error(error: KamnKolmeTlsPolicyError) -> KolmeRuntimeCommitProviderError {
-    match error {
-        KamnKolmeTlsPolicyError::Unavailable { reason } => {
-            KolmeRuntimeCommitProviderError::Unavailable { reason }
-        }
-    }
-}
-
-fn map_transport_request_policy_error(
-    error: KamnKolmeTransportRequestPolicyError,
-) -> KolmeRuntimeCommitError {
-    match error {
-        KamnKolmeTransportRequestPolicyError::InvalidRequest { field, reason } => {
-            KolmeRuntimeCommitError::InvalidRequest { field, reason }
-        }
-    }
-}
-
 fn reconnect_exhausted_error(max_reconnect_attempts: u32) -> KolmeRuntimeCommitProviderError {
     KolmeRuntimeCommitProviderError::Unavailable {
         reason: format!(
@@ -1945,7 +1932,11 @@ fn configured_tls_ca_file() -> Result<Option<String>, KolmeRuntimeCommitProvider
             });
         }
     };
-    parse_kolme_tls_ca_file_env_value(value.as_deref()).map_err(map_tls_policy_error)
+    parse_kolme_tls_ca_file_env_value(value.as_deref()).map_err(|error| match error {
+        KamnKolmeTlsPolicyError::Unavailable { reason } => {
+            KolmeRuntimeCommitProviderError::Unavailable { reason }
+        }
+    })
 }
 
 fn parse_live_provider_response(
