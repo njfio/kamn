@@ -1,7 +1,16 @@
-# Kolme Integration Roadmap and Version Compatibility Guards (Issues #780, #1401, #1402)
+# Kolme Integration Roadmap and Version Compatibility Guards (Issues #780, #1401, #1402, #1501)
 
 This roadmap tracks the compatibility policy used to keep KAMN reproducible
 across Kolme upgrades.
+
+## Fork Backend Contract Inventory
+
+- Canonical inventory/gap report for live backend integration:
+  - `docs/research/kolme-fork-api-contract-inventory.md`
+- Follow-up implementation tasks from the inventory:
+  - `#1502`
+  - `#1503`
+  - `#1504`
 
 ## Scope
 
@@ -89,6 +98,7 @@ across Kolme upgrades.
 - Nonce/broadcast duplicate-idempotent, unauthorized, and malformed payload drift remains fail-closed (`Regression: #1462`).
 - Notifications websocket variant decode and reconnect-budget exhaustion remain fail-closed (`Regression: #1463`).
 - Block fallback stale-window and response-height drift remain fail-closed (`Regression: #1464`).
+- KAMN-to-kolme_fork endpoint/method/payload contract inventory remains synchronized with code-level integration assumptions (`Regression: #1501`).
 
 ## Local Validation
 

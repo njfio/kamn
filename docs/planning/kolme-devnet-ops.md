@@ -1,7 +1,10 @@
-# Kolme Triadic Devnet Operability Plan (Issues #784, #785, #787, #788, #1405, #1417, #1418)
+# Kolme Triadic Devnet Operability Plan (Issues #784, #785, #787, #788, #1405, #1417, #1418, #1501)
 
 This plan defines the deterministic, low-cost local smoke contract for triadic
 runtime roles (processor/listener/approver) and its CI-compatible validation.
+
+The live backend contract inventory for `njfio/kolme_fork` is tracked in:
+- `docs/research/kolme-fork-api-contract-inventory.md`
 
 ## Scope
 
