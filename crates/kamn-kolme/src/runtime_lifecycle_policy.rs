@@ -1,6 +1,6 @@
 //! Runtime-commit lifecycle and finality policy contracts.
 
-use crate::ReceiptFinality;
+use crate::receipt_finality::{parse_receipt_finality, ReceiptFinality, ReceiptFinalityError};
 
 /// Finality classification for a runtime commit receipt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,6 +46,14 @@ pub fn commit_finality_from_receipt_finality(
     }
 }
 
+/// Parses raw finality string and maps it into runtime commit finality.
+pub fn parse_commit_receipt_finality(
+    value: &str,
+) -> Result<KolmeCommitReceiptFinality, ReceiptFinalityError> {
+    let finality = parse_receipt_finality(value)?;
+    Ok(commit_finality_from_receipt_finality(finality))
+}
+
 /// Renders deterministic lifecycle state labels for diagnostics and errors.
 pub fn lifecycle_state_label(state: RuntimeCommitLifecycleState) -> &'static str {
     match state {
@@ -68,9 +76,10 @@ pub fn commit_finality_label(finality: KolmeCommitReceiptFinality) -> &'static s
 mod tests {
     use super::{
         commit_finality_from_receipt_finality, commit_finality_label, lifecycle_state_for_finality,
-        lifecycle_state_label, KolmeCommitReceiptFinality, RuntimeCommitLifecycleState,
+        lifecycle_state_label, parse_commit_receipt_finality, KolmeCommitReceiptFinality,
+        RuntimeCommitLifecycleState,
     };
-    use crate::ReceiptFinality;
+    use crate::receipt_finality::{ReceiptFinality, ReceiptFinalityError};
 
     #[test]
     fn unit_maps_finality_to_lifecycle_state() {
@@ -115,6 +124,17 @@ mod tests {
         assert_eq!(
             commit_finality_from_receipt_finality(ReceiptFinality::Failed),
             KolmeCommitReceiptFinality::Failed
+        );
+    }
+
+    #[test]
+    fn regression_commit_finality_parse_remains_fail_closed() {
+        // Regression: #1783
+        assert_eq!(
+            parse_commit_receipt_finality("settled"),
+            Err(ReceiptFinalityError::InvalidFinalityValue(
+                "settled".to_owned()
+            ))
         );
     }
 }

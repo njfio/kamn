@@ -67,7 +67,8 @@ pub use provider_response_policy::{
 pub use receipt_finality::{parse_receipt_finality, ReceiptFinality, ReceiptFinalityError};
 pub use runtime_lifecycle_policy::{
     commit_finality_from_receipt_finality, commit_finality_label, lifecycle_state_for_finality,
-    lifecycle_state_label, KolmeCommitReceiptFinality, RuntimeCommitLifecycleState,
+    lifecycle_state_label, parse_commit_receipt_finality, KolmeCommitReceiptFinality,
+    RuntimeCommitLifecycleState,
 };
 pub use runtime_request_identity_policy::{
     deterministic_runtime_commit_id, deterministic_runtime_commit_idempotency_key,
