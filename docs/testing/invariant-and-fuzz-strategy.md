@@ -54,6 +54,8 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
 
 - Lifecycle property report schema:
   - `kamn.runtime.lifecycle-property-contract-report.v1`
+- Lifecycle property replay metadata schema:
+  - `kamn.runtime.lifecycle-property-replay-metadata.v1`
 - Lifecycle property replay artifact key:
   - `lifecycle_property_replay:v1`
 - Input mutation report schema:
@@ -83,6 +85,9 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
   - `elapsed_seconds`
   - `max_seconds`
   - `reason_codes`
+- Lifecycle property replay metadata contract fields:
+  - `executed_cases`
+  - `generated_sequence_bounds`
 - Required pass reason code:
   - `none`
 - Live transport replay/tamper report schema:

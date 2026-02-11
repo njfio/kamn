@@ -61,9 +61,18 @@ import sys
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert report["schema_version"] == "kamn.runtime.lifecycle-property-contract-report.v1"
 assert report["status"] == "pass"
+assert report["replay_schema_version"] == "kamn.runtime.lifecycle-property-replay-metadata.v1"
 assert report["replay_artifact_key"] == "lifecycle_property_replay:v1"
 assert report["reason_codes"] == ["none"]
 assert len(report["executed_tests"]) >= 12
+assert len(report["executed_cases"]) == len(report["executed_tests"])
+assert all("target" in case and "name" in case for case in report["executed_cases"])
+assert report["generated_sequence_bounds"]["task"]["alphabet_size"] == 8
+assert report["generated_sequence_bounds"]["task"]["max_sequence_length"] == 4
+assert report["generated_sequence_bounds"]["escrow"]["alphabet_size"] == 5
+assert report["generated_sequence_bounds"]["escrow"]["max_sequence_length"] == 4
+assert report["generated_sequence_bounds"]["peer"]["alphabet_size"] == 6
+assert report["generated_sequence_bounds"]["peer"]["max_sequence_length"] == 4
 assert "integration_dispute_refund_replay_traces_are_deterministic" in report["executed_tests"]
 assert "peer_lifecycle_property_sequence_replay_is_deterministic" in report["executed_tests"]
 PY

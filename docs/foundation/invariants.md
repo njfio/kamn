@@ -28,8 +28,13 @@ This document defines the canonical transaction invariant catalog and error taxo
   - `bash scripts/runtime/run_lifecycle_property_contract_lane.sh --output-json /tmp/lifecycle-property-contract-report.json`
 - Lifecycle property report schema:
   - `kamn.runtime.lifecycle-property-contract-report.v1`
+- Lifecycle property replay metadata schema:
+  - `kamn.runtime.lifecycle-property-replay-metadata.v1`
 - Lifecycle property replay artifact key:
   - `lifecycle_property_replay:v1`
+- Lifecycle property replay metadata fields:
+  - `executed_cases`
+  - `generated_sequence_bounds`
 - Fuzz/mutation fail-closed lane:
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh`
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh --output-json /tmp/input-mutation-contract-report.json`

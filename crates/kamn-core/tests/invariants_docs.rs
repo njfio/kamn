@@ -5,6 +5,7 @@ fn doc_contains_runtime_invariant_harness_coverage_contract() {
     assert!(DOC.contains("## Runtime Invariant Harness Coverage (Issue #897)"));
     assert!(DOC.contains("run_lifecycle_property_contract_lane.sh"));
     assert!(DOC.contains("kamn.runtime.lifecycle-property-contract-report.v1"));
+    assert!(DOC.contains("kamn.runtime.lifecycle-property-replay-metadata.v1"));
     assert!(DOC.contains("lifecycle_property_replay:v1"));
     assert!(DOC.contains("run_input_mutation_contract_lane.sh"));
     assert!(DOC.contains("kamn.runtime.input-mutation-contract-report.v1"));
@@ -15,6 +16,14 @@ fn doc_contains_runtime_invariant_harness_coverage_contract() {
     assert!(DOC.contains("run_invariant_fuzz_concurrency_contract_lane.sh"));
     assert!(DOC.contains("check_invariant_fuzz_concurrency_policy.sh"));
     assert!(DOC.contains("kamn.runtime.invariant-fuzz-concurrency-contract-report.v1"));
+}
+
+#[test]
+fn regression_requires_lifecycle_property_replay_metadata_contract_markers() {
+    // Regression: #1605
+    assert!(DOC.contains("kamn.runtime.lifecycle-property-replay-metadata.v1"));
+    assert!(DOC.contains("generated_sequence_bounds"));
+    assert!(DOC.contains("executed_cases"));
 }
 
 #[test]

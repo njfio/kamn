@@ -55,11 +55,13 @@ declare -a property_cases=(
 )
 
 executed_tests=()
+executed_cases=()
 for property_case in "${property_cases[@]}"; do
   test_target="${property_case%%:*}"
   test_name="${property_case#*:}"
   cargo test -p kamn-core --test "$test_target" "$test_name" -- --exact >/dev/null
   executed_tests+=("$test_name")
+  executed_cases+=("$test_target:$test_name")
 done
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
@@ -71,26 +73,42 @@ fi
 if [[ -n "$output_json" ]]; then
   mkdir -p "$(dirname "$output_json")"
   tests_file="$(mktemp)"
-  trap 'rm -f "$tests_file"' EXIT
+  cases_file="$(mktemp)"
+  trap 'rm -f "$tests_file" "$cases_file"' EXIT
   printf '%s\n' "${executed_tests[@]}" >"$tests_file"
+  printf '%s\n' "${executed_cases[@]}" >"$cases_file"
 
-  python3 - "$output_json" "$tests_file" "$elapsed_seconds" "$max_seconds" <<'PY'
+  python3 - "$output_json" "$tests_file" "$cases_file" "$elapsed_seconds" "$max_seconds" <<'PY'
 import json
 import pathlib
 import sys
 
 output_path = pathlib.Path(sys.argv[1])
 tests_path = pathlib.Path(sys.argv[2])
-elapsed_seconds = int(sys.argv[3])
-max_seconds = int(sys.argv[4])
+cases_path = pathlib.Path(sys.argv[3])
+elapsed_seconds = int(sys.argv[4])
+max_seconds = int(sys.argv[5])
 
 tests = [line.strip() for line in tests_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+cases = [line.strip() for line in cases_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+executed_cases = []
+for case in cases:
+    target, name = case.split(":", 1)
+    executed_cases.append({"target": target, "name": name})
+
 payload = {
     "schema_version": "kamn.runtime.lifecycle-property-contract-report.v1",
     "status": "pass",
     "suite": "lifecycle_property_contract_lane",
+    "replay_schema_version": "kamn.runtime.lifecycle-property-replay-metadata.v1",
     "replay_artifact_key": "lifecycle_property_replay:v1",
     "executed_tests": tests,
+    "executed_cases": executed_cases,
+    "generated_sequence_bounds": {
+        "task": {"alphabet_size": 8, "max_sequence_length": 4},
+        "escrow": {"alphabet_size": 5, "max_sequence_length": 4},
+        "peer": {"alphabet_size": 6, "max_sequence_length": 4},
+    },
     "elapsed_seconds": elapsed_seconds,
     "max_seconds": max_seconds,
     "reason_codes": ["none"],
