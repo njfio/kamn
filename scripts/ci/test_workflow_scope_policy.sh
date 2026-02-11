@@ -331,6 +331,16 @@ if ! grep -Fq "bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_co
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh" "$FAST_WORKFLOW"; then
+  echo "expected local fork rust matrix policy checker command-surface tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected local fork rust matrix contract lane command-surface tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh" "$FAST_WORKFLOW"; then
   echo "expected fast-gate native API parity lane command-surface tests in ci-fast-gate.yml" >&2
   exit 1
