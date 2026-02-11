@@ -225,6 +225,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `bash scripts/sdk/run_localhost_signed_demo_contract_lane.sh --output-json /tmp/localhost-signed-demo-contract-report.json`
 - Shared report composer helper:
   - `scripts/sdk/localhost_signed_report_composer.py` (used by demo and integration contract wrappers to keep report schema/marker composition deterministic)
+- Shared scenario runner helper:
+  - `scripts/sdk/localhost_signed_scenario_runner.py` (used by integration contract wrapper to keep scenario execution deterministic with bounded timeout-race retries)
 - Demo contract lane schema:
   - `kamn.sdk.localhost-signed.demo-contract.v1`
 - Deterministic success markers:
@@ -404,6 +406,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - localhost two-process signed-demo command/schema markers remain fail-closed across README and Kolme devnet ops docs (`Regression: #1612`).
 - localhost signed demo contract-lane status markers remain fail-closed (`Regression: #1609`).
 - localhost signed demo/integration report composition remains centralized via shared helper wiring (`Regression: #1617`).
+- localhost signed timeout-race handling remains bounded and fail-closed via shared scenario runner retries (`Regression: #1621`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
 ## Local Validation
