@@ -118,6 +118,9 @@ trap 'rm -f "$CHECKPOINT_FILE" "$ARTIFACT_FILE"' EXIT
 
 overall_status="ok"
 reason_code=""
+if [ "$MODE" = "dry-run" ]; then
+  reason_code="dry_run_no_commands_executed"
+fi
 already_failed=0
 start_epoch="$(date +%s)"
 
@@ -158,6 +161,10 @@ if [ "$elapsed_seconds" -gt "$MAX_SECONDS" ]; then
     overall_status="fail"
     reason_code="runtime_budget_exceeded"
   fi
+fi
+
+if [ "$MODE" = "run" ] && [ "$overall_status" = "ok" ]; then
+  reason_code="local_e2e_integration_passed"
 fi
 
 python3 "$SUMMARY_HELPER" \

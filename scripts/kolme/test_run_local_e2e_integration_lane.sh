@@ -72,6 +72,7 @@ dry_run_output="$(
 
 assert_eq "$(extract_value "$dry_run_output" "status")" "ok" "expected dry-run e2e lane to pass"
 assert_eq "$(extract_value "$dry_run_output" "lane_mode")" "dry-run" "expected dry-run lane mode marker"
+assert_eq "$(extract_value "$dry_run_output" "reason_code")" "dry_run_no_commands_executed" "expected dry-run reason marker"
 assert_eq "$(extract_value "$dry_run_output" "local_only_enforced")" "true" "expected local-only marker for e2e lane"
 
 python3 - "$TMP_REPORT" <<'PY'
@@ -86,6 +87,8 @@ if report.get("mode") != "dry-run":
     raise SystemExit("expected dry-run e2e mode in summary")
 if report.get("status") != "ok":
     raise SystemExit("expected ok status for dry-run e2e summary")
+if report.get("reason_code") != "dry_run_no_commands_executed":
+    raise SystemExit("expected dry-run reason code marker in e2e summary")
 if report.get("local_only_enforced") is not True:
     raise SystemExit("expected local_only_enforced=true in e2e summary")
 checkpoints = report.get("checkpoints")

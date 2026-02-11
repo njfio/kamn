@@ -57,6 +57,8 @@ bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_real_process_policy.sh
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_real_process_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_bootstrap_health_checks.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_e2e_integration_lane.sh"
+bash "$ROOT_DIR/scripts/kolme/test_check_local_e2e_integration_policy.sh"
+bash "$ROOT_DIR/scripts/kolme/test_run_local_e2e_integration_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_check_runtime_commit_replay_policy.sh"
 bash "$ROOT_DIR/scripts/kolme/test_check_nonce_broadcast_parity_policy.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_runtime_commit_contract_lane.sh"

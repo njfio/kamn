@@ -64,6 +64,8 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("KAMN_KOLME_NONCE_BROADCAST_PARITY_MAX_SECONDS=60"));
     assert!(DOC.contains("run_local_bootstrap_health_checks.sh"));
     assert!(DOC.contains("run_local_e2e_integration_lane.sh"));
+    assert!(DOC.contains("check_local_e2e_integration_policy.py"));
+    assert!(DOC.contains("run_local_e2e_integration_contract_lane.sh"));
     assert!(DOC.contains("KAMN_KOLME_LOCAL_HEAVY=1"));
     assert!(
         DOC.contains("local-only heavy Kolme run-mode commands remain excluded from ci-fast-gate.")
@@ -104,6 +106,7 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("make-target and selector workflow drift"));
     assert!(DOC.contains("Regression: #1419"));
     assert!(DOC.contains("Regression: #1431"));
+    assert!(DOC.contains("Regression: #1682"));
     assert!(DOC.contains("Regression: #1441"));
     assert!(DOC.contains("Regression: #1451"));
     assert!(DOC.contains("Regression: #1467"));

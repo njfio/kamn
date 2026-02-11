@@ -448,8 +448,13 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `bash scripts/kolme/run_local_e2e_integration_lane.sh --mode dry-run --output-json /tmp/kolme-local-e2e-integration-summary.json`
 - Explicit opt-in E2E execution:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_e2e_integration_lane.sh --mode run --output-json /tmp/kolme-local-e2e-integration-summary.json`
+- Policy checker contract:
+  - `python3 scripts/kolme/check_local_e2e_integration_policy.py --report-file /tmp/kolme-local-e2e-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-e2e-integration-policy.json`
+- Bounded contract lane (dry-run + policy):
+  - `bash scripts/kolme/run_local_e2e_integration_contract_lane.sh --output-json /tmp/kolme-local-e2e-integration-summary.json --policy-output-json /tmp/kolme-local-e2e-integration-policy.json`
 - Summary schema:
   - `kamn.kolme.local-e2e-integration-summary.v1`
+  - policy schema: `kamn.kolme.local-e2e-integration-policy-report.v1`
 - Deterministic checkpoints include:
   - `run_local_bootstrap_health_checks.sh`
   - `run_local_kolme_fork_checkout_bootstrap_contract_lane.sh`
@@ -501,6 +506,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - runtime commit adapter replay/finality reason-code drift fails closed (`Regression: #980`).
 - deterministic bootstrap run mode fails closed without explicit local-only opt-in (`Regression: #1417`).
 - local-only heavy E2E lane run mode fails closed without explicit local-only opt-in (`Regression: #1418`).
+- local-only heavy E2E lane summary policy and contract-lane decision/checkpoint drift remain fail-closed (`Regression: #1682`).
 - shared local-heavy opt-in helper wiring remains fail-closed across bootstrap/E2E/matrix lanes (`Regression: #1585`).
 - local-only heavy validation matrix requires explicit opt-in and remains excluded from PR fast-gate workflows (`Regression: #1405`).
 - local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
@@ -567,6 +573,8 @@ bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh
 bash scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh
 bash scripts/kolme/test_run_local_bootstrap_health_checks.sh
 bash scripts/kolme/test_run_local_e2e_integration_lane.sh
+bash scripts/kolme/test_check_local_e2e_integration_policy.sh
+bash scripts/kolme/test_run_local_e2e_integration_contract_lane.sh
 bash scripts/kolme/test_run_local_heavy_validation_matrix.sh
 bash scripts/runtime/test_select_failover_sync_drill_lane.sh
 bash scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh
