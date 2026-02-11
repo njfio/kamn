@@ -276,8 +276,17 @@ pub struct KolmeApiNextNonceRequest {
 impl KolmeApiNextNonceRequest {
     /// Builds a deterministic nonce lookup request.
     pub fn new(pubkey: &str) -> Result<Self, KolmeRuntimeCommitError> {
-        let extracted = KamnKolmeApiNextNonceRequest::new(pubkey)
-            .map_err(map_codec_error_to_invalid_request)?;
+        let extracted = KamnKolmeApiNextNonceRequest::new(pubkey).map_err(|error| match error {
+            KamnKolmeApiCodecError::InvalidRequest { field, reason } => {
+                KolmeRuntimeCommitError::InvalidRequest { field, reason }
+            }
+            KamnKolmeApiCodecError::MalformedResponse { .. } => {
+                KolmeRuntimeCommitError::InvalidRequest {
+                    field: "codec_payload",
+                    reason: "must be valid json",
+                }
+            }
+        })?;
         Ok(Self {
             pubkey: extracted.pubkey,
         })
@@ -304,8 +313,17 @@ pub struct KolmeApiNextNonceResponse {
 impl KolmeApiNextNonceResponse {
     /// Parses one nonce lookup response JSON payload.
     pub fn parse_json(response: &str) -> Result<Self, KolmeRuntimeCommitProviderError> {
-        let extracted = KamnKolmeApiNextNonceResponse::parse_json(response)
-            .map_err(map_codec_error_to_malformed_response)?;
+        let extracted =
+            KamnKolmeApiNextNonceResponse::parse_json(response).map_err(|error| match error {
+                KamnKolmeApiCodecError::InvalidRequest { field, reason } => {
+                    KolmeRuntimeCommitProviderError::MalformedResponse {
+                        reason: format!("invalid request {field}: {reason}"),
+                    }
+                }
+                KamnKolmeApiCodecError::MalformedResponse { reason } => {
+                    KolmeRuntimeCommitProviderError::MalformedResponse { reason }
+                }
+            })?;
         Ok(Self {
             next_nonce: extracted.next_nonce,
             account_id: extracted.account_id,
@@ -332,7 +350,17 @@ impl KolmeApiBroadcastRequest {
         recovery_id: u8,
     ) -> Result<Self, KolmeRuntimeCommitError> {
         let extracted = KamnKolmeApiBroadcastRequest::new(message, signature, recovery_id)
-            .map_err(map_codec_error_to_invalid_request)?;
+            .map_err(|error| match error {
+                KamnKolmeApiCodecError::InvalidRequest { field, reason } => {
+                    KolmeRuntimeCommitError::InvalidRequest { field, reason }
+                }
+                KamnKolmeApiCodecError::MalformedResponse { .. } => {
+                    KolmeRuntimeCommitError::InvalidRequest {
+                        field: "codec_payload",
+                        reason: "must be valid json",
+                    }
+                }
+            })?;
         Ok(Self {
             message: extracted.message,
             signature: extracted.signature,
@@ -361,8 +389,17 @@ pub struct KolmeApiBroadcastResponse {
 impl KolmeApiBroadcastResponse {
     /// Parses one broadcast response JSON payload.
     pub fn parse_json(response: &str) -> Result<Self, KolmeRuntimeCommitProviderError> {
-        let extracted = KamnKolmeApiBroadcastResponse::parse_json(response)
-            .map_err(map_codec_error_to_malformed_response)?;
+        let extracted =
+            KamnKolmeApiBroadcastResponse::parse_json(response).map_err(|error| match error {
+                KamnKolmeApiCodecError::InvalidRequest { field, reason } => {
+                    KolmeRuntimeCommitProviderError::MalformedResponse {
+                        reason: format!("invalid request {field}: {reason}"),
+                    }
+                }
+                KamnKolmeApiCodecError::MalformedResponse { reason } => {
+                    KolmeRuntimeCommitProviderError::MalformedResponse { reason }
+                }
+            })?;
         Ok(Self {
             txhash: extracted.txhash,
         })
@@ -1769,35 +1806,6 @@ fn map_provider_error(error: KolmeRuntimeCommitProviderError) -> KolmeRuntimeCom
                 kind: KolmeRuntimeCommitTransportErrorKind::MalformedResponse,
                 detail: reason,
             }
-        }
-    }
-}
-
-fn map_codec_error_to_invalid_request(error: KamnKolmeApiCodecError) -> KolmeRuntimeCommitError {
-    match error {
-        KamnKolmeApiCodecError::InvalidRequest { field, reason } => {
-            KolmeRuntimeCommitError::InvalidRequest { field, reason }
-        }
-        KamnKolmeApiCodecError::MalformedResponse { .. } => {
-            KolmeRuntimeCommitError::InvalidRequest {
-                field: "codec_payload",
-                reason: "must be valid json",
-            }
-        }
-    }
-}
-
-fn map_codec_error_to_malformed_response(
-    error: KamnKolmeApiCodecError,
-) -> KolmeRuntimeCommitProviderError {
-    match error {
-        KamnKolmeApiCodecError::InvalidRequest { field, reason } => {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("invalid request {field}: {reason}"),
-            }
-        }
-        KamnKolmeApiCodecError::MalformedResponse { reason } => {
-            KolmeRuntimeCommitProviderError::MalformedResponse { reason }
         }
     }
 }
