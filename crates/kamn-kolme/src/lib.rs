@@ -13,6 +13,7 @@ pub mod notification_policy;
 pub mod pipeline;
 pub mod receipt_finality;
 pub mod transport;
+pub mod websocket_policy;
 
 pub use api_codec::{
     validate_direct_signed_transaction_message, KolmeApiBroadcastRequest,
@@ -37,6 +38,10 @@ pub use pipeline::{PipelineError, RuntimeCommitPipeline};
 pub use receipt_finality::{parse_receipt_finality, ReceiptFinality, ReceiptFinalityError};
 pub use transport::{
     EchoTransport, KolmeTransport, TransportError, TransportRequest, TransportResponse,
+};
+pub use websocket_policy::{
+    find_http_header_boundary, try_take_websocket_frame, validate_websocket_handshake_response,
+    KolmeWebsocketFrame, KolmeWebsocketPolicyError,
 };
 
 #[cfg(test)]
