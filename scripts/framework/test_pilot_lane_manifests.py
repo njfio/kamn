@@ -90,6 +90,21 @@ class PilotLaneManifestTests(unittest.TestCase):
                 "guard.durable_guard_recovery.contract",
                 "scripts/guard/durable_guard_recovery_contract_lane_contract.py",
             ),
+            (
+                "kolme_snapshot_drift_contract_lane.json",
+                "kolme.snapshot_drift.contract",
+                "scripts/kolme/contracts/snapshot_drift_contract_lane.py",
+            ),
+            (
+                "kolme_notifications_consumer_contract_lane.json",
+                "kolme.notifications.consumer.contract",
+                "scripts/kolme/contracts/notifications_consumer_contract_lane.py",
+            ),
+            (
+                "kolme_block_fallback_reconciliation_contract_lane.json",
+                "kolme.block_fallback.reconciliation.contract",
+                "scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py",
+            ),
         )
 
         for manifest_name, expected_lane_id, expected_script in cases:
