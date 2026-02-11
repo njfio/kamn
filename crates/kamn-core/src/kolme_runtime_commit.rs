@@ -1396,7 +1396,8 @@ impl KolmeRuntimeCommitNotificationsConnector for KolmeRuntimeCommitWebsocketCon
         let mut response_bytes = Vec::new();
         let header_end = read_http_header_boundary(&mut stream, &mut response_bytes)?;
         let (header_bytes, trailing) = response_bytes.split_at(header_end + 4);
-        validate_websocket_handshake_response(header_bytes)?;
+        validate_kolme_websocket_handshake_response(header_bytes)
+            .map_err(map_websocket_policy_error)?;
         Ok(KolmeRuntimeCommitWebsocketConnection::new(
             stream,
             trailing.to_vec(),
@@ -1894,12 +1895,6 @@ fn read_http_header_boundary(
         }
         response_bytes.extend_from_slice(&chunk[..read]);
     }
-}
-
-fn validate_websocket_handshake_response(
-    header_bytes: &[u8],
-) -> Result<(), KolmeRuntimeCommitProviderError> {
-    validate_kolme_websocket_handshake_response(header_bytes).map_err(map_websocket_policy_error)
 }
 
 fn parse_kolme_notification_event(
