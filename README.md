@@ -525,7 +525,7 @@ bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode run --output-json
 bash scripts/kolme/run_local_e2e_integration_lane.sh --mode dry-run --output-json /tmp/kolme-local-e2e-integration-summary.json
 
 # local-only heavy end-to-end lane execution
-# (bootstrap + runtime commit + sdk parity + fork rust matrix + live API conformance)
+# (bootstrap + checkout bootstrap contract + runtime commit + sdk parity + fork rust matrix + live API conformance)
 KAMN_KOLME_LOCAL_HEAVY=1 \
 bash scripts/kolme/run_local_e2e_integration_lane.sh --mode run --output-json /tmp/kolme-local-e2e-integration-summary.json
 # schema: kamn.kolme.local-e2e-integration-summary.v1

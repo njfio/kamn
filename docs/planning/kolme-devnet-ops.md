@@ -452,6 +452,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `kamn.kolme.local-e2e-integration-summary.v1`
 - Deterministic checkpoints include:
   - `run_local_bootstrap_health_checks.sh`
+  - `run_local_kolme_fork_checkout_bootstrap_contract_lane.sh`
   - `run_runtime_commit_adapter_contract_lane.sh`
   - `run_live_transport_parity_contract_lane.sh --languages python,typescript`
   - `run_local_kolme_fork_rust_test_matrix_contract_lane.sh`
@@ -519,6 +520,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local fork self-test lane fails closed for local opt-in, nested matrix/policy checkpoint failures, and runtime budget overruns (`Regression: #1652`).
 - local fork checkout bootstrap lane fails closed for local opt-in, checkout provenance drift, diagnostics command failures, and runtime budget overruns (`Regression: #1663`).
 - real-fork local process wrapper bootstrap-first prerequisite ordering remains fail-closed for bootstrap lane/policy checkpoint drift (`Regression: #1667`).
+- local-only heavy E2E lane checkout-bootstrap contract checkpoint composition remains fail-closed for command/id ordering drift (`Regression: #1677`).
 - real-fork local process wrapper lane fails closed for local opt-in, serve-command profile drift, self-test/lifecycle/policy checkpoint failure, and runtime budget overruns (`Regression: #1644`).
 - real-fork local process wrapper policy checker lane remains fail-closed for schema/contracts/checkpoint drift (`Regression: #1671`).
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
