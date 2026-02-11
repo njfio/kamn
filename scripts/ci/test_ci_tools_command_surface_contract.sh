@@ -5,6 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CI_TOOLS_SCRIPT="$ROOT_DIR/scripts/ci/test_ci_tools.sh"
 
 required_commands=(
+  'bash "$ROOT_DIR/scripts/kolme/test_generate_fork_compatibility_evidence.sh"'
+  'bash "$ROOT_DIR/scripts/kolme/test_check_fork_compatibility_policy.sh"'
+  'bash "$ROOT_DIR/scripts/kolme/test_run_runtime_commit_adapter_contract_lane.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh"'

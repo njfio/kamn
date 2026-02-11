@@ -61,6 +61,9 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - `test_scope=kolme-version-contract`
   - command-surface tests stay on PR fast gate:
     - `bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh`
+    - `bash scripts/kolme/test_generate_fork_compatibility_evidence.sh`
+    - `bash scripts/kolme/test_check_fork_compatibility_policy.sh`
+    - `bash scripts/kolme/test_run_runtime_commit_adapter_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh`
     - `bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh`
