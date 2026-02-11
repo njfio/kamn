@@ -1387,6 +1387,62 @@ where
     }
 }
 
+/// Fork-profile finality resolver that composes notifications and block fallback lookups.
+pub struct KolmeRuntimeCommitForkFinalityResolver<C, T>
+where
+    C: KolmeRuntimeCommitNotificationsConnector,
+    T: KolmeRuntimeCommitBlockFallbackTransport,
+{
+    notifications_consumer: KolmeRuntimeCommitNotificationsConsumer<C>,
+    block_fallback_reconciler: KolmeRuntimeCommitBlockFallbackReconciler<T>,
+}
+
+impl<C, T> KolmeRuntimeCommitForkFinalityResolver<C, T>
+where
+    C: KolmeRuntimeCommitNotificationsConnector,
+    T: KolmeRuntimeCommitBlockFallbackTransport,
+{
+    /// Builds a fork finality resolver from notifications and block fallback components.
+    pub fn new(
+        notifications_consumer: KolmeRuntimeCommitNotificationsConsumer<C>,
+        block_fallback_reconciler: KolmeRuntimeCommitBlockFallbackReconciler<T>,
+    ) -> Self {
+        Self {
+            notifications_consumer,
+            block_fallback_reconciler,
+        }
+    }
+
+    /// Resolves finality for one commit id using notifications first, then bounded block fallback.
+    pub fn resolve_commit_finality(
+        &mut self,
+        commit_id: &str,
+        from_height: u64,
+        latest_height: u64,
+    ) -> Result<KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderError> {
+        let expected_txhash = txhash_from_commit_id(commit_id)?;
+
+        match self.notifications_consumer.next_commit_receipt() {
+            Ok(receipt) => {
+                let observed_txhash = txhash_from_commit_id(receipt.commit_id.as_str())?;
+                if observed_txhash != expected_txhash {
+                    return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                        reason: format!(
+                            "notification txhash mismatch: expected '{expected_txhash}' observed '{observed_txhash}'"
+                        ),
+                    });
+                }
+                Ok(receipt)
+            }
+            Err(KolmeRuntimeCommitProviderError::Unavailable { .. })
+            | Err(KolmeRuntimeCommitProviderError::Timeout) => self
+                .block_fallback_reconciler
+                .reconcile_txhash(expected_txhash.as_str(), from_height, latest_height),
+            Err(error @ KolmeRuntimeCommitProviderError::MalformedResponse { .. }) => Err(error),
+        }
+    }
+}
+
 impl<T: KolmeRuntimeCommitProviderTransport> KolmeRuntimeCommitLiveProvider<T> {
     /// Builds a live provider with deterministic endpoint validation.
     pub fn new(
@@ -2960,6 +3016,37 @@ fn deterministic_backend_commit_id(tx_hash: &str, block_height: Option<u64>) -> 
         Some(height) => format!("kolme-commit:{tx_hash}:h{height}"),
         None => format!("kolme-commit:{tx_hash}"),
     }
+}
+
+fn txhash_from_commit_id(commit_id: &str) -> Result<String, KolmeRuntimeCommitProviderError> {
+    let commit_id = commit_id.trim();
+    if commit_id.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "commit_id must not be empty".to_owned(),
+        });
+    }
+    let without_prefix = commit_id.strip_prefix("kolme-commit:").ok_or_else(|| {
+        KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "commit_id must start with 'kolme-commit:'".to_owned(),
+        }
+    })?;
+
+    let (txhash, block_suffix) = match without_prefix.split_once(":h") {
+        Some((txhash, suffix)) => (txhash, Some(suffix)),
+        None => (without_prefix, None),
+    };
+    let txhash = txhash.trim();
+    if txhash.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "commit_id txhash segment must not be empty".to_owned(),
+        });
+    }
+
+    if let Some(raw_height) = block_suffix {
+        parse_block_height(raw_height)?;
+    }
+
+    Ok(txhash.to_owned())
 }
 
 fn parse_receipt_finality(
