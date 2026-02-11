@@ -39,6 +39,11 @@ pub enum BlockScanPolicyError {
         /// Observed block height.
         observed: u64,
     },
+    /// Fork block-fallback response is malformed.
+    MalformedForkFallbackResponse {
+        /// Deterministic parse/validation failure reason.
+        reason: String,
+    },
 }
 
 impl fmt::Display for BlockScanPolicyError {
@@ -69,6 +74,7 @@ impl fmt::Display for BlockScanPolicyError {
                 f,
                 "block fallback response height mismatch: expected {expected} observed {observed}"
             ),
+            Self::MalformedForkFallbackResponse { reason } => f.write_str(reason),
         }
     }
 }
@@ -146,11 +152,114 @@ pub fn validate_block_identity(
     Ok(())
 }
 
+/// Parses the required `txhash` field from a fork block-fallback payload.
+pub fn parse_fork_block_txhash(response: &str) -> Result<String, BlockScanPolicyError> {
+    find_string_field(response, "txhash")?.ok_or_else(|| {
+        BlockScanPolicyError::MalformedForkFallbackResponse {
+            reason: "missing required field: txhash".to_owned(),
+        }
+    })
+}
+
+fn find_string_field(payload: &str, field: &str) -> Result<Option<String>, BlockScanPolicyError> {
+    let pattern = format!("\"{field}\"");
+    for (index, _) in payload.match_indices(pattern.as_str()) {
+        let mut cursor = index + pattern.len();
+        cursor = skip_ascii_whitespace(payload, cursor);
+        if payload.as_bytes().get(cursor).copied() != Some(b':') {
+            continue;
+        }
+        cursor += 1;
+        cursor = skip_ascii_whitespace(payload, cursor);
+        if payload.as_bytes().get(cursor).copied() != Some(b'"') {
+            continue;
+        }
+
+        let mut end = cursor + 1;
+        let mut escape = false;
+        while let Some(byte) = payload.as_bytes().get(end).copied() {
+            if escape {
+                escape = false;
+                end += 1;
+                continue;
+            }
+            if byte == b'\\' {
+                escape = true;
+                end += 1;
+                continue;
+            }
+            if byte == b'"' {
+                let token = &payload[cursor..=end];
+                let parsed = parse_json_string(token).map_err(|reason| {
+                    BlockScanPolicyError::MalformedForkFallbackResponse {
+                        reason: format!("notification field '{field}' is invalid: {reason}"),
+                    }
+                })?;
+                if parsed.trim().is_empty() {
+                    return Err(BlockScanPolicyError::MalformedForkFallbackResponse {
+                        reason: format!("notification field '{field}' must not be empty"),
+                    });
+                }
+                return Ok(Some(parsed));
+            }
+            end += 1;
+        }
+        return Err(BlockScanPolicyError::MalformedForkFallbackResponse {
+            reason: format!("notification field '{field}' is unterminated"),
+        });
+    }
+    Ok(None)
+}
+
+fn parse_json_string(token: &str) -> Result<String, &'static str> {
+    let trimmed = token.trim();
+    if !(trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2) {
+        return Err("token must be a quoted string");
+    }
+    let mut output = String::new();
+    let mut escape = false;
+    for ch in trimmed[1..trimmed.len() - 1].chars() {
+        if escape {
+            let mapped = match ch {
+                '\\' => '\\',
+                '"' => '"',
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                _ => return Err("unsupported escape sequence"),
+            };
+            output.push(mapped);
+            escape = false;
+            continue;
+        }
+        if ch == '\\' {
+            escape = true;
+            continue;
+        }
+        output.push(ch);
+    }
+    if escape {
+        return Err("unterminated escape sequence");
+    }
+    Ok(output)
+}
+
+fn skip_ascii_whitespace(value: &str, mut cursor: usize) -> usize {
+    while let Some(byte) = value.as_bytes().get(cursor).copied() {
+        if byte.is_ascii_whitespace() {
+            cursor += 1;
+            continue;
+        }
+        break;
+    }
+    cursor
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        render_block_path, validate_block_identity, validate_block_path_template,
-        validate_lookup_window, BlockScanPolicyError,
+        parse_fork_block_txhash, render_block_path, validate_block_identity,
+        validate_block_path_template, validate_lookup_window, BlockScanPolicyError,
     };
 
     #[test]
@@ -182,6 +291,16 @@ mod tests {
         assert_eq!(
             render_block_path("/block/{height}", 42).expect("render should pass"),
             "/block/42"
+        );
+    }
+
+    #[test]
+    fn unit_parse_fork_block_txhash_rejects_empty_txhash() {
+        assert_eq!(
+            parse_fork_block_txhash(r#"{"txhash":"   "}"#),
+            Err(BlockScanPolicyError::MalformedForkFallbackResponse {
+                reason: "notification field 'txhash' must not be empty".to_owned(),
+            })
         );
     }
 }

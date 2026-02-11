@@ -4,6 +4,7 @@ use crate::AgentDid;
 use kamn_kolme::{
     compose_finality_status_path as compose_kolme_finality_status_path,
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
+    parse_fork_block_txhash as parse_kolme_fork_block_txhash,
     parse_http_endpoint as parse_kolme_http_endpoint,
     parse_receipt_finality as parse_kolme_receipt_finality,
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
@@ -1816,11 +1817,8 @@ fn parse_kolme_fork_block_fallback_response(
             reason: "expected block height must be positive".to_owned(),
         });
     }
-    let txhash = find_notification_string_field(response, "txhash")?.ok_or_else(|| {
-        KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "missing required field: txhash".to_owned(),
-        }
-    })?;
+    let txhash = parse_kolme_fork_block_txhash(response)
+        .map_err(map_block_scan_policy_error_to_malformed)?;
 
     Ok(ParsedBlockFallbackResponse {
         provider: provider.to_owned(),
