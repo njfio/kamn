@@ -131,6 +131,21 @@ pub fn parse_live_provider_outcome(
     }
 }
 
+/// Extracts one required non-empty field from provider response field maps.
+pub fn required_provider_response_field(
+    fields: &HashMap<String, String>,
+    field: &'static str,
+) -> Result<String, KolmeProviderOutcomePolicyError> {
+    required_response_field(fields, field)
+}
+
+/// Resolves deterministic commit-id from provider response fields.
+pub fn parse_commit_id_from_response_fields(
+    fields: &HashMap<String, String>,
+) -> Result<String, KolmeProviderOutcomePolicyError> {
+    resolve_commit_id(fields)
+}
+
 /// Builds deterministic backend commit id from tx hash and optional block height.
 pub fn deterministic_backend_commit_id(tx_hash: &str, block_height: Option<u64>) -> String {
     match block_height {

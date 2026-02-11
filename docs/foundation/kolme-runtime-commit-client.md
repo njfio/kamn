@@ -71,7 +71,7 @@ handling.
   - provider response field parsing contracts are sourced from `kamn-kolme` (`parse_provider_response_fields`, `parse_provider_key_value_fields`) and mapped through `kamn-core` compatibility wrappers.
   - flat JSON scalar field parsing contracts are sourced from `kamn-kolme` (`parse_flat_json_value_fields`, `required_json_string_field`, `required_positive_u64_json_field`) and mapped through `kamn-core` compatibility wrappers.
   - block-fallback response parsing contracts are sourced from `kamn-kolme` (`parse_block_fallback_response`, `parse_fork_block_fallback_response`) and mapped through `kamn-core` compatibility wrappers.
-  - provider outcome and commit-id helper contracts are sourced from `kamn-kolme` (`parse_live_provider_outcome`, `deterministic_backend_commit_id`, `txhash_from_commit_id`) and mapped through `kamn-core` compatibility wrappers.
+  - provider outcome and commit-id helper contracts are sourced from `kamn-kolme` (`parse_live_provider_outcome`, `required_provider_response_field`, `parse_commit_id_from_response_fields`, `deterministic_backend_commit_id`, `txhash_from_commit_id`) and mapped through `kamn-core` compatibility wrappers.
   - resolver consumes one notification event first:
     - txhash-bearing `NewBlock` / `FailedTransaction` events map directly to receipts.
     - `LatestBlock` (or `NewBlock` payloads that carry height but no txhash) trigger bounded `/block/{height}` fallback reconciliation.
@@ -193,3 +193,4 @@ cargo test -p kamn-core
 - flat JSON parser extraction parity drift remains fail-closed (`Regression: #1747`).
 - provider outcome and commit-id parser extraction parity drift remains fail-closed (`Regression: #1749`).
 - block-fallback parser extraction parity drift remains fail-closed (`Regression: #1751`).
+- provider helper reuse extraction parity drift remains fail-closed (`Regression: #1753`).
