@@ -62,6 +62,11 @@ if [ "$MODE" = "run" ]; then
   "$LOCAL_HEAVY_GUARD"
 fi
 
+reason_code="dry_run_no_commands_executed"
+if [ "$MODE" = "run" ]; then
+  reason_code="local_heavy_validation_passed"
+fi
+
 BOOTSTRAP_REPORT="/tmp/kolme-local-bootstrap-summary.json"
 DEEP_REPORT="/tmp/kolme-version-compatibility-report.json"
 FORK_RUST_MATRIX_REPORT="/tmp/kolme-local-fork-rust-test-matrix-summary.json"
@@ -110,6 +115,7 @@ python3 "$SUMMARY_HELPER" \
   --summary-type commands \
   --mode "$MODE" \
   --status ok \
+  --reason-code "$reason_code" \
   --local-only-enforced true \
   --commands-file "$COMMAND_FILE" \
   --artifacts-file "$ARTIFACT_FILE" \
@@ -117,5 +123,6 @@ python3 "$SUMMARY_HELPER" \
 
 echo "status=ok"
 echo "matrix_mode=$MODE"
+echo "reason_code=$reason_code"
 echo "local_only_enforced=true"
 echo "summary_file=$(realpath "$OUTPUT_JSON")"

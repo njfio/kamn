@@ -300,7 +300,7 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    scripts/framework/assert_local_heavy_opt_in.sh|scripts/framework/test_assert_local_heavy_opt_in.sh|scripts/kolme/run_local_bootstrap_health_checks.sh|scripts/kolme/test_run_local_bootstrap_health_checks.sh|scripts/kolme/run_local_e2e_integration_lane.sh|scripts/kolme/check_local_e2e_integration_policy.py|scripts/kolme/run_local_e2e_integration_contract_lane.sh|scripts/kolme/test_run_local_e2e_integration_lane.sh|scripts/kolme/test_check_local_e2e_integration_policy.sh|scripts/kolme/test_run_local_e2e_integration_contract_lane.sh|scripts/kolme/run_local_heavy_validation_matrix.sh|scripts/kolme/test_run_local_heavy_validation_matrix.sh)
+    scripts/framework/assert_local_heavy_opt_in.sh|scripts/framework/test_assert_local_heavy_opt_in.sh|scripts/kolme/run_local_bootstrap_health_checks.sh|scripts/kolme/test_run_local_bootstrap_health_checks.sh|scripts/kolme/run_local_e2e_integration_lane.sh|scripts/kolme/check_local_e2e_integration_policy.py|scripts/kolme/run_local_e2e_integration_contract_lane.sh|scripts/kolme/test_run_local_e2e_integration_lane.sh|scripts/kolme/test_check_local_e2e_integration_policy.sh|scripts/kolme/test_run_local_e2e_integration_contract_lane.sh|scripts/kolme/run_local_heavy_validation_matrix.sh|scripts/kolme/check_local_heavy_validation_matrix_policy.py|scripts/kolme/run_local_heavy_validation_matrix_contract_lane.sh|scripts/kolme/test_run_local_heavy_validation_matrix.sh|scripts/kolme/test_check_local_heavy_validation_matrix_policy.sh|scripts/kolme/test_run_local_heavy_validation_matrix_contract_lane.sh)
       KOLME_LOCAL_HEAVY_CONTRACT_CHANGED=true
       kolme_local_heavy_routing_candidate=true
       classified=true
