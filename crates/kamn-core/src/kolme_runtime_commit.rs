@@ -6,6 +6,7 @@ use kamn_kolme::{
     classify_transport_io_error as classify_kolme_transport_io_error,
     commit_finality_from_receipt_finality as commit_finality_from_receipt_finality_contract,
     commit_finality_label as commit_finality_label_contract,
+    compose_block_fallback_unresolved_reason as compose_kolme_block_fallback_unresolved_reason_contract,
     compose_finality_status_path as compose_kolme_finality_status_path,
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
     deterministic_runtime_commit_id as deterministic_runtime_commit_id_contract,
@@ -36,6 +37,7 @@ use kamn_kolme::{
     txhash_from_commit_id as txhash_from_kolme_commit_id,
     validate_block_identity as validate_kolme_block_identity,
     validate_block_path_template as validate_kolme_block_path_template,
+    validate_lookup_txhash as validate_kolme_lookup_txhash_contract,
     validate_lookup_window as validate_kolme_lookup_window,
     validate_provider_receipt_identity as validate_kolme_provider_receipt_identity_contract,
     validate_websocket_handshake_response as validate_kolme_websocket_handshake_response,
@@ -1310,12 +1312,11 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
         from_height: u64,
         latest_height: u64,
     ) -> Result<KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderError> {
-        let txhash = txhash.trim();
-        if txhash.is_empty() {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "txhash must not be empty".to_owned(),
-            });
-        }
+        let txhash = validate_kolme_lookup_txhash_contract(txhash).map_err(|error| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: error.to_string(),
+            }
+        })?;
         validate_kolme_lookup_window(from_height, latest_height, self.max_block_lookups).map_err(
             |error| match error {
                 BlockScanPolicyError::MaxLookupsExceeded { .. } => {
@@ -1357,18 +1358,23 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
             if block
                 .finalized_tx_hashes
                 .iter()
-                .any(|value| value == txhash)
+                .any(|value| value == txhash.as_str())
             {
                 let projection =
-                    project_kolme_finalized_block_txhash_receipt_contract(txhash, height);
+                    project_kolme_finalized_block_txhash_receipt_contract(txhash.as_str(), height);
                 return Ok(KolmeRuntimeCommitProviderReceipt {
                     provider: self.provider.clone(),
                     commit_id: projection.commit_id,
                     finality: commit_finality_from_receipt_finality_contract(projection.finality),
                 });
             }
-            if block.failed_tx_hashes.iter().any(|value| value == txhash) {
-                let projection = project_kolme_failed_block_txhash_receipt_contract(txhash);
+            if block
+                .failed_tx_hashes
+                .iter()
+                .any(|value| value == txhash.as_str())
+            {
+                let projection =
+                    project_kolme_failed_block_txhash_receipt_contract(txhash.as_str());
                 return Ok(KolmeRuntimeCommitProviderReceipt {
                     provider: self.provider.clone(),
                     commit_id: projection.commit_id,
@@ -1378,8 +1384,10 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
         }
 
         Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: format!(
-                "block fallback did not resolve txhash '{txhash}' between heights {from_height} and {latest_height}"
+            reason: compose_kolme_block_fallback_unresolved_reason_contract(
+                txhash.as_str(),
+                from_height,
+                latest_height,
             ),
         })
     }

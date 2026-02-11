@@ -141,6 +141,17 @@ pub fn validate_lookup_window(
     Ok(())
 }
 
+/// Validates txhash request identity for block fallback reconciliation.
+pub fn validate_lookup_txhash(txhash: &str) -> Result<String, BlockScanPolicyError> {
+    let normalized = txhash.trim();
+    if normalized.is_empty() {
+        return Err(BlockScanPolicyError::MalformedForkFallbackResponse {
+            reason: "txhash must not be empty".to_owned(),
+        });
+    }
+    Ok(normalized.to_owned())
+}
+
 /// Resolves block-fallback upper bound using one latest-block notification height.
 pub fn resolve_lookup_upper_bound(
     from_height: u64,
@@ -171,6 +182,17 @@ pub fn project_failed_block_txhash_receipt(txhash: &str) -> BlockScanReceiptProj
         commit_id: deterministic_backend_commit_id(txhash, None),
         finality: ReceiptFinality::Failed,
     }
+}
+
+/// Renders deterministic fallback unresolved reason text.
+pub fn compose_block_fallback_unresolved_reason(
+    txhash: &str,
+    from_height: u64,
+    latest_height: u64,
+) -> String {
+    format!(
+        "block fallback did not resolve txhash '{txhash}' between heights {from_height} and {latest_height}"
+    )
 }
 
 /// Validates provider + height identity for one scanned block response.

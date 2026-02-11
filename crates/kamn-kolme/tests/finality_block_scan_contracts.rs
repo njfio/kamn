@@ -1,10 +1,11 @@
 use kamn_kolme::{
+    compose_block_fallback_unresolved_reason as compose_block_fallback_unresolved_reason_contract,
     parse_fork_block_txhash, parse_receipt_finality,
     project_failed_block_txhash_receipt as project_failed_block_txhash_receipt_contract,
     project_finalized_block_txhash_receipt as project_finalized_block_txhash_receipt_contract,
     render_block_path, resolve_lookup_upper_bound, validate_block_identity,
-    validate_block_path_template, validate_lookup_window, BlockScanReceiptProjection,
-    ReceiptFinality,
+    validate_block_path_template, validate_lookup_txhash as validate_lookup_txhash_contract,
+    validate_lookup_window, BlockScanReceiptProjection, ReceiptFinality,
 };
 
 #[test]
@@ -96,5 +97,24 @@ fn regression_issue_1854_project_failed_block_txhash_receipt_uses_heightless_com
             commit_id: "kolme-commit:ab12cd34".to_owned(),
             finality: ReceiptFinality::Failed,
         }
+    );
+}
+
+#[test]
+fn functional_validate_lookup_txhash_normalizes_non_empty_input() {
+    let txhash = validate_lookup_txhash_contract("  ab12cd34  ").expect("txhash should normalize");
+    assert_eq!(txhash, "ab12cd34".to_owned());
+}
+
+#[test]
+fn regression_issue_1856_validate_lookup_txhash_rejects_empty_input_and_unresolved_reason_stable() {
+    // Regression: #1856
+    let error = validate_lookup_txhash_contract("   ").expect_err("empty txhash must fail");
+    assert_eq!(error.to_string(), "txhash must not be empty");
+
+    let reason = compose_block_fallback_unresolved_reason_contract("ab12cd34", 40, 45);
+    assert_eq!(
+        reason,
+        "block fallback did not resolve txhash 'ab12cd34' between heights 40 and 45".to_owned()
     );
 }
