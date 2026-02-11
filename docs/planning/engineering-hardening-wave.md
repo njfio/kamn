@@ -40,6 +40,8 @@ default development loop green while tightening missing-doc policy controls for
 - Crate-wide `#![allow(missing_docs)]` is prohibited.
 - Legacy `#[allow(missing_docs)] pub mod ...` exemptions are tracked in:
   - `fixtures/ci/kamn_core_missing_docs_allowlist.txt`
+- Graduated modules that must remain outside the allow-list:
+  - `namespaces`, `bootstrap`, `kolme_runtime_commit`, `state`, `task_lifecycle`
 - Any allowlist drift fails closed via:
   - `scripts/ci/check_kamn_core_missing_docs_policy.sh`
 - Architecture/runtime flow and rustdoc publication docs are required:

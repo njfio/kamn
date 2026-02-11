@@ -1,38 +1,65 @@
+//! Task lifecycle state machine and transition evidence contracts.
+
 use std::fmt;
 
+/// Snapshot of task lifecycle state within the task state machine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TaskState {
+    /// Task has been created but not yet accepted.
     Submitted,
+    /// Task has been accepted by an assignee.
     Accepted,
+    /// Task has been delegated to another assignee.
     Delegated,
+    /// Task is actively being worked.
     InProgress,
+    /// Task is waiting for additional external input.
     InputRequired,
+    /// Task is temporarily blocked.
     Blocked,
+    /// Task completed successfully.
     Completed,
+    /// Task ended in failure.
     Failed,
+    /// Task has been cancelled.
     Cancelled,
 }
 
+/// Transition action applied to [`TaskLifecycle`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TaskTransition {
+    /// Accept a submitted task.
     Accept,
+    /// Delegate an accepted task.
     Delegate,
+    /// Start or resume work.
     StartWork,
+    /// Request additional input while in progress.
     RequestInput,
+    /// Mark an in-progress task as blocked.
     Block,
+    /// Complete work successfully.
     Complete,
+    /// Mark work as failed.
     Fail,
+    /// Cancel the task.
     Cancel,
 }
 
+/// Evidence record describing an allowed task transition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TaskTransitionEvidence {
+    /// Source state before transition application.
     pub from: TaskState,
+    /// Applied transition.
     pub transition: TaskTransition,
+    /// Destination state after transition application.
     pub to: TaskState,
+    /// Stable reason-code emitted for policy contracts.
     pub reason_code: &'static str,
 }
 
+/// Mutable task lifecycle state machine with replayable history.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskLifecycle {
     task_id: String,
@@ -41,6 +68,7 @@ pub struct TaskLifecycle {
 }
 
 impl TaskLifecycle {
+    /// Create a new lifecycle initialized in [`TaskState::Submitted`].
     pub fn new(task_id: &str) -> Result<Self, TaskLifecycleError> {
         if task_id.trim().is_empty() {
             return Err(TaskLifecycleError::EmptyTaskId);
@@ -52,18 +80,22 @@ impl TaskLifecycle {
         })
     }
 
+    /// Return the stable task identifier.
     pub fn task_id(&self) -> &str {
         &self.task_id
     }
 
+    /// Return the current lifecycle state.
     pub fn state(&self) -> TaskState {
         self.state
     }
 
+    /// Return the replay history as an owned state vector.
     pub fn history(&self) -> Vec<TaskState> {
         self.history.clone()
     }
 
+    /// Apply a transition and mutate lifecycle state if the edge is valid.
     pub fn transition(&mut self, transition: TaskTransition) -> Result<(), TaskLifecycleError> {
         if is_terminal(self.state) {
             return Err(TaskLifecycleError::TerminalState(self.state));
@@ -80,6 +112,7 @@ impl TaskLifecycle {
         Ok(())
     }
 
+    /// Apply a transition and emit deterministic transition evidence.
     pub fn transition_with_evidence(
         &mut self,
         transition: TaskTransition,
@@ -94,6 +127,7 @@ impl TaskLifecycle {
         })
     }
 
+    /// Restore a lifecycle from historical states after validating each edge.
     pub fn restore(task_id: &str, history: Vec<TaskState>) -> Result<Self, TaskLifecycleError> {
         if history.is_empty() {
             return Err(TaskLifecycleError::InvalidHistory(
@@ -127,18 +161,26 @@ impl TaskLifecycle {
     }
 }
 
+/// Error variants emitted by [`TaskLifecycle`] transition and restore operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TaskLifecycleError {
+    /// Provided task identifier is empty.
     EmptyTaskId,
+    /// Lifecycle history is malformed or not replayable.
     InvalidHistory(String),
+    /// Requested transition edge is invalid for current state.
     InvalidTransition {
+        /// Source state where invalid transition was requested.
         from: TaskState,
+        /// Transition that was rejected.
         transition: TaskTransition,
     },
+    /// Transition was requested from a terminal state.
     TerminalState(TaskState),
 }
 
 impl TaskLifecycleError {
+    /// Return deterministic reason-code used by contract lanes.
     pub fn reason_code(&self) -> &'static str {
         match self {
             Self::EmptyTaskId => "task_id_empty",
