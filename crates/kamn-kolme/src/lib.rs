@@ -19,6 +19,7 @@ pub mod provider_response_policy;
 pub mod receipt_finality;
 pub mod tls_policy;
 pub mod transport;
+pub mod transport_request_policy;
 pub mod websocket_policy;
 
 pub use api_codec::{
@@ -65,6 +66,9 @@ pub use tls_policy::{
 };
 pub use transport::{
     EchoTransport, KolmeTransport, TransportError, TransportRequest, TransportResponse,
+};
+pub use transport_request_policy::{
+    is_broadcast_submit_path, parse_authorization_header_value, KolmeTransportRequestPolicyError,
 };
 pub use websocket_policy::{
     find_http_header_boundary, try_take_websocket_frame, validate_websocket_handshake_response,
