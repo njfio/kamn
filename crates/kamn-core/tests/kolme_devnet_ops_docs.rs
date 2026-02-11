@@ -265,6 +265,22 @@ fn plan_contains_tranche1_manifest_migration_contract() {
 }
 
 #[test]
+fn plan_contains_runtime_nonce_manifest_migration_contract() {
+    assert!(PLAN.contains("## Runtime+Nonce Manifest Migration (Issue #1763)"));
+    assert!(PLAN.contains("scripts/ci/test_kolme_runtime_nonce_manifest_migration_contract.sh"));
+    assert!(PLAN
+        .contains("scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json"));
+    assert!(
+        PLAN.contains("scripts/framework/manifests/kolme_runtime_commit_replay_contract_lane.json")
+    );
+    assert!(PLAN
+        .contains("scripts/framework/manifests/kolme_nonce_broadcast_parity_contract_lane.json"));
+    assert!(PLAN.contains("scripts/kolme/contracts/runtime_commit_replay_contract_lane.py"));
+    assert!(PLAN
+        .contains("Combined wrapper shell LOC for this runtime/nonce tranche remains `<= 120`."));
+}
+
+#[test]
 fn regression_requires_failover_sync_budget_and_scheduled_cadence_guards() {
     // Regression: #788
     assert!(PLAN
@@ -316,6 +332,14 @@ fn regression_requires_tranche1_manifest_migration_guard_marker() {
     // Regression: #1722
     assert!(PLAN.contains(
         "tranche-1 manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1722`)."
+    ));
+}
+
+#[test]
+fn regression_requires_runtime_nonce_manifest_migration_guard_marker() {
+    // Regression: #1763
+    assert!(PLAN.contains(
+        "runtime+nonce manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1763`)."
     ));
 }
 

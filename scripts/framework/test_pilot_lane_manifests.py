@@ -105,6 +105,21 @@ class PilotLaneManifestTests(unittest.TestCase):
                 "kolme.block_fallback.reconciliation.contract",
                 "scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py",
             ),
+            (
+                "kolme_runtime_commit_adapter_contract_lane.json",
+                "kolme.runtime_commit.adapter.contract",
+                "scripts/kolme/contracts/runtime_commit_adapter_contract_lane.py",
+            ),
+            (
+                "kolme_runtime_commit_replay_contract_lane.json",
+                "kolme.runtime_commit.replay.contract",
+                "scripts/kolme/contracts/runtime_commit_replay_contract_lane.py",
+            ),
+            (
+                "kolme_nonce_broadcast_parity_contract_lane.json",
+                "kolme.nonce_broadcast.parity.contract",
+                "scripts/kolme/contracts/nonce_broadcast_parity_contract_lane.py",
+            ),
         )
 
         for manifest_name, expected_lane_id, expected_script in cases:

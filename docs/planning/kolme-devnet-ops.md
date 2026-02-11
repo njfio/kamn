@@ -52,6 +52,25 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Shell-surface budget contract:
   - Combined wrapper shell LOC for the tranche remains `<= 60`.
 
+## Runtime+Nonce Manifest Migration (Issue #1763)
+
+- Migration guard contract:
+  - `bash scripts/ci/test_kolme_runtime_nonce_manifest_migration_contract.sh`
+- Migrated manifest-backed wrappers:
+  - `scripts/kolme/run_runtime_commit_adapter_contract_lane.sh`
+  - `scripts/kolme/run_runtime_commit_replay_contract_lane.sh`
+  - `scripts/kolme/run_nonce_broadcast_parity_contract_lane.sh`
+- Manifest files:
+  - `scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json`
+  - `scripts/framework/manifests/kolme_runtime_commit_replay_contract_lane.json`
+  - `scripts/framework/manifests/kolme_nonce_broadcast_parity_contract_lane.json`
+- Python contract lane implementations:
+  - `scripts/kolme/contracts/runtime_commit_adapter_contract_lane.py`
+  - `scripts/kolme/contracts/runtime_commit_replay_contract_lane.py`
+  - `scripts/kolme/contracts/nonce_broadcast_parity_contract_lane.py`
+- Shell-surface budget contract:
+  - Combined wrapper shell LOC for this runtime/nonce tranche remains `<= 120`.
+
 ## Contract Commands
 
 - Run triadic smoke orchestration:
@@ -595,6 +614,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local bootstrap health summary policy and contract-lane command/report drift remain fail-closed (`Regression: #1692`).
 - lane migration matrix schema/order/required-lane drift remains fail-closed (`Regression: #1721`).
 - tranche-1 manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1722`).
+- runtime+nonce manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1763`).
 - local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
 - local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
 - local fork Rust test matrix lane fails closed on missing local opt-in, metadata sync drift, and per-command timeout/failure paths (`Regression: #1537`).
