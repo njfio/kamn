@@ -281,7 +281,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - lane default budget is bounded to 300 seconds with per-stage integration budget caps.
   - local fork process lifecycle integration run-mode execution remains excluded from PR fast-gate workflow routing.
 
-## Local Fork Profile Preflight Lane (Issue #1648)
+## Local Fork Profile Preflight Lane (Issues #1648, #1696)
 
 - Local fork profile preflight runner:
   - `bash scripts/kolme/run_local_kolme_fork_profile_preflight_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-profile-preflight-summary.json`
@@ -289,8 +289,11 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_profile_preflight_lane.sh --mode run --checkout-path /tmp/kolme_fork --max-seconds 45 --output-json /tmp/kolme-local-fork-profile-preflight-summary.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_profile_preflight_policy.py --report-file /tmp/kolme-local-fork-profile-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
+- Contract lane command:
+  - `bash scripts/kolme/run_local_kolme_fork_profile_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-profile-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
 - Summary schema:
   - `kamn.kolme.local-fork-profile-preflight-summary.v1`
+  - policy schema: `kamn.kolme.local-fork-profile-preflight-policy-report.v1`
 - Deterministic checkpoints include:
   - default profile contract requires `cd /tmp/kolme_fork && cargo run --bin example-six-sigma -- serve api-server`.
   - fail-closed policy gate for checkout/profile drift unless explicit local harness override is supplied.
@@ -537,6 +540,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - unified local signed-to-Kolme demo lane fails closed for local opt-in, stage prerequisite drift, and runtime budget overruns (`Regression: #1640`).
 - local fork process lifecycle integration lane fails closed for process start/readiness/integration/teardown/budget drift and missing local opt-in (`Regression: #1494`).
 - local fork profile preflight lane fails closed for local opt-in, checkout/profile contract drift, probe command failures, and runtime budget overruns (`Regression: #1648`).
+- local fork profile preflight policy and contract-lane command/report drift remains fail-closed (`Regression: #1697`).
 - local fork self-test lane fails closed for local opt-in, nested matrix/policy checkpoint failures, and runtime budget overruns (`Regression: #1652`).
 - local fork checkout bootstrap lane fails closed for local opt-in, checkout provenance drift, diagnostics command failures, and runtime budget overruns (`Regression: #1663`).
 - real-fork local process wrapper bootstrap-first prerequisite ordering remains fail-closed for bootstrap lane/policy checkpoint drift (`Regression: #1667`).
@@ -575,6 +579,7 @@ bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh
 bash scripts/kolme/test_run_local_signed_to_kolme_demo_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_profile_preflight_lane.sh
+bash scripts/kolme/test_run_local_kolme_fork_profile_preflight_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_self_test_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_lane.sh
 bash scripts/kolme/test_check_local_kolme_fork_checkout_bootstrap_policy.sh

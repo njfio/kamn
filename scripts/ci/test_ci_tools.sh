@@ -49,6 +49,7 @@ bash "$ROOT_DIR/scripts/kolme/test_run_local_kamn_live_runtime_integration_contr
 bash "$ROOT_DIR/scripts/kolme/test_run_local_signed_to_kolme_demo_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_profile_preflight_lane.sh"
+bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_profile_preflight_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_self_test_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_checkout_bootstrap_policy.sh"

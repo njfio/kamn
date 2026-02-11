@@ -217,7 +217,9 @@ python3 scripts/kolme/check_local_signed_to_kolme_demo_policy.py \
 ```bash
 bash scripts/kolme/run_local_kolme_fork_profile_preflight_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-profile-preflight-summary.json
 python3 scripts/kolme/check_local_kolme_fork_profile_preflight_policy.py --report-file /tmp/kolme-local-fork-profile-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-profile-preflight-policy.json
+bash scripts/kolme/run_local_kolme_fork_profile_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-profile-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-profile-preflight-policy.json
 # schema: kamn.kolme.local-fork-profile-preflight-summary.v1
+# schema: kamn.kolme.local-fork-profile-preflight-policy-report.v1
 ```
 
 ### Run Local Fork Self-Test Lane
@@ -583,6 +585,7 @@ Local Kolme API probe/smoke lane contract tests:
 - `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_fork_profile_preflight_lane.sh`
+- `bash scripts/kolme/test_run_local_kolme_fork_profile_preflight_contract_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_fork_self_test_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_lane.sh`
 - `bash scripts/kolme/test_check_local_kolme_fork_checkout_bootstrap_policy.sh`
