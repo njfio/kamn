@@ -92,6 +92,15 @@ fn plan_contains_local_kamn_live_runtime_integration_lane() {
 }
 
 #[test]
+fn plan_contains_local_fork_process_lifecycle_lane() {
+    assert!(PLAN.contains("## Local Kolme Fork Process Lifecycle Integration Lane"));
+    assert!(PLAN.contains("run_local_kolme_fork_process_lifecycle_lane.sh"));
+    assert!(PLAN.contains("check_local_kolme_fork_process_lifecycle_policy.py"));
+    assert!(PLAN.contains("run_local_kolme_fork_process_lifecycle_contract_lane.sh"));
+    assert!(PLAN.contains("kamn.kolme.local-fork-process-lifecycle-summary.v1"));
+}
+
+#[test]
 fn plan_contains_local_runtime_commit_live_lane() {
     assert!(PLAN.contains("## Local Runtime Commit Live Proof Lane"));
     assert!(PLAN.contains("run_local_runtime_commit_live_lane.sh"));
@@ -278,5 +287,13 @@ fn regression_requires_local_kamn_live_runtime_integration_guard_marker() {
     // Regression: #1489
     assert!(PLAN.contains(
         "local KAMN live runtime integration lane fails closed for bootstrap/conformance/runtime-commit prerequisite drift, runtime budget overruns, and missing local opt-in (`Regression: #1489`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_fork_process_lifecycle_guard_marker() {
+    // Regression: #1494
+    assert!(PLAN.contains(
+        "local fork process lifecycle integration lane fails closed for process start/readiness/integration/teardown/budget drift and missing local opt-in (`Regression: #1494`)."
     ));
 }

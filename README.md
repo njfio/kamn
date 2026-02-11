@@ -382,6 +382,24 @@ bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --ou
 # schema: kamn.kolme.local-kamn-live-runtime-integration-summary.v1
 ```
 
+### Run Local Kolme Fork Process Lifecycle Integration Lane
+
+```bash
+# deterministic process lifecycle plan (no command execution)
+bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json
+
+# explicit local-only process lifecycle execution (start -> readiness -> integration -> teardown)
+KAMN_KOLME_LOCAL_HEAVY=1 \
+bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --serve-command "python3 /tmp/mock_kolme_api.py 3000 v0.15.2" --max-seconds 300 --startup-max-seconds 45 --integration-max-seconds 240 --integration-bootstrap-max-seconds 90 --integration-conformance-max-seconds 180 --integration-runtime-commit-max-seconds 30 --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json
+
+# policy checker contract
+python3 scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py --report-file /tmp/kolme-local-fork-process-lifecycle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-process-lifecycle-policy.json
+
+# bounded contract lane (spawns local mock API process command + pinned checkout fixture)
+bash scripts/kolme/run_local_kolme_fork_process_lifecycle_contract_lane.sh --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json --policy-output-json /tmp/kolme-local-fork-process-lifecycle-policy.json
+# schema: kamn.kolme.local-fork-process-lifecycle-summary.v1
+```
+
 ### Run Local-Only Heavy Kolme Validation Matrix
 
 ```bash
@@ -421,6 +439,7 @@ Local Kolme API probe/smoke lane contract tests:
 - `bash scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh`
 - `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
+- `bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh`
 
 ## Workflow
 
