@@ -7,6 +7,8 @@ use kamn_kolme::{
     compose_finality_status_path as compose_kolme_finality_status_path,
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
     deterministic_backend_commit_id as deterministic_kolme_backend_commit_id,
+    deterministic_runtime_commit_id as deterministic_runtime_commit_id_contract,
+    deterministic_runtime_commit_idempotency_key as deterministic_runtime_commit_idempotency_key_contract,
     find_http_header_boundary as find_kolme_http_header_boundary,
     is_broadcast_submit_path as is_kolme_broadcast_submit_path_contract,
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
@@ -2315,13 +2317,12 @@ fn deterministic_idempotency_key(
     nonce: u64,
     payload_hash: &str,
 ) -> String {
-    format!(
-        "kolme-runtime-commit:{}:{}:{}:{}:{}",
-        operation_id.trim(),
-        state_root.trim(),
-        actor_did.trim(),
+    deterministic_runtime_commit_idempotency_key_contract(
+        operation_id,
+        state_root,
+        actor_did,
         nonce,
-        payload_hash.trim().len()
+        payload_hash,
     )
 }
 
@@ -2331,13 +2332,7 @@ fn deterministic_commit_id(
     nonce: u64,
     payload_hash: &str,
 ) -> String {
-    format!(
-        "kolme-commit:{}:{}:{}:{}",
-        operation_id,
-        actor_did,
-        nonce,
-        payload_hash.len()
-    )
+    deterministic_runtime_commit_id_contract(operation_id, actor_did, nonce, payload_hash)
 }
 
 fn lifecycle_state_for_finality(

@@ -19,6 +19,7 @@ pub mod provider_outcome_policy;
 pub mod provider_response_policy;
 pub mod receipt_finality;
 pub mod runtime_lifecycle_policy;
+pub mod runtime_request_identity_policy;
 pub mod tls_policy;
 pub mod transport;
 pub mod transport_request_policy;
@@ -67,6 +68,9 @@ pub use receipt_finality::{parse_receipt_finality, ReceiptFinality, ReceiptFinal
 pub use runtime_lifecycle_policy::{
     commit_finality_label, lifecycle_state_for_finality, lifecycle_state_label,
     KolmeCommitReceiptFinality, RuntimeCommitLifecycleState,
+};
+pub use runtime_request_identity_policy::{
+    deterministic_runtime_commit_id, deterministic_runtime_commit_idempotency_key,
 };
 pub use tls_policy::{
     classify_tls_failure_reason, parse_tls_ca_file_env_value, KolmeTlsPolicyError,

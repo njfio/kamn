@@ -111,6 +111,9 @@ handling.
 - Adapter submissions call provider transport with:
   - canonical request payload from `KolmeRuntimeCommitRequest::to_wire_payload()`
   - deterministic idempotency key from `KolmeRuntimeCommitRequest::idempotency_key()`
+- Deterministic request identity contracts are sourced from `kamn-kolme`
+  (`deterministic_runtime_commit_idempotency_key`, `deterministic_runtime_commit_id`)
+  and mapped through `kamn-core` compatibility wrappers.
 - The adapter preserves validation semantics from
   `KolmeRuntimeCommitRequest::validate()` before provider dispatch.
 - Signed translation model:
@@ -170,6 +173,7 @@ cargo test -p kamn-kolme --test provider_outcome_policy_contracts
 cargo test -p kamn-kolme --test transport_request_policy_contracts
 cargo test -p kamn-kolme --test broadcast_payload_policy_contracts
 cargo test -p kamn-kolme --test runtime_lifecycle_policy_contracts
+cargo test -p kamn-kolme --test runtime_request_identity_policy_contracts
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_fetch_next_nonce_query_and_parse -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_submit_broadcast_request_put_and_parse_txhash -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_http_transport_submit_broadcast_request_rejects_malformed_txhash_response -- --exact
@@ -204,3 +208,4 @@ cargo test -p kamn-core
 - transport request helper extraction parity drift remains fail-closed (`Regression: #1755`).
 - broadcast payload normalization extraction parity drift remains fail-closed (`Regression: #1757`).
 - runtime lifecycle/finality projection extraction parity drift remains fail-closed (`Regression: #1775`).
+- runtime request identity extraction parity drift remains fail-closed (`Regression: #1777`).
