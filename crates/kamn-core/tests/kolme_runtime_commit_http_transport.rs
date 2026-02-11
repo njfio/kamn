@@ -800,3 +800,58 @@ fn regression_kolme_fork_direct_signed_payload_requires_json_message_shape() {
         })
     );
 }
+
+#[test]
+fn regression_kolme_fork_direct_signed_payload_requires_core_transaction_keys() {
+    // Regression: #1519
+    let missing_key_cases = [
+        (
+            "pubkey",
+            "{\"nonce\":1,\"created\":\"2026-02-11T00:00:00Z\",\"messages\":[],\"max_height\":null}",
+        ),
+        (
+            "nonce",
+            "{\"pubkey\":\"pk-direct\",\"created\":\"2026-02-11T00:00:00Z\",\"messages\":[],\"max_height\":null}",
+        ),
+        (
+            "created",
+            "{\"pubkey\":\"pk-direct\",\"nonce\":1,\"messages\":[],\"max_height\":null}",
+        ),
+        (
+            "messages",
+            "{\"pubkey\":\"pk-direct\",\"nonce\":1,\"created\":\"2026-02-11T00:00:00Z\",\"max_height\":null}",
+        ),
+    ];
+
+    for (missing_field, message_json) in missing_key_cases {
+        let wire_payload = format!(
+            "{{\"message\":\"{}\",\"signature\":\"sig-direct\",\"recovery_id\":1}}",
+            message_json.replace('\\', "\\\\").replace('\"', "\\\"")
+        );
+        let base_url = spawn_single_request_server(
+            "{\"txhash\":\"ab12cd34\"}".to_owned(),
+            "HTTP/1.1 200 OK",
+            |_raw_request| {},
+        );
+
+        let transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+        let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
+            base_url.as_str(),
+            "kolme-fork-local",
+            transport,
+        )
+        .expect("provider should build");
+
+        assert_eq!(
+            provider.submit_runtime_commit(
+                wire_payload.as_str(),
+                "kolme-runtime-commit:direct-required-fields:1"
+            ),
+            Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!(
+                    "direct signed payload message missing required field: {missing_field}"
+                ),
+            })
+        );
+    }
+}

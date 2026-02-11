@@ -2720,6 +2720,7 @@ fn normalize_kolme_broadcast_payload(
                 reason: "direct signed payload message must be a JSON object string".to_owned(),
             });
         }
+        validate_direct_signed_transaction_message(message.as_str())?;
 
         let request =
             KolmeApiBroadcastRequest::new(message.as_str(), signature.as_str(), recovery_id)
@@ -2746,6 +2747,70 @@ fn normalize_kolme_broadcast_payload(
         }
     })?;
     Ok(request.to_json_payload())
+}
+
+fn validate_direct_signed_transaction_message(
+    message: &str,
+) -> Result<(), KolmeRuntimeCommitProviderError> {
+    let required_string_fields = ["pubkey", "created"];
+    for field in required_string_fields {
+        let value = find_notification_string_field(message, field).map_err(|_| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("direct signed payload message field is invalid: {field}"),
+            }
+        })?;
+        if value.is_none() {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("direct signed payload message missing required field: {field}"),
+            });
+        }
+    }
+
+    let nonce = find_notification_u64_field(message, "nonce").map_err(|_| {
+        KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "direct signed payload message field is invalid: nonce".to_owned(),
+        }
+    })?;
+    if nonce.is_none() {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "direct signed payload message missing required field: nonce".to_owned(),
+        });
+    }
+
+    let has_messages = has_json_array_field(message, "messages")
+        .map_err(|error| KolmeRuntimeCommitProviderError::MalformedResponse { reason: error })?;
+    if !has_messages {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "direct signed payload message missing required field: messages".to_owned(),
+        });
+    }
+
+    Ok(())
+}
+
+fn has_json_array_field(payload: &str, field: &str) -> Result<bool, String> {
+    let pattern = format!("\"{field}\"");
+    for (index, _) in payload.match_indices(pattern.as_str()) {
+        let mut cursor = index + pattern.len();
+        cursor = skip_ascii_whitespace(payload, cursor);
+        if payload.as_bytes().get(cursor).copied() != Some(b':') {
+            continue;
+        }
+        cursor += 1;
+        cursor = skip_ascii_whitespace(payload, cursor);
+        let Some(first) = payload.as_bytes().get(cursor).copied() else {
+            return Err(format!(
+                "direct signed payload message field must be array: {field}"
+            ));
+        };
+        if first == b'[' {
+            return Ok(true);
+        }
+        return Err(format!(
+            "direct signed payload message field must be array: {field}"
+        ));
+    }
+    Ok(false)
 }
 
 fn parse_live_provider_response(
