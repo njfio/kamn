@@ -9,6 +9,7 @@ pub mod block_scan_policy;
 pub mod codec;
 pub mod endpoint_policy;
 pub mod finality;
+pub mod notification_policy;
 pub mod pipeline;
 pub mod receipt_finality;
 pub mod transport;
@@ -28,6 +29,9 @@ pub use endpoint_policy::{
     KolmeParsedWebsocketEndpoint,
 };
 pub use finality::{resolve_finality, FinalityResolution, FinalityState};
+pub use notification_policy::{
+    parse_notification_event, KolmeNotificationEvent, KolmeNotificationPolicyError,
+};
 pub use pipeline::{PipelineError, RuntimeCommitPipeline};
 pub use receipt_finality::{parse_receipt_finality, ReceiptFinality, ReceiptFinalityError};
 pub use transport::{
