@@ -187,6 +187,17 @@ bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-
 CI fast-gate routes this lane when selector output
 `run_localhost_signed_integration_contract_lane_tests` is `true`.
 
+### Run Localhost Signed Demo Contract Lane
+
+```bash
+bash scripts/sdk/run_localhost_signed_demo_contract_lane.sh \
+  --output-json /tmp/localhost-signed-demo-contract-report.json
+# schema: kamn.sdk.localhost-signed.demo-contract.v1
+# localhost_signed_demo_status=pass
+# localhost_signed_integration_status=pass
+# localhost signed demo contract lane tests passed.
+```
+
 ### Run Live Transport Replay/Tamper Contract Lane
 
 ```bash
