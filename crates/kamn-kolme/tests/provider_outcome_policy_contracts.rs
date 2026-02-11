@@ -1,7 +1,9 @@
 use kamn_kolme::{
-    deterministic_backend_commit_id, parse_live_provider_outcome, txhash_from_commit_id,
+    deterministic_backend_commit_id, parse_commit_id_from_response_fields,
+    parse_live_provider_outcome, required_provider_response_field, txhash_from_commit_id,
     KolmeProviderOutcome, KolmeProviderOutcomePolicyError, ReceiptFinality,
 };
+use std::collections::HashMap;
 
 #[test]
 fn functional_parse_live_provider_outcome_maps_submitted_status() {
@@ -66,6 +68,31 @@ fn regression_issue_1749_txhash_from_commit_id_rejects_invalid_prefix() {
         error,
         KolmeProviderOutcomePolicyError::MalformedResponse {
             reason: "commit_id must start with 'kolme-commit:'".to_owned(),
+        }
+    );
+}
+
+#[test]
+fn functional_required_provider_response_field_trims_non_empty_values() {
+    let mut fields = HashMap::new();
+    fields.insert("provider".to_owned(), "  kolme-fork  ".to_owned());
+    let provider =
+        required_provider_response_field(&fields, "provider").expect("field should parse");
+    assert_eq!(provider, "kolme-fork");
+}
+
+#[test]
+fn regression_issue_1753_parse_commit_id_from_response_fields_rejects_zero_block_height() {
+    // Regression: #1753
+    let mut fields = HashMap::new();
+    fields.insert("tx_hash".to_owned(), "ab12cd34".to_owned());
+    fields.insert("block_height".to_owned(), "0".to_owned());
+    let error = parse_commit_id_from_response_fields(&fields)
+        .expect_err("zero block height must fail closed");
+    assert_eq!(
+        error,
+        KolmeProviderOutcomePolicyError::MalformedResponse {
+            reason: "block_height must be positive".to_owned(),
         }
     );
 }
