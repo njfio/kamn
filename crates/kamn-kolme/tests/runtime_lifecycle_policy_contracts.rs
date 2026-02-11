@@ -1,6 +1,7 @@
 use kamn_kolme::{
     commit_finality_label, lifecycle_state_for_finality, lifecycle_state_label,
-    KolmeCommitReceiptFinality, RuntimeCommitLifecycleState,
+    require_final_receipt_finality as require_final_receipt_finality_contract,
+    KolmeCommitReceiptFinality, RuntimeCommitLifecycleState, RuntimeLifecyclePolicyError,
 };
 
 #[test]
@@ -55,5 +56,24 @@ fn regression_runtime_lifecycle_policy_state_label_drift_remains_fail_closed() {
             KolmeCommitReceiptFinality::Final
         )),
         "finalized"
+    );
+}
+
+#[test]
+fn functional_runtime_lifecycle_policy_requires_final_receipt_finality() {
+    require_final_receipt_finality_contract(KolmeCommitReceiptFinality::Final)
+        .expect("final receipt finality should pass");
+}
+
+#[test]
+fn regression_issue_1844_runtime_lifecycle_policy_rejects_non_final_receipt_finality() {
+    // Regression: #1844
+    let error = require_final_receipt_finality_contract(KolmeCommitReceiptFinality::Pending)
+        .expect_err("pending receipt finality must fail closed");
+    assert_eq!(
+        error,
+        RuntimeLifecyclePolicyError::NonFinalReceipt {
+            finality: KolmeCommitReceiptFinality::Pending,
+        }
     );
 }
