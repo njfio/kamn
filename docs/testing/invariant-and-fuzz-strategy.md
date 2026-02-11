@@ -17,6 +17,10 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
 - Mutation/fuzz smoke lane:
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh`
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh --output-json /tmp/input-mutation-contract-report.json`
+  - local envelope-only bounded run:
+    - `bash scripts/runtime/run_input_mutation_contract_lane.sh --target envelope --output-json /tmp/input-mutation-envelope-smoke-report.json`
+  - local DID-only bounded run:
+    - `bash scripts/runtime/run_input_mutation_contract_lane.sh --target did --output-json /tmp/input-mutation-did-smoke-report.json`
 - Concurrency race lane:
   - `bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh`
   - `bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh --output-json /tmp/concurrency-mutation-contract-report.json`
@@ -60,8 +64,13 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
   - `lifecycle_property_replay:v1`
 - Input mutation report schema:
   - `kamn.runtime.input-mutation-contract-report.v1`
+- Input mutation replay metadata schema:
+  - `kamn.runtime.input-mutation-replay-metadata.v1`
 - Input mutation replay artifact key:
   - `input_mutation_replay:v1`
+  - seed corpus keys:
+    - `input_mutation_envelope_seed:v1`
+    - `input_mutation_did_seed:v1`
 - Concurrency mutation report schema:
   - `kamn.runtime.concurrency-mutation-contract-report.v1`
 - Concurrency mutation replay artifact key:
@@ -88,6 +97,9 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
 - Lifecycle property replay metadata contract fields:
   - `executed_cases`
   - `generated_sequence_bounds`
+- Input mutation replay metadata contract fields:
+  - `target`
+  - `seed_corpus_keys`
 - Required pass reason code:
   - `none`
 - Live transport replay/tamper report schema:
