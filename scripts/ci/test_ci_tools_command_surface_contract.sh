@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+CI_TOOLS_SCRIPT="$ROOT_DIR/scripts/ci/test_ci_tools.sh"
+
+required_commands=(
+  'bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh"'
+  'bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh"'
+)
+
+for command in "${required_commands[@]}"; do
+  if ! grep -Fq "$command" "$CI_TOOLS_SCRIPT"; then
+    echo "expected ci tools regression lane to include command: $command" >&2
+    exit 1
+  fi
+done
+
+echo "ci tools command surface contract tests passed."
