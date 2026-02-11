@@ -33,6 +33,7 @@ handling.
   - `KolmeRuntimeCommitHttpTransport::submit_broadcast_request(...)`
 - Endpoint normalization boundary:
   - `crates/kamn-kolme/src/endpoint_policy.rs` owns HTTP/WebSocket endpoint parsing and URL composition contracts.
+  - `crates/kamn-kolme/src/http_response_policy.rs` owns HTTP response status/content parsing contracts.
   - `crates/kamn-core/src/kolme_runtime_commit.rs` delegates endpoint normalization through compatibility wrappers.
 - Optional auth-aware constructor:
   - `KolmeRuntimeCommitHttpTransport::new_with_authorization(...)`
@@ -147,6 +148,7 @@ cargo test -p kamn-kolme --test api_codec_contracts
 cargo test -p kamn-kolme --test finality_block_scan_contracts
 cargo test -p kamn-kolme --test endpoint_policy_contracts
 cargo test -p kamn-kolme --test websocket_policy_contracts
+cargo test -p kamn-kolme --test http_response_policy_contracts
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_fetch_next_nonce_query_and_parse -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_submit_broadcast_request_put_and_parse_txhash -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_http_transport_submit_broadcast_request_rejects_malformed_txhash_response -- --exact
