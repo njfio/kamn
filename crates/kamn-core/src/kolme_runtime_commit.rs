@@ -7,6 +7,8 @@ use kamn_kolme::{
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
     deterministic_backend_commit_id as deterministic_kolme_backend_commit_id,
     find_http_header_boundary as find_kolme_http_header_boundary,
+    is_broadcast_submit_path as is_kolme_broadcast_submit_path_contract,
+    parse_authorization_header_value as parse_kolme_authorization_header_value,
     parse_block_fallback_response as parse_kolme_block_fallback_response_contract,
     parse_commit_id_from_response_fields as parse_kolme_commit_id_from_response_fields,
     parse_flat_json_value_fields as parse_kolme_flat_json_value_fields,
@@ -49,7 +51,9 @@ use kamn_kolme::{
     KolmeProviderOutcome as KamnKolmeProviderOutcome,
     KolmeProviderOutcomePolicyError as KamnKolmeProviderOutcomePolicyError,
     KolmeProviderResponsePolicyError as KamnKolmeProviderResponsePolicyError,
-    KolmeTlsPolicyError as KamnKolmeTlsPolicyError, KolmeWebsocketFrame as KamnKolmeWebsocketFrame,
+    KolmeTlsPolicyError as KamnKolmeTlsPolicyError,
+    KolmeTransportRequestPolicyError as KamnKolmeTransportRequestPolicyError,
+    KolmeWebsocketFrame as KamnKolmeWebsocketFrame,
     KolmeWebsocketPolicyError as KamnKolmeWebsocketPolicyError, ReceiptFinality,
 };
 use std::collections::HashMap;
@@ -783,7 +787,10 @@ impl KolmeRuntimeCommitHttpTransport {
         authorization_header: &str,
     ) -> Result<Self, KolmeRuntimeCommitError> {
         let mut transport = Self::new(timeout_seconds)?;
-        transport.authorization_header = Some(parse_authorization_header(authorization_header)?);
+        transport.authorization_header = Some(
+            parse_kolme_authorization_header_value(authorization_header)
+                .map_err(map_transport_request_policy_error)?,
+        );
         Ok(transport)
     }
 
@@ -1015,7 +1022,7 @@ impl KolmeRuntimeCommitProviderTransport for KolmeRuntimeCommitHttpTransport {
                 reason: "idempotency_key must not be empty".to_owned(),
             });
         }
-        if is_kolme_broadcast_submit_path(submit_path) {
+        if is_kolme_broadcast_submit_path_contract(submit_path) {
             let payload = normalize_kolme_broadcast_payload(wire_payload, idempotency_key)?;
             return self.execute_request(
                 base_url,
@@ -1847,6 +1854,16 @@ fn map_tls_policy_error(error: KamnKolmeTlsPolicyError) -> KolmeRuntimeCommitPro
     }
 }
 
+fn map_transport_request_policy_error(
+    error: KamnKolmeTransportRequestPolicyError,
+) -> KolmeRuntimeCommitError {
+    match error {
+        KamnKolmeTransportRequestPolicyError::InvalidRequest { field, reason } => {
+            KolmeRuntimeCommitError::InvalidRequest { field, reason }
+        }
+    }
+}
+
 fn parse_http_endpoint(
     base_url: &str,
     path: &str,
@@ -1960,23 +1977,6 @@ fn parse_kolme_notification_event(
     }
 }
 
-fn parse_authorization_header(value: &str) -> Result<String, KolmeRuntimeCommitError> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        return Err(KolmeRuntimeCommitError::InvalidRequest {
-            field: "transport_authorization_header",
-            reason: "must not be empty",
-        });
-    }
-    if trimmed.contains('\r') || trimmed.contains('\n') {
-        return Err(KolmeRuntimeCommitError::InvalidRequest {
-            field: "transport_authorization_header",
-            reason: "must be single-line",
-        });
-    }
-    Ok(trimmed.to_owned())
-}
-
 fn map_transport_io_error(error: std::io::Error) -> KolmeRuntimeCommitProviderError {
     if matches!(
         error.kind(),
@@ -2004,19 +2004,6 @@ fn configured_tls_ca_file() -> Result<Option<String>, KolmeRuntimeCommitProvider
 
 fn classify_tls_failure_reason(stderr: &str) -> String {
     classify_kolme_tls_failure_reason(stderr)
-}
-
-fn is_kolme_broadcast_submit_path(submit_path: &str) -> bool {
-    let trimmed = submit_path.trim();
-    if trimmed.is_empty() {
-        return false;
-    }
-    let without_query = trimmed
-        .split('?')
-        .next()
-        .unwrap_or(trimmed)
-        .trim_end_matches('/');
-    without_query == "/broadcast"
 }
 
 fn normalize_kolme_broadcast_payload(

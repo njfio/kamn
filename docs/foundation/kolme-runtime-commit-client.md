@@ -36,6 +36,7 @@ handling.
   - `crates/kamn-kolme/src/http_response_policy.rs` owns HTTP response status/content parsing contracts.
   - `crates/kamn-kolme/src/flat_json_policy.rs` owns flat JSON scalar/object parsing contracts used by broadcast normalization and block-fallback field extraction.
   - `crates/kamn-kolme/src/block_fallback_policy.rs` owns block-fallback response parsing contracts for key/value and flat-JSON payloads.
+  - `crates/kamn-kolme/src/transport_request_policy.rs` owns authorization header validation and broadcast submit-path detection contracts.
   - `crates/kamn-kolme/src/provider_outcome_policy.rs` owns live provider outcome parsing and commit-id helper contracts.
   - `crates/kamn-kolme/src/provider_response_policy.rs` owns provider response field parsing contracts (key/value + flat JSON string object formats).
   - `crates/kamn-core/src/kolme_runtime_commit.rs` delegates endpoint normalization through compatibility wrappers.
@@ -163,6 +164,7 @@ cargo test -p kamn-kolme --test provider_response_policy_contracts
 cargo test -p kamn-kolme --test flat_json_policy_contracts
 cargo test -p kamn-kolme --test block_fallback_policy_contracts
 cargo test -p kamn-kolme --test provider_outcome_policy_contracts
+cargo test -p kamn-kolme --test transport_request_policy_contracts
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_fetch_next_nonce_query_and_parse -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_submit_broadcast_request_put_and_parse_txhash -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_http_transport_submit_broadcast_request_rejects_malformed_txhash_response -- --exact
@@ -194,3 +196,4 @@ cargo test -p kamn-core
 - provider outcome and commit-id parser extraction parity drift remains fail-closed (`Regression: #1749`).
 - block-fallback parser extraction parity drift remains fail-closed (`Regression: #1751`).
 - provider helper reuse extraction parity drift remains fail-closed (`Regression: #1753`).
+- transport request helper extraction parity drift remains fail-closed (`Regression: #1755`).
