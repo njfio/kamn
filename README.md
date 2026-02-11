@@ -318,6 +318,12 @@ bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode dry-run 
 KAMN_KOLME_LOCAL_HEAVY=1 \
 bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json
 # schema: kamn.kolme.local-fork-rust-test-matrix-summary.v1
+
+# policy checker contract
+python3 scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py --report-file /tmp/kolme-local-fork-rust-test-matrix-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json
+
+# bounded contract lane (dry-run + local-only run + fail-closed policy checks)
+bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json --policy-output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json
 ```
 
 ### Run Local Kolme API Probe Lane
@@ -452,6 +458,8 @@ Local Kolme API probe/smoke lane contract tests:
 - `bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh`
+- `bash scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh`
+- `bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh`
 - `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
