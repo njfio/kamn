@@ -57,6 +57,11 @@ if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER"; then
   exit 1
 fi
 
+if ! grep -q "run_localhost_signed_integration_contract_lane.sh" "$RUNNER"; then
+  echo "expected local KAMN live runtime integration runner to invoke localhost signed integration contract lane prerequisite" >&2
+  exit 1
+fi
+
 if [ ! -x "$CHECKER" ]; then
   echo "expected local KAMN live runtime integration policy checker to be executable" >&2
   exit 1
@@ -82,6 +87,11 @@ if ! grep -q "run_local_kamn_live_runtime_integration_contract_lane.sh" "$DOC_FI
   exit 1
 fi
 
+if ! grep -q -- "--localhost-signed-max-seconds 45" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to document localhost signed checkpoint runtime budget argument" >&2
+  exit 1
+fi
+
 if ! grep -q "run_localhost_signed_demo.sh --output-json /tmp/localhost-signed-demo-artifact.json" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to reference localhost signed demo artifact command" >&2
   exit 1
@@ -104,6 +114,11 @@ fi
 
 if ! grep -q "kamn.sdk.localhost-signed.integration-contract.v1" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to reference localhost signed integration contract schema" >&2
+  exit 1
+fi
+
+if ! grep -q "Regression: #1636" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include localhost signed runtime integration prerequisite regression marker" >&2
   exit 1
 fi
 
@@ -356,6 +371,7 @@ run_output="$(
       --fork-chain-version "$FORK_CHAIN_VERSION" \
       --max-seconds 210 \
       --bootstrap-max-seconds 90 \
+      --localhost-signed-max-seconds 45 \
       --conformance-max-seconds 180 \
       --runtime-commit-max-seconds 30 \
       --output-json "$TMP_REPORT"
@@ -393,7 +409,12 @@ if report.get("status") != "ok":
 checks = report.get("checks")
 if not isinstance(checks, list):
     raise SystemExit("expected check list in run summary")
-for expected_id in ("bootstrap_readiness", "live_api_conformance", "runtime_commit_endpoint"):
+for expected_id in (
+    "bootstrap_readiness",
+    "localhost_signed_integration",
+    "live_api_conformance",
+    "runtime_commit_endpoint",
+):
     matching = [entry for entry in checks if isinstance(entry, dict) and entry.get("id") == expected_id]
     if not matching:
         raise SystemExit(f"missing check id: {expected_id}")
@@ -406,6 +427,10 @@ if contracts.get("runtime_commit_endpoint") != "/broadcast/runtime-commit":
     raise SystemExit("unexpected runtime commit endpoint contract marker")
 if contracts.get("runtime_commit_method") != "POST":
     raise SystemExit("unexpected runtime commit method contract marker")
+if contracts.get("runtime_commit_finality_primary_endpoint") != "/notifications":
+    raise SystemExit("unexpected runtime commit finality primary endpoint contract marker")
+if contracts.get("runtime_commit_finality_fallback_endpoint") != "/block/{height}":
+    raise SystemExit("unexpected runtime commit finality fallback endpoint contract marker")
 PY
 
 contract_output="$(

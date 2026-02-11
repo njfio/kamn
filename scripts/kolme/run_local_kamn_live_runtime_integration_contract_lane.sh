@@ -260,6 +260,7 @@ KAMN_KOLME_LOCAL_HEAVY=1 \
     --fork-chain-version "$FORK_CHAIN_VERSION" \
     --max-seconds "$MAX_SECONDS" \
     --bootstrap-max-seconds 90 \
+    --localhost-signed-max-seconds 45 \
     --conformance-max-seconds 180 \
     --runtime-commit-max-seconds 30 \
     --output-json "$OUTPUT_JSON" \
@@ -288,8 +289,18 @@ if ! grep -q "run_local_kamn_live_runtime_integration_contract_lane.sh" "$DOC_FI
   exit 1
 fi
 
+if ! grep -q -- "--localhost-signed-max-seconds 45" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to document localhost signed checkpoint runtime budget argument" >&2
+  exit 1
+fi
+
 if ! grep -q "Regression: #1489" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to include local KAMN live runtime integration regression marker" >&2
+  exit 1
+fi
+
+if ! grep -q "Regression: #1636" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include localhost signed runtime integration prerequisite regression marker" >&2
   exit 1
 fi
 

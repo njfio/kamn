@@ -4,12 +4,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BOOTSTRAP_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh"
 CONFORMANCE_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_api_conformance_harness.sh"
+LOCALHOST_SIGNED_INTEGRATION_RUNNER="$ROOT_DIR/scripts/sdk/run_localhost_signed_integration_contract_lane.sh"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 
 MODE="dry-run"
 OUTPUT_JSON="/tmp/kolme-local-kamn-live-runtime-integration-summary.json"
 BOOTSTRAP_REPORT="/tmp/kolme-local-fork-bootstrap-readiness-summary.json"
 CONFORMANCE_REPORT="/tmp/kolme-local-live-api-conformance-summary.json"
+LOCALHOST_SIGNED_REPORT="/tmp/localhost-signed-integration-contract-report.json"
 RUNTIME_COMMIT_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-endpoint-output.txt"
 CHECKOUT_PATH="/tmp/kolme_fork"
 EXPECTED_REMOTE_URL="https://github.com/njfio/kolme_fork.git"
@@ -20,6 +22,7 @@ RUNTIME_COMMIT_COMMAND=""
 MAX_SECONDS=210
 BOOTSTRAP_MAX_SECONDS=90
 CONFORMANCE_MAX_SECONDS=180
+LOCALHOST_SIGNED_MAX_SECONDS=45
 RUNTIME_COMMIT_MAX_SECONDS=30
 
 while [ "$#" -gt 0 ]; do
@@ -54,6 +57,14 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       CONFORMANCE_REPORT="$2"
+      shift 2
+      ;;
+    --localhost-signed-report)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --localhost-signed-report" >&2
+        exit 1
+      fi
+      LOCALHOST_SIGNED_REPORT="$2"
       shift 2
       ;;
     --runtime-commit-output-file)
@@ -136,6 +147,14 @@ while [ "$#" -gt 0 ]; do
       CONFORMANCE_MAX_SECONDS="$2"
       shift 2
       ;;
+    --localhost-signed-max-seconds)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --localhost-signed-max-seconds" >&2
+        exit 1
+      fi
+      LOCALHOST_SIGNED_MAX_SECONDS="$2"
+      shift 2
+      ;;
     --runtime-commit-max-seconds)
       if [ "$#" -lt 2 ]; then
         echo "missing value for --runtime-commit-max-seconds" >&2
@@ -153,6 +172,7 @@ Options:
   --output-json <path>                  Deterministic summary report output path.
   --bootstrap-report <path>             Output path for bootstrap/readiness summary.
   --conformance-report <path>           Output path for live API conformance summary.
+  --localhost-signed-report <path>      Output path for localhost signed integration summary.
   --runtime-commit-output-file <path>   Captured stdout/stderr for runtime-commit endpoint command.
   --checkout-path <path>                Local kolme_fork checkout path.
   --expected-remote-url <url>           Expected origin URL for checkout validation.
@@ -163,6 +183,7 @@ Options:
   --max-seconds <n>                     Max total runtime budget for run mode.
   --bootstrap-max-seconds <n>           Max budget for bootstrap/readiness prerequisite.
   --conformance-max-seconds <n>         Max budget for live API conformance prerequisite.
+  --localhost-signed-max-seconds <n>    Max budget for localhost signed integration prerequisite.
   --runtime-commit-max-seconds <n>      Max budget for runtime-commit endpoint command.
 USAGE
       exit 0
@@ -189,7 +210,7 @@ if [ -z "$BASE_URL" ] || [ -z "$FORK_CHAIN_VERSION" ]; then
   exit 1
 fi
 
-for numeric_value in "$MAX_SECONDS" "$BOOTSTRAP_MAX_SECONDS" "$CONFORMANCE_MAX_SECONDS" "$RUNTIME_COMMIT_MAX_SECONDS"; do
+for numeric_value in "$MAX_SECONDS" "$BOOTSTRAP_MAX_SECONDS" "$CONFORMANCE_MAX_SECONDS" "$LOCALHOST_SIGNED_MAX_SECONDS" "$RUNTIME_COMMIT_MAX_SECONDS"; do
   if ! [[ "$numeric_value" =~ ^[0-9]+$ ]] || [ "$numeric_value" -le 0 ]; then
     echo "all max-second arguments must be positive integers" >&2
     exit 1
@@ -203,6 +224,11 @@ fi
 
 if [ ! -x "$CONFORMANCE_RUNNER" ]; then
   echo "expected local Kolme live API conformance harness runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$LOCALHOST_SIGNED_INTEGRATION_RUNNER" ]; then
+  echo "expected localhost signed integration contract runner to be executable" >&2
   exit 1
 fi
 
@@ -256,6 +282,7 @@ PY
 }
 
 bootstrap_command="bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh --mode run --checkout-path ${CHECKOUT_PATH} --expected-remote-url ${EXPECTED_REMOTE_URL} --expected-ref ${EXPECTED_REF} --base-url ${BASE_URL} --fork-chain-version ${FORK_CHAIN_VERSION} --max-seconds ${BOOTSTRAP_MAX_SECONDS} --probe-max-seconds 20 --output-json ${BOOTSTRAP_REPORT}"
+localhost_signed_command="bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json ${LOCALHOST_SIGNED_REPORT}"
 conformance_command="bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run --base-url ${BASE_URL} --fork-chain-version ${FORK_CHAIN_VERSION} --max-seconds ${CONFORMANCE_MAX_SECONDS} --probe-max-seconds 30 --native-max-seconds 120 --output-json ${CONFORMANCE_REPORT}"
 runtime_commit_command="$RUNTIME_COMMIT_COMMAND"
 
@@ -264,10 +291,12 @@ reason_code="dry_run_no_commands_executed"
 budget_status="not_run"
 elapsed_seconds=0
 bootstrap_reason_code="not_run"
+localhost_signed_reason_code="not_run"
 conformance_reason_code="not_run"
 runtime_commit_reason_code="not_run"
 
 record_check "bootstrap_readiness" "$bootstrap_command" "planned" "not_run"
+record_check "localhost_signed_integration" "$localhost_signed_command" "planned" "not_run"
 record_check "live_api_conformance" "$conformance_command" "planned" "not_run"
 record_check "runtime_commit_endpoint" "$runtime_commit_command" "planned" "not_run"
 
@@ -277,11 +306,13 @@ if [ "$MODE" = "run" ]; then
 
   if ! "$LOCAL_HEAVY_GUARD"; then
     record_check "bootstrap_readiness" "$bootstrap_command" "fail" "local_opt_in_missing"
+    record_check "localhost_signed_integration" "$localhost_signed_command" "skipped" "local_opt_in_missing"
     record_check "live_api_conformance" "$conformance_command" "skipped" "local_opt_in_missing"
     record_check "runtime_commit_endpoint" "$runtime_commit_command" "skipped" "local_opt_in_missing"
     overall_status="fail"
     reason_code="local_opt_in_missing"
     bootstrap_reason_code="local_opt_in_missing"
+    localhost_signed_reason_code="local_opt_in_missing"
     conformance_reason_code="local_opt_in_missing"
     runtime_commit_reason_code="local_opt_in_missing"
   else
@@ -300,12 +331,45 @@ if [ "$MODE" = "run" ]; then
     else
       bootstrap_reason_code="$(read_report_reason_code "$BOOTSTRAP_REPORT")"
       record_check "bootstrap_readiness" "$bootstrap_command" "fail" "$bootstrap_reason_code"
+      record_check "localhost_signed_integration" "$localhost_signed_command" "skipped" "bootstrap_readiness_failed"
       record_check "live_api_conformance" "$conformance_command" "skipped" "bootstrap_readiness_failed"
       record_check "runtime_commit_endpoint" "$runtime_commit_command" "skipped" "bootstrap_readiness_failed"
       overall_status="fail"
       reason_code="bootstrap_readiness_failed"
+      localhost_signed_reason_code="bootstrap_readiness_failed"
       conformance_reason_code="bootstrap_readiness_failed"
       runtime_commit_reason_code="bootstrap_readiness_failed"
+    fi
+
+    if [ "$overall_status" = "ok" ]; then
+      set +e
+      timeout "$LOCALHOST_SIGNED_MAX_SECONDS" bash "$LOCALHOST_SIGNED_INTEGRATION_RUNNER" \
+        --output-json "$LOCALHOST_SIGNED_REPORT" >/dev/null 2>&1
+      localhost_signed_exit_code=$?
+      set -e
+
+      if [ "$localhost_signed_exit_code" -eq 0 ]; then
+        record_check "localhost_signed_integration" "$localhost_signed_command" "pass" "localhost_signed_integration_passed"
+        localhost_signed_reason_code="localhost_signed_integration_passed"
+      elif [ "$localhost_signed_exit_code" -eq 124 ]; then
+        record_check "localhost_signed_integration" "$localhost_signed_command" "fail" "localhost_signed_integration_timeout"
+        record_check "live_api_conformance" "$conformance_command" "skipped" "localhost_signed_integration_failed"
+        record_check "runtime_commit_endpoint" "$runtime_commit_command" "skipped" "localhost_signed_integration_failed"
+        overall_status="fail"
+        reason_code="localhost_signed_integration_failed"
+        localhost_signed_reason_code="localhost_signed_integration_timeout"
+        conformance_reason_code="localhost_signed_integration_failed"
+        runtime_commit_reason_code="localhost_signed_integration_failed"
+      else
+        record_check "localhost_signed_integration" "$localhost_signed_command" "fail" "localhost_signed_integration_failed"
+        record_check "live_api_conformance" "$conformance_command" "skipped" "localhost_signed_integration_failed"
+        record_check "runtime_commit_endpoint" "$runtime_commit_command" "skipped" "localhost_signed_integration_failed"
+        overall_status="fail"
+        reason_code="localhost_signed_integration_failed"
+        localhost_signed_reason_code="localhost_signed_integration_failed"
+        conformance_reason_code="localhost_signed_integration_failed"
+        runtime_commit_reason_code="localhost_signed_integration_failed"
+      fi
     fi
 
     if [ "$overall_status" = "ok" ]; then
@@ -367,7 +431,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$BOOTSTRAP_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$CHECK_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -389,11 +453,13 @@ budget_status = sys.argv[12]
 runtime_commit_command = sys.argv[13]
 runtime_commit_output_file = sys.argv[14]
 bootstrap_report = sys.argv[15]
-conformance_report = sys.argv[16]
-bootstrap_reason_code = sys.argv[17]
-conformance_reason_code = sys.argv[18]
-runtime_commit_reason_code = sys.argv[19]
-checks_path = pathlib.Path(sys.argv[20])
+localhost_signed_report = sys.argv[16]
+conformance_report = sys.argv[17]
+bootstrap_reason_code = sys.argv[18]
+localhost_signed_reason_code = sys.argv[19]
+conformance_reason_code = sys.argv[20]
+runtime_commit_reason_code = sys.argv[21]
+checks_path = pathlib.Path(sys.argv[22])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -428,15 +494,19 @@ summary = {
     "fork_chain_version": fork_chain_version,
     "runtime_commit_command": runtime_commit_command,
     "bootstrap_reason_code": bootstrap_reason_code,
+    "localhost_signed_reason_code": localhost_signed_reason_code,
     "conformance_reason_code": conformance_reason_code,
     "runtime_commit_reason_code": runtime_commit_reason_code,
     "contracts": {
         "runtime_commit_endpoint": "/broadcast/runtime-commit",
         "runtime_commit_method": "POST",
+        "runtime_commit_finality_primary_endpoint": "/notifications",
+        "runtime_commit_finality_fallback_endpoint": "/block/{height}",
     },
     "checks": checks,
     "artifact_paths": [
         bootstrap_report,
+        localhost_signed_report,
         conformance_report,
         runtime_commit_output_file,
     ],

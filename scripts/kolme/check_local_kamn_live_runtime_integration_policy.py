@@ -59,12 +59,21 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_commit_endpoint_mismatch")
         if contracts.get("runtime_commit_method") != "POST":
             reason_codes.append("runtime_commit_method_mismatch")
+        if contracts.get("runtime_commit_finality_primary_endpoint") != "/notifications":
+            reason_codes.append("runtime_commit_finality_primary_endpoint_mismatch")
+        if contracts.get("runtime_commit_finality_fallback_endpoint") != "/block/{height}":
+            reason_codes.append("runtime_commit_finality_fallback_endpoint_mismatch")
 
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
         reason_codes.append("checks_missing")
     else:
-        expected_ids = {"bootstrap_readiness", "live_api_conformance", "runtime_commit_endpoint"}
+        expected_ids = {
+            "bootstrap_readiness",
+            "localhost_signed_integration",
+            "live_api_conformance",
+            "runtime_commit_endpoint",
+        }
         observed_ids: set[str] = set()
         for entry in checks:
             if not isinstance(entry, dict):
