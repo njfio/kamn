@@ -152,6 +152,12 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `run_local_kolme_fork_real_process_contract_lane.sh`
     - enforces tranche shell-wrapper budget:
       - combined migrated wrapper shell LOC must remain `<= 200`
+  - shared dispatcher wrapper-matrix guard stays on PR fast gate:
+    - `bash scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh`
+    - enforces that all migrated `run_*contract_lane.sh` wrappers dispatch through:
+      - `scripts/kolme/run_contract_lane_dispatch.sh`
+    - validates manifest resolution fail-closed behavior for unknown wrapper keys.
+    - Regression: #1827
   - additional Kolme contract checks stay covered by aggregate CI tools lane:
     - `bash scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh`
     - `bash scripts/kolme/test_check_local_bootstrap_health_policy.sh`
