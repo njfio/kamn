@@ -308,6 +308,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `run_local_bootstrap_health_checks.sh`
   - `run_runtime_commit_adapter_contract_lane.sh`
   - `run_live_transport_parity_contract_lane.sh --languages python,typescript`
+  - `run_local_kolme_fork_rust_test_matrix_contract_lane.sh`
+  - `run_local_kolme_live_api_conformance_contract_lane.sh`
 - Cost policy:
   - lane enforces explicit local-only opt-in and a deterministic runtime budget ceiling.
 
@@ -322,6 +324,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Heavy command set includes:
   - `scripts/kolme/run_local_bootstrap_health_checks.sh`
   - `scripts/kolme/run_version_compatibility_replay_deep_lane.sh`
+  - `scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh`
+  - `scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh`
 - Cost policy:
   - matrix execution remains local-only and is excluded from PR fast-gate workflow routing.
 

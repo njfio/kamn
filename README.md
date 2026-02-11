@@ -435,7 +435,8 @@ bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode run --output-json
 # local-only heavy end-to-end lane plan (no command execution)
 bash scripts/kolme/run_local_e2e_integration_lane.sh --mode dry-run --output-json /tmp/kolme-local-e2e-integration-summary.json
 
-# local-only heavy end-to-end lane execution (bootstrap + runtime commit + sdk parity)
+# local-only heavy end-to-end lane execution
+# (bootstrap + runtime commit + sdk parity + fork rust matrix + live API conformance)
 KAMN_KOLME_LOCAL_HEAVY=1 \
 bash scripts/kolme/run_local_e2e_integration_lane.sh --mode run --output-json /tmp/kolme-local-e2e-integration-summary.json
 # schema: kamn.kolme.local-e2e-integration-summary.v1
@@ -443,7 +444,8 @@ bash scripts/kolme/run_local_e2e_integration_lane.sh --mode run --output-json /t
 # command surface + artifact schema validation (no heavy execution)
 bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode dry-run --output-json /tmp/kolme-local-heavy-validation-summary.json
 
-# explicit local-only heavy execution (bootstrap preflight + deep replay)
+# explicit local-only heavy execution
+# (bootstrap preflight + deep replay + fork rust matrix contract + live API conformance contract)
 KAMN_KOLME_LOCAL_HEAVY=1 \
 bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode run --output-json /tmp/kolme-local-heavy-validation-summary.json
 # schema: kamn.kolme.local-heavy-validation-summary.v1

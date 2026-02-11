@@ -66,21 +66,33 @@ if [ "$MODE" = "run" ] && [ "${KAMN_KOLME_LOCAL_HEAVY:-0}" != "1" ]; then
 fi
 
 BOOTSTRAP_REPORT="/tmp/kolme-local-bootstrap-summary.json"
+FORK_RUST_MATRIX_REPORT="/tmp/kolme-local-fork-rust-test-matrix-summary.json"
+FORK_RUST_MATRIX_POLICY_REPORT="/tmp/kolme-local-fork-rust-test-matrix-policy.json"
+LIVE_API_CONFORMANCE_REPORT="/tmp/kolme-local-live-api-conformance-summary.json"
+LIVE_API_CONFORMANCE_POLICY_REPORT="/tmp/kolme-local-live-api-conformance-policy.json"
 
 declare -a CHECKPOINT_IDS=(
   "bootstrap_health_checks"
   "runtime_commit_adapter"
   "sdk_live_transport_parity"
+  "fork_rust_test_matrix"
+  "fork_live_api_conformance"
 )
 
 declare -a CHECKPOINT_COMMANDS=(
   "bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode run --output-json $BOOTSTRAP_REPORT"
   "bash scripts/kolme/run_runtime_commit_adapter_contract_lane.sh"
   "bash scripts/sdk/run_live_transport_parity_contract_lane.sh --languages python,typescript"
+  "bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh --output-json $FORK_RUST_MATRIX_REPORT --policy-output-json $FORK_RUST_MATRIX_POLICY_REPORT"
+  "bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json $LIVE_API_CONFORMANCE_REPORT --policy-output-json $LIVE_API_CONFORMANCE_POLICY_REPORT"
 )
 
 declare -a ARTIFACTS=(
   "$BOOTSTRAP_REPORT"
+  "$FORK_RUST_MATRIX_REPORT"
+  "$FORK_RUST_MATRIX_POLICY_REPORT"
+  "$LIVE_API_CONFORMANCE_REPORT"
+  "$LIVE_API_CONFORMANCE_POLICY_REPORT"
 )
 
 CHECKPOINT_FILE="$(mktemp)"

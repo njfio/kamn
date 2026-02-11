@@ -56,12 +56,16 @@ if report.get("mode") != "dry-run":
 if report.get("local_only_enforced") is not True:
     raise SystemExit("expected local_only_enforced=true in local heavy matrix summary")
 commands = report.get("commands")
-if not isinstance(commands, list) or len(commands) < 2:
+if not isinstance(commands, list) or len(commands) < 4:
     raise SystemExit("expected local heavy matrix summary to contain command entries")
 if not any("run_local_bootstrap_health_checks.sh" in cmd for cmd in commands):
     raise SystemExit("expected bootstrap health-check command marker in local heavy matrix summary")
 if not any("run_version_compatibility_replay_deep_lane.sh" in cmd for cmd in commands):
     raise SystemExit("expected deep replay command marker in local heavy matrix summary")
+if not any("run_local_kolme_fork_rust_test_matrix_contract_lane.sh" in cmd for cmd in commands):
+    raise SystemExit("expected local fork rust matrix contract-lane command marker in local heavy matrix summary")
+if not any("run_local_kolme_live_api_conformance_contract_lane.sh" in cmd for cmd in commands):
+    raise SystemExit("expected local live API conformance contract-lane command marker in local heavy matrix summary")
 PY
 
 # Regression: #1405
