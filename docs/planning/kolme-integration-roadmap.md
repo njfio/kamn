@@ -63,6 +63,7 @@ across Kolme upgrades.
   - `cargo test -p kamn-core --test kolme_api_codec_contracts unit_runtime_commit_signed_translation_rejects_message_mismatch -- --exact`
   - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_kolme_fork_signed_envelope_submit_maps_txhash_response -- --exact`
   - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_kolme_fork_direct_signed_payload_submit_maps_txhash_response -- --exact`
+  - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_kolme_fork_direct_signed_payload_requires_core_transaction_keys -- --exact`
 - Nonce/broadcast parity policy checker:
   - `python3 scripts/kolme/check_nonce_broadcast_parity_policy.py --case-id nonce-go-001 --operation nonce --http-status 200 --nonce-value 42 --broadcast-accepted false --duplicate-detected false --payload-valid true --authorization-present true --ci-fast-gate PASS --output-json /tmp/kolme-nonce-broadcast-policy.json`
 - Nonce/broadcast parity matrix command:
