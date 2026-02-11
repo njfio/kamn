@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SUMMARY_HELPER="$ROOT_DIR/scripts/framework/generate_local_lane_summary.py"
 
 MODE="dry-run"
 OUTPUT_JSON="/tmp/kolme-local-e2e-integration-summary.json"
@@ -62,6 +63,11 @@ fi
 
 if [ "$MODE" = "run" ] && [ "${KAMN_KOLME_LOCAL_HEAVY:-0}" != "1" ]; then
   echo "run mode requires explicit local-only opt-in: KAMN_KOLME_LOCAL_HEAVY=1" >&2
+  exit 1
+fi
+
+if [ ! -x "$SUMMARY_HELPER" ]; then
+  echo "expected shared local-lane summary helper to be executable" >&2
   exit 1
 fi
 
@@ -143,61 +149,19 @@ if [ "$elapsed_seconds" -gt "$MAX_SECONDS" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKPOINT_FILE" "$ARTIFACT_FILE" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" <<'PY'
-from __future__ import annotations
-
-import json
-import pathlib
-import sys
-
-output_path = pathlib.Path(sys.argv[1]).resolve()
-mode = sys.argv[2]
-status = sys.argv[3]
-reason_code = sys.argv[4]
-checkpoints_path = pathlib.Path(sys.argv[5])
-artifacts_path = pathlib.Path(sys.argv[6])
-elapsed_seconds = int(sys.argv[7])
-max_seconds = int(sys.argv[8])
-budget_status = sys.argv[9]
-
-checkpoints = []
-for raw_line in checkpoints_path.read_text(encoding="utf-8").splitlines():
-    if not raw_line.strip():
-        continue
-    parts = raw_line.split("\t")
-    if len(parts) != 3:
-        continue
-    checkpoint_id, command, checkpoint_status = parts
-    checkpoints.append(
-        {
-            "id": checkpoint_id,
-            "command": command,
-            "status": checkpoint_status,
-        }
-    )
-
-artifacts = [
-    line.strip()
-    for line in artifacts_path.read_text(encoding="utf-8").splitlines()
-    if line.strip()
-]
-
-summary = {
-    "schema_version": "kamn.kolme.local-e2e-integration-summary.v1",
-    "mode": mode,
-    "status": status,
-    "reason_code": reason_code,
-    "local_only_enforced": True,
-    "elapsed_seconds": elapsed_seconds,
-    "max_seconds": max_seconds,
-    "budget_status": budget_status,
-    "checkpoints": checkpoints,
-    "artifact_paths": artifacts,
-}
-
-output_path.parent.mkdir(parents=True, exist_ok=True)
-output_path.write_text(json.dumps(summary, sort_keys=True, indent=2) + "\n", encoding="utf-8")
-PY
+python3 "$SUMMARY_HELPER" \
+  --schema-version "kamn.kolme.local-e2e-integration-summary.v1" \
+  --summary-type checkpoints \
+  --mode "$MODE" \
+  --status "$overall_status" \
+  --reason-code "$reason_code" \
+  --local-only-enforced true \
+  --checkpoints-file "$CHECKPOINT_FILE" \
+  --artifacts-file "$ARTIFACT_FILE" \
+  --elapsed-seconds "$elapsed_seconds" \
+  --max-seconds "$MAX_SECONDS" \
+  --budget-status "$budget_status" \
+  --output-json "$OUTPUT_JSON"
 
 echo "status=$overall_status"
 echo "lane_mode=$MODE"

@@ -310,6 +310,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `run_live_transport_parity_contract_lane.sh --languages python,typescript`
   - `run_local_kolme_fork_rust_test_matrix_contract_lane.sh`
   - `run_local_kolme_live_api_conformance_contract_lane.sh`
+  - shared JSON summary generation via `scripts/framework/generate_local_lane_summary.py`
 - Cost policy:
   - lane enforces explicit local-only opt-in and a deterministic runtime budget ceiling.
 
@@ -326,6 +327,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `scripts/kolme/run_version_compatibility_replay_deep_lane.sh`
   - `scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh`
   - `scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh`
+  - shared JSON summary generation via `scripts/framework/generate_local_lane_summary.py`
 - Cost policy:
   - matrix execution remains local-only and is excluded from PR fast-gate workflow routing.
 
