@@ -1064,8 +1064,11 @@ impl KolmeRuntimeCommitBlockFallbackTransport for KolmeRuntimeCommitHttpTranspor
                 reason: "block height must be positive".to_owned(),
             });
         }
-        let block_path = render_kolme_block_path(block_path_template, height)
-            .map_err(map_block_scan_policy_error_to_unavailable)?;
+        let block_path = render_kolme_block_path(block_path_template, height).map_err(|error| {
+            KolmeRuntimeCommitProviderError::Unavailable {
+                reason: error.to_string(),
+            }
+        })?;
         self.execute_request(base_url, block_path.as_str(), "GET", None, &[])
     }
 }
@@ -1207,7 +1210,9 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
             });
         }
         validate_kolme_block_path_template(block_path_template)
-            .map_err(map_block_scan_policy_error_to_unavailable)
+            .map_err(|error| KolmeRuntimeCommitProviderError::Unavailable {
+                reason: error.to_string(),
+            })
             .map_err(map_provider_error)?;
         Ok(Self {
             base_url: base_url.trim().to_owned(),
@@ -1231,8 +1236,18 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
                 reason: "txhash must not be empty".to_owned(),
             });
         }
-        validate_kolme_lookup_window(from_height, latest_height, self.max_block_lookups)
-            .map_err(map_lookup_window_error)?;
+        validate_kolme_lookup_window(from_height, latest_height, self.max_block_lookups).map_err(
+            |error| match error {
+                BlockScanPolicyError::MaxLookupsExceeded { .. } => {
+                    KolmeRuntimeCommitProviderError::Unavailable {
+                        reason: error.to_string(),
+                    }
+                }
+                _ => KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: error.to_string(),
+                },
+            },
+        )?;
 
         for height in from_height..=latest_height {
             let response = self.transport.fetch_block_by_height(
@@ -1257,7 +1272,9 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
                 height,
                 block.block_height,
             )
-            .map_err(map_block_scan_policy_error_to_malformed)?;
+            .map_err(|error| KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: error.to_string(),
+            })?;
 
             if block
                 .finalized_tx_hashes
@@ -1744,31 +1761,6 @@ fn map_codec_error_to_malformed_response(
         KamnKolmeApiCodecError::MalformedResponse { reason } => {
             KolmeRuntimeCommitProviderError::MalformedResponse { reason }
         }
-    }
-}
-
-fn map_block_scan_policy_error_to_unavailable(
-    error: BlockScanPolicyError,
-) -> KolmeRuntimeCommitProviderError {
-    KolmeRuntimeCommitProviderError::Unavailable {
-        reason: error.to_string(),
-    }
-}
-
-fn map_block_scan_policy_error_to_malformed(
-    error: BlockScanPolicyError,
-) -> KolmeRuntimeCommitProviderError {
-    KolmeRuntimeCommitProviderError::MalformedResponse {
-        reason: error.to_string(),
-    }
-}
-
-fn map_lookup_window_error(error: BlockScanPolicyError) -> KolmeRuntimeCommitProviderError {
-    match error {
-        BlockScanPolicyError::MaxLookupsExceeded { .. } => {
-            map_block_scan_policy_error_to_unavailable(error)
-        }
-        _ => map_block_scan_policy_error_to_malformed(error),
     }
 }
 
