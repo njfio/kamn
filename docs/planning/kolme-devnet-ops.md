@@ -208,6 +208,27 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - lane default budget is bounded to 210 seconds with per-stage budget caps.
   - local KAMN live runtime integration run-mode execution remains excluded from PR fast-gate workflow routing.
 
+## Localhost Two-Process Signed-Message Demo Contract (Issue #1612)
+
+- Makefile demo command:
+  - `make demo-localhost-transport`
+- Direct localhost sender/listener demo command:
+  - `bash scripts/sdk/run_localhost_signed_demo.sh --output-json /tmp/localhost-signed-demo-artifact.json`
+- Demo artifact schema:
+  - `kamn.sdk.localhost-signed.demo-receipt-artifact.v1`
+- Localhost signed integration contract commands:
+  - `bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json`
+  - `bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-file /tmp/localhost-signed-integration-contract-report.json`
+- Integration contract schema:
+  - `kamn.sdk.localhost-signed.integration-contract.v1`
+- Deterministic success markers:
+  - `localhost signed message demo completed.`
+  - `localhost signed integration contract lane tests passed.`
+- Cost policy:
+  - two-process localhost sender/listener demo remains bounded local smoke usage.
+  - explicit local-heavy Kolme opt-in remains limited to heavy lanes and is not required for this demo path.
+  - demo contract markers remain deterministic to keep onboarding checks local-fast.
+
 ## Local Kolme Fork Process Lifecycle Integration Lane (Issue #1494)
 
 - Local fork process lifecycle runner:
@@ -372,6 +393,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - native parity fast/local command matrix docs drift remains fail-closed (`Regression: #1468`).
 - local probe fork-info query semantics and native parity broadcast method drift remain fail-closed (`Regression: #1482`).
 - block fallback stale-window and response-height drift remains fail-closed (`Regression: #1464`).
+- localhost two-process signed-demo command/schema markers remain fail-closed across README and Kolme devnet ops docs (`Regression: #1612`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
 ## Local Validation
