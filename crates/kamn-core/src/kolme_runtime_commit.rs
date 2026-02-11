@@ -57,7 +57,7 @@ use kamn_kolme::{
     KolmeTlsPolicyError as KamnKolmeTlsPolicyError,
     KolmeTransportRequestPolicyError as KamnKolmeTransportRequestPolicyError,
     KolmeWebsocketFrame as KamnKolmeWebsocketFrame,
-    KolmeWebsocketPolicyError as KamnKolmeWebsocketPolicyError, ReceiptFinality,
+    KolmeWebsocketPolicyError as KamnKolmeWebsocketPolicyError,
     RuntimeCommitLifecycleState as KamnKolmeRuntimeCommitLifecycleState,
 };
 use std::collections::HashMap;
@@ -1131,7 +1131,12 @@ impl<T: KolmeRuntimeCommitFinalityTransport> KolmeRuntimeCommitFinalityChecker<T
         }
         let finality_value = required_kolme_provider_response_field(&fields, "finality")
             .map_err(map_provider_outcome_policy_error_to_malformed)?;
-        let finality = parse_receipt_finality(finality_value.as_str())?;
+        let finality =
+            parse_kolme_commit_receipt_finality(finality_value.as_str()).map_err(|error| {
+                KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: error.to_string(),
+                }
+            })?;
         Ok(KolmeRuntimeCommitProviderReceipt {
             provider,
             commit_id: observed_commit_id,
@@ -2017,7 +2022,7 @@ fn parse_live_provider_response(
             KolmeRuntimeCommitProviderReceipt {
                 provider,
                 commit_id,
-                finality: map_extracted_receipt_finality(finality),
+                finality: commit_finality_from_receipt_finality_contract(finality),
             },
         )),
         KamnKolmeProviderOutcome::Duplicate {
@@ -2028,7 +2033,7 @@ fn parse_live_provider_response(
             KolmeRuntimeCommitProviderReceipt {
                 provider,
                 commit_id,
-                finality: map_extracted_receipt_finality(finality),
+                finality: commit_finality_from_receipt_finality_contract(finality),
             },
         )),
         KamnKolmeProviderOutcome::Rejected { reason } => {
@@ -2043,20 +2048,6 @@ fn deterministic_backend_commit_id(tx_hash: &str, block_height: Option<u64>) -> 
 
 fn txhash_from_commit_id(commit_id: &str) -> Result<String, KolmeRuntimeCommitProviderError> {
     txhash_from_kolme_commit_id(commit_id).map_err(map_provider_outcome_policy_error_to_malformed)
-}
-
-fn parse_receipt_finality(
-    value: &str,
-) -> Result<KolmeCommitReceiptFinality, KolmeRuntimeCommitProviderError> {
-    parse_kolme_commit_receipt_finality(value).map_err(|error| {
-        KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: error.to_string(),
-        }
-    })
-}
-
-fn map_extracted_receipt_finality(finality: ReceiptFinality) -> KolmeCommitReceiptFinality {
-    commit_finality_from_receipt_finality_contract(finality)
 }
 
 fn map_provider_outcome(
