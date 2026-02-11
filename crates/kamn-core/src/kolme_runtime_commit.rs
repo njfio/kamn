@@ -42,7 +42,6 @@ use kamn_kolme::{
     KolmeApiNextNonceRequest as KamnKolmeApiNextNonceRequest,
     KolmeApiNextNonceResponse as KamnKolmeApiNextNonceResponse,
     KolmeCommitReceiptFinality as KamnKolmeCommitReceiptFinality,
-    KolmeEndpointPolicyError as KamnKolmeEndpointPolicyError,
     KolmeHttpResponsePolicyError as KamnKolmeHttpResponsePolicyError,
     KolmeHttpScheme as KamnKolmeHttpScheme, KolmeNotificationEvent as KamnKolmeNotificationEvent,
     KolmeParsedHttpEndpoint as KamnKolmeParsedHttpEndpoint,
@@ -832,8 +831,11 @@ impl KolmeRuntimeCommitHttpTransport {
         body: Option<&str>,
         headers: &[(&str, &str)],
     ) -> Result<String, KolmeRuntimeCommitProviderError> {
-        let endpoint =
-            parse_kolme_http_endpoint(base_url, path).map_err(map_endpoint_policy_error)?;
+        let endpoint = parse_kolme_http_endpoint(base_url, path).map_err(|error| {
+            KolmeRuntimeCommitProviderError::Unavailable {
+                reason: error.to_string(),
+            }
+        })?;
         let payload = body.unwrap_or("");
         let mut request = format!(
             "{method} {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n",
@@ -862,7 +864,15 @@ impl KolmeRuntimeCommitHttpTransport {
             HttpScheme::Http => self.execute_http_request(endpoint, request.as_bytes())?,
             HttpScheme::Https => self.execute_https_request(endpoint, request.as_bytes())?,
         };
-        parse_kolme_http_response_body(response_bytes).map_err(map_http_response_policy_error)
+        parse_kolme_http_response_body(response_bytes).map_err(|error| match error {
+            KamnKolmeHttpResponsePolicyError::Timeout => KolmeRuntimeCommitProviderError::Timeout,
+            KamnKolmeHttpResponsePolicyError::Unavailable { reason } => {
+                KolmeRuntimeCommitProviderError::Unavailable { reason }
+            }
+            KamnKolmeHttpResponsePolicyError::Malformed { reason } => {
+                KolmeRuntimeCommitProviderError::MalformedResponse { reason }
+            }
+        })
     }
 
     fn execute_http_request(
@@ -1352,9 +1362,16 @@ impl KolmeRuntimeCommitWebsocketConnection {
 impl KolmeRuntimeCommitNotificationsConnection for KolmeRuntimeCommitWebsocketConnection {
     fn read_text_message(&mut self) -> Result<Option<String>, KolmeRuntimeCommitProviderError> {
         loop {
-            if let Some(frame) = try_take_kolme_websocket_frame(&mut self.read_buffer)
-                .map_err(map_websocket_policy_error)?
-            {
+            if let Some(frame) = try_take_kolme_websocket_frame(&mut self.read_buffer).map_err(
+                |error| match error {
+                    KamnKolmeWebsocketPolicyError::Unavailable { reason } => {
+                        KolmeRuntimeCommitProviderError::Unavailable { reason }
+                    }
+                    KamnKolmeWebsocketPolicyError::Malformed { reason } => {
+                        KolmeRuntimeCommitProviderError::MalformedResponse { reason }
+                    }
+                },
+            )? {
                 match frame {
                     KamnKolmeWebsocketFrame::Text(payload_bytes) => {
                         let payload = String::from_utf8(payload_bytes).map_err(|error| {
@@ -1391,8 +1408,11 @@ impl KolmeRuntimeCommitNotificationsConnector for KolmeRuntimeCommitWebsocketCon
         &mut self,
         notifications_url: &str,
     ) -> Result<Self::Connection, KolmeRuntimeCommitProviderError> {
-        let endpoint =
-            parse_kolme_websocket_endpoint(notifications_url).map_err(map_endpoint_policy_error)?;
+        let endpoint = parse_kolme_websocket_endpoint(notifications_url).map_err(|error| {
+            KolmeRuntimeCommitProviderError::Unavailable {
+                reason: error.to_string(),
+            }
+        })?;
         if endpoint.secure {
             return Err(KolmeRuntimeCommitProviderError::Unavailable {
                 reason: "wss:// notifications are not supported by this transport".to_owned(),
@@ -1428,8 +1448,14 @@ impl KolmeRuntimeCommitNotificationsConnector for KolmeRuntimeCommitWebsocketCon
         let mut response_bytes = Vec::new();
         let header_end = read_http_header_boundary(&mut stream, &mut response_bytes)?;
         let (header_bytes, trailing) = response_bytes.split_at(header_end + 4);
-        validate_kolme_websocket_handshake_response(header_bytes)
-            .map_err(map_websocket_policy_error)?;
+        validate_kolme_websocket_handshake_response(header_bytes).map_err(|error| match error {
+            KamnKolmeWebsocketPolicyError::Unavailable { reason } => {
+                KolmeRuntimeCommitProviderError::Unavailable { reason }
+            }
+            KamnKolmeWebsocketPolicyError::Malformed { reason } => {
+                KolmeRuntimeCommitProviderError::MalformedResponse { reason }
+            }
+        })?;
         Ok(KolmeRuntimeCommitWebsocketConnection::new(
             stream,
             trailing.to_vec(),
@@ -1475,7 +1501,9 @@ where
         }
         let notifications_url =
             compose_kolme_notifications_websocket_url(base_url, notifications_path)
-                .map_err(map_endpoint_policy_error)
+                .map_err(|error| KolmeRuntimeCommitProviderError::Unavailable {
+                    reason: error.to_string(),
+                })
                 .map_err(map_provider_error)?;
         Ok(Self {
             notifications_url,
@@ -1774,46 +1802,11 @@ fn map_codec_error_to_malformed_response(
     }
 }
 
-fn map_endpoint_policy_error(
-    error: KamnKolmeEndpointPolicyError,
-) -> KolmeRuntimeCommitProviderError {
-    KolmeRuntimeCommitProviderError::Unavailable {
-        reason: error.to_string(),
-    }
-}
-
 fn map_provider_outcome_policy_error_to_malformed(
     error: KamnKolmeProviderOutcomePolicyError,
 ) -> KolmeRuntimeCommitProviderError {
     KolmeRuntimeCommitProviderError::MalformedResponse {
         reason: error.to_string(),
-    }
-}
-
-fn map_websocket_policy_error(
-    error: KamnKolmeWebsocketPolicyError,
-) -> KolmeRuntimeCommitProviderError {
-    match error {
-        KamnKolmeWebsocketPolicyError::Unavailable { reason } => {
-            KolmeRuntimeCommitProviderError::Unavailable { reason }
-        }
-        KamnKolmeWebsocketPolicyError::Malformed { reason } => {
-            KolmeRuntimeCommitProviderError::MalformedResponse { reason }
-        }
-    }
-}
-
-fn map_http_response_policy_error(
-    error: KamnKolmeHttpResponsePolicyError,
-) -> KolmeRuntimeCommitProviderError {
-    match error {
-        KamnKolmeHttpResponsePolicyError::Timeout => KolmeRuntimeCommitProviderError::Timeout,
-        KamnKolmeHttpResponsePolicyError::Unavailable { reason } => {
-            KolmeRuntimeCommitProviderError::Unavailable { reason }
-        }
-        KamnKolmeHttpResponsePolicyError::Malformed { reason } => {
-            KolmeRuntimeCommitProviderError::MalformedResponse { reason }
-        }
     }
 }
 
@@ -1831,7 +1824,14 @@ fn read_http_header_boundary(
 ) -> Result<usize, KolmeRuntimeCommitProviderError> {
     loop {
         if let Some(position) =
-            find_kolme_http_header_boundary(response_bytes).map_err(map_websocket_policy_error)?
+            find_kolme_http_header_boundary(response_bytes).map_err(|error| match error {
+                KamnKolmeWebsocketPolicyError::Unavailable { reason } => {
+                    KolmeRuntimeCommitProviderError::Unavailable { reason }
+                }
+                KamnKolmeWebsocketPolicyError::Malformed { reason } => {
+                    KolmeRuntimeCommitProviderError::MalformedResponse { reason }
+                }
+            })?
         {
             return Ok(position);
         }
