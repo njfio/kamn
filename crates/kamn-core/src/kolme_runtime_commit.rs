@@ -7,6 +7,7 @@ use kamn_kolme::{
     find_http_header_boundary as find_kolme_http_header_boundary,
     parse_fork_block_txhash as parse_kolme_fork_block_txhash,
     parse_http_endpoint as parse_kolme_http_endpoint,
+    parse_http_response_body as parse_kolme_http_response_body,
     parse_notification_event as parse_kolme_notification_event_contract,
     parse_receipt_finality as parse_kolme_receipt_finality,
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
@@ -23,6 +24,7 @@ use kamn_kolme::{
     KolmeApiNextNonceRequest as KamnKolmeApiNextNonceRequest,
     KolmeApiNextNonceResponse as KamnKolmeApiNextNonceResponse,
     KolmeEndpointPolicyError as KamnKolmeEndpointPolicyError,
+    KolmeHttpResponsePolicyError as KamnKolmeHttpResponsePolicyError,
     KolmeHttpScheme as KamnKolmeHttpScheme, KolmeNotificationEvent as KamnKolmeNotificationEvent,
     KolmeNotificationPolicyError as KamnKolmeNotificationPolicyError,
     KolmeParsedHttpEndpoint as KamnKolmeParsedHttpEndpoint,
@@ -854,7 +856,7 @@ impl KolmeRuntimeCommitHttpTransport {
             HttpScheme::Http => self.execute_http_request(endpoint, request.as_bytes())?,
             HttpScheme::Https => self.execute_https_request(endpoint, request.as_bytes())?,
         };
-        parse_http_response(response_bytes)
+        parse_kolme_http_response_body(response_bytes).map_err(map_http_response_policy_error)
     }
 
     fn execute_http_request(
@@ -1774,6 +1776,20 @@ fn map_websocket_policy_error(
     }
 }
 
+fn map_http_response_policy_error(
+    error: KamnKolmeHttpResponsePolicyError,
+) -> KolmeRuntimeCommitProviderError {
+    match error {
+        KamnKolmeHttpResponsePolicyError::Timeout => KolmeRuntimeCommitProviderError::Timeout,
+        KamnKolmeHttpResponsePolicyError::Unavailable { reason } => {
+            KolmeRuntimeCommitProviderError::Unavailable { reason }
+        }
+        KamnKolmeHttpResponsePolicyError::Malformed { reason } => {
+            KolmeRuntimeCommitProviderError::MalformedResponse { reason }
+        }
+    }
+}
+
 fn parse_http_endpoint(
     base_url: &str,
     path: &str,
@@ -2066,103 +2082,6 @@ fn classify_tls_failure_reason(stderr: &str) -> String {
         .find(|line| !line.trim().is_empty())
         .unwrap_or("tls request failed");
     format!("tls request failed: {}", first_line.trim())
-}
-
-fn parse_http_response(response_bytes: Vec<u8>) -> Result<String, KolmeRuntimeCommitProviderError> {
-    let response_text = String::from_utf8(response_bytes).map_err(|error| {
-        KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("http response body is not valid utf-8: {error}"),
-        }
-    })?;
-
-    let (raw_headers, raw_body) = response_text.split_once("\r\n\r\n").ok_or_else(|| {
-        KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "http response missing header/body separator".to_owned(),
-        }
-    })?;
-
-    let mut header_lines = raw_headers.lines();
-    let status_line =
-        header_lines
-            .next()
-            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "http response missing status line".to_owned(),
-            })?;
-    let mut status_parts = status_line.split_whitespace();
-    let _http_version =
-        status_parts
-            .next()
-            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "http response status line is malformed".to_owned(),
-            })?;
-    let status_code_raw =
-        status_parts
-            .next()
-            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "http response status code is missing".to_owned(),
-            })?;
-    let status_code = status_code_raw.parse::<u16>().map_err(|_| {
-        KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("http response status code is invalid: {status_code_raw}"),
-        }
-    })?;
-
-    if status_code == 408 || status_code == 504 {
-        return Err(KolmeRuntimeCommitProviderError::Timeout);
-    }
-    if status_code >= 500 {
-        return Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: format!("http response status indicates upstream failure: {status_code}"),
-        });
-    }
-    if status_code >= 400 {
-        return Err(map_http_client_status_error(status_code));
-    }
-
-    let mut declared_content_length = None;
-    for line in header_lines {
-        let Some((name, value)) = line.split_once(':') else {
-            continue;
-        };
-        if name.eq_ignore_ascii_case("Content-Length") {
-            let parsed = value.trim().parse::<usize>().map_err(|_| {
-                KolmeRuntimeCommitProviderError::MalformedResponse {
-                    reason: "http response content-length is invalid".to_owned(),
-                }
-            })?;
-            declared_content_length = Some(parsed);
-            break;
-        }
-    }
-    if let Some(declared) = declared_content_length {
-        let observed = raw_body.len();
-        if declared != observed {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!(
-                    "http response content-length mismatch: declared {declared}, observed {observed}"
-                ),
-            });
-        }
-    }
-
-    Ok(raw_body.to_owned())
-}
-
-fn map_http_client_status_error(status_code: u16) -> KolmeRuntimeCommitProviderError {
-    match status_code {
-        401 | 403 => KolmeRuntimeCommitProviderError::Unavailable {
-            reason: format!("http response status indicates authorization failure: {status_code}"),
-        },
-        400 | 404 | 409 | 422 => KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("http response status indicates invalid request: {status_code}"),
-        },
-        429 => KolmeRuntimeCommitProviderError::Unavailable {
-            reason: format!("http response status indicates rate limited: {status_code}"),
-        },
-        _ => KolmeRuntimeCommitProviderError::Unavailable {
-            reason: format!("http response status indicates client failure: {status_code}"),
-        },
-    }
 }
 
 fn is_kolme_broadcast_submit_path(submit_path: &str) -> bool {
