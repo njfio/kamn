@@ -1,0 +1,30 @@
+use kamn_kolme::{deterministic_runtime_commit_id, deterministic_runtime_commit_idempotency_key};
+
+#[test]
+fn unit_runtime_request_identity_policy_idempotency_key_contract() {
+    let idempotency_key = deterministic_runtime_commit_idempotency_key(
+        " operation-123 ",
+        " state:abc ",
+        " did:kamn:agent:alpha ",
+        7,
+        " payload-hash ",
+    );
+    assert_eq!(
+        idempotency_key,
+        "kolme-runtime-commit:operation-123:state:abc:did:kamn:agent:alpha:7:12"
+    );
+}
+
+#[test]
+fn functional_runtime_request_identity_policy_commit_id_contract() {
+    let commit_id = deterministic_runtime_commit_id("op-9", "did:agent:beta", 11, "hash:xyz");
+    assert_eq!(commit_id, "kolme-commit:op-9:did:agent:beta:11:8");
+}
+
+#[test]
+fn regression_runtime_request_identity_policy_payload_length_drift_remains_fail_closed() {
+    // Regression: #1777
+    let left = deterministic_runtime_commit_id("op-x", "did:agent", 3, "abc");
+    let right = deterministic_runtime_commit_id("op-x", "did:agent", 3, "xyz");
+    assert_eq!(left, right);
+}
