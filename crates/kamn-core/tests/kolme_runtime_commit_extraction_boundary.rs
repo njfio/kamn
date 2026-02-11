@@ -18,11 +18,13 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("fn render_block_path("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn parse_block_fallback_response("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn parse_kolme_fork_block_fallback_response("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("fn classify_tls_failure_reason("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("fn normalize_kolme_broadcast_payload("));
 }
 
 #[test]
 fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation() {
-    // Regression: #1796
+    // Regression: #1798
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_commit_receipt_finality("));
     assert!(RUNTIME_COMMIT_SRC.contains("commit_finality_from_receipt_finality_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("lifecycle_state_for_finality_contract("));
@@ -39,4 +41,6 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("render_kolme_block_path("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_block_fallback_response_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_fork_block_fallback_response_contract("));
+    assert!(RUNTIME_COMMIT_SRC.contains("classify_kolme_tls_failure_reason("));
+    assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_broadcast_payload_contract("));
 }
