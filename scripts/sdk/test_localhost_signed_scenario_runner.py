@@ -170,6 +170,44 @@ class LocalhostSignedScenarioRunnerTests(unittest.TestCase):
         self.assertEqual(result.attempts, 2)
         self.assertEqual(len(calls), 2)
 
+    def test_retry_retries_once_for_admission_listener_timeout(self) -> None:
+        calls: list[list[str]] = []
+        responses = [
+            _StubRunResult(
+                returncode=1,
+                stdout=(
+                    "status=fail; scenario=admission-guards; "
+                    "reason_code=listener_timeout;"
+                ),
+            ),
+            _StubRunResult(
+                returncode=0,
+                stdout=(
+                    "status=pass; scenario=admission-guards; "
+                    "reason_code=session_admission_guards_detected;"
+                ),
+            ),
+        ]
+
+        def _runner(command: list[str]) -> _StubRunResult:
+            calls.append(command)
+            return responses[len(calls) - 1]
+
+        result = run_harness_scenario_with_retry(
+            harness_runner=Path("/tmp/fake-harness.sh"),
+            scenario="admission-guards",
+            output_json=Path("/tmp/fake-admission.json"),
+            max_attempts=2,
+            retry_reason_code="listener_timeout",
+            run_command=_runner,
+            sleep_fn=lambda _seconds: None,
+        )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("session_admission_guards_detected", result.stdout)
+        self.assertEqual(result.attempts, 2)
+        self.assertEqual(len(calls), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

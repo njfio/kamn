@@ -219,6 +219,21 @@ if ! grep -Fq "listener_timeout" "$SHARED_CONTRACT"; then
   exit 1
 fi
 
+if ! grep -Fq "ADMISSION_GUARDS_RACE_REASON_CODE" "$SHARED_CONTRACT"; then
+  echo "expected localhost signed integration shared contract lane module to define admission bounded retry reason-code handling" >&2
+  exit 1
+fi
+
+if ! grep -Fq "ADMISSION_GUARDS_RACE_MAX_ATTEMPTS" "$SHARED_CONTRACT"; then
+  echo "expected localhost signed integration shared contract lane module to define bounded admission retry attempts" >&2
+  exit 1
+fi
+
+if ! grep -Fq "session_admission_guards_detected" "$SHARED_CONTRACT"; then
+  echo "expected localhost signed integration shared contract lane module to wire admission scenario reason-code handling" >&2
+  exit 1
+fi
+
 if ! grep -Fq "signature-mismatch bounded retries" "$DEVNET_DOC"; then
   echo "expected Kolme devnet ops doc to document localhost signature-mismatch bounded retries contract" >&2
   exit 1
@@ -226,6 +241,11 @@ fi
 
 if ! grep -Fq "replay-nonce bounded retries" "$DEVNET_DOC"; then
   echo "expected Kolme devnet ops doc to document localhost replay-nonce bounded retries contract" >&2
+  exit 1
+fi
+
+if ! grep -Fq "admission bounded retries" "$DEVNET_DOC"; then
+  echo "expected Kolme devnet ops doc to document localhost admission bounded retries contract" >&2
   exit 1
 fi
 

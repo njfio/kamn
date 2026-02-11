@@ -226,7 +226,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Shared report composer helper:
   - `scripts/sdk/localhost_signed_report_composer.py` (used by demo and integration contract wrappers to keep report schema/marker composition deterministic)
 - Shared scenario runner helper:
-  - `scripts/sdk/localhost_signed_scenario_runner.py` (used by integration contract wrapper to keep scenario execution deterministic with bounded timeout-race retries, signature-mismatch bounded retries, and replay-nonce bounded retries)
+  - `scripts/sdk/localhost_signed_scenario_runner.py` (used by integration contract wrapper to keep scenario execution deterministic with bounded timeout-race retries, signature-mismatch bounded retries, replay-nonce bounded retries, and admission bounded retries)
 - Demo contract lane schema:
   - `kamn.sdk.localhost-signed.demo-contract.v1`
 - Deterministic success markers:
@@ -409,6 +409,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - localhost signed timeout-race handling remains bounded and fail-closed via shared scenario runner retries (`Regression: #1621`).
 - localhost signed signature-mismatch bounded retries remain deterministic and fail-closed via shared scenario runner retries (`Regression: #1625`).
 - localhost signed replay-nonce bounded retries remain deterministic and fail-closed via shared scenario runner retries (`Regression: #1629`).
+- localhost signed admission bounded retries remain deterministic and fail-closed via shared scenario runner retries (`Regression: #1632`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
 ## Local Validation
