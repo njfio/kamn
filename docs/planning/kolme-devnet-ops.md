@@ -221,9 +221,15 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `bash scripts/sdk/check_localhost_signed_integration_evidence_policy.sh --report-file /tmp/localhost-signed-integration-contract-report.json`
 - Integration contract schema:
   - `kamn.sdk.localhost-signed.integration-contract.v1`
+- Localhost signed demo contract lane command:
+  - `bash scripts/sdk/run_localhost_signed_demo_contract_lane.sh --output-json /tmp/localhost-signed-demo-contract-report.json`
+- Demo contract lane schema:
+  - `kamn.sdk.localhost-signed.demo-contract.v1`
 - Deterministic success markers:
   - `localhost signed message demo completed.`
   - `localhost signed integration contract lane tests passed.`
+  - `localhost_signed_demo_status=pass`
+  - `localhost_signed_integration_status=pass`
 - Cost policy:
   - two-process localhost sender/listener demo remains bounded local smoke usage.
   - explicit local-heavy Kolme opt-in remains limited to heavy lanes and is not required for this demo path.
@@ -394,6 +400,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local probe fork-info query semantics and native parity broadcast method drift remain fail-closed (`Regression: #1482`).
 - block fallback stale-window and response-height drift remains fail-closed (`Regression: #1464`).
 - localhost two-process signed-demo command/schema markers remain fail-closed across README and Kolme devnet ops docs (`Regression: #1612`).
+- localhost signed demo contract-lane status markers remain fail-closed (`Regression: #1609`).
 - Failover/sync budget overruns and unscheduled deep-lane execution fail closed (`Regression: #788`).
 
 ## Local Validation
