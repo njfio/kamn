@@ -15,6 +15,7 @@ use kamn_kolme::{
     find_http_header_boundary as find_kolme_http_header_boundary,
     is_broadcast_submit_path as is_kolme_broadcast_submit_path_contract,
     is_terminal_receipt_finality as is_kolme_terminal_receipt_finality_contract,
+    is_valid_poll_attempt_budget as is_kolme_valid_poll_attempt_budget_contract,
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
     lifecycle_state_label as lifecycle_state_label_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
@@ -1221,7 +1222,7 @@ impl<T: KolmeRuntimeCommitFinalityTransport> KolmeRuntimeCommitFinalityChecker<T
         commit_id: &str,
         max_attempts: u32,
     ) -> Result<KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderError> {
-        if max_attempts == 0 {
+        if !is_kolme_valid_poll_attempt_budget_contract(max_attempts) {
             return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                 reason: "max_attempts must be positive".to_owned(),
             });

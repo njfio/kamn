@@ -1,5 +1,6 @@
 use kamn_kolme::{
     commit_finality_label, is_terminal_receipt_finality as is_terminal_receipt_finality_contract,
+    is_valid_poll_attempt_budget as is_valid_poll_attempt_budget_contract,
     lifecycle_state_for_finality, lifecycle_state_label,
     require_final_receipt_finality as require_final_receipt_finality_contract,
     KolmeCommitReceiptFinality, RuntimeCommitLifecycleState, RuntimeLifecyclePolicyError,
@@ -95,4 +96,16 @@ fn regression_issue_1858_runtime_lifecycle_policy_treats_failed_as_terminal() {
     assert!(is_terminal_receipt_finality_contract(
         KolmeCommitReceiptFinality::Failed
     ));
+}
+
+#[test]
+fn functional_runtime_lifecycle_policy_validates_positive_poll_attempt_budget() {
+    assert!(is_valid_poll_attempt_budget_contract(1));
+    assert!(is_valid_poll_attempt_budget_contract(3));
+}
+
+#[test]
+fn regression_issue_1860_runtime_lifecycle_policy_rejects_zero_poll_attempt_budget() {
+    // Regression: #1860
+    assert!(!is_valid_poll_attempt_budget_contract(0));
 }
