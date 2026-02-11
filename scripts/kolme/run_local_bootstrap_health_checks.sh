@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 
 MODE="dry-run"
 OUTPUT_JSON="/tmp/kolme-local-bootstrap-summary.json"
@@ -46,9 +47,13 @@ if [ "$MODE" != "dry-run" ] && [ "$MODE" != "run" ]; then
   exit 1
 fi
 
-if [ "$MODE" = "run" ] && [ "${KAMN_KOLME_LOCAL_HEAVY:-0}" != "1" ]; then
-  echo "run mode requires explicit local-only opt-in: KAMN_KOLME_LOCAL_HEAVY=1" >&2
+if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
+  echo "expected shared local-heavy opt-in guard helper to be executable" >&2
   exit 1
+fi
+
+if [ "$MODE" = "run" ]; then
+  "$LOCAL_HEAVY_GUARD"
 fi
 
 VERSION_REPORT="/tmp/kolme-bootstrap-version-report.json"

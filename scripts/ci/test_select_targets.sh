@@ -1341,6 +1341,20 @@ assert_eq "$(extract_output "$local_lane_summary_helper_test_output" "run_kolme_
 assert_eq "$(extract_output "$local_lane_summary_helper_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Local-lane summary helper test changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$local_lane_summary_helper_test_output" "test_scope")" "kolme-version-contract" "Local-lane summary helper test changes should set kolme-version-contract scope"
 
+local_heavy_optin_helper_output="$(run_selector $'scripts/framework/assert_local_heavy_opt_in.sh')"
+assert_eq "$(extract_output "$local_heavy_optin_helper_output" "run_rust")" "false" "Local-heavy opt-in helper changes should avoid rust lane"
+assert_eq "$(extract_output "$local_heavy_optin_helper_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Local-heavy opt-in helper changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$local_heavy_optin_helper_output" "run_kolme_version_compatibility_contract_tests")" "true" "Local-heavy opt-in helper changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$local_heavy_optin_helper_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Local-heavy opt-in helper changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$local_heavy_optin_helper_output" "test_scope")" "kolme-version-contract" "Local-heavy opt-in helper changes should set kolme-version-contract scope"
+
+local_heavy_optin_helper_test_output="$(run_selector $'scripts/framework/test_assert_local_heavy_opt_in.sh')"
+assert_eq "$(extract_output "$local_heavy_optin_helper_test_output" "run_rust")" "false" "Local-heavy opt-in helper test changes should avoid rust lane"
+assert_eq "$(extract_output "$local_heavy_optin_helper_test_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Local-heavy opt-in helper test changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$local_heavy_optin_helper_test_output" "run_kolme_version_compatibility_contract_tests")" "true" "Local-heavy opt-in helper test changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$local_heavy_optin_helper_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Local-heavy opt-in helper test changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$local_heavy_optin_helper_test_output" "test_scope")" "kolme-version-contract" "Local-heavy opt-in helper test changes should set kolme-version-contract scope"
+
 kolme_devnet_ops_docs_test_output="$(run_selector $'crates/kamn-core/tests/kolme_devnet_ops_docs.rs')"
 assert_eq "$(extract_output "$kolme_devnet_ops_docs_test_output" "run_rust")" "true" "Kolme devnet ops docs rust test changes should run rust lane"
 assert_eq "$(extract_output "$kolme_devnet_ops_docs_test_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme devnet ops docs rust test changes should skip Kolme snapshot drift contract lane"

@@ -202,6 +202,14 @@ fn regression_requires_local_e2e_opt_in_guard_marker() {
 }
 
 #[test]
+fn regression_requires_shared_local_heavy_opt_in_helper_guard_marker() {
+    // Regression: #1585
+    assert!(PLAN.contains(
+        "shared local-heavy opt-in helper wiring remains fail-closed across bootstrap/E2E/matrix lanes (`Regression: #1585`)."
+    ));
+}
+
+#[test]
 fn regression_requires_local_fork_sync_metadata_guard_marker() {
     // Regression: #1429
     assert!(PLAN.contains(

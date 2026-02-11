@@ -89,6 +89,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - bounded smoke command execution with timeout budget guard
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.
+  - shared opt-in enforcement helper: `scripts/framework/assert_local_heavy_opt_in.sh`.
   - smoke command timeout/exceeded budget is reported as `fork_smoke_command_timeout`.
 
 ## Local-Only Fork Rust Test Matrix Lane (Issue #1537)
@@ -313,6 +314,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - shared JSON summary generation via `scripts/framework/generate_local_lane_summary.py`
 - Cost policy:
   - lane enforces explicit local-only opt-in and a deterministic runtime budget ceiling.
+  - shared opt-in enforcement helper: `scripts/framework/assert_local_heavy_opt_in.sh`.
 
 ## Local-Only Heavy Kolme Validation Matrix (Issue #1405)
 
@@ -330,6 +332,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - shared JSON summary generation via `scripts/framework/generate_local_lane_summary.py`
 - Cost policy:
   - matrix execution remains local-only and is excluded from PR fast-gate workflow routing.
+  - shared opt-in enforcement helper: `scripts/framework/assert_local_heavy_opt_in.sh`.
 
 ## Failover + Sync Drill Lane Policy (Issues #787, #788)
 
@@ -352,6 +355,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - runtime commit adapter replay/finality reason-code drift fails closed (`Regression: #980`).
 - deterministic bootstrap run mode fails closed without explicit local-only opt-in (`Regression: #1417`).
 - local-only heavy E2E lane run mode fails closed without explicit local-only opt-in (`Regression: #1418`).
+- shared local-heavy opt-in helper wiring remains fail-closed across bootstrap/E2E/matrix lanes (`Regression: #1585`).
 - local-only heavy validation matrix requires explicit opt-in and remains excluded from PR fast-gate workflows (`Regression: #1405`).
 - local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
 - local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
