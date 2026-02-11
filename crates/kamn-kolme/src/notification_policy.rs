@@ -38,6 +38,17 @@ pub struct KolmeNotificationReceipt {
     pub finality: KolmeCommitReceiptFinality,
 }
 
+/// Provider-scoped receipt projection derived from one notification event.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KolmeProviderNotificationReceipt {
+    /// Provider identifier normalized for adapter-facing receipts.
+    pub provider: String,
+    /// Deterministic backend commit id correlated from notification payload.
+    pub commit_id: String,
+    /// Receipt finality projected from notification variant.
+    pub finality: KolmeCommitReceiptFinality,
+}
+
 /// Error raised by notification parsing policy contracts.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KolmeNotificationPolicyError {
@@ -129,6 +140,23 @@ pub fn notification_event_to_receipt(
         }
         KolmeNotificationEvent::LatestBlock { .. } => None,
     }
+}
+
+/// Projects (`provider`, `event`) into an optional provider-scoped receipt contract.
+pub fn notification_event_to_provider_receipt(
+    provider: &str,
+    event: &KolmeNotificationEvent,
+) -> Option<KolmeProviderNotificationReceipt> {
+    let provider = provider.trim();
+    if provider.is_empty() {
+        return None;
+    }
+    let receipt = notification_event_to_receipt(event)?;
+    Some(KolmeProviderNotificationReceipt {
+        provider: provider.to_owned(),
+        commit_id: receipt.commit_id,
+        finality: receipt.finality,
+    })
 }
 
 fn find_notification_string_field(

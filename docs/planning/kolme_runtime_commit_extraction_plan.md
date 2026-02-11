@@ -43,6 +43,7 @@ Out of scope:
 - #1846: extracted live provider outcome finality normalization to `kamn-kolme` (`parse_live_runtime_provider_outcome`) and rewired `kamn-core` live provider parsing delegation.
 - #1848: extracted notification event-to-receipt projection to `kamn-kolme` (`notification_event_to_receipt`) and rewired `kamn-core` notification receipt conversion delegation.
 - #1850: extracted TLS CA env-result resolver to `kamn-kolme` (`resolve_tls_ca_file_env_result`) and rewired `kamn-core` TLS CA configuration lookup delegation.
+- #1852: extracted provider-scoped notification receipt projection to `kamn-kolme` (`notification_event_to_provider_receipt`) and rewired `kamn-core` notification conversion provider normalization + receipt assembly delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,
