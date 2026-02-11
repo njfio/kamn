@@ -47,7 +47,6 @@ use kamn_kolme::{
     KolmeHttpScheme as KamnKolmeHttpScheme, KolmeNotificationEvent as KamnKolmeNotificationEvent,
     KolmeParsedHttpEndpoint as KamnKolmeParsedHttpEndpoint,
     KolmeProviderOutcome as KamnKolmeProviderOutcome,
-    KolmeProviderOutcomePolicyError as KamnKolmeProviderOutcomePolicyError,
     KolmeTlsPolicyError as KamnKolmeTlsPolicyError,
     KolmeTransportIoClassification as KamnKolmeTransportIoClassification,
     KolmeTransportRequestPolicyError as KamnKolmeTransportRequestPolicyError,
@@ -1197,10 +1196,18 @@ impl<T: KolmeRuntimeCommitFinalityTransport> KolmeRuntimeCommitFinalityChecker<T
                 reason: error.to_string(),
             }
         })?;
-        let provider = required_kolme_provider_response_field(&fields, "provider")
-            .map_err(map_provider_outcome_policy_error_to_malformed)?;
-        let observed_commit_id = parse_kolme_commit_id_from_response_fields(&fields)
-            .map_err(map_provider_outcome_policy_error_to_malformed)?;
+        let provider =
+            required_kolme_provider_response_field(&fields, "provider").map_err(|error| {
+                KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: error.to_string(),
+                }
+            })?;
+        let observed_commit_id =
+            parse_kolme_commit_id_from_response_fields(&fields).map_err(|error| {
+                KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: error.to_string(),
+                }
+            })?;
         if observed_commit_id != commit_id {
             return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                 reason: format!(
@@ -1208,8 +1215,12 @@ impl<T: KolmeRuntimeCommitFinalityTransport> KolmeRuntimeCommitFinalityChecker<T
                 ),
             });
         }
-        let finality_value = required_kolme_provider_response_field(&fields, "finality")
-            .map_err(map_provider_outcome_policy_error_to_malformed)?;
+        let finality_value =
+            required_kolme_provider_response_field(&fields, "finality").map_err(|error| {
+                KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: error.to_string(),
+                }
+            })?;
         let finality =
             parse_kolme_commit_receipt_finality(finality_value.as_str()).map_err(|error| {
                 KolmeRuntimeCommitProviderError::MalformedResponse {
@@ -1695,8 +1706,11 @@ where
         from_height: u64,
         latest_height: u64,
     ) -> Result<KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderError> {
-        let expected_txhash = txhash_from_kolme_commit_id(commit_id)
-            .map_err(map_provider_outcome_policy_error_to_malformed)?;
+        let expected_txhash = txhash_from_kolme_commit_id(commit_id).map_err(|error| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: error.to_string(),
+            }
+        })?;
 
         match self.notifications_consumer.next_notification_event() {
             Ok(event) => match event {
@@ -1718,9 +1732,12 @@ where
                         .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
                             reason: "notification event did not carry receipt data".to_owned(),
                         })?;
-                    let observed_txhash =
-                        txhash_from_kolme_commit_id(receipt.commit_id.as_str())
-                            .map_err(map_provider_outcome_policy_error_to_malformed)?;
+                    let observed_txhash = txhash_from_kolme_commit_id(receipt.commit_id.as_str())
+                        .map_err(|error| {
+                        KolmeRuntimeCommitProviderError::MalformedResponse {
+                            reason: error.to_string(),
+                        }
+                    })?;
                     if observed_txhash != expected_txhash {
                         return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                             reason: format!(
@@ -1904,14 +1921,6 @@ impl<P: KolmeRuntimeCommitProvider> KolmeRuntimeCommitClient
     }
 }
 
-fn map_provider_outcome_policy_error_to_malformed(
-    error: KamnKolmeProviderOutcomePolicyError,
-) -> KolmeRuntimeCommitProviderError {
-    KolmeRuntimeCommitProviderError::MalformedResponse {
-        reason: error.to_string(),
-    }
-}
-
 fn reconnect_exhausted_error(max_reconnect_attempts: u32) -> KolmeRuntimeCommitProviderError {
     KolmeRuntimeCommitProviderError::Unavailable {
         reason: format!(
@@ -2000,9 +2009,11 @@ fn parse_live_provider_response(
     response: &str,
     provider_hint: Option<&str>,
 ) -> Result<KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderError> {
-    match parse_kolme_live_provider_outcome(response, provider_hint)
-        .map_err(map_provider_outcome_policy_error_to_malformed)?
-    {
+    match parse_kolme_live_provider_outcome(response, provider_hint).map_err(|error| {
+        KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: error.to_string(),
+        }
+    })? {
         KamnKolmeProviderOutcome::Submitted {
             provider,
             commit_id,

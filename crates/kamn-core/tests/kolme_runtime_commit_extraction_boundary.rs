@@ -41,11 +41,12 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_provider_error("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_transport_io_error("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_transport_io_classification_to_provider_error("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("fn map_provider_outcome_policy_error_to_malformed("));
 }
 
 #[test]
 fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation() {
-    // Regression: #1822
+    // Regression: #1824
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_commit_receipt_finality("));
     assert!(RUNTIME_COMMIT_SRC.contains("commit_finality_from_receipt_finality_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("lifecycle_state_for_finality_contract("));
