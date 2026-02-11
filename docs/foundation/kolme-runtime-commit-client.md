@@ -35,6 +35,7 @@ handling.
   - `crates/kamn-kolme/src/endpoint_policy.rs` owns HTTP/WebSocket endpoint parsing and URL composition contracts.
   - `crates/kamn-kolme/src/http_response_policy.rs` owns HTTP response status/content parsing contracts.
   - `crates/kamn-kolme/src/flat_json_policy.rs` owns flat JSON scalar/object parsing contracts used by broadcast normalization and block-fallback field extraction.
+  - `crates/kamn-kolme/src/block_fallback_policy.rs` owns block-fallback response parsing contracts for key/value and flat-JSON payloads.
   - `crates/kamn-kolme/src/provider_outcome_policy.rs` owns live provider outcome parsing and commit-id helper contracts.
   - `crates/kamn-kolme/src/provider_response_policy.rs` owns provider response field parsing contracts (key/value + flat JSON string object formats).
   - `crates/kamn-core/src/kolme_runtime_commit.rs` delegates endpoint normalization through compatibility wrappers.
@@ -69,6 +70,7 @@ handling.
   - finality alias parsing and block-scan policy contracts are sourced from `kamn-kolme` (`parse_receipt_finality`, `validate_lookup_window`, `validate_block_identity`, `render_block_path`, `parse_fork_block_txhash`) so extraction boundaries stay explicit while `kamn-core` adapters are migrated.
   - provider response field parsing contracts are sourced from `kamn-kolme` (`parse_provider_response_fields`, `parse_provider_key_value_fields`) and mapped through `kamn-core` compatibility wrappers.
   - flat JSON scalar field parsing contracts are sourced from `kamn-kolme` (`parse_flat_json_value_fields`, `required_json_string_field`, `required_positive_u64_json_field`) and mapped through `kamn-core` compatibility wrappers.
+  - block-fallback response parsing contracts are sourced from `kamn-kolme` (`parse_block_fallback_response`, `parse_fork_block_fallback_response`) and mapped through `kamn-core` compatibility wrappers.
   - provider outcome and commit-id helper contracts are sourced from `kamn-kolme` (`parse_live_provider_outcome`, `deterministic_backend_commit_id`, `txhash_from_commit_id`) and mapped through `kamn-core` compatibility wrappers.
   - resolver consumes one notification event first:
     - txhash-bearing `NewBlock` / `FailedTransaction` events map directly to receipts.
@@ -159,6 +161,7 @@ cargo test -p kamn-kolme --test http_response_policy_contracts
 cargo test -p kamn-kolme --test tls_policy_contracts
 cargo test -p kamn-kolme --test provider_response_policy_contracts
 cargo test -p kamn-kolme --test flat_json_policy_contracts
+cargo test -p kamn-kolme --test block_fallback_policy_contracts
 cargo test -p kamn-kolme --test provider_outcome_policy_contracts
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_fetch_next_nonce_query_and_parse -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_submit_broadcast_request_put_and_parse_txhash -- --exact
@@ -189,3 +192,4 @@ cargo test -p kamn-core
 - provider response field parser extraction parity drift remains fail-closed (`Regression: #1745`).
 - flat JSON parser extraction parity drift remains fail-closed (`Regression: #1747`).
 - provider outcome and commit-id parser extraction parity drift remains fail-closed (`Regression: #1749`).
+- block-fallback parser extraction parity drift remains fail-closed (`Regression: #1751`).
