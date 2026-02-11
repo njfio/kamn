@@ -3,6 +3,7 @@
 use crate::AgentDid;
 use kamn_kolme::{
     classify_tls_failure_reason as classify_kolme_tls_failure_reason,
+    commit_finality_from_receipt_finality as commit_finality_from_receipt_finality_contract,
     commit_finality_label as commit_finality_label_contract,
     compose_finality_status_path as compose_kolme_finality_status_path,
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
@@ -2061,23 +2062,16 @@ fn txhash_from_commit_id(commit_id: &str) -> Result<String, KolmeRuntimeCommitPr
 fn parse_receipt_finality(
     value: &str,
 ) -> Result<KolmeCommitReceiptFinality, KolmeRuntimeCommitProviderError> {
-    match parse_kolme_receipt_finality(value).map_err(|error| {
+    let finality = parse_kolme_receipt_finality(value).map_err(|error| {
         KolmeRuntimeCommitProviderError::MalformedResponse {
             reason: error.to_string(),
         }
-    })? {
-        ReceiptFinality::Pending => Ok(KolmeCommitReceiptFinality::Pending),
-        ReceiptFinality::Final => Ok(KolmeCommitReceiptFinality::Final),
-        ReceiptFinality::Failed => Ok(KolmeCommitReceiptFinality::Failed),
-    }
+    })?;
+    Ok(commit_finality_from_receipt_finality_contract(finality))
 }
 
 fn map_extracted_receipt_finality(finality: ReceiptFinality) -> KolmeCommitReceiptFinality {
-    match finality {
-        ReceiptFinality::Pending => KolmeCommitReceiptFinality::Pending,
-        ReceiptFinality::Final => KolmeCommitReceiptFinality::Final,
-        ReceiptFinality::Failed => KolmeCommitReceiptFinality::Failed,
-    }
+    commit_finality_from_receipt_finality_contract(finality)
 }
 
 fn map_provider_outcome(
