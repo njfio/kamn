@@ -226,6 +226,12 @@ assert_eq "$(extract_output "$script_surface_budget_config_output" "run_ci_tool_
 assert_eq "$(extract_output "$script_surface_budget_config_output" "run_script_surface_budget_checks")" "true" "script-surface budget config changes must run script-surface budget checks"
 assert_eq "$(extract_output "$script_surface_budget_config_output" "test_scope")" "none" "script-surface budget config changes should keep non-rust scope"
 
+kolme_asymmetry_policy_output="$(run_selector $'.ci/kolme-command-surface-asymmetry-policy.json')"
+assert_eq "$(extract_output "$kolme_asymmetry_policy_output" "run_rust")" "false" "Kolme asymmetry policy-file changes should avoid rust full fallback"
+assert_eq "$(extract_output "$kolme_asymmetry_policy_output" "run_ci_tool_checks")" "true" "Kolme asymmetry policy-file changes must run CI tool checks"
+assert_eq "$(extract_output "$kolme_asymmetry_policy_output" "unknown_risk_changed")" "false" "Kolme asymmetry policy-file changes should be classified"
+assert_eq "$(extract_output "$kolme_asymmetry_policy_output" "test_scope")" "ci-doc-contract" "Kolme asymmetry policy-file changes should use ci-doc-contract scope"
+
 unknown_output="$(run_selector $'config/runtime-policy.json')"
 # Regression: #505
 assert_eq "$(extract_output "$unknown_output" "run_rust")" "true" "unknown paths must run rust fallback"

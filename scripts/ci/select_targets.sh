@@ -241,6 +241,13 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
+    .ci/kolme-command-surface-asymmetry-policy.json)
+      CI_STRATEGY_DOC_CONTRACT_CHANGED=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
     docs/ci/strategy.md)
       CI_STRATEGY_DOC_CONTRACT_CHANGED=true
       classified=true

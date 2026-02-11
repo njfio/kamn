@@ -48,6 +48,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 - `Makefile` changes map to runtime contract scope:
   - `run_runtime_snapshot_contract_tests=true`
   - `test_scope=runtime-contract`
+- `.ci/kolme-command-surface-asymmetry-policy.json` changes map to CI contract scope:
+  - `run_ci_tool_checks=true`
+  - `test_scope=ci-doc-contract`
+  - unknown/full fallback remains disabled for this path
 - Localhost signed integration command changes map to dedicated scope:
   - `run_localhost_signed_integration_contract_lane_tests=true`
   - `test_scope=sdk-live-localhost-integration`
