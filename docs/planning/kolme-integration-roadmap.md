@@ -53,6 +53,9 @@ across Kolme upgrades.
 - `kolme_fork` finality resolver regression checks:
   - `cargo test -p kamn-core --test kolme_runtime_commit_fork_finality_resolver`
   - `cargo test -p kamn-core --test kolme_runtime_commit_notifications --test kolme_runtime_commit_block_fallback`
+  - includes fork-parity coverage for:
+    - `functional_fork_finality_resolver_uses_new_block_height_when_txhash_is_not_present`
+    - `functional_block_fallback_accepts_real_kolme_fork_block_shape`
 - Local-only live conformance matrix lane:
   - `bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json`
   - fixture: `fixtures/kolme_commit/local_live_api_conformance_matrix.json`

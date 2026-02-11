@@ -54,9 +54,13 @@ handling.
   - provider identity for txhash-only responses uses response `provider` when present, otherwise deterministic provider hint from profile construction.
 - Fork finality profile:
   - `KolmeRuntimeCommitForkFinalityResolver` composes websocket notifications (`/notifications`) with bounded block fallback scans (`/block/{height}`).
-  - resolver first attempts notification-derived receipts, then falls back only on transport unavailability/timeout.
+  - resolver consumes one notification event first:
+    - txhash-bearing `NewBlock` / `FailedTransaction` events map directly to receipts.
+    - `LatestBlock` (or `NewBlock` payloads that carry height but no txhash) trigger bounded `/block/{height}` fallback reconciliation.
+  - transport unavailability/timeout also falls back to bounded block reconciliation.
   - malformed notification payloads and txhash mismatches remain fail-closed and do not trigger fallback.
   - fork profile does not require `/runtime-commit/status` or `/commit/finality` endpoints.
+  - block fallback accepts both synthetic parity fixtures and real fork block payloads that include top-level `txhash` plus nested `block`/`logs` JSON.
 
 ## Typed Kolme Nonce/Broadcast Codecs
 

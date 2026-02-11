@@ -1220,7 +1220,13 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
                 self.block_path_template.as_str(),
                 height,
             )?;
-            let block = parse_block_fallback_response(response.as_str())?;
+            let block = parse_block_fallback_response(response.as_str()).or_else(|_| {
+                parse_kolme_fork_block_fallback_response(
+                    response.as_str(),
+                    self.provider.as_str(),
+                    height,
+                )
+            })?;
 
             if block.provider != self.provider {
                 return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
@@ -1519,18 +1525,37 @@ where
     ) -> Result<KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderError> {
         let expected_txhash = txhash_from_commit_id(commit_id)?;
 
-        match self.notifications_consumer.next_commit_receipt() {
-            Ok(receipt) => {
-                let observed_txhash = txhash_from_commit_id(receipt.commit_id.as_str())?;
-                if observed_txhash != expected_txhash {
-                    return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                        reason: format!(
-                            "notification txhash mismatch: expected '{expected_txhash}' observed '{observed_txhash}'"
-                        ),
-                    });
+        match self.notifications_consumer.next_notification_event() {
+            Ok(event) => match event {
+                KolmeRuntimeCommitNotificationEvent::LatestBlock { height } => {
+                    let upper_bound = if height >= from_height {
+                        height.min(latest_height)
+                    } else {
+                        latest_height
+                    };
+                    self.block_fallback_reconciler.reconcile_txhash(
+                        expected_txhash.as_str(),
+                        from_height,
+                        upper_bound,
+                    )
                 }
-                Ok(receipt)
-            }
+                _ => {
+                    let receipt = event
+                        .to_provider_receipt(self.notifications_consumer.provider.as_str())
+                        .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
+                            reason: "notification event did not carry receipt data".to_owned(),
+                        })?;
+                    let observed_txhash = txhash_from_commit_id(receipt.commit_id.as_str())?;
+                    if observed_txhash != expected_txhash {
+                        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                            reason: format!(
+                                "notification txhash mismatch: expected '{expected_txhash}' observed '{observed_txhash}'"
+                            ),
+                        });
+                    }
+                    Ok(receipt)
+                }
+            },
             Err(KolmeRuntimeCommitProviderError::Unavailable { .. })
             | Err(KolmeRuntimeCommitProviderError::Timeout) => self
                 .block_fallback_reconciler
@@ -1804,6 +1829,36 @@ fn parse_block_fallback_response(
         block_height,
         finalized_tx_hashes,
         failed_tx_hashes,
+    })
+}
+
+fn parse_kolme_fork_block_fallback_response(
+    response: &str,
+    provider: &str,
+    expected_height: u64,
+) -> Result<ParsedBlockFallbackResponse, KolmeRuntimeCommitProviderError> {
+    let provider = provider.trim();
+    if provider.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "provider must not be empty".to_owned(),
+        });
+    }
+    if expected_height == 0 {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "expected block height must be positive".to_owned(),
+        });
+    }
+    let txhash = find_notification_string_field(response, "txhash")?.ok_or_else(|| {
+        KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "missing required field: txhash".to_owned(),
+        }
+    })?;
+
+    Ok(ParsedBlockFallbackResponse {
+        provider: provider.to_owned(),
+        block_height: expected_height,
+        finalized_tx_hashes: vec![txhash],
+        failed_tx_hashes: Vec::new(),
     })
 }
 
@@ -2141,15 +2196,19 @@ fn parse_kolme_notification_event(
         });
     }
     if trimmed.contains("\"NewBlock\"") {
-        let txhash = find_notification_string_field(trimmed, "txhash")?.ok_or_else(|| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "notification txhash field is missing".to_owned(),
-            }
-        })?;
-        let block_height = find_notification_u64_field(trimmed, "height")?;
-        return Ok(KolmeRuntimeCommitNotificationEvent::NewBlock {
-            txhash,
-            block_height,
+        let block_height = find_notification_u64_field(trimmed, "height")?
+            .or(find_escaped_notification_u64_field(trimmed, "height")?);
+        if let Some(txhash) = find_notification_string_field(trimmed, "txhash")? {
+            return Ok(KolmeRuntimeCommitNotificationEvent::NewBlock {
+                txhash,
+                block_height,
+            });
+        }
+        if let Some(height) = block_height {
+            return Ok(KolmeRuntimeCommitNotificationEvent::LatestBlock { height });
+        }
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "notification txhash or height field is missing".to_owned(),
         });
     }
     if trimmed.contains("\"FailedTransaction\"") {
@@ -2290,6 +2349,31 @@ fn find_notification_u64_field(
             return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                 reason: format!("notification field '{field}' must be a positive integer"),
             });
+        }
+        let token = &payload[cursor..end];
+        return parse_notification_positive_u64(token, field).map(Some);
+    }
+    Ok(None)
+}
+
+fn find_escaped_notification_u64_field(
+    payload: &str,
+    field: &str,
+) -> Result<Option<u64>, KolmeRuntimeCommitProviderError> {
+    let pattern = format!("\\\"{field}\\\":");
+    for (index, _) in payload.match_indices(pattern.as_str()) {
+        let mut cursor = index + pattern.len();
+        cursor = skip_ascii_whitespace(payload, cursor);
+        let mut end = cursor;
+        while let Some(byte) = payload.as_bytes().get(end).copied() {
+            if byte.is_ascii_digit() {
+                end += 1;
+                continue;
+            }
+            break;
+        }
+        if end == cursor {
+            continue;
         }
         let token = &payload[cursor..end];
         return parse_notification_positive_u64(token, field).map(Some);

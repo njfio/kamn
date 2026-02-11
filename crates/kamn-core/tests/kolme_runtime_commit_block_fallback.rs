@@ -236,6 +236,30 @@ fn integration_http_transport_block_fallback_converges_with_mock_block_api() {
 }
 
 #[test]
+fn functional_block_fallback_accepts_real_kolme_fork_block_shape() {
+    let responses = vec![Ok(
+        "{\"code_version\":\"v0.15.2\",\"chain_version\":\"v1\",\"blockhash\":\"00aa\",\"txhash\":\"ab12cd34\",\"block\":{\"message\":\"{\\\"height\\\":72}\"},\"logs\":[[]]}"
+            .to_owned(),
+    )];
+    let (transport, _calls) = RecordingBlockLookupTransport::with_responses(responses);
+    let mut reconciler = KolmeRuntimeCommitBlockFallbackReconciler::new(
+        "http://127.0.0.1:3030",
+        "/block/{height}",
+        "kolme-fork-local",
+        2,
+        transport,
+    )
+    .expect("reconciler should build");
+
+    let receipt = reconciler
+        .reconcile_txhash("ab12cd34", 72, 72)
+        .expect("real fork block shape should map to final receipt");
+    assert_eq!(receipt.provider, "kolme-fork-local");
+    assert_eq!(receipt.commit_id, "kolme-commit:ab12cd34:h72");
+    assert_eq!(receipt.finality, KolmeCommitReceiptFinality::Final);
+}
+
+#[test]
 fn regression_block_fallback_rejects_response_height_mismatch_fail_closed() {
     // Regression: #1464
     let responses = vec![Ok(
