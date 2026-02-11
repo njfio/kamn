@@ -15,8 +15,9 @@ pub mod receipt_finality;
 pub mod transport;
 
 pub use api_codec::{
-    KolmeApiBroadcastRequest, KolmeApiBroadcastResponse, KolmeApiCodecError,
-    KolmeApiNextNonceRequest, KolmeApiNextNonceResponse,
+    validate_direct_signed_transaction_message, KolmeApiBroadcastRequest,
+    KolmeApiBroadcastResponse, KolmeApiCodecError, KolmeApiNextNonceRequest,
+    KolmeApiNextNonceResponse,
 };
 pub use block_scan_policy::{
     parse_fork_block_txhash, render_block_path, validate_block_identity,

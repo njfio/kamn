@@ -159,6 +159,47 @@ impl KolmeApiBroadcastResponse {
     }
 }
 
+/// Validates required direct-signed transaction message fields.
+pub fn validate_direct_signed_transaction_message(message: &str) -> Result<(), KolmeApiCodecError> {
+    let required_string_fields = ["pubkey", "created"];
+    for field in required_string_fields {
+        let value = find_json_string_field(message, field).map_err(|_| {
+            KolmeApiCodecError::MalformedResponse {
+                reason: format!("direct signed payload message field is invalid: {field}"),
+            }
+        })?;
+        if value.is_none() {
+            return Err(KolmeApiCodecError::MalformedResponse {
+                reason: format!("direct signed payload message missing required field: {field}"),
+            });
+        }
+    }
+
+    let nonce = find_json_u64_field(message, "nonce").map_err(|_| {
+        KolmeApiCodecError::MalformedResponse {
+            reason: "direct signed payload message field is invalid: nonce".to_owned(),
+        }
+    })?;
+    if nonce.is_none() {
+        return Err(KolmeApiCodecError::MalformedResponse {
+            reason: "direct signed payload message missing required field: nonce".to_owned(),
+        });
+    }
+
+    let has_messages = has_json_array_field(message, "messages").map_err(|_| {
+        KolmeApiCodecError::MalformedResponse {
+            reason: "direct signed payload message field is invalid: messages".to_owned(),
+        }
+    })?;
+    if !has_messages {
+        return Err(KolmeApiCodecError::MalformedResponse {
+            reason: "direct signed payload message missing required field: messages".to_owned(),
+        });
+    }
+
+    Ok(())
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum FlatJsonValue {
     String(String),
@@ -378,6 +419,143 @@ fn split_unquoted(input: &str, delimiter: char) -> Result<Vec<String>, &'static 
     Ok(parts)
 }
 
+fn find_json_string_field(payload: &str, field: &str) -> Result<Option<String>, &'static str> {
+    let pattern = format!("\"{field}\"");
+    for (index, _) in payload.match_indices(pattern.as_str()) {
+        let mut cursor = index + pattern.len();
+        cursor = skip_ascii_whitespace(payload, cursor);
+        if payload.as_bytes().get(cursor).copied() != Some(b':') {
+            continue;
+        }
+        cursor += 1;
+        cursor = skip_ascii_whitespace(payload, cursor);
+        if payload.as_bytes().get(cursor).copied() != Some(b'"') {
+            continue;
+        }
+        let mut end = cursor + 1;
+        let mut escape = false;
+        while let Some(byte) = payload.as_bytes().get(end).copied() {
+            if escape {
+                escape = false;
+                end += 1;
+                continue;
+            }
+            if byte == b'\\' {
+                escape = true;
+                end += 1;
+                continue;
+            }
+            if byte == b'"' {
+                let token = &payload[cursor..=end];
+                let parsed = parse_json_string(token)?;
+                if parsed.trim().is_empty() {
+                    return Err("field must not be empty");
+                }
+                return Ok(Some(parsed));
+            }
+            end += 1;
+        }
+        return Err("field value is unterminated");
+    }
+    Ok(None)
+}
+
+fn find_json_u64_field(payload: &str, field: &str) -> Result<Option<u64>, &'static str> {
+    let pattern = format!("\"{field}\"");
+    for (index, _) in payload.match_indices(pattern.as_str()) {
+        let mut cursor = index + pattern.len();
+        cursor = skip_ascii_whitespace(payload, cursor);
+        if payload.as_bytes().get(cursor).copied() != Some(b':') {
+            continue;
+        }
+        cursor += 1;
+        cursor = skip_ascii_whitespace(payload, cursor);
+        let Some(first) = payload.as_bytes().get(cursor).copied() else {
+            return Err("field value is missing");
+        };
+        if first == b'"' {
+            let mut end = cursor + 1;
+            let mut escape = false;
+            while let Some(byte) = payload.as_bytes().get(end).copied() {
+                if escape {
+                    escape = false;
+                    end += 1;
+                    continue;
+                }
+                if byte == b'\\' {
+                    escape = true;
+                    end += 1;
+                    continue;
+                }
+                if byte == b'"' {
+                    let token = &payload[cursor..=end];
+                    let parsed = parse_json_string(token)?;
+                    return parse_positive_u64(parsed.as_str()).map(Some);
+                }
+                end += 1;
+            }
+            return Err("field value is unterminated");
+        }
+        let mut end = cursor;
+        while let Some(byte) = payload.as_bytes().get(end).copied() {
+            if byte.is_ascii_digit() {
+                end += 1;
+                continue;
+            }
+            break;
+        }
+        if end == cursor {
+            return Err("field must be a positive integer");
+        }
+        let token = &payload[cursor..end];
+        return parse_positive_u64(token).map(Some);
+    }
+    Ok(None)
+}
+
+fn parse_positive_u64(token: &str) -> Result<u64, &'static str> {
+    let trimmed = token.trim();
+    let parsed = trimmed
+        .parse::<u64>()
+        .map_err(|_| "field must be a positive integer")?;
+    if parsed == 0 {
+        return Err("field must be a positive integer");
+    }
+    Ok(parsed)
+}
+
+fn has_json_array_field(payload: &str, field: &str) -> Result<bool, &'static str> {
+    let pattern = format!("\"{field}\"");
+    for (index, _) in payload.match_indices(pattern.as_str()) {
+        let mut cursor = index + pattern.len();
+        cursor = skip_ascii_whitespace(payload, cursor);
+        if payload.as_bytes().get(cursor).copied() != Some(b':') {
+            continue;
+        }
+        cursor += 1;
+        cursor = skip_ascii_whitespace(payload, cursor);
+        let Some(first) = payload.as_bytes().get(cursor).copied() else {
+            return Err("field must be array");
+        };
+        if first == b'[' {
+            return Ok(true);
+        }
+        return Err("field must be array");
+    }
+    Ok(false)
+}
+
+fn skip_ascii_whitespace(value: &str, mut cursor: usize) -> usize {
+    while let Some(byte) = value.as_bytes().get(cursor).copied() {
+        if byte.is_ascii_whitespace() {
+            cursor += 1;
+            continue;
+        }
+        break;
+    }
+    cursor
+}
+
 fn parse_json_string(token: &str) -> Result<String, &'static str> {
     let trimmed = token.trim();
     if !(trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2) {
@@ -443,8 +621,9 @@ fn json_escape(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        KolmeApiBroadcastRequest, KolmeApiBroadcastResponse, KolmeApiCodecError,
-        KolmeApiNextNonceRequest, KolmeApiNextNonceResponse,
+        validate_direct_signed_transaction_message, KolmeApiBroadcastRequest,
+        KolmeApiBroadcastResponse, KolmeApiCodecError, KolmeApiNextNonceRequest,
+        KolmeApiNextNonceResponse,
     };
 
     #[test]
@@ -484,6 +663,18 @@ mod tests {
         assert_eq!(
             request.to_json_payload(),
             "{\"message\":\"{\\\"nonce\\\":42}\",\"signature\":\"sig-42\",\"recovery_id\":0}"
+        );
+    }
+
+    #[test]
+    fn unit_validate_direct_signed_transaction_message_requires_messages_array() {
+        assert_eq!(
+            validate_direct_signed_transaction_message(
+                "{\"pubkey\":\"p\",\"nonce\":1,\"created\":\"c\",\"messages\":\"x\"}"
+            ),
+            Err(KolmeApiCodecError::MalformedResponse {
+                reason: "direct signed payload message field is invalid: messages".to_owned(),
+            })
         );
     }
 }
