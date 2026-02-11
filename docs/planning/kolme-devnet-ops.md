@@ -299,6 +299,25 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - default budget is bounded to 45 seconds.
   - preflight run-mode execution remains excluded from PR fast-gate workflow routing.
 
+## Local Fork Self-Test Lane (Issue #1652)
+
+- Local fork self-test runner:
+  - `bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-self-test-summary.json`
+- Explicit local-only self-test execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --matrix-max-seconds 60 --output-json /tmp/kolme-local-fork-self-test-summary.json`
+- Policy checker command:
+  - `python3 scripts/kolme/check_local_kolme_fork_self_test_policy.py --report-file /tmp/kolme-local-fork-self-test-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-self-test-policy.json`
+- Summary schema:
+  - `kamn.kolme.local-fork-self-test-summary.v1`
+- Deterministic checkpoints include:
+  - `run_local_kolme_fork_rust_test_matrix_lane.sh` run-mode verification with bounded matrix budget and optional command overrides.
+  - `check_local_kolme_fork_rust_test_matrix_policy.py` GO decision verification with required reason-code contract.
+  - fail-closed reason codes for local opt-in, nested matrix failure, nested policy failure, and total-budget drift.
+- Cost policy:
+  - run mode fails closed without explicit local-only opt-in.
+  - nested matrix budget and total lane budget remain bounded and local-only.
+  - self-test run-mode execution remains excluded from PR fast-gate workflow routing.
+
 ## Real Fork Local Process Wrapper Contract Lane (Issue #1644)
 
 - Real-fork local wrapper runner:
@@ -465,6 +484,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - unified local signed-to-Kolme demo lane fails closed for local opt-in, stage prerequisite drift, and runtime budget overruns (`Regression: #1640`).
 - local fork process lifecycle integration lane fails closed for process start/readiness/integration/teardown/budget drift and missing local opt-in (`Regression: #1494`).
 - local fork profile preflight lane fails closed for local opt-in, checkout/profile contract drift, probe command failures, and runtime budget overruns (`Regression: #1648`).
+- local fork self-test lane fails closed for local opt-in, nested matrix/policy checkpoint failures, and runtime budget overruns (`Regression: #1652`).
 - real-fork local process wrapper lane fails closed for local opt-in, serve-command profile drift, lifecycle/policy checkpoint failure, and runtime budget overruns (`Regression: #1644`).
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
 - local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`).
@@ -498,6 +518,7 @@ bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh
 bash scripts/kolme/test_run_local_signed_to_kolme_demo_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_profile_preflight_lane.sh
+bash scripts/kolme/test_run_local_kolme_fork_self_test_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_real_process_contract_lane.sh
 bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh
 bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh
