@@ -44,6 +44,11 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
 - Concurrency lanes use replay fixtures and deterministic round-based checks to
   guard winner exclusivity and terminal-state safety, and emit replay metadata
   artifact key `concurrency_mutation_replay:v1`.
+- Threaded lifecycle transition regression coverage is anchored in
+  `crates/kamn-core/tests/lifecycle_concurrency_contracts.rs`, validating:
+  - task terminal-state fail-closed behavior under parallel completion attempts
+  - escrow invalid-transition rejection under parallel dispute attempts
+  - peer lifecycle invalid-edge rejection under parallel handshake attempts
 
 ## Evidence and Policy Contracts
 
