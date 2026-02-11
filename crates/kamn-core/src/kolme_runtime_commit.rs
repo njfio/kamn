@@ -2,7 +2,10 @@
 
 use crate::AgentDid;
 use kamn_kolme::{
+    compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
+    parse_http_endpoint as parse_kolme_http_endpoint,
     parse_receipt_finality as parse_kolme_receipt_finality,
+    parse_websocket_endpoint as parse_kolme_websocket_endpoint,
     render_block_path as render_kolme_block_path,
     validate_block_identity as validate_kolme_block_identity,
     validate_block_path_template as validate_kolme_block_path_template,
@@ -11,7 +14,10 @@ use kamn_kolme::{
     KolmeApiBroadcastResponse as KamnKolmeApiBroadcastResponse,
     KolmeApiCodecError as KamnKolmeApiCodecError,
     KolmeApiNextNonceRequest as KamnKolmeApiNextNonceRequest,
-    KolmeApiNextNonceResponse as KamnKolmeApiNextNonceResponse, ReceiptFinality,
+    KolmeApiNextNonceResponse as KamnKolmeApiNextNonceResponse,
+    KolmeEndpointPolicyError as KamnKolmeEndpointPolicyError,
+    KolmeHttpScheme as KamnKolmeHttpScheme, KolmeParsedHttpEndpoint as KamnKolmeParsedHttpEndpoint,
+    KolmeParsedWebsocketEndpoint as KamnKolmeParsedWebsocketEndpoint, ReceiptFinality,
 };
 use std::collections::HashMap;
 use std::fmt;
@@ -710,23 +716,8 @@ enum KolmeRuntimeCommitSubmitProfile {
     KolmeForkBroadcast,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct ParsedHttpEndpoint {
-    scheme: HttpScheme,
-    host: String,
-    host_header: String,
-    port: u16,
-    target_path: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct ParsedWebsocketEndpoint {
-    secure: bool,
-    host: String,
-    host_header: String,
-    port: u16,
-    target_path: String,
-}
+type ParsedHttpEndpoint = KamnKolmeParsedHttpEndpoint;
+type ParsedWebsocketEndpoint = KamnKolmeParsedWebsocketEndpoint;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ParsedBlockFallbackResponse {
@@ -736,20 +727,7 @@ struct ParsedBlockFallbackResponse {
     failed_tx_hashes: Vec<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum HttpScheme {
-    Http,
-    Https,
-}
-
-impl HttpScheme {
-    fn default_port(self) -> u16 {
-        match self {
-            Self::Http => 80,
-            Self::Https => 443,
-        }
-    }
-}
+type HttpScheme = KamnKolmeHttpScheme;
 
 /// Dependency-free HTTP transport implementation for runtime commit submit/finality calls.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1752,77 +1730,19 @@ fn map_lookup_window_error(error: BlockScanPolicyError) -> KolmeRuntimeCommitPro
     }
 }
 
+fn map_endpoint_policy_error(
+    error: KamnKolmeEndpointPolicyError,
+) -> KolmeRuntimeCommitProviderError {
+    KolmeRuntimeCommitProviderError::Unavailable {
+        reason: error.to_string(),
+    }
+}
+
 fn parse_http_endpoint(
     base_url: &str,
     path: &str,
 ) -> Result<ParsedHttpEndpoint, KolmeRuntimeCommitProviderError> {
-    let base = base_url.trim();
-    if base.is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "base_url must not be empty".to_owned(),
-        });
-    }
-    let (scheme, remainder) = if let Some(remainder) = base.strip_prefix("http://") {
-        (HttpScheme::Http, remainder)
-    } else if let Some(remainder) = base.strip_prefix("https://") {
-        (HttpScheme::Https, remainder)
-    } else {
-        return Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "base_url scheme must be http:// or https://".to_owned(),
-        });
-    };
-    let (authority, base_path) = match remainder.split_once('/') {
-        Some((left, right)) => (left, format!("/{}", right.trim_start_matches('/'))),
-        None => (remainder, "/".to_owned()),
-    };
-
-    if authority.is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "base_url host must not be empty".to_owned(),
-        });
-    }
-
-    let (host, port) = parse_authority(authority, scheme.default_port())?;
-    let target_path = join_http_paths(base_path.as_str(), path);
-    Ok(ParsedHttpEndpoint {
-        scheme,
-        host,
-        host_header: authority.to_owned(),
-        port,
-        target_path,
-    })
-}
-
-fn parse_authority(
-    authority: &str,
-    default_port: u16,
-) -> Result<(String, u16), KolmeRuntimeCommitProviderError> {
-    if authority.starts_with('[') {
-        return Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "ipv6 host syntax is not supported".to_owned(),
-        });
-    }
-    if let Some((host, port_raw)) = authority.rsplit_once(':') {
-        if !port_raw.is_empty() && port_raw.chars().all(|ch| ch.is_ascii_digit()) {
-            let port = port_raw.parse::<u16>().map_err(|_| {
-                KolmeRuntimeCommitProviderError::Unavailable {
-                    reason: "base_url port is invalid".to_owned(),
-                }
-            })?;
-            if host.trim().is_empty() {
-                return Err(KolmeRuntimeCommitProviderError::Unavailable {
-                    reason: "base_url host must not be empty".to_owned(),
-                });
-            }
-            return Ok((host.to_owned(), port));
-        }
-        if !port_raw.is_empty() {
-            return Err(KolmeRuntimeCommitProviderError::Unavailable {
-                reason: "base_url port is invalid".to_owned(),
-            });
-        }
-    }
-    Ok((authority.to_owned(), default_port))
+    parse_kolme_http_endpoint(base_url, path).map_err(map_endpoint_policy_error)
 }
 
 fn validate_block_path_template(
@@ -1973,59 +1893,14 @@ fn compose_notifications_websocket_url(
     base_url: &str,
     notifications_path: &str,
 ) -> Result<String, KolmeRuntimeCommitProviderError> {
-    if notifications_path.trim().is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "notifications_path must not be empty".to_owned(),
-        });
-    }
-    let endpoint = parse_http_endpoint(base_url, notifications_path)?;
-    let scheme = match endpoint.scheme {
-        HttpScheme::Http => "ws",
-        HttpScheme::Https => "wss",
-    };
-    Ok(format!(
-        "{scheme}://{}{}",
-        endpoint.host_header, endpoint.target_path
-    ))
+    compose_kolme_notifications_websocket_url(base_url, notifications_path)
+        .map_err(map_endpoint_policy_error)
 }
 
 fn parse_websocket_endpoint(
     notifications_url: &str,
 ) -> Result<ParsedWebsocketEndpoint, KolmeRuntimeCommitProviderError> {
-    let raw = notifications_url.trim();
-    if raw.is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "notifications_url must not be empty".to_owned(),
-        });
-    }
-    let (secure, remainder) = if let Some(remainder) = raw.strip_prefix("ws://") {
-        (false, remainder)
-    } else if let Some(remainder) = raw.strip_prefix("wss://") {
-        (true, remainder)
-    } else {
-        return Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "notifications_url scheme must be ws:// or wss://".to_owned(),
-        });
-    };
-
-    let (authority, target_path) = match remainder.split_once('/') {
-        Some((left, right)) => (left, format!("/{}", right.trim_start_matches('/'))),
-        None => (remainder, "/".to_owned()),
-    };
-    if authority.trim().is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "notifications_url host must not be empty".to_owned(),
-        });
-    }
-    let default_port = if secure { 443 } else { 80 };
-    let (host, port) = parse_authority(authority, default_port)?;
-    Ok(ParsedWebsocketEndpoint {
-        secure,
-        host,
-        host_header: authority.to_owned(),
-        port,
-        target_path,
-    })
+    parse_kolme_websocket_endpoint(notifications_url).map_err(map_endpoint_policy_error)
 }
 
 fn reconnect_exhausted_error(max_reconnect_attempts: u32) -> KolmeRuntimeCommitProviderError {
@@ -2471,34 +2346,6 @@ fn parse_authorization_header(value: &str) -> Result<String, KolmeRuntimeCommitE
         });
     }
     Ok(trimmed.to_owned())
-}
-
-fn join_http_paths(base_path: &str, request_path: &str) -> String {
-    let base = if base_path.trim().is_empty() {
-        "/".to_owned()
-    } else if base_path.starts_with('/') {
-        base_path.to_owned()
-    } else {
-        format!("/{base_path}")
-    };
-
-    let request = request_path.trim();
-    if request.is_empty() || request == "/" {
-        return base;
-    }
-
-    if request.starts_with('/') {
-        if base == "/" {
-            return request.to_owned();
-        }
-        return format!("{}{}", base.trim_end_matches('/'), request);
-    }
-
-    if base == "/" {
-        format!("/{request}")
-    } else {
-        format!("{}/{}", base.trim_end_matches('/'), request)
-    }
 }
 
 fn map_transport_io_error(error: std::io::Error) -> KolmeRuntimeCommitProviderError {
