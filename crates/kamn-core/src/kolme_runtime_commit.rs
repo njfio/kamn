@@ -6,6 +6,7 @@ use kamn_kolme::{
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
     parse_fork_block_txhash as parse_kolme_fork_block_txhash,
     parse_http_endpoint as parse_kolme_http_endpoint,
+    parse_notification_event as parse_kolme_notification_event_contract,
     parse_receipt_finality as parse_kolme_receipt_finality,
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
     render_block_path as render_kolme_block_path,
@@ -18,7 +19,9 @@ use kamn_kolme::{
     KolmeApiNextNonceRequest as KamnKolmeApiNextNonceRequest,
     KolmeApiNextNonceResponse as KamnKolmeApiNextNonceResponse,
     KolmeEndpointPolicyError as KamnKolmeEndpointPolicyError,
-    KolmeHttpScheme as KamnKolmeHttpScheme, KolmeParsedHttpEndpoint as KamnKolmeParsedHttpEndpoint,
+    KolmeHttpScheme as KamnKolmeHttpScheme, KolmeNotificationEvent as KamnKolmeNotificationEvent,
+    KolmeNotificationPolicyError as KamnKolmeNotificationPolicyError,
+    KolmeParsedHttpEndpoint as KamnKolmeParsedHttpEndpoint,
     KolmeParsedWebsocketEndpoint as KamnKolmeParsedWebsocketEndpoint, ReceiptFinality,
 };
 use std::collections::HashMap;
@@ -1742,6 +1745,14 @@ fn map_endpoint_policy_error_to_malformed(
     }
 }
 
+fn map_notification_policy_error_to_malformed(
+    error: KamnKolmeNotificationPolicyError,
+) -> KolmeRuntimeCommitProviderError {
+    KolmeRuntimeCommitProviderError::MalformedResponse {
+        reason: error.to_string(),
+    }
+}
+
 fn parse_http_endpoint(
     base_url: &str,
     path: &str,
@@ -2110,51 +2121,27 @@ fn try_take_websocket_frame(
 fn parse_kolme_notification_event(
     payload: &str,
 ) -> Result<KolmeRuntimeCommitNotificationEvent, KolmeRuntimeCommitProviderError> {
-    let trimmed = payload.trim();
-    if trimmed.is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "notification payload must not be empty".to_owned(),
-        });
-    }
-    if trimmed.contains("\"NewBlock\"") {
-        let block_height = find_notification_u64_field(trimmed, "height")?
-            .or(find_escaped_notification_u64_field(trimmed, "height")?);
-        if let Some(txhash) = find_notification_string_field(trimmed, "txhash")? {
-            return Ok(KolmeRuntimeCommitNotificationEvent::NewBlock {
-                txhash,
-                block_height,
-            });
-        }
-        if let Some(height) = block_height {
-            return Ok(KolmeRuntimeCommitNotificationEvent::LatestBlock { height });
-        }
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "notification txhash or height field is missing".to_owned(),
-        });
-    }
-    if trimmed.contains("\"FailedTransaction\"") {
-        let txhash = find_notification_string_field(trimmed, "txhash")?.ok_or_else(|| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "notification txhash field is missing".to_owned(),
-            }
-        })?;
-        let proposed_height = find_notification_u64_field(trimmed, "proposed_height")?;
-        return Ok(KolmeRuntimeCommitNotificationEvent::FailedTransaction {
+    let event = parse_kolme_notification_event_contract(payload)
+        .map_err(map_notification_policy_error_to_malformed)?;
+    match event {
+        KamnKolmeNotificationEvent::NewBlock {
+            txhash,
+            block_height,
+        } => Ok(KolmeRuntimeCommitNotificationEvent::NewBlock {
+            txhash,
+            block_height,
+        }),
+        KamnKolmeNotificationEvent::FailedTransaction {
             txhash,
             proposed_height,
-        });
+        } => Ok(KolmeRuntimeCommitNotificationEvent::FailedTransaction {
+            txhash,
+            proposed_height,
+        }),
+        KamnKolmeNotificationEvent::LatestBlock { height } => {
+            Ok(KolmeRuntimeCommitNotificationEvent::LatestBlock { height })
+        }
     }
-    if trimmed.contains("\"LatestBlock\"") {
-        let height = find_notification_u64_field(trimmed, "height")?.ok_or_else(|| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "notification latest block height is missing".to_owned(),
-            }
-        })?;
-        return Ok(KolmeRuntimeCommitNotificationEvent::LatestBlock { height });
-    }
-    Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-        reason: "notification variant is unsupported".to_owned(),
-    })
 }
 
 fn find_notification_string_field(
@@ -2270,31 +2257,6 @@ fn find_notification_u64_field(
             return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                 reason: format!("notification field '{field}' must be a positive integer"),
             });
-        }
-        let token = &payload[cursor..end];
-        return parse_notification_positive_u64(token, field).map(Some);
-    }
-    Ok(None)
-}
-
-fn find_escaped_notification_u64_field(
-    payload: &str,
-    field: &str,
-) -> Result<Option<u64>, KolmeRuntimeCommitProviderError> {
-    let pattern = format!("\\\"{field}\\\":");
-    for (index, _) in payload.match_indices(pattern.as_str()) {
-        let mut cursor = index + pattern.len();
-        cursor = skip_ascii_whitespace(payload, cursor);
-        let mut end = cursor;
-        while let Some(byte) = payload.as_bytes().get(end).copied() {
-            if byte.is_ascii_digit() {
-                end += 1;
-                continue;
-            }
-            break;
-        }
-        if end == cursor {
-            continue;
         }
         let token = &payload[cursor..end];
         return parse_notification_positive_u64(token, field).map(Some);
