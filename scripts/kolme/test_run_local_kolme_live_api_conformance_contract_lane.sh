@@ -6,6 +6,7 @@ RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_api_conformance_harness.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_live_api_conformance_policy.py"
 CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
+MATRIX_FILE="$ROOT_DIR/fixtures/kolme_commit/local_live_api_conformance_matrix.json"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT="$(mktemp)"
 TMP_POLICY="$(mktemp)"
@@ -55,6 +56,11 @@ if [ ! -x "$CONTRACT_LANE" ]; then
   exit 1
 fi
 
+if [ ! -f "$MATRIX_FILE" ]; then
+  echo "expected local live API conformance matrix fixture to exist" >&2
+  exit 1
+fi
+
 if ! grep -q "run_local_kolme_live_api_conformance_harness.sh" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to reference local Kolme live API conformance harness runner" >&2
   exit 1
@@ -70,11 +76,17 @@ if ! grep -q "run_local_kolme_live_api_conformance_contract_lane.sh" "$DOC_FILE"
   exit 1
 fi
 
+if ! grep -q "fixtures/kolme_commit/local_live_api_conformance_matrix.json" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local live API conformance matrix fixture" >&2
+  exit 1
+fi
+
 FORK_CHAIN_VERSION="v0.15.2"
 
 dry_run_output="$(
   bash "$RUNNER" \
     --mode dry-run \
+    --matrix-file "$MATRIX_FILE" \
     --fork-chain-version "$FORK_CHAIN_VERSION" \
     --output-json "$TMP_REPORT"
 )"
@@ -156,11 +168,25 @@ if "api_probe" not in check_ids:
     raise SystemExit("expected api_probe check id")
 if "native_api_parity" not in check_ids:
     raise SystemExit("expected native_api_parity check id")
+matrix = report.get("conformance_matrix")
+if not isinstance(matrix, dict):
+    raise SystemExit("expected conformance_matrix object in summary")
+if matrix.get("schema_version") != "kamn.kolme.local-live-api-conformance-matrix.v1":
+    raise SystemExit("expected conformance_matrix schema marker")
+matrix_checks = matrix.get("checks")
+if not isinstance(matrix_checks, list) or len(matrix_checks) < 2:
+    raise SystemExit("expected deterministic conformance matrix checks")
+matrix_ids = [entry.get("id") for entry in matrix_checks if isinstance(entry, dict)]
+if "api_probe" not in matrix_ids:
+    raise SystemExit("expected api_probe matrix check id")
+if "native_api_parity" not in matrix_ids:
+    raise SystemExit("expected native_api_parity matrix check id")
 PY
 
 set +e
 bash "$RUNNER" \
   --mode run \
+  --matrix-file "$MATRIX_FILE" \
   --fork-chain-version "$FORK_CHAIN_VERSION" \
   --output-json "$TMP_REPORT" >"$TMP_ERR" 2>&1
 run_without_opt_in_code=$?
@@ -306,11 +332,12 @@ done
 
 run_output="$(
   KAMN_KOLME_LOCAL_HEAVY=1 \
-    bash "$RUNNER" \
-      --mode run \
-      --base-url "http://127.0.0.1:${PORT}" \
-      --fork-chain-version "$FORK_CHAIN_VERSION" \
-      --max-seconds 60 \
+  bash "$RUNNER" \
+    --mode run \
+    --matrix-file "$MATRIX_FILE" \
+    --base-url "http://127.0.0.1:${PORT}" \
+    --fork-chain-version "$FORK_CHAIN_VERSION" \
+    --max-seconds 60 \
       --probe-max-seconds 20 \
       --native-max-seconds 40 \
       --output-json "$TMP_REPORT"
@@ -358,12 +385,27 @@ for expected_id in ("api_probe", "native_api_parity"):
         raise SystemExit(f"missing check id: {expected_id}")
     if matching[0].get("status") != "pass":
         raise SystemExit(f"expected pass status for check id: {expected_id}")
+matrix = report.get("conformance_matrix")
+if not isinstance(matrix, dict):
+    raise SystemExit("expected conformance_matrix object in run summary")
+matrix_checks = matrix.get("checks")
+if not isinstance(matrix_checks, list):
+    raise SystemExit("expected conformance matrix checks in run summary")
+for expected_id in ("api_probe", "native_api_parity"):
+    matching = [
+        entry for entry in matrix_checks if isinstance(entry, dict) and entry.get("id") == expected_id
+    ]
+    if not matching:
+        raise SystemExit(f"missing conformance matrix check id: {expected_id}")
+    if matching[0].get("ci_scope") != "local-only":
+        raise SystemExit(f"expected local-only ci_scope for matrix check id: {expected_id}")
 PY
 
 contract_output="$(
   bash "$CONTRACT_LANE" \
     --output-json "$TMP_REPORT" \
     --policy-output-json "$TMP_POLICY" \
+    --matrix-file "$MATRIX_FILE" \
     --max-seconds 120 \
     --fork-chain-version "$FORK_CHAIN_VERSION"
 )"

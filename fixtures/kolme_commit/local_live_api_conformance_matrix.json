@@ -1,0 +1,27 @@
+{
+  "schema_version": "kamn.kolme.local-live-api-conformance-matrix.v1",
+  "checks": [
+    {
+      "id": "api_probe",
+      "runner": "scripts/kolme/run_local_kolme_api_probe_lane.sh",
+      "ci_scope": "local-only",
+      "description": "Probe local health and fork-info contracts",
+      "contracts": {
+        "healthz_path": "/healthz",
+        "fork_info_path": "/fork-info",
+        "fork_info_query_key": "chain_version"
+      }
+    },
+    {
+      "id": "native_api_parity",
+      "runner": "scripts/kolme/run_local_native_api_parity_live_proof_lane.sh",
+      "ci_scope": "local-only",
+      "description": "Validate nonce/broadcast native API parity",
+      "contracts": {
+        "nonce_endpoint": "/get-next-nonce",
+        "broadcast_endpoint": "/broadcast",
+        "broadcast_method": "PUT"
+      }
+    }
+  ]
+}

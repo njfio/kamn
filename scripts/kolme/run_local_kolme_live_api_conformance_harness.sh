@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PROBE_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_api_probe_lane.sh"
 NATIVE_RUNNER="$ROOT_DIR/scripts/kolme/run_local_native_api_parity_live_proof_lane.sh"
+MATRIX_FILE="$ROOT_DIR/fixtures/kolme_commit/local_live_api_conformance_matrix.json"
 
 MODE="dry-run"
 OUTPUT_JSON="/tmp/kolme-local-live-api-conformance-summary.json"
@@ -107,6 +108,14 @@ while [ "$#" -gt 0 ]; do
       NATIVE_MAX_SECONDS="$2"
       shift 2
       ;;
+    --matrix-file)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --matrix-file" >&2
+        exit 1
+      fi
+      MATRIX_FILE="$2"
+      shift 2
+      ;;
     --help|-h)
       cat <<'USAGE'
 Usage: run_local_kolme_live_api_conformance_harness.sh [options]
@@ -123,6 +132,7 @@ Options:
   --max-seconds <n>               Max total runtime budget for the harness.
   --probe-max-seconds <n>         Max runtime for probe prerequisite.
   --native-max-seconds <n>        Max runtime for native parity proof step.
+  --matrix-file <path>            Conformance matrix fixture path.
 USAGE
       exit 0
       ;;
@@ -145,6 +155,11 @@ fi
 
 if [ -z "$BROADCAST_PAYLOAD" ]; then
   echo "broadcast-payload must not be empty" >&2
+  exit 1
+fi
+
+if [ -z "$MATRIX_FILE" ]; then
+  echo "matrix-file must not be empty" >&2
   exit 1
 fi
 
@@ -172,6 +187,67 @@ if [ ! -x "$NATIVE_RUNNER" ]; then
   echo "expected local native API parity live proof runner to be executable" >&2
   exit 1
 fi
+
+if [ ! -f "$MATRIX_FILE" ]; then
+  echo "expected local live API conformance matrix fixture to exist" >&2
+  exit 1
+fi
+
+CONFORMANCE_MATRIX_JSON="$(
+  python3 - "$MATRIX_FILE" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1]).resolve()
+payload = json.loads(path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.kolme.local-live-api-conformance-matrix.v1":
+    raise SystemExit("conformance matrix schema_version mismatch")
+
+checks = payload.get("checks")
+if not isinstance(checks, list) or not checks:
+    raise SystemExit("conformance matrix checks must be a non-empty list")
+
+required = {"api_probe", "native_api_parity"}
+observed = set()
+normalized_checks: list[dict[str, object]] = []
+for entry in checks:
+    if not isinstance(entry, dict):
+        raise SystemExit("conformance matrix check entry must be an object")
+    check_id = entry.get("id")
+    runner = entry.get("runner")
+    ci_scope = entry.get("ci_scope")
+    if not isinstance(check_id, str) or not check_id.strip():
+        raise SystemExit("conformance matrix check id must be non-empty")
+    if not isinstance(runner, str) or not runner.strip():
+        raise SystemExit(f"conformance matrix runner missing for check '{check_id}'")
+    if ci_scope != "local-only":
+        raise SystemExit(f"conformance matrix ci_scope must be local-only for check '{check_id}'")
+    observed.add(check_id)
+    normalized_checks.append(
+        {
+            "id": check_id,
+            "runner": runner,
+            "ci_scope": ci_scope,
+            "description": entry.get("description", ""),
+            "contracts": entry.get("contracts", {}),
+        }
+    )
+
+missing = sorted(required - observed)
+if missing:
+    raise SystemExit(f"conformance matrix missing required checks: {','.join(missing)}")
+
+summary_matrix = {
+    "schema_version": "kamn.kolme.local-live-api-conformance-matrix.v1",
+    "source_file": str(path),
+    "checks": normalized_checks,
+}
+print(json.dumps(summary_matrix, sort_keys=True))
+PY
+)"
 
 CHECK_FILE="$(mktemp)"
 trap 'rm -f "$CHECK_FILE"' EXIT
@@ -295,7 +371,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$BASE_URL" "$FORK_CHAIN_VERSION" "$NONCE_PUBKEY" "$BROADCAST_PAYLOAD" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$PROBE_REPORT" "$NATIVE_REPORT" "$probe_reason_code" "$native_reason_code" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$BASE_URL" "$FORK_CHAIN_VERSION" "$NONCE_PUBKEY" "$BROADCAST_PAYLOAD" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$PROBE_REPORT" "$NATIVE_REPORT" "$probe_reason_code" "$native_reason_code" "$MATRIX_FILE" "$CONFORMANCE_MATRIX_JSON" "$CHECK_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -317,7 +393,9 @@ probe_report = sys.argv[12]
 native_report = sys.argv[13]
 probe_reason_code = sys.argv[14]
 native_reason_code = sys.argv[15]
-checks_path = pathlib.Path(sys.argv[16])
+matrix_file = sys.argv[16]
+conformance_matrix = json.loads(sys.argv[17])
+checks_path = pathlib.Path(sys.argv[18])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -350,6 +428,8 @@ summary = {
     "nonce_pubkey": nonce_pubkey,
     "probe_reason_code": probe_reason_code,
     "native_reason_code": native_reason_code,
+    "matrix_file": matrix_file,
+    "conformance_matrix": conformance_matrix,
     "checks": checks,
     "contracts": {
         "healthz_path": "/healthz",
