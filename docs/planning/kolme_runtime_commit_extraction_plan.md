@@ -46,6 +46,7 @@ Out of scope:
 - #1852: extracted provider-scoped notification receipt projection to `kamn-kolme` (`notification_event_to_provider_receipt`) and rewired `kamn-core` notification conversion provider normalization + receipt assembly delegation.
 - #1854: extracted block-fallback txhash-match receipt projection to `kamn-kolme` (`project_finalized_block_txhash_receipt` / `project_failed_block_txhash_receipt`) and rewired `kamn-core` fallback reconciler receipt projection delegation.
 - #1856: extracted fallback txhash request validation + unresolved-reason composition to `kamn-kolme` (`validate_lookup_txhash` / `compose_block_fallback_unresolved_reason`) and rewired `kamn-core` fallback reconciler delegation.
+- #1858: extracted terminal receipt-finality gate to `kamn-kolme` (`is_terminal_receipt_finality`) and rewired `kamn-core` finality poller convergence gating delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,

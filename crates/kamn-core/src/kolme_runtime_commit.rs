@@ -14,6 +14,7 @@ use kamn_kolme::{
     escape_json_string as escape_kolme_json_string,
     find_http_header_boundary as find_kolme_http_header_boundary,
     is_broadcast_submit_path as is_kolme_broadcast_submit_path_contract,
+    is_terminal_receipt_finality as is_kolme_terminal_receipt_finality_contract,
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
     lifecycle_state_label as lifecycle_state_label_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
@@ -1227,7 +1228,7 @@ impl<T: KolmeRuntimeCommitFinalityTransport> KolmeRuntimeCommitFinalityChecker<T
         }
         for _ in 0..max_attempts {
             let receipt = self.check_commit_finality(commit_id)?;
-            if !matches!(receipt.finality, KolmeCommitReceiptFinality::Pending) {
+            if is_kolme_terminal_receipt_finality_contract(receipt.finality) {
                 return Ok(receipt);
             }
         }

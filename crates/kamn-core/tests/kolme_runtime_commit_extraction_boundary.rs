@@ -54,6 +54,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("lifecycle_state_for_finality_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("lifecycle_state_label_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("commit_finality_label_contract("));
+    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_terminal_receipt_finality_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("deterministic_runtime_commit_idempotency_key_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("deterministic_runtime_commit_id_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("txhash_from_kolme_commit_id("));
