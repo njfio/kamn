@@ -20,6 +20,9 @@ default development loop green while tightening missing-doc policy controls for
   - `bash scripts/ci/check_kamn_core_missing_docs_policy.sh`
 - Missing-doc policy checker regression tests:
   - `bash scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
+- Missing-doc throughput report generation and policy checker:
+  - `python3 scripts/ci/missing_docs_throughput_report_contract.py generate --output-json /tmp/kamn-core-missing-docs-throughput-report.json`
+  - `python3 scripts/ci/missing_docs_throughput_report_contract.py check --report-file /tmp/kamn-core-missing-docs-throughput-report.json`
 - Bounded rustdoc generation command (kamn-core only):
   - `RUSTDOCFLAGS="-D warnings" cargo doc -p kamn-core --no-deps`
 - Rustdoc artifact contract lane and policy checker:
@@ -42,12 +45,29 @@ default development loop green while tightening missing-doc policy controls for
   - `fixtures/ci/kamn_core_missing_docs_allowlist.txt`
 - Graduated modules that must remain outside the allow-list:
   - `namespaces`, `bootstrap`, `kolme_runtime_commit`, `state`, `task_lifecycle`
+- Graduated modules fixture:
+  - `fixtures/ci/kamn_core_missing_docs_graduated_modules.txt`
+- Throughput visibility target:
+  - `5` graduated modules per `100` commits (`target_modules_per_100_commits`).
 - Any allowlist drift fails closed via:
   - `scripts/ci/check_kamn_core_missing_docs_policy.sh`
 - Architecture/runtime flow and rustdoc publication docs are required:
   - `docs/architecture/kamn-core-module-map.md`
   - `docs/architecture/kamn-core-module-map.md#contributor-entrypoint-matrix`
   - `docs/developer/rustdoc-publishing.md`
+
+## Missing-Docs Throughput Report Contract
+
+- Throughput report schema:
+  - `kamn.ci.kamn-core-missing-docs-throughput-report.v1`
+- Report artifact fields include:
+  - `commit_count`, `graduated_module_count`, `target_modules_per_100_commits`,
+    `observed_modules_per_100_commits`, `target_met`, `reason_key`
+- Operational response when throughput is under target:
+  - If `target_met` is `false`, keep parent task `#1718` in `status:in-progress`
+    and open/execute a corrective subtask before next release cut.
+  - If `target_met` is `true`, post evidence to `#1718` and retain policy checks
+    to guard against regressions.
 
 ## Cost and Runtime Policy
 
@@ -64,8 +84,11 @@ default development loop green while tightening missing-doc policy controls for
   - `crates/kamn-core/tests/missing_docs_policy.rs`
   - `crates/kamn-core/tests/engineering_hardening_wave_docs.rs`
   - `fixtures/ci/kamn_core_missing_docs_allowlist.txt`
+  - `fixtures/ci/kamn_core_missing_docs_graduated_modules.txt`
   - `scripts/ci/check_kamn_core_missing_docs_policy.sh`
   - `scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
+  - `scripts/ci/missing_docs_throughput_report_contract.py`
+  - `scripts/ci/test_missing_docs_throughput_report_contract.sh`
   - `scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh`
   - `scripts/ci/test_run_kamn_core_rustdoc_artifact_contract_lane.sh`
   - `scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh`

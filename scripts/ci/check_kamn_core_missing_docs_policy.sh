@@ -9,6 +9,7 @@ README_PATH="${KAMN_README_PATH:-$ROOT_DIR/README.md}"
 PLAN_DOC_PATH="${KAMN_ENGINEERING_HARDENING_DOC_PATH:-$ROOT_DIR/docs/planning/engineering-hardening-wave.md}"
 ARCH_DOC_PATH="${KAMN_CORE_MODULE_MAP_DOC_PATH:-$ROOT_DIR/docs/architecture/kamn-core-module-map.md}"
 RUSTDOC_GUIDE_PATH="${KAMN_RUSTDOC_PUBLISHING_DOC_PATH:-$ROOT_DIR/docs/developer/rustdoc-publishing.md}"
+THROUGHPUT_CONTRACT_SCRIPT_PATH="${KAMN_MISSING_DOCS_THROUGHPUT_CONTRACT_SCRIPT_PATH:-$ROOT_DIR/scripts/ci/missing_docs_throughput_report_contract.py}"
 
 require_file() {
   local file="$1"
@@ -26,6 +27,7 @@ require_file "$README_PATH" "README"
 require_file "$PLAN_DOC_PATH" "engineering hardening plan"
 require_file "$ARCH_DOC_PATH" "kamn-core module map"
 require_file "$RUSTDOC_GUIDE_PATH" "rustdoc publishing guide"
+require_file "$THROUGHPUT_CONTRACT_SCRIPT_PATH" "missing-docs throughput report contract script"
 
 if ! grep -Fq "#![warn(missing_docs)]" "$CORE_LIB_PATH"; then
   echo "missing-docs policy contract failed: kamn-core must declare #![warn(missing_docs)]." >&2
@@ -119,6 +121,21 @@ if ! grep -Fq "check_kamn_core_missing_docs_policy.sh" "$PLAN_DOC_PATH"; then
   exit 1
 fi
 
+if ! grep -Fq "missing_docs_throughput_report_contract.py" "$PLAN_DOC_PATH"; then
+  echo "missing-docs policy contract failed: engineering hardening plan must include throughput report contract command." >&2
+  exit 1
+fi
+
+if ! grep -Fq "target_modules_per_100_commits" "$PLAN_DOC_PATH"; then
+  echo "missing-docs policy contract failed: engineering hardening plan must include throughput target marker." >&2
+  exit 1
+fi
+
+if ! grep -Fq "kamn.ci.kamn-core-missing-docs-throughput-report.v1" "$PLAN_DOC_PATH"; then
+  echo "missing-docs policy contract failed: engineering hardening plan must include throughput schema marker." >&2
+  exit 1
+fi
+
 if ! grep -Fq "#![warn(missing_docs)]" "$PLAN_DOC_PATH"; then
   echo "missing-docs policy contract failed: engineering hardening plan must include #![warn(missing_docs)] policy marker." >&2
   exit 1
@@ -163,5 +180,24 @@ if ! grep -Fq "target/doc" "$RUSTDOC_GUIDE_PATH"; then
   echo "missing-docs policy contract failed: rustdoc guide must include publication artifact path." >&2
   exit 1
 fi
+
+tmp_throughput_report="$(mktemp)"
+if ! python3 "$THROUGHPUT_CONTRACT_SCRIPT_PATH" generate \
+  --core-lib "$CORE_LIB_PATH" \
+  --allowlist "$ALLOWLIST_PATH" \
+  --graduated-modules "$GRADUATED_MODULES_PATH" \
+  --output-json "$tmp_throughput_report" >/dev/null; then
+  echo "missing-docs policy contract failed: throughput report generation command failed." >&2
+  rm -f "$tmp_throughput_report"
+  exit 1
+fi
+
+if ! python3 "$THROUGHPUT_CONTRACT_SCRIPT_PATH" check \
+  --report-file "$tmp_throughput_report" >/dev/null; then
+  echo "missing-docs policy contract failed: throughput report policy check failed." >&2
+  rm -f "$tmp_throughput_report"
+  exit 1
+fi
+rm -f "$tmp_throughput_report"
 
 echo "kamn-core missing-docs policy contract passed."
