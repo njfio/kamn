@@ -560,6 +560,7 @@ Local Kolme API probe/smoke lane contract tests:
 - `bash scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_lane.sh`
 - `bash scripts/kolme/test_check_local_kolme_fork_checkout_bootstrap_policy.sh`
 - `bash scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_contract_lane.sh`
+- `bash scripts/kolme/test_check_local_kolme_fork_real_process_policy.sh`
 - `bash scripts/kolme/test_run_local_kolme_fork_real_process_contract_lane.sh`
 
 ## Workflow
