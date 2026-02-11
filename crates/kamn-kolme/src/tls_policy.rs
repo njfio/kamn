@@ -39,6 +39,19 @@ pub fn parse_tls_ca_file_env_value(
     Ok(Some(trimmed.to_owned()))
 }
 
+/// Resolves one `KAMN_KOLME_TLS_CA_FILE` environment read result into deterministic policy output.
+pub fn resolve_tls_ca_file_env_result(
+    value: Result<String, std::env::VarError>,
+) -> Result<Option<String>, KolmeTlsPolicyError> {
+    match value {
+        Ok(raw) => parse_tls_ca_file_env_value(Some(raw.as_str())),
+        Err(std::env::VarError::NotPresent) => Ok(None),
+        Err(std::env::VarError::NotUnicode(_)) => Err(KolmeTlsPolicyError::Unavailable {
+            reason: "KAMN_KOLME_TLS_CA_FILE must be valid utf-8".to_owned(),
+        }),
+    }
+}
+
 /// Classifies stderr output from TLS-backed transport into deterministic reason text.
 pub fn classify_tls_failure_reason(stderr: &str) -> String {
     let normalized = stderr.to_ascii_lowercase();
@@ -65,7 +78,10 @@ pub fn classify_tls_failure_reason(stderr: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{classify_tls_failure_reason, parse_tls_ca_file_env_value, KolmeTlsPolicyError};
+    use super::{
+        classify_tls_failure_reason, parse_tls_ca_file_env_value, resolve_tls_ca_file_env_result,
+        KolmeTlsPolicyError,
+    };
 
     #[test]
     fn unit_parse_tls_ca_file_env_value_accepts_trimmed_path() {
@@ -90,6 +106,31 @@ mod tests {
         assert_eq!(
             classify_tls_failure_reason("ssl routines:ssl3_get_record:wrong version number"),
             "tls handshake failed"
+        );
+    }
+
+    #[test]
+    fn functional_resolve_tls_ca_file_env_result_handles_not_present_and_valid_values() {
+        assert_eq!(
+            resolve_tls_ca_file_env_result(Err(std::env::VarError::NotPresent)),
+            Ok(None)
+        );
+        assert_eq!(
+            resolve_tls_ca_file_env_result(Ok("/etc/ssl/custom.pem".to_owned())),
+            Ok(Some("/etc/ssl/custom.pem".to_owned()))
+        );
+    }
+
+    #[test]
+    fn regression_tls_env_resolution_rejects_non_utf8_env_value() {
+        // Regression: #1850
+        assert_eq!(
+            resolve_tls_ca_file_env_result(Err(std::env::VarError::NotUnicode(
+                std::ffi::OsString::from("invalid"),
+            ))),
+            Err(KolmeTlsPolicyError::Unavailable {
+                reason: "KAMN_KOLME_TLS_CA_FILE must be valid utf-8".to_owned(),
+            })
         );
     }
 }

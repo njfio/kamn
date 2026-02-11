@@ -85,7 +85,8 @@ pub use runtime_request_identity_policy::{
     deterministic_runtime_commit_id, deterministic_runtime_commit_idempotency_key,
 };
 pub use tls_policy::{
-    classify_tls_failure_reason, parse_tls_ca_file_env_value, KolmeTlsPolicyError,
+    classify_tls_failure_reason, parse_tls_ca_file_env_value, resolve_tls_ca_file_env_result,
+    KolmeTlsPolicyError,
 };
 pub use transport::{
     classify_transport_io_error, EchoTransport, KolmeTransport, KolmeTransportIoClassification,
