@@ -92,6 +92,10 @@ handling.
   - `signed_message` must exactly match canonical `to_wire_payload()` output.
   - `KolmeRuntimeCommitSignedBroadcastEnvelope` requires non-empty `signer_key_id`, `message`, and `signature`.
   - fork `/broadcast` normalization accepts signed envelope wire payloads only when `signer_key_id` is present and envelope message idempotency key matches the transport idempotency key.
+  - fork `/broadcast` normalization also accepts direct pre-signed transaction JSON payloads (`message`, `signature`, `recovery_id`) when:
+    - `message` is a JSON object string.
+    - optional JSON `idempotency_key` matches the transport idempotency key.
+    - malformed/non-JSON direct payload messages fail closed.
 
 ## Provider and Finality Policy Rules
 
@@ -144,3 +148,4 @@ cargo test -p kamn-core
 - `kolme_fork` submit-profile drift for `PUT /broadcast` and txhash-only response mapping remains fail-closed (`Regression: #1502`).
 - `kolme_fork` finality resolution drift for notifications + block fallback remains fail-closed (`Regression: #1503`).
 - signed translation envelope and signer custody precondition drift remains fail-closed (`Regression: #1506`).
+- direct signed transaction payload normalization drift remains fail-closed (`Regression: #1516`).
