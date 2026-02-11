@@ -104,6 +104,22 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - Mediates external transport and settlement confirmations into normalized
     internal state mutations.
 
+### Kolme Extraction Boundary (In Progress)
+
+- Crate/module surface:
+  - `crates/kamn-core/src/kolme_runtime_commit.rs` (legacy compatibility shim
+    while extraction proceeds)
+  - `crates/kamn-kolme/src/codec.rs`, `crates/kamn-kolme/src/transport.rs`,
+    `crates/kamn-kolme/src/finality.rs`, `crates/kamn-kolme/src/pipeline.rs`
+- Ownership boundary:
+  - `kamn-kolme` is the dedicated home for runtime-commit transport/codec/finality
+    contracts. `kamn-core` retains temporary compatibility exports until full
+    migration is complete.
+- Runtime/data-flow ownership:
+  - New runtime-commit submissions should target `kamn-kolme` contracts first,
+    then map back to `kamn-core` compatibility paths only where migration is
+    still in progress.
+
 ### Cryptographic Signer and ZK Surface
 
 - Modules:
@@ -134,6 +150,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
 | See ownership boundaries across core modules | `docs/architecture/kamn-core-module-map.md#ownership-matrix` | Canonical map for domain ownership and runtime/data-flow responsibilities. |
 | Understand high-level runtime path | `docs/architecture/kamn-core-module-map.md#runtime-flow-condensed` | Condensed sequence from identity checks to external receipts. |
 | Find exported public API surface | `crates/kamn-core/src/lib.rs` | Canonical `pub mod` and `pub use` inventory for `kamn-core`. |
+| Find extracted Kolme scaffold contracts | `crates/kamn-kolme/src/lib.rs` | Canonical crate boundary for runtime-commit codec, transport, finality, and pipeline scaffolding. |
 | Run missing-doc drift policy | `scripts/ci/check_kamn_core_missing_docs_policy.sh` | Fail-closed lint allowlist checker for docs hardening. |
 | Generate bounded rustdoc artifact evidence | `scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh` | Deterministic rustdoc report/artifact lane used in CI and local checks. |
 | Enforce rustdoc artifact policy schema | `scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh` | Validates report schema, digest, artifact path, and runtime budget. |

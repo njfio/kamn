@@ -312,6 +312,13 @@ assert_eq "$(extract_output "$core_lib_policy_output" "run_rust")" "true" "kamn-
 assert_eq "$(extract_output "$core_lib_policy_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "kamn-core lib changes must run missing-docs policy checks"
 assert_eq "$(extract_output "$core_lib_policy_output" "test_scope")" "targeted" "kamn-core lib changes should stay targeted"
 
+kolme_scaffold_output="$(run_selector $'crates/kamn-kolme/src/lib.rs')"
+assert_eq "$(extract_output "$kolme_scaffold_output" "run_rust")" "true" "kamn-kolme scaffold changes should run rust lane"
+assert_eq "$(extract_output "$kolme_scaffold_output" "test_scope")" "targeted" "kamn-kolme scaffold changes should stay targeted"
+assert_eq "$(extract_output "$kolme_scaffold_output" "run_kolme_version_compatibility_contract_tests")" "false" "kamn-kolme scaffold alone should not force legacy kamn-core Kolme lanes"
+assert_eq "$(extract_output "$kolme_scaffold_output" "run_kamn_core_missing_docs_policy_contract_tests")" "false" "kamn-kolme scaffold should not trigger kamn-core missing-docs policy checks"
+assert_eq "$(extract_output "$kolme_scaffold_output" "changed_manifests")" "crates/kamn-kolme/Cargo.toml" "kamn-kolme paths should resolve to the new crate manifest"
+
 test_cmd="$(extract_output "$targeted_output" "test_cmd")"
 if ! printf '%s\n' "$test_cmd" | grep -q "run_cargo_test_with_quarantine.sh"; then
   echo "targeted test command must use quarantine wrapper" >&2
