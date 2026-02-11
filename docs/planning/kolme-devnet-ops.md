@@ -520,6 +520,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local fork checkout bootstrap lane fails closed for local opt-in, checkout provenance drift, diagnostics command failures, and runtime budget overruns (`Regression: #1663`).
 - real-fork local process wrapper bootstrap-first prerequisite ordering remains fail-closed for bootstrap lane/policy checkpoint drift (`Regression: #1667`).
 - real-fork local process wrapper lane fails closed for local opt-in, serve-command profile drift, self-test/lifecycle/policy checkpoint failure, and runtime budget overruns (`Regression: #1644`).
+- real-fork local process wrapper policy checker lane remains fail-closed for schema/contracts/checkpoint drift (`Regression: #1671`).
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
 - local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`).
 - native parity fast/local command matrix docs drift remains fail-closed (`Regression: #1468`).
@@ -556,6 +557,7 @@ bash scripts/kolme/test_run_local_kolme_fork_self_test_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_lane.sh
 bash scripts/kolme/test_check_local_kolme_fork_checkout_bootstrap_policy.sh
 bash scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_contract_lane.sh
+bash scripts/kolme/test_check_local_kolme_fork_real_process_policy.sh
 bash scripts/kolme/test_run_local_kolme_fork_real_process_contract_lane.sh
 bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh
 bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh

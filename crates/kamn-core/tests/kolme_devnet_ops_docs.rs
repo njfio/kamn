@@ -157,6 +157,11 @@ fn plan_contains_real_fork_local_process_wrapper_lane() {
 }
 
 #[test]
+fn plan_contains_real_fork_wrapper_policy_checker_test_command() {
+    assert!(PLAN.contains("test_check_local_kolme_fork_real_process_policy.sh"));
+}
+
+#[test]
 fn plan_contains_local_runtime_commit_live_lane() {
     assert!(PLAN.contains("## Local Runtime Commit Live Proof Lane"));
     assert!(PLAN.contains("run_local_runtime_commit_live_lane.sh"));
@@ -424,5 +429,13 @@ fn regression_requires_real_fork_wrapper_bootstrap_prerequisite_guard_marker() {
     // Regression: #1667
     assert!(PLAN.contains(
         "real-fork local process wrapper bootstrap-first prerequisite ordering remains fail-closed for bootstrap lane/policy checkpoint drift (`Regression: #1667`)."
+    ));
+}
+
+#[test]
+fn regression_requires_real_fork_wrapper_policy_checker_guard_marker() {
+    // Regression: #1671
+    assert!(PLAN.contains(
+        "real-fork local process wrapper policy checker lane remains fail-closed for schema/contracts/checkpoint drift (`Regression: #1671`)."
     ));
 }
