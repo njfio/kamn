@@ -21,6 +21,8 @@ required_snippets=(
   "test_kolme_command_surface_coverage_contract.sh"
   "test_kolme_command_surface_asymmetry_contract.sh"
   ".ci/kolme-command-surface-asymmetry-policy.json"
+  "changes map to CI contract scope"
+  "unknown/full fallback remains disabled for this path"
   "run_runtime_snapshot_contract_tests=true"
   "test_scope=runtime-contract"
   "run_localhost_signed_integration_contract_lane_tests"
