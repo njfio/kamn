@@ -14,11 +14,15 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("fn parse_http_endpoint("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn parse_websocket_endpoint("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn compose_notifications_websocket_url("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("fn validate_block_path_template("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("fn render_block_path("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("fn parse_block_fallback_response("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("fn parse_kolme_fork_block_fallback_response("));
 }
 
 #[test]
 fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation() {
-    // Regression: #1794
+    // Regression: #1796
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_commit_receipt_finality("));
     assert!(RUNTIME_COMMIT_SRC.contains("commit_finality_from_receipt_finality_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("lifecycle_state_for_finality_contract("));
@@ -31,4 +35,8 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_endpoint("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_websocket_endpoint("));
     assert!(RUNTIME_COMMIT_SRC.contains("compose_kolme_notifications_websocket_url("));
+    assert!(RUNTIME_COMMIT_SRC.contains("validate_kolme_block_path_template("));
+    assert!(RUNTIME_COMMIT_SRC.contains("render_kolme_block_path("));
+    assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_block_fallback_response_contract("));
+    assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_fork_block_fallback_response_contract("));
 }
