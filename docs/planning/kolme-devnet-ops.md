@@ -130,6 +130,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `python3 scripts/kolme/check_local_kolme_live_api_conformance_policy.py --report-file /tmp/kolme-local-live-api-conformance-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-api-conformance-policy.json`
 - Contract lane command:
   - `bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json`
+- Matrix fixture:
+  - `fixtures/kolme_commit/local_live_api_conformance_matrix.json`
 - Summary schema:
   - `kamn.kolme.local-live-api-conformance-summary.v1`
 - Deterministic checkpoints include:
