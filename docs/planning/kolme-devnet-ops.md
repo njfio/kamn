@@ -159,6 +159,27 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
   - lane default budget is bounded to 90 seconds for local reproducibility.
   - local bootstrap/readiness run-mode execution remains excluded from PR fast-gate workflow routing.
 
+## Local KAMN Live Runtime Integration Lane (Issue #1489)
+
+- Local KAMN live runtime integration runner:
+  - `bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
+- Explicit local-only live runtime integration execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 210 --bootstrap-max-seconds 90 --conformance-max-seconds 180 --runtime-commit-max-seconds 30 --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
+- Policy checker command:
+  - `python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
+- Contract lane command:
+  - `bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
+- Summary schema:
+  - `kamn.kolme.local-kamn-live-runtime-integration-summary.v1`
+- Deterministic checkpoints include:
+  - `run_local_kolme_fork_bootstrap_readiness_lane.sh` run-mode validation for pinned checkout provenance and API readiness.
+  - `run_local_kolme_live_api_conformance_harness.sh` run-mode validation for health/query/nonce/broadcast command contracts.
+  - explicit runtime-commit endpoint probe over `POST /broadcast/runtime-commit` with fail-closed reason codes.
+- Cost policy:
+  - run mode fails closed without explicit local-only opt-in.
+  - lane default budget is bounded to 210 seconds with per-stage budget caps.
+  - local KAMN live runtime integration run-mode execution remains excluded from PR fast-gate workflow routing.
+
 ## Local Runtime Commit Live Proof Lane (Issue #1450)
 
 - Local runtime-commit live lane runner:
@@ -284,6 +305,7 @@ runtime roles (processor/listener/approver) and its CI-compatible validation.
 - local Kolme API smoke lane fails closed without explicit local opt-in, probe prerequisite failure, smoke-command timeout, and smoke-command errors (`Regression: #1440`).
 - local live API conformance harness fails closed for probe/native parity prerequisite failures, runtime budget overruns, and endpoint contract drift (`Regression: #1483`).
 - local fork bootstrap/readiness lane fails closed for sync/probe prerequisite failures, runtime budget overruns, and missing local opt-in (`Regression: #1488`).
+- local KAMN live runtime integration lane fails closed for bootstrap/conformance/runtime-commit prerequisite drift, runtime budget overruns, and missing local opt-in (`Regression: #1489`).
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
 - local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`).
 - native parity fast/local command matrix docs drift remains fail-closed (`Regression: #1468`).
@@ -302,6 +324,7 @@ bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh
 bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh
 bash scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh
+bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh
 bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh
 bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh
 bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh

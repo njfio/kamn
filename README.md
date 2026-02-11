@@ -364,6 +364,24 @@ bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_contract_lane.sh --o
 # schema: kamn.kolme.local-fork-bootstrap-readiness-summary.v1
 ```
 
+### Run Local KAMN Live Runtime Integration Lane
+
+```bash
+# deterministic runtime integration plan (no command execution)
+bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json
+
+# explicit local-only runtime integration execution
+KAMN_KOLME_LOCAL_HEAVY=1 \
+bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 210 --bootstrap-max-seconds 90 --conformance-max-seconds 180 --runtime-commit-max-seconds 30 --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json
+
+# policy checker contract
+python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json
+
+# bounded contract lane (spawns local mock API server + pinned checkout fixture)
+bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json
+# schema: kamn.kolme.local-kamn-live-runtime-integration-summary.v1
+```
+
 ### Run Local-Only Heavy Kolme Validation Matrix
 
 ```bash
@@ -402,6 +420,7 @@ Local Kolme API probe/smoke lane contract tests:
 - `bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh`
+- `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
 
 ## Workflow
 
