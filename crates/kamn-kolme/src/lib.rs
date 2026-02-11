@@ -63,8 +63,9 @@ pub use notification_policy::{
 pub use pipeline::{PipelineError, RuntimeCommitPipeline};
 pub use provider_outcome_policy::{
     deterministic_backend_commit_id, parse_commit_id_from_response_fields,
-    parse_live_provider_outcome, required_provider_response_field, txhash_from_commit_id,
-    KolmeProviderOutcome, KolmeProviderOutcomePolicyError,
+    parse_live_provider_outcome, require_commit_id_matches_expected_txhash,
+    required_provider_response_field, txhash_from_commit_id, KolmeProviderOutcome,
+    KolmeProviderOutcomePolicyError,
 };
 pub use provider_response_policy::{
     parse_provider_key_value_fields, parse_provider_response_fields,

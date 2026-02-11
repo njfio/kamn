@@ -186,6 +186,28 @@ pub fn txhash_from_commit_id(commit_id: &str) -> Result<String, KolmeProviderOut
     Ok(txhash.to_owned())
 }
 
+/// Validates that deterministic commit id maps to the expected txhash value.
+pub fn require_commit_id_matches_expected_txhash(
+    commit_id: &str,
+    expected_txhash: &str,
+) -> Result<(), KolmeProviderOutcomePolicyError> {
+    let expected_txhash = expected_txhash.trim();
+    if expected_txhash.is_empty() {
+        return Err(KolmeProviderOutcomePolicyError::MalformedResponse {
+            reason: "expected txhash must not be empty".to_owned(),
+        });
+    }
+    let observed_txhash = txhash_from_commit_id(commit_id)?;
+    if observed_txhash != expected_txhash {
+        return Err(KolmeProviderOutcomePolicyError::MalformedResponse {
+            reason: format!(
+                "notification txhash mismatch: expected '{expected_txhash}' observed '{observed_txhash}'"
+            ),
+        });
+    }
+    Ok(())
+}
+
 fn required_response_field(
     fields: &HashMap<String, String>,
     field: &'static str,

@@ -27,6 +27,7 @@ use kamn_kolme::{
     parse_tls_ca_file_env_value as parse_kolme_tls_ca_file_env_value,
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
     render_block_path as render_kolme_block_path,
+    require_commit_id_matches_expected_txhash as require_kolme_commit_id_matches_expected_txhash_contract,
     try_take_websocket_frame as try_take_kolme_websocket_frame,
     txhash_from_commit_id as txhash_from_kolme_commit_id,
     validate_block_identity as validate_kolme_block_identity,
@@ -1689,19 +1690,15 @@ where
                         .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
                             reason: "notification event did not carry receipt data".to_owned(),
                         })?;
-                    let observed_txhash = txhash_from_kolme_commit_id(receipt.commit_id.as_str())
-                        .map_err(|error| {
+                    require_kolme_commit_id_matches_expected_txhash_contract(
+                        receipt.commit_id.as_str(),
+                        expected_txhash.as_str(),
+                    )
+                    .map_err(|error| {
                         KolmeRuntimeCommitProviderError::MalformedResponse {
                             reason: error.to_string(),
                         }
                     })?;
-                    if observed_txhash != expected_txhash {
-                        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                            reason: format!(
-                                "notification txhash mismatch: expected '{expected_txhash}' observed '{observed_txhash}'"
-                            ),
-                        });
-                    }
                     Ok(receipt)
                 }
             },

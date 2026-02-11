@@ -1,7 +1,8 @@
 use kamn_kolme::{
     deterministic_backend_commit_id, parse_commit_id_from_response_fields,
-    parse_live_provider_outcome, required_provider_response_field, txhash_from_commit_id,
-    KolmeProviderOutcome, KolmeProviderOutcomePolicyError, ReceiptFinality,
+    parse_live_provider_outcome, require_commit_id_matches_expected_txhash,
+    required_provider_response_field, txhash_from_commit_id, KolmeProviderOutcome,
+    KolmeProviderOutcomePolicyError, ReceiptFinality,
 };
 use std::collections::HashMap;
 
@@ -93,6 +94,25 @@ fn regression_issue_1753_parse_commit_id_from_response_fields_rejects_zero_block
         error,
         KolmeProviderOutcomePolicyError::MalformedResponse {
             reason: "block_height must be positive".to_owned(),
+        }
+    );
+}
+
+#[test]
+fn functional_require_commit_id_matches_expected_txhash_accepts_matching_txhash() {
+    require_commit_id_matches_expected_txhash("kolme-commit:ab12cd34:h42", "ab12cd34")
+        .expect("matching txhash should pass correlation check");
+}
+
+#[test]
+fn regression_issue_1838_require_commit_id_matches_expected_txhash_fails_closed_on_mismatch() {
+    // Regression: #1838
+    let error = require_commit_id_matches_expected_txhash("kolme-commit:ff00:h42", "ab12cd34")
+        .expect_err("mismatch must fail closed");
+    assert_eq!(
+        error,
+        KolmeProviderOutcomePolicyError::MalformedResponse {
+            reason: "notification txhash mismatch: expected 'ab12cd34' observed 'ff00'".to_owned(),
         }
     );
 }
