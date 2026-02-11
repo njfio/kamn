@@ -198,6 +198,20 @@ bash scripts/sdk/run_localhost_signed_demo_contract_lane.sh \
 # localhost signed demo contract lane tests passed.
 ```
 
+### Run Unified Local Signed-to-Kolme Demo Contract Lane
+
+```bash
+bash scripts/kolme/run_local_signed_to_kolme_demo_contract_lane.sh \
+  --mode dry-run \
+  --output-json /tmp/kolme-local-signed-to-kolme-demo-summary.json
+python3 scripts/kolme/check_local_signed_to_kolme_demo_policy.py \
+  --report-file /tmp/kolme-local-signed-to-kolme-demo-summary.json \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --output-json /tmp/kolme-local-signed-to-kolme-demo-policy.json
+# schema: kamn.kolme.local-signed-to-kolme-demo-summary.v1
+```
+
 ### Run Live Transport Replay/Tamper Contract Lane
 
 ```bash

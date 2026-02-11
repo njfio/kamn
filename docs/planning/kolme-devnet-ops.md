@@ -240,6 +240,25 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - explicit local-heavy Kolme opt-in remains limited to heavy lanes and is not required for this demo path.
   - demo contract markers remain deterministic to keep onboarding checks local-fast.
 
+## Unified Local Signed-to-Kolme Demo Contract Lane (Issue #1640)
+
+- Unified local signed-to-Kolme demo runner:
+  - `bash scripts/kolme/run_local_signed_to_kolme_demo_contract_lane.sh --mode dry-run --output-json /tmp/kolme-local-signed-to-kolme-demo-summary.json`
+- Explicit local-only unified demo execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_signed_to_kolme_demo_contract_lane.sh --mode run --max-seconds 420 --localhost-signed-demo-max-seconds 60 --localhost-signed-integration-max-seconds 120 --kolme-runtime-integration-max-seconds 300 --output-json /tmp/kolme-local-signed-to-kolme-demo-summary.json`
+- Policy checker command:
+  - `python3 scripts/kolme/check_local_signed_to_kolme_demo_policy.py --report-file /tmp/kolme-local-signed-to-kolme-demo-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-signed-to-kolme-demo-policy.json`
+- Summary schema:
+  - `kamn.kolme.local-signed-to-kolme-demo-summary.v1`
+- Deterministic checkpoints include:
+  - `run_localhost_signed_demo_contract_lane.sh` run-mode verification before integration.
+  - `run_localhost_signed_integration_contract_lane.sh` run-mode verification before Kolme runtime stage.
+  - `run_local_kamn_live_runtime_integration_contract_lane.sh` run-mode verification before final GO decision.
+- Cost policy:
+  - run mode fails closed without explicit local-only opt-in.
+  - lane enforces bounded per-stage and total runtime budgets.
+  - run-mode execution remains excluded from PR fast-gate workflow routing.
+
 ## Local Kolme Fork Process Lifecycle Integration Lane (Issue #1494)
 
 - Local fork process lifecycle runner:
@@ -399,6 +418,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local fork bootstrap/readiness lane fails closed for sync/probe prerequisite failures, runtime budget overruns, and missing local opt-in (`Regression: #1488`).
 - local KAMN live runtime integration lane fails closed for bootstrap/localhost-signed/conformance/runtime-commit prerequisite drift, runtime budget overruns, and missing local opt-in (`Regression: #1489`).
 - local KAMN live runtime integration lane requires bounded localhost signed integration prerequisite execution before runtime commit submission (`Regression: #1636`).
+- unified local signed-to-Kolme demo lane fails closed for local opt-in, stage prerequisite drift, and runtime budget overruns (`Regression: #1640`).
 - local fork process lifecycle integration lane fails closed for process start/readiness/integration/teardown/budget drift and missing local opt-in (`Regression: #1494`).
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
 - local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`).
@@ -429,6 +449,7 @@ bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh
 bash scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh
 bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh
+bash scripts/kolme/test_run_local_signed_to_kolme_demo_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh
 bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh
 bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh
