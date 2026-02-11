@@ -316,6 +316,11 @@ if ! grep -Fq "bash scripts/kolme/test_run_local_kolme_live_api_conformance_cont
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected local fork bootstrap/readiness command-surface tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh" "$FAST_WORKFLOW"; then
   echo "expected fast-gate native API parity lane command-surface tests in ci-fast-gate.yml" >&2
   exit 1
