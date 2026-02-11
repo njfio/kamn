@@ -7,6 +7,7 @@ SHARED_CONTRACT="$ROOT_DIR/scripts/sdk/localhost_signed_integration_contract_lan
 REPORT_COMPOSER="$ROOT_DIR/scripts/sdk/localhost_signed_report_composer.py"
 SCENARIO_RUNNER_HELPER="$ROOT_DIR/scripts/sdk/localhost_signed_scenario_runner.py"
 FIXTURE_FILE="$ROOT_DIR/fixtures/runtime/localhost_signed_integration_cases.json"
+DEVNET_DOC="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -190,6 +191,21 @@ fi
 
 if ! grep -Fq "unexpected_listener_completion" "$SHARED_CONTRACT"; then
   echo "expected localhost signed integration shared contract lane module to enforce bounded timeout race retry reason-code handling" >&2
+  exit 1
+fi
+
+if ! grep -Fq "mismatch_not_detected_not_reported" "$SHARED_CONTRACT"; then
+  echo "expected localhost signed integration shared contract lane module to enforce bounded signature-mismatch race retry reason-code handling" >&2
+  exit 1
+fi
+
+if ! grep -Fq "SIGNATURE_MISMATCH_RACE_MAX_ATTEMPTS" "$SHARED_CONTRACT"; then
+  echo "expected localhost signed integration shared contract lane module to define bounded signature-mismatch retry attempts" >&2
+  exit 1
+fi
+
+if ! grep -Fq "signature-mismatch bounded retries" "$DEVNET_DOC"; then
+  echo "expected Kolme devnet ops doc to document localhost signature-mismatch bounded retries contract" >&2
   exit 1
 fi
 
