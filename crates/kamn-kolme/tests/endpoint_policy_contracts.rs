@@ -1,6 +1,6 @@
 use kamn_kolme::{
-    compose_notifications_websocket_url, parse_http_endpoint, parse_websocket_endpoint,
-    KolmeEndpointPolicyError, KolmeHttpScheme,
+    compose_finality_status_path, compose_notifications_websocket_url, parse_http_endpoint,
+    parse_websocket_endpoint, KolmeEndpointPolicyError, KolmeHttpScheme,
 };
 
 #[test]
@@ -19,6 +19,23 @@ fn functional_compose_notifications_websocket_url_maps_https_to_wss() {
         compose_notifications_websocket_url("https://kolme.example/base", "/notifications")
             .expect("notifications url should compose");
     assert_eq!(notifications_url, "wss://kolme.example/base/notifications");
+}
+
+#[test]
+fn functional_compose_finality_status_path_encodes_commit_id_and_separator() {
+    assert_eq!(
+        compose_finality_status_path("/runtime-commit/status", "kolme-commit:ab12cd34:h42")
+            .expect("status path should compose"),
+        "/runtime-commit/status?commit_id=kolme-commit%3Aab12cd34%3Ah42"
+    );
+    assert_eq!(
+        compose_finality_status_path(
+            "/runtime-commit/status?provider=kolme-fork-local",
+            "kolme-commit:ff00"
+        )
+        .expect("status path should append query"),
+        "/runtime-commit/status?provider=kolme-fork-local&commit_id=kolme-commit%3Aff00"
+    );
 }
 
 #[test]
