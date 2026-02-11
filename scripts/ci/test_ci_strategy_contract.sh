@@ -19,6 +19,7 @@ required_snippets=(
   "make ci-tools"
   "test_makefile_execution_contract.sh"
   "test_kolme_command_surface_coverage_contract.sh"
+  "test_kolme_command_surface_asymmetry_contract.sh"
   "run_runtime_snapshot_contract_tests=true"
   "test_scope=runtime-contract"
   "run_localhost_signed_integration_contract_lane_tests"
