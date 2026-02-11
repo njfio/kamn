@@ -320,6 +320,28 @@ fn plan_contains_profile_selftest_portability_manifest_migration_contract() {
 }
 
 #[test]
+fn plan_contains_runtime_triadic_bootstrap_e2e_manifest_migration_contract() {
+    assert!(PLAN.contains("## Runtime+Triadic+Bootstrap+E2E Manifest Migration (Issue #1769)"));
+    assert!(PLAN.contains(
+        "scripts/ci/test_kolme_runtime_triadic_bootstrap_e2e_manifest_migration_contract.sh"
+    ));
+    assert!(PLAN.contains("scripts/framework/manifests/kolme_runtime_commit_contract_lane.json"));
+    assert!(
+        PLAN.contains("scripts/framework/manifests/kolme_triadic_devnet_smoke_contract_lane.json")
+    );
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_local_bootstrap_health_checks_contract_lane.json"
+    ));
+    assert!(
+        PLAN.contains("scripts/framework/manifests/kolme_local_e2e_integration_contract_lane.json")
+    );
+    assert!(PLAN.contains("scripts/kolme/contracts/local_e2e_integration_contract_lane.py"));
+    assert!(PLAN.contains(
+        "Combined wrapper shell LOC for this runtime/triadic/bootstrap/e2e tranche remains `<= 160`."
+    ));
+}
+
+#[test]
 fn regression_requires_failover_sync_budget_and_scheduled_cadence_guards() {
     // Regression: #788
     assert!(PLAN
@@ -395,6 +417,14 @@ fn regression_requires_profile_selftest_portability_manifest_migration_guard_mar
     // Regression: #1767
     assert!(PLAN.contains(
         "profile+self-test+portability manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1767`)."
+    ));
+}
+
+#[test]
+fn regression_requires_runtime_triadic_bootstrap_e2e_manifest_migration_guard_marker() {
+    // Regression: #1769
+    assert!(PLAN.contains(
+        "runtime+triadic+bootstrap+e2e manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1769`)."
     ));
 }
 

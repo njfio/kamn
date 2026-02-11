@@ -150,6 +150,26 @@ class PilotLaneManifestTests(unittest.TestCase):
                 "kolme.local_fork_portability_preflight.contract",
                 "scripts/kolme/contracts/local_fork_portability_preflight_contract_lane.py",
             ),
+            (
+                "kolme_runtime_commit_contract_lane.json",
+                "kolme.runtime_commit.contract",
+                "scripts/kolme/contracts/runtime_commit_contract_lane.py",
+            ),
+            (
+                "kolme_triadic_devnet_smoke_contract_lane.json",
+                "kolme.triadic_devnet_smoke.contract",
+                "scripts/kolme/contracts/triadic_devnet_smoke_contract_lane.py",
+            ),
+            (
+                "kolme_local_bootstrap_health_checks_contract_lane.json",
+                "kolme.local_bootstrap_health_checks.contract",
+                "scripts/kolme/contracts/local_bootstrap_health_checks_contract_lane.py",
+            ),
+            (
+                "kolme_local_e2e_integration_contract_lane.json",
+                "kolme.local_e2e_integration.contract",
+                "scripts/kolme/contracts/local_e2e_integration_contract_lane.py",
+            ),
         )
 
         for manifest_name, expected_lane_id, expected_script in cases:

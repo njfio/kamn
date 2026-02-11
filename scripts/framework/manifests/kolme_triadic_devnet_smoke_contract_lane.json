@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "kolme.triadic_devnet_smoke.contract",
+  "evidence_key": "kolme_triadic_devnet_smoke_contract_lane:v1",
+  "reason_key": "kolme_triadic_devnet_smoke_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "python3",
+      "scripts/kolme/contracts/triadic_devnet_smoke_contract_lane.py"
+    ]
+  }
+}
