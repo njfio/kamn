@@ -35,6 +35,7 @@ required_snippets=(
   "make demo"
   "make demo-localhost-transport"
   "make ci-tools"
+  "test_makefile_execution_contract.sh"
   "run_localhost_signed_demo.sh"
   "run_localhost_signed_demo.sh --help"
   "--timeout-seconds"

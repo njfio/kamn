@@ -37,6 +37,10 @@ Contributor entrypoint commands must remain stable and synchronized across `Make
 - `make demo-localhost-transport`
 - `make ci-tools`
 
+Fast-gate command contract coverage is intentionally split:
+- static command-surface parity (`scripts/ci/test_makefile_command_surface_contract.sh`)
+- dry-run execution parity (`scripts/ci/test_makefile_execution_contract.sh`) via `make -n` target resolution for bounded `check/test/demo` targets
+
 Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 
 - `Makefile` changes map to runtime contract scope:
@@ -239,6 +243,7 @@ Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 - Flaky issue syncer (`test_sync_flaky_registry_issues.sh`)
 - Rustdoc artifact lane contract (`test_run_kamn_core_rustdoc_artifact_contract_lane.sh`)
 - Rustdoc artifact policy checker (`test_check_kamn_core_rustdoc_artifact_policy.sh`)
+- Makefile execution contract checker (`test_makefile_execution_contract.sh`)
 
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.

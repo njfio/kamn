@@ -17,6 +17,7 @@ required_snippets=(
   "make demo"
   "make demo-localhost-transport"
   "make ci-tools"
+  "test_makefile_execution_contract.sh"
   "run_runtime_snapshot_contract_tests=true"
   "test_scope=runtime-contract"
   "run_localhost_signed_integration_contract_lane_tests"

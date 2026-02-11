@@ -93,6 +93,9 @@ make demo-localhost-transport
 
 # CI helper regression suite (command/selector/docs contracts)
 make ci-tools
+
+# dry-run make target execution contract (no command execution)
+bash scripts/ci/test_makefile_execution_contract.sh
 ```
 
 Deep/scheduled lanes remain opt-in via scripts in `scripts/sdk/` and `scripts/ci/`.
