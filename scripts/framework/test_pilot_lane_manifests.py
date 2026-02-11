@@ -135,6 +135,21 @@ class PilotLaneManifestTests(unittest.TestCase):
                 "kolme.local_heavy_validation_matrix.contract",
                 "scripts/kolme/contracts/local_heavy_validation_matrix_contract_lane.py",
             ),
+            (
+                "kolme_local_fork_profile_preflight_contract_lane.json",
+                "kolme.local_fork_profile_preflight.contract",
+                "scripts/kolme/contracts/local_fork_profile_preflight_contract_lane.py",
+            ),
+            (
+                "kolme_local_fork_self_test_contract_lane.json",
+                "kolme.local_fork_self_test.contract",
+                "scripts/kolme/contracts/local_fork_self_test_contract_lane.py",
+            ),
+            (
+                "kolme_local_fork_portability_preflight_contract_lane.json",
+                "kolme.local_fork_portability_preflight.contract",
+                "scripts/kolme/contracts/local_fork_portability_preflight_contract_lane.py",
+            ),
         )
 
         for manifest_name, expected_lane_id, expected_script in cases:

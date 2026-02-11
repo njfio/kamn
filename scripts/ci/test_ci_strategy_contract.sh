@@ -66,6 +66,7 @@ required_snippets=(
   "combined migrated wrapper shell LOC must remain"
   "test_kolme_runtime_nonce_manifest_migration_contract.sh"
   "test_kolme_version_matrix_manifest_migration_contract.sh"
+  "test_kolme_profile_selftest_portability_manifest_migration_contract.sh"
   "run_runtime_commit_adapter_contract_lane.sh"
   "run_runtime_commit_replay_contract_lane.sh"
   "run_nonce_broadcast_parity_contract_lane.sh"
@@ -74,6 +75,7 @@ required_snippets=(
   "run_local_heavy_validation_matrix_contract_lane.sh"
   "runtime+nonce manifest migration guard stays on PR fast gate:"
   "version+matrix manifest migration guard stays on PR fast gate:"
+  "profile+self-test+portability manifest migration guard stays on PR fast gate:"
   "test_run_local_kolme_fork_rust_test_matrix_lane.sh"
   "test_check_local_kolme_fork_rust_test_matrix_policy.sh"
   "test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh"
@@ -183,6 +185,7 @@ required_snippets=(
   "Regression: #1722"
   "Regression: #1763"
   "Regression: #1765"
+  "Regression: #1767"
 )
 
 for snippet in "${required_snippets[@]}"; do

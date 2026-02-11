@@ -90,6 +90,25 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Shell-surface budget contract:
   - Combined wrapper shell LOC for this version/matrix tranche remains `<= 120`.
 
+## Profile+SelfTest+Portability Manifest Migration (Issue #1767)
+
+- Migration guard contract:
+  - `bash scripts/ci/test_kolme_profile_selftest_portability_manifest_migration_contract.sh`
+- Migrated manifest-backed wrappers:
+  - `scripts/kolme/run_local_kolme_fork_profile_preflight_contract_lane.sh`
+  - `scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh`
+  - `scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh`
+- Manifest files:
+  - `scripts/framework/manifests/kolme_local_fork_profile_preflight_contract_lane.json`
+  - `scripts/framework/manifests/kolme_local_fork_self_test_contract_lane.json`
+  - `scripts/framework/manifests/kolme_local_fork_portability_preflight_contract_lane.json`
+- Python contract lane implementations:
+  - `scripts/kolme/contracts/local_fork_profile_preflight_contract_lane.py`
+  - `scripts/kolme/contracts/local_fork_self_test_contract_lane.py`
+  - `scripts/kolme/contracts/local_fork_portability_preflight_contract_lane.py`
+- Shell-surface budget contract:
+  - Combined wrapper shell LOC for this profile/self-test/portability tranche remains `<= 120`.
+
 ## Contract Commands
 
 - Run triadic smoke orchestration:
@@ -635,6 +654,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - tranche-1 manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1722`).
 - runtime+nonce manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1763`).
 - version+matrix manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1765`).
+- profile+self-test+portability manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1767`).
 - local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
 - local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
 - local fork Rust test matrix lane fails closed on missing local opt-in, metadata sync drift, and per-command timeout/failure paths (`Regression: #1537`).
@@ -720,5 +740,6 @@ bash scripts/runtime/test_run_failover_sync_drill_deep_lane.sh
 bash scripts/runtime/test_run_failover_sync_drill_suite.sh
 bash scripts/ci/test_select_targets.sh
 bash scripts/ci/test_kolme_version_matrix_manifest_migration_contract.sh
+bash scripts/ci/test_kolme_profile_selftest_portability_manifest_migration_contract.sh
 bash scripts/ci/test_workflow_scope_policy.sh
 ```

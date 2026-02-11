@@ -299,6 +299,27 @@ fn plan_contains_version_matrix_manifest_migration_contract() {
 }
 
 #[test]
+fn plan_contains_profile_selftest_portability_manifest_migration_contract() {
+    assert!(PLAN.contains("## Profile+SelfTest+Portability Manifest Migration (Issue #1767)"));
+    assert!(PLAN.contains(
+        "scripts/ci/test_kolme_profile_selftest_portability_manifest_migration_contract.sh"
+    ));
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_local_fork_profile_preflight_contract_lane.json"
+    ));
+    assert!(
+        PLAN.contains("scripts/framework/manifests/kolme_local_fork_self_test_contract_lane.json")
+    );
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_local_fork_portability_preflight_contract_lane.json"
+    ));
+    assert!(PLAN.contains("scripts/kolme/contracts/local_fork_self_test_contract_lane.py"));
+    assert!(PLAN.contains(
+        "Combined wrapper shell LOC for this profile/self-test/portability tranche remains `<= 120`."
+    ));
+}
+
+#[test]
 fn regression_requires_failover_sync_budget_and_scheduled_cadence_guards() {
     // Regression: #788
     assert!(PLAN
@@ -366,6 +387,14 @@ fn regression_requires_version_matrix_manifest_migration_guard_marker() {
     // Regression: #1765
     assert!(PLAN.contains(
         "version+matrix manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1765`)."
+    ));
+}
+
+#[test]
+fn regression_requires_profile_selftest_portability_manifest_migration_guard_marker() {
+    // Regression: #1767
+    assert!(PLAN.contains(
+        "profile+self-test+portability manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1767`)."
     ));
 }
 
