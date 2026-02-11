@@ -121,7 +121,9 @@ fn plan_contains_local_fork_profile_preflight_lane() {
     assert!(PLAN.contains("## Local Fork Profile Preflight Lane"));
     assert!(PLAN.contains("run_local_kolme_fork_profile_preflight_lane.sh"));
     assert!(PLAN.contains("check_local_kolme_fork_profile_preflight_policy.py"));
+    assert!(PLAN.contains("run_local_kolme_fork_profile_preflight_contract_lane.sh"));
     assert!(PLAN.contains("kamn.kolme.local-fork-profile-preflight-summary.v1"));
+    assert!(PLAN.contains("kamn.kolme.local-fork-profile-preflight-policy-report.v1"));
 }
 
 #[test]
@@ -438,6 +440,14 @@ fn regression_requires_local_fork_profile_preflight_guard_marker() {
     // Regression: #1648
     assert!(PLAN.contains(
         "local fork profile preflight lane fails closed for local opt-in, checkout/profile contract drift, probe command failures, and runtime budget overruns (`Regression: #1648`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_fork_profile_preflight_contract_lane_guard_marker() {
+    // Regression: #1697
+    assert!(PLAN.contains(
+        "local fork profile preflight policy and contract-lane command/report drift remains fail-closed (`Regression: #1697`)."
     ));
 }
 
