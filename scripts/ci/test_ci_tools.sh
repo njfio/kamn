@@ -75,6 +75,7 @@ bash "$ROOT_DIR/scripts/ci/run_with_retry.sh" \
   --label "sdk-rust-live-transport-contract-lane" \
   --max-attempts 2 \
   -- bash "$ROOT_DIR/scripts/sdk/test_run_rust_live_transport_contract_lane.sh"
+bash "$ROOT_DIR/scripts/sdk/test_localhost_signed_report_composer.sh"
 bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_demo.sh"
 bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_demo_contract_lane.sh"
 bash "$ROOT_DIR/scripts/sdk/test_run_localhost_signed_integration_harness.sh"

@@ -6,6 +6,7 @@ LANE_SCRIPT="$ROOT_DIR/scripts/sdk/run_localhost_signed_demo_contract_lane.sh"
 DEMO_SCRIPT="$ROOT_DIR/scripts/sdk/run_localhost_signed_demo.sh"
 INTEGRATION_CONTRACT_LANE="$ROOT_DIR/scripts/sdk/run_localhost_signed_integration_contract_lane.sh"
 INTEGRATION_POLICY="$ROOT_DIR/scripts/sdk/check_localhost_signed_integration_evidence_policy.sh"
+REPORT_COMPOSER="$ROOT_DIR/scripts/sdk/localhost_signed_report_composer.py"
 README_FILE="$ROOT_DIR/README.md"
 DEVNET_DOC="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 TMP_DIR="$(mktemp -d)"
@@ -28,6 +29,11 @@ fi
 
 if [ ! -x "$INTEGRATION_POLICY" ]; then
   echo "expected localhost signed integration evidence policy checker to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$REPORT_COMPOSER" ]; then
+  echo "expected localhost signed report composer helper module to be executable" >&2
   exit 1
 fi
 
@@ -80,5 +86,15 @@ assert report["demo_status"] == "pass"
 assert report["integration_status"] == "pass"
 assert report["budget_status"] == "within_budget"
 PY
+
+if ! grep -Fq "localhost_signed_report_composer.py" "$LANE_SCRIPT"; then
+  echo "expected localhost signed demo contract lane to dispatch shared report composer helper" >&2
+  exit 1
+fi
+
+if ! grep -Fq "localhost_signed_report_composer" "$REPORT_COMPOSER"; then
+  echo "expected localhost signed report composer helper to expose stable module entrypoint" >&2
+  exit 1
+fi
 
 echo "localhost signed demo contract lane script tests passed."
