@@ -41,7 +41,6 @@ use kamn_kolme::{
     KolmeApiCodecError as KamnKolmeApiCodecError,
     KolmeApiNextNonceRequest as KamnKolmeApiNextNonceRequest,
     KolmeApiNextNonceResponse as KamnKolmeApiNextNonceResponse,
-    KolmeBlockFallbackPolicyError as KamnKolmeBlockFallbackPolicyError,
     KolmeCommitReceiptFinality as KamnKolmeCommitReceiptFinality,
     KolmeEndpointPolicyError as KamnKolmeEndpointPolicyError,
     KolmeHttpResponsePolicyError as KamnKolmeHttpResponsePolicyError,
@@ -1261,14 +1260,20 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
                 height,
             )?;
             let block = parse_kolme_block_fallback_response_contract(response.as_str())
-                .map_err(map_block_fallback_policy_error_to_malformed)
+                .map_err(|error| KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: error.to_string(),
+                })
                 .or_else(|_| {
                     parse_kolme_fork_block_fallback_response_contract(
                         response.as_str(),
                         self.provider.as_str(),
                         height,
                     )
-                    .map_err(map_block_fallback_policy_error_to_malformed)
+                    .map_err(|error| {
+                        KolmeRuntimeCommitProviderError::MalformedResponse {
+                            reason: error.to_string(),
+                        }
+                    })
                 })?;
 
             validate_kolme_block_identity(
@@ -1766,14 +1771,6 @@ fn map_codec_error_to_malformed_response(
         KamnKolmeApiCodecError::MalformedResponse { reason } => {
             KolmeRuntimeCommitProviderError::MalformedResponse { reason }
         }
-    }
-}
-
-fn map_block_fallback_policy_error_to_malformed(
-    error: KamnKolmeBlockFallbackPolicyError,
-) -> KolmeRuntimeCommitProviderError {
-    KolmeRuntimeCommitProviderError::MalformedResponse {
-        reason: error.to_string(),
     }
 }
 
