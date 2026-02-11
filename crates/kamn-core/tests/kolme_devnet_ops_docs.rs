@@ -70,6 +70,7 @@ fn plan_contains_local_live_api_conformance_harness() {
     assert!(PLAN.contains("run_local_kolme_live_api_conformance_harness.sh"));
     assert!(PLAN.contains("check_local_kolme_live_api_conformance_policy.py"));
     assert!(PLAN.contains("run_local_kolme_live_api_conformance_contract_lane.sh"));
+    assert!(PLAN.contains("fixtures/kolme_commit/local_live_api_conformance_matrix.json"));
     assert!(PLAN.contains("kamn.kolme.local-live-api-conformance-summary.v1"));
 }
 

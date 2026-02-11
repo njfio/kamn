@@ -50,6 +50,12 @@ across Kolme upgrades.
 - `kolme_fork` submit-profile transport regression checks:
   - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport functional_kolme_fork_submit_profile_uses_put_broadcast_and_maps_txhash_response -- --exact`
   - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_kolme_fork_submit_profile_requires_non_empty_provider_hint -- --exact`
+- `kolme_fork` finality resolver regression checks:
+  - `cargo test -p kamn-core --test kolme_runtime_commit_fork_finality_resolver`
+  - `cargo test -p kamn-core --test kolme_runtime_commit_notifications --test kolme_runtime_commit_block_fallback`
+- Local-only live conformance matrix lane:
+  - `bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json`
+  - fixture: `fixtures/kolme_commit/local_live_api_conformance_matrix.json`
 - Nonce/broadcast parity policy checker:
   - `python3 scripts/kolme/check_nonce_broadcast_parity_policy.py --case-id nonce-go-001 --operation nonce --http-status 200 --nonce-value 42 --broadcast-accepted false --duplicate-detected false --payload-valid true --authorization-present true --ci-fast-gate PASS --output-json /tmp/kolme-nonce-broadcast-policy.json`
 - Nonce/broadcast parity matrix command:
@@ -97,6 +103,8 @@ across Kolme upgrades.
 - Adapter provider mismatch and non-final receipt handling remain fail-closed (`Regression: #979`).
 - Adapter replay/finality reason-code drift remains fail-closed (`Regression: #980`).
 - `kolme_fork` `PUT /broadcast` submit profile and txhash-only response mapping remain fail-closed (`Regression: #1502`).
+- `kolme_fork` notifications-plus-block-fallback finality strategy remains fail-closed (`Regression: #1503`).
+- local-only live conformance matrix contract and policy drift remains fail-closed (`Regression: #1504`).
 - Fork release-tag drift remains fail-closed (`Regression: #1401`).
 - Fork compatibility policy mismatches and malformed evidence remain fail-closed (`Regression: #1402`).
 - Nonce/broadcast duplicate-idempotent, unauthorized, and malformed payload drift remains fail-closed (`Regression: #1462`).

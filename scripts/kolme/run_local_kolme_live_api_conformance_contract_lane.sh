@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_api_conformance_harness.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_live_api_conformance_policy.py"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
+MATRIX_FILE="$ROOT_DIR/fixtures/kolme_commit/local_live_api_conformance_matrix.json"
 
 OUTPUT_JSON="/tmp/kolme-local-live-api-conformance-summary.json"
 POLICY_OUTPUT_JSON="/tmp/kolme-local-live-api-conformance-policy.json"
@@ -45,6 +46,14 @@ while [ "$#" -gt 0 ]; do
       FORK_CHAIN_VERSION="$2"
       shift 2
       ;;
+    --matrix-file)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --matrix-file" >&2
+        exit 1
+      fi
+      MATRIX_FILE="$2"
+      shift 2
+      ;;
     --help|-h)
       cat <<'USAGE'
 Usage: run_local_kolme_live_api_conformance_contract_lane.sh [options]
@@ -54,6 +63,7 @@ Options:
   --policy-output-json <path>  Policy checker report output.
   --max-seconds <n>            Total runtime budget in seconds.
   --fork-chain-version <val>   Required fork-info chain_version query value.
+  --matrix-file <path>         Conformance matrix fixture path.
 USAGE
       exit 0
       ;;
@@ -81,6 +91,11 @@ fi
 
 if [ ! -f "$DOC_FILE" ]; then
   echo "expected Kolme devnet ops documentation to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$MATRIX_FILE" ]; then
+  echo "expected local live API conformance matrix fixture to exist" >&2
   exit 1
 fi
 
@@ -221,6 +236,7 @@ start_epoch="$(date +%s)"
 bash "$RUNNER" \
   --mode dry-run \
   --fork-chain-version "$FORK_CHAIN_VERSION" \
+  --matrix-file "$MATRIX_FILE" \
   --output-json "$OUTPUT_JSON" \
   >/dev/null
 
@@ -248,6 +264,7 @@ KAMN_KOLME_LOCAL_HEAVY=1 \
     --mode run \
     --base-url "http://127.0.0.1:${PORT}" \
     --fork-chain-version "$FORK_CHAIN_VERSION" \
+    --matrix-file "$MATRIX_FILE" \
     --max-seconds "$MAX_SECONDS" \
     --probe-max-seconds 20 \
     --native-max-seconds 40 \
@@ -274,6 +291,11 @@ fi
 
 if ! grep -q "run_local_kolme_live_api_conformance_contract_lane.sh" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to reference local live API conformance contract lane" >&2
+  exit 1
+fi
+
+if ! grep -q "fixtures/kolme_commit/local_live_api_conformance_matrix.json" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local live API conformance matrix fixture" >&2
   exit 1
 fi
 

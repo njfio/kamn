@@ -79,6 +79,43 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         for missing_id in missing_ids:
             reason_codes.append(f"check_missing:{missing_id}")
 
+    conformance_matrix = report.get("conformance_matrix")
+    if not isinstance(conformance_matrix, dict):
+        reason_codes.append("conformance_matrix_missing")
+    else:
+        if (
+            conformance_matrix.get("schema_version")
+            != "kamn.kolme.local-live-api-conformance-matrix.v1"
+        ):
+            reason_codes.append("conformance_matrix_schema_mismatch")
+        source_file = conformance_matrix.get("source_file")
+        if not isinstance(source_file, str) or not source_file.strip():
+            reason_codes.append("conformance_matrix_source_file_missing")
+        matrix_checks = conformance_matrix.get("checks")
+        if not isinstance(matrix_checks, list) or not matrix_checks:
+            reason_codes.append("conformance_matrix_checks_missing")
+        else:
+            required_matrix_ids = {"api_probe", "native_api_parity"}
+            observed_matrix_ids: set[str] = set()
+            for entry in matrix_checks:
+                if not isinstance(entry, dict):
+                    reason_codes.append("conformance_matrix_check_entry_invalid")
+                    continue
+                check_id = entry.get("id")
+                runner = entry.get("runner")
+                ci_scope = entry.get("ci_scope")
+                if not isinstance(check_id, str) or not check_id.strip():
+                    reason_codes.append("conformance_matrix_check_id_invalid")
+                    continue
+                observed_matrix_ids.add(check_id)
+                if not isinstance(runner, str) or not runner.strip():
+                    reason_codes.append(f"conformance_matrix_runner_invalid:{check_id}")
+                if ci_scope != "local-only":
+                    reason_codes.append(f"conformance_matrix_ci_scope_invalid:{check_id}")
+            missing_matrix_ids = sorted(required_matrix_ids - observed_matrix_ids)
+            for missing_id in missing_matrix_ids:
+                reason_codes.append(f"conformance_matrix_check_missing:{missing_id}")
+
     contracts = report.get("contracts")
     if not isinstance(contracts, dict):
         reason_codes.append("contracts_missing")
