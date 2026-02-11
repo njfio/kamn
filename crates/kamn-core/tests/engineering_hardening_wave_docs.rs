@@ -14,6 +14,8 @@ fn engineering_hardening_wave_doc_declares_missing_docs_policy_contract() {
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("check_kamn_core_rustdoc_artifact_policy.sh"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC
         .contains("cargo test -p kamn-core --test lifecycle_evidence_property_matrix"));
+    assert!(ENGINEERING_HARDENING_WAVE_DOC
+        .contains("cargo test -p kamn-core --test concurrency_task_terminal_race"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("kamn-core"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("#![warn(missing_docs)]"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("docs/architecture/kamn-core-module-map.md"));
@@ -21,6 +23,7 @@ fn engineering_hardening_wave_doc_declares_missing_docs_policy_contract() {
         .contains("docs/architecture/kamn-core-module-map.md#contributor-entrypoint-matrix"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("docs/developer/rustdoc-publishing.md"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("Regression: #1526"));
+    assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("Regression: #1527"));
 }
 
 #[test]

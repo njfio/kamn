@@ -31,6 +31,8 @@ default development loop green while tightening missing-doc policy controls for
   - `bash scripts/framework/test_contract_framework.sh`
 - Bounded lifecycle evidence property matrix (runtime/task/escrow):
   - `cargo test -p kamn-core --test lifecycle_evidence_property_matrix`
+- Deterministic task terminal concurrency mutation lane:
+  - `cargo test -p kamn-core --test concurrency_task_terminal_race`
 
 ## Missing-Docs Policy Contract
 
@@ -112,3 +114,5 @@ default development loop green while tightening missing-doc policy controls for
   checker/documentation command changes.
 - `Regression: #1526` — keep bounded lifecycle evidence property matrices
   deterministic and fail-closed for runtime/task/escrow transition contracts.
+- `Regression: #1527` — keep deterministic task terminal concurrency replay
+  coverage fail-closed for shared-state mutation races.
