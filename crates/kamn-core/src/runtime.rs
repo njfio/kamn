@@ -34,6 +34,15 @@ pub enum RuntimeLifecycleError {
     },
 }
 
+impl RuntimeLifecycleError {
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::InvalidPeerId => "runtime_peer_id_invalid",
+            Self::InvalidTransition { .. } => "runtime_peer_transition_invalid",
+        }
+    }
+}
+
 impl Display for RuntimeLifecycleError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
