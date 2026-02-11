@@ -1,6 +1,8 @@
 const CORE_LIB: &str = include_str!("../src/lib.rs");
 const ALLOWLIST_FIXTURE: &str =
     include_str!("../../../fixtures/ci/kamn_core_missing_docs_allowlist.txt");
+const GRADUATED_MODULES_FIXTURE: &str =
+    include_str!("../../../fixtures/ci/kamn_core_missing_docs_graduated_modules.txt");
 
 fn allowlisted_modules_from_core_lib(source: &str) -> Vec<String> {
     let mut allow_pending = false;
@@ -106,4 +108,23 @@ fn graduated_wave_three_task_lifecycle_module_must_not_return_to_missing_docs_al
             .any(|candidate| candidate == "task_lifecycle"),
         "allowlist fixture must keep task_lifecycle removed"
     );
+}
+
+#[test]
+fn graduated_modules_fixture_must_not_overlap_missing_docs_allowlist() {
+    // Regression: #1723
+    let actual = allowlisted_modules_from_core_lib(CORE_LIB);
+    let expected = allowlisted_modules_from_fixture(ALLOWLIST_FIXTURE);
+    let graduated = allowlisted_modules_from_fixture(GRADUATED_MODULES_FIXTURE);
+
+    for module in graduated {
+        assert!(
+            !actual.iter().any(|candidate| candidate == &module),
+            "{module} must stay graduated from #[allow(missing_docs)]"
+        );
+        assert!(
+            !expected.iter().any(|candidate| candidate == &module),
+            "allowlist fixture must keep {module} removed"
+        );
+    }
 }

@@ -8,6 +8,7 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 CORE_LIB_FIXTURE="$TMP_DIR/lib.rs"
 ALLOWLIST_FIXTURE="$TMP_DIR/allowlist.txt"
+GRADUATED_MODULES_FIXTURE="$TMP_DIR/graduated-modules.txt"
 README_FIXTURE="$TMP_DIR/README.md"
 PLAN_DOC_FIXTURE="$TMP_DIR/engineering-hardening-wave.md"
 ARCH_DOC_FIXTURE="$TMP_DIR/kamn-core-module-map.md"
@@ -16,6 +17,7 @@ RUSTDOC_GUIDE_FIXTURE="$TMP_DIR/rustdoc-publishing.md"
 run_checker() {
   KAMN_CORE_LIB_PATH="$CORE_LIB_FIXTURE" \
   KAMN_CORE_MISSING_DOCS_ALLOWLIST_PATH="$ALLOWLIST_FIXTURE" \
+  KAMN_CORE_MISSING_DOCS_GRADUATED_MODULES_PATH="$GRADUATED_MODULES_FIXTURE" \
   KAMN_README_PATH="$README_FIXTURE" \
   KAMN_ENGINEERING_HARDENING_DOC_PATH="$PLAN_DOC_FIXTURE" \
   KAMN_CORE_MODULE_MAP_DOC_PATH="$ARCH_DOC_FIXTURE" \
@@ -26,6 +28,7 @@ run_checker() {
 reset_fixtures() {
   cp "$ROOT_DIR/crates/kamn-core/src/lib.rs" "$CORE_LIB_FIXTURE"
   cp "$ROOT_DIR/fixtures/ci/kamn_core_missing_docs_allowlist.txt" "$ALLOWLIST_FIXTURE"
+  cp "$ROOT_DIR/fixtures/ci/kamn_core_missing_docs_graduated_modules.txt" "$GRADUATED_MODULES_FIXTURE"
   cp "$ROOT_DIR/README.md" "$README_FIXTURE"
   cp "$ROOT_DIR/docs/planning/engineering-hardening-wave.md" "$PLAN_DOC_FIXTURE"
   cp "$ROOT_DIR/docs/architecture/kamn-core-module-map.md" "$ARCH_DOC_FIXTURE"
@@ -73,5 +76,11 @@ expect_failure "rustdoc publishing command drift should fail"
 reset_fixtures
 sed -i '/docs\/developer\/rustdoc-publishing.md/d' "$README_FIXTURE"
 expect_failure "README rustdoc link drift should fail"
+
+# Regression: #1723
+reset_fixtures
+printf '\nkolme_runtime_commit\n' >>"$ALLOWLIST_FIXTURE"
+sed -i 's/^pub mod kolme_runtime_commit;/#[allow(missing_docs)]\npub mod kolme_runtime_commit;/' "$CORE_LIB_FIXTURE"
+expect_failure "graduated module allowlist bypass should fail"
 
 echo "kamn-core missing-docs policy checker tests passed."

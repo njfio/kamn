@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CORE_LIB_PATH="${KAMN_CORE_LIB_PATH:-$ROOT_DIR/crates/kamn-core/src/lib.rs}"
 ALLOWLIST_PATH="${KAMN_CORE_MISSING_DOCS_ALLOWLIST_PATH:-$ROOT_DIR/fixtures/ci/kamn_core_missing_docs_allowlist.txt}"
+GRADUATED_MODULES_PATH="${KAMN_CORE_MISSING_DOCS_GRADUATED_MODULES_PATH:-$ROOT_DIR/fixtures/ci/kamn_core_missing_docs_graduated_modules.txt}"
 README_PATH="${KAMN_README_PATH:-$ROOT_DIR/README.md}"
 PLAN_DOC_PATH="${KAMN_ENGINEERING_HARDENING_DOC_PATH:-$ROOT_DIR/docs/planning/engineering-hardening-wave.md}"
 ARCH_DOC_PATH="${KAMN_CORE_MODULE_MAP_DOC_PATH:-$ROOT_DIR/docs/architecture/kamn-core-module-map.md}"
@@ -20,6 +21,7 @@ require_file() {
 
 require_file "$CORE_LIB_PATH" "kamn-core lib"
 require_file "$ALLOWLIST_PATH" "missing-docs allowlist fixture"
+require_file "$GRADUATED_MODULES_PATH" "missing-docs graduated-modules fixture"
 require_file "$README_PATH" "README"
 require_file "$PLAN_DOC_PATH" "engineering hardening plan"
 require_file "$ARCH_DOC_PATH" "kamn-core module map"
@@ -63,6 +65,14 @@ expected_allowlisted_modules="$(
   ' "$ALLOWLIST_PATH" | sort
 )"
 
+expected_graduated_modules="$(
+  awk '
+    /^[[:space:]]*#/ { next }
+    /^[[:space:]]*$/ { next }
+    { print $1 }
+  ' "$GRADUATED_MODULES_PATH" | sort
+)"
+
 if ! diff -u \
   <(printf '%s\n' "$expected_allowlisted_modules") \
   <(printf '%s\n' "$actual_allowlisted_modules") >/dev/null; then
@@ -70,6 +80,17 @@ if ! diff -u \
   diff -u \
     <(printf '%s\n' "$expected_allowlisted_modules") \
     <(printf '%s\n' "$actual_allowlisted_modules") >&2
+  exit 1
+fi
+
+graduated_allowlist_overlap="$(
+  comm -12 \
+    <(printf '%s\n' "$expected_graduated_modules") \
+    <(printf '%s\n' "$actual_allowlisted_modules")
+)"
+if [ -n "$graduated_allowlist_overlap" ]; then
+  echo "missing-docs policy contract failed: graduated modules cannot be re-added to #[allow(missing_docs)] allowlist." >&2
+  echo "$graduated_allowlist_overlap" >&2
   exit 1
 fi
 
