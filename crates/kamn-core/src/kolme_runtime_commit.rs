@@ -8,29 +8,25 @@ use kamn_kolme::{
     deterministic_backend_commit_id as deterministic_kolme_backend_commit_id,
     find_http_header_boundary as find_kolme_http_header_boundary,
     is_broadcast_submit_path as is_kolme_broadcast_submit_path_contract,
+    normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
     parse_authorization_header_value as parse_kolme_authorization_header_value,
     parse_block_fallback_response as parse_kolme_block_fallback_response_contract,
     parse_commit_id_from_response_fields as parse_kolme_commit_id_from_response_fields,
-    parse_flat_json_value_fields as parse_kolme_flat_json_value_fields,
     parse_fork_block_fallback_response as parse_kolme_fork_block_fallback_response_contract,
     parse_http_endpoint as parse_kolme_http_endpoint,
     parse_http_response_body as parse_kolme_http_response_body,
     parse_live_provider_outcome as parse_kolme_live_provider_outcome,
     parse_notification_event as parse_kolme_notification_event_contract,
-    parse_provider_key_value_fields as parse_kolme_provider_key_value_fields,
     parse_provider_response_fields as parse_kolme_provider_response_fields,
     parse_receipt_finality as parse_kolme_receipt_finality,
     parse_tls_ca_file_env_value as parse_kolme_tls_ca_file_env_value,
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
     render_block_path as render_kolme_block_path,
-    required_json_string_field as required_kolme_json_string_field,
-    required_positive_u64_json_field as required_kolme_positive_u64_json_field,
     required_provider_response_field as required_kolme_provider_response_field,
     try_take_websocket_frame as try_take_kolme_websocket_frame,
     txhash_from_commit_id as txhash_from_kolme_commit_id,
     validate_block_identity as validate_kolme_block_identity,
     validate_block_path_template as validate_kolme_block_path_template,
-    validate_direct_signed_transaction_message as validate_kolme_direct_signed_transaction_message,
     validate_lookup_window as validate_kolme_lookup_window,
     validate_websocket_handshake_response as validate_kolme_websocket_handshake_response,
     BlockScanPolicyError, KolmeApiBroadcastRequest as KamnKolmeApiBroadcastRequest,
@@ -40,9 +36,8 @@ use kamn_kolme::{
     KolmeApiNextNonceResponse as KamnKolmeApiNextNonceResponse,
     KolmeBlockFallbackPolicyError as KamnKolmeBlockFallbackPolicyError,
     KolmeBlockFallbackResponse as KamnKolmeBlockFallbackResponse,
+    KolmeBroadcastPayloadPolicyError as KamnKolmeBroadcastPayloadPolicyError,
     KolmeEndpointPolicyError as KamnKolmeEndpointPolicyError,
-    KolmeFlatJsonPolicyError as KamnKolmeFlatJsonPolicyError,
-    KolmeFlatJsonValue as KamnKolmeFlatJsonValue,
     KolmeHttpResponsePolicyError as KamnKolmeHttpResponsePolicyError,
     KolmeHttpScheme as KamnKolmeHttpScheme, KolmeNotificationEvent as KamnKolmeNotificationEvent,
     KolmeNotificationPolicyError as KamnKolmeNotificationPolicyError,
@@ -1811,8 +1806,8 @@ fn map_provider_outcome_policy_error_to_malformed(
     }
 }
 
-fn map_flat_json_policy_error_to_malformed(
-    error: KamnKolmeFlatJsonPolicyError,
+fn map_broadcast_payload_policy_error_to_malformed(
+    error: KamnKolmeBroadcastPayloadPolicyError,
 ) -> KolmeRuntimeCommitProviderError {
     KolmeRuntimeCommitProviderError::MalformedResponse {
         reason: error.to_string(),
@@ -2010,124 +2005,8 @@ fn normalize_kolme_broadcast_payload(
     wire_payload: &str,
     idempotency_key: &str,
 ) -> Result<String, KolmeRuntimeCommitProviderError> {
-    let payload = wire_payload.trim();
-    if payload.is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "wire_payload must not be empty".to_owned(),
-        });
-    }
-    let idempotency_key = idempotency_key.trim();
-    if idempotency_key.is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "idempotency_key must not be empty".to_owned(),
-        });
-    }
-
-    if payload.starts_with('{') {
-        let fields = parse_kolme_flat_json_value_fields(payload)
-            .map_err(map_flat_json_policy_error_to_malformed)?;
-        if let Some(payload_idempotency_key) = fields.get("idempotency_key") {
-            let payload_idempotency_key = match payload_idempotency_key {
-                KamnKolmeFlatJsonValue::String(value) => value.trim(),
-                _ => {
-                    return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                        reason: "field must be a string: idempotency_key".to_owned(),
-                    });
-                }
-            };
-            if payload_idempotency_key.is_empty() {
-                return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                    reason: "field must not be empty: idempotency_key".to_owned(),
-                });
-            }
-            if payload_idempotency_key != idempotency_key {
-                return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                    reason: "wire_payload idempotency_key does not match transport idempotency key"
-                        .to_owned(),
-                });
-            }
-        }
-
-        let message = required_kolme_json_string_field(&fields, "message")
-            .map_err(map_flat_json_policy_error_to_malformed)?;
-        let signature = required_kolme_json_string_field(&fields, "signature")
-            .map_err(map_flat_json_policy_error_to_malformed)?;
-        let recovery_id_u64 = required_kolme_positive_u64_json_field(&fields, "recovery_id")
-            .map_err(map_flat_json_policy_error_to_malformed)?;
-        let recovery_id = u8::try_from(recovery_id_u64).map_err(|_| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "recovery_id must be within u8 range".to_owned(),
-            }
-        })?;
-
-        if fields.contains_key("signer_key_id") {
-            let signer_key_id = required_kolme_json_string_field(&fields, "signer_key_id")
-                .map_err(map_flat_json_policy_error_to_malformed)?;
-            let envelope = KolmeRuntimeCommitSignedBroadcastEnvelope::new(
-                signer_key_id.as_str(),
-                message.as_str(),
-                signature.as_str(),
-                recovery_id,
-            )
-            .map_err(|error| KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: error.to_string(),
-            })?;
-
-            let message_fields = parse_kolme_provider_key_value_fields(envelope.message.as_str())
-                .map_err(map_provider_response_policy_error_to_malformed)?;
-            let message_idempotency_key =
-                required_kolme_provider_response_field(&message_fields, "idempotency_key")
-                    .map_err(map_provider_outcome_policy_error_to_malformed)?;
-            if message_idempotency_key != idempotency_key {
-                return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                    reason:
-                        "signed message idempotency_key does not match transport idempotency key"
-                            .to_owned(),
-                });
-            }
-
-            let request = envelope.to_broadcast_request().map_err(|error| {
-                KolmeRuntimeCommitProviderError::MalformedResponse {
-                    reason: error.to_string(),
-                }
-            })?;
-            return Ok(request.to_json_payload());
-        }
-
-        if !message.trim().starts_with('{') || !message.trim().ends_with('}') {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "direct signed payload message must be a JSON object string".to_owned(),
-            });
-        }
-        validate_kolme_direct_signed_transaction_message(message.as_str())
-            .map_err(map_codec_error_to_malformed_response)?;
-
-        let request =
-            KolmeApiBroadcastRequest::new(message.as_str(), signature.as_str(), recovery_id)
-                .map_err(|error| KolmeRuntimeCommitProviderError::MalformedResponse {
-                    reason: error.to_string(),
-                })?;
-        return Ok(request.to_json_payload());
-    }
-
-    let fields = parse_kolme_provider_key_value_fields(payload)
-        .map_err(map_provider_response_policy_error_to_malformed)?;
-    if let Some(payload_idempotency_key) = fields.get("idempotency_key") {
-        let payload_idempotency_key = payload_idempotency_key.trim();
-        if payload_idempotency_key != idempotency_key {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "wire_payload idempotency_key does not match transport idempotency key"
-                    .to_owned(),
-            });
-        }
-    }
-
-    let request = KolmeApiBroadcastRequest::new(payload, idempotency_key, 1).map_err(|error| {
-        KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: error.to_string(),
-        }
-    })?;
-    Ok(request.to_json_payload())
+    normalize_kolme_broadcast_payload_contract(wire_payload, idempotency_key)
+        .map_err(map_broadcast_payload_policy_error_to_malformed)
 }
 
 fn parse_live_provider_response(
