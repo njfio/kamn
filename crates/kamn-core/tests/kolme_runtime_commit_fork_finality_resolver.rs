@@ -200,6 +200,56 @@ fn functional_fork_finality_resolver_falls_back_when_notifications_unavailable()
 }
 
 #[test]
+fn functional_fork_finality_resolver_uses_new_block_height_when_txhash_is_not_present() {
+    let connector = MockConnector::new(vec![Ok(MockConnection::new(vec![MockStep::Message(
+        "{\"NewBlock\":{\"block\":{\"message\":\"{\\\"height\\\":42}\"},\"logs\":[[]]}}".to_owned(),
+    )]))]);
+    let notifications_consumer = KolmeRuntimeCommitNotificationsConsumer::new(
+        "http://127.0.0.1:3030",
+        "/notifications",
+        "kolme-fork-local",
+        1,
+        connector,
+    )
+    .expect("notifications consumer should build");
+
+    let responses =
+        vec![
+        Ok("{\"provider\":\"kolme-fork-local\",\"block_height\":40,\"tx_hashes\":\"00aa\"}"
+            .to_owned()),
+        Ok("{\"provider\":\"kolme-fork-local\",\"block_height\":41,\"tx_hashes\":\"00bb\"}"
+            .to_owned()),
+        Ok("{\"provider\":\"kolme-fork-local\",\"block_height\":42,\"tx_hashes\":\"ab12cd34\"}"
+            .to_owned()),
+    ];
+    let (block_transport, block_calls) = RecordingBlockFallbackTransport::with_responses(responses);
+    let block_reconciler = KolmeRuntimeCommitBlockFallbackReconciler::new(
+        "http://127.0.0.1:3030",
+        "/block/{height}",
+        "kolme-fork-local",
+        10,
+        block_transport,
+    )
+    .expect("block fallback reconciler should build");
+
+    let mut resolver =
+        KolmeRuntimeCommitForkFinalityResolver::new(notifications_consumer, block_reconciler);
+    let receipt = resolver
+        .resolve_commit_finality("kolme-commit:ab12cd34", 40, 45)
+        .expect("resolver should use new-block height to drive fallback");
+
+    assert_eq!(receipt.provider, "kolme-fork-local");
+    assert_eq!(receipt.commit_id, "kolme-commit:ab12cd34:h42");
+    assert_eq!(receipt.finality, KolmeCommitReceiptFinality::Final);
+    let observed_heights = block_calls
+        .borrow()
+        .iter()
+        .map(|(_, _, height)| *height)
+        .collect::<Vec<_>>();
+    assert_eq!(observed_heights, vec![40, 41, 42]);
+}
+
+#[test]
 fn regression_fork_finality_resolver_fails_closed_on_notification_txhash_mismatch() {
     // Regression: #1503
     let connector = MockConnector::new(vec![Ok(MockConnection::new(vec![MockStep::Message(
