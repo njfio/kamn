@@ -953,7 +953,7 @@ impl KolmeRuntimeCommitHttpTransport {
             && output.stdout.windows(4).any(|window| window == b"\r\n\r\n");
         if !output.status.success() && !looks_like_http_response {
             return Err(KolmeRuntimeCommitProviderError::Unavailable {
-                reason: classify_tls_failure_reason(
+                reason: classify_kolme_tls_failure_reason(
                     String::from_utf8_lossy(&output.stderr).as_ref(),
                 ),
             });
@@ -1008,7 +1008,8 @@ impl KolmeRuntimeCommitProviderTransport for KolmeRuntimeCommitHttpTransport {
             });
         }
         if is_kolme_broadcast_submit_path_contract(submit_path) {
-            let payload = normalize_kolme_broadcast_payload(wire_payload, idempotency_key)?;
+            let payload = normalize_kolme_broadcast_payload_contract(wire_payload, idempotency_key)
+                .map_err(map_broadcast_payload_policy_error_to_malformed)?;
             return self.execute_request(
                 base_url,
                 submit_path,
@@ -1952,18 +1953,6 @@ fn configured_tls_ca_file() -> Result<Option<String>, KolmeRuntimeCommitProvider
     parse_kolme_tls_ca_file_env_value(value.as_deref()).map_err(map_tls_policy_error)
 }
 
-fn classify_tls_failure_reason(stderr: &str) -> String {
-    classify_kolme_tls_failure_reason(stderr)
-}
-
-fn normalize_kolme_broadcast_payload(
-    wire_payload: &str,
-    idempotency_key: &str,
-) -> Result<String, KolmeRuntimeCommitProviderError> {
-    normalize_kolme_broadcast_payload_contract(wire_payload, idempotency_key)
-        .map_err(map_broadcast_payload_policy_error_to_malformed)
-}
-
 fn parse_live_provider_response(
     response: &str,
     provider_hint: Option<&str>,
@@ -2261,7 +2250,9 @@ fn lifecycle_record_from_outcome(
 
 #[cfg(test)]
 mod tests {
-    use super::{classify_tls_failure_reason, KolmeRuntimeCommitError, KolmeRuntimeCommitRequest};
+    use super::{
+        classify_kolme_tls_failure_reason, KolmeRuntimeCommitError, KolmeRuntimeCommitRequest,
+    };
 
     #[test]
     fn deterministic_request_rejects_empty_operation_id() {
@@ -2282,7 +2273,7 @@ mod tests {
 
     #[test]
     fn tls_failure_reason_classifier_detects_certificate_errors() {
-        let reason = classify_tls_failure_reason(
+        let reason = classify_kolme_tls_failure_reason(
             "verify error:num=18:self-signed certificate\ncertificate verify failed",
         );
         assert_eq!(reason, "tls certificate verification failed");
@@ -2291,7 +2282,7 @@ mod tests {
     #[test]
     fn tls_failure_reason_classifier_detects_handshake_errors() {
         let reason =
-            classify_tls_failure_reason("ssl routines:ssl3_get_record:wrong version number");
+            classify_kolme_tls_failure_reason("ssl routines:ssl3_get_record:wrong version number");
         assert_eq!(reason, "tls handshake failed");
     }
 }
