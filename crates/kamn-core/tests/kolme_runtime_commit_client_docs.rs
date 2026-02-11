@@ -16,6 +16,7 @@ fn doc_contains_adapter_types_and_validation_commands() {
     assert!(DOC.contains("runtime_request_identity_policy"));
     assert!(DOC.contains("deterministic_runtime_commit_idempotency_key"));
     assert!(DOC.contains("deterministic_runtime_commit_id"));
+    assert!(DOC.contains("escape_json_string"));
     assert!(DOC.contains("translate_to_signed_broadcast_envelope"));
     assert!(DOC.contains("fetch_next_nonce"));
     assert!(DOC.contains("submit_broadcast_request"));
@@ -53,4 +54,5 @@ fn regression_requires_adapter_provider_mismatch_and_non_final_fail_closed_marke
     assert!(DOC.contains("`Regression: #1775`"));
     assert!(DOC.contains("`Regression: #1777`"));
     assert!(DOC.contains("`Regression: #1779`"));
+    assert!(DOC.contains("`Regression: #1781`"));
 }
