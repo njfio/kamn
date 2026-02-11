@@ -8,7 +8,8 @@ DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 README_FILE="$ROOT_DIR/README.md"
 TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT"' EXIT
+TMP_REPO="$(mktemp -d)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT"; rm -rf "$TMP_REPO"' EXIT
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local fork rust test matrix contract lane runner to be executable" >&2
@@ -40,7 +41,22 @@ if ! grep -q "Regression: #1541" "$DOC_FILE"; then
   exit 1
 fi
 
-bash "$RUNNER" --output-json "$TMP_REPORT" --policy-output-json "$TMP_POLICY_REPORT" >/dev/null
+git -C "$TMP_REPO" init -q
+git -C "$TMP_REPO" checkout -q -b main
+git -C "$TMP_REPO" config user.email "ci@example.com"
+git -C "$TMP_REPO" config user.name "CI Runner"
+cat >"$TMP_REPO/README.md" <<'EOF'
+local fork rust matrix contract lane fixture
+EOF
+git -C "$TMP_REPO" add README.md
+git -C "$TMP_REPO" commit -q -m "init matrix contract fixture"
+git -C "$TMP_REPO" remote add origin "https://github.com/njfio/kolme_fork.git"
+
+bash "$RUNNER" \
+  --checkout-path "$TMP_REPO" \
+  --output-json "$TMP_REPORT" \
+  --policy-output-json "$TMP_POLICY_REPORT" \
+  >/dev/null
 
 python3 - "$TMP_REPORT" "$TMP_POLICY_REPORT" <<'PY'
 import json
