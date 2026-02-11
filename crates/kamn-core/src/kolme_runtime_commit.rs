@@ -10,6 +10,8 @@ use kamn_kolme::{
     parse_http_endpoint as parse_kolme_http_endpoint,
     parse_http_response_body as parse_kolme_http_response_body,
     parse_notification_event as parse_kolme_notification_event_contract,
+    parse_provider_key_value_fields as parse_kolme_provider_key_value_fields,
+    parse_provider_response_fields as parse_kolme_provider_response_fields,
     parse_receipt_finality as parse_kolme_receipt_finality,
     parse_tls_ca_file_env_value as parse_kolme_tls_ca_file_env_value,
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
@@ -31,6 +33,7 @@ use kamn_kolme::{
     KolmeNotificationPolicyError as KamnKolmeNotificationPolicyError,
     KolmeParsedHttpEndpoint as KamnKolmeParsedHttpEndpoint,
     KolmeParsedWebsocketEndpoint as KamnKolmeParsedWebsocketEndpoint,
+    KolmeProviderResponsePolicyError as KamnKolmeProviderResponsePolicyError,
     KolmeTlsPolicyError as KamnKolmeTlsPolicyError, KolmeWebsocketFrame as KamnKolmeWebsocketFrame,
     KolmeWebsocketPolicyError as KamnKolmeWebsocketPolicyError, ReceiptFinality,
 };
@@ -1110,7 +1113,8 @@ impl<T: KolmeRuntimeCommitFinalityTransport> KolmeRuntimeCommitFinalityChecker<T
             self.status_path.as_str(),
             commit_id,
         )?;
-        let fields = parse_response_fields(response.as_str())?;
+        let fields = parse_kolme_provider_response_fields(response.as_str())
+            .map_err(map_provider_response_policy_error_to_malformed)?;
         let provider = required_response_field(&fields, "provider")?;
         let observed_commit_id = resolve_commit_id(&fields)?;
         if observed_commit_id != commit_id {
@@ -1765,6 +1769,14 @@ fn map_notification_policy_error_to_malformed(
     }
 }
 
+fn map_provider_response_policy_error_to_malformed(
+    error: KamnKolmeProviderResponsePolicyError,
+) -> KolmeRuntimeCommitProviderError {
+    KolmeRuntimeCommitProviderError::MalformedResponse {
+        reason: error.to_string(),
+    }
+}
+
 fn map_websocket_policy_error(
     error: KamnKolmeWebsocketPolicyError,
 ) -> KolmeRuntimeCommitProviderError {
@@ -1840,7 +1852,8 @@ fn parse_block_fallback_response(
         });
     }
 
-    let fields = parse_response_fields(trimmed)?;
+    let fields = parse_kolme_provider_response_fields(trimmed)
+        .map_err(map_provider_response_policy_error_to_malformed)?;
     let provider = required_response_field(&fields, "provider")?;
     let block_height = fields
         .get("block_height")
@@ -2144,7 +2157,8 @@ fn normalize_kolme_broadcast_payload(
                 reason: error.to_string(),
             })?;
 
-            let message_fields = parse_key_value_response_fields(envelope.message.as_str())?;
+            let message_fields = parse_kolme_provider_key_value_fields(envelope.message.as_str())
+                .map_err(map_provider_response_policy_error_to_malformed)?;
             let message_idempotency_key =
                 required_response_field(&message_fields, "idempotency_key")?;
             if message_idempotency_key != idempotency_key {
@@ -2179,7 +2193,8 @@ fn normalize_kolme_broadcast_payload(
         return Ok(request.to_json_payload());
     }
 
-    let fields = parse_key_value_response_fields(payload)?;
+    let fields = parse_kolme_provider_key_value_fields(payload)
+        .map_err(map_provider_response_policy_error_to_malformed)?;
     if let Some(payload_idempotency_key) = fields.get("idempotency_key") {
         let payload_idempotency_key = payload_idempotency_key.trim();
         if payload_idempotency_key != idempotency_key {
@@ -2202,7 +2217,8 @@ fn parse_live_provider_response(
     response: &str,
     provider_hint: Option<&str>,
 ) -> Result<KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderError> {
-    let fields = parse_response_fields(response)?;
+    let fields = parse_kolme_provider_response_fields(response)
+        .map_err(map_provider_response_policy_error_to_malformed)?;
     if let Some(status_raw) = fields.get("status") {
         let status = status_raw.trim();
         if status.is_empty() {
@@ -2266,102 +2282,6 @@ fn parse_live_provider_response(
             },
         ))
     }
-}
-
-fn parse_response_fields(
-    response: &str,
-) -> Result<HashMap<String, String>, KolmeRuntimeCommitProviderError> {
-    let trimmed = response.trim();
-    if trimmed.is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "response body must not be empty".to_owned(),
-        });
-    }
-
-    if trimmed.starts_with('{') {
-        return parse_flat_json_response_fields(trimmed);
-    }
-
-    parse_key_value_response_fields(trimmed)
-}
-
-fn parse_key_value_response_fields(
-    response: &str,
-) -> Result<HashMap<String, String>, KolmeRuntimeCommitProviderError> {
-    let mut fields = HashMap::new();
-    for line in response.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        let (key, value) = trimmed.split_once('=').ok_or_else(|| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("invalid key/value response line: {trimmed}"),
-            }
-        })?;
-        let key = key.trim();
-        let value = value.trim();
-        if key.is_empty() || value.is_empty() {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("invalid key/value response line: {trimmed}"),
-            });
-        }
-        fields.insert(key.to_owned(), value.to_owned());
-    }
-    if fields.is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "response body must contain at least one field".to_owned(),
-        });
-    }
-    Ok(fields)
-}
-
-fn parse_flat_json_response_fields(
-    response: &str,
-) -> Result<HashMap<String, String>, KolmeRuntimeCommitProviderError> {
-    let body = response.trim();
-    if !(body.starts_with('{') && body.ends_with('}')) {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "json response must be an object".to_owned(),
-        });
-    }
-    let inner = &body[1..body.len() - 1];
-    if inner.trim().is_empty() {
-        return Ok(HashMap::new());
-    }
-
-    let entries = split_unquoted(inner, ',').map_err(|reason| {
-        KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("invalid json response: {reason}"),
-        }
-    })?;
-
-    let mut fields = HashMap::new();
-    for entry in entries {
-        let pair = split_unquoted(entry.as_str(), ':').map_err(|reason| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("invalid json response pair: {reason}"),
-            }
-        })?;
-        if pair.len() != 2 {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "json response pair must contain exactly one ':'".to_owned(),
-            });
-        }
-
-        let key = parse_json_string(pair[0].trim()).map_err(|reason| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("invalid json key: {reason}"),
-            }
-        })?;
-        let value = parse_json_string(pair[1].trim()).map_err(|reason| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("invalid json value: {reason}"),
-            }
-        })?;
-        fields.insert(key, value);
-    }
-    Ok(fields)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

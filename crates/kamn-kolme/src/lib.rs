@@ -12,6 +12,7 @@ pub mod finality;
 pub mod http_response_policy;
 pub mod notification_policy;
 pub mod pipeline;
+pub mod provider_response_policy;
 pub mod receipt_finality;
 pub mod tls_policy;
 pub mod transport;
@@ -38,6 +39,10 @@ pub use notification_policy::{
     parse_notification_event, KolmeNotificationEvent, KolmeNotificationPolicyError,
 };
 pub use pipeline::{PipelineError, RuntimeCommitPipeline};
+pub use provider_response_policy::{
+    parse_provider_key_value_fields, parse_provider_response_fields,
+    KolmeProviderResponsePolicyError,
+};
 pub use receipt_finality::{parse_receipt_finality, ReceiptFinality, ReceiptFinalityError};
 pub use tls_policy::{
     classify_tls_failure_reason, parse_tls_ca_file_env_value, KolmeTlsPolicyError,
