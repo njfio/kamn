@@ -42,16 +42,13 @@ use kamn_kolme::{
     KolmeApiNextNonceRequest as KamnKolmeApiNextNonceRequest,
     KolmeApiNextNonceResponse as KamnKolmeApiNextNonceResponse,
     KolmeBlockFallbackPolicyError as KamnKolmeBlockFallbackPolicyError,
-    KolmeBroadcastPayloadPolicyError as KamnKolmeBroadcastPayloadPolicyError,
     KolmeCommitReceiptFinality as KamnKolmeCommitReceiptFinality,
     KolmeEndpointPolicyError as KamnKolmeEndpointPolicyError,
     KolmeHttpResponsePolicyError as KamnKolmeHttpResponsePolicyError,
     KolmeHttpScheme as KamnKolmeHttpScheme, KolmeNotificationEvent as KamnKolmeNotificationEvent,
-    KolmeNotificationPolicyError as KamnKolmeNotificationPolicyError,
     KolmeParsedHttpEndpoint as KamnKolmeParsedHttpEndpoint,
     KolmeProviderOutcome as KamnKolmeProviderOutcome,
     KolmeProviderOutcomePolicyError as KamnKolmeProviderOutcomePolicyError,
-    KolmeProviderResponsePolicyError as KamnKolmeProviderResponsePolicyError,
     KolmeTlsPolicyError as KamnKolmeTlsPolicyError,
     KolmeTransportRequestPolicyError as KamnKolmeTransportRequestPolicyError,
     KolmeWebsocketFrame as KamnKolmeWebsocketFrame,
@@ -1014,7 +1011,9 @@ impl KolmeRuntimeCommitProviderTransport for KolmeRuntimeCommitHttpTransport {
         }
         if is_kolme_broadcast_submit_path_contract(submit_path) {
             let payload = normalize_kolme_broadcast_payload_contract(wire_payload, idempotency_key)
-                .map_err(map_broadcast_payload_policy_error_to_malformed)?;
+                .map_err(|error| KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: error.to_string(),
+                })?;
             return self.execute_request(
                 base_url,
                 submit_path,
@@ -1046,8 +1045,11 @@ impl KolmeRuntimeCommitFinalityTransport for KolmeRuntimeCommitHttpTransport {
         status_path: &str,
         commit_id: &str,
     ) -> Result<String, KolmeRuntimeCommitProviderError> {
-        let path = compose_kolme_finality_status_path(status_path, commit_id)
-            .map_err(map_endpoint_policy_error_to_malformed)?;
+        let path = compose_kolme_finality_status_path(status_path, commit_id).map_err(|error| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: error.to_string(),
+            }
+        })?;
         self.execute_request(base_url, path.as_str(), "GET", None, &[])
     }
 }
@@ -1123,8 +1125,11 @@ impl<T: KolmeRuntimeCommitFinalityTransport> KolmeRuntimeCommitFinalityChecker<T
             self.status_path.as_str(),
             commit_id,
         )?;
-        let fields = parse_kolme_provider_response_fields(response.as_str())
-            .map_err(map_provider_response_policy_error_to_malformed)?;
+        let fields = parse_kolme_provider_response_fields(response.as_str()).map_err(|error| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: error.to_string(),
+            }
+        })?;
         let provider = required_kolme_provider_response_field(&fields, "provider")
             .map_err(map_provider_outcome_policy_error_to_malformed)?;
         let observed_commit_id = parse_kolme_commit_id_from_response_fields(&fields)
@@ -1780,40 +1785,8 @@ fn map_endpoint_policy_error(
     }
 }
 
-fn map_endpoint_policy_error_to_malformed(
-    error: KamnKolmeEndpointPolicyError,
-) -> KolmeRuntimeCommitProviderError {
-    KolmeRuntimeCommitProviderError::MalformedResponse {
-        reason: error.to_string(),
-    }
-}
-
-fn map_notification_policy_error_to_malformed(
-    error: KamnKolmeNotificationPolicyError,
-) -> KolmeRuntimeCommitProviderError {
-    KolmeRuntimeCommitProviderError::MalformedResponse {
-        reason: error.to_string(),
-    }
-}
-
-fn map_provider_response_policy_error_to_malformed(
-    error: KamnKolmeProviderResponsePolicyError,
-) -> KolmeRuntimeCommitProviderError {
-    KolmeRuntimeCommitProviderError::MalformedResponse {
-        reason: error.to_string(),
-    }
-}
-
 fn map_provider_outcome_policy_error_to_malformed(
     error: KamnKolmeProviderOutcomePolicyError,
-) -> KolmeRuntimeCommitProviderError {
-    KolmeRuntimeCommitProviderError::MalformedResponse {
-        reason: error.to_string(),
-    }
-}
-
-fn map_broadcast_payload_policy_error_to_malformed(
-    error: KamnKolmeBroadcastPayloadPolicyError,
 ) -> KolmeRuntimeCommitProviderError {
     KolmeRuntimeCommitProviderError::MalformedResponse {
         reason: error.to_string(),
@@ -1879,8 +1852,11 @@ fn read_http_header_boundary(
 fn parse_kolme_notification_event(
     payload: &str,
 ) -> Result<KolmeRuntimeCommitNotificationEvent, KolmeRuntimeCommitProviderError> {
-    let event = parse_kolme_notification_event_contract(payload)
-        .map_err(map_notification_policy_error_to_malformed)?;
+    let event = parse_kolme_notification_event_contract(payload).map_err(|error| {
+        KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: error.to_string(),
+        }
+    })?;
     match event {
         KamnKolmeNotificationEvent::NewBlock {
             txhash,
