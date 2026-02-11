@@ -656,12 +656,12 @@ impl KolmeRuntimeCommitNotificationEvent {
                 block_height,
             } => Some(KolmeRuntimeCommitProviderReceipt {
                 provider: provider.to_owned(),
-                commit_id: deterministic_backend_commit_id(txhash.as_str(), *block_height),
+                commit_id: deterministic_kolme_backend_commit_id(txhash.as_str(), *block_height),
                 finality: KolmeCommitReceiptFinality::Final,
             }),
             Self::FailedTransaction { txhash, .. } => Some(KolmeRuntimeCommitProviderReceipt {
                 provider: provider.to_owned(),
-                commit_id: deterministic_backend_commit_id(txhash.as_str(), None),
+                commit_id: deterministic_kolme_backend_commit_id(txhash.as_str(), None),
                 finality: KolmeCommitReceiptFinality::Failed,
             }),
             Self::LatestBlock { .. } => None,
@@ -1257,14 +1257,14 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
             {
                 return Ok(KolmeRuntimeCommitProviderReceipt {
                     provider: self.provider.clone(),
-                    commit_id: deterministic_backend_commit_id(txhash, Some(height)),
+                    commit_id: deterministic_kolme_backend_commit_id(txhash, Some(height)),
                     finality: KolmeCommitReceiptFinality::Final,
                 });
             }
             if block.failed_tx_hashes.iter().any(|value| value == txhash) {
                 return Ok(KolmeRuntimeCommitProviderReceipt {
                     provider: self.provider.clone(),
-                    commit_id: deterministic_backend_commit_id(txhash, None),
+                    commit_id: deterministic_kolme_backend_commit_id(txhash, None),
                     finality: KolmeCommitReceiptFinality::Failed,
                 });
             }
@@ -1530,7 +1530,8 @@ where
         from_height: u64,
         latest_height: u64,
     ) -> Result<KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderError> {
-        let expected_txhash = txhash_from_commit_id(commit_id)?;
+        let expected_txhash = txhash_from_kolme_commit_id(commit_id)
+            .map_err(map_provider_outcome_policy_error_to_malformed)?;
 
         match self.notifications_consumer.next_notification_event() {
             Ok(event) => match event {
@@ -1552,7 +1553,9 @@ where
                         .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
                             reason: "notification event did not carry receipt data".to_owned(),
                         })?;
-                    let observed_txhash = txhash_from_commit_id(receipt.commit_id.as_str())?;
+                    let observed_txhash =
+                        txhash_from_kolme_commit_id(receipt.commit_id.as_str())
+                            .map_err(map_provider_outcome_policy_error_to_malformed)?;
                     if observed_txhash != expected_txhash {
                         return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                             reason: format!(
@@ -2040,14 +2043,6 @@ fn parse_live_provider_response(
             Ok(KolmeRuntimeCommitProviderOutcome::Rejected { reason })
         }
     }
-}
-
-fn deterministic_backend_commit_id(tx_hash: &str, block_height: Option<u64>) -> String {
-    deterministic_kolme_backend_commit_id(tx_hash, block_height)
-}
-
-fn txhash_from_commit_id(commit_id: &str) -> Result<String, KolmeRuntimeCommitProviderError> {
-    txhash_from_kolme_commit_id(commit_id).map_err(map_provider_outcome_policy_error_to_malformed)
 }
 
 fn map_provider_outcome(
