@@ -5,11 +5,13 @@ use kamn_kolme::{
     classify_tls_failure_reason as classify_kolme_tls_failure_reason,
     compose_finality_status_path as compose_kolme_finality_status_path,
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
+    deterministic_backend_commit_id as deterministic_kolme_backend_commit_id,
     find_http_header_boundary as find_kolme_http_header_boundary,
     parse_flat_json_value_fields as parse_kolme_flat_json_value_fields,
     parse_fork_block_txhash as parse_kolme_fork_block_txhash,
     parse_http_endpoint as parse_kolme_http_endpoint,
     parse_http_response_body as parse_kolme_http_response_body,
+    parse_live_provider_outcome as parse_kolme_live_provider_outcome,
     parse_notification_event as parse_kolme_notification_event_contract,
     parse_provider_key_value_fields as parse_kolme_provider_key_value_fields,
     parse_provider_response_fields as parse_kolme_provider_response_fields,
@@ -20,6 +22,7 @@ use kamn_kolme::{
     required_json_string_field as required_kolme_json_string_field,
     required_positive_u64_json_field as required_kolme_positive_u64_json_field,
     try_take_websocket_frame as try_take_kolme_websocket_frame,
+    txhash_from_commit_id as txhash_from_kolme_commit_id,
     validate_block_identity as validate_kolme_block_identity,
     validate_block_path_template as validate_kolme_block_path_template,
     validate_direct_signed_transaction_message as validate_kolme_direct_signed_transaction_message,
@@ -38,6 +41,8 @@ use kamn_kolme::{
     KolmeNotificationPolicyError as KamnKolmeNotificationPolicyError,
     KolmeParsedHttpEndpoint as KamnKolmeParsedHttpEndpoint,
     KolmeParsedWebsocketEndpoint as KamnKolmeParsedWebsocketEndpoint,
+    KolmeProviderOutcome as KamnKolmeProviderOutcome,
+    KolmeProviderOutcomePolicyError as KamnKolmeProviderOutcomePolicyError,
     KolmeProviderResponsePolicyError as KamnKolmeProviderResponsePolicyError,
     KolmeTlsPolicyError as KamnKolmeTlsPolicyError, KolmeWebsocketFrame as KamnKolmeWebsocketFrame,
     KolmeWebsocketPolicyError as KamnKolmeWebsocketPolicyError, ReceiptFinality,
@@ -1782,6 +1787,14 @@ fn map_provider_response_policy_error_to_malformed(
     }
 }
 
+fn map_provider_outcome_policy_error_to_malformed(
+    error: KamnKolmeProviderOutcomePolicyError,
+) -> KolmeRuntimeCommitProviderError {
+    KolmeRuntimeCommitProviderError::MalformedResponse {
+        reason: error.to_string(),
+    }
+}
+
 fn map_flat_json_policy_error_to_malformed(
     error: KamnKolmeFlatJsonPolicyError,
 ) -> KolmeRuntimeCommitProviderError {
@@ -2239,70 +2252,34 @@ fn parse_live_provider_response(
     response: &str,
     provider_hint: Option<&str>,
 ) -> Result<KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderError> {
-    let fields = parse_kolme_provider_response_fields(response)
-        .map_err(map_provider_response_policy_error_to_malformed)?;
-    if let Some(status_raw) = fields.get("status") {
-        let status = status_raw.trim();
-        if status.is_empty() {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "field must not be empty: status".to_owned(),
-            });
-        }
-        match status {
-            "submitted" | "duplicate" => {
-                let provider = required_response_field(&fields, "provider")?;
-                let commit_id = resolve_commit_id(&fields)?;
-                let finality_value = required_response_field(&fields, "finality")?;
-                let finality = parse_receipt_finality(finality_value.as_str())?;
-                let receipt = KolmeRuntimeCommitProviderReceipt {
-                    provider,
-                    commit_id,
-                    finality,
-                };
-                if status == "submitted" {
-                    Ok(KolmeRuntimeCommitProviderOutcome::Submitted(receipt))
-                } else {
-                    Ok(KolmeRuntimeCommitProviderOutcome::Duplicate(receipt))
-                }
-            }
-            "rejected" => {
-                let reason = required_response_field(&fields, "reason")?;
-                Ok(KolmeRuntimeCommitProviderOutcome::Rejected { reason })
-            }
-            _ => Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("invalid status value: {status}"),
-            }),
-        }
-    } else {
-        let has_tx_hash = fields.contains_key("txhash") || fields.contains_key("tx_hash");
-        if !has_tx_hash {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "missing required field: status".to_owned(),
-            });
-        }
-
-        let provider = optional_response_field(&fields, "provider").or_else(|| {
-            provider_hint
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(ToOwned::to_owned)
-        });
-        let provider =
-            provider.ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "missing required field: provider".to_owned(),
-            })?;
-        let commit_id = resolve_commit_id(&fields)?;
-        let finality = match optional_response_field(&fields, "finality") {
-            Some(raw_finality) => parse_receipt_finality(raw_finality.as_str())?,
-            None => KolmeCommitReceiptFinality::Pending,
-        };
-        Ok(KolmeRuntimeCommitProviderOutcome::Submitted(
+    match parse_kolme_live_provider_outcome(response, provider_hint)
+        .map_err(map_provider_outcome_policy_error_to_malformed)?
+    {
+        KamnKolmeProviderOutcome::Submitted {
+            provider,
+            commit_id,
+            finality,
+        } => Ok(KolmeRuntimeCommitProviderOutcome::Submitted(
             KolmeRuntimeCommitProviderReceipt {
                 provider,
                 commit_id,
-                finality,
+                finality: map_extracted_receipt_finality(finality),
             },
-        ))
+        )),
+        KamnKolmeProviderOutcome::Duplicate {
+            provider,
+            commit_id,
+            finality,
+        } => Ok(KolmeRuntimeCommitProviderOutcome::Duplicate(
+            KolmeRuntimeCommitProviderReceipt {
+                provider,
+                commit_id,
+                finality: map_extracted_receipt_finality(finality),
+            },
+        )),
+        KamnKolmeProviderOutcome::Rejected { reason } => {
+            Ok(KolmeRuntimeCommitProviderOutcome::Rejected { reason })
+        }
     }
 }
 
@@ -2338,18 +2315,6 @@ fn required_response_field(
         });
     }
     Ok(trimmed.to_owned())
-}
-
-fn optional_response_field(
-    fields: &HashMap<String, String>,
-    field: &'static str,
-) -> Option<String> {
-    let value = fields.get(field)?;
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        return None;
-    }
-    Some(trimmed.to_owned())
 }
 
 fn resolve_commit_id(
@@ -2407,41 +2372,11 @@ fn parse_block_height(raw: &str) -> Result<u64, KolmeRuntimeCommitProviderError>
 }
 
 fn deterministic_backend_commit_id(tx_hash: &str, block_height: Option<u64>) -> String {
-    match block_height {
-        Some(height) => format!("kolme-commit:{tx_hash}:h{height}"),
-        None => format!("kolme-commit:{tx_hash}"),
-    }
+    deterministic_kolme_backend_commit_id(tx_hash, block_height)
 }
 
 fn txhash_from_commit_id(commit_id: &str) -> Result<String, KolmeRuntimeCommitProviderError> {
-    let commit_id = commit_id.trim();
-    if commit_id.is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "commit_id must not be empty".to_owned(),
-        });
-    }
-    let without_prefix = commit_id.strip_prefix("kolme-commit:").ok_or_else(|| {
-        KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "commit_id must start with 'kolme-commit:'".to_owned(),
-        }
-    })?;
-
-    let (txhash, block_suffix) = match without_prefix.split_once(":h") {
-        Some((txhash, suffix)) => (txhash, Some(suffix)),
-        None => (without_prefix, None),
-    };
-    let txhash = txhash.trim();
-    if txhash.is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "commit_id txhash segment must not be empty".to_owned(),
-        });
-    }
-
-    if let Some(raw_height) = block_suffix {
-        parse_block_height(raw_height)?;
-    }
-
-    Ok(txhash.to_owned())
+    txhash_from_kolme_commit_id(commit_id).map_err(map_provider_outcome_policy_error_to_malformed)
 }
 
 fn parse_receipt_finality(
@@ -2455,6 +2390,14 @@ fn parse_receipt_finality(
         ReceiptFinality::Pending => Ok(KolmeCommitReceiptFinality::Pending),
         ReceiptFinality::Final => Ok(KolmeCommitReceiptFinality::Final),
         ReceiptFinality::Failed => Ok(KolmeCommitReceiptFinality::Failed),
+    }
+}
+
+fn map_extracted_receipt_finality(finality: ReceiptFinality) -> KolmeCommitReceiptFinality {
+    match finality {
+        ReceiptFinality::Pending => KolmeCommitReceiptFinality::Pending,
+        ReceiptFinality::Final => KolmeCommitReceiptFinality::Final,
+        ReceiptFinality::Failed => KolmeCommitReceiptFinality::Failed,
     }
 }
 

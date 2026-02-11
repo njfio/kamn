@@ -13,6 +13,7 @@ pub mod flat_json_policy;
 pub mod http_response_policy;
 pub mod notification_policy;
 pub mod pipeline;
+pub mod provider_outcome_policy;
 pub mod provider_response_policy;
 pub mod receipt_finality;
 pub mod tls_policy;
@@ -44,6 +45,10 @@ pub use notification_policy::{
     parse_notification_event, KolmeNotificationEvent, KolmeNotificationPolicyError,
 };
 pub use pipeline::{PipelineError, RuntimeCommitPipeline};
+pub use provider_outcome_policy::{
+    deterministic_backend_commit_id, parse_live_provider_outcome, txhash_from_commit_id,
+    KolmeProviderOutcome, KolmeProviderOutcomePolicyError,
+};
 pub use provider_response_policy::{
     parse_provider_key_value_fields, parse_provider_response_fields,
     KolmeProviderResponsePolicyError,
