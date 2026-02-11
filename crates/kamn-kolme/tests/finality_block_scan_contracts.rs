@@ -1,6 +1,6 @@
 use kamn_kolme::{
-    parse_fork_block_txhash, parse_receipt_finality, render_block_path, validate_block_identity,
-    validate_block_path_template, validate_lookup_window, ReceiptFinality,
+    parse_fork_block_txhash, parse_receipt_finality, render_block_path, resolve_lookup_upper_bound,
+    validate_block_identity, validate_block_path_template, validate_lookup_window, ReceiptFinality,
 };
 
 #[test]
@@ -55,4 +55,17 @@ fn regression_issue_1720_block_identity_mismatch_fails_closed() {
         render_block_path("/block/{height}", 42).expect("render should work"),
         "/block/42"
     );
+}
+
+#[test]
+fn functional_resolve_lookup_upper_bound_honors_notification_height_within_window() {
+    let upper_bound = resolve_lookup_upper_bound(40, 45, 42);
+    assert_eq!(upper_bound, 42);
+}
+
+#[test]
+fn regression_issue_1840_resolve_lookup_upper_bound_falls_back_to_latest_when_notification_stale() {
+    // Regression: #1840
+    let upper_bound = resolve_lookup_upper_bound(40, 45, 39);
+    assert_eq!(upper_bound, 45);
 }

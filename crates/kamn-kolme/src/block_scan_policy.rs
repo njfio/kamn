@@ -130,6 +130,19 @@ pub fn validate_lookup_window(
     Ok(())
 }
 
+/// Resolves block-fallback upper bound using one latest-block notification height.
+pub fn resolve_lookup_upper_bound(
+    from_height: u64,
+    latest_height: u64,
+    notification_height: u64,
+) -> u64 {
+    if notification_height >= from_height {
+        notification_height.min(latest_height)
+    } else {
+        latest_height
+    }
+}
+
 /// Validates provider + height identity for one scanned block response.
 pub fn validate_block_identity(
     expected_provider: &str,
