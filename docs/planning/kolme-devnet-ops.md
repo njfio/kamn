@@ -153,6 +153,31 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Shell-surface budget contract:
   - Combined wrapper shell LOC for this bootstrap/conformance/runtime/process tranche remains `<= 160`.
 
+## Parity+Demo+Real-Process Manifest Migration (Issue #1773)
+
+- Migration guard contract:
+  - `bash scripts/ci/test_kolme_parity_demo_real_process_manifest_migration_contract.sh`
+- Migrated manifest-backed wrappers:
+  - `scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh`
+  - `scripts/kolme/run_local_native_api_parity_live_proof_contract_lane.sh`
+  - `scripts/kolme/run_local_signed_to_kolme_demo_contract_lane.sh`
+  - `scripts/kolme/run_local_kolme_fork_checkout_bootstrap_contract_lane.sh`
+  - `scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh`
+- Manifest files:
+  - `scripts/framework/manifests/kolme_fast_gate_native_api_parity_contract_lane.json`
+  - `scripts/framework/manifests/kolme_local_native_api_parity_live_proof_contract_lane.json`
+  - `scripts/framework/manifests/kolme_local_signed_to_kolme_demo_contract_lane.json`
+  - `scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json`
+  - `scripts/framework/manifests/kolme_local_kolme_fork_real_process_contract_lane.json`
+- Python contract lane implementations:
+  - `scripts/kolme/contracts/fast_gate_native_api_parity_contract_lane.py`
+  - `scripts/kolme/contracts/local_native_api_parity_live_proof_contract_lane.py`
+  - `scripts/kolme/contracts/local_signed_to_kolme_demo_contract_lane.py`
+  - `scripts/kolme/contracts/local_kolme_fork_checkout_bootstrap_contract_lane.py`
+  - `scripts/kolme/contracts/local_kolme_fork_real_process_contract_lane.py`
+- Shell-surface budget contract:
+  - Combined wrapper shell LOC for this parity/demo/real-process tranche remains `<= 200`.
+
 ## Contract Commands
 
 - Run triadic smoke orchestration:
@@ -701,6 +726,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - profile+self-test+portability manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1767`).
 - runtime+triadic+bootstrap+e2e manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1769`).
 - bootstrap+conformance+runtime+process manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1771`).
+- parity+demo+real-process manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1773`).
 - local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
 - local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
 - local fork Rust test matrix lane fails closed on missing local opt-in, metadata sync drift, and per-command timeout/failure paths (`Regression: #1537`).
@@ -789,5 +815,6 @@ bash scripts/ci/test_select_targets.sh
 bash scripts/ci/test_kolme_version_matrix_manifest_migration_contract.sh
 bash scripts/ci/test_kolme_profile_selftest_portability_manifest_migration_contract.sh
 bash scripts/ci/test_kolme_runtime_triadic_bootstrap_e2e_manifest_migration_contract.sh
+bash scripts/ci/test_kolme_parity_demo_real_process_manifest_migration_contract.sh
 bash scripts/ci/test_workflow_scope_policy.sh
 ```

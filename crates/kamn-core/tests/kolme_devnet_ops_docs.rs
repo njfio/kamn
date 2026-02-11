@@ -369,6 +369,32 @@ fn plan_contains_bootstrap_conformance_runtime_process_manifest_migration_contra
 }
 
 #[test]
+fn plan_contains_parity_demo_real_process_manifest_migration_contract() {
+    assert!(PLAN.contains("## Parity+Demo+Real-Process Manifest Migration (Issue #1773)"));
+    assert!(PLAN
+        .contains("scripts/ci/test_kolme_parity_demo_real_process_manifest_migration_contract.sh"));
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_fast_gate_native_api_parity_contract_lane.json"
+    ));
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_local_native_api_parity_live_proof_contract_lane.json"
+    ));
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_local_signed_to_kolme_demo_contract_lane.json"
+    ));
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json"
+    ));
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_local_kolme_fork_real_process_contract_lane.json"
+    ));
+    assert!(PLAN.contains("scripts/kolme/contracts/local_kolme_fork_real_process_contract_lane.py"));
+    assert!(PLAN.contains(
+        "Combined wrapper shell LOC for this parity/demo/real-process tranche remains `<= 200`."
+    ));
+}
+
+#[test]
 fn regression_requires_failover_sync_budget_and_scheduled_cadence_guards() {
     // Regression: #788
     assert!(PLAN
@@ -460,6 +486,14 @@ fn regression_requires_bootstrap_conformance_runtime_process_manifest_migration_
     // Regression: #1771
     assert!(PLAN.contains(
         "bootstrap+conformance+runtime+process manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1771`)."
+    ));
+}
+
+#[test]
+fn regression_requires_parity_demo_real_process_manifest_migration_guard_marker() {
+    // Regression: #1773
+    assert!(PLAN.contains(
+        "parity+demo+real-process manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1773`)."
     ));
 }
 
