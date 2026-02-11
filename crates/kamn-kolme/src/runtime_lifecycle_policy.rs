@@ -113,6 +113,11 @@ pub fn is_terminal_receipt_finality(finality: KolmeCommitReceiptFinality) -> boo
     !matches!(finality, KolmeCommitReceiptFinality::Pending)
 }
 
+/// Validates polling attempt budget before runtime finality convergence loops.
+pub fn is_valid_poll_attempt_budget(max_attempts: u32) -> bool {
+    max_attempts > 0
+}
+
 #[cfg(test)]
 mod tests {
     use super::{

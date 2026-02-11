@@ -81,9 +81,9 @@ pub use provider_response_policy::{
 pub use receipt_finality::{parse_receipt_finality, ReceiptFinality, ReceiptFinalityError};
 pub use runtime_lifecycle_policy::{
     commit_finality_from_receipt_finality, commit_finality_label, is_terminal_receipt_finality,
-    lifecycle_state_for_finality, lifecycle_state_label, parse_commit_receipt_finality,
-    require_final_receipt_finality, KolmeCommitReceiptFinality, RuntimeCommitLifecycleState,
-    RuntimeLifecyclePolicyError,
+    is_valid_poll_attempt_budget, lifecycle_state_for_finality, lifecycle_state_label,
+    parse_commit_receipt_finality, require_final_receipt_finality, KolmeCommitReceiptFinality,
+    RuntimeCommitLifecycleState, RuntimeLifecyclePolicyError,
 };
 pub use runtime_request_identity_policy::{
     deterministic_runtime_commit_id, deterministic_runtime_commit_idempotency_key,
