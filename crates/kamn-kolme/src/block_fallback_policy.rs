@@ -108,6 +108,16 @@ pub fn parse_fork_block_fallback_response(
     })
 }
 
+/// Parses provider block-fallback payload by selecting canonical or fork profile shapes.
+pub fn parse_provider_block_fallback_response(
+    response: &str,
+    provider: &str,
+    expected_height: u64,
+) -> Result<KolmeBlockFallbackResponse, KolmeBlockFallbackPolicyError> {
+    parse_block_fallback_response(response)
+        .or_else(|_| parse_fork_block_fallback_response(response, provider, expected_height))
+}
+
 fn optional_block_tx_hashes(
     fields: &HashMap<String, String>,
     field: &'static str,

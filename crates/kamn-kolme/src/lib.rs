@@ -33,7 +33,8 @@ pub use api_codec::{
 };
 pub use block_fallback_policy::{
     parse_block_fallback_response, parse_fork_block_fallback_response,
-    KolmeBlockFallbackPolicyError, KolmeBlockFallbackResponse,
+    parse_provider_block_fallback_response, KolmeBlockFallbackPolicyError,
+    KolmeBlockFallbackResponse,
 };
 pub use block_scan_policy::{
     parse_fork_block_txhash, render_block_path, validate_block_identity,

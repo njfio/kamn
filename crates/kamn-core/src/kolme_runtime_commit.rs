@@ -18,12 +18,11 @@ use kamn_kolme::{
     lifecycle_state_label as lifecycle_state_label_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
     parse_authorization_header_value as parse_kolme_authorization_header_value,
-    parse_block_fallback_response as parse_kolme_block_fallback_response_contract,
-    parse_fork_block_fallback_response as parse_kolme_fork_block_fallback_response_contract,
     parse_http_endpoint as parse_kolme_http_endpoint,
     parse_http_response_body as parse_kolme_http_response_body,
     parse_live_provider_outcome as parse_kolme_live_provider_outcome,
     parse_notification_event as parse_kolme_notification_event_contract,
+    parse_provider_block_fallback_response as parse_kolme_provider_block_fallback_response_contract,
     parse_provider_finality_receipt as parse_kolme_provider_finality_receipt,
     parse_tls_ca_file_env_value as parse_kolme_tls_ca_file_env_value,
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
@@ -1323,22 +1322,14 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
                 self.block_path_template.as_str(),
                 height,
             )?;
-            let block = parse_kolme_block_fallback_response_contract(response.as_str())
-                .map_err(|error| KolmeRuntimeCommitProviderError::MalformedResponse {
-                    reason: error.to_string(),
-                })
-                .or_else(|_| {
-                    parse_kolme_fork_block_fallback_response_contract(
-                        response.as_str(),
-                        self.provider.as_str(),
-                        height,
-                    )
-                    .map_err(|error| {
-                        KolmeRuntimeCommitProviderError::MalformedResponse {
-                            reason: error.to_string(),
-                        }
-                    })
-                })?;
+            let block = parse_kolme_provider_block_fallback_response_contract(
+                response.as_str(),
+                self.provider.as_str(),
+                height,
+            )
+            .map_err(|error| KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: error.to_string(),
+            })?;
 
             validate_kolme_block_identity(
                 self.provider.as_str(),
