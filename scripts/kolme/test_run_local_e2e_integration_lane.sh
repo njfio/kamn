@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_e2e_integration_lane.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
+SUMMARY_HELPER="$ROOT_DIR/scripts/framework/generate_local_lane_summary.py"
 TMP_REPORT="$(mktemp)"
 TMP_ERR="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_ERR"' EXIT
@@ -26,6 +27,17 @@ assert_eq() {
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected Kolme local e2e integration lane runner to be executable" >&2
+  exit 1
+fi
+
+# Regression: #1579
+if [ ! -x "$SUMMARY_HELPER" ]; then
+  echo "expected shared local-lane summary helper to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "scripts/framework/generate_local_lane_summary.py" "$RUNNER"; then
+  echo "expected local e2e integration runner to use shared local-lane summary helper" >&2
   exit 1
 fi
 

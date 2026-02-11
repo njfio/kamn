@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MATRIX_RUNNER="$ROOT_DIR/scripts/kolme/run_local_heavy_validation_matrix.sh"
 BOOTSTRAP_RUNNER="$ROOT_DIR/scripts/kolme/run_local_bootstrap_health_checks.sh"
+SUMMARY_HELPER="$ROOT_DIR/scripts/framework/generate_local_lane_summary.py"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
@@ -30,6 +31,17 @@ fi
 
 if [ ! -x "$BOOTSTRAP_RUNNER" ]; then
   echo "expected Kolme local bootstrap health-check runner to be executable" >&2
+  exit 1
+fi
+
+# Regression: #1579
+if [ ! -x "$SUMMARY_HELPER" ]; then
+  echo "expected shared local-lane summary helper to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "scripts/framework/generate_local_lane_summary.py" "$MATRIX_RUNNER"; then
+  echo "expected local heavy matrix runner to use shared local-lane summary helper" >&2
   exit 1
 fi
 

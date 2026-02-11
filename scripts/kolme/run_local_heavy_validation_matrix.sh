@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SUMMARY_HELPER="$ROOT_DIR/scripts/framework/generate_local_lane_summary.py"
 
 MODE="dry-run"
 OUTPUT_JSON="/tmp/kolme-local-heavy-validation-summary.json"
@@ -51,6 +52,11 @@ if [ "$MODE" = "run" ] && [ "${KAMN_KOLME_LOCAL_HEAVY:-0}" != "1" ]; then
   exit 1
 fi
 
+if [ ! -x "$SUMMARY_HELPER" ]; then
+  echo "expected shared local-lane summary helper to be executable" >&2
+  exit 1
+fi
+
 BOOTSTRAP_REPORT="/tmp/kolme-local-bootstrap-summary.json"
 DEEP_REPORT="/tmp/kolme-version-compatibility-report.json"
 FORK_RUST_MATRIX_REPORT="/tmp/kolme-local-fork-rust-test-matrix-summary.json"
@@ -94,33 +100,15 @@ for artifact in "${ARTIFACTS[@]}"; do
   printf '%s\n' "$artifact" >>"$ARTIFACT_FILE"
 done
 
-python3 - "$OUTPUT_JSON" "$MODE" "$COMMAND_FILE" "$ARTIFACT_FILE" <<'PY'
-from __future__ import annotations
-
-import json
-import pathlib
-import sys
-
-output_path = pathlib.Path(sys.argv[1]).resolve()
-mode = sys.argv[2]
-commands_path = pathlib.Path(sys.argv[3])
-artifacts_path = pathlib.Path(sys.argv[4])
-
-commands = [line.strip() for line in commands_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-artifacts = [line.strip() for line in artifacts_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-
-summary = {
-    "schema_version": "kamn.kolme.local-heavy-validation-summary.v1",
-    "mode": mode,
-    "local_only_enforced": True,
-    "status": "ok",
-    "commands": commands,
-    "artifact_paths": artifacts,
-}
-
-output_path.parent.mkdir(parents=True, exist_ok=True)
-output_path.write_text(json.dumps(summary, sort_keys=True, indent=2) + "\n", encoding="utf-8")
-PY
+python3 "$SUMMARY_HELPER" \
+  --schema-version "kamn.kolme.local-heavy-validation-summary.v1" \
+  --summary-type commands \
+  --mode "$MODE" \
+  --status ok \
+  --local-only-enforced true \
+  --commands-file "$COMMAND_FILE" \
+  --artifacts-file "$ARTIFACT_FILE" \
+  --output-json "$OUTPUT_JSON"
 
 echo "status=ok"
 echo "matrix_mode=$MODE"

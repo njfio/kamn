@@ -13,6 +13,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh"'
+  'bash "$ROOT_DIR/scripts/framework/test_generate_local_lane_summary.sh"'
 )
 
 for command in "${required_commands[@]}"; do
