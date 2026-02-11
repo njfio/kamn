@@ -1,0 +1,297 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh"
+CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py"
+DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
+
+OUTPUT_JSON="/tmp/kolme-local-fork-process-lifecycle-summary.json"
+POLICY_OUTPUT_JSON="/tmp/kolme-local-fork-process-lifecycle-policy.json"
+MAX_SECONDS="${KAMN_KOLME_LOCAL_FORK_PROCESS_LIFECYCLE_MAX_SECONDS:-300}"
+FORK_CHAIN_VERSION="v0.15.2"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --output-json)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --output-json" >&2
+        exit 1
+      fi
+      OUTPUT_JSON="$2"
+      shift 2
+      ;;
+    --policy-output-json)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --policy-output-json" >&2
+        exit 1
+      fi
+      POLICY_OUTPUT_JSON="$2"
+      shift 2
+      ;;
+    --max-seconds)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --max-seconds" >&2
+        exit 1
+      fi
+      MAX_SECONDS="$2"
+      shift 2
+      ;;
+    --fork-chain-version)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --fork-chain-version" >&2
+        exit 1
+      fi
+      FORK_CHAIN_VERSION="$2"
+      shift 2
+      ;;
+    --help|-h)
+      cat <<'USAGE'
+Usage: run_local_kolme_fork_process_lifecycle_contract_lane.sh [options]
+
+Options:
+  --output-json <path>         Process lifecycle summary output.
+  --policy-output-json <path>  Policy checker report output.
+  --max-seconds <n>            Total runtime budget in seconds.
+  --fork-chain-version <val>   Required fork-info chain_version query value.
+USAGE
+      exit 0
+      ;;
+    *)
+      echo "unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if ! [[ "$MAX_SECONDS" =~ ^[0-9]+$ ]] || [ "$MAX_SECONDS" -le 0 ]; then
+  echo "max-seconds must be a positive integer" >&2
+  exit 1
+fi
+
+if [ ! -x "$RUNNER" ]; then
+  echo "expected local Kolme fork process lifecycle runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$CHECKER" ]; then
+  echo "expected local Kolme fork process lifecycle policy checker to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$DOC_FILE" ]; then
+  echo "expected Kolme devnet ops documentation to exist" >&2
+  exit 1
+fi
+
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+CHECKOUT_PATH="$TMP_DIR/kolme_fork"
+mkdir -p "$CHECKOUT_PATH"
+git -C "$CHECKOUT_PATH" init -q
+git -C "$CHECKOUT_PATH" checkout -q -b main
+git -C "$CHECKOUT_PATH" config user.email "ci@example.com"
+git -C "$CHECKOUT_PATH" config user.name "CI Runner"
+cat >"$CHECKOUT_PATH/README.md" <<'EOF'
+local fork process lifecycle fixture
+EOF
+git -C "$CHECKOUT_PATH" add README.md
+git -C "$CHECKOUT_PATH" commit -q -m "init process lifecycle fixture"
+git -C "$CHECKOUT_PATH" remote add origin "https://github.com/njfio/kolme_fork.git"
+
+cat >"$TMP_DIR/mock_kolme_api.py" <<'PY'
+from __future__ import annotations
+
+import json
+import sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs, urlparse
+
+PORT = int(sys.argv[1])
+CHAIN_VERSION = sys.argv[2]
+
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, format: str, *args: object) -> None:  # noqa: A003
+        return
+
+    def do_GET(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        query = parse_qs(parsed.query)
+        if parsed.path == "/healthz":
+            body = b"Healthy!"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if parsed.path == "/fork-info":
+            versions = query.get("chain_version", [])
+            if versions != [CHAIN_VERSION]:
+                body = b"invalid chain_version"
+                self.send_response(400)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            payload = {"first_block": 10, "last_block": 25}
+            body = json.dumps(payload, sort_keys=True).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if parsed.path == "/get-next-nonce":
+            payload = {"nonce": 7}
+            body = json.dumps(payload, sort_keys=True).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
+        body = b"not found"
+        self.send_response(404)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_PUT(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        if parsed.path != "/broadcast":
+            body = b"not found"
+            self.send_response(404)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        content_length = int(self.headers.get("Content-Length", "0"))
+        if content_length > 0:
+            _ = self.rfile.read(content_length)
+        payload = {"txhash": "tx-local"}
+        body = json.dumps(payload, sort_keys=True).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_POST(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        if parsed.path != "/broadcast/runtime-commit":
+            body = b"not found"
+            self.send_response(404)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        content_length = int(self.headers.get("Content-Length", "0"))
+        if content_length > 0:
+            _ = self.rfile.read(content_length)
+        payload = {"status": "ok", "commit_id": "local-runtime-commit"}
+        body = json.dumps(payload, sort_keys=True).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+
+HTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+PY
+
+pick_port() {
+  python3 - <<'PY'
+import socket
+
+sock = socket.socket()
+sock.bind(("127.0.0.1", 0))
+print(sock.getsockname()[1])
+sock.close()
+PY
+}
+
+PORT="$(pick_port)"
+SERVE_COMMAND="python3 $TMP_DIR/mock_kolme_api.py $PORT $FORK_CHAIN_VERSION"
+
+start_epoch="$(date +%s)"
+
+bash "$RUNNER" \
+  --mode dry-run \
+  --checkout-path "$CHECKOUT_PATH" \
+  --expected-remote-url "https://github.com/njfio/kolme_fork.git" \
+  --expected-ref "refs/heads/main" \
+  --base-url "http://127.0.0.1:${PORT}" \
+  --fork-chain-version "$FORK_CHAIN_VERSION" \
+  --output-json "$OUTPUT_JSON" \
+  >/dev/null
+
+python3 "$CHECKER" \
+  --report-file "$OUTPUT_JSON" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --require-reason-code dry_run_no_commands_executed \
+  --output-json "$POLICY_OUTPUT_JSON" \
+  >/dev/null
+
+KAMN_KOLME_LOCAL_HEAVY=1 \
+  bash "$RUNNER" \
+    --mode run \
+    --checkout-path "$CHECKOUT_PATH" \
+    --expected-remote-url "https://github.com/njfio/kolme_fork.git" \
+    --expected-ref "refs/heads/main" \
+    --base-url "http://127.0.0.1:${PORT}" \
+    --fork-chain-version "$FORK_CHAIN_VERSION" \
+    --serve-command "$SERVE_COMMAND" \
+    --max-seconds "$MAX_SECONDS" \
+    --startup-max-seconds 45 \
+    --integration-max-seconds 180 \
+    --integration-bootstrap-max-seconds 90 \
+    --integration-conformance-max-seconds 120 \
+    --integration-runtime-commit-max-seconds 30 \
+    --output-json "$OUTPUT_JSON" \
+    >/dev/null
+
+python3 "$CHECKER" \
+  --report-file "$OUTPUT_JSON" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --require-reason-code process_lifecycle_integration_passed \
+  --output-json "$POLICY_OUTPUT_JSON" \
+  >/dev/null
+
+if ! grep -q "run_local_kolme_fork_process_lifecycle_lane.sh" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local fork process lifecycle runner" >&2
+  exit 1
+fi
+
+if ! grep -q "check_local_kolme_fork_process_lifecycle_policy.py" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local fork process lifecycle policy checker" >&2
+  exit 1
+fi
+
+if ! grep -q "run_local_kolme_fork_process_lifecycle_contract_lane.sh" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local fork process lifecycle contract lane" >&2
+  exit 1
+fi
+
+if ! grep -q "Regression: #1494" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include local fork process lifecycle regression marker" >&2
+  exit 1
+fi
+
+elapsed_seconds="$(( $(date +%s) - start_epoch ))"
+if [ "$elapsed_seconds" -gt "$MAX_SECONDS" ]; then
+  echo "local Kolme fork process lifecycle contract lane exceeded runtime budget: ${elapsed_seconds}s" >&2
+  exit 1
+fi
+
+echo "local Kolme fork process lifecycle contract lane tests passed."

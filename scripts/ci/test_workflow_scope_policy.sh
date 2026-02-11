@@ -326,6 +326,11 @@ if ! grep -Fq "bash scripts/kolme/test_run_local_kamn_live_runtime_integration_c
   exit 1
 fi
 
+if ! grep -Fq "bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected local fork process lifecycle integration command-surface tests in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh" "$FAST_WORKFLOW"; then
   echo "expected fast-gate native API parity lane command-surface tests in ci-fast-gate.yml" >&2
   exit 1
@@ -398,6 +403,11 @@ fi
 
 if grep -Fq "bash scripts/kolme/run_local_native_api_parity_live_proof_lane.sh --mode run" "$FAST_WORKFLOW"; then
   echo "expected local native API parity live-proof run-mode lane to remain excluded from ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if grep -Fq "bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run" "$FAST_WORKFLOW"; then
+  echo "expected local fork process lifecycle integration run-mode lane to remain excluded from ci-fast-gate.yml" >&2
   exit 1
 fi
 

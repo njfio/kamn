@@ -194,6 +194,7 @@ jobs:
           bash scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh
           bash scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh
           bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh
+          bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh
           bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh
           bash scripts/kolme/test_run_local_heavy_validation_matrix.sh
           bash scripts/kolme/test_run_local_bootstrap_health_checks.sh
