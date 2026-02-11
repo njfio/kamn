@@ -21,6 +21,11 @@ across Kolme upgrades.
 - Scheduled deep lane:
   - run full version replay fixture matrix.
   - emit machine-readable replay report for audit evidence.
+- Lane migration governance:
+  - enforce prioritized waiver-critical lane inventory in
+    `fixtures/kolme_compatibility/lane_migration_matrix.json`.
+  - fail closed on lane matrix drift with
+    `scripts/kolme/check_lane_migration_matrix_policy.py`.
 
 ## Validator Contract
 
@@ -142,6 +147,7 @@ bash scripts/kolme/test_check_nonce_broadcast_parity_policy.sh
 bash scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh
 bash scripts/kolme/test_run_notifications_consumer_contract_lane.sh
 bash scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh
+bash scripts/kolme/test_check_lane_migration_matrix_policy.sh
 bash scripts/ci/test_select_targets.sh
 bash scripts/ci/test_workflow_scope_policy.sh
 ```

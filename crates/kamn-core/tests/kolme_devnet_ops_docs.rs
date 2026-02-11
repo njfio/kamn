@@ -241,6 +241,16 @@ fn plan_contains_local_only_heavy_e2e_lane() {
 }
 
 #[test]
+fn plan_contains_lane_migration_matrix_contract() {
+    assert!(PLAN.contains("## Lane Migration Matrix (Issue #1721)"));
+    assert!(PLAN.contains("fixtures/kolme_compatibility/lane_migration_matrix.json"));
+    assert!(PLAN.contains("kamn.kolme.lane-migration-matrix.v1"));
+    assert!(PLAN.contains("check_lane_migration_matrix_policy.py"));
+    assert!(PLAN.contains("test_check_lane_migration_matrix_policy.sh"));
+    assert!(PLAN.contains("kolme.local.fork.rust_matrix"));
+}
+
+#[test]
 fn regression_requires_failover_sync_budget_and_scheduled_cadence_guards() {
     // Regression: #788
     assert!(PLAN
@@ -276,6 +286,14 @@ fn regression_requires_local_bootstrap_policy_contract_guard_marker() {
     // Regression: #1692
     assert!(PLAN.contains(
         "local bootstrap health summary policy and contract-lane command/report drift remain fail-closed (`Regression: #1692`)."
+    ));
+}
+
+#[test]
+fn regression_requires_lane_migration_matrix_policy_guard_marker() {
+    // Regression: #1721
+    assert!(PLAN.contains(
+        "lane migration matrix schema/order/required-lane drift remains fail-closed (`Regression: #1721`)."
     ));
 }
 

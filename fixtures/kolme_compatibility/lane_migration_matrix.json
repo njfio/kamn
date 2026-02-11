@@ -1,0 +1,104 @@
+{
+  "lanes": [
+    {
+      "current_runner": "legacy_bash_lane",
+      "lane_id": "kolme.block.fallback.reconciliation",
+      "owner": "backend",
+      "parent_issue": "#1715",
+      "priority": "P0",
+      "source_entry": "scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh",
+      "status": "planned",
+      "target_issue": "#1716",
+      "target_runner": "framework_manifest_lane"
+    },
+    {
+      "current_runner": "legacy_bash_lane",
+      "lane_id": "kolme.notifications.consumer",
+      "owner": "backend",
+      "parent_issue": "#1715",
+      "priority": "P0",
+      "source_entry": "scripts/kolme/run_notifications_consumer_contract_lane.sh",
+      "status": "planned",
+      "target_issue": "#1716",
+      "target_runner": "framework_manifest_lane"
+    },
+    {
+      "current_runner": "legacy_bash_lane",
+      "lane_id": "kolme.runtime.commit.adapter",
+      "owner": "backend",
+      "parent_issue": "#1715",
+      "priority": "P0",
+      "source_entry": "scripts/kolme/run_runtime_commit_adapter_contract_lane.sh",
+      "status": "planned",
+      "target_issue": "#1716",
+      "target_runner": "framework_manifest_lane"
+    },
+    {
+      "current_runner": "legacy_bash_lane",
+      "lane_id": "kolme.runtime.commit.replay",
+      "owner": "backend",
+      "parent_issue": "#1715",
+      "priority": "P0",
+      "source_entry": "scripts/kolme/run_runtime_commit_replay_contract_lane.sh",
+      "status": "planned",
+      "target_issue": "#1716",
+      "target_runner": "framework_manifest_lane"
+    },
+    {
+      "current_runner": "hybrid_shell_python",
+      "lane_id": "kolme.local.fork.rust_matrix",
+      "owner": "devops",
+      "parent_issue": "#1715",
+      "priority": "P1",
+      "source_entry": "scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh",
+      "status": "planned",
+      "target_issue": "#1716",
+      "target_runner": "framework_manifest_lane"
+    },
+    {
+      "current_runner": "hybrid_shell_python",
+      "lane_id": "kolme.local.kamn.live_runtime_integration",
+      "owner": "devops",
+      "parent_issue": "#1715",
+      "priority": "P1",
+      "source_entry": "scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh",
+      "status": "planned",
+      "target_issue": "#1716",
+      "target_runner": "framework_manifest_lane"
+    },
+    {
+      "current_runner": "legacy_bash_lane",
+      "lane_id": "kolme.nonce.broadcast.parity",
+      "owner": "backend",
+      "parent_issue": "#1715",
+      "priority": "P1",
+      "source_entry": "scripts/kolme/run_nonce_broadcast_parity_contract_lane.sh",
+      "status": "planned",
+      "target_issue": "#1716",
+      "target_runner": "framework_manifest_lane"
+    },
+    {
+      "current_runner": "hybrid_shell_python",
+      "lane_id": "kolme.version.compatibility",
+      "owner": "backend",
+      "parent_issue": "#1715",
+      "priority": "P1",
+      "source_entry": "scripts/kolme/run_version_compatibility_contract_lane.sh",
+      "status": "planned",
+      "target_issue": "#1716",
+      "target_runner": "framework_manifest_lane"
+    },
+    {
+      "current_runner": "hybrid_shell_python",
+      "lane_id": "kolme.local.heavy.validation_matrix",
+      "owner": "qa",
+      "parent_issue": "#1715",
+      "priority": "P2",
+      "source_entry": "scripts/kolme/run_local_heavy_validation_matrix_contract_lane.sh",
+      "status": "planned",
+      "target_issue": "#1716",
+      "target_runner": "framework_manifest_lane"
+    }
+  ],
+  "schema_version": "kamn.kolme.lane-migration-matrix.v1"
+}

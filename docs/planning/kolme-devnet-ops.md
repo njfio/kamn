@@ -12,6 +12,27 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Deterministic marker validation from fixture contract.
 - PR-safe runtime budget guard for smoke lane cost control.
 
+## Lane Migration Matrix (Issue #1721)
+
+- Canonical prioritized lane migration matrix fixture:
+  - `fixtures/kolme_compatibility/lane_migration_matrix.json`
+- Matrix schema version:
+  - `kamn.kolme.lane-migration-matrix.v1`
+- Fail-closed matrix policy checker:
+  - `python3 scripts/kolme/check_lane_migration_matrix_policy.py --matrix-file fixtures/kolme_compatibility/lane_migration_matrix.json`
+- Matrix contract test:
+  - `bash scripts/kolme/test_check_lane_migration_matrix_policy.sh`
+- Required waiver-critical lane identifiers:
+  - `kolme.version.compatibility`
+  - `kolme.runtime.commit.adapter`
+  - `kolme.runtime.commit.replay`
+  - `kolme.notifications.consumer`
+  - `kolme.block.fallback.reconciliation`
+  - `kolme.nonce.broadcast.parity`
+  - `kolme.local.fork.rust_matrix`
+  - `kolme.local.kamn.live_runtime_integration`
+  - `kolme.local.heavy.validation_matrix`
+
 ## Contract Commands
 
 - Run triadic smoke orchestration:
@@ -553,6 +574,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local-only heavy validation matrix requires explicit opt-in and remains excluded from PR fast-gate workflows (`Regression: #1405`).
 - local-only heavy validation matrix summary policy and contract-lane command/report drift remain fail-closed (`Regression: #1687`).
 - local bootstrap health summary policy and contract-lane command/report drift remain fail-closed (`Regression: #1692`).
+- lane migration matrix schema/order/required-lane drift remains fail-closed (`Regression: #1721`).
 - local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
 - local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
 - local fork Rust test matrix lane fails closed on missing local opt-in, metadata sync drift, and per-command timeout/failure paths (`Regression: #1537`).
