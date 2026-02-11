@@ -8,6 +8,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_coverage_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_asymmetry_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_kolme_tranche1_manifest_migration_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_kolme_runtime_nonce_manifest_migration_contract.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_lane_migration_matrix_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_generate_fork_compatibility_evidence.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_fork_compatibility_policy.sh"'

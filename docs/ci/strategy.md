@@ -100,6 +100,14 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `run_block_fallback_reconciliation_contract_lane.sh`
     - enforces tranche shell-wrapper budget:
       - combined migrated wrapper shell LOC must remain `<= 60`
+  - runtime+nonce manifest migration guard stays on PR fast gate:
+    - `bash scripts/ci/test_kolme_runtime_nonce_manifest_migration_contract.sh`
+    - enforces manifest-backed wrappers for:
+      - `run_runtime_commit_adapter_contract_lane.sh`
+      - `run_runtime_commit_replay_contract_lane.sh`
+      - `run_nonce_broadcast_parity_contract_lane.sh`
+    - enforces tranche shell-wrapper budget:
+      - combined migrated wrapper shell LOC must remain `<= 120`
   - additional Kolme contract checks stay covered by aggregate CI tools lane:
     - `bash scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh`
     - `bash scripts/kolme/test_check_local_bootstrap_health_policy.sh`
@@ -259,6 +267,7 @@ Regression policy:
 - Kolme command-surface asymmetry split drift remains fail-closed (`Regression: #1565`).
 - Kolme command-surface asymmetry policy-file schema drift remains fail-closed (`Regression: #1569`).
 - Kolme tranche-1 manifest migration wrapper and shell-LOC budget drift remains fail-closed (`Regression: #1722`).
+- Kolme runtime+nonce manifest migration wrapper and shell-LOC budget drift remains fail-closed (`Regression: #1763`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
