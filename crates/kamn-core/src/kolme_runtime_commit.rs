@@ -793,6 +793,51 @@ impl KolmeRuntimeCommitHttpTransport {
         Ok(transport)
     }
 
+    /// Fetches one typed nonce response from `/get-next-nonce`.
+    pub fn fetch_next_nonce(
+        &mut self,
+        base_url: &str,
+        nonce_path: &str,
+        request: &KolmeApiNextNonceRequest,
+    ) -> Result<KolmeApiNextNonceResponse, KolmeRuntimeCommitProviderError> {
+        let path = request.query_path(nonce_path);
+        let response = self.execute_request(base_url, path.as_str(), "GET", None, &[])?;
+        KolmeApiNextNonceResponse::parse_json(response.as_str())
+    }
+
+    /// Submits one typed broadcast request to `/broadcast`.
+    pub fn submit_broadcast_request(
+        &mut self,
+        base_url: &str,
+        submit_path: &str,
+        request: &KolmeApiBroadcastRequest,
+        idempotency_key: &str,
+    ) -> Result<KolmeApiBroadcastResponse, KolmeRuntimeCommitProviderError> {
+        let idempotency_key = idempotency_key.trim();
+        if idempotency_key.is_empty() {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "idempotency_key must not be empty".to_owned(),
+            });
+        }
+        let submit_path = if submit_path.trim().is_empty() {
+            "/broadcast"
+        } else {
+            submit_path.trim()
+        };
+        let payload = request.to_json_payload();
+        let response = self.execute_request(
+            base_url,
+            submit_path,
+            "PUT",
+            Some(payload.as_str()),
+            &[
+                ("Content-Type", "application/json"),
+                ("X-Idempotency-Key", idempotency_key),
+            ],
+        )?;
+        KolmeApiBroadcastResponse::parse_json(response.as_str())
+    }
+
     fn execute_request(
         &self,
         base_url: &str,
