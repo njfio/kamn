@@ -36,6 +36,7 @@ Out of scope:
 ## Phase 2 Progress
 - #1826: extracted finality response-to-receipt parser contract to `kamn-kolme` (`parse_provider_finality_receipt`) and rewired `kamn-core` finality checker to consume the extracted contract.
 - #1836: extracted provider-aware block-fallback parse-selection contract to `kamn-kolme` (`parse_provider_block_fallback_response`) and rewired `kamn-core` block fallback reconciler delegation.
+- #1838: extracted notification receipt txhash-correlation helper to `kamn-kolme` (`require_commit_id_matches_expected_txhash`) and rewired `kamn-core` fork finality resolver mismatch checking.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,
