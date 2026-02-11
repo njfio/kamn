@@ -612,7 +612,15 @@ pub trait KolmeRuntimeCommitProviderTransport {
 pub struct KolmeRuntimeCommitLiveProvider<T> {
     base_url: String,
     submit_path: String,
+    profile: KolmeRuntimeCommitSubmitProfile,
+    provider_hint: Option<String>,
     transport: T,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum KolmeRuntimeCommitSubmitProfile {
+    LegacyRuntimeCommit,
+    KolmeForkBroadcast,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -870,6 +878,19 @@ impl KolmeRuntimeCommitProviderTransport for KolmeRuntimeCommitHttpTransport {
             return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                 reason: "idempotency_key must not be empty".to_owned(),
             });
+        }
+        if is_kolme_broadcast_submit_path(submit_path) {
+            let payload = normalize_kolme_broadcast_payload(wire_payload, idempotency_key)?;
+            return self.execute_request(
+                base_url,
+                submit_path,
+                "PUT",
+                Some(payload.as_str()),
+                &[
+                    ("Content-Type", "application/json"),
+                    ("X-Idempotency-Key", idempotency_key),
+                ],
+            );
         }
         self.execute_request(
             base_url,
@@ -1388,8 +1409,29 @@ impl<T: KolmeRuntimeCommitProviderTransport> KolmeRuntimeCommitLiveProvider<T> {
         Ok(Self {
             base_url: base_url.trim().to_owned(),
             submit_path: submit_path.trim().to_owned(),
+            profile: KolmeRuntimeCommitSubmitProfile::LegacyRuntimeCommit,
+            provider_hint: None,
             transport,
         })
+    }
+
+    /// Builds a live provider configured for `kolme_fork` broadcast semantics.
+    pub fn new_kolme_fork_broadcast_profile(
+        base_url: &str,
+        provider_hint: &str,
+        transport: T,
+    ) -> Result<Self, KolmeRuntimeCommitError> {
+        let provider_hint = provider_hint.trim();
+        if provider_hint.is_empty() {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "provider_hint",
+                reason: "must not be empty",
+            });
+        }
+        let mut provider = Self::new(base_url, "/broadcast", transport)?;
+        provider.profile = KolmeRuntimeCommitSubmitProfile::KolmeForkBroadcast;
+        provider.provider_hint = Some(provider_hint.to_owned());
+        Ok(provider)
     }
 }
 
@@ -1407,7 +1449,11 @@ impl<T: KolmeRuntimeCommitProviderTransport> KolmeRuntimeCommitProvider
             wire_payload,
             idempotency_key,
         )?;
-        parse_live_provider_response(response.as_str())
+        let provider_hint = match self.profile {
+            KolmeRuntimeCommitSubmitProfile::KolmeForkBroadcast => self.provider_hint.as_deref(),
+            KolmeRuntimeCommitSubmitProfile::LegacyRuntimeCommit => None,
+        };
+        parse_live_provider_response(response.as_str(), provider_hint)
     }
 }
 
@@ -2338,35 +2384,122 @@ fn percent_encode(value: &str) -> String {
     encoded
 }
 
+fn is_kolme_broadcast_submit_path(submit_path: &str) -> bool {
+    let trimmed = submit_path.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    let without_query = trimmed
+        .split('?')
+        .next()
+        .unwrap_or(trimmed)
+        .trim_end_matches('/');
+    without_query == "/broadcast"
+}
+
+fn normalize_kolme_broadcast_payload(
+    wire_payload: &str,
+    idempotency_key: &str,
+) -> Result<String, KolmeRuntimeCommitProviderError> {
+    let payload = wire_payload.trim();
+    if payload.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "wire_payload must not be empty".to_owned(),
+        });
+    }
+    let idempotency_key = idempotency_key.trim();
+    if idempotency_key.is_empty() {
+        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "idempotency_key must not be empty".to_owned(),
+        });
+    }
+
+    let fields = parse_key_value_response_fields(payload)?;
+    if let Some(payload_idempotency_key) = fields.get("idempotency_key") {
+        let payload_idempotency_key = payload_idempotency_key.trim();
+        if payload_idempotency_key != idempotency_key {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "wire_payload idempotency_key does not match transport idempotency key"
+                    .to_owned(),
+            });
+        }
+    }
+
+    let request = KolmeApiBroadcastRequest::new(payload, idempotency_key, 1).map_err(|error| {
+        KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: error.to_string(),
+        }
+    })?;
+    Ok(request.to_json_payload())
+}
+
 fn parse_live_provider_response(
     response: &str,
+    provider_hint: Option<&str>,
 ) -> Result<KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderError> {
     let fields = parse_response_fields(response)?;
-    let status = required_response_field(&fields, "status")?;
-    match status.as_str() {
-        "submitted" | "duplicate" => {
-            let provider = required_response_field(&fields, "provider")?;
-            let commit_id = resolve_commit_id(&fields)?;
-            let finality_value = required_response_field(&fields, "finality")?;
-            let finality = parse_receipt_finality(finality_value.as_str())?;
-            let receipt = KolmeRuntimeCommitProviderReceipt {
+    if let Some(status_raw) = fields.get("status") {
+        let status = status_raw.trim();
+        if status.is_empty() {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "field must not be empty: status".to_owned(),
+            });
+        }
+        match status {
+            "submitted" | "duplicate" => {
+                let provider = required_response_field(&fields, "provider")?;
+                let commit_id = resolve_commit_id(&fields)?;
+                let finality_value = required_response_field(&fields, "finality")?;
+                let finality = parse_receipt_finality(finality_value.as_str())?;
+                let receipt = KolmeRuntimeCommitProviderReceipt {
+                    provider,
+                    commit_id,
+                    finality,
+                };
+                if status == "submitted" {
+                    Ok(KolmeRuntimeCommitProviderOutcome::Submitted(receipt))
+                } else {
+                    Ok(KolmeRuntimeCommitProviderOutcome::Duplicate(receipt))
+                }
+            }
+            "rejected" => {
+                let reason = required_response_field(&fields, "reason")?;
+                Ok(KolmeRuntimeCommitProviderOutcome::Rejected { reason })
+            }
+            _ => Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("invalid status value: {status}"),
+            }),
+        }
+    } else {
+        let has_tx_hash = fields.contains_key("txhash") || fields.contains_key("tx_hash");
+        if !has_tx_hash {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "missing required field: status".to_owned(),
+            });
+        }
+
+        let provider = optional_response_field(&fields, "provider").or_else(|| {
+            provider_hint
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(ToOwned::to_owned)
+        });
+        let provider =
+            provider.ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "missing required field: provider".to_owned(),
+            })?;
+        let commit_id = resolve_commit_id(&fields)?;
+        let finality = match optional_response_field(&fields, "finality") {
+            Some(raw_finality) => parse_receipt_finality(raw_finality.as_str())?,
+            None => KolmeCommitReceiptFinality::Pending,
+        };
+        Ok(KolmeRuntimeCommitProviderOutcome::Submitted(
+            KolmeRuntimeCommitProviderReceipt {
                 provider,
                 commit_id,
                 finality,
-            };
-            if status == "submitted" {
-                Ok(KolmeRuntimeCommitProviderOutcome::Submitted(receipt))
-            } else {
-                Ok(KolmeRuntimeCommitProviderOutcome::Duplicate(receipt))
-            }
-        }
-        "rejected" => {
-            let reason = required_response_field(&fields, "reason")?;
-            Ok(KolmeRuntimeCommitProviderOutcome::Rejected { reason })
-        }
-        _ => Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("invalid status value: {status}"),
-        }),
+            },
+        ))
     }
 }
 
@@ -2754,6 +2887,18 @@ fn required_response_field(
         });
     }
     Ok(trimmed.to_owned())
+}
+
+fn optional_response_field(
+    fields: &HashMap<String, String>,
+    field: &'static str,
+) -> Option<String> {
+    let value = fields.get(field)?;
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    Some(trimmed.to_owned())
 }
 
 fn resolve_commit_id(

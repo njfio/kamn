@@ -177,7 +177,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Deterministic checkpoints include:
   - `run_local_kolme_fork_bootstrap_readiness_lane.sh` run-mode validation for pinned checkout provenance and API readiness.
   - `run_local_kolme_live_api_conformance_harness.sh` run-mode validation for health/query/nonce/broadcast command contracts.
-  - explicit runtime-commit endpoint probe over `POST /broadcast/runtime-commit` with fail-closed reason codes.
+  - explicit runtime-commit submit-profile probe over `PUT /broadcast` with fail-closed reason codes.
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.
   - lane default budget is bounded to 210 seconds with per-stage budget caps.

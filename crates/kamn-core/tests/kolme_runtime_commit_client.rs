@@ -555,6 +555,43 @@ fn functional_live_provider_maps_submitted_json_response_to_provider_outcome() {
 }
 
 #[test]
+fn unit_kolme_fork_live_provider_maps_txhash_only_response_using_provider_hint() {
+    let response = r#"{"txhash":"ab12cd34"}"#.to_owned();
+    let (transport, calls) = RecordingTransport::with_result(Ok(response));
+    let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
+        "http://127.0.0.1:3030",
+        "kolme-fork-local",
+        transport,
+    )
+    .expect("provider should build");
+
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-live-provider-1502-a",
+        "state:live",
+        "kamn:did:agent:live-provider-1502-a",
+        59,
+        "payload:live-provider",
+    )
+    .expect("request should build");
+
+    let outcome = provider
+        .submit_runtime_commit(&request.to_wire_payload(), request.idempotency_key())
+        .expect("provider should map txhash-only response");
+    assert_eq!(
+        outcome,
+        KolmeRuntimeCommitProviderOutcome::Submitted(KolmeRuntimeCommitProviderReceipt {
+            provider: "kolme-fork-local".to_owned(),
+            commit_id: "kolme-commit:ab12cd34".to_owned(),
+            finality: KolmeCommitReceiptFinality::Pending,
+        })
+    );
+
+    let calls = calls.borrow();
+    assert_eq!(calls.len(), 1, "provider transport should be called once");
+    assert_eq!(calls[0].1, "/broadcast");
+}
+
+#[test]
 fn regression_live_provider_fails_closed_for_malformed_response_shape() {
     // Regression: #1411
     let malformed_response =
@@ -582,6 +619,38 @@ fn regression_live_provider_fails_closed_for_malformed_response_shape() {
             Err(KolmeRuntimeCommitProviderError::MalformedResponse { .. })
         ),
         "provider must fail closed for malformed backend responses"
+    );
+}
+
+#[test]
+fn regression_live_provider_rejects_statusless_response_without_txhash() {
+    // Regression: #1502
+    let malformed_response =
+        r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:runtime:missing-status"}"#
+            .to_owned();
+    let (transport, _calls) = RecordingTransport::with_result(Ok(malformed_response));
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        "http://127.0.0.1:3030",
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-live-provider-1502-b",
+        "state:live",
+        "kamn:did:agent:live-provider-1502-b",
+        60,
+        "payload:live-provider",
+    )
+    .expect("request should build");
+
+    assert!(
+        matches!(
+            provider.submit_runtime_commit(&request.to_wire_payload(), request.idempotency_key()),
+            Err(KolmeRuntimeCommitProviderError::MalformedResponse { .. })
+        ),
+        "provider must fail closed when neither status nor txhash is present"
     );
 }
 
