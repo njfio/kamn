@@ -50,7 +50,6 @@ use kamn_kolme::{
     KolmeHttpScheme as KamnKolmeHttpScheme, KolmeNotificationEvent as KamnKolmeNotificationEvent,
     KolmeNotificationPolicyError as KamnKolmeNotificationPolicyError,
     KolmeParsedHttpEndpoint as KamnKolmeParsedHttpEndpoint,
-    KolmeParsedWebsocketEndpoint as KamnKolmeParsedWebsocketEndpoint,
     KolmeProviderOutcome as KamnKolmeProviderOutcome,
     KolmeProviderOutcomePolicyError as KamnKolmeProviderOutcomePolicyError,
     KolmeProviderResponsePolicyError as KamnKolmeProviderResponsePolicyError,
@@ -742,7 +741,6 @@ enum KolmeRuntimeCommitSubmitProfile {
 }
 
 type ParsedHttpEndpoint = KamnKolmeParsedHttpEndpoint;
-type ParsedWebsocketEndpoint = KamnKolmeParsedWebsocketEndpoint;
 type ParsedBlockFallbackResponse = KamnKolmeBlockFallbackResponse;
 
 type HttpScheme = KamnKolmeHttpScheme;
@@ -835,7 +833,8 @@ impl KolmeRuntimeCommitHttpTransport {
         body: Option<&str>,
         headers: &[(&str, &str)],
     ) -> Result<String, KolmeRuntimeCommitProviderError> {
-        let endpoint = parse_http_endpoint(base_url, path)?;
+        let endpoint =
+            parse_kolme_http_endpoint(base_url, path).map_err(map_endpoint_policy_error)?;
         let payload = body.unwrap_or("");
         let mut request = format!(
             "{method} {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n",
@@ -1355,7 +1354,8 @@ impl KolmeRuntimeCommitNotificationsConnector for KolmeRuntimeCommitWebsocketCon
         &mut self,
         notifications_url: &str,
     ) -> Result<Self::Connection, KolmeRuntimeCommitProviderError> {
-        let endpoint = parse_websocket_endpoint(notifications_url)?;
+        let endpoint =
+            parse_kolme_websocket_endpoint(notifications_url).map_err(map_endpoint_policy_error)?;
         if endpoint.secure {
             return Err(KolmeRuntimeCommitProviderError::Unavailable {
                 reason: "wss:// notifications are not supported by this transport".to_owned(),
@@ -1435,8 +1435,10 @@ where
                 reason: "must be positive",
             });
         }
-        let notifications_url = compose_notifications_websocket_url(base_url, notifications_path)
-            .map_err(map_provider_error)?;
+        let notifications_url =
+            compose_kolme_notifications_websocket_url(base_url, notifications_path)
+                .map_err(map_endpoint_policy_error)
+                .map_err(map_provider_error)?;
         Ok(Self {
             notifications_url,
             provider: provider.trim().to_owned(),
@@ -1860,13 +1862,6 @@ fn map_transport_request_policy_error(
     }
 }
 
-fn parse_http_endpoint(
-    base_url: &str,
-    path: &str,
-) -> Result<ParsedHttpEndpoint, KolmeRuntimeCommitProviderError> {
-    parse_kolme_http_endpoint(base_url, path).map_err(map_endpoint_policy_error)
-}
-
 fn validate_block_path_template(
     block_path_template: &str,
 ) -> Result<(), KolmeRuntimeCommitProviderError> {
@@ -1896,20 +1891,6 @@ fn parse_kolme_fork_block_fallback_response(
 ) -> Result<ParsedBlockFallbackResponse, KolmeRuntimeCommitProviderError> {
     parse_kolme_fork_block_fallback_response_contract(response, provider, expected_height)
         .map_err(map_block_fallback_policy_error_to_malformed)
-}
-
-fn compose_notifications_websocket_url(
-    base_url: &str,
-    notifications_path: &str,
-) -> Result<String, KolmeRuntimeCommitProviderError> {
-    compose_kolme_notifications_websocket_url(base_url, notifications_path)
-        .map_err(map_endpoint_policy_error)
-}
-
-fn parse_websocket_endpoint(
-    notifications_url: &str,
-) -> Result<ParsedWebsocketEndpoint, KolmeRuntimeCommitProviderError> {
-    parse_kolme_websocket_endpoint(notifications_url).map_err(map_endpoint_policy_error)
 }
 
 fn reconnect_exhausted_error(max_reconnect_attempts: u32) -> KolmeRuntimeCommitProviderError {
