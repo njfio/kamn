@@ -38,11 +38,12 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_codec_error_to_malformed_response("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_provider_outcome("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_provider_receipt("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("fn map_provider_error("));
 }
 
 #[test]
 fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation() {
-    // Regression: #1816
+    // Regression: #1818
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_commit_receipt_finality("));
     assert!(RUNTIME_COMMIT_SRC.contains("commit_finality_from_receipt_finality_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("lifecycle_state_for_finality_contract("));
@@ -75,4 +76,6 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("KamnKolmeApiBroadcastResponse::parse_json("));
     assert!(RUNTIME_COMMIT_SRC.contains("if receipt.provider != expected_provider"));
     assert!(RUNTIME_COMMIT_SRC.contains("if receipt.commit_id.trim().is_empty()"));
+    assert!(RUNTIME_COMMIT_SRC.contains("KolmeRuntimeCommitTransportErrorKind::Timeout"));
+    assert!(RUNTIME_COMMIT_SRC.contains("KolmeRuntimeCommitTransportErrorKind::MalformedResponse"));
 }

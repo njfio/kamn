@@ -1264,7 +1264,26 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
             .map_err(|error| KolmeRuntimeCommitProviderError::Unavailable {
                 reason: error.to_string(),
             })
-            .map_err(map_provider_error)?;
+            .map_err(|error| match error {
+                KolmeRuntimeCommitProviderError::Timeout => {
+                    KolmeRuntimeCommitError::ProviderTransport {
+                        kind: KolmeRuntimeCommitTransportErrorKind::Timeout,
+                        detail: "provider request timed out".to_owned(),
+                    }
+                }
+                KolmeRuntimeCommitProviderError::Unavailable { reason } => {
+                    KolmeRuntimeCommitError::ProviderTransport {
+                        kind: KolmeRuntimeCommitTransportErrorKind::Unavailable,
+                        detail: reason,
+                    }
+                }
+                KolmeRuntimeCommitProviderError::MalformedResponse { reason } => {
+                    KolmeRuntimeCommitError::ProviderTransport {
+                        kind: KolmeRuntimeCommitTransportErrorKind::MalformedResponse,
+                        detail: reason,
+                    }
+                }
+            })?;
         Ok(Self {
             base_url: base_url.trim().to_owned(),
             block_path_template: block_path_template.trim().to_owned(),
@@ -1541,7 +1560,26 @@ where
                 .map_err(|error| KolmeRuntimeCommitProviderError::Unavailable {
                     reason: error.to_string(),
                 })
-                .map_err(map_provider_error)?;
+                .map_err(|error| match error {
+                    KolmeRuntimeCommitProviderError::Timeout => {
+                        KolmeRuntimeCommitError::ProviderTransport {
+                            kind: KolmeRuntimeCommitTransportErrorKind::Timeout,
+                            detail: "provider request timed out".to_owned(),
+                        }
+                    }
+                    KolmeRuntimeCommitProviderError::Unavailable { reason } => {
+                        KolmeRuntimeCommitError::ProviderTransport {
+                            kind: KolmeRuntimeCommitTransportErrorKind::Unavailable,
+                            detail: reason,
+                        }
+                    }
+                    KolmeRuntimeCommitProviderError::MalformedResponse { reason } => {
+                        KolmeRuntimeCommitError::ProviderTransport {
+                            kind: KolmeRuntimeCommitTransportErrorKind::MalformedResponse,
+                            detail: reason,
+                        }
+                    }
+                })?;
         Ok(Self {
             notifications_url,
             provider: provider.trim().to_owned(),
@@ -1810,7 +1848,26 @@ impl<P: KolmeRuntimeCommitProvider> KolmeRuntimeCommitClient
         let provider_outcome = self
             .provider
             .submit_runtime_commit(&request.to_wire_payload(), request.idempotency_key())
-            .map_err(map_provider_error)?;
+            .map_err(|error| match error {
+                KolmeRuntimeCommitProviderError::Timeout => {
+                    KolmeRuntimeCommitError::ProviderTransport {
+                        kind: KolmeRuntimeCommitTransportErrorKind::Timeout,
+                        detail: "provider request timed out".to_owned(),
+                    }
+                }
+                KolmeRuntimeCommitProviderError::Unavailable { reason } => {
+                    KolmeRuntimeCommitError::ProviderTransport {
+                        kind: KolmeRuntimeCommitTransportErrorKind::Unavailable,
+                        detail: reason,
+                    }
+                }
+                KolmeRuntimeCommitProviderError::MalformedResponse { reason } => {
+                    KolmeRuntimeCommitError::ProviderTransport {
+                        kind: KolmeRuntimeCommitTransportErrorKind::MalformedResponse,
+                        detail: reason,
+                    }
+                }
+            })?;
         match provider_outcome {
             KolmeRuntimeCommitProviderOutcome::Submitted(receipt) => Ok(
                 KolmeRuntimeCommitOutcome::Submitted(map_provider_receipt(receipt)?),
@@ -1820,27 +1877,6 @@ impl<P: KolmeRuntimeCommitProvider> KolmeRuntimeCommitClient
             ),
             KolmeRuntimeCommitProviderOutcome::Rejected { reason } => {
                 Ok(KolmeRuntimeCommitOutcome::Rejected { reason })
-            }
-        }
-    }
-}
-
-fn map_provider_error(error: KolmeRuntimeCommitProviderError) -> KolmeRuntimeCommitError {
-    match error {
-        KolmeRuntimeCommitProviderError::Timeout => KolmeRuntimeCommitError::ProviderTransport {
-            kind: KolmeRuntimeCommitTransportErrorKind::Timeout,
-            detail: "provider request timed out".to_owned(),
-        },
-        KolmeRuntimeCommitProviderError::Unavailable { reason } => {
-            KolmeRuntimeCommitError::ProviderTransport {
-                kind: KolmeRuntimeCommitTransportErrorKind::Unavailable,
-                detail: reason,
-            }
-        }
-        KolmeRuntimeCommitProviderError::MalformedResponse { reason } => {
-            KolmeRuntimeCommitError::ProviderTransport {
-                kind: KolmeRuntimeCommitTransportErrorKind::MalformedResponse,
-                detail: reason,
             }
         }
     }
