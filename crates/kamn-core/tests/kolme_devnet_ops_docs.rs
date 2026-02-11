@@ -132,7 +132,9 @@ fn plan_contains_local_fork_self_test_lane() {
     assert!(PLAN.contains("run_local_kolme_fork_self_test_lane.sh"));
     assert!(PLAN.contains("--matrix-cargo-profile portable"));
     assert!(PLAN.contains("check_local_kolme_fork_self_test_policy.py"));
+    assert!(PLAN.contains("run_local_kolme_fork_self_test_contract_lane.sh"));
     assert!(PLAN.contains("kamn.kolme.local-fork-self-test-summary.v1"));
+    assert!(PLAN.contains("kamn.kolme.local-fork-self-test-policy-report.v1"));
 }
 
 #[test]
@@ -456,6 +458,14 @@ fn regression_requires_local_fork_self_test_guard_marker() {
     // Regression: #1652
     assert!(PLAN.contains(
         "local fork self-test lane fails closed for local opt-in, nested matrix/policy checkpoint failures, and runtime budget overruns (`Regression: #1652`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_fork_self_test_contract_lane_guard_marker() {
+    // Regression: #1702
+    assert!(PLAN.contains(
+        "local fork self-test policy and contract-lane command/report drift remains fail-closed (`Regression: #1702`)."
     ));
 }
 

@@ -51,6 +51,7 @@ bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contra
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_profile_preflight_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_profile_preflight_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_self_test_lane.sh"
+bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_self_test_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_checkout_bootstrap_policy.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_contract_lane.sh"
