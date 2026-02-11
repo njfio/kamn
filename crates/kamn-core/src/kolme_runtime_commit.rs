@@ -4,17 +4,20 @@ use crate::AgentDid;
 use kamn_kolme::{
     compose_finality_status_path as compose_kolme_finality_status_path,
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
+    find_http_header_boundary as find_kolme_http_header_boundary,
     parse_fork_block_txhash as parse_kolme_fork_block_txhash,
     parse_http_endpoint as parse_kolme_http_endpoint,
     parse_notification_event as parse_kolme_notification_event_contract,
     parse_receipt_finality as parse_kolme_receipt_finality,
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
     render_block_path as render_kolme_block_path,
+    try_take_websocket_frame as try_take_kolme_websocket_frame,
     validate_block_identity as validate_kolme_block_identity,
     validate_block_path_template as validate_kolme_block_path_template,
     validate_direct_signed_transaction_message as validate_kolme_direct_signed_transaction_message,
-    validate_lookup_window as validate_kolme_lookup_window, BlockScanPolicyError,
-    KolmeApiBroadcastRequest as KamnKolmeApiBroadcastRequest,
+    validate_lookup_window as validate_kolme_lookup_window,
+    validate_websocket_handshake_response as validate_kolme_websocket_handshake_response,
+    BlockScanPolicyError, KolmeApiBroadcastRequest as KamnKolmeApiBroadcastRequest,
     KolmeApiBroadcastResponse as KamnKolmeApiBroadcastResponse,
     KolmeApiCodecError as KamnKolmeApiCodecError,
     KolmeApiNextNonceRequest as KamnKolmeApiNextNonceRequest,
@@ -23,7 +26,9 @@ use kamn_kolme::{
     KolmeHttpScheme as KamnKolmeHttpScheme, KolmeNotificationEvent as KamnKolmeNotificationEvent,
     KolmeNotificationPolicyError as KamnKolmeNotificationPolicyError,
     KolmeParsedHttpEndpoint as KamnKolmeParsedHttpEndpoint,
-    KolmeParsedWebsocketEndpoint as KamnKolmeParsedWebsocketEndpoint, ReceiptFinality,
+    KolmeParsedWebsocketEndpoint as KamnKolmeParsedWebsocketEndpoint,
+    KolmeWebsocketFrame as KamnKolmeWebsocketFrame,
+    KolmeWebsocketPolicyError as KamnKolmeWebsocketPolicyError, ReceiptFinality,
 };
 use std::collections::HashMap;
 use std::fmt;
@@ -1292,9 +1297,11 @@ impl KolmeRuntimeCommitWebsocketConnection {
 impl KolmeRuntimeCommitNotificationsConnection for KolmeRuntimeCommitWebsocketConnection {
     fn read_text_message(&mut self) -> Result<Option<String>, KolmeRuntimeCommitProviderError> {
         loop {
-            if let Some(frame) = try_take_websocket_frame(&mut self.read_buffer)? {
+            if let Some(frame) = try_take_kolme_websocket_frame(&mut self.read_buffer)
+                .map_err(map_websocket_policy_error)?
+            {
                 match frame {
-                    WebsocketFrame::Text(payload_bytes) => {
+                    KamnKolmeWebsocketFrame::Text(payload_bytes) => {
                         let payload = String::from_utf8(payload_bytes).map_err(|error| {
                             KolmeRuntimeCommitProviderError::MalformedResponse {
                                 reason: format!(
@@ -1304,8 +1311,8 @@ impl KolmeRuntimeCommitNotificationsConnection for KolmeRuntimeCommitWebsocketCo
                         })?;
                         return Ok(Some(payload));
                     }
-                    WebsocketFrame::Close => return Ok(None),
-                    WebsocketFrame::Ping | WebsocketFrame::Pong => continue,
+                    KamnKolmeWebsocketFrame::Close => return Ok(None),
+                    KamnKolmeWebsocketFrame::Ping | KamnKolmeWebsocketFrame::Pong => continue,
                 }
             }
 
@@ -1754,6 +1761,19 @@ fn map_notification_policy_error_to_malformed(
     }
 }
 
+fn map_websocket_policy_error(
+    error: KamnKolmeWebsocketPolicyError,
+) -> KolmeRuntimeCommitProviderError {
+    match error {
+        KamnKolmeWebsocketPolicyError::Unavailable { reason } => {
+            KolmeRuntimeCommitProviderError::Unavailable { reason }
+        }
+        KamnKolmeWebsocketPolicyError::Malformed { reason } => {
+            KolmeRuntimeCommitProviderError::MalformedResponse { reason }
+        }
+    }
+}
+
 fn parse_http_endpoint(
     base_url: &str,
     path: &str,
@@ -1929,16 +1949,10 @@ fn read_http_header_boundary(
     response_bytes: &mut Vec<u8>,
 ) -> Result<usize, KolmeRuntimeCommitProviderError> {
     loop {
-        if let Some(position) = response_bytes
-            .windows(4)
-            .position(|window| window == b"\r\n\r\n")
+        if let Some(position) =
+            find_kolme_http_header_boundary(response_bytes).map_err(map_websocket_policy_error)?
         {
             return Ok(position);
-        }
-        if response_bytes.len() > 32 * 1024 {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "websocket handshake response headers are too large".to_owned(),
-            });
         }
         let mut chunk = [0_u8; 1024];
         let read = stream.read(&mut chunk).map_err(map_transport_io_error)?;
@@ -1954,169 +1968,7 @@ fn read_http_header_boundary(
 fn validate_websocket_handshake_response(
     header_bytes: &[u8],
 ) -> Result<(), KolmeRuntimeCommitProviderError> {
-    let header_text = String::from_utf8(header_bytes.to_vec()).map_err(|error| {
-        KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("websocket handshake response is not valid utf-8: {error}"),
-        }
-    })?;
-    let raw_headers = header_text
-        .split_once("\r\n\r\n")
-        .map(|(headers, _)| headers)
-        .unwrap_or(header_text.as_str());
-
-    let mut lines = raw_headers.lines();
-    let status_line =
-        lines
-            .next()
-            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "websocket handshake response missing status line".to_owned(),
-            })?;
-    let mut status_parts = status_line.split_whitespace();
-    let _http_version =
-        status_parts
-            .next()
-            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "websocket handshake status line is malformed".to_owned(),
-            })?;
-    let status_code_raw =
-        status_parts
-            .next()
-            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "websocket handshake status code is missing".to_owned(),
-            })?;
-    let status_code = status_code_raw.parse::<u16>().map_err(|_| {
-        KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("websocket handshake status code is invalid: {status_code_raw}"),
-        }
-    })?;
-    if status_code != 101 {
-        return Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: format!("websocket handshake rejected with status {status_code}"),
-        });
-    }
-
-    let mut has_upgrade_websocket = false;
-    let mut has_connection_upgrade = false;
-    for line in lines {
-        let Some((name, value)) = line.split_once(':') else {
-            continue;
-        };
-        if name.eq_ignore_ascii_case("Upgrade")
-            && value.trim().to_ascii_lowercase().contains("websocket")
-        {
-            has_upgrade_websocket = true;
-        }
-        if name.eq_ignore_ascii_case("Connection")
-            && value.trim().to_ascii_lowercase().contains("upgrade")
-        {
-            has_connection_upgrade = true;
-        }
-    }
-    if !has_upgrade_websocket || !has_connection_upgrade {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "websocket handshake response missing upgrade headers".to_owned(),
-        });
-    }
-    Ok(())
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum WebsocketFrame {
-    Text(Vec<u8>),
-    Ping,
-    Pong,
-    Close,
-}
-
-fn try_take_websocket_frame(
-    read_buffer: &mut Vec<u8>,
-) -> Result<Option<WebsocketFrame>, KolmeRuntimeCommitProviderError> {
-    if read_buffer.len() < 2 {
-        return Ok(None);
-    }
-    let first = read_buffer[0];
-    let second = read_buffer[1];
-    let fin = (first & 0x80) != 0;
-    if !fin {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "fragmented websocket frames are not supported".to_owned(),
-        });
-    }
-    let opcode = first & 0x0f;
-    let masked = (second & 0x80) != 0;
-    let mut payload_len = usize::from(second & 0x7f);
-    let mut cursor = 2_usize;
-
-    if payload_len == 126 {
-        if read_buffer.len() < cursor + 2 {
-            return Ok(None);
-        }
-        payload_len = usize::from(u16::from_be_bytes([
-            read_buffer[cursor],
-            read_buffer[cursor + 1],
-        ]));
-        cursor += 2;
-    } else if payload_len == 127 {
-        if read_buffer.len() < cursor + 8 {
-            return Ok(None);
-        }
-        let raw = u64::from_be_bytes([
-            read_buffer[cursor],
-            read_buffer[cursor + 1],
-            read_buffer[cursor + 2],
-            read_buffer[cursor + 3],
-            read_buffer[cursor + 4],
-            read_buffer[cursor + 5],
-            read_buffer[cursor + 6],
-            read_buffer[cursor + 7],
-        ]);
-        payload_len = usize::try_from(raw).map_err(|_| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "websocket payload length exceeds platform limits".to_owned(),
-            }
-        })?;
-        cursor += 8;
-    }
-
-    let masking_key = if masked {
-        if read_buffer.len() < cursor + 4 {
-            return Ok(None);
-        }
-        let key = [
-            read_buffer[cursor],
-            read_buffer[cursor + 1],
-            read_buffer[cursor + 2],
-            read_buffer[cursor + 3],
-        ];
-        cursor += 4;
-        Some(key)
-    } else {
-        None
-    };
-
-    if read_buffer.len() < cursor + payload_len {
-        return Ok(None);
-    }
-    let mut payload = read_buffer[cursor..cursor + payload_len].to_vec();
-    if let Some(masking_key) = masking_key {
-        for (index, byte) in payload.iter_mut().enumerate() {
-            *byte ^= masking_key[index % 4];
-        }
-    }
-    read_buffer.drain(0..cursor + payload_len);
-
-    let frame = match opcode {
-        0x1 => WebsocketFrame::Text(payload),
-        0x8 => WebsocketFrame::Close,
-        0x9 => WebsocketFrame::Ping,
-        0xA => WebsocketFrame::Pong,
-        _ => {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("unsupported websocket opcode: {opcode}"),
-            })
-        }
-    };
-    Ok(Some(frame))
+    validate_kolme_websocket_handshake_response(header_bytes).map_err(map_websocket_policy_error)
 }
 
 fn parse_kolme_notification_event(
