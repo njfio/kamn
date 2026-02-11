@@ -40,6 +40,7 @@ handling.
   - emits `Authorization: <value>` header on submit/finality requests.
 - HTTPS/TLS behavior:
   - `https://` requests execute through TLS-backed `openssl s_client` command wiring.
+  - `crates/kamn-kolme/src/tls_policy.rs` owns TLS CA-file env parsing and deterministic stderr failure classification contracts.
   - optional custom CA trust file is read from `KAMN_KOLME_TLS_CA_FILE`.
   - deterministic TLS failure mapping:
     - certificate verification failures => `Unavailable("tls certificate verification failed")`
@@ -149,6 +150,7 @@ cargo test -p kamn-kolme --test finality_block_scan_contracts
 cargo test -p kamn-kolme --test endpoint_policy_contracts
 cargo test -p kamn-kolme --test websocket_policy_contracts
 cargo test -p kamn-kolme --test http_response_policy_contracts
+cargo test -p kamn-kolme --test tls_policy_contracts
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_fetch_next_nonce_query_and_parse -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_submit_broadcast_request_put_and_parse_txhash -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_http_transport_submit_broadcast_request_rejects_malformed_txhash_response -- --exact
