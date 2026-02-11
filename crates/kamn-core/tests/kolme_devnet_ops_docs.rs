@@ -194,10 +194,13 @@ fn plan_contains_fast_gate_native_api_parity_lane() {
 fn plan_contains_local_only_heavy_validation_matrix() {
     assert!(PLAN.contains("## Local-Only Heavy Kolme Validation Matrix"));
     assert!(PLAN.contains("run_local_heavy_validation_matrix.sh"));
+    assert!(PLAN.contains("check_local_heavy_validation_matrix_policy.py"));
+    assert!(PLAN.contains("run_local_heavy_validation_matrix_contract_lane.sh"));
     assert!(PLAN.contains("--cargo-profile portable"));
     assert!(PLAN.contains("run_local_bootstrap_health_checks.sh"));
     assert!(PLAN.contains("run_version_compatibility_replay_deep_lane.sh"));
     assert!(PLAN.contains("kamn.kolme.local-heavy-validation-summary.v1"));
+    assert!(PLAN.contains("kamn.kolme.local-heavy-validation-policy-report.v1"));
 }
 
 #[test]
@@ -240,6 +243,14 @@ fn regression_requires_local_only_heavy_matrix_guard_marker() {
     // Regression: #1405
     assert!(PLAN.contains(
         "local-only heavy validation matrix requires explicit opt-in and remains excluded from PR fast-gate workflows (`Regression: #1405`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_only_heavy_matrix_policy_contract_guard_marker() {
+    // Regression: #1687
+    assert!(PLAN.contains(
+        "local-only heavy validation matrix summary policy and contract-lane command/report drift remain fail-closed (`Regression: #1687`)."
     ));
 }
 

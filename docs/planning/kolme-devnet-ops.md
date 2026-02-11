@@ -473,8 +473,13 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode dry-run --output-json /tmp/kolme-local-heavy-validation-summary.json`
 - Explicit opt-in execution:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode run --output-json /tmp/kolme-local-heavy-validation-summary.json`
+- Policy checker contract:
+  - `python3 scripts/kolme/check_local_heavy_validation_matrix_policy.py --report-file /tmp/kolme-local-heavy-validation-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-heavy-validation-policy.json`
+- Bounded contract lane (dry-run + policy):
+  - `bash scripts/kolme/run_local_heavy_validation_matrix_contract_lane.sh --output-json /tmp/kolme-local-heavy-validation-summary.json --policy-output-json /tmp/kolme-local-heavy-validation-policy.json`
 - Summary schema:
   - `kamn.kolme.local-heavy-validation-summary.v1`
+  - policy schema: `kamn.kolme.local-heavy-validation-policy-report.v1`
 - Heavy command set includes:
   - `scripts/kolme/run_local_bootstrap_health_checks.sh`
   - `scripts/kolme/run_version_compatibility_replay_deep_lane.sh`
@@ -509,6 +514,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local-only heavy E2E lane summary policy and contract-lane decision/checkpoint drift remain fail-closed (`Regression: #1682`).
 - shared local-heavy opt-in helper wiring remains fail-closed across bootstrap/E2E/matrix lanes (`Regression: #1585`).
 - local-only heavy validation matrix requires explicit opt-in and remains excluded from PR fast-gate workflows (`Regression: #1405`).
+- local-only heavy validation matrix summary policy and contract-lane command/report drift remain fail-closed (`Regression: #1687`).
 - local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
 - local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
 - local fork Rust test matrix lane fails closed on missing local opt-in, metadata sync drift, and per-command timeout/failure paths (`Regression: #1537`).
@@ -576,6 +582,8 @@ bash scripts/kolme/test_run_local_e2e_integration_lane.sh
 bash scripts/kolme/test_check_local_e2e_integration_policy.sh
 bash scripts/kolme/test_run_local_e2e_integration_contract_lane.sh
 bash scripts/kolme/test_run_local_heavy_validation_matrix.sh
+bash scripts/kolme/test_check_local_heavy_validation_matrix_policy.sh
+bash scripts/kolme/test_run_local_heavy_validation_matrix_contract_lane.sh
 bash scripts/runtime/test_select_failover_sync_drill_lane.sh
 bash scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh
 bash scripts/runtime/test_run_failover_sync_drill_deep_lane.sh

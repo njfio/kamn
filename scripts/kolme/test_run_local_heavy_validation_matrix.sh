@@ -65,6 +65,7 @@ dry_run_output="$(
 
 assert_eq "$(extract_value "$dry_run_output" "status")" "ok" "expected dry-run matrix execution to pass"
 assert_eq "$(extract_value "$dry_run_output" "matrix_mode")" "dry-run" "expected dry-run matrix mode marker"
+assert_eq "$(extract_value "$dry_run_output" "reason_code")" "dry_run_no_commands_executed" "expected dry-run matrix reason marker"
 assert_eq "$(extract_value "$dry_run_output" "local_only_enforced")" "true" "expected local-only enforcement marker"
 
 python3 - "$TMP_REPORT" <<'PY'
@@ -79,6 +80,8 @@ if report.get("mode") != "dry-run":
     raise SystemExit("expected dry-run mode in local heavy matrix summary")
 if report.get("local_only_enforced") is not True:
     raise SystemExit("expected local_only_enforced=true in local heavy matrix summary")
+if report.get("reason_code") != "dry_run_no_commands_executed":
+    raise SystemExit("expected dry-run reason code marker in local heavy matrix summary")
 commands = report.get("commands")
 if not isinstance(commands, list) or len(commands) < 4:
     raise SystemExit("expected local heavy matrix summary to contain command entries")
