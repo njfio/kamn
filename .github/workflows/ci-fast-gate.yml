@@ -187,6 +187,7 @@ jobs:
           bash scripts/kolme/test_validate_version_compatibility.sh
           bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh
           bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh
+          bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh
           bash scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh
           bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh
           bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh
