@@ -7,6 +7,7 @@
 pub mod api_codec;
 pub mod block_scan_policy;
 pub mod codec;
+pub mod endpoint_policy;
 pub mod finality;
 pub mod pipeline;
 pub mod receipt_finality;
@@ -21,6 +22,11 @@ pub use block_scan_policy::{
     validate_lookup_window, BlockScanPolicyError,
 };
 pub use codec::{KolmeCodecError, KolmeWireCodec, PassthroughCodec};
+pub use endpoint_policy::{
+    compose_notifications_websocket_url, parse_http_endpoint, parse_websocket_endpoint,
+    KolmeEndpointPolicyError, KolmeHttpScheme, KolmeParsedHttpEndpoint,
+    KolmeParsedWebsocketEndpoint,
+};
 pub use finality::{resolve_finality, FinalityResolution, FinalityState};
 pub use pipeline::{PipelineError, RuntimeCommitPipeline};
 pub use receipt_finality::{parse_receipt_finality, ReceiptFinality, ReceiptFinalityError};
