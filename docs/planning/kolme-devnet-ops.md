@@ -303,7 +303,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - default budget is bounded to 45 seconds.
   - preflight run-mode execution remains excluded from PR fast-gate workflow routing.
 
-## Local Fork Self-Test Lane (Issue #1652)
+## Local Fork Self-Test Lane (Issues #1652, #1701)
 
 - Local fork self-test runner:
   - `bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-self-test-summary.json`
@@ -311,8 +311,11 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --matrix-max-seconds 60 --matrix-cargo-profile portable --output-json /tmp/kolme-local-fork-self-test-summary.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_self_test_policy.py --report-file /tmp/kolme-local-fork-self-test-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-self-test-policy.json`
+- Contract lane command:
+  - `bash scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh --output-json /tmp/kolme-local-fork-self-test-summary.json --policy-output-json /tmp/kolme-local-fork-self-test-policy.json`
 - Summary schema:
   - `kamn.kolme.local-fork-self-test-summary.v1`
+  - policy schema: `kamn.kolme.local-fork-self-test-policy-report.v1`
 - Deterministic checkpoints include:
   - `run_local_kolme_fork_rust_test_matrix_lane.sh` run-mode verification with bounded matrix budget, optional command overrides, and configurable cargo profile (`strict|portable`).
   - `check_local_kolme_fork_rust_test_matrix_policy.py` GO decision verification with required reason-code contract.
@@ -542,6 +545,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local fork profile preflight lane fails closed for local opt-in, checkout/profile contract drift, probe command failures, and runtime budget overruns (`Regression: #1648`).
 - local fork profile preflight policy and contract-lane command/report drift remains fail-closed (`Regression: #1697`).
 - local fork self-test lane fails closed for local opt-in, nested matrix/policy checkpoint failures, and runtime budget overruns (`Regression: #1652`).
+- local fork self-test policy and contract-lane command/report drift remains fail-closed (`Regression: #1702`).
 - local fork checkout bootstrap lane fails closed for local opt-in, checkout provenance drift, diagnostics command failures, and runtime budget overruns (`Regression: #1663`).
 - real-fork local process wrapper bootstrap-first prerequisite ordering remains fail-closed for bootstrap lane/policy checkpoint drift (`Regression: #1667`).
 - local-only heavy E2E lane checkout-bootstrap contract checkpoint composition remains fail-closed for command/id ordering drift (`Regression: #1677`).
@@ -581,6 +585,7 @@ bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_profile_preflight_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_profile_preflight_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_self_test_lane.sh
+bash scripts/kolme/test_run_local_kolme_fork_self_test_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_lane.sh
 bash scripts/kolme/test_check_local_kolme_fork_checkout_bootstrap_policy.sh
 bash scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_contract_lane.sh

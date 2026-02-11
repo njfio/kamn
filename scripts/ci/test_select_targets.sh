@@ -1299,6 +1299,20 @@ assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_contract_lane_t
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork profile preflight contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_fork_profile_preflight_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork profile preflight contract lane test script changes should set kolme-version-contract scope"
 
+kolme_local_fork_self_test_contract_lane_script_output="$(run_selector $'scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh')"
+assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_script_output" "run_rust")" "false" "Kolme local fork self-test contract lane script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork self-test contract lane script changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork self-test contract lane script changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork self-test contract lane script changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork self-test contract lane script changes should set kolme-version-contract scope"
+
+kolme_local_fork_self_test_contract_lane_test_script_output="$(run_selector $'scripts/kolme/test_run_local_kolme_fork_self_test_contract_lane.sh')"
+assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_test_script_output" "run_rust")" "false" "Kolme local fork self-test contract lane test script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_test_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local fork self-test contract lane test script changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_test_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme local fork self-test contract lane test script changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local fork self-test contract lane test script changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_local_fork_self_test_contract_lane_test_script_output" "test_scope")" "kolme-version-contract" "Kolme local fork self-test contract lane test script changes should set kolme-version-contract scope"
+
 kolme_fast_gate_native_api_parity_contract_lane_script_output="$(run_selector $'scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_script_output" "run_rust")" "false" "Kolme fast-gate native API parity contract lane script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_fast_gate_native_api_parity_contract_lane_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme fast-gate native API parity contract lane script changes should skip Kolme snapshot drift contract lane"
