@@ -7,6 +7,7 @@ LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kamn_live_runtime_integration_policy.py"
 CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
+README_FILE="$ROOT_DIR/README.md"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT="$(mktemp)"
 TMP_POLICY="$(mktemp)"
@@ -78,6 +79,56 @@ fi
 
 if ! grep -q "run_local_kamn_live_runtime_integration_contract_lane.sh" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to reference local KAMN live runtime integration contract lane" >&2
+  exit 1
+fi
+
+if ! grep -q "run_localhost_signed_demo.sh --output-json /tmp/localhost-signed-demo-artifact.json" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference localhost signed demo artifact command" >&2
+  exit 1
+fi
+
+if ! grep -q "kamn.sdk.localhost-signed.demo-receipt-artifact.v1" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference localhost signed demo artifact schema" >&2
+  exit 1
+fi
+
+if ! grep -q "run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference localhost signed integration contract lane command" >&2
+  exit 1
+fi
+
+if ! grep -q "check_localhost_signed_integration_evidence_policy.sh --report-file /tmp/localhost-signed-integration-contract-report.json" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference localhost signed integration evidence policy command" >&2
+  exit 1
+fi
+
+if ! grep -q "kamn.sdk.localhost-signed.integration-contract.v1" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference localhost signed integration contract schema" >&2
+  exit 1
+fi
+
+if ! grep -q "run_localhost_signed_demo.sh --output-json /tmp/localhost-signed-demo-artifact.json" "$README_FILE"; then
+  echo "expected README to reference localhost signed demo artifact command" >&2
+  exit 1
+fi
+
+if ! grep -q "kamn.sdk.localhost-signed.demo-receipt-artifact.v1" "$README_FILE"; then
+  echo "expected README to reference localhost signed demo artifact schema" >&2
+  exit 1
+fi
+
+if ! grep -q "run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed-integration-contract-report.json" "$README_FILE"; then
+  echo "expected README to reference localhost signed integration contract lane command" >&2
+  exit 1
+fi
+
+if ! grep -q "check_localhost_signed_integration_evidence_policy.sh --report-file /tmp/localhost-signed-integration-contract-report.json" "$README_FILE"; then
+  echo "expected README to reference localhost signed integration evidence policy command" >&2
+  exit 1
+fi
+
+if ! grep -q "kamn.sdk.localhost-signed.integration-contract.v1" "$README_FILE"; then
+  echo "expected README to reference localhost signed integration contract schema" >&2
   exit 1
 fi
 

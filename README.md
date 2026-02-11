@@ -147,6 +147,9 @@ bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario replay-n
 bash scripts/sdk/run_localhost_signed_integration_harness.sh --scenario admission-guards
 ```
 
+Kolme local-operability alignment for this localhost demo path is documented in:
+`docs/planning/kolme-devnet-ops.md#localhost-two-process-signed-message-demo-contract-issue-1612`.
+
 ### Run Localhost Bridge Relay Demo Lane
 
 ```bash
