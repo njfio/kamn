@@ -1,5 +1,7 @@
 //! Notification event parsing contracts for Kolme websocket payloads.
 
+use crate::provider_outcome_policy::deterministic_backend_commit_id;
+use crate::runtime_lifecycle_policy::KolmeCommitReceiptFinality;
 use std::error::Error;
 use std::fmt;
 
@@ -25,6 +27,15 @@ pub enum KolmeNotificationEvent {
         /// Latest observed block height.
         height: u64,
     },
+}
+
+/// Typed commit receipt projection derived from one notification event.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KolmeNotificationReceipt {
+    /// Deterministic backend commit id correlated from txhash/height fields.
+    pub commit_id: String,
+    /// Receipt finality projected from event class.
+    pub finality: KolmeCommitReceiptFinality,
 }
 
 /// Error raised by notification parsing policy contracts.
@@ -96,6 +107,28 @@ pub fn parse_notification_event(
     Err(KolmeNotificationPolicyError::MalformedResponse {
         reason: "notification variant is unsupported".to_owned(),
     })
+}
+
+/// Projects one parsed notification event into an optional commit receipt shape.
+pub fn notification_event_to_receipt(
+    event: &KolmeNotificationEvent,
+) -> Option<KolmeNotificationReceipt> {
+    match event {
+        KolmeNotificationEvent::NewBlock {
+            txhash,
+            block_height,
+        } => Some(KolmeNotificationReceipt {
+            commit_id: deterministic_backend_commit_id(txhash.as_str(), *block_height),
+            finality: KolmeCommitReceiptFinality::Final,
+        }),
+        KolmeNotificationEvent::FailedTransaction { txhash, .. } => {
+            Some(KolmeNotificationReceipt {
+                commit_id: deterministic_backend_commit_id(txhash.as_str(), None),
+                finality: KolmeCommitReceiptFinality::Failed,
+            })
+        }
+        KolmeNotificationEvent::LatestBlock { .. } => None,
+    }
 }
 
 fn find_notification_string_field(
