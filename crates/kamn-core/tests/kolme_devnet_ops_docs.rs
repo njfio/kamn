@@ -146,6 +146,8 @@ fn plan_contains_local_fork_checkout_bootstrap_lane() {
 fn plan_contains_real_fork_local_process_wrapper_lane() {
     assert!(PLAN.contains("## Real Fork Local Process Wrapper Contract Lane"));
     assert!(PLAN.contains("run_local_kolme_fork_real_process_contract_lane.sh"));
+    assert!(PLAN.contains("run_local_kolme_fork_checkout_bootstrap_lane.sh"));
+    assert!(PLAN.contains("check_local_kolme_fork_checkout_bootstrap_policy.py"));
     assert!(PLAN.contains("run_local_kolme_fork_profile_preflight_lane.sh"));
     assert!(PLAN.contains("check_local_kolme_fork_profile_preflight_policy.py"));
     assert!(PLAN.contains("run_local_kolme_fork_self_test_lane.sh"));
@@ -414,5 +416,13 @@ fn regression_requires_real_fork_local_process_wrapper_guard_marker() {
     // Regression: #1644
     assert!(PLAN.contains(
         "real-fork local process wrapper lane fails closed for local opt-in, serve-command profile drift, self-test/lifecycle/policy checkpoint failure, and runtime budget overruns (`Regression: #1644`)."
+    ));
+}
+
+#[test]
+fn regression_requires_real_fork_wrapper_bootstrap_prerequisite_guard_marker() {
+    // Regression: #1667
+    assert!(PLAN.contains(
+        "real-fork local process wrapper bootstrap-first prerequisite ordering remains fail-closed for bootstrap lane/policy checkpoint drift (`Regression: #1667`)."
     ));
 }

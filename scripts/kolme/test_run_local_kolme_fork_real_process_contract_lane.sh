@@ -70,6 +70,16 @@ if ! grep -q "run_local_kolme_fork_profile_preflight_lane.sh" "$DOC_FILE"; then
   exit 1
 fi
 
+if ! grep -q "run_local_kolme_fork_checkout_bootstrap_lane.sh" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local fork checkout bootstrap runner" >&2
+  exit 1
+fi
+
+if ! grep -q "check_local_kolme_fork_checkout_bootstrap_policy.py" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local fork checkout bootstrap policy checker" >&2
+  exit 1
+fi
+
 if ! grep -q "run_local_kolme_fork_self_test_lane.sh" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to reference local fork self-test runner" >&2
   exit 1
@@ -125,6 +135,8 @@ if not isinstance(checks, list):
     raise SystemExit("expected checks list in summary")
 for expected_id in (
     "real_fork_command_profile",
+    "checkout_bootstrap_lane",
+    "checkout_bootstrap_policy",
     "profile_preflight_lane",
     "profile_preflight_policy",
     "self_test_lane",
@@ -155,17 +167,18 @@ if ! grep -q "requires explicit local-only opt-in" "$TMP_ERR"; then
 fi
 
 CHECKOUT_PATH="$TMP_DIR/kolme_fork"
-mkdir -p "$CHECKOUT_PATH"
-git -C "$CHECKOUT_PATH" init -q
-git -C "$CHECKOUT_PATH" checkout -q -b main
-git -C "$CHECKOUT_PATH" config user.email "ci@example.com"
-git -C "$CHECKOUT_PATH" config user.name "CI Runner"
-cat >"$CHECKOUT_PATH/README.md" <<'EOF'
-real-fork wrapper fixture checkout
+SOURCE_REPO="$TMP_DIR/source_fork"
+mkdir -p "$SOURCE_REPO"
+git -C "$SOURCE_REPO" init -q
+git -C "$SOURCE_REPO" checkout -q -b main
+git -C "$SOURCE_REPO" config user.email "ci@example.com"
+git -C "$SOURCE_REPO" config user.name "CI Runner"
+cat >"$SOURCE_REPO/README.md" <<'EOF'
+real-fork wrapper source fixture checkout
 EOF
-git -C "$CHECKOUT_PATH" add README.md
-git -C "$CHECKOUT_PATH" commit -q -m "init wrapper fixture"
-git -C "$CHECKOUT_PATH" remote add origin "https://github.com/njfio/kolme_fork.git"
+git -C "$SOURCE_REPO" add README.md
+git -C "$SOURCE_REPO" commit -q -m "init wrapper source fixture"
+git clone -q "$SOURCE_REPO" "$CHECKOUT_PATH"
 
 cat >"$TMP_DIR/mock_kolme_api.py" <<'PY'
 from __future__ import annotations
@@ -309,7 +322,8 @@ run_output="$(
     bash "$RUNNER" \
       --mode run \
       --checkout-path "$CHECKOUT_PATH" \
-      --expected-remote-url "https://github.com/njfio/kolme_fork.git" \
+      --fork-remote-url "$SOURCE_REPO" \
+      --expected-remote-url "$SOURCE_REPO" \
       --expected-ref "refs/heads/main" \
       --base-url "$BASE_URL" \
       --fork-chain-version "$FORK_CHAIN_VERSION" \
@@ -362,6 +376,8 @@ if not isinstance(checks, list):
     raise SystemExit("expected checks list in run summary")
 for expected_id in (
     "real_fork_command_profile",
+    "checkout_bootstrap_lane",
+    "checkout_bootstrap_policy",
     "profile_preflight_lane",
     "profile_preflight_policy",
     "self_test_lane",
@@ -381,7 +397,63 @@ KAMN_KOLME_LOCAL_HEAVY=1 \
   bash "$RUNNER" \
     --mode run \
     --checkout-path "$CHECKOUT_PATH" \
-    --expected-remote-url "https://github.com/njfio/kolme_fork.git" \
+    --fork-remote-url "$SOURCE_REPO" \
+    --expected-remote-url "$TMP_DIR/not-source" \
+    --expected-ref "refs/heads/main" \
+    --max-seconds 180 \
+    --output-json "$TMP_REPORT" >"$TMP_ERR" 2>&1
+bootstrap_mismatch_code=$?
+set -e
+
+if [ "$bootstrap_mismatch_code" -eq 0 ]; then
+  echo "expected bootstrap-first wrapper run to fail on checkout remote mismatch" >&2
+  exit 1
+fi
+
+if ! grep -q "reason_code=checkpoint_failed_checkout_bootstrap_lane" "$TMP_ERR"; then
+  echo "expected checkpoint_failed_checkout_bootstrap_lane marker for bootstrap mismatch failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if report.get("status") != "fail":
+    raise SystemExit("expected fail status for bootstrap mismatch summary")
+if report.get("reason_code") != "checkpoint_failed_checkout_bootstrap_lane":
+    raise SystemExit("expected checkpoint_failed_checkout_bootstrap_lane reason code")
+checks = report.get("checks")
+if not isinstance(checks, list):
+    raise SystemExit("expected checks list for bootstrap mismatch summary")
+
+def check_status(check_id: str) -> str:
+    for entry in checks:
+        if isinstance(entry, dict) and entry.get("id") == check_id:
+            value = entry.get("status")
+            if isinstance(value, str):
+                return value
+    raise SystemExit(f"missing check id in bootstrap mismatch summary: {check_id}")
+
+if check_status("checkout_bootstrap_lane") != "fail":
+    raise SystemExit("expected checkout_bootstrap_lane=fail for bootstrap mismatch")
+if check_status("checkout_bootstrap_policy") != "skipped":
+    raise SystemExit("expected checkout_bootstrap_policy=skipped for bootstrap mismatch")
+if check_status("profile_preflight_lane") != "skipped":
+    raise SystemExit("expected profile_preflight_lane=skipped for bootstrap mismatch")
+PY
+
+set +e
+KAMN_KOLME_LOCAL_HEAVY=1 \
+  bash "$RUNNER" \
+    --mode run \
+    --checkout-path "$CHECKOUT_PATH" \
+    --fork-remote-url "$SOURCE_REPO" \
+    --expected-remote-url "$SOURCE_REPO" \
     --expected-ref "refs/heads/main" \
     --base-url "$BASE_URL" \
     --fork-chain-version "$FORK_CHAIN_VERSION" \

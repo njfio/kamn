@@ -346,9 +346,12 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Real-fork local wrapper runner:
   - `bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-real-process-summary.json`
 - Explicit local-only real-fork wrapper execution:
-  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 360 --preflight-max-seconds 45 --self-test-max-seconds 120 --self-test-matrix-max-seconds 60 --lifecycle-max-seconds 300 --lifecycle-startup-max-seconds 45 --lifecycle-integration-max-seconds 240 --lifecycle-bootstrap-max-seconds 90 --lifecycle-conformance-max-seconds 180 --lifecycle-runtime-commit-max-seconds 30 --output-json /tmp/kolme-local-fork-real-process-summary.json`
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh --mode run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 360 --bootstrap-max-seconds 120 --preflight-max-seconds 45 --self-test-max-seconds 120 --self-test-matrix-max-seconds 60 --lifecycle-max-seconds 300 --lifecycle-startup-max-seconds 45 --lifecycle-integration-max-seconds 240 --lifecycle-bootstrap-max-seconds 90 --lifecycle-conformance-max-seconds 180 --lifecycle-runtime-commit-max-seconds 30 --output-json /tmp/kolme-local-fork-real-process-summary.json`
 - Default serve profile contract:
   - `cd <checkout-path> && cargo run --bin example-six-sigma -- serve api-server`
+- Checkout bootstrap prerequisite commands:
+  - `bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh --mode run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json`
+  - `python3 scripts/kolme/check_local_kolme_fork_checkout_bootstrap_policy.py --report-file /tmp/kolme-local-fork-checkout-bootstrap-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code fork_checkout_bootstrap_passed --output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json`
 - Profile preflight prerequisite commands:
   - `bash scripts/kolme/run_local_kolme_fork_profile_preflight_lane.sh --mode run --checkout-path /tmp/kolme_fork --max-seconds 45 --output-json /tmp/kolme-local-fork-profile-preflight-summary.json`
   - `python3 scripts/kolme/check_local_kolme_fork_profile_preflight_policy.py --report-file /tmp/kolme-local-fork-profile-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code profile_preflight_passed --output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
@@ -361,6 +364,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `kamn.kolme.local-fork-real-process-summary.v1`
 - Deterministic checkpoints include:
   - real-fork command profile validation for `example-six-sigma serve api-server`.
+  - `run_local_kolme_fork_checkout_bootstrap_lane.sh` and policy verification execute before preflight/self-test/lifecycle orchestration.
   - `run_local_kolme_fork_profile_preflight_lane.sh` and policy verification execute before self-test/lifecycle orchestration.
   - `run_local_kolme_fork_self_test_lane.sh` and policy verification execute before lifecycle orchestration.
   - `run_local_kolme_fork_process_lifecycle_lane.sh` run-mode composition with bounded budgets.
@@ -514,6 +518,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local fork profile preflight lane fails closed for local opt-in, checkout/profile contract drift, probe command failures, and runtime budget overruns (`Regression: #1648`).
 - local fork self-test lane fails closed for local opt-in, nested matrix/policy checkpoint failures, and runtime budget overruns (`Regression: #1652`).
 - local fork checkout bootstrap lane fails closed for local opt-in, checkout provenance drift, diagnostics command failures, and runtime budget overruns (`Regression: #1663`).
+- real-fork local process wrapper bootstrap-first prerequisite ordering remains fail-closed for bootstrap lane/policy checkpoint drift (`Regression: #1667`).
 - real-fork local process wrapper lane fails closed for local opt-in, serve-command profile drift, self-test/lifecycle/policy checkpoint failure, and runtime budget overruns (`Regression: #1644`).
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
 - local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`).
