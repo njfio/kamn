@@ -83,6 +83,15 @@ fn plan_contains_local_fork_bootstrap_readiness_contract_lane() {
 }
 
 #[test]
+fn plan_contains_local_kamn_live_runtime_integration_lane() {
+    assert!(PLAN.contains("## Local KAMN Live Runtime Integration Lane"));
+    assert!(PLAN.contains("run_local_kamn_live_runtime_integration_lane.sh"));
+    assert!(PLAN.contains("check_local_kamn_live_runtime_integration_policy.py"));
+    assert!(PLAN.contains("run_local_kamn_live_runtime_integration_contract_lane.sh"));
+    assert!(PLAN.contains("kamn.kolme.local-kamn-live-runtime-integration-summary.v1"));
+}
+
+#[test]
 fn plan_contains_local_runtime_commit_live_lane() {
     assert!(PLAN.contains("## Local Runtime Commit Live Proof Lane"));
     assert!(PLAN.contains("run_local_runtime_commit_live_lane.sh"));
@@ -261,5 +270,13 @@ fn regression_requires_local_fork_bootstrap_readiness_guard_marker() {
     // Regression: #1488
     assert!(PLAN.contains(
         "local fork bootstrap/readiness lane fails closed for sync/probe prerequisite failures, runtime budget overruns, and missing local opt-in (`Regression: #1488`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_kamn_live_runtime_integration_guard_marker() {
+    // Regression: #1489
+    assert!(PLAN.contains(
+        "local KAMN live runtime integration lane fails closed for bootstrap/conformance/runtime-commit prerequisite drift, runtime budget overruns, and missing local opt-in (`Regression: #1489`)."
     ));
 }
