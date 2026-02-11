@@ -15,3 +15,11 @@ fn regression_requires_live_transport_replay_tamper_contract_markers() {
     assert!(DOC.contains("/tmp/live-transport-replay-tamper-contract-report.json"));
     assert!(DOC.contains("bundle-file /tmp/live-transport-replay-tamper-contract-report.json"));
 }
+
+#[test]
+fn regression_requires_lifecycle_property_replay_metadata_markers() {
+    // Regression: #1605
+    assert!(DOC.contains("kamn.runtime.lifecycle-property-replay-metadata.v1"));
+    assert!(DOC.contains("generated_sequence_bounds"));
+    assert!(DOC.contains("executed_cases"));
+}
