@@ -20,6 +20,7 @@ required_snippets=(
   "test_makefile_execution_contract.sh"
   "test_kolme_command_surface_coverage_contract.sh"
   "test_kolme_command_surface_asymmetry_contract.sh"
+  ".ci/kolme-command-surface-asymmetry-policy.json"
   "run_runtime_snapshot_contract_tests=true"
   "test_scope=runtime-contract"
   "run_localhost_signed_integration_contract_lane_tests"
@@ -131,6 +132,9 @@ required_snippets=(
   "Regression: #1462"
   "Regression: #1466"
   "Regression: #1497"
+  "Regression: #1561"
+  "Regression: #1565"
+  "Regression: #1569"
 )
 
 for snippet in "${required_snippets[@]}"; do
