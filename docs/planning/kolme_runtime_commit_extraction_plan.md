@@ -33,6 +33,9 @@ Out of scope:
 - keep provider mismatch and commit-id mismatch fail-closed behavior in `kamn-core`,
 - gate completion on finality and block-fallback regression suites.
 
+## Phase 2 Progress
+- #1826: extracted finality response-to-receipt parser contract to `kamn-kolme` (`parse_provider_finality_receipt`) and rewired `kamn-core` finality checker to consume the extracted contract.
+
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,
 - preserve lifecycle-state and idempotency semantics in `kamn-core`,

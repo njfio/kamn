@@ -11,6 +11,7 @@ pub mod broadcast_payload_policy;
 pub mod codec;
 pub mod endpoint_policy;
 pub mod finality;
+pub mod finality_receipt_policy;
 pub mod flat_json_policy;
 pub mod http_response_policy;
 pub mod notification_policy;
@@ -46,6 +47,10 @@ pub use endpoint_policy::{
     KolmeParsedWebsocketEndpoint,
 };
 pub use finality::{resolve_finality, FinalityResolution, FinalityState};
+pub use finality_receipt_policy::{
+    parse_provider_finality_receipt, KolmeProviderFinalityReceipt,
+    KolmeProviderFinalityReceiptPolicyError,
+};
 pub use flat_json_policy::{
     parse_flat_json_value_fields, required_json_string_field, required_positive_u64_json_field,
     KolmeFlatJsonPolicyError, KolmeFlatJsonValue,

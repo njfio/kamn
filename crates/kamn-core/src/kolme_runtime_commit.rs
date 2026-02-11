@@ -19,18 +19,15 @@ use kamn_kolme::{
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
     parse_authorization_header_value as parse_kolme_authorization_header_value,
     parse_block_fallback_response as parse_kolme_block_fallback_response_contract,
-    parse_commit_id_from_response_fields as parse_kolme_commit_id_from_response_fields,
-    parse_commit_receipt_finality as parse_kolme_commit_receipt_finality,
     parse_fork_block_fallback_response as parse_kolme_fork_block_fallback_response_contract,
     parse_http_endpoint as parse_kolme_http_endpoint,
     parse_http_response_body as parse_kolme_http_response_body,
     parse_live_provider_outcome as parse_kolme_live_provider_outcome,
     parse_notification_event as parse_kolme_notification_event_contract,
-    parse_provider_response_fields as parse_kolme_provider_response_fields,
+    parse_provider_finality_receipt as parse_kolme_provider_finality_receipt,
     parse_tls_ca_file_env_value as parse_kolme_tls_ca_file_env_value,
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
     render_block_path as render_kolme_block_path,
-    required_provider_response_field as required_kolme_provider_response_field,
     try_take_websocket_frame as try_take_kolme_websocket_frame,
     txhash_from_commit_id as txhash_from_kolme_commit_id,
     validate_block_identity as validate_kolme_block_identity,
@@ -1191,46 +1188,15 @@ impl<T: KolmeRuntimeCommitFinalityTransport> KolmeRuntimeCommitFinalityChecker<T
             self.status_path.as_str(),
             commit_id,
         )?;
-        let fields = parse_kolme_provider_response_fields(response.as_str()).map_err(|error| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
+        let receipt = parse_kolme_provider_finality_receipt(response.as_str(), commit_id).map_err(
+            |error| KolmeRuntimeCommitProviderError::MalformedResponse {
                 reason: error.to_string(),
-            }
-        })?;
-        let provider =
-            required_kolme_provider_response_field(&fields, "provider").map_err(|error| {
-                KolmeRuntimeCommitProviderError::MalformedResponse {
-                    reason: error.to_string(),
-                }
-            })?;
-        let observed_commit_id =
-            parse_kolme_commit_id_from_response_fields(&fields).map_err(|error| {
-                KolmeRuntimeCommitProviderError::MalformedResponse {
-                    reason: error.to_string(),
-                }
-            })?;
-        if observed_commit_id != commit_id {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!(
-                    "commit_id mismatch: expected '{commit_id}', observed '{observed_commit_id}'"
-                ),
-            });
-        }
-        let finality_value =
-            required_kolme_provider_response_field(&fields, "finality").map_err(|error| {
-                KolmeRuntimeCommitProviderError::MalformedResponse {
-                    reason: error.to_string(),
-                }
-            })?;
-        let finality =
-            parse_kolme_commit_receipt_finality(finality_value.as_str()).map_err(|error| {
-                KolmeRuntimeCommitProviderError::MalformedResponse {
-                    reason: error.to_string(),
-                }
-            })?;
+            },
+        )?;
         Ok(KolmeRuntimeCommitProviderReceipt {
-            provider,
-            commit_id: observed_commit_id,
-            finality,
+            provider: receipt.provider,
+            commit_id: receipt.commit_id,
+            finality: receipt.finality,
         })
     }
 
