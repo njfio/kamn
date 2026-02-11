@@ -1,8 +1,9 @@
 //! Provider outcome parsing and commit-id helper contracts for runtime commits.
 
 use crate::{
-    parse_provider_response_fields, parse_receipt_finality, KolmeProviderResponsePolicyError,
-    ReceiptFinality, ReceiptFinalityError,
+    parse_provider_response_fields, parse_receipt_finality,
+    runtime_lifecycle_policy::{commit_finality_from_receipt_finality, KolmeCommitReceiptFinality},
+    KolmeProviderResponsePolicyError, ReceiptFinality, ReceiptFinalityError,
 };
 use std::collections::HashMap;
 use std::error::Error;
@@ -28,6 +29,35 @@ pub enum KolmeProviderOutcome {
         commit_id: String,
         /// Parsed receipt finality.
         finality: ReceiptFinality,
+    },
+    /// Provider rejected request with explicit reason.
+    Rejected {
+        /// Rejection reason.
+        reason: String,
+    },
+}
+
+/// Typed provider outcome extracted from one live response payload and normalized
+/// to runtime receipt finality variants.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum KolmeRuntimeProviderOutcome {
+    /// Provider accepted a new request submission.
+    Submitted {
+        /// Provider identifier.
+        provider: String,
+        /// Deterministic backend commit id.
+        commit_id: String,
+        /// Runtime receipt finality.
+        finality: KolmeCommitReceiptFinality,
+    },
+    /// Provider detected duplicate idempotency key.
+    Duplicate {
+        /// Provider identifier.
+        provider: String,
+        /// Deterministic backend commit id.
+        commit_id: String,
+        /// Runtime receipt finality.
+        finality: KolmeCommitReceiptFinality,
     },
     /// Provider rejected request with explicit reason.
     Rejected {
@@ -156,6 +186,37 @@ pub fn parse_live_provider_outcome(
             commit_id,
             finality,
         })
+    }
+}
+
+/// Parses a live provider response payload and normalizes finality into runtime
+/// receipt finality variants.
+pub fn parse_live_runtime_provider_outcome(
+    response: &str,
+    provider_hint: Option<&str>,
+) -> Result<KolmeRuntimeProviderOutcome, KolmeProviderOutcomePolicyError> {
+    match parse_live_provider_outcome(response, provider_hint)? {
+        KolmeProviderOutcome::Submitted {
+            provider,
+            commit_id,
+            finality,
+        } => Ok(KolmeRuntimeProviderOutcome::Submitted {
+            provider,
+            commit_id,
+            finality: commit_finality_from_receipt_finality(finality),
+        }),
+        KolmeProviderOutcome::Duplicate {
+            provider,
+            commit_id,
+            finality,
+        } => Ok(KolmeRuntimeProviderOutcome::Duplicate {
+            provider,
+            commit_id,
+            finality: commit_finality_from_receipt_finality(finality),
+        }),
+        KolmeProviderOutcome::Rejected { reason } => {
+            Ok(KolmeRuntimeProviderOutcome::Rejected { reason })
+        }
     }
 }
 

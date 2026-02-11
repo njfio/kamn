@@ -1,12 +1,46 @@
 use kamn_kolme::{
     deterministic_backend_commit_id, parse_commit_id_from_response_fields,
-    parse_live_provider_outcome, require_commit_id_matches_expected_txhash,
-    required_provider_response_field, txhash_from_commit_id,
+    parse_live_provider_outcome, parse_live_runtime_provider_outcome,
+    require_commit_id_matches_expected_txhash, required_provider_response_field,
+    txhash_from_commit_id,
     validate_provider_receipt_identity as validate_provider_receipt_identity_contract,
-    KolmeProviderOutcome, KolmeProviderOutcomePolicyError, KolmeProviderReceiptIdentityError,
-    ReceiptFinality,
+    KolmeCommitReceiptFinality, KolmeProviderOutcome, KolmeProviderOutcomePolicyError,
+    KolmeProviderReceiptIdentityError, KolmeRuntimeProviderOutcome, ReceiptFinality,
 };
 use std::collections::HashMap;
+
+#[test]
+fn functional_parse_live_runtime_provider_outcome_maps_finality_to_runtime_contract() {
+    let response =
+        "status=submitted\nprovider=kolme-fork\ncommit_id=kolme-commit:ab12cd34\nfinality=final\n";
+    let outcome =
+        parse_live_runtime_provider_outcome(response, None).expect("response should parse");
+    assert_eq!(
+        outcome,
+        KolmeRuntimeProviderOutcome::Submitted {
+            provider: "kolme-fork".to_owned(),
+            commit_id: "kolme-commit:ab12cd34".to_owned(),
+            finality: KolmeCommitReceiptFinality::Final,
+        }
+    );
+}
+
+#[test]
+fn regression_issue_1846_parse_live_runtime_provider_outcome_preserves_duplicate_shape() {
+    // Regression: #1846
+    let response =
+        "status=duplicate\nprovider=kolme-fork\ncommit_id=kolme-commit:ff00\nfinality=pending\n";
+    let outcome = parse_live_runtime_provider_outcome(response, None)
+        .expect("duplicate response should parse");
+    assert_eq!(
+        outcome,
+        KolmeRuntimeProviderOutcome::Duplicate {
+            provider: "kolme-fork".to_owned(),
+            commit_id: "kolme-commit:ff00".to_owned(),
+            finality: KolmeCommitReceiptFinality::Pending,
+        }
+    );
+}
 
 #[test]
 fn functional_parse_live_provider_outcome_maps_submitted_status() {

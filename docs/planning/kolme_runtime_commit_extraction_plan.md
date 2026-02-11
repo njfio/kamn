@@ -40,6 +40,7 @@ Out of scope:
 - #1840: extracted latest-block upper-bound selection helper to `kamn-kolme` (`resolve_lookup_upper_bound`) and rewired `kamn-core` fork finality resolver block fallback bound selection.
 - #1842: extracted adapter receipt provider/commit-id identity validator to `kamn-kolme` (`validate_provider_receipt_identity`) and rewired `kamn-core` adapter receipt mapping checks.
 - #1844: extracted adapter non-final receipt guard to `kamn-kolme` (`require_final_receipt_finality`) and rewired `kamn-core` adapter receipt finality enforcement.
+- #1846: extracted live provider outcome finality normalization to `kamn-kolme` (`parse_live_runtime_provider_outcome`) and rewired `kamn-core` live provider parsing delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,

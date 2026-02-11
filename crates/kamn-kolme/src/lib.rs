@@ -64,9 +64,11 @@ pub use notification_policy::{
 pub use pipeline::{PipelineError, RuntimeCommitPipeline};
 pub use provider_outcome_policy::{
     deterministic_backend_commit_id, parse_commit_id_from_response_fields,
-    parse_live_provider_outcome, require_commit_id_matches_expected_txhash,
-    required_provider_response_field, txhash_from_commit_id, validate_provider_receipt_identity,
-    KolmeProviderOutcome, KolmeProviderOutcomePolicyError, KolmeProviderReceiptIdentityError,
+    parse_live_provider_outcome, parse_live_runtime_provider_outcome,
+    require_commit_id_matches_expected_txhash, required_provider_response_field,
+    txhash_from_commit_id, validate_provider_receipt_identity, KolmeProviderOutcome,
+    KolmeProviderOutcomePolicyError, KolmeProviderReceiptIdentityError,
+    KolmeRuntimeProviderOutcome,
 };
 pub use provider_response_policy::{
     parse_provider_key_value_fields, parse_provider_response_fields,

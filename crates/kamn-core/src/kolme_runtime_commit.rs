@@ -4,7 +4,6 @@ use crate::AgentDid;
 use kamn_kolme::{
     classify_tls_failure_reason as classify_kolme_tls_failure_reason,
     classify_transport_io_error as classify_kolme_transport_io_error,
-    commit_finality_from_receipt_finality as commit_finality_from_receipt_finality_contract,
     commit_finality_label as commit_finality_label_contract,
     compose_finality_status_path as compose_kolme_finality_status_path,
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
@@ -20,7 +19,7 @@ use kamn_kolme::{
     parse_authorization_header_value as parse_kolme_authorization_header_value,
     parse_http_endpoint as parse_kolme_http_endpoint,
     parse_http_response_body as parse_kolme_http_response_body,
-    parse_live_provider_outcome as parse_kolme_live_provider_outcome,
+    parse_live_runtime_provider_outcome as parse_kolme_live_runtime_provider_outcome_contract,
     parse_notification_event as parse_kolme_notification_event_contract,
     parse_provider_block_fallback_response as parse_kolme_provider_block_fallback_response_contract,
     parse_provider_finality_receipt as parse_kolme_provider_finality_receipt,
@@ -46,8 +45,8 @@ use kamn_kolme::{
     KolmeHttpResponsePolicyError as KamnKolmeHttpResponsePolicyError,
     KolmeHttpScheme as KamnKolmeHttpScheme, KolmeNotificationEvent as KamnKolmeNotificationEvent,
     KolmeParsedHttpEndpoint as KamnKolmeParsedHttpEndpoint,
-    KolmeProviderOutcome as KamnKolmeProviderOutcome,
     KolmeProviderReceiptIdentityError as KamnKolmeProviderReceiptIdentityError,
+    KolmeRuntimeProviderOutcome as KamnKolmeRuntimeProviderOutcome,
     KolmeTlsPolicyError as KamnKolmeTlsPolicyError,
     KolmeTransportIoClassification as KamnKolmeTransportIoClassification,
     KolmeTransportRequestPolicyError as KamnKolmeTransportRequestPolicyError,
@@ -1973,12 +1972,12 @@ fn parse_live_provider_response(
     response: &str,
     provider_hint: Option<&str>,
 ) -> Result<KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderError> {
-    match parse_kolme_live_provider_outcome(response, provider_hint).map_err(|error| {
-        KolmeRuntimeCommitProviderError::MalformedResponse {
+    match parse_kolme_live_runtime_provider_outcome_contract(response, provider_hint).map_err(
+        |error| KolmeRuntimeCommitProviderError::MalformedResponse {
             reason: error.to_string(),
-        }
-    })? {
-        KamnKolmeProviderOutcome::Submitted {
+        },
+    )? {
+        KamnKolmeRuntimeProviderOutcome::Submitted {
             provider,
             commit_id,
             finality,
@@ -1986,10 +1985,10 @@ fn parse_live_provider_response(
             KolmeRuntimeCommitProviderReceipt {
                 provider,
                 commit_id,
-                finality: commit_finality_from_receipt_finality_contract(finality),
+                finality,
             },
         )),
-        KamnKolmeProviderOutcome::Duplicate {
+        KamnKolmeRuntimeProviderOutcome::Duplicate {
             provider,
             commit_id,
             finality,
@@ -1997,10 +1996,10 @@ fn parse_live_provider_response(
             KolmeRuntimeCommitProviderReceipt {
                 provider,
                 commit_id,
-                finality: commit_finality_from_receipt_finality_contract(finality),
+                finality,
             },
         )),
-        KamnKolmeProviderOutcome::Rejected { reason } => {
+        KamnKolmeRuntimeProviderOutcome::Rejected { reason } => {
             Ok(KolmeRuntimeCommitProviderOutcome::Rejected { reason })
         }
     }
