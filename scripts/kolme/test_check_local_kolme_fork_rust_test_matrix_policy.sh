@@ -25,6 +25,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "elapsed_seconds": 0,
   "max_seconds_per_command": 120,
   "command_count": 2,
+  "cargo_profile": "strict",
   "budget_status": "not_run",
   "checkpoints": [
     {
@@ -80,6 +81,7 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
   "elapsed_seconds": 6,
   "max_seconds_per_command": 5,
   "command_count": 1,
+  "cargo_profile": "strict",
   "budget_status": "exceeded_budget",
   "checkpoints": [
     {

@@ -51,6 +51,10 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(command_count, int) or command_count <= 0:
         reason_codes.append("command_count_invalid")
 
+    cargo_profile = report.get("cargo_profile")
+    if cargo_profile not in ("strict", "portable"):
+        reason_codes.append("cargo_profile_invalid")
+
     budget_status = report.get("budget_status")
     if budget_status not in ("not_run", "within_budget", "exceeded_budget"):
         reason_codes.append("budget_status_invalid")

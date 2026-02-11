@@ -61,7 +61,28 @@ git -C "$TMP_REPO" config user.name "CI Runner"
 cat >"$TMP_REPO/README.md" <<'DOC'
 local fork rust test matrix fixture
 DOC
+cat >"$TMP_REPO/Cargo.toml" <<'TOML'
+[package]
+name = "matrix-fixture"
+version = "0.1.0"
+edition = "2021"
+TOML
+mkdir -p "$TMP_REPO/src" "$TMP_REPO/.cargo"
+cat >"$TMP_REPO/src/lib.rs" <<'RS'
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn smoke() {
+        assert_eq!(2 + 2, 4);
+    }
+}
+RS
+cat >"$TMP_REPO/.cargo/config.toml" <<'TOML'
+[build]
+rustflags = ["-C", "link-arg=-fuse-ld=this-linker-does-not-exist"]
+TOML
 git -C "$TMP_REPO" add README.md
+git -C "$TMP_REPO" add Cargo.toml src/lib.rs .cargo/config.toml
 git -C "$TMP_REPO" commit -q -m "init fixture"
 git -C "$TMP_REPO" remote add origin "https://github.com/njfio/kolme_fork.git"
 
@@ -191,5 +212,62 @@ if ! grep -q "reason_code=fork_rust_test_command_timeout" "$TMP_ERR"; then
   echo "expected fork_rust_test_command_timeout reason marker for command timeout failure" >&2
   exit 1
 fi
+
+set +e
+KAMN_KOLME_LOCAL_HEAVY=1 \
+  bash "$RUNNER" \
+    --mode run \
+    --checkout-path "$TMP_REPO" \
+    --expected-remote-url "https://github.com/njfio/kolme_fork.git" \
+    --expected-ref "refs/heads/main" \
+    --matrix-command "cargo test --lib -- --exact smoke" \
+    --max-seconds 60 \
+    --output-json "$TMP_REPORT" \
+    --metadata-report "$TMP_METADATA_REPORT" \
+    --command-output-dir "$TMP_OUTPUT_DIR" >"$TMP_ERR" 2>&1
+linker_fail_code=$?
+set -e
+
+if [ "$linker_fail_code" -eq 0 ]; then
+  echo "expected strict cargo profile to fail when linker profile is invalid" >&2
+  exit 1
+fi
+
+if ! grep -q "reason_code=fork_rust_test_command_failed" "$TMP_ERR"; then
+  echo "expected fork_rust_test_command_failed marker for strict cargo linker failure" >&2
+  exit 1
+fi
+
+portable_output="$(
+  KAMN_KOLME_LOCAL_HEAVY=1 \
+    bash "$RUNNER" \
+      --mode run \
+      --checkout-path "$TMP_REPO" \
+      --expected-remote-url "https://github.com/njfio/kolme_fork.git" \
+      --expected-ref "refs/heads/main" \
+      --matrix-command "cargo test --lib -- --exact smoke" \
+      --cargo-profile portable \
+      --max-seconds 120 \
+      --output-json "$TMP_REPORT" \
+      --metadata-report "$TMP_METADATA_REPORT" \
+      --command-output-dir "$TMP_OUTPUT_DIR"
+)"
+
+assert_eq "$(extract_value "$portable_output" "status")" "ok" "expected portable cargo profile run to pass"
+assert_eq "$(extract_value "$portable_output" "reason_code")" "fork_rust_test_matrix_passed" "expected pass reason code for portable cargo profile"
+
+python3 - "$TMP_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if report.get("mode") != "run":
+    raise SystemExit("expected run mode for portable profile matrix report")
+if report.get("status") != "ok":
+    raise SystemExit("expected ok status for portable profile matrix report")
+if report.get("cargo_profile") != "portable":
+    raise SystemExit("expected cargo_profile=portable in matrix report")
+PY
 
 echo "local fork rust test matrix lane tests passed."

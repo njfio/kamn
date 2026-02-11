@@ -13,6 +13,7 @@ CHECKOUT_PATH="/tmp/kolme_fork"
 EXPECTED_REMOTE_URL="https://github.com/njfio/kolme_fork.git"
 EXPECTED_REF="refs/heads/main"
 MAX_SECONDS=120
+CARGO_PROFILE="strict"
 
 declare -a MATRIX_COMMANDS=()
 
@@ -90,6 +91,14 @@ while [ "$#" -gt 0 ]; do
       MAX_SECONDS="$2"
       shift 2
       ;;
+    --cargo-profile)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --cargo-profile" >&2
+        exit 1
+      fi
+      CARGO_PROFILE="$2"
+      shift 2
+      ;;
     --help|-h)
       cat <<'USAGE'
 Usage: run_local_kolme_fork_rust_test_matrix_lane.sh [options]
@@ -104,6 +113,8 @@ Options:
   --expected-ref <ref>            Expected symbolic HEAD ref.
   --matrix-command <command>      Repeatable bounded command to run from checkout path.
   --max-seconds <n>               Max runtime per matrix command.
+  --cargo-profile <strict|portable>
+                                  Cargo command execution profile for matrix commands.
 USAGE
       exit 0
       ;;
@@ -121,6 +132,11 @@ fi
 
 if ! [[ "$MAX_SECONDS" =~ ^[0-9]+$ ]] || [ "$MAX_SECONDS" -le 0 ]; then
   echo "max-seconds must be a positive integer" >&2
+  exit 1
+fi
+
+if [ "$CARGO_PROFILE" != "strict" ] && [ "$CARGO_PROFILE" != "portable" ]; then
+  echo "cargo-profile must be one of: strict, portable" >&2
   exit 1
 fi
 
@@ -221,16 +237,21 @@ if [ "$MODE" = "run" ]; then
         index="$(( i + 1 ))"
         command="${MATRIX_COMMANDS[$i]}"
         output_file="$COMMAND_OUTPUT_DIR/command-$index.log"
+        effective_command="$command"
 
         if [ "$stop_execution" = "true" ]; then
           record_check "matrix_command_$index" "$command" "skipped" "$output_file"
           continue
         fi
 
+        if [ "$CARGO_PROFILE" = "portable" ] && [[ "$command" == cargo\ * ]]; then
+          effective_command="RUSTFLAGS='' ${command}"
+        fi
+
         mkdir -p "$(dirname "$output_file")"
         command_exit_code=0
         set +e
-        timeout "$MAX_SECONDS" bash -lc "cd \"$CHECKOUT_PATH\" && $command" >"$output_file" 2>&1
+        timeout "$MAX_SECONDS" bash -lc "cd \"$CHECKOUT_PATH\" && $effective_command" >"$output_file" 2>&1
         command_exit_code=$?
         set -e
 
@@ -281,7 +302,7 @@ if [ "$MODE" = "run" ]; then
   elapsed_seconds="$(( end_epoch - start_epoch ))"
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$METADATA_REPORT" "$COMMAND_OUTPUT_DIR" "$CHECK_FILE" "${MATRIX_COMMANDS[@]}" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$METADATA_REPORT" "$COMMAND_OUTPUT_DIR" "$CHECK_FILE" "$CARGO_PROFILE" "${MATRIX_COMMANDS[@]}" <<'PY'
 from __future__ import annotations
 
 import json
@@ -302,7 +323,8 @@ expected_ref = sys.argv[11]
 metadata_report = sys.argv[12]
 command_output_dir = sys.argv[13]
 checks_path = pathlib.Path(sys.argv[14])
-commands = sys.argv[15:]
+cargo_profile = sys.argv[15]
+commands = sys.argv[16:]
 
 checkpoints = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -330,6 +352,7 @@ summary = {
     "elapsed_seconds": elapsed_seconds,
     "max_seconds_per_command": max_seconds_per_command,
     "command_count": len(commands),
+    "cargo_profile": cargo_profile,
     "budget_status": budget_status,
     "checkout_path": checkout_path,
     "expected_remote_url": expected_remote_url,

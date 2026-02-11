@@ -34,6 +34,8 @@ fn roadmap_contains_version_and_runtime_commit_contract_lane_commands() {
     assert!(ROADMAP.contains("fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json"));
     assert!(ROADMAP.contains("fixtures/kolme_commit/nonce_broadcast_parity_cases.json"));
     assert!(ROADMAP.contains("fixtures/kolme_commit/local_live_api_conformance_matrix.json"));
+    assert!(ROADMAP.contains("--cargo-profile portable"));
+    assert!(ROADMAP.contains("--matrix-cargo-profile portable"));
 }
 
 #[test]
@@ -54,4 +56,5 @@ fn regression_guards_include_legacy_and_runtime_commit_markers() {
     assert!(ROADMAP.contains("`Regression: #1463`"));
     assert!(ROADMAP.contains("`Regression: #1464`"));
     assert!(ROADMAP.contains("`Regression: #1533`"));
+    assert!(ROADMAP.contains("`Regression: #1659`"));
 }

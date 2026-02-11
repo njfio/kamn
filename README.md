@@ -224,6 +224,7 @@ python3 scripts/kolme/check_local_kolme_fork_profile_preflight_policy.py --repor
 
 ```bash
 bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-self-test-summary.json
+KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --matrix-max-seconds 60 --matrix-cargo-profile portable --output-json /tmp/kolme-local-fork-self-test-summary.json
 python3 scripts/kolme/check_local_kolme_fork_self_test_policy.py --report-file /tmp/kolme-local-fork-self-test-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-self-test-policy.json
 # schema: kamn.kolme.local-fork-self-test-summary.v1
 ```
@@ -375,7 +376,7 @@ bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode dry-run 
 
 # explicit local-only bounded matrix execution against fork checkout
 KAMN_KOLME_LOCAL_HEAVY=1 \
-bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json
+bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --cargo-profile portable --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json
 # schema: kamn.kolme.local-fork-rust-test-matrix-summary.v1
 
 # policy checker contract
