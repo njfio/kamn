@@ -63,6 +63,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh`
     - `bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh`
+    - `bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh`
     - `bash scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh`
     - `bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh`

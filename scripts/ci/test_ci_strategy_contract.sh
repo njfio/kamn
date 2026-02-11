@@ -50,6 +50,7 @@ required_snippets=(
   "--request PUT --data '{\\\"message\\\":\\\"native-parity\\\",\\\"signature\\\":\\\"sig\\\",\\\"recovery_id\\\":1}' http://127.0.0.1:3000/broadcast"
   "test_run_local_runtime_commit_live_lane.sh"
   "test_run_local_native_api_parity_live_proof_contract_lane.sh"
+  "test_run_local_kolme_fork_rust_test_matrix_lane.sh"
   "test_check_local_kolme_fork_rust_test_matrix_policy.sh"
   "test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh"
   "run_local_kolme_fork_rust_test_matrix_contract_lane.sh --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json --policy-output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json"
