@@ -108,6 +108,11 @@ pub fn require_final_receipt_finality(
     Ok(())
 }
 
+/// Returns whether one receipt finality is terminal for polling convergence.
+pub fn is_terminal_receipt_finality(finality: KolmeCommitReceiptFinality) -> bool {
+    !matches!(finality, KolmeCommitReceiptFinality::Pending)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{

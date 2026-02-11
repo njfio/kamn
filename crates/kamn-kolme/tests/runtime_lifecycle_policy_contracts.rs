@@ -1,5 +1,6 @@
 use kamn_kolme::{
-    commit_finality_label, lifecycle_state_for_finality, lifecycle_state_label,
+    commit_finality_label, is_terminal_receipt_finality as is_terminal_receipt_finality_contract,
+    lifecycle_state_for_finality, lifecycle_state_label,
     require_final_receipt_finality as require_final_receipt_finality_contract,
     KolmeCommitReceiptFinality, RuntimeCommitLifecycleState, RuntimeLifecyclePolicyError,
 };
@@ -76,4 +77,22 @@ fn regression_issue_1844_runtime_lifecycle_policy_rejects_non_final_receipt_fina
             finality: KolmeCommitReceiptFinality::Pending,
         }
     );
+}
+
+#[test]
+fn functional_runtime_lifecycle_policy_detects_terminal_receipt_finality() {
+    assert!(!is_terminal_receipt_finality_contract(
+        KolmeCommitReceiptFinality::Pending
+    ));
+    assert!(is_terminal_receipt_finality_contract(
+        KolmeCommitReceiptFinality::Final
+    ));
+}
+
+#[test]
+fn regression_issue_1858_runtime_lifecycle_policy_treats_failed_as_terminal() {
+    // Regression: #1858
+    assert!(is_terminal_receipt_finality_contract(
+        KolmeCommitReceiptFinality::Failed
+    ));
 }
