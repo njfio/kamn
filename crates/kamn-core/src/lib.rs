@@ -263,9 +263,9 @@ pub use kolme_runtime_commit::{
     KolmeRuntimeCommitOutcome, KolmeRuntimeCommitProvider, KolmeRuntimeCommitProviderError,
     KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderReceipt,
     KolmeRuntimeCommitProviderTransport, KolmeRuntimeCommitReceipt, KolmeRuntimeCommitRequest,
-    KolmeRuntimeCommitTransportErrorKind, KolmeRuntimeCommitWebsocketConnector,
-    RuntimeCommitFinalityProjection, RuntimeCommitLifecycleRecord, RuntimeCommitLifecycleState,
-    RuntimeCommitPipeline,
+    KolmeRuntimeCommitSignedBroadcastEnvelope, KolmeRuntimeCommitTransportErrorKind,
+    KolmeRuntimeCommitWebsocketConnector, RuntimeCommitFinalityProjection,
+    RuntimeCommitLifecycleRecord, RuntimeCommitLifecycleState, RuntimeCommitPipeline,
 };
 pub use message_delivery_guards::{
     DeliveryFailureCode, DeliveryGuardInput, DeliveryGuardSnapshot, DeliveryGuardSnapshotError,

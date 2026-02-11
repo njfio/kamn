@@ -1,6 +1,7 @@
 use kamn_core::{
     KolmeApiBroadcastRequest, KolmeApiBroadcastResponse, KolmeApiNextNonceRequest,
     KolmeApiNextNonceResponse, KolmeRuntimeCommitError, KolmeRuntimeCommitProviderError,
+    KolmeRuntimeCommitRequest,
 };
 
 #[test]
@@ -102,4 +103,60 @@ fn integration_nonce_and_broadcast_codec_contracts_are_compatible() {
     let broadcast_response = KolmeApiBroadcastResponse::parse_json("{\"txhash\":\"tx-42\"}")
         .expect("response should parse");
     assert_eq!(broadcast_response.txhash, "tx-42");
+}
+
+#[test]
+fn unit_runtime_commit_signed_translation_rejects_message_mismatch() {
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-1506-a",
+        "state:1506",
+        "kamn:did:agent:codec-1506-a",
+        11,
+        "payload:1506-a",
+    )
+    .expect("request should build");
+
+    assert_eq!(
+        request.translate_to_signed_broadcast_envelope(
+            "kamn:key:signer:1",
+            "tampered-message",
+            "sig-1506-a",
+            1,
+        ),
+        Err(KolmeRuntimeCommitError::InvalidRequest {
+            field: "signed_message",
+            reason: "must match canonical runtime commit wire payload",
+        })
+    );
+}
+
+#[test]
+fn functional_runtime_commit_signed_translation_emits_canonical_signed_envelope() {
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-1506-b",
+        "state:1506",
+        "kamn:did:agent:codec-1506-b",
+        12,
+        "payload:1506-b",
+    )
+    .expect("request should build");
+    let canonical_message = request.to_wire_payload();
+
+    let envelope = request
+        .translate_to_signed_broadcast_envelope(
+            "kamn:key:signer:2",
+            canonical_message.as_str(),
+            "sig-1506-b",
+            2,
+        )
+        .expect("signed envelope should build");
+
+    let wire_payload = envelope.to_wire_payload();
+    assert!(wire_payload.contains("\"signer_key_id\":\"kamn:key:signer:2\""));
+    assert!(wire_payload.contains("\"signature\":\"sig-1506-b\""));
+    let broadcast_request = envelope
+        .to_broadcast_request()
+        .expect("broadcast request should build");
+    assert_eq!(broadcast_request.signature, "sig-1506-b");
+    assert_eq!(broadcast_request.recovery_id, 2);
 }

@@ -91,6 +91,9 @@ fn plan_contains_local_kamn_live_runtime_integration_lane() {
     assert!(PLAN.contains("run_local_kamn_live_runtime_integration_contract_lane.sh"));
     assert!(PLAN.contains("kamn.kolme.local-kamn-live-runtime-integration-summary.v1"));
     assert!(PLAN.contains(
+        "signed runtime-commit envelope translation enforces `signer_key_id` presence and canonical message/signature binding before broadcast normalization."
+    ));
+    assert!(PLAN.contains(
         "finality verification uses `/notifications` first with bounded `/block/{height}` fallback; no runtime commit status endpoint dependency."
     ));
 }

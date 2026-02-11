@@ -78,6 +78,30 @@ impl KolmeRuntimeCommitRequest {
         &self.idempotency_key
     }
 
+    /// Translates a canonical runtime commit into a signed broadcast envelope.
+    pub fn translate_to_signed_broadcast_envelope(
+        &self,
+        signer_key_id: &str,
+        signed_message: &str,
+        signature: &str,
+        recovery_id: u8,
+    ) -> Result<KolmeRuntimeCommitSignedBroadcastEnvelope, KolmeRuntimeCommitError> {
+        self.validate()?;
+        let canonical_message = self.to_wire_payload();
+        if signed_message != canonical_message {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "signed_message",
+                reason: "must match canonical runtime commit wire payload",
+            });
+        }
+        KolmeRuntimeCommitSignedBroadcastEnvelope::new(
+            signer_key_id,
+            signed_message,
+            signature,
+            recovery_id,
+        )
+    }
+
     /// Validates commit request schema and invariant boundaries.
     pub fn validate(&self) -> Result<(), KolmeRuntimeCommitError> {
         if self.operation_id.trim().is_empty() {
@@ -114,6 +138,79 @@ impl KolmeRuntimeCommitRequest {
             });
         }
         Ok(())
+    }
+}
+
+/// Signed envelope that binds canonical runtime commit message to signing identity.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KolmeRuntimeCommitSignedBroadcastEnvelope {
+    /// Signer key identifier used by the external custody boundary.
+    pub signer_key_id: String,
+    /// Canonical runtime commit message that was signed.
+    pub message: String,
+    /// Signature bytes/encoding for the message.
+    pub signature: String,
+    /// Signature recovery identifier.
+    pub recovery_id: u8,
+}
+
+impl KolmeRuntimeCommitSignedBroadcastEnvelope {
+    /// Builds a signed broadcast envelope with deterministic validation.
+    pub fn new(
+        signer_key_id: &str,
+        message: &str,
+        signature: &str,
+        recovery_id: u8,
+    ) -> Result<Self, KolmeRuntimeCommitError> {
+        let signer_key_id = signer_key_id.trim();
+        if signer_key_id.is_empty() {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "signer_key_id",
+                reason: "must not be empty",
+            });
+        }
+        let message = message.trim();
+        if message.is_empty() {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "signed_message",
+                reason: "must not be empty",
+            });
+        }
+        let signature = signature.trim();
+        if signature.is_empty() {
+            return Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "signature",
+                reason: "must not be empty",
+            });
+        }
+        Ok(Self {
+            signer_key_id: signer_key_id.to_owned(),
+            message: message.to_owned(),
+            signature: signature.to_owned(),
+            recovery_id,
+        })
+    }
+
+    /// Returns canonical wire payload used by fork submit profile before normalization.
+    pub fn to_wire_payload(&self) -> String {
+        format!(
+            "{{\"signer_key_id\":\"{}\",\"message\":\"{}\",\"signature\":\"{}\",\"recovery_id\":{}}}",
+            json_escape(self.signer_key_id.as_str()),
+            json_escape(self.message.as_str()),
+            json_escape(self.signature.as_str()),
+            self.recovery_id
+        )
+    }
+
+    /// Converts the envelope into a Kolme `/broadcast` request payload.
+    pub fn to_broadcast_request(
+        &self,
+    ) -> Result<KolmeApiBroadcastRequest, KolmeRuntimeCommitError> {
+        KolmeApiBroadcastRequest::new(
+            self.message.as_str(),
+            self.signature.as_str(),
+            self.recovery_id,
+        )
     }
 }
 
@@ -2468,6 +2565,44 @@ fn normalize_kolme_broadcast_payload(
         return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
             reason: "idempotency_key must not be empty".to_owned(),
         });
+    }
+
+    if payload.starts_with('{') {
+        let fields = parse_flat_json_value_fields(payload)?;
+        let signer_key_id = required_json_string_field(&fields, "signer_key_id")?;
+        let message = required_json_string_field(&fields, "message")?;
+        let signature = required_json_string_field(&fields, "signature")?;
+        let recovery_id_u64 = required_positive_u64_json_field(&fields, "recovery_id")?;
+        let recovery_id = u8::try_from(recovery_id_u64).map_err(|_| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "recovery_id must be within u8 range".to_owned(),
+            }
+        })?;
+        let envelope = KolmeRuntimeCommitSignedBroadcastEnvelope::new(
+            signer_key_id.as_str(),
+            message.as_str(),
+            signature.as_str(),
+            recovery_id,
+        )
+        .map_err(|error| KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: error.to_string(),
+        })?;
+
+        let message_fields = parse_key_value_response_fields(envelope.message.as_str())?;
+        let message_idempotency_key = required_response_field(&message_fields, "idempotency_key")?;
+        if message_idempotency_key != idempotency_key {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "signed message idempotency_key does not match transport idempotency key"
+                    .to_owned(),
+            });
+        }
+
+        let request = envelope.to_broadcast_request().map_err(|error| {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: error.to_string(),
+            }
+        })?;
+        return Ok(request.to_json_payload());
     }
 
     let fields = parse_key_value_response_fields(payload)?;
