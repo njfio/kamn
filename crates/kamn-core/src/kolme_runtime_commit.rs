@@ -19,13 +19,13 @@ use kamn_kolme::{
     parse_authorization_header_value as parse_kolme_authorization_header_value,
     parse_block_fallback_response as parse_kolme_block_fallback_response_contract,
     parse_commit_id_from_response_fields as parse_kolme_commit_id_from_response_fields,
+    parse_commit_receipt_finality as parse_kolme_commit_receipt_finality,
     parse_fork_block_fallback_response as parse_kolme_fork_block_fallback_response_contract,
     parse_http_endpoint as parse_kolme_http_endpoint,
     parse_http_response_body as parse_kolme_http_response_body,
     parse_live_provider_outcome as parse_kolme_live_provider_outcome,
     parse_notification_event as parse_kolme_notification_event_contract,
     parse_provider_response_fields as parse_kolme_provider_response_fields,
-    parse_receipt_finality as parse_kolme_receipt_finality,
     parse_tls_ca_file_env_value as parse_kolme_tls_ca_file_env_value,
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
     render_block_path as render_kolme_block_path,
@@ -2048,12 +2048,11 @@ fn txhash_from_commit_id(commit_id: &str) -> Result<String, KolmeRuntimeCommitPr
 fn parse_receipt_finality(
     value: &str,
 ) -> Result<KolmeCommitReceiptFinality, KolmeRuntimeCommitProviderError> {
-    let finality = parse_kolme_receipt_finality(value).map_err(|error| {
+    parse_kolme_commit_receipt_finality(value).map_err(|error| {
         KolmeRuntimeCommitProviderError::MalformedResponse {
             reason: error.to_string(),
         }
-    })?;
-    Ok(commit_finality_from_receipt_finality_contract(finality))
+    })
 }
 
 fn map_extracted_receipt_finality(finality: ReceiptFinality) -> KolmeCommitReceiptFinality {

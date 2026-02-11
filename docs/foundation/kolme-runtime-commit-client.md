@@ -69,7 +69,7 @@ handling.
   - `KolmeRuntimeCommitForkFinalityResolver` composes websocket notifications (`/notifications`) with bounded block fallback scans (`/block/{height}`).
   - websocket handshake/frame parsing contracts are sourced from `kamn-kolme` (`find_http_header_boundary`, `validate_websocket_handshake_response`, `try_take_websocket_frame`) and mapped through `kamn-core` compatibility wrappers.
   - notification variant parsing contracts are sourced from `kamn-kolme` (`parse_notification_event`) and mapped through `kamn-core` compatibility wrappers.
-  - finality alias parsing and block-scan policy contracts are sourced from `kamn-kolme` (`parse_receipt_finality`, `validate_lookup_window`, `validate_block_identity`, `render_block_path`, `parse_fork_block_txhash`) so extraction boundaries stay explicit while `kamn-core` adapters are migrated.
+  - finality alias parsing and block-scan policy contracts are sourced from `kamn-kolme` (`parse_receipt_finality`, `parse_commit_receipt_finality`, `validate_lookup_window`, `validate_block_identity`, `render_block_path`, `parse_fork_block_txhash`) so extraction boundaries stay explicit while `kamn-core` adapters are migrated.
   - receipt-finality to commit-finality mapping contracts are sourced from `kamn-kolme` (`commit_finality_from_receipt_finality`) and mapped through `kamn-core` compatibility wrappers.
   - runtime lifecycle/finality projection contracts are sourced from `kamn-kolme` (`lifecycle_state_for_finality`, `lifecycle_state_label`, `commit_finality_label`) and mapped through `kamn-core` compatibility wrappers.
   - provider response field parsing contracts are sourced from `kamn-kolme` (`parse_provider_response_fields`, `parse_provider_key_value_fields`) and mapped through `kamn-core` compatibility wrappers.
@@ -180,6 +180,7 @@ cargo test -p kamn-kolme --test runtime_lifecycle_policy_contracts
 cargo test -p kamn-kolme --test runtime_request_identity_policy_contracts
 cargo test -p kamn-kolme --test receipt_to_commit_finality_policy_contracts
 cargo test -p kamn-kolme --test json_escape_policy_contracts
+cargo test -p kamn-kolme --test commit_finality_parse_policy_contracts
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_fetch_next_nonce_query_and_parse -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_submit_broadcast_request_put_and_parse_txhash -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_http_transport_submit_broadcast_request_rejects_malformed_txhash_response -- --exact
@@ -217,3 +218,4 @@ cargo test -p kamn-core
 - runtime request identity extraction parity drift remains fail-closed (`Regression: #1777`).
 - receipt-finality mapping extraction parity drift remains fail-closed (`Regression: #1779`).
 - JSON escape helper extraction parity drift remains fail-closed (`Regression: #1781`).
+- commit-finality parse helper extraction parity drift remains fail-closed (`Regression: #1783`).
