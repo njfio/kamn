@@ -7,8 +7,9 @@ use kamn_kolme::{
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
     deterministic_backend_commit_id as deterministic_kolme_backend_commit_id,
     find_http_header_boundary as find_kolme_http_header_boundary,
+    parse_block_fallback_response as parse_kolme_block_fallback_response_contract,
     parse_flat_json_value_fields as parse_kolme_flat_json_value_fields,
-    parse_fork_block_txhash as parse_kolme_fork_block_txhash,
+    parse_fork_block_fallback_response as parse_kolme_fork_block_fallback_response_contract,
     parse_http_endpoint as parse_kolme_http_endpoint,
     parse_http_response_body as parse_kolme_http_response_body,
     parse_live_provider_outcome as parse_kolme_live_provider_outcome,
@@ -33,6 +34,8 @@ use kamn_kolme::{
     KolmeApiCodecError as KamnKolmeApiCodecError,
     KolmeApiNextNonceRequest as KamnKolmeApiNextNonceRequest,
     KolmeApiNextNonceResponse as KamnKolmeApiNextNonceResponse,
+    KolmeBlockFallbackPolicyError as KamnKolmeBlockFallbackPolicyError,
+    KolmeBlockFallbackResponse as KamnKolmeBlockFallbackResponse,
     KolmeEndpointPolicyError as KamnKolmeEndpointPolicyError,
     KolmeFlatJsonPolicyError as KamnKolmeFlatJsonPolicyError,
     KolmeFlatJsonValue as KamnKolmeFlatJsonValue,
@@ -746,14 +749,7 @@ enum KolmeRuntimeCommitSubmitProfile {
 
 type ParsedHttpEndpoint = KamnKolmeParsedHttpEndpoint;
 type ParsedWebsocketEndpoint = KamnKolmeParsedWebsocketEndpoint;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct ParsedBlockFallbackResponse {
-    provider: String,
-    block_height: u64,
-    finalized_tx_hashes: Vec<String>,
-    failed_tx_hashes: Vec<String>,
-}
+type ParsedBlockFallbackResponse = KamnKolmeBlockFallbackResponse;
 
 type HttpScheme = KamnKolmeHttpScheme;
 
@@ -1755,6 +1751,14 @@ fn map_lookup_window_error(error: BlockScanPolicyError) -> KolmeRuntimeCommitPro
     }
 }
 
+fn map_block_fallback_policy_error_to_malformed(
+    error: KamnKolmeBlockFallbackPolicyError,
+) -> KolmeRuntimeCommitProviderError {
+    KolmeRuntimeCommitProviderError::MalformedResponse {
+        reason: error.to_string(),
+    }
+}
+
 fn map_endpoint_policy_error(
     error: KamnKolmeEndpointPolicyError,
 ) -> KolmeRuntimeCommitProviderError {
@@ -1863,41 +1867,8 @@ fn render_block_path(
 fn parse_block_fallback_response(
     response: &str,
 ) -> Result<ParsedBlockFallbackResponse, KolmeRuntimeCommitProviderError> {
-    let trimmed = response.trim();
-    if trimmed.starts_with('{') {
-        let fields = parse_kolme_flat_json_value_fields(trimmed)
-            .map_err(map_flat_json_policy_error_to_malformed)?;
-        let provider = required_kolme_json_string_field(&fields, "provider")
-            .map_err(map_flat_json_policy_error_to_malformed)?;
-        let block_height = required_block_height_json_field(&fields)?;
-        let finalized_tx_hashes = optional_json_block_tx_hashes(&fields, "tx_hashes")?;
-        let failed_tx_hashes = optional_json_block_tx_hashes(&fields, "failed_tx_hashes")?;
-        return Ok(ParsedBlockFallbackResponse {
-            provider,
-            block_height,
-            finalized_tx_hashes,
-            failed_tx_hashes,
-        });
-    }
-
-    let fields = parse_kolme_provider_response_fields(trimmed)
-        .map_err(map_provider_response_policy_error_to_malformed)?;
-    let provider = required_response_field(&fields, "provider")?;
-    let block_height = fields
-        .get("block_height")
-        .or_else(|| fields.get("height"))
-        .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "missing required field: block_height".to_owned(),
-        })
-        .and_then(|value| parse_block_height(value.as_str()))?;
-    let finalized_tx_hashes = optional_block_tx_hashes(&fields, "tx_hashes")?;
-    let failed_tx_hashes = optional_block_tx_hashes(&fields, "failed_tx_hashes")?;
-    Ok(ParsedBlockFallbackResponse {
-        provider,
-        block_height,
-        finalized_tx_hashes,
-        failed_tx_hashes,
-    })
+    parse_kolme_block_fallback_response_contract(response)
+        .map_err(map_block_fallback_policy_error_to_malformed)
 }
 
 fn parse_kolme_fork_block_fallback_response(
@@ -1905,90 +1876,8 @@ fn parse_kolme_fork_block_fallback_response(
     provider: &str,
     expected_height: u64,
 ) -> Result<ParsedBlockFallbackResponse, KolmeRuntimeCommitProviderError> {
-    let provider = provider.trim();
-    if provider.is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "provider must not be empty".to_owned(),
-        });
-    }
-    if expected_height == 0 {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "expected block height must be positive".to_owned(),
-        });
-    }
-    let txhash = parse_kolme_fork_block_txhash(response)
-        .map_err(map_block_scan_policy_error_to_malformed)?;
-
-    Ok(ParsedBlockFallbackResponse {
-        provider: provider.to_owned(),
-        block_height: expected_height,
-        finalized_tx_hashes: vec![txhash],
-        failed_tx_hashes: Vec::new(),
-    })
-}
-
-fn optional_block_tx_hashes(
-    fields: &HashMap<String, String>,
-    field: &'static str,
-) -> Result<Vec<String>, KolmeRuntimeCommitProviderError> {
-    let Some(value) = fields.get(field) else {
-        return Ok(Vec::new());
-    };
-    parse_tx_hash_list(value, field)
-}
-
-fn parse_tx_hash_list(
-    raw: &str,
-    field: &'static str,
-) -> Result<Vec<String>, KolmeRuntimeCommitProviderError> {
-    if raw.trim().is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("field must not be empty: {field}"),
-        });
-    }
-    let mut values = Vec::new();
-    for token in raw.split(',') {
-        let txhash = token.trim();
-        if txhash.is_empty() {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("field contains empty tx hash token: {field}"),
-            });
-        }
-        values.push(txhash.to_owned());
-    }
-    Ok(values)
-}
-
-fn required_block_height_json_field(
-    fields: &HashMap<String, KamnKolmeFlatJsonValue>,
-) -> Result<u64, KolmeRuntimeCommitProviderError> {
-    if fields.contains_key("block_height") {
-        return required_kolme_positive_u64_json_field(fields, "block_height")
-            .map_err(map_flat_json_policy_error_to_malformed);
-    }
-    if fields.contains_key("height") {
-        return required_kolme_positive_u64_json_field(fields, "height")
-            .map_err(map_flat_json_policy_error_to_malformed);
-    }
-    Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-        reason: "missing required field: block_height".to_owned(),
-    })
-}
-
-fn optional_json_block_tx_hashes(
-    fields: &HashMap<String, KamnKolmeFlatJsonValue>,
-    field: &'static str,
-) -> Result<Vec<String>, KolmeRuntimeCommitProviderError> {
-    let Some(value) = fields.get(field) else {
-        return Ok(Vec::new());
-    };
-    match value {
-        KamnKolmeFlatJsonValue::Null => Ok(Vec::new()),
-        KamnKolmeFlatJsonValue::String(raw) => parse_tx_hash_list(raw, field),
-        _ => Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("field must be string|null: {field}"),
-        }),
-    }
+    parse_kolme_fork_block_fallback_response_contract(response, provider, expected_height)
+        .map_err(map_block_fallback_policy_error_to_malformed)
 }
 
 fn compose_notifications_websocket_url(

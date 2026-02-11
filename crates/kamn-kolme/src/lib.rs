@@ -5,6 +5,7 @@
 #![warn(missing_docs)]
 
 pub mod api_codec;
+pub mod block_fallback_policy;
 pub mod block_scan_policy;
 pub mod codec;
 pub mod endpoint_policy;
@@ -24,6 +25,10 @@ pub use api_codec::{
     validate_direct_signed_transaction_message, KolmeApiBroadcastRequest,
     KolmeApiBroadcastResponse, KolmeApiCodecError, KolmeApiNextNonceRequest,
     KolmeApiNextNonceResponse,
+};
+pub use block_fallback_policy::{
+    parse_block_fallback_response, parse_fork_block_fallback_response,
+    KolmeBlockFallbackPolicyError, KolmeBlockFallbackResponse,
 };
 pub use block_scan_policy::{
     parse_fork_block_txhash, render_block_path, validate_block_identity,
