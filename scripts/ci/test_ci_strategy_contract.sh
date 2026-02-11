@@ -27,6 +27,7 @@ required_snippets=(
   "test_scope=runtime-contract"
   "run_localhost_signed_integration_contract_lane_tests"
   "sdk-live-localhost-integration"
+  "KAMN_CI_TOOLS_FAST_MODE=true"
   "run_live_transport_replay_tamper_fast_lane.sh"
   "check_live_transport_replay_tamper_policy.sh"
   "KAMN_SDK_REPLAY_TAMPER_CONTRACT_MAX_SECONDS=60"

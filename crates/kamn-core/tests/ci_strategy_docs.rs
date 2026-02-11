@@ -7,6 +7,7 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("make demo"));
     assert!(DOC.contains("run_localhost_signed_integration_contract_lane_tests"));
     assert!(DOC.contains("sdk-live-localhost-integration"));
+    assert!(DOC.contains("KAMN_CI_TOOLS_FAST_MODE=true"));
     assert!(DOC.contains("run_localhost_signed_integration_contract_lane.sh"));
     assert!(DOC.contains("scripts/ci/select_targets.sh"));
     assert!(DOC.contains("run_kolme_version_compatibility_contract_tests=true"));

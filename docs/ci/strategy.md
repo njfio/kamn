@@ -289,7 +289,9 @@ When CI-sensitive files are modified (`.github/workflows/*`, `scripts/ci/*`, `.c
 Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 
 ## Script Regression Coverage
-`ci-fast-gate` runs `scripts/ci/test_ci_tools.sh` to locally regression-test CI helper scripts:
+`ci-fast-gate` runs `scripts/ci/test_ci_tools.sh` with `KAMN_CI_TOOLS_FAST_MODE=true` to keep PR-critical CI tooling checks bounded and cost-effective, while local/deep lanes continue to run the full script.
+
+Fast-mode CI tooling regression coverage includes:
 - Budget evaluator (`test_evaluate_budget.sh`)
 - Script duplication/surface budget checker (`test_check_script_duplication_budget.sh`)
 - Retry helper (`test_run_with_retry.sh`)
@@ -300,9 +302,11 @@ Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 - PR CI declaration checker (`test_check_pr_ci_declaration.sh`)
 - Flaky report commenter (`test_post_flaky_report_comment.sh`)
 - Flaky issue syncer (`test_sync_flaky_registry_issues.sh`)
+- Workflow guard contracts (`test_workflow_retry_policy.sh`, `test_workflow_cache_policy.sh`, `test_workflow_scope_policy.sh`, `test_workflow_performance_policy.sh`)
 - Rustdoc artifact lane contract (`test_run_kamn_core_rustdoc_artifact_contract_lane.sh`)
 - Rustdoc artifact policy checker (`test_check_kamn_core_rustdoc_artifact_policy.sh`)
 - Makefile execution contract checker (`test_makefile_execution_contract.sh`)
+- Local fork portability preflight lane/policy/contract checks (`test_run_local_kolme_fork_portability_preflight_lane.sh`, `test_check_local_kolme_fork_portability_preflight_policy.sh`, `test_run_local_kolme_fork_portability_preflight_contract_lane.sh`)
 
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
