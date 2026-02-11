@@ -40,6 +40,7 @@ Contributor entrypoint commands must remain stable and synchronized across `Make
 Fast-gate command contract coverage is intentionally split:
 - static command-surface parity (`scripts/ci/test_makefile_command_surface_contract.sh`)
 - dry-run execution parity (`scripts/ci/test_makefile_execution_contract.sh`) via `make -n` target resolution for bounded `check/test/demo` targets
+- Kolme missing-both coverage (`scripts/ci/test_kolme_command_surface_coverage_contract.sh`) ensures every `scripts/kolme/test_*.sh` appears in at least one CI command surface (`ci-fast-gate` or aggregate `scripts/ci/test_ci_tools.sh`).
 
 Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 
@@ -200,6 +201,7 @@ Regression policy:
 - nonce/broadcast parity matrix selector/docs/runtime-budget drift remains fail-closed (`Regression: #1462`).
 - fast-gate native Kolme API parity lane schema/routing/runtime-budget drift remains fail-closed (`Regression: #1466`).
 - script-surface budget temporary `script_count` waiver scope/expiry drift remains fail-closed (`Regression: #1497`).
+- Kolme command-surface missing-both coverage drift remains fail-closed (`Regression: #1561`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:

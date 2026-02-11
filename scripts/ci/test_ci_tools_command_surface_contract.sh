@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CI_TOOLS_SCRIPT="$ROOT_DIR/scripts/ci/test_ci_tools.sh"
 
 required_commands=(
+  'bash "$ROOT_DIR/scripts/ci/test_kolme_command_surface_coverage_contract.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_generate_fork_compatibility_evidence.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_fork_compatibility_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_run_runtime_commit_adapter_contract_lane.sh"'
