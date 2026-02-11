@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_bootstrap_health_checks.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
+LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 TMP_REPORT="$(mktemp)"
 TMP_ERR="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_ERR"' EXIT
@@ -26,6 +27,17 @@ assert_eq() {
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected Kolme local bootstrap health-check runner to be executable" >&2
+  exit 1
+fi
+
+# Regression: #1585
+if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
+  echo "expected shared local-heavy opt-in guard helper to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER"; then
+  echo "expected local bootstrap runner to use shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 

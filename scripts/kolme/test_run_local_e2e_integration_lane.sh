@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_e2e_integration_lane.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 SUMMARY_HELPER="$ROOT_DIR/scripts/framework/generate_local_lane_summary.py"
+LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 TMP_REPORT="$(mktemp)"
 TMP_ERR="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_ERR"' EXIT
@@ -38,6 +39,17 @@ fi
 
 if ! grep -q "scripts/framework/generate_local_lane_summary.py" "$RUNNER"; then
   echo "expected local e2e integration runner to use shared local-lane summary helper" >&2
+  exit 1
+fi
+
+# Regression: #1585
+if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
+  echo "expected shared local-heavy opt-in guard helper to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER"; then
+  echo "expected local e2e integration runner to use shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 

@@ -181,6 +181,7 @@ bash "$ROOT_DIR/scripts/reputation/test_generate_reputation_recovery_evidence_bu
 bash "$ROOT_DIR/scripts/reputation/test_run_reputation_recovery_contract_lane.sh"
 bash "$ROOT_DIR/scripts/reputation/test_check_reputation_recovery_policy.sh"
 bash "$ROOT_DIR/scripts/framework/test_contract_framework.sh"
+bash "$ROOT_DIR/scripts/framework/test_assert_local_heavy_opt_in.sh"
 bash "$ROOT_DIR/scripts/framework/test_generate_local_lane_summary.sh"
 bash "$ROOT_DIR/scripts/token/test_generate_token_launch_handoff_evidence_bundle.sh"
 bash "$ROOT_DIR/scripts/token/test_run_token_launch_handoff_contract_lane.sh"

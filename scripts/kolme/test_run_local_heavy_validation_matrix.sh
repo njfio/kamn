@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MATRIX_RUNNER="$ROOT_DIR/scripts/kolme/run_local_heavy_validation_matrix.sh"
 BOOTSTRAP_RUNNER="$ROOT_DIR/scripts/kolme/run_local_bootstrap_health_checks.sh"
 SUMMARY_HELPER="$ROOT_DIR/scripts/framework/generate_local_lane_summary.py"
+LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
@@ -42,6 +43,17 @@ fi
 
 if ! grep -q "scripts/framework/generate_local_lane_summary.py" "$MATRIX_RUNNER"; then
   echo "expected local heavy matrix runner to use shared local-lane summary helper" >&2
+  exit 1
+fi
+
+# Regression: #1585
+if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
+  echo "expected shared local-heavy opt-in guard helper to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$MATRIX_RUNNER"; then
+  echo "expected local heavy matrix runner to use shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 
