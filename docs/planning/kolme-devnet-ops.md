@@ -91,6 +91,22 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - run mode fails closed without explicit local-only opt-in.
   - smoke command timeout/exceeded budget is reported as `fork_smoke_command_timeout`.
 
+## Local-Only Fork Rust Test Matrix Lane (Issue #1537)
+
+- Local fork Rust test matrix runner:
+  - `bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json`
+- Explicit local-only Rust test matrix execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json`
+- Summary schema:
+  - `kamn.kolme.local-fork-rust-test-matrix-summary.v1`
+- Deterministic checkpoints include:
+  - `run_local_fork_sync_metadata_lane.sh` metadata validation prior to Rust command execution.
+  - bounded per-command timeout guard with deterministic pass/fail reason codes.
+  - per-command stdout/stderr artifact capture for audit review.
+- Cost policy:
+  - run mode fails closed without explicit local-only opt-in.
+  - run mode remains local/manual and is excluded from PR fast-gate workflow routing.
+
 ## Deterministic Local Kolme API Probe Lane (Issue #1439)
 
 - Local API probe runner:
@@ -329,6 +345,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local-only heavy validation matrix requires explicit opt-in and remains excluded from PR fast-gate workflows (`Regression: #1405`).
 - local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
 - local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
+- local fork Rust test matrix lane fails closed on missing local opt-in, metadata sync drift, and per-command timeout/failure paths (`Regression: #1537`).
 - local Kolme API probe lane fails closed on unavailable health endpoint, invalid fork-info payload, and runtime budget overruns (`Regression: #1439`).
 - local Kolme API smoke lane fails closed without explicit local opt-in, probe prerequisite failure, smoke-command timeout, and smoke-command errors (`Regression: #1440`).
 - local live API conformance harness fails closed for probe/native parity prerequisite failures, runtime budget overruns, and endpoint contract drift (`Regression: #1483`).
@@ -349,6 +366,7 @@ bash scripts/kolme/test_validate_triadic_devnet_smoke.sh
 bash scripts/kolme/test_run_triadic_devnet_smoke_contract_lane.sh
 bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh
 bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh
+bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh
 bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh
 bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh
 bash scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh

@@ -308,6 +308,18 @@ bash scripts/kolme/run_local_fork_smoke_evidence_lane.sh --mode run --checkout-p
 # schema: kamn.kolme.local-fork-smoke-evidence-summary.v1
 ```
 
+### Run Local Fork Rust Test Matrix Lane (Kolme)
+
+```bash
+# deterministic local matrix plan (no command execution)
+bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json
+
+# explicit local-only bounded matrix execution against fork checkout
+KAMN_KOLME_LOCAL_HEAVY=1 \
+bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json
+# schema: kamn.kolme.local-fork-rust-test-matrix-summary.v1
+```
+
 ### Run Local Kolme API Probe Lane
 
 ```bash
@@ -439,6 +451,7 @@ Fast-gate validates only command surfaces:
 Local Kolme API probe/smoke lane contract tests:
 - `bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh`
+- `bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh`
 - `bash scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh`
 - `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
