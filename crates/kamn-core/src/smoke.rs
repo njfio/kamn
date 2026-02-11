@@ -1,31 +1,42 @@
+//! Deterministic triadic smoke network used by runtime contract tests.
+
 use std::fmt;
 
 use crate::config::NodeRole;
 use crate::transaction::{BaselineTransaction, TransactionGuardError, TransactionGuards};
 
+/// Block produced by the processor role during smoke simulation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProducedBlock {
+    /// Sequential block height.
     pub height: u64,
+    /// Producer role that emitted the block.
     pub producer: NodeRole,
+    /// Ordered transactions committed into the block.
     pub transactions: Vec<BaselineTransaction>,
 }
 
+/// In-memory role state tracked during smoke simulation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NodeSmokeState {
+    /// Node role represented by this state record.
     pub role: NodeRole,
     mempool: Vec<BaselineTransaction>,
     committed_tx_ids: Vec<String>,
 }
 
 impl NodeSmokeState {
+    /// Returns current number of pending mempool transactions.
     pub fn mempool_len(&self) -> usize {
         self.mempool.len()
     }
 
+    /// Returns number of committed transaction IDs.
     pub fn committed_len(&self) -> usize {
         self.committed_tx_ids.len()
     }
 
+    /// Returns true when the transaction appears in mempool or committed history.
     pub fn has_seen_transaction(&self, tx_id: &str) -> bool {
         self.mempool.iter().any(|tx| tx.id == tx_id)
             || self.committed_tx_ids.iter().any(|seen_id| seen_id == tx_id)
@@ -42,17 +53,23 @@ impl NodeSmokeState {
     }
 }
 
+/// Triadic runtime smoke network with processor/listener/approver roles.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RoleSmokeNetwork {
+    /// Processor role state.
     pub processor: NodeSmokeState,
+    /// Listener role state.
     pub listener: NodeSmokeState,
+    /// Approver role state.
     pub approver: NodeSmokeState,
+    /// Enables transaction gossip from processor to listener/approver.
     pub gossip_enabled: bool,
     guards: TransactionGuards,
     next_height: u64,
 }
 
 impl RoleSmokeNetwork {
+    /// Creates a new triadic smoke network with optional gossip behavior.
     pub fn new(gossip_enabled: bool) -> Self {
         Self {
             processor: NodeSmokeState {
@@ -76,10 +93,12 @@ impl RoleSmokeNetwork {
         }
     }
 
+    /// Returns expected state hash required for the next accepted transaction.
     pub fn expected_state_hash(&self) -> &str {
         self.guards.expected_state_hash()
     }
 
+    /// Validates and submits a transaction into processor state.
     pub fn submit_transaction(&mut self, tx: BaselineTransaction) -> Result<(), SmokeError> {
         self.guards.validate_and_record(&tx)?;
 
@@ -92,6 +111,7 @@ impl RoleSmokeNetwork {
         Ok(())
     }
 
+    /// Produces a block from processor mempool and advances network height.
     pub fn produce_block(&mut self) -> Result<ProducedBlock, SmokeError> {
         if self.processor.mempool.is_empty() {
             return Err(SmokeError::EmptyMempool(NodeRole::Processor));
@@ -121,14 +141,18 @@ impl RoleSmokeNetwork {
         Ok(block)
     }
 
+    /// Returns true when listener and approver have both observed the transaction.
     pub fn gossip_reached_all_roles(&self, tx_id: &str) -> bool {
         self.listener.has_seen_transaction(tx_id) && self.approver.has_seen_transaction(tx_id)
     }
 }
 
+/// Smoke network error type surfaced by submit/produce operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SmokeError {
+    /// Attempted block production with an empty processor mempool.
     EmptyMempool(NodeRole),
+    /// Transaction guard rejected an operation.
     Guard(TransactionGuardError),
 }
 

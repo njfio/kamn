@@ -1,31 +1,53 @@
+//! Recovery-state workflow for compromised agent signing keys.
+
 use std::collections::HashSet;
 
+/// Lifecycle state for key compromise and recovery operations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RecoveryState {
+    /// The active key can be used for normal signing operations.
     Active,
+    /// The active key is marked compromised and cannot be trusted.
     Compromised,
+    /// The compromised key has been revoked and recovery can begin.
     Revoked,
+    /// A recovery proposal is in progress and waiting for approvals.
     RecoveryPending,
 }
 
+/// Error surfaced by key recovery lifecycle operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RecoveryError {
+    /// A required key identifier was empty.
     EmptyKeyId,
+    /// Recovery approval requirements are invalid for the configured approvers.
     InvalidRequiredApprovals {
+        /// Requested threshold of required approvals.
         required: usize,
+        /// Number of configured approvers available.
         approver_count: usize,
     },
+    /// Attempted transition is invalid for the current recovery state.
     InvalidTransition {
+        /// Current state where the transition was attempted.
         from: RecoveryState,
+        /// Operation name that triggered the invalid transition.
         action: &'static str,
     },
+    /// Recovery action was attempted by an untrusted approver.
     UnauthorizedApprover(String),
+    /// Finalization attempted without enough distinct approvals.
     InsufficientApprovals {
+        /// Required approval threshold.
         required: usize,
+        /// Number of approvals collected so far.
         actual: usize,
     },
+    /// Proposed key is known to be compromised.
     CompromisedKeyReuse(String),
+    /// Recovery nonce was already used by a prior finalized proposal.
     ReplayNonce(u64),
+    /// The same approver attempted to approve twice.
     DuplicateApproval(String),
 }
 
@@ -36,6 +58,7 @@ struct RecoveryProposal {
     approvals: HashSet<String>,
 }
 
+/// Manages emergency compromise, revocation, and multi-approver recovery.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyRecoveryManager {
     state: RecoveryState,
@@ -48,6 +71,7 @@ pub struct KeyRecoveryManager {
 }
 
 impl KeyRecoveryManager {
+    /// Creates a new recovery manager for the active key and approver set.
     pub fn new(
         current_key_id: &str,
         authorized_approvers: Vec<String>,
@@ -75,14 +99,17 @@ impl KeyRecoveryManager {
         })
     }
 
+    /// Returns the current recovery lifecycle state.
     pub fn state(&self) -> RecoveryState {
         self.state
     }
 
+    /// Returns the currently active key identifier.
     pub fn current_key_id(&self) -> &str {
         &self.current_key_id
     }
 
+    /// Marks the active key as compromised and enters compromised state.
     pub fn declare_compromised(&mut self, _reason: &str) -> Result<(), RecoveryError> {
         if self.state != RecoveryState::Active {
             return Err(RecoveryError::InvalidTransition {
@@ -96,6 +123,7 @@ impl KeyRecoveryManager {
         Ok(())
     }
 
+    /// Revokes the compromised key and opens recovery proposal flow.
     pub fn emergency_revoke(&mut self) -> Result<(), RecoveryError> {
         if self.state != RecoveryState::Compromised {
             return Err(RecoveryError::InvalidTransition {
@@ -107,6 +135,7 @@ impl KeyRecoveryManager {
         Ok(())
     }
 
+    /// Starts a recovery proposal with the first approver signature.
     pub fn propose_recovery(
         &mut self,
         candidate_key_id: &str,
@@ -145,6 +174,7 @@ impl KeyRecoveryManager {
         Ok(())
     }
 
+    /// Adds an approver vote to the in-flight recovery proposal.
     pub fn approve_recovery(&mut self, approver: &str) -> Result<(), RecoveryError> {
         if self.state != RecoveryState::RecoveryPending {
             return Err(RecoveryError::InvalidTransition {
@@ -171,6 +201,7 @@ impl KeyRecoveryManager {
         Ok(())
     }
 
+    /// Finalizes recovery and activates the proposed key once threshold is met.
     pub fn finalize_recovery(&mut self) -> Result<(), RecoveryError> {
         if self.state != RecoveryState::RecoveryPending {
             return Err(RecoveryError::InvalidTransition {
@@ -202,6 +233,7 @@ impl KeyRecoveryManager {
         Ok(())
     }
 
+    /// Rejects usage of keys that are recorded as compromised.
     pub fn verify_key_use(&self, key_id: &str) -> Result<(), RecoveryError> {
         if self.compromised_keys.contains(key_id) {
             return Err(RecoveryError::CompromisedKeyReuse(key_id.to_owned()));

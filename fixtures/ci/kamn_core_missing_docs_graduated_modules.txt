@@ -1,5 +1,8 @@
 bootstrap
+key_recovery
 kolme_runtime_commit
+migrations
 namespaces
+smoke
 state
 task_lifecycle
