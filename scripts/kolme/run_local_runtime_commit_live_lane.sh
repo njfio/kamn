@@ -9,6 +9,26 @@ OUTPUT_JSON="/tmp/kolme-local-runtime-commit-live-summary.json"
 LIVE_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-live-output.txt"
 LIVE_COMMAND=""
 MAX_SECONDS=90
+BASE_URL="http://127.0.0.1:3000"
+PROVIDER_HINT="kolme-fork-local"
+AUTHORIZATION_HEADER=""
+PREFLIGHT_MAX_SECONDS=10
+SKIP_PREFLIGHT=0
+
+shell_escape() {
+  printf "%q" "$1"
+}
+
+default_live_command() {
+  local command
+  command="KAMN_KOLME_LIVE_BASE_URL=$(shell_escape "$BASE_URL")"
+  command="${command} KAMN_KOLME_LIVE_PROVIDER_HINT=$(shell_escape "$PROVIDER_HINT")"
+  if [ -n "$AUTHORIZATION_HEADER" ]; then
+    command="${command} KAMN_KOLME_LIVE_AUTHORIZATION=$(shell_escape "$AUTHORIZATION_HEADER")"
+  fi
+  command="${command} cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint"
+  printf '%s' "$command"
+}
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -52,6 +72,42 @@ while [ "$#" -gt 0 ]; do
       MAX_SECONDS="$2"
       shift 2
       ;;
+    --base-url)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --base-url" >&2
+        exit 1
+      fi
+      BASE_URL="$2"
+      shift 2
+      ;;
+    --provider-hint)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --provider-hint" >&2
+        exit 1
+      fi
+      PROVIDER_HINT="$2"
+      shift 2
+      ;;
+    --authorization-header)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --authorization-header" >&2
+        exit 1
+      fi
+      AUTHORIZATION_HEADER="$2"
+      shift 2
+      ;;
+    --preflight-max-seconds)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --preflight-max-seconds" >&2
+        exit 1
+      fi
+      PREFLIGHT_MAX_SECONDS="$2"
+      shift 2
+      ;;
+    --skip-preflight)
+      SKIP_PREFLIGHT=1
+      shift
+      ;;
     --help|-h)
       cat <<'USAGE'
 Usage: run_local_runtime_commit_live_lane.sh [options]
@@ -62,6 +118,11 @@ Options:
   --live-output-file <path>     Captured stdout/stderr for live command.
   --live-command <command>      Runtime-commit submit/finality command for run mode.
   --max-seconds <n>             Max runtime budget in seconds for run mode.
+  --base-url <url>              Live Kolme base URL used by default smoke command.
+  --provider-hint <value>       Provider hint used by default live smoke command.
+  --authorization-header <str>  Optional Authorization header value for live smoke.
+  --preflight-max-seconds <n>   Max runtime budget for preflight health probe.
+  --skip-preflight              Bypass preflight health probe in run mode.
 USAGE
       exit 0
       ;;
@@ -82,10 +143,31 @@ if ! [[ "$MAX_SECONDS" =~ ^[0-9]+$ ]] || [ "$MAX_SECONDS" -le 0 ]; then
   exit 1
 fi
 
+if ! [[ "$PREFLIGHT_MAX_SECONDS" =~ ^[0-9]+$ ]] || [ "$PREFLIGHT_MAX_SECONDS" -le 0 ]; then
+  echo "preflight-max-seconds must be a positive integer" >&2
+  exit 1
+fi
+
+if [ -z "$BASE_URL" ]; then
+  echo "base-url must not be empty" >&2
+  exit 1
+fi
+
+if [ -z "$PROVIDER_HINT" ]; then
+  echo "provider-hint must not be empty" >&2
+  exit 1
+fi
+
 if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   echo "expected shared local-heavy opt-in guard helper to be executable" >&2
   exit 1
 fi
+
+if [ -z "$LIVE_COMMAND" ]; then
+  LIVE_COMMAND="$(default_live_command)"
+fi
+
+preflight_command="curl --silent --show-error --fail --max-time ${PREFLIGHT_MAX_SECONDS} ${BASE_URL%/}/healthz"
 
 CHECK_FILE="$(mktemp)"
 trap 'rm -f "$CHECK_FILE"' EXIT
@@ -103,7 +185,8 @@ budget_status="not_run"
 elapsed_seconds=0
 local_only_enforced="true"
 
-planned_command="${LIVE_COMMAND:-<required-in-run-mode>}"
+planned_command="$LIVE_COMMAND"
+record_check "runtime_commit_live_preflight" "$preflight_command" "planned"
 record_check "runtime_commit_live_command" "$planned_command" "planned"
 
 if [ "$MODE" = "run" ]; then
@@ -114,12 +197,28 @@ if [ "$MODE" = "run" ]; then
     record_check "runtime_commit_live_command" "$planned_command" "fail"
     overall_status="fail"
     reason_code="local_opt_in_missing"
-  elif [ -z "$LIVE_COMMAND" ]; then
-    echo "run mode requires --live-command for runtime-commit submit/finality proof execution" >&2
-    record_check "runtime_commit_live_command" "$planned_command" "fail"
-    overall_status="fail"
-    reason_code="live_command_missing"
+  elif [ "$SKIP_PREFLIGHT" -eq 1 ]; then
+    record_check "runtime_commit_live_preflight" "$preflight_command" "skipped"
   else
+    set +e
+    timeout "${PREFLIGHT_MAX_SECONDS}" bash -lc "$preflight_command" >/dev/null 2>&1
+    preflight_exit_code=$?
+    set -e
+
+    if [ "$preflight_exit_code" -eq 0 ]; then
+      record_check "runtime_commit_live_preflight" "$preflight_command" "pass"
+    elif [ "$preflight_exit_code" -eq 124 ]; then
+      record_check "runtime_commit_live_preflight" "$preflight_command" "fail"
+      overall_status="fail"
+      reason_code="live_preflight_timeout"
+    else
+      record_check "runtime_commit_live_preflight" "$preflight_command" "fail"
+      overall_status="fail"
+      reason_code="live_preflight_failed"
+    fi
+  fi
+
+  if [ "$overall_status" = "ok" ]; then
     mkdir -p "$(dirname "$LIVE_OUTPUT_FILE")"
     command_exit_code=0
     set +e
@@ -154,7 +253,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -171,7 +270,11 @@ max_seconds = int(sys.argv[7])
 budget_status = sys.argv[8]
 live_command = sys.argv[9]
 live_output_file = sys.argv[10]
-checks_path = pathlib.Path(sys.argv[11])
+base_url = sys.argv[11]
+provider_hint = sys.argv[12]
+preflight_max_seconds = int(sys.argv[13])
+skip_preflight = sys.argv[14] == "1"
+checks_path = pathlib.Path(sys.argv[15])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -200,6 +303,10 @@ summary = {
     "budget_status": budget_status,
     "live_command": live_command,
     "live_output_file": live_output_file,
+    "base_url": base_url,
+    "provider_hint": provider_hint,
+    "preflight_enabled": not skip_preflight,
+    "preflight_max_seconds": preflight_max_seconds,
     "checks": checks,
     "artifact_paths": [
         live_output_file,

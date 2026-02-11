@@ -186,6 +186,8 @@ cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_h
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_http_transport_submit_broadcast_request_rejects_malformed_txhash_response -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport functional_https_transport_submit_with_trusted_ca_succeeds -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_https_transport_maps_certificate_errors_to_unavailable -- --exact
+bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode dry-run --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt
+KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --base-url http://127.0.0.1:3000 --provider-hint kolme-fork-local --max-seconds 90 --preflight-max-seconds 10 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt
 bash scripts/kolme/run_runtime_commit_contract_lane.sh
 ```
 
@@ -206,6 +208,7 @@ cargo test -p kamn-core
 - signed translation envelope and signer custody precondition drift remains fail-closed (`Regression: #1506`).
 - direct signed transaction payload normalization drift remains fail-closed (`Regression: #1516`).
 - direct signed transaction required-field validation drift remains fail-closed (`Regression: #1519`).
+- local live-node provider smoke preflight and ignored-test dispatch remain fail-closed (`Regression: #1829`).
 - typed nonce/broadcast HTTP helper mapping drift remains fail-closed (`Regression: #1533`).
 - provider response field parser extraction parity drift remains fail-closed (`Regression: #1745`).
 - flat JSON parser extraction parity drift remains fail-closed (`Regression: #1747`).

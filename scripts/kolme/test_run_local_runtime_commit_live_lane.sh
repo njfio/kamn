@@ -75,7 +75,34 @@ if report.get("local_only_enforced") is not True:
 checks = report.get("checks")
 if not isinstance(checks, list) or not checks:
     raise SystemExit("expected deterministic checks in summary")
+if not any(
+    check.get("id") == "runtime_commit_live_preflight" and check.get("status") == "planned"
+    for check in checks
+):
+    raise SystemExit("expected planned runtime commit live preflight check")
 PY
+
+set +e
+KAMN_KOLME_LOCAL_HEAVY=1 \
+  bash "$RUNNER" \
+    --mode run \
+    --live-command "printf 'status=submitted\n'" \
+    --max-seconds 5 \
+    --base-url "http://127.0.0.1:1" \
+    --output-json "$TMP_REPORT" \
+    --live-output-file "$TMP_OUTPUT" >"$TMP_ERR" 2>&1
+preflight_failure_code=$?
+set -e
+
+if [ "$preflight_failure_code" -eq 0 ]; then
+  echo "expected run mode preflight failure to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "reason_code=live_preflight_failed" "$TMP_ERR"; then
+  echo "expected preflight failure reason marker" >&2
+  exit 1
+fi
 
 set +e
 bash "$RUNNER" \
@@ -99,6 +126,7 @@ run_output="$(
   KAMN_KOLME_LOCAL_HEAVY=1 \
     bash "$RUNNER" \
       --mode run \
+      --skip-preflight \
       --live-command "printf 'status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:1\nfinality=final\n'" \
       --max-seconds 5 \
       --output-json "$TMP_REPORT" \
@@ -135,6 +163,7 @@ set +e
 KAMN_KOLME_LOCAL_HEAVY=1 \
   bash "$RUNNER" \
     --mode run \
+    --skip-preflight \
     --live-command "sleep 2" \
     --max-seconds 1 \
     --output-json "$TMP_REPORT" \

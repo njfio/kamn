@@ -934,3 +934,63 @@ fn regression_kolme_fork_direct_signed_payload_requires_core_transaction_keys() 
         );
     }
 }
+
+#[test]
+#[ignore = "requires reachable local Kolme node and explicit local opt-in lane"]
+fn integration_kolme_fork_live_node_submit_reaches_endpoint() {
+    let base_url = env::var("KAMN_KOLME_LIVE_BASE_URL")
+        .expect("KAMN_KOLME_LIVE_BASE_URL must be set for live node smoke");
+    let provider_hint =
+        env::var("KAMN_KOLME_LIVE_PROVIDER_HINT").unwrap_or_else(|_| "kolme-fork-local".to_owned());
+    let authorization_header = env::var("KAMN_KOLME_LIVE_AUTHORIZATION").ok();
+
+    let transport = if let Some(value) = authorization_header {
+        KolmeRuntimeCommitHttpTransport::new_with_authorization(10, value.as_str())
+            .expect("transport with authorization should build")
+    } else {
+        KolmeRuntimeCommitHttpTransport::new(10).expect("transport should build")
+    };
+
+    let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
+        base_url.as_str(),
+        provider_hint.as_str(),
+        transport,
+    )
+    .expect("provider should build");
+
+    let unique_suffix = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system clock should be after unix epoch")
+        .as_nanos();
+    let message_json = format!(
+        "{{\"pubkey\":\"pk-live-smoke-{unique_suffix}\",\"nonce\":1,\"created\":\"2026-02-11T00:00:00Z\",\"messages\":[],\"max_height\":null}}"
+    );
+    let wire_payload = format!(
+        "{{\"message\":\"{}\",\"signature\":\"sig-live-smoke-{unique_suffix}\",\"recovery_id\":1}}",
+        message_json.replace('\\', "\\\\").replace('\"', "\\\"")
+    );
+    let idempotency_key = format!("kolme-runtime-commit:live-smoke:{unique_suffix}");
+
+    let outcome = provider.submit_runtime_commit(wire_payload.as_str(), idempotency_key.as_str());
+    match outcome {
+        Ok(KolmeRuntimeCommitProviderOutcome::Submitted(receipt))
+        | Ok(KolmeRuntimeCommitProviderOutcome::Duplicate(receipt)) => {
+            assert!(!receipt.provider.trim().is_empty());
+            assert!(!receipt.commit_id.trim().is_empty());
+        }
+        Ok(KolmeRuntimeCommitProviderOutcome::Rejected { reason }) => {
+            assert!(!reason.trim().is_empty());
+        }
+        Err(KolmeRuntimeCommitProviderError::MalformedResponse { reason }) => {
+            assert!(
+                reason.contains("invalid request")
+                    || reason.contains("missing required field")
+                    || reason.contains("txhash"),
+                "unexpected malformed response reason from live node: {reason}"
+            );
+        }
+        Err(other) => {
+            panic!("live node smoke expected endpoint reachability outcome, got error: {other:?}");
+        }
+    }
+}
