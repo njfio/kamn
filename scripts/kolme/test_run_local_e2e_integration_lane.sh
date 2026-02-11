@@ -53,6 +53,12 @@ if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER"; then
   exit 1
 fi
 
+# Regression: #1677
+if ! grep -q "run_local_kolme_fork_checkout_bootstrap_contract_lane.sh" "$RUNNER"; then
+  echo "expected local e2e integration runner to compose checkout bootstrap contract lane command" >&2
+  exit 1
+fi
+
 if ! grep -q "run_local_e2e_integration_lane.sh" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to reference local e2e integration lane runner" >&2
   exit 1
@@ -83,13 +89,15 @@ if report.get("status") != "ok":
 if report.get("local_only_enforced") is not True:
     raise SystemExit("expected local_only_enforced=true in e2e summary")
 checkpoints = report.get("checkpoints")
-if not isinstance(checkpoints, list) or len(checkpoints) < 5:
+if not isinstance(checkpoints, list) or len(checkpoints) < 6:
     raise SystemExit("expected deterministic checkpoint entries in e2e summary")
 checkpoint_ids = [
     entry.get("id")
     for entry in checkpoints
     if isinstance(entry, dict)
 ]
+if "fork_checkout_bootstrap_contract" not in checkpoint_ids:
+    raise SystemExit("expected fork_checkout_bootstrap_contract checkpoint id")
 if "runtime_commit_adapter" not in checkpoint_ids:
     raise SystemExit("expected runtime_commit_adapter checkpoint id")
 if "sdk_live_transport_parity" not in checkpoint_ids:
@@ -98,6 +106,8 @@ if "fork_rust_test_matrix" not in checkpoint_ids:
     raise SystemExit("expected fork_rust_test_matrix checkpoint id")
 if "fork_live_api_conformance" not in checkpoint_ids:
     raise SystemExit("expected fork_live_api_conformance checkpoint id")
+if checkpoint_ids.index("fork_checkout_bootstrap_contract") > checkpoint_ids.index("runtime_commit_adapter"):
+    raise SystemExit("expected checkout bootstrap checkpoint before runtime_commit_adapter")
 PY
 
 set +e
