@@ -137,6 +137,24 @@ pub fn compose_notifications_websocket_url(
     ))
 }
 
+/// Composes one finality status path by appending encoded `commit_id` query.
+pub fn compose_finality_status_path(
+    status_path: &str,
+    commit_id: &str,
+) -> Result<String, KolmeEndpointPolicyError> {
+    let commit_id = commit_id.trim();
+    if commit_id.is_empty() {
+        return Err(KolmeEndpointPolicyError::Unavailable {
+            reason: "commit_id must not be empty".to_owned(),
+        });
+    }
+    let encoded_commit_id = percent_encode(commit_id);
+    let separator = if status_path.contains('?') { "&" } else { "?" };
+    Ok(format!(
+        "{status_path}{separator}commit_id={encoded_commit_id}"
+    ))
+}
+
 /// Parses and validates one websocket notifications endpoint URL.
 pub fn parse_websocket_endpoint(
     notifications_url: &str,
@@ -240,11 +258,25 @@ fn join_http_paths(base_path: &str, request_path: &str) -> String {
     }
 }
 
+fn percent_encode(value: &str) -> String {
+    let mut encoded = String::new();
+    for byte in value.bytes() {
+        let ch = byte as char;
+        if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.' | '~') {
+            encoded.push(ch);
+        } else {
+            encoded.push('%');
+            encoded.push_str(format!("{byte:02X}").as_str());
+        }
+    }
+    encoded
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        compose_notifications_websocket_url, parse_http_endpoint, parse_websocket_endpoint,
-        KolmeEndpointPolicyError, KolmeHttpScheme,
+        compose_finality_status_path, compose_notifications_websocket_url, parse_http_endpoint,
+        parse_websocket_endpoint, KolmeEndpointPolicyError, KolmeHttpScheme,
     };
 
     #[test]
@@ -286,5 +318,15 @@ mod tests {
         assert_eq!(endpoint.host_header, "kolme.local:7443");
         assert_eq!(endpoint.port, 7443);
         assert_eq!(endpoint.target_path, "/base/runtime-commit/status");
+    }
+
+    #[test]
+    fn unit_compose_finality_status_path_rejects_empty_commit_id() {
+        assert_eq!(
+            compose_finality_status_path("/runtime-commit/status", " "),
+            Err(KolmeEndpointPolicyError::Unavailable {
+                reason: "commit_id must not be empty".to_owned(),
+            })
+        );
     }
 }

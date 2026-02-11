@@ -23,8 +23,8 @@ pub use block_scan_policy::{
 };
 pub use codec::{KolmeCodecError, KolmeWireCodec, PassthroughCodec};
 pub use endpoint_policy::{
-    compose_notifications_websocket_url, parse_http_endpoint, parse_websocket_endpoint,
-    KolmeEndpointPolicyError, KolmeHttpScheme, KolmeParsedHttpEndpoint,
+    compose_finality_status_path, compose_notifications_websocket_url, parse_http_endpoint,
+    parse_websocket_endpoint, KolmeEndpointPolicyError, KolmeHttpScheme, KolmeParsedHttpEndpoint,
     KolmeParsedWebsocketEndpoint,
 };
 pub use finality::{resolve_finality, FinalityResolution, FinalityState};

@@ -2,6 +2,7 @@
 
 use crate::AgentDid;
 use kamn_kolme::{
+    compose_finality_status_path as compose_kolme_finality_status_path,
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
     parse_http_endpoint as parse_kolme_http_endpoint,
     parse_receipt_finality as parse_kolme_receipt_finality,
@@ -1022,14 +1023,8 @@ impl KolmeRuntimeCommitFinalityTransport for KolmeRuntimeCommitHttpTransport {
         status_path: &str,
         commit_id: &str,
     ) -> Result<String, KolmeRuntimeCommitProviderError> {
-        if commit_id.trim().is_empty() {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "commit_id must not be empty".to_owned(),
-            });
-        }
-        let encoded_commit_id = percent_encode(commit_id);
-        let separator = if status_path.contains('?') { "&" } else { "?" };
-        let path = format!("{status_path}{separator}commit_id={encoded_commit_id}");
+        let path = compose_kolme_finality_status_path(status_path, commit_id)
+            .map_err(map_endpoint_policy_error_to_malformed)?;
         self.execute_request(base_url, path.as_str(), "GET", None, &[])
     }
 }
@@ -1734,6 +1729,14 @@ fn map_endpoint_policy_error(
     error: KamnKolmeEndpointPolicyError,
 ) -> KolmeRuntimeCommitProviderError {
     KolmeRuntimeCommitProviderError::Unavailable {
+        reason: error.to_string(),
+    }
+}
+
+fn map_endpoint_policy_error_to_malformed(
+    error: KamnKolmeEndpointPolicyError,
+) -> KolmeRuntimeCommitProviderError {
+    KolmeRuntimeCommitProviderError::MalformedResponse {
         reason: error.to_string(),
     }
 }
@@ -2497,20 +2500,6 @@ fn map_http_client_status_error(status_code: u16) -> KolmeRuntimeCommitProviderE
             reason: format!("http response status indicates client failure: {status_code}"),
         },
     }
-}
-
-fn percent_encode(value: &str) -> String {
-    let mut encoded = String::new();
-    for byte in value.bytes() {
-        let ch = byte as char;
-        if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.' | '~') {
-            encoded.push(ch);
-        } else {
-            encoded.push('%');
-            encoded.push_str(format!("{byte:02X}").as_str());
-        }
-    }
-    encoded
 }
 
 fn is_kolme_broadcast_submit_path(submit_path: &str) -> bool {
