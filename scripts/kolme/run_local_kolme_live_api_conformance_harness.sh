@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PROBE_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_api_probe_lane.sh"
 NATIVE_RUNNER="$ROOT_DIR/scripts/kolme/run_local_native_api_parity_live_proof_lane.sh"
+LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 MATRIX_FILE="$ROOT_DIR/fixtures/kolme_commit/local_live_api_conformance_matrix.json"
 
 MODE="dry-run"
@@ -193,6 +194,11 @@ if [ ! -f "$MATRIX_FILE" ]; then
   exit 1
 fi
 
+if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
+  echo "expected shared local-heavy opt-in guard helper to be executable" >&2
+  exit 1
+fi
+
 CONFORMANCE_MATRIX_JSON="$(
   python3 - "$MATRIX_FILE" <<'PY'
 from __future__ import annotations
@@ -313,8 +319,7 @@ if [ "$MODE" = "run" ]; then
   : >"$CHECK_FILE"
   start_epoch="$(date +%s)"
 
-  if [ "${KAMN_KOLME_LOCAL_HEAVY:-0}" != "1" ]; then
-    echo "run mode requires explicit local-only opt-in: KAMN_KOLME_LOCAL_HEAVY=1" >&2
+  if ! "$LOCAL_HEAVY_GUARD"; then
     record_check "api_probe" "$probe_command" "fail" "local_opt_in_missing"
     record_check "native_api_parity" "$native_command" "skipped" "local_opt_in_missing"
     overall_status="fail"

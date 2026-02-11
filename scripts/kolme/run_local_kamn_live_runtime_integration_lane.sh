@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BOOTSTRAP_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh"
 CONFORMANCE_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_api_conformance_harness.sh"
+LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 
 MODE="dry-run"
 OUTPUT_JSON="/tmp/kolme-local-kamn-live-runtime-integration-summary.json"
@@ -205,6 +206,11 @@ if [ ! -x "$CONFORMANCE_RUNNER" ]; then
   exit 1
 fi
 
+if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
+  echo "expected shared local-heavy opt-in guard helper to be executable" >&2
+  exit 1
+fi
+
 default_runtime_commit_command="curl --silent --show-error --fail --request POST --header \"Content-Type: application/json\" --data '{\"commit_id\":\"local-runtime-commit\"}' ${BASE_URL%/}/broadcast/runtime-commit"
 if [ -z "$RUNTIME_COMMIT_COMMAND" ]; then
   RUNTIME_COMMIT_COMMAND="$default_runtime_commit_command"
@@ -269,8 +275,7 @@ if [ "$MODE" = "run" ]; then
   : >"$CHECK_FILE"
   start_epoch="$(date +%s)"
 
-  if [ "${KAMN_KOLME_LOCAL_HEAVY:-0}" != "1" ]; then
-    echo "run mode requires explicit local-only opt-in: KAMN_KOLME_LOCAL_HEAVY=1" >&2
+  if ! "$LOCAL_HEAVY_GUARD"; then
     record_check "bootstrap_readiness" "$bootstrap_command" "fail" "local_opt_in_missing"
     record_check "live_api_conformance" "$conformance_command" "skipped" "local_opt_in_missing"
     record_check "runtime_commit_endpoint" "$runtime_commit_command" "skipped" "local_opt_in_missing"

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
+
 MODE="dry-run"
 OUTPUT_JSON="/tmp/kolme-local-runtime-commit-live-summary.json"
 LIVE_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-live-output.txt"
@@ -79,6 +82,11 @@ if ! [[ "$MAX_SECONDS" =~ ^[0-9]+$ ]] || [ "$MAX_SECONDS" -le 0 ]; then
   exit 1
 fi
 
+if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
+  echo "expected shared local-heavy opt-in guard helper to be executable" >&2
+  exit 1
+fi
+
 CHECK_FILE="$(mktemp)"
 trap 'rm -f "$CHECK_FILE"' EXIT
 
@@ -102,8 +110,7 @@ if [ "$MODE" = "run" ]; then
   : >"$CHECK_FILE"
   start_epoch="$(date +%s)"
 
-  if [ "${KAMN_KOLME_LOCAL_HEAVY:-0}" != "1" ]; then
-    echo "run mode requires explicit local-only opt-in: KAMN_KOLME_LOCAL_HEAVY=1" >&2
+  if ! "$LOCAL_HEAVY_GUARD"; then
     record_check "runtime_commit_live_command" "$planned_command" "fail"
     overall_status="fail"
     reason_code="local_opt_in_missing"

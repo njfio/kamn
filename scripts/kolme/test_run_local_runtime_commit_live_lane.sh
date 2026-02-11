@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_runtime_commit_live_lane.sh"
+LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 TMP_REPORT="$(mktemp)"
 TMP_OUTPUT="$(mktemp)"
@@ -27,6 +28,16 @@ assert_eq() {
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local runtime commit live lane runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
+  echo "expected shared local-heavy opt-in guard helper to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER"; then
+  echo "expected runtime commit live runner to invoke shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 
