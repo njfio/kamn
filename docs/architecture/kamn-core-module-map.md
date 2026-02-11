@@ -122,8 +122,8 @@ contributors can locate runtime/domain ownership responsibilities quickly.
     `crates/kamn-kolme/src/transport_request_policy.rs`, `crates/kamn-kolme/src/broadcast_payload_policy.rs`
 - Ownership boundary:
   - `kamn-kolme` is the dedicated home for runtime-commit transport/codec/finality
-    contracts (including direct signed payload validation, lifecycle/finality,
-    and deterministic request identity
+    contracts (including direct signed payload validation, receipt-to-commit
+    finality mapping, lifecycle/finality, and deterministic request identity
     projection policy). `kamn-core`
     retains temporary compatibility exports until full migration is complete.
 - Runtime/data-flow ownership:

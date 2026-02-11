@@ -9,6 +9,7 @@ fn doc_contains_adapter_types_and_validation_commands() {
     assert!(DOC.contains("KolmeRuntimeCommitProviderError"));
     assert!(DOC.contains("KolmeRuntimeCommitForkFinalityResolver"));
     assert!(DOC.contains("runtime_lifecycle_policy"));
+    assert!(DOC.contains("commit_finality_from_receipt_finality"));
     assert!(DOC.contains("lifecycle_state_for_finality"));
     assert!(DOC.contains("lifecycle_state_label"));
     assert!(DOC.contains("commit_finality_label"));
@@ -51,4 +52,5 @@ fn regression_requires_adapter_provider_mismatch_and_non_final_fail_closed_marke
     assert!(DOC.contains("`Regression: #1533`"));
     assert!(DOC.contains("`Regression: #1775`"));
     assert!(DOC.contains("`Regression: #1777`"));
+    assert!(DOC.contains("`Regression: #1779`"));
 }

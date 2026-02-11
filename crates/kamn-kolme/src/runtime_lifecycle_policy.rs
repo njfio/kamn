@@ -1,5 +1,7 @@
 //! Runtime-commit lifecycle and finality policy contracts.
 
+use crate::ReceiptFinality;
+
 /// Finality classification for a runtime commit receipt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KolmeCommitReceiptFinality {
@@ -33,6 +35,17 @@ pub fn lifecycle_state_for_finality(
     }
 }
 
+/// Maps receipt finality aliases to runtime commit finality.
+pub fn commit_finality_from_receipt_finality(
+    finality: ReceiptFinality,
+) -> KolmeCommitReceiptFinality {
+    match finality {
+        ReceiptFinality::Pending => KolmeCommitReceiptFinality::Pending,
+        ReceiptFinality::Final => KolmeCommitReceiptFinality::Final,
+        ReceiptFinality::Failed => KolmeCommitReceiptFinality::Failed,
+    }
+}
+
 /// Renders deterministic lifecycle state labels for diagnostics and errors.
 pub fn lifecycle_state_label(state: RuntimeCommitLifecycleState) -> &'static str {
     match state {
@@ -54,9 +67,10 @@ pub fn commit_finality_label(finality: KolmeCommitReceiptFinality) -> &'static s
 #[cfg(test)]
 mod tests {
     use super::{
-        commit_finality_label, lifecycle_state_for_finality, lifecycle_state_label,
-        KolmeCommitReceiptFinality, RuntimeCommitLifecycleState,
+        commit_finality_from_receipt_finality, commit_finality_label, lifecycle_state_for_finality,
+        lifecycle_state_label, KolmeCommitReceiptFinality, RuntimeCommitLifecycleState,
     };
+    use crate::ReceiptFinality;
 
     #[test]
     fn unit_maps_finality_to_lifecycle_state() {
@@ -84,6 +98,23 @@ mod tests {
         assert_eq!(
             commit_finality_label(KolmeCommitReceiptFinality::Final),
             "final"
+        );
+    }
+
+    #[test]
+    fn regression_receipt_finality_mapping_remains_stable() {
+        // Regression: #1779
+        assert_eq!(
+            commit_finality_from_receipt_finality(ReceiptFinality::Pending),
+            KolmeCommitReceiptFinality::Pending
+        );
+        assert_eq!(
+            commit_finality_from_receipt_finality(ReceiptFinality::Final),
+            KolmeCommitReceiptFinality::Final
+        );
+        assert_eq!(
+            commit_finality_from_receipt_finality(ReceiptFinality::Failed),
+            KolmeCommitReceiptFinality::Failed
         );
     }
 }
