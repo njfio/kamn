@@ -18,6 +18,9 @@ ROOT_DIR = SCRIPT_DIR.parent.parent
 sys.path.insert(0, str(SCRIPT_DIR.parent))
 
 from framework.contract_framework import ContractError, fail, load_json  # noqa: E402
+from localhost_signed_report_composer import (  # noqa: E402
+    compose_localhost_signed_integration_contract_report,
+)
 
 
 def _is_executable(path: Path) -> bool:
@@ -377,53 +380,17 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
         session_expired_payload = load_json(session_expired_report)
         replay_payload = load_json(replay_report)
         admission_payload = load_json(admission_report)
-        summary = {
-            "schema_version": "kamn.sdk.localhost-signed.integration-contract.v1",
-            "status": "pass",
-            "final_decision": "GO",
-            "contract_key": "localhost_signed_integration_contract:v1",
-            "scenario_fixture_schema_version": fixture_schema_version,
-            "scenario_fixture_ids": scenario_fixture_ids,
-            "success_scenario_status": success_payload["status"],
-            "signature_mismatch_scenario_status": signature_payload["status"],
-            "malformed_signature_scenario_status": malformed_signature_payload["status"],
-            "timeout_scenario_status": timeout_payload["status"],
-            "session_expired_scenario_status": session_expired_payload["status"],
-            "replay_nonce_scenario_status": replay_payload["status"],
-            "admission_guards_scenario_status": admission_payload["status"],
-            "success_evidence_key": success_payload["evidence_key"],
-            "signature_mismatch_evidence_key": signature_payload["evidence_key"],
-            "malformed_signature_evidence_key": malformed_signature_payload["evidence_key"],
-            "timeout_evidence_key": timeout_payload["evidence_key"],
-            "session_expired_evidence_key": session_expired_payload["evidence_key"],
-            "replay_nonce_evidence_key": replay_payload["evidence_key"],
-            "admission_guards_evidence_key": admission_payload["evidence_key"],
-            "signature_mismatch_reason_code": signature_payload["reason_code"],
-            "malformed_signature_reason_code": malformed_signature_payload["reason_code"],
-            "timeout_reason_code": timeout_payload["reason_code"],
-            "session_expired_reason_code": session_expired_payload["reason_code"],
-            "replay_nonce_reason_code": replay_payload["reason_code"],
-            "admission_guards_reason_code": admission_payload["reason_code"],
-            "success_reason_key": success_payload["reason_key"],
-            "signature_mismatch_reason_key": signature_payload["reason_key"],
-            "malformed_signature_reason_key": malformed_signature_payload["reason_key"],
-            "timeout_reason_key": timeout_payload["reason_key"],
-            "session_expired_reason_key": session_expired_payload["reason_key"],
-            "replay_nonce_reason_key": replay_payload["reason_key"],
-            "admission_guards_reason_key": admission_payload["reason_key"],
-            "success_elapsed_seconds": success_payload["elapsed_seconds"],
-            "signature_mismatch_elapsed_seconds": signature_payload["elapsed_seconds"],
-            "malformed_signature_elapsed_seconds": malformed_signature_payload["elapsed_seconds"],
-            "timeout_elapsed_seconds": timeout_payload["elapsed_seconds"],
-            "session_expired_elapsed_seconds": session_expired_payload["elapsed_seconds"],
-            "replay_nonce_elapsed_seconds": replay_payload["elapsed_seconds"],
-            "admission_guards_elapsed_seconds": admission_payload["elapsed_seconds"],
-            "expiry_guard_status": session_expired_payload["expiry_guard_status"],
-            "replay_guard_status": replay_payload["replay_guard_status"],
-            "replay_rejected_nonce": replay_payload["replay_rejected_nonce"],
-            "admission_guard_status": admission_payload["admission_guard_status"],
-            "admission_reason_codes": admission_payload["admission_reason_codes"],
-        }
+        summary = compose_localhost_signed_integration_contract_report(
+            fixture_schema_version=fixture_schema_version,
+            scenario_fixture_ids=scenario_fixture_ids,
+            success_payload=success_payload,
+            signature_payload=signature_payload,
+            malformed_signature_payload=malformed_signature_payload,
+            timeout_payload=timeout_payload,
+            session_expired_payload=session_expired_payload,
+            replay_payload=replay_payload,
+            admission_payload=admission_payload,
+        )
         summary_report.write_text(
             json.dumps(summary, separators=(",", ":")),
             encoding="utf-8",

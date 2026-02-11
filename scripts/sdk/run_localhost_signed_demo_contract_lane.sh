@@ -18,6 +18,7 @@ EOF_USAGE
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEMO_SCRIPT="$ROOT_DIR/scripts/sdk/run_localhost_signed_demo.sh"
 INTEGRATION_CONTRACT_LANE="$ROOT_DIR/scripts/sdk/run_localhost_signed_integration_contract_lane.sh"
+REPORT_COMPOSER="$ROOT_DIR/scripts/sdk/localhost_signed_report_composer.py"
 
 output_json=""
 max_seconds="${KAMN_LOCALHOST_SIGNED_DEMO_CONTRACT_MAX_SECONDS:-180}"
@@ -67,6 +68,11 @@ if [ ! -x "$INTEGRATION_CONTRACT_LANE" ]; then
   exit 1
 fi
 
+if [ ! -x "$REPORT_COMPOSER" ]; then
+  echo "expected localhost signed report composer helper module to be executable" >&2
+  exit 1
+fi
+
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -99,52 +105,12 @@ fi
 
 if [ -n "$output_json" ]; then
   mkdir -p "$(dirname "$output_json")"
-  python3 - \
-    "$demo_artifact" \
-    "$integration_report" \
-    "$output_json" \
-    "$elapsed_seconds" \
-    "$max_seconds" <<'PY'
-import json
-import pathlib
-import sys
-
-demo_artifact_path = pathlib.Path(sys.argv[1])
-integration_report_path = pathlib.Path(sys.argv[2])
-output_path = pathlib.Path(sys.argv[3])
-elapsed_seconds = int(sys.argv[4])
-max_seconds = int(sys.argv[5])
-
-demo_artifact = json.loads(demo_artifact_path.read_text(encoding="utf-8"))
-integration_report = json.loads(integration_report_path.read_text(encoding="utf-8"))
-
-if demo_artifact.get("schema_version") != "kamn.sdk.localhost-signed.demo-receipt-artifact.v1":
-    raise SystemExit("unexpected localhost signed demo artifact schema")
-if demo_artifact.get("status") != "pass":
-    raise SystemExit("expected localhost signed demo artifact status=pass")
-
-if integration_report.get("schema_version") != "kamn.sdk.localhost-signed.integration-contract.v1":
-    raise SystemExit("unexpected localhost signed integration report schema")
-if integration_report.get("status") != "pass":
-    raise SystemExit("expected localhost signed integration report status=pass")
-
-payload = {
-    "schema_version": "kamn.sdk.localhost-signed.demo-contract.v1",
-    "status": "pass",
-    "suite": "localhost_signed_demo_contract_lane",
-    "demo_artifact_schema": "kamn.sdk.localhost-signed.demo-receipt-artifact.v1",
-    "integration_report_schema": "kamn.sdk.localhost-signed.integration-contract.v1",
-    "demo_status": "pass",
-    "integration_status": "pass",
-    "demo_success_marker": "localhost signed message demo completed.",
-    "integration_success_marker": "localhost signed integration contract lane tests passed.",
-    "elapsed_seconds": elapsed_seconds,
-    "max_seconds": max_seconds,
-    "budget_status": "within_budget",
-    "reason_codes": ["none"],
-}
-output_path.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
-PY
+  python3 "$REPORT_COMPOSER" compose-demo \
+    --demo-artifact "$demo_artifact" \
+    --integration-report "$integration_report" \
+    --output-json "$output_json" \
+    --elapsed-seconds "$elapsed_seconds" \
+    --max-seconds "$max_seconds"
   echo "localhost_signed_demo_contract_report=$output_json"
 fi
 

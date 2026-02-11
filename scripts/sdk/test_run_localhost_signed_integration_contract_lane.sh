@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE_SCRIPT="$ROOT_DIR/scripts/sdk/run_localhost_signed_integration_contract_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/sdk/localhost_signed_integration_contract_lane_contract.py"
+REPORT_COMPOSER="$ROOT_DIR/scripts/sdk/localhost_signed_report_composer.py"
 FIXTURE_FILE="$ROOT_DIR/fixtures/runtime/localhost_signed_integration_cases.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -15,6 +16,11 @@ fi
 
 if [ ! -x "$SHARED_CONTRACT" ]; then
   echo "expected localhost signed integration shared contract lane module to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$REPORT_COMPOSER" ]; then
+  echo "expected localhost signed report composer helper module to be executable" >&2
   exit 1
 fi
 
@@ -163,6 +169,11 @@ fi
 
 if ! grep -Fq "fixtures/runtime/localhost_signed_integration_cases.json" "$SHARED_CONTRACT"; then
   echo "expected localhost signed integration shared contract lane module to enforce fixture corpus contract" >&2
+  exit 1
+fi
+
+if ! grep -Fq "localhost_signed_report_composer" "$SHARED_CONTRACT"; then
+  echo "expected localhost signed integration shared contract lane module to use shared report composer helper" >&2
   exit 1
 fi
 
