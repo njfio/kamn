@@ -33,6 +33,21 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `kolme.local.kamn.live_runtime_integration`
   - `kolme.local.heavy.validation_matrix`
 
+## Shared Wrapper Dispatcher Tranche (Issue #1827)
+
+- Shared Kolme contract-lane dispatcher:
+  - `scripts/kolme/run_contract_lane_dispatch.sh`
+- Compatibility wrapper shape:
+  - all manifest-only `scripts/kolme/run_*contract_lane.sh` wrappers are symlinks to the shared dispatcher.
+- Dispatcher matrix guard:
+  - `bash scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh`
+- CI contract surface:
+  - dispatcher matrix guard runs in both:
+    - `.github/workflows/ci-fast-gate.yml`
+    - `scripts/ci/test_ci_tools.sh`
+- Regression marker:
+  - `Regression: #1827`
+
 ## Tranche-1 Manifest Migration (Issue #1722)
 
 - Migration guard contract:

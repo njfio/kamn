@@ -9,6 +9,16 @@ if [ ! -f "$MANIFEST_RUNNER" ]; then
   exit 1
 fi
 
+lane_wrapper_shell_loc() {
+  local lane_script_path="$1"
+  if [ -L "$lane_script_path" ]; then
+    echo 1
+    return
+  fi
+
+  wc -l <"$lane_script_path"
+}
+
 lane_scripts=(
   "run_fast_gate_native_api_parity_contract_lane.sh"
   "run_local_native_api_parity_live_proof_contract_lane.sh"
@@ -88,7 +98,7 @@ PY
     exit 1
   fi
 
-  lane_loc="$(wc -l <"$lane_script_path")"
+  lane_loc="$(lane_wrapper_shell_loc "$lane_script_path")"
   total_shell_loc="$((total_shell_loc + lane_loc))"
 done
 
