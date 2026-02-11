@@ -3,11 +3,14 @@
 use crate::AgentDid;
 use kamn_kolme::{
     classify_tls_failure_reason as classify_kolme_tls_failure_reason,
+    commit_finality_label as commit_finality_label_contract,
     compose_finality_status_path as compose_kolme_finality_status_path,
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
     deterministic_backend_commit_id as deterministic_kolme_backend_commit_id,
     find_http_header_boundary as find_kolme_http_header_boundary,
     is_broadcast_submit_path as is_kolme_broadcast_submit_path_contract,
+    lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
+    lifecycle_state_label as lifecycle_state_label_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
     parse_authorization_header_value as parse_kolme_authorization_header_value,
     parse_block_fallback_response as parse_kolme_block_fallback_response_contract,
@@ -37,6 +40,7 @@ use kamn_kolme::{
     KolmeBlockFallbackPolicyError as KamnKolmeBlockFallbackPolicyError,
     KolmeBlockFallbackResponse as KamnKolmeBlockFallbackResponse,
     KolmeBroadcastPayloadPolicyError as KamnKolmeBroadcastPayloadPolicyError,
+    KolmeCommitReceiptFinality as KamnKolmeCommitReceiptFinality,
     KolmeEndpointPolicyError as KamnKolmeEndpointPolicyError,
     KolmeHttpResponsePolicyError as KamnKolmeHttpResponsePolicyError,
     KolmeHttpScheme as KamnKolmeHttpScheme, KolmeNotificationEvent as KamnKolmeNotificationEvent,
@@ -50,6 +54,7 @@ use kamn_kolme::{
     KolmeTransportRequestPolicyError as KamnKolmeTransportRequestPolicyError,
     KolmeWebsocketFrame as KamnKolmeWebsocketFrame,
     KolmeWebsocketPolicyError as KamnKolmeWebsocketPolicyError, ReceiptFinality,
+    RuntimeCommitLifecycleState as KamnKolmeRuntimeCommitLifecycleState,
 };
 use std::collections::HashMap;
 use std::fmt;
@@ -368,15 +373,7 @@ impl KolmeApiBroadcastResponse {
 }
 
 /// Finality classification for a runtime commit receipt.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum KolmeCommitReceiptFinality {
-    /// Commit has been submitted and is pending confirmation.
-    Pending,
-    /// Commit is fully finalized.
-    Final,
-    /// Commit failed validation/finality.
-    Failed,
-}
+pub type KolmeCommitReceiptFinality = KamnKolmeCommitReceiptFinality;
 
 /// Receipt emitted by the runtime commit client.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -404,15 +401,7 @@ pub enum KolmeRuntimeCommitOutcome {
 }
 
 /// Runtime lifecycle state projected from commit receipt outcomes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RuntimeCommitLifecycleState {
-    /// Commit is pending confirmation and should remain on requeue/watch.
-    Pending,
-    /// Commit has reached final confirmation.
-    Finalized,
-    /// Commit failed and should not be retried automatically.
-    Failed,
-}
+pub type RuntimeCommitLifecycleState = KamnKolmeRuntimeCommitLifecycleState;
 
 /// One runtime operation lifecycle record.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -2354,27 +2343,15 @@ fn deterministic_commit_id(
 fn lifecycle_state_for_finality(
     finality: KolmeCommitReceiptFinality,
 ) -> RuntimeCommitLifecycleState {
-    match finality {
-        KolmeCommitReceiptFinality::Pending => RuntimeCommitLifecycleState::Pending,
-        KolmeCommitReceiptFinality::Final => RuntimeCommitLifecycleState::Finalized,
-        KolmeCommitReceiptFinality::Failed => RuntimeCommitLifecycleState::Failed,
-    }
+    lifecycle_state_for_finality_contract(finality)
 }
 
 fn lifecycle_state_label(state: RuntimeCommitLifecycleState) -> &'static str {
-    match state {
-        RuntimeCommitLifecycleState::Pending => "pending",
-        RuntimeCommitLifecycleState::Finalized => "finalized",
-        RuntimeCommitLifecycleState::Failed => "failed",
-    }
+    lifecycle_state_label_contract(state)
 }
 
 fn commit_finality_label(finality: KolmeCommitReceiptFinality) -> &'static str {
-    match finality {
-        KolmeCommitReceiptFinality::Pending => "pending",
-        KolmeCommitReceiptFinality::Final => "final",
-        KolmeCommitReceiptFinality::Failed => "failed",
-    }
+    commit_finality_label_contract(finality)
 }
 
 fn lifecycle_record_from_outcome(
