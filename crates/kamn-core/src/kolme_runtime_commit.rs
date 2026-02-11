@@ -16,7 +16,7 @@ use kamn_kolme::{
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
     lifecycle_state_label as lifecycle_state_label_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
-    notification_event_to_receipt as notification_event_to_kolme_receipt_contract,
+    notification_event_to_provider_receipt as notification_event_to_kolme_provider_receipt_contract,
     parse_authorization_header_value as parse_kolme_authorization_header_value,
     parse_http_endpoint as parse_kolme_http_endpoint,
     parse_http_response_body as parse_kolme_http_response_body,
@@ -690,10 +690,6 @@ pub enum KolmeRuntimeCommitNotificationEvent {
 impl KolmeRuntimeCommitNotificationEvent {
     /// Converts notification event to a provider receipt when it carries tx finality information.
     pub fn to_provider_receipt(&self, provider: &str) -> Option<KolmeRuntimeCommitProviderReceipt> {
-        let provider = provider.trim();
-        if provider.is_empty() {
-            return None;
-        }
         let event = match self {
             Self::NewBlock {
                 txhash,
@@ -713,9 +709,9 @@ impl KolmeRuntimeCommitNotificationEvent {
                 KamnKolmeNotificationEvent::LatestBlock { height: *height }
             }
         };
-        let receipt = notification_event_to_kolme_receipt_contract(&event)?;
+        let receipt = notification_event_to_kolme_provider_receipt_contract(provider, &event)?;
         Some(KolmeRuntimeCommitProviderReceipt {
-            provider: provider.to_owned(),
+            provider: receipt.provider,
             commit_id: receipt.commit_id,
             finality: receipt.finality,
         })

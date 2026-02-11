@@ -1,7 +1,8 @@
 use kamn_kolme::{
+    notification_event_to_provider_receipt as notification_event_to_provider_receipt_contract,
     notification_event_to_receipt as notification_event_to_receipt_contract,
     parse_notification_event, KolmeCommitReceiptFinality, KolmeNotificationEvent,
-    KolmeNotificationReceipt,
+    KolmeNotificationReceipt, KolmeProviderNotificationReceipt,
 };
 
 #[test]
@@ -61,5 +62,38 @@ fn regression_issue_1848_notification_event_to_receipt_returns_none_for_latest_b
     // Regression: #1848
     let receipt =
         notification_event_to_receipt_contract(&KolmeNotificationEvent::LatestBlock { height: 55 });
+    assert_eq!(receipt, None);
+}
+
+#[test]
+fn functional_notification_event_to_provider_receipt_normalizes_provider_and_maps_receipt() {
+    let receipt = notification_event_to_provider_receipt_contract(
+        "  kolme-fork  ",
+        &KolmeNotificationEvent::NewBlock {
+            txhash: "0xabc123".to_owned(),
+            block_height: Some(42),
+        },
+    )
+    .expect("new block + provider should map to provider receipt");
+    assert_eq!(
+        receipt,
+        KolmeProviderNotificationReceipt {
+            provider: "kolme-fork".to_owned(),
+            commit_id: "kolme-commit:0xabc123:h42".to_owned(),
+            finality: KolmeCommitReceiptFinality::Final,
+        }
+    );
+}
+
+#[test]
+fn regression_issue_1852_notification_event_to_provider_receipt_rejects_empty_provider() {
+    // Regression: #1852
+    let receipt = notification_event_to_provider_receipt_contract(
+        "   ",
+        &KolmeNotificationEvent::FailedTransaction {
+            txhash: "0xff00".to_owned(),
+            proposed_height: Some(44),
+        },
+    );
     assert_eq!(receipt, None);
 }
