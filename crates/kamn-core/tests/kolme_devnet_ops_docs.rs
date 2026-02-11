@@ -281,6 +281,24 @@ fn plan_contains_runtime_nonce_manifest_migration_contract() {
 }
 
 #[test]
+fn plan_contains_version_matrix_manifest_migration_contract() {
+    assert!(PLAN.contains("## Version+Matrix Manifest Migration (Issue #1765)"));
+    assert!(PLAN.contains("scripts/ci/test_kolme_version_matrix_manifest_migration_contract.sh"));
+    assert!(
+        PLAN.contains("scripts/framework/manifests/kolme_version_compatibility_contract_lane.json")
+    );
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_local_fork_rust_test_matrix_contract_lane.json"
+    ));
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_local_heavy_validation_matrix_contract_lane.json"
+    ));
+    assert!(PLAN.contains("scripts/kolme/contracts/local_heavy_validation_matrix_contract_lane.py"));
+    assert!(PLAN
+        .contains("Combined wrapper shell LOC for this version/matrix tranche remains `<= 120`."));
+}
+
+#[test]
 fn regression_requires_failover_sync_budget_and_scheduled_cadence_guards() {
     // Regression: #788
     assert!(PLAN
@@ -340,6 +358,14 @@ fn regression_requires_runtime_nonce_manifest_migration_guard_marker() {
     // Regression: #1763
     assert!(PLAN.contains(
         "runtime+nonce manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1763`)."
+    ));
+}
+
+#[test]
+fn regression_requires_version_matrix_manifest_migration_guard_marker() {
+    // Regression: #1765
+    assert!(PLAN.contains(
+        "version+matrix manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1765`)."
     ));
 }
 
