@@ -99,7 +99,7 @@ impl KolmeRuntimeCommitRequest {
                 reason: "must be a valid KAMN DID",
             })?;
         let actor_did_value = actor_did.as_str().to_owned();
-        let idempotency_key = deterministic_idempotency_key(
+        let idempotency_key = deterministic_runtime_commit_idempotency_key_contract(
             operation_id,
             state_root,
             actor_did_value.as_str(),
@@ -2166,7 +2166,7 @@ impl KolmeRuntimeCommitClient for InMemoryKolmeRuntimeCommitClient {
 
         let receipt = KolmeRuntimeCommitReceipt {
             provider: self.provider.clone(),
-            commit_id: deterministic_commit_id(
+            commit_id: deterministic_runtime_commit_id_contract(
                 request.operation_id.as_str(),
                 request.actor_did.as_str(),
                 request.nonce,
@@ -2279,31 +2279,6 @@ impl fmt::Display for KolmeRuntimeCommitError {
 }
 
 impl std::error::Error for KolmeRuntimeCommitError {}
-
-fn deterministic_idempotency_key(
-    operation_id: &str,
-    state_root: &str,
-    actor_did: &str,
-    nonce: u64,
-    payload_hash: &str,
-) -> String {
-    deterministic_runtime_commit_idempotency_key_contract(
-        operation_id,
-        state_root,
-        actor_did,
-        nonce,
-        payload_hash,
-    )
-}
-
-fn deterministic_commit_id(
-    operation_id: &str,
-    actor_did: &str,
-    nonce: u64,
-    payload_hash: &str,
-) -> String {
-    deterministic_runtime_commit_id_contract(operation_id, actor_did, nonce, payload_hash)
-}
 
 fn lifecycle_record_from_outcome(
     request: &KolmeRuntimeCommitRequest,
