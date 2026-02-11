@@ -323,24 +323,28 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Real-fork local wrapper runner:
   - `bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-real-process-summary.json`
 - Explicit local-only real-fork wrapper execution:
-  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 360 --preflight-max-seconds 45 --lifecycle-max-seconds 300 --lifecycle-startup-max-seconds 45 --lifecycle-integration-max-seconds 240 --lifecycle-bootstrap-max-seconds 90 --lifecycle-conformance-max-seconds 180 --lifecycle-runtime-commit-max-seconds 30 --output-json /tmp/kolme-local-fork-real-process-summary.json`
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 360 --preflight-max-seconds 45 --self-test-max-seconds 120 --self-test-matrix-max-seconds 60 --lifecycle-max-seconds 300 --lifecycle-startup-max-seconds 45 --lifecycle-integration-max-seconds 240 --lifecycle-bootstrap-max-seconds 90 --lifecycle-conformance-max-seconds 180 --lifecycle-runtime-commit-max-seconds 30 --output-json /tmp/kolme-local-fork-real-process-summary.json`
 - Default serve profile contract:
   - `cd <checkout-path> && cargo run --bin example-six-sigma -- serve api-server`
 - Profile preflight prerequisite commands:
   - `bash scripts/kolme/run_local_kolme_fork_profile_preflight_lane.sh --mode run --checkout-path /tmp/kolme_fork --max-seconds 45 --output-json /tmp/kolme-local-fork-profile-preflight-summary.json`
   - `python3 scripts/kolme/check_local_kolme_fork_profile_preflight_policy.py --report-file /tmp/kolme-local-fork-profile-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code profile_preflight_passed --output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
+- Local self-test prerequisite commands:
+  - `bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --matrix-max-seconds 60 --output-json /tmp/kolme-local-fork-self-test-summary.json`
+  - `python3 scripts/kolme/check_local_kolme_fork_self_test_policy.py --report-file /tmp/kolme-local-fork-self-test-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code fork_self_test_passed --output-json /tmp/kolme-local-fork-self-test-policy.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_real_process_policy.py --report-file /tmp/kolme-local-fork-real-process-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-real-process-policy.json`
 - Summary schema:
   - `kamn.kolme.local-fork-real-process-summary.v1`
 - Deterministic checkpoints include:
   - real-fork command profile validation for `example-six-sigma serve api-server`.
-  - `run_local_kolme_fork_profile_preflight_lane.sh` and policy verification execute before lifecycle orchestration.
+  - `run_local_kolme_fork_profile_preflight_lane.sh` and policy verification execute before self-test/lifecycle orchestration.
+  - `run_local_kolme_fork_self_test_lane.sh` and policy verification execute before lifecycle orchestration.
   - `run_local_kolme_fork_process_lifecycle_lane.sh` run-mode composition with bounded budgets.
   - `check_local_kolme_fork_process_lifecycle_policy.py` GO decision verification.
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.
-  - wrapper run mode enforces bounded preflight/lifecycle and total runtime budgets.
+  - wrapper run mode enforces bounded preflight/self-test/lifecycle and total runtime budgets.
   - wrapper run-mode execution remains excluded from PR fast-gate workflow routing.
 
 ## Local Runtime Commit Live Proof Lane (Issue #1450)
@@ -485,7 +489,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local fork process lifecycle integration lane fails closed for process start/readiness/integration/teardown/budget drift and missing local opt-in (`Regression: #1494`).
 - local fork profile preflight lane fails closed for local opt-in, checkout/profile contract drift, probe command failures, and runtime budget overruns (`Regression: #1648`).
 - local fork self-test lane fails closed for local opt-in, nested matrix/policy checkpoint failures, and runtime budget overruns (`Regression: #1652`).
-- real-fork local process wrapper lane fails closed for local opt-in, serve-command profile drift, lifecycle/policy checkpoint failure, and runtime budget overruns (`Regression: #1644`).
+- real-fork local process wrapper lane fails closed for local opt-in, serve-command profile drift, self-test/lifecycle/policy checkpoint failure, and runtime budget overruns (`Regression: #1644`).
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
 - local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`).
 - native parity fast/local command matrix docs drift remains fail-closed (`Regression: #1468`).

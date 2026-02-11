@@ -70,6 +70,16 @@ if ! grep -q "run_local_kolme_fork_profile_preflight_lane.sh" "$DOC_FILE"; then
   exit 1
 fi
 
+if ! grep -q "run_local_kolme_fork_self_test_lane.sh" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local fork self-test runner" >&2
+  exit 1
+fi
+
+if ! grep -q "check_local_kolme_fork_self_test_policy.py" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local fork self-test policy checker" >&2
+  exit 1
+fi
+
 if ! grep -q "run_local_kolme_fork_real_process_contract_lane.sh" "$README_FILE"; then
   echo "expected README to reference real-fork local process wrapper runner" >&2
   exit 1
@@ -117,6 +127,8 @@ for expected_id in (
     "real_fork_command_profile",
     "profile_preflight_lane",
     "profile_preflight_policy",
+    "self_test_lane",
+    "self_test_policy",
     "process_lifecycle_lane",
     "process_lifecycle_policy",
 ):
@@ -305,6 +317,10 @@ run_output="$(
       --allow-non-fork-serve-command \
       --max-seconds 360 \
       --preflight-max-seconds 45 \
+      --self-test-max-seconds 60 \
+      --self-test-matrix-max-seconds 20 \
+      --self-test-matrix-command "printf wrapper_self_test_ok_1" \
+      --self-test-matrix-command "printf wrapper_self_test_ok_2" \
       --lifecycle-max-seconds 240 \
       --lifecycle-startup-max-seconds 45 \
       --lifecycle-integration-max-seconds 180 \
@@ -348,6 +364,8 @@ for expected_id in (
     "real_fork_command_profile",
     "profile_preflight_lane",
     "profile_preflight_policy",
+    "self_test_lane",
+    "self_test_policy",
     "process_lifecycle_lane",
     "process_lifecycle_policy",
 ):
