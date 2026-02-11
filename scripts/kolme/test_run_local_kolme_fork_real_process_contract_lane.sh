@@ -65,6 +65,11 @@ if ! grep -q "check_local_kolme_fork_real_process_policy.py" "$DOC_FILE"; then
   exit 1
 fi
 
+if ! grep -q "run_local_kolme_fork_profile_preflight_lane.sh" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local fork profile preflight runner" >&2
+  exit 1
+fi
+
 if ! grep -q "run_local_kolme_fork_real_process_contract_lane.sh" "$README_FILE"; then
   echo "expected README to reference real-fork local process wrapper runner" >&2
   exit 1
@@ -110,6 +115,8 @@ if not isinstance(checks, list):
     raise SystemExit("expected checks list in summary")
 for expected_id in (
     "real_fork_command_profile",
+    "profile_preflight_lane",
+    "profile_preflight_policy",
     "process_lifecycle_lane",
     "process_lifecycle_policy",
 ):
@@ -297,6 +304,7 @@ run_output="$(
       --serve-command "python3 $TMP_DIR/mock_kolme_api.py $PORT $FORK_CHAIN_VERSION" \
       --allow-non-fork-serve-command \
       --max-seconds 360 \
+      --preflight-max-seconds 45 \
       --lifecycle-max-seconds 240 \
       --lifecycle-startup-max-seconds 45 \
       --lifecycle-integration-max-seconds 180 \
@@ -338,6 +346,8 @@ if not isinstance(checks, list):
     raise SystemExit("expected checks list in run summary")
 for expected_id in (
     "real_fork_command_profile",
+    "profile_preflight_lane",
+    "profile_preflight_policy",
     "process_lifecycle_lane",
     "process_lifecycle_policy",
 ):
