@@ -8,7 +8,7 @@ from pathlib import Path
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate local real-fork process wrapper summary policy."
+        description="Validate local Kolme fork profile preflight summary policy."
     )
     parser.add_argument("--report-file", required=True)
     parser.add_argument("--expected-final-decision", required=True, choices=["GO", "NO-GO"])
@@ -21,7 +21,7 @@ def parse_args() -> argparse.Namespace:
 def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, list[str]]:
     reason_codes: list[str] = []
 
-    if report.get("schema_version") != "kamn.kolme.local-fork-real-process-summary.v1":
+    if report.get("schema_version") != "kamn.kolme.local-fork-profile-preflight-summary.v1":
         reason_codes.append("schema_version_mismatch")
 
     mode = report.get("mode")
@@ -51,43 +51,34 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if budget_status not in ("not_run", "within_budget", "exceeded_budget"):
         reason_codes.append("budget_status_invalid")
 
-    selected_serve_command = report.get("selected_serve_command")
-    if not isinstance(selected_serve_command, str) or not selected_serve_command.strip():
-        reason_codes.append("selected_serve_command_missing")
+    selected_probe_command = report.get("selected_probe_command")
+    if not isinstance(selected_probe_command, str) or not selected_probe_command.strip():
+        reason_codes.append("selected_probe_command_missing")
 
-    allow_non_fork_serve_command = report.get("allow_non_fork_serve_command")
-    if not isinstance(allow_non_fork_serve_command, bool):
-        reason_codes.append("allow_non_fork_serve_command_invalid")
+    allow_non_default_probe_command = report.get("allow_non_default_probe_command")
+    if not isinstance(allow_non_default_probe_command, bool):
+        reason_codes.append("allow_non_default_probe_command_invalid")
 
     contracts = report.get("contracts")
     if not isinstance(contracts, dict):
         reason_codes.append("contracts_missing")
     else:
+        if contracts.get("default_checkout_path") != "/tmp/kolme_fork":
+            reason_codes.append("default_checkout_path_mismatch")
         if contracts.get("default_profile") != "example-six-sigma:serve-api-server":
             reason_codes.append("default_profile_mismatch")
         if contracts.get("expected_cargo_bin") != "example-six-sigma":
             reason_codes.append("expected_cargo_bin_mismatch")
         if contracts.get("expected_component") != "api-server":
             reason_codes.append("expected_component_mismatch")
-        if contracts.get("profile_preflight_runner") != "run_local_kolme_fork_profile_preflight_lane.sh":
-            reason_codes.append("profile_preflight_runner_mismatch")
-        if contracts.get("profile_preflight_checker") != "check_local_kolme_fork_profile_preflight_policy.py":
-            reason_codes.append("profile_preflight_checker_mismatch")
-        if contracts.get("lifecycle_runner") != "run_local_kolme_fork_process_lifecycle_lane.sh":
-            reason_codes.append("lifecycle_runner_mismatch")
-        if contracts.get("lifecycle_checker") != "check_local_kolme_fork_process_lifecycle_policy.py":
-            reason_codes.append("lifecycle_checker_mismatch")
 
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
         reason_codes.append("checks_missing")
     else:
         expected_ids = {
-            "real_fork_command_profile",
-            "profile_preflight_lane",
-            "profile_preflight_policy",
-            "process_lifecycle_lane",
-            "process_lifecycle_policy",
+            "profile_contract",
+            "probe_command",
         }
         observed_ids: set[str] = set()
         for entry in checks:
@@ -112,23 +103,19 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         for missing_id in missing_ids:
             reason_codes.append(f"check_missing:{missing_id}")
 
-    artifacts = report.get("artifact_paths")
-    if not isinstance(artifacts, list) or len(artifacts) < 4:
-        reason_codes.append("artifact_paths_missing")
-
     if args.ci_fast_gate != "PASS":
         reason_codes.append("ci_fast_gate_failed")
 
     observed_final_decision = ""
     if status == "ok":
         observed_final_decision = "GO"
-        if reason_code not in ("dry_run_no_commands_executed", "real_fork_process_wrapper_passed"):
+        if reason_code not in ("dry_run_no_commands_executed", "profile_preflight_passed"):
             reason_codes.append("ok_status_reason_code_mismatch")
         if budget_status == "exceeded_budget":
             reason_codes.append("ok_status_budget_exceeded")
     elif status == "fail":
         observed_final_decision = "NO-GO"
-        if reason_code in ("dry_run_no_commands_executed", "real_fork_process_wrapper_passed"):
+        if reason_code in ("dry_run_no_commands_executed", "profile_preflight_passed"):
             reason_codes.append("fail_status_reason_code_mismatch")
 
     for required_reason_code in args.require_reason_code:
@@ -156,7 +143,7 @@ def main() -> int:
 
     final_decision, reason_codes = evaluate(report, args)
     output = {
-        "schema_version": "kamn.kolme.local-fork-real-process-policy-report.v1",
+        "schema_version": "kamn.kolme.local-fork-profile-preflight-policy-report.v1",
         "report_file": str(report_path),
         "expected_final_decision": args.expected_final_decision,
         "ci_fast_gate": args.ci_fast_gate,

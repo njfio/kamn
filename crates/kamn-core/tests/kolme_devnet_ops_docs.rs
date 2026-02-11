@@ -117,9 +117,19 @@ fn plan_contains_local_fork_process_lifecycle_lane() {
 }
 
 #[test]
+fn plan_contains_local_fork_profile_preflight_lane() {
+    assert!(PLAN.contains("## Local Fork Profile Preflight Lane"));
+    assert!(PLAN.contains("run_local_kolme_fork_profile_preflight_lane.sh"));
+    assert!(PLAN.contains("check_local_kolme_fork_profile_preflight_policy.py"));
+    assert!(PLAN.contains("kamn.kolme.local-fork-profile-preflight-summary.v1"));
+}
+
+#[test]
 fn plan_contains_real_fork_local_process_wrapper_lane() {
     assert!(PLAN.contains("## Real Fork Local Process Wrapper Contract Lane"));
     assert!(PLAN.contains("run_local_kolme_fork_real_process_contract_lane.sh"));
+    assert!(PLAN.contains("run_local_kolme_fork_profile_preflight_lane.sh"));
+    assert!(PLAN.contains("check_local_kolme_fork_profile_preflight_policy.py"));
     assert!(PLAN.contains("check_local_kolme_fork_real_process_policy.py"));
     assert!(PLAN.contains("kamn.kolme.local-fork-real-process-summary.v1"));
 }
@@ -343,6 +353,14 @@ fn regression_requires_local_fork_process_lifecycle_guard_marker() {
     // Regression: #1494
     assert!(PLAN.contains(
         "local fork process lifecycle integration lane fails closed for process start/readiness/integration/teardown/budget drift and missing local opt-in (`Regression: #1494`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_fork_profile_preflight_guard_marker() {
+    // Regression: #1648
+    assert!(PLAN.contains(
+        "local fork profile preflight lane fails closed for local opt-in, checkout/profile contract drift, probe command failures, and runtime budget overruns (`Regression: #1648`)."
     ));
 }
 
