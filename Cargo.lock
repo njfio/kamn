@@ -7,6 +7,10 @@ name = "kamn-core"
 version = "0.1.0"
 
 [[package]]
+name = "kamn-kolme"
+version = "0.1.0"
+
+[[package]]
 name = "kamn-node"
 version = "0.1.0"
 dependencies = [
