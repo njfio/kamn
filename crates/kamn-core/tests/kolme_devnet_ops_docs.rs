@@ -138,6 +138,8 @@ fn plan_contains_real_fork_local_process_wrapper_lane() {
     assert!(PLAN.contains("run_local_kolme_fork_real_process_contract_lane.sh"));
     assert!(PLAN.contains("run_local_kolme_fork_profile_preflight_lane.sh"));
     assert!(PLAN.contains("check_local_kolme_fork_profile_preflight_policy.py"));
+    assert!(PLAN.contains("run_local_kolme_fork_self_test_lane.sh"));
+    assert!(PLAN.contains("check_local_kolme_fork_self_test_policy.py"));
     assert!(PLAN.contains("check_local_kolme_fork_real_process_policy.py"));
     assert!(PLAN.contains("kamn.kolme.local-fork-real-process-summary.v1"));
 }
@@ -384,6 +386,6 @@ fn regression_requires_local_fork_self_test_guard_marker() {
 fn regression_requires_real_fork_local_process_wrapper_guard_marker() {
     // Regression: #1644
     assert!(PLAN.contains(
-        "real-fork local process wrapper lane fails closed for local opt-in, serve-command profile drift, lifecycle/policy checkpoint failure, and runtime budget overruns (`Regression: #1644`)."
+        "real-fork local process wrapper lane fails closed for local opt-in, serve-command profile drift, self-test/lifecycle/policy checkpoint failure, and runtime budget overruns (`Regression: #1644`)."
     ));
 }
