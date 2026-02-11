@@ -2,6 +2,7 @@
 
 use crate::AgentDid;
 use kamn_kolme::{
+    classify_tls_failure_reason as classify_kolme_tls_failure_reason,
     compose_finality_status_path as compose_kolme_finality_status_path,
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
     find_http_header_boundary as find_kolme_http_header_boundary,
@@ -10,6 +11,7 @@ use kamn_kolme::{
     parse_http_response_body as parse_kolme_http_response_body,
     parse_notification_event as parse_kolme_notification_event_contract,
     parse_receipt_finality as parse_kolme_receipt_finality,
+    parse_tls_ca_file_env_value as parse_kolme_tls_ca_file_env_value,
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
     render_block_path as render_kolme_block_path,
     try_take_websocket_frame as try_take_kolme_websocket_frame,
@@ -29,7 +31,7 @@ use kamn_kolme::{
     KolmeNotificationPolicyError as KamnKolmeNotificationPolicyError,
     KolmeParsedHttpEndpoint as KamnKolmeParsedHttpEndpoint,
     KolmeParsedWebsocketEndpoint as KamnKolmeParsedWebsocketEndpoint,
-    KolmeWebsocketFrame as KamnKolmeWebsocketFrame,
+    KolmeTlsPolicyError as KamnKolmeTlsPolicyError, KolmeWebsocketFrame as KamnKolmeWebsocketFrame,
     KolmeWebsocketPolicyError as KamnKolmeWebsocketPolicyError, ReceiptFinality,
 };
 use std::collections::HashMap;
@@ -1790,6 +1792,14 @@ fn map_http_response_policy_error(
     }
 }
 
+fn map_tls_policy_error(error: KamnKolmeTlsPolicyError) -> KolmeRuntimeCommitProviderError {
+    match error {
+        KamnKolmeTlsPolicyError::Unavailable { reason } => {
+            KolmeRuntimeCommitProviderError::Unavailable { reason }
+        }
+    }
+}
+
 fn parse_http_endpoint(
     base_url: &str,
     path: &str,
@@ -2044,7 +2054,7 @@ fn map_transport_io_error(error: std::io::Error) -> KolmeRuntimeCommitProviderEr
 
 fn configured_tls_ca_file() -> Result<Option<String>, KolmeRuntimeCommitProviderError> {
     let value = match std::env::var("KAMN_KOLME_TLS_CA_FILE") {
-        Ok(value) => value,
+        Ok(value) => Some(value),
         Err(std::env::VarError::NotPresent) => return Ok(None),
         Err(std::env::VarError::NotUnicode(_)) => {
             return Err(KolmeRuntimeCommitProviderError::Unavailable {
@@ -2052,36 +2062,11 @@ fn configured_tls_ca_file() -> Result<Option<String>, KolmeRuntimeCommitProvider
             });
         }
     };
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "KAMN_KOLME_TLS_CA_FILE must not be empty".to_owned(),
-        });
-    }
-    Ok(Some(trimmed.to_owned()))
+    parse_kolme_tls_ca_file_env_value(value.as_deref()).map_err(map_tls_policy_error)
 }
 
 fn classify_tls_failure_reason(stderr: &str) -> String {
-    let normalized = stderr.to_ascii_lowercase();
-    if normalized.contains("certificate verify failed")
-        || normalized.contains("self-signed certificate")
-        || normalized.contains("unable to get local issuer certificate")
-        || normalized.contains("unable to verify the first certificate")
-    {
-        return "tls certificate verification failed".to_owned();
-    }
-    if normalized.contains("handshake failure")
-        || normalized.contains("wrong version number")
-        || normalized.contains("tlsv")
-        || normalized.contains("ssl routines")
-    {
-        return "tls handshake failed".to_owned();
-    }
-    let first_line = stderr
-        .lines()
-        .find(|line| !line.trim().is_empty())
-        .unwrap_or("tls request failed");
-    format!("tls request failed: {}", first_line.trim())
+    classify_kolme_tls_failure_reason(stderr)
 }
 
 fn is_kolme_broadcast_submit_path(submit_path: &str) -> bool {
