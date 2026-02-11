@@ -1,5 +1,5 @@
 use kamn_kolme::{
-    parse_receipt_finality, render_block_path, validate_block_identity,
+    parse_fork_block_txhash, parse_receipt_finality, render_block_path, validate_block_identity,
     validate_block_path_template, validate_lookup_window, ReceiptFinality,
 };
 
@@ -25,6 +25,15 @@ fn functional_validate_lookup_window_rejects_stale_span() {
     assert_eq!(
         error.to_string(),
         "block fallback window exceeds max lookups: from_height=40 latest_height=44 max_lookups=3"
+    );
+}
+
+#[test]
+fn functional_parse_fork_block_txhash_extracts_required_field() {
+    assert_eq!(
+        parse_fork_block_txhash(r#"{"height":42,"txhash":"0xabc123"}"#)
+            .expect("txhash should parse"),
+        "0xabc123"
     );
 }
 

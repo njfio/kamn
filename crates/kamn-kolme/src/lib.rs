@@ -18,8 +18,8 @@ pub use api_codec::{
     KolmeApiNextNonceRequest, KolmeApiNextNonceResponse,
 };
 pub use block_scan_policy::{
-    render_block_path, validate_block_identity, validate_block_path_template,
-    validate_lookup_window, BlockScanPolicyError,
+    parse_fork_block_txhash, render_block_path, validate_block_identity,
+    validate_block_path_template, validate_lookup_window, BlockScanPolicyError,
 };
 pub use codec::{KolmeCodecError, KolmeWireCodec, PassthroughCodec};
 pub use endpoint_policy::{
