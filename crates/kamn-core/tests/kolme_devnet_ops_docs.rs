@@ -100,6 +100,14 @@ fn plan_contains_local_kamn_live_runtime_integration_lane() {
 }
 
 #[test]
+fn plan_contains_unified_local_signed_to_kolme_demo_lane() {
+    assert!(PLAN.contains("## Unified Local Signed-to-Kolme Demo Contract Lane"));
+    assert!(PLAN.contains("run_local_signed_to_kolme_demo_contract_lane.sh"));
+    assert!(PLAN.contains("check_local_signed_to_kolme_demo_policy.py"));
+    assert!(PLAN.contains("kamn.kolme.local-signed-to-kolme-demo-summary.v1"));
+}
+
+#[test]
 fn plan_contains_local_fork_process_lifecycle_lane() {
     assert!(PLAN.contains("## Local Kolme Fork Process Lifecycle Integration Lane"));
     assert!(PLAN.contains("run_local_kolme_fork_process_lifecycle_lane.sh"));
@@ -311,6 +319,14 @@ fn regression_requires_localhost_signed_runtime_integration_prerequisite_guard_m
     // Regression: #1636
     assert!(PLAN.contains(
         "local KAMN live runtime integration lane requires bounded localhost signed integration prerequisite execution before runtime commit submission (`Regression: #1636`)."
+    ));
+}
+
+#[test]
+fn regression_requires_unified_local_signed_to_kolme_demo_guard_marker() {
+    // Regression: #1640
+    assert!(PLAN.contains(
+        "unified local signed-to-Kolme demo lane fails closed for local opt-in, stage prerequisite drift, and runtime budget overruns (`Regression: #1640`)."
     ));
 }
 
