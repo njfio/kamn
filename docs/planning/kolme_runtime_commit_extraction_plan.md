@@ -25,6 +25,9 @@ Out of scope:
 - keep call-site behavior unchanged with extraction-boundary tests,
 - gate completion on strict `clippy` and runtime-commit transport regression tests.
 
+## Phase 1 Progress
+- #1820: extracted transport IO classification contract to `kamn-kolme` (`classify_transport_io_error`) and removed core-local transport IO classification ownership.
+
 ## Phase 2 - Finality and block-fallback extraction
 - move finality parsing and block-fallback conversion contracts behind `kamn-kolme` interfaces,
 - keep provider mismatch and commit-id mismatch fail-closed behavior in `kamn-core`,

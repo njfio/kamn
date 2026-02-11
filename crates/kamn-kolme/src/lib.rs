@@ -77,7 +77,8 @@ pub use tls_policy::{
     classify_tls_failure_reason, parse_tls_ca_file_env_value, KolmeTlsPolicyError,
 };
 pub use transport::{
-    EchoTransport, KolmeTransport, TransportError, TransportRequest, TransportResponse,
+    classify_transport_io_error, EchoTransport, KolmeTransport, KolmeTransportIoClassification,
+    TransportError, TransportRequest, TransportResponse,
 };
 pub use transport_request_policy::{
     is_broadcast_submit_path, parse_authorization_header_value, KolmeTransportRequestPolicyError,

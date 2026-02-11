@@ -13,6 +13,8 @@ fn regression_requires_phase_gates_and_validation_matrix_markers() {
     assert!(DOC.contains("## Phase 1 - Transport and endpoint parsing extraction"));
     assert!(DOC.contains("## Phase 2 - Finality and block-fallback extraction"));
     assert!(DOC.contains("## Phase 3 - Adapter and lifecycle orchestration extraction"));
+    assert!(DOC.contains("## Phase 1 Progress"));
+    assert!(DOC.contains("#1820"));
     assert!(DOC.contains("## Validation Matrix"));
     assert!(DOC.contains("Regression: #1814"));
 }

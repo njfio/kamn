@@ -3,6 +3,7 @@
 use crate::AgentDid;
 use kamn_kolme::{
     classify_tls_failure_reason as classify_kolme_tls_failure_reason,
+    classify_transport_io_error as classify_kolme_transport_io_error,
     commit_finality_from_receipt_finality as commit_finality_from_receipt_finality_contract,
     commit_finality_label as commit_finality_label_contract,
     compose_finality_status_path as compose_kolme_finality_status_path,
@@ -48,6 +49,7 @@ use kamn_kolme::{
     KolmeProviderOutcome as KamnKolmeProviderOutcome,
     KolmeProviderOutcomePolicyError as KamnKolmeProviderOutcomePolicyError,
     KolmeTlsPolicyError as KamnKolmeTlsPolicyError,
+    KolmeTransportIoClassification as KamnKolmeTransportIoClassification,
     KolmeTransportRequestPolicyError as KamnKolmeTransportRequestPolicyError,
     KolmeWebsocketFrame as KamnKolmeWebsocketFrame,
     KolmeWebsocketPolicyError as KamnKolmeWebsocketPolicyError,
@@ -917,21 +919,35 @@ impl KolmeRuntimeCommitHttpTransport {
         endpoint: ParsedHttpEndpoint,
         request: &[u8],
     ) -> Result<Vec<u8>, KolmeRuntimeCommitProviderError> {
-        let mut stream = TcpStream::connect((endpoint.host.as_str(), endpoint.port))
-            .map_err(map_transport_io_error)?;
+        let mut stream =
+            TcpStream::connect((endpoint.host.as_str(), endpoint.port)).map_err(|error| {
+                map_transport_io_classification_to_provider_error(
+                    classify_kolme_transport_io_error(&error),
+                )
+            })?;
         let timeout = Duration::from_secs(self.timeout_seconds);
-        stream
-            .set_read_timeout(Some(timeout))
-            .map_err(map_transport_io_error)?;
-        stream
-            .set_write_timeout(Some(timeout))
-            .map_err(map_transport_io_error)?;
-        stream.write_all(request).map_err(map_transport_io_error)?;
+        stream.set_read_timeout(Some(timeout)).map_err(|error| {
+            map_transport_io_classification_to_provider_error(classify_kolme_transport_io_error(
+                &error,
+            ))
+        })?;
+        stream.set_write_timeout(Some(timeout)).map_err(|error| {
+            map_transport_io_classification_to_provider_error(classify_kolme_transport_io_error(
+                &error,
+            ))
+        })?;
+        stream.write_all(request).map_err(|error| {
+            map_transport_io_classification_to_provider_error(classify_kolme_transport_io_error(
+                &error,
+            ))
+        })?;
 
         let mut response_bytes = Vec::new();
-        stream
-            .read_to_end(&mut response_bytes)
-            .map_err(map_transport_io_error)?;
+        stream.read_to_end(&mut response_bytes).map_err(|error| {
+            map_transport_io_classification_to_provider_error(classify_kolme_transport_io_error(
+                &error,
+            ))
+        })?;
         Ok(response_bytes)
     }
 
@@ -972,7 +988,11 @@ impl KolmeRuntimeCommitHttpTransport {
                     .ok_or_else(|| KolmeRuntimeCommitProviderError::Unavailable {
                         reason: "tls command stdin unavailable".to_owned(),
                     })?;
-            stdin.write_all(request).map_err(map_transport_io_error)?;
+            stdin.write_all(request).map_err(|error| {
+                map_transport_io_classification_to_provider_error(
+                    classify_kolme_transport_io_error(&error),
+                )
+            })?;
         }
 
         let timeout = Duration::from_secs(self.timeout_seconds);
@@ -996,7 +1016,11 @@ impl KolmeRuntimeCommitHttpTransport {
             }
         }
 
-        let output = child.wait_with_output().map_err(map_transport_io_error)?;
+        let output = child.wait_with_output().map_err(|error| {
+            map_transport_io_classification_to_provider_error(classify_kolme_transport_io_error(
+                &error,
+            ))
+        })?;
         let looks_like_http_response = output.stdout.starts_with(b"HTTP/1.")
             && output.stdout.windows(4).any(|window| window == b"\r\n\r\n");
         if !output.status.success() && !looks_like_http_response {
@@ -1445,10 +1469,11 @@ impl KolmeRuntimeCommitNotificationsConnection for KolmeRuntimeCommitWebsocketCo
             }
 
             let mut chunk = [0_u8; 1024];
-            let read = self
-                .stream
-                .read(&mut chunk)
-                .map_err(map_transport_io_error)?;
+            let read = self.stream.read(&mut chunk).map_err(|error| {
+                map_transport_io_classification_to_provider_error(
+                    classify_kolme_transport_io_error(&error),
+                )
+            })?;
             if read == 0 {
                 return Ok(None);
             }
@@ -1475,15 +1500,23 @@ impl KolmeRuntimeCommitNotificationsConnector for KolmeRuntimeCommitWebsocketCon
             });
         }
 
-        let mut stream = TcpStream::connect((endpoint.host.as_str(), endpoint.port))
-            .map_err(map_transport_io_error)?;
+        let mut stream =
+            TcpStream::connect((endpoint.host.as_str(), endpoint.port)).map_err(|error| {
+                map_transport_io_classification_to_provider_error(
+                    classify_kolme_transport_io_error(&error),
+                )
+            })?;
         let timeout = Duration::from_secs(self.timeout_seconds);
-        stream
-            .set_read_timeout(Some(timeout))
-            .map_err(map_transport_io_error)?;
-        stream
-            .set_write_timeout(Some(timeout))
-            .map_err(map_transport_io_error)?;
+        stream.set_read_timeout(Some(timeout)).map_err(|error| {
+            map_transport_io_classification_to_provider_error(classify_kolme_transport_io_error(
+                &error,
+            ))
+        })?;
+        stream.set_write_timeout(Some(timeout)).map_err(|error| {
+            map_transport_io_classification_to_provider_error(classify_kolme_transport_io_error(
+                &error,
+            ))
+        })?;
 
         let handshake = format!(
             concat!(
@@ -1497,9 +1530,11 @@ impl KolmeRuntimeCommitNotificationsConnector for KolmeRuntimeCommitWebsocketCon
             ),
             endpoint.target_path, endpoint.host_header, "dGhlIHNhbXBsZSBub25jZQ=="
         );
-        stream
-            .write_all(handshake.as_bytes())
-            .map_err(map_transport_io_error)?;
+        stream.write_all(handshake.as_bytes()).map_err(|error| {
+            map_transport_io_classification_to_provider_error(classify_kolme_transport_io_error(
+                &error,
+            ))
+        })?;
 
         let mut response_bytes = Vec::new();
         let header_end = read_http_header_boundary(&mut stream, &mut response_bytes)?;
@@ -1916,7 +1951,11 @@ fn read_http_header_boundary(
             return Ok(position);
         }
         let mut chunk = [0_u8; 1024];
-        let read = stream.read(&mut chunk).map_err(map_transport_io_error)?;
+        let read = stream.read(&mut chunk).map_err(|error| {
+            map_transport_io_classification_to_provider_error(classify_kolme_transport_io_error(
+                &error,
+            ))
+        })?;
         if read == 0 {
             return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                 reason: "websocket handshake response is incomplete".to_owned(),
@@ -1955,15 +1994,14 @@ fn parse_kolme_notification_event(
     }
 }
 
-fn map_transport_io_error(error: std::io::Error) -> KolmeRuntimeCommitProviderError {
-    if matches!(
-        error.kind(),
-        std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock
-    ) {
-        return KolmeRuntimeCommitProviderError::Timeout;
-    }
-    KolmeRuntimeCommitProviderError::Unavailable {
-        reason: format!("transport io error: {error}"),
+fn map_transport_io_classification_to_provider_error(
+    classification: KamnKolmeTransportIoClassification,
+) -> KolmeRuntimeCommitProviderError {
+    match classification {
+        KamnKolmeTransportIoClassification::Timeout => KolmeRuntimeCommitProviderError::Timeout,
+        KamnKolmeTransportIoClassification::Unavailable { reason } => {
+            KolmeRuntimeCommitProviderError::Unavailable { reason }
+        }
     }
 }
 

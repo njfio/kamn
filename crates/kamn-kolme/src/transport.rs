@@ -58,6 +58,31 @@ impl fmt::Display for TransportError {
 
 impl Error for TransportError {}
 
+/// Deterministic classification for transport IO failures.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum KolmeTransportIoClassification {
+    /// IO timeout or would-block condition.
+    Timeout,
+    /// Other transport IO failures that should be treated as unavailable.
+    Unavailable {
+        /// Deterministic unavailability reason.
+        reason: String,
+    },
+}
+
+/// Classifies transport IO failures for runtime-commit transport paths.
+pub fn classify_transport_io_error(error: &std::io::Error) -> KolmeTransportIoClassification {
+    if matches!(
+        error.kind(),
+        std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock
+    ) {
+        return KolmeTransportIoClassification::Timeout;
+    }
+    KolmeTransportIoClassification::Unavailable {
+        reason: format!("transport io error: {error}"),
+    }
+}
+
 /// Transport boundary for runtime-commit submissions.
 pub trait KolmeTransport {
     /// Submits a request and returns a response envelope.
