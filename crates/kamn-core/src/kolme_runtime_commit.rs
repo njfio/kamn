@@ -2653,7 +2653,28 @@ fn normalize_kolme_broadcast_payload(
 
     if payload.starts_with('{') {
         let fields = parse_flat_json_value_fields(payload)?;
-        let signer_key_id = required_json_string_field(&fields, "signer_key_id")?;
+        if let Some(payload_idempotency_key) = fields.get("idempotency_key") {
+            let payload_idempotency_key = match payload_idempotency_key {
+                FlatJsonValue::String(value) => value.trim(),
+                _ => {
+                    return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                        reason: "field must be a string: idempotency_key".to_owned(),
+                    });
+                }
+            };
+            if payload_idempotency_key.is_empty() {
+                return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: "field must not be empty: idempotency_key".to_owned(),
+                });
+            }
+            if payload_idempotency_key != idempotency_key {
+                return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: "wire_payload idempotency_key does not match transport idempotency key"
+                        .to_owned(),
+                });
+            }
+        }
+
         let message = required_json_string_field(&fields, "message")?;
         let signature = required_json_string_field(&fields, "signature")?;
         let recovery_id_u64 = required_positive_u64_json_field(&fields, "recovery_id")?;
@@ -2662,30 +2683,49 @@ fn normalize_kolme_broadcast_payload(
                 reason: "recovery_id must be within u8 range".to_owned(),
             }
         })?;
-        let envelope = KolmeRuntimeCommitSignedBroadcastEnvelope::new(
-            signer_key_id.as_str(),
-            message.as_str(),
-            signature.as_str(),
-            recovery_id,
-        )
-        .map_err(|error| KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: error.to_string(),
-        })?;
 
-        let message_fields = parse_key_value_response_fields(envelope.message.as_str())?;
-        let message_idempotency_key = required_response_field(&message_fields, "idempotency_key")?;
-        if message_idempotency_key != idempotency_key {
+        if fields.contains_key("signer_key_id") {
+            let signer_key_id = required_json_string_field(&fields, "signer_key_id")?;
+            let envelope = KolmeRuntimeCommitSignedBroadcastEnvelope::new(
+                signer_key_id.as_str(),
+                message.as_str(),
+                signature.as_str(),
+                recovery_id,
+            )
+            .map_err(|error| KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: error.to_string(),
+            })?;
+
+            let message_fields = parse_key_value_response_fields(envelope.message.as_str())?;
+            let message_idempotency_key =
+                required_response_field(&message_fields, "idempotency_key")?;
+            if message_idempotency_key != idempotency_key {
+                return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason:
+                        "signed message idempotency_key does not match transport idempotency key"
+                            .to_owned(),
+                });
+            }
+
+            let request = envelope.to_broadcast_request().map_err(|error| {
+                KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: error.to_string(),
+                }
+            })?;
+            return Ok(request.to_json_payload());
+        }
+
+        if !message.trim().starts_with('{') || !message.trim().ends_with('}') {
             return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "signed message idempotency_key does not match transport idempotency key"
-                    .to_owned(),
+                reason: "direct signed payload message must be a JSON object string".to_owned(),
             });
         }
 
-        let request = envelope.to_broadcast_request().map_err(|error| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: error.to_string(),
-            }
-        })?;
+        let request =
+            KolmeApiBroadcastRequest::new(message.as_str(), signature.as_str(), recovery_id)
+                .map_err(|error| KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: error.to_string(),
+                })?;
         return Ok(request.to_json_payload());
     }
 
