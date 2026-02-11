@@ -34,6 +34,7 @@ use kamn_kolme::{
     validate_block_identity as validate_kolme_block_identity,
     validate_block_path_template as validate_kolme_block_path_template,
     validate_lookup_window as validate_kolme_lookup_window,
+    validate_provider_receipt_identity as validate_kolme_provider_receipt_identity_contract,
     validate_websocket_handshake_response as validate_kolme_websocket_handshake_response,
     BlockScanPolicyError, KolmeApiBroadcastRequest as KamnKolmeApiBroadcastRequest,
     KolmeApiBroadcastResponse as KamnKolmeApiBroadcastResponse,
@@ -45,6 +46,7 @@ use kamn_kolme::{
     KolmeHttpScheme as KamnKolmeHttpScheme, KolmeNotificationEvent as KamnKolmeNotificationEvent,
     KolmeParsedHttpEndpoint as KamnKolmeParsedHttpEndpoint,
     KolmeProviderOutcome as KamnKolmeProviderOutcome,
+    KolmeProviderReceiptIdentityError as KamnKolmeProviderReceiptIdentityError,
     KolmeTlsPolicyError as KamnKolmeTlsPolicyError,
     KolmeTransportIoClassification as KamnKolmeTransportIoClassification,
     KolmeTransportRequestPolicyError as KamnKolmeTransportRequestPolicyError,
@@ -1812,18 +1814,22 @@ impl<P: KolmeRuntimeCommitProvider> KolmeRuntimeCommitClient
         request.validate()?;
         let expected_provider = self.expected_provider.as_str();
         let map_provider_receipt = |receipt: KolmeRuntimeCommitProviderReceipt| {
-            if receipt.provider != expected_provider {
-                return Err(KolmeRuntimeCommitError::ProviderMismatch {
-                    expected: expected_provider.to_owned(),
-                    observed: receipt.provider,
-                });
-            }
-            if receipt.commit_id.trim().is_empty() {
-                return Err(KolmeRuntimeCommitError::InvalidRequest {
-                    field: "receipt_commit_id",
-                    reason: "must not be empty",
-                });
-            }
+            validate_kolme_provider_receipt_identity_contract(
+                expected_provider,
+                receipt.provider.as_str(),
+                receipt.commit_id.as_str(),
+            )
+            .map_err(|error| match error {
+                KamnKolmeProviderReceiptIdentityError::ProviderMismatch { expected, observed } => {
+                    KolmeRuntimeCommitError::ProviderMismatch { expected, observed }
+                }
+                KamnKolmeProviderReceiptIdentityError::EmptyCommitId => {
+                    KolmeRuntimeCommitError::InvalidRequest {
+                        field: "receipt_commit_id",
+                        reason: "must not be empty",
+                    }
+                }
+            })?;
             if !matches!(receipt.finality, KolmeCommitReceiptFinality::Final) {
                 return Err(KolmeRuntimeCommitError::NonFinalReceipt {
                     commit_id: receipt.commit_id,
