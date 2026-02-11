@@ -74,6 +74,15 @@ fn plan_contains_local_live_api_conformance_harness() {
 }
 
 #[test]
+fn plan_contains_local_fork_bootstrap_readiness_contract_lane() {
+    assert!(PLAN.contains("## Local Kolme Fork Bootstrap/Readiness Contract Lane"));
+    assert!(PLAN.contains("run_local_kolme_fork_bootstrap_readiness_lane.sh"));
+    assert!(PLAN.contains("check_local_kolme_fork_bootstrap_readiness_policy.py"));
+    assert!(PLAN.contains("run_local_kolme_fork_bootstrap_readiness_contract_lane.sh"));
+    assert!(PLAN.contains("kamn.kolme.local-fork-bootstrap-readiness-summary.v1"));
+}
+
+#[test]
 fn plan_contains_local_runtime_commit_live_lane() {
     assert!(PLAN.contains("## Local Runtime Commit Live Proof Lane"));
     assert!(PLAN.contains("run_local_runtime_commit_live_lane.sh"));
@@ -244,5 +253,13 @@ fn regression_requires_local_live_api_conformance_harness_guard_marker() {
     // Regression: #1483
     assert!(PLAN.contains(
         "local live API conformance harness fails closed for probe/native parity prerequisite failures, runtime budget overruns, and endpoint contract drift (`Regression: #1483`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_fork_bootstrap_readiness_guard_marker() {
+    // Regression: #1488
+    assert!(PLAN.contains(
+        "local fork bootstrap/readiness lane fails closed for sync/probe prerequisite failures, runtime budget overruns, and missing local opt-in (`Regression: #1488`)."
     ));
 }

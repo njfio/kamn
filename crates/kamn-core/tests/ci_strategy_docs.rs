@@ -27,6 +27,13 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains(
         "run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json"
     ));
+    assert!(DOC.contains("run_local_kolme_fork_bootstrap_readiness_lane.sh --mode run"));
+    assert!(DOC.contains(
+        "check_local_kolme_fork_bootstrap_readiness_policy.py --report-file /tmp/kolme-local-fork-bootstrap-readiness-summary.json"
+    ));
+    assert!(DOC.contains(
+        "run_local_kolme_fork_bootstrap_readiness_contract_lane.sh --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json --policy-output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json"
+    ));
     assert!(DOC.contains("run_local_runtime_commit_live_lane.sh --mode run"));
     assert!(DOC.contains("run_local_native_api_parity_live_proof_lane.sh --mode run"));
     assert!(
@@ -35,6 +42,7 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("test_run_local_runtime_commit_live_lane.sh"));
     assert!(DOC.contains("test_run_local_native_api_parity_live_proof_contract_lane.sh"));
     assert!(DOC.contains("test_run_local_kolme_live_api_conformance_contract_lane.sh"));
+    assert!(DOC.contains("test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh"));
     assert!(DOC.contains("run_nonce_broadcast_parity_contract_lane.sh"));
     assert!(DOC.contains("test_run_nonce_broadcast_parity_contract_lane.sh"));
     assert!(DOC.contains("KAMN_KOLME_NONCE_BROADCAST_PARITY_MAX_SECONDS=60"));
@@ -52,6 +60,9 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     ));
     assert!(DOC.contains(
         "local live API conformance harness run-mode commands remain excluded from ci-fast-gate."
+    ));
+    assert!(DOC.contains(
+        "local fork bootstrap/readiness run-mode commands remain excluded from ci-fast-gate."
     ));
     assert!(DOC.contains(
         "local runtime-commit live run-mode commands remain excluded from ci-fast-gate."
@@ -77,6 +88,7 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("Regression: #1468"));
     assert!(DOC.contains("Regression: #1482"));
     assert!(DOC.contains("Regression: #1483"));
+    assert!(DOC.contains("Regression: #1488"));
     assert!(DOC.contains("Regression: #1462"));
     assert!(DOC.contains("Regression: #1466"));
 }
