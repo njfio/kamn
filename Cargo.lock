@@ -5,6 +5,9 @@ version = 4
 [[package]]
 name = "kamn-core"
 version = "0.1.0"
+dependencies = [
+ "kamn-kolme",
+]
 
 [[package]]
 name = "kamn-kolme"

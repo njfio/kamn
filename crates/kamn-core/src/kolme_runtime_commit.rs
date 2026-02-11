@@ -1,6 +1,13 @@
 //! Deterministic runtime-commit request/receipt contracts for Kolme integration.
 
 use crate::AgentDid;
+use kamn_kolme::{
+    parse_receipt_finality as parse_kolme_receipt_finality,
+    render_block_path as render_kolme_block_path,
+    validate_block_identity as validate_kolme_block_identity,
+    validate_block_path_template as validate_kolme_block_path_template,
+    validate_lookup_window as validate_kolme_lookup_window, BlockScanPolicyError, ReceiptFinality,
+};
 use std::collections::HashMap;
 use std::fmt;
 use std::io::{Read, Write};
@@ -1233,31 +1240,8 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
                 reason: "txhash must not be empty".to_owned(),
             });
         }
-        if from_height == 0 {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "from_height must be positive".to_owned(),
-            });
-        }
-        if latest_height == 0 {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "latest_height must be positive".to_owned(),
-            });
-        }
-        if latest_height < from_height {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "latest_height must be greater than or equal to from_height".to_owned(),
-            });
-        }
-
-        let lookup_span = latest_height - from_height + 1;
-        if lookup_span > self.max_block_lookups {
-            return Err(KolmeRuntimeCommitProviderError::Unavailable {
-                reason: format!(
-                    "block fallback window exceeds max lookups: from_height={from_height} latest_height={latest_height} max_lookups={}",
-                    self.max_block_lookups
-                ),
-            });
-        }
+        validate_kolme_lookup_window(from_height, latest_height, self.max_block_lookups)
+            .map_err(map_lookup_window_error)?;
 
         for height in from_height..=latest_height {
             let response = self.transport.fetch_block_by_height(
@@ -1273,22 +1257,13 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
                 )
             })?;
 
-            if block.provider != self.provider {
-                return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                    reason: format!(
-                        "block fallback provider mismatch: expected {} observed {}",
-                        self.provider, block.provider
-                    ),
-                });
-            }
-            if block.block_height != height {
-                return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                    reason: format!(
-                        "block fallback response height mismatch: expected {height} observed {}",
-                        block.block_height
-                    ),
-                });
-            }
+            validate_kolme_block_identity(
+                self.provider.as_str(),
+                block.provider.as_str(),
+                height,
+                block.block_height,
+            )
+            .map_err(map_block_scan_policy_error_to_malformed)?;
 
             if block
                 .finalized_tx_hashes
@@ -1740,6 +1715,31 @@ fn map_provider_error(error: KolmeRuntimeCommitProviderError) -> KolmeRuntimeCom
     }
 }
 
+fn map_block_scan_policy_error_to_unavailable(
+    error: BlockScanPolicyError,
+) -> KolmeRuntimeCommitProviderError {
+    KolmeRuntimeCommitProviderError::Unavailable {
+        reason: error.to_string(),
+    }
+}
+
+fn map_block_scan_policy_error_to_malformed(
+    error: BlockScanPolicyError,
+) -> KolmeRuntimeCommitProviderError {
+    KolmeRuntimeCommitProviderError::MalformedResponse {
+        reason: error.to_string(),
+    }
+}
+
+fn map_lookup_window_error(error: BlockScanPolicyError) -> KolmeRuntimeCommitProviderError {
+    match error {
+        BlockScanPolicyError::MaxLookupsExceeded { .. } => {
+            map_block_scan_policy_error_to_unavailable(error)
+        }
+        _ => map_block_scan_policy_error_to_malformed(error),
+    }
+}
+
 fn parse_http_endpoint(
     base_url: &str,
     path: &str,
@@ -1816,28 +1816,16 @@ fn parse_authority(
 fn validate_block_path_template(
     block_path_template: &str,
 ) -> Result<(), KolmeRuntimeCommitProviderError> {
-    let trimmed = block_path_template.trim();
-    if trimmed.is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "block_path_template must not be empty".to_owned(),
-        });
-    }
-    if !trimmed.contains("{height}") {
-        return Err(KolmeRuntimeCommitProviderError::Unavailable {
-            reason: "block_path_template must include '{height}' placeholder".to_owned(),
-        });
-    }
-    Ok(())
+    validate_kolme_block_path_template(block_path_template)
+        .map_err(map_block_scan_policy_error_to_unavailable)
 }
 
 fn render_block_path(
     block_path_template: &str,
     height: u64,
 ) -> Result<String, KolmeRuntimeCommitProviderError> {
-    validate_block_path_template(block_path_template)?;
-    Ok(block_path_template
-        .trim()
-        .replace("{height}", height.to_string().as_str()))
+    render_kolme_block_path(block_path_template, height)
+        .map_err(map_block_scan_policy_error_to_unavailable)
 }
 
 fn parse_block_fallback_response(
@@ -3421,13 +3409,14 @@ fn txhash_from_commit_id(commit_id: &str) -> Result<String, KolmeRuntimeCommitPr
 fn parse_receipt_finality(
     value: &str,
 ) -> Result<KolmeCommitReceiptFinality, KolmeRuntimeCommitProviderError> {
-    match value {
-        "pending" | "accepted" | "mempool" => Ok(KolmeCommitReceiptFinality::Pending),
-        "final" | "confirmed" | "finalized" => Ok(KolmeCommitReceiptFinality::Final),
-        "failed" | "rejected" => Ok(KolmeCommitReceiptFinality::Failed),
-        _ => Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("invalid finality value: {value}"),
-        }),
+    match parse_kolme_receipt_finality(value).map_err(|error| {
+        KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: error.to_string(),
+        }
+    })? {
+        ReceiptFinality::Pending => Ok(KolmeCommitReceiptFinality::Pending),
+        ReceiptFinality::Final => Ok(KolmeCommitReceiptFinality::Final),
+        ReceiptFinality::Failed => Ok(KolmeCommitReceiptFinality::Failed),
     }
 }
 
