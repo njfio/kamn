@@ -4,14 +4,21 @@
 //! extraction from `kamn-core` is in flight.
 #![warn(missing_docs)]
 
+pub mod block_scan_policy;
 pub mod codec;
 pub mod finality;
 pub mod pipeline;
+pub mod receipt_finality;
 pub mod transport;
 
+pub use block_scan_policy::{
+    render_block_path, validate_block_identity, validate_block_path_template,
+    validate_lookup_window, BlockScanPolicyError,
+};
 pub use codec::{KolmeCodecError, KolmeWireCodec, PassthroughCodec};
 pub use finality::{resolve_finality, FinalityResolution, FinalityState};
 pub use pipeline::{PipelineError, RuntimeCommitPipeline};
+pub use receipt_finality::{parse_receipt_finality, ReceiptFinality, ReceiptFinalityError};
 pub use transport::{
     EchoTransport, KolmeTransport, TransportError, TransportRequest, TransportResponse,
 };

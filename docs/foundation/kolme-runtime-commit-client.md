@@ -56,6 +56,7 @@ handling.
   - provider identity for txhash-only responses uses response `provider` when present, otherwise deterministic provider hint from profile construction.
 - Fork finality profile:
   - `KolmeRuntimeCommitForkFinalityResolver` composes websocket notifications (`/notifications`) with bounded block fallback scans (`/block/{height}`).
+  - finality alias parsing and block-scan policy contracts are sourced from `kamn-kolme` (`parse_receipt_finality`, `validate_lookup_window`, `validate_block_identity`, `render_block_path`) so extraction boundaries stay explicit while `kamn-core` adapters are migrated.
   - resolver consumes one notification event first:
     - txhash-bearing `NewBlock` / `FailedTransaction` events map directly to receipts.
     - `LatestBlock` (or `NewBlock` payloads that carry height but no txhash) trigger bounded `/block/{height}` fallback reconciliation.
@@ -131,6 +132,9 @@ Run targeted checks first:
 ```bash
 cargo test -p kamn-core --test kolme_runtime_commit_client
 cargo test -p kamn-core --test kolme_runtime_commit_finality
+cargo test -p kamn-core --test kolme_runtime_commit_block_fallback
+cargo test -p kamn-core --test kolme_runtime_commit_fork_finality_resolver
+cargo test -p kamn-kolme --test finality_block_scan_contracts
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_fetch_next_nonce_query_and_parse -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_submit_broadcast_request_put_and_parse_txhash -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_http_transport_submit_broadcast_request_rejects_malformed_txhash_response -- --exact
