@@ -1761,6 +1761,20 @@ assert_eq "$(extract_output "$kolme_lane_matrix_fixture_output" "run_kolme_versi
 assert_eq "$(extract_output "$kolme_lane_matrix_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme lane migration matrix fixture changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_lane_matrix_fixture_output" "test_scope")" "kolme-version-contract" "Kolme lane migration matrix fixture changes should set kolme-version-contract scope"
 
+kolme_manifest_contract_fixture_output="$(run_selector $'scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json')"
+assert_eq "$(extract_output "$kolme_manifest_contract_fixture_output" "run_rust")" "false" "Kolme manifest fixture-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_manifest_contract_fixture_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme manifest fixture changes should skip snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_manifest_contract_fixture_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme manifest fixture changes must run version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_manifest_contract_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme manifest fixture changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_manifest_contract_fixture_output" "test_scope")" "kolme-version-contract" "Kolme manifest fixture changes should set kolme-version-contract scope"
+
+kolme_manifest_contract_script_output="$(run_selector $'scripts/kolme/contracts/notifications_consumer_contract_lane.py')"
+assert_eq "$(extract_output "$kolme_manifest_contract_script_output" "run_rust")" "false" "Kolme manifest contract script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_manifest_contract_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme manifest contract script changes should skip snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_manifest_contract_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme manifest contract script changes must run version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_manifest_contract_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme manifest contract script changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_manifest_contract_script_output" "test_scope")" "kolme-version-contract" "Kolme manifest contract script changes should set kolme-version-contract scope"
+
 runtime_contract_docs_output="$(run_selector $'docs/foundation/runtime-network.md')"
 assert_eq "$(extract_output "$runtime_contract_docs_output" "run_rust")" "false" "runtime contract docs should avoid rust lane"
 assert_eq "$(extract_output "$runtime_contract_docs_output" "run_runtime_snapshot_contract_tests")" "true" "runtime contract docs must run runtime snapshot contract lane"

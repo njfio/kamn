@@ -251,6 +251,20 @@ fn plan_contains_lane_migration_matrix_contract() {
 }
 
 #[test]
+fn plan_contains_tranche1_manifest_migration_contract() {
+    assert!(PLAN.contains("## Tranche-1 Manifest Migration (Issue #1722)"));
+    assert!(PLAN.contains("scripts/ci/test_kolme_tranche1_manifest_migration_contract.sh"));
+    assert!(PLAN.contains("scripts/framework/manifests/kolme_snapshot_drift_contract_lane.json"));
+    assert!(PLAN
+        .contains("scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json"));
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json"
+    ));
+    assert!(PLAN.contains("scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py"));
+    assert!(PLAN.contains("Combined wrapper shell LOC for the tranche remains `<= 60`."));
+}
+
+#[test]
 fn regression_requires_failover_sync_budget_and_scheduled_cadence_guards() {
     // Regression: #788
     assert!(PLAN
@@ -294,6 +308,14 @@ fn regression_requires_lane_migration_matrix_policy_guard_marker() {
     // Regression: #1721
     assert!(PLAN.contains(
         "lane migration matrix schema/order/required-lane drift remains fail-closed (`Regression: #1721`)."
+    ));
+}
+
+#[test]
+fn regression_requires_tranche1_manifest_migration_guard_marker() {
+    // Regression: #1722
+    assert!(PLAN.contains(
+        "tranche-1 manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1722`)."
     ));
 }
 

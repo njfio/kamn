@@ -6,11 +6,37 @@ LANE_SCRIPT="$ROOT_DIR/scripts/kolme/run_block_fallback_reconciliation_contract_
 RUNTIME_NETWORK_DOC="$ROOT_DIR/docs/foundation/runtime-network.md"
 DEVNET_DOC="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 ROADMAP_DOC="$ROOT_DIR/docs/planning/kolme-integration-roadmap.md"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json"
 
 if [ ! -x "$LANE_SCRIPT" ]; then
   echo "expected block fallback reconciliation contract lane script to be executable" >&2
   exit 1
 fi
+
+if ! grep -q "scripts/framework/run_manifest_lane.sh" "$LANE_SCRIPT"; then
+  echo "expected block fallback reconciliation contract lane to dispatch through manifest wrapper" >&2
+  exit 1
+fi
+
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected block fallback reconciliation contract lane manifest to exist" >&2
+  exit 1
+fi
+
+python3 - "$MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+contract_command = payload.get("phases", {}).get("contract")
+if contract_command != [
+    "python3",
+    "scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py",
+]:
+    raise SystemExit("expected block fallback reconciliation manifest contract command")
+PY
 
 if [ ! -f "$RUNTIME_NETWORK_DOC" ] || [ ! -f "$DEVNET_DOC" ] || [ ! -f "$ROADMAP_DOC" ]; then
   echo "expected runtime/kolme documentation to exist" >&2

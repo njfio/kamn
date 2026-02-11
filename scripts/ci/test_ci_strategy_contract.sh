@@ -59,6 +59,11 @@ required_snippets=(
   "test_generate_fork_compatibility_evidence.sh"
   "test_check_fork_compatibility_policy.sh"
   "test_run_runtime_commit_adapter_contract_lane.sh"
+  "test_kolme_tranche1_manifest_migration_contract.sh"
+  "run_snapshot_drift_contract_lane.sh"
+  "run_notifications_consumer_contract_lane.sh"
+  "run_block_fallback_reconciliation_contract_lane.sh"
+  "combined migrated wrapper shell LOC must remain"
   "test_run_local_kolme_fork_rust_test_matrix_lane.sh"
   "test_check_local_kolme_fork_rust_test_matrix_policy.sh"
   "test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh"
@@ -165,6 +170,7 @@ required_snippets=(
   "Regression: #1561"
   "Regression: #1565"
   "Regression: #1569"
+  "Regression: #1722"
 )
 
 for snippet in "${required_snippets[@]}"; do
