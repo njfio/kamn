@@ -47,7 +47,7 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
 #[test]
 fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation() {
     // Regression: #1824
-    assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_commit_receipt_finality("));
+    assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_provider_finality_receipt("));
     assert!(RUNTIME_COMMIT_SRC.contains("commit_finality_from_receipt_finality_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("lifecycle_state_for_finality_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("lifecycle_state_label_contract("));
@@ -71,7 +71,6 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("validate_kolme_lookup_window("));
     assert!(RUNTIME_COMMIT_SRC.contains("validate_kolme_block_identity("));
     assert!(RUNTIME_COMMIT_SRC.contains("compose_kolme_finality_status_path("));
-    assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_provider_response_fields("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_notification_event_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_response_body("));
     assert!(RUNTIME_COMMIT_SRC.contains("find_kolme_http_header_boundary("));
