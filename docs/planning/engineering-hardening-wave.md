@@ -29,6 +29,8 @@ default development loop green while tightening missing-doc policy controls for
   - `bash scripts/ci/test_ci_tools.sh`
 - Contract framework helper unit tests:
   - `bash scripts/framework/test_contract_framework.sh`
+- Bounded lifecycle evidence property matrix (runtime/task/escrow):
+  - `cargo test -p kamn-core --test lifecycle_evidence_property_matrix`
 
 ## Missing-Docs Policy Contract
 
@@ -108,3 +110,5 @@ default development loop green while tightening missing-doc policy controls for
 
 - `Regression: #896` — protect against missing-doc policy drift and undocumented
   checker/documentation command changes.
+- `Regression: #1526` — keep bounded lifecycle evidence property matrices
+  deterministic and fail-closed for runtime/task/escrow transition contracts.
