@@ -52,6 +52,11 @@ handling.
   - `PUT /broadcast` requests are normalized to JSON using `KolmeApiBroadcastRequest`.
   - txhash-only responses (`{"txhash":"..."}`) map to deterministic commit ids (`kolme-commit:<txhash>`) with default `Pending` finality when backend finality is absent.
   - provider identity for txhash-only responses uses response `provider` when present, otherwise deterministic provider hint from profile construction.
+- Fork finality profile:
+  - `KolmeRuntimeCommitForkFinalityResolver` composes websocket notifications (`/notifications`) with bounded block fallback scans (`/block/{height}`).
+  - resolver first attempts notification-derived receipts, then falls back only on transport unavailability/timeout.
+  - malformed notification payloads and txhash mismatches remain fail-closed and do not trigger fallback.
+  - fork profile does not require `/runtime-commit/status` or `/commit/finality` endpoints.
 
 ## Typed Kolme Nonce/Broadcast Codecs
 
@@ -128,3 +133,4 @@ cargo test -p kamn-core
 - Adapter provider mismatch/non-final receipts remain fail-closed (`Regression: #979`).
 - HTTPS TLS certificate/handshake drift remains fail-closed (`Regression: #1471`).
 - `kolme_fork` submit-profile drift for `PUT /broadcast` and txhash-only response mapping remains fail-closed (`Regression: #1502`).
+- `kolme_fork` finality resolution drift for notifications + block fallback remains fail-closed (`Regression: #1503`).
