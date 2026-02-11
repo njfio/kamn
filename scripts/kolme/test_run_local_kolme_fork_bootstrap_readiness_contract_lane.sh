@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh"
+LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_fork_bootstrap_readiness_policy.py"
 CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_bootstrap_readiness_contract_lane.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
@@ -42,6 +43,16 @@ PY
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local Kolme fork bootstrap/readiness runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
+  echo "expected shared local-heavy opt-in guard helper to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER"; then
+  echo "expected local Kolme fork bootstrap/readiness runner to invoke shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 

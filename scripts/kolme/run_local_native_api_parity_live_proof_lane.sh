@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
+
 MODE="dry-run"
 OUTPUT_JSON="/tmp/kolme-local-native-api-parity-live-proof-summary.json"
 NONCE_COMMAND=""
@@ -99,6 +102,11 @@ if ! [[ "$MAX_SECONDS" =~ ^[0-9]+$ ]] || [ "$MAX_SECONDS" -le 0 ]; then
   exit 1
 fi
 
+if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
+  echo "expected shared local-heavy opt-in guard helper to be executable" >&2
+  exit 1
+fi
+
 CHECK_FILE="$(mktemp)"
 trap 'rm -f "$CHECK_FILE"' EXIT
 
@@ -170,8 +178,7 @@ if [ "$MODE" = "run" ]; then
   start_epoch="$(date +%s)"
   mkdir -p "$LOG_DIR"
 
-  if [ "${KAMN_KOLME_LOCAL_HEAVY:-0}" != "1" ]; then
-    echo "run mode requires explicit local-only opt-in: KAMN_KOLME_LOCAL_HEAVY=1" >&2
+  if ! "$LOCAL_HEAVY_GUARD"; then
     record_check "nonce_probe" "$planned_nonce_command" "fail" "local_opt_in_missing"
     record_check "broadcast_probe" "$planned_broadcast_command" "fail" "local_opt_in_missing"
     record_check "finality_probe" "$planned_finality_command" "fail" "local_opt_in_missing"

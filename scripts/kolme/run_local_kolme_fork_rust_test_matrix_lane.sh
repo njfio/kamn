@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SYNC_RUNNER="$ROOT_DIR/scripts/kolme/run_local_fork_sync_metadata_lane.sh"
+LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 
 MODE="dry-run"
 OUTPUT_JSON="/tmp/kolme-local-fork-rust-test-matrix-summary.json"
@@ -145,9 +146,13 @@ if [ "${#MATRIX_COMMANDS[@]}" -eq 0 ]; then
   )
 fi
 
-if [ "$MODE" = "run" ] && [ "${KAMN_KOLME_LOCAL_HEAVY:-0}" != "1" ]; then
-  echo "run mode requires explicit local-only opt-in: KAMN_KOLME_LOCAL_HEAVY=1" >&2
+if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
+  echo "expected shared local-heavy opt-in guard helper to be executable" >&2
   exit 1
+fi
+
+if [ "$MODE" = "run" ]; then
+  "$LOCAL_HEAVY_GUARD"
 fi
 
 CHECK_FILE="$(mktemp)"

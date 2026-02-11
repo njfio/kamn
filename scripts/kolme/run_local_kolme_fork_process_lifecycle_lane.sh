@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INTEGRATION_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"
+LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 
 MODE="dry-run"
 OUTPUT_JSON="/tmp/kolme-local-fork-process-lifecycle-summary.json"
@@ -216,6 +217,11 @@ if [ ! -x "$INTEGRATION_RUNNER" ]; then
   exit 1
 fi
 
+if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
+  echo "expected shared local-heavy opt-in guard helper to be executable" >&2
+  exit 1
+fi
+
 CHECK_FILE="$(mktemp)"
 trap 'rm -f "$CHECK_FILE"; if [ -n "$PROCESS_PID" ] && kill -0 "$PROCESS_PID" >/dev/null 2>&1; then kill "$PROCESS_PID" >/dev/null 2>&1 || true; wait "$PROCESS_PID" 2>/dev/null || true; fi' EXIT
 
@@ -329,8 +335,7 @@ if [ "$MODE" = "run" ]; then
   : >"$CHECK_FILE"
   start_epoch="$(date +%s)"
 
-  if [ "${KAMN_KOLME_LOCAL_HEAVY:-0}" != "1" ]; then
-    echo "run mode requires explicit local-only opt-in: KAMN_KOLME_LOCAL_HEAVY=1" >&2
+  if ! "$LOCAL_HEAVY_GUARD"; then
     record_check "process_start" "$serve_command_planned" "fail" "local_opt_in_missing"
     record_check "readiness_probe" "$readiness_command" "skipped" "local_opt_in_missing"
     record_check "kamn_live_integration" "$integration_command" "skipped" "local_opt_in_missing"
