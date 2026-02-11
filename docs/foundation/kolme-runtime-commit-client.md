@@ -83,6 +83,11 @@ handling.
   - deterministic idempotency key from `KolmeRuntimeCommitRequest::idempotency_key()`
 - The adapter preserves validation semantics from
   `KolmeRuntimeCommitRequest::validate()` before provider dispatch.
+- Signed translation model:
+  - `KolmeRuntimeCommitRequest::translate_to_signed_broadcast_envelope(...)` defines the custody boundary between runtime intent and externally signed payload.
+  - `signed_message` must exactly match canonical `to_wire_payload()` output.
+  - `KolmeRuntimeCommitSignedBroadcastEnvelope` requires non-empty `signer_key_id`, `message`, and `signature`.
+  - fork `/broadcast` normalization accepts signed envelope wire payloads only when `signer_key_id` is present and envelope message idempotency key matches the transport idempotency key.
 
 ## Provider and Finality Policy Rules
 
@@ -134,3 +139,4 @@ cargo test -p kamn-core
 - HTTPS TLS certificate/handshake drift remains fail-closed (`Regression: #1471`).
 - `kolme_fork` submit-profile drift for `PUT /broadcast` and txhash-only response mapping remains fail-closed (`Regression: #1502`).
 - `kolme_fork` finality resolution drift for notifications + block fallback remains fail-closed (`Regression: #1503`).
+- signed translation envelope and signer custody precondition drift remains fail-closed (`Regression: #1506`).

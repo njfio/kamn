@@ -130,6 +130,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `python3 scripts/kolme/check_local_kolme_live_api_conformance_policy.py --report-file /tmp/kolme-local-live-api-conformance-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-api-conformance-policy.json`
 - Contract lane command:
   - `bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json`
+- Matrix fixture:
+  - `fixtures/kolme_commit/local_live_api_conformance_matrix.json`
 - Summary schema:
   - `kamn.kolme.local-live-api-conformance-summary.v1`
 - Deterministic checkpoints include:
@@ -178,6 +180,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `run_local_kolme_fork_bootstrap_readiness_lane.sh` run-mode validation for pinned checkout provenance and API readiness.
   - `run_local_kolme_live_api_conformance_harness.sh` run-mode validation for health/query/nonce/broadcast command contracts.
   - explicit runtime-commit submit-profile probe over `PUT /broadcast` with fail-closed reason codes.
+  - signed runtime-commit envelope translation enforces `signer_key_id` presence and canonical message/signature binding before broadcast normalization.
   - finality verification uses `/notifications` first with bounded `/block/{height}` fallback; no runtime commit status endpoint dependency.
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.

@@ -1,7 +1,7 @@
 use kamn_core::{
     KolmeCommitReceiptFinality, KolmeRuntimeCommitFinalityChecker, KolmeRuntimeCommitHttpTransport,
     KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitProvider, KolmeRuntimeCommitProviderError,
-    KolmeRuntimeCommitProviderOutcome,
+    KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitRequest,
 };
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
@@ -666,5 +666,79 @@ fn regression_kolme_fork_submit_profile_requires_non_empty_provider_hint() {
     assert_eq!(
         error.to_string(),
         "invalid runtime commit request provider_hint: must not be empty"
+    );
+}
+
+#[test]
+fn integration_kolme_fork_signed_envelope_submit_maps_txhash_response() {
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-1506-http-a",
+        "state:1506",
+        "kamn:did:agent:http-1506-a",
+        21,
+        "payload:1506-http-a",
+    )
+    .expect("request should build");
+    let signed_envelope = request
+        .translate_to_signed_broadcast_envelope(
+            "kamn:key:signer:http-1",
+            request.to_wire_payload().as_str(),
+            "sig-1506-http-a",
+            1,
+        )
+        .expect("signed envelope should build");
+    let wire_payload = signed_envelope.to_wire_payload();
+
+    let base_url = spawn_single_request_server(
+        "{\"txhash\":\"ab12cd34\"}".to_owned(),
+        "HTTP/1.1 200 OK",
+        move |raw_request| {
+            assert!(raw_request.contains("PUT /broadcast HTTP/1.1"));
+            assert!(raw_request.contains("Content-Type: application/json"));
+            assert!(raw_request.contains("\"message\":\"operation_id=op-1506-http-a"));
+            assert!(raw_request.contains("\"signature\":\"sig-1506-http-a\""));
+            assert!(raw_request.contains("\"recovery_id\":1"));
+        },
+    );
+
+    let transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
+        base_url.as_str(),
+        "kolme-fork-local",
+        transport,
+    )
+    .expect("provider should build");
+
+    let outcome = provider
+        .submit_runtime_commit(wire_payload.as_str(), request.idempotency_key())
+        .expect("signed submit should succeed");
+    match outcome {
+        KolmeRuntimeCommitProviderOutcome::Submitted(receipt) => {
+            assert_eq!(receipt.provider, "kolme-fork-local");
+            assert_eq!(receipt.commit_id, "kolme-commit:ab12cd34");
+            assert_eq!(receipt.finality, KolmeCommitReceiptFinality::Pending);
+        }
+        other => panic!("unexpected provider outcome: {other:?}"),
+    }
+}
+
+#[test]
+fn regression_kolme_fork_signed_envelope_requires_signer_key_id() {
+    // Regression: #1506
+    let transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
+        "http://127.0.0.1:3030",
+        "kolme-fork-local",
+        transport,
+    )
+    .expect("provider should build");
+
+    let malformed_envelope =
+        "{\"message\":\"operation_id=op\\nidempotency_key=abc\\n\",\"signature\":\"sig\",\"recovery_id\":1}";
+    assert_eq!(
+        provider.submit_runtime_commit(malformed_envelope, "abc"),
+        Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "missing required field: signer_key_id".to_owned(),
+        })
     );
 }
