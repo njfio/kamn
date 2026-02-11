@@ -46,6 +46,12 @@ handling.
     - `401`/`403` => authorization failure (`Unavailable`)
     - `400`/`404`/`409`/`422` => invalid request (`MalformedResponse`)
     - `429` => rate limited (`Unavailable`)
+- Live submit profiles:
+  - `KolmeRuntimeCommitLiveProvider::new(...)` preserves legacy submit behavior and request shape.
+  - `KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(...)` targets `PUT /broadcast` for `njfio/kolme_fork`.
+  - `PUT /broadcast` requests are normalized to JSON using `KolmeApiBroadcastRequest`.
+  - txhash-only responses (`{"txhash":"..."}`) map to deterministic commit ids (`kolme-commit:<txhash>`) with default `Pending` finality when backend finality is absent.
+  - provider identity for txhash-only responses uses response `provider` when present, otherwise deterministic provider hint from profile construction.
 
 ## Typed Kolme Nonce/Broadcast Codecs
 
@@ -121,3 +127,4 @@ cargo test -p kamn-core
 - Replay/tamper mismatch policy remains fail-closed (`Regression: #827`).
 - Adapter provider mismatch/non-final receipts remain fail-closed (`Regression: #979`).
 - HTTPS TLS certificate/handshake drift remains fail-closed (`Regression: #1471`).
+- `kolme_fork` submit-profile drift for `PUT /broadcast` and txhash-only response mapping remains fail-closed (`Regression: #1502`).
