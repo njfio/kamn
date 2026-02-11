@@ -45,7 +45,6 @@ signature_profile
 signer_backend
 smoke
 task_artifacts
-task_lifecycle
 task_operations
 task_payment
 telegram_bridge

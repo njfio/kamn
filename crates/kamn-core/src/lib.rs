@@ -103,7 +103,6 @@ pub mod smoke;
 pub mod state;
 #[allow(missing_docs)]
 pub mod task_artifacts;
-#[allow(missing_docs)]
 pub mod task_lifecycle;
 #[allow(missing_docs)]
 pub mod task_operations;

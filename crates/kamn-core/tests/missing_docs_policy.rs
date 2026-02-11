@@ -89,3 +89,21 @@ fn graduated_wave_two_modules_must_not_return_to_missing_docs_allowlist() {
         );
     }
 }
+
+#[test]
+fn graduated_wave_three_task_lifecycle_module_must_not_return_to_missing_docs_allowlist() {
+    // Regression: #1601
+    let actual = allowlisted_modules_from_core_lib(CORE_LIB);
+    let expected = allowlisted_modules_from_fixture(ALLOWLIST_FIXTURE);
+
+    assert!(
+        !actual.iter().any(|candidate| candidate == "task_lifecycle"),
+        "task_lifecycle must stay graduated from #[allow(missing_docs)]"
+    );
+    assert!(
+        !expected
+            .iter()
+            .any(|candidate| candidate == "task_lifecycle"),
+        "allowlist fixture must keep task_lifecycle removed"
+    );
+}
