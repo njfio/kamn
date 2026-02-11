@@ -30,12 +30,19 @@ fn roadmap_contains_version_and_runtime_commit_contract_lane_commands() {
     assert!(ROADMAP.contains("kolme_runtime_commit_notifications"));
     assert!(ROADMAP.contains("kolme_runtime_commit_block_fallback"));
     assert!(ROADMAP.contains("fixtures/kolme_compatibility/fork_compatibility_cases.json"));
+    assert!(ROADMAP.contains("fixtures/kolme_compatibility/lane_migration_matrix.json"));
+    assert!(ROADMAP.contains("check_lane_migration_matrix_policy.py"));
     assert!(ROADMAP.contains("fixtures/kolme_commit/runtime_commit_request_cases.txt"));
     assert!(ROADMAP.contains("fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json"));
     assert!(ROADMAP.contains("fixtures/kolme_commit/nonce_broadcast_parity_cases.json"));
     assert!(ROADMAP.contains("fixtures/kolme_commit/local_live_api_conformance_matrix.json"));
     assert!(ROADMAP.contains("--cargo-profile portable"));
     assert!(ROADMAP.contains("--matrix-cargo-profile portable"));
+}
+
+#[test]
+fn roadmap_local_validation_includes_lane_migration_matrix_policy_test() {
+    assert!(ROADMAP.contains("bash scripts/kolme/test_check_lane_migration_matrix_policy.sh"));
 }
 
 #[test]

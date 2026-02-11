@@ -1747,6 +1747,20 @@ assert_eq "$(extract_output "$kolme_devnet_contract_fixture_output" "run_kolme_v
 assert_eq "$(extract_output "$kolme_devnet_contract_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "true" "Kolme devnet smoke fixture changes must run triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_devnet_contract_fixture_output" "test_scope")" "kolme-devnet-contract" "Kolme devnet smoke fixture changes should set kolme-devnet-contract scope"
 
+kolme_lane_matrix_policy_script_output="$(run_selector $'scripts/kolme/check_lane_migration_matrix_policy.py')"
+assert_eq "$(extract_output "$kolme_lane_matrix_policy_script_output" "run_rust")" "false" "Kolme lane migration matrix policy script-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_lane_matrix_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme lane migration matrix policy script changes should skip snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_lane_matrix_policy_script_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme lane migration matrix policy script changes must run version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_lane_matrix_policy_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme lane migration matrix policy script changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_lane_matrix_policy_script_output" "test_scope")" "kolme-version-contract" "Kolme lane migration matrix policy script changes should set kolme-version-contract scope"
+
+kolme_lane_matrix_fixture_output="$(run_selector $'fixtures/kolme_compatibility/lane_migration_matrix.json')"
+assert_eq "$(extract_output "$kolme_lane_matrix_fixture_output" "run_rust")" "false" "Kolme lane migration matrix fixture-only changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_lane_matrix_fixture_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme lane migration matrix fixture changes should skip snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_lane_matrix_fixture_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme lane migration matrix fixture changes must run version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_lane_matrix_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme lane migration matrix fixture changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_lane_matrix_fixture_output" "test_scope")" "kolme-version-contract" "Kolme lane migration matrix fixture changes should set kolme-version-contract scope"
+
 runtime_contract_docs_output="$(run_selector $'docs/foundation/runtime-network.md')"
 assert_eq "$(extract_output "$runtime_contract_docs_output" "run_rust")" "false" "runtime contract docs should avoid rust lane"
 assert_eq "$(extract_output "$runtime_contract_docs_output" "run_runtime_snapshot_contract_tests")" "true" "runtime contract docs must run runtime snapshot contract lane"
