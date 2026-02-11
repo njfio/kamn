@@ -75,7 +75,8 @@ fail_output="$(
   bash "$SCRIPT" \
     --scripts-root "$SCRIPTS_ROOT" \
     --budget-file "$FAIL_BUDGET" \
-    --baseline-file "$BASELINE_FILE" 2>&1
+    --baseline-file "$BASELINE_FILE" \
+    --waiver-file "$TMP_DIR/missing-waiver.json" 2>&1
 )"
 fail_code=$?
 set -e

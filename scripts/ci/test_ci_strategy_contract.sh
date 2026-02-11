@@ -120,6 +120,7 @@ required_snippets=(
   "Regression: #1494"
   "Regression: #1462"
   "Regression: #1466"
+  "Regression: #1497"
 )
 
 for snippet in "${required_snippets[@]}"; do
