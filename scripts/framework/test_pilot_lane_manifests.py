@@ -170,6 +170,26 @@ class PilotLaneManifestTests(unittest.TestCase):
                 "kolme.local_e2e_integration.contract",
                 "scripts/kolme/contracts/local_e2e_integration_contract_lane.py",
             ),
+            (
+                "kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json",
+                "kolme.local_kolme_fork_bootstrap_readiness.contract",
+                "scripts/kolme/contracts/local_kolme_fork_bootstrap_readiness_contract_lane.py",
+            ),
+            (
+                "kolme_local_kolme_live_api_conformance_contract_lane.json",
+                "kolme.local_kolme_live_api_conformance.contract",
+                "scripts/kolme/contracts/local_kolme_live_api_conformance_contract_lane.py",
+            ),
+            (
+                "kolme_local_kamn_live_runtime_integration_contract_lane.json",
+                "kolme.local_kamn_live_runtime_integration.contract",
+                "scripts/kolme/contracts/local_kamn_live_runtime_integration_contract_lane.py",
+            ),
+            (
+                "kolme_local_kolme_fork_process_lifecycle_contract_lane.json",
+                "kolme.local_kolme_fork_process_lifecycle.contract",
+                "scripts/kolme/contracts/local_kolme_fork_process_lifecycle_contract_lane.py",
+            ),
         )
 
         for manifest_name, expected_lane_id, expected_script in cases:

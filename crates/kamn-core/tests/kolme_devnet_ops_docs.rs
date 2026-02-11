@@ -342,6 +342,33 @@ fn plan_contains_runtime_triadic_bootstrap_e2e_manifest_migration_contract() {
 }
 
 #[test]
+fn plan_contains_bootstrap_conformance_runtime_process_manifest_migration_contract() {
+    assert!(
+        PLAN.contains("## Bootstrap+Conformance+Runtime+Process Manifest Migration (Issue #1771)")
+    );
+    assert!(PLAN.contains(
+        "scripts/ci/test_kolme_bootstrap_conformance_runtime_process_manifest_migration_contract.sh"
+    ));
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json"
+    ));
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json"
+    ));
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_contract_lane.json"
+    ));
+    assert!(PLAN.contains(
+        "scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_contract_lane.json"
+    ));
+    assert!(PLAN
+        .contains("scripts/kolme/contracts/local_kolme_fork_process_lifecycle_contract_lane.py"));
+    assert!(PLAN.contains(
+        "Combined wrapper shell LOC for this bootstrap/conformance/runtime/process tranche remains `<= 160`."
+    ));
+}
+
+#[test]
 fn regression_requires_failover_sync_budget_and_scheduled_cadence_guards() {
     // Regression: #788
     assert!(PLAN
@@ -425,6 +452,14 @@ fn regression_requires_runtime_triadic_bootstrap_e2e_manifest_migration_guard_ma
     // Regression: #1769
     assert!(PLAN.contains(
         "runtime+triadic+bootstrap+e2e manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1769`)."
+    ));
+}
+
+#[test]
+fn regression_requires_bootstrap_conformance_runtime_process_manifest_migration_guard_marker() {
+    // Regression: #1771
+    assert!(PLAN.contains(
+        "bootstrap+conformance+runtime+process manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1771`)."
     ));
 }
 
