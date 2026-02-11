@@ -34,6 +34,7 @@ handling.
 - Endpoint normalization boundary:
   - `crates/kamn-kolme/src/endpoint_policy.rs` owns HTTP/WebSocket endpoint parsing and URL composition contracts.
   - `crates/kamn-kolme/src/http_response_policy.rs` owns HTTP response status/content parsing contracts.
+  - `crates/kamn-kolme/src/flat_json_policy.rs` owns flat JSON scalar/object parsing contracts used by broadcast normalization and block-fallback field extraction.
   - `crates/kamn-kolme/src/provider_response_policy.rs` owns provider response field parsing contracts (key/value + flat JSON string object formats).
   - `crates/kamn-core/src/kolme_runtime_commit.rs` delegates endpoint normalization through compatibility wrappers.
 - Optional auth-aware constructor:
@@ -66,6 +67,7 @@ handling.
   - notification variant parsing contracts are sourced from `kamn-kolme` (`parse_notification_event`) and mapped through `kamn-core` compatibility wrappers.
   - finality alias parsing and block-scan policy contracts are sourced from `kamn-kolme` (`parse_receipt_finality`, `validate_lookup_window`, `validate_block_identity`, `render_block_path`, `parse_fork_block_txhash`) so extraction boundaries stay explicit while `kamn-core` adapters are migrated.
   - provider response field parsing contracts are sourced from `kamn-kolme` (`parse_provider_response_fields`, `parse_provider_key_value_fields`) and mapped through `kamn-core` compatibility wrappers.
+  - flat JSON scalar field parsing contracts are sourced from `kamn-kolme` (`parse_flat_json_value_fields`, `required_json_string_field`, `required_positive_u64_json_field`) and mapped through `kamn-core` compatibility wrappers.
   - resolver consumes one notification event first:
     - txhash-bearing `NewBlock` / `FailedTransaction` events map directly to receipts.
     - `LatestBlock` (or `NewBlock` payloads that carry height but no txhash) trigger bounded `/block/{height}` fallback reconciliation.
@@ -154,6 +156,7 @@ cargo test -p kamn-kolme --test websocket_policy_contracts
 cargo test -p kamn-kolme --test http_response_policy_contracts
 cargo test -p kamn-kolme --test tls_policy_contracts
 cargo test -p kamn-kolme --test provider_response_policy_contracts
+cargo test -p kamn-kolme --test flat_json_policy_contracts
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_fetch_next_nonce_query_and_parse -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_submit_broadcast_request_put_and_parse_txhash -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_http_transport_submit_broadcast_request_rejects_malformed_txhash_response -- --exact
@@ -181,3 +184,4 @@ cargo test -p kamn-core
 - direct signed transaction required-field validation drift remains fail-closed (`Regression: #1519`).
 - typed nonce/broadcast HTTP helper mapping drift remains fail-closed (`Regression: #1533`).
 - provider response field parser extraction parity drift remains fail-closed (`Regression: #1745`).
+- flat JSON parser extraction parity drift remains fail-closed (`Regression: #1747`).

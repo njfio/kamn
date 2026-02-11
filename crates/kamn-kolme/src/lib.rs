@@ -9,6 +9,7 @@ pub mod block_scan_policy;
 pub mod codec;
 pub mod endpoint_policy;
 pub mod finality;
+pub mod flat_json_policy;
 pub mod http_response_policy;
 pub mod notification_policy;
 pub mod pipeline;
@@ -34,6 +35,10 @@ pub use endpoint_policy::{
     KolmeParsedWebsocketEndpoint,
 };
 pub use finality::{resolve_finality, FinalityResolution, FinalityState};
+pub use flat_json_policy::{
+    parse_flat_json_value_fields, required_json_string_field, required_positive_u64_json_field,
+    KolmeFlatJsonPolicyError, KolmeFlatJsonValue,
+};
 pub use http_response_policy::{parse_http_response_body, KolmeHttpResponsePolicyError};
 pub use notification_policy::{
     parse_notification_event, KolmeNotificationEvent, KolmeNotificationPolicyError,

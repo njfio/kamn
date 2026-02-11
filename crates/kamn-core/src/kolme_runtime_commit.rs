@@ -6,6 +6,7 @@ use kamn_kolme::{
     compose_finality_status_path as compose_kolme_finality_status_path,
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
     find_http_header_boundary as find_kolme_http_header_boundary,
+    parse_flat_json_value_fields as parse_kolme_flat_json_value_fields,
     parse_fork_block_txhash as parse_kolme_fork_block_txhash,
     parse_http_endpoint as parse_kolme_http_endpoint,
     parse_http_response_body as parse_kolme_http_response_body,
@@ -16,6 +17,8 @@ use kamn_kolme::{
     parse_tls_ca_file_env_value as parse_kolme_tls_ca_file_env_value,
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
     render_block_path as render_kolme_block_path,
+    required_json_string_field as required_kolme_json_string_field,
+    required_positive_u64_json_field as required_kolme_positive_u64_json_field,
     try_take_websocket_frame as try_take_kolme_websocket_frame,
     validate_block_identity as validate_kolme_block_identity,
     validate_block_path_template as validate_kolme_block_path_template,
@@ -28,6 +31,8 @@ use kamn_kolme::{
     KolmeApiNextNonceRequest as KamnKolmeApiNextNonceRequest,
     KolmeApiNextNonceResponse as KamnKolmeApiNextNonceResponse,
     KolmeEndpointPolicyError as KamnKolmeEndpointPolicyError,
+    KolmeFlatJsonPolicyError as KamnKolmeFlatJsonPolicyError,
+    KolmeFlatJsonValue as KamnKolmeFlatJsonValue,
     KolmeHttpResponsePolicyError as KamnKolmeHttpResponsePolicyError,
     KolmeHttpScheme as KamnKolmeHttpScheme, KolmeNotificationEvent as KamnKolmeNotificationEvent,
     KolmeNotificationPolicyError as KamnKolmeNotificationPolicyError,
@@ -1777,6 +1782,14 @@ fn map_provider_response_policy_error_to_malformed(
     }
 }
 
+fn map_flat_json_policy_error_to_malformed(
+    error: KamnKolmeFlatJsonPolicyError,
+) -> KolmeRuntimeCommitProviderError {
+    KolmeRuntimeCommitProviderError::MalformedResponse {
+        reason: error.to_string(),
+    }
+}
+
 fn map_websocket_policy_error(
     error: KamnKolmeWebsocketPolicyError,
 ) -> KolmeRuntimeCommitProviderError {
@@ -1839,8 +1852,10 @@ fn parse_block_fallback_response(
 ) -> Result<ParsedBlockFallbackResponse, KolmeRuntimeCommitProviderError> {
     let trimmed = response.trim();
     if trimmed.starts_with('{') {
-        let fields = parse_flat_json_value_fields(trimmed)?;
-        let provider = required_json_string_field(&fields, "provider")?;
+        let fields = parse_kolme_flat_json_value_fields(trimmed)
+            .map_err(map_flat_json_policy_error_to_malformed)?;
+        let provider = required_kolme_json_string_field(&fields, "provider")
+            .map_err(map_flat_json_policy_error_to_malformed)?;
         let block_height = required_block_height_json_field(&fields)?;
         let finalized_tx_hashes = optional_json_block_tx_hashes(&fields, "tx_hashes")?;
         let failed_tx_hashes = optional_json_block_tx_hashes(&fields, "failed_tx_hashes")?;
@@ -1932,13 +1947,15 @@ fn parse_tx_hash_list(
 }
 
 fn required_block_height_json_field(
-    fields: &HashMap<String, FlatJsonValue>,
+    fields: &HashMap<String, KamnKolmeFlatJsonValue>,
 ) -> Result<u64, KolmeRuntimeCommitProviderError> {
     if fields.contains_key("block_height") {
-        return required_positive_u64_json_field(fields, "block_height");
+        return required_kolme_positive_u64_json_field(fields, "block_height")
+            .map_err(map_flat_json_policy_error_to_malformed);
     }
     if fields.contains_key("height") {
-        return required_positive_u64_json_field(fields, "height");
+        return required_kolme_positive_u64_json_field(fields, "height")
+            .map_err(map_flat_json_policy_error_to_malformed);
     }
     Err(KolmeRuntimeCommitProviderError::MalformedResponse {
         reason: "missing required field: block_height".to_owned(),
@@ -1946,15 +1963,15 @@ fn required_block_height_json_field(
 }
 
 fn optional_json_block_tx_hashes(
-    fields: &HashMap<String, FlatJsonValue>,
+    fields: &HashMap<String, KamnKolmeFlatJsonValue>,
     field: &'static str,
 ) -> Result<Vec<String>, KolmeRuntimeCommitProviderError> {
     let Some(value) = fields.get(field) else {
         return Ok(Vec::new());
     };
     match value {
-        FlatJsonValue::Null => Ok(Vec::new()),
-        FlatJsonValue::String(raw) => parse_tx_hash_list(raw, field),
+        KamnKolmeFlatJsonValue::Null => Ok(Vec::new()),
+        KamnKolmeFlatJsonValue::String(raw) => parse_tx_hash_list(raw, field),
         _ => Err(KolmeRuntimeCommitProviderError::MalformedResponse {
             reason: format!("field must be string|null: {field}"),
         }),
@@ -2113,10 +2130,11 @@ fn normalize_kolme_broadcast_payload(
     }
 
     if payload.starts_with('{') {
-        let fields = parse_flat_json_value_fields(payload)?;
+        let fields = parse_kolme_flat_json_value_fields(payload)
+            .map_err(map_flat_json_policy_error_to_malformed)?;
         if let Some(payload_idempotency_key) = fields.get("idempotency_key") {
             let payload_idempotency_key = match payload_idempotency_key {
-                FlatJsonValue::String(value) => value.trim(),
+                KamnKolmeFlatJsonValue::String(value) => value.trim(),
                 _ => {
                     return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                         reason: "field must be a string: idempotency_key".to_owned(),
@@ -2136,9 +2154,12 @@ fn normalize_kolme_broadcast_payload(
             }
         }
 
-        let message = required_json_string_field(&fields, "message")?;
-        let signature = required_json_string_field(&fields, "signature")?;
-        let recovery_id_u64 = required_positive_u64_json_field(&fields, "recovery_id")?;
+        let message = required_kolme_json_string_field(&fields, "message")
+            .map_err(map_flat_json_policy_error_to_malformed)?;
+        let signature = required_kolme_json_string_field(&fields, "signature")
+            .map_err(map_flat_json_policy_error_to_malformed)?;
+        let recovery_id_u64 = required_kolme_positive_u64_json_field(&fields, "recovery_id")
+            .map_err(map_flat_json_policy_error_to_malformed)?;
         let recovery_id = u8::try_from(recovery_id_u64).map_err(|_| {
             KolmeRuntimeCommitProviderError::MalformedResponse {
                 reason: "recovery_id must be within u8 range".to_owned(),
@@ -2146,7 +2167,8 @@ fn normalize_kolme_broadcast_payload(
         })?;
 
         if fields.contains_key("signer_key_id") {
-            let signer_key_id = required_json_string_field(&fields, "signer_key_id")?;
+            let signer_key_id = required_kolme_json_string_field(&fields, "signer_key_id")
+                .map_err(map_flat_json_policy_error_to_malformed)?;
             let envelope = KolmeRuntimeCommitSignedBroadcastEnvelope::new(
                 signer_key_id.as_str(),
                 message.as_str(),
@@ -2282,238 +2304,6 @@ fn parse_live_provider_response(
             },
         ))
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum FlatJsonValue {
-    String(String),
-    Number(String),
-    Boolean(bool),
-    Null,
-}
-
-fn parse_flat_json_value_fields(
-    response: &str,
-) -> Result<HashMap<String, FlatJsonValue>, KolmeRuntimeCommitProviderError> {
-    let body = response.trim();
-    if !(body.starts_with('{') && body.ends_with('}')) {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "json response must be an object".to_owned(),
-        });
-    }
-    let inner = &body[1..body.len() - 1];
-    if inner.trim().is_empty() {
-        return Ok(HashMap::new());
-    }
-
-    let entries = split_unquoted(inner, ',').map_err(|reason| {
-        KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("invalid json response: {reason}"),
-        }
-    })?;
-
-    let mut fields = HashMap::new();
-    for entry in entries {
-        let pair = split_unquoted(entry.as_str(), ':').map_err(|reason| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("invalid json response pair: {reason}"),
-            }
-        })?;
-        if pair.len() != 2 {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "json response pair must contain exactly one ':'".to_owned(),
-            });
-        }
-
-        let key = parse_json_string(pair[0].trim()).map_err(|reason| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("invalid json key: {reason}"),
-            }
-        })?;
-        let value = parse_json_value(pair[1].trim())?;
-        fields.insert(key, value);
-    }
-    Ok(fields)
-}
-
-fn parse_json_value(token: &str) -> Result<FlatJsonValue, KolmeRuntimeCommitProviderError> {
-    let trimmed = token.trim();
-    if trimmed.starts_with('"') {
-        let value = parse_json_string(trimmed).map_err(|reason| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("invalid json value: {reason}"),
-            }
-        })?;
-        return Ok(FlatJsonValue::String(value));
-    }
-    if trimmed == "null" {
-        return Ok(FlatJsonValue::Null);
-    }
-    if trimmed == "true" {
-        return Ok(FlatJsonValue::Boolean(true));
-    }
-    if trimmed == "false" {
-        return Ok(FlatJsonValue::Boolean(false));
-    }
-    if is_json_number_literal(trimmed) {
-        return Ok(FlatJsonValue::Number(trimmed.to_owned()));
-    }
-    Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-        reason: "invalid json value token".to_owned(),
-    })
-}
-
-fn is_json_number_literal(token: &str) -> bool {
-    if token.is_empty() {
-        return false;
-    }
-    let mut chars = token.chars();
-    let first = chars.next().unwrap_or_default();
-    if first == '-' {
-        let remainder = chars.as_str();
-        return !remainder.is_empty() && remainder.chars().all(|ch| ch.is_ascii_digit());
-    }
-    first.is_ascii_digit() && chars.as_str().chars().all(|ch| ch.is_ascii_digit())
-}
-
-fn required_json_string_field(
-    fields: &HashMap<String, FlatJsonValue>,
-    field: &'static str,
-) -> Result<String, KolmeRuntimeCommitProviderError> {
-    let value =
-        fields
-            .get(field)
-            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("missing required field: {field}"),
-            })?;
-    let FlatJsonValue::String(raw) = value else {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("field must be a string: {field}"),
-        });
-    };
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("field must not be empty: {field}"),
-        });
-    }
-    Ok(trimmed.to_owned())
-}
-
-fn required_positive_u64_json_field(
-    fields: &HashMap<String, FlatJsonValue>,
-    field: &'static str,
-) -> Result<u64, KolmeRuntimeCommitProviderError> {
-    let value =
-        fields
-            .get(field)
-            .ok_or_else(|| KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("missing required field: {field}"),
-            })?;
-
-    let raw = match value {
-        FlatJsonValue::Number(value) => value.as_str(),
-        FlatJsonValue::String(value) => value.trim(),
-        _ => {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("field must be numeric: {field}"),
-            });
-        }
-    };
-
-    let parsed =
-        raw.parse::<i128>()
-            .map_err(|_| KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("invalid numeric field: {field}"),
-            })?;
-    if parsed <= 0 {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("{field} must be positive"),
-        });
-    }
-    u64::try_from(parsed).map_err(|_| KolmeRuntimeCommitProviderError::MalformedResponse {
-        reason: format!("invalid numeric field: {field}"),
-    })
-}
-
-fn split_unquoted(input: &str, delimiter: char) -> Result<Vec<String>, &'static str> {
-    let mut parts = Vec::new();
-    let mut current = String::new();
-    let mut in_quotes = false;
-    let mut escape = false;
-
-    for ch in input.chars() {
-        if escape {
-            current.push(ch);
-            escape = false;
-            continue;
-        }
-
-        if ch == '\\' && in_quotes {
-            current.push(ch);
-            escape = true;
-            continue;
-        }
-
-        if ch == '"' {
-            in_quotes = !in_quotes;
-            current.push(ch);
-            continue;
-        }
-
-        if ch == delimiter && !in_quotes {
-            if current.trim().is_empty() {
-                return Err("empty segment");
-            }
-            parts.push(current.trim().to_owned());
-            current.clear();
-            continue;
-        }
-
-        current.push(ch);
-    }
-
-    if in_quotes {
-        return Err("unterminated quoted string");
-    }
-    if current.trim().is_empty() {
-        return Err("empty trailing segment");
-    }
-    parts.push(current.trim().to_owned());
-    Ok(parts)
-}
-
-fn parse_json_string(token: &str) -> Result<String, &'static str> {
-    let trimmed = token.trim();
-    if !(trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2) {
-        return Err("token must be a quoted string");
-    }
-    let mut output = String::new();
-    let mut escape = false;
-    for ch in trimmed[1..trimmed.len() - 1].chars() {
-        if escape {
-            let mapped = match ch {
-                '\\' => '\\',
-                '"' => '"',
-                'n' => '\n',
-                'r' => '\r',
-                't' => '\t',
-                _ => return Err("unsupported escape sequence"),
-            };
-            output.push(mapped);
-            escape = false;
-            continue;
-        }
-        if ch == '\\' {
-            escape = true;
-            continue;
-        }
-        output.push(ch);
-    }
-    if escape {
-        return Err("unterminated escape sequence");
-    }
-    Ok(output)
 }
 
 fn json_escape(value: &str) -> String {
