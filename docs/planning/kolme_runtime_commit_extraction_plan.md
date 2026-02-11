@@ -44,6 +44,7 @@ Out of scope:
 - #1848: extracted notification event-to-receipt projection to `kamn-kolme` (`notification_event_to_receipt`) and rewired `kamn-core` notification receipt conversion delegation.
 - #1850: extracted TLS CA env-result resolver to `kamn-kolme` (`resolve_tls_ca_file_env_result`) and rewired `kamn-core` TLS CA configuration lookup delegation.
 - #1852: extracted provider-scoped notification receipt projection to `kamn-kolme` (`notification_event_to_provider_receipt`) and rewired `kamn-core` notification conversion provider normalization + receipt assembly delegation.
+- #1854: extracted block-fallback txhash-match receipt projection to `kamn-kolme` (`project_finalized_block_txhash_receipt` / `project_failed_block_txhash_receipt`) and rewired `kamn-core` fallback reconciler receipt projection delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,

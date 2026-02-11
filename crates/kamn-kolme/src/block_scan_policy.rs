@@ -1,5 +1,7 @@
 //! Block-scan policy contracts for Kolme fallback reconciliation.
 
+use crate::provider_outcome_policy::deterministic_backend_commit_id;
+use crate::receipt_finality::ReceiptFinality;
 use std::error::Error;
 use std::fmt;
 
@@ -81,6 +83,15 @@ impl fmt::Display for BlockScanPolicyError {
 
 impl Error for BlockScanPolicyError {}
 
+/// Deterministic receipt projection emitted from one block txhash match.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BlockScanReceiptProjection {
+    /// Deterministic backend commit id.
+    pub commit_id: String,
+    /// Projected receipt finality.
+    pub finality: ReceiptFinality,
+}
+
 /// Validates the configured block endpoint path template.
 pub fn validate_block_path_template(block_path_template: &str) -> Result<(), BlockScanPolicyError> {
     let trimmed = block_path_template.trim();
@@ -140,6 +151,25 @@ pub fn resolve_lookup_upper_bound(
         notification_height.min(latest_height)
     } else {
         latest_height
+    }
+}
+
+/// Projects a finalized block match into deterministic receipt projection fields.
+pub fn project_finalized_block_txhash_receipt(
+    txhash: &str,
+    block_height: u64,
+) -> BlockScanReceiptProjection {
+    BlockScanReceiptProjection {
+        commit_id: deterministic_backend_commit_id(txhash, Some(block_height)),
+        finality: ReceiptFinality::Final,
+    }
+}
+
+/// Projects a failed block match into deterministic receipt projection fields.
+pub fn project_failed_block_txhash_receipt(txhash: &str) -> BlockScanReceiptProjection {
+    BlockScanReceiptProjection {
+        commit_id: deterministic_backend_commit_id(txhash, None),
+        finality: ReceiptFinality::Failed,
     }
 }
 

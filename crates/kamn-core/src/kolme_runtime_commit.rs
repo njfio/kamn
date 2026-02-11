@@ -4,10 +4,10 @@ use crate::AgentDid;
 use kamn_kolme::{
     classify_tls_failure_reason as classify_kolme_tls_failure_reason,
     classify_transport_io_error as classify_kolme_transport_io_error,
+    commit_finality_from_receipt_finality as commit_finality_from_receipt_finality_contract,
     commit_finality_label as commit_finality_label_contract,
     compose_finality_status_path as compose_kolme_finality_status_path,
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
-    deterministic_backend_commit_id as deterministic_kolme_backend_commit_id,
     deterministic_runtime_commit_id as deterministic_runtime_commit_id_contract,
     deterministic_runtime_commit_idempotency_key as deterministic_runtime_commit_idempotency_key_contract,
     escape_json_string as escape_kolme_json_string,
@@ -25,6 +25,8 @@ use kamn_kolme::{
     parse_provider_block_fallback_response as parse_kolme_provider_block_fallback_response_contract,
     parse_provider_finality_receipt as parse_kolme_provider_finality_receipt,
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
+    project_failed_block_txhash_receipt as project_kolme_failed_block_txhash_receipt_contract,
+    project_finalized_block_txhash_receipt as project_kolme_finalized_block_txhash_receipt_contract,
     render_block_path as render_kolme_block_path,
     require_commit_id_matches_expected_txhash as require_kolme_commit_id_matches_expected_txhash_contract,
     require_final_receipt_finality as require_kolme_final_receipt_finality_contract,
@@ -1357,17 +1359,20 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
                 .iter()
                 .any(|value| value == txhash)
             {
+                let projection =
+                    project_kolme_finalized_block_txhash_receipt_contract(txhash, height);
                 return Ok(KolmeRuntimeCommitProviderReceipt {
                     provider: self.provider.clone(),
-                    commit_id: deterministic_kolme_backend_commit_id(txhash, Some(height)),
-                    finality: KolmeCommitReceiptFinality::Final,
+                    commit_id: projection.commit_id,
+                    finality: commit_finality_from_receipt_finality_contract(projection.finality),
                 });
             }
             if block.failed_tx_hashes.iter().any(|value| value == txhash) {
+                let projection = project_kolme_failed_block_txhash_receipt_contract(txhash);
                 return Ok(KolmeRuntimeCommitProviderReceipt {
                     provider: self.provider.clone(),
-                    commit_id: deterministic_kolme_backend_commit_id(txhash, None),
-                    finality: KolmeCommitReceiptFinality::Failed,
+                    commit_id: projection.commit_id,
+                    finality: commit_finality_from_receipt_finality_contract(projection.finality),
                 });
             }
         }
