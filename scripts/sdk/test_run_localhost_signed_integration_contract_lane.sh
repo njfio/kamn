@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE_SCRIPT="$ROOT_DIR/scripts/sdk/run_localhost_signed_integration_contract_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/sdk/localhost_signed_integration_contract_lane_contract.py"
 REPORT_COMPOSER="$ROOT_DIR/scripts/sdk/localhost_signed_report_composer.py"
+SCENARIO_RUNNER_HELPER="$ROOT_DIR/scripts/sdk/localhost_signed_scenario_runner.py"
 FIXTURE_FILE="$ROOT_DIR/fixtures/runtime/localhost_signed_integration_cases.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -21,6 +22,11 @@ fi
 
 if [ ! -x "$REPORT_COMPOSER" ]; then
   echo "expected localhost signed report composer helper module to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$SCENARIO_RUNNER_HELPER" ]; then
+  echo "expected localhost signed scenario runner helper module to be executable" >&2
   exit 1
 fi
 
@@ -174,6 +180,16 @@ fi
 
 if ! grep -Fq "localhost_signed_report_composer" "$SHARED_CONTRACT"; then
   echo "expected localhost signed integration shared contract lane module to use shared report composer helper" >&2
+  exit 1
+fi
+
+if ! grep -Fq "localhost_signed_scenario_runner" "$SHARED_CONTRACT"; then
+  echo "expected localhost signed integration shared contract lane module to use shared scenario runner helper" >&2
+  exit 1
+fi
+
+if ! grep -Fq "unexpected_listener_completion" "$SHARED_CONTRACT"; then
+  echo "expected localhost signed integration shared contract lane module to enforce bounded timeout race retry reason-code handling" >&2
   exit 1
 fi
 

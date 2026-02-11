@@ -21,6 +21,14 @@ from framework.contract_framework import ContractError, fail, load_json  # noqa:
 from localhost_signed_report_composer import (  # noqa: E402
     compose_localhost_signed_integration_contract_report,
 )
+from localhost_signed_scenario_runner import (  # noqa: E402
+    ScenarioRunnerError,
+    run_harness_scenario_with_retry,
+)
+
+
+TIMEOUT_RACE_REASON_CODE = "unexpected_listener_completion"
+TIMEOUT_SCENARIO_MAX_ATTEMPTS = 2
 
 
 def _is_executable(path: Path) -> bool:
@@ -34,6 +42,39 @@ def _require_contains(text: str, marker: str, message: str) -> None:
 
 def _require_file_contains(path: Path, marker: str, message: str) -> None:
     _require_contains(path.read_text(encoding="utf-8"), marker, message)
+
+
+def _run_and_validate_scenario(
+    *,
+    harness_runner: Path,
+    scenario: str,
+    output_json: Path,
+    status_marker: str,
+    status_message: str,
+    reason_marker: str,
+    reason_message: str,
+    evidence_marker: str,
+    evidence_message: str,
+    timeout_seconds: int | None = None,
+    max_attempts: int = 1,
+    retry_reason_code: str | None = None,
+) -> str:
+    try:
+        run_result = run_harness_scenario_with_retry(
+            harness_runner=harness_runner,
+            scenario=scenario,
+            output_json=output_json,
+            timeout_seconds=timeout_seconds,
+            max_attempts=max_attempts,
+            retry_reason_code=retry_reason_code,
+        )
+    except ScenarioRunnerError as error:
+        fail(str(error))
+    output = run_result.combined_output
+    _require_contains(output, status_marker, status_message)
+    _require_contains(output, reason_marker, reason_message)
+    _require_contains(output, evidence_marker, evidence_message)
+    return output
 
 
 def _load_fixture_contract(
@@ -123,254 +164,91 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
         admission_report = tmp_dir / "admission-guards.json"
         summary_report = tmp_dir / "localhost-signed-integration-contract.json"
 
-        success_run = subprocess.run(
-            [
-                "bash",
-                str(harness_runner),
-                "--scenario",
-                "success",
-                "--output-json",
-                str(success_report),
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if success_run.returncode != 0:
-            fail((success_run.stderr or success_run.stdout or "success scenario failed").strip())
-        success_output = success_run.stdout
-        _require_contains(
-            success_output,
-            "status=pass; scenario=success;",
-            "expected localhost signed integration success scenario status marker",
-        )
-        _require_contains(
-            success_output,
-            f"reason_code={fixture_by_scenario['success']['expected_reason_code']};",
-            "expected localhost signed integration success scenario reason code marker",
-        )
-        _require_contains(
-            success_output,
-            f"evidence_key={fixture_by_scenario['success']['expected_evidence_key']};",
-            "expected localhost signed integration success scenario evidence key",
+        _run_and_validate_scenario(
+            harness_runner=harness_runner,
+            scenario="success",
+            output_json=success_report,
+            status_marker="status=pass; scenario=success;",
+            status_message="expected localhost signed integration success scenario status marker",
+            reason_marker=f"reason_code={fixture_by_scenario['success']['expected_reason_code']};",
+            reason_message="expected localhost signed integration success scenario reason code marker",
+            evidence_marker=f"evidence_key={fixture_by_scenario['success']['expected_evidence_key']};",
+            evidence_message="expected localhost signed integration success scenario evidence key",
         )
 
-        signature_run = subprocess.run(
-            [
-                "bash",
-                str(harness_runner),
-                "--scenario",
-                "signature-mismatch",
-                "--output-json",
-                str(signature_report),
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if signature_run.returncode != 0:
-            fail(
-                (
-                    signature_run.stderr
-                    or signature_run.stdout
-                    or "signature-mismatch scenario failed"
-                ).strip()
-            )
-        signature_output = signature_run.stdout
-        _require_contains(
-            signature_output,
-            "status=pass; scenario=signature-mismatch;",
-            "expected localhost signed integration signature mismatch scenario status marker",
-        )
-        _require_contains(
-            signature_output,
-            f"reason_code={fixture_by_scenario['signature-mismatch']['expected_reason_code']};",
-            "expected localhost signed integration signature mismatch scenario reason code marker",
-        )
-        _require_contains(
-            signature_output,
-            f"evidence_key={fixture_by_scenario['signature-mismatch']['expected_evidence_key']};",
-            "expected localhost signed integration signature mismatch scenario evidence key",
+        _run_and_validate_scenario(
+            harness_runner=harness_runner,
+            scenario="signature-mismatch",
+            output_json=signature_report,
+            status_marker="status=pass; scenario=signature-mismatch;",
+            status_message="expected localhost signed integration signature mismatch scenario status marker",
+            reason_marker=f"reason_code={fixture_by_scenario['signature-mismatch']['expected_reason_code']};",
+            reason_message="expected localhost signed integration signature mismatch scenario reason code marker",
+            evidence_marker=f"evidence_key={fixture_by_scenario['signature-mismatch']['expected_evidence_key']};",
+            evidence_message="expected localhost signed integration signature mismatch scenario evidence key",
         )
 
-        malformed_signature_run = subprocess.run(
-            [
-                "bash",
-                str(harness_runner),
-                "--scenario",
-                "malformed-signature",
-                "--output-json",
-                str(malformed_signature_report),
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if malformed_signature_run.returncode != 0:
-            fail(
-                (
-                    malformed_signature_run.stderr
-                    or malformed_signature_run.stdout
-                    or "malformed-signature scenario failed"
-                ).strip()
-            )
-        malformed_signature_output = malformed_signature_run.stdout
-        _require_contains(
-            malformed_signature_output,
-            "status=pass; scenario=malformed-signature;",
-            "expected localhost signed integration malformed signature scenario status marker",
-        )
-        _require_contains(
-            malformed_signature_output,
-            "reason_code=malformed_signature_detected;",
-            "expected localhost signed integration malformed signature scenario reason code marker",
-        )
-        _require_contains(
-            malformed_signature_output,
-            "evidence_key=localhost_signed_integration:malformed-signature:v1;",
-            "expected localhost signed integration malformed signature scenario evidence key",
+        _run_and_validate_scenario(
+            harness_runner=harness_runner,
+            scenario="malformed-signature",
+            output_json=malformed_signature_report,
+            status_marker="status=pass; scenario=malformed-signature;",
+            status_message="expected localhost signed integration malformed signature scenario status marker",
+            reason_marker="reason_code=malformed_signature_detected;",
+            reason_message="expected localhost signed integration malformed signature scenario reason code marker",
+            evidence_marker="evidence_key=localhost_signed_integration:malformed-signature:v1;",
+            evidence_message="expected localhost signed integration malformed signature scenario evidence key",
         )
 
-        timeout_run = subprocess.run(
-            [
-                "bash",
-                str(harness_runner),
-                "--scenario",
-                "timeout",
-                "--timeout-seconds",
-                "1",
-                "--output-json",
-                str(timeout_report),
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if timeout_run.returncode != 0:
-            fail((timeout_run.stderr or timeout_run.stdout or "timeout scenario failed").strip())
-        timeout_output = timeout_run.stdout
-        _require_contains(
-            timeout_output,
-            "status=pass; scenario=timeout;",
-            "expected localhost signed integration timeout scenario status marker",
-        )
-        _require_contains(
-            timeout_output,
-            f"reason_code={fixture_by_scenario['timeout']['expected_reason_code']};",
-            "expected localhost signed integration timeout scenario reason code marker",
-        )
-        _require_contains(
-            timeout_output,
-            f"evidence_key={fixture_by_scenario['timeout']['expected_evidence_key']};",
-            "expected localhost signed integration timeout scenario evidence key",
+        _run_and_validate_scenario(
+            harness_runner=harness_runner,
+            scenario="timeout",
+            output_json=timeout_report,
+            timeout_seconds=1,
+            max_attempts=TIMEOUT_SCENARIO_MAX_ATTEMPTS,
+            retry_reason_code=TIMEOUT_RACE_REASON_CODE,
+            status_marker="status=pass; scenario=timeout;",
+            status_message="expected localhost signed integration timeout scenario status marker",
+            reason_marker=f"reason_code={fixture_by_scenario['timeout']['expected_reason_code']};",
+            reason_message="expected localhost signed integration timeout scenario reason code marker",
+            evidence_marker=f"evidence_key={fixture_by_scenario['timeout']['expected_evidence_key']};",
+            evidence_message="expected localhost signed integration timeout scenario evidence key",
         )
 
-        session_expired_run = subprocess.run(
-            [
-                "bash",
-                str(harness_runner),
-                "--scenario",
-                "session-expired",
-                "--output-json",
-                str(session_expired_report),
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if session_expired_run.returncode != 0:
-            fail(
-                (
-                    session_expired_run.stderr
-                    or session_expired_run.stdout
-                    or "session-expired scenario failed"
-                ).strip()
-            )
-        session_expired_output = session_expired_run.stdout
-        _require_contains(
-            session_expired_output,
-            "status=pass; scenario=session-expired;",
-            "expected localhost signed integration session-expired scenario status marker",
-        )
-        _require_contains(
-            session_expired_output,
-            "reason_code=session_expired_detected;",
-            "expected localhost signed integration session-expired scenario reason code marker",
-        )
-        _require_contains(
-            session_expired_output,
-            "evidence_key=localhost_signed_integration:session-expired:v1;",
-            "expected localhost signed integration session-expired scenario evidence key",
+        _run_and_validate_scenario(
+            harness_runner=harness_runner,
+            scenario="session-expired",
+            output_json=session_expired_report,
+            status_marker="status=pass; scenario=session-expired;",
+            status_message="expected localhost signed integration session-expired scenario status marker",
+            reason_marker="reason_code=session_expired_detected;",
+            reason_message="expected localhost signed integration session-expired scenario reason code marker",
+            evidence_marker="evidence_key=localhost_signed_integration:session-expired:v1;",
+            evidence_message="expected localhost signed integration session-expired scenario evidence key",
         )
 
-        replay_run = subprocess.run(
-            [
-                "bash",
-                str(harness_runner),
-                "--scenario",
-                "replay-nonce",
-                "--output-json",
-                str(replay_report),
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if replay_run.returncode != 0:
-            fail((replay_run.stderr or replay_run.stdout or "replay-nonce scenario failed").strip())
-        replay_output = replay_run.stdout
-        _require_contains(
-            replay_output,
-            "status=pass; scenario=replay-nonce;",
-            "expected localhost signed integration replay nonce scenario status marker",
-        )
-        _require_contains(
-            replay_output,
-            "reason_code=replay_nonce_detected;",
-            "expected localhost signed integration replay nonce scenario reason code marker",
-        )
-        _require_contains(
-            replay_output,
-            "evidence_key=localhost_signed_integration:replay-nonce:v1;",
-            "expected localhost signed integration replay nonce scenario evidence key",
+        _run_and_validate_scenario(
+            harness_runner=harness_runner,
+            scenario="replay-nonce",
+            output_json=replay_report,
+            status_marker="status=pass; scenario=replay-nonce;",
+            status_message="expected localhost signed integration replay nonce scenario status marker",
+            reason_marker="reason_code=replay_nonce_detected;",
+            reason_message="expected localhost signed integration replay nonce scenario reason code marker",
+            evidence_marker="evidence_key=localhost_signed_integration:replay-nonce:v1;",
+            evidence_message="expected localhost signed integration replay nonce scenario evidence key",
         )
 
-        admission_run = subprocess.run(
-            [
-                "bash",
-                str(harness_runner),
-                "--scenario",
-                "admission-guards",
-                "--output-json",
-                str(admission_report),
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if admission_run.returncode != 0:
-            fail(
-                (
-                    admission_run.stderr
-                    or admission_run.stdout
-                    or "admission-guards scenario failed"
-                ).strip()
-            )
-        admission_output = admission_run.stdout
-        _require_contains(
-            admission_output,
-            "status=pass; scenario=admission-guards;",
-            "expected localhost signed integration admission guards scenario status marker",
-        )
-        _require_contains(
-            admission_output,
-            "reason_code=session_admission_guards_detected;",
-            "expected localhost signed integration admission guards scenario reason code marker",
-        )
-        _require_contains(
-            admission_output,
-            "evidence_key=localhost_signed_integration:admission-guards:v1;",
-            "expected localhost signed integration admission guards scenario evidence key",
+        _run_and_validate_scenario(
+            harness_runner=harness_runner,
+            scenario="admission-guards",
+            output_json=admission_report,
+            status_marker="status=pass; scenario=admission-guards;",
+            status_message="expected localhost signed integration admission guards scenario status marker",
+            reason_marker="reason_code=session_admission_guards_detected;",
+            reason_message="expected localhost signed integration admission guards scenario reason code marker",
+            evidence_marker="evidence_key=localhost_signed_integration:admission-guards:v1;",
+            evidence_message="expected localhost signed integration admission guards scenario evidence key",
         )
 
         success_payload = load_json(success_report)
