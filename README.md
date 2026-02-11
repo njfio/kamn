@@ -246,11 +246,30 @@ bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh \
   --mode dry-run \
   --checkout-path /tmp/kolme_fork \
   --output-json /tmp/kolme-local-fork-real-process-summary.json
+KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh \
+  --mode run \
+  --checkout-path /tmp/kolme_fork \
+  --fork-remote-url https://github.com/njfio/kolme_fork.git \
+  --expected-remote-url https://github.com/njfio/kolme_fork.git \
+  --expected-ref refs/heads/main \
+  --max-seconds 360 \
+  --bootstrap-max-seconds 120 \
+  --preflight-max-seconds 45 \
+  --self-test-max-seconds 120 \
+  --self-test-matrix-max-seconds 60 \
+  --lifecycle-max-seconds 300 \
+  --lifecycle-startup-max-seconds 45 \
+  --lifecycle-integration-max-seconds 240 \
+  --lifecycle-bootstrap-max-seconds 90 \
+  --lifecycle-conformance-max-seconds 180 \
+  --lifecycle-runtime-commit-max-seconds 30 \
+  --output-json /tmp/kolme-local-fork-real-process-summary.json
 python3 scripts/kolme/check_local_kolme_fork_real_process_policy.py \
   --report-file /tmp/kolme-local-fork-real-process-summary.json \
   --expected-final-decision GO \
   --ci-fast-gate PASS \
   --output-json /tmp/kolme-local-fork-real-process-policy.json
+# run mode composes checkout bootstrap + policy prerequisites before preflight/self-test/lifecycle
 # schema: kamn.kolme.local-fork-real-process-summary.v1
 ```
 

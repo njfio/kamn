@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+CHECKOUT_BOOTSTRAP_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh"
+CHECKOUT_BOOTSTRAP_CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_fork_checkout_bootstrap_policy.py"
 PROFILE_PREFLIGHT_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_profile_preflight_lane.sh"
 PROFILE_PREFLIGHT_CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_fork_profile_preflight_policy.py"
 SELF_TEST_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_self_test_lane.sh"
@@ -12,6 +14,8 @@ LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 
 MODE="dry-run"
 OUTPUT_JSON="/tmp/kolme-local-fork-real-process-summary.json"
+CHECKOUT_BOOTSTRAP_REPORT="/tmp/kolme-local-fork-checkout-bootstrap-summary.json"
+CHECKOUT_BOOTSTRAP_POLICY_REPORT="/tmp/kolme-local-fork-checkout-bootstrap-policy.json"
 PROFILE_PREFLIGHT_REPORT="/tmp/kolme-local-fork-profile-preflight-summary.json"
 PROFILE_PREFLIGHT_POLICY_REPORT="/tmp/kolme-local-fork-profile-preflight-policy.json"
 SELF_TEST_REPORT="/tmp/kolme-local-fork-self-test-summary.json"
@@ -19,6 +23,7 @@ SELF_TEST_POLICY_REPORT="/tmp/kolme-local-fork-self-test-policy.json"
 LIFECYCLE_REPORT="/tmp/kolme-local-fork-process-lifecycle-summary.json"
 LIFECYCLE_POLICY_REPORT="/tmp/kolme-local-fork-process-lifecycle-policy.json"
 CHECKOUT_PATH="/tmp/kolme_fork"
+FORK_REMOTE_URL="https://github.com/njfio/kolme_fork.git"
 EXPECTED_REMOTE_URL="https://github.com/njfio/kolme_fork.git"
 EXPECTED_REF="refs/heads/main"
 BASE_URL="http://127.0.0.1:3000"
@@ -26,6 +31,7 @@ FORK_CHAIN_VERSION="v0.15.2"
 SERVE_COMMAND=""
 ALLOW_NON_FORK_SERVE_COMMAND="false"
 MAX_SECONDS=360
+CHECKOUT_BOOTSTRAP_MAX_SECONDS=120
 PROFILE_PREFLIGHT_MAX_SECONDS=45
 SELF_TEST_MAX_SECONDS=120
 SELF_TEST_MATRIX_MAX_SECONDS=60
@@ -54,6 +60,22 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       OUTPUT_JSON="$2"
+      shift 2
+      ;;
+    --bootstrap-report)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --bootstrap-report" >&2
+        exit 1
+      fi
+      CHECKOUT_BOOTSTRAP_REPORT="$2"
+      shift 2
+      ;;
+    --bootstrap-policy-report)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --bootstrap-policy-report" >&2
+        exit 1
+      fi
+      CHECKOUT_BOOTSTRAP_POLICY_REPORT="$2"
       shift 2
       ;;
     --lifecycle-report)
@@ -112,6 +134,14 @@ while [ "$#" -gt 0 ]; do
       CHECKOUT_PATH="$2"
       shift 2
       ;;
+    --fork-remote-url)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --fork-remote-url" >&2
+        exit 1
+      fi
+      FORK_REMOTE_URL="$2"
+      shift 2
+      ;;
     --expected-remote-url)
       if [ "$#" -lt 2 ]; then
         echo "missing value for --expected-remote-url" >&2
@@ -162,6 +192,14 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       MAX_SECONDS="$2"
+      shift 2
+      ;;
+    --bootstrap-max-seconds)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --bootstrap-max-seconds" >&2
+        exit 1
+      fi
+      CHECKOUT_BOOTSTRAP_MAX_SECONDS="$2"
       shift 2
       ;;
     --preflight-max-seconds)
@@ -251,6 +289,8 @@ Usage: run_local_kolme_fork_real_process_contract_lane.sh [options]
 Options:
   --mode dry-run|run                              Emit planned checks or execute wrapper checks.
   --output-json <path>                            Deterministic summary output path.
+  --bootstrap-report <path>                       Output path for checkout bootstrap report.
+  --bootstrap-policy-report <path>                Output path for checkout bootstrap policy report.
   --preflight-report <path>                       Output path for local fork profile preflight report.
   --preflight-policy-report <path>                Output path for local fork profile preflight policy report.
   --self-test-report <path>                       Output path for local fork self-test summary report.
@@ -258,6 +298,7 @@ Options:
   --lifecycle-report <path>                       Output path for local fork process lifecycle report.
   --lifecycle-policy-report <path>                Output path for local fork process lifecycle policy report.
   --checkout-path <path>                          Local kolme_fork checkout path.
+  --fork-remote-url <url-or-path>                 Fork clone/fetch source used by checkout bootstrap prerequisite.
   --expected-remote-url <url>                     Expected origin URL for checkout validation.
   --expected-ref <ref>                            Expected symbolic HEAD ref for checkout.
   --base-url <url>                                Base URL for local Kolme API server.
@@ -265,6 +306,7 @@ Options:
   --serve-command <command>                       Optional serve command override.
   --allow-non-fork-serve-command                  Allow non-fork serve command override for local test harnesses.
   --max-seconds <n>                               Max total runtime budget for run mode.
+  --bootstrap-max-seconds <n>                     Max runtime budget for nested checkout bootstrap lane.
   --preflight-max-seconds <n>                     Max runtime budget for nested profile-preflight lane.
   --self-test-max-seconds <n>                     Max runtime budget for nested self-test lane.
   --self-test-matrix-max-seconds <n>              Max per-command budget for nested self-test matrix runner.
@@ -292,6 +334,7 @@ fi
 
 for numeric_value in \
   "$MAX_SECONDS" \
+  "$CHECKOUT_BOOTSTRAP_MAX_SECONDS" \
   "$PROFILE_PREFLIGHT_MAX_SECONDS" \
   "$SELF_TEST_MAX_SECONDS" \
   "$SELF_TEST_MATRIX_MAX_SECONDS" \
@@ -309,6 +352,16 @@ done
 
 if [ ! -x "$PROFILE_PREFLIGHT_RUNNER" ]; then
   echo "expected local fork profile preflight runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$CHECKOUT_BOOTSTRAP_RUNNER" ]; then
+  echo "expected local fork checkout bootstrap runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$CHECKOUT_BOOTSTRAP_CHECKER" ]; then
+  echo "expected local fork checkout bootstrap policy checker to be executable" >&2
   exit 1
 fi
 
@@ -390,6 +443,8 @@ PY
 command_policy_error_message="serve-command must target checkout path and use cargo run for the local fork profile (or pass --allow-non-fork-serve-command for local harnesses)"
 
 command_profile_contract="default profile: cargo run --bin example-six-sigma -- serve api-server"
+checkout_bootstrap_command="bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh --mode run --checkout-path ${CHECKOUT_PATH} --fork-remote-url ${FORK_REMOTE_URL} --expected-remote-url ${EXPECTED_REMOTE_URL} --expected-ref ${EXPECTED_REF} --max-seconds ${CHECKOUT_BOOTSTRAP_MAX_SECONDS} --output-json ${CHECKOUT_BOOTSTRAP_REPORT}"
+checkout_bootstrap_policy_command="python3 scripts/kolme/check_local_kolme_fork_checkout_bootstrap_policy.py --report-file ${CHECKOUT_BOOTSTRAP_REPORT} --expected-final-decision GO --ci-fast-gate PASS --require-reason-code fork_checkout_bootstrap_passed --output-json ${CHECKOUT_BOOTSTRAP_POLICY_REPORT}"
 preflight_command="bash scripts/kolme/run_local_kolme_fork_profile_preflight_lane.sh --mode run --checkout-path ${CHECKOUT_PATH} --max-seconds ${PROFILE_PREFLIGHT_MAX_SECONDS} --output-json ${PROFILE_PREFLIGHT_REPORT}"
 preflight_policy_command="python3 scripts/kolme/check_local_kolme_fork_profile_preflight_policy.py --report-file ${PROFILE_PREFLIGHT_REPORT} --expected-final-decision GO --ci-fast-gate PASS --require-reason-code profile_preflight_passed --output-json ${PROFILE_PREFLIGHT_POLICY_REPORT}"
 self_test_command="bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode run --checkout-path ${CHECKOUT_PATH} --expected-remote-url ${EXPECTED_REMOTE_URL} --expected-ref ${EXPECTED_REF} --max-seconds ${SELF_TEST_MAX_SECONDS} --matrix-max-seconds ${SELF_TEST_MATRIX_MAX_SECONDS} --output-json ${SELF_TEST_REPORT}"
@@ -403,6 +458,8 @@ budget_status="not_run"
 elapsed_seconds=0
 
 record_check "real_fork_command_profile" "$command_profile_contract" "planned" "not_run"
+record_check "checkout_bootstrap_lane" "$checkout_bootstrap_command" "planned" "not_run"
+record_check "checkout_bootstrap_policy" "$checkout_bootstrap_policy_command" "planned" "not_run"
 record_check "profile_preflight_lane" "$preflight_command" "planned" "not_run"
 record_check "profile_preflight_policy" "$preflight_policy_command" "planned" "not_run"
 record_check "self_test_lane" "$self_test_command" "planned" "not_run"
@@ -416,6 +473,8 @@ if [ "$MODE" = "run" ]; then
 
   if ! "$LOCAL_HEAVY_GUARD"; then
     record_check "real_fork_command_profile" "$command_profile_contract" "fail" "local_opt_in_missing"
+    record_check "checkout_bootstrap_lane" "$checkout_bootstrap_command" "skipped" "local_opt_in_missing"
+    record_check "checkout_bootstrap_policy" "$checkout_bootstrap_policy_command" "skipped" "local_opt_in_missing"
     record_check "profile_preflight_lane" "$preflight_command" "skipped" "local_opt_in_missing"
     record_check "profile_preflight_policy" "$preflight_policy_command" "skipped" "local_opt_in_missing"
     record_check "self_test_lane" "$self_test_command" "skipped" "local_opt_in_missing"
@@ -432,6 +491,8 @@ if [ "$MODE" = "run" ]; then
   }; then
     echo "$command_policy_error_message" >&2
     record_check "real_fork_command_profile" "$command_profile_contract" "fail" "command_policy_violation"
+    record_check "checkout_bootstrap_lane" "$checkout_bootstrap_command" "skipped" "command_policy_violation"
+    record_check "checkout_bootstrap_policy" "$checkout_bootstrap_policy_command" "skipped" "command_policy_violation"
     record_check "profile_preflight_lane" "$preflight_command" "skipped" "command_policy_violation"
     record_check "profile_preflight_policy" "$preflight_policy_command" "skipped" "command_policy_violation"
     record_check "self_test_lane" "$self_test_command" "skipped" "command_policy_violation"
@@ -444,40 +505,107 @@ if [ "$MODE" = "run" ]; then
     record_check "real_fork_command_profile" "$command_profile_contract" "pass" "command_profile_validated"
 
     set +e
-    preflight_args=(
-      --mode run
-      --checkout-path "$CHECKOUT_PATH"
-      --max-seconds "$PROFILE_PREFLIGHT_MAX_SECONDS"
-      --output-json "$PROFILE_PREFLIGHT_REPORT"
-    )
-    if [ "$ALLOW_NON_FORK_SERVE_COMMAND" = "true" ]; then
-      preflight_args+=(--probe-command "bash -lc 'exit 0'" --allow-non-default-probe-command)
-    fi
-    timeout "$PROFILE_PREFLIGHT_MAX_SECONDS" bash "$PROFILE_PREFLIGHT_RUNNER" "${preflight_args[@]}" >/dev/null 2>&1
-    preflight_exit_code=$?
+    timeout "$CHECKOUT_BOOTSTRAP_MAX_SECONDS" bash "$CHECKOUT_BOOTSTRAP_RUNNER" \
+      --mode run \
+      --checkout-path "$CHECKOUT_PATH" \
+      --fork-remote-url "$FORK_REMOTE_URL" \
+      --expected-remote-url "$EXPECTED_REMOTE_URL" \
+      --expected-ref "$EXPECTED_REF" \
+      --max-seconds "$CHECKOUT_BOOTSTRAP_MAX_SECONDS" \
+      --output-json "$CHECKOUT_BOOTSTRAP_REPORT" >/dev/null 2>&1
+    checkout_bootstrap_exit_code=$?
     set -e
 
-    if [ "$preflight_exit_code" -eq 0 ]; then
-      record_check "profile_preflight_lane" "$preflight_command" "pass" "profile_preflight_lane_passed"
-    elif [ "$preflight_exit_code" -eq 124 ]; then
-      record_check "profile_preflight_lane" "$preflight_command" "fail" "profile_preflight_lane_timeout"
-      record_check "profile_preflight_policy" "$preflight_policy_command" "skipped" "profile_preflight_lane_failed"
-      record_check "self_test_lane" "$self_test_command" "skipped" "profile_preflight_lane_failed"
-      record_check "self_test_policy" "$self_test_policy_command" "skipped" "profile_preflight_lane_failed"
-      record_check "process_lifecycle_lane" "$lifecycle_command" "skipped" "profile_preflight_lane_failed"
-      record_check "process_lifecycle_policy" "$policy_command" "skipped" "profile_preflight_lane_failed"
+    if [ "$checkout_bootstrap_exit_code" -eq 0 ]; then
+      record_check "checkout_bootstrap_lane" "$checkout_bootstrap_command" "pass" "checkout_bootstrap_lane_passed"
+    elif [ "$checkout_bootstrap_exit_code" -eq 124 ]; then
+      record_check "checkout_bootstrap_lane" "$checkout_bootstrap_command" "fail" "checkout_bootstrap_lane_timeout"
+      record_check "checkout_bootstrap_policy" "$checkout_bootstrap_policy_command" "skipped" "checkout_bootstrap_lane_failed"
+      record_check "profile_preflight_lane" "$preflight_command" "skipped" "checkout_bootstrap_lane_failed"
+      record_check "profile_preflight_policy" "$preflight_policy_command" "skipped" "checkout_bootstrap_lane_failed"
+      record_check "self_test_lane" "$self_test_command" "skipped" "checkout_bootstrap_lane_failed"
+      record_check "self_test_policy" "$self_test_policy_command" "skipped" "checkout_bootstrap_lane_failed"
+      record_check "process_lifecycle_lane" "$lifecycle_command" "skipped" "checkout_bootstrap_lane_failed"
+      record_check "process_lifecycle_policy" "$policy_command" "skipped" "checkout_bootstrap_lane_failed"
       overall_status="fail"
-      reason_code="checkpoint_failed_profile_preflight_lane"
+      reason_code="checkpoint_failed_checkout_bootstrap_lane"
     else
-      preflight_reason_code="$(read_reason_code "$PROFILE_PREFLIGHT_REPORT")"
-      record_check "profile_preflight_lane" "$preflight_command" "fail" "$preflight_reason_code"
-      record_check "profile_preflight_policy" "$preflight_policy_command" "skipped" "profile_preflight_lane_failed"
-      record_check "self_test_lane" "$self_test_command" "skipped" "profile_preflight_lane_failed"
-      record_check "self_test_policy" "$self_test_policy_command" "skipped" "profile_preflight_lane_failed"
-      record_check "process_lifecycle_lane" "$lifecycle_command" "skipped" "profile_preflight_lane_failed"
-      record_check "process_lifecycle_policy" "$policy_command" "skipped" "profile_preflight_lane_failed"
+      checkout_bootstrap_reason_code="$(read_reason_code "$CHECKOUT_BOOTSTRAP_REPORT")"
+      record_check "checkout_bootstrap_lane" "$checkout_bootstrap_command" "fail" "$checkout_bootstrap_reason_code"
+      record_check "checkout_bootstrap_policy" "$checkout_bootstrap_policy_command" "skipped" "checkout_bootstrap_lane_failed"
+      record_check "profile_preflight_lane" "$preflight_command" "skipped" "checkout_bootstrap_lane_failed"
+      record_check "profile_preflight_policy" "$preflight_policy_command" "skipped" "checkout_bootstrap_lane_failed"
+      record_check "self_test_lane" "$self_test_command" "skipped" "checkout_bootstrap_lane_failed"
+      record_check "self_test_policy" "$self_test_policy_command" "skipped" "checkout_bootstrap_lane_failed"
+      record_check "process_lifecycle_lane" "$lifecycle_command" "skipped" "checkout_bootstrap_lane_failed"
+      record_check "process_lifecycle_policy" "$policy_command" "skipped" "checkout_bootstrap_lane_failed"
       overall_status="fail"
-      reason_code="checkpoint_failed_profile_preflight_lane"
+      reason_code="checkpoint_failed_checkout_bootstrap_lane"
+    fi
+
+    if [ "$overall_status" = "ok" ]; then
+      set +e
+      python3 "$CHECKOUT_BOOTSTRAP_CHECKER" \
+        --report-file "$CHECKOUT_BOOTSTRAP_REPORT" \
+        --expected-final-decision GO \
+        --ci-fast-gate PASS \
+        --require-reason-code fork_checkout_bootstrap_passed \
+        --output-json "$CHECKOUT_BOOTSTRAP_POLICY_REPORT" >/dev/null 2>&1
+      checkout_bootstrap_policy_exit_code=$?
+      set -e
+
+      if [ "$checkout_bootstrap_policy_exit_code" -eq 0 ]; then
+        record_check "checkout_bootstrap_policy" "$checkout_bootstrap_policy_command" "pass" "checkout_bootstrap_policy_passed"
+      else
+        record_check "checkout_bootstrap_policy" "$checkout_bootstrap_policy_command" "fail" "checkout_bootstrap_policy_failed"
+        record_check "profile_preflight_lane" "$preflight_command" "skipped" "checkout_bootstrap_policy_failed"
+        record_check "profile_preflight_policy" "$preflight_policy_command" "skipped" "checkout_bootstrap_policy_failed"
+        record_check "self_test_lane" "$self_test_command" "skipped" "checkout_bootstrap_policy_failed"
+        record_check "self_test_policy" "$self_test_policy_command" "skipped" "checkout_bootstrap_policy_failed"
+        record_check "process_lifecycle_lane" "$lifecycle_command" "skipped" "checkout_bootstrap_policy_failed"
+        record_check "process_lifecycle_policy" "$policy_command" "skipped" "checkout_bootstrap_policy_failed"
+        overall_status="fail"
+        reason_code="checkpoint_failed_checkout_bootstrap_policy"
+      fi
+    fi
+
+    if [ "$overall_status" = "ok" ]; then
+      set +e
+      preflight_args=(
+        --mode run
+        --checkout-path "$CHECKOUT_PATH"
+        --max-seconds "$PROFILE_PREFLIGHT_MAX_SECONDS"
+        --output-json "$PROFILE_PREFLIGHT_REPORT"
+      )
+      if [ "$ALLOW_NON_FORK_SERVE_COMMAND" = "true" ]; then
+        preflight_args+=(--probe-command "bash -lc 'exit 0'" --allow-non-default-probe-command)
+      fi
+      timeout "$PROFILE_PREFLIGHT_MAX_SECONDS" bash "$PROFILE_PREFLIGHT_RUNNER" "${preflight_args[@]}" >/dev/null 2>&1
+      preflight_exit_code=$?
+      set -e
+
+      if [ "$preflight_exit_code" -eq 0 ]; then
+        record_check "profile_preflight_lane" "$preflight_command" "pass" "profile_preflight_lane_passed"
+      elif [ "$preflight_exit_code" -eq 124 ]; then
+        record_check "profile_preflight_lane" "$preflight_command" "fail" "profile_preflight_lane_timeout"
+        record_check "profile_preflight_policy" "$preflight_policy_command" "skipped" "profile_preflight_lane_failed"
+        record_check "self_test_lane" "$self_test_command" "skipped" "profile_preflight_lane_failed"
+        record_check "self_test_policy" "$self_test_policy_command" "skipped" "profile_preflight_lane_failed"
+        record_check "process_lifecycle_lane" "$lifecycle_command" "skipped" "profile_preflight_lane_failed"
+        record_check "process_lifecycle_policy" "$policy_command" "skipped" "profile_preflight_lane_failed"
+        overall_status="fail"
+        reason_code="checkpoint_failed_profile_preflight_lane"
+      else
+        preflight_reason_code="$(read_reason_code "$PROFILE_PREFLIGHT_REPORT")"
+        record_check "profile_preflight_lane" "$preflight_command" "fail" "$preflight_reason_code"
+        record_check "profile_preflight_policy" "$preflight_policy_command" "skipped" "profile_preflight_lane_failed"
+        record_check "self_test_lane" "$self_test_command" "skipped" "profile_preflight_lane_failed"
+        record_check "self_test_policy" "$self_test_policy_command" "skipped" "profile_preflight_lane_failed"
+        record_check "process_lifecycle_lane" "$lifecycle_command" "skipped" "profile_preflight_lane_failed"
+        record_check "process_lifecycle_policy" "$policy_command" "skipped" "profile_preflight_lane_failed"
+        overall_status="fail"
+        reason_code="checkpoint_failed_profile_preflight_lane"
+      fi
     fi
 
     if [ "$overall_status" = "ok" ]; then
@@ -635,7 +763,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$CHECK_FILE" "$selected_serve_command" "$ALLOW_NON_FORK_SERVE_COMMAND" "$PROFILE_PREFLIGHT_REPORT" "$PROFILE_PREFLIGHT_POLICY_REPORT" "$SELF_TEST_REPORT" "$SELF_TEST_POLICY_REPORT" "$LIFECYCLE_REPORT" "$LIFECYCLE_POLICY_REPORT" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$CHECK_FILE" "$selected_serve_command" "$ALLOW_NON_FORK_SERVE_COMMAND" "$CHECKOUT_BOOTSTRAP_REPORT" "$CHECKOUT_BOOTSTRAP_POLICY_REPORT" "$PROFILE_PREFLIGHT_REPORT" "$PROFILE_PREFLIGHT_POLICY_REPORT" "$SELF_TEST_REPORT" "$SELF_TEST_POLICY_REPORT" "$LIFECYCLE_REPORT" "$LIFECYCLE_POLICY_REPORT" <<'PY'
 from __future__ import annotations
 
 import json
@@ -652,12 +780,14 @@ budget_status = sys.argv[7]
 checks_path = pathlib.Path(sys.argv[8])
 selected_serve_command = sys.argv[9]
 allow_non_fork_serve_command = sys.argv[10] == "true"
-profile_preflight_report = sys.argv[11]
-profile_preflight_policy_report = sys.argv[12]
-self_test_report = sys.argv[13]
-self_test_policy_report = sys.argv[14]
-lifecycle_report = sys.argv[15]
-lifecycle_policy_report = sys.argv[16]
+checkout_bootstrap_report = sys.argv[11]
+checkout_bootstrap_policy_report = sys.argv[12]
+profile_preflight_report = sys.argv[13]
+profile_preflight_policy_report = sys.argv[14]
+self_test_report = sys.argv[15]
+self_test_policy_report = sys.argv[16]
+lifecycle_report = sys.argv[17]
+lifecycle_policy_report = sys.argv[18]
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -691,6 +821,8 @@ summary = {
         "default_profile": "example-six-sigma:serve-api-server",
         "expected_cargo_bin": "example-six-sigma",
         "expected_component": "api-server",
+        "checkout_bootstrap_runner": "run_local_kolme_fork_checkout_bootstrap_lane.sh",
+        "checkout_bootstrap_checker": "check_local_kolme_fork_checkout_bootstrap_policy.py",
         "profile_preflight_runner": "run_local_kolme_fork_profile_preflight_lane.sh",
         "profile_preflight_checker": "check_local_kolme_fork_profile_preflight_policy.py",
         "self_test_runner": "run_local_kolme_fork_self_test_lane.sh",
@@ -700,6 +832,8 @@ summary = {
     },
     "checks": checks,
     "artifact_paths": [
+        checkout_bootstrap_report,
+        checkout_bootstrap_policy_report,
         profile_preflight_report,
         profile_preflight_policy_report,
         self_test_report,

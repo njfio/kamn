@@ -69,6 +69,10 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("expected_cargo_bin_mismatch")
         if contracts.get("expected_component") != "api-server":
             reason_codes.append("expected_component_mismatch")
+        if contracts.get("checkout_bootstrap_runner") != "run_local_kolme_fork_checkout_bootstrap_lane.sh":
+            reason_codes.append("checkout_bootstrap_runner_mismatch")
+        if contracts.get("checkout_bootstrap_checker") != "check_local_kolme_fork_checkout_bootstrap_policy.py":
+            reason_codes.append("checkout_bootstrap_checker_mismatch")
         if contracts.get("profile_preflight_runner") != "run_local_kolme_fork_profile_preflight_lane.sh":
             reason_codes.append("profile_preflight_runner_mismatch")
         if contracts.get("profile_preflight_checker") != "check_local_kolme_fork_profile_preflight_policy.py":
@@ -88,6 +92,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     else:
         expected_ids = {
             "real_fork_command_profile",
+            "checkout_bootstrap_lane",
+            "checkout_bootstrap_policy",
             "profile_preflight_lane",
             "profile_preflight_policy",
             "self_test_lane",
@@ -119,7 +125,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append(f"check_missing:{missing_id}")
 
     artifacts = report.get("artifact_paths")
-    if not isinstance(artifacts, list) or len(artifacts) < 6:
+    if not isinstance(artifacts, list) or len(artifacts) < 8:
         reason_codes.append("artifact_paths_missing")
 
     if args.ci_fast_gate != "PASS":
