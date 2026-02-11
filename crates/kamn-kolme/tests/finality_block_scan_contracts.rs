@@ -1,6 +1,10 @@
 use kamn_kolme::{
-    parse_fork_block_txhash, parse_receipt_finality, render_block_path, resolve_lookup_upper_bound,
-    validate_block_identity, validate_block_path_template, validate_lookup_window, ReceiptFinality,
+    parse_fork_block_txhash, parse_receipt_finality,
+    project_failed_block_txhash_receipt as project_failed_block_txhash_receipt_contract,
+    project_finalized_block_txhash_receipt as project_finalized_block_txhash_receipt_contract,
+    render_block_path, resolve_lookup_upper_bound, validate_block_identity,
+    validate_block_path_template, validate_lookup_window, BlockScanReceiptProjection,
+    ReceiptFinality,
 };
 
 #[test]
@@ -68,4 +72,29 @@ fn regression_issue_1840_resolve_lookup_upper_bound_falls_back_to_latest_when_no
     // Regression: #1840
     let upper_bound = resolve_lookup_upper_bound(40, 45, 39);
     assert_eq!(upper_bound, 45);
+}
+
+#[test]
+fn functional_project_finalized_block_txhash_receipt_maps_commit_id_and_finality() {
+    let receipt = project_finalized_block_txhash_receipt_contract("ab12cd34", 72);
+    assert_eq!(
+        receipt,
+        BlockScanReceiptProjection {
+            commit_id: "kolme-commit:ab12cd34:h72".to_owned(),
+            finality: ReceiptFinality::Final,
+        }
+    );
+}
+
+#[test]
+fn regression_issue_1854_project_failed_block_txhash_receipt_uses_heightless_commit_id() {
+    // Regression: #1854
+    let receipt = project_failed_block_txhash_receipt_contract("ab12cd34");
+    assert_eq!(
+        receipt,
+        BlockScanReceiptProjection {
+            commit_id: "kolme-commit:ab12cd34".to_owned(),
+            finality: ReceiptFinality::Failed,
+        }
+    );
 }

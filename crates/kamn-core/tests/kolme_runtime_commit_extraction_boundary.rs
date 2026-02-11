@@ -56,7 +56,6 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("commit_finality_label_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("deterministic_runtime_commit_idempotency_key_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("deterministic_runtime_commit_id_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("deterministic_kolme_backend_commit_id("));
     assert!(RUNTIME_COMMIT_SRC.contains("txhash_from_kolme_commit_id("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_endpoint("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_websocket_endpoint("));
@@ -71,6 +70,8 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_authorization_header_value("));
     assert!(RUNTIME_COMMIT_SRC.contains("validate_kolme_lookup_window("));
     assert!(RUNTIME_COMMIT_SRC.contains("resolve_kolme_lookup_upper_bound("));
+    assert!(RUNTIME_COMMIT_SRC.contains("project_kolme_finalized_block_txhash_receipt_contract("));
+    assert!(RUNTIME_COMMIT_SRC.contains("project_kolme_failed_block_txhash_receipt_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("validate_kolme_block_identity("));
     assert!(RUNTIME_COMMIT_SRC.contains("compose_kolme_finality_status_path("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_notification_event_contract("));
