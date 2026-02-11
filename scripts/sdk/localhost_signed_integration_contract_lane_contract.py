@@ -31,6 +31,8 @@ TIMEOUT_RACE_REASON_CODE = "unexpected_listener_completion"
 TIMEOUT_SCENARIO_MAX_ATTEMPTS = 2
 SIGNATURE_MISMATCH_RACE_REASON_CODE = "mismatch_not_detected_not_reported"
 SIGNATURE_MISMATCH_RACE_MAX_ATTEMPTS = 2
+REPLAY_NONCE_RACE_REASON_CODE = "listener_timeout"
+REPLAY_NONCE_RACE_MAX_ATTEMPTS = 2
 
 
 def _is_executable(path: Path) -> bool:
@@ -235,6 +237,8 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
             harness_runner=harness_runner,
             scenario="replay-nonce",
             output_json=replay_report,
+            max_attempts=REPLAY_NONCE_RACE_MAX_ATTEMPTS,
+            retry_reason_code=REPLAY_NONCE_RACE_REASON_CODE,
             status_marker="status=pass; scenario=replay-nonce;",
             status_message="expected localhost signed integration replay nonce scenario status marker",
             reason_marker="reason_code=replay_nonce_detected;",
