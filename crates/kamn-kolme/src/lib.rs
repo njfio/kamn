@@ -7,6 +7,7 @@
 pub mod api_codec;
 pub mod block_fallback_policy;
 pub mod block_scan_policy;
+pub mod broadcast_payload_policy;
 pub mod codec;
 pub mod endpoint_policy;
 pub mod finality;
@@ -35,6 +36,7 @@ pub use block_scan_policy::{
     parse_fork_block_txhash, render_block_path, validate_block_identity,
     validate_block_path_template, validate_lookup_window, BlockScanPolicyError,
 };
+pub use broadcast_payload_policy::{normalize_broadcast_payload, KolmeBroadcastPayloadPolicyError};
 pub use codec::{KolmeCodecError, KolmeWireCodec, PassthroughCodec};
 pub use endpoint_policy::{
     compose_finality_status_path, compose_notifications_websocket_url, parse_http_endpoint,

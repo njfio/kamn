@@ -38,6 +38,7 @@ handling.
   - `crates/kamn-kolme/src/block_fallback_policy.rs` owns block-fallback response parsing contracts for key/value and flat-JSON payloads.
   - `crates/kamn-kolme/src/transport_request_policy.rs` owns authorization header validation and broadcast submit-path detection contracts.
   - `crates/kamn-kolme/src/provider_outcome_policy.rs` owns live provider outcome parsing and commit-id helper contracts.
+  - `crates/kamn-kolme/src/broadcast_payload_policy.rs` owns `/broadcast` payload normalization contracts (direct-signed, signed-envelope, and key/value fallback paths) with deterministic idempotency checks.
   - `crates/kamn-kolme/src/provider_response_policy.rs` owns provider response field parsing contracts (key/value + flat JSON string object formats).
   - `crates/kamn-core/src/kolme_runtime_commit.rs` delegates endpoint normalization through compatibility wrappers.
 - Optional auth-aware constructor:
@@ -73,6 +74,7 @@ handling.
   - flat JSON scalar field parsing contracts are sourced from `kamn-kolme` (`parse_flat_json_value_fields`, `required_json_string_field`, `required_positive_u64_json_field`) and mapped through `kamn-core` compatibility wrappers.
   - block-fallback response parsing contracts are sourced from `kamn-kolme` (`parse_block_fallback_response`, `parse_fork_block_fallback_response`) and mapped through `kamn-core` compatibility wrappers.
   - provider outcome and commit-id helper contracts are sourced from `kamn-kolme` (`parse_live_provider_outcome`, `required_provider_response_field`, `parse_commit_id_from_response_fields`, `deterministic_backend_commit_id`, `txhash_from_commit_id`) and mapped through `kamn-core` compatibility wrappers.
+  - broadcast payload normalization contracts are sourced from `kamn-kolme` (`normalize_broadcast_payload`) and mapped through `kamn-core` compatibility wrappers.
   - resolver consumes one notification event first:
     - txhash-bearing `NewBlock` / `FailedTransaction` events map directly to receipts.
     - `LatestBlock` (or `NewBlock` payloads that carry height but no txhash) trigger bounded `/block/{height}` fallback reconciliation.
@@ -165,6 +167,7 @@ cargo test -p kamn-kolme --test flat_json_policy_contracts
 cargo test -p kamn-kolme --test block_fallback_policy_contracts
 cargo test -p kamn-kolme --test provider_outcome_policy_contracts
 cargo test -p kamn-kolme --test transport_request_policy_contracts
+cargo test -p kamn-kolme --test broadcast_payload_policy_contracts
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_fetch_next_nonce_query_and_parse -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_submit_broadcast_request_put_and_parse_txhash -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_http_transport_submit_broadcast_request_rejects_malformed_txhash_response -- --exact
@@ -197,3 +200,4 @@ cargo test -p kamn-core
 - block-fallback parser extraction parity drift remains fail-closed (`Regression: #1751`).
 - provider helper reuse extraction parity drift remains fail-closed (`Regression: #1753`).
 - transport request helper extraction parity drift remains fail-closed (`Regression: #1755`).
+- broadcast payload normalization extraction parity drift remains fail-closed (`Regression: #1757`).
