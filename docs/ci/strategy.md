@@ -41,7 +41,7 @@ Fast-gate command contract coverage is intentionally split:
 - static command-surface parity (`scripts/ci/test_makefile_command_surface_contract.sh`)
 - dry-run execution parity (`scripts/ci/test_makefile_execution_contract.sh`) via `make -n` target resolution for bounded `check/test/demo` targets
 - Kolme missing-both coverage (`scripts/ci/test_kolme_command_surface_coverage_contract.sh`) ensures every `scripts/kolme/test_*.sh` appears in at least one CI command surface (`ci-fast-gate` or aggregate `scripts/ci/test_ci_tools.sh`).
-- Kolme asymmetry split coverage (`scripts/ci/test_kolme_command_surface_asymmetry_contract.sh`) enforces the approved `fast_only` and `ci_tools_only` script sets.
+- Kolme asymmetry split coverage (`scripts/ci/test_kolme_command_surface_asymmetry_contract.sh`) enforces the approved `fast_only` and `ci_tools_only` script sets from `.ci/kolme-command-surface-asymmetry-policy.json`.
 
 Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 
@@ -204,6 +204,7 @@ Regression policy:
 - script-surface budget temporary `script_count` waiver scope/expiry drift remains fail-closed (`Regression: #1497`).
 - Kolme command-surface missing-both coverage drift remains fail-closed (`Regression: #1561`).
 - Kolme command-surface asymmetry split drift remains fail-closed (`Regression: #1565`).
+- Kolme command-surface asymmetry policy-file schema drift remains fail-closed (`Regression: #1569`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:

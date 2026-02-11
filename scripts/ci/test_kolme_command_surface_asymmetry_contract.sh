@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_WORKFLOW="$ROOT_DIR/.github/workflows/ci-fast-gate.yml"
 CI_TOOLS_SCRIPT="$ROOT_DIR/scripts/ci/test_ci_tools.sh"
+POLICY_FILE="$ROOT_DIR/.ci/kolme-command-surface-asymmetry-policy.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -14,6 +15,11 @@ fi
 
 if [ ! -f "$CI_TOOLS_SCRIPT" ]; then
   echo "expected aggregate CI tools script to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$POLICY_FILE" ]; then
+  echo "expected Kolme asymmetry policy file to exist at .ci/kolme-command-surface-asymmetry-policy.json" >&2
   exit 1
 fi
 
@@ -45,30 +51,42 @@ for script_path in "${kolme_tests[@]}"; do
   fi
 done
 
-expected_fast_only=(
-  "scripts/kolme/test_check_snapshot_drift.sh"
-  "scripts/kolme/test_run_local_heavy_validation_matrix.sh"
-  "scripts/kolme/test_run_local_runtime_commit_live_lane.sh"
-  "scripts/kolme/test_run_snapshot_drift_contract_lane.sh"
-  "scripts/kolme/test_run_triadic_devnet_smoke_contract_lane.sh"
-  "scripts/kolme/test_run_version_compatibility_contract_lane.sh"
-  "scripts/kolme/test_validate_version_compatibility.sh"
-)
-
-expected_ci_tools_only=(
-  "scripts/kolme/test_check_nonce_broadcast_parity_policy.sh"
-  "scripts/kolme/test_check_runtime_commit_replay_policy.sh"
-  "scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh"
-  "scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh"
-  "scripts/kolme/test_run_notifications_consumer_contract_lane.sh"
-  "scripts/kolme/test_run_runtime_commit_contract_lane.sh"
-  "scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh"
-)
-
 printf '%s\n' "${actual_fast_only[@]}" | sed '/^$/d' | sort >"$TMP_DIR/actual_fast_only.txt"
 printf '%s\n' "${actual_ci_tools_only[@]}" | sed '/^$/d' | sort >"$TMP_DIR/actual_ci_tools_only.txt"
-printf '%s\n' "${expected_fast_only[@]}" | sort >"$TMP_DIR/expected_fast_only.txt"
-printf '%s\n' "${expected_ci_tools_only[@]}" | sort >"$TMP_DIR/expected_ci_tools_only.txt"
+
+python3 - "$POLICY_FILE" "$TMP_DIR/expected_fast_only.txt" "$TMP_DIR/expected_ci_tools_only.txt" <<'PY'
+import json
+import pathlib
+import sys
+
+policy_path = pathlib.Path(sys.argv[1])
+expected_fast_only_path = pathlib.Path(sys.argv[2])
+expected_ci_tools_only_path = pathlib.Path(sys.argv[3])
+
+try:
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+except (OSError, json.JSONDecodeError) as exc:
+    raise SystemExit(f"invalid Kolme asymmetry policy file: {exc}")
+
+if policy.get("schema_version") != "kamn.ci.kolme-command-surface-asymmetry-policy.v1":
+    raise SystemExit("unexpected Kolme asymmetry policy schema_version")
+
+def validate_array(name: str) -> list[str]:
+    value = policy.get(name)
+    if not isinstance(value, list) or len(value) == 0:
+        raise SystemExit(f"expected non-empty '{name}' array in Kolme asymmetry policy")
+    if not all(isinstance(item, str) and item for item in value):
+        raise SystemExit(f"expected '{name}' entries to be non-empty strings")
+    if len(set(value)) != len(value):
+        raise SystemExit(f"expected '{name}' entries to be unique")
+    return sorted(value)
+
+expected_fast_only = validate_array("fast_only")
+expected_ci_tools_only = validate_array("ci_tools_only")
+
+expected_fast_only_path.write_text("".join(f"{item}\n" for item in expected_fast_only), encoding="utf-8")
+expected_ci_tools_only_path.write_text("".join(f"{item}\n" for item in expected_ci_tools_only), encoding="utf-8")
+PY
 
 echo "kolme_fast_only_count_actual=$(wc -l <"$TMP_DIR/actual_fast_only.txt" | tr -d ' ')"
 echo "kolme_fast_only_count_expected=$(wc -l <"$TMP_DIR/expected_fast_only.txt" | tr -d ' ')"
