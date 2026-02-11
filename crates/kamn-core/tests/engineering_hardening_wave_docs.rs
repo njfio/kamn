@@ -8,6 +8,7 @@ const README: &str = include_str!("../../../README.md");
 #[test]
 fn engineering_hardening_wave_doc_declares_missing_docs_policy_contract() {
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("check_kamn_core_missing_docs_policy.sh"));
+    assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("missing_docs_throughput_report_contract.py"));
     assert!(
         ENGINEERING_HARDENING_WAVE_DOC.contains("run_kamn_core_rustdoc_artifact_contract_lane.sh")
     );
@@ -22,6 +23,9 @@ fn engineering_hardening_wave_doc_declares_missing_docs_policy_contract() {
     assert!(ENGINEERING_HARDENING_WAVE_DOC
         .contains("docs/architecture/kamn-core-module-map.md#contributor-entrypoint-matrix"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("docs/developer/rustdoc-publishing.md"));
+    assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("target_modules_per_100_commits"));
+    assert!(ENGINEERING_HARDENING_WAVE_DOC
+        .contains("kamn.ci.kamn-core-missing-docs-throughput-report.v1"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("Regression: #1526"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("Regression: #1527"));
 }

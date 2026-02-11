@@ -316,6 +316,10 @@ graduated_modules_fixture_output="$(run_selector $'fixtures/ci/kamn_core_missing
 assert_eq "$(extract_output "$graduated_modules_fixture_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "graduated modules fixture changes must run missing-docs policy checks"
 assert_eq "$(extract_output "$graduated_modules_fixture_output" "test_scope")" "qa-doc-contract" "graduated modules fixture changes should stay in docs-contract scope"
 
+throughput_contract_output="$(run_selector $'scripts/ci/missing_docs_throughput_report_contract.py')"
+assert_eq "$(extract_output "$throughput_contract_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "throughput contract tool changes must run missing-docs policy checks"
+assert_eq "$(extract_output "$throughput_contract_output" "test_scope")" "full" "throughput contract tool changes should keep full fallback scope"
+
 kolme_scaffold_output="$(run_selector $'crates/kamn-kolme/src/lib.rs')"
 assert_eq "$(extract_output "$kolme_scaffold_output" "run_rust")" "true" "kamn-kolme scaffold changes should run rust lane"
 assert_eq "$(extract_output "$kolme_scaffold_output" "test_scope")" "targeted" "kamn-kolme scaffold changes should stay targeted"

@@ -66,6 +66,10 @@ sed -i '/#!\[warn(missing_docs)\]/d' "$PLAN_DOC_FIXTURE"
 expect_failure "plan doc marker drift should fail"
 
 reset_fixtures
+sed -i '/missing_docs_throughput_report_contract.py/d' "$PLAN_DOC_FIXTURE"
+expect_failure "plan doc throughput command drift should fail"
+
+reset_fixtures
 sed -i '/## Runtime Flow (Condensed)/d' "$ARCH_DOC_FIXTURE"
 expect_failure "architecture map runtime flow marker drift should fail"
 
