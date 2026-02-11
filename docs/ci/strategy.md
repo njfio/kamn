@@ -182,6 +182,7 @@ Regression policy:
 - governance lifecycle/rollback selector/docs parity remains fail-closed (`Regression: #910`).
 - governance quorum attestation selector/docs parity remains fail-closed (`Regression: #911`).
 - local-only heavy Kolme selector/workflow/docs parity remains fail-closed (`Regression: #1419`).
+- aggregate CI-tools fork Rust matrix command-surface coverage remains fail-closed (`Regression: #1549`).
 - local-only fork sync/smoke run-mode exclusion parity remains fail-closed (`Regression: #1431`).
 - local Kolme API probe/smoke run-mode exclusion parity remains fail-closed (`Regression: #1441`).
 - local live API conformance harness run-mode exclusion parity remains fail-closed (`Regression: #1483`).
