@@ -128,6 +128,7 @@ fn plan_contains_local_fork_profile_preflight_lane() {
 fn plan_contains_local_fork_self_test_lane() {
     assert!(PLAN.contains("## Local Fork Self-Test Lane"));
     assert!(PLAN.contains("run_local_kolme_fork_self_test_lane.sh"));
+    assert!(PLAN.contains("--matrix-cargo-profile portable"));
     assert!(PLAN.contains("check_local_kolme_fork_self_test_policy.py"));
     assert!(PLAN.contains("kamn.kolme.local-fork-self-test-summary.v1"));
 }
@@ -177,6 +178,7 @@ fn plan_contains_fast_gate_native_api_parity_lane() {
 fn plan_contains_local_only_heavy_validation_matrix() {
     assert!(PLAN.contains("## Local-Only Heavy Kolme Validation Matrix"));
     assert!(PLAN.contains("run_local_heavy_validation_matrix.sh"));
+    assert!(PLAN.contains("--cargo-profile portable"));
     assert!(PLAN.contains("run_local_bootstrap_health_checks.sh"));
     assert!(PLAN.contains("run_version_compatibility_replay_deep_lane.sh"));
     assert!(PLAN.contains("kamn.kolme.local-heavy-validation-summary.v1"));
@@ -259,6 +261,14 @@ fn regression_requires_local_fork_smoke_evidence_guard_marker() {
     // Regression: #1430
     assert!(PLAN.contains(
         "local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_fork_matrix_portable_cargo_profile_guard_marker() {
+    // Regression: #1659
+    assert!(PLAN.contains(
+        "local fork Rust test matrix portable cargo profile (`--cargo-profile portable`) remains fail-closed and linker-portable via `RUSTFLAGS=''` cargo override (`Regression: #1659`)."
     ));
 }
 

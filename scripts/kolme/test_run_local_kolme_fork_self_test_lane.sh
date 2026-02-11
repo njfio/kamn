@@ -112,6 +112,8 @@ if report.get("mode") != "dry-run":
     raise SystemExit("expected dry-run mode in summary")
 if report.get("status") != "ok":
     raise SystemExit("expected ok dry-run status")
+if report.get("matrix_cargo_profile") != "portable":
+    raise SystemExit("expected default matrix_cargo_profile=portable")
 checks = report.get("checks")
 if not isinstance(checks, list):
     raise SystemExit("expected checks list in summary")

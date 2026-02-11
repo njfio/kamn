@@ -97,7 +97,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Local fork Rust test matrix runner:
   - `bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json`
 - Explicit local-only Rust test matrix execution:
-  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json`
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --cargo-profile portable --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py --report-file /tmp/kolme-local-fork-rust-test-matrix-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json`
 - Contract lane command:
@@ -106,6 +106,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `kamn.kolme.local-fork-rust-test-matrix-summary.v1`
 - Deterministic checkpoints include:
   - `run_local_fork_sync_metadata_lane.sh` metadata validation prior to Rust command execution.
+  - portable cargo profile support (`--cargo-profile portable`) rewrites cargo invocations with `RUSTFLAGS=''` for linker-portable local execution.
   - bounded per-command timeout guard with deterministic pass/fail reason codes.
   - per-command stdout/stderr artifact capture for audit review.
 - Cost policy:
@@ -304,13 +305,13 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Local fork self-test runner:
   - `bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-self-test-summary.json`
 - Explicit local-only self-test execution:
-  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --matrix-max-seconds 60 --output-json /tmp/kolme-local-fork-self-test-summary.json`
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --matrix-max-seconds 60 --matrix-cargo-profile portable --output-json /tmp/kolme-local-fork-self-test-summary.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_self_test_policy.py --report-file /tmp/kolme-local-fork-self-test-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-self-test-policy.json`
 - Summary schema:
   - `kamn.kolme.local-fork-self-test-summary.v1`
 - Deterministic checkpoints include:
-  - `run_local_kolme_fork_rust_test_matrix_lane.sh` run-mode verification with bounded matrix budget and optional command overrides.
+  - `run_local_kolme_fork_rust_test_matrix_lane.sh` run-mode verification with bounded matrix budget, optional command overrides, and configurable cargo profile (`strict|portable`).
   - `check_local_kolme_fork_rust_test_matrix_policy.py` GO decision verification with required reason-code contract.
   - fail-closed reason codes for local opt-in, nested matrix failure, nested policy failure, and total-budget drift.
 - Cost policy:
@@ -330,7 +331,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `bash scripts/kolme/run_local_kolme_fork_profile_preflight_lane.sh --mode run --checkout-path /tmp/kolme_fork --max-seconds 45 --output-json /tmp/kolme-local-fork-profile-preflight-summary.json`
   - `python3 scripts/kolme/check_local_kolme_fork_profile_preflight_policy.py --report-file /tmp/kolme-local-fork-profile-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code profile_preflight_passed --output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
 - Local self-test prerequisite commands:
-  - `bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --matrix-max-seconds 60 --output-json /tmp/kolme-local-fork-self-test-summary.json`
+  - `bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --matrix-max-seconds 60 --matrix-cargo-profile portable --output-json /tmp/kolme-local-fork-self-test-summary.json`
   - `python3 scripts/kolme/check_local_kolme_fork_self_test_policy.py --report-file /tmp/kolme-local-fork-self-test-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code fork_self_test_passed --output-json /tmp/kolme-local-fork-self-test-policy.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_real_process_policy.py --report-file /tmp/kolme-local-fork-real-process-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-real-process-policy.json`
@@ -478,6 +479,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
 - local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
 - local fork Rust test matrix lane fails closed on missing local opt-in, metadata sync drift, and per-command timeout/failure paths (`Regression: #1537`).
+- local fork Rust test matrix portable cargo profile (`--cargo-profile portable`) remains fail-closed and linker-portable via `RUSTFLAGS=''` cargo override (`Regression: #1659`).
 - local fork Rust test matrix policy and contract-lane checks fail closed on schema/decision/reason-code drift (`Regression: #1541`).
 - local Kolme API probe lane fails closed on unavailable health endpoint, invalid fork-info payload, and runtime budget overruns (`Regression: #1439`).
 - local Kolme API smoke lane fails closed without explicit local opt-in, probe prerequisite failure, smoke-command timeout, and smoke-command errors (`Regression: #1440`).

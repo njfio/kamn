@@ -51,6 +51,10 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(matrix_max_seconds, int) or matrix_max_seconds <= 0:
         reason_codes.append("matrix_max_seconds_invalid")
 
+    matrix_cargo_profile = report.get("matrix_cargo_profile")
+    if matrix_cargo_profile not in ("strict", "portable"):
+        reason_codes.append("matrix_cargo_profile_invalid")
+
     budget_status = report.get("budget_status")
     if budget_status not in ("not_run", "within_budget", "exceeded_budget"):
         reason_codes.append("budget_status_invalid")

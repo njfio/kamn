@@ -15,6 +15,7 @@ EXPECTED_REMOTE_URL="https://github.com/njfio/kolme_fork.git"
 EXPECTED_REF="refs/heads/main"
 MAX_SECONDS=120
 MATRIX_MAX_SECONDS=60
+MATRIX_CARGO_PROFILE="portable"
 
 declare -a MATRIX_COMMANDS=()
 
@@ -100,6 +101,14 @@ while [ "$#" -gt 0 ]; do
       MATRIX_MAX_SECONDS="$2"
       shift 2
       ;;
+    --matrix-cargo-profile)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --matrix-cargo-profile" >&2
+        exit 1
+      fi
+      MATRIX_CARGO_PROFILE="$2"
+      shift 2
+      ;;
     --help|-h)
       cat <<'USAGE'
 Usage: run_local_kolme_fork_self_test_lane.sh [options]
@@ -115,6 +124,8 @@ Options:
   --matrix-command <command>            Repeatable override commands for nested matrix execution.
   --max-seconds <n>                     Max total runtime budget for this self-test lane.
   --matrix-max-seconds <n>              Max runtime budget for nested matrix lane execution.
+  --matrix-cargo-profile <strict|portable>
+                                         Cargo command execution profile passed to nested matrix lane.
 USAGE
       exit 0
       ;;
@@ -136,6 +147,11 @@ for numeric_value in "$MAX_SECONDS" "$MATRIX_MAX_SECONDS"; do
     exit 1
   fi
 done
+
+if [ "$MATRIX_CARGO_PROFILE" != "strict" ] && [ "$MATRIX_CARGO_PROFILE" != "portable" ]; then
+  echo "matrix-cargo-profile must be one of: strict, portable" >&2
+  exit 1
+fi
 
 if [ -z "$CHECKOUT_PATH" ] || [ -z "$EXPECTED_REMOTE_URL" ] || [ -z "$EXPECTED_REF" ]; then
   echo "checkout-path, expected-remote-url, and expected-ref must not be empty" >&2
@@ -196,7 +212,7 @@ else:
 PY
 }
 
-matrix_command="bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode run --checkout-path ${CHECKOUT_PATH} --expected-remote-url ${EXPECTED_REMOTE_URL} --expected-ref ${EXPECTED_REF} --max-seconds ${MATRIX_MAX_SECONDS} --output-json ${MATRIX_REPORT}"
+matrix_command="bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode run --checkout-path ${CHECKOUT_PATH} --expected-remote-url ${EXPECTED_REMOTE_URL} --expected-ref ${EXPECTED_REF} --max-seconds ${MATRIX_MAX_SECONDS} --cargo-profile ${MATRIX_CARGO_PROFILE} --output-json ${MATRIX_REPORT}"
 policy_command="python3 scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py --report-file ${MATRIX_REPORT} --expected-final-decision GO --ci-fast-gate PASS --require-reason-code fork_rust_test_matrix_passed --output-json ${MATRIX_POLICY_REPORT}"
 
 overall_status="ok"
@@ -223,6 +239,7 @@ if [ "$MODE" = "run" ]; then
       --expected-remote-url "$EXPECTED_REMOTE_URL"
       --expected-ref "$EXPECTED_REF"
       --max-seconds "$MATRIX_MAX_SECONDS"
+      --cargo-profile "$MATRIX_CARGO_PROFILE"
       --output-json "$MATRIX_REPORT"
     )
     for matrix_command_override in "${MATRIX_COMMANDS[@]}"; do
@@ -283,7 +300,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$MATRIX_MAX_SECONDS" "$budget_status" "$CHECK_FILE" "$MATRIX_REPORT" "$MATRIX_POLICY_REPORT" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$MATRIX_MAX_SECONDS" "$budget_status" "$CHECK_FILE" "$MATRIX_REPORT" "$MATRIX_POLICY_REPORT" "$MATRIX_CARGO_PROFILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -301,6 +318,7 @@ budget_status = sys.argv[8]
 checks_path = pathlib.Path(sys.argv[9])
 matrix_report = sys.argv[10]
 matrix_policy_report = sys.argv[11]
+matrix_cargo_profile = sys.argv[12]
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -328,6 +346,7 @@ summary = {
     "elapsed_seconds": elapsed_seconds,
     "max_seconds": max_seconds,
     "matrix_max_seconds": matrix_max_seconds,
+    "matrix_cargo_profile": matrix_cargo_profile,
     "budget_status": budget_status,
     "contracts": {
         "matrix_runner": "run_local_kolme_fork_rust_test_matrix_lane.sh",

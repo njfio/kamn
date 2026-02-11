@@ -94,6 +94,7 @@ across Kolme upgrades.
   - `run_block_fallback_reconciliation_contract_lane.sh` enforces `KAMN_KOLME_BLOCK_FALLBACK_MAX_SECONDS=75`.
 - PR safety:
   - replay smoke uses `--max-cases 2` via contract lane to keep cost low.
+  - local fork rust-test matrix and self-test run lanes stay local-only and use `--cargo-profile portable` / `--matrix-cargo-profile portable` to avoid host-specific linker drift.
 - Scheduled-only work:
   - full replay matrix and artifact publication run in deep workflow only.
 
@@ -125,6 +126,7 @@ across Kolme upgrades.
 - Block fallback stale-window and response-height drift remain fail-closed (`Regression: #1464`).
 - KAMN-to-kolme_fork endpoint/method/payload contract inventory remains synchronized with code-level integration assumptions (`Regression: #1501`).
 - typed nonce/broadcast helper request/response mapping remains fail-closed (`Regression: #1533`).
+- local fork rust-test matrix portable cargo profile remains fail-closed and linker-portable (`Regression: #1659`).
 
 ## Local Validation
 
