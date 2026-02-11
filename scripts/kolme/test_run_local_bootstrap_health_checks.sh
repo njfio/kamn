@@ -55,6 +55,7 @@ dry_run_output="$(
 assert_eq "$(extract_value "$dry_run_output" "status")" "ok" "expected dry-run bootstrap run to pass"
 assert_eq "$(extract_value "$dry_run_output" "bootstrap_mode")" "dry-run" "expected bootstrap dry-run mode marker"
 assert_eq "$(extract_value "$dry_run_output" "readiness_status")" "planned" "expected planned readiness marker in dry-run"
+assert_eq "$(extract_value "$dry_run_output" "reason_code")" "dry_run_no_commands_executed" "expected deterministic dry-run reason code"
 
 python3 - "$TMP_REPORT" <<'PY'
 import json
@@ -68,6 +69,8 @@ if report.get("mode") != "dry-run":
     raise SystemExit("expected dry-run bootstrap mode in summary")
 if report.get("ready") is not False:
     raise SystemExit("expected ready=false for bootstrap dry-run summary")
+if report.get("reason_code") != "dry_run_no_commands_executed":
+    raise SystemExit("expected deterministic dry-run reason code in bootstrap summary")
 if report.get("local_only_enforced") is not True:
     raise SystemExit("expected local_only_enforced=true in bootstrap summary")
 checks = report.get("checks")
