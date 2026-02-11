@@ -42,7 +42,6 @@ use kamn_kolme::{
     KolmeApiNextNonceRequest as KamnKolmeApiNextNonceRequest,
     KolmeApiNextNonceResponse as KamnKolmeApiNextNonceResponse,
     KolmeBlockFallbackPolicyError as KamnKolmeBlockFallbackPolicyError,
-    KolmeBlockFallbackResponse as KamnKolmeBlockFallbackResponse,
     KolmeBroadcastPayloadPolicyError as KamnKolmeBroadcastPayloadPolicyError,
     KolmeCommitReceiptFinality as KamnKolmeCommitReceiptFinality,
     KolmeEndpointPolicyError as KamnKolmeEndpointPolicyError,
@@ -741,7 +740,6 @@ enum KolmeRuntimeCommitSubmitProfile {
 }
 
 type ParsedHttpEndpoint = KamnKolmeParsedHttpEndpoint;
-type ParsedBlockFallbackResponse = KamnKolmeBlockFallbackResponse;
 
 type HttpScheme = KamnKolmeHttpScheme;
 
@@ -1060,7 +1058,8 @@ impl KolmeRuntimeCommitBlockFallbackTransport for KolmeRuntimeCommitHttpTranspor
                 reason: "block height must be positive".to_owned(),
             });
         }
-        let block_path = render_block_path(block_path_template, height)?;
+        let block_path = render_kolme_block_path(block_path_template, height)
+            .map_err(map_block_scan_policy_error_to_unavailable)?;
         self.execute_request(base_url, block_path.as_str(), "GET", None, &[])
     }
 }
@@ -1201,7 +1200,9 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
                 reason: "must be positive",
             });
         }
-        validate_block_path_template(block_path_template).map_err(map_provider_error)?;
+        validate_kolme_block_path_template(block_path_template)
+            .map_err(map_block_scan_policy_error_to_unavailable)
+            .map_err(map_provider_error)?;
         Ok(Self {
             base_url: base_url.trim().to_owned(),
             block_path_template: block_path_template.trim().to_owned(),
@@ -1233,13 +1234,16 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
                 self.block_path_template.as_str(),
                 height,
             )?;
-            let block = parse_block_fallback_response(response.as_str()).or_else(|_| {
-                parse_kolme_fork_block_fallback_response(
-                    response.as_str(),
-                    self.provider.as_str(),
-                    height,
-                )
-            })?;
+            let block = parse_kolme_block_fallback_response_contract(response.as_str())
+                .map_err(map_block_fallback_policy_error_to_malformed)
+                .or_else(|_| {
+                    parse_kolme_fork_block_fallback_response_contract(
+                        response.as_str(),
+                        self.provider.as_str(),
+                        height,
+                    )
+                    .map_err(map_block_fallback_policy_error_to_malformed)
+                })?;
 
             validate_kolme_block_identity(
                 self.provider.as_str(),
@@ -1860,37 +1864,6 @@ fn map_transport_request_policy_error(
             KolmeRuntimeCommitError::InvalidRequest { field, reason }
         }
     }
-}
-
-fn validate_block_path_template(
-    block_path_template: &str,
-) -> Result<(), KolmeRuntimeCommitProviderError> {
-    validate_kolme_block_path_template(block_path_template)
-        .map_err(map_block_scan_policy_error_to_unavailable)
-}
-
-fn render_block_path(
-    block_path_template: &str,
-    height: u64,
-) -> Result<String, KolmeRuntimeCommitProviderError> {
-    render_kolme_block_path(block_path_template, height)
-        .map_err(map_block_scan_policy_error_to_unavailable)
-}
-
-fn parse_block_fallback_response(
-    response: &str,
-) -> Result<ParsedBlockFallbackResponse, KolmeRuntimeCommitProviderError> {
-    parse_kolme_block_fallback_response_contract(response)
-        .map_err(map_block_fallback_policy_error_to_malformed)
-}
-
-fn parse_kolme_fork_block_fallback_response(
-    response: &str,
-    provider: &str,
-    expected_height: u64,
-) -> Result<ParsedBlockFallbackResponse, KolmeRuntimeCommitProviderError> {
-    parse_kolme_fork_block_fallback_response_contract(response, provider, expected_height)
-        .map_err(map_block_fallback_policy_error_to_malformed)
 }
 
 fn reconnect_exhausted_error(max_reconnect_attempts: u32) -> KolmeRuntimeCommitProviderError {
