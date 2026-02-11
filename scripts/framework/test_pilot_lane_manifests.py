@@ -190,6 +190,31 @@ class PilotLaneManifestTests(unittest.TestCase):
                 "kolme.local_kolme_fork_process_lifecycle.contract",
                 "scripts/kolme/contracts/local_kolme_fork_process_lifecycle_contract_lane.py",
             ),
+            (
+                "kolme_fast_gate_native_api_parity_contract_lane.json",
+                "kolme.fast_gate_native_api_parity.contract",
+                "scripts/kolme/contracts/fast_gate_native_api_parity_contract_lane.py",
+            ),
+            (
+                "kolme_local_native_api_parity_live_proof_contract_lane.json",
+                "kolme.local_native_api_parity_live_proof.contract",
+                "scripts/kolme/contracts/local_native_api_parity_live_proof_contract_lane.py",
+            ),
+            (
+                "kolme_local_signed_to_kolme_demo_contract_lane.json",
+                "kolme.local_signed_to_kolme_demo.contract",
+                "scripts/kolme/contracts/local_signed_to_kolme_demo_contract_lane.py",
+            ),
+            (
+                "kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json",
+                "kolme.local_kolme_fork_checkout_bootstrap.contract",
+                "scripts/kolme/contracts/local_kolme_fork_checkout_bootstrap_contract_lane.py",
+            ),
+            (
+                "kolme_local_kolme_fork_real_process_contract_lane.json",
+                "kolme.local_kolme_fork_real_process.contract",
+                "scripts/kolme/contracts/local_kolme_fork_real_process_contract_lane.py",
+            ),
         )
 
         for manifest_name, expected_lane_id, expected_script in cases:

@@ -13,6 +13,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_kolme_profile_selftest_portability_manifest_migration_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_kolme_runtime_triadic_bootstrap_e2e_manifest_migration_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_kolme_bootstrap_conformance_runtime_process_manifest_migration_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_kolme_parity_demo_real_process_manifest_migration_contract.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_lane_migration_matrix_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_generate_fork_compatibility_evidence.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_fork_compatibility_policy.sh"'

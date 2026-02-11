@@ -84,6 +84,8 @@ required_snippets=(
   "profile+self-test+portability manifest migration guard stays on PR fast gate:"
   "runtime+triadic+bootstrap+e2e manifest migration guard stays on PR fast gate:"
   "bootstrap+conformance+runtime+process manifest migration guard stays on PR fast gate:"
+  "parity+demo+real-process manifest migration guard stays on PR fast gate:"
+  "test_kolme_parity_demo_real_process_manifest_migration_contract.sh"
   "test_run_local_kolme_fork_rust_test_matrix_lane.sh"
   "test_check_local_kolme_fork_rust_test_matrix_policy.sh"
   "test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh"
@@ -196,6 +198,7 @@ required_snippets=(
   "Regression: #1767"
   "Regression: #1769"
   "Regression: #1771"
+  "Regression: #1773"
 )
 
 for snippet in "${required_snippets[@]}"; do
