@@ -116,8 +116,8 @@ contributors can locate runtime/domain ownership responsibilities quickly.
     `crates/kamn-kolme/src/notification_policy.rs`
 - Ownership boundary:
   - `kamn-kolme` is the dedicated home for runtime-commit transport/codec/finality
-    contracts. `kamn-core` retains temporary compatibility exports until full
-    migration is complete.
+    contracts (including direct signed payload validation policy). `kamn-core`
+    retains temporary compatibility exports until full migration is complete.
 - Runtime/data-flow ownership:
   - New runtime-commit submissions should target `kamn-kolme` contracts first,
     then map back to `kamn-core` compatibility paths only where migration is

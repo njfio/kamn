@@ -1,6 +1,7 @@
 use kamn_kolme::{
-    KolmeApiBroadcastRequest, KolmeApiBroadcastResponse, KolmeApiCodecError,
-    KolmeApiNextNonceRequest, KolmeApiNextNonceResponse,
+    validate_direct_signed_transaction_message, KolmeApiBroadcastRequest,
+    KolmeApiBroadcastResponse, KolmeApiCodecError, KolmeApiNextNonceRequest,
+    KolmeApiNextNonceResponse,
 };
 
 #[test]
@@ -40,6 +41,29 @@ fn regression_issue_1727_nonce_and_broadcast_parsing_fails_closed() {
         broadcast_error,
         KolmeApiCodecError::MalformedResponse {
             reason: "field must not be empty: txhash".to_owned(),
+        }
+    );
+}
+
+#[test]
+fn functional_validate_direct_signed_transaction_message_accepts_required_shape() {
+    validate_direct_signed_transaction_message(
+        r#"{"pubkey":"ed25519:abc","nonce":42,"created":"2026-02-11T00:00:00Z","messages":[{"kind":"transfer"}]}"#,
+    )
+    .expect("message shape should validate");
+}
+
+#[test]
+fn regression_issue_1737_direct_signed_message_validation_fails_closed() {
+    // Regression: #1737
+    let error = validate_direct_signed_transaction_message(
+        r#"{"pubkey":"ed25519:abc","nonce":42,"created":"2026-02-11T00:00:00Z","messages":"not-array"}"#,
+    )
+    .expect_err("non-array messages field must fail");
+    assert_eq!(
+        error,
+        KolmeApiCodecError::MalformedResponse {
+            reason: "direct signed payload message field is invalid: messages".to_owned(),
         }
     );
 }

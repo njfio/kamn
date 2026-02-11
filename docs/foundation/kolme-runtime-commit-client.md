@@ -79,6 +79,7 @@ handling.
 - Canonical extraction boundary:
   - `crates/kamn-kolme/src/api_codec.rs` owns deterministic nonce/broadcast codec constructors, query/payload serializers, and JSON parse contracts.
   - `crates/kamn-core/src/kolme_runtime_commit.rs` delegates codec behavior through compatibility wrappers to preserve existing core API surface.
+  - direct signed transaction message shape validation (`validate_direct_signed_transaction_message`) is sourced from `kamn-kolme` codec contracts.
 - Deterministic nonce request behavior:
   - `KolmeApiNextNonceRequest::query_path(...)` percent-encodes the `pubkey` query
     value and preserves deterministic path composition.

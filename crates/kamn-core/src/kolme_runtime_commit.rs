@@ -12,6 +12,7 @@ use kamn_kolme::{
     render_block_path as render_kolme_block_path,
     validate_block_identity as validate_kolme_block_identity,
     validate_block_path_template as validate_kolme_block_path_template,
+    validate_direct_signed_transaction_message as validate_kolme_direct_signed_transaction_message,
     validate_lookup_window as validate_kolme_lookup_window, BlockScanPolicyError,
     KolmeApiBroadcastRequest as KamnKolmeApiBroadcastRequest,
     KolmeApiBroadcastResponse as KamnKolmeApiBroadcastResponse,
@@ -2144,156 +2145,6 @@ fn parse_kolme_notification_event(
     }
 }
 
-fn find_notification_string_field(
-    payload: &str,
-    field: &str,
-) -> Result<Option<String>, KolmeRuntimeCommitProviderError> {
-    let pattern = format!("\"{field}\"");
-    for (index, _) in payload.match_indices(pattern.as_str()) {
-        let mut cursor = index + pattern.len();
-        cursor = skip_ascii_whitespace(payload, cursor);
-        if payload.as_bytes().get(cursor).copied() != Some(b':') {
-            continue;
-        }
-        cursor += 1;
-        cursor = skip_ascii_whitespace(payload, cursor);
-        if payload.as_bytes().get(cursor).copied() != Some(b'"') {
-            continue;
-        }
-        let mut end = cursor + 1;
-        let mut escape = false;
-        while let Some(byte) = payload.as_bytes().get(end).copied() {
-            if escape {
-                escape = false;
-                end += 1;
-                continue;
-            }
-            if byte == b'\\' {
-                escape = true;
-                end += 1;
-                continue;
-            }
-            if byte == b'"' {
-                let token = &payload[cursor..=end];
-                let parsed = parse_json_string(token).map_err(|reason| {
-                    KolmeRuntimeCommitProviderError::MalformedResponse {
-                        reason: format!("notification field '{field}' is invalid: {reason}"),
-                    }
-                })?;
-                if parsed.trim().is_empty() {
-                    return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                        reason: format!("notification field '{field}' must not be empty"),
-                    });
-                }
-                return Ok(Some(parsed));
-            }
-            end += 1;
-        }
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("notification field '{field}' is unterminated"),
-        });
-    }
-    Ok(None)
-}
-
-fn find_notification_u64_field(
-    payload: &str,
-    field: &str,
-) -> Result<Option<u64>, KolmeRuntimeCommitProviderError> {
-    let pattern = format!("\"{field}\"");
-    for (index, _) in payload.match_indices(pattern.as_str()) {
-        let mut cursor = index + pattern.len();
-        cursor = skip_ascii_whitespace(payload, cursor);
-        if payload.as_bytes().get(cursor).copied() != Some(b':') {
-            continue;
-        }
-        cursor += 1;
-        cursor = skip_ascii_whitespace(payload, cursor);
-        let Some(first) = payload.as_bytes().get(cursor).copied() else {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("notification field '{field}' value is missing"),
-            });
-        };
-
-        if first == b'"' {
-            let mut end = cursor + 1;
-            let mut escape = false;
-            while let Some(byte) = payload.as_bytes().get(end).copied() {
-                if escape {
-                    escape = false;
-                    end += 1;
-                    continue;
-                }
-                if byte == b'\\' {
-                    escape = true;
-                    end += 1;
-                    continue;
-                }
-                if byte == b'"' {
-                    let token = &payload[cursor..=end];
-                    let parsed = parse_json_string(token).map_err(|reason| {
-                        KolmeRuntimeCommitProviderError::MalformedResponse {
-                            reason: format!("notification field '{field}' is invalid: {reason}"),
-                        }
-                    })?;
-                    return parse_notification_positive_u64(parsed.as_str(), field).map(Some);
-                }
-                end += 1;
-            }
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("notification field '{field}' is unterminated"),
-            });
-        }
-
-        let mut end = cursor;
-        while let Some(byte) = payload.as_bytes().get(end).copied() {
-            if byte.is_ascii_digit() {
-                end += 1;
-                continue;
-            }
-            break;
-        }
-        if end == cursor {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("notification field '{field}' must be a positive integer"),
-            });
-        }
-        let token = &payload[cursor..end];
-        return parse_notification_positive_u64(token, field).map(Some);
-    }
-    Ok(None)
-}
-
-fn parse_notification_positive_u64(
-    token: &str,
-    field: &str,
-) -> Result<u64, KolmeRuntimeCommitProviderError> {
-    let trimmed = token.trim();
-    let parsed =
-        trimmed
-            .parse::<u64>()
-            .map_err(|_| KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("notification field '{field}' must be a positive integer"),
-            })?;
-    if parsed == 0 {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("notification field '{field}' must be a positive integer"),
-        });
-    }
-    Ok(parsed)
-}
-
-fn skip_ascii_whitespace(value: &str, mut cursor: usize) -> usize {
-    while let Some(byte) = value.as_bytes().get(cursor).copied() {
-        if byte.is_ascii_whitespace() {
-            cursor += 1;
-            continue;
-        }
-        break;
-    }
-    cursor
-}
-
 fn parse_authorization_header(value: &str) -> Result<String, KolmeRuntimeCommitError> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
@@ -2561,7 +2412,8 @@ fn normalize_kolme_broadcast_payload(
                 reason: "direct signed payload message must be a JSON object string".to_owned(),
             });
         }
-        validate_direct_signed_transaction_message(message.as_str())?;
+        validate_kolme_direct_signed_transaction_message(message.as_str())
+            .map_err(map_codec_error_to_malformed_response)?;
 
         let request =
             KolmeApiBroadcastRequest::new(message.as_str(), signature.as_str(), recovery_id)
@@ -2588,70 +2440,6 @@ fn normalize_kolme_broadcast_payload(
         }
     })?;
     Ok(request.to_json_payload())
-}
-
-fn validate_direct_signed_transaction_message(
-    message: &str,
-) -> Result<(), KolmeRuntimeCommitProviderError> {
-    let required_string_fields = ["pubkey", "created"];
-    for field in required_string_fields {
-        let value = find_notification_string_field(message, field).map_err(|_| {
-            KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("direct signed payload message field is invalid: {field}"),
-            }
-        })?;
-        if value.is_none() {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: format!("direct signed payload message missing required field: {field}"),
-            });
-        }
-    }
-
-    let nonce = find_notification_u64_field(message, "nonce").map_err(|_| {
-        KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "direct signed payload message field is invalid: nonce".to_owned(),
-        }
-    })?;
-    if nonce.is_none() {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "direct signed payload message missing required field: nonce".to_owned(),
-        });
-    }
-
-    let has_messages = has_json_array_field(message, "messages")
-        .map_err(|error| KolmeRuntimeCommitProviderError::MalformedResponse { reason: error })?;
-    if !has_messages {
-        return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: "direct signed payload message missing required field: messages".to_owned(),
-        });
-    }
-
-    Ok(())
-}
-
-fn has_json_array_field(payload: &str, field: &str) -> Result<bool, String> {
-    let pattern = format!("\"{field}\"");
-    for (index, _) in payload.match_indices(pattern.as_str()) {
-        let mut cursor = index + pattern.len();
-        cursor = skip_ascii_whitespace(payload, cursor);
-        if payload.as_bytes().get(cursor).copied() != Some(b':') {
-            continue;
-        }
-        cursor += 1;
-        cursor = skip_ascii_whitespace(payload, cursor);
-        let Some(first) = payload.as_bytes().get(cursor).copied() else {
-            return Err(format!(
-                "direct signed payload message field must be array: {field}"
-            ));
-        };
-        if first == b'[' {
-            return Ok(true);
-        }
-        return Err(format!(
-            "direct signed payload message field must be array: {field}"
-        ));
-    }
-    Ok(false)
 }
 
 fn parse_live_provider_response(
