@@ -29,6 +29,8 @@ from localhost_signed_scenario_runner import (  # noqa: E402
 
 TIMEOUT_RACE_REASON_CODE = "unexpected_listener_completion"
 TIMEOUT_SCENARIO_MAX_ATTEMPTS = 2
+SIGNATURE_MISMATCH_RACE_REASON_CODE = "mismatch_not_detected_not_reported"
+SIGNATURE_MISMATCH_RACE_MAX_ATTEMPTS = 2
 
 
 def _is_executable(path: Path) -> bool:
@@ -180,6 +182,8 @@ def run_localhost_signed_integration_contract_lane(args: argparse.Namespace) -> 
             harness_runner=harness_runner,
             scenario="signature-mismatch",
             output_json=signature_report,
+            max_attempts=SIGNATURE_MISMATCH_RACE_MAX_ATTEMPTS,
+            retry_reason_code=SIGNATURE_MISMATCH_RACE_REASON_CODE,
             status_marker="status=pass; scenario=signature-mismatch;",
             status_message="expected localhost signed integration signature mismatch scenario status marker",
             reason_marker=f"reason_code={fixture_by_scenario['signature-mismatch']['expected_reason_code']};",

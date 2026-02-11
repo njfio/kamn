@@ -94,6 +94,44 @@ class LocalhostSignedScenarioRunnerTests(unittest.TestCase):
                 sleep_fn=lambda _seconds: None,
             )
 
+    def test_retry_retries_once_for_signature_mismatch_race(self) -> None:
+        calls: list[list[str]] = []
+        responses = [
+            _StubRunResult(
+                returncode=1,
+                stdout=(
+                    "status=fail; scenario=signature-mismatch; "
+                    "reason_code=mismatch_not_detected_not_reported;"
+                ),
+            ),
+            _StubRunResult(
+                returncode=0,
+                stdout=(
+                    "status=pass; scenario=signature-mismatch; "
+                    "reason_code=signature_mismatch_detected;"
+                ),
+            ),
+        ]
+
+        def _runner(command: list[str]) -> _StubRunResult:
+            calls.append(command)
+            return responses[len(calls) - 1]
+
+        result = run_harness_scenario_with_retry(
+            harness_runner=Path("/tmp/fake-harness.sh"),
+            scenario="signature-mismatch",
+            output_json=Path("/tmp/fake-signature.json"),
+            max_attempts=2,
+            retry_reason_code="mismatch_not_detected_not_reported",
+            run_command=_runner,
+            sleep_fn=lambda _seconds: None,
+        )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("signature_mismatch_detected", result.stdout)
+        self.assertEqual(result.attempts, 2)
+        self.assertEqual(len(calls), 2)
+
 
 if __name__ == "__main__":
     unittest.main()
