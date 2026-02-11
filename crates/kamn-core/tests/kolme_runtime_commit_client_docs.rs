@@ -7,6 +7,7 @@ fn doc_contains_adapter_types_and_validation_commands() {
     assert!(DOC.contains("KolmeRuntimeCommitProviderOutcome"));
     assert!(DOC.contains("KolmeRuntimeCommitProviderReceipt"));
     assert!(DOC.contains("KolmeRuntimeCommitProviderError"));
+    assert!(DOC.contains("KolmeRuntimeCommitForkFinalityResolver"));
     assert!(DOC.contains("KolmeRuntimeCommitTransportErrorKind"));
     assert!(DOC.contains("http://` and `https://"));
     assert!(DOC.contains("KAMN_KOLME_TLS_CA_FILE"));
@@ -25,4 +26,6 @@ fn regression_requires_adapter_provider_mismatch_and_non_final_fail_closed_marke
     assert!(DOC.contains("`Regression: #979`"));
     assert!(DOC.contains("provider mismatch/non-final receipts remain fail-closed"));
     assert!(DOC.contains("`Regression: #1471`"));
+    assert!(DOC.contains("`Regression: #1502`"));
+    assert!(DOC.contains("`Regression: #1503`"));
 }
