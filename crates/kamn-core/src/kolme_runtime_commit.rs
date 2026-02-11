@@ -24,12 +24,12 @@ use kamn_kolme::{
     parse_notification_event as parse_kolme_notification_event_contract,
     parse_provider_block_fallback_response as parse_kolme_provider_block_fallback_response_contract,
     parse_provider_finality_receipt as parse_kolme_provider_finality_receipt,
-    parse_tls_ca_file_env_value as parse_kolme_tls_ca_file_env_value,
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
     render_block_path as render_kolme_block_path,
     require_commit_id_matches_expected_txhash as require_kolme_commit_id_matches_expected_txhash_contract,
     require_final_receipt_finality as require_kolme_final_receipt_finality_contract,
     resolve_lookup_upper_bound as resolve_kolme_lookup_upper_bound,
+    resolve_tls_ca_file_env_result as resolve_kolme_tls_ca_file_env_result_contract,
     try_take_websocket_frame as try_take_kolme_websocket_frame,
     txhash_from_commit_id as txhash_from_kolme_commit_id,
     validate_block_identity as validate_kolme_block_identity,
@@ -1962,20 +1962,13 @@ fn parse_kolme_notification_event(
 }
 
 fn configured_tls_ca_file() -> Result<Option<String>, KolmeRuntimeCommitProviderError> {
-    let value = match std::env::var("KAMN_KOLME_TLS_CA_FILE") {
-        Ok(value) => Some(value),
-        Err(std::env::VarError::NotPresent) => return Ok(None),
-        Err(std::env::VarError::NotUnicode(_)) => {
-            return Err(KolmeRuntimeCommitProviderError::Unavailable {
-                reason: "KAMN_KOLME_TLS_CA_FILE must be valid utf-8".to_owned(),
-            });
-        }
-    };
-    parse_kolme_tls_ca_file_env_value(value.as_deref()).map_err(|error| match error {
-        KamnKolmeTlsPolicyError::Unavailable { reason } => {
-            KolmeRuntimeCommitProviderError::Unavailable { reason }
-        }
-    })
+    resolve_kolme_tls_ca_file_env_result_contract(std::env::var("KAMN_KOLME_TLS_CA_FILE")).map_err(
+        |error| match error {
+            KamnKolmeTlsPolicyError::Unavailable { reason } => {
+                KolmeRuntimeCommitProviderError::Unavailable { reason }
+            }
+        },
+    )
 }
 
 fn parse_live_provider_response(
