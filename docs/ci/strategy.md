@@ -152,6 +152,13 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `run_local_kolme_fork_real_process_contract_lane.sh`
     - enforces tranche shell-wrapper budget:
       - combined migrated wrapper shell LOC must remain `<= 200`
+  - shared manifest-migration CI dispatcher guards stay on PR fast gate:
+    - `bash scripts/ci/test_kolme_manifest_migration_contract_dispatch_wrapper_matrix.sh`
+    - `bash scripts/ci/test_run_kolme_manifest_migration_contract_dispatch.sh`
+    - enforces that each `test_kolme_*manifest_migration_contract.sh` wrapper dispatches through:
+      - `scripts/ci/run_kolme_manifest_migration_contract_dispatch.sh`
+    - enforces shared migration group config contract:
+      - `fixtures/ci/kolme_manifest_migration_contract_groups.json`
   - shared dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh`
     - enforces that all migrated `run_*contract_lane.sh` wrappers dispatch through:
@@ -324,6 +331,7 @@ Regression policy:
 - Kolme runtime+triadic+bootstrap+e2e manifest migration wrapper and shell-LOC budget drift remains fail-closed (`Regression: #1769`).
 - Kolme bootstrap+conformance+runtime+process manifest migration wrapper and shell-LOC budget drift remains fail-closed (`Regression: #1771`).
 - Kolme parity+demo+real-process manifest migration wrapper and shell-LOC budget drift remains fail-closed (`Regression: #1773`).
+- Kolme shared manifest-migration CI dispatcher wrapper/config routing drift remains fail-closed (`Regression: #1833`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
