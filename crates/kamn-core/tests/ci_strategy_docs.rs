@@ -52,6 +52,8 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("test_run_local_kolme_fork_profile_preflight_contract_lane.sh"));
     assert!(DOC.contains("run_local_kolme_fork_self_test_contract_lane.sh"));
     assert!(DOC.contains("test_run_local_kolme_fork_self_test_contract_lane.sh"));
+    assert!(DOC.contains("run_local_kolme_fork_portability_preflight_contract_lane.sh"));
+    assert!(DOC.contains("test_run_local_kolme_fork_portability_preflight_contract_lane.sh"));
     assert!(DOC.contains("run_local_runtime_commit_live_lane.sh --mode run"));
     assert!(DOC.contains("run_local_native_api_parity_live_proof_lane.sh --mode run"));
     assert!(
@@ -106,6 +108,12 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
         DOC.contains("local fork self-test run-mode commands remain excluded from ci-fast-gate.")
     );
     assert!(DOC.contains(
+        "local fork portability preflight run-mode commands remain excluded from ci-fast-gate."
+    ));
+    assert!(DOC.contains(
+        "check_local_kolme_fork_portability_preflight_policy.py --report-file /tmp/kolme-local-fork-portability-preflight-summary.json"
+    ));
+    assert!(DOC.contains(
         "local runtime-commit live run-mode commands remain excluded from ci-fast-gate."
     ));
     assert!(DOC.contains(
@@ -127,6 +135,7 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("Regression: #1687"));
     assert!(DOC.contains("Regression: #1697"));
     assert!(DOC.contains("Regression: #1702"));
+    assert!(DOC.contains("Regression: #1707"));
     assert!(DOC.contains("Regression: #1692"));
     assert!(DOC.contains("Regression: #1441"));
     assert!(DOC.contains("Regression: #1451"));
