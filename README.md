@@ -530,6 +530,13 @@ KAMN_KOLME_LOCAL_HEAVY=1 \
 bash scripts/kolme/run_local_e2e_integration_lane.sh --mode run --output-json /tmp/kolme-local-e2e-integration-summary.json
 # schema: kamn.kolme.local-e2e-integration-summary.v1
 
+# policy checker contract
+python3 scripts/kolme/check_local_e2e_integration_policy.py --report-file /tmp/kolme-local-e2e-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-e2e-integration-policy.json
+
+# bounded contract lane (dry-run + policy)
+bash scripts/kolme/run_local_e2e_integration_contract_lane.sh --output-json /tmp/kolme-local-e2e-integration-summary.json --policy-output-json /tmp/kolme-local-e2e-integration-policy.json
+# schema: kamn.kolme.local-e2e-integration-policy-report.v1
+
 # command surface + artifact schema validation (no heavy execution)
 bash scripts/kolme/run_local_heavy_validation_matrix.sh --mode dry-run --output-json /tmp/kolme-local-heavy-validation-summary.json
 
@@ -544,6 +551,8 @@ Local-only heavy Kolme run-mode commands stay excluded from ci-fast-gate.
 Fast-gate validates only command surfaces:
 - `bash scripts/kolme/test_run_local_bootstrap_health_checks.sh`
 - `bash scripts/kolme/test_run_local_e2e_integration_lane.sh`
+- `bash scripts/kolme/test_check_local_e2e_integration_policy.sh`
+- `bash scripts/kolme/test_run_local_e2e_integration_contract_lane.sh`
 
 Local Kolme API probe/smoke lane contract tests:
 - `bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh`

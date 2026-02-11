@@ -19,6 +19,8 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_checkout_bootstrap_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_contract_lane.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_real_process_policy.sh"'
+  'bash "$ROOT_DIR/scripts/kolme/test_check_local_e2e_integration_policy.sh"'
+  'bash "$ROOT_DIR/scripts/kolme/test_run_local_e2e_integration_contract_lane.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_assert_local_heavy_opt_in.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_generate_local_lane_summary.sh"'
 )

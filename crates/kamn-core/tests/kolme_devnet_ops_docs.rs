@@ -212,7 +212,10 @@ fn plan_contains_deterministic_local_bootstrap_health_checks() {
 fn plan_contains_local_only_heavy_e2e_lane() {
     assert!(PLAN.contains("## Local-Only Heavy End-to-End Lane"));
     assert!(PLAN.contains("run_local_e2e_integration_lane.sh"));
+    assert!(PLAN.contains("check_local_e2e_integration_policy.py"));
+    assert!(PLAN.contains("run_local_e2e_integration_contract_lane.sh"));
     assert!(PLAN.contains("kamn.kolme.local-e2e-integration-summary.v1"));
+    assert!(PLAN.contains("kamn.kolme.local-e2e-integration-policy-report.v1"));
     assert!(PLAN.contains("run_runtime_commit_adapter_contract_lane.sh"));
     assert!(PLAN.contains("run_live_transport_parity_contract_lane.sh"));
 }
@@ -253,6 +256,14 @@ fn regression_requires_local_e2e_opt_in_guard_marker() {
     // Regression: #1418
     assert!(PLAN.contains(
         "local-only heavy E2E lane run mode fails closed without explicit local-only opt-in (`Regression: #1418`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_e2e_policy_contract_guard_marker() {
+    // Regression: #1682
+    assert!(PLAN.contains(
+        "local-only heavy E2E lane summary policy and contract-lane decision/checkpoint drift remain fail-closed (`Regression: #1682`)."
     ));
 }
 

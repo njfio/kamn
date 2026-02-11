@@ -175,6 +175,8 @@ Required demo lane command contract:
 - `python3 scripts/kolme/check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-fast-gate-native-api-parity-policy.json`
 - `bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode dry-run --output-json /tmp/kolme-local-bootstrap-summary.json`
 - `bash scripts/kolme/run_local_e2e_integration_lane.sh --mode dry-run --output-json /tmp/kolme-local-e2e-integration-summary.json`
+- `python3 scripts/kolme/check_local_e2e_integration_policy.py --report-file /tmp/kolme-local-e2e-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-e2e-integration-policy.json`
+- `bash scripts/kolme/run_local_e2e_integration_contract_lane.sh --output-json /tmp/kolme-local-e2e-integration-summary.json --policy-output-json /tmp/kolme-local-e2e-integration-policy.json`
 - `bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode dry-run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-api-conformance-summary.json`
 - `bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json`
 - `bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
@@ -202,6 +204,7 @@ Regression policy:
 - local-only heavy Kolme selector/workflow/docs parity remains fail-closed (`Regression: #1419`).
 - aggregate CI-tools fork Rust matrix command-surface coverage remains fail-closed (`Regression: #1549`).
 - local-only fork sync/smoke run-mode exclusion parity remains fail-closed (`Regression: #1431`).
+- local-only heavy E2E policy and contract lane command-surface parity remains fail-closed (`Regression: #1682`).
 - local Kolme API probe/smoke run-mode exclusion parity remains fail-closed (`Regression: #1441`).
 - local live API conformance harness run-mode exclusion parity remains fail-closed (`Regression: #1483`).
 - local fork bootstrap/readiness run-mode exclusion parity remains fail-closed (`Regression: #1488`).
