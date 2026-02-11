@@ -36,6 +36,7 @@ append_summary() {
     echo "- Run federated DID handshake contract tests: ${RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS}"
     echo "- Run federated DID handshake deep lane: ${RUN_FEDERATED_DID_HANDSHAKE_DEEP_LANE}"
     echo "- Run Kolme snapshot drift contract tests: ${RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS}"
+    echo "- Run Kolme local-heavy contract tests: ${RUN_KOLME_LOCAL_HEAVY_CONTRACT_TESTS}"
     echo "- Run Kolme version compatibility contract tests: ${RUN_KOLME_VERSION_COMPATIBILITY_CONTRACT_TESTS}"
     echo "- Run Kolme triadic devnet smoke contract tests: ${RUN_KOLME_TRIADIC_DEVNET_SMOKE_CONTRACT_TESTS}"
     echo "- Run federated delegation settlement contract tests: ${RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS}"
@@ -162,6 +163,7 @@ SIGNER_EMULATOR_CONTRACT_CHANGED=false
 DID_REGISTRY_CONTRACT_CHANGED=false
 FEDERATED_DID_HANDSHAKE_CONTRACT_CHANGED=false
 KOLME_SNAPSHOT_DRIFT_CONTRACT_CHANGED=false
+KOLME_LOCAL_HEAVY_CONTRACT_CHANGED=false
 KOLME_VERSION_COMPATIBILITY_CONTRACT_CHANGED=false
 KOLME_TRIADIC_DEVNET_SMOKE_CONTRACT_CHANGED=false
 FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_CHANGED=false
@@ -204,6 +206,7 @@ declare -A MANIFESTS=()
 
 for file in "${CHANGED_FILES[@]}"; do
   classified=false
+  kolme_local_heavy_routing_candidate=false
 
   case "$file" in
     *.md|*.txt|docs/*)
@@ -297,23 +300,33 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
+    scripts/framework/assert_local_heavy_opt_in.sh|scripts/framework/test_assert_local_heavy_opt_in.sh|scripts/kolme/run_local_bootstrap_health_checks.sh|scripts/kolme/test_run_local_bootstrap_health_checks.sh|scripts/kolme/run_local_e2e_integration_lane.sh|scripts/kolme/test_run_local_e2e_integration_lane.sh|scripts/kolme/run_local_heavy_validation_matrix.sh|scripts/kolme/test_run_local_heavy_validation_matrix.sh)
+      KOLME_LOCAL_HEAVY_CONTRACT_CHANGED=true
+      kolme_local_heavy_routing_candidate=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
     docs/research/kolme-upstream-compatibility.md|scripts/kolme/check_snapshot_drift.py|scripts/kolme/run_snapshot_drift_contract_lane.sh|scripts/kolme/test_check_snapshot_drift.sh|scripts/kolme/test_run_snapshot_drift_contract_lane.sh|fixtures/kolme_compatibility/snapshot_*)
       KOLME_SNAPSHOT_DRIFT_CONTRACT_CHANGED=true
       classified=true
       ;;
   esac
 
-  case "$file" in
-    crates/kamn-core/src/kolme_runtime_commit.rs|crates/kamn-core/tests/kolme_runtime_commit_client.rs|crates/kamn-core/tests/kolme_runtime_commit_finality.rs|crates/kamn-core/tests/kolme_runtime_commit_client_docs.rs|crates/kamn-core/tests/kolme_runtime_commit_notifications.rs|crates/kamn-core/tests/kolme_runtime_commit_block_fallback.rs)
-      KOLME_VERSION_COMPATIBILITY_CONTRACT_CHANGED=true
-      RUST_CHANGED=true
-      classified=true
-      ;;
-    docs/planning/kolme-integration-roadmap.md|docs/planning/kolme-devnet-ops.md|docs/foundation/kolme-runtime-commit-client.md|docs/foundation/release-gonogo-checklist.md|scripts/kolme/validate_version_compatibility.py|scripts/kolme/generate_fork_compatibility_evidence.py|scripts/kolme/check_fork_compatibility_policy.py|scripts/kolme/run_version_compatibility_replay.py|scripts/kolme/run_version_compatibility_contract_lane.sh|scripts/kolme/run_version_compatibility_replay_deep_lane.sh|scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh|scripts/kolme/check_fast_gate_native_api_parity_policy.py|scripts/kolme/run_local_fork_sync_metadata_lane.sh|scripts/kolme/run_local_fork_smoke_evidence_lane.sh|scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh|scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py|scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh|scripts/kolme/run_local_kolme_api_probe_lane.sh|scripts/kolme/run_local_kolme_api_smoke_lane.sh|scripts/kolme/run_local_runtime_commit_live_lane.sh|scripts/kolme/run_local_native_api_parity_live_proof_lane.sh|scripts/kolme/check_local_native_api_parity_live_proof_policy.py|scripts/kolme/run_local_native_api_parity_live_proof_contract_lane.sh|scripts/kolme/run_local_kolme_live_api_conformance_harness.sh|scripts/kolme/check_local_kolme_live_api_conformance_policy.py|scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh|scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh|scripts/kolme/check_local_kolme_fork_bootstrap_readiness_policy.py|scripts/kolme/run_local_kolme_fork_bootstrap_readiness_contract_lane.sh|scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh|scripts/kolme/check_local_kamn_live_runtime_integration_policy.py|scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh|scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh|scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py|scripts/kolme/run_local_kolme_fork_process_lifecycle_contract_lane.sh|scripts/kolme/run_local_heavy_validation_matrix.sh|scripts/kolme/run_local_bootstrap_health_checks.sh|scripts/kolme/run_local_e2e_integration_lane.sh|scripts/framework/assert_local_heavy_opt_in.sh|scripts/framework/generate_local_lane_summary.py|scripts/kolme/run_runtime_commit_contract_lane.sh|scripts/kolme/run_runtime_commit_adapter_contract_lane.sh|scripts/kolme/check_runtime_commit_replay_policy.py|scripts/kolme/run_runtime_commit_replay_tamper_matrix.py|scripts/kolme/run_runtime_commit_replay_contract_lane.sh|scripts/kolme/check_nonce_broadcast_parity_policy.py|scripts/kolme/run_nonce_broadcast_parity_matrix.py|scripts/kolme/run_nonce_broadcast_parity_contract_lane.sh|scripts/kolme/run_notifications_consumer_contract_lane.sh|scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh|scripts/kolme/test_validate_version_compatibility.sh|scripts/kolme/test_generate_fork_compatibility_evidence.sh|scripts/kolme/test_check_fork_compatibility_policy.sh|scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh|scripts/kolme/test_run_local_fork_sync_metadata_lane.sh|scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh|scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh|scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh|scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh|scripts/kolme/test_run_local_kolme_api_probe_lane.sh|scripts/kolme/test_run_local_kolme_api_smoke_lane.sh|scripts/kolme/test_run_local_runtime_commit_live_lane.sh|scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh|scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh|scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh|scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh|scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh|scripts/kolme/test_run_local_heavy_validation_matrix.sh|scripts/kolme/test_run_local_bootstrap_health_checks.sh|scripts/kolme/test_run_local_e2e_integration_lane.sh|scripts/framework/test_assert_local_heavy_opt_in.sh|scripts/framework/test_generate_local_lane_summary.sh|scripts/kolme/test_check_runtime_commit_replay_policy.sh|scripts/kolme/test_check_nonce_broadcast_parity_policy.sh|scripts/kolme/test_run_version_compatibility_contract_lane.sh|scripts/kolme/test_run_runtime_commit_contract_lane.sh|scripts/kolme/test_run_runtime_commit_adapter_contract_lane.sh|scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh|scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh|scripts/kolme/test_run_notifications_consumer_contract_lane.sh|scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh|fixtures/kolme_compatibility/version_compatibility_cases.json|fixtures/kolme_compatibility/fork_compatibility_cases.json|fixtures/kolme_commit/runtime_commit_request_cases.txt|fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json|fixtures/kolme_commit/nonce_broadcast_parity_cases.json|crates/kamn-core/tests/kolme_integration_roadmap_docs.rs|crates/kamn-core/tests/kolme_devnet_ops_docs.rs)
-      KOLME_VERSION_COMPATIBILITY_CONTRACT_CHANGED=true
-      classified=true
-      ;;
-  esac
+  if [ "$kolme_local_heavy_routing_candidate" != true ]; then
+    case "$file" in
+      crates/kamn-core/src/kolme_runtime_commit.rs|crates/kamn-core/tests/kolme_runtime_commit_client.rs|crates/kamn-core/tests/kolme_runtime_commit_finality.rs|crates/kamn-core/tests/kolme_runtime_commit_client_docs.rs|crates/kamn-core/tests/kolme_runtime_commit_notifications.rs|crates/kamn-core/tests/kolme_runtime_commit_block_fallback.rs)
+        KOLME_VERSION_COMPATIBILITY_CONTRACT_CHANGED=true
+        RUST_CHANGED=true
+        classified=true
+        ;;
+      docs/planning/kolme-integration-roadmap.md|docs/planning/kolme-devnet-ops.md|docs/foundation/kolme-runtime-commit-client.md|docs/foundation/release-gonogo-checklist.md|scripts/kolme/validate_version_compatibility.py|scripts/kolme/generate_fork_compatibility_evidence.py|scripts/kolme/check_fork_compatibility_policy.py|scripts/kolme/run_version_compatibility_replay.py|scripts/kolme/run_version_compatibility_contract_lane.sh|scripts/kolme/run_version_compatibility_replay_deep_lane.sh|scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh|scripts/kolme/check_fast_gate_native_api_parity_policy.py|scripts/kolme/run_local_fork_sync_metadata_lane.sh|scripts/kolme/run_local_fork_smoke_evidence_lane.sh|scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh|scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py|scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh|scripts/kolme/run_local_kolme_api_probe_lane.sh|scripts/kolme/run_local_kolme_api_smoke_lane.sh|scripts/kolme/run_local_runtime_commit_live_lane.sh|scripts/kolme/run_local_native_api_parity_live_proof_lane.sh|scripts/kolme/check_local_native_api_parity_live_proof_policy.py|scripts/kolme/run_local_native_api_parity_live_proof_contract_lane.sh|scripts/kolme/run_local_kolme_live_api_conformance_harness.sh|scripts/kolme/check_local_kolme_live_api_conformance_policy.py|scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh|scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh|scripts/kolme/check_local_kolme_fork_bootstrap_readiness_policy.py|scripts/kolme/run_local_kolme_fork_bootstrap_readiness_contract_lane.sh|scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh|scripts/kolme/check_local_kamn_live_runtime_integration_policy.py|scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh|scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh|scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py|scripts/kolme/run_local_kolme_fork_process_lifecycle_contract_lane.sh|scripts/framework/generate_local_lane_summary.py|scripts/kolme/run_runtime_commit_contract_lane.sh|scripts/kolme/run_runtime_commit_adapter_contract_lane.sh|scripts/kolme/check_runtime_commit_replay_policy.py|scripts/kolme/run_runtime_commit_replay_tamper_matrix.py|scripts/kolme/run_runtime_commit_replay_contract_lane.sh|scripts/kolme/check_nonce_broadcast_parity_policy.py|scripts/kolme/run_nonce_broadcast_parity_matrix.py|scripts/kolme/run_nonce_broadcast_parity_contract_lane.sh|scripts/kolme/run_notifications_consumer_contract_lane.sh|scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh|scripts/kolme/test_validate_version_compatibility.sh|scripts/kolme/test_generate_fork_compatibility_evidence.sh|scripts/kolme/test_check_fork_compatibility_policy.sh|scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh|scripts/kolme/test_run_local_fork_sync_metadata_lane.sh|scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh|scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh|scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh|scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh|scripts/kolme/test_run_local_kolme_api_probe_lane.sh|scripts/kolme/test_run_local_kolme_api_smoke_lane.sh|scripts/kolme/test_run_local_runtime_commit_live_lane.sh|scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh|scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh|scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh|scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh|scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh|scripts/framework/test_generate_local_lane_summary.sh|scripts/kolme/test_check_runtime_commit_replay_policy.sh|scripts/kolme/test_check_nonce_broadcast_parity_policy.sh|scripts/kolme/test_run_version_compatibility_contract_lane.sh|scripts/kolme/test_run_runtime_commit_contract_lane.sh|scripts/kolme/test_run_runtime_commit_adapter_contract_lane.sh|scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh|scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh|scripts/kolme/test_run_notifications_consumer_contract_lane.sh|scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh|fixtures/kolme_compatibility/version_compatibility_cases.json|fixtures/kolme_compatibility/fork_compatibility_cases.json|fixtures/kolme_commit/runtime_commit_request_cases.txt|fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json|fixtures/kolme_commit/nonce_broadcast_parity_cases.json|crates/kamn-core/tests/kolme_integration_roadmap_docs.rs|crates/kamn-core/tests/kolme_devnet_ops_docs.rs)
+        KOLME_VERSION_COMPATIBILITY_CONTRACT_CHANGED=true
+        classified=true
+        ;;
+    esac
+  fi
 
   case "$file" in
     docs/planning/kolme-devnet-ops.md|scripts/kolme/validate_triadic_devnet_smoke.py|scripts/kolme/run_triadic_devnet_smoke.sh|scripts/kolme/run_triadic_devnet_smoke_contract_lane.sh|scripts/kolme/test_validate_triadic_devnet_smoke.sh|scripts/kolme/test_run_triadic_devnet_smoke_contract_lane.sh|fixtures/kolme_compatibility/devnet_smoke_markers.json)
@@ -594,6 +607,7 @@ RUN_DID_REGISTRY_CONTRACT_TESTS=false
 RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS=false
 RUN_FEDERATED_DID_HANDSHAKE_DEEP_LANE=false
 RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS=false
+RUN_KOLME_LOCAL_HEAVY_CONTRACT_TESTS=false
 RUN_KOLME_VERSION_COMPATIBILITY_CONTRACT_TESTS=false
 RUN_KOLME_TRIADIC_DEVNET_SMOKE_CONTRACT_TESTS=false
 RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS=false
@@ -764,6 +778,13 @@ if [ "$FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_CHANGED" = true ]; then
   RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS=true
   if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ] && [ "$TOKEN_LAUNCH_CONTRACT_CHANGED" != true ]; then
     TEST_SCOPE="federated-task-contract"
+  fi
+fi
+
+if [ "$KOLME_LOCAL_HEAVY_CONTRACT_CHANGED" = true ]; then
+  RUN_KOLME_LOCAL_HEAVY_CONTRACT_TESTS=true
+  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="kolme-local-heavy-contract"
   fi
 fi
 
@@ -986,6 +1007,7 @@ write_output "run_did_registry_contract_tests" "$RUN_DID_REGISTRY_CONTRACT_TESTS
 write_output "run_federated_did_handshake_contract_tests" "$RUN_FEDERATED_DID_HANDSHAKE_CONTRACT_TESTS"
 write_output "run_federated_did_handshake_deep_lane" "$RUN_FEDERATED_DID_HANDSHAKE_DEEP_LANE"
 write_output "run_kolme_snapshot_drift_contract_tests" "$RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS"
+write_output "run_kolme_local_heavy_contract_tests" "$RUN_KOLME_LOCAL_HEAVY_CONTRACT_TESTS"
 write_output "run_kolme_version_compatibility_contract_tests" "$RUN_KOLME_VERSION_COMPATIBILITY_CONTRACT_TESTS"
 write_output "run_kolme_triadic_devnet_smoke_contract_tests" "$RUN_KOLME_TRIADIC_DEVNET_SMOKE_CONTRACT_TESTS"
 write_output "run_federated_delegation_settlement_contract_tests" "$RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS"

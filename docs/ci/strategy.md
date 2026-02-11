@@ -62,7 +62,15 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 - Live transport parity command changes map to parity scope:
   - `run_live_transport_parity_contract_tests=true`
   - `live_transport_parity_languages=rust,python,typescript`
-- Local-only heavy Kolme command changes map to version-compatibility command-surface scope:
+- Core local-heavy Kolme helper/orchestration command changes map to dedicated local-heavy scope:
+  - `run_kolme_local_heavy_contract_tests=true`
+  - `test_scope=kolme-local-heavy-contract`
+  - fast-gate commands:
+    - `bash scripts/framework/test_assert_local_heavy_opt_in.sh`
+    - `bash scripts/kolme/test_run_local_bootstrap_health_checks.sh`
+    - `bash scripts/kolme/test_run_local_e2e_integration_lane.sh`
+    - `bash scripts/kolme/test_run_local_heavy_validation_matrix.sh`
+- Broader Kolme compatibility command changes continue to map to version-compatibility scope:
   - `run_kolme_version_compatibility_contract_tests=true`
   - `test_scope=kolme-version-contract`
   - command-surface tests stay on PR fast gate:
@@ -83,8 +91,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh`
     - `bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh`
-    - `bash scripts/kolme/test_run_local_bootstrap_health_checks.sh`
-    - `bash scripts/kolme/test_run_local_e2e_integration_lane.sh`
+    - `bash scripts/kolme/test_run_version_compatibility_contract_lane.sh`
+  - additional Kolme contract checks stay covered by aggregate CI tools lane:
     - `bash scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh`
   - nonce/broadcast parity matrix fast-lane budget stays bounded:
     - `KAMN_KOLME_NONCE_BROADCAST_PARITY_MAX_SECONDS=60`
