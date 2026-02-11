@@ -28,6 +28,7 @@ use kamn_kolme::{
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
     render_block_path as render_kolme_block_path,
     require_commit_id_matches_expected_txhash as require_kolme_commit_id_matches_expected_txhash_contract,
+    resolve_lookup_upper_bound as resolve_kolme_lookup_upper_bound,
     try_take_websocket_frame as try_take_kolme_websocket_frame,
     txhash_from_commit_id as txhash_from_kolme_commit_id,
     validate_block_identity as validate_kolme_block_identity,
@@ -1673,11 +1674,8 @@ where
         match self.notifications_consumer.next_notification_event() {
             Ok(event) => match event {
                 KolmeRuntimeCommitNotificationEvent::LatestBlock { height } => {
-                    let upper_bound = if height >= from_height {
-                        height.min(latest_height)
-                    } else {
-                        latest_height
-                    };
+                    let upper_bound =
+                        resolve_kolme_lookup_upper_bound(from_height, latest_height, height);
                     self.block_fallback_reconciler.reconcile_txhash(
                         expected_txhash.as_str(),
                         from_height,

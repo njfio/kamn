@@ -71,6 +71,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_tls_ca_file_env_value("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_authorization_header_value("));
     assert!(RUNTIME_COMMIT_SRC.contains("validate_kolme_lookup_window("));
+    assert!(RUNTIME_COMMIT_SRC.contains("resolve_kolme_lookup_upper_bound("));
     assert!(RUNTIME_COMMIT_SRC.contains("validate_kolme_block_identity("));
     assert!(RUNTIME_COMMIT_SRC.contains("compose_kolme_finality_status_path("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_notification_event_contract("));

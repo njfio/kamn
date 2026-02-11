@@ -37,8 +37,9 @@ pub use block_fallback_policy::{
     KolmeBlockFallbackResponse,
 };
 pub use block_scan_policy::{
-    parse_fork_block_txhash, render_block_path, validate_block_identity,
-    validate_block_path_template, validate_lookup_window, BlockScanPolicyError,
+    parse_fork_block_txhash, render_block_path, resolve_lookup_upper_bound,
+    validate_block_identity, validate_block_path_template, validate_lookup_window,
+    BlockScanPolicyError,
 };
 pub use broadcast_payload_policy::{normalize_broadcast_payload, KolmeBroadcastPayloadPolicyError};
 pub use codec::{KolmeCodecError, KolmeWireCodec, PassthroughCodec};
