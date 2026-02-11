@@ -59,7 +59,7 @@ if report.get("status") != "ok":
 if report.get("local_only_enforced") is not True:
     raise SystemExit("expected local_only_enforced=true in e2e summary")
 checkpoints = report.get("checkpoints")
-if not isinstance(checkpoints, list) or len(checkpoints) < 3:
+if not isinstance(checkpoints, list) or len(checkpoints) < 5:
     raise SystemExit("expected deterministic checkpoint entries in e2e summary")
 checkpoint_ids = [
     entry.get("id")
@@ -70,6 +70,10 @@ if "runtime_commit_adapter" not in checkpoint_ids:
     raise SystemExit("expected runtime_commit_adapter checkpoint id")
 if "sdk_live_transport_parity" not in checkpoint_ids:
     raise SystemExit("expected sdk_live_transport_parity checkpoint id")
+if "fork_rust_test_matrix" not in checkpoint_ids:
+    raise SystemExit("expected fork_rust_test_matrix checkpoint id")
+if "fork_live_api_conformance" not in checkpoint_ids:
+    raise SystemExit("expected fork_live_api_conformance checkpoint id")
 PY
 
 set +e

@@ -53,15 +53,25 @@ fi
 
 BOOTSTRAP_REPORT="/tmp/kolme-local-bootstrap-summary.json"
 DEEP_REPORT="/tmp/kolme-version-compatibility-report.json"
+FORK_RUST_MATRIX_REPORT="/tmp/kolme-local-fork-rust-test-matrix-summary.json"
+FORK_RUST_MATRIX_POLICY_REPORT="/tmp/kolme-local-fork-rust-test-matrix-policy.json"
+LIVE_API_CONFORMANCE_REPORT="/tmp/kolme-local-live-api-conformance-summary.json"
+LIVE_API_CONFORMANCE_POLICY_REPORT="/tmp/kolme-local-live-api-conformance-policy.json"
 
 declare -a COMMANDS=(
   "bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode run --output-json $BOOTSTRAP_REPORT"
   "bash scripts/kolme/run_version_compatibility_replay_deep_lane.sh --output-json $DEEP_REPORT"
+  "bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh --output-json $FORK_RUST_MATRIX_REPORT --policy-output-json $FORK_RUST_MATRIX_POLICY_REPORT"
+  "bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json $LIVE_API_CONFORMANCE_REPORT --policy-output-json $LIVE_API_CONFORMANCE_POLICY_REPORT"
 )
 
 declare -a ARTIFACTS=(
   "$BOOTSTRAP_REPORT"
   "$DEEP_REPORT"
+  "$FORK_RUST_MATRIX_REPORT"
+  "$FORK_RUST_MATRIX_POLICY_REPORT"
+  "$LIVE_API_CONFORMANCE_REPORT"
+  "$LIVE_API_CONFORMANCE_POLICY_REPORT"
 )
 
 if [ "$MODE" = "run" ]; then
