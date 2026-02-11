@@ -120,6 +120,21 @@ class PilotLaneManifestTests(unittest.TestCase):
                 "kolme.nonce_broadcast.parity.contract",
                 "scripts/kolme/contracts/nonce_broadcast_parity_contract_lane.py",
             ),
+            (
+                "kolme_version_compatibility_contract_lane.json",
+                "kolme.version_compatibility.contract",
+                "scripts/kolme/contracts/version_compatibility_contract_lane.py",
+            ),
+            (
+                "kolme_local_fork_rust_test_matrix_contract_lane.json",
+                "kolme.local_fork_rust_test_matrix.contract",
+                "scripts/kolme/contracts/local_fork_rust_test_matrix_contract_lane.py",
+            ),
+            (
+                "kolme_local_heavy_validation_matrix_contract_lane.json",
+                "kolme.local_heavy_validation_matrix.contract",
+                "scripts/kolme/contracts/local_heavy_validation_matrix_contract_lane.py",
+            ),
         )
 
         for manifest_name, expected_lane_id, expected_script in cases:
