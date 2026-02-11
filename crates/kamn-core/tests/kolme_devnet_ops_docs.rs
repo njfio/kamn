@@ -134,6 +134,15 @@ fn plan_contains_local_fork_self_test_lane() {
 }
 
 #[test]
+fn plan_contains_local_fork_checkout_bootstrap_lane() {
+    assert!(PLAN.contains("## Local Fork Checkout Bootstrap Lane"));
+    assert!(PLAN.contains("run_local_kolme_fork_checkout_bootstrap_lane.sh"));
+    assert!(PLAN.contains("check_local_kolme_fork_checkout_bootstrap_policy.py"));
+    assert!(PLAN.contains("run_local_kolme_fork_checkout_bootstrap_contract_lane.sh"));
+    assert!(PLAN.contains("kamn.kolme.local-fork-checkout-bootstrap-summary.v1"));
+}
+
+#[test]
 fn plan_contains_real_fork_local_process_wrapper_lane() {
     assert!(PLAN.contains("## Real Fork Local Process Wrapper Contract Lane"));
     assert!(PLAN.contains("run_local_kolme_fork_real_process_contract_lane.sh"));
@@ -261,6 +270,14 @@ fn regression_requires_local_fork_smoke_evidence_guard_marker() {
     // Regression: #1430
     assert!(PLAN.contains(
         "local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_fork_checkout_bootstrap_guard_marker() {
+    // Regression: #1663
+    assert!(PLAN.contains(
+        "local fork checkout bootstrap lane fails closed for local opt-in, checkout provenance drift, diagnostics command failures, and runtime budget overruns (`Regression: #1663`)."
     ));
 }
 

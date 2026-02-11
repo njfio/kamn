@@ -319,6 +319,28 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - nested matrix budget and total lane budget remain bounded and local-only.
   - self-test run-mode execution remains excluded from PR fast-gate workflow routing.
 
+## Local Fork Checkout Bootstrap Lane (Issue #1663)
+
+- Local fork checkout bootstrap runner:
+  - `bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json`
+- Explicit local-only checkout bootstrap execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh --mode run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json`
+- Policy checker command:
+  - `python3 scripts/kolme/check_local_kolme_fork_checkout_bootstrap_policy.py --report-file /tmp/kolme-local-fork-checkout-bootstrap-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json`
+- Contract lane command:
+  - `bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_contract_lane.sh --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json --policy-output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json`
+- Summary schema:
+  - `kamn.kolme.local-fork-checkout-bootstrap-summary.v1`
+- Deterministic checkpoints include:
+  - checkout preparation (clone/update) against pinned `fork-remote-url`.
+  - nested `run_local_fork_sync_metadata_lane.sh` run-mode validation for remote/ref provenance.
+  - deterministic diagnostics capture for `git --version`, `cargo --version`, and `rustc --version`.
+  - fail-closed reason codes for missing local opt-in, checkout bootstrap failure, metadata drift, diagnostics failure, and runtime budget overrun.
+- Cost policy:
+  - run mode fails closed without explicit local-only opt-in.
+  - lane default budget remains bounded to 120 seconds.
+  - run-mode execution remains local-only and excluded from PR fast-gate workflow routing.
+
 ## Real Fork Local Process Wrapper Contract Lane (Issue #1644)
 
 - Real-fork local wrapper runner:
@@ -491,6 +513,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local fork process lifecycle integration lane fails closed for process start/readiness/integration/teardown/budget drift and missing local opt-in (`Regression: #1494`).
 - local fork profile preflight lane fails closed for local opt-in, checkout/profile contract drift, probe command failures, and runtime budget overruns (`Regression: #1648`).
 - local fork self-test lane fails closed for local opt-in, nested matrix/policy checkpoint failures, and runtime budget overruns (`Regression: #1652`).
+- local fork checkout bootstrap lane fails closed for local opt-in, checkout provenance drift, diagnostics command failures, and runtime budget overruns (`Regression: #1663`).
 - real-fork local process wrapper lane fails closed for local opt-in, serve-command profile drift, self-test/lifecycle/policy checkpoint failure, and runtime budget overruns (`Regression: #1644`).
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
 - local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`).
@@ -525,6 +548,9 @@ bash scripts/kolme/test_run_local_signed_to_kolme_demo_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_profile_preflight_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_self_test_lane.sh
+bash scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_lane.sh
+bash scripts/kolme/test_check_local_kolme_fork_checkout_bootstrap_policy.sh
+bash scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_contract_lane.sh
 bash scripts/kolme/test_run_local_kolme_fork_real_process_contract_lane.sh
 bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh
 bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh
