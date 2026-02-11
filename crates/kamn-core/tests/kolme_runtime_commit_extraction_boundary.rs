@@ -77,10 +77,9 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_notification_event_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_response_body("));
     assert!(RUNTIME_COMMIT_SRC.contains("find_kolme_http_header_boundary("));
+    assert!(RUNTIME_COMMIT_SRC.contains("validate_kolme_provider_receipt_identity_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("KamnKolmeApiNextNonceRequest::new("));
     assert!(RUNTIME_COMMIT_SRC.contains("KamnKolmeApiBroadcastResponse::parse_json("));
-    assert!(RUNTIME_COMMIT_SRC.contains("if receipt.provider != expected_provider"));
-    assert!(RUNTIME_COMMIT_SRC.contains("if receipt.commit_id.trim().is_empty()"));
     assert!(RUNTIME_COMMIT_SRC.contains("KolmeRuntimeCommitTransportErrorKind::Timeout"));
     assert!(RUNTIME_COMMIT_SRC.contains("KolmeRuntimeCommitTransportErrorKind::MalformedResponse"));
     assert!(RUNTIME_COMMIT_SRC.contains("classify_kolme_transport_io_error(&error)"));

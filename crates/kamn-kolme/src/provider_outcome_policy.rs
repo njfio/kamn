@@ -56,6 +56,34 @@ impl fmt::Display for KolmeProviderOutcomePolicyError {
 
 impl Error for KolmeProviderOutcomePolicyError {}
 
+/// Error returned by provider receipt identity validation contracts.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum KolmeProviderReceiptIdentityError {
+    /// Provider identifier differs from expected runtime provider.
+    ProviderMismatch {
+        /// Expected provider identifier.
+        expected: String,
+        /// Observed provider identifier from receipt.
+        observed: String,
+    },
+    /// Deterministic backend commit id is missing or empty.
+    EmptyCommitId,
+}
+
+impl fmt::Display for KolmeProviderReceiptIdentityError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ProviderMismatch { expected, observed } => write!(
+                f,
+                "provider mismatch: expected '{expected}' observed '{observed}'"
+            ),
+            Self::EmptyCommitId => f.write_str("receipt commit_id must not be empty"),
+        }
+    }
+}
+
+impl Error for KolmeProviderReceiptIdentityError {}
+
 /// Parses a live provider response payload into one typed provider outcome.
 pub fn parse_live_provider_outcome(
     response: &str,
@@ -204,6 +232,24 @@ pub fn require_commit_id_matches_expected_txhash(
                 "notification txhash mismatch: expected '{expected_txhash}' observed '{observed_txhash}'"
             ),
         });
+    }
+    Ok(())
+}
+
+/// Validates provider receipt identity tuple before adapter-level finality mapping.
+pub fn validate_provider_receipt_identity(
+    expected_provider: &str,
+    observed_provider: &str,
+    commit_id: &str,
+) -> Result<(), KolmeProviderReceiptIdentityError> {
+    if observed_provider != expected_provider {
+        return Err(KolmeProviderReceiptIdentityError::ProviderMismatch {
+            expected: expected_provider.to_owned(),
+            observed: observed_provider.to_owned(),
+        });
+    }
+    if commit_id.trim().is_empty() {
+        return Err(KolmeProviderReceiptIdentityError::EmptyCommitId);
     }
     Ok(())
 }

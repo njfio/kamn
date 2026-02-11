@@ -1,8 +1,10 @@
 use kamn_kolme::{
     deterministic_backend_commit_id, parse_commit_id_from_response_fields,
     parse_live_provider_outcome, require_commit_id_matches_expected_txhash,
-    required_provider_response_field, txhash_from_commit_id, KolmeProviderOutcome,
-    KolmeProviderOutcomePolicyError, ReceiptFinality,
+    required_provider_response_field, txhash_from_commit_id,
+    validate_provider_receipt_identity as validate_provider_receipt_identity_contract,
+    KolmeProviderOutcome, KolmeProviderOutcomePolicyError, KolmeProviderReceiptIdentityError,
+    ReceiptFinality,
 };
 use std::collections::HashMap;
 
@@ -114,5 +116,37 @@ fn regression_issue_1838_require_commit_id_matches_expected_txhash_fails_closed_
         KolmeProviderOutcomePolicyError::MalformedResponse {
             reason: "notification txhash mismatch: expected 'ab12cd34' observed 'ff00'".to_owned(),
         }
+    );
+}
+
+#[test]
+fn functional_validate_provider_receipt_identity_accepts_matching_provider_and_commit_id() {
+    validate_provider_receipt_identity_contract("kolme-fork", "kolme-fork", "kolme-commit:ab12")
+        .expect("matching provider + non-empty commit id should pass");
+}
+
+#[test]
+fn regression_issue_1842_validate_provider_receipt_identity_rejects_mismatch_and_empty_commit_id() {
+    // Regression: #1842
+    let mismatch_error = validate_provider_receipt_identity_contract(
+        "kolme-local",
+        "kolme-remote",
+        "kolme-commit:a1",
+    )
+    .expect_err("provider mismatch must fail closed");
+    assert_eq!(
+        mismatch_error,
+        KolmeProviderReceiptIdentityError::ProviderMismatch {
+            expected: "kolme-local".to_owned(),
+            observed: "kolme-remote".to_owned(),
+        }
+    );
+
+    let empty_commit_id_error =
+        validate_provider_receipt_identity_contract("kolme-local", "kolme-local", "   ")
+            .expect_err("empty commit id must fail closed");
+    assert_eq!(
+        empty_commit_id_error,
+        KolmeProviderReceiptIdentityError::EmptyCommitId
     );
 }

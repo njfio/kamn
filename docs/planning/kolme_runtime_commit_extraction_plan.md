@@ -38,6 +38,7 @@ Out of scope:
 - #1836: extracted provider-aware block-fallback parse-selection contract to `kamn-kolme` (`parse_provider_block_fallback_response`) and rewired `kamn-core` block fallback reconciler delegation.
 - #1838: extracted notification receipt txhash-correlation helper to `kamn-kolme` (`require_commit_id_matches_expected_txhash`) and rewired `kamn-core` fork finality resolver mismatch checking.
 - #1840: extracted latest-block upper-bound selection helper to `kamn-kolme` (`resolve_lookup_upper_bound`) and rewired `kamn-core` fork finality resolver block fallback bound selection.
+- #1842: extracted adapter receipt provider/commit-id identity validator to `kamn-kolme` (`validate_provider_receipt_identity`) and rewired `kamn-core` adapter receipt mapping checks.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,
