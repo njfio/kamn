@@ -508,7 +508,7 @@ impl RuntimeCommitPipeline {
             }
         }
 
-        let target_state = lifecycle_state_for_finality(finality);
+        let target_state = lifecycle_state_for_finality_contract(finality);
 
         if record.state != target_state
             && !matches!(
@@ -523,8 +523,8 @@ impl RuntimeCommitPipeline {
             )
         {
             return Err(KolmeRuntimeCommitError::InvalidFinalityTransition {
-                from: lifecycle_state_label(record.state),
-                to: lifecycle_state_label(target_state),
+                from: lifecycle_state_label_contract(record.state),
+                to: lifecycle_state_label_contract(target_state),
             });
         }
 
@@ -2272,7 +2272,7 @@ impl fmt::Display for KolmeRuntimeCommitError {
             } => write!(
                 f,
                 "provider receipt must be final for commit '{commit_id}', observed {}",
-                commit_finality_label(*finality)
+                commit_finality_label_contract(*finality)
             ),
         }
     }
@@ -2305,20 +2305,6 @@ fn deterministic_commit_id(
     deterministic_runtime_commit_id_contract(operation_id, actor_did, nonce, payload_hash)
 }
 
-fn lifecycle_state_for_finality(
-    finality: KolmeCommitReceiptFinality,
-) -> RuntimeCommitLifecycleState {
-    lifecycle_state_for_finality_contract(finality)
-}
-
-fn lifecycle_state_label(state: RuntimeCommitLifecycleState) -> &'static str {
-    lifecycle_state_label_contract(state)
-}
-
-fn commit_finality_label(finality: KolmeCommitReceiptFinality) -> &'static str {
-    commit_finality_label_contract(finality)
-}
-
 fn lifecycle_record_from_outcome(
     request: &KolmeRuntimeCommitRequest,
     outcome: &KolmeRuntimeCommitOutcome,
@@ -2326,7 +2312,7 @@ fn lifecycle_record_from_outcome(
     match outcome {
         KolmeRuntimeCommitOutcome::Submitted(receipt)
         | KolmeRuntimeCommitOutcome::Duplicate(receipt) => {
-            let state = lifecycle_state_for_finality(receipt.finality);
+            let state = lifecycle_state_for_finality_contract(receipt.finality);
             RuntimeCommitLifecycleRecord {
                 operation_id: request.operation_id.clone(),
                 idempotency_key: request.idempotency_key().to_owned(),
