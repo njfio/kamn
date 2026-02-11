@@ -92,11 +92,12 @@ trap 'rm -f "$CHECK_FILE" "$ARTIFACT_FILE"' EXIT
 
 overall_status="ok"
 readiness_status="planned"
-reason_code=""
+reason_code="dry_run_no_commands_executed"
 already_failed=0
 
 if [ "$MODE" = "run" ]; then
   readiness_status="ready"
+  reason_code="local_bootstrap_health_checks_passed"
 fi
 
 pushd "$ROOT_DIR" >/dev/null

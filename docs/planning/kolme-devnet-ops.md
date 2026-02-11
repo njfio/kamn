@@ -425,20 +425,27 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - lane default budget is bounded to 120 seconds via `KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS`.
   - local-heavy run-mode parity commands remain excluded from PR fast-gate workflow routing.
 
-## Deterministic Local Bootstrap Health Checks (Issue #1417)
+## Deterministic Local Bootstrap Health Checks (Issues #1417, #1691)
 
 - Bootstrap health-check runner:
   - `bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode dry-run --output-json /tmp/kolme-local-bootstrap-summary.json`
 - Explicit opt-in bootstrap execution:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode run --output-json /tmp/kolme-local-bootstrap-summary.json`
+- Policy checker contract:
+  - `python3 scripts/kolme/check_local_bootstrap_health_policy.py --report-file /tmp/kolme-local-bootstrap-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-bootstrap-policy.json`
+- Bounded contract lane (dry-run + policy):
+  - `bash scripts/kolme/run_local_bootstrap_health_checks_contract_lane.sh --output-json /tmp/kolme-local-bootstrap-summary.json --policy-output-json /tmp/kolme-local-bootstrap-policy.json`
 - Summary schema:
   - `kamn.kolme.local-bootstrap-summary.v1`
+  - policy schema: `kamn.kolme.local-bootstrap-policy-report.v1`
 - Deterministic readiness checks include:
   - `validate_version_compatibility.py`
   - `generate_fork_compatibility_evidence.py`
   - `check_fork_compatibility_policy.py`
   - `run_triadic_devnet_smoke.sh`
   - `validate_triadic_devnet_smoke.py`
+  - deterministic dry-run reason code: `dry_run_no_commands_executed`
+  - deterministic run-mode success reason code: `local_bootstrap_health_checks_passed`
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.
 
@@ -515,6 +522,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - shared local-heavy opt-in helper wiring remains fail-closed across bootstrap/E2E/matrix lanes (`Regression: #1585`).
 - local-only heavy validation matrix requires explicit opt-in and remains excluded from PR fast-gate workflows (`Regression: #1405`).
 - local-only heavy validation matrix summary policy and contract-lane command/report drift remain fail-closed (`Regression: #1687`).
+- local bootstrap health summary policy and contract-lane command/report drift remain fail-closed (`Regression: #1692`).
 - local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
 - local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
 - local fork Rust test matrix lane fails closed on missing local opt-in, metadata sync drift, and per-command timeout/failure paths (`Regression: #1537`).
@@ -578,6 +586,8 @@ bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh
 bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh
 bash scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh
 bash scripts/kolme/test_run_local_bootstrap_health_checks.sh
+bash scripts/kolme/test_check_local_bootstrap_health_policy.sh
+bash scripts/kolme/test_run_local_bootstrap_health_checks_contract_lane.sh
 bash scripts/kolme/test_run_local_e2e_integration_lane.sh
 bash scripts/kolme/test_check_local_e2e_integration_policy.sh
 bash scripts/kolme/test_run_local_e2e_integration_contract_lane.sh

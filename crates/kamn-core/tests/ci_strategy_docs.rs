@@ -63,6 +63,10 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("test_run_nonce_broadcast_parity_contract_lane.sh"));
     assert!(DOC.contains("KAMN_KOLME_NONCE_BROADCAST_PARITY_MAX_SECONDS=60"));
     assert!(DOC.contains("run_local_bootstrap_health_checks.sh"));
+    assert!(DOC.contains("check_local_bootstrap_health_policy.py"));
+    assert!(DOC.contains("run_local_bootstrap_health_checks_contract_lane.sh"));
+    assert!(DOC.contains("test_check_local_bootstrap_health_policy.sh"));
+    assert!(DOC.contains("test_run_local_bootstrap_health_checks_contract_lane.sh"));
     assert!(DOC.contains("run_local_e2e_integration_lane.sh"));
     assert!(DOC.contains("check_local_e2e_integration_policy.py"));
     assert!(DOC.contains("run_local_e2e_integration_contract_lane.sh"));
@@ -111,6 +115,7 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("Regression: #1431"));
     assert!(DOC.contains("Regression: #1682"));
     assert!(DOC.contains("Regression: #1687"));
+    assert!(DOC.contains("Regression: #1692"));
     assert!(DOC.contains("Regression: #1441"));
     assert!(DOC.contains("Regression: #1451"));
     assert!(DOC.contains("Regression: #1467"));

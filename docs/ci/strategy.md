@@ -94,6 +94,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/test_run_version_compatibility_contract_lane.sh`
   - additional Kolme contract checks stay covered by aggregate CI tools lane:
     - `bash scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh`
+    - `bash scripts/kolme/test_check_local_bootstrap_health_policy.sh`
+    - `bash scripts/kolme/test_run_local_bootstrap_health_checks_contract_lane.sh`
   - nonce/broadcast parity matrix fast-lane budget stays bounded:
     - `KAMN_KOLME_NONCE_BROADCAST_PARITY_MAX_SECONDS=60`
   - fast-gate native API parity lane remains bounded:
@@ -174,6 +176,8 @@ Required demo lane command contract:
 - `bash scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json`
 - `python3 scripts/kolme/check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-fast-gate-native-api-parity-policy.json`
 - `bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode dry-run --output-json /tmp/kolme-local-bootstrap-summary.json`
+- `python3 scripts/kolme/check_local_bootstrap_health_policy.py --report-file /tmp/kolme-local-bootstrap-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-bootstrap-policy.json`
+- `bash scripts/kolme/run_local_bootstrap_health_checks_contract_lane.sh --output-json /tmp/kolme-local-bootstrap-summary.json --policy-output-json /tmp/kolme-local-bootstrap-policy.json`
 - `bash scripts/kolme/run_local_e2e_integration_lane.sh --mode dry-run --output-json /tmp/kolme-local-e2e-integration-summary.json`
 - `python3 scripts/kolme/check_local_e2e_integration_policy.py --report-file /tmp/kolme-local-e2e-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-e2e-integration-policy.json`
 - `bash scripts/kolme/run_local_e2e_integration_contract_lane.sh --output-json /tmp/kolme-local-e2e-integration-summary.json --policy-output-json /tmp/kolme-local-e2e-integration-policy.json`
@@ -209,6 +213,7 @@ Regression policy:
 - local-only fork sync/smoke run-mode exclusion parity remains fail-closed (`Regression: #1431`).
 - local-only heavy E2E policy and contract lane command-surface parity remains fail-closed (`Regression: #1682`).
 - local-only heavy matrix policy and contract lane command-surface parity remains fail-closed (`Regression: #1687`).
+- local bootstrap health policy and contract lane command-surface parity remains fail-closed (`Regression: #1692`).
 - local Kolme API probe/smoke run-mode exclusion parity remains fail-closed (`Regression: #1441`).
 - local live API conformance harness run-mode exclusion parity remains fail-closed (`Regression: #1483`).
 - local fork bootstrap/readiness run-mode exclusion parity remains fail-closed (`Regression: #1488`).

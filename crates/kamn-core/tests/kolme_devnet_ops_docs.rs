@@ -207,7 +207,10 @@ fn plan_contains_local_only_heavy_validation_matrix() {
 fn plan_contains_deterministic_local_bootstrap_health_checks() {
     assert!(PLAN.contains("## Deterministic Local Bootstrap Health Checks"));
     assert!(PLAN.contains("run_local_bootstrap_health_checks.sh"));
+    assert!(PLAN.contains("check_local_bootstrap_health_policy.py"));
+    assert!(PLAN.contains("run_local_bootstrap_health_checks_contract_lane.sh"));
     assert!(PLAN.contains("kamn.kolme.local-bootstrap-summary.v1"));
+    assert!(PLAN.contains("kamn.kolme.local-bootstrap-policy-report.v1"));
     assert!(PLAN.contains("KAMN_KOLME_LOCAL_HEAVY=1"));
 }
 
@@ -251,6 +254,14 @@ fn regression_requires_local_only_heavy_matrix_policy_contract_guard_marker() {
     // Regression: #1687
     assert!(PLAN.contains(
         "local-only heavy validation matrix summary policy and contract-lane command/report drift remain fail-closed (`Regression: #1687`)."
+    ));
+}
+
+#[test]
+fn regression_requires_local_bootstrap_policy_contract_guard_marker() {
+    // Regression: #1692
+    assert!(PLAN.contains(
+        "local bootstrap health summary policy and contract-lane command/report drift remain fail-closed (`Regression: #1692`)."
     ));
 }
 
