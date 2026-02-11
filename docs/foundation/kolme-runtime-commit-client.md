@@ -29,6 +29,8 @@ handling.
 - `KolmeRuntimeCommitHttpTransport` provides deterministic `http://` and `https://` transport paths for:
   - `KolmeRuntimeCommitProviderTransport::submit_runtime_commit(...)`
   - `KolmeRuntimeCommitFinalityTransport::fetch_runtime_commit_finality(...)`
+  - `KolmeRuntimeCommitHttpTransport::fetch_next_nonce(...)`
+  - `KolmeRuntimeCommitHttpTransport::submit_broadcast_request(...)`
 - Optional auth-aware constructor:
   - `KolmeRuntimeCommitHttpTransport::new_with_authorization(...)`
   - emits `Authorization: <value>` header on submit/finality requests.
@@ -129,6 +131,9 @@ Run targeted checks first:
 ```bash
 cargo test -p kamn-core --test kolme_runtime_commit_client
 cargo test -p kamn-core --test kolme_runtime_commit_finality
+cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_fetch_next_nonce_query_and_parse -- --exact
+cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_submit_broadcast_request_put_and_parse_txhash -- --exact
+cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_http_transport_submit_broadcast_request_rejects_malformed_txhash_response -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport functional_https_transport_submit_with_trusted_ca_succeeds -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_https_transport_maps_certificate_errors_to_unavailable -- --exact
 bash scripts/kolme/run_runtime_commit_contract_lane.sh
@@ -151,3 +156,4 @@ cargo test -p kamn-core
 - signed translation envelope and signer custody precondition drift remains fail-closed (`Regression: #1506`).
 - direct signed transaction payload normalization drift remains fail-closed (`Regression: #1516`).
 - direct signed transaction required-field validation drift remains fail-closed (`Regression: #1519`).
+- typed nonce/broadcast HTTP helper mapping drift remains fail-closed (`Regression: #1533`).
