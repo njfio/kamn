@@ -6,7 +6,12 @@ use kamn_kolme::{
     render_block_path as render_kolme_block_path,
     validate_block_identity as validate_kolme_block_identity,
     validate_block_path_template as validate_kolme_block_path_template,
-    validate_lookup_window as validate_kolme_lookup_window, BlockScanPolicyError, ReceiptFinality,
+    validate_lookup_window as validate_kolme_lookup_window, BlockScanPolicyError,
+    KolmeApiBroadcastRequest as KamnKolmeApiBroadcastRequest,
+    KolmeApiBroadcastResponse as KamnKolmeApiBroadcastResponse,
+    KolmeApiCodecError as KamnKolmeApiCodecError,
+    KolmeApiNextNonceRequest as KamnKolmeApiNextNonceRequest,
+    KolmeApiNextNonceResponse as KamnKolmeApiNextNonceResponse, ReceiptFinality,
 };
 use std::collections::HashMap;
 use std::fmt;
@@ -231,30 +236,19 @@ pub struct KolmeApiNextNonceRequest {
 impl KolmeApiNextNonceRequest {
     /// Builds a deterministic nonce lookup request.
     pub fn new(pubkey: &str) -> Result<Self, KolmeRuntimeCommitError> {
-        let trimmed = pubkey.trim();
-        if trimmed.is_empty() {
-            return Err(KolmeRuntimeCommitError::InvalidRequest {
-                field: "pubkey",
-                reason: "must not be empty",
-            });
-        }
+        let extracted = KamnKolmeApiNextNonceRequest::new(pubkey)
+            .map_err(map_codec_error_to_invalid_request)?;
         Ok(Self {
-            pubkey: trimmed.to_owned(),
+            pubkey: extracted.pubkey,
         })
     }
 
     /// Returns encoded request path for the configured nonce endpoint.
     pub fn query_path(&self, nonce_path: &str) -> String {
-        let base_path = if nonce_path.trim().is_empty() {
-            "/get-next-nonce".to_owned()
-        } else {
-            nonce_path.trim().to_owned()
-        };
-        let separator = if base_path.contains('?') { "&" } else { "?" };
-        format!(
-            "{base_path}{separator}pubkey={}",
-            percent_encode(self.pubkey.as_str())
-        )
+        KamnKolmeApiNextNonceRequest {
+            pubkey: self.pubkey.clone(),
+        }
+        .query_path(nonce_path)
     }
 }
 
@@ -270,12 +264,11 @@ pub struct KolmeApiNextNonceResponse {
 impl KolmeApiNextNonceResponse {
     /// Parses one nonce lookup response JSON payload.
     pub fn parse_json(response: &str) -> Result<Self, KolmeRuntimeCommitProviderError> {
-        let fields = parse_flat_json_value_fields(response)?;
-        let next_nonce = required_positive_u64_json_field(&fields, "next_nonce")?;
-        let account_id = optional_nullable_json_string_field(&fields, "account_id")?;
+        let extracted = KamnKolmeApiNextNonceResponse::parse_json(response)
+            .map_err(map_codec_error_to_malformed_response)?;
         Ok(Self {
-            next_nonce,
-            account_id,
+            next_nonce: extracted.next_nonce,
+            account_id: extracted.account_id,
         })
     }
 }
@@ -298,35 +291,23 @@ impl KolmeApiBroadcastRequest {
         signature: &str,
         recovery_id: u8,
     ) -> Result<Self, KolmeRuntimeCommitError> {
-        let message = message.trim();
-        if message.is_empty() {
-            return Err(KolmeRuntimeCommitError::InvalidRequest {
-                field: "message",
-                reason: "must not be empty",
-            });
-        }
-        let signature = signature.trim();
-        if signature.is_empty() {
-            return Err(KolmeRuntimeCommitError::InvalidRequest {
-                field: "signature",
-                reason: "must not be empty",
-            });
-        }
+        let extracted = KamnKolmeApiBroadcastRequest::new(message, signature, recovery_id)
+            .map_err(map_codec_error_to_invalid_request)?;
         Ok(Self {
-            message: message.to_owned(),
-            signature: signature.to_owned(),
-            recovery_id,
+            message: extracted.message,
+            signature: extracted.signature,
+            recovery_id: extracted.recovery_id,
         })
     }
 
     /// Returns deterministic JSON payload in canonical field order.
     pub fn to_json_payload(&self) -> String {
-        format!(
-            "{{\"message\":\"{}\",\"signature\":\"{}\",\"recovery_id\":{}}}",
-            json_escape(self.message.as_str()),
-            json_escape(self.signature.as_str()),
-            self.recovery_id
-        )
+        KamnKolmeApiBroadcastRequest {
+            message: self.message.clone(),
+            signature: self.signature.clone(),
+            recovery_id: self.recovery_id,
+        }
+        .to_json_payload()
     }
 }
 
@@ -340,9 +321,11 @@ pub struct KolmeApiBroadcastResponse {
 impl KolmeApiBroadcastResponse {
     /// Parses one broadcast response JSON payload.
     pub fn parse_json(response: &str) -> Result<Self, KolmeRuntimeCommitProviderError> {
-        let fields = parse_flat_json_value_fields(response)?;
-        let txhash = required_json_string_field(&fields, "txhash")?;
-        Ok(Self { txhash })
+        let extracted = KamnKolmeApiBroadcastResponse::parse_json(response)
+            .map_err(map_codec_error_to_malformed_response)?;
+        Ok(Self {
+            txhash: extracted.txhash,
+        })
     }
 }
 
@@ -1711,6 +1694,35 @@ fn map_provider_error(error: KolmeRuntimeCommitProviderError) -> KolmeRuntimeCom
                 kind: KolmeRuntimeCommitTransportErrorKind::MalformedResponse,
                 detail: reason,
             }
+        }
+    }
+}
+
+fn map_codec_error_to_invalid_request(error: KamnKolmeApiCodecError) -> KolmeRuntimeCommitError {
+    match error {
+        KamnKolmeApiCodecError::InvalidRequest { field, reason } => {
+            KolmeRuntimeCommitError::InvalidRequest { field, reason }
+        }
+        KamnKolmeApiCodecError::MalformedResponse { .. } => {
+            KolmeRuntimeCommitError::InvalidRequest {
+                field: "codec_payload",
+                reason: "must be valid json",
+            }
+        }
+    }
+}
+
+fn map_codec_error_to_malformed_response(
+    error: KamnKolmeApiCodecError,
+) -> KolmeRuntimeCommitProviderError {
+    match error {
+        KamnKolmeApiCodecError::InvalidRequest { field, reason } => {
+            KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: format!("invalid request {field}: {reason}"),
+            }
+        }
+        KamnKolmeApiCodecError::MalformedResponse { reason } => {
+            KolmeRuntimeCommitProviderError::MalformedResponse { reason }
         }
     }
 }
@@ -3126,30 +3138,6 @@ fn required_json_string_field(
         });
     }
     Ok(trimmed.to_owned())
-}
-
-fn optional_nullable_json_string_field(
-    fields: &HashMap<String, FlatJsonValue>,
-    field: &'static str,
-) -> Result<Option<String>, KolmeRuntimeCommitProviderError> {
-    let Some(value) = fields.get(field) else {
-        return Ok(None);
-    };
-    match value {
-        FlatJsonValue::Null => Ok(None),
-        FlatJsonValue::String(raw) => {
-            let trimmed = raw.trim();
-            if trimmed.is_empty() {
-                return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                    reason: format!("field must not be empty: {field}"),
-                });
-            }
-            Ok(Some(trimmed.to_owned()))
-        }
-        _ => Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: format!("field must be string|null: {field}"),
-        }),
-    }
 }
 
 fn required_positive_u64_json_field(

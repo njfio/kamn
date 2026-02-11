@@ -67,11 +67,14 @@ handling.
 
 ## Typed Kolme Nonce/Broadcast Codecs
 
-- Added typed Kolme API codec contracts in `kamn-core`:
+- Added typed Kolme API codec contracts in `kamn-core` (compatibility wrappers) with canonical ownership in `kamn-kolme`:
   - `KolmeApiNextNonceRequest`
   - `KolmeApiNextNonceResponse`
   - `KolmeApiBroadcastRequest`
   - `KolmeApiBroadcastResponse`
+- Canonical extraction boundary:
+  - `crates/kamn-kolme/src/api_codec.rs` owns deterministic nonce/broadcast codec constructors, query/payload serializers, and JSON parse contracts.
+  - `crates/kamn-core/src/kolme_runtime_commit.rs` delegates codec behavior through compatibility wrappers to preserve existing core API surface.
 - Deterministic nonce request behavior:
   - `KolmeApiNextNonceRequest::query_path(...)` percent-encodes the `pubkey` query
     value and preserves deterministic path composition.
@@ -134,6 +137,7 @@ cargo test -p kamn-core --test kolme_runtime_commit_client
 cargo test -p kamn-core --test kolme_runtime_commit_finality
 cargo test -p kamn-core --test kolme_runtime_commit_block_fallback
 cargo test -p kamn-core --test kolme_runtime_commit_fork_finality_resolver
+cargo test -p kamn-kolme --test api_codec_contracts
 cargo test -p kamn-kolme --test finality_block_scan_contracts
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_fetch_next_nonce_query_and_parse -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_submit_broadcast_request_put_and_parse_txhash -- --exact

@@ -4,6 +4,7 @@
 //! extraction from `kamn-core` is in flight.
 #![warn(missing_docs)]
 
+pub mod api_codec;
 pub mod block_scan_policy;
 pub mod codec;
 pub mod finality;
@@ -11,6 +12,10 @@ pub mod pipeline;
 pub mod receipt_finality;
 pub mod transport;
 
+pub use api_codec::{
+    KolmeApiBroadcastRequest, KolmeApiBroadcastResponse, KolmeApiCodecError,
+    KolmeApiNextNonceRequest, KolmeApiNextNonceResponse,
+};
 pub use block_scan_policy::{
     render_block_path, validate_block_identity, validate_block_path_template,
     validate_lookup_window, BlockScanPolicyError,
