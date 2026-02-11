@@ -48,6 +48,23 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Regression marker:
   - `Regression: #1827`
 
+## Shared Manifest-Migration CI Dispatcher (Issue #1833)
+
+- Shared migration CI dispatcher:
+  - `scripts/ci/run_kolme_manifest_migration_contract_dispatch.sh`
+- Shared dispatcher validator implementation:
+  - `scripts/ci/kolme_manifest_migration_contract.py`
+- Shared migration-group config contract:
+  - `fixtures/ci/kolme_manifest_migration_contract_groups.json`
+- Thin-wrapper matrix guard:
+  - `bash scripts/ci/test_kolme_manifest_migration_contract_dispatch_wrapper_matrix.sh`
+- Dispatcher behavior guard:
+  - `bash scripts/ci/test_run_kolme_manifest_migration_contract_dispatch.sh`
+- Compatibility wrapper shape:
+  - each `scripts/ci/test_kolme_*manifest_migration_contract.sh` entrypoint is now a thin wrapper that delegates to the shared dispatcher with a fixed `--group`.
+- Regression marker:
+  - `Regression: #1833`
+
 ## Tranche-1 Manifest Migration (Issue #1722)
 
 - Migration guard contract:

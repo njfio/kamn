@@ -14,6 +14,8 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_kolme_runtime_triadic_bootstrap_e2e_manifest_migration_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_kolme_bootstrap_conformance_runtime_process_manifest_migration_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_kolme_parity_demo_real_process_manifest_migration_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_kolme_manifest_migration_contract_dispatch_wrapper_matrix.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_run_kolme_manifest_migration_contract_dispatch.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_lane_migration_matrix_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_generate_fork_compatibility_evidence.sh"'

@@ -1,0 +1,204 @@
+{
+  "schema_version": "kamn.kolme-manifest-migration-contract-groups.v1",
+  "groups": {
+    "tranche1": {
+      "description": "tranche-1",
+      "max_shell_loc": 60,
+      "success_message": "Kolme tranche-1 manifest migration contract lane checks passed.",
+      "lanes": [
+        {
+          "lane_script": "scripts/kolme/run_snapshot_drift_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_snapshot_drift_contract_lane.json",
+          "lane_id": "kolme.snapshot_drift.contract",
+          "contract_script": "scripts/kolme/contracts/snapshot_drift_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_notifications_consumer_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_notifications_consumer_contract_lane.json",
+          "lane_id": "kolme.notifications.consumer.contract",
+          "contract_script": "scripts/kolme/contracts/notifications_consumer_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_block_fallback_reconciliation_contract_lane.json",
+          "lane_id": "kolme.block_fallback.reconciliation.contract",
+          "contract_script": "scripts/kolme/contracts/block_fallback_reconciliation_contract_lane.py"
+        }
+      ]
+    },
+    "runtime_nonce": {
+      "description": "runtime+nonce",
+      "max_shell_loc": 120,
+      "success_message": "Kolme runtime+nonce manifest migration contract lane checks passed.",
+      "lanes": [
+        {
+          "lane_script": "scripts/kolme/run_runtime_commit_adapter_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_runtime_commit_adapter_contract_lane.json",
+          "lane_id": "kolme.runtime_commit.adapter.contract",
+          "contract_script": "scripts/kolme/contracts/runtime_commit_adapter_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_runtime_commit_replay_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_runtime_commit_replay_contract_lane.json",
+          "lane_id": "kolme.runtime_commit.replay.contract",
+          "contract_script": "scripts/kolme/contracts/runtime_commit_replay_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_nonce_broadcast_parity_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_nonce_broadcast_parity_contract_lane.json",
+          "lane_id": "kolme.nonce_broadcast.parity.contract",
+          "contract_script": "scripts/kolme/contracts/nonce_broadcast_parity_contract_lane.py"
+        }
+      ]
+    },
+    "version_matrix": {
+      "description": "version+matrix",
+      "max_shell_loc": 120,
+      "success_message": "Kolme version+matrix manifest migration contract lane checks passed.",
+      "lanes": [
+        {
+          "lane_script": "scripts/kolme/run_version_compatibility_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_version_compatibility_contract_lane.json",
+          "lane_id": "kolme.version_compatibility.contract",
+          "contract_script": "scripts/kolme/contracts/version_compatibility_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_fork_rust_test_matrix_contract_lane.json",
+          "lane_id": "kolme.local_fork_rust_test_matrix.contract",
+          "contract_script": "scripts/kolme/contracts/local_fork_rust_test_matrix_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_local_heavy_validation_matrix_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_heavy_validation_matrix_contract_lane.json",
+          "lane_id": "kolme.local_heavy_validation_matrix.contract",
+          "contract_script": "scripts/kolme/contracts/local_heavy_validation_matrix_contract_lane.py"
+        }
+      ]
+    },
+    "profile_selftest_portability": {
+      "description": "profile+self-test+portability",
+      "max_shell_loc": 120,
+      "success_message": "Kolme profile+self-test+portability manifest migration contract lane checks passed.",
+      "lanes": [
+        {
+          "lane_script": "scripts/kolme/run_local_kolme_fork_profile_preflight_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_fork_profile_preflight_contract_lane.json",
+          "lane_id": "kolme.local_fork_profile_preflight.contract",
+          "contract_script": "scripts/kolme/contracts/local_fork_profile_preflight_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_fork_self_test_contract_lane.json",
+          "lane_id": "kolme.local_fork_self_test.contract",
+          "contract_script": "scripts/kolme/contracts/local_fork_self_test_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_fork_portability_preflight_contract_lane.json",
+          "lane_id": "kolme.local_fork_portability_preflight.contract",
+          "contract_script": "scripts/kolme/contracts/local_fork_portability_preflight_contract_lane.py"
+        }
+      ]
+    },
+    "runtime_triadic_bootstrap_e2e": {
+      "description": "runtime+triadic+bootstrap+e2e",
+      "max_shell_loc": 160,
+      "success_message": "Kolme runtime+triadic+bootstrap+e2e manifest migration contract lane checks passed.",
+      "lanes": [
+        {
+          "lane_script": "scripts/kolme/run_runtime_commit_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_runtime_commit_contract_lane.json",
+          "lane_id": "kolme.runtime_commit.contract",
+          "contract_script": "scripts/kolme/contracts/runtime_commit_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_triadic_devnet_smoke_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_triadic_devnet_smoke_contract_lane.json",
+          "lane_id": "kolme.triadic_devnet_smoke.contract",
+          "contract_script": "scripts/kolme/contracts/triadic_devnet_smoke_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_local_bootstrap_health_checks_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_bootstrap_health_checks_contract_lane.json",
+          "lane_id": "kolme.local_bootstrap_health_checks.contract",
+          "contract_script": "scripts/kolme/contracts/local_bootstrap_health_checks_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_local_e2e_integration_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_e2e_integration_contract_lane.json",
+          "lane_id": "kolme.local_e2e_integration.contract",
+          "contract_script": "scripts/kolme/contracts/local_e2e_integration_contract_lane.py"
+        }
+      ]
+    },
+    "bootstrap_conformance_runtime_process": {
+      "description": "bootstrap+conformance+runtime+process",
+      "max_shell_loc": 160,
+      "success_message": "Kolme bootstrap+conformance+runtime+process manifest migration contract lane checks passed.",
+      "lanes": [
+        {
+          "lane_script": "scripts/kolme/run_local_kolme_fork_bootstrap_readiness_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json",
+          "lane_id": "kolme.local_kolme_fork_bootstrap_readiness.contract",
+          "contract_script": "scripts/kolme/contracts/local_kolme_fork_bootstrap_readiness_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json",
+          "lane_id": "kolme.local_kolme_live_api_conformance.contract",
+          "contract_script": "scripts/kolme/contracts/local_kolme_live_api_conformance_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_contract_lane.json",
+          "lane_id": "kolme.local_kamn_live_runtime_integration.contract",
+          "contract_script": "scripts/kolme/contracts/local_kamn_live_runtime_integration_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_local_kolme_fork_process_lifecycle_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_contract_lane.json",
+          "lane_id": "kolme.local_kolme_fork_process_lifecycle.contract",
+          "contract_script": "scripts/kolme/contracts/local_kolme_fork_process_lifecycle_contract_lane.py"
+        }
+      ]
+    },
+    "parity_demo_real_process": {
+      "description": "parity+demo+real-process",
+      "max_shell_loc": 200,
+      "success_message": "Kolme parity+demo+real-process manifest migration contract lane checks passed.",
+      "lanes": [
+        {
+          "lane_script": "scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_fast_gate_native_api_parity_contract_lane.json",
+          "lane_id": "kolme.fast_gate_native_api_parity.contract",
+          "contract_script": "scripts/kolme/contracts/fast_gate_native_api_parity_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_local_native_api_parity_live_proof_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_native_api_parity_live_proof_contract_lane.json",
+          "lane_id": "kolme.local_native_api_parity_live_proof.contract",
+          "contract_script": "scripts/kolme/contracts/local_native_api_parity_live_proof_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_local_signed_to_kolme_demo_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_signed_to_kolme_demo_contract_lane.json",
+          "lane_id": "kolme.local_signed_to_kolme_demo.contract",
+          "contract_script": "scripts/kolme/contracts/local_signed_to_kolme_demo_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_local_kolme_fork_checkout_bootstrap_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json",
+          "lane_id": "kolme.local_kolme_fork_checkout_bootstrap.contract",
+          "contract_script": "scripts/kolme/contracts/local_kolme_fork_checkout_bootstrap_contract_lane.py"
+        },
+        {
+          "lane_script": "scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh",
+          "manifest_file": "scripts/framework/manifests/kolme_local_kolme_fork_real_process_contract_lane.json",
+          "lane_id": "kolme.local_kolme_fork_real_process.contract",
+          "contract_script": "scripts/kolme/contracts/local_kolme_fork_real_process_contract_lane.py"
+        }
+      ]
+    }
+  }
+}
