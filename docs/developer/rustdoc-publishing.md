@@ -42,6 +42,9 @@ without adding hosted-doc platform dependencies.
   - `bash scripts/ci/check_kamn_core_missing_docs_policy.sh`
 - Graduated-module guard fixture consumed by checker:
   - `fixtures/ci/kamn_core_missing_docs_graduated_modules.txt`
+- Current graduated modules:
+  - `bootstrap`, `key_recovery`, `kolme_runtime_commit`, `migrations`,
+    `namespaces`, `smoke`, `state`, `task_lifecycle`
 - Regression tests for checker behavior:
   - `bash scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
 - Rustdoc artifact contract lane (bounded):
@@ -69,3 +72,5 @@ without adding hosted-doc platform dependencies.
 - Graduated modules listed in `kamn_core_missing_docs_graduated_modules.txt`
   cannot be re-added to `#[allow(missing_docs)]` without a fail-closed policy
   break.
+- Graduation update marker:
+  - `Regression: #1828`

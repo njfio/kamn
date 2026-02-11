@@ -154,6 +154,20 @@ contributors can locate runtime/domain ownership responsibilities quickly.
 6. Bridge/adapters and signer/ZK surfaces emit external receipts and proof
    artifacts for reconciliation.
 
+## Missing-Docs Graduation Status
+
+- Graduated modules currently enforced outside the allow-list:
+  - `bootstrap`
+  - `key_recovery`
+  - `kolme_runtime_commit`
+  - `migrations`
+  - `namespaces`
+  - `smoke`
+  - `state`
+  - `task_lifecycle`
+- Regression marker:
+  - `Regression: #1828`
+
 ## Contributor Entrypoint Matrix
 
 | Contributor need | Entrypoint | Why it exists |

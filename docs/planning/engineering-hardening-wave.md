@@ -44,7 +44,8 @@ default development loop green while tightening missing-doc policy controls for
 - Legacy `#[allow(missing_docs)] pub mod ...` exemptions are tracked in:
   - `fixtures/ci/kamn_core_missing_docs_allowlist.txt`
 - Graduated modules that must remain outside the allow-list:
-  - `namespaces`, `bootstrap`, `kolme_runtime_commit`, `state`, `task_lifecycle`
+  - `bootstrap`, `key_recovery`, `kolme_runtime_commit`, `migrations`,
+    `namespaces`, `smoke`, `state`, `task_lifecycle`
 - Graduated modules fixture:
   - `fixtures/ci/kamn_core_missing_docs_graduated_modules.txt`
 - Throughput visibility target:

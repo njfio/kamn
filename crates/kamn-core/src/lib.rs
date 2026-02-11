@@ -58,7 +58,7 @@ pub mod instruction_verify;
 pub mod invariants;
 #[allow(missing_docs)]
 pub mod key_lifecycle;
-#[allow(missing_docs)]
+/// Key compromise and recovery lifecycle contracts.
 pub mod key_recovery;
 pub mod kolme_runtime_commit;
 #[allow(missing_docs)]
@@ -67,7 +67,7 @@ pub mod message_delivery_guards;
 pub mod message_envelope;
 #[allow(missing_docs)]
 pub mod message_lifecycle;
-#[allow(missing_docs)]
+/// State schema migration planning and validation contracts.
 pub mod migrations;
 pub mod namespaces;
 #[allow(missing_docs)]
@@ -98,7 +98,7 @@ pub mod service_marketplace;
 pub mod signature_profile;
 #[allow(missing_docs)]
 pub mod signer_backend;
-#[allow(missing_docs)]
+/// Deterministic triadic runtime smoke simulation contracts.
 pub mod smoke;
 pub mod state;
 #[allow(missing_docs)]

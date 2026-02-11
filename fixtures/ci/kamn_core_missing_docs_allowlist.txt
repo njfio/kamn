@@ -24,11 +24,9 @@ group_channel_crypto
 instruction_verify
 invariants
 key_lifecycle
-key_recovery
 message_delivery_guards
 message_envelope
 message_lifecycle
-migrations
 observability
 operator_actions
 operator_binding
@@ -43,7 +41,6 @@ runtime
 service_marketplace
 signature_profile
 signer_backend
-smoke
 task_artifacts
 task_operations
 task_payment

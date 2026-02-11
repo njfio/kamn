@@ -1,17 +1,26 @@
+//! State-version migration planning and validation contracts.
+
 use std::fmt;
 
 use crate::state::StateVersion;
 
+/// Single migration step between two adjacent state versions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MigrationStep {
+    /// Stable step identifier used in audit and policy checks.
     pub id: &'static str,
+    /// Source state version for this step.
     pub from: StateVersion,
+    /// Destination state version reached by this step.
     pub to: StateVersion,
+    /// Human-readable description of the migration behavior.
     pub description: &'static str,
+    /// Namespaces affected by this migration step.
     pub namespaces: &'static [&'static str],
 }
 
 impl MigrationStep {
+    /// Builds a static migration step descriptor.
     pub const fn new(
         id: &'static str,
         from: StateVersion,
@@ -29,14 +38,19 @@ impl MigrationStep {
     }
 }
 
+/// Ordered migration plan from one version to another.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MigrationPlan {
+    /// Requested source version.
     pub from: StateVersion,
+    /// Requested target version.
     pub to: StateVersion,
+    /// Ordered steps required to reach the target version.
     pub steps: Vec<MigrationStep>,
 }
 
 impl MigrationPlan {
+    /// Validates continuity and target coverage of the migration plan.
     pub fn validate(&self) -> Result<(), MigrationError> {
         if self.from == self.to {
             if self.steps.is_empty() {
@@ -74,16 +88,19 @@ impl MigrationPlan {
     }
 }
 
+/// Registry of known migration steps keyed by their source version.
 #[derive(Debug, Clone, Default)]
 pub struct MigrationRegistry {
     steps: Vec<MigrationStep>,
 }
 
 impl MigrationRegistry {
+    /// Creates an empty migration registry.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Registers a new migration step after range and ID validation.
     pub fn register(&mut self, step: MigrationStep) -> Result<(), MigrationError> {
         if step.from >= step.to {
             return Err(MigrationError::InvalidStepRange {
@@ -102,6 +119,7 @@ impl MigrationRegistry {
         Ok(())
     }
 
+    /// Builds a contiguous migration plan from source to target version.
     pub fn build_plan(
         &self,
         from: StateVersion,
@@ -148,31 +166,51 @@ impl MigrationRegistry {
     }
 }
 
+/// Error returned when migration steps or plans are invalid.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MigrationError {
+    /// Step ID already exists in the registry.
     DuplicateStepId(String),
+    /// Step range is invalid because source is not lower than destination.
     InvalidStepRange {
+        /// Step identifier with invalid range.
         id: &'static str,
+        /// Source version supplied for the step.
         from: StateVersion,
+        /// Destination version supplied for the step.
         to: StateVersion,
     },
+    /// Requested plan range is invalid.
     InvalidPlanRange {
+        /// Source version requested by the caller.
         from: StateVersion,
+        /// Target version requested by the caller.
         to: StateVersion,
     },
+    /// Registry lacks a required step to continue toward the target.
     MissingStep {
+        /// Current version that requires a next step.
         from: StateVersion,
+        /// Final target version requested by the caller.
         to: StateVersion,
     },
+    /// Step sequence is not contiguous with prior step output.
     NonContiguousStep {
+        /// Expected source version based on previous step.
         expected_from: StateVersion,
+        /// Actual source version found on the next step.
         found_from: StateVersion,
     },
+    /// Step destination exceeds requested migration target.
     StepOvershootsTarget {
+        /// Step ID that overshoots the target.
         id: String,
+        /// Requested target version.
         target: StateVersion,
+        /// Step destination that exceeded the target.
         step_to: StateVersion,
     },
+    /// Plan includes steps even though source and target are equal.
     UnexpectedStepsForSameVersion,
 }
 
