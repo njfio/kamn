@@ -1,6 +1,8 @@
 //! Runtime-commit lifecycle and finality policy contracts.
 
 use crate::receipt_finality::{parse_receipt_finality, ReceiptFinality, ReceiptFinalityError};
+use std::error::Error;
+use std::fmt;
 
 /// Finality classification for a runtime commit receipt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -23,6 +25,30 @@ pub enum RuntimeCommitLifecycleState {
     /// Commit failed and should not be retried automatically.
     Failed,
 }
+
+/// Error returned by runtime lifecycle policy validation contracts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuntimeLifecyclePolicyError {
+    /// Receipt did not reach final confirmation state.
+    NonFinalReceipt {
+        /// Observed receipt finality.
+        finality: KolmeCommitReceiptFinality,
+    },
+}
+
+impl fmt::Display for RuntimeLifecyclePolicyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NonFinalReceipt { finality } => write!(
+                f,
+                "receipt finality must be final, observed {}",
+                commit_finality_label(*finality)
+            ),
+        }
+    }
+}
+
+impl Error for RuntimeLifecyclePolicyError {}
 
 /// Maps receipt finality to projected lifecycle state.
 pub fn lifecycle_state_for_finality(
@@ -70,6 +96,16 @@ pub fn commit_finality_label(finality: KolmeCommitReceiptFinality) -> &'static s
         KolmeCommitReceiptFinality::Final => "final",
         KolmeCommitReceiptFinality::Failed => "failed",
     }
+}
+
+/// Ensures one provider receipt finality is finalized before adapter acceptance.
+pub fn require_final_receipt_finality(
+    finality: KolmeCommitReceiptFinality,
+) -> Result<(), RuntimeLifecyclePolicyError> {
+    if finality != KolmeCommitReceiptFinality::Final {
+        return Err(RuntimeLifecyclePolicyError::NonFinalReceipt { finality });
+    }
+    Ok(())
 }
 
 #[cfg(test)]

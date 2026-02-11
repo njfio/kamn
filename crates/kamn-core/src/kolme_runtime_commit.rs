@@ -28,6 +28,7 @@ use kamn_kolme::{
     parse_websocket_endpoint as parse_kolme_websocket_endpoint,
     render_block_path as render_kolme_block_path,
     require_commit_id_matches_expected_txhash as require_kolme_commit_id_matches_expected_txhash_contract,
+    require_final_receipt_finality as require_kolme_final_receipt_finality_contract,
     resolve_lookup_upper_bound as resolve_kolme_lookup_upper_bound,
     try_take_websocket_frame as try_take_kolme_websocket_frame,
     txhash_from_commit_id as txhash_from_kolme_commit_id,
@@ -53,6 +54,7 @@ use kamn_kolme::{
     KolmeWebsocketFrame as KamnKolmeWebsocketFrame,
     KolmeWebsocketPolicyError as KamnKolmeWebsocketPolicyError,
     RuntimeCommitLifecycleState as KamnKolmeRuntimeCommitLifecycleState,
+    RuntimeLifecyclePolicyError as KamnKolmeRuntimeLifecyclePolicyError,
 };
 use std::collections::HashMap;
 use std::fmt;
@@ -1830,12 +1832,16 @@ impl<P: KolmeRuntimeCommitProvider> KolmeRuntimeCommitClient
                     }
                 }
             })?;
-            if !matches!(receipt.finality, KolmeCommitReceiptFinality::Final) {
-                return Err(KolmeRuntimeCommitError::NonFinalReceipt {
-                    commit_id: receipt.commit_id,
-                    finality: receipt.finality,
-                });
-            }
+            require_kolme_final_receipt_finality_contract(receipt.finality).map_err(|error| {
+                match error {
+                    KamnKolmeRuntimeLifecyclePolicyError::NonFinalReceipt { finality } => {
+                        KolmeRuntimeCommitError::NonFinalReceipt {
+                            commit_id: receipt.commit_id.clone(),
+                            finality,
+                        }
+                    }
+                }
+            })?;
             Ok(KolmeRuntimeCommitReceipt {
                 provider: receipt.provider,
                 commit_id: receipt.commit_id,
