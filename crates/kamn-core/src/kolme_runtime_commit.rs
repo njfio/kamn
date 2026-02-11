@@ -1781,11 +1781,47 @@ impl<P: KolmeRuntimeCommitProvider> KolmeRuntimeCommitClient
         request: &KolmeRuntimeCommitRequest,
     ) -> Result<KolmeRuntimeCommitOutcome, KolmeRuntimeCommitError> {
         request.validate()?;
+        let expected_provider = self.expected_provider.as_str();
+        let map_provider_receipt = |receipt: KolmeRuntimeCommitProviderReceipt| {
+            if receipt.provider != expected_provider {
+                return Err(KolmeRuntimeCommitError::ProviderMismatch {
+                    expected: expected_provider.to_owned(),
+                    observed: receipt.provider,
+                });
+            }
+            if receipt.commit_id.trim().is_empty() {
+                return Err(KolmeRuntimeCommitError::InvalidRequest {
+                    field: "receipt_commit_id",
+                    reason: "must not be empty",
+                });
+            }
+            if !matches!(receipt.finality, KolmeCommitReceiptFinality::Final) {
+                return Err(KolmeRuntimeCommitError::NonFinalReceipt {
+                    commit_id: receipt.commit_id,
+                    finality: receipt.finality,
+                });
+            }
+            Ok(KolmeRuntimeCommitReceipt {
+                provider: receipt.provider,
+                commit_id: receipt.commit_id,
+                finality: receipt.finality,
+            })
+        };
         let provider_outcome = self
             .provider
             .submit_runtime_commit(&request.to_wire_payload(), request.idempotency_key())
             .map_err(map_provider_error)?;
-        map_provider_outcome(provider_outcome, self.expected_provider.as_str())
+        match provider_outcome {
+            KolmeRuntimeCommitProviderOutcome::Submitted(receipt) => Ok(
+                KolmeRuntimeCommitOutcome::Submitted(map_provider_receipt(receipt)?),
+            ),
+            KolmeRuntimeCommitProviderOutcome::Duplicate(receipt) => Ok(
+                KolmeRuntimeCommitOutcome::Duplicate(map_provider_receipt(receipt)?),
+            ),
+            KolmeRuntimeCommitProviderOutcome::Rejected { reason } => {
+                Ok(KolmeRuntimeCommitOutcome::Rejected { reason })
+            }
+        }
     }
 }
 
@@ -1945,54 +1981,6 @@ fn parse_live_provider_response(
             Ok(KolmeRuntimeCommitProviderOutcome::Rejected { reason })
         }
     }
-}
-
-fn map_provider_outcome(
-    outcome: KolmeRuntimeCommitProviderOutcome,
-    expected_provider: &str,
-) -> Result<KolmeRuntimeCommitOutcome, KolmeRuntimeCommitError> {
-    match outcome {
-        KolmeRuntimeCommitProviderOutcome::Submitted(receipt) => {
-            let runtime_receipt = map_provider_receipt(receipt, expected_provider)?;
-            Ok(KolmeRuntimeCommitOutcome::Submitted(runtime_receipt))
-        }
-        KolmeRuntimeCommitProviderOutcome::Duplicate(receipt) => {
-            let runtime_receipt = map_provider_receipt(receipt, expected_provider)?;
-            Ok(KolmeRuntimeCommitOutcome::Duplicate(runtime_receipt))
-        }
-        KolmeRuntimeCommitProviderOutcome::Rejected { reason } => {
-            Ok(KolmeRuntimeCommitOutcome::Rejected { reason })
-        }
-    }
-}
-
-fn map_provider_receipt(
-    receipt: KolmeRuntimeCommitProviderReceipt,
-    expected_provider: &str,
-) -> Result<KolmeRuntimeCommitReceipt, KolmeRuntimeCommitError> {
-    if receipt.provider != expected_provider {
-        return Err(KolmeRuntimeCommitError::ProviderMismatch {
-            expected: expected_provider.to_owned(),
-            observed: receipt.provider,
-        });
-    }
-    if receipt.commit_id.trim().is_empty() {
-        return Err(KolmeRuntimeCommitError::InvalidRequest {
-            field: "receipt_commit_id",
-            reason: "must not be empty",
-        });
-    }
-    if !matches!(receipt.finality, KolmeCommitReceiptFinality::Final) {
-        return Err(KolmeRuntimeCommitError::NonFinalReceipt {
-            commit_id: receipt.commit_id,
-            finality: receipt.finality,
-        });
-    }
-    Ok(KolmeRuntimeCommitReceipt {
-        provider: receipt.provider,
-        commit_id: receipt.commit_id,
-        finality: receipt.finality,
-    })
 }
 
 /// Deterministic in-memory commit client used for contract tests and local development.
