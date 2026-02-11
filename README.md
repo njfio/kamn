@@ -212,6 +212,21 @@ python3 scripts/kolme/check_local_signed_to_kolme_demo_policy.py \
 # schema: kamn.kolme.local-signed-to-kolme-demo-summary.v1
 ```
 
+### Run Real Fork Local Process Wrapper Contract Lane
+
+```bash
+bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh \
+  --mode dry-run \
+  --checkout-path /tmp/kolme_fork \
+  --output-json /tmp/kolme-local-fork-real-process-summary.json
+python3 scripts/kolme/check_local_kolme_fork_real_process_policy.py \
+  --report-file /tmp/kolme-local-fork-real-process-summary.json \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --output-json /tmp/kolme-local-fork-real-process-policy.json
+# schema: kamn.kolme.local-fork-real-process-summary.v1
+```
+
 ### Run Live Transport Replay/Tamper Contract Lane
 
 ```bash
