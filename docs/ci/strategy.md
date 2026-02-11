@@ -165,6 +165,7 @@ Regression policy:
 - local probe fork-info chain_version query and native parity broadcast method drift remains fail-closed (`Regression: #1482`).
 - nonce/broadcast parity matrix selector/docs/runtime-budget drift remains fail-closed (`Regression: #1462`).
 - fast-gate native Kolme API parity lane schema/routing/runtime-budget drift remains fail-closed (`Regression: #1466`).
+- script-surface budget temporary `script_count` waiver scope/expiry drift remains fail-closed (`Regression: #1497`).
 
 ## Budget Telemetry and Enforcement
 Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
