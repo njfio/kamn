@@ -10,6 +10,7 @@ use kamn_kolme::{
     deterministic_backend_commit_id as deterministic_kolme_backend_commit_id,
     deterministic_runtime_commit_id as deterministic_runtime_commit_id_contract,
     deterministic_runtime_commit_idempotency_key as deterministic_runtime_commit_idempotency_key_contract,
+    escape_json_string as escape_kolme_json_string,
     find_http_header_boundary as find_kolme_http_header_boundary,
     is_broadcast_submit_path as is_kolme_broadcast_submit_path_contract,
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
@@ -253,9 +254,9 @@ impl KolmeRuntimeCommitSignedBroadcastEnvelope {
     pub fn to_wire_payload(&self) -> String {
         format!(
             "{{\"signer_key_id\":\"{}\",\"message\":\"{}\",\"signature\":\"{}\",\"recovery_id\":{}}}",
-            json_escape(self.signer_key_id.as_str()),
-            json_escape(self.message.as_str()),
-            json_escape(self.signature.as_str()),
+            escape_kolme_json_string(self.signer_key_id.as_str()),
+            escape_kolme_json_string(self.message.as_str()),
+            escape_kolme_json_string(self.signature.as_str()),
             self.recovery_id
         )
     }
@@ -2034,21 +2035,6 @@ fn parse_live_provider_response(
             Ok(KolmeRuntimeCommitProviderOutcome::Rejected { reason })
         }
     }
-}
-
-fn json_escape(value: &str) -> String {
-    let mut escaped = String::with_capacity(value.len());
-    for ch in value.chars() {
-        match ch {
-            '\\' => escaped.push_str("\\\\"),
-            '"' => escaped.push_str("\\\""),
-            '\n' => escaped.push_str("\\n"),
-            '\r' => escaped.push_str("\\r"),
-            '\t' => escaped.push_str("\\t"),
-            _ => escaped.push(ch),
-        }
-    }
-    escaped
 }
 
 fn deterministic_backend_commit_id(tx_hash: &str, block_height: Option<u64>) -> String {

@@ -115,6 +115,9 @@ handling.
 - Deterministic request identity contracts are sourced from `kamn-kolme`
   (`deterministic_runtime_commit_idempotency_key`, `deterministic_runtime_commit_id`)
   and mapped through `kamn-core` compatibility wrappers.
+- Deterministic JSON string escaping contracts for signed-envelope serialization are
+  sourced from `kamn-kolme` (`escape_json_string`) and mapped through
+  `kamn-core` compatibility wrappers.
 - The adapter preserves validation semantics from
   `KolmeRuntimeCommitRequest::validate()` before provider dispatch.
 - Signed translation model:
@@ -176,6 +179,7 @@ cargo test -p kamn-kolme --test broadcast_payload_policy_contracts
 cargo test -p kamn-kolme --test runtime_lifecycle_policy_contracts
 cargo test -p kamn-kolme --test runtime_request_identity_policy_contracts
 cargo test -p kamn-kolme --test receipt_to_commit_finality_policy_contracts
+cargo test -p kamn-kolme --test json_escape_policy_contracts
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_fetch_next_nonce_query_and_parse -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_http_transport_submit_broadcast_request_put_and_parse_txhash -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_http_transport_submit_broadcast_request_rejects_malformed_txhash_response -- --exact
@@ -212,3 +216,4 @@ cargo test -p kamn-core
 - runtime lifecycle/finality projection extraction parity drift remains fail-closed (`Regression: #1775`).
 - runtime request identity extraction parity drift remains fail-closed (`Regression: #1777`).
 - receipt-finality mapping extraction parity drift remains fail-closed (`Regression: #1779`).
+- JSON escape helper extraction parity drift remains fail-closed (`Regression: #1781`).

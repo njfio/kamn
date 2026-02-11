@@ -123,8 +123,8 @@ contributors can locate runtime/domain ownership responsibilities quickly.
 - Ownership boundary:
   - `kamn-kolme` is the dedicated home for runtime-commit transport/codec/finality
     contracts (including direct signed payload validation, receipt-to-commit
-    finality mapping, lifecycle/finality, and deterministic request identity
-    projection policy). `kamn-core`
+    finality mapping, lifecycle/finality, deterministic request identity, and
+    JSON escape serialization policy). `kamn-core`
     retains temporary compatibility exports until full migration is complete.
 - Runtime/data-flow ownership:
   - New runtime-commit submissions should target `kamn-kolme` contracts first,

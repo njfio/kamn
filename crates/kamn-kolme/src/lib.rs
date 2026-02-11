@@ -26,7 +26,7 @@ pub mod transport_request_policy;
 pub mod websocket_policy;
 
 pub use api_codec::{
-    validate_direct_signed_transaction_message, KolmeApiBroadcastRequest,
+    escape_json_string, validate_direct_signed_transaction_message, KolmeApiBroadcastRequest,
     KolmeApiBroadcastResponse, KolmeApiCodecError, KolmeApiNextNonceRequest,
     KolmeApiNextNonceResponse,
 };

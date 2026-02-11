@@ -136,8 +136,8 @@ impl KolmeApiBroadcastRequest {
     pub fn to_json_payload(&self) -> String {
         format!(
             "{{\"message\":\"{}\",\"signature\":\"{}\",\"recovery_id\":{}}}",
-            json_escape(self.message.as_str()),
-            json_escape(self.signature.as_str()),
+            escape_json_string(self.message.as_str()),
+            escape_json_string(self.signature.as_str()),
             self.recovery_id
         )
     }
@@ -603,7 +603,8 @@ fn percent_encode(value: &str) -> String {
     encoded
 }
 
-fn json_escape(value: &str) -> String {
+/// Escapes one UTF-8 string for deterministic JSON string rendering.
+pub fn escape_json_string(value: &str) -> String {
     let mut escaped = String::with_capacity(value.len());
     for ch in value.chars() {
         match ch {
