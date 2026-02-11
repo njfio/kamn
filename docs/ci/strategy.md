@@ -63,6 +63,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh`
     - `bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh`
+    - `bash scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh`
+    - `bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh`
@@ -84,6 +86,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - local-only fork sync/smoke run-mode commands remain excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_fork_smoke_evidence_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --smoke-command "cargo test -p merkle-map --test version -- --exact load_from_zero_example" --max-seconds 120 --output-json /tmp/kolme-local-fork-smoke-evidence-summary.json`
+    - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json`
+    - `bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json --policy-output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json`
   - local Kolme API probe/smoke run-mode commands remain excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 30 --output-json /tmp/kolme-local-api-probe-summary.json`
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_api_smoke_lane.sh --mode run --base-url http://127.0.0.1:3000 --smoke-command "curl --silent --show-error --fail http://127.0.0.1:3000/healthz" --max-seconds 60 --output-json /tmp/kolme-local-api-smoke-summary.json`
