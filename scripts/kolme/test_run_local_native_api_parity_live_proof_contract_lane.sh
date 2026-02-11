@@ -110,10 +110,10 @@ set +e
 KAMN_KOLME_LOCAL_HEAVY=1 \
   bash "$RUNNER" \
     --mode run \
-    --nonce-command "sleep 2" \
+    --nonce-command "sleep 5" \
     --broadcast-command "printf 'broadcast_ok\n'" \
     --finality-command "printf 'finality_ok\n'" \
-    --max-seconds 1 \
+    --max-seconds 3 \
     --output-json "$TMP_REPORT" >"$TMP_ERR" 2>&1
 timeout_code=$?
 set -e
