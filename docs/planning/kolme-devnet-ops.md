@@ -131,6 +131,28 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Shell-surface budget contract:
   - Combined wrapper shell LOC for this runtime/triadic/bootstrap/e2e tranche remains `<= 160`.
 
+## Bootstrap+Conformance+Runtime+Process Manifest Migration (Issue #1771)
+
+- Migration guard contract:
+  - `bash scripts/ci/test_kolme_bootstrap_conformance_runtime_process_manifest_migration_contract.sh`
+- Migrated manifest-backed wrappers:
+  - `scripts/kolme/run_local_kolme_fork_bootstrap_readiness_contract_lane.sh`
+  - `scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh`
+  - `scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh`
+  - `scripts/kolme/run_local_kolme_fork_process_lifecycle_contract_lane.sh`
+- Manifest files:
+  - `scripts/framework/manifests/kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json`
+  - `scripts/framework/manifests/kolme_local_kolme_live_api_conformance_contract_lane.json`
+  - `scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_contract_lane.json`
+  - `scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_contract_lane.json`
+- Python contract lane implementations:
+  - `scripts/kolme/contracts/local_kolme_fork_bootstrap_readiness_contract_lane.py`
+  - `scripts/kolme/contracts/local_kolme_live_api_conformance_contract_lane.py`
+  - `scripts/kolme/contracts/local_kamn_live_runtime_integration_contract_lane.py`
+  - `scripts/kolme/contracts/local_kolme_fork_process_lifecycle_contract_lane.py`
+- Shell-surface budget contract:
+  - Combined wrapper shell LOC for this bootstrap/conformance/runtime/process tranche remains `<= 160`.
+
 ## Contract Commands
 
 - Run triadic smoke orchestration:
@@ -678,6 +700,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - version+matrix manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1765`).
 - profile+self-test+portability manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1767`).
 - runtime+triadic+bootstrap+e2e manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1769`).
+- bootstrap+conformance+runtime+process manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1771`).
 - local fork metadata sync lane fails closed for checkout-path, remote-URL, ref, and dirty-checkout drift (`Regression: #1429`).
 - local fork smoke evidence lane fails closed on missing local opt-in, metadata sync failure, command timeout, and smoke-command errors (`Regression: #1430`).
 - local fork Rust test matrix lane fails closed on missing local opt-in, metadata sync drift, and per-command timeout/failure paths (`Regression: #1537`).
@@ -757,6 +780,7 @@ bash scripts/kolme/test_run_local_e2e_integration_contract_lane.sh
 bash scripts/kolme/test_run_local_heavy_validation_matrix.sh
 bash scripts/kolme/test_check_local_heavy_validation_matrix_policy.sh
 bash scripts/kolme/test_run_local_heavy_validation_matrix_contract_lane.sh
+bash scripts/ci/test_kolme_bootstrap_conformance_runtime_process_manifest_migration_contract.sh
 bash scripts/runtime/test_select_failover_sync_drill_lane.sh
 bash scripts/runtime/test_run_failover_sync_drill_preflight_contract_lane.sh
 bash scripts/runtime/test_run_failover_sync_drill_deep_lane.sh
