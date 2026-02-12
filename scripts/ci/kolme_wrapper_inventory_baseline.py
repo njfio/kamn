@@ -13,6 +13,7 @@ from typing import Any
 BASELINE_SCHEMA_VERSION = "kamn.kolme.wrapper-inventory-baseline.v1"
 DELTA_REPORT_SCHEMA_VERSION = "kamn.kolme.wrapper-inventory-delta-report.v1"
 MATRIX_SCHEMA_VERSION = "kamn.kolme.lane-migration-matrix.v1"
+TREND_THRESHOLD_SCHEMA_VERSION = "kamn.kolme.wrapper-budget-trend-thresholds.v1"
 
 
 def fail(message: str) -> None:
@@ -220,6 +221,46 @@ def validate_baseline_payload(payload: dict[str, Any]) -> None:
             fail(f"baseline {key} must be >= 0")
 
 
+def load_trend_thresholds(path: Path) -> dict[str, Any]:
+    payload = load_json_object(path, label="wrapper budget trend thresholds")
+    if payload.get("schema_version") != TREND_THRESHOLD_SCHEMA_VERSION:
+        fail(
+            "wrapper budget trend threshold schema_version must be "
+            f"{TREND_THRESHOLD_SCHEMA_VERSION}"
+        )
+
+    max_wrapper_count_increase = require_int(
+        payload,
+        "max_wrapper_count_increase",
+        label="wrapper budget trend thresholds",
+    )
+    if max_wrapper_count_increase < 0:
+        fail("wrapper budget trend max_wrapper_count_increase must be >= 0")
+
+    max_total_shell_loc_increase = require_int(
+        payload,
+        "max_total_shell_loc_increase",
+        label="wrapper budget trend thresholds",
+    )
+    if max_total_shell_loc_increase < 0:
+        fail("wrapper budget trend max_total_shell_loc_increase must be >= 0")
+
+    enforce_lane_shell_loc_nonincreasing = payload.get(
+        "enforce_lane_shell_loc_nonincreasing"
+    )
+    if not isinstance(enforce_lane_shell_loc_nonincreasing, bool):
+        fail(
+            "wrapper budget trend thresholds enforce_lane_shell_loc_nonincreasing "
+            "must be a boolean"
+        )
+
+    return {
+        "max_wrapper_count_increase": max_wrapper_count_increase,
+        "max_total_shell_loc_increase": max_total_shell_loc_increase,
+        "enforce_lane_shell_loc_nonincreasing": enforce_lane_shell_loc_nonincreasing,
+    }
+
+
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -255,6 +296,26 @@ def command_check(args: argparse.Namespace) -> int:
     repo_root = Path(args.repo_root).resolve()
     matrix_file = Path(args.matrix_file).resolve()
     baseline_file = Path(args.baseline_file).resolve()
+    trend_mode = bool(args.trend_mode)
+    max_wrapper_count_increase = int(args.max_wrapper_count_increase)
+    max_total_shell_loc_increase = int(args.max_total_shell_loc_increase)
+    enforce_lane_shell_loc_nonincreasing = True
+
+    if max_wrapper_count_increase < 0:
+        fail("--max-wrapper-count-increase must be >= 0")
+    if max_total_shell_loc_increase < 0:
+        fail("--max-total-shell-loc-increase must be >= 0")
+    if args.threshold_file and not trend_mode:
+        fail("--threshold-file requires --trend-mode")
+
+    if args.threshold_file:
+        threshold_file = Path(args.threshold_file).resolve()
+        thresholds = load_trend_thresholds(threshold_file)
+        max_wrapper_count_increase = int(thresholds["max_wrapper_count_increase"])
+        max_total_shell_loc_increase = int(thresholds["max_total_shell_loc_increase"])
+        enforce_lane_shell_loc_nonincreasing = bool(
+            thresholds["enforce_lane_shell_loc_nonincreasing"]
+        )
 
     baseline = load_json_object(baseline_file, label="wrapper inventory baseline")
     validate_baseline_payload(baseline)
@@ -299,7 +360,14 @@ def command_check(args: argparse.Namespace) -> int:
                 violations.append(
                     f"lane {lane_id} changed {key}: baseline={baseline_lane[key]} current={current_lane[key]}"
                 )
-        if shell_loc_delta != 0:
+        if trend_mode:
+            if enforce_lane_shell_loc_nonincreasing and shell_loc_delta > 0:
+                violations.append(
+                    "lane "
+                    f"{lane_id} shell_loc increased beyond nonincreasing policy: "
+                    f"baseline={baseline_lane['shell_loc']} current={current_lane['shell_loc']}"
+                )
+        elif shell_loc_delta != 0:
             violations.append(
                 f"lane {lane_id} shell_loc drifted: baseline={baseline_lane['shell_loc']} current={current_lane['shell_loc']}"
             )
@@ -310,6 +378,20 @@ def command_check(args: argparse.Namespace) -> int:
         "regular_file_wrapper_count_delta": current["regular_file_wrapper_count"] - baseline["regular_file_wrapper_count"],
         "total_shell_loc_delta": current["total_shell_loc"] - baseline["total_shell_loc"],
     }
+
+    if trend_mode:
+        if totals_delta["wrapper_count_delta"] > max_wrapper_count_increase:
+            violations.append(
+                "wrapper_count_delta exceeded trend threshold: "
+                f"delta={totals_delta['wrapper_count_delta']} "
+                f"threshold={max_wrapper_count_increase}"
+            )
+        if totals_delta["total_shell_loc_delta"] > max_total_shell_loc_increase:
+            violations.append(
+                "total_shell_loc_delta exceeded trend threshold: "
+                f"delta={totals_delta['total_shell_loc_delta']} "
+                f"threshold={max_total_shell_loc_increase}"
+            )
 
     report_payload = {
         "schema_version": DELTA_REPORT_SCHEMA_VERSION,
@@ -328,6 +410,12 @@ def command_check(args: argparse.Namespace) -> int:
             "total_shell_loc": current["total_shell_loc"],
         },
         "totals_delta": totals_delta,
+        "policy": {
+            "mode": "trend" if trend_mode else "strict",
+            "max_wrapper_count_increase": max_wrapper_count_increase,
+            "max_total_shell_loc_increase": max_total_shell_loc_increase,
+            "enforce_lane_shell_loc_nonincreasing": enforce_lane_shell_loc_nonincreasing,
+        },
         "lane_deltas": lane_deltas,
         "violations": violations,
         "status": "fail" if violations else "pass",
@@ -337,6 +425,7 @@ def command_check(args: argparse.Namespace) -> int:
         write_json(Path(args.output_json).resolve(), report_payload)
 
     print(f"status={report_payload['status']}")
+    print(f"mode={report_payload['policy']['mode']}")
     print(f"wrapper_count_delta={totals_delta['wrapper_count_delta']}")
     print(f"total_shell_loc_delta={totals_delta['total_shell_loc_delta']}")
     print(f"violation_count={len(violations)}")
@@ -368,6 +457,27 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser = subparsers.add_parser("check", help="Check current inventory against baseline.")
     check_parser.add_argument("--matrix-file", required=True, help="Path to lane migration matrix JSON.")
     check_parser.add_argument("--baseline-file", required=True, help="Path to committed baseline JSON.")
+    check_parser.add_argument(
+        "--trend-mode",
+        action="store_true",
+        help="Enable trend policy mode (allow reductions, fail only growth above thresholds).",
+    )
+    check_parser.add_argument(
+        "--threshold-file",
+        help="Optional trend threshold config JSON (requires --trend-mode).",
+    )
+    check_parser.add_argument(
+        "--max-wrapper-count-increase",
+        type=int,
+        default=0,
+        help="Allowed positive wrapper_count_delta in trend mode.",
+    )
+    check_parser.add_argument(
+        "--max-total-shell-loc-increase",
+        type=int,
+        default=0,
+        help="Allowed positive total_shell_loc_delta in trend mode.",
+    )
     check_parser.add_argument(
         "--output-json",
         help="Optional output path for delta report JSON.",
