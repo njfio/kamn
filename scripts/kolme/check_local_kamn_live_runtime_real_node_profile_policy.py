@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 NON_SYNTHETIC_SUBMIT_PROBE_MARKER = "integration_kolme_fork_live_node_submit_reaches_endpoint"
+IN_MEMORY_PROVIDER_MARKER = "InMemoryKolmeRuntimeCommitClient"
 
 
 def parse_args() -> argparse.Namespace:
@@ -109,6 +110,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             and NON_SYNTHETIC_SUBMIT_PROBE_MARKER not in runtime_commit_command
         ):
             reason_codes.append("runtime_commit_non_synthetic_submit_probe_missing")
+        if IN_MEMORY_PROVIDER_MARKER in runtime_commit_command:
+            reason_codes.append("runtime_commit_in_memory_provider_reference_detected")
 
     runtime_commit_live_policy_report = report.get("runtime_commit_live_policy_report")
     if not isinstance(runtime_commit_live_policy_report, str) or not runtime_commit_live_policy_report.strip():
@@ -175,6 +178,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             and "--require-non-synthetic-run-evidence" not in runtime_commit_policy_check_command
         ):
             reason_codes.append("runtime_commit_policy_check_non_synthetic_marker_missing")
+        if runtime_commit_policy_check_command is not None and IN_MEMORY_PROVIDER_MARKER in runtime_commit_policy_check_command:
+            reason_codes.append("runtime_commit_policy_check_in_memory_provider_reference_detected")
 
     artifact_paths = report.get("artifact_paths")
     if not isinstance(artifact_paths, list) or not artifact_paths:

@@ -11,6 +11,7 @@ TMP_DIR="$(mktemp -d)"
 TMP_REPORT_OK="$TMP_DIR/ok-report.json"
 TMP_REPORT_BAD="$TMP_DIR/bad-report.json"
 TMP_REPORT_SYNTHETIC="$TMP_DIR/synthetic-report.json"
+TMP_REPORT_INMEMORY="$TMP_DIR/inmemory-report.json"
 TMP_POLICY_OUT="$TMP_DIR/policy-report.json"
 TMP_INTEGRATION_POLICY_OUT="$TMP_DIR/integration-policy-report.json"
 TMP_SUMMARY="$TMP_DIR/integration-summary.json"
@@ -336,6 +337,105 @@ fi
 
 if ! grep -q "runtime_commit_non_synthetic_submit_probe_missing" "$TMP_ERR"; then
   echo "expected non-synthetic submit probe marker requirement reason for synthetic policy failure" >&2
+  exit 1
+fi
+
+cat >"$TMP_REPORT_INMEMORY" <<'JSON'
+{
+  "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
+  "mode": "dry-run",
+  "status": "ok",
+  "reason_code": "dry_run_no_commands_executed",
+  "local_only_enforced": true,
+  "ci_fast_gate_eligible": false,
+  "elapsed_seconds": 0,
+  "max_seconds": 210,
+  "budget_status": "not_run",
+  "runtime_profile": "real-node",
+  "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
+  "runtime_commit_command_profile": "real-node-non-synthetic-v1",
+  "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
+  "runtime_commit_command_profile_version": "v1",
+  "runtime_commit_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" --provider-hint InMemoryKolmeRuntimeCommitClient --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
+  "runtime_commit_live_policy_report": "/tmp/runtime-policy.json",
+  "runtime_commit_finality_command": "",
+  "runtime_commit_finality_output_file": "",
+  "runtime_commit_finality_enabled": false,
+  "runtime_commit_finality_max_seconds": 15,
+  "bootstrap_reason_code": "not_run",
+  "localhost_signed_reason_code": "not_run",
+  "conformance_reason_code": "not_run",
+  "runtime_commit_reason_code": "not_run",
+  "runtime_commit_policy_reason_code": "not_run",
+  "contracts": {
+    "ci_fast_gate_scope": "local-only",
+    "runtime_profile": "real-node",
+    "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
+    "runtime_commit_endpoint": "/broadcast/runtime-commit",
+    "runtime_commit_method": "POST",
+    "runtime_commit_finality_primary_endpoint": "/notifications",
+    "runtime_commit_finality_fallback_endpoint": "/block/{height}"
+  },
+  "checks": [
+    {
+      "id": "bootstrap_readiness",
+      "command": "bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh --mode run",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "localhost_signed_integration",
+      "command": "bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed.json",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "live_api_conformance",
+      "command": "bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "runtime_commit_endpoint",
+      "command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" --provider-hint InMemoryKolmeRuntimeCommitClient --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "runtime_commit_policy",
+      "command": "python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/runtime-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-non-synthetic-run-evidence --output-json /tmp/runtime-policy.json",
+      "status": "planned",
+      "reason_code": "not_run"
+    }
+  ],
+  "artifact_paths": [
+    "/tmp/bootstrap-summary.json",
+    "/tmp/localhost-signed.json",
+    "/tmp/conformance-summary.json",
+    "/tmp/runtime-output.log",
+    "/tmp/runtime-summary.json",
+    "/tmp/runtime-policy.json"
+  ]
+}
+JSON
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_INMEMORY" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+inmemory_exit_code=$?
+set -e
+
+if [ "$inmemory_exit_code" -eq 0 ]; then
+  echo "expected real-node profile policy checker to fail for in-memory provider reference drift" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_in_memory_provider_reference_detected" "$TMP_ERR"; then
+  echo "expected in-memory provider reference reason for policy failure" >&2
   exit 1
 fi
 

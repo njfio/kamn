@@ -13,9 +13,10 @@ TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 TMP_DRIFT_REPORT="$(mktemp)"
 TMP_SYNTHETIC_REPORT="$(mktemp)"
+TMP_INMEMORY_REPORT="$(mktemp)"
 TMP_NEGATIVE_POLICY="$(mktemp)"
 TMP_NEGATIVE_ERR="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local KAMN live runtime real-node profile contract lane runner to be executable" >&2
@@ -67,6 +68,7 @@ required_coverage_markers=(
   "README.md"
   "runtime_commit_command_profile_mismatch"
   "runtime_commit_non_synthetic_submit_probe_missing"
+  "runtime_commit_in_memory_provider_reference_detected"
   "Regression: #2139"
 )
 for marker in "${required_coverage_markers[@]}"; do
@@ -130,7 +132,7 @@ if policy.get("reason_codes") != []:
     raise SystemExit("expected no policy reason codes for real-node profile contract-lane dry-run composition")
 PY
 
-python3 - "$TMP_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" <<'PY'
+python3 - "$TMP_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" <<'PY'
 import json
 import pathlib
 import sys
@@ -154,6 +156,22 @@ synthetic_summary["runtime_commit_command"] = (
 )
 pathlib.Path(sys.argv[3]).write_text(
     json.dumps(synthetic_summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+
+inmemory_summary = dict(base_summary)
+inmemory_summary["runtime_commit_command"] = (
+    "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh "
+    "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider "
+    "--require-non-synthetic-run-evidence "
+    "--live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 "
+    "KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local cargo test -p kamn-core --test kolme_runtime_commit_http_transport "
+    "-- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" "
+    "--provider-hint InMemoryKolmeRuntimeCommitClient "
+    "--output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json"
+)
+pathlib.Path(sys.argv[4]).write_text(
+    json.dumps(inmemory_summary, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
 )
 PY
@@ -195,6 +213,26 @@ fi
 
 if ! grep -q "runtime_commit_non_synthetic_submit_probe_missing" "$TMP_NEGATIVE_ERR"; then
   echo "expected non-synthetic submit probe marker reason in synthetic-command negative proof output" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_INMEMORY_REPORT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_NEGATIVE_POLICY" >"$TMP_NEGATIVE_ERR" 2>&1
+inmemory_exit_code=$?
+set -e
+
+if [ "$inmemory_exit_code" -eq 0 ]; then
+  echo "expected in-memory provider reference negative proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_in_memory_provider_reference_detected" "$TMP_NEGATIVE_ERR"; then
+  echo "expected in-memory provider reference reason in negative proof output" >&2
   exit 1
 fi
 

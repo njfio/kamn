@@ -210,6 +210,9 @@ def main() -> int:
     if "--require-non-synthetic-run-evidence" not in runtime_commit_command:
         print("expected strict non-synthetic runtime marker in contract-lane summary command", file=sys.stderr)
         return 1
+    if "InMemoryKolmeRuntimeCommitClient" in runtime_commit_command:
+        print("expected live-provider-only runtime command composition in real-node contract-lane summary", file=sys.stderr)
+        return 1
     if summary.get("runtime_commit_command_profile") != "real-node-non-synthetic-v1":
         print("expected deterministic runtime commit command profile marker in contract-lane summary", file=sys.stderr)
         return 1
@@ -306,6 +309,47 @@ def main() -> int:
             return 1
         if synthetic_regression_policy.get("final_decision") != "NO-GO":
             print("expected NO-GO final decision for synthetic regression policy output", file=sys.stderr)
+            return 1
+
+        in_memory_provider_summary_file = negative_path / "in_memory_provider_summary.json"
+        in_memory_provider_policy_file = negative_path / "in_memory_provider_policy.json"
+        in_memory_provider_summary = dict(summary)
+        in_memory_provider_summary["runtime_commit_command"] = (
+            "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh "
+            "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider "
+            "--require-non-synthetic-run-evidence "
+            "--live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 "
+            "KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local cargo test -p kamn-core --test kolme_runtime_commit_http_transport "
+            "-- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" "
+            "--provider-hint InMemoryKolmeRuntimeCommitClient "
+            "--output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json"
+        )
+        in_memory_provider_summary_file.write_text(
+            json.dumps(in_memory_provider_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        in_memory_provider_result = run_real_node_policy_check(
+            report_file=in_memory_provider_summary_file,
+            output_json=in_memory_provider_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if in_memory_provider_result.returncode == 0:
+            print("expected in-memory provider regression negative proof to fail closed", file=sys.stderr)
+            return 1
+        in_memory_provider_policy = json.loads(in_memory_provider_policy_file.read_text(encoding="utf-8"))
+        in_memory_provider_reason_codes = in_memory_provider_policy.get("reason_codes")
+        if not isinstance(in_memory_provider_reason_codes, list):
+            print("expected reason_codes list in in-memory provider regression policy output", file=sys.stderr)
+            return 1
+        if "runtime_commit_in_memory_provider_reference_detected" not in in_memory_provider_reason_codes:
+            print(
+                "expected runtime_commit_in_memory_provider_reference_detected in in-memory provider regression policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if in_memory_provider_policy.get("final_decision") != "NO-GO":
+            print("expected NO-GO final decision for in-memory provider regression policy output", file=sys.stderr)
             return 1
 
     doc_markers = [

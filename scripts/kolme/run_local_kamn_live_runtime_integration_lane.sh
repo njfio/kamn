@@ -366,6 +366,11 @@ if [ -z "$RUNTIME_COMMIT_COMMAND" ]; then
   RUNTIME_COMMIT_FINALITY_COMMAND="$effective_runtime_commit_finality_command"
 fi
 
+if [ "$RUNTIME_PROFILE" = "real-node" ] && [[ "$RUNTIME_COMMIT_COMMAND" == *"InMemoryKolmeRuntimeCommitClient"* ]]; then
+  echo "runtime-commit-command must not reference InMemoryKolmeRuntimeCommitClient when runtime-profile=real-node" >&2
+  exit 1
+fi
+
 CHECK_FILE="$(mktemp)"
 trap 'rm -f "$CHECK_FILE"' EXIT
 
