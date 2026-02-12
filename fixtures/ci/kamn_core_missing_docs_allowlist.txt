@@ -9,7 +9,6 @@ invariants
 message_delivery_guards
 message_envelope
 message_lifecycle
-observability
 operator_dashboard_api
 operator_dashboard_ui
 reputation_state
