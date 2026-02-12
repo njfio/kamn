@@ -11,7 +11,7 @@ pub mod agent_key_hierarchy;
 pub mod agent_upgrade_workflow;
 /// Anti-spam admission, rate-limit, and suspension policy contracts.
 pub mod anti_spam;
-#[allow(missing_docs)]
+/// Audit export filters, bundles, and governance evidence contracts.
 pub mod audit_exports;
 pub mod bootstrap;
 #[allow(missing_docs)]
