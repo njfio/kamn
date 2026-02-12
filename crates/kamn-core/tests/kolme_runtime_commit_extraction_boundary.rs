@@ -190,7 +190,14 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
         .contains("normalize_kolme_runtime_commit_request_fields_contract("));
     assert!(RUNTIME_HTTP_TRANSPORT_SRC
         .contains("normalize_kolme_transport_idempotency_key_input_contract("));
-    assert!(RUNTIME_LIVE_PROVIDER_SRC.contains("normalize_kolme_provider_hint_input_contract("));
+    assert!(
+        RUNTIME_LIVE_PROVIDER_SRC.contains("build_kamn_kolme_runtime_commit_live_provider_config(")
+    );
+    assert!(
+        RUNTIME_LIVE_PROVIDER_SRC.contains("build_kamn_kolme_fork_broadcast_live_provider_config(")
+    );
+    assert!(RUNTIME_LIVE_PROVIDER_SRC
+        .contains("submit_kamn_kolme_runtime_commit_live_provider_request("));
     assert!(RUNTIME_NOTIFICATIONS_CONSUMER_SRC
         .contains("normalize_kolme_notifications_provider_input_contract("));
     assert!(RUNTIME_BLOCK_FALLBACK_RECONCILER_SRC
@@ -198,16 +205,9 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(
         RUNTIME_FINALITY_CHECKER_SRC.contains("normalize_kolme_finality_endpoint_inputs_contract(")
     );
-    assert!(RUNTIME_LIVE_PROVIDER_SRC
-        .contains("normalize_kolme_live_provider_endpoint_inputs_contract("));
     assert!(RUNTIME_FORK_FINALITY_RESOLVER_SRC.contains("txhash_from_kolme_commit_id("));
     assert!(RUNTIME_HTTP_TRANSPORT_SRC.contains("parse_kolme_http_endpoint("));
     assert!(RUNTIME_NOTIFICATIONS_WS_SRC.contains("parse_kolme_websocket_endpoint("));
-    assert!(
-        RUNTIME_LIVE_PROVIDER_SRC.contains("is_kolme_valid_live_provider_base_url_input_contract(")
-    );
-    assert!(RUNTIME_LIVE_PROVIDER_SRC
-        .contains("is_kolme_valid_live_provider_submit_path_input_contract("));
     assert!(RUNTIME_ADAPTER_BACKED_CLIENT_SRC
         .contains("is_kolme_valid_expected_provider_input_contract("));
     assert!(
@@ -262,9 +262,8 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_NOTIFICATIONS_CONSUMER_SRC
         .contains("normalize_kolme_notifications_provider_input_contract("));
     assert!(RUNTIME_OUTCOMES_SRC.contains("notification_event_to_kolme_provider_receipt_contract("));
-    assert!(
-        RUNTIME_LIVE_PROVIDER_SRC.contains("parse_kolme_live_runtime_provider_outcome_contract(")
-    );
+    assert!(RUNTIME_LIVE_PROVIDER_SRC
+        .contains("submit_kamn_kolme_runtime_commit_live_provider_request("));
     assert!(RUNTIME_OUTCOMES_SRC.contains(
         "impl From<KamnKolmeRuntimeProviderOutcome> for KolmeRuntimeCommitProviderOutcome"
     ));
@@ -291,7 +290,9 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
         RUNTIME_HTTP_TRANSPORT_SRC.contains("is_kolme_valid_http_response_bytes_input_contract(")
     );
     assert!(RUNTIME_IN_MEMORY_SRC.contains("is_kolme_valid_runtime_provider_input_contract("));
-    assert!(RUNTIME_LIVE_PROVIDER_SRC.contains("is_kolme_valid_provider_hint_input_contract("));
+    assert!(
+        RUNTIME_LIVE_PROVIDER_SRC.contains("build_kamn_kolme_fork_broadcast_live_provider_config(")
+    );
     assert!(RUNTIME_REQUEST_ENVELOPE_SRC
         .contains("is_kolme_valid_runtime_operation_id_input_contract("));
     assert!(
@@ -411,4 +412,29 @@ fn regression_issue_2277_transport_error_and_trait_ownership_moves_to_kamn_kolme
     assert!(KAMN_KOLME_LIB_SRC.contains("KolmeRuntimeCommitProviderTransport"));
     assert!(KAMN_KOLME_LIB_SRC.contains("KolmeRuntimeCommitFinalityTransport"));
     assert!(KAMN_KOLME_LIB_SRC.contains("KolmeRuntimeCommitBlockFallbackTransport"));
+}
+
+#[test]
+fn regression_issue_2278_live_provider_pipeline_ownership_moves_to_kamn_kolme() {
+    // Regression: #2278
+    assert!(!RUNTIME_LIVE_PROVIDER_SRC.contains("enum KolmeRuntimeCommitSubmitProfile"));
+    assert!(
+        !RUNTIME_LIVE_PROVIDER_SRC.contains("parse_kolme_live_runtime_provider_outcome_contract(")
+    );
+    assert!(!RUNTIME_LIVE_PROVIDER_SRC
+        .contains("normalize_kolme_live_provider_endpoint_inputs_contract("));
+    assert!(!RUNTIME_LIVE_PROVIDER_SRC
+        .contains("is_kolme_valid_live_provider_base_url_input_contract("));
+    assert!(!RUNTIME_LIVE_PROVIDER_SRC
+        .contains("is_kolme_valid_live_provider_submit_path_input_contract("));
+    assert!(
+        RUNTIME_LIVE_PROVIDER_SRC.contains("build_kamn_kolme_runtime_commit_live_provider_config(")
+    );
+    assert!(
+        RUNTIME_LIVE_PROVIDER_SRC.contains("build_kamn_kolme_fork_broadcast_live_provider_config(")
+    );
+    assert!(RUNTIME_LIVE_PROVIDER_SRC
+        .contains("submit_kamn_kolme_runtime_commit_live_provider_request("));
+    assert!(KAMN_KOLME_LIB_SRC.contains("pub mod live_provider_pipeline;"));
+    assert!(KAMN_KOLME_LIB_SRC.contains("submit_runtime_commit_live_provider_request"));
 }

@@ -68,6 +68,11 @@ handling.
     - `400`/`404`/`409`/`422` => invalid request (`MalformedResponse`)
     - `429` => rate limited (`Unavailable`)
 - Live submit profiles:
+  - canonical pipeline ownership now lives in `crates/kamn-kolme/src/live_provider_pipeline.rs`:
+    - `build_runtime_commit_live_provider_config(...)`
+    - `build_kolme_fork_broadcast_live_provider_config(...)`
+    - `submit_runtime_commit_live_provider_request(...)`
+  - `crates/kamn-core/src/kolme_runtime_commit/live_provider.rs` remains a compatibility facade that maps `kamn-kolme` config errors into `KolmeRuntimeCommitError::InvalidRequest`.
   - `KolmeRuntimeCommitLiveProvider::new(...)` preserves legacy submit behavior and request shape.
   - `KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(...)` targets `PUT /broadcast` for `njfio/kolme_fork`.
   - `PUT /broadcast` requests are normalized to JSON using `KolmeApiBroadcastRequest`.
