@@ -179,6 +179,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `telegram_bridge`
   - `task_lifecycle`
   - `transaction`
+  - `validator_lifecycle`
 - Regression marker:
   - `Regression: #1828`
   - `Regression: #1981`
@@ -195,6 +196,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2003`
   - `Regression: #2005`
   - `Regression: #2007`
+  - `Regression: #2009`
 
 ## Contributor Entrypoint Matrix
 

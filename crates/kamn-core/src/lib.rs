@@ -118,7 +118,7 @@ pub mod transaction;
 pub mod trust_score;
 #[allow(missing_docs)]
 pub mod upgrade_orchestration;
-#[allow(missing_docs)]
+/// Validator onboarding/offboarding, quorum-change, and rollback lifecycle contracts.
 pub mod validator_lifecycle;
 #[allow(missing_docs)]
 pub mod watchdog;

@@ -35,6 +35,5 @@ task_operations
 token
 trust_score
 upgrade_orchestration
-validator_lifecycle
 watchdog
 zk_message_proofs

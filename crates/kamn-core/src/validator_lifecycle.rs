@@ -1,39 +1,65 @@
+//! Validator lifecycle state machine and transition-proof policy contracts.
+//!
+//! This module models validator onboarding, offboarding, quorum reconfiguration,
+//! and rollback actions with auditable transition records.
+
 use crate::AgentDid;
 use std::collections::BTreeSet;
 use std::fmt;
 
+/// Evidence bundle authorizing a validator set transition.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatorTransitionProof {
+    /// Governance or workflow proposal identifier for this transition.
     pub proposal_id: String,
+    /// Validator DIDs that approved the transition proposal.
     pub approver_dids: Vec<String>,
+    /// Deterministic digest for the transition authorization artifact.
     pub proof_hash: String,
 }
 
+/// Materialized validator-set state after a transition.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatorSetSnapshot {
+    /// Active validator DIDs in deterministic order.
     pub validator_dids: Vec<String>,
+    /// Minimum approvals required for future transition proofs.
     pub quorum_threshold: usize,
+    /// Unix timestamp when this snapshot became active.
     pub updated_at_unix: u64,
 }
 
+/// Supported validator-set transition kinds.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValidatorTransitionKind {
+    /// Adds a new validator DID to the active set.
     Onboard,
+    /// Removes an existing validator DID from the active set.
     Offboard,
+    /// Changes quorum threshold without changing validator membership.
     ReconfigureQuorum,
+    /// Reverts the previous transition and records rollback provenance.
     Rollback,
 }
 
+/// Immutable audit record describing one validator-set transition.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatorTransitionRecord {
+    /// Transition variant executed.
     pub kind: ValidatorTransitionKind,
+    /// Subject validator DID for member add/remove transitions.
     pub subject_validator_did: Option<String>,
+    /// Snapshot before applying the transition.
     pub previous_snapshot: ValidatorSetSnapshot,
+    /// Snapshot after applying the transition.
     pub next_snapshot: ValidatorSetSnapshot,
+    /// Proof material used to authorize the transition.
     pub proof: ValidatorTransitionProof,
+    /// Unix timestamp when transition was requested.
     pub requested_at_unix: u64,
 }
 
+/// In-memory manager enforcing validator lifecycle transition policies.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatorLifecycleManager {
     validator_dids: BTreeSet<String>,
@@ -44,6 +70,7 @@ pub struct ValidatorLifecycleManager {
 }
 
 impl ValidatorLifecycleManager {
+    /// Constructs a manager with an initial validator set and quorum threshold.
     pub fn new(
         validator_dids: Vec<String>,
         quorum_threshold: usize,
@@ -70,6 +97,7 @@ impl ValidatorLifecycleManager {
         })
     }
 
+    /// Adds a validator after DID/proof validation and self-approval checks.
     pub fn onboard_validator(
         &mut self,
         validator_did: &str,
@@ -103,6 +131,7 @@ impl ValidatorLifecycleManager {
         Ok(())
     }
 
+    /// Removes a validator while ensuring quorum remains satisfiable.
     pub fn offboard_validator(
         &mut self,
         validator_did: &str,
@@ -143,6 +172,7 @@ impl ValidatorLifecycleManager {
         Ok(())
     }
 
+    /// Updates quorum threshold using the current validator governance proof.
     pub fn reconfigure_quorum(
         &mut self,
         new_quorum_threshold: usize,
@@ -170,6 +200,7 @@ impl ValidatorLifecycleManager {
         Ok(())
     }
 
+    /// Rolls back the last transition and appends an explicit rollback record.
     pub fn rollback_last_transition(
         &mut self,
         rolled_back_by: &str,
@@ -209,6 +240,7 @@ impl ValidatorLifecycleManager {
         Ok(())
     }
 
+    /// Returns the current validator-set snapshot.
     pub fn snapshot(&self) -> ValidatorSetSnapshot {
         ValidatorSetSnapshot {
             validator_dids: self.validator_dids.iter().cloned().collect(),
@@ -217,6 +249,7 @@ impl ValidatorLifecycleManager {
         }
     }
 
+    /// Returns transition history in insertion order.
     pub fn transition_history(&self) -> Vec<ValidatorTransitionRecord> {
         self.transitions.clone()
     }
@@ -243,34 +276,57 @@ impl ValidatorLifecycleManager {
     }
 }
 
+/// Error surface for validator lifecycle state and transition-proof validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValidatorLifecycleError {
+    /// A required string field was empty or whitespace.
     EmptyField(&'static str),
+    /// DID value failed `AgentDid` validation.
     InvalidDid(String),
+    /// Timestamp field was zero.
     InvalidTimestamp(&'static str),
+    /// Initial validator set was empty.
     EmptyValidatorSet,
+    /// Validator DID already exists in the active set.
     DuplicateValidator(String),
+    /// Validator DID does not exist in the active set.
     ValidatorNotFound(String),
+    /// Quorum threshold is outside `1..=validator_count`.
     InvalidQuorumThreshold {
+        /// Candidate quorum threshold value.
         quorum_threshold: usize,
+        /// Active validator count used for validation.
         validator_count: usize,
     },
+    /// Offboarding would violate quorum/validator-count invariants.
     QuorumWouldExceedValidatorCount {
+        /// Existing quorum threshold that would become invalid.
         quorum_threshold: usize,
+        /// Validator count after the attempted offboarding.
         validator_count: usize,
     },
+    /// Transition proof omitted required fields.
     InvalidTransitionProof(&'static str),
+    /// Transition proof did not include enough unique approvers.
     InsufficientTransitionApprovals {
+        /// Required unique approval count.
         required: usize,
+        /// Unique approval count provided by the proof.
         provided: usize,
     },
+    /// Transition proof fingerprint has already been consumed.
     TransitionProofReplay {
+        /// Proposal identifier from the replayed proof.
         proposal_id: String,
+        /// Proof hash from the replayed proof.
         proof_hash: String,
     },
+    /// Candidate validator approved its own onboarding proof.
     OnboardingSelfApproval {
+        /// Candidate validator DID that self-approved onboarding.
         validator_did: String,
     },
+    /// No prior transition exists to roll back.
     NoTransitionToRollback,
 }
 
