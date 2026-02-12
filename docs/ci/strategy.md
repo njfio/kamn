@@ -159,6 +159,15 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `scripts/ci/run_kolme_manifest_migration_contract_dispatch.sh`
     - enforces shared migration group config contract:
       - `fixtures/ci/kolme_manifest_migration_contract_groups.json`
+  - Kolme wrapper-inventory baseline guard stays on PR fast gate:
+    - `bash scripts/ci/test_kolme_wrapper_inventory_baseline_contract.sh`
+    - deterministic baseline artifact:
+      - `fixtures/kolme_compatibility/wrapper_inventory_baseline.json`
+    - deterministic generator/check commands:
+      - `bash scripts/ci/generate_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/kolme_compatibility/lane_migration_matrix.json --output-json /tmp/kolme-wrapper-inventory-baseline.json`
+      - `bash scripts/ci/check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/kolme_compatibility/lane_migration_matrix.json --baseline-file fixtures/kolme_compatibility/wrapper_inventory_baseline.json --output-json /tmp/kolme-wrapper-inventory-delta.json`
+    - emits lane-level and aggregate wrapper-count/shell-LOC deltas for migration trend governance.
+    - Regression: #2117
   - shared dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh`
     - enforces that all migrated `run_*contract_lane.sh` wrappers dispatch through:
