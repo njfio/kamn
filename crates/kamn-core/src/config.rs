@@ -209,6 +209,10 @@ pub enum ConfigError {
     InvalidDaemonControlArgument(String),
     /// Invalid daemon lifecycle event argument.
     InvalidDaemonLifecycleEvent(String),
+    /// Invalid live Kolme provider hint argument.
+    InvalidKolmeLiveProviderHint(String),
+    /// Invalid live Kolme signing profile argument.
+    InvalidKolmeLiveSigningProfile(String),
     /// Invalid governance proposal argument.
     InvalidProposalArgument(String),
     /// Invalid rejoin-attempt argument.
@@ -219,6 +223,8 @@ pub enum ConfigError {
     RuntimeRecovery(String),
     /// Runtime daemon lifecycle argument validation failure.
     RuntimeDaemonLifecycle(String),
+    /// Runtime Kolme live-provider wiring validation failure.
+    RuntimeKolmeLive(String),
     /// Unknown command-line/config argument.
     UnknownArgument(String),
     /// Argument flag required a value but none was provided.
@@ -250,6 +256,12 @@ impl fmt::Display for ConfigError {
             Self::InvalidDaemonLifecycleEvent(value) => {
                 write!(f, "invalid daemon lifecycle event: {value}")
             }
+            Self::InvalidKolmeLiveProviderHint(value) => {
+                write!(f, "invalid kolme live provider hint: {value}")
+            }
+            Self::InvalidKolmeLiveSigningProfile(value) => {
+                write!(f, "invalid kolme live signing profile: {value}")
+            }
             Self::InvalidProposalArgument(value) => {
                 write!(f, "invalid proposal argument: {value}")
             }
@@ -264,6 +276,9 @@ impl fmt::Display for ConfigError {
             }
             Self::RuntimeDaemonLifecycle(message) => {
                 write!(f, "runtime daemon lifecycle validation failed: {message}")
+            }
+            Self::RuntimeKolmeLive(message) => {
+                write!(f, "runtime kolme live validation failed: {message}")
             }
             Self::UnknownArgument(value) => write!(f, "unknown argument: {value}"),
             Self::MissingArgumentValue(flag) => {

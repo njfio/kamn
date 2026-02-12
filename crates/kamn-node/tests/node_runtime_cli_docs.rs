@@ -13,10 +13,17 @@ fn doc_contains_output_mode_scope_and_rules() {
     assert!(DOC.contains("--runtime-mode planning"));
     assert!(DOC.contains("--runtime-mode recovery-check"));
     assert!(DOC.contains("--runtime-mode daemon"));
+    assert!(DOC.contains("--runtime-mode kolme-live"));
+    assert!(DOC.contains("--kolme-live-base-url"));
+    assert!(DOC.contains("--kolme-live-provider-hint"));
+    assert!(DOC.contains("--kolme-live-signing-profile"));
     assert!(DOC.contains("ConfigError::InvalidRuntimeMode"));
     assert!(DOC.contains("ConfigError::InvalidDaemonControlArgument"));
     assert!(DOC.contains("ConfigError::InvalidDaemonLifecycleEvent"));
     assert!(DOC.contains("ConfigError::RuntimeDaemonLifecycle"));
+    assert!(DOC.contains("ConfigError::InvalidKolmeLiveProviderHint"));
+    assert!(DOC.contains("ConfigError::InvalidKolmeLiveSigningProfile"));
+    assert!(DOC.contains("ConfigError::RuntimeKolmeLive"));
 }
 
 #[test]
@@ -36,6 +43,11 @@ fn doc_contains_deterministic_json_fields() {
     assert!(DOC.contains("daemon_completion_reason"));
     assert!(DOC.contains("daemon_peer_lifecycle_final_state"));
     assert!(DOC.contains("daemon_peer_lifecycle_applied_events"));
+    assert!(DOC.contains("kolme_live_provider_client_contract"));
+    assert!(DOC.contains("kolme_live_base_url"));
+    assert!(DOC.contains("kolme_live_provider_hint"));
+    assert!(DOC.contains("kolme_live_signing_profile"));
+    assert!(DOC.contains("kolme_live_execution_status"));
     assert!(DOC.contains("sync_mode"));
     assert!(DOC.contains("components"));
 }
@@ -91,6 +103,17 @@ fn doc_contains_runtime_daemon_rules() {
     assert!(DOC.contains("execute_processor_daemon_tick"));
     assert!(DOC.contains("typed construct-lock errors"));
     assert!(DOC.contains("tick-budget-exhausted"));
+}
+
+#[test]
+fn doc_contains_runtime_kolme_live_rules() {
+    assert!(DOC.contains("## Kolme Live Runtime Rules"));
+    assert!(DOC.contains("`kolme-live`"));
+    assert!(DOC.contains("--kolme-live-base-url"));
+    assert!(DOC.contains("--kolme-live-provider-hint"));
+    assert!(DOC.contains("--kolme-live-signing-profile"));
+    assert!(DOC.contains("KolmeRuntimeCommitLiveProvider"));
+    assert!(DOC.contains("kolme-fork-secp256k1-v1"));
 }
 
 #[test]
@@ -182,4 +205,12 @@ fn regression_requires_runtime_daemon_lease_guard_rules() {
     assert!(
         DOC.contains("daemon lease guard no-lease/invalid-owner rejection (`Regression: #388`)")
     );
+}
+
+#[test]
+fn regression_requires_runtime_kolme_live_guard_rules() {
+    // Regression: #2175
+    assert!(DOC.contains(
+        "in-memory fallback and invalid signing profile rejection (`Regression: #2175`)"
+    ));
 }
