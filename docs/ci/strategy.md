@@ -356,7 +356,9 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_key_source_contract_version=v1`
       - `runtime_signer_key_source=env-local`
       - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
-    - strict secondary signer summary marker contracts:
+      - `runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+      - `runtime_signer_fallback_private_key_present=false`
+      - strict secondary signer summary marker contracts:
       - `runtime_signer_profile=ops-secondary`
       - `runtime_signer_previous_profile=ops-secondary`
       - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY`
@@ -367,6 +369,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_rotation_epoch_stale`
       - `runtime_signer_key_source_profile_pair_disallowed`
       - `runtime_signer_private_key_env_mismatch`
+      - `runtime_signer_fallback_private_key_present_violation`
       - `runtime_commit_non_synthetic_submit_probe_missing`
       - `runtime_commit_real_signing_profile_marker_missing`
       - `runtime_commit_signer_profile_marker_missing`
@@ -377,10 +380,13 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - strict profile signer marker:
       - `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary`
       - `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary`
+    - strict profile fallback-key guard marker:
+      - `fallback signer secret env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK)`
     - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
     - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --runtime-signer-profile ops-secondary --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
     - strict real-node runtime evidence marker path remains local-only and excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
+    - fallback signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2302`).
   - deployment preflight signer/runtime checks remain fast and ci-fast-gate eligible.
     - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
     - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`

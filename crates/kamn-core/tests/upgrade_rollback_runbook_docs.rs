@@ -80,6 +80,16 @@ fn runbook_contains_kolme_multi_signer_deployment_preflight_contract_lane() {
 }
 
 #[test]
+fn runbook_contains_kolme_fallback_signer_runtime_deploy_guard() {
+    assert!(RUNBOOK.contains("## Kolme Fallback Signer Runtime/Deploy Guard (Issue #2302)"));
+    assert!(RUNBOOK.contains("test_run_local_kamn_live_runtime_integration_real_node_profile.sh"));
+    assert!(RUNBOOK.contains("test_check_local_kamn_live_runtime_real_node_profile_policy.sh"));
+    assert!(RUNBOOK.contains("test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh"));
+    assert!(RUNBOOK.contains("runtime_signer_fallback_private_key_present_violation"));
+    assert!(RUNBOOK.contains("contracts.runtime_signer_fallback_private_key_allowed=false"));
+}
+
+#[test]
 fn runbook_contains_live_network_pilot_rollback_evidence_gate() {
     assert!(RUNBOOK.contains("## Live-Network Pilot Rollback Evidence Gate"));
     assert!(RUNBOOK.contains("run_live_network_pilot_deep_lane.sh"));
@@ -167,5 +177,13 @@ fn regression_requires_kolme_multi_signer_preflight_fail_closed_guard() {
     // Regression: #2301
     assert!(RUNBOOK.contains(
         "signer quorum/custody/provenance drift, quorum evidence schema drift, or contract-lane/docs parity drift force `NO-GO` (`Regression: #2301`)."
+    ));
+}
+
+#[test]
+fn regression_requires_kolme_fallback_signer_fail_closed_guard() {
+    // Regression: #2302
+    assert!(RUNBOOK.contains(
+        "fallback signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2302`)."
     ));
 }

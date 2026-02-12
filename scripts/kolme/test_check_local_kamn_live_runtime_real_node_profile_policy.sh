@@ -73,6 +73,8 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "runtime_signer_key_source_contract_version": "v1",
   "runtime_signer_key_source": "env-local",
   "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+  "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+  "runtime_signer_fallback_private_key_present": false,
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_command_profile_version": "v1",
@@ -98,6 +100,8 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "runtime_signer_key_source_contract_version": "v1",
     "runtime_signer_key_source": "env-local",
     "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+    "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+    "runtime_signer_fallback_private_key_allowed": false,
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
     "runtime_commit_finality_primary_endpoint": "/notifications",
@@ -119,6 +123,12 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     {
       "id": "live_api_conformance",
       "command": "bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "runtime_signer_fallback_private_key_contract",
+      "command": "fallback signer secret env must remain unset for real-node runtime profile",
       "status": "planned",
       "reason_code": "not_run"
     },
@@ -423,6 +433,8 @@ cat >"$TMP_REPORT_SYNTHETIC" <<'JSON'
   "runtime_signer_key_source_contract_version": "v1",
   "runtime_signer_key_source": "env-local",
   "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+  "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+  "runtime_signer_fallback_private_key_present": false,
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_command_profile_version": "v1",
@@ -446,6 +458,8 @@ cat >"$TMP_REPORT_SYNTHETIC" <<'JSON'
     "runtime_signer_key_source_contract_version": "v1",
     "runtime_signer_key_source": "env-local",
     "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+    "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+    "runtime_signer_fallback_private_key_allowed": false,
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
     "runtime_commit_finality_primary_endpoint": "/notifications",
@@ -467,6 +481,12 @@ cat >"$TMP_REPORT_SYNTHETIC" <<'JSON'
     {
       "id": "live_api_conformance",
       "command": "bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "runtime_signer_fallback_private_key_contract",
+      "command": "fallback signer secret env must remain unset for real-node runtime profile",
       "status": "planned",
       "reason_code": "not_run"
     },
@@ -542,6 +562,8 @@ cat >"$TMP_REPORT_INMEMORY" <<'JSON'
   "runtime_signer_key_source_contract_version": "v1",
   "runtime_signer_key_source": "env-local",
   "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+  "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+  "runtime_signer_fallback_private_key_present": false,
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_command_profile_version": "v1",
@@ -565,6 +587,8 @@ cat >"$TMP_REPORT_INMEMORY" <<'JSON'
     "runtime_signer_key_source_contract_version": "v1",
     "runtime_signer_key_source": "env-local",
     "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+    "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+    "runtime_signer_fallback_private_key_allowed": false,
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
     "runtime_commit_finality_primary_endpoint": "/notifications",
@@ -586,6 +610,12 @@ cat >"$TMP_REPORT_INMEMORY" <<'JSON'
     {
       "id": "live_api_conformance",
       "command": "bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "runtime_signer_fallback_private_key_contract",
+      "command": "fallback signer secret env must remain unset for real-node runtime profile",
       "status": "planned",
       "reason_code": "not_run"
     },
@@ -715,9 +745,22 @@ if summary.get("runtime_signer_key_source") != "env-local":
     raise SystemExit("expected signer key-source marker in runner-generated summary")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected signer private key env marker in runner-generated summary")
+if summary.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
+    raise SystemExit("expected fallback signer private key env marker in runner-generated summary")
+if summary.get("runtime_signer_fallback_private_key_present") is not False:
+    raise SystemExit("expected fallback signer private key presence marker false in runner-generated summary")
 checks = summary.get("checks")
 if not isinstance(checks, list) or not checks:
     raise SystemExit("expected checks list in runner-generated summary")
+fallback_key_checks = [
+    check
+    for check in checks
+    if isinstance(check, dict) and check.get("id") == "runtime_signer_fallback_private_key_contract"
+]
+if len(fallback_key_checks) != 1:
+    raise SystemExit("expected exactly one runtime_signer_fallback_private_key_contract check in runner-generated summary")
+if fallback_key_checks[0].get("status") != "planned":
+    raise SystemExit("expected runtime_signer_fallback_private_key_contract check to remain planned in dry-run summary")
 runtime_policy_checks = [
     check for check in checks if isinstance(check, dict) and check.get("id") == "runtime_commit_policy"
 ]
@@ -762,6 +805,14 @@ if contracts.get("runtime_signer_key_source") != "env-local":
     raise SystemExit("expected contracts signer key-source marker in secondary runner-generated summary")
 if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
     raise SystemExit("expected contracts secondary signer private key env marker in secondary runner-generated summary")
+if summary.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
+    raise SystemExit("expected fallback signer private key env marker in secondary runner-generated summary")
+if summary.get("runtime_signer_fallback_private_key_present") is not False:
+    raise SystemExit("expected fallback signer private key presence marker false in secondary runner-generated summary")
+if contracts.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
+    raise SystemExit("expected contracts fallback signer private key env marker in secondary runner-generated summary")
+if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
+    raise SystemExit("expected contracts fallback signer private key allowed=false marker in secondary runner-generated summary")
 PY
 
 python3 - "$TMP_INTEGRATION_POLICY_OUT" <<'PY'
