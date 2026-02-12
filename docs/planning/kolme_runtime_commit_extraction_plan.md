@@ -49,6 +49,7 @@ Out of scope:
 - #1858: extracted terminal receipt-finality gate to `kamn-kolme` (`is_terminal_receipt_finality`) and rewired `kamn-core` finality poller convergence gating delegation.
 - #1860: extracted poll-attempt budget validation to `kamn-kolme` (`is_valid_poll_attempt_budget`) and rewired `kamn-core` finality poller budget guard delegation.
 - #1862: extracted finality check commit-id request guard to `kamn-kolme` (`is_valid_runtime_commit_id_request`) and rewired `kamn-core` finality checker input validation delegation.
+- #1864: extracted finality checker constructor endpoint input guards to `kamn-kolme` (`is_valid_finality_base_url_input` / `is_valid_finality_status_path_input`) and rewired `kamn-core` constructor guard delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,

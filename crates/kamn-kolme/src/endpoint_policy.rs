@@ -116,6 +116,16 @@ pub fn parse_http_endpoint(
     })
 }
 
+/// Validates finality checker base URL input before runtime-commit polling.
+pub fn is_valid_finality_base_url_input(base_url: &str) -> bool {
+    !base_url.trim().is_empty()
+}
+
+/// Validates finality checker status-path input before runtime-commit polling.
+pub fn is_valid_finality_status_path_input(status_path: &str) -> bool {
+    !status_path.trim().is_empty()
+}
+
 /// Composes websocket notifications URL from HTTP base URL + notifications path.
 pub fn compose_notifications_websocket_url(
     base_url: &str,
@@ -275,7 +285,8 @@ fn percent_encode(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        compose_finality_status_path, compose_notifications_websocket_url, parse_http_endpoint,
+        compose_finality_status_path, compose_notifications_websocket_url,
+        is_valid_finality_base_url_input, is_valid_finality_status_path_input, parse_http_endpoint,
         parse_websocket_endpoint, KolmeEndpointPolicyError, KolmeHttpScheme,
     };
 
@@ -328,5 +339,15 @@ mod tests {
                 reason: "commit_id must not be empty".to_owned(),
             })
         );
+    }
+
+    #[test]
+    fn unit_validates_finality_endpoint_inputs() {
+        assert!(is_valid_finality_base_url_input("https://kolme.local"));
+        assert!(!is_valid_finality_base_url_input(" "));
+        assert!(is_valid_finality_status_path_input(
+            "/runtime-commit/status"
+        ));
+        assert!(!is_valid_finality_status_path_input(" "));
     }
 }

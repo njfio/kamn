@@ -46,7 +46,8 @@ pub use block_scan_policy::{
 pub use broadcast_payload_policy::{normalize_broadcast_payload, KolmeBroadcastPayloadPolicyError};
 pub use codec::{KolmeCodecError, KolmeWireCodec, PassthroughCodec};
 pub use endpoint_policy::{
-    compose_finality_status_path, compose_notifications_websocket_url, parse_http_endpoint,
+    compose_finality_status_path, compose_notifications_websocket_url,
+    is_valid_finality_base_url_input, is_valid_finality_status_path_input, parse_http_endpoint,
     parse_websocket_endpoint, KolmeEndpointPolicyError, KolmeHttpScheme, KolmeParsedHttpEndpoint,
     KolmeParsedWebsocketEndpoint,
 };

@@ -15,6 +15,8 @@ use kamn_kolme::{
     find_http_header_boundary as find_kolme_http_header_boundary,
     is_broadcast_submit_path as is_kolme_broadcast_submit_path_contract,
     is_terminal_receipt_finality as is_kolme_terminal_receipt_finality_contract,
+    is_valid_finality_base_url_input as is_kolme_valid_finality_base_url_input_contract,
+    is_valid_finality_status_path_input as is_kolme_valid_finality_status_path_input_contract,
     is_valid_poll_attempt_budget as is_kolme_valid_poll_attempt_budget_contract,
     is_valid_runtime_commit_id_request as is_kolme_valid_runtime_commit_id_request_contract,
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
@@ -1170,13 +1172,13 @@ impl<T: KolmeRuntimeCommitFinalityTransport> KolmeRuntimeCommitFinalityChecker<T
         status_path: &str,
         transport: T,
     ) -> Result<Self, KolmeRuntimeCommitError> {
-        if base_url.trim().is_empty() {
+        if !is_kolme_valid_finality_base_url_input_contract(base_url) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "provider_base_url",
                 reason: "must not be empty",
             });
         }
-        if status_path.trim().is_empty() {
+        if !is_kolme_valid_finality_status_path_input_contract(status_path) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "provider_status_path",
                 reason: "must not be empty",

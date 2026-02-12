@@ -1,5 +1,6 @@
 use kamn_kolme::{
-    compose_finality_status_path, compose_notifications_websocket_url, parse_http_endpoint,
+    compose_finality_status_path, compose_notifications_websocket_url,
+    is_valid_finality_base_url_input, is_valid_finality_status_path_input, parse_http_endpoint,
     parse_websocket_endpoint, KolmeEndpointPolicyError, KolmeHttpScheme,
 };
 
@@ -54,4 +55,19 @@ fn regression_issue_1729_endpoint_validation_fails_closed() {
             reason: "notifications_url scheme must be ws:// or wss://".to_owned(),
         })
     );
+}
+
+#[test]
+fn functional_endpoint_policy_accepts_non_empty_finality_checker_inputs() {
+    assert!(is_valid_finality_base_url_input("https://kolme.example"));
+    assert!(is_valid_finality_status_path_input(
+        "/runtime-commit/status"
+    ));
+}
+
+#[test]
+fn regression_issue_1864_endpoint_policy_rejects_empty_finality_checker_inputs() {
+    // Regression: #1864
+    assert!(!is_valid_finality_base_url_input("   "));
+    assert!(!is_valid_finality_status_path_input(""));
 }
