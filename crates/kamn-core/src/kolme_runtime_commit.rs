@@ -28,6 +28,7 @@ use kamn_kolme::{
     is_valid_notifications_provider_input as is_kolme_valid_notifications_provider_input_contract,
     is_valid_notifications_reconnect_budget as is_kolme_valid_notifications_reconnect_budget_contract,
     is_valid_poll_attempt_budget as is_kolme_valid_poll_attempt_budget_contract,
+    is_valid_provider_hint_input as is_kolme_valid_provider_hint_input_contract,
     is_valid_runtime_commit_id_request as is_kolme_valid_runtime_commit_id_request_contract,
     is_valid_runtime_provider_input as is_kolme_valid_runtime_provider_input_contract,
     is_valid_websocket_timeout_seconds as is_kolme_valid_websocket_timeout_seconds_contract,
@@ -1782,13 +1783,13 @@ impl<T: KolmeRuntimeCommitProviderTransport> KolmeRuntimeCommitLiveProvider<T> {
         provider_hint: &str,
         transport: T,
     ) -> Result<Self, KolmeRuntimeCommitError> {
-        let provider_hint = provider_hint.trim();
-        if provider_hint.is_empty() {
+        if !is_kolme_valid_provider_hint_input_contract(provider_hint) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "provider_hint",
                 reason: "must not be empty",
             });
         }
+        let provider_hint = provider_hint.trim();
         let mut provider = Self::new(base_url, "/broadcast", transport)?;
         provider.profile = KolmeRuntimeCommitSubmitProfile::KolmeForkBroadcast;
         provider.provider_hint = Some(provider_hint.to_owned());

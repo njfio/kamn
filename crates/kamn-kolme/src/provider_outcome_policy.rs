@@ -325,6 +325,11 @@ pub fn is_valid_runtime_provider_input(provider: &str) -> bool {
     !provider.trim().is_empty()
 }
 
+/// Validates provider hint input for `kolme_fork` submit profile configuration.
+pub fn is_valid_provider_hint_input(provider_hint: &str) -> bool {
+    is_valid_runtime_provider_input(provider_hint)
+}
+
 fn required_response_field(
     fields: &HashMap<String, String>,
     field: &'static str,
