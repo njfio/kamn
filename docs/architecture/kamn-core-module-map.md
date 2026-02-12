@@ -163,10 +163,12 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `migrations`
   - `namespaces`
   - `smoke`
+  - `signature_profile`
   - `state`
   - `task_lifecycle`
 - Regression marker:
   - `Regression: #1828`
+  - `Regression: #1981`
 
 ## Contributor Entrypoint Matrix
 

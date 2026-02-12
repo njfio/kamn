@@ -94,7 +94,7 @@ pub mod retention_engine;
 pub mod runtime;
 #[allow(missing_docs)]
 pub mod service_marketplace;
-#[allow(missing_docs)]
+/// Signature-profile compatibility fixtures and baseline verification helpers.
 pub mod signature_profile;
 #[allow(missing_docs)]
 pub mod signer_backend;

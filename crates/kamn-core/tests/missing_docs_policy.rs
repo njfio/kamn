@@ -113,10 +113,11 @@ fn graduated_wave_three_task_lifecycle_module_must_not_return_to_missing_docs_al
 #[test]
 fn graduated_wave_four_runtime_safety_modules_must_not_return_to_allowlist() {
     // Regression: #1828
+    // Regression: #1981
     let actual = allowlisted_modules_from_core_lib(CORE_LIB);
     let expected = allowlisted_modules_from_fixture(ALLOWLIST_FIXTURE);
 
-    for module in ["key_recovery", "migrations", "smoke"] {
+    for module in ["key_recovery", "migrations", "signature_profile", "smoke"] {
         assert!(
             !actual.iter().any(|candidate| candidate == module),
             "{module} must stay graduated from #[allow(missing_docs)]"
