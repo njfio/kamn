@@ -1,8 +1,9 @@
 use kamn_kolme::{
     are_runtime_commit_request_fields_single_line, deterministic_runtime_commit_id,
-    deterministic_runtime_commit_idempotency_key, is_valid_runtime_commit_id_request,
-    is_valid_runtime_nonce_input, is_valid_runtime_operation_id_input,
-    is_valid_runtime_payload_hash_input, is_valid_runtime_state_root_input,
+    deterministic_runtime_commit_idempotency_key, is_canonical_runtime_commit_signed_message,
+    is_valid_runtime_commit_id_request, is_valid_runtime_nonce_input,
+    is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
+    is_valid_runtime_state_root_input,
 };
 
 #[test]
@@ -78,6 +79,14 @@ fn functional_runtime_request_identity_policy_accepts_single_line_request_fields
 }
 
 #[test]
+fn functional_runtime_request_identity_policy_accepts_canonical_signed_message_match() {
+    let canonical = "operation_id=op-9\nstate_root=state:beta\n";
+    assert!(is_canonical_runtime_commit_signed_message(
+        canonical, canonical
+    ));
+}
+
+#[test]
 fn regression_issue_1894_runtime_request_identity_policy_rejects_multiline_request_fields() {
     // Regression: #1894
     assert!(!are_runtime_commit_request_fields_single_line(
@@ -101,4 +110,14 @@ fn regression_issue_1894_runtime_request_identity_policy_rejects_multiline_reque
 fn regression_issue_1900_runtime_request_identity_policy_rejects_zero_nonce_input() {
     // Regression: #1900
     assert!(!is_valid_runtime_nonce_input(0));
+}
+
+#[test]
+fn regression_issue_1902_runtime_request_identity_policy_rejects_noncanonical_signed_message() {
+    // Regression: #1902
+    let canonical = "operation_id=op-9\nstate_root=state:beta\n";
+    let tampered = "operation_id=op-9\nstate_root=state:tampered\n";
+    assert!(!is_canonical_runtime_commit_signed_message(
+        canonical, tampered
+    ));
 }

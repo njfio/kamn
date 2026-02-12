@@ -68,13 +68,22 @@ pub fn are_runtime_commit_request_fields_single_line(
     !operation_id.contains('\n') && !state_root.contains('\n') && !payload_hash.contains('\n')
 }
 
+/// Returns whether the signed message equals the canonical runtime commit wire payload.
+pub fn is_canonical_runtime_commit_signed_message(
+    canonical_message: &str,
+    signed_message: &str,
+) -> bool {
+    signed_message == canonical_message
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         are_runtime_commit_request_fields_single_line, deterministic_runtime_commit_id,
-        deterministic_runtime_commit_idempotency_key, is_valid_runtime_commit_id_request,
-        is_valid_runtime_nonce_input, is_valid_runtime_operation_id_input,
-        is_valid_runtime_payload_hash_input, is_valid_runtime_state_root_input,
+        deterministic_runtime_commit_idempotency_key, is_canonical_runtime_commit_signed_message,
+        is_valid_runtime_commit_id_request, is_valid_runtime_nonce_input,
+        is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
+        is_valid_runtime_state_root_input,
     };
 
     #[test]
@@ -135,6 +144,18 @@ mod tests {
             "op-123\nwrapped",
             "state:abc",
             "payload:hash"
+        ));
+    }
+
+    #[test]
+    fn unit_validates_canonical_runtime_commit_signed_message_match() {
+        assert!(is_canonical_runtime_commit_signed_message(
+            "operation_id=op-1\nstate_root=state-1\n",
+            "operation_id=op-1\nstate_root=state-1\n",
+        ));
+        assert!(!is_canonical_runtime_commit_signed_message(
+            "operation_id=op-1\nstate_root=state-1\n",
+            "operation_id=op-2\nstate_root=state-1\n",
         ));
     }
 }
