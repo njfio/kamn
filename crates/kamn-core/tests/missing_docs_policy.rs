@@ -691,6 +691,23 @@ fn graduated_wave_thirty_seven_operator_dashboard_api_module_must_not_return_to_
 }
 
 #[test]
+fn graduated_wave_thirty_eight_operator_dashboard_ui_module_must_not_return_to_allowlist() {
+    // Regression: #2049
+    let actual = allowlisted_modules_from_core_lib(CORE_LIB);
+    let expected = allowlisted_modules_from_fixture(ALLOWLIST_FIXTURE);
+    let module = "operator_dashboard_ui";
+
+    assert!(
+        !actual.iter().any(|candidate| candidate == module),
+        "{module} must stay graduated from #[allow(missing_docs)]"
+    );
+    assert!(
+        !expected.iter().any(|candidate| candidate == module),
+        "allowlist fixture must keep {module} removed"
+    );
+}
+
+#[test]
 fn graduated_modules_fixture_must_not_overlap_missing_docs_allowlist() {
     // Regression: #1723
     let actual = allowlisted_modules_from_core_lib(CORE_LIB);

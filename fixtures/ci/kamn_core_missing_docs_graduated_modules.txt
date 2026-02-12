@@ -40,3 +40,4 @@ retention_engine
 token
 observability
 operator_dashboard_api
+operator_dashboard_ui

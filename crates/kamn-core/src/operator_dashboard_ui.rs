@@ -1,3 +1,5 @@
+//! Operator dashboard UI projection contracts for human-facing control surfaces.
+
 use crate::{
     EscrowStatus, MessageStatus, OperatorActionAuditRecord, OperatorActionOutcome,
     OperatorBindingAction, OperatorDashboardSnapshot, TaskState,
@@ -5,104 +7,168 @@ use crate::{
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// UI attention severity used for triage highlighting.
 pub enum DashboardAttentionLevel {
+    /// Informational state requiring no intervention.
     Info,
+    /// Elevated state worth operator review.
     Warning,
+    /// Critical state requiring operator intervention.
     Critical,
+    /// Positive/completed state.
     Success,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Reputation risk tier used by operator dashboards.
 pub enum ReputationRiskTier {
+    /// Healthy reputation signal profile.
     Stable,
+    /// Watchlist reputation signal profile.
     Watch,
+    /// Critical reputation signal profile.
     Critical,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Top-level counters for dashboard overview cards.
 pub struct DashboardSummary {
+    /// Number of registered agents in the projection.
     pub total_agents: usize,
+    /// Number of tasks in non-terminal active states.
     pub active_tasks: usize,
+    /// Number of blocked tasks.
     pub blocked_tasks: usize,
+    /// Number of messages in failure states.
     pub failed_messages: usize,
+    /// Number of escrows currently disputed.
     pub disputed_escrows: usize,
+    /// Number of agents in critical reputation tier.
     pub critical_reputation_agents: usize,
+    /// Number of denied operator actions in audit trail.
     pub denied_operator_actions: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// UI row projection for agent list views.
 pub struct OperatorAgentListRow {
+    /// Agent DID identifier.
     pub agent_did: String,
+    /// Concise key hierarchy summary for display.
     pub key_summary: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// UI entry for task timeline displays.
 pub struct OperatorTaskTimelineEntry {
+    /// Task identifier.
     pub task_id: String,
+    /// Effective owner (assignee or requester).
     pub owner: String,
+    /// Current task state.
     pub state: TaskState,
+    /// Attention level derived from task state.
     pub attention: DashboardAttentionLevel,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// UI entry for message delivery trace views.
 pub struct OperatorMessageTraceEntry {
+    /// Message identifier.
     pub message_id: String,
+    /// Sender DID.
     pub sender: String,
+    /// Number of recipients for the message.
     pub recipient_count: usize,
+    /// Current message status.
     pub status: MessageStatus,
+    /// Attention level derived from message status.
     pub attention: DashboardAttentionLevel,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// UI entry for escrow status tracking.
 pub struct OperatorEscrowStatusEntry {
+    /// Escrow identifier.
     pub escrow_id: String,
+    /// Payer DID.
     pub payer: String,
+    /// Payee DID.
     pub payee: String,
+    /// Current escrow status.
     pub status: EscrowStatus,
+    /// Remaining amount in base units.
     pub remaining_amount: u128,
+    /// Attention level derived from escrow status.
     pub attention: DashboardAttentionLevel,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// UI entry for reputation overview tables.
 pub struct OperatorReputationOverviewEntry {
+    /// Agent DID identifier.
     pub agent_did: String,
+    /// Trust score scalar.
     pub trust_score: u32,
+    /// Delivery success rate.
     pub delivery_rate: f64,
+    /// Dispute rate.
     pub dispute_rate: f64,
+    /// Derived risk tier.
     pub risk_tier: ReputationRiskTier,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// UI entry for operator-action audit trace tables.
 pub struct OperatorAuditTraceEntry {
+    /// Subject agent DID.
     pub agent_did: String,
+    /// Operator DID that initiated the action.
     pub operator_did: String,
+    /// Operator binding action kind.
     pub action: OperatorBindingAction,
+    /// Target capability/field.
     pub target: String,
+    /// Optional action value payload.
     pub value: Option<String>,
+    /// Request timestamp (epoch seconds).
     pub requested_at_unix: u64,
+    /// Action outcome classification.
     pub outcome: OperatorActionOutcome,
+    /// Attention level derived from outcome.
     pub attention: DashboardAttentionLevel,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Composite UI model produced for operator dashboard rendering.
 pub struct OperatorDashboardUiModel {
+    /// Summary counters.
     pub summary: DashboardSummary,
+    /// Agent table rows.
     pub agent_list: Vec<OperatorAgentListRow>,
+    /// Task timeline entries.
     pub task_timeline: Vec<OperatorTaskTimelineEntry>,
+    /// Message trace entries.
     pub message_traces: Vec<OperatorMessageTraceEntry>,
+    /// Escrow status entries.
     pub escrow_status: Vec<OperatorEscrowStatusEntry>,
+    /// Reputation overview entries.
     pub reputation_overview: Vec<OperatorReputationOverviewEntry>,
+    /// Audit trace entries.
     pub audit_traces: Vec<OperatorAuditTraceEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// Stateless UI composer for operator dashboard projections.
 pub struct OperatorDashboardUi;
 
 impl OperatorDashboardUi {
+    /// Creates an operator dashboard UI composer.
     pub fn new() -> Self {
         Self
     }
 
+    /// Composes a presentation-ready UI model from runtime snapshot and audit log.
     pub fn compose(
         &self,
         snapshot: &OperatorDashboardSnapshot,
@@ -287,18 +353,29 @@ impl OperatorDashboardUi {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Error taxonomy for dashboard UI projection validation.
 pub enum OperatorDashboardUiError {
+    /// Agent key role is empty.
     EmptyAgentKey {
+        /// Agent DID with missing key.
         agent_did: String,
+        /// Missing key role label.
         key_role: &'static str,
     },
+    /// Message projection is missing recipients.
     EmptyMessageRecipients(String),
+    /// Reputation rate is outside the supported range.
     InvalidReputationRate {
+        /// Agent DID associated with invalid rate.
         agent_did: String,
+        /// Invalid field name.
         field: &'static str,
+        /// Invalid value.
         value: f64,
     },
+    /// Audit record timestamp is invalid.
     InvalidAuditTimestamp {
+        /// Operator DID for the invalid record.
         operator_did: String,
     },
 }
