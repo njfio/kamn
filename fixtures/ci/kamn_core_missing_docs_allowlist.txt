@@ -1,7 +1,6 @@
 agent_upgrade_workflow
 bridge_adapter
 channel_models
-channel_policies
 governance_workflow
 message_lifecycle
 runtime

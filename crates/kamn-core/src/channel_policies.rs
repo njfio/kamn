@@ -1,46 +1,74 @@
+//! Channel-level authorization and retention policy contracts.
+
 use crate::AgentDid;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+/// Schema version used for serialized [`ChannelPolicySnapshot`] payloads.
 pub const CHANNEL_POLICY_SNAPSHOT_SCHEMA_VERSION: u16 = 1;
 
+/// Channel operations that require permission checks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChannelAction {
+    /// Send a message into the channel.
     Send,
+    /// Read message history from the channel.
     Read,
+    /// Invite a new member into the channel.
     Invite,
+    /// Remove an existing member from the channel.
     Remove,
+    /// Update channel policy configuration.
     Configure,
 }
 
+/// Authorization rule used to evaluate a [`ChannelAction`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PermissionRule {
+    /// Allow any actor, regardless of membership.
     All,
+    /// Allow only registered channel members.
     Members,
+    /// Allow only channel administrators.
     Admins,
+    /// Allow only explicitly listed actor DIDs.
     Allowlist(BTreeSet<String>),
 }
 
+/// Retention strategy applied to channel message history.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RetentionPolicy {
+    /// Keep all messages indefinitely.
     Forever,
+    /// Retain messages no older than the given age window in seconds.
     MaxAgeSeconds(u64),
+    /// Keep only the most recent `N` messages.
     MaxMessageCount(usize),
 }
 
+/// Permission configuration for every supported channel action.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChannelPermissions {
+    /// Rule used for [`ChannelAction::Send`].
     pub send: PermissionRule,
+    /// Rule used for [`ChannelAction::Read`].
     pub read: PermissionRule,
+    /// Rule used for [`ChannelAction::Invite`].
     pub invite: PermissionRule,
+    /// Rule used for [`ChannelAction::Remove`].
     pub remove: PermissionRule,
+    /// Rule used for [`ChannelAction::Configure`].
     pub configure: PermissionRule,
+    /// Retention policy used for pruning candidate evaluation.
     pub retention: RetentionPolicy,
 }
 
+/// Message metadata used by retention evaluation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RetentionMessage {
+    /// Message identifier unique within the channel.
     pub id: String,
+    /// Message creation timestamp in Unix seconds.
     pub created_at_secs: u64,
 }
 
@@ -51,30 +79,44 @@ struct ChannelPolicyRecord {
     permissions: ChannelPermissions,
 }
 
+/// Serializable snapshot of all registered channel policy records.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChannelPolicySnapshot {
+    /// Snapshot schema version for compatibility checks.
     pub schema_version: u16,
+    /// Serialized channel policy records.
     pub channels: Vec<ChannelPolicySnapshotChannel>,
 }
 
+/// Serializable policy record for a single channel.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChannelPolicySnapshotChannel {
+    /// Unique channel identifier.
     pub channel_id: String,
+    /// Member DID set serialized as a sorted list.
     pub members: Vec<String>,
+    /// Admin DID set serialized as a sorted list.
     pub admins: Vec<String>,
+    /// Permission and retention rules for the channel.
     pub permissions: ChannelPermissions,
 }
 
+/// In-memory registry that enforces channel permission and retention contracts.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ChannelPermissionEngine {
     channels: BTreeMap<String, ChannelPolicyRecord>,
 }
 
 impl ChannelPermissionEngine {
+    /// Create an empty permission engine.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Register a channel with members, admins, and policy rules.
+    ///
+    /// Returns an error when identifiers are invalid, members/admins are empty,
+    /// admins are not members, or permission/retention rules fail validation.
     pub fn register_channel(
         &mut self,
         channel_id: &str,
@@ -126,6 +168,7 @@ impl ChannelPermissionEngine {
         Ok(())
     }
 
+    /// Authorize an actor for a channel action using stored policy rules.
     pub fn authorize(
         &self,
         channel_id: &str,
@@ -156,6 +199,7 @@ impl ChannelPermissionEngine {
         }
     }
 
+    /// Compute message IDs that are eligible for pruning under retention policy.
     pub fn retention_candidates(
         &self,
         channel_id: &str,
@@ -196,6 +240,7 @@ impl ChannelPermissionEngine {
         }
     }
 
+    /// Export the current engine state into a serializable snapshot payload.
     pub fn export_snapshot(&self) -> ChannelPolicySnapshot {
         let channels = self
             .channels
@@ -214,6 +259,7 @@ impl ChannelPermissionEngine {
         }
     }
 
+    /// Restore engine state from a snapshot after schema and policy validation.
     pub fn restore_snapshot(
         &mut self,
         snapshot: ChannelPolicySnapshot,
@@ -239,6 +285,7 @@ impl ChannelPermissionEngine {
         Ok(())
     }
 
+    /// Construct a new engine from a snapshot payload.
     pub fn from_snapshot(
         snapshot: ChannelPolicySnapshot,
     ) -> Result<Self, ChannelPolicySnapshotError> {
@@ -248,27 +295,49 @@ impl ChannelPermissionEngine {
     }
 }
 
+/// Errors emitted by channel registration, authorization, and retention checks.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChannelPolicyError {
+    /// Registration rejected because `channel_id` is empty.
     EmptyChannelId,
+    /// Registration rejected because the channel already exists.
     DuplicateChannelId(String),
+    /// Registration rejected because the members list is empty.
     EmptyMembers,
+    /// Registration rejected because the admins list is empty.
     EmptyAdmins,
+    /// An actor or member/admin DID failed validation.
     InvalidDid(String),
+    /// Registration rejected because an admin is not in the members set.
     AdminNotMember(String),
+    /// Channel lookup failed because no policy record exists.
     NotFound(String),
+    /// Action authorization failed for the actor under the configured rule.
     Unauthorized {
+        /// DID of the actor that failed authorization.
         actor: String,
+        /// Action that was denied.
         action: ChannelAction,
+        /// Permission rule evaluated for this action.
         rule: PermissionRule,
     },
+    /// Permission configuration failed rule-level validation.
     InvalidPermissionRule(String),
+    /// Retention policy failed policy-level validation.
     InvalidRetentionPolicy(String),
 }
 
+/// Errors emitted while restoring or loading channel policy snapshots.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChannelPolicySnapshotError {
-    SchemaVersionMismatch { expected: u16, found: u16 },
+    /// Snapshot schema version does not match the runtime expectation.
+    SchemaVersionMismatch {
+        /// Schema version required by the running engine.
+        expected: u16,
+        /// Schema version provided by the snapshot payload.
+        found: u16,
+    },
+    /// Snapshot channel record failed normal channel policy validation.
     ChannelPolicy(ChannelPolicyError),
 }
 

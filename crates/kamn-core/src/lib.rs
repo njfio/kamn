@@ -18,7 +18,7 @@ pub mod bootstrap;
 pub mod bridge_adapter;
 #[allow(missing_docs)]
 pub mod channel_models;
-#[allow(missing_docs)]
+/// Channel policy registration, membership authorization, and retention contracts.
 pub mod channel_policies;
 /// Node role, sync mode, and runtime configuration validation contracts.
 pub mod config;
