@@ -545,6 +545,8 @@ bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --ou
 # local-only CI boundary marker: ci_fast_gate_eligible=false (contracts.ci_fast_gate_scope=local-only)
 ```
 
+Live Provider Operator Runbook (Issue #2114): `docs/planning/kolme-devnet-ops.md`
+
 ### Run Local Kolme Fork Process Lifecycle Integration Lane
 
 ```bash

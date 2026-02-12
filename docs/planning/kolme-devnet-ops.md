@@ -420,6 +420,55 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - lane default budget is bounded to 210 seconds with per-stage budget caps.
   - local KAMN live runtime integration run-mode execution remains excluded from PR fast-gate workflow routing.
 
+## Live Provider Operator Runbook (Issue #2114)
+
+### Prerequisites (Local)
+
+- Local fork checkout exists at `/tmp/kolme_fork` (or a chosen path) with:
+  - `origin` remote set to `https://github.com/njfio/kolme_fork.git`
+  - symbolic `HEAD` resolving to `refs/heads/main`
+- Local API endpoint for fork node is reachable at `http://127.0.0.1:3000` and responds to:
+  - `GET /healthz`
+  - `GET /fork-info?chain_version=v0.15.2`
+- Local heavy opt-in is explicit for run mode:
+  - `export KAMN_KOLME_LOCAL_HEAVY=1`
+
+### Execution Flow
+
+1. Dry-run integration plan:
+   - `bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
+2. Run integration lane (local-only):
+   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --max-seconds 210 --bootstrap-max-seconds 90 --localhost-signed-max-seconds 45 --conformance-max-seconds 180 --runtime-commit-max-seconds 30 --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
+3. Validate policy decision:
+   - `python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
+
+Operator checkpoints:
+- summary must include `ci_fast_gate_eligible=false`
+- summary contracts must include `ci_fast_gate_scope=local-only`
+- summary must include `runtime_provider_client_contract=KolmeRuntimeCommitLiveProvider`
+
+### Rollback and Recovery Evidence
+
+- If integration run fails, execute process lifecycle lane with explicit rollback/recovery evidence paths:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --serve-command "python3 /tmp/mock_kolme_api.py 3000 v0.15.2" --integration-runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --rollback-evidence-file /tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json --recovery-evidence-file /tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json`
+- Confirm process lifecycle policy decision:
+  - `python3 scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py --report-file /tmp/kolme-local-fork-process-lifecycle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-process-lifecycle-policy.json`
+- Archive artifacts for release audit:
+  - integration summary + policy
+  - process lifecycle summary + policy
+  - rollback/recovery evidence JSON files
+
+### Troubleshooting
+
+- `reason_code=local_opt_in_missing`:
+  - set `KAMN_KOLME_LOCAL_HEAVY=1` and rerun.
+- `reason_code=bootstrap_readiness_failed`:
+  - re-run bootstrap lane directly and inspect checkout/probe markers.
+- `reason_code=runtime_commit_policy_failed`:
+  - inspect `/tmp/kolme-local-runtime-commit-live-policy.json` for provider marker or evidence mismatch.
+- `ci_fast_gate_eligibility_violation` or `ci_fast_gate_scope_mismatch` from policy checker:
+  - verify summary still emits `ci_fast_gate_eligible=false` and `contracts.ci_fast_gate_scope=local-only`.
+
 ## Localhost Two-Process Signed-Message Demo Contract (Issue #1612)
 
 - Makefile demo command:
@@ -808,6 +857,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local KAMN live runtime integration lane composes runtime finality evidence contract-lane policy artifacts and remains fail-closed for missing runtime policy evidence (`Regression: #2101`).
 - local KAMN live runtime integration lane forwards explicit runtime provider contract markers into nested runtime policy checks and remains fail-closed on provider-contract drift (`Regression: #2112`).
 - local KAMN live runtime integration lane emits fail-closed local-only fast-gate exclusion markers (`ci_fast_gate_eligible=false`, `contracts.ci_fast_gate_scope=local-only`) in summary/policy/docs contracts (`Regression: #2113`).
+- live provider operator runbook command/checkpoint/troubleshooting markers remain fail-closed across devnet ops docs and README cross-reference (`Regression: #2114`).
 - local KAMN live runtime integration lane requires bounded localhost signed integration prerequisite execution before runtime commit submission (`Regression: #1636`).
 - unified local signed-to-Kolme demo lane fails closed for local opt-in, stage prerequisite drift, and runtime budget overruns (`Regression: #1640`).
 - local fork process lifecycle integration lane fails closed for process start/readiness/integration/teardown/budget drift and missing local opt-in (`Regression: #1494`).

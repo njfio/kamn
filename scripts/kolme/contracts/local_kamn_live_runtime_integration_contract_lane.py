@@ -200,6 +200,13 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
+    # Regression: #2114
+    if "Live Provider Operator Runbook (Issue #2114)" not in doc_text:
+        print(
+            "expected Kolme devnet ops doc to include live provider operator runbook section marker",
+            file=sys.stderr,
+        )
+        return 1
     if "run_localhost_signed_integration_contract_lane.sh" not in doc_text:
         print("expected Kolme devnet ops doc to reference localhost signed integration prerequisite lane", file=sys.stderr)
         return 1
@@ -240,6 +247,12 @@ def main() -> int:
     if "ci_fast_gate_eligible" not in readme_text:
         print(
             "expected README to document local-only fast-gate eligibility marker",
+            file=sys.stderr,
+        )
+        return 1
+    if "Live Provider Operator Runbook (Issue #2114)" not in readme_text:
+        print(
+            "expected README to reference live provider operator runbook section marker",
             file=sys.stderr,
         )
         return 1
