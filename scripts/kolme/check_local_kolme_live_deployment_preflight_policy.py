@@ -1,0 +1,231 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+REQUIRED_RUNTIME_MODE = "kolme-live"
+SIGNER_PROFILE_SELECTOR_ENV = "KAMN_KOLME_LIVE_SIGNER_PROFILE"
+PRIMARY_SIGNER_PROFILE = "ops-primary"
+SECONDARY_SIGNER_PROFILE = "ops-secondary"
+PRIMARY_SIGNER_SECRET_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
+SECONDARY_SIGNER_SECRET_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+REQUIRED_SECRET_HEX_LENGTH = 64
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Validate local Kolme live deployment preflight summary policy."
+    )
+    parser.add_argument("--report-file", required=True)
+    parser.add_argument("--expected-final-decision", required=True, choices=["GO", "NO-GO"])
+    parser.add_argument("--ci-fast-gate", required=True, choices=["PASS", "FAIL"])
+    parser.add_argument("--require-reason-code", action="append", default=[])
+    parser.add_argument("--output-json", default="")
+    return parser.parse_args()
+
+
+def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, list[str]]:
+    reason_codes: list[str] = []
+
+    if report.get("schema_version") != "kamn.kolme.local-live-deployment-preflight-summary.v1":
+        reason_codes.append("schema_version_mismatch")
+
+    mode = report.get("mode")
+    if mode not in ("dry-run", "run"):
+        reason_codes.append("mode_invalid")
+
+    status = report.get("status")
+    if status not in ("ok", "fail"):
+        reason_codes.append("status_invalid")
+
+    reason_code = report.get("reason_code")
+    if not isinstance(reason_code, str) or not reason_code.strip():
+        reason_codes.append("reason_code_missing")
+
+    local_only_enforced = report.get("local_only_enforced")
+    if not isinstance(local_only_enforced, bool):
+        reason_codes.append("local_only_enforced_invalid")
+
+    ci_fast_gate_eligible = report.get("ci_fast_gate_eligible")
+    if not isinstance(ci_fast_gate_eligible, bool):
+        reason_codes.append("ci_fast_gate_eligible_invalid")
+    elif not ci_fast_gate_eligible:
+        reason_codes.append("ci_fast_gate_eligibility_violation")
+
+    elapsed_seconds = report.get("elapsed_seconds")
+    if not isinstance(elapsed_seconds, int) or elapsed_seconds < 0:
+        reason_codes.append("elapsed_seconds_invalid")
+
+    max_seconds = report.get("max_seconds")
+    if not isinstance(max_seconds, int) or max_seconds <= 0:
+        reason_codes.append("max_seconds_invalid")
+
+    budget_status = report.get("budget_status")
+    if budget_status not in ("not_run", "within_budget", "exceeded_budget"):
+        reason_codes.append("budget_status_invalid")
+
+    runtime_mode = report.get("runtime_mode")
+    if not isinstance(runtime_mode, str) or not runtime_mode.strip():
+        reason_codes.append("runtime_mode_missing")
+    elif runtime_mode != REQUIRED_RUNTIME_MODE:
+        reason_codes.append("runtime_mode_mismatch")
+
+    signer_profile_selector_env = report.get("signer_profile_selector_env")
+    if not isinstance(signer_profile_selector_env, str) or not signer_profile_selector_env.strip():
+        reason_codes.append("signer_profile_selector_env_missing")
+    elif signer_profile_selector_env != SIGNER_PROFILE_SELECTOR_ENV:
+        reason_codes.append("signer_profile_selector_env_mismatch")
+
+    signer_profile = report.get("signer_profile")
+    if not isinstance(signer_profile, str) or not signer_profile.strip():
+        reason_codes.append("signer_profile_missing")
+    elif signer_profile not in (PRIMARY_SIGNER_PROFILE, SECONDARY_SIGNER_PROFILE):
+        reason_codes.append("signer_profile_mismatch")
+
+    signer_private_key_env = report.get("signer_private_key_env")
+    expected_signer_env = ""
+    if signer_profile == PRIMARY_SIGNER_PROFILE:
+        expected_signer_env = PRIMARY_SIGNER_SECRET_ENV
+    elif signer_profile == SECONDARY_SIGNER_PROFILE:
+        expected_signer_env = SECONDARY_SIGNER_SECRET_ENV
+    if not isinstance(signer_private_key_env, str) or not signer_private_key_env.strip():
+        reason_codes.append("signer_private_key_env_missing")
+    elif expected_signer_env and signer_private_key_env != expected_signer_env:
+        reason_codes.append("signer_private_key_env_mismatch")
+
+    signer_secret_present = report.get("signer_secret_present")
+    if not isinstance(signer_secret_present, bool):
+        reason_codes.append("signer_secret_present_invalid")
+
+    signer_secret_hex_valid = report.get("signer_secret_hex_valid")
+    if not isinstance(signer_secret_hex_valid, bool):
+        reason_codes.append("signer_secret_hex_valid_invalid")
+
+    contracts = report.get("contracts")
+    if not isinstance(contracts, dict):
+        reason_codes.append("contracts_missing")
+    else:
+        if contracts.get("ci_fast_gate_scope") != "ci-fast-gate":
+            reason_codes.append("ci_fast_gate_scope_mismatch")
+        if contracts.get("required_runtime_mode") != REQUIRED_RUNTIME_MODE:
+            reason_codes.append("required_runtime_mode_contract_mismatch")
+        if contracts.get("signer_profile_selector_env") != SIGNER_PROFILE_SELECTOR_ENV:
+            reason_codes.append("signer_profile_selector_env_contract_mismatch")
+        if contracts.get("supported_signer_profiles") != [PRIMARY_SIGNER_PROFILE, SECONDARY_SIGNER_PROFILE]:
+            reason_codes.append("supported_signer_profiles_contract_mismatch")
+        if contracts.get("primary_signer_secret_env") != PRIMARY_SIGNER_SECRET_ENV:
+            reason_codes.append("primary_signer_secret_env_contract_mismatch")
+        if contracts.get("secondary_signer_secret_env") != SECONDARY_SIGNER_SECRET_ENV:
+            reason_codes.append("secondary_signer_secret_env_contract_mismatch")
+        if contracts.get("required_secret_hex_length") != REQUIRED_SECRET_HEX_LENGTH:
+            reason_codes.append("required_secret_hex_length_contract_mismatch")
+        if contracts.get("secret_source") != "env":
+            reason_codes.append("secret_source_contract_mismatch")
+
+    checks = report.get("checks")
+    if not isinstance(checks, list) or not checks:
+        reason_codes.append("checks_missing")
+    else:
+        expected_ids = {
+            "runtime_mode_contract",
+            "signer_profile_contract",
+            "signer_secret_contract",
+        }
+        observed_ids: set[str] = set()
+        for entry in checks:
+            if not isinstance(entry, dict):
+                reason_codes.append("check_entry_invalid")
+                continue
+            check_id = entry.get("id")
+            command = entry.get("command")
+            check_status = entry.get("status")
+            check_reason_code = entry.get("reason_code")
+            if not isinstance(check_id, str) or not check_id.strip():
+                reason_codes.append("check_id_invalid")
+                continue
+            observed_ids.add(check_id)
+            if not isinstance(command, str) or not command.strip():
+                reason_codes.append(f"check_command_invalid:{check_id}")
+            if check_status not in ("planned", "pass", "fail", "skipped"):
+                reason_codes.append(f"check_status_invalid:{check_id}")
+            if not isinstance(check_reason_code, str) or not check_reason_code.strip():
+                reason_codes.append(f"check_reason_code_invalid:{check_id}")
+        missing_ids = sorted(expected_ids - observed_ids)
+        for missing_id in missing_ids:
+            reason_codes.append(f"check_missing:{missing_id}")
+
+    if args.ci_fast_gate != "PASS":
+        reason_codes.append("ci_fast_gate_failed")
+
+    observed_final_decision = ""
+    if status == "ok":
+        observed_final_decision = "GO"
+        if reason_code not in ("dry_run_no_commands_executed", "deployment_preflight_passed"):
+            reason_codes.append("ok_status_reason_code_mismatch")
+        if budget_status == "exceeded_budget":
+            reason_codes.append("ok_status_budget_exceeded")
+        if mode == "run":
+            if signer_secret_present is not True:
+                reason_codes.append("ok_status_signer_secret_presence_violation")
+            if signer_secret_hex_valid is not True:
+                reason_codes.append("ok_status_signer_secret_hex_violation")
+    elif status == "fail":
+        observed_final_decision = "NO-GO"
+        if reason_code in ("dry_run_no_commands_executed", "deployment_preflight_passed"):
+            reason_codes.append("fail_status_reason_code_mismatch")
+
+    for required_reason_code in args.require_reason_code:
+        if reason_code != required_reason_code:
+            reason_codes.append(f"required_reason_code_missing:{required_reason_code}")
+
+    if observed_final_decision and observed_final_decision != args.expected_final_decision:
+        reason_codes.append("observed_final_decision_mismatch")
+
+    final_decision = "GO" if not reason_codes else "NO-GO"
+    return final_decision, reason_codes
+
+
+def main() -> int:
+    args = parse_args()
+    report_path = Path(args.report_file).resolve()
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+
+    observed_status = report.get("status")
+    observed_final_decision = ""
+    if observed_status == "ok":
+        observed_final_decision = "GO"
+    elif observed_status == "fail":
+        observed_final_decision = "NO-GO"
+
+    final_decision, reason_codes = evaluate(report, args)
+    output = {
+        "schema_version": "kamn.kolme.local-live-deployment-preflight-policy-report.v1",
+        "report_file": str(report_path),
+        "expected_final_decision": args.expected_final_decision,
+        "ci_fast_gate": args.ci_fast_gate,
+        "required_reason_codes": args.require_reason_code,
+        "observed_status": observed_status,
+        "observed_final_decision": observed_final_decision,
+        "observed_reason_code": report.get("reason_code"),
+        "reason_codes": reason_codes,
+        "final_decision": final_decision,
+    }
+
+    if args.output_json:
+        output_path = Path(args.output_json).resolve()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(output, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+
+    status = "ok" if final_decision == "GO" else "fail"
+    failed_checks = ",".join(reason_codes) if reason_codes else "none"
+    print(f"status={status}")
+    print(f"final_decision={final_decision}")
+    print(f"failed_checks={failed_checks}")
+
+    return 0 if final_decision == "GO" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
