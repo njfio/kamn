@@ -283,6 +283,14 @@ KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_co
   --lifecycle-conformance-max-seconds 180 \
   --lifecycle-runtime-commit-max-seconds 30 \
   --output-json /tmp/kolme-local-fork-real-process-summary.json
+# optional lifecycle runtime finality pass-through into nested process lifecycle lane
+KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh \
+  --mode run \
+  --checkout-path /tmp/kolme_fork \
+  --lifecycle-runtime-commit-finality-command "printf 'finality=final\n'" \
+  --lifecycle-runtime-commit-finality-max-seconds 15 \
+  --lifecycle-runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt \
+  --output-json /tmp/kolme-local-fork-real-process-summary.json
 python3 scripts/kolme/check_local_kolme_fork_real_process_policy.py \
   --report-file /tmp/kolme-local-fork-real-process-summary.json \
   --expected-final-decision GO \
