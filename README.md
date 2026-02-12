@@ -542,6 +542,7 @@ python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --repo
 # bounded contract lane (spawns local mock API server + pinned checkout fixture)
 bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json
 # schema: kamn.kolme.local-kamn-live-runtime-integration-summary.v1
+# local-only CI boundary marker: ci_fast_gate_eligible=false (contracts.ci_fast_gate_scope=local-only)
 ```
 
 ### Run Local Kolme Fork Process Lifecycle Integration Lane

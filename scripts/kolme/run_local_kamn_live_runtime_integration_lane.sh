@@ -645,6 +645,7 @@ summary = {
     "status": status,
     "reason_code": reason_code,
     "local_only_enforced": True,
+    "ci_fast_gate_eligible": False,
     "elapsed_seconds": elapsed_seconds,
     "max_seconds": max_seconds,
     "budget_status": budget_status,
@@ -666,6 +667,7 @@ summary = {
     "runtime_commit_reason_code": runtime_commit_reason_code,
     "runtime_commit_policy_reason_code": runtime_commit_policy_reason_code,
     "contracts": {
+        "ci_fast_gate_scope": "local-only",
         "runtime_provider_client_contract": runtime_provider_client_contract,
         "runtime_commit_endpoint": "/broadcast/runtime-commit",
         "runtime_commit_method": "POST",

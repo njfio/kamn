@@ -88,6 +88,7 @@ required_coverage_markers=(
   "Regression: #1971"
   "Regression: #2101"
   "Regression: #2112"
+  "Regression: #2113"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then
@@ -116,6 +117,11 @@ if ! grep -q -- "--runtime-provider-client-contract" "$DOC_FILE"; then
   exit 1
 fi
 
+if ! grep -q "ci_fast_gate_eligible" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to document local-only fast-gate eligibility marker" >&2
+  exit 1
+fi
+
 if ! grep -q "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to reference runtime finality evidence contract lane composition in local KAMN integration lane" >&2
   exit 1
@@ -138,6 +144,11 @@ fi
 
 if ! grep -q -- "--runtime-provider-client-contract" "$README_FILE"; then
   echo "expected README to document runtime provider contract option" >&2
+  exit 1
+fi
+
+if ! grep -q "ci_fast_gate_eligible" "$README_FILE"; then
+  echo "expected README to document local-only fast-gate eligibility marker" >&2
   exit 1
 fi
 
@@ -180,6 +191,11 @@ if not isinstance(checks, list) or not any(
     raise SystemExit("expected runtime commit policy planned check marker in contract-lane summary")
 if summary.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
     raise SystemExit("expected runtime provider client contract marker in contract-lane summary")
+if summary.get("ci_fast_gate_eligible") is not False:
+    raise SystemExit("expected local-only fast-gate exclusion marker in contract-lane summary")
+contracts = summary.get("contracts", {})
+if contracts.get("ci_fast_gate_scope") != "local-only":
+    raise SystemExit("expected local-only fast-gate scope contract marker in contract-lane summary")
 if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1":
     raise SystemExit("unexpected local KAMN live runtime integration contract-lane policy schema")
 if policy.get("final_decision") != "GO":

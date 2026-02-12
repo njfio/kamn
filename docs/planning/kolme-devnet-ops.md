@@ -409,8 +409,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `run_localhost_signed_integration_contract_lane.sh` run-mode validation of signed message admission/replay guards before Kolme runtime commit execution.
   - `run_local_kolme_live_api_conformance_harness.sh` run-mode validation for health/query/nonce/broadcast command contracts.
   - `run_local_runtime_commit_live_finality_evidence_contract_lane.sh` is composed as the default runtime-commit endpoint step (no raw curl fallback by default).
-- optional runtime finality pass-through (`--runtime-commit-finality-command`, `--runtime-commit-finality-max-seconds`, `--runtime-commit-finality-output-file`) and `--runtime-commit-live-policy-report` are wired through to nested runtime finality evidence contract composition.
-- runtime provider contract marker (`--runtime-provider-client-contract`) remains explicit and fail-closed for `KolmeRuntimeCommitLiveProvider`.
+  - optional runtime finality pass-through (`--runtime-commit-finality-command`, `--runtime-commit-finality-max-seconds`, `--runtime-commit-finality-output-file`) and `--runtime-commit-live-policy-report` are wired through to nested runtime finality evidence contract composition.
+  - runtime provider contract marker (`--runtime-provider-client-contract`) remains explicit and fail-closed for `KolmeRuntimeCommitLiveProvider`.
+  - integration summary emits `ci_fast_gate_eligible=false` with `contracts.ci_fast_gate_scope=local-only` for explicit PR-fast-gate exclusion enforcement.
   - explicit runtime-commit submit-profile probe over `PUT /broadcast` with fail-closed reason codes.
   - signed runtime-commit envelope translation enforces `signer_key_id` presence and canonical message/signature binding before broadcast normalization.
   - finality verification uses `/notifications` first with bounded `/block/{height}` fallback; no runtime commit status endpoint dependency.
@@ -806,6 +807,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local KAMN live runtime integration lane propagates runtime finality pass-through options and artifacts to nested runtime live lane command composition (`Regression: #1971`).
 - local KAMN live runtime integration lane composes runtime finality evidence contract-lane policy artifacts and remains fail-closed for missing runtime policy evidence (`Regression: #2101`).
 - local KAMN live runtime integration lane forwards explicit runtime provider contract markers into nested runtime policy checks and remains fail-closed on provider-contract drift (`Regression: #2112`).
+- local KAMN live runtime integration lane emits fail-closed local-only fast-gate exclusion markers (`ci_fast_gate_eligible=false`, `contracts.ci_fast_gate_scope=local-only`) in summary/policy/docs contracts (`Regression: #2113`).
 - local KAMN live runtime integration lane requires bounded localhost signed integration prerequisite execution before runtime commit submission (`Regression: #1636`).
 - unified local signed-to-Kolme demo lane fails closed for local opt-in, stage prerequisite drift, and runtime budget overruns (`Regression: #1640`).
 - local fork process lifecycle integration lane fails closed for process start/readiness/integration/teardown/budget drift and missing local opt-in (`Regression: #1494`).

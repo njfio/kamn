@@ -193,6 +193,13 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
+    # Regression: #2113
+    if "ci_fast_gate_eligible" not in doc_text:
+        print(
+            "expected Kolme devnet ops doc to document local-only fast-gate eligibility marker",
+            file=sys.stderr,
+        )
+        return 1
     if "run_localhost_signed_integration_contract_lane.sh" not in doc_text:
         print("expected Kolme devnet ops doc to reference localhost signed integration prerequisite lane", file=sys.stderr)
         return 1
@@ -227,6 +234,12 @@ def main() -> int:
     if "--runtime-provider-client-contract" not in readme_text:
         print(
             "expected README to document runtime provider contract option",
+            file=sys.stderr,
+        )
+        return 1
+    if "ci_fast_gate_eligible" not in readme_text:
+        print(
+            "expected README to document local-only fast-gate eligibility marker",
             file=sys.stderr,
         )
         return 1
