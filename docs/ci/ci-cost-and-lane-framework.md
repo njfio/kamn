@@ -31,7 +31,7 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 - `script_count`
 - `shell_line_total`
 - `duplicate_basename`
-- `duplicate_content`
+- `duplicate_content` (regular files only; symlink wrappers are excluded)
 
 The checker also computes per-PR deltas against `.ci/script-surface-baseline.env` and emits:
 
