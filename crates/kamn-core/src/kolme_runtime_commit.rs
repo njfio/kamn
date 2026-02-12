@@ -32,7 +32,10 @@ use kamn_kolme::{
     is_valid_receipt_commit_id_input as is_kolme_valid_receipt_commit_id_input_contract,
     is_valid_receipt_provider_input as is_kolme_valid_receipt_provider_input_contract,
     is_valid_runtime_commit_id_request as is_kolme_valid_runtime_commit_id_request_contract,
+    is_valid_runtime_operation_id_input as is_kolme_valid_runtime_operation_id_input_contract,
+    is_valid_runtime_payload_hash_input as is_kolme_valid_runtime_payload_hash_input_contract,
     is_valid_runtime_provider_input as is_kolme_valid_runtime_provider_input_contract,
+    is_valid_runtime_state_root_input as is_kolme_valid_runtime_state_root_input_contract,
     is_valid_transport_idempotency_key_input as is_kolme_valid_transport_idempotency_key_input_contract,
     is_valid_transport_wire_payload_input as is_kolme_valid_transport_wire_payload_input_contract,
     is_valid_websocket_timeout_seconds as is_kolme_valid_websocket_timeout_seconds_contract,
@@ -186,13 +189,13 @@ impl KolmeRuntimeCommitRequest {
 
     /// Validates commit request schema and invariant boundaries.
     pub fn validate(&self) -> Result<(), KolmeRuntimeCommitError> {
-        if self.operation_id.trim().is_empty() {
+        if !is_kolme_valid_runtime_operation_id_input_contract(self.operation_id.as_str()) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "operation_id",
                 reason: "must not be empty",
             });
         }
-        if self.state_root.trim().is_empty() {
+        if !is_kolme_valid_runtime_state_root_input_contract(self.state_root.as_str()) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "state_root",
                 reason: "must not be empty",
@@ -204,7 +207,7 @@ impl KolmeRuntimeCommitRequest {
                 reason: "must be positive",
             });
         }
-        if self.payload_hash.trim().is_empty() {
+        if !is_kolme_valid_runtime_payload_hash_input_contract(self.payload_hash.as_str()) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "payload_hash",
                 reason: "must not be empty",
