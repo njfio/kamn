@@ -21,7 +21,14 @@ INTEGRATION_MAX_SECONDS=240
 INTEGRATION_BOOTSTRAP_MAX_SECONDS=90
 INTEGRATION_CONFORMANCE_MAX_SECONDS=180
 INTEGRATION_RUNTIME_COMMIT_MAX_SECONDS=30
+INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND=""
+INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS=15
+INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-live-finality-output.txt"
 PROCESS_PID=""
+
+shell_escape() {
+  printf "%q" "$1"
+}
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -153,6 +160,30 @@ while [ "$#" -gt 0 ]; do
       INTEGRATION_RUNTIME_COMMIT_MAX_SECONDS="$2"
       shift 2
       ;;
+    --integration-runtime-commit-finality-command)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --integration-runtime-commit-finality-command" >&2
+        exit 1
+      fi
+      INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND="$2"
+      shift 2
+      ;;
+    --integration-runtime-commit-finality-max-seconds)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --integration-runtime-commit-finality-max-seconds" >&2
+        exit 1
+      fi
+      INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS="$2"
+      shift 2
+      ;;
+    --integration-runtime-commit-finality-output-file)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --integration-runtime-commit-finality-output-file" >&2
+        exit 1
+      fi
+      INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE="$2"
+      shift 2
+      ;;
     --help|-h)
       cat <<'USAGE'
 Usage: run_local_kolme_fork_process_lifecycle_lane.sh [options]
@@ -174,6 +205,12 @@ Options:
   --integration-bootstrap-max-seconds <n>       Max bootstrap/readiness budget for nested integration lane.
   --integration-conformance-max-seconds <n>     Max live API conformance budget for nested integration lane.
   --integration-runtime-commit-max-seconds <n>  Max runtime-commit endpoint command budget for nested lane.
+  --integration-runtime-commit-finality-command <command>
+                                                 Optional runtime finality command passed through to nested integration lane.
+  --integration-runtime-commit-finality-max-seconds <n>
+                                                 Max runtime budget for runtime finality command passed through to nested integration lane.
+  --integration-runtime-commit-finality-output-file <path>
+                                                 Captured stdout/stderr path for runtime finality command passed through to nested integration lane.
 USAGE
       exit 0
       ;;
@@ -205,7 +242,8 @@ for numeric_value in \
   "$INTEGRATION_MAX_SECONDS" \
   "$INTEGRATION_BOOTSTRAP_MAX_SECONDS" \
   "$INTEGRATION_CONFORMANCE_MAX_SECONDS" \
-  "$INTEGRATION_RUNTIME_COMMIT_MAX_SECONDS"; do
+  "$INTEGRATION_RUNTIME_COMMIT_MAX_SECONDS" \
+  "$INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS"; do
   if ! [[ "$numeric_value" =~ ^[0-9]+$ ]] || [ "$numeric_value" -le 0 ]; then
     echo "all max-second arguments must be positive integers" >&2
     exit 1
@@ -315,6 +353,9 @@ graceful_teardown() {
 serve_command_planned="${SERVE_COMMAND:-<required-in-run-mode>}"
 readiness_command="curl --silent --show-error --fail ${BASE_URL%/}/healthz && curl --silent --show-error --fail ${BASE_URL%/}/fork-info?chain_version=${FORK_CHAIN_VERSION}"
 integration_command="bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path ${CHECKOUT_PATH} --expected-remote-url ${EXPECTED_REMOTE_URL} --expected-ref ${EXPECTED_REF} --base-url ${BASE_URL} --fork-chain-version ${FORK_CHAIN_VERSION} --max-seconds ${INTEGRATION_MAX_SECONDS} --bootstrap-max-seconds ${INTEGRATION_BOOTSTRAP_MAX_SECONDS} --conformance-max-seconds ${INTEGRATION_CONFORMANCE_MAX_SECONDS} --runtime-commit-max-seconds ${INTEGRATION_RUNTIME_COMMIT_MAX_SECONDS} --output-json ${INTEGRATION_REPORT}"
+if [ -n "$INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND" ]; then
+  integration_command="${integration_command} --runtime-commit-finality-command $(shell_escape "${INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND}") --runtime-commit-finality-max-seconds ${INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS} --runtime-commit-finality-output-file $(shell_escape "${INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE}")"
+fi
 teardown_command="kill <lifecycle-process-pid>"
 
 overall_status="ok"
@@ -395,22 +436,31 @@ if [ "$MODE" = "run" ]; then
 
       if [ "$overall_status" = "ok" ]; then
         integration_exit_code=0
+        integration_args=(
+          --mode run
+          --checkout-path "$CHECKOUT_PATH"
+          --expected-remote-url "$EXPECTED_REMOTE_URL"
+          --expected-ref "$EXPECTED_REF"
+          --base-url "$BASE_URL"
+          --fork-chain-version "$FORK_CHAIN_VERSION"
+          --max-seconds "$INTEGRATION_MAX_SECONDS"
+          --bootstrap-max-seconds "$INTEGRATION_BOOTSTRAP_MAX_SECONDS"
+          --conformance-max-seconds "$INTEGRATION_CONFORMANCE_MAX_SECONDS"
+          --runtime-commit-max-seconds "$INTEGRATION_RUNTIME_COMMIT_MAX_SECONDS"
+          --output-json "$INTEGRATION_REPORT"
+        )
+        if [ -n "$INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND" ]; then
+          integration_args+=(
+            --runtime-commit-finality-command "$INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND"
+            --runtime-commit-finality-max-seconds "$INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS"
+            --runtime-commit-finality-output-file "$INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE"
+          )
+        fi
         set +e
         timeout "$INTEGRATION_MAX_SECONDS" \
           env KAMN_KOLME_LOCAL_HEAVY=1 \
           bash "$INTEGRATION_RUNNER" \
-            --mode run \
-            --checkout-path "$CHECKOUT_PATH" \
-            --expected-remote-url "$EXPECTED_REMOTE_URL" \
-            --expected-ref "$EXPECTED_REF" \
-            --base-url "$BASE_URL" \
-            --fork-chain-version "$FORK_CHAIN_VERSION" \
-            --max-seconds "$INTEGRATION_MAX_SECONDS" \
-            --bootstrap-max-seconds "$INTEGRATION_BOOTSTRAP_MAX_SECONDS" \
-            --conformance-max-seconds "$INTEGRATION_CONFORMANCE_MAX_SECONDS" \
-            --runtime-commit-max-seconds "$INTEGRATION_RUNTIME_COMMIT_MAX_SECONDS" \
-            --output-json "$INTEGRATION_REPORT" \
-            >/dev/null
+            "${integration_args[@]}" >/dev/null
         integration_exit_code=$?
         set -e
 
@@ -457,7 +507,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$SERVE_COMMAND" "$PROCESS_OUTPUT_FILE" "$INTEGRATION_REPORT" "$start_reason_code" "$readiness_reason_code" "$integration_reason_code" "$teardown_reason_code" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$SERVE_COMMAND" "$PROCESS_OUTPUT_FILE" "$INTEGRATION_REPORT" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$start_reason_code" "$readiness_reason_code" "$integration_reason_code" "$teardown_reason_code" "$CHECK_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -479,11 +529,14 @@ budget_status = sys.argv[12]
 serve_command = sys.argv[13]
 process_output_file = sys.argv[14]
 integration_report = sys.argv[15]
-start_reason_code = sys.argv[16]
-readiness_reason_code = sys.argv[17]
-integration_reason_code = sys.argv[18]
-teardown_reason_code = sys.argv[19]
-checks_path = pathlib.Path(sys.argv[20])
+integration_runtime_commit_finality_command = sys.argv[16]
+integration_runtime_commit_finality_max_seconds = int(sys.argv[17])
+integration_runtime_commit_finality_output_file = sys.argv[18]
+start_reason_code = sys.argv[19]
+readiness_reason_code = sys.argv[20]
+integration_reason_code = sys.argv[21]
+teardown_reason_code = sys.argv[22]
+checks_path = pathlib.Path(sys.argv[23])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -517,6 +570,14 @@ summary = {
     "base_url": base_url,
     "fork_chain_version": fork_chain_version,
     "serve_command": serve_command,
+    "integration_runtime_commit_finality_enabled": bool(integration_runtime_commit_finality_command),
+    "integration_runtime_commit_finality_command": (
+        integration_runtime_commit_finality_command if integration_runtime_commit_finality_command else ""
+    ),
+    "integration_runtime_commit_finality_max_seconds": integration_runtime_commit_finality_max_seconds,
+    "integration_runtime_commit_finality_output_file": (
+        integration_runtime_commit_finality_output_file if integration_runtime_commit_finality_command else ""
+    ),
     "start_reason_code": start_reason_code,
     "readiness_reason_code": readiness_reason_code,
     "integration_reason_code": integration_reason_code,
@@ -534,6 +595,9 @@ summary = {
         integration_report,
     ],
 }
+
+if integration_runtime_commit_finality_command:
+    summary["artifact_paths"].append(integration_runtime_commit_finality_output_file)
 
 output_path.parent.mkdir(parents=True, exist_ok=True)
 output_path.write_text(json.dumps(summary, sort_keys=True, indent=2) + "\n", encoding="utf-8")

@@ -169,14 +169,33 @@ def main() -> int:
     if "run_local_kolme_fork_process_lifecycle_contract_lane.sh" not in doc_text:
         print("expected Kolme devnet ops doc to reference local Kolme fork process lifecycle contract lane", file=sys.stderr)
         return 1
+    # Regression: #1973
+    if "--integration-runtime-commit-finality-command" not in doc_text:
+        print(
+            "expected Kolme devnet ops doc to document process lifecycle integration finality pass-through option",
+            file=sys.stderr,
+        )
+        return 1
     if "run_local_kamn_live_runtime_integration_lane.sh" not in doc_text:
         print("expected Kolme devnet ops doc to reference local KAMN live runtime integration prerequisite lane", file=sys.stderr)
         return 1
     if "Regression: #1494" not in doc_text:
         print("expected Kolme devnet ops doc to include local fork process lifecycle regression marker", file=sys.stderr)
         return 1
+    if "Regression: #1973" not in doc_text:
+        print(
+            "expected Kolme devnet ops doc to include process lifecycle integration finality pass-through regression marker",
+            file=sys.stderr,
+        )
+        return 1
     if "run_local_kolme_fork_process_lifecycle_contract_lane.sh" not in readme_text:
         print("expected README to reference local Kolme fork process lifecycle contract lane", file=sys.stderr)
+        return 1
+    if "--integration-runtime-commit-finality-command" not in readme_text:
+        print(
+            "expected README to document process lifecycle integration finality pass-through option",
+            file=sys.stderr,
+        )
         return 1
 
     elapsed_seconds = int(time.monotonic() - start_epoch)
