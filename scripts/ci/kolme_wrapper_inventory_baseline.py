@@ -140,7 +140,7 @@ def build_inventory(*, matrix_file: Path, repo_root: Path) -> dict[str, Any]:
             label=f"lane[{index}]",
         )
 
-        wrapper_path = (repo_root / source_entry).resolve()
+        wrapper_path = repo_root / source_entry
         if not wrapper_path.exists():
             fail(f"lane wrapper path does not exist for {lane_id}: {source_entry}")
         if not wrapper_path.is_file():
