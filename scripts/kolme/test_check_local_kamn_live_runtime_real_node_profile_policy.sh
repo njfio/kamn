@@ -60,6 +60,10 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
   "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
   "runtime_signer_profile": "ops-primary",
+  "runtime_signer_previous_profile": "ops-primary",
+  "runtime_signer_failover_active": false,
+  "runtime_signer_rotation_epoch": 1,
+  "runtime_signer_previous_rotation_epoch": 1,
   "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
@@ -81,6 +85,8 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
     "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
     "runtime_signer_profile": "ops-primary",
+    "runtime_signer_failover_requires_profile_change": true,
+    "runtime_signer_rotation_epoch_must_increase_on_failover": true,
     "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
@@ -173,7 +179,11 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
   "runtime_profile": "standard",
   "runtime_provider_client_contract": "InMemoryKolmeRuntimeCommitClient",
   "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
-  "runtime_signer_profile": "ops-secondary",
+  "runtime_signer_profile": "ops-primary",
+  "runtime_signer_previous_profile": "ops-primary",
+  "runtime_signer_failover_active": true,
+  "runtime_signer_rotation_epoch": 4,
+  "runtime_signer_previous_rotation_epoch": 4,
   "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
   "runtime_commit_command_profile": "standard-default-v1",
   "runtime_commit_policy_command_profile": "standard-default-v1",
@@ -185,7 +195,9 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
     "runtime_profile": "standard",
     "runtime_provider_client_contract": "InMemoryKolmeRuntimeCommitClient",
     "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
-    "runtime_signer_profile": "ops-secondary",
+    "runtime_signer_profile": "ops-primary",
+    "runtime_signer_failover_requires_profile_change": false,
+    "runtime_signer_rotation_epoch_must_increase_on_failover": false,
     "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
   },
   "checks": [
@@ -238,8 +250,13 @@ if ! grep -q "runtime_commit_policy_command_profile_mismatch" "$TMP_ERR"; then
   exit 1
 fi
 
-if ! grep -q "runtime_signer_profile_mismatch" "$TMP_ERR"; then
-  echo "expected signer profile mismatch reason for policy failure" >&2
+if ! grep -q "runtime_signer_failover_profile_unchanged" "$TMP_ERR"; then
+  echo "expected failover unchanged reason for policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_rotation_epoch_stale" "$TMP_ERR"; then
+  echo "expected stale rotation epoch reason for policy failure" >&2
   exit 1
 fi
 
@@ -534,6 +551,14 @@ if summary.get("runtime_signer_profile_selector_env") != "KAMN_KOLME_LIVE_SIGNER
     raise SystemExit("expected signer profile selector env marker in runner-generated summary")
 if summary.get("runtime_signer_profile") != "ops-primary":
     raise SystemExit("expected signer profile marker in runner-generated summary")
+if summary.get("runtime_signer_previous_profile") != "ops-primary":
+    raise SystemExit("expected signer previous-profile marker in runner-generated summary")
+if summary.get("runtime_signer_failover_active") is not False:
+    raise SystemExit("expected signer failover-active marker false in runner-generated summary")
+if summary.get("runtime_signer_rotation_epoch") != 1:
+    raise SystemExit("expected signer rotation epoch marker in runner-generated summary")
+if summary.get("runtime_signer_previous_rotation_epoch") != 1:
+    raise SystemExit("expected signer previous rotation epoch marker in runner-generated summary")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected signer private key env marker in runner-generated summary")
 checks = summary.get("checks")

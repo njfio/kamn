@@ -9,9 +9,18 @@ NON_SYNTHETIC_SUBMIT_PROBE_MARKER = "integration_kolme_fork_live_node_submit_rea
 IN_MEMORY_PROVIDER_MARKER = "InMemoryKolmeRuntimeCommitClient"
 REAL_SIGNING_PROFILE_MARKER = "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1"
 REAL_SIGNER_PROFILE_SELECTOR_ENV = "KAMN_KOLME_LIVE_SIGNER_PROFILE"
-REAL_SIGNER_PROFILE = "ops-primary"
-REAL_SIGNER_PRIVATE_KEY_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
-REAL_SIGNER_PROFILE_COMMAND_MARKER = "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary"
+REAL_SIGNER_PROFILE_PRIMARY = "ops-primary"
+REAL_SIGNER_PROFILE_SECONDARY = "ops-secondary"
+REAL_SIGNER_PRIVATE_KEY_ENV_PRIMARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
+REAL_SIGNER_PRIVATE_KEY_ENV_SECONDARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+ALLOWED_SIGNER_PROFILES = (
+    REAL_SIGNER_PROFILE_PRIMARY,
+    REAL_SIGNER_PROFILE_SECONDARY,
+)
+SIGNER_PRIVATE_KEY_ENV_BY_PROFILE = {
+    REAL_SIGNER_PROFILE_PRIMARY: REAL_SIGNER_PRIVATE_KEY_ENV_PRIMARY,
+    REAL_SIGNER_PROFILE_SECONDARY: REAL_SIGNER_PRIVATE_KEY_ENV_SECONDARY,
+}
 NATIVE_PAYLOAD_PUBKEY_MARKER = "pubkey"
 NATIVE_PAYLOAD_NONCE_MARKER = "nonce"
 NATIVE_PAYLOAD_MESSAGES_MARKER = "messages"
@@ -92,15 +101,56 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_signer_profile_selector_env_mismatch")
 
     runtime_signer_profile = report.get("runtime_signer_profile")
+    expected_signer_private_key_env = ""
     if not isinstance(runtime_signer_profile, str) or not runtime_signer_profile.strip():
         reason_codes.append("runtime_signer_profile_missing")
-    elif runtime_signer_profile != REAL_SIGNER_PROFILE:
+    elif runtime_signer_profile not in ALLOWED_SIGNER_PROFILES:
         reason_codes.append("runtime_signer_profile_mismatch")
+    else:
+        expected_signer_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[runtime_signer_profile]
+
+    runtime_signer_previous_profile = report.get("runtime_signer_previous_profile")
+    if not isinstance(runtime_signer_previous_profile, str) or not runtime_signer_previous_profile.strip():
+        reason_codes.append("runtime_signer_previous_profile_missing")
+    elif runtime_signer_previous_profile not in ALLOWED_SIGNER_PROFILES:
+        reason_codes.append("runtime_signer_previous_profile_mismatch")
+
+    runtime_signer_failover_active = report.get("runtime_signer_failover_active")
+    if not isinstance(runtime_signer_failover_active, bool):
+        reason_codes.append("runtime_signer_failover_active_invalid")
+
+    runtime_signer_rotation_epoch = report.get("runtime_signer_rotation_epoch")
+    if not isinstance(runtime_signer_rotation_epoch, int) or runtime_signer_rotation_epoch <= 0:
+        reason_codes.append("runtime_signer_rotation_epoch_invalid")
+
+    runtime_signer_previous_rotation_epoch = report.get("runtime_signer_previous_rotation_epoch")
+    if not isinstance(runtime_signer_previous_rotation_epoch, int) or runtime_signer_previous_rotation_epoch <= 0:
+        reason_codes.append("runtime_signer_previous_rotation_epoch_invalid")
+
+    if (
+        isinstance(runtime_signer_profile, str)
+        and runtime_signer_profile in ALLOWED_SIGNER_PROFILES
+        and isinstance(runtime_signer_previous_profile, str)
+        and runtime_signer_previous_profile in ALLOWED_SIGNER_PROFILES
+        and isinstance(runtime_signer_failover_active, bool)
+    ):
+        if runtime_signer_failover_active and runtime_signer_profile == runtime_signer_previous_profile:
+            reason_codes.append("runtime_signer_failover_profile_unchanged")
+        if (not runtime_signer_failover_active) and runtime_signer_profile != runtime_signer_previous_profile:
+            reason_codes.append("runtime_signer_profile_changed_without_failover")
+    if (
+        isinstance(runtime_signer_failover_active, bool)
+        and runtime_signer_failover_active
+        and isinstance(runtime_signer_rotation_epoch, int)
+        and isinstance(runtime_signer_previous_rotation_epoch, int)
+        and runtime_signer_rotation_epoch <= runtime_signer_previous_rotation_epoch
+    ):
+        reason_codes.append("runtime_signer_rotation_epoch_stale")
 
     runtime_signer_private_key_env = report.get("runtime_signer_private_key_env")
     if not isinstance(runtime_signer_private_key_env, str) or not runtime_signer_private_key_env.strip():
         reason_codes.append("runtime_signer_private_key_env_missing")
-    elif runtime_signer_private_key_env != REAL_SIGNER_PRIVATE_KEY_ENV:
+    elif expected_signer_private_key_env and runtime_signer_private_key_env != expected_signer_private_key_env:
         reason_codes.append("runtime_signer_private_key_env_mismatch")
 
     runtime_commit_command_profile = report.get("runtime_commit_command_profile")
@@ -141,9 +191,15 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             and REAL_SIGNING_PROFILE_MARKER not in runtime_commit_command
         ):
             reason_codes.append("runtime_commit_real_signing_profile_marker_missing")
+        expected_profile_command_marker = ""
+        if isinstance(runtime_signer_profile, str) and runtime_signer_profile in ALLOWED_SIGNER_PROFILES:
+            expected_profile_command_marker = (
+                f"{REAL_SIGNER_PROFILE_SELECTOR_ENV}={runtime_signer_profile}"
+            )
         if (
             runtime_commit_command_profile == "real-node-non-synthetic-v1"
-            and REAL_SIGNER_PROFILE_COMMAND_MARKER not in runtime_commit_command
+            and expected_profile_command_marker
+            and expected_profile_command_marker not in runtime_commit_command
         ):
             reason_codes.append("runtime_commit_signer_profile_marker_missing")
         if (
@@ -180,10 +236,18 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_provider_client_contract_contract_mismatch")
         if contracts.get("runtime_signer_profile_selector_env") != REAL_SIGNER_PROFILE_SELECTOR_ENV:
             reason_codes.append("runtime_signer_profile_selector_env_contract_mismatch")
-        if contracts.get("runtime_signer_profile") != REAL_SIGNER_PROFILE:
+        if (
+            isinstance(runtime_signer_profile, str)
+            and runtime_signer_profile in ALLOWED_SIGNER_PROFILES
+            and contracts.get("runtime_signer_profile") != runtime_signer_profile
+        ):
             reason_codes.append("runtime_signer_profile_contract_mismatch")
-        if contracts.get("runtime_signer_private_key_env") != REAL_SIGNER_PRIVATE_KEY_ENV:
+        if expected_signer_private_key_env and contracts.get("runtime_signer_private_key_env") != expected_signer_private_key_env:
             reason_codes.append("runtime_signer_private_key_env_contract_mismatch")
+        if contracts.get("runtime_signer_failover_requires_profile_change") is not True:
+            reason_codes.append("runtime_signer_failover_requires_profile_change_contract_mismatch")
+        if contracts.get("runtime_signer_rotation_epoch_must_increase_on_failover") is not True:
+            reason_codes.append("runtime_signer_rotation_epoch_contract_mismatch")
         if contracts.get("runtime_commit_endpoint") != "/broadcast/runtime-commit":
             reason_codes.append("runtime_commit_endpoint_mismatch")
         if contracts.get("runtime_commit_method") != "POST":

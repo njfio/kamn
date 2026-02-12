@@ -581,11 +581,17 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_commit_command_profile_version=v1
 # runtime_signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE
 # runtime_signer_profile=ops-primary
+# runtime_signer_previous_profile=ops-primary
+# runtime_signer_failover_active=false
+# runtime_signer_rotation_epoch=1
+# runtime_signer_previous_rotation_epoch=1
 # runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX
 
 # strict profile NO-GO drift/synthetic reason markers
 # runtime_commit_command_profile_mismatch
 # runtime_signer_profile_mismatch
+# runtime_signer_failover_profile_unchanged
+# runtime_signer_rotation_epoch_stale
 # runtime_signer_private_key_env_mismatch
 # runtime_commit_non_synthetic_submit_probe_missing
 # runtime_commit_real_signing_profile_marker_missing

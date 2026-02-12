@@ -234,6 +234,18 @@ def main() -> int:
     if summary.get("runtime_signer_profile") != "ops-primary":
         print("expected signer profile marker in contract-lane summary", file=sys.stderr)
         return 1
+    if summary.get("runtime_signer_previous_profile") != "ops-primary":
+        print("expected signer previous profile marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_signer_failover_active") is not False:
+        print("expected signer failover marker false in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_signer_rotation_epoch") != 1:
+        print("expected signer rotation epoch marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_signer_previous_rotation_epoch") != 1:
+        print("expected signer previous rotation epoch marker in contract-lane summary", file=sys.stderr)
+        return 1
     if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
         print("expected signer private key env marker in contract-lane summary", file=sys.stderr)
         return 1
@@ -249,6 +261,12 @@ def main() -> int:
         return 1
     if contracts.get("runtime_signer_profile") != "ops-primary":
         print("expected contracts signer profile marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_failover_requires_profile_change") is not True:
+        print("expected contracts failover profile-change guard marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_rotation_epoch_must_increase_on_failover") is not True:
+        print("expected contracts signer rotation epoch guard marker in contract-lane summary", file=sys.stderr)
         return 1
     if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
         print("expected contracts signer private key env marker in contract-lane summary", file=sys.stderr)
@@ -295,36 +313,40 @@ def main() -> int:
             print("expected NO-GO final decision for marker drift policy output", file=sys.stderr)
             return 1
 
-        signer_profile_drift_summary_file = negative_path / "signer_profile_drift_summary.json"
-        signer_profile_drift_policy_file = negative_path / "signer_profile_drift_policy.json"
-        signer_profile_drift_summary = dict(summary)
-        signer_profile_drift_summary["runtime_signer_profile"] = "ops-secondary"
-        signer_profile_drift_summary["runtime_signer_private_key_env"] = (
-            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
-        )
-        signer_profile_drift_summary_file.write_text(
-            json.dumps(signer_profile_drift_summary, sort_keys=True, indent=2) + "\n",
+        failover_stale_summary_file = negative_path / "failover_stale_summary.json"
+        failover_stale_policy_file = negative_path / "failover_stale_policy.json"
+        failover_stale_summary = dict(summary)
+        failover_stale_summary["runtime_signer_profile"] = "ops-primary"
+        failover_stale_summary["runtime_signer_previous_profile"] = "ops-primary"
+        failover_stale_summary["runtime_signer_failover_active"] = True
+        failover_stale_summary["runtime_signer_rotation_epoch"] = 3
+        failover_stale_summary["runtime_signer_previous_rotation_epoch"] = 3
+        failover_stale_summary_file.write_text(
+            json.dumps(failover_stale_summary, sort_keys=True, indent=2) + "\n",
             encoding="utf-8",
         )
 
-        signer_profile_drift_result = run_real_node_policy_check(
-            report_file=signer_profile_drift_summary_file,
-            output_json=signer_profile_drift_policy_file,
+        failover_stale_result = run_real_node_policy_check(
+            report_file=failover_stale_summary_file,
+            output_json=failover_stale_policy_file,
             expected_final_decision="NO-GO",
         )
-        if signer_profile_drift_result.returncode == 0:
-            print("expected signer profile drift negative proof to fail closed", file=sys.stderr)
+        if failover_stale_result.returncode == 0:
+            print("expected failover stale negative proof to fail closed", file=sys.stderr)
             return 1
-        signer_profile_drift_policy = json.loads(signer_profile_drift_policy_file.read_text(encoding="utf-8"))
-        signer_profile_drift_reason_codes = signer_profile_drift_policy.get("reason_codes")
-        if not isinstance(signer_profile_drift_reason_codes, list):
-            print("expected reason_codes list in signer profile drift policy output", file=sys.stderr)
+        failover_stale_policy = json.loads(failover_stale_policy_file.read_text(encoding="utf-8"))
+        failover_stale_reason_codes = failover_stale_policy.get("reason_codes")
+        if not isinstance(failover_stale_reason_codes, list):
+            print("expected reason_codes list in failover stale policy output", file=sys.stderr)
             return 1
-        if "runtime_signer_profile_mismatch" not in signer_profile_drift_reason_codes:
-            print("expected runtime_signer_profile_mismatch in signer profile drift policy output", file=sys.stderr)
+        if "runtime_signer_failover_profile_unchanged" not in failover_stale_reason_codes:
+            print("expected runtime_signer_failover_profile_unchanged in failover stale policy output", file=sys.stderr)
             return 1
-        if signer_profile_drift_policy.get("final_decision") != "NO-GO":
-            print("expected NO-GO final decision for signer profile drift policy output", file=sys.stderr)
+        if "runtime_signer_rotation_epoch_stale" not in failover_stale_reason_codes:
+            print("expected runtime_signer_rotation_epoch_stale in failover stale policy output", file=sys.stderr)
+            return 1
+        if failover_stale_policy.get("final_decision") != "NO-GO":
+            print("expected NO-GO final decision for failover stale policy output", file=sys.stderr)
             return 1
 
         synthetic_regression_summary_file = negative_path / "synthetic_regression_summary.json"
@@ -426,6 +448,8 @@ def main() -> int:
         "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
         "--require-non-synthetic-run-evidence",
         "runtime_signer_profile=ops-primary",
+        "runtime_signer_failover_profile_unchanged",
+        "runtime_signer_rotation_epoch_stale",
         "Regression: #2139",
     ]
     ci_doc_markers = [
@@ -434,6 +458,8 @@ def main() -> int:
         "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
         "--require-non-synthetic-run-evidence",
         "runtime_signer_profile=ops-primary",
+        "runtime_signer_failover_profile_unchanged",
+        "runtime_signer_rotation_epoch_stale",
         "Regression: #2139",
     ]
     readme_markers = [
@@ -442,6 +468,8 @@ def main() -> int:
         "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
         "--require-non-synthetic-run-evidence",
         "runtime_signer_profile=ops-primary",
+        "runtime_signer_failover_profile_unchanged",
+        "runtime_signer_rotation_epoch_stale",
         "Regression: #2139",
     ]
 
