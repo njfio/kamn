@@ -22,7 +22,7 @@ pub mod channel_models;
 pub mod channel_policies;
 /// Node role, sync mode, and runtime configuration validation contracts.
 pub mod config;
-#[allow(missing_docs)]
+/// Content retention, tombstone scheduling, and purge eligibility contracts.
 pub mod content_lifecycle;
 #[allow(missing_docs)]
 pub mod content_replication;

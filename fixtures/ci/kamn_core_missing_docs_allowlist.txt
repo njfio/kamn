@@ -3,7 +3,6 @@ audit_exports
 bridge_adapter
 channel_models
 channel_policies
-content_lifecycle
 content_replication
 content_retrieval
 data_classification

@@ -1,3 +1,5 @@
+//! Content retention, tombstone, and purge lifecycle contracts.
+
 use crate::{cid_from_content_uri, content_uri_for_cid, ContentStorageError};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -10,59 +12,88 @@ const COMPLIANCE_RETAIN_SECS: u64 = 31_536_000;
 const COMPLIANCE_TOMBSTONE_SECS: u64 = 31_536_000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Retention class used to derive expiry and tombstone windows.
 pub enum ContentRetentionClass {
+    /// Ephemeral content retained for a short period.
     ShortLived,
+    /// Default retention profile for standard content.
     Standard,
+    /// Long-retention profile for compliance-sensitive content.
     Compliance,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Derived retention profile used by lifecycle calculations.
 pub struct ContentRetentionProfile {
+    /// Seconds from creation until content becomes expired.
     pub retain_for_secs: u64,
+    /// Seconds from tombstone until purge is eligible.
     pub tombstone_for_secs: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Current lifecycle status for a content record at a point in time.
 pub enum ContentLifecycleStatus {
+    /// Content is within retention window and accessible.
     Active,
+    /// Content retention window elapsed and is due for tombstone.
     Expired,
+    /// Content has been tombstoned and is waiting for purge window.
     Tombstoned,
+    /// Content has been purged and cannot be accessed.
     Purged,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Cleanup action scheduler output for lifecycle maintenance.
 pub enum ContentCleanupActionKind {
+    /// Mark content as tombstoned.
     Tombstone,
+    /// Permanently purge content.
     Purge,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Scheduled cleanup action for a content identifier.
 pub struct ContentCleanupAction {
+    /// Content identifier the action applies to.
     pub cid: String,
+    /// Cleanup action to execute for the record.
     pub action: ContentCleanupActionKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Mutable lifecycle metadata tracked for a single content identifier.
 pub struct ContentLifecycleRecord {
+    /// Canonical content identifier.
     pub cid: String,
+    /// Retention class used to calculate lifecycle windows.
     pub retention_class: ContentRetentionClass,
+    /// Unix timestamp when the content was registered.
     pub created_at_unix: u64,
+    /// Unix timestamp when content first becomes expired.
     pub expires_at_unix: u64,
+    /// Unix timestamp when tombstone was applied, if any.
     pub tombstoned_at_unix: Option<u64>,
+    /// Unix timestamp after which purge is eligible, if tombstoned.
     pub purge_after_unix: Option<u64>,
+    /// Unix timestamp when purge was executed, if any.
     pub purged_at_unix: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// In-memory manager for content lifecycle registration and cleanup decisions.
 pub struct ContentLifecycleManager {
     records: BTreeMap<String, ContentLifecycleRecord>,
 }
 
 impl ContentLifecycleManager {
+    /// Creates an empty lifecycle manager.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Returns the retention profile associated with a retention class.
     pub fn retention_profile(class: ContentRetentionClass) -> ContentRetentionProfile {
         match class {
             ContentRetentionClass::ShortLived => ContentRetentionProfile {
@@ -80,6 +111,9 @@ impl ContentLifecycleManager {
         }
     }
 
+    /// Registers a new content lifecycle record and computes expiry from profile.
+    ///
+    /// Returns an error when CID is invalid, timestamp is zero, or CID already exists.
     pub fn register(
         &mut self,
         cid: &str,
@@ -108,6 +142,9 @@ impl ContentLifecycleManager {
         Ok(record)
     }
 
+    /// Applies tombstone state to an existing record and sets purge eligibility.
+    ///
+    /// This call is idempotent for already-tombstoned records.
     pub fn apply_tombstone(
         &mut self,
         cid: &str,
@@ -132,6 +169,7 @@ impl ContentLifecycleManager {
         Ok(record.clone())
     }
 
+    /// Resolves the lifecycle status for a content identifier at `now_unix`.
     pub fn lifecycle_status(
         &self,
         cid: &str,
@@ -153,6 +191,7 @@ impl ContentLifecycleManager {
         Ok(ContentLifecycleStatus::Active)
     }
 
+    /// Returns cleanup actions that are due at `now_unix`.
     pub fn cleanup_due(&self, now_unix: u64) -> Vec<ContentCleanupAction> {
         let mut actions = Vec::new();
         for (cid, record) in &self.records {
@@ -178,6 +217,9 @@ impl ContentLifecycleManager {
         actions
     }
 
+    /// Executes the cleanup action due for `cid` at `now_unix`.
+    ///
+    /// Returns the action performed (`Tombstone` or `Purge`) when due.
     pub fn execute_cleanup(
         &mut self,
         cid: &str,
@@ -206,6 +248,7 @@ impl ContentLifecycleManager {
         Err(ContentLifecycleError::NoCleanupDue(cid.to_owned()))
     }
 
+    /// Returns an error if content is not currently accessible at `now_unix`.
     pub fn assert_accessible(&self, cid: &str, now_unix: u64) -> Result<(), ContentLifecycleError> {
         match self.lifecycle_status(cid, now_unix)? {
             ContentLifecycleStatus::Active => Ok(()),
@@ -217,6 +260,9 @@ impl ContentLifecycleManager {
         }
     }
 
+    /// Validates a content URI and enforces accessibility at `now_unix`.
+    ///
+    /// Returns the extracted CID when access is permitted.
     pub fn assert_uri_accessible(
         &self,
         content_uri: &str,
@@ -230,15 +276,25 @@ impl ContentLifecycleManager {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Lifecycle manager error taxonomy.
 pub enum ContentLifecycleError {
+    /// A required input field was empty or zero.
     EmptyField(&'static str),
+    /// CID failed canonical validation.
     InvalidCid(String),
+    /// Content URI could not be parsed into a CID.
     InvalidContentUri(String),
+    /// Lifecycle record already exists for CID.
     DuplicateContent(String),
+    /// Lifecycle record does not exist for CID.
     NotFound(String),
+    /// No cleanup action is due at the provided timestamp.
     NoCleanupDue(String),
+    /// Content is expired and no longer accessible.
     Expired(String),
+    /// Content is tombstoned and not accessible.
     Tombstoned(String),
+    /// Content has been purged and is permanently inaccessible.
     Purged(String),
 }
 
