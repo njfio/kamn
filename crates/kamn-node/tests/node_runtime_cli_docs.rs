@@ -114,6 +114,10 @@ fn doc_contains_runtime_kolme_live_rules() {
     assert!(DOC.contains("--kolme-live-signing-profile"));
     assert!(DOC.contains("KolmeRuntimeCommitLiveProvider"));
     assert!(DOC.contains("kolme-fork-secp256k1-v1"));
+    assert!(DOC.contains("/runtime-commit/status"));
+    assert!(DOC.contains("max-attempt budget `2`"));
+    assert!(DOC.contains("finality-polled"));
+    assert!(DOC.contains("finality-unavailable"));
 }
 
 #[test]
@@ -138,6 +142,9 @@ fn doc_contains_daemon_focused_fast_lane_commands() {
     ));
     assert!(DOC.contains(
         "cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node regression_runtime_kolme_live_rejects_provider_marker_drift"
     ));
 }
 
@@ -212,5 +219,13 @@ fn regression_requires_runtime_kolme_live_guard_rules() {
     // Regression: #2175
     assert!(DOC.contains(
         "in-memory fallback and invalid signing profile rejection (`Regression: #2175`)"
+    ));
+}
+
+#[test]
+fn regression_requires_runtime_kolme_live_provider_drift_guard_rules() {
+    // Regression: #2176
+    assert!(DOC.contains(
+        "provider marker drift rejection in live submit/finality flow (`Regression: #2176`)"
     ));
 }

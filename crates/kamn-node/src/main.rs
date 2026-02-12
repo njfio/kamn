@@ -3,15 +3,20 @@ use std::process::ExitCode;
 
 use kamn_core::{
     bootstrap, BootstrapPlan, ConfigError, DeterministicProposalPlanner,
-    KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitLiveProvider, NodeConfig, NodeRole,
-    PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, RecoveryRejoinGuard,
-    RecoveryStatus, RejoinAttempt, SyncMode,
+    KolmeCommitReceiptFinality, KolmeRuntimeCommitFinalityChecker, KolmeRuntimeCommitHttpTransport,
+    KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitProvider, KolmeRuntimeCommitProviderError,
+    KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderReceipt,
+    KolmeRuntimeCommitRequest, NodeConfig, NodeRole, PeerLifecycle, PeerLifecycleEvent,
+    PeerLifecycleState, ProposalCandidate, RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt,
+    SyncMode,
 };
 
 const KOLME_LIVE_PROVIDER_CONTRACT: &str = "KolmeRuntimeCommitLiveProvider";
 const KOLME_LIVE_SIGNING_PROFILE: &str = "kolme-fork-secp256k1-v1";
 const KOLME_IN_MEMORY_PROVIDER_MARKER: &str = "InMemoryKolmeRuntimeCommitClient";
 const KOLME_LIVE_TRANSPORT_TIMEOUT_SECONDS: u64 = 30;
+const KOLME_LIVE_FINALITY_STATUS_PATH: &str = "/runtime-commit/status";
+const KOLME_LIVE_FINALITY_MAX_ATTEMPTS: u32 = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct OutputMode {
@@ -658,6 +663,58 @@ fn run() -> Result<(), ConfigError> {
     Ok(())
 }
 
+fn build_kolme_live_request(
+    plan: &BootstrapPlan,
+) -> Result<KolmeRuntimeCommitRequest, ConfigError> {
+    let role_label = plan.config.role.as_str();
+    let operation_id = format!("runtime-commit:{}:{role_label}", plan.config.chain_id);
+    let state_root = format!(
+        "state:{}:{}",
+        plan.config.chain_version, plan.state_schema.version.0
+    );
+    let actor_did = format!("kamn:did:agent:node-runtime-{role_label}");
+    let payload_hash = format!("payload:{}:{role_label}", plan.config.chain_version);
+    KolmeRuntimeCommitRequest::deterministic(
+        operation_id.as_str(),
+        state_root.as_str(),
+        actor_did.as_str(),
+        1,
+        payload_hash.as_str(),
+    )
+    .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))
+}
+
+fn ensure_kolme_live_provider_marker(expected: &str, observed: &str) -> Result<(), ConfigError> {
+    if expected == observed {
+        return Ok(());
+    }
+    Err(ConfigError::RuntimeKolmeLive(format!(
+        "provider marker drift: expected '{expected}', observed '{observed}'"
+    )))
+}
+
+fn kolme_live_finality_label(finality: KolmeCommitReceiptFinality) -> &'static str {
+    match finality {
+        KolmeCommitReceiptFinality::Pending => "pending",
+        KolmeCommitReceiptFinality::Final => "final",
+        KolmeCommitReceiptFinality::Failed => "failed",
+    }
+}
+
+fn map_kolme_live_submit_outcome(
+    outcome: KolmeRuntimeCommitProviderOutcome,
+) -> Result<(&'static str, KolmeRuntimeCommitProviderReceipt), ConfigError> {
+    match outcome {
+        KolmeRuntimeCommitProviderOutcome::Submitted(receipt) => Ok(("submitted", receipt)),
+        KolmeRuntimeCommitProviderOutcome::Duplicate(receipt) => Ok(("duplicate", receipt)),
+        KolmeRuntimeCommitProviderOutcome::Rejected { reason } => {
+            Err(ConfigError::RuntimeKolmeLive(format!(
+                "provider rejected runtime commit submission: {reason}"
+            )))
+        }
+    }
+}
+
 fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
     let NodeCli {
         profile,
@@ -802,19 +859,64 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             let transport =
                 KolmeRuntimeCommitHttpTransport::new(KOLME_LIVE_TRANSPORT_TIMEOUT_SECONDS)
                     .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
-            let _provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
+            let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
                 base_url.as_str(),
                 provider_hint.as_str(),
-                transport,
+                transport.clone(),
             )
             .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
+            let request = build_kolme_live_request(&plan)?;
+            let submit_outcome = provider
+                .submit_runtime_commit(
+                    request.to_wire_payload().as_str(),
+                    request.idempotency_key(),
+                )
+                .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
+            let (submit_status, mut receipt) = map_kolme_live_submit_outcome(submit_outcome)?;
+            ensure_kolme_live_provider_marker(provider_hint.as_str(), receipt.provider.as_str())?;
+            let mut resolution = "submit-receipt".to_owned();
+            if matches!(receipt.finality, KolmeCommitReceiptFinality::Pending) {
+                let mut checker = KolmeRuntimeCommitFinalityChecker::new(
+                    base_url.as_str(),
+                    KOLME_LIVE_FINALITY_STATUS_PATH,
+                    transport,
+                )
+                .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
+                match checker
+                    .poll_finality(receipt.commit_id.as_str(), KOLME_LIVE_FINALITY_MAX_ATTEMPTS)
+                {
+                    Ok(polled_receipt) => {
+                        ensure_kolme_live_provider_marker(
+                            provider_hint.as_str(),
+                            polled_receipt.provider.as_str(),
+                        )?;
+                        receipt = polled_receipt;
+                        resolution = "finality-polled".to_owned();
+                    }
+                    Err(KolmeRuntimeCommitProviderError::Timeout) => {
+                        resolution = "finality-timeout".to_owned();
+                    }
+                    Err(KolmeRuntimeCommitProviderError::Unavailable { .. }) => {
+                        resolution = "finality-unavailable".to_owned();
+                    }
+                    Err(KolmeRuntimeCommitProviderError::MalformedResponse { reason }) => {
+                        return Err(ConfigError::RuntimeKolmeLive(format!(
+                            "finality response malformed: {reason}"
+                        )));
+                    }
+                }
+            }
+            let finality = kolme_live_finality_label(receipt.finality);
             RuntimeExecutionBundle {
                 kolme_live: Some(KolmeLiveExecution {
                     provider_client_contract: KOLME_LIVE_PROVIDER_CONTRACT.to_owned(),
                     base_url,
                     provider_hint,
                     signing_profile,
-                    execution_status: "provider-configured".to_owned(),
+                    execution_status: format!(
+                        "{submit_status};commit_id={};finality={finality};resolution={resolution}",
+                        receipt.commit_id
+                    ),
                 }),
                 ..RuntimeExecutionBundle::default()
             }
@@ -1222,6 +1324,126 @@ mod tests {
         LocalProfile, NodeBootstrapReport, OutputMode, RuntimeExecutionBundle, RuntimeMode,
     };
     use kamn_core::{bootstrap, ConfigError, NodeConfig, NodeRole, SyncMode};
+    use std::io::{ErrorKind, Read, Write};
+    use std::net::TcpListener;
+    use std::sync::{Arc, Mutex};
+    use std::thread;
+    use std::time::{Duration, Instant};
+
+    #[derive(Clone)]
+    struct MockHttpReply {
+        status_line: &'static str,
+        body: String,
+    }
+
+    impl MockHttpReply {
+        fn ok(body: &str) -> Self {
+            Self {
+                status_line: "HTTP/1.1 200 OK",
+                body: body.to_owned(),
+            }
+        }
+    }
+
+    fn read_http_request(stream: &mut std::net::TcpStream) -> String {
+        let mut buffer = Vec::new();
+        let mut chunk = [0_u8; 1024];
+        let mut header_end = None;
+        let mut expected_total = None;
+        stream
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .expect("read timeout should be set");
+
+        loop {
+            let read_count = match stream.read(&mut chunk) {
+                Ok(read_count) => read_count,
+                Err(error)
+                    if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) =>
+                {
+                    break;
+                }
+                Err(error) => panic!("request bytes should be readable: {error}"),
+            };
+            if read_count == 0 {
+                break;
+            }
+            buffer.extend_from_slice(&chunk[..read_count]);
+
+            if header_end.is_none() {
+                header_end = buffer
+                    .windows(4)
+                    .position(|window| window == b"\r\n\r\n")
+                    .map(|pos| pos + 4);
+                if let Some(end) = header_end {
+                    let headers = String::from_utf8_lossy(&buffer[..end]);
+                    let content_length = headers
+                        .lines()
+                        .find_map(|line| {
+                            let (name, value) = line.split_once(':')?;
+                            if name.eq_ignore_ascii_case("Content-Length") {
+                                return value.trim().parse::<usize>().ok();
+                            }
+                            None
+                        })
+                        .unwrap_or(0);
+                    expected_total = Some(end + content_length);
+                }
+            }
+            if let Some(total) = expected_total {
+                if buffer.len() >= total {
+                    break;
+                }
+            }
+        }
+
+        String::from_utf8(buffer).expect("request should be valid utf-8")
+    }
+
+    fn spawn_kolme_live_mock_server(
+        replies: Vec<MockHttpReply>,
+    ) -> (String, Arc<Mutex<Vec<String>>>) {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
+        listener
+            .set_nonblocking(true)
+            .expect("listener should allow nonblocking accepts");
+        let addr = listener.local_addr().expect("local addr should resolve");
+        let recorded_requests = Arc::new(Mutex::new(Vec::new()));
+        let recorded_requests_ref = Arc::clone(&recorded_requests);
+        thread::spawn(move || {
+            for reply in replies {
+                let accept_deadline = Instant::now() + Duration::from_secs(2);
+                loop {
+                    match listener.accept() {
+                        Ok((mut stream, _)) => {
+                            let request = read_http_request(&mut stream);
+                            recorded_requests_ref
+                                .lock()
+                                .expect("request mutex should lock")
+                                .push(request);
+                            let response = format!(
+                                "{}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                                reply.status_line,
+                                reply.body.len(),
+                                reply.body
+                            );
+                            stream
+                                .write_all(response.as_bytes())
+                                .expect("response should write");
+                            break;
+                        }
+                        Err(error) if error.kind() == ErrorKind::WouldBlock => {
+                            if Instant::now() >= accept_deadline {
+                                return;
+                            }
+                            thread::sleep(Duration::from_millis(5));
+                        }
+                        Err(error) => panic!("accept should succeed: {error}"),
+                    }
+                }
+            }
+        });
+        (format!("http://{addr}"), recorded_requests)
+    }
 
     #[test]
     fn parses_required_role_and_defaults() {
@@ -1708,6 +1930,14 @@ mod tests {
 
     #[test]
     fn integration_runtime_kolme_live_renders_provider_contract_markers() {
+        let (base_url, requests) = spawn_kolme_live_mock_server(vec![
+            MockHttpReply::ok(
+                r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"pending"}"#,
+            ),
+            MockHttpReply::ok(
+                r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"final"}"#,
+            ),
+        ]);
         let args = vec![
             "kamn-node".to_owned(),
             "--role".to_owned(),
@@ -1715,7 +1945,7 @@ mod tests {
             "--runtime-mode".to_owned(),
             "kolme-live".to_owned(),
             "--kolme-live-base-url".to_owned(),
-            "http://127.0.0.1:3000".to_owned(),
+            base_url,
             "--kolme-live-provider-hint".to_owned(),
             "kolme-fork-local".to_owned(),
             "--kolme-live-signing-profile".to_owned(),
@@ -1732,6 +1962,56 @@ mod tests {
             "\"kolme_live_provider_client_contract\":\"KolmeRuntimeCommitLiveProvider\""
         ));
         assert!(rendered.contains("\"kolme_live_signing_profile\":\"kolme-fork-secp256k1-v1\""));
+        assert!(rendered.contains("\"kolme_live_execution_status\":\"submitted;"));
+
+        let recorded_requests = requests.lock().expect("request mutex should lock");
+        assert_eq!(
+            recorded_requests.len(),
+            2,
+            "live runtime should issue submit and finality requests"
+        );
+        assert!(recorded_requests[0].contains("PUT /broadcast HTTP/1.1"));
+        assert!(recorded_requests[0].contains("X-Idempotency-Key: "));
+        assert!(recorded_requests[1]
+            .contains("GET /runtime-commit/status?commit_id=kolme-commit%3Aab12cd34 HTTP/1.1"));
+    }
+
+    #[test]
+    fn regression_runtime_kolme_live_rejects_provider_marker_drift() {
+        // Regression: #2176
+        let (base_url, requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+            r#"{"status":"submitted","provider":"unexpected-provider","commit_id":"kolme-commit:ab12cd34","finality":"final"}"#,
+        )]);
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            base_url,
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+        let parsed = parse_args(args).expect("kolme-live args should parse");
+        assert!(
+            matches!(
+                execute(parsed),
+                Err(ConfigError::RuntimeKolmeLive(message))
+                if message.contains("provider marker drift")
+            ),
+            "runtime must fail closed when provider marker drifts from configured hint"
+        );
+        let recorded_requests = requests.lock().expect("request mutex should lock");
+        assert_eq!(
+            recorded_requests.len(),
+            1,
+            "provider drift should fail immediately after submit response mapping"
+        );
     }
 
     #[test]
