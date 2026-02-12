@@ -129,6 +129,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif runtime_provider_client_contract != "KolmeRuntimeCommitLiveProvider":
         reason_codes.append("runtime_provider_client_contract_mismatch")
 
+    runtime_profile = report.get("runtime_profile")
+    if not isinstance(runtime_profile, str) or not runtime_profile.strip():
+        reason_codes.append("runtime_profile_missing")
+    elif runtime_profile not in ("standard", "real-node"):
+        reason_codes.append("runtime_profile_invalid")
+    elif mode == "run" and runtime_profile != "real-node":
+        reason_codes.append("runtime_profile_run_mode_mismatch")
+
     runtime_commit_live_policy_report = report.get("runtime_commit_live_policy_report")
     if not isinstance(runtime_commit_live_policy_report, str) or not runtime_commit_live_policy_report.strip():
         reason_codes.append("runtime_commit_live_policy_report_missing")
@@ -167,6 +175,9 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("ci_fast_gate_scope_mismatch")
         if contracts.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
             reason_codes.append("runtime_provider_client_contract_contract_mismatch")
+        if isinstance(runtime_profile, str) and runtime_profile in ("standard", "real-node"):
+            if contracts.get("runtime_profile") != runtime_profile:
+                reason_codes.append("runtime_profile_contract_mismatch")
         if contracts.get("runtime_commit_endpoint") != "/broadcast/runtime-commit":
             reason_codes.append("runtime_commit_endpoint_mismatch")
         if contracts.get("runtime_commit_method") != "POST":

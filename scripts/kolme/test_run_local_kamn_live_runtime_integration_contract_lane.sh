@@ -129,6 +129,7 @@ required_coverage_markers=(
   "run_localhost_signed_integration_contract_lane.sh"
   "run_local_runtime_commit_live_finality_evidence_contract_lane.sh"
   "runtime_commit_failure_taxonomy_mismatch:finality.timeout"
+  "runtime_profile_run_mode_mismatch"
   "Regression: #1489"
   "Regression: #1971"
   "Regression: #2101"
@@ -136,6 +137,7 @@ required_coverage_markers=(
   "Regression: #2113"
   "Regression: #2114"
   "Regression: #2296"
+  "Regression: #2298"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then
@@ -244,6 +246,8 @@ if summary.get("status") != "ok":
     raise SystemExit("expected local KAMN live runtime integration contract-lane summary status ok")
 if summary.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected dry_run_no_commands_executed reason code in contract-lane summary")
+if summary.get("runtime_profile") != "real-node":
+    raise SystemExit("expected runtime_profile=real-node in contract-lane summary")
 if summary.get("runtime_commit_failure_taxonomy_version") != "v1":
     raise SystemExit("expected runtime commit failure taxonomy version marker in contract-lane summary")
 if summary.get("runtime_commit_failure_taxonomy") != "none":
