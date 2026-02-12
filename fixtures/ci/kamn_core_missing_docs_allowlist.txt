@@ -36,7 +36,6 @@ reputation_state
 retention_engine
 runtime
 signer_backend
-task_artifacts
 task_operations
 token
 trust_score

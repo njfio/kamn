@@ -2,28 +2,45 @@ use crate::AgentDid;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+/// Persisted task artifact metadata after successful registration.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskArtifactRecord {
+    /// Stable artifact identifier.
     pub artifact_id: String,
+    /// Task identifier the artifact belongs to.
     pub task_id: String,
+    /// Creator DID for the artifact.
     pub creator: String,
+    /// Creation timestamp in unix seconds.
     pub created_at_unix: u64,
+    /// On-chain integrity hash for artifact verification.
     pub on_chain_hash: String,
+    /// Off-chain URI where artifact content is stored.
     pub off_chain_uri: String,
+    /// MIME-style content type for artifact payload.
     pub content_type: String,
 }
 
+/// Input payload used to register a new task artifact.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskArtifactSubmission {
+    /// Stable artifact identifier.
     pub artifact_id: String,
+    /// Task identifier the artifact belongs to.
     pub task_id: String,
+    /// Creator DID for the artifact.
     pub creator: String,
+    /// Creation timestamp in unix seconds.
     pub created_at_unix: u64,
+    /// On-chain integrity hash for artifact verification.
     pub on_chain_hash: String,
+    /// Off-chain URI where artifact content is stored.
     pub off_chain_uri: String,
+    /// MIME-style content type for artifact payload.
     pub content_type: String,
 }
 
+/// Registry for task-artifact storage keyed by artifact, task, and creator.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct TaskArtifactRegistry {
     artifacts: BTreeMap<String, TaskArtifactRecord>,
@@ -32,15 +49,18 @@ pub struct TaskArtifactRegistry {
 }
 
 impl TaskArtifactRegistry {
+    /// Creates an empty task artifact registry.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Computes deterministic integrity fingerprint for `(task_id, creator, off_chain_uri)`.
     pub fn integrity_fingerprint(task_id: &str, creator: &str, off_chain_uri: &str) -> String {
         let canonical = format!("{task_id}|{creator}|{off_chain_uri}");
         fnv1a_hex(&canonical)
     }
 
+    /// Registers a new artifact after validating fields, DID, and integrity hash.
     pub fn register(
         &mut self,
         submission: TaskArtifactSubmission,
@@ -96,12 +116,14 @@ impl TaskArtifactRegistry {
         Ok(())
     }
 
+    /// Returns artifact record by identifier.
     pub fn artifact(&self, artifact_id: &str) -> Result<&TaskArtifactRecord, TaskArtifactError> {
         self.artifacts
             .get(artifact_id)
             .ok_or_else(|| TaskArtifactError::NotFound(artifact_id.to_owned()))
     }
 
+    /// Lists artifact ids associated with the provided task id.
     pub fn artifacts_for_task(&self, task_id: &str) -> Vec<String> {
         self.artifacts_by_task
             .get(task_id)
@@ -109,6 +131,7 @@ impl TaskArtifactRegistry {
             .unwrap_or_default()
     }
 
+    /// Lists artifact ids associated with the provided creator DID.
     pub fn artifacts_for_creator(&self, creator: &str) -> Vec<String> {
         self.artifacts_by_creator
             .get(creator)
@@ -117,12 +140,23 @@ impl TaskArtifactRegistry {
     }
 }
 
+/// Errors returned by task artifact registration and lookup flows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TaskArtifactError {
+    /// Required field was empty.
     EmptyField(&'static str),
+    /// Creator DID failed validation.
     InvalidDid(String),
+    /// Artifact id already exists.
     DuplicateArtifactId(String),
-    IntegrityMismatch { expected: String, provided: String },
+    /// Integrity hash did not match expected fingerprint.
+    IntegrityMismatch {
+        /// Expected deterministic fingerprint.
+        expected: String,
+        /// Provided on-chain hash value.
+        provided: String,
+    },
+    /// Artifact id does not exist.
     NotFound(String),
 }
 

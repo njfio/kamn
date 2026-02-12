@@ -13,4 +13,5 @@ service_marketplace
 task_payment
 telegram_bridge
 task_lifecycle
+task_artifacts
 transaction
