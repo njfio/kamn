@@ -172,6 +172,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `namespaces`
   - `operator_actions`
   - `operator_binding`
+  - `redaction_compliance`
   - `reputation_signals`
   - `service_marketplace`
   - `smoke`
@@ -203,6 +204,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2011`
   - `Regression: #2013`
   - `Regression: #2015`
+  - `Regression: #2017`
 
 ## Contributor Entrypoint Matrix
 

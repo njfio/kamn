@@ -82,7 +82,7 @@ pub mod operator_dashboard_api;
 pub mod operator_dashboard_ui;
 #[allow(missing_docs)]
 pub mod performance_targets;
-#[allow(missing_docs)]
+/// Redaction request approval, audit-event, and visibility compliance contracts.
 pub mod redaction_compliance;
 /// Reputation-signal weighting and candidate-ranking contracts for routing.
 pub mod reputation_signals;
