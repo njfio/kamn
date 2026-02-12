@@ -714,6 +714,45 @@ fn functional_live_provider_maps_submitted_json_response_to_provider_outcome() {
 }
 
 #[test]
+fn regression_issue_1920_live_provider_trims_endpoint_inputs() {
+    // Regression: #1920
+    let response = r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:runtime:1920","finality":"pending"}"#.to_owned();
+    let (transport, calls) = RecordingTransport::with_result(Ok(response));
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        "  http://127.0.0.1:3030  ",
+        "  /broadcast/runtime-commit  ",
+        transport,
+    )
+    .expect("provider should build");
+
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-live-provider-1920",
+        "state:live",
+        "kamn:did:agent:live-provider-1920",
+        61,
+        "payload:live-provider-1920",
+    )
+    .expect("request should build");
+
+    let outcome = provider
+        .submit_runtime_commit(&request.to_wire_payload(), request.idempotency_key())
+        .expect("provider should return a parsed outcome");
+    assert_eq!(
+        outcome,
+        KolmeRuntimeCommitProviderOutcome::Submitted(KolmeRuntimeCommitProviderReceipt {
+            provider: "kolme-fork-local".to_owned(),
+            commit_id: "kolme-commit:runtime:1920".to_owned(),
+            finality: KolmeCommitReceiptFinality::Pending,
+        })
+    );
+
+    let calls = calls.borrow();
+    assert_eq!(calls.len(), 1, "provider transport should be called once");
+    assert_eq!(calls[0].0, "http://127.0.0.1:3030");
+    assert_eq!(calls[0].1, "/broadcast/runtime-commit");
+}
+
+#[test]
 fn unit_kolme_fork_live_provider_maps_txhash_only_response_using_provider_hint() {
     let response = r#"{"txhash":"ab12cd34"}"#.to_owned();
     let (transport, calls) = RecordingTransport::with_result(Ok(response));

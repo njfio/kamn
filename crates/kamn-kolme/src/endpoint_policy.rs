@@ -141,6 +141,14 @@ pub fn is_valid_live_provider_submit_path_input(submit_path: &str) -> bool {
     !submit_path.trim().is_empty()
 }
 
+/// Normalizes live provider endpoint inputs for deterministic broadcast submit composition.
+pub fn normalize_live_provider_endpoint_inputs(
+    base_url: &str,
+    submit_path: &str,
+) -> (String, String) {
+    (base_url.trim().to_owned(), submit_path.trim().to_owned())
+}
+
 /// Composes websocket notifications URL from HTTP base URL + notifications path.
 pub fn compose_notifications_websocket_url(
     base_url: &str,

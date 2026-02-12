@@ -57,6 +57,8 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
         .contains("notifications_url,\n            provider: provider.trim().to_owned(),"));
     assert!(!RUNTIME_COMMIT_SRC
         .contains("base_url: base_url.trim().to_owned(),\n            status_path: status_path.trim().to_owned(),"));
+    assert!(!RUNTIME_COMMIT_SRC
+        .contains("base_url: base_url.trim().to_owned(),\n            submit_path: submit_path.trim().to_owned(),"));
     assert!(!RUNTIME_COMMIT_SRC.contains(
         "\"operation_id={}\\nstate_root={}\\nactor_did={}\\nnonce={}\\npayload_hash={}\\nidempotency_key={}\\n\""
     ));
@@ -86,6 +88,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_provider_hint_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_notifications_provider_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_finality_endpoint_inputs_contract("));
+    assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_live_provider_endpoint_inputs_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("txhash_from_kolme_commit_id("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_endpoint("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_websocket_endpoint("));
