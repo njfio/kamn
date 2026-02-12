@@ -103,8 +103,11 @@ def load_baseline_metrics(path: Path) -> ScriptMetrics:
 
 
 def compute_metrics(scripts_root: Path) -> ScriptMetrics:
+    def include_in_budget(path: Path) -> bool:
+        return path.is_file() and not path.name.startswith("test_")
+
     scripts = sorted(
-        path for path in scripts_root.rglob("*.sh") if path.is_file()
+        path for path in scripts_root.rglob("*.sh") if include_in_budget(path)
     )
     script_count = len(scripts)
     shell_line_total = sum(

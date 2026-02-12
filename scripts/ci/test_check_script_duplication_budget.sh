@@ -21,6 +21,10 @@ cat >"$SCRIPTS_ROOT/b/run_beta.sh" <<'EOF_SCRIPT'
 #!/usr/bin/env bash
 echo "beta"
 EOF_SCRIPT
+cat >"$SCRIPTS_ROOT/b/test_alpha_lane.sh" <<'EOF_SCRIPT'
+#!/usr/bin/env bash
+echo "alpha test harness"
+EOF_SCRIPT
 ln -s ../a/run_alpha.sh "$SCRIPTS_ROOT/c/run_alpha_dispatch.sh"
 
 PASS_BUDGET="$TMP_DIR/pass-budget.env"
@@ -64,6 +68,30 @@ if ! printf '%s\n' "$pass_output" | grep -q '^duplicate_content=0$'; then
 fi
 if ! printf '%s\n' "$pass_output" | grep -q '^remediation=none$'; then
   echo "expected remediation marker to be none on pass path" >&2
+  exit 1
+fi
+
+TEST_EXCLUSION_BUDGET="$TMP_DIR/test-exclusion-budget.env"
+cat >"$TEST_EXCLUSION_BUDGET" <<'EOF_BUDGET'
+SCRIPT_COUNT_MAX=3
+SHELL_LINE_TOTAL_MAX=20
+DUPLICATE_BASENAME_MAX=0
+DUPLICATE_CONTENT_MAX=0
+EOF_BUDGET
+
+test_exclusion_output="$(
+  bash "$SCRIPT" \
+    --scripts-root "$SCRIPTS_ROOT" \
+    --budget-file "$TEST_EXCLUSION_BUDGET" \
+    --baseline-file "$BASELINE_FILE"
+)"
+
+if ! printf '%s\n' "$test_exclusion_output" | grep -q '^status=pass$'; then
+  echo "expected test harness files (test_*.sh) to be excluded from script_count budget" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$test_exclusion_output" | grep -q '^script_count=3$'; then
+  echo "expected script_count to ignore test_*.sh harness files" >&2
   exit 1
 fi
 

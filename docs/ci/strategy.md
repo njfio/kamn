@@ -320,8 +320,9 @@ Regression policy:
 - local probe fork-info chain_version query and native parity broadcast method drift remains fail-closed (`Regression: #1482`).
 - nonce/broadcast parity matrix selector/docs/runtime-budget drift remains fail-closed (`Regression: #1462`).
 - fast-gate native Kolme API parity lane schema/routing/runtime-budget drift remains fail-closed (`Regression: #1466`).
-- script-surface budget temporary `script_count` waiver scope/expiry drift remains fail-closed (`Regression: #1497`).
+- script-surface budget waiver schema/scope/expiry validation remains fail-closed when waiver files are present (`Regression: #1497`).
 - script-surface duplicate-content policy excludes symlink dispatch wrappers and remains fail-closed for duplicated regular files (`Regression: #2090`).
+- script-surface script-count/LOC metrics exclude `test_*.sh` harness scripts and remain fail-closed for non-test shell surfaces (`Regression: #2093`).
 - Kolme command-surface missing-both coverage drift remains fail-closed (`Regression: #1561`).
 - Kolme command-surface asymmetry split drift remains fail-closed (`Regression: #1565`).
 - Kolme command-surface asymmetry policy-file schema drift remains fail-closed (`Regression: #1569`).
