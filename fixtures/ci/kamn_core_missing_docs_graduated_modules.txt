@@ -7,4 +7,5 @@ namespaces
 signature_profile
 smoke
 state
+service_marketplace
 task_lifecycle
