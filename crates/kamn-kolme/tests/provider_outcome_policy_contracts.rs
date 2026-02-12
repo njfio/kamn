@@ -1,8 +1,9 @@
 use kamn_kolme::{
     deterministic_backend_commit_id, is_valid_expected_provider_input,
-    parse_commit_id_from_response_fields, parse_live_provider_outcome,
-    parse_live_runtime_provider_outcome, require_commit_id_matches_expected_txhash,
-    required_provider_response_field, txhash_from_commit_id,
+    is_valid_runtime_provider_input, parse_commit_id_from_response_fields,
+    parse_live_provider_outcome, parse_live_runtime_provider_outcome,
+    require_commit_id_matches_expected_txhash, required_provider_response_field,
+    txhash_from_commit_id,
     validate_provider_receipt_identity as validate_provider_receipt_identity_contract,
     KolmeCommitReceiptFinality, KolmeProviderOutcome, KolmeProviderOutcomePolicyError,
     KolmeProviderReceiptIdentityError, KolmeRuntimeProviderOutcome, ReceiptFinality,
@@ -194,4 +195,15 @@ fn functional_provider_outcome_policy_accepts_non_empty_expected_provider_input(
 fn regression_issue_1878_provider_outcome_policy_rejects_empty_expected_provider_input() {
     // Regression: #1878
     assert!(!is_valid_expected_provider_input(" "));
+}
+
+#[test]
+fn functional_provider_outcome_policy_accepts_non_empty_runtime_provider_input() {
+    assert!(is_valid_runtime_provider_input("kolme-local"));
+}
+
+#[test]
+fn regression_issue_1880_provider_outcome_policy_rejects_empty_runtime_provider_input() {
+    // Regression: #1880
+    assert!(!is_valid_runtime_provider_input(""));
 }

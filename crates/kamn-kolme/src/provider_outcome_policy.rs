@@ -317,7 +317,12 @@ pub fn validate_provider_receipt_identity(
 
 /// Validates adapter expected-provider input before receipt identity enforcement.
 pub fn is_valid_expected_provider_input(expected_provider: &str) -> bool {
-    !expected_provider.trim().is_empty()
+    is_valid_runtime_provider_input(expected_provider)
+}
+
+/// Validates runtime provider identifier input for provider-backed clients.
+pub fn is_valid_runtime_provider_input(provider: &str) -> bool {
+    !provider.trim().is_empty()
 }
 
 fn required_response_field(
