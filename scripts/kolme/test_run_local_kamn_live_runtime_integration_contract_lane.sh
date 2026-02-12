@@ -5,6 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kamn_live_runtime_integration_policy.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_contract_lane.json"
+RUNTIME_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"
+RUNTIME_DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
+RUNTIME_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_kamn_live_runtime_integration_contract_lane.py"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 README_FILE="$ROOT_DIR/README.md"
@@ -24,6 +27,47 @@ fi
 
 if ! grep -q "scripts/framework/run_manifest_lane.sh" "$RUNNER"; then
   echo "expected local KAMN live runtime integration contract lane to dispatch through manifest wrapper" >&2
+  exit 1
+fi
+
+if [ ! -x "$RUNTIME_DISPATCHER" ]; then
+  echo "expected shared runtime lane dispatcher to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "scripts/kolme/run_lane_dispatch.sh" "$RUNTIME_RUNNER"; then
+  echo "expected local KAMN live runtime integration runner to dispatch through shared runtime lane dispatcher" >&2
+  exit 1
+fi
+
+if [ ! -f "$RUNTIME_MANIFEST" ]; then
+  echo "expected local KAMN live runtime integration lane manifest to exist" >&2
+  exit 1
+fi
+
+python3 - "$RUNTIME_MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.contract-lane.manifest.v1":
+    raise SystemExit("expected local KAMN live runtime integration lane manifest schema")
+if payload.get("lane_id") != "kolme.local_kamn_live_runtime_integration.run":
+    raise SystemExit("expected local KAMN live runtime integration lane manifest lane_id")
+run_command = payload.get("phases", {}).get("run")
+if run_command != [
+    "bash",
+    "scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh",
+    "--manifest-impl",
+]:
+    raise SystemExit("expected local KAMN live runtime integration lane manifest run command")
+PY
+
+resolved_runtime_manifest="$(bash "$RUNTIME_DISPATCHER" --lane-wrapper "$(basename "$RUNTIME_RUNNER")" --resolve-manifest-path)"
+if [ "$resolved_runtime_manifest" != "$RUNTIME_MANIFEST" ]; then
+  echo "expected runtime integration wrapper to resolve deterministic runtime manifest" >&2
   exit 1
 fi
 

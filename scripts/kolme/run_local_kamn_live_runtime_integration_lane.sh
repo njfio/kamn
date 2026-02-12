@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_NAME="$(basename "$0")"
 BOOTSTRAP_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh"
 CONFORMANCE_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_api_conformance_harness.sh"
 LOCALHOST_SIGNED_INTEGRATION_RUNNER="$ROOT_DIR/scripts/sdk/run_localhost_signed_integration_contract_lane.sh"
@@ -39,6 +40,11 @@ RUNTIME_SIGNER_KEY_SOURCE_CONTRACT_VERSION=""
 RUNTIME_SIGNER_KEY_SOURCE=""
 RUNTIME_SIGNER_PRIVATE_KEY_ENV=""
 RUNTIME_SIGNER_PROFILE_OVERRIDE=""
+
+if [ "${1:-}" != "--manifest-impl" ]; then
+  exec bash "$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh" --lane-wrapper "$SCRIPT_NAME" -- "$@"
+fi
+shift
 
 shell_escape() {
   printf "%q" "$1"

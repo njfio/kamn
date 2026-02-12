@@ -447,6 +447,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Summary schema:
   - `kamn.kolme.local-kamn-live-runtime-integration-summary.v1`
 - Deterministic checkpoints include:
+  - wrapper routing remains manifest-backed via `scripts/kolme/run_lane_dispatch.sh` resolving `scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_lane.json`.
   - `run_local_kolme_fork_bootstrap_readiness_lane.sh` run-mode validation for pinned checkout provenance and API readiness.
   - `run_localhost_signed_integration_contract_lane.sh` run-mode validation of signed message admission/replay guards before Kolme runtime commit execution.
   - `run_local_kolme_live_api_conformance_harness.sh` run-mode validation for health/query/nonce/broadcast command contracts.
