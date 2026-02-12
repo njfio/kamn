@@ -216,6 +216,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `upgrade_orchestration`
   - `validator_lifecycle`
   - `watchdog`
+  - `zk_message_proofs`
 - Regression marker:
   - `Regression: #1828`
   - `Regression: #1981`
@@ -269,6 +270,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2077`
   - `Regression: #2079`
   - `Regression: #2081`
+  - `Regression: #2083`
 
 ## Contributor Entrypoint Matrix
 
