@@ -92,6 +92,7 @@ Out of scope:
 - #1944: extracted fork finality resolver ownership into `kolme_runtime_commit/fork_finality_resolver.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeRuntimeCommitForkFinalityResolver` from the dedicated submodule.
 - #1946: extracted finality checker ownership into `kolme_runtime_commit/finality_checker.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeRuntimeCommitFinalityChecker` from the dedicated submodule.
 - #1948: extracted block fallback reconciler ownership into `kolme_runtime_commit/block_fallback_reconciler.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeRuntimeCommitBlockFallbackReconciler` from the dedicated submodule.
+- #1950: extracted adapter-backed client ownership into `kolme_runtime_commit/adapter_backed_client.rs` and rewired `kolme_runtime_commit.rs` to re-export `AdapterBackedKolmeRuntimeCommitClient` from the dedicated submodule.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,
