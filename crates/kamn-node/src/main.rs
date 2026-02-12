@@ -20,8 +20,6 @@ const KOLME_LIVE_FINALITY_STATUS_PATH: &str = "/runtime-commit/status";
 const KOLME_LIVE_FINALITY_MAX_ATTEMPTS: u32 = 2;
 const KOLME_LIVE_SIGNER_KEY_ID: &str = "kamn:key:signer:kolme-fork-secp256k1-v1";
 const KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX";
-const KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK: &str =
-    "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct OutputMode {
@@ -739,11 +737,22 @@ fn encode_kolme_hex_lower(bytes: &[u8]) -> String {
     output
 }
 
+fn read_kolme_live_signer_private_key_hex() -> Result<String, ConfigError> {
+    match env::var(KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV) {
+        Ok(private_key_hex) => Ok(private_key_hex),
+        Err(env::VarError::NotPresent) => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV} must be set"
+        ))),
+        Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV} must be valid utf-8"
+        ))),
+    }
+}
+
 fn build_kolme_live_signed_wire_payload(
     request: &KolmeRuntimeCommitRequest,
 ) -> Result<String, ConfigError> {
-    let private_key_hex = env::var(KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV)
-        .unwrap_or_else(|_| KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK.to_owned());
+    let private_key_hex = read_kolme_live_signer_private_key_hex()?;
     let private_key_bytes = decode_kolme_hex_bytes(private_key_hex.as_str())?;
     let signing_key = SigningKey::from_slice(private_key_bytes.as_slice()).map_err(|error| {
         ConfigError::RuntimeKolmeLive(format!(
@@ -1416,6 +1425,41 @@ mod tests {
     use std::sync::{Arc, Mutex};
     use std::thread;
     use std::time::{Duration, Instant};
+    use std::{env, sync::OnceLock};
+
+    const TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX: &str =
+        "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+
+    fn signer_env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    struct EnvVarGuard {
+        key: &'static str,
+        previous: Option<String>,
+    }
+
+    impl EnvVarGuard {
+        fn set(key: &'static str, value: Option<&str>) -> Self {
+            let previous = env::var(key).ok();
+            match value {
+                Some(value) => env::set_var(key, value),
+                None => env::remove_var(key),
+            }
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            if let Some(previous) = self.previous.as_deref() {
+                env::set_var(self.key, previous);
+            } else {
+                env::remove_var(self.key);
+            }
+        }
+    }
 
     #[derive(Clone)]
     struct MockHttpReply {
@@ -2032,6 +2076,13 @@ mod tests {
 
     #[test]
     fn integration_runtime_kolme_live_renders_provider_contract_markers() {
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _env_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+        );
         let (base_url, requests) = spawn_kolme_live_mock_server(vec![
             MockHttpReply::ok(
                 r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"pending"}"#,
@@ -2092,6 +2143,13 @@ mod tests {
 
     #[test]
     fn unit_kolme_live_signer_builds_signed_envelope_wire_payload() {
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _env_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+        );
         let request = KolmeRuntimeCommitRequest::deterministic(
             "op-node-live-2197",
             "state:node-live-2197",
@@ -2125,6 +2183,13 @@ mod tests {
     #[test]
     fn regression_runtime_kolme_live_rejects_provider_marker_drift() {
         // Regression: #2176
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _env_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+        );
         let (base_url, requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
             r#"{"status":"submitted","provider":"unexpected-provider","commit_id":"kolme-commit:ab12cd34","finality":"final"}"#,
         )]);
@@ -2157,6 +2222,42 @@ mod tests {
             recorded_requests.len(),
             1,
             "provider drift should fail immediately after submit response mapping"
+        );
+    }
+
+    #[test]
+    fn regression_runtime_kolme_live_rejects_missing_signer_private_key_env() {
+        // Regression: #2220
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _env_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
+        let (base_url, _requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+            r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"final"}"#,
+        )]);
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            base_url,
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+        let parsed = parse_args(args).expect("kolme-live args should parse");
+        assert!(
+            matches!(
+                execute(parsed),
+                Err(ConfigError::RuntimeKolmeLive(message))
+                if message.contains("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX must be set")
+            ),
+            "runtime must fail closed when signer private key env is missing"
         );
     }
 

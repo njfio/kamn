@@ -224,7 +224,7 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
   - live submit payload composition:
     - runtime request payload is signed with secp256k1 before `/broadcast` submission.
     - signer key marker in signed-envelope source payload: `kamn:key:signer:kolme-fork-secp256k1-v1`.
-    - private key source contract: `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX` (falls back to deterministic local smoke key when unset).
+    - private key source contract: `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX` (required; live runtime fails closed when missing).
     - synthetic fallback signature material (`signature=<idempotency_key>`) is rejected by runtime tests/policies.
   - in-memory fallback markers and non-fork signing profiles are rejected fail-closed by typed node config errors.
 - Runtime live lane (submit + optional finality):
