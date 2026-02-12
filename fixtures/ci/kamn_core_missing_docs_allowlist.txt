@@ -40,7 +40,6 @@ runtime
 signer_backend
 task_artifacts
 task_operations
-task_payment
 telegram_bridge
 token
 transaction

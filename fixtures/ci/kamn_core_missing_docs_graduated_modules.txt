@@ -8,4 +8,5 @@ signature_profile
 smoke
 state
 service_marketplace
+task_payment
 task_lifecycle

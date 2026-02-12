@@ -106,7 +106,7 @@ pub mod task_artifacts;
 pub mod task_lifecycle;
 #[allow(missing_docs)]
 pub mod task_operations;
-#[allow(missing_docs)]
+/// Task payment offer/confirmation workflow backed by escrow release controls.
 pub mod task_payment;
 #[allow(missing_docs)]
 pub mod telegram_bridge;

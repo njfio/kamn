@@ -5,19 +5,29 @@ use crate::{
 use std::collections::BTreeMap;
 use std::fmt;
 
+/// Payment offer submitted for a completed task.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PaymentOffer {
+    /// Task identifier that the offer settles.
     pub task_id: String,
+    /// Escrow identifier funding the payout.
     pub escrow_id: String,
+    /// Requester DID funding the payment.
     pub payer_did: String,
+    /// Assignee DID receiving the payment.
     pub payee_did: String,
+    /// Amount to release from escrow in atomic units.
     pub amount: u128,
 }
 
+/// Confirmation payload authorizing release for a payment offer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PaymentConfirm {
+    /// Task identifier for the confirmed offer.
     pub task_id: String,
+    /// Escrow identifier tied to the offer.
     pub escrow_id: String,
+    /// Payer DID confirming release.
     pub confirmer_did: String,
 }
 
@@ -27,16 +37,19 @@ struct PendingOffer {
     confirmed: bool,
 }
 
+/// Task payment workflow that validates and tracks escrow-backed offers.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct TaskPaymentWorkflow {
     offers_by_task: BTreeMap<String, PendingOffer>,
 }
 
 impl TaskPaymentWorkflow {
+    /// Creates an empty task-payment workflow.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Submits a payment offer after validating task, escrow, and participant constraints.
     pub fn submit_offer(
         &mut self,
         offer: PaymentOffer,
@@ -81,6 +94,7 @@ impl TaskPaymentWorkflow {
         Ok(())
     }
 
+    /// Confirms a submitted offer and releases escrow funds once.
     pub fn confirm_offer(
         &mut self,
         confirm: PaymentConfirm,
@@ -122,22 +136,68 @@ impl TaskPaymentWorkflow {
     }
 }
 
+/// Errors returned by task-payment offer and confirmation workflows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TaskPaymentError {
+    /// Confirmation already exists for the task.
     DuplicateConfirm(String),
+    /// Offer already exists for the task.
     DuplicateOffer(String),
+    /// Required field is missing.
     EmptyField(&'static str),
+    /// Escrow lifecycle call failed.
     Escrow(String),
-    EscrowMismatch { expected: String, found: String },
+    /// Escrow identifier does not match the submitted offer.
+    EscrowMismatch {
+        /// Expected escrow identifier.
+        expected: String,
+        /// Observed escrow identifier.
+        found: String,
+    },
+    /// DID failed validation.
     InvalidDid(String),
+    /// Offer amount is invalid.
     InvalidOfferAmount(u128),
-    PayerRequesterMismatch { expected: String, found: String },
-    PayeeAssigneeMismatch { expected: String, found: String },
-    OfferExceedsEscrow { offered: u128, remaining: u128 },
+    /// Payer DID does not match task requester.
+    PayerRequesterMismatch {
+        /// Expected requester DID.
+        expected: String,
+        /// Observed payer DID.
+        found: String,
+    },
+    /// Payee DID does not match task assignee.
+    PayeeAssigneeMismatch {
+        /// Expected assignee DID.
+        expected: String,
+        /// Observed payee DID.
+        found: String,
+    },
+    /// Offer amount exceeds remaining escrow balance.
+    OfferExceedsEscrow {
+        /// Amount offered for release.
+        offered: u128,
+        /// Remaining escrow balance.
+        remaining: u128,
+    },
+    /// Task lookup failed.
     TaskLookup(String),
+    /// Task is missing assignee required for payment routing.
     TaskMissingAssignee(String),
-    TaskNotCompleted { task_id: String, state: TaskState },
-    UnauthorizedConfirmer { expected: String, found: String },
+    /// Task is not completed and cannot be paid yet.
+    TaskNotCompleted {
+        /// Task identifier.
+        task_id: String,
+        /// Current task state.
+        state: TaskState,
+    },
+    /// Confirmer DID is not authorized to approve release.
+    UnauthorizedConfirmer {
+        /// Expected confirmer DID.
+        expected: String,
+        /// Observed confirmer DID.
+        found: String,
+    },
+    /// Offer for the given task does not exist.
     UnknownOffer(String),
 }
 
