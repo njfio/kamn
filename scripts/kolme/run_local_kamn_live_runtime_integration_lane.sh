@@ -36,6 +36,7 @@ RUNTIME_COMMIT_MAX_SECONDS=30
 RUNTIME_SIGNER_PROFILE_SELECTOR_ENV=""
 RUNTIME_SIGNER_PROFILE=""
 RUNTIME_SIGNER_PRIVATE_KEY_ENV=""
+RUNTIME_SIGNER_PROFILE_OVERRIDE=""
 
 shell_escape() {
   printf "%q" "$1"
@@ -121,6 +122,14 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       RUNTIME_PROFILE="$2"
+      shift 2
+      ;;
+    --runtime-signer-profile)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --runtime-signer-profile" >&2
+        exit 1
+      fi
+      RUNTIME_SIGNER_PROFILE_OVERRIDE="$2"
       shift 2
       ;;
     --runtime-commit-finality-command)
@@ -253,6 +262,8 @@ Options:
                                       Required runtime provider contract marker forwarded to nested runtime finality evidence policy.
   --runtime-profile standard|real-node
                                       Runtime integration profile contract marker for local evidence interpretation.
+  --runtime-signer-profile ops-primary|ops-secondary
+                                      Optional signer profile override for real-node runtime profile summaries.
   --runtime-commit-finality-command <command>
                                       Optional finality command passed through to nested runtime-commit live lane.
   --runtime-commit-finality-max-seconds <n>
@@ -307,6 +318,16 @@ fi
 
 if [ "$RUNTIME_PROFILE" != "standard" ] && [ "$RUNTIME_PROFILE" != "real-node" ]; then
   echo "runtime-profile must be one of: standard, real-node" >&2
+  exit 1
+fi
+
+if [ -n "$RUNTIME_SIGNER_PROFILE_OVERRIDE" ] && [ "$RUNTIME_PROFILE" != "real-node" ]; then
+  echo "runtime-signer-profile is only valid when runtime-profile=real-node" >&2
+  exit 1
+fi
+
+if [ -n "$RUNTIME_SIGNER_PROFILE_OVERRIDE" ] && [ "$RUNTIME_SIGNER_PROFILE_OVERRIDE" != "ops-primary" ] && [ "$RUNTIME_SIGNER_PROFILE_OVERRIDE" != "ops-secondary" ]; then
+  echo "runtime-signer-profile must be one of: ops-primary, ops-secondary" >&2
   exit 1
 fi
 
@@ -368,9 +389,13 @@ if [ "$RUNTIME_PROFILE" = "real-node" ]; then
   runtime_commit_command_profile="real-node-non-synthetic-v1"
   runtime_commit_policy_command_profile="real-node-non-synthetic-v1"
   RUNTIME_SIGNER_PROFILE_SELECTOR_ENV="KAMN_KOLME_LIVE_SIGNER_PROFILE"
-  RUNTIME_SIGNER_PROFILE="ops-primary"
-  RUNTIME_SIGNER_PRIVATE_KEY_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
-  RUNTIME_SIGNER_PREVIOUS_PROFILE="ops-primary"
+  RUNTIME_SIGNER_PROFILE="${RUNTIME_SIGNER_PROFILE_OVERRIDE:-ops-primary}"
+  if [ "$RUNTIME_SIGNER_PROFILE" = "ops-secondary" ]; then
+    RUNTIME_SIGNER_PRIVATE_KEY_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+  else
+    RUNTIME_SIGNER_PRIVATE_KEY_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
+  fi
+  RUNTIME_SIGNER_PREVIOUS_PROFILE="$RUNTIME_SIGNER_PROFILE"
 fi
 
 if [ -n "$RUNTIME_SIGNER_PROFILE" ]; then

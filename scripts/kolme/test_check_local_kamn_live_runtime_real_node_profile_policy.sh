@@ -9,12 +9,16 @@ CI_DOC_FILE="$ROOT_DIR/docs/ci/strategy.md"
 README_FILE="$ROOT_DIR/README.md"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT_OK="$TMP_DIR/ok-report.json"
+TMP_REPORT_OK_SECONDARY="$TMP_DIR/ok-report-secondary.json"
 TMP_REPORT_BAD="$TMP_DIR/bad-report.json"
 TMP_REPORT_SYNTHETIC="$TMP_DIR/synthetic-report.json"
 TMP_REPORT_INMEMORY="$TMP_DIR/inmemory-report.json"
 TMP_POLICY_OUT="$TMP_DIR/policy-report.json"
+TMP_POLICY_OUT_SECONDARY="$TMP_DIR/policy-report-secondary.json"
 TMP_INTEGRATION_POLICY_OUT="$TMP_DIR/integration-policy-report.json"
+TMP_INTEGRATION_POLICY_OUT_SECONDARY="$TMP_DIR/integration-policy-secondary-report.json"
 TMP_SUMMARY="$TMP_DIR/integration-summary.json"
+TMP_SUMMARY_SECONDARY="$TMP_DIR/integration-summary-secondary.json"
 TMP_RUNTIME_SUMMARY="$TMP_DIR/runtime-summary.json"
 TMP_RUNTIME_POLICY="$TMP_DIR/runtime-policy.json"
 TMP_ERR="$TMP_DIR/error.log"
@@ -163,6 +167,51 @@ if report.get("final_decision") != "GO":
     raise SystemExit("expected final_decision GO for valid real-node profile report")
 if report.get("reason_codes") != []:
     raise SystemExit("expected no reason codes for valid real-node profile report")
+PY
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_OK_SECONDARY" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["runtime_signer_profile"] = "ops-secondary"
+report["runtime_signer_previous_profile"] = "ops-secondary"
+report["runtime_signer_private_key_env"] = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+report["runtime_commit_command"] = str(report["runtime_commit_command"]).replace(
+    "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary",
+    "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary",
+)
+contracts = report.get("contracts", {})
+if isinstance(contracts, dict):
+    contracts["runtime_signer_profile"] = "ops-secondary"
+    contracts["runtime_signer_private_key_env"] = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_OK_SECONDARY" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --require-reason-code dry_run_no_commands_executed \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT_SECONDARY" >/dev/null
+
+python3 - "$TMP_POLICY_OUT_SECONDARY" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if report.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1":
+    raise SystemExit("unexpected secondary real-node profile policy report schema")
+if report.get("final_decision") != "GO":
+    raise SystemExit("expected final_decision GO for valid secondary real-node profile report")
+if report.get("reason_codes") != []:
+    raise SystemExit("expected no reason codes for valid secondary real-node profile report")
 PY
 
 cat >"$TMP_REPORT_BAD" <<'JSON'
@@ -516,6 +565,23 @@ python3 "$CHECKER" \
   --require-non-synthetic-run-evidence \
   --output-json "$TMP_INTEGRATION_POLICY_OUT" >/dev/null
 
+bash "$RUNNER" \
+  --mode dry-run \
+  --runtime-profile real-node \
+  --runtime-signer-profile ops-secondary \
+  --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider \
+  --runtime-commit-live-summary "$TMP_RUNTIME_SUMMARY" \
+  --runtime-commit-live-policy-report "$TMP_RUNTIME_POLICY" \
+  --output-json "$TMP_SUMMARY_SECONDARY" >/dev/null
+
+python3 "$CHECKER" \
+  --report-file "$TMP_SUMMARY_SECONDARY" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --require-reason-code dry_run_no_commands_executed \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_INTEGRATION_POLICY_OUT_SECONDARY" >/dev/null
+
 python3 - "$TMP_SUMMARY" <<'PY'
 import json
 import pathlib
@@ -576,6 +642,32 @@ if "--require-native-payload-evidence" not in runtime_policy_command:
     raise SystemExit("expected native payload evidence marker in runner-generated runtime policy command")
 PY
 
+python3 - "$TMP_SUMMARY_SECONDARY" <<'PY'
+import json
+import pathlib
+import sys
+
+summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+runtime_commit_command = summary.get("runtime_commit_command")
+if not isinstance(runtime_commit_command, str):
+    raise SystemExit("expected runtime_commit_command string in secondary runner-generated summary")
+if "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary" not in runtime_commit_command:
+    raise SystemExit("expected secondary signer profile marker in secondary runner-generated runtime commit command")
+if summary.get("runtime_signer_profile") != "ops-secondary":
+    raise SystemExit("expected secondary signer profile marker in secondary runner-generated summary")
+if summary.get("runtime_signer_previous_profile") != "ops-secondary":
+    raise SystemExit("expected secondary signer previous-profile marker in secondary runner-generated summary")
+if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
+    raise SystemExit("expected secondary signer private key env marker in secondary runner-generated summary")
+contracts = summary.get("contracts")
+if not isinstance(contracts, dict):
+    raise SystemExit("expected contracts object in secondary runner-generated summary")
+if contracts.get("runtime_signer_profile") != "ops-secondary":
+    raise SystemExit("expected contracts secondary signer profile marker in secondary runner-generated summary")
+if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
+    raise SystemExit("expected contracts secondary signer private key env marker in secondary runner-generated summary")
+PY
+
 python3 - "$TMP_INTEGRATION_POLICY_OUT" <<'PY'
 import json
 import pathlib
@@ -586,6 +678,18 @@ if policy.get("final_decision") != "GO":
     raise SystemExit("expected GO from real-node profile checker for runner-generated dry-run summary")
 if policy.get("reason_codes") != []:
     raise SystemExit("expected no reason codes for runner-generated real-node profile summary")
+PY
+
+python3 - "$TMP_INTEGRATION_POLICY_OUT_SECONDARY" <<'PY'
+import json
+import pathlib
+import sys
+
+policy = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if policy.get("final_decision") != "GO":
+    raise SystemExit("expected GO from real-node profile checker for secondary runner-generated dry-run summary")
+if policy.get("reason_codes") != []:
+    raise SystemExit("expected no reason codes for secondary runner-generated real-node profile summary")
 PY
 
 echo "local KAMN live runtime real-node profile policy checker tests passed."
