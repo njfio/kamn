@@ -3,9 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_runtime_commit_live_lane.sh"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_runtime_commit_live_evidence_policy.py"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_runtime_commit_live_lane.json"
 TMP_REPORT="$(mktemp)"
 TMP_OUTPUT="$(mktemp)"
 TMP_FINALITY_OUTPUT="$(mktemp)"
@@ -35,6 +37,11 @@ if [ ! -x "$RUNNER" ]; then
   exit 1
 fi
 
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected local runtime lane dispatcher to be executable" >&2
+  exit 1
+fi
+
 if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   echo "expected shared local-heavy opt-in guard helper to be executable" >&2
   exit 1
@@ -47,6 +54,43 @@ fi
 
 if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER"; then
   echo "expected runtime commit live runner to invoke shared local-heavy opt-in guard helper" >&2
+  exit 1
+fi
+
+if ! grep -q "scripts/kolme/run_lane_dispatch.sh" "$RUNNER"; then
+  echo "expected runtime commit live runner to dispatch through shared runtime lane dispatcher" >&2
+  exit 1
+fi
+
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected runtime commit live lane manifest to exist" >&2
+  exit 1
+fi
+
+python3 - "$MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.contract-lane.manifest.v1":
+    raise SystemExit("expected runtime commit live lane manifest schema")
+if payload.get("lane_id") != "kolme.local_runtime_commit_live.run":
+    raise SystemExit("expected runtime commit live lane manifest lane_id")
+run_command = payload.get("phases", {}).get("run")
+if run_command != [
+    "bash",
+    "scripts/kolme/run_local_runtime_commit_live_lane.sh",
+    "--manifest-impl",
+]:
+    raise SystemExit("expected runtime commit live lane manifest run command")
+PY
+
+manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUNNER")" --resolve-manifest-path)"
+assert_eq "$manifest_path" "$MANIFEST" "expected runtime commit live wrapper to resolve deterministic manifest"
+if bash "$DISPATCHER" --lane-wrapper run_missing_runtime_lane.sh --resolve-manifest-path >/dev/null 2>&1; then
+  echo "expected runtime lane dispatcher to fail closed for unknown wrapper" >&2
   exit 1
 fi
 

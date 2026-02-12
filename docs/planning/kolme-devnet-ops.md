@@ -861,6 +861,7 @@ Operator checkpoints:
   - `kamn.kolme.local-runtime-commit-live-summary.v1`
   - policy schema: `kamn.kolme.local-runtime-commit-live-policy-report.v1`
 - Deterministic checkpoints include:
+  - wrapper routing remains manifest-backed via `scripts/kolme/run_lane_dispatch.sh` resolving `scripts/framework/manifests/kolme_local_runtime_commit_live_lane.json`.
   - bounded preflight probe against `<base-url>/healthz` before live submit execution (unless `--skip-preflight` is explicitly set)
   - explicit local-only opt-in marker (`KAMN_KOLME_LOCAL_HEAVY=1`)
   - bounded live command timeout via `--max-seconds`
