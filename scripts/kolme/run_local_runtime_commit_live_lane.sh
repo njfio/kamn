@@ -392,6 +392,31 @@ submit_evidence_marker_present = sys.argv[24] == "true"
 finality_evidence_marker = sys.argv[25]
 finality_evidence_marker_present = sys.argv[26] == "true"
 
+def classify_synthetic_command(command: str) -> bool:
+    normalized = " ".join(command.strip().split())
+    if not normalized or normalized == "<not-configured>":
+        return False
+
+    lower = normalized.lower()
+    executable_markers = (
+        "cargo test",
+        "curl ",
+        "python3 ",
+        "bash scripts/",
+        "./scripts/",
+    )
+    has_executable_marker = any(marker in lower for marker in executable_markers)
+    synthetic_prefixes = ("printf ", "echo ", "true", ":", "cat <<", "cat<<")
+    has_synthetic_prefix = lower.startswith(synthetic_prefixes)
+
+    if has_synthetic_prefix and not has_executable_marker:
+        return True
+    if has_executable_marker:
+        return False
+    if "status=submitted" in lower or "finality=final" in lower:
+        return True
+    return False
+
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
     if not raw_line.strip():
@@ -408,6 +433,13 @@ for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
         }
     )
 
+live_command_synthetic = classify_synthetic_command(live_command)
+finality_enabled = bool(finality_command.strip())
+if finality_enabled:
+    finality_command_synthetic = classify_synthetic_command(finality_command)
+else:
+    finality_command_synthetic = False
+
 summary = {
     "schema_version": "kamn.kolme.local-runtime-commit-live-summary.v1",
     "mode": mode,
@@ -418,11 +450,14 @@ summary = {
     "max_seconds": max_seconds,
     "budget_status": budget_status,
     "live_command": live_command,
+    "live_command_synthetic": live_command_synthetic,
     "live_output_file": live_output_file,
     "finality_command": finality_command,
+    "finality_command_synthetic": finality_command_synthetic,
     "finality_output_file": finality_output_file,
-    "finality_enabled": bool(finality_command.strip()),
+    "finality_enabled": finality_enabled,
     "finality_max_seconds": finality_max_seconds,
+    "synthetic_evidence_classification_version": "v1",
     "base_url": base_url,
     "provider_hint": provider_hint,
     "provider_client_contract": provider_client_contract,
