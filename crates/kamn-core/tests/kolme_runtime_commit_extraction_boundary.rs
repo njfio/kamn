@@ -1,4 +1,5 @@
 const RUNTIME_COMMIT_SRC: &str = include_str!("../src/kolme_runtime_commit.rs");
+const RUNTIME_IN_MEMORY_SRC: &str = include_str!("../src/kolme_runtime_commit/in_memory_client.rs");
 const RUNTIME_PIPELINE_SRC: &str = include_str!("../src/kolme_runtime_commit/runtime_pipeline.rs");
 
 #[test]
@@ -52,7 +53,9 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct RuntimeCommitLifecycleRecord"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct RuntimeCommitFinalityProjection"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct RuntimeCommitPipeline"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub struct InMemoryKolmeRuntimeCommitClient"));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl RuntimeCommitPipeline"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("impl InMemoryKolmeRuntimeCommitClient"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let signer_key_id = signer_key_id.trim();"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let message = message.trim();"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let signature = signature.trim();"));
@@ -95,7 +98,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_poll_attempt_budget_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_commit_id_request_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("deterministic_runtime_commit_idempotency_key_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("deterministic_runtime_commit_id_contract("));
+    assert!(RUNTIME_IN_MEMORY_SRC.contains("deterministic_runtime_commit_id_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("render_kolme_runtime_commit_wire_payload_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("render_kolme_signed_envelope_wire_payload_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_runtime_commit_request_fields_contract("));
@@ -162,7 +165,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("classify_kolme_transport_io_error(&error)"));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_http_transport_timeout_seconds_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_http_response_bytes_input_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_provider_input_contract("));
+    assert!(RUNTIME_IN_MEMORY_SRC.contains("is_kolme_valid_runtime_provider_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_provider_hint_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_operation_id_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_state_root_input_contract("));
@@ -187,5 +190,9 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_broadcast_submit_path_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("impl From<KamnKolmeTransportIoClassification>"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod runtime_pipeline;"));
+    assert!(RUNTIME_COMMIT_SRC.contains("mod in_memory_client;"));
     assert!(RUNTIME_COMMIT_SRC.contains("pub use runtime_pipeline::{"));
+    assert!(
+        RUNTIME_COMMIT_SRC.contains("pub use in_memory_client::InMemoryKolmeRuntimeCommitClient;")
+    );
 }
