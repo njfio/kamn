@@ -39,6 +39,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `scripts/kolme/run_contract_lane_dispatch.sh`
 - Compatibility wrapper shape:
   - all manifest-only `scripts/kolme/run_*contract_lane.sh` wrappers are symlinks to the shared dispatcher.
+- Script-surface duplicate-content policy alignment:
+  - symlinked dispatcher wrappers are excluded from `duplicate_content` budget checks; duplicate-content enforcement remains fail-closed for regular files.
 - Dispatcher matrix guard:
   - `bash scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh`
 - CI contract surface:
@@ -47,6 +49,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `scripts/ci/test_ci_tools.sh`
 - Regression marker:
   - `Regression: #1827`
+  - `Regression: #2090`
 
 ## Shared Manifest-Migration CI Dispatcher (Issue #1833)
 

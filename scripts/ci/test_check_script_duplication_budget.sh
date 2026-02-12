@@ -12,7 +12,7 @@ if [ ! -x "$SCRIPT" ]; then
 fi
 
 SCRIPTS_ROOT="$TMP_DIR/scripts"
-mkdir -p "$SCRIPTS_ROOT/a" "$SCRIPTS_ROOT/b"
+mkdir -p "$SCRIPTS_ROOT/a" "$SCRIPTS_ROOT/b" "$SCRIPTS_ROOT/c" "$SCRIPTS_ROOT/d"
 cat >"$SCRIPTS_ROOT/a/run_alpha.sh" <<'EOF_SCRIPT'
 #!/usr/bin/env bash
 echo "alpha"
@@ -21,6 +21,7 @@ cat >"$SCRIPTS_ROOT/b/run_beta.sh" <<'EOF_SCRIPT'
 #!/usr/bin/env bash
 echo "beta"
 EOF_SCRIPT
+ln -s ../a/run_alpha.sh "$SCRIPTS_ROOT/c/run_alpha_dispatch.sh"
 
 PASS_BUDGET="$TMP_DIR/pass-budget.env"
 cat >"$PASS_BUDGET" <<'EOF_BUDGET'
@@ -53,8 +54,12 @@ if ! printf '%s\n' "$pass_output" | grep -q '^violations=none$'; then
   echo "expected no violations on pass path" >&2
   exit 1
 fi
-if ! printf '%s\n' "$pass_output" | grep -q '^delta_script_count=1$'; then
+if ! printf '%s\n' "$pass_output" | grep -q '^delta_script_count=2$'; then
   echo "expected deterministic script_count delta output on pass path" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$pass_output" | grep -q '^duplicate_content=0$'; then
+  echo "expected symlink wrappers to be excluded from duplicate_content metric" >&2
   exit 1
 fi
 if ! printf '%s\n' "$pass_output" | grep -q '^remediation=none$'; then
@@ -169,6 +174,39 @@ if [ "$expired_waiver_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$expired_waiver_output" | grep -q 'waiver_error=waiver has expired'; then
   echo "expected explicit expired waiver error output" >&2
+  exit 1
+fi
+
+cat >"$SCRIPTS_ROOT/d/run_alpha_copy.sh" <<'EOF_SCRIPT'
+#!/usr/bin/env bash
+echo "alpha"
+EOF_SCRIPT
+
+DUPLICATE_CONTENT_BUDGET="$TMP_DIR/duplicate-content-budget.env"
+cat >"$DUPLICATE_CONTENT_BUDGET" <<'EOF_BUDGET'
+SCRIPT_COUNT_MAX=20
+SHELL_LINE_TOTAL_MAX=200
+DUPLICATE_BASENAME_MAX=0
+DUPLICATE_CONTENT_MAX=0
+EOF_BUDGET
+
+set +e
+duplicate_content_output="$(
+  bash "$SCRIPT" \
+    --scripts-root "$SCRIPTS_ROOT" \
+    --budget-file "$DUPLICATE_CONTENT_BUDGET" \
+    --baseline-file "$BASELINE_FILE" \
+    --waiver-file "$TMP_DIR/missing-waiver.json" 2>&1
+)"
+duplicate_content_code=$?
+set -e
+
+if [ "$duplicate_content_code" -eq 0 ]; then
+  echo "expected checker to fail when regular files duplicate content" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$duplicate_content_output" | grep -q 'violations=duplicate_content'; then
+  echo "expected duplicate_content violation marker for regular-file duplicate" >&2
   exit 1
 fi
 

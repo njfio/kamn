@@ -117,8 +117,12 @@ def compute_metrics(scripts_root: Path) -> ScriptMetrics:
         count for count in basename_counts.values() if count > 1
     )
 
+    # Treat symlink wrappers as intentional command-surface entries and only
+    # enforce duplicate-content policy across regular files.
     content_counts = Counter(
-        hashlib.sha256(path.read_bytes()).hexdigest() for path in scripts
+        hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in scripts
+        if not path.is_symlink()
     )
     duplicate_content = sum(
         count for count in content_counts.values() if count > 1
