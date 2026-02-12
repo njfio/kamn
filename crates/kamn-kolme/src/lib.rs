@@ -44,7 +44,11 @@ pub use block_scan_policy::{
     validate_block_identity, validate_block_path_template, validate_lookup_txhash,
     validate_lookup_window, BlockScanPolicyError, BlockScanReceiptProjection,
 };
-pub use broadcast_payload_policy::{normalize_broadcast_payload, KolmeBroadcastPayloadPolicyError};
+pub use broadcast_payload_policy::{
+    is_valid_signed_envelope_message_input, is_valid_signed_envelope_signature_input,
+    is_valid_signed_envelope_signer_key_id_input, normalize_broadcast_payload,
+    KolmeBroadcastPayloadPolicyError,
+};
 pub use codec::{KolmeCodecError, KolmeWireCodec, PassthroughCodec};
 pub use endpoint_policy::{
     compose_finality_status_path, compose_notifications_websocket_url,

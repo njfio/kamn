@@ -1,4 +1,8 @@
-use kamn_kolme::{normalize_broadcast_payload, KolmeBroadcastPayloadPolicyError};
+use kamn_kolme::{
+    is_valid_signed_envelope_message_input, is_valid_signed_envelope_signature_input,
+    is_valid_signed_envelope_signer_key_id_input, normalize_broadcast_payload,
+    KolmeBroadcastPayloadPolicyError,
+};
 
 #[test]
 fn functional_normalize_broadcast_payload_maps_direct_signed_json() {
@@ -19,6 +23,15 @@ fn functional_normalize_broadcast_payload_maps_signed_envelope_payload() {
     assert!(normalized.contains("\"recovery_id\":1"));
     assert!(normalized.contains("operation_id=op"));
     assert!(normalized.contains("idempotency_key=abc"));
+}
+
+#[test]
+fn functional_broadcast_payload_policy_accepts_non_empty_signed_envelope_field_inputs() {
+    assert!(is_valid_signed_envelope_signer_key_id_input(
+        "kamn:key:signer:1"
+    ));
+    assert!(is_valid_signed_envelope_message_input("operation_id=op\n"));
+    assert!(is_valid_signed_envelope_signature_input("sig-1"));
 }
 
 #[test]
@@ -47,4 +60,12 @@ fn regression_issue_1757_normalize_broadcast_payload_rejects_non_json_direct_mes
             reason: "direct signed payload message must be a JSON object string".to_owned(),
         }
     );
+}
+
+#[test]
+fn regression_issue_1896_broadcast_payload_policy_rejects_empty_signed_envelope_field_inputs() {
+    // Regression: #1896
+    assert!(!is_valid_signed_envelope_signer_key_id_input(" "));
+    assert!(!is_valid_signed_envelope_message_input(" "));
+    assert!(!is_valid_signed_envelope_signature_input(" "));
 }

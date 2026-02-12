@@ -5,8 +5,8 @@ use kamn_core::{
     KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitOutcome, KolmeRuntimeCommitProvider,
     KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderOutcome,
     KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderTransport,
-    KolmeRuntimeCommitRequest, KolmeRuntimeCommitTransportErrorKind, RuntimeCommitLifecycleState,
-    RuntimeCommitPipeline,
+    KolmeRuntimeCommitRequest, KolmeRuntimeCommitSignedBroadcastEnvelope,
+    KolmeRuntimeCommitTransportErrorKind, RuntimeCommitLifecycleState, RuntimeCommitPipeline,
 };
 use std::cell::RefCell;
 use std::collections::VecDeque;
@@ -356,6 +356,37 @@ fn regression_issue_1894_submit_commit_fails_closed_for_multiline_operation_id()
         Err(KolmeRuntimeCommitError::InvalidRequest {
             field: "wire_payload",
             reason: "fields must be single-line",
+        })
+    );
+}
+
+#[test]
+fn regression_issue_1896_signed_envelope_constructor_rejects_empty_fields() {
+    // Regression: #1896
+    assert_eq!(
+        KolmeRuntimeCommitSignedBroadcastEnvelope::new(" ", "operation_id=op\n", "sig-1", 1),
+        Err(KolmeRuntimeCommitError::InvalidRequest {
+            field: "signer_key_id",
+            reason: "must not be empty",
+        })
+    );
+    assert_eq!(
+        KolmeRuntimeCommitSignedBroadcastEnvelope::new("kamn:key:signer:1", " ", "sig-1", 1),
+        Err(KolmeRuntimeCommitError::InvalidRequest {
+            field: "signed_message",
+            reason: "must not be empty",
+        })
+    );
+    assert_eq!(
+        KolmeRuntimeCommitSignedBroadcastEnvelope::new(
+            "kamn:key:signer:1",
+            "operation_id=op\n",
+            " ",
+            1
+        ),
+        Err(KolmeRuntimeCommitError::InvalidRequest {
+            field: "signature",
+            reason: "must not be empty",
         })
     );
 }
