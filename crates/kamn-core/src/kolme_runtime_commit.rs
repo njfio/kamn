@@ -20,6 +20,8 @@ use kamn_kolme::{
     is_valid_block_fallback_provider_input as is_kolme_valid_block_fallback_provider_input_contract,
     is_valid_finality_base_url_input as is_kolme_valid_finality_base_url_input_contract,
     is_valid_finality_status_path_input as is_kolme_valid_finality_status_path_input_contract,
+    is_valid_notifications_provider_input as is_kolme_valid_notifications_provider_input_contract,
+    is_valid_notifications_reconnect_budget as is_kolme_valid_notifications_reconnect_budget_contract,
     is_valid_poll_attempt_budget as is_kolme_valid_poll_attempt_budget_contract,
     is_valid_runtime_commit_id_request as is_kolme_valid_runtime_commit_id_request_contract,
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
@@ -1565,13 +1567,13 @@ where
         max_reconnect_attempts: u32,
         connector: C,
     ) -> Result<Self, KolmeRuntimeCommitError> {
-        if provider.trim().is_empty() {
+        if !is_kolme_valid_notifications_provider_input_contract(provider) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "notifications_provider",
                 reason: "must not be empty",
             });
         }
-        if max_reconnect_attempts == 0 {
+        if !is_kolme_valid_notifications_reconnect_budget_contract(max_reconnect_attempts) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "notifications_max_reconnect_attempts",
                 reason: "must be positive",

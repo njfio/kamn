@@ -63,6 +63,7 @@ pub use flat_json_policy::{
 };
 pub use http_response_policy::{parse_http_response_body, KolmeHttpResponsePolicyError};
 pub use notification_policy::{
+    is_valid_notifications_provider_input, is_valid_notifications_reconnect_budget,
     notification_event_to_provider_receipt, notification_event_to_receipt,
     parse_notification_event, KolmeNotificationEvent, KolmeNotificationPolicyError,
     KolmeNotificationReceipt, KolmeProviderNotificationReceipt,
