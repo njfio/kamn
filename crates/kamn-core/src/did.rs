@@ -1,11 +1,15 @@
+//! DID identity parsing, canonical document construction, and federated trust-handshake contracts.
+
 use std::{collections::BTreeSet, fmt};
 
 const AGENT_DID_PREFIX: &str = "kamn:did:agent:";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// Canonical KAMN agent DID wrapper.
 pub struct AgentDid(String);
 
 impl AgentDid {
+    /// Parses and validates a KAMN agent DID.
     pub fn parse(value: &str) -> Result<Self, AgentDidError> {
         if !value.starts_with(AGENT_DID_PREFIX) {
             return Err(AgentDidError::InvalidPrefix(value.to_owned()));
@@ -26,19 +30,25 @@ impl AgentDid {
         Ok(Self(value.to_owned()))
     }
 
+    /// Returns the full DID string.
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
+    /// Returns the method-specific identifier component.
     pub fn method_specific_id(&self) -> &str {
         &self.0[AGENT_DID_PREFIX.len()..]
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Errors returned when parsing or validating an [`AgentDid`].
 pub enum AgentDidError {
+    /// DID did not start with the required KAMN agent prefix.
     InvalidPrefix(String),
+    /// DID prefix was present but method-specific id was missing.
     MissingMethodSpecificId,
+    /// Method-specific id contained unsupported characters.
     InvalidCharacter(String),
 }
 
@@ -59,54 +69,82 @@ impl fmt::Display for AgentDidError {
 impl std::error::Error for AgentDidError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Metadata extension embedded in KAMN DID documents.
 pub struct AgentDidMetadata {
+    /// Agent type classification (for example `autonomous`).
     pub agent_type: String,
+    /// Model family identifier for the agent.
     pub model_family: String,
+    /// Declared capabilities supported by the agent.
     pub capabilities: Vec<String>,
+    /// Optional operator DID or name associated with the agent.
     pub operator: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// DID verification method entry.
 pub struct DidVerificationMethod {
+    /// Verification method identifier.
     pub id: String,
+    /// Verification method type name.
     pub type_name: String,
+    /// DID controller for this method.
     pub controller: String,
+    /// Multibase-encoded public key.
     pub public_key_multibase: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// DID service endpoint entry.
 pub struct DidService {
+    /// Service identifier.
     pub id: String,
+    /// Service type name.
     pub type_name: String,
+    /// Canonical service endpoint URI.
     pub service_endpoint: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Canonical DID document representation used by KAMN.
 pub struct DidDocument {
+    /// Ordered JSON-LD context list.
     pub context: Vec<String>,
+    /// DID identifier.
     pub id: String,
+    /// DID controller identifier.
     pub controller: String,
+    /// Verification methods published by the DID.
     pub verification_method: Vec<DidVerificationMethod>,
+    /// Authentication method references.
     pub authentication: Vec<String>,
+    /// Assertion method references.
     pub assertion_method: Vec<String>,
+    /// Service endpoints attached to the DID.
     pub service: Vec<DidService>,
+    /// KAMN-specific metadata extension.
     pub metadata: AgentDidMetadata,
 }
 
+/// Trust-store abstraction used by federated DID handshake evaluation.
 pub trait FederatedDidTrustStore {
+    /// Returns true when `subject_did` is trusted for `network`.
     fn is_trusted(&self, network: &str, subject_did: &str) -> bool;
 }
 
 #[derive(Debug, Clone, Default)]
+/// In-memory trust store for federated DID evaluation.
 pub struct InMemoryFederatedDidTrustStore {
     entries: BTreeSet<(String, String)>,
 }
 
 impl InMemoryFederatedDidTrustStore {
+    /// Creates an empty trust store.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Builds a trust store from `(network, did)` entries.
     pub fn from_entries<I, N, D>(entries: I) -> Self
     where
         I: IntoIterator<Item = (N, D)>,
@@ -120,6 +158,7 @@ impl InMemoryFederatedDidTrustStore {
         trust_store
     }
 
+    /// Inserts a trusted DID entry for a network.
     pub fn insert(&mut self, network: &str, subject_did: &str) {
         self.entries
             .insert((network.trim().to_owned(), subject_did.trim().to_owned()));
@@ -134,22 +173,35 @@ impl FederatedDidTrustStore for InMemoryFederatedDidTrustStore {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Input envelope for federated DID handshake policy evaluation.
 pub struct FederatedDidHandshakeInput {
+    /// Unique handshake identifier.
     pub handshake_id: String,
+    /// Subject DID being validated.
     pub subject_did: String,
+    /// Local network identifier.
     pub local_network: String,
+    /// Remote network identifier.
     pub remote_network: String,
+    /// Resolver version used for DID resolution.
     pub resolver_version: String,
+    /// Whether signature policy checks passed.
     pub signature_policy_passed: bool,
+    /// Whether nonce progression is monotonic.
     pub nonce_monotonic: bool,
+    /// Whether downgrade signal was detected.
     pub downgrade_detected: bool,
+    /// Whether partition sequence is monotonic.
     pub partition_sequence_monotonic: bool,
+    /// Required quorum for federated acceptance.
     pub required_quorum: u16,
+    /// Quorum received during evaluation.
     pub received_quorum: u16,
 }
 
 impl FederatedDidHandshakeInput {
     #[allow(clippy::too_many_arguments)]
+    /// Constructs and validates a federated DID handshake input payload.
     pub fn new(
         handshake_id: &str,
         subject_did: &str,
@@ -198,51 +250,78 @@ impl FederatedDidHandshakeInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Positive federated DID handshake decision payload.
 pub struct FederatedDidHandshakeDecision {
+    /// Handshake identifier.
     pub handshake_id: String,
+    /// Subject DID that was accepted.
     pub subject_did: String,
+    /// Local network identifier.
     pub local_network: String,
+    /// Remote network identifier.
     pub remote_network: String,
 }
 
 impl FederatedDidHandshakeDecision {
+    /// Returns canonical reason code for successful decisions.
     pub fn reason_code(&self) -> &'static str {
         "federated_did_handshake_ok"
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Federated DID handshake failure taxonomy.
 pub enum FederatedDidHandshakeError {
+    /// One of the required string fields was empty.
     EmptyField(&'static str),
+    /// Required quorum value was invalid.
     InvalidRequiredQuorum {
+        /// Required quorum value provided by caller.
         required: u16,
     },
+    /// Resolver version was missing for this handshake.
     ResolverVersionMissing {
+        /// Handshake identifier.
         handshake_id: String,
     },
+    /// Trust store did not contain `(network, did)` entry.
     TrustStoreMiss {
+        /// Subject DID not found in trust store.
         subject_did: String,
+        /// Network queried in trust store.
         network: String,
     },
+    /// Signature-policy checks failed.
     SignaturePolicyFailed {
+        /// Handshake identifier.
         handshake_id: String,
     },
+    /// Received quorum was below required quorum.
     QuorumShortfall {
+        /// Required quorum threshold.
         required: u16,
+        /// Received quorum count.
         received: u16,
     },
+    /// Nonce replay or non-monotonic sequence detected.
     NonceReplayDetected {
+        /// Handshake identifier.
         handshake_id: String,
     },
+    /// Partition sequence replay/non-monotonic signal detected.
     PartitionSequenceReplayDetected {
+        /// Handshake identifier.
         handshake_id: String,
     },
+    /// Resolver downgrade signal detected.
     DowngradeDetected {
+        /// Handshake identifier.
         handshake_id: String,
     },
 }
 
 impl FederatedDidHandshakeError {
+    /// Returns stable reason code for telemetry and policy lanes.
     pub fn reason_code(&self) -> &'static str {
         match self {
             Self::EmptyField(_) => "federated_did_handshake_invalid_input",
@@ -304,15 +383,18 @@ impl fmt::Display for FederatedDidHandshakeError {
 impl std::error::Error for FederatedDidHandshakeError {}
 
 #[derive(Debug, Clone)]
+/// Evaluator that applies federated DID handshake policy against a trust store.
 pub struct FederatedDidHandshakeEvaluator<T: FederatedDidTrustStore> {
     trust_store: T,
 }
 
 impl<T: FederatedDidTrustStore> FederatedDidHandshakeEvaluator<T> {
+    /// Creates an evaluator using the provided trust store implementation.
     pub fn new(trust_store: T) -> Self {
         Self { trust_store }
     }
 
+    /// Evaluates federated DID handshake input and returns acceptance decision.
     pub fn evaluate(
         &mut self,
         input: FederatedDidHandshakeInput,
@@ -370,13 +452,21 @@ impl<T: FederatedDidTrustStore> FederatedDidHandshakeEvaluator<T> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// DID document canonicalization and validation errors.
 pub enum DidDocumentError {
+    /// Public key input was empty.
     EmptyPublicKey,
+    /// Agent metadata type was empty.
     EmptyAgentType,
+    /// Model family metadata was empty.
     EmptyModelFamily,
+    /// Capability list was empty.
     MissingCapabilities,
+    /// At least one capability entry was empty.
     InvalidCapability,
+    /// Service endpoint failed canonical validation.
     InvalidServiceEndpoint(String),
+    /// Verification method algorithm set was invalid.
     InvalidVerificationMethodAlgorithm(String),
 }
 
@@ -400,6 +490,7 @@ impl fmt::Display for DidDocumentError {
 
 impl std::error::Error for DidDocumentError {}
 
+/// Canonicalizes and validates a DID service endpoint.
 pub fn canonical_service_endpoint(raw_endpoint: &str) -> Result<String, DidDocumentError> {
     let trimmed = raw_endpoint.trim();
     if trimmed.is_empty() {
@@ -453,6 +544,7 @@ pub fn canonical_service_endpoint(raw_endpoint: &str) -> Result<String, DidDocum
     Ok(format!("kamn://messaging/{normalized_path}"))
 }
 
+/// Validates verification method algorithm set used in DID documents.
 pub fn validate_did_verification_method_algorithms(
     algorithms: &[String],
 ) -> Result<(), DidDocumentError> {
@@ -491,6 +583,7 @@ pub fn validate_did_verification_method_algorithms(
     Ok(())
 }
 
+/// Builds canonical KAMN DID document from validated inputs.
 pub fn canonical_did_document(
     did: &AgentDid,
     public_key_multibase: &str,

@@ -36,7 +36,7 @@ pub mod cross_chain_bridge;
 pub mod cross_chain_receipt;
 /// Data-domain classification policy and write-tag validation contracts.
 pub mod data_classification;
-#[allow(missing_docs)]
+/// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
 #[allow(missing_docs)]
 pub mod did_registry;
