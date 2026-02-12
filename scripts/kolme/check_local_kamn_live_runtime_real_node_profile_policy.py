@@ -74,6 +74,24 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif runtime_provider_client_contract != "KolmeRuntimeCommitLiveProvider":
         reason_codes.append("runtime_provider_client_contract_mismatch")
 
+    runtime_commit_command_profile = report.get("runtime_commit_command_profile")
+    if not isinstance(runtime_commit_command_profile, str) or not runtime_commit_command_profile.strip():
+        reason_codes.append("runtime_commit_command_profile_missing")
+    elif runtime_commit_command_profile != "real-node-non-synthetic-v1":
+        reason_codes.append("runtime_commit_command_profile_mismatch")
+
+    runtime_commit_policy_command_profile = report.get("runtime_commit_policy_command_profile")
+    if not isinstance(runtime_commit_policy_command_profile, str) or not runtime_commit_policy_command_profile.strip():
+        reason_codes.append("runtime_commit_policy_command_profile_missing")
+    elif runtime_commit_policy_command_profile != "real-node-non-synthetic-v1":
+        reason_codes.append("runtime_commit_policy_command_profile_mismatch")
+
+    runtime_commit_command_profile_version = report.get("runtime_commit_command_profile_version")
+    if not isinstance(runtime_commit_command_profile_version, str) or not runtime_commit_command_profile_version.strip():
+        reason_codes.append("runtime_commit_command_profile_version_missing")
+    elif runtime_commit_command_profile_version != "v1":
+        reason_codes.append("runtime_commit_command_profile_version_mismatch")
+
     runtime_commit_command = report.get("runtime_commit_command")
     if not isinstance(runtime_commit_command, str) or not runtime_commit_command.strip():
         reason_codes.append("runtime_commit_command_missing")

@@ -424,6 +424,11 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - optional runtime finality pass-through (`--runtime-commit-finality-command`, `--runtime-commit-finality-max-seconds`, `--runtime-commit-finality-output-file`) and `--runtime-commit-live-policy-report` are wired through to nested runtime finality evidence contract composition.
   - runtime provider contract marker (`--runtime-provider-client-contract`) remains explicit and fail-closed for `KolmeRuntimeCommitLiveProvider`.
   - runtime integration profile marker (`--runtime-profile standard|real-node`) remains explicit and is emitted into summary + contracts fields for release-decision audits.
+  - deterministic runtime evidence profile markers are emitted in summary fields:
+    - `runtime_commit_command_profile`
+    - `runtime_commit_policy_command_profile`
+    - `runtime_commit_command_profile_version`
+  - real-node profile requires `runtime_commit_command_profile=real-node-non-synthetic-v1`, `runtime_commit_policy_command_profile=real-node-non-synthetic-v1`, and `runtime_commit_command_profile_version=v1`; real-node checker fails closed on marker drift.
   - integration summary emits `ci_fast_gate_eligible=false` with `contracts.ci_fast_gate_scope=local-only` for explicit PR-fast-gate exclusion enforcement.
   - explicit runtime-commit submit-profile probe over `PUT /broadcast` with fail-closed reason codes.
   - signed runtime-commit envelope translation enforces `signer_key_id` presence and canonical message/signature binding before broadcast normalization.

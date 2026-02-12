@@ -56,6 +56,9 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "fork_chain_version": "v0.15.2",
   "runtime_profile": "real-node",
   "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
+  "runtime_commit_command_profile": "real-node-non-synthetic-v1",
+  "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
+  "runtime_commit_command_profile_version": "v1",
   "runtime_commit_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
   "runtime_commit_live_policy_report": "/tmp/runtime-policy.json",
   "runtime_commit_finality_command": "",
@@ -161,6 +164,9 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
   "budget_status": "not_run",
   "runtime_profile": "standard",
   "runtime_provider_client_contract": "InMemoryKolmeRuntimeCommitClient",
+  "runtime_commit_command_profile": "standard-default-v1",
+  "runtime_commit_policy_command_profile": "standard-default-v1",
+  "runtime_commit_command_profile_version": "v0",
   "runtime_commit_command": "echo runtime",
   "runtime_commit_live_policy_report": "/tmp/runtime-policy.json",
   "contracts": {
@@ -208,6 +214,21 @@ if ! grep -q "runtime_provider_client_contract_mismatch" "$TMP_ERR"; then
   exit 1
 fi
 
+if ! grep -q "runtime_commit_command_profile_mismatch" "$TMP_ERR"; then
+  echo "expected runtime commit command profile mismatch reason for policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_policy_command_profile_mismatch" "$TMP_ERR"; then
+  echo "expected runtime commit policy command profile mismatch reason for policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_command_profile_version_mismatch" "$TMP_ERR"; then
+  echo "expected runtime commit profile marker version mismatch reason for policy failure" >&2
+  exit 1
+fi
+
 if ! grep -q "runtime_commit_non_synthetic_policy_marker_missing" "$TMP_ERR"; then
   echo "expected strict non-synthetic marker requirement reason for policy failure" >&2
   exit 1
@@ -245,6 +266,12 @@ if not isinstance(runtime_commit_command, str):
     raise SystemExit("expected runtime_commit_command string in runner-generated summary")
 if "--require-non-synthetic-run-evidence" not in runtime_commit_command:
     raise SystemExit("expected strict non-synthetic runtime marker in real-node profile runtime commit command")
+if summary.get("runtime_commit_command_profile") != "real-node-non-synthetic-v1":
+    raise SystemExit("expected deterministic runtime commit command profile marker in runner-generated summary")
+if summary.get("runtime_commit_policy_command_profile") != "real-node-non-synthetic-v1":
+    raise SystemExit("expected deterministic runtime commit policy command profile marker in runner-generated summary")
+if summary.get("runtime_commit_command_profile_version") != "v1":
+    raise SystemExit("expected runtime commit command profile marker version in runner-generated summary")
 PY
 
 python3 - "$TMP_INTEGRATION_POLICY_OUT" <<'PY'
