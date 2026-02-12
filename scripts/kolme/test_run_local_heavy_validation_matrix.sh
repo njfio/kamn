@@ -83,7 +83,7 @@ if report.get("local_only_enforced") is not True:
 if report.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected dry-run reason code marker in local heavy matrix summary")
 commands = report.get("commands")
-if not isinstance(commands, list) or len(commands) < 4:
+if not isinstance(commands, list) or len(commands) < 8:
     raise SystemExit("expected local heavy matrix summary to contain command entries")
 if not any("run_local_bootstrap_health_checks.sh" in cmd for cmd in commands):
     raise SystemExit("expected bootstrap health-check command marker in local heavy matrix summary")
@@ -93,6 +93,36 @@ if not any("run_local_kolme_fork_rust_test_matrix_contract_lane.sh" in cmd for c
     raise SystemExit("expected local fork rust matrix contract-lane command marker in local heavy matrix summary")
 if not any("run_local_kolme_live_api_conformance_contract_lane.sh" in cmd for cmd in commands):
     raise SystemExit("expected local live API conformance contract-lane command marker in local heavy matrix summary")
+if not any("run_local_runtime_commit_live_finality_evidence_contract_lane.sh" in cmd for cmd in commands):
+    raise SystemExit("expected local runtime commit finality contract-lane command marker in local heavy matrix summary")
+if not any(
+    "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" in cmd
+    and "--max-seconds 120" in cmd
+    and "--finality-max-seconds 15" in cmd
+    and "--require-native-payload-evidence" in cmd
+    for cmd in commands
+):
+    raise SystemExit("expected runtime commit native parity budget and strict marker flags in local heavy matrix summary")
+if not any(
+    "run_local_native_api_parity_live_proof_contract_lane.sh" in cmd and "--max-seconds 180" in cmd
+    for cmd in commands
+):
+    raise SystemExit("expected native API parity budget marker in local heavy matrix summary")
+if not any(
+    "run_local_kamn_live_runtime_integration_lane.sh" in cmd
+    and "--runtime-profile real-node" in cmd
+    and "--max-seconds 210" in cmd
+    and "--runtime-commit-max-seconds 30" in cmd
+    and "--runtime-commit-finality-max-seconds 15" in cmd
+    for cmd in commands
+):
+    raise SystemExit("expected real-node runtime integration budget markers in local heavy matrix summary")
+if not any(
+    "check_local_kamn_live_runtime_real_node_profile_policy.py" in cmd
+    and "--require-non-synthetic-run-evidence" in cmd
+    for cmd in commands
+):
+    raise SystemExit("expected strict real-node profile policy check marker in local heavy matrix summary")
 PY
 
 # Regression: #1405

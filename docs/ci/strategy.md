@@ -100,6 +100,17 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/test_run_local_bootstrap_health_checks.sh`
     - `bash scripts/kolme/test_run_local_e2e_integration_lane.sh`
     - `bash scripts/kolme/test_run_local_heavy_validation_matrix.sh`
+    - `bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh`
+    - `bash scripts/kolme/test_run_local_runtime_commit_live_finality_evidence_contract_lane.sh`
+    - `bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh`
+    - `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
+    - `bash scripts/kolme/test_check_local_kamn_live_runtime_real_node_profile_policy.sh`
+    - `bash scripts/kolme/test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh`
+  - native parity local-heavy budget markers are enforced in matrix policy:
+    - runtime-commit finality lane budget marker: `--max-seconds 120 --finality-max-seconds 15`
+    - native API parity lane budget marker: `--max-seconds 180`
+    - real-node integration budget markers: `--max-seconds 210 --runtime-commit-max-seconds 30 --runtime-commit-finality-max-seconds 15`
+    - fail-closed reasons: `native_runtime_commit_budget_marker_missing`, `native_api_parity_budget_marker_missing`, `native_real_node_budget_marker_missing`, `native_real_node_policy_marker_missing`
 - Broader Kolme compatibility command changes continue to map to version-compatibility scope:
   - `run_kolme_version_compatibility_contract_tests=true`
   - `test_scope=kolme-version-contract`
@@ -117,10 +128,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh`
-    - `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh`
-    - `bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh`
-    - `bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh`
     - `bash scripts/kolme/test_run_version_compatibility_contract_lane.sh`
   - tranche-1 manifest migration guard stays on PR fast gate:
     - `bash scripts/ci/test_kolme_tranche1_manifest_migration_contract.sh`
@@ -322,6 +330,9 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `python3 scripts/kolme/check_local_kolme_fork_portability_preflight_policy.py --report-file /tmp/kolme-local-fork-portability-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code portability_preflight_passed --output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
     - `bash scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
   - local runtime-commit live run-mode commands remain excluded from ci-fast-gate.
+    - selector routing for native parity command/policy/manifest changes:
+      - `run_kolme_local_heavy_contract_tests=true`
+      - `test_scope=kolme-local-heavy-contract`
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --base-url http://127.0.0.1:3000 --provider-hint kolme-fork-local --max-seconds 90 --preflight-max-seconds 10 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt`
     - `python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/kolme-local-runtime-commit-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-runtime-commit-live-policy.json`
     - `bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json`

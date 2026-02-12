@@ -65,6 +65,7 @@ import sys
 from pathlib import Path
 
 patterns = (
+    re.compile(r"^\s*(Compiling|Checking|Documenting)\s+.+$"),
     re.compile(r"^\s*Finished `.* target\(s\) in .*s$"),
     re.compile(r"^\s*Running tests/.+\(target/.+\)$"),
 )
