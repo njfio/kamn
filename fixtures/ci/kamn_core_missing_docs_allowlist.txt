@@ -19,7 +19,6 @@ governance_workflow
 group_channel_crypto
 instruction_verify
 invariants
-key_lifecycle
 message_delivery_guards
 message_envelope
 message_lifecycle

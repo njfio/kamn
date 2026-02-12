@@ -1,42 +1,79 @@
+/// Key lifecycle state for an agent signing key.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyLifecycleState {
+    /// Key is active and can sign traffic.
     Active,
+    /// Rotation has started and a pending key is staged.
     Rotating,
+    /// Key has been revoked and can no longer be used.
     Revoked,
 }
 
+/// Key lifecycle event emitted for audit and replay.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KeyLifecycleEvent {
+    /// Rotation started from one key id to a new key id.
     RotationInitiated {
+        /// Monotonic lifecycle sequence number.
         sequence: u64,
+        /// Previous active key id.
         from_key: String,
+        /// Staged next key id.
         to_key: String,
     },
+    /// Rotation was activated and pending key became active.
     RotationActivated {
+        /// Monotonic lifecycle sequence number.
         sequence: u64,
+        /// Newly active key id.
         active_key: String,
     },
+    /// Active key was revoked.
     KeyRevoked {
+        /// Monotonic lifecycle sequence number.
         sequence: u64,
+        /// Revoked key id.
         key_id: String,
     },
 }
 
+/// Canonical audit record for a single lifecycle event.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyLifecycleAuditRecord {
+    /// Monotonic lifecycle sequence number.
     pub sequence: u64,
+    /// Canonical event kind.
     pub event_kind: String,
+    /// Canonical event payload.
     pub event_payload: String,
+    /// Previous record hash in audit chain.
     pub previous_hash: String,
+    /// Record hash computed from canonical fields.
     pub record_hash: String,
 }
 
+/// Errors returned while validating lifecycle audit trails.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KeyLifecycleAuditError {
+    /// Audit trail was empty.
     EmptyAuditTrail,
-    SequenceGap { expected: u64, found: u64 },
-    BrokenHashChain { sequence: u64 },
-    HashMismatch { sequence: u64 },
+    /// Sequence numbers were not contiguous.
+    SequenceGap {
+        /// Expected sequence value.
+        expected: u64,
+        /// Observed sequence value.
+        found: u64,
+    },
+    /// Record previous-hash link did not match chain state.
+    BrokenHashChain {
+        /// Sequence where chain link failed.
+        sequence: u64,
+    },
+    /// Record hash did not match canonical recomputation.
+    HashMismatch {
+        /// Sequence where hash mismatch occurred.
+        sequence: u64,
+    },
 }
 
 impl std::fmt::Display for KeyLifecycleAuditError {
@@ -93,6 +130,7 @@ impl KeyLifecycleEvent {
     }
 }
 
+/// Key lifecycle state machine with deterministic audit-event emission.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyLifecycle {
     state: KeyLifecycleState,
@@ -103,6 +141,7 @@ pub struct KeyLifecycle {
 }
 
 impl KeyLifecycle {
+    /// Creates lifecycle with an initial active key id.
     pub fn new(active_key_id: &str) -> Result<Self, KeyLifecycleError> {
         if active_key_id.trim().is_empty() {
             return Err(KeyLifecycleError::EmptyKeyId);
@@ -116,22 +155,27 @@ impl KeyLifecycle {
         })
     }
 
+    /// Returns current lifecycle state.
     pub fn state(&self) -> KeyLifecycleState {
         self.state
     }
 
+    /// Returns current active key id.
     pub fn active_key_id(&self) -> &str {
         &self.active_key_id
     }
 
+    /// Returns pending key id when rotation is in progress.
     pub fn pending_key_id(&self) -> Option<&str> {
         self.pending_key_id.as_deref()
     }
 
+    /// Returns immutable lifecycle event history.
     pub fn events(&self) -> &[KeyLifecycleEvent] {
         &self.events
     }
 
+    /// Builds canonical audit records from lifecycle events.
     pub fn audit_records(&self) -> Vec<KeyLifecycleAuditRecord> {
         let mut records = Vec::with_capacity(self.events.len());
         let mut previous_hash = AUDIT_CHAIN_GENESIS.to_owned();
@@ -157,10 +201,12 @@ impl KeyLifecycle {
         records
     }
 
+    /// Verifies audit trail generated from in-memory lifecycle events.
     pub fn verify_audit_trail(&self) -> Result<(), KeyLifecycleAuditError> {
         Self::verify_audit_records(&self.audit_records())
     }
 
+    /// Verifies provided audit records for sequence continuity and hash-chain integrity.
     pub fn verify_audit_records(
         records: &[KeyLifecycleAuditRecord],
     ) -> Result<(), KeyLifecycleAuditError> {
@@ -204,6 +250,7 @@ impl KeyLifecycle {
         Ok(())
     }
 
+    /// Initiates rotation from active key to `next_key_id`.
     pub fn initiate_rotation(&mut self, next_key_id: &str) -> Result<(), KeyLifecycleError> {
         if next_key_id.trim().is_empty() {
             return Err(KeyLifecycleError::EmptyKeyId);
@@ -229,6 +276,7 @@ impl KeyLifecycle {
         Ok(())
     }
 
+    /// Activates currently pending key and returns lifecycle to active state.
     pub fn activate_rotation(&mut self) -> Result<(), KeyLifecycleError> {
         if self.state != KeyLifecycleState::Rotating {
             return Err(KeyLifecycleError::InvalidTransition {
@@ -256,6 +304,7 @@ impl KeyLifecycle {
         Ok(())
     }
 
+    /// Revokes the active key and transitions lifecycle to revoked state.
     pub fn revoke(&mut self) -> Result<(), KeyLifecycleError> {
         match self.state {
             KeyLifecycleState::Active | KeyLifecycleState::Rotating => {}
@@ -298,12 +347,18 @@ fn compute_audit_hash(
     format!("{hash:016x}")
 }
 
+/// Errors emitted by key lifecycle transitions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KeyLifecycleError {
+    /// Key id input was empty.
     EmptyKeyId,
+    /// Rotation target matched active key id.
     RotationKeyUnchanged,
+    /// Transition/action is invalid for current lifecycle state.
     InvalidTransition {
+        /// Current lifecycle state.
         from: KeyLifecycleState,
+        /// Requested transition action.
         action: &'static str,
     },
 }
