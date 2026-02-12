@@ -37,6 +37,7 @@ use kamn_kolme::{
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
     lifecycle_state_label as lifecycle_state_label_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
+    normalize_broadcast_submit_path_input as normalize_kolme_broadcast_submit_path_input_contract,
     notification_event_to_provider_receipt as notification_event_to_kolme_provider_receipt_contract,
     parse_authorization_header_value as parse_kolme_authorization_header_value,
     parse_http_endpoint as parse_kolme_http_endpoint,
@@ -884,11 +885,7 @@ impl KolmeRuntimeCommitHttpTransport {
             });
         }
         let idempotency_key = idempotency_key.trim();
-        let submit_path = if submit_path.trim().is_empty() {
-            "/broadcast"
-        } else {
-            submit_path.trim()
-        };
+        let submit_path = normalize_kolme_broadcast_submit_path_input_contract(submit_path);
         let payload = request.to_json_payload();
         let response = self.execute_request(
             base_url,

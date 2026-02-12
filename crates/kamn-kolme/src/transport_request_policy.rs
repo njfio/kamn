@@ -37,6 +37,16 @@ pub fn is_valid_transport_wire_payload_input(wire_payload: &str) -> bool {
     !wire_payload.trim().is_empty()
 }
 
+/// Normalizes broadcast submit-path input, defaulting empty values to `/broadcast`.
+pub fn normalize_broadcast_submit_path_input(submit_path: &str) -> &str {
+    let trimmed = submit_path.trim();
+    if trimmed.is_empty() {
+        "/broadcast"
+    } else {
+        trimmed
+    }
+}
+
 /// Parses one authorization header value with deterministic trim + CRLF safeguards.
 pub fn parse_authorization_header_value(
     value: &str,
