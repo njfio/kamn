@@ -329,13 +329,16 @@ def command_check(args: argparse.Namespace) -> int:
     current_lane_ids = set(current_lanes)
 
     violations: list[str] = []
+    reason_codes: set[str] = set()
 
     missing_lanes = sorted(baseline_lane_ids - current_lane_ids)
     extra_lanes = sorted(current_lane_ids - baseline_lane_ids)
     if missing_lanes:
         violations.append(f"missing lanes in current inventory: {', '.join(missing_lanes)}")
+        reason_codes.add("missing_lanes_in_current_inventory")
     if extra_lanes:
         violations.append(f"unexpected new lanes in current inventory: {', '.join(extra_lanes)}")
+        reason_codes.add("unexpected_new_lanes_in_current_inventory")
 
     lane_deltas: list[dict[str, Any]] = []
     for lane_id in sorted(baseline_lane_ids & current_lane_ids):
@@ -360,6 +363,12 @@ def command_check(args: argparse.Namespace) -> int:
                 violations.append(
                     f"lane {lane_id} changed {key}: baseline={baseline_lane[key]} current={current_lane[key]}"
                 )
+                if key == "source_entry":
+                    reason_codes.add("lane_source_entry_drift")
+                elif key == "manifest_file":
+                    reason_codes.add("lane_manifest_file_drift")
+                elif key == "wrapper_kind":
+                    reason_codes.add("lane_wrapper_kind_drift")
         if trend_mode:
             if enforce_lane_shell_loc_nonincreasing and shell_loc_delta > 0:
                 violations.append(
@@ -367,10 +376,12 @@ def command_check(args: argparse.Namespace) -> int:
                     f"{lane_id} shell_loc increased beyond nonincreasing policy: "
                     f"baseline={baseline_lane['shell_loc']} current={current_lane['shell_loc']}"
                 )
+                reason_codes.add("lane_shell_loc_increase_violation")
         elif shell_loc_delta != 0:
             violations.append(
                 f"lane {lane_id} shell_loc drifted: baseline={baseline_lane['shell_loc']} current={current_lane['shell_loc']}"
             )
+            reason_codes.add("lane_shell_loc_drift")
 
     totals_delta = {
         "wrapper_count_delta": current["wrapper_count"] - baseline["wrapper_count"],
@@ -386,12 +397,16 @@ def command_check(args: argparse.Namespace) -> int:
                 f"delta={totals_delta['wrapper_count_delta']} "
                 f"threshold={max_wrapper_count_increase}"
             )
+            reason_codes.add("wrapper_count_delta_threshold_exceeded")
         if totals_delta["total_shell_loc_delta"] > max_total_shell_loc_increase:
             violations.append(
                 "total_shell_loc_delta exceeded trend threshold: "
                 f"delta={totals_delta['total_shell_loc_delta']} "
                 f"threshold={max_total_shell_loc_increase}"
             )
+            reason_codes.add("total_shell_loc_delta_threshold_exceeded")
+
+    sorted_reason_codes = sorted(reason_codes)
 
     report_payload = {
         "schema_version": DELTA_REPORT_SCHEMA_VERSION,
@@ -417,6 +432,7 @@ def command_check(args: argparse.Namespace) -> int:
             "enforce_lane_shell_loc_nonincreasing": enforce_lane_shell_loc_nonincreasing,
         },
         "lane_deltas": lane_deltas,
+        "reason_codes": sorted_reason_codes,
         "violations": violations,
         "status": "fail" if violations else "pass",
     }
@@ -429,6 +445,7 @@ def command_check(args: argparse.Namespace) -> int:
     print(f"wrapper_count_delta={totals_delta['wrapper_count_delta']}")
     print(f"total_shell_loc_delta={totals_delta['total_shell_loc_delta']}")
     print(f"violation_count={len(violations)}")
+    print(f"reason_codes={'none' if not sorted_reason_codes else ','.join(sorted_reason_codes)}")
 
     if violations:
         for violation in violations:
