@@ -59,6 +59,11 @@ if ! grep -q -- "--runtime-provider-client-contract KolmeRuntimeCommitLiveProvid
   exit 1
 fi
 
+if ! grep -q -- "--runtime-profile real-node" "$RUNNER"; then
+  echo "expected bundle runner integration command to pin real-node runtime profile marker" >&2
+  exit 1
+fi
+
 if ! grep -q "run_local_live_node_validation_bundle_lane.sh" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to reference local live-node validation bundle runner" >&2
   exit 1
@@ -125,6 +130,8 @@ if "run_local_kamn_live_runtime_integration_lane.sh" not in integration_command:
     raise SystemExit("expected integration command marker in bundle summary")
 if "--runtime-provider-client-contract KolmeRuntimeCommitLiveProvider" not in integration_command:
     raise SystemExit("expected explicit runtime provider marker in integration command")
+if "--runtime-profile real-node" not in integration_command:
+    raise SystemExit("expected explicit real-node runtime profile marker in integration command")
 
 process_command = report.get("process_lifecycle_command", "")
 if "run_local_kolme_fork_process_lifecycle_lane.sh" not in process_command:

@@ -219,6 +219,8 @@ integration_commands = [
 if len(integration_commands) != 1:
     raise SystemExit("expected exactly one kamn_live_integration check command")
 integration_command = integration_commands[0]
+if "--runtime-profile real-node" not in integration_command:
+    raise SystemExit("expected nested integration command to include explicit real-node runtime profile marker")
 if "--runtime-commit-finality-command" not in integration_command:
     raise SystemExit("expected nested integration command to include runtime finality command pass-through")
 if "--runtime-commit-finality-max-seconds 11" not in integration_command:
