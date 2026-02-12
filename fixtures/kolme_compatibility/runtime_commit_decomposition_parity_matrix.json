@@ -1,0 +1,68 @@
+{
+  "schema_version": "kamn.kolme.runtime-commit-decomposition-parity-matrix.v1",
+  "legacy_surface_file": "crates/kamn-core/src/kolme_runtime_commit.rs",
+  "extracted_surface_root": "crates/kamn-kolme/src",
+  "scenarios": [
+    {
+      "scenario_id": "submit_http_round_trip",
+      "legacy_contract": "AdapterBackedKolmeRuntimeCommitClient submit path",
+      "extracted_module_files": [
+        "crates/kamn-kolme/src/transport.rs",
+        "crates/kamn-kolme/src/endpoint_policy.rs",
+        "crates/kamn-kolme/src/http_response_policy.rs",
+        "crates/kamn-kolme/src/provider_response_policy.rs"
+      ],
+      "evidence_tests": [
+        "crates/kamn-core/tests/kolme_runtime_commit_client.rs",
+        "crates/kamn-core/tests/kolme_runtime_commit_http_transport.rs"
+      ],
+      "parity_status": "preserved"
+    },
+    {
+      "scenario_id": "submit_fork_broadcast_round_trip",
+      "legacy_contract": "Fork broadcast normalization and provider-outcome mapping",
+      "extracted_module_files": [
+        "crates/kamn-kolme/src/broadcast_payload_policy.rs",
+        "crates/kamn-kolme/src/provider_outcome_policy.rs",
+        "crates/kamn-kolme/src/transport_request_policy.rs"
+      ],
+      "evidence_tests": [
+        "crates/kamn-core/tests/kolme_runtime_commit_http_transport.rs",
+        "crates/kamn-kolme/tests/broadcast_payload_policy_contracts.rs",
+        "crates/kamn-kolme/tests/provider_outcome_policy_contracts.rs"
+      ],
+      "parity_status": "preserved"
+    },
+    {
+      "scenario_id": "finality_notification_resolution",
+      "legacy_contract": "Notification-first finality receipt resolution",
+      "extracted_module_files": [
+        "crates/kamn-kolme/src/finality.rs",
+        "crates/kamn-kolme/src/notification_policy.rs",
+        "crates/kamn-kolme/src/finality_receipt_policy.rs",
+        "crates/kamn-kolme/src/receipt_finality.rs"
+      ],
+      "evidence_tests": [
+        "crates/kamn-core/tests/kolme_runtime_commit_notifications.rs",
+        "crates/kamn-core/tests/kolme_runtime_commit_finality.rs",
+        "crates/kamn-kolme/tests/notification_policy_contracts.rs"
+      ],
+      "parity_status": "preserved"
+    },
+    {
+      "scenario_id": "finality_block_fallback_resolution",
+      "legacy_contract": "Block fallback scan reconciliation and lifecycle projection",
+      "extracted_module_files": [
+        "crates/kamn-kolme/src/block_scan_policy.rs",
+        "crates/kamn-kolme/src/block_fallback_policy.rs",
+        "crates/kamn-kolme/src/runtime_lifecycle_policy.rs"
+      ],
+      "evidence_tests": [
+        "crates/kamn-core/tests/kolme_runtime_commit_block_fallback.rs",
+        "crates/kamn-kolme/tests/finality_block_scan_contracts.rs",
+        "crates/kamn-kolme/tests/runtime_lifecycle_policy_contracts.rs"
+      ],
+      "parity_status": "preserved"
+    }
+  ]
+}

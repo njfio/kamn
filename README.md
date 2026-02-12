@@ -94,6 +94,16 @@ bash scripts/ci/test_kolme_tranche1_dispatch_execution_parity_contract.sh
 This validates that tranche-1 wrapper entrypoints and direct manifest dispatch
 produce equivalent normalized execution output.
 
+### Runtime Commit Decomposition Parity Matrix
+
+```bash
+python3 scripts/kolme/check_runtime_commit_decomposition_parity_matrix.py check --matrix-file fixtures/kolme_compatibility/runtime_commit_decomposition_parity_matrix.json --output-json /tmp/runtime-commit-decomposition-parity-policy.json
+bash scripts/kolme/test_check_runtime_commit_decomposition_parity_matrix.sh
+```
+
+Architecture/module-boundary ownership and parity scenario details are documented
+in `docs/foundation/kolme-runtime-commit-client.md`.
+
 ### Fast Make Lanes
 
 ```bash

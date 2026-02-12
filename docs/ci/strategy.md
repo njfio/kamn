@@ -202,12 +202,17 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - validates manifest resolution fail-closed behavior for unknown wrapper keys.
     - Regression: #1827
   - additional Kolme contract checks stay covered by aggregate CI tools lane:
+    - `bash scripts/kolme/test_check_runtime_commit_decomposition_parity_matrix.sh`
     - `bash scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh`
     - `bash scripts/kolme/test_check_local_bootstrap_health_policy.sh`
     - `bash scripts/kolme/test_run_local_bootstrap_health_checks_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_fork_profile_preflight_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_fork_self_test_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_fork_portability_preflight_contract_lane.sh`
+    - decomposition parity matrix fixture:
+      - `fixtures/kolme_compatibility/runtime_commit_decomposition_parity_matrix.json`
+    - decomposition parity checker:
+      - `python3 scripts/kolme/check_runtime_commit_decomposition_parity_matrix.py check --matrix-file fixtures/kolme_compatibility/runtime_commit_decomposition_parity_matrix.json --output-json /tmp/runtime-commit-decomposition-parity-policy.json`
   - nonce/broadcast parity matrix fast-lane budget stays bounded:
     - `KAMN_KOLME_NONCE_BROADCAST_PARITY_MAX_SECONDS=60`
   - fast-gate native API parity lane remains bounded:
@@ -397,6 +402,7 @@ Regression policy:
 - Kolme runtime+triadic+bootstrap+e2e manifest migration wrapper and shell-LOC budget drift remains fail-closed (`Regression: #1769`).
 - Kolme bootstrap+conformance+runtime+process manifest migration wrapper and shell-LOC budget drift remains fail-closed (`Regression: #1771`).
 - Kolme parity+demo+real-process manifest migration wrapper and shell-LOC budget drift remains fail-closed (`Regression: #1773`).
+- Runtime commit decomposition parity matrix schema/doc/contract-lane drift remains fail-closed (`Regression: #2124`).
 - Kolme shared manifest-migration CI dispatcher wrapper/config routing drift remains fail-closed (`Regression: #1833`).
 
 ## Budget Telemetry and Enforcement

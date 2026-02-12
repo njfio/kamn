@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_runtime_commit_contract_lane.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_runtime_commit_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/runtime_commit_contract_lane.py"
+PARITY_CHECKER="$ROOT_DIR/scripts/kolme/check_runtime_commit_decomposition_parity_matrix.py"
+PARITY_MATRIX="$ROOT_DIR/fixtures/kolme_compatibility/runtime_commit_decomposition_parity_matrix.json"
 
 if [ ! -x "$CONTRACT_LANE" ]; then
   echo "expected Kolme runtime commit contract lane script to be executable" >&2
@@ -41,10 +43,22 @@ if [ ! -f "$CONTRACT_IMPL" ]; then
   exit 1
 fi
 
+if [ ! -x "$PARITY_CHECKER" ]; then
+  echo "expected runtime commit decomposition parity checker to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$PARITY_MATRIX" ]; then
+  echo "expected runtime commit decomposition parity matrix fixture to exist" >&2
+  exit 1
+fi
+
 required_coverage_markers=(
   "kolme_runtime_commit_client"
   "kolme_runtime_commit_finality"
   "run_runtime_commit_contract_lane.sh"
+  "check_runtime_commit_decomposition_parity_matrix.py"
+  "runtime_commit_decomposition_parity_matrix.json"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then
