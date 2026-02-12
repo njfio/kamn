@@ -53,6 +53,8 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     ));
     assert!(!RUNTIME_COMMIT_SRC.contains("let idempotency_key = idempotency_key.trim();"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let provider_hint = provider_hint.trim();"));
+    assert!(!RUNTIME_COMMIT_SRC
+        .contains("notifications_url,\n            provider: provider.trim().to_owned(),"));
     assert!(!RUNTIME_COMMIT_SRC.contains(
         "\"operation_id={}\\nstate_root={}\\nactor_did={}\\nnonce={}\\npayload_hash={}\\nidempotency_key={}\\n\""
     ));
@@ -80,6 +82,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
         RUNTIME_COMMIT_SRC.contains("normalize_kolme_transport_idempotency_key_input_contract(")
     );
     assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_provider_hint_input_contract("));
+    assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_notifications_provider_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("txhash_from_kolme_commit_id("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_endpoint("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_websocket_endpoint("));

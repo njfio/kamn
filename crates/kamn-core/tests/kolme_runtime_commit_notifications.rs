@@ -195,6 +195,29 @@ fn functional_notifications_consumer_decodes_new_block_variant_to_final_receipt(
 }
 
 #[test]
+fn regression_issue_1916_notifications_consumer_trims_provider_input() {
+    // Regression: #1916
+    let connector = MockConnector::new(vec![Ok(MockConnection::new(vec![MockStep::Message(
+        "{\"NewBlock\":{\"block\":{\"txhash\":\"ab12cd34\"},\"height\":42}}".to_owned(),
+    )]))]);
+    let mut consumer = KolmeRuntimeCommitNotificationsConsumer::new(
+        "http://127.0.0.1:3030",
+        "/notifications",
+        "  kolme-fork-local  ",
+        1,
+        connector,
+    )
+    .expect("notifications consumer should build");
+
+    let receipt = consumer
+        .next_commit_receipt()
+        .expect("consumer should map one event");
+    assert_eq!(receipt.provider, "kolme-fork-local");
+    assert_eq!(receipt.commit_id, "kolme-commit:ab12cd34:h42");
+    assert_eq!(receipt.finality, KolmeCommitReceiptFinality::Final);
+}
+
+#[test]
 fn integration_notifications_websocket_connector_receives_kolme_notification() {
     let port = spawn_mock_websocket_notification_server(
         "{\"NewBlock\":{\"block\":{\"txhash\":\"00c0ffee\"},\"height\":88}}",

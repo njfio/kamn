@@ -49,6 +49,7 @@ use kamn_kolme::{
     lifecycle_state_label as lifecycle_state_label_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
     normalize_broadcast_submit_path_input as normalize_kolme_broadcast_submit_path_input_contract,
+    normalize_notifications_provider_input as normalize_kolme_notifications_provider_input_contract,
     normalize_provider_hint_input as normalize_kolme_provider_hint_input_contract,
     normalize_runtime_commit_request_fields as normalize_kolme_runtime_commit_request_fields_contract,
     normalize_runtime_commit_signed_envelope_fields as normalize_kolme_runtime_commit_signed_envelope_fields_contract,
@@ -1642,7 +1643,7 @@ where
                 })?;
         Ok(Self {
             notifications_url,
-            provider: provider.trim().to_owned(),
+            provider: normalize_kolme_notifications_provider_input_contract(provider).to_owned(),
             max_reconnect_attempts,
             connector,
             connection: None,

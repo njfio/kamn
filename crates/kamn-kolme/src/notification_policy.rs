@@ -164,6 +164,11 @@ pub fn is_valid_notifications_provider_input(provider: &str) -> bool {
     !provider.trim().is_empty()
 }
 
+/// Normalizes notifications consumer provider input for deterministic identity projection.
+pub fn normalize_notifications_provider_input(provider: &str) -> &str {
+    provider.trim()
+}
+
 /// Validates notifications consumer reconnect budget input.
 pub fn is_valid_notifications_reconnect_budget(max_reconnect_attempts: u32) -> bool {
     max_reconnect_attempts > 0

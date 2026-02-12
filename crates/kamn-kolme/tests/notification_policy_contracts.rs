@@ -1,5 +1,6 @@
 use kamn_kolme::{
     is_valid_notifications_provider_input, is_valid_notifications_reconnect_budget,
+    normalize_notifications_provider_input,
     notification_event_to_provider_receipt as notification_event_to_provider_receipt_contract,
     notification_event_to_receipt as notification_event_to_receipt_contract,
     parse_notification_event, KolmeCommitReceiptFinality, KolmeNotificationEvent,
@@ -106,8 +107,25 @@ fn functional_notification_policy_accepts_valid_notifications_consumer_inputs() 
 }
 
 #[test]
+fn functional_notification_policy_normalizes_notifications_provider_input() {
+    assert_eq!(
+        normalize_notifications_provider_input("  kolme-fork-local  "),
+        "kolme-fork-local"
+    );
+}
+
+#[test]
 fn regression_issue_1868_notification_policy_rejects_invalid_notifications_consumer_inputs() {
     // Regression: #1868
     assert!(!is_valid_notifications_provider_input(" "));
     assert!(!is_valid_notifications_reconnect_budget(0));
+}
+
+#[test]
+fn regression_issue_1916_notification_policy_trims_outer_provider_whitespace() {
+    // Regression: #1916
+    assert_eq!(
+        normalize_notifications_provider_input("\nkolme-fork-local\n"),
+        "kolme-fork-local"
+    );
 }
