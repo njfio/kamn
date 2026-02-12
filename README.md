@@ -571,6 +571,7 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 
 # real-node profile contract lane (dry-run summary + policy + docs parity)
 bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json
+# real-node strict runtime evidence checker remains local-only and excluded from ci-fast-gate.
 
 # bounded contract lane (spawns local mock API server + pinned checkout fixture)
 bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json

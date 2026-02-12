@@ -133,6 +133,8 @@ required_snippets=(
   "local live API conformance harness run-mode commands remain excluded from ci-fast-gate."
   "local fork bootstrap/readiness run-mode commands remain excluded from ci-fast-gate."
   "local KAMN live runtime integration run-mode commands remain excluded from ci-fast-gate."
+  "check_local_kamn_live_runtime_real_node_profile_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --require-non-synthetic-run-evidence --output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json"
+  "strict real-node runtime evidence marker path remains local-only and excluded from ci-fast-gate."
   "local fork process lifecycle integration run-mode commands remain excluded from ci-fast-gate."
   "local fork profile preflight run-mode commands remain excluded from ci-fast-gate."
   "check_local_kolme_fork_profile_preflight_policy.py --report-file /tmp/kolme-local-fork-profile-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code profile_preflight_passed --output-json /tmp/kolme-local-fork-profile-preflight-policy.json"
