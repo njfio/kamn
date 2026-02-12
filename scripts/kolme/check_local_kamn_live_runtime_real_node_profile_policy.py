@@ -12,6 +12,9 @@ REAL_SIGNER_PROFILE_SELECTOR_ENV = "KAMN_KOLME_LIVE_SIGNER_PROFILE"
 REAL_SIGNER_PROFILE = "ops-primary"
 REAL_SIGNER_PRIVATE_KEY_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
 REAL_SIGNER_PROFILE_COMMAND_MARKER = "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary"
+NATIVE_PAYLOAD_PUBKEY_MARKER = "pubkey"
+NATIVE_PAYLOAD_NONCE_MARKER = "nonce"
+NATIVE_PAYLOAD_MESSAGES_MARKER = "messages"
 
 
 def parse_args() -> argparse.Namespace:
@@ -143,6 +146,21 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             and REAL_SIGNER_PROFILE_COMMAND_MARKER not in runtime_commit_command
         ):
             reason_codes.append("runtime_commit_signer_profile_marker_missing")
+        if (
+            runtime_commit_command_profile == "real-node-non-synthetic-v1"
+            and NATIVE_PAYLOAD_PUBKEY_MARKER not in runtime_commit_command
+        ):
+            reason_codes.append("runtime_commit_native_payload_pubkey_marker_missing")
+        if (
+            runtime_commit_command_profile == "real-node-non-synthetic-v1"
+            and NATIVE_PAYLOAD_NONCE_MARKER not in runtime_commit_command
+        ):
+            reason_codes.append("runtime_commit_native_payload_nonce_marker_missing")
+        if (
+            runtime_commit_command_profile == "real-node-non-synthetic-v1"
+            and NATIVE_PAYLOAD_MESSAGES_MARKER not in runtime_commit_command
+        ):
+            reason_codes.append("runtime_commit_native_payload_messages_marker_missing")
         if IN_MEMORY_PROVIDER_MARKER in runtime_commit_command:
             reason_codes.append("runtime_commit_in_memory_provider_reference_detected")
 
@@ -217,6 +235,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             and "--require-non-synthetic-run-evidence" not in runtime_commit_policy_check_command
         ):
             reason_codes.append("runtime_commit_policy_check_non_synthetic_marker_missing")
+        if (
+            runtime_commit_command_profile == "real-node-non-synthetic-v1"
+            and runtime_commit_policy_check_command is not None
+            and "--require-native-payload-evidence" not in runtime_commit_policy_check_command
+        ):
+            reason_codes.append("runtime_commit_policy_check_native_payload_marker_missing")
         if runtime_commit_policy_check_command is not None and IN_MEMORY_PROVIDER_MARKER in runtime_commit_policy_check_command:
             reason_codes.append("runtime_commit_policy_check_in_memory_provider_reference_detected")
 

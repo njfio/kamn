@@ -820,8 +820,10 @@ Operator checkpoints:
   - bounded live command timeout via `--max-seconds`
   - optional finality command timeout bound via `--finality-max-seconds`
   - submit/finality evidence marker fields (`submit_evidence_marker_present`, `finality_evidence_marker_present`) remain fail-closed in policy checks
+  - native payload evidence marker fields (`native_payload_pubkey_marker_present`, `native_payload_nonce_marker_present`, `native_payload_messages_marker_present`) remain fail-closed in strict real-node policy checks
   - summary includes `live_command_synthetic`, `finality_command_synthetic`, and `synthetic_evidence_classification_version=v1` for deterministic synthetic-command detection.
   - `--require-non-synthetic-run-evidence` enforces NO-GO on synthetic run-mode command paths (`synthetic_live_command_detected`, `synthetic_finality_command_detected`).
+  - `--require-native-payload-evidence` enforces NO-GO when run-mode native payload markers are absent (`native_payload_pubkey_marker_missing`, `native_payload_nonce_marker_missing`, `native_payload_messages_marker_missing`).
   - machine-readable pass/fail reason codes for missing opt-in, preflight failure/timeout, command failure, and command timeout
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.

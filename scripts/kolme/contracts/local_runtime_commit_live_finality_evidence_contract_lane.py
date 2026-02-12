@@ -58,6 +58,16 @@ def build_parser() -> argparse.ArgumentParser:
         default="KolmeRuntimeCommitLiveProvider",
         help="Expected provider client contract emitted by runtime live lane summary.",
     )
+    parser.add_argument(
+        "--require-non-synthetic-run-evidence",
+        action="store_true",
+        help="Require fail-closed non-synthetic run evidence checks in policy evaluation.",
+    )
+    parser.add_argument(
+        "--require-native-payload-evidence",
+        action="store_true",
+        help="Require fail-closed native payload marker checks in policy evaluation.",
+    )
     return parser
 
 
@@ -154,6 +164,16 @@ def main() -> int:
             args.expected_provider_client_contract,
             "--output-json",
             args.policy_output_json,
+            *(
+                ["--require-non-synthetic-run-evidence"]
+                if args.require_non_synthetic_run_evidence
+                else []
+            ),
+            *(
+                ["--require-native-payload-evidence"]
+                if args.require_native_payload_evidence
+                else []
+            ),
         ],
         cwd=ROOT_DIR,
         check=True,
@@ -170,7 +190,7 @@ def main() -> int:
             "run",
             "--skip-preflight",
             "--live-command",
-            "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\\nintegration_kolme_fork_live_node_submit_reaches_endpoint\\n'",
+            "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\\nintegration_kolme_fork_live_node_submit_reaches_endpoint\\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\\n'",
             "--finality-command",
             "printf 'finality=final\\n'",
             "--max-seconds",
@@ -206,6 +226,16 @@ def main() -> int:
             args.expected_provider_client_contract,
             "--output-json",
             args.policy_output_json,
+            *(
+                ["--require-non-synthetic-run-evidence"]
+                if args.require_non_synthetic_run_evidence
+                else []
+            ),
+            *(
+                ["--require-native-payload-evidence"]
+                if args.require_native_payload_evidence
+                else []
+            ),
         ],
         cwd=ROOT_DIR,
         check=True,
@@ -221,6 +251,15 @@ def main() -> int:
         return 1
     if summary_payload.get("finality_evidence_marker_present") is not True:
         print("expected finality_evidence_marker_present=true", file=sys.stderr)
+        return 1
+    if summary_payload.get("native_payload_pubkey_marker_present") is not True:
+        print("expected native_payload_pubkey_marker_present=true", file=sys.stderr)
+        return 1
+    if summary_payload.get("native_payload_nonce_marker_present") is not True:
+        print("expected native_payload_nonce_marker_present=true", file=sys.stderr)
+        return 1
+    if summary_payload.get("native_payload_messages_marker_present") is not True:
+        print("expected native_payload_messages_marker_present=true", file=sys.stderr)
         return 1
 
     elapsed_seconds = int(time.monotonic() - start_epoch)

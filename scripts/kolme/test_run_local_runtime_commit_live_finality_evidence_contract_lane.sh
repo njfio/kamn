@@ -59,6 +59,9 @@ required_markers=(
   "check_local_runtime_commit_live_evidence_policy.py"
   "submit_evidence_marker_present"
   "finality_evidence_marker_present"
+  "native_payload_pubkey_marker_present"
+  "native_payload_nonce_marker_present"
+  "native_payload_messages_marker_present"
   "Regression: #2099"
 )
 for marker in "${required_markers[@]}"; do
@@ -73,6 +76,9 @@ required_doc_markers=(
   "check_local_runtime_commit_live_evidence_policy.py"
   "submit_evidence_marker_present"
   "finality_evidence_marker_present"
+  "native_payload_pubkey_marker_present"
+  "native_payload_nonce_marker_present"
+  "native_payload_messages_marker_present"
 )
 for marker in "${required_doc_markers[@]}"; do
   if ! grep -q "$marker" "$DOC_FILE"; then
@@ -116,6 +122,12 @@ if summary.get("submit_evidence_marker_present") is not True:
     raise SystemExit("expected submit_evidence_marker_present=true in runtime-commit live finality evidence summary")
 if summary.get("finality_evidence_marker_present") is not True:
     raise SystemExit("expected finality_evidence_marker_present=true in runtime-commit live finality evidence summary")
+if summary.get("native_payload_pubkey_marker_present") is not True:
+    raise SystemExit("expected native_payload_pubkey_marker_present=true in runtime-commit live finality evidence summary")
+if summary.get("native_payload_nonce_marker_present") is not True:
+    raise SystemExit("expected native_payload_nonce_marker_present=true in runtime-commit live finality evidence summary")
+if summary.get("native_payload_messages_marker_present") is not True:
+    raise SystemExit("expected native_payload_messages_marker_present=true in runtime-commit live finality evidence summary")
 
 if policy.get("schema_version") != "kamn.kolme.local-runtime-commit-live-policy-report.v1":
     raise SystemExit("unexpected runtime-commit live finality evidence policy schema")

@@ -93,6 +93,12 @@ if "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1" not in runtime_comm
     raise SystemExit("expected real signing profile marker in integration runtime_commit_command")
 if "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary" not in runtime_commit_command:
     raise SystemExit("expected signer profile marker in integration runtime_commit_command")
+if "pubkey" not in runtime_commit_command:
+    raise SystemExit("expected native payload pubkey marker in integration runtime_commit_command")
+if "nonce" not in runtime_commit_command:
+    raise SystemExit("expected native payload nonce marker in integration runtime_commit_command")
+if "messages" not in runtime_commit_command:
+    raise SystemExit("expected native payload messages marker in integration runtime_commit_command")
 if summary.get("runtime_commit_command_profile") != "real-node-non-synthetic-v1":
     raise SystemExit("expected deterministic runtime commit command profile marker for real-node profile")
 if summary.get("runtime_commit_policy_command_profile") != "real-node-non-synthetic-v1":
@@ -118,6 +124,19 @@ if contracts.get("runtime_signer_profile") != "ops-primary":
     raise SystemExit("expected contracts signer profile marker in integration summary")
 if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected contracts signer private key env marker in integration summary")
+checks = summary.get("checks", [])
+if not isinstance(checks, list) or not checks:
+    raise SystemExit("expected checks list in integration summary")
+runtime_policy_checks = [
+    entry for entry in checks if isinstance(entry, dict) and entry.get("id") == "runtime_commit_policy"
+]
+if len(runtime_policy_checks) != 1:
+    raise SystemExit("expected exactly one runtime_commit_policy check entry in integration summary")
+runtime_policy_command = runtime_policy_checks[0].get("command")
+if not isinstance(runtime_policy_command, str):
+    raise SystemExit("expected runtime_commit_policy check command to be a string")
+if "--require-native-payload-evidence" not in runtime_policy_command:
+    raise SystemExit("expected native payload evidence marker requirement in runtime policy check command")
 PY
 
 set +e
