@@ -65,6 +65,32 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_commit_method_mismatch")
         if contracts.get("integration_runner") != "run_local_kamn_live_runtime_integration_lane.sh":
             reason_codes.append("integration_runner_mismatch")
+        if contracts.get("integration_runtime_commit_live_policy_report_option") != "--runtime-commit-live-policy-report":
+            reason_codes.append("integration_runtime_commit_live_policy_report_option_mismatch")
+
+    integration_runtime_commit_live_policy_report = report.get("integration_runtime_commit_live_policy_report")
+    if (
+        not isinstance(integration_runtime_commit_live_policy_report, str)
+        or not integration_runtime_commit_live_policy_report.strip()
+    ):
+        reason_codes.append("integration_runtime_commit_live_policy_report_missing")
+
+    integration_runtime_commit_policy_reason_code = report.get("integration_runtime_commit_policy_reason_code")
+    if (
+        not isinstance(integration_runtime_commit_policy_reason_code, str)
+        or not integration_runtime_commit_policy_reason_code.strip()
+    ):
+        reason_codes.append("integration_runtime_commit_policy_reason_code_missing")
+
+    artifact_paths = report.get("artifact_paths")
+    if not isinstance(artifact_paths, list) or not artifact_paths:
+        reason_codes.append("artifact_paths_missing")
+    elif (
+        isinstance(integration_runtime_commit_live_policy_report, str)
+        and integration_runtime_commit_live_policy_report.strip()
+        and integration_runtime_commit_live_policy_report not in artifact_paths
+    ):
+        reason_codes.append("integration_runtime_commit_live_policy_report_artifact_missing")
 
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
@@ -95,6 +121,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 reason_codes.append(f"check_status_invalid:{check_id}")
             if not isinstance(check_reason_code, str) or not check_reason_code.strip():
                 reason_codes.append(f"check_reason_code_invalid:{check_id}")
+            if (
+                check_id == "kamn_live_integration"
+                and isinstance(command, str)
+                and "--runtime-commit-live-policy-report" not in command
+            ):
+                reason_codes.append("kamn_live_integration_policy_report_marker_missing")
         missing_ids = sorted(expected_ids - observed_ids)
         for missing_id in missing_ids:
             reason_codes.append(f"check_missing:{missing_id}")

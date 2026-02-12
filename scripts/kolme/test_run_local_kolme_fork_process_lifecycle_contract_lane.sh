@@ -32,10 +32,11 @@ required_integration_finality_markers=(
   "--integration-runtime-commit-finality-command"
   "--integration-runtime-commit-finality-max-seconds"
   "--integration-runtime-commit-finality-output-file"
+  "--integration-runtime-commit-live-policy-report"
 )
 for marker in "${required_integration_finality_markers[@]}"; do
   if ! grep -q -- "$marker" "$ROOT_DIR/scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh"; then
-    echo "expected local fork process lifecycle runner to expose integration finality pass-through marker: $marker" >&2
+    echo "expected local fork process lifecycle runner to expose integration pass-through marker: $marker" >&2
     exit 1
   fi
 done
@@ -71,6 +72,7 @@ required_coverage_markers=(
   "run_local_kamn_live_runtime_integration_lane.sh"
   "Regression: #1494"
   "Regression: #1973"
+  "Regression: #2104"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then
@@ -94,6 +96,11 @@ if ! grep -q -- "--integration-runtime-commit-finality-command" "$DOC_FILE"; the
   exit 1
 fi
 
+if ! grep -q -- "--integration-runtime-commit-live-policy-report" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to document process lifecycle runtime policy pass-through option" >&2
+  exit 1
+fi
+
 if ! grep -q "check_local_kolme_fork_process_lifecycle_policy.py" "$README_FILE"; then
   echo "expected README to reference local fork process lifecycle policy checker" >&2
   exit 1
@@ -106,6 +113,16 @@ fi
 
 if ! grep -q -- "--integration-runtime-commit-finality-command" "$README_FILE"; then
   echo "expected README to document process lifecycle integration finality pass-through command option" >&2
+  exit 1
+fi
+
+if ! grep -q -- "--integration-runtime-commit-live-policy-report" "$README_FILE"; then
+  echo "expected README to document process lifecycle runtime policy pass-through option" >&2
+  exit 1
+fi
+
+if ! grep -q "Regression: #2104" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include process lifecycle runtime policy pass-through regression marker" >&2
   exit 1
 fi
 
@@ -140,18 +157,20 @@ TMP_DIRECT_SUMMARY="$(mktemp)"
 TMP_DIRECT_PROCESS_OUTPUT="$(mktemp)"
 TMP_DIRECT_INTEGRATION_REPORT="$(mktemp)"
 TMP_DIRECT_FINALITY_OUTPUT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_PROCESS_OUTPUT" "$TMP_DIRECT_INTEGRATION_REPORT" "$TMP_DIRECT_FINALITY_OUTPUT"' EXIT
+TMP_DIRECT_RUNTIME_POLICY_REPORT="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_PROCESS_OUTPUT" "$TMP_DIRECT_INTEGRATION_REPORT" "$TMP_DIRECT_FINALITY_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY_REPORT"' EXIT
 
 bash "$ROOT_DIR/scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh" \
   --mode dry-run \
   --integration-runtime-commit-finality-command "printf 'finality=final\n'" \
   --integration-runtime-commit-finality-max-seconds 11 \
   --integration-runtime-commit-finality-output-file "$TMP_DIRECT_FINALITY_OUTPUT" \
+  --integration-runtime-commit-live-policy-report "$TMP_DIRECT_RUNTIME_POLICY_REPORT" \
   --process-output-file "$TMP_DIRECT_PROCESS_OUTPUT" \
   --integration-report "$TMP_DIRECT_INTEGRATION_REPORT" \
   --output-json "$TMP_DIRECT_SUMMARY" >/dev/null
 
-python3 - "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_FINALITY_OUTPUT" <<'PY'
+python3 - "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_FINALITY_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY_REPORT" <<'PY'
 from __future__ import annotations
 
 import json
@@ -177,6 +196,13 @@ if f"--runtime-commit-finality-output-file {finality_output_path}" not in integr
     raise SystemExit("expected nested integration command to include runtime finality output pass-through")
 if str(finality_output_path) not in summary.get("artifact_paths", []):
     raise SystemExit("expected process lifecycle summary artifact paths to include integration finality output file")
+runtime_policy_report_path = pathlib.Path(sys.argv[3]).resolve()
+if f"--runtime-commit-live-policy-report {runtime_policy_report_path}" not in integration_command:
+    raise SystemExit("expected nested integration command to include runtime policy report pass-through")
+if summary.get("integration_runtime_commit_live_policy_report") != str(runtime_policy_report_path):
+    raise SystemExit("expected summary to expose runtime policy report path")
+if str(runtime_policy_report_path) not in summary.get("artifact_paths", []):
+    raise SystemExit("expected process lifecycle summary artifact paths to include runtime policy report path")
 PY
 
 echo "local fork process lifecycle contract lane tests passed."

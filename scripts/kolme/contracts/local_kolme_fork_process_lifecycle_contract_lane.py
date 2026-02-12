@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 import tempfile
@@ -72,6 +73,7 @@ def main() -> int:
         checkout_path = temp_path / "kolme_fork"
         process_output_file = temp_path / "kolme_process.log"
         integration_report = temp_path / "kolme_runtime_integration_summary.json"
+        runtime_policy_report = temp_path / "kolme_runtime_commit_live_policy.json"
         checkout_path.mkdir(parents=True, exist_ok=True)
 
         subprocess.run(["git", "-C", str(checkout_path), "init", "-q"], check=True)
@@ -130,6 +132,8 @@ def main() -> int:
                 str(process_output_file),
                 "--integration-report",
                 str(integration_report),
+                "--integration-runtime-commit-live-policy-report",
+                str(runtime_policy_report),
                 "--output-json",
                 args.output_json,
             ],
@@ -158,6 +162,27 @@ def main() -> int:
             stdout=subprocess.DEVNULL,
         )
 
+        summary = json.loads(Path(args.output_json).read_text(encoding="utf-8"))
+        if summary.get("integration_runtime_commit_live_policy_report") != str(runtime_policy_report):
+            print(
+                "expected process lifecycle summary to expose integration runtime policy report path",
+                file=sys.stderr,
+            )
+            return 1
+        if str(runtime_policy_report) not in summary.get("artifact_paths", []):
+            print(
+                "expected process lifecycle summary artifact paths to include integration runtime policy report",
+                file=sys.stderr,
+            )
+            return 1
+        runtime_policy_reason_code = summary.get("integration_runtime_commit_policy_reason_code")
+        if not isinstance(runtime_policy_reason_code, str) or not runtime_policy_reason_code.strip():
+            print(
+                "expected process lifecycle summary to expose integration runtime policy reason code",
+                file=sys.stderr,
+            )
+            return 1
+
     doc_text = DOC_FILE.read_text(encoding="utf-8")
     readme_text = README_FILE.read_text(encoding="utf-8")
     if "run_local_kolme_fork_process_lifecycle_lane.sh" not in doc_text:
@@ -173,6 +198,13 @@ def main() -> int:
     if "--integration-runtime-commit-finality-command" not in doc_text:
         print(
             "expected Kolme devnet ops doc to document process lifecycle integration finality pass-through option",
+            file=sys.stderr,
+        )
+        return 1
+    # Regression: #2104
+    if "--integration-runtime-commit-live-policy-report" not in doc_text:
+        print(
+            "expected Kolme devnet ops doc to document process lifecycle runtime policy report pass-through option",
             file=sys.stderr,
         )
         return 1
@@ -194,6 +226,12 @@ def main() -> int:
     if "--integration-runtime-commit-finality-command" not in readme_text:
         print(
             "expected README to document process lifecycle integration finality pass-through option",
+            file=sys.stderr,
+        )
+        return 1
+    if "--integration-runtime-commit-live-policy-report" not in readme_text:
+        print(
+            "expected README to document process lifecycle runtime policy report pass-through option",
             file=sys.stderr,
         )
         return 1
