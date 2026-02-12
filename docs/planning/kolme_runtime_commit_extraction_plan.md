@@ -86,6 +86,7 @@ Out of scope:
 - #1932: removed local lifecycle-record helper glue from `kamn-core` by inlining deterministic lifecycle-record construction in runtime pipeline submit path and deleting `lifecycle_record_from_outcome` helper ownership.
 - #1934: removed websocket header-boundary helper glue from `kamn-core` by inlining deterministic handshake header-boundary read loop in connector `connect` flow and deleting `read_http_header_boundary` helper ownership.
 - #1936: extracted runtime pipeline lifecycle record/projection ownership into `kolme_runtime_commit/runtime_pipeline.rs` and rewired `kolme_runtime_commit.rs` to re-export pipeline types from the dedicated submodule.
+- #1938: extracted in-memory runtime client ownership into `kolme_runtime_commit/in_memory_client.rs` and rewired `kolme_runtime_commit.rs` to re-export `InMemoryKolmeRuntimeCommitClient` from the dedicated submodule.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,
