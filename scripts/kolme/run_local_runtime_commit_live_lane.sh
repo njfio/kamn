@@ -8,12 +8,15 @@ MODE="dry-run"
 OUTPUT_JSON="/tmp/kolme-local-runtime-commit-live-summary.json"
 LIVE_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-live-output.txt"
 LIVE_COMMAND=""
+FINALITY_COMMAND=""
 MAX_SECONDS=90
 BASE_URL="http://127.0.0.1:3000"
 PROVIDER_HINT="kolme-fork-local"
 AUTHORIZATION_HEADER=""
 PREFLIGHT_MAX_SECONDS=10
+FINALITY_MAX_SECONDS=15
 SKIP_PREFLIGHT=0
+FINALITY_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-live-finality-output.txt"
 
 shell_escape() {
   printf "%q" "$1"
@@ -72,6 +75,30 @@ while [ "$#" -gt 0 ]; do
       MAX_SECONDS="$2"
       shift 2
       ;;
+    --finality-command)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --finality-command" >&2
+        exit 1
+      fi
+      FINALITY_COMMAND="$2"
+      shift 2
+      ;;
+    --finality-max-seconds)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --finality-max-seconds" >&2
+        exit 1
+      fi
+      FINALITY_MAX_SECONDS="$2"
+      shift 2
+      ;;
+    --finality-output-file)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --finality-output-file" >&2
+        exit 1
+      fi
+      FINALITY_OUTPUT_FILE="$2"
+      shift 2
+      ;;
     --base-url)
       if [ "$#" -lt 2 ]; then
         echo "missing value for --base-url" >&2
@@ -117,6 +144,9 @@ Options:
   --output-json <path>          Deterministic summary report output path.
   --live-output-file <path>     Captured stdout/stderr for live command.
   --live-command <command>      Runtime-commit submit/finality command for run mode.
+  --finality-command <command>  Optional post-submit finality command for run mode.
+  --finality-output-file <path> Captured stdout/stderr for finality command.
+  --finality-max-seconds <n>    Max runtime budget in seconds for finality command.
   --max-seconds <n>             Max runtime budget in seconds for run mode.
   --base-url <url>              Live Kolme base URL used by default smoke command.
   --provider-hint <value>       Provider hint used by default live smoke command.
@@ -145,6 +175,11 @@ fi
 
 if ! [[ "$PREFLIGHT_MAX_SECONDS" =~ ^[0-9]+$ ]] || [ "$PREFLIGHT_MAX_SECONDS" -le 0 ]; then
   echo "preflight-max-seconds must be a positive integer" >&2
+  exit 1
+fi
+
+if ! [[ "$FINALITY_MAX_SECONDS" =~ ^[0-9]+$ ]] || [ "$FINALITY_MAX_SECONDS" -le 0 ]; then
+  echo "finality-max-seconds must be a positive integer" >&2
   exit 1
 fi
 
@@ -186,8 +221,13 @@ elapsed_seconds=0
 local_only_enforced="true"
 
 planned_command="$LIVE_COMMAND"
+planned_finality_command="$FINALITY_COMMAND"
+if [ -z "$planned_finality_command" ]; then
+  planned_finality_command="<not-configured>"
+fi
 record_check "runtime_commit_live_preflight" "$preflight_command" "planned"
 record_check "runtime_commit_live_command" "$planned_command" "planned"
+record_check "runtime_commit_live_finality_command" "$planned_finality_command" "planned"
 
 if [ "$MODE" = "run" ]; then
   : >"$CHECK_FILE"
@@ -195,6 +235,7 @@ if [ "$MODE" = "run" ]; then
 
   if ! "$LOCAL_HEAVY_GUARD"; then
     record_check "runtime_commit_live_command" "$planned_command" "fail"
+    record_check "runtime_commit_live_finality_command" "$planned_finality_command" "skipped"
     overall_status="fail"
     reason_code="local_opt_in_missing"
   elif [ "$SKIP_PREFLIGHT" -eq 1 ]; then
@@ -211,10 +252,12 @@ if [ "$MODE" = "run" ]; then
       record_check "runtime_commit_live_preflight" "$preflight_command" "fail"
       overall_status="fail"
       reason_code="live_preflight_timeout"
+      record_check "runtime_commit_live_finality_command" "$planned_finality_command" "skipped"
     else
       record_check "runtime_commit_live_preflight" "$preflight_command" "fail"
       overall_status="fail"
       reason_code="live_preflight_failed"
+      record_check "runtime_commit_live_finality_command" "$planned_finality_command" "skipped"
     fi
   fi
 
@@ -233,16 +276,44 @@ if [ "$MODE" = "run" ]; then
       record_check "runtime_commit_live_command" "$LIVE_COMMAND" "fail"
       overall_status="fail"
       reason_code="live_runtime_commit_command_timeout"
+      record_check "runtime_commit_live_finality_command" "$planned_finality_command" "skipped"
     else
       record_check "runtime_commit_live_command" "$LIVE_COMMAND" "fail"
       overall_status="fail"
       reason_code="live_runtime_commit_command_failed"
+      record_check "runtime_commit_live_finality_command" "$planned_finality_command" "skipped"
+    fi
+  fi
+
+  if [ "$overall_status" = "ok" ]; then
+    if [ -n "$FINALITY_COMMAND" ]; then
+      mkdir -p "$(dirname "$FINALITY_OUTPUT_FILE")"
+      finality_exit_code=0
+      set +e
+      timeout "${FINALITY_MAX_SECONDS}" bash -lc "$FINALITY_COMMAND" >"$FINALITY_OUTPUT_FILE" 2>&1
+      finality_exit_code=$?
+      set -e
+
+      if [ "$finality_exit_code" -eq 0 ]; then
+        record_check "runtime_commit_live_finality_command" "$FINALITY_COMMAND" "pass"
+        reason_code="live_runtime_commit_and_finality_commands_passed"
+      elif [ "$finality_exit_code" -eq 124 ]; then
+        record_check "runtime_commit_live_finality_command" "$FINALITY_COMMAND" "fail"
+        overall_status="fail"
+        reason_code="live_finality_command_timeout"
+      else
+        record_check "runtime_commit_live_finality_command" "$FINALITY_COMMAND" "fail"
+        overall_status="fail"
+        reason_code="live_finality_command_failed"
+      fi
+    else
+      record_check "runtime_commit_live_finality_command" "$planned_finality_command" "skipped"
     fi
   fi
 
   end_epoch="$(date +%s)"
   elapsed_seconds="$(( end_epoch - start_epoch ))"
-  if [ "$elapsed_seconds" -le "$MAX_SECONDS" ] && [ "$reason_code" != "live_runtime_commit_command_timeout" ]; then
+  if [ "$elapsed_seconds" -le "$MAX_SECONDS" ] && [ "$reason_code" != "live_runtime_commit_command_timeout" ] && [ "$reason_code" != "live_finality_command_timeout" ]; then
     budget_status="within_budget"
   else
     budget_status="exceeded_budget"
@@ -253,7 +324,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$FINALITY_COMMAND" "$FINALITY_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$FINALITY_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -270,11 +341,14 @@ max_seconds = int(sys.argv[7])
 budget_status = sys.argv[8]
 live_command = sys.argv[9]
 live_output_file = sys.argv[10]
-base_url = sys.argv[11]
-provider_hint = sys.argv[12]
-preflight_max_seconds = int(sys.argv[13])
-skip_preflight = sys.argv[14] == "1"
-checks_path = pathlib.Path(sys.argv[15])
+finality_command = sys.argv[11]
+finality_output_file = sys.argv[12]
+base_url = sys.argv[13]
+provider_hint = sys.argv[14]
+preflight_max_seconds = int(sys.argv[15])
+finality_max_seconds = int(sys.argv[16])
+skip_preflight = sys.argv[17] == "1"
+checks_path = pathlib.Path(sys.argv[18])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -303,6 +377,10 @@ summary = {
     "budget_status": budget_status,
     "live_command": live_command,
     "live_output_file": live_output_file,
+    "finality_command": finality_command,
+    "finality_output_file": finality_output_file,
+    "finality_enabled": bool(finality_command.strip()),
+    "finality_max_seconds": finality_max_seconds,
     "base_url": base_url,
     "provider_hint": provider_hint,
     "preflight_enabled": not skip_preflight,
@@ -310,6 +388,7 @@ summary = {
     "checks": checks,
     "artifact_paths": [
         live_output_file,
+        finality_output_file,
     ],
 }
 
