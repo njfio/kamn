@@ -569,6 +569,18 @@ python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --repo
 # real-node profile policy checker contract
 python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --require-non-synthetic-run-evidence --output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json
 
+# strict profile summary marker contracts
+# runtime_commit_command_profile=real-node-non-synthetic-v1
+# runtime_commit_policy_command_profile=real-node-non-synthetic-v1
+# runtime_commit_command_profile_version=v1
+
+# strict profile NO-GO drift/synthetic reason markers
+# runtime_commit_command_profile_mismatch
+# runtime_commit_non_synthetic_submit_probe_missing
+
+# strict profile non-synthetic submit probe marker
+# integration_kolme_fork_live_node_submit_reaches_endpoint
+
 # real-node profile contract lane (dry-run summary + policy + docs parity)
 bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json
 # real-node strict runtime evidence checker remains local-only and excluded from ci-fast-gate.

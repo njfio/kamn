@@ -245,6 +245,15 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - operator workflow reference: `Live Provider Operator Runbook (Issue #2114)` in `docs/planning/kolme-devnet-ops.md`.
     - `python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
     - `python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --require-non-synthetic-run-evidence --output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
+    - strict profile summary marker contracts:
+      - `runtime_commit_command_profile=real-node-non-synthetic-v1`
+      - `runtime_commit_policy_command_profile=real-node-non-synthetic-v1`
+      - `runtime_commit_command_profile_version=v1`
+    - strict profile NO-GO drift/synthetic reasons:
+      - `runtime_commit_command_profile_mismatch`
+      - `runtime_commit_non_synthetic_submit_probe_missing`
+    - strict profile non-synthetic submit probe marker:
+      - `integration_kolme_fork_live_node_submit_reaches_endpoint`
     - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
     - strict real-node runtime evidence marker path remains local-only and excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
