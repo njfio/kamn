@@ -114,7 +114,7 @@ pub mod telegram_bridge;
 pub mod token;
 /// Baseline transaction validation and state-hash progression guard contracts.
 pub mod transaction;
-#[allow(missing_docs)]
+/// Trust score policy model, abuse penalties, and persistence calculation helpers.
 pub mod trust_score;
 #[allow(missing_docs)]
 pub mod upgrade_orchestration;

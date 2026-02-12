@@ -11,7 +11,6 @@ reputation_state
 runtime
 signer_backend
 task_operations
-trust_score
 upgrade_orchestration
 watchdog
 zk_message_proofs
