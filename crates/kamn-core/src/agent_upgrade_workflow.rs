@@ -1,3 +1,5 @@
+//! Agent-driven runtime upgrade proposal, review, governance, and activation workflow contracts.
+
 use crate::{
     AgentDid, GovernanceProposalDraft, GovernanceProposalRecord, GovernanceProposalStatus,
     GovernanceVoteChoice, GovernanceVoteRecord, GovernanceWorkflow, GovernanceWorkflowError,
@@ -6,69 +8,115 @@ use crate::{
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+/// Configuration parameters used to initialize an agent-driven upgrade workflow.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AgentUpgradeWorkflowConfig {
+    /// Runtime version currently active at workflow initialization.
     pub current_version: String,
+    /// DID allowlist for agents permitted to submit upgrade proposals.
     pub allowed_agent_proposers: Vec<String>,
+    /// DID allowlist for validators permitted to review and vote.
     pub allowed_validator_voters: Vec<String>,
+    /// Minimum number of distinct human reviews required before governance submission.
     pub required_human_reviews: usize,
+    /// Governance quorum required to approve the proposal.
     pub required_validator_quorum: usize,
+    /// Minimum delay, in seconds, between governance approval and activation.
     pub min_activation_delay_secs: u64,
 }
 
+/// Draft payload submitted by an authorized agent proposer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AgentUpgradeProposalDraft {
+    /// Unique upgrade proposal identifier.
     pub proposal_id: String,
+    /// Candidate runtime version to activate if the workflow succeeds.
     pub target_version: String,
+    /// DID of the proposing agent.
     pub agent_did: String,
+    /// Human-readable rationale for the upgrade.
     pub rationale: String,
+    /// Proposal creation timestamp in Unix seconds.
     pub created_at_unix: u64,
+    /// Governance voting deadline timestamp in Unix seconds.
     pub voting_deadline_unix: u64,
 }
 
+/// Lifecycle state machine for agent-driven upgrade proposals.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AgentUpgradeProposalState {
+    /// Proposal exists and is collecting required human reviews.
     PendingHumanReview,
+    /// Proposal has been promoted and is currently in governance voting.
     GovernanceVoting,
+    /// Governance has approved the proposal and activation delay may apply.
     GovernanceApproved,
+    /// Upgrade has been executed and marked active.
     Activated,
 }
 
+/// Canonical state snapshot for a proposal tracked by this workflow.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AgentUpgradeProposalRecord {
+    /// Unique proposal identifier.
     pub proposal_id: String,
+    /// Candidate runtime version requested by the proposal.
     pub target_version: String,
+    /// DID of the original proposing agent.
     pub agent_did: String,
+    /// Human-readable upgrade rationale.
     pub rationale: String,
+    /// Proposal creation timestamp in Unix seconds.
     pub created_at_unix: u64,
+    /// Governance voting deadline timestamp in Unix seconds.
     pub voting_deadline_unix: u64,
+    /// Set of reviewers that approved this proposal for governance submission.
     pub human_reviewers: BTreeSet<String>,
+    /// Current proposal lifecycle state.
     pub state: AgentUpgradeProposalState,
+    /// Current governance status mirrored from the governance workflow.
     pub governance_status: GovernanceProposalStatus,
+    /// Timestamp when governance first reached approved status.
     pub governance_approved_at_unix: Option<u64>,
+    /// Timestamp when upgrade activation completed.
     pub activated_at_unix: Option<u64>,
+    /// Governance operation hash used during final execution.
     pub operation_hash: Option<String>,
 }
 
+/// Audit event kinds emitted by the agent-driven upgrade workflow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AgentUpgradeAuditEventKind {
+    /// An agent submitted a proposal draft.
     AgentProposed,
+    /// A human reviewer approved the proposal for governance promotion.
     HumanReviewApproved,
+    /// The proposal was submitted into governance voting.
     GovernanceSubmitted,
+    /// Governance reached quorum approval for the proposal.
     GovernanceApproved,
+    /// Governance execution completed for the proposal.
     GovernanceExecuted,
+    /// The runtime upgrade was activated.
     UpgradeActivated,
 }
 
+/// Immutable audit event record emitted by the workflow.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AgentUpgradeAuditEvent {
+    /// Proposal identifier associated with this event.
     pub proposal_id: String,
+    /// DID or system actor responsible for the event.
     pub actor_did: String,
+    /// Event timestamp in Unix seconds.
     pub event_at_unix: u64,
+    /// Event classification.
     pub kind: AgentUpgradeAuditEventKind,
+    /// Optional operator-facing annotation for this event.
     pub note: Option<String>,
 }
 
+/// In-memory workflow coordinating proposal review, governance, and activation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AgentDrivenUpgradeWorkflow {
     allowed_agent_proposers: BTreeSet<String>,
@@ -83,6 +131,7 @@ pub struct AgentDrivenUpgradeWorkflow {
 }
 
 impl AgentDrivenUpgradeWorkflow {
+    /// Construct a workflow instance after validating config invariants and DID allowlists.
     pub fn new(config: AgentUpgradeWorkflowConfig) -> Result<Self, AgentUpgradeWorkflowError> {
         if config.required_human_reviews == 0 {
             return Err(AgentUpgradeWorkflowError::InvalidRequiredHumanReviews(0));
@@ -127,6 +176,7 @@ impl AgentDrivenUpgradeWorkflow {
         })
     }
 
+    /// Register a new proposal from an authorized agent and seed upgrade orchestration state.
     pub fn submit_agent_proposal(
         &mut self,
         draft: AgentUpgradeProposalDraft,
@@ -189,6 +239,7 @@ impl AgentDrivenUpgradeWorkflow {
         Ok(())
     }
 
+    /// Record a distinct human-review approval for a pending proposal.
     pub fn approve_human_review(
         &mut self,
         proposal_id: &str,
@@ -223,6 +274,7 @@ impl AgentDrivenUpgradeWorkflow {
         Ok(())
     }
 
+    /// Promote a reviewed proposal into governance voting.
     pub fn submit_to_governance(
         &mut self,
         proposal_id: &str,
@@ -281,6 +333,7 @@ impl AgentDrivenUpgradeWorkflow {
         Ok(())
     }
 
+    /// Cast a governance vote from an allowlisted validator and update mirrored proposal state.
     pub fn cast_validator_vote(
         &mut self,
         proposal_id: &str,
@@ -320,6 +373,7 @@ impl AgentDrivenUpgradeWorkflow {
         Ok(())
     }
 
+    /// Execute governance-approved proposal and activate the runtime upgrade once delay passes.
     pub fn finalize_upgrade(
         &mut self,
         proposal_id: &str,
@@ -404,18 +458,22 @@ impl AgentDrivenUpgradeWorkflow {
         Ok(())
     }
 
+    /// Return proposal snapshot by identifier if present.
     pub fn proposal(&self, proposal_id: &str) -> Option<AgentUpgradeProposalRecord> {
         self.proposals.get(proposal_id).cloned()
     }
 
+    /// Return mirrored governance proposal record by identifier if present.
     pub fn governance_record(&self, proposal_id: &str) -> Option<GovernanceProposalRecord> {
         self.governance.proposal(proposal_id)
     }
 
+    /// Return upgrade-orchestrator audit view for all tracked operations.
     pub fn upgrade_audit_view(&self) -> VersionUpgradeAuditView {
         self.orchestrator.audit_view()
     }
 
+    /// Return emitted agent workflow audit events in insertion order.
     pub fn agent_audit_log(&self) -> Vec<AgentUpgradeAuditEvent> {
         self.events.clone()
     }
@@ -442,48 +500,84 @@ fn apply_yes_votes_as_upgrade_approvals(
     Ok(())
 }
 
+/// Errors emitted by the agent-driven upgrade workflow lifecycle.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AgentUpgradeWorkflowError {
+    /// Required string field was empty or whitespace.
     EmptyField(&'static str),
+    /// DID failed canonical parse/validation.
     InvalidDid(String),
+    /// Timestamp field was zero or otherwise invalid.
     InvalidTimestamp(&'static str),
+    /// Voting deadline does not occur after the reference creation/submission timestamp.
     InvalidDeadline {
+        /// Reference creation/submission timestamp in Unix seconds.
         created_at_unix: u64,
+        /// Voting deadline timestamp in Unix seconds.
         voting_deadline_unix: u64,
     },
+    /// Required human-review threshold must be positive.
     InvalidRequiredHumanReviews(usize),
+    /// Required validator quorum must be positive.
     InvalidRequiredValidatorQuorum(usize),
+    /// Activation delay must be positive.
     InvalidMinActivationDelaySecs(u64),
+    /// Agent proposer allowlist is empty.
     MissingAllowedAgentProposers,
+    /// Validator voter allowlist is empty.
     MissingAllowedValidatorVoters,
+    /// Agent DID is not authorized to submit proposals.
     UnauthorizedAgentProposer(String),
+    /// Reviewer DID is not authorized for human review approval.
     UnauthorizedHumanReviewer(String),
+    /// Validator DID is not authorized to vote.
     UnauthorizedValidatorVoter(String),
+    /// Proposal identifier already exists.
     ProposalAlreadyExists(String),
+    /// Proposal identifier does not exist.
     ProposalNotFound(String),
+    /// Reviewer submitted a duplicate human approval for the same proposal.
     DuplicateHumanReview {
+        /// Proposal identifier.
         proposal_id: String,
+        /// Reviewer DID that attempted duplicate approval.
         reviewer_did: String,
     },
+    /// Proposal does not yet meet required human-review threshold.
     InsufficientHumanReviews {
+        /// Required number of distinct human reviews.
         required: usize,
+        /// Number of reviews currently recorded.
         provided: usize,
     },
+    /// Proposal state does not permit submission into governance.
     GovernanceSubmissionNotAllowed {
+        /// Proposal identifier.
         proposal_id: String,
+        /// Current proposal state that blocks transition.
         state: AgentUpgradeProposalState,
     },
+    /// Governance status is not approved at execution time.
     GovernanceStatusNotApproved {
+        /// Proposal identifier.
         proposal_id: String,
+        /// Governance status observed when execution was attempted.
         status: GovernanceProposalStatus,
     },
+    /// Governance approval timestamp was never recorded for the proposal.
     MissingGovernanceApprovalTimestamp(String),
+    /// Activation attempted before minimum post-approval delay elapsed.
     ActivationDelayNotElapsed {
+        /// Proposal identifier.
         proposal_id: String,
+        /// Earliest valid activation timestamp in Unix seconds.
         earliest_activation_unix: u64,
+        /// Attempted activation timestamp in Unix seconds.
         attempted_activation_unix: u64,
     },
+    /// Wrapped error propagated from governance workflow operations.
     GovernanceWorkflow(GovernanceWorkflowError),
+    /// Wrapped error propagated from upgrade orchestrator operations.
     UpgradeOrchestration(UpgradeOrchestrationError),
 }
 
