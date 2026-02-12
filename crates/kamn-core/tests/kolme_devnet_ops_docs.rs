@@ -583,6 +583,9 @@ fn regression_requires_local_runtime_commit_live_guard_marker() {
     assert!(PLAN.contains(
         "local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`)."
     ));
+    assert!(PLAN.contains(
+        "local runtime-commit live proof lane evidence policy remains fail-closed for missing live-provider command marker contracts (`Regression: #2095`)."
+    ));
 }
 
 #[test]

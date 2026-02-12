@@ -202,6 +202,14 @@ if [ -z "$LIVE_COMMAND" ]; then
   LIVE_COMMAND="$(default_live_command)"
 fi
 
+PROVIDER_CLIENT_CONTRACT="KolmeRuntimeCommitLiveProvider"
+PROVIDER_SUBMIT_PROFILE_CONTRACT="kolme_fork_broadcast_profile"
+PROVIDER_COMMAND_MARKER="integration_kolme_fork_live_node_submit_reaches_endpoint"
+PROVIDER_COMMAND_MARKER_PRESENT="false"
+if [[ "$LIVE_COMMAND" == *"$PROVIDER_COMMAND_MARKER"* ]]; then
+  PROVIDER_COMMAND_MARKER_PRESENT="true"
+fi
+
 preflight_command="curl --silent --show-error --fail --max-time ${PREFLIGHT_MAX_SECONDS} ${BASE_URL%/}/healthz"
 
 CHECK_FILE="$(mktemp)"
@@ -324,7 +332,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$FINALITY_COMMAND" "$FINALITY_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$FINALITY_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$FINALITY_COMMAND" "$FINALITY_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$FINALITY_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" "$PROVIDER_CLIENT_CONTRACT" "$PROVIDER_SUBMIT_PROFILE_CONTRACT" "$PROVIDER_COMMAND_MARKER" "$PROVIDER_COMMAND_MARKER_PRESENT" <<'PY'
 from __future__ import annotations
 
 import json
@@ -349,6 +357,10 @@ preflight_max_seconds = int(sys.argv[15])
 finality_max_seconds = int(sys.argv[16])
 skip_preflight = sys.argv[17] == "1"
 checks_path = pathlib.Path(sys.argv[18])
+provider_client_contract = sys.argv[19]
+provider_submit_profile_contract = sys.argv[20]
+provider_command_marker = sys.argv[21]
+provider_command_marker_present = sys.argv[22] == "true"
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -383,6 +395,10 @@ summary = {
     "finality_max_seconds": finality_max_seconds,
     "base_url": base_url,
     "provider_hint": provider_hint,
+    "provider_client_contract": provider_client_contract,
+    "provider_submit_profile_contract": provider_submit_profile_contract,
+    "provider_command_marker": provider_command_marker,
+    "provider_command_marker_present": provider_command_marker_present,
     "preflight_enabled": not skip_preflight,
     "preflight_max_seconds": preflight_max_seconds,
     "checks": checks,

@@ -315,6 +315,7 @@ Regression policy:
 - local fork process lifecycle integration run-mode exclusion parity remains fail-closed (`Regression: #1494`).
 - local runtime-commit live run-mode exclusion parity remains fail-closed (`Regression: #1451`).
 - local runtime-commit live preflight health-probe and default live-provider ignored-test dispatch parity remains fail-closed (`Regression: #1829`).
+- local runtime-commit live evidence policy marker parity remains fail-closed for missing `KolmeRuntimeCommitLiveProvider` command markers (`Regression: #2095`).
 - local native API parity live-proof run-mode exclusion parity remains fail-closed (`Regression: #1467`).
 - native parity fast/local command matrix docs parity remains fail-closed (`Regression: #1468`).
 - local probe fork-info chain_version query and native parity broadcast method drift remains fail-closed (`Regression: #1482`).

@@ -3,13 +3,16 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_runtime_commit_live_lane.sh"
+CHECKER="$ROOT_DIR/scripts/kolme/check_local_runtime_commit_live_evidence_policy.py"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 TMP_REPORT="$(mktemp)"
 TMP_OUTPUT="$(mktemp)"
 TMP_FINALITY_OUTPUT="$(mktemp)"
+TMP_POLICY_REPORT="$(mktemp)"
+TMP_POLICY_ERR="$(mktemp)"
 TMP_ERR="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_ERR"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_ERR"' EXIT
 
 extract_value() {
   local output="$1"
@@ -34,6 +37,11 @@ fi
 
 if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   echo "expected shared local-heavy opt-in guard helper to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$CHECKER" ]; then
+  echo "expected local runtime commit live evidence policy checker to be executable" >&2
   exit 1
 fi
 
@@ -84,6 +92,14 @@ if report.get("mode") != "dry-run":
     raise SystemExit("expected dry-run mode")
 if report.get("local_only_enforced") is not True:
     raise SystemExit("expected local_only_enforced=true")
+if report.get("provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
+    raise SystemExit("expected provider client contract marker")
+if report.get("provider_submit_profile_contract") != "kolme_fork_broadcast_profile":
+    raise SystemExit("expected provider submit profile contract marker")
+if report.get("provider_command_marker") != "integration_kolme_fork_live_node_submit_reaches_endpoint":
+    raise SystemExit("expected live provider command marker")
+if report.get("provider_command_marker_present") is not True:
+    raise SystemExit("expected default dry-run command to include live provider marker")
 checks = report.get("checks")
 if not isinstance(checks, list) or not checks:
     raise SystemExit("expected deterministic checks in summary")
@@ -98,6 +114,15 @@ if not any(
 ):
     raise SystemExit("expected planned runtime commit live finality check")
 PY
+
+checker_output="$(
+  python3 "$CHECKER" \
+    --report-file "$TMP_REPORT" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY_REPORT"
+)"
+assert_eq "$(extract_value "$checker_output" "status")" "ok" "expected live evidence policy checker to pass dry-run report"
 
 set +e
 KAMN_KOLME_LOCAL_HEAVY=1 \
@@ -231,6 +256,23 @@ fi
 
 if ! grep -q "reason_code=live_runtime_commit_command_timeout" "$TMP_ERR"; then
   echo "expected timeout reason marker" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS >"$TMP_POLICY_ERR" 2>&1
+policy_failure_code=$?
+set -e
+
+if [ "$policy_failure_code" -eq 0 ]; then
+  echo "expected evidence policy checker to fail when live provider command marker is absent" >&2
+  exit 1
+fi
+if ! grep -q "provider_command_marker_missing" "$TMP_POLICY_ERR"; then
+  echo "expected provider marker failure reason from evidence policy checker" >&2
   exit 1
 fi
 

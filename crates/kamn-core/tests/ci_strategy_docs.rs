@@ -151,4 +151,5 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("Regression: #1466"));
     assert!(DOC.contains("Regression: #1497"));
     assert!(DOC.contains("Regression: #2093"));
+    assert!(DOC.contains("Regression: #2095"));
 }
