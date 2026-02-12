@@ -16,6 +16,7 @@ use kamn_kolme::{
     is_broadcast_submit_path as is_kolme_broadcast_submit_path_contract,
     is_terminal_receipt_finality as is_kolme_terminal_receipt_finality_contract,
     is_valid_poll_attempt_budget as is_kolme_valid_poll_attempt_budget_contract,
+    is_valid_runtime_commit_id_request as is_kolme_valid_runtime_commit_id_request_contract,
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
     lifecycle_state_label as lifecycle_state_label_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
@@ -1193,7 +1194,7 @@ impl<T: KolmeRuntimeCommitFinalityTransport> KolmeRuntimeCommitFinalityChecker<T
         &mut self,
         commit_id: &str,
     ) -> Result<KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitProviderError> {
-        if commit_id.trim().is_empty() {
+        if !is_kolme_valid_runtime_commit_id_request_contract(commit_id) {
             return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                 reason: "commit_id must not be empty".to_owned(),
             });
