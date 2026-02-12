@@ -365,6 +365,19 @@ summary = {
         metadata_report,
         command_output_dir,
     ],
+    "evidence_bundle_schema_version": "kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1",
+    "evidence_bundle": {
+        "schema_version": "kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1",
+        "summary_schema_version": "kamn.kolme.local-fork-rust-test-matrix-summary.v1",
+        "status": status,
+        "reason_code": reason_code,
+        "budget_status": budget_status,
+        "command_count": len(commands),
+        "artifact_paths": [
+            metadata_report,
+            command_output_dir,
+        ],
+    },
 }
 
 output_path.parent.mkdir(parents=True, exist_ok=True)

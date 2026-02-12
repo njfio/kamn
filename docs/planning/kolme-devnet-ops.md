@@ -341,9 +341,13 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - portable cargo profile support (`--cargo-profile portable`) rewrites cargo invocations with `RUSTFLAGS=''` for linker-portable local execution.
   - bounded per-command timeout guard with deterministic pass/fail reason codes.
   - per-command stdout/stderr artifact capture for audit review.
+  - evidence bundle marker contract: `evidence_bundle_schema_version=kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1`.
+  - evidence bundle payload contract: `evidence_bundle` includes `schema_version`, `summary_schema_version`, `status`, `reason_code`, `budget_status`, `command_count`, and `artifact_paths`.
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.
   - run mode remains local/manual and is excluded from PR fast-gate workflow routing.
+  - Regression: #1541
+  - Regression: #2329
 
 ## Deterministic Local Kolme API Probe Lane (Issue #1439)
 

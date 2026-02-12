@@ -5,6 +5,9 @@ import argparse
 import json
 from pathlib import Path
 
+SUMMARY_SCHEMA_VERSION = "kamn.kolme.local-fork-rust-test-matrix-summary.v1"
+EVIDENCE_BUNDLE_SCHEMA_VERSION = "kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1"
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -21,7 +24,7 @@ def parse_args() -> argparse.Namespace:
 def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, list[str]]:
     reason_codes: list[str] = []
 
-    if report.get("schema_version") != "kamn.kolme.local-fork-rust-test-matrix-summary.v1":
+    if report.get("schema_version") != SUMMARY_SCHEMA_VERSION:
         reason_codes.append("report_schema_invalid")
 
     mode = report.get("mode")
@@ -58,6 +61,30 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     budget_status = report.get("budget_status")
     if budget_status not in ("not_run", "within_budget", "exceeded_budget"):
         reason_codes.append("budget_status_invalid")
+
+    evidence_bundle_schema_version = report.get("evidence_bundle_schema_version")
+    if evidence_bundle_schema_version != EVIDENCE_BUNDLE_SCHEMA_VERSION:
+        reason_codes.append("evidence_bundle_schema_invalid")
+
+    evidence_bundle = report.get("evidence_bundle")
+    if not isinstance(evidence_bundle, dict):
+        reason_codes.append("evidence_bundle_missing")
+    else:
+        if evidence_bundle.get("schema_version") != EVIDENCE_BUNDLE_SCHEMA_VERSION:
+            reason_codes.append("evidence_bundle_schema_invalid")
+        if evidence_bundle.get("summary_schema_version") != report.get("schema_version"):
+            reason_codes.append("evidence_bundle_summary_schema_mismatch")
+        if evidence_bundle.get("status") != status:
+            reason_codes.append("evidence_bundle_status_mismatch")
+        if evidence_bundle.get("reason_code") != reason_code:
+            reason_codes.append("evidence_bundle_reason_code_mismatch")
+        if evidence_bundle.get("budget_status") != budget_status:
+            reason_codes.append("evidence_bundle_budget_status_mismatch")
+        if evidence_bundle.get("command_count") != command_count:
+            reason_codes.append("evidence_bundle_command_count_mismatch")
+        bundle_artifact_paths = evidence_bundle.get("artifact_paths")
+        if not isinstance(bundle_artifact_paths, list) or not bundle_artifact_paths:
+            reason_codes.append("evidence_bundle_artifact_paths_missing")
 
     checkpoints = report.get("checkpoints")
     if not isinstance(checkpoints, list) or not checkpoints:

@@ -7,6 +7,7 @@ CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_fork_rust_test_matrix_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_fork_rust_test_matrix_contract_lane.py"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
+CI_DOC_FILE="$ROOT_DIR/docs/ci/strategy.md"
 README_FILE="$ROOT_DIR/README.md"
 TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
@@ -56,7 +57,10 @@ fi
 required_coverage_markers=(
   "run_local_kolme_fork_rust_test_matrix_lane.sh"
   "check_local_kolme_fork_rust_test_matrix_policy.py"
+  "evidence_bundle_schema_version=kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1"
+  "evidence_bundle"
   "Regression: #1541"
+  "Regression: #2329"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then
@@ -65,20 +69,28 @@ for marker in "${required_coverage_markers[@]}"; do
   fi
 done
 
-if ! grep -q "run_local_kolme_fork_rust_test_matrix_contract_lane.sh" "$DOC_FILE"; then
-  echo "expected Kolme devnet ops doc to reference fork rust test matrix contract lane" >&2
-  exit 1
-fi
-
-if ! grep -q "check_local_kolme_fork_rust_test_matrix_policy.py" "$DOC_FILE"; then
-  echo "expected Kolme devnet ops doc to reference fork rust test matrix policy checker" >&2
-  exit 1
-fi
-
-if ! grep -q "run_local_kolme_fork_rust_test_matrix_contract_lane.sh" "$README_FILE"; then
-  echo "expected README to reference fork rust test matrix contract lane" >&2
-  exit 1
-fi
+for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
+  if ! grep -q "run_local_kolme_fork_rust_test_matrix_contract_lane.sh" "$docs_file"; then
+    echo "expected docs parity to reference fork rust test matrix contract lane in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "check_local_kolme_fork_rust_test_matrix_policy.py" "$docs_file"; then
+    echo "expected docs parity to reference fork rust test matrix policy checker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "evidence_bundle_schema_version=kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1" "$docs_file"; then
+    echo "expected docs parity to include evidence bundle schema marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "evidence_bundle" "$docs_file"; then
+    echo "expected docs parity to include evidence_bundle marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "Regression: #2329" "$docs_file"; then
+    echo "expected docs parity to include local rust matrix evidence regression marker in $docs_file" >&2
+    exit 1
+  fi
+done
 
 if ! grep -q "Regression: #1541" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to include fork rust test matrix regression marker" >&2
