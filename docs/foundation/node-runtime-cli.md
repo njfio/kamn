@@ -93,6 +93,10 @@ This document captures node-runtime productionization slices for machine-readabl
   - `kolme_live_base_url`
   - `kolme_live_provider_hint`
   - `kolme_live_signing_profile`
+  - `kolme_live_signer_profile_selector_env`
+  - `kolme_live_signer_profile`
+  - `kolme_live_signer_key_source`
+  - `kolme_live_signer_private_key_env`
   - `kolme_live_execution_status`
   - `components`
 - Invalid modes are rejected with explicit typed error.
@@ -222,6 +226,11 @@ This document captures node-runtime productionization slices for machine-readabl
   - finality transport timeout/unavailable keeps execution in pending status without falling back to in-memory adapters
 - Runtime reports:
   - `kolme_live_provider_client_contract=KolmeRuntimeCommitLiveProvider`
+  - signer-selection evidence markers:
+    - `kolme_live_signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE`
+    - `kolme_live_signer_profile=ops-primary|ops-secondary`
+    - `kolme_live_signer_key_source=env-local`
+    - `kolme_live_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX|KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY`
   - `kolme_live_execution_status=submitted;commit_id=<deterministic-commit-id>;finality=<pending|final|failed>;resolution=<submit-receipt|finality-polled|finality-timeout|finality-unavailable>`
 
 ## Test Coverage Mapping
