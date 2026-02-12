@@ -39,6 +39,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if report.get("local_only_enforced") is not True:
         reason_codes.append("local_only_enforced_missing")
 
+    ci_fast_gate_eligible = report.get("ci_fast_gate_eligible")
+    if not isinstance(ci_fast_gate_eligible, bool):
+        reason_codes.append("ci_fast_gate_eligible_invalid")
+    elif ci_fast_gate_eligible is True:
+        reason_codes.append("ci_fast_gate_eligibility_violation")
+
     elapsed_seconds = report.get("elapsed_seconds")
     if not isinstance(elapsed_seconds, int) or elapsed_seconds < 0:
         reason_codes.append("elapsed_seconds_invalid")
@@ -77,6 +83,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(contracts, dict):
         reason_codes.append("contracts_missing")
     else:
+        if contracts.get("ci_fast_gate_scope") != "local-only":
+            reason_codes.append("ci_fast_gate_scope_mismatch")
         if contracts.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
             reason_codes.append("runtime_provider_client_contract_contract_mismatch")
         if contracts.get("runtime_commit_endpoint") != "/broadcast/runtime-commit":
