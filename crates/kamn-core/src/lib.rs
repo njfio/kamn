@@ -61,7 +61,7 @@ pub mod key_lifecycle;
 /// Key compromise and recovery lifecycle contracts.
 pub mod key_recovery;
 pub mod kolme_runtime_commit;
-#[allow(missing_docs)]
+/// Message delivery replay, nonce, and acceptance window guardrail contracts.
 pub mod message_delivery_guards;
 #[allow(missing_docs)]
 pub mod message_envelope;
