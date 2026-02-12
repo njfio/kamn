@@ -568,7 +568,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" > /tmp/kolme-live-signer-provenance.json`
   - `custody_sha="$(sha256sum /tmp/kolme-live-signer-custody.json | awk '{print $1}')"; cat > /tmp/kolme-live-signer-quorum.json <<JSON
 {
-  "schema_version": "kamn.kolme.signer-quorum-evidence.v1",
+  "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
   "required_approvals": 2,
   "received_approvals": 2,
   "approved_signers": ["ops-primary", "ops-secondary"],
@@ -620,6 +620,8 @@ JSON`
     - `quorum_evidence_signers_unique`
     - `quorum_evidence_matches_threshold`
     - `quorum_evidence_custody_sha256_match`
+    - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
+    - `runtime_signer_attestation_bundle`
     - `custody_evidence_file`
     - `custody_evidence_present`
     - `custody_evidence_sha256_valid`
@@ -632,10 +634,15 @@ JSON`
     - `contracts.approval_quorum_source=local-operator-attestations`
     - `contracts.quorum_evidence_required=true`
     - `contracts.quorum_evidence_sha256_required=true`
-    - `contracts.quorum_evidence_schema_version=kamn.kolme.signer-quorum-evidence.v1`
+    - `contracts.quorum_evidence_schema_version=kamn.kolme.runtime-signer-attestation.v1`
     - `contracts.quorum_evidence_signer_uniqueness_required=true`
     - `contracts.quorum_evidence_custody_sha256_match_required=true`
     - `contracts.quorum_evidence_source=operator-attestation-bundle`
+    - `contracts.runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
+    - `contracts.runtime_signer_attestation_signer_uniqueness_required=true`
+    - `contracts.runtime_signer_attestation_threshold_required=true`
+    - `contracts.runtime_signer_attestation_profile_membership_required=true`
+    - `contracts.runtime_signer_attestation_required_approvals=2`
     - `contracts.custody_evidence_required=true`
     - `contracts.custody_evidence_sha256_required=true`
     - `contracts.signer_provenance_required=true`
@@ -662,6 +669,8 @@ JSON`
   - `quorum_evidence_signers_not_unique`
   - `quorum_evidence_approvals_mismatch`
   - `quorum_evidence_custody_sha256_mismatch`
+  - `runtime_signer_attestation_approved_signers_not_unique`
+  - `runtime_signer_attestation_quorum_shortfall`
   - `custody_evidence_missing`
   - `custody_evidence_sha256_invalid`
   - `signer_key_source_contract_version_mismatch`
@@ -677,6 +686,7 @@ JSON`
   - deployment preflight contract lane parity remains fail-closed (`Regression: #2226`).
   - signer provenance + rotation freshness marker parity remains fail-closed (`Regression: #2300`).
   - signer quorum evidence schema + custody digest parity remains fail-closed (`Regression: #2301`).
+  - runtime/deployment shared signer-attestation schema + reason-code parity remains fail-closed (`Regression: #2326`).
 
 ## Live Provider Operator Runbook (Issue #2114)
 
@@ -698,7 +708,7 @@ JSON`
   - `printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" > /tmp/kolme-live-signer-provenance.json`
   - `custody_sha="$(sha256sum /tmp/kolme-live-signer-custody.json | awk '{print $1}')"; cat > /tmp/kolme-live-signer-quorum.json <<JSON
 {
-  "schema_version": "kamn.kolme.signer-quorum-evidence.v1",
+  "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
   "required_approvals": 2,
   "received_approvals": 2,
   "approved_signers": ["ops-primary", "ops-secondary"],
@@ -751,7 +761,7 @@ Operator checkpoints:
 - `reason_code=checkpoint_failed_signer_quorum_contract`:
   - verify `--received-approvals` is greater than or equal to `--required-approvals`.
 - `reason_code=checkpoint_failed_quorum_evidence_contract`:
-  - verify `--quorum-evidence-file` exists, `schema_version=kamn.kolme.signer-quorum-evidence.v1`, signer IDs are unique, approval counts match `--received-approvals`, and custody digest matches `--custody-evidence-file`.
+  - verify `--quorum-evidence-file` exists, `schema_version=kamn.kolme.runtime-signer-attestation.v1`, signer IDs are unique, approval counts match `--received-approvals`, and custody digest matches `--custody-evidence-file`.
 - `reason_code=checkpoint_failed_custody_evidence_contract`:
   - verify `--custody-evidence-file` exists and its sha256 can be emitted in summary markers.
 - `reason_code=checkpoint_failed_signer_provenance_contract`:

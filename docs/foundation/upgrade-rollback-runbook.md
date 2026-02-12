@@ -104,7 +104,7 @@ Local Kolme deployment gates require deterministic multi-signer quorum and custo
   - `printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" > /tmp/kolme-live-signer-provenance.json`
   - `custody_sha="$(sha256sum /tmp/kolme-live-signer-custody.json | awk '{print $1}')"; cat > /tmp/kolme-live-signer-quorum.json <<JSON
 {
-  "schema_version": "kamn.kolme.signer-quorum-evidence.v1",
+  "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
   "required_approvals": 2,
   "received_approvals": 2,
   "approved_signers": ["ops-primary", "ops-secondary"],
@@ -120,14 +120,19 @@ JSON`
 - Required schema/reason markers:
   - `kamn.kolme.local-live-deployment-preflight-summary.v1`
   - `kamn.kolme.local-live-deployment-preflight-policy-report.v1`
-  - `kamn.kolme.signer-quorum-evidence.v1`
+  - `kamn.kolme.runtime-signer-attestation.v1`
+  - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
+  - `runtime_signer_attestation_bundle`
   - `checkpoint_failed_signer_quorum_contract`
   - `checkpoint_failed_quorum_evidence_contract`
   - `checkpoint_failed_custody_evidence_contract`
   - `quorum_evidence_missing`
   - `quorum_evidence_custody_sha256_mismatch`
+  - `runtime_signer_attestation_approved_signers_not_unique`
+  - `runtime_signer_attestation_quorum_shortfall`
 - Regression policy:
   - signer quorum/custody/provenance drift, quorum evidence schema drift, or contract-lane/docs parity drift force `NO-GO` (`Regression: #2301`).
+  - runtime/deployment signer-attestation schema and reason-code drift force `NO-GO` (`Regression: #2326`).
 
 ## Kolme Fallback Signer Runtime/Deploy Guard (Issue #2302)
 Fallback private-key surfaces are forbidden in deployment preflight and runtime launch paths; checks fail closed with deterministic remediation guidance.

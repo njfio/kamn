@@ -667,7 +667,7 @@ printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" > /tmp/ko
 # sample signer quorum evidence bundle for run mode
 custody_sha="$(sha256sum /tmp/kolme-live-signer-custody.json | awk '{print $1}')"; cat > /tmp/kolme-live-signer-quorum.json <<JSON
 {
-  "schema_version": "kamn.kolme.signer-quorum-evidence.v1",
+  "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
   "required_approvals": 2,
   "received_approvals": 2,
   "approved_signers": ["ops-primary", "ops-secondary"],
@@ -708,15 +708,22 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # quorum_evidence_signers_unique
 # quorum_evidence_matches_threshold
 # quorum_evidence_custody_sha256_match
+# runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1
+# runtime_signer_attestation_bundle
 # contracts.ci_fast_gate_scope=ci-fast-gate
 # contracts.required_runtime_mode=kolme-live
 # contracts.fallback_private_key_path_allowed=false
 # contracts.approval_quorum_required=2
 # contracts.quorum_evidence_required=true
 # contracts.quorum_evidence_sha256_required=true
-# contracts.quorum_evidence_schema_version=kamn.kolme.signer-quorum-evidence.v1
+# contracts.quorum_evidence_schema_version=kamn.kolme.runtime-signer-attestation.v1
 # contracts.quorum_evidence_signer_uniqueness_required=true
 # contracts.quorum_evidence_custody_sha256_match_required=true
+# contracts.runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1
+# contracts.runtime_signer_attestation_signer_uniqueness_required=true
+# contracts.runtime_signer_attestation_threshold_required=true
+# contracts.runtime_signer_attestation_profile_membership_required=true
+# contracts.runtime_signer_attestation_required_approvals=2
 # contracts.custody_evidence_required=true
 # contracts.signer_provenance_required=true
 # contracts.signer_provenance_sha256_required=true
@@ -742,6 +749,8 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # quorum_evidence_signers_not_unique
 # quorum_evidence_approvals_mismatch
 # quorum_evidence_custody_sha256_mismatch
+# runtime_signer_attestation_approved_signers_not_unique
+# runtime_signer_attestation_quorum_shortfall
 # custody_evidence_missing
 # custody_evidence_sha256_invalid
 # signer_key_source_contract_version_mismatch
@@ -757,6 +766,7 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # Regression: #2226
 # Regression: #2300
 # Regression: #2301
+# Regression: #2326
 ```
 
 Live Provider Operator Runbook (Issue #2114): `docs/planning/kolme-devnet-ops.md`

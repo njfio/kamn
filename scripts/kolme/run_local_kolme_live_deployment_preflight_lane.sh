@@ -26,7 +26,8 @@ SECONDARY_SIGNER_SECRET_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
 FALLBACK_SIGNER_SECRET_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 REQUIRED_SECRET_HEX_LENGTH=64
 SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED="v1"
-QUORUM_EVIDENCE_SCHEMA_VERSION="kamn.kolme.signer-quorum-evidence.v1"
+RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION="kamn.kolme.runtime-signer-attestation.v1"
+QUORUM_EVIDENCE_SCHEMA_VERSION="$RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -278,6 +279,8 @@ signer_provenance_sha256=""
 signer_provenance_sha256_valid="false"
 signer_rotation_delta_epochs=0
 signer_rotation_fresh="false"
+runtime_signer_attestation_approved_signers_csv=""
+runtime_signer_attestation_profile_approved="false"
 
 record_check "runtime_mode_contract" "$runtime_mode_command" "planned" "not_run"
 record_check "signer_profile_contract" "$signer_profile_command" "planned" "not_run"
@@ -428,7 +431,7 @@ if [ "$MODE" = "run" ]; then
                 quorum_evidence_message="signer quorum evidence sha256 marker is invalid: $QUORUM_EVIDENCE_FILE"
               else
                 quorum_evidence_parse_output="$(
-                  python3 - "$QUORUM_EVIDENCE_FILE" "$QUORUM_EVIDENCE_SCHEMA_VERSION" "$REQUIRED_APPROVALS" "$RECEIVED_APPROVALS" "$custody_evidence_sha256" <<'PY'
+                  python3 - "$QUORUM_EVIDENCE_FILE" "$QUORUM_EVIDENCE_SCHEMA_VERSION" "$REQUIRED_APPROVALS" "$RECEIVED_APPROVALS" "$custody_evidence_sha256" "$SIGNER_PROFILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -440,6 +443,7 @@ expected_schema = sys.argv[2]
 required_approvals = int(sys.argv[3])
 received_approvals = int(sys.argv[4])
 custody_sha256 = sys.argv[5]
+runtime_signer_profile = sys.argv[6]
 
 result = {
     "schema_valid": False,
@@ -447,6 +451,8 @@ result = {
     "signers_unique": False,
     "matches_threshold": False,
     "custody_sha256_match": False,
+    "profile_approved": False,
+    "approved_signers_csv": "",
     "reason_code": "quorum_evidence_schema_invalid",
 }
 
@@ -475,19 +481,24 @@ if isinstance(payload, dict):
     )
     custody_field = payload.get("custody_evidence_sha256")
     custody_match = isinstance(custody_field, str) and custody_field == custody_sha256
+    profile_approved = runtime_signer_profile in normalized_signers
 
     result["schema_valid"] = schema_valid
     result["approval_count"] = approval_count
     result["signers_unique"] = signers_unique
     result["matches_threshold"] = matches_threshold
     result["custody_sha256_match"] = custody_match
+    result["profile_approved"] = profile_approved
+    result["approved_signers_csv"] = ",".join(normalized_signers)
 
     if not schema_valid:
-        result["reason_code"] = "quorum_evidence_schema_invalid"
+        result["reason_code"] = "runtime_signer_attestation_schema_invalid"
     elif not signers_unique:
-        result["reason_code"] = "quorum_evidence_signers_not_unique"
+        result["reason_code"] = "runtime_signer_attestation_approved_signers_not_unique"
     elif not matches_threshold:
-        result["reason_code"] = "quorum_evidence_approvals_mismatch"
+        result["reason_code"] = "runtime_signer_attestation_quorum_shortfall"
+    elif not profile_approved:
+        result["reason_code"] = "runtime_signer_attestation_profile_not_approved"
     elif not custody_match:
         result["reason_code"] = "quorum_evidence_custody_sha256_mismatch"
     else:
@@ -499,6 +510,8 @@ for key in (
     "signers_unique",
     "matches_threshold",
     "custody_sha256_match",
+    "profile_approved",
+    "approved_signers_csv",
     "reason_code",
 ):
     print(f"{key}={result[key]}")
@@ -543,6 +556,16 @@ PY
                         quorum_evidence_custody_sha256_match="false"
                       fi
                       ;;
+                    profile_approved)
+                      if [ "$value" = "True" ] || [ "$value" = "true" ]; then
+                        runtime_signer_attestation_profile_approved="true"
+                      else
+                        runtime_signer_attestation_profile_approved="false"
+                      fi
+                      ;;
+                    approved_signers_csv)
+                      runtime_signer_attestation_approved_signers_csv="$value"
+                      ;;
                     reason_code)
                       parsed_quorum_reason_code="$value"
                       ;;
@@ -551,17 +574,19 @@ PY
 
                 if [ "$parsed_quorum_reason_code" != "ok" ]; then
                   quorum_evidence_reason="$parsed_quorum_reason_code"
-                  if [ "$parsed_quorum_reason_code" = "quorum_evidence_schema_invalid" ]; then
-                    quorum_evidence_message="signer quorum evidence schema is invalid: $QUORUM_EVIDENCE_FILE"
-                  elif [ "$parsed_quorum_reason_code" = "quorum_evidence_signers_not_unique" ]; then
-                    quorum_evidence_message="signer quorum evidence signers must be unique: $QUORUM_EVIDENCE_FILE"
-                  elif [ "$parsed_quorum_reason_code" = "quorum_evidence_approvals_mismatch" ]; then
-                    quorum_evidence_message="signer quorum evidence approvals must match received approvals and threshold"
+                  if [ "$parsed_quorum_reason_code" = "runtime_signer_attestation_schema_invalid" ]; then
+                    quorum_evidence_message="runtime signer attestation schema is invalid: $QUORUM_EVIDENCE_FILE"
+                  elif [ "$parsed_quorum_reason_code" = "runtime_signer_attestation_approved_signers_not_unique" ]; then
+                    quorum_evidence_message="runtime signer attestation approved_signers must be unique: $QUORUM_EVIDENCE_FILE"
+                  elif [ "$parsed_quorum_reason_code" = "runtime_signer_attestation_quorum_shortfall" ]; then
+                    quorum_evidence_message="runtime signer attestation approvals must satisfy required approvals threshold"
+                  elif [ "$parsed_quorum_reason_code" = "runtime_signer_attestation_profile_not_approved" ]; then
+                    quorum_evidence_message="runtime signer attestation approved_signers must include signer profile: $SIGNER_PROFILE"
                   elif [ "$parsed_quorum_reason_code" = "quorum_evidence_custody_sha256_mismatch" ]; then
                     quorum_evidence_message="signer quorum evidence custody digest must match custody evidence sha256"
                   else
-                    quorum_evidence_reason="quorum_evidence_schema_invalid"
-                    quorum_evidence_message="signer quorum evidence schema is invalid: $QUORUM_EVIDENCE_FILE"
+                    quorum_evidence_reason="runtime_signer_attestation_schema_invalid"
+                    quorum_evidence_message="runtime signer attestation schema is invalid: $QUORUM_EVIDENCE_FILE"
                   fi
                 fi
               fi
@@ -656,7 +681,7 @@ PY
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$RUNTIME_MODE" "$SIGNER_PROFILE_SELECTOR_ENV" "$SIGNER_PROFILE" "$selected_signer_secret_env" "$FALLBACK_SIGNER_SECRET_ENV" "$signer_secret_present" "$fallback_signer_secret_present" "$signer_secret_hex_valid" "$CHECK_FILE" "$REQUIRED_RUNTIME_MODE" "$PRIMARY_SIGNER_PROFILE" "$SECONDARY_SIGNER_PROFILE" "$PRIMARY_SIGNER_SECRET_ENV" "$SECONDARY_SIGNER_SECRET_ENV" "$REQUIRED_SECRET_HEX_LENGTH" "$REQUIRED_APPROVALS" "$RECEIVED_APPROVALS" "$QUORUM_EVIDENCE_FILE" "$quorum_evidence_present" "$quorum_evidence_sha256" "$quorum_evidence_sha256_valid" "$quorum_evidence_schema_valid" "$quorum_evidence_approval_count" "$quorum_evidence_signers_unique" "$quorum_evidence_matches_threshold" "$quorum_evidence_custody_sha256_match" "$QUORUM_EVIDENCE_SCHEMA_VERSION" "$CUSTODY_EVIDENCE_FILE" "$custody_evidence_present" "$custody_evidence_sha256" "$custody_evidence_sha256_valid" "$SIGNER_PROVENANCE_FILE" "$signer_provenance_present" "$signer_provenance_sha256" "$signer_provenance_sha256_valid" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$SIGNER_KEY_SOURCE" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED" "$SIGNER_ROTATION_EPOCH" "$SIGNER_PREVIOUS_ROTATION_EPOCH" "$SIGNER_ROTATION_FRESHNESS_MAX_DELTA" "$signer_rotation_delta_epochs" "$signer_rotation_fresh" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$RUNTIME_MODE" "$SIGNER_PROFILE_SELECTOR_ENV" "$SIGNER_PROFILE" "$selected_signer_secret_env" "$FALLBACK_SIGNER_SECRET_ENV" "$signer_secret_present" "$fallback_signer_secret_present" "$signer_secret_hex_valid" "$CHECK_FILE" "$REQUIRED_RUNTIME_MODE" "$PRIMARY_SIGNER_PROFILE" "$SECONDARY_SIGNER_PROFILE" "$PRIMARY_SIGNER_SECRET_ENV" "$SECONDARY_SIGNER_SECRET_ENV" "$REQUIRED_SECRET_HEX_LENGTH" "$REQUIRED_APPROVALS" "$RECEIVED_APPROVALS" "$QUORUM_EVIDENCE_FILE" "$quorum_evidence_present" "$quorum_evidence_sha256" "$quorum_evidence_sha256_valid" "$quorum_evidence_schema_valid" "$quorum_evidence_approval_count" "$quorum_evidence_signers_unique" "$quorum_evidence_matches_threshold" "$quorum_evidence_custody_sha256_match" "$QUORUM_EVIDENCE_SCHEMA_VERSION" "$CUSTODY_EVIDENCE_FILE" "$custody_evidence_present" "$custody_evidence_sha256" "$custody_evidence_sha256_valid" "$SIGNER_PROVENANCE_FILE" "$signer_provenance_present" "$signer_provenance_sha256" "$signer_provenance_sha256_valid" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$SIGNER_KEY_SOURCE" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED" "$SIGNER_ROTATION_EPOCH" "$SIGNER_PREVIOUS_ROTATION_EPOCH" "$SIGNER_ROTATION_FRESHNESS_MAX_DELTA" "$signer_rotation_delta_epochs" "$signer_rotation_fresh" "$RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION" "$runtime_signer_attestation_approved_signers_csv" "$runtime_signer_attestation_profile_approved" <<'PY'
 from __future__ import annotations
 
 import json
@@ -713,6 +738,29 @@ signer_previous_rotation_epoch = int(sys.argv[47])
 signer_rotation_freshness_max_delta = int(sys.argv[48])
 signer_rotation_delta_epochs = int(sys.argv[49])
 signer_rotation_fresh = sys.argv[50] == "true"
+runtime_signer_attestation_schema_version = sys.argv[51]
+runtime_signer_attestation_approved_signers_csv = sys.argv[52]
+runtime_signer_attestation_profile_approved = sys.argv[53] == "true"
+
+runtime_signer_attestation_approved_signers: list[str] = [
+    entry.strip()
+    for entry in runtime_signer_attestation_approved_signers_csv.split(",")
+    if entry.strip()
+]
+if mode == "dry-run" and not runtime_signer_attestation_approved_signers:
+    runtime_signer_attestation_approved_signers = [primary_signer_profile, secondary_signer_profile]
+
+runtime_signer_attestation_profile_approved = (
+    isinstance(signer_profile, str) and signer_profile in runtime_signer_attestation_approved_signers
+)
+
+runtime_signer_attestation_bundle = {
+    "schema_version": runtime_signer_attestation_schema_version,
+    "required_approvals": required_approvals,
+    "approved_signers": runtime_signer_attestation_approved_signers,
+    "signer_profile": signer_profile,
+    "signer_key_source": signer_key_source,
+}
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -760,6 +808,9 @@ summary = {
     "quorum_evidence_signers_unique": quorum_evidence_signers_unique,
     "quorum_evidence_matches_threshold": quorum_evidence_matches_threshold,
     "quorum_evidence_custody_sha256_match": quorum_evidence_custody_sha256_match,
+    "runtime_signer_attestation_schema_version": runtime_signer_attestation_schema_version,
+    "runtime_signer_attestation_bundle": runtime_signer_attestation_bundle,
+    "runtime_signer_attestation_profile_approved": runtime_signer_attestation_profile_approved,
     "custody_evidence_file": custody_evidence_file,
     "custody_evidence_present": custody_evidence_present,
     "custody_evidence_sha256": custody_evidence_sha256,
@@ -794,6 +845,11 @@ summary = {
         "quorum_evidence_signer_uniqueness_required": True,
         "quorum_evidence_custody_sha256_match_required": True,
         "quorum_evidence_source": "operator-attestation-bundle",
+        "runtime_signer_attestation_schema_version": runtime_signer_attestation_schema_version,
+        "runtime_signer_attestation_signer_uniqueness_required": True,
+        "runtime_signer_attestation_threshold_required": True,
+        "runtime_signer_attestation_profile_membership_required": True,
+        "runtime_signer_attestation_required_approvals": required_approvals,
         "custody_evidence_required": True,
         "custody_evidence_sha256_required": True,
         "signer_provenance_required": True,

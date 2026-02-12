@@ -14,12 +14,51 @@ SECONDARY_SIGNER_SECRET_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
 FALLBACK_SIGNER_SECRET_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 REQUIRED_SECRET_HEX_LENGTH = 64
 SIGNER_KEY_SOURCE_CONTRACT_VERSION = "v1"
-QUORUM_EVIDENCE_SCHEMA_VERSION = "kamn.kolme.signer-quorum-evidence.v1"
+RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION = "kamn.kolme.runtime-signer-attestation.v1"
+QUORUM_EVIDENCE_SCHEMA_VERSION = RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION
 ALLOWED_SIGNER_KEY_SOURCES = ("env-local", "managed-external")
 ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE = {
     PRIMARY_SIGNER_PROFILE: ("env-local", "managed-external"),
     SECONDARY_SIGNER_PROFILE: ("env-local",),
 }
+
+
+def evaluate_runtime_signer_attestation_bundle(
+    attestation_bundle: object, runtime_signer_profile: object
+) -> list[str]:
+    reason_codes: list[str] = []
+    if not isinstance(attestation_bundle, dict):
+        return ["runtime_signer_attestation_bundle_missing"]
+
+    if attestation_bundle.get("schema_version") != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
+        reason_codes.append("runtime_signer_attestation_schema_invalid")
+
+    required_approvals = attestation_bundle.get("required_approvals")
+    if not isinstance(required_approvals, int) or required_approvals <= 0:
+        reason_codes.append("runtime_signer_attestation_required_approvals_invalid")
+
+    approved_signers = attestation_bundle.get("approved_signers")
+    normalized_signers: list[str] = []
+    if not isinstance(approved_signers, list) or not approved_signers:
+        reason_codes.append("runtime_signer_attestation_approved_signers_invalid")
+    else:
+        for entry in approved_signers:
+            if not isinstance(entry, str) or not entry.strip():
+                reason_codes.append("runtime_signer_attestation_approved_signers_invalid")
+                break
+            normalized_signers.append(entry.strip())
+        if len(set(normalized_signers)) != len(normalized_signers):
+            reason_codes.append("runtime_signer_attestation_approved_signers_not_unique")
+        if isinstance(required_approvals, int) and len(normalized_signers) < required_approvals:
+            reason_codes.append("runtime_signer_attestation_quorum_shortfall")
+        if (
+            isinstance(runtime_signer_profile, str)
+            and runtime_signer_profile.strip()
+            and runtime_signer_profile not in normalized_signers
+        ):
+            reason_codes.append("runtime_signer_attestation_profile_not_approved")
+
+    return reason_codes
 
 
 def parse_args() -> argparse.Namespace:
@@ -239,6 +278,28 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(quorum_evidence_custody_sha256_match, bool):
         reason_codes.append("quorum_evidence_custody_sha256_match_invalid")
 
+    runtime_signer_attestation_schema_version = report.get("runtime_signer_attestation_schema_version")
+    if (
+        not isinstance(runtime_signer_attestation_schema_version, str)
+        or not runtime_signer_attestation_schema_version.strip()
+    ):
+        reason_codes.append("runtime_signer_attestation_schema_version_missing")
+    elif runtime_signer_attestation_schema_version != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
+        reason_codes.append("runtime_signer_attestation_schema_version_mismatch")
+
+    reason_codes.extend(
+        evaluate_runtime_signer_attestation_bundle(
+            report.get("runtime_signer_attestation_bundle"),
+            signer_profile,
+        )
+    )
+
+    runtime_signer_attestation_profile_approved = report.get("runtime_signer_attestation_profile_approved")
+    if not isinstance(runtime_signer_attestation_profile_approved, bool):
+        reason_codes.append("runtime_signer_attestation_profile_approved_invalid")
+    elif "runtime_signer_attestation_profile_not_approved" in reason_codes and runtime_signer_attestation_profile_approved:
+        reason_codes.append("runtime_signer_attestation_profile_approved_contract_mismatch")
+
     custody_evidence_file = report.get("custody_evidence_file")
     if not isinstance(custody_evidence_file, str):
         reason_codes.append("custody_evidence_file_invalid")
@@ -298,6 +359,16 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("quorum_evidence_custody_sha256_match_required_contract_mismatch")
         if contracts.get("quorum_evidence_source") != "operator-attestation-bundle":
             reason_codes.append("quorum_evidence_source_contract_mismatch")
+        if contracts.get("runtime_signer_attestation_schema_version") != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
+            reason_codes.append("runtime_signer_attestation_schema_version_contract_mismatch")
+        if contracts.get("runtime_signer_attestation_signer_uniqueness_required") is not True:
+            reason_codes.append("runtime_signer_attestation_signer_uniqueness_required_contract_mismatch")
+        if contracts.get("runtime_signer_attestation_threshold_required") is not True:
+            reason_codes.append("runtime_signer_attestation_threshold_required_contract_mismatch")
+        if contracts.get("runtime_signer_attestation_profile_membership_required") is not True:
+            reason_codes.append("runtime_signer_attestation_profile_membership_required_contract_mismatch")
+        if contracts.get("runtime_signer_attestation_required_approvals") != required_approvals:
+            reason_codes.append("runtime_signer_attestation_required_approvals_contract_mismatch")
         if contracts.get("custody_evidence_required") is not True:
             reason_codes.append("custody_evidence_required_contract_mismatch")
         if contracts.get("custody_evidence_sha256_required") is not True:
