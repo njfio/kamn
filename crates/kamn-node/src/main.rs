@@ -19,7 +19,12 @@ const KOLME_LIVE_TRANSPORT_TIMEOUT_SECONDS: u64 = 30;
 const KOLME_LIVE_FINALITY_STATUS_PATH: &str = "/runtime-commit/status";
 const KOLME_LIVE_FINALITY_MAX_ATTEMPTS: u32 = 2;
 const KOLME_LIVE_SIGNER_KEY_ID: &str = "kamn:key:signer:kolme-fork-secp256k1-v1";
+const KOLME_LIVE_SIGNER_PROFILE_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_PROFILE";
+const KOLME_LIVE_SIGNER_PROFILE_PRIMARY: &str = "ops-primary";
+const KOLME_LIVE_SIGNER_PROFILE_SECONDARY: &str = "ops-secondary";
 const KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX";
+const KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY_ENV: &str =
+    "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct OutputMode {
@@ -737,14 +742,47 @@ fn encode_kolme_hex_lower(bytes: &[u8]) -> String {
     output
 }
 
+fn resolve_kolme_live_signer_private_key_env_name(
+) -> Result<(&'static str, &'static str), ConfigError> {
+    let profile_value = match env::var(KOLME_LIVE_SIGNER_PROFILE_ENV) {
+        Ok(value) => value,
+        Err(env::VarError::NotPresent) => KOLME_LIVE_SIGNER_PROFILE_PRIMARY.to_owned(),
+        Err(env::VarError::NotUnicode(_)) => {
+            return Err(ConfigError::RuntimeKolmeLive(format!(
+                "{KOLME_LIVE_SIGNER_PROFILE_ENV} must be valid utf-8"
+            )))
+        }
+    };
+    let profile_value = profile_value.trim();
+    if profile_value.is_empty() {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_SIGNER_PROFILE_ENV} must not be empty"
+        )));
+    }
+    match profile_value {
+        KOLME_LIVE_SIGNER_PROFILE_PRIMARY => Ok((
+            KOLME_LIVE_SIGNER_PROFILE_PRIMARY,
+            KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV,
+        )),
+        KOLME_LIVE_SIGNER_PROFILE_SECONDARY => Ok((
+            KOLME_LIVE_SIGNER_PROFILE_SECONDARY,
+            KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY_ENV,
+        )),
+        _ => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_SIGNER_PROFILE_ENV} has unsupported profile: {profile_value}"
+        ))),
+    }
+}
+
 fn read_kolme_live_signer_private_key_hex() -> Result<String, ConfigError> {
-    match env::var(KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV) {
+    let (profile, key_env) = resolve_kolme_live_signer_private_key_env_name()?;
+    match env::var(key_env) {
         Ok(private_key_hex) => Ok(private_key_hex),
         Err(env::VarError::NotPresent) => Err(ConfigError::RuntimeKolmeLive(format!(
-            "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV} must be set"
+            "{key_env} must be set for signer profile {profile}"
         ))),
         Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
-            "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV} must be valid utf-8"
+            "{key_env} must be valid utf-8 for signer profile {profile}"
         ))),
     }
 }
@@ -1414,8 +1452,9 @@ fn main() -> ExitCode {
 mod tests {
     use super::{
         build_bootstrap_report, build_kolme_live_signed_wire_payload, execute, parse_args,
-        render_bootstrap_report, DiagnosticsMode, LocalProfile, NodeBootstrapReport, OutputMode,
-        RuntimeExecutionBundle, RuntimeMode, KOLME_LIVE_SIGNER_KEY_ID,
+        render_bootstrap_report, resolve_kolme_live_signer_private_key_env_name, DiagnosticsMode,
+        LocalProfile, NodeBootstrapReport, OutputMode, RuntimeExecutionBundle, RuntimeMode,
+        KOLME_LIVE_SIGNER_KEY_ID,
     };
     use kamn_core::{
         bootstrap, ConfigError, KolmeRuntimeCommitRequest, NodeConfig, NodeRole, SyncMode,
@@ -1429,6 +1468,8 @@ mod tests {
 
     const TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX: &str =
         "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+    const TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY: &str =
+        "838c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
     fn signer_env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -2079,6 +2120,8 @@ mod tests {
         let _lock = signer_env_lock()
             .lock()
             .expect("signer env lock should guard test mutation");
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
         let _env_guard = EnvVarGuard::set(
             "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
             Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
@@ -2146,6 +2189,8 @@ mod tests {
         let _lock = signer_env_lock()
             .lock()
             .expect("signer env lock should guard test mutation");
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
         let _env_guard = EnvVarGuard::set(
             "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
             Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
@@ -2181,11 +2226,70 @@ mod tests {
     }
 
     #[test]
+    fn unit_kolme_live_signer_profile_defaults_to_primary_key_env() {
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _profile_env_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", None);
+
+        let (profile, env_name) = resolve_kolme_live_signer_private_key_env_name()
+            .expect("default profile selection should succeed");
+        assert_eq!(profile, "ops-primary");
+        assert_eq!(env_name, "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX");
+    }
+
+    #[test]
+    fn regression_kolme_live_signer_profile_rejects_unsupported_value() {
+        // Regression: #2222
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _profile_env_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("legacy"));
+        assert!(
+            matches!(
+                resolve_kolme_live_signer_private_key_env_name(),
+                Err(ConfigError::RuntimeKolmeLive(message))
+                if message.contains("KAMN_KOLME_LIVE_SIGNER_PROFILE has unsupported profile")
+            ),
+            "unsupported signer profile must fail closed"
+        );
+    }
+
+    #[test]
+    fn integration_kolme_live_signer_profile_secondary_uses_secondary_key_env() {
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-secondary"));
+        let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
+        let _secondary_key_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY),
+        );
+        let request = KolmeRuntimeCommitRequest::deterministic(
+            "op-node-live-2222",
+            "state:node-live-2222",
+            "kamn:did:agent:node-live-2222",
+            1,
+            "payload:node-live-2222",
+        )
+        .expect("request should build");
+
+        let signed_wire_payload = build_kolme_live_signed_wire_payload(&request)
+            .expect("secondary profile signing should succeed");
+        assert!(signed_wire_payload.contains("\"signer_key_id\":\""));
+        assert!(signed_wire_payload.contains(KOLME_LIVE_SIGNER_KEY_ID));
+    }
+
+    #[test]
     fn regression_runtime_kolme_live_rejects_provider_marker_drift() {
         // Regression: #2176
         let _lock = signer_env_lock()
             .lock()
             .expect("signer env lock should guard test mutation");
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
         let _env_guard = EnvVarGuard::set(
             "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
             Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
@@ -2231,6 +2335,8 @@ mod tests {
         let _lock = signer_env_lock()
             .lock()
             .expect("signer env lock should guard test mutation");
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
         let _env_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
         let (base_url, _requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
             r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"final"}"#,
@@ -2255,7 +2361,7 @@ mod tests {
             matches!(
                 execute(parsed),
                 Err(ConfigError::RuntimeKolmeLive(message))
-                if message.contains("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX must be set")
+                if message.contains("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX must be set for signer profile ops-primary")
             ),
             "runtime must fail closed when signer private key env is missing"
         );
