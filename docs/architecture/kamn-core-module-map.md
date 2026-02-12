@@ -161,6 +161,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `anti_spam`
   - `bootstrap`
   - `config`
+  - `content_lifecycle`
   - `content_storage`
   - `cross_chain_bridge`
   - `cross_chain_receipt`
@@ -209,6 +210,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2017`
   - `Regression: #2019`
   - `Regression: #2021`
+  - `Regression: #2023`
 
 ## Contributor Entrypoint Matrix
 
