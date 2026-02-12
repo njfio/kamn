@@ -32,6 +32,11 @@ impl fmt::Display for KolmeHttpResponsePolicyError {
 
 impl Error for KolmeHttpResponsePolicyError {}
 
+/// Returns whether raw HTTP response bytes input is non-empty.
+pub fn is_valid_http_response_bytes_input(response_bytes: &[u8]) -> bool {
+    !response_bytes.is_empty()
+}
+
 /// Parses raw HTTP response bytes and returns body for success statuses.
 pub fn parse_http_response_body(
     response_bytes: Vec<u8>,

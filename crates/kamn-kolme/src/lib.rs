@@ -66,7 +66,9 @@ pub use flat_json_policy::{
     parse_flat_json_value_fields, required_json_string_field, required_positive_u64_json_field,
     KolmeFlatJsonPolicyError, KolmeFlatJsonValue,
 };
-pub use http_response_policy::{parse_http_response_body, KolmeHttpResponsePolicyError};
+pub use http_response_policy::{
+    is_valid_http_response_bytes_input, parse_http_response_body, KolmeHttpResponsePolicyError,
+};
 pub use notification_policy::{
     is_valid_notifications_provider_input, is_valid_notifications_reconnect_budget,
     notification_event_to_provider_receipt, notification_event_to_receipt,

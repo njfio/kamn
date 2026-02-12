@@ -23,6 +23,7 @@ use kamn_kolme::{
     is_valid_expected_provider_input as is_kolme_valid_expected_provider_input_contract,
     is_valid_finality_base_url_input as is_kolme_valid_finality_base_url_input_contract,
     is_valid_finality_status_path_input as is_kolme_valid_finality_status_path_input_contract,
+    is_valid_http_response_bytes_input as is_kolme_valid_http_response_bytes_input_contract,
     is_valid_http_transport_timeout_seconds as is_kolme_valid_http_transport_timeout_seconds_contract,
     is_valid_live_provider_base_url_input as is_kolme_valid_live_provider_base_url_input_contract,
     is_valid_live_provider_submit_path_input as is_kolme_valid_live_provider_submit_path_input_contract,
@@ -1064,7 +1065,7 @@ impl KolmeRuntimeCommitHttpTransport {
                 ),
             });
         }
-        if output.stdout.is_empty() {
+        if !is_kolme_valid_http_response_bytes_input_contract(output.stdout.as_slice()) {
             return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                 reason: "tls response body is empty".to_owned(),
             });
