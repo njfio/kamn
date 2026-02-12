@@ -5,6 +5,31 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_WORKFLOW="$ROOT_DIR/.github/workflows/ci-fast-gate.yml"
 DEEP_WORKFLOW="$ROOT_DIR/.github/workflows/ci-deep-validate.yml"
 
+if ! grep -Fq "workflow_dispatch:" "$FAST_WORKFLOW"; then
+  echo "expected workflow_dispatch trigger in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_kolme_local_heavy_contract_tests:" "$FAST_WORKFLOW"; then
+  echo "expected workflow_dispatch input for Kolme local-heavy opt-in in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS:" "$FAST_WORKFLOW"; then
+  echo "expected selector env gate for Kolme local-heavy opt-in in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "github.event.inputs.run_kolme_local_heavy_contract_tests" "$FAST_WORKFLOW"; then
+  echo "expected selector env gate to derive from workflow_dispatch input in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if ! grep -Fq "if: steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+  echo "expected Kolme local-heavy lane to remain gated by selector output in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if ! grep -Fq "steps.scope.outputs.run_deploy_preflight_tests == 'true'" "$FAST_WORKFLOW"; then
   echo "expected deploy preflight scope condition in ci-fast-gate.yml" >&2
   exit 1

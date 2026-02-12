@@ -1,0 +1,19 @@
+name: ci-fast-gate
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+
+jobs:
+  fast-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Select CI scope
+        id: scope
+        env:
+          CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_kolme_local_heavy_contract_tests || 'false' }}
+        run: bash scripts/ci/select_targets.sh
+      - name: Run Kolme local-heavy contract lane
+        if: steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true'
+        run: bash scripts/framework/test_assert_local_heavy_opt_in.sh
