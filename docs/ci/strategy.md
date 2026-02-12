@@ -429,6 +429,11 @@ Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
 - `scripts/ci/check_fast_gate_budget_delta_threshold.sh` fails closed on unapproved regressions.
 - `ci-budget-fast-gate-delta-*.json` artifacts are uploaded for auditability.
 
+Test-harness growth advisory (non-blocking):
+- `scripts/ci/generate_test_harness_loc_report.sh --output-json /tmp/test-harness-loc-report.json`
+- `scripts/ci/check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --output-json /tmp/test-harness-loc-soft-budget-report.json`
+- Exceeded soft thresholds emit `soft_budget_status=exceeded` with `review_required=true` for reviewer visibility, but do not fail fast-gate by themselves.
+
 Policy:
 - Warning at 90% of configured budget.
 - Failure at 100% of configured budget for `ci-fast-gate` (merge-critical lane).
@@ -458,6 +463,8 @@ Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 Fast-mode CI tooling regression coverage includes:
 - Budget evaluator (`test_evaluate_budget.sh`)
 - Script duplication/surface budget checker (`test_check_script_duplication_budget.sh`)
+- Test-harness LOC report generator (`test_generate_test_harness_loc_report.sh`)
+- Test-harness LOC soft-budget checker (`test_check_test_harness_loc_soft_budget.sh`)
 - Retry helper (`test_run_with_retry.sh`)
 - Invariant harness runner (`test_run_invariant_harness.sh`)
 - Selector matrix runner with output-env isolation (`test_select_targets.sh`, `Regression: #463`)

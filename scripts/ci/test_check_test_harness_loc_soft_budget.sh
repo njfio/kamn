@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT="$ROOT_DIR/scripts/ci/check_test_harness_loc_soft_budget.sh"
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+if [ ! -x "$SCRIPT" ]; then
+  echo "expected test harness LOC soft budget checker to be executable" >&2
+  exit 1
+fi
+
+REPORT_FILE="$TMP_DIR/test-harness-loc-report.json"
+cat >"$REPORT_FILE" <<'EOF_REPORT'
+{
+  "schema_version": "kamn.ci.test-harness-loc-report.v1",
+  "harness_script_count": 5,
+  "harness_shell_line_total": 100
+}
+EOF_REPORT
+
+BUDGET_FILE="$TMP_DIR/soft-budget.env"
+cat >"$BUDGET_FILE" <<'EOF_BUDGET'
+TEST_HARNESS_SCRIPT_COUNT_SOFT_MAX=10
+TEST_HARNESS_SHELL_LINE_TOTAL_SOFT_MAX=120
+EOF_BUDGET
+
+BASELINE_FILE="$TMP_DIR/baseline.env"
+cat >"$BASELINE_FILE" <<'EOF_BASELINE'
+TEST_HARNESS_SCRIPT_COUNT_BASELINE=3
+TEST_HARNESS_SHELL_LINE_TOTAL_BASELINE=90
+EOF_BASELINE
+
+POLICY_JSON="$TMP_DIR/policy-within.json"
+within_output="$(
+  bash "$SCRIPT" \
+    --report-file "$REPORT_FILE" \
+    --budget-file "$BUDGET_FILE" \
+    --baseline-file "$BASELINE_FILE" \
+    --output-json "$POLICY_JSON"
+)"
+
+if ! printf '%s\n' "$within_output" | grep -q '^status=ok$'; then
+  echo "expected status=ok for within-budget soft checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$within_output" | grep -q '^soft_budget_status=within$'; then
+  echo "expected soft_budget_status=within for within-budget soft checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$within_output" | grep -q '^review_required=false$'; then
+  echo "expected review_required=false for within-budget soft checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$within_output" | grep -q '^delta_harness_script_count=2$'; then
+  echo "expected deterministic script-count delta for within-budget soft checker path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$within_output" | grep -q '^delta_harness_shell_line_total=10$'; then
+  echo "expected deterministic shell-line delta for within-budget soft checker path" >&2
+  exit 1
+fi
+
+BUDGET_FILE_EXCEEDED="$TMP_DIR/soft-budget-exceeded.env"
+cat >"$BUDGET_FILE_EXCEEDED" <<'EOF_BUDGET'
+TEST_HARNESS_SCRIPT_COUNT_SOFT_MAX=4
+TEST_HARNESS_SHELL_LINE_TOTAL_SOFT_MAX=80
+EOF_BUDGET
+
+POLICY_EXCEEDED_JSON="$TMP_DIR/policy-exceeded.json"
+exceeded_output="$(
+  bash "$SCRIPT" \
+    --report-file "$REPORT_FILE" \
+    --budget-file "$BUDGET_FILE_EXCEEDED" \
+    --baseline-file "$BASELINE_FILE" \
+    --output-json "$POLICY_EXCEEDED_JSON"
+)"
+
+if ! printf '%s\n' "$exceeded_output" | grep -q '^status=ok$'; then
+  echo "expected status=ok for soft-budget exceed advisory path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$exceeded_output" | grep -q '^soft_budget_status=exceeded$'; then
+  echo "expected soft_budget_status=exceeded for soft-budget exceed advisory path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$exceeded_output" | grep -q '^review_required=true$'; then
+  echo "expected review_required=true for soft-budget exceed advisory path" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$exceeded_output" | grep -q '^exceeded_metrics=harness_script_count,harness_shell_line_total$'; then
+  echo "expected exceeded metrics marker for soft-budget exceed advisory path" >&2
+  exit 1
+fi
+
+BROKEN_REPORT="$TMP_DIR/broken-report.json"
+cat >"$BROKEN_REPORT" <<'EOF_REPORT'
+{
+  "schema_version": "kamn.ci.unexpected.v1",
+  "harness_script_count": 5,
+  "harness_shell_line_total": 100
+}
+EOF_REPORT
+
+set +e
+broken_output="$(
+  bash "$SCRIPT" \
+    --report-file "$BROKEN_REPORT" \
+    --budget-file "$BUDGET_FILE" \
+    --baseline-file "$BASELINE_FILE" 2>&1
+)"
+broken_code=$?
+set -e
+
+if [ "$broken_code" -eq 0 ]; then
+  echo "expected invalid report schema to fail checker contract" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$broken_output" | grep -q '^error=unexpected report schema:'; then
+  echo "expected explicit schema error marker for invalid report path" >&2
+  exit 1
+fi
+
+echo "test harness LOC soft budget checker tests passed."

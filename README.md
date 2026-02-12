@@ -122,6 +122,11 @@ make demo-localhost-transport
 # CI helper regression suite (command/selector/docs contracts)
 make ci-tools
 
+# test-harness LOC advisory metrics (non-blocking soft budget)
+bash scripts/ci/generate_test_harness_loc_report.sh --output-json /tmp/test-harness-loc-report.json
+bash scripts/ci/check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --output-json /tmp/test-harness-loc-soft-budget-report.json
+# advisory markers: soft_budget_status=exceeded, review_required=true
+
 # dry-run make target execution contract (no command execution)
 bash scripts/ci/test_makefile_execution_contract.sh
 ```
