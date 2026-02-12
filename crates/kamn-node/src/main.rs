@@ -261,7 +261,18 @@ struct KolmeLiveExecution {
     base_url: String,
     provider_hint: String,
     signing_profile: String,
+    signer_profile_selector_env: String,
+    signer_profile: String,
+    signer_key_source: String,
+    signer_private_key_env: String,
     execution_status: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct KolmeLiveSignerSelection {
+    profile: &'static str,
+    key_source: &'static str,
+    private_key_env: &'static str,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -295,6 +306,10 @@ struct NodeBootstrapReport {
     kolme_live_base_url: Option<String>,
     kolme_live_provider_hint: Option<String>,
     kolme_live_signing_profile: Option<String>,
+    kolme_live_signer_profile_selector_env: Option<String>,
+    kolme_live_signer_profile: Option<String>,
+    kolme_live_signer_key_source: Option<String>,
+    kolme_live_signer_private_key_env: Option<String>,
     kolme_live_execution_status: Option<String>,
     profile: Option<String>,
     role: String,
@@ -854,27 +869,44 @@ fn resolve_kolme_live_signer_private_key_env_name(
     }
 }
 
-fn read_kolme_live_signer_private_key_hex(
+fn resolve_kolme_live_signer_selection(
     strict_signer_profile: Option<&str>,
     strict_signer_key_source: Option<&str>,
-) -> Result<(String, &'static str), ConfigError> {
-    if let Some(key_source) = strict_signer_key_source {
-        normalize_kolme_live_signer_key_source(key_source)?;
+) -> Result<KolmeLiveSignerSelection, ConfigError> {
+    let key_source = if let Some(key_source) = strict_signer_key_source {
+        normalize_kolme_live_signer_key_source(key_source)?
     } else if strict_signer_profile.is_some() {
         return Err(ConfigError::RuntimeKolmeLive(
             "--kolme-live-signer-key-source must be declared for strict signer contracts"
                 .to_owned(),
         ));
-    }
+    } else {
+        KOLME_LIVE_SIGNER_KEY_SOURCE_ENV_LOCAL
+    };
+    let (profile, private_key_env) =
+        resolve_kolme_live_signer_private_key_env_name(strict_signer_profile)?;
+    Ok(KolmeLiveSignerSelection {
+        profile,
+        key_source,
+        private_key_env,
+    })
+}
 
-    let (profile, key_env) = resolve_kolme_live_signer_private_key_env_name(strict_signer_profile)?;
-    match env::var(key_env) {
-        Ok(private_key_hex) => Ok((private_key_hex, key_env)),
+fn read_kolme_live_signer_private_key_hex(
+    strict_signer_profile: Option<&str>,
+    strict_signer_key_source: Option<&str>,
+) -> Result<(String, KolmeLiveSignerSelection), ConfigError> {
+    let selection =
+        resolve_kolme_live_signer_selection(strict_signer_profile, strict_signer_key_source)?;
+    match env::var(selection.private_key_env) {
+        Ok(private_key_hex) => Ok((private_key_hex, selection)),
         Err(env::VarError::NotPresent) => Err(ConfigError::RuntimeKolmeLive(format!(
-            "{key_env} must be set for signer profile {profile}"
+            "{} must be set for signer profile {}",
+            selection.private_key_env, selection.profile
         ))),
         Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
-            "{key_env} must be valid utf-8 for signer profile {profile}"
+            "{} must be valid utf-8 for signer profile {}",
+            selection.private_key_env, selection.profile
         ))),
     }
 }
@@ -897,15 +929,18 @@ fn escape_kolme_json_string(value: &str) -> String {
 fn build_kolme_live_signing_key(
     strict_signer_profile: Option<&str>,
     strict_signer_key_source: Option<&str>,
-) -> Result<SigningKey, ConfigError> {
-    let (private_key_hex, key_env) =
+) -> Result<(SigningKey, KolmeLiveSignerSelection), ConfigError> {
+    let (private_key_hex, selection) =
         read_kolme_live_signer_private_key_hex(strict_signer_profile, strict_signer_key_source)?;
-    let private_key_bytes = decode_kolme_hex_bytes(private_key_hex.as_str(), key_env)?;
-    SigningKey::from_slice(private_key_bytes.as_slice()).map_err(|error| {
+    let private_key_bytes =
+        decode_kolme_hex_bytes(private_key_hex.as_str(), selection.private_key_env)?;
+    let signing_key = SigningKey::from_slice(private_key_bytes.as_slice()).map_err(|error| {
         ConfigError::RuntimeKolmeLive(format!(
-            "{key_env} is not a valid secp256k1 private key: {error}"
+            "{} is not a valid secp256k1 private key: {error}",
+            selection.private_key_env
         ))
-    })
+    })?;
+    Ok((signing_key, selection))
 }
 
 fn kolme_live_signer_pubkey_hex(signing_key: &SigningKey) -> String {
@@ -980,8 +1015,8 @@ fn build_kolme_live_direct_signed_wire_payload(
     request: &KolmeRuntimeCommitRequest,
     strict_signer_profile: Option<&str>,
     strict_signer_key_source: Option<&str>,
-) -> Result<String, ConfigError> {
-    let signing_key =
+) -> Result<(String, KolmeLiveSignerSelection), ConfigError> {
+    let (signing_key, signer_selection) =
         build_kolme_live_signing_key(strict_signer_profile, strict_signer_key_source)?;
     let pubkey = kolme_live_signer_pubkey_hex(&signing_key);
     let nonce = resolve_kolme_live_nonce(base_url, transport, pubkey.as_str())?;
@@ -1001,7 +1036,7 @@ fn build_kolme_live_direct_signed_wire_payload(
         recovery_id.to_byte(),
     )
     .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
-    Ok(request.to_json_payload())
+    Ok((request.to_json_payload(), signer_selection))
 }
 
 fn ensure_kolme_live_provider_marker(expected: &str, observed: &str) -> Result<(), ConfigError> {
@@ -1201,13 +1236,14 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                 KolmeRuntimeCommitHttpTransport::new(KOLME_LIVE_TRANSPORT_TIMEOUT_SECONDS)
                     .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
             let request = build_kolme_live_request(&plan)?;
-            let signed_wire_payload = build_kolme_live_direct_signed_wire_payload(
-                base_url.as_str(),
-                &mut transport,
-                &request,
-                strict_signer_profile,
-                strict_signer_key_source,
-            )?;
+            let (signed_wire_payload, signer_selection) =
+                build_kolme_live_direct_signed_wire_payload(
+                    base_url.as_str(),
+                    &mut transport,
+                    &request,
+                    strict_signer_profile,
+                    strict_signer_key_source,
+                )?;
             let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
                 base_url.as_str(),
                 provider_hint.as_str(),
@@ -1258,6 +1294,10 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                     base_url,
                     provider_hint,
                     signing_profile,
+                    signer_profile_selector_env: KOLME_LIVE_SIGNER_PROFILE_ENV.to_owned(),
+                    signer_profile: signer_selection.profile.to_owned(),
+                    signer_key_source: signer_selection.key_source.to_owned(),
+                    signer_private_key_env: signer_selection.private_key_env.to_owned(),
                     execution_status: format!(
                         "{submit_status};commit_id={};finality={finality};resolution={resolution}",
                         receipt.commit_id
@@ -1338,6 +1378,18 @@ fn build_bootstrap_report(
     let kolme_live_signing_profile = kolme_live
         .as_ref()
         .map(|execution| execution.signing_profile.clone());
+    let kolme_live_signer_profile_selector_env = kolme_live
+        .as_ref()
+        .map(|execution| execution.signer_profile_selector_env.clone());
+    let kolme_live_signer_profile = kolme_live
+        .as_ref()
+        .map(|execution| execution.signer_profile.clone());
+    let kolme_live_signer_key_source = kolme_live
+        .as_ref()
+        .map(|execution| execution.signer_key_source.clone());
+    let kolme_live_signer_private_key_env = kolme_live
+        .as_ref()
+        .map(|execution| execution.signer_private_key_env.clone());
     let kolme_live_execution_status = kolme_live
         .as_ref()
         .map(|execution| execution.execution_status.clone());
@@ -1363,6 +1415,10 @@ fn build_bootstrap_report(
         kolme_live_base_url,
         kolme_live_provider_hint,
         kolme_live_signing_profile,
+        kolme_live_signer_profile_selector_env,
+        kolme_live_signer_profile,
+        kolme_live_signer_key_source,
+        kolme_live_signer_private_key_env,
         kolme_live_execution_status,
         profile: profile.map(LocalProfile::as_str).map(str::to_owned),
         role: plan.config.role.as_str().to_owned(),
@@ -1451,12 +1507,28 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         .kolme_live_signing_profile
         .as_deref()
         .unwrap_or("none");
+    let kolme_live_signer_profile_selector_env = report
+        .kolme_live_signer_profile_selector_env
+        .as_deref()
+        .unwrap_or("none");
+    let kolme_live_signer_profile = report
+        .kolme_live_signer_profile
+        .as_deref()
+        .unwrap_or("none");
+    let kolme_live_signer_key_source = report
+        .kolme_live_signer_key_source
+        .as_deref()
+        .unwrap_or("none");
+    let kolme_live_signer_private_key_env = report
+        .kolme_live_signer_private_key_env
+        .as_deref()
+        .unwrap_or("none");
     let kolme_live_execution_status = report
         .kolme_live_execution_status
         .as_deref()
         .unwrap_or("none");
     format!(
-        "KAMN node bootstrap\n  runtime_mode: {}\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  planning_expected_state_hash: {}\n  planning_candidate_count: {}\n  planning_scheduled_candidate_ids: {}\n  recovery_expected_state_version: {}\n  recovery_expected_state_hash: {}\n  recovery_attempt_count: {}\n  recovery_decisions: {}\n  daemon_max_ticks: {}\n  daemon_tick_interval_ms: {}\n  daemon_executed_ticks: {}\n  daemon_completion_reason: {}\n  daemon_peer_id: {}\n  daemon_peer_lifecycle_final_state: {}\n  daemon_peer_lifecycle_applied_events: {}\n  kolme_live_provider_client_contract: {}\n  kolme_live_base_url: {}\n  kolme_live_provider_hint: {}\n  kolme_live_signing_profile: {}\n  kolme_live_execution_status: {}\n  components: {}",
+        "KAMN node bootstrap\n  runtime_mode: {}\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  planning_expected_state_hash: {}\n  planning_candidate_count: {}\n  planning_scheduled_candidate_ids: {}\n  recovery_expected_state_version: {}\n  recovery_expected_state_hash: {}\n  recovery_attempt_count: {}\n  recovery_decisions: {}\n  daemon_max_ticks: {}\n  daemon_tick_interval_ms: {}\n  daemon_executed_ticks: {}\n  daemon_completion_reason: {}\n  daemon_peer_id: {}\n  daemon_peer_lifecycle_final_state: {}\n  daemon_peer_lifecycle_applied_events: {}\n  kolme_live_provider_client_contract: {}\n  kolme_live_base_url: {}\n  kolme_live_provider_hint: {}\n  kolme_live_signing_profile: {}\n  kolme_live_signer_profile_selector_env: {}\n  kolme_live_signer_profile: {}\n  kolme_live_signer_key_source: {}\n  kolme_live_signer_private_key_env: {}\n  kolme_live_execution_status: {}\n  components: {}",
         report.runtime_mode,
         report.diagnostics_mode,
         profile,
@@ -1493,6 +1565,10 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         kolme_live_base_url,
         kolme_live_provider_hint,
         kolme_live_signing_profile,
+        kolme_live_signer_profile_selector_env,
+        kolme_live_signer_profile,
+        kolme_live_signer_key_source,
+        kolme_live_signer_private_key_env,
         kolme_live_execution_status,
         report.components.join(", "),
     )
@@ -1596,6 +1672,23 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         Some(value) => format!("\"{}\"", json_escape(value)),
         None => "null".to_owned(),
     };
+    let kolme_live_signer_profile_selector_env =
+        match &report.kolme_live_signer_profile_selector_env {
+            Some(value) => format!("\"{}\"", json_escape(value)),
+            None => "null".to_owned(),
+        };
+    let kolme_live_signer_profile = match &report.kolme_live_signer_profile {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
+    let kolme_live_signer_key_source = match &report.kolme_live_signer_key_source {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
+    let kolme_live_signer_private_key_env = match &report.kolme_live_signer_private_key_env {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
     let kolme_live_execution_status = match &report.kolme_live_execution_status {
         Some(value) => format!("\"{}\"", json_escape(value)),
         None => "null".to_owned(),
@@ -1607,7 +1700,7 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         .collect::<Vec<String>>()
         .join(",");
     format!(
-        "{{\"runtime_mode\":\"{}\",\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"planning_expected_state_hash\":{},\"planning_candidate_count\":{},\"planning_scheduled_candidate_ids\":{},\"recovery_expected_state_version\":{},\"recovery_expected_state_hash\":{},\"recovery_attempt_count\":{},\"recovery_decisions\":{},\"daemon_max_ticks\":{},\"daemon_tick_interval_ms\":{},\"daemon_executed_ticks\":{},\"daemon_completion_reason\":{},\"daemon_peer_id\":{},\"daemon_peer_lifecycle_final_state\":{},\"daemon_peer_lifecycle_applied_events\":{},\"kolme_live_provider_client_contract\":{},\"kolme_live_base_url\":{},\"kolme_live_provider_hint\":{},\"kolme_live_signing_profile\":{},\"kolme_live_execution_status\":{},\"components\":[{}]}}",
+        "{{\"runtime_mode\":\"{}\",\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"planning_expected_state_hash\":{},\"planning_candidate_count\":{},\"planning_scheduled_candidate_ids\":{},\"recovery_expected_state_version\":{},\"recovery_expected_state_hash\":{},\"recovery_attempt_count\":{},\"recovery_decisions\":{},\"daemon_max_ticks\":{},\"daemon_tick_interval_ms\":{},\"daemon_executed_ticks\":{},\"daemon_completion_reason\":{},\"daemon_peer_id\":{},\"daemon_peer_lifecycle_final_state\":{},\"daemon_peer_lifecycle_applied_events\":{},\"kolme_live_provider_client_contract\":{},\"kolme_live_base_url\":{},\"kolme_live_provider_hint\":{},\"kolme_live_signing_profile\":{},\"kolme_live_signer_profile_selector_env\":{},\"kolme_live_signer_profile\":{},\"kolme_live_signer_key_source\":{},\"kolme_live_signer_private_key_env\":{},\"kolme_live_execution_status\":{},\"components\":[{}]}}",
         json_escape(&report.runtime_mode),
         json_escape(&report.diagnostics_mode),
         profile,
@@ -1640,6 +1733,10 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         kolme_live_base_url,
         kolme_live_provider_hint,
         kolme_live_signing_profile,
+        kolme_live_signer_profile_selector_env,
+        kolme_live_signer_profile,
+        kolme_live_signer_key_source,
+        kolme_live_signer_private_key_env,
         kolme_live_execution_status,
         components,
     )
@@ -2110,6 +2207,10 @@ mod tests {
             kolme_live_base_url: None,
             kolme_live_provider_hint: None,
             kolme_live_signing_profile: None,
+            kolme_live_signer_profile_selector_env: None,
+            kolme_live_signer_profile: None,
+            kolme_live_signer_key_source: None,
+            kolme_live_signer_private_key_env: None,
             kolme_live_execution_status: None,
             profile: None,
             role: "processor".to_owned(),
@@ -2378,6 +2479,14 @@ mod tests {
             "\"kolme_live_provider_client_contract\":\"KolmeRuntimeCommitLiveProvider\""
         ));
         assert!(rendered.contains("\"kolme_live_signing_profile\":\"kolme-fork-secp256k1-v1\""));
+        assert!(rendered.contains(
+            "\"kolme_live_signer_profile_selector_env\":\"KAMN_KOLME_LIVE_SIGNER_PROFILE\""
+        ));
+        assert!(rendered.contains("\"kolme_live_signer_profile\":\"ops-primary\""));
+        assert!(rendered.contains("\"kolme_live_signer_key_source\":\"env-local\""));
+        assert!(rendered.contains(
+            "\"kolme_live_signer_private_key_env\":\"KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX\""
+        ));
         assert!(rendered.contains("\"kolme_live_execution_status\":\"submitted;"));
 
         let recorded_requests = requests.lock().expect("request mutex should lock");
@@ -2430,7 +2539,7 @@ mod tests {
         )]);
         let mut transport =
             KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
-        let signed_wire_payload = build_kolme_live_direct_signed_wire_payload(
+        let (signed_wire_payload, signer_selection) = build_kolme_live_direct_signed_wire_payload(
             base_url.as_str(),
             &mut transport,
             &request,
@@ -2439,6 +2548,12 @@ mod tests {
         )
         .expect("signed payload should be produced");
 
+        assert_eq!(signer_selection.profile, "ops-primary");
+        assert_eq!(
+            signer_selection.private_key_env,
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
+        );
+        assert_eq!(signer_selection.key_source, "env-local");
         assert!(signed_wire_payload.contains("\"message\":\"{\\\"pubkey\\\":"));
         let signature = extract_json_string_field(signed_wire_payload.as_str(), "signature")
             .expect("direct signed payload must include signature field");
@@ -2512,7 +2627,7 @@ mod tests {
         )]);
         let mut transport =
             KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
-        let signed_wire_payload = build_kolme_live_direct_signed_wire_payload(
+        let (signed_wire_payload, signer_selection) = build_kolme_live_direct_signed_wire_payload(
             base_url.as_str(),
             &mut transport,
             &request,
@@ -2520,9 +2635,60 @@ mod tests {
             None,
         )
         .expect("secondary profile signing should succeed");
+        assert_eq!(signer_selection.profile, "ops-secondary");
+        assert_eq!(
+            signer_selection.private_key_env,
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+        );
+        assert_eq!(signer_selection.key_source, "env-local");
         let signature = extract_json_string_field(signed_wire_payload.as_str(), "signature")
             .expect("direct signed payload must include signature field");
         assert_eq!(signature.len(), 128);
+    }
+
+    #[test]
+    fn integration_runtime_kolme_live_renders_secondary_signer_selection_markers() {
+        // Regression: #2241
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-secondary"));
+        let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
+        let _secondary_key_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY),
+        );
+        let (base_url, _requests) = spawn_kolme_live_mock_server(vec![
+            MockHttpReply::ok(r#"{"next_nonce":37,"account_id":"acct-live-secondary"}"#),
+            MockHttpReply::ok(
+                r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:ef56ab78","finality":"final"}"#,
+            ),
+        ]);
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            base_url,
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+
+        let parsed = parse_args(args).expect("kolme-live args should parse");
+        let report = execute(parsed).expect("kolme-live execution should succeed");
+        let rendered = render_bootstrap_report(&report, OutputMode::json());
+        assert!(rendered.contains("\"kolme_live_signer_profile\":\"ops-secondary\""));
+        assert!(rendered.contains(
+            "\"kolme_live_signer_private_key_env\":\"KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY\""
+        ));
+        assert!(rendered.contains("\"kolme_live_signer_key_source\":\"env-local\""));
     }
 
     #[test]

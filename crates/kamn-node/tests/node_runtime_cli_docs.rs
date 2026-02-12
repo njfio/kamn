@@ -47,6 +47,10 @@ fn doc_contains_deterministic_json_fields() {
     assert!(DOC.contains("kolme_live_base_url"));
     assert!(DOC.contains("kolme_live_provider_hint"));
     assert!(DOC.contains("kolme_live_signing_profile"));
+    assert!(DOC.contains("kolme_live_signer_profile_selector_env"));
+    assert!(DOC.contains("kolme_live_signer_profile"));
+    assert!(DOC.contains("kolme_live_signer_key_source"));
+    assert!(DOC.contains("kolme_live_signer_private_key_env"));
     assert!(DOC.contains("kolme_live_execution_status"));
     assert!(DOC.contains("sync_mode"));
     assert!(DOC.contains("components"));
@@ -114,6 +118,11 @@ fn doc_contains_runtime_kolme_live_rules() {
     assert!(DOC.contains("--kolme-live-signing-profile"));
     assert!(DOC.contains("KolmeRuntimeCommitLiveProvider"));
     assert!(DOC.contains("kolme-fork-secp256k1-v1"));
+    assert!(DOC.contains("signer-selection evidence markers"));
+    assert!(DOC.contains("KAMN_KOLME_LIVE_SIGNER_PROFILE"));
+    assert!(DOC.contains("ops-primary"));
+    assert!(DOC.contains("ops-secondary"));
+    assert!(DOC.contains("env-local"));
     assert!(DOC.contains("/runtime-commit/status"));
     assert!(DOC.contains("max-attempt budget `2`"));
     assert!(DOC.contains("finality-polled"));
