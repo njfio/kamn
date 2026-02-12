@@ -1,77 +1,129 @@
+//! Governance proposal, voting, and execution workflow contracts.
+
 use crate::AgentDid;
 use std::collections::BTreeMap;
 use std::fmt;
 
+/// Draft proposal submitted into the governance workflow.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GovernanceProposalDraft {
+    /// Unique proposal identifier.
     pub proposal_id: String,
+    /// Human-readable proposal title.
     pub title: String,
+    /// Detailed proposal description.
     pub description: String,
+    /// DID of the proposer.
     pub proposer_did: String,
+    /// Proposal creation timestamp in Unix seconds.
     pub created_at_unix: u64,
+    /// Voting deadline timestamp in Unix seconds.
     pub voting_deadline_unix: u64,
+    /// Number of matching votes required for terminal approval/rejection.
     pub quorum_threshold: usize,
+    /// Optional parameter mutation requested by the proposal.
     pub parameter_change: Option<GovernanceParameterChangeDraft>,
 }
 
+/// Draft payload describing a governance-controlled parameter change.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GovernanceParameterChangeDraft {
+    /// Catalog key for the parameter being changed.
     pub key: String,
+    /// Candidate value to apply if proposal executes.
     pub proposed_value: u64,
+    /// Lower bound asserted by proposal.
     pub min_value: u64,
+    /// Upper bound asserted by proposal.
     pub max_value: u64,
+    /// Target runtime version for compatibility checks.
     pub target_version: String,
 }
 
+/// Vote choices available to governance participants.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GovernanceVoteChoice {
+    /// Vote in favor of proposal approval.
     Yes,
+    /// Vote against proposal approval.
     No,
+    /// Abstain while still recording participation.
     Abstain,
 }
 
+/// Lifecycle states for governance proposals.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GovernanceProposalStatus {
+    /// Proposal is open for voting.
     Voting,
+    /// Proposal met approval quorum and is eligible for execution.
     Approved,
+    /// Proposal met rejection quorum.
     Rejected,
+    /// Proposal has been executed.
     Executed,
+    /// Proposal expired without approval/rejection quorum.
     Expired,
 }
 
+/// Immutable record of an individual governance vote.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GovernanceVoteRecord {
+    /// Proposal identifier this vote belongs to.
     pub proposal_id: String,
+    /// DID of the voter.
     pub voter_did: String,
+    /// Vote choice cast by the voter.
     pub choice: GovernanceVoteChoice,
+    /// Vote timestamp in Unix seconds.
     pub cast_at_unix: u64,
 }
 
+/// Immutable record of governance proposal execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GovernanceExecutionRecord {
+    /// Executed proposal identifier.
     pub proposal_id: String,
+    /// DID of executor.
     pub executed_by: String,
+    /// Execution timestamp in Unix seconds.
     pub executed_at_unix: u64,
+    /// Hash of operation payload executed by governance.
     pub operation_hash: String,
 }
 
+/// Canonical proposal state snapshot exposed by query APIs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GovernanceProposalRecord {
+    /// Unique proposal identifier.
     pub proposal_id: String,
+    /// Human-readable proposal title.
     pub title: String,
+    /// Detailed proposal description.
     pub description: String,
+    /// DID of the proposer.
     pub proposer_did: String,
+    /// Proposal creation timestamp in Unix seconds.
     pub created_at_unix: u64,
+    /// Voting deadline timestamp in Unix seconds.
     pub voting_deadline_unix: u64,
+    /// Number of matching votes required for terminal approval/rejection.
     pub quorum_threshold: usize,
+    /// Optional parameter mutation requested by proposal.
     pub parameter_change: Option<GovernanceParameterChangeDraft>,
+    /// Current proposal lifecycle status.
     pub status: GovernanceProposalStatus,
+    /// Count of `Yes` votes.
     pub yes_votes: usize,
+    /// Count of `No` votes.
     pub no_votes: usize,
+    /// Count of `Abstain` votes.
     pub abstain_votes: usize,
+    /// Execution timestamp when status is `Executed`.
     pub executed_at_unix: Option<u64>,
 }
 
+/// In-memory governance workflow engine.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct GovernanceWorkflow {
     proposals: BTreeMap<String, GovernanceProposalState>,
@@ -154,10 +206,12 @@ const PARAMETER_POLICY_CATALOG: [ParameterPolicySpec; 3] = [
 ];
 
 impl GovernanceWorkflow {
+    /// Construct an empty governance workflow engine.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Submit a proposal draft into the governance workflow.
     pub fn submit_proposal(
         &mut self,
         draft: GovernanceProposalDraft,
@@ -211,6 +265,7 @@ impl GovernanceWorkflow {
         Ok(())
     }
 
+    /// Cast a vote for a proposal while it remains in the voting window.
     pub fn cast_vote(
         &mut self,
         proposal_id: &str,
@@ -263,6 +318,7 @@ impl GovernanceWorkflow {
         Ok(())
     }
 
+    /// Reevaluate proposal status using current tallies and deadline checks.
     pub fn evaluate(
         &mut self,
         proposal_id: &str,
@@ -282,6 +338,7 @@ impl GovernanceWorkflow {
         Ok(state.record.status)
     }
 
+    /// Execute an approved proposal and emit an execution record.
     pub fn execute(
         &mut self,
         proposal_id: &str,
@@ -328,12 +385,14 @@ impl GovernanceWorkflow {
         Ok(record)
     }
 
+    /// Return a proposal record snapshot by identifier.
     pub fn proposal(&self, proposal_id: &str) -> Option<GovernanceProposalRecord> {
         self.proposals
             .get(proposal_id)
             .map(|state| state.record.clone())
     }
 
+    /// Return vote history for a proposal in deterministic voter order.
     pub fn vote_history(
         &self,
         proposal_id: &str,
@@ -345,60 +404,102 @@ impl GovernanceWorkflow {
         Ok(state.votes.values().cloned().collect())
     }
 
+    /// Return all execution records emitted by this workflow.
     pub fn execution_history(&self) -> Vec<GovernanceExecutionRecord> {
         self.execution_history.clone()
     }
 }
 
+/// Errors emitted by governance proposal, vote, and execution flows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GovernanceWorkflowError {
+    /// Required string field is empty.
     EmptyField(&'static str),
+    /// DID failed canonical parsing/validation.
     InvalidDid(String),
+    /// Timestamp field must be positive.
     InvalidTimestamp(&'static str),
+    /// Voting deadline does not occur after creation timestamp.
     InvalidDeadline {
+        /// Proposal creation timestamp.
         created_at_unix: u64,
+        /// Proposal voting deadline timestamp.
         voting_deadline_unix: u64,
     },
+    /// Quorum threshold must be positive.
     InvalidQuorum(usize),
+    /// Target version could not be parsed as semantic version.
     InvalidParameterTargetVersion(String),
+    /// Parameter min/max bounds are internally inconsistent.
     InvalidParameterRange {
+        /// Parameter catalog key.
         key: String,
+        /// Proposed minimum value.
         min_value: u64,
+        /// Proposed maximum value.
         max_value: u64,
     },
+    /// Parameter key is not recognized by policy catalog.
     UnknownParameterKey(String),
+    /// Requested parameter range exceeds policy-approved range.
     ParameterRangeOutsidePolicy {
+        /// Parameter catalog key.
         key: String,
+        /// Requested minimum value.
         min_value: u64,
+        /// Requested maximum value.
         max_value: u64,
+        /// Policy minimum value.
         policy_min_value: u64,
+        /// Policy maximum value.
         policy_max_value: u64,
     },
+    /// Parameter is unsupported for the requested runtime version.
     ParameterUnsupportedForVersion {
+        /// Parameter catalog key.
         key: String,
+        /// Requested runtime version.
         target_version: String,
+        /// Minimum runtime version that supports this key.
         min_supported_version: String,
     },
+    /// Proposed value lies outside requested min/max bounds.
     ParameterOutOfBounds {
+        /// Parameter catalog key.
         key: String,
+        /// Proposed value to apply.
         proposed_value: u64,
+        /// Requested minimum value.
         min_value: u64,
+        /// Requested maximum value.
         max_value: u64,
     },
+    /// Proposal identifier already exists.
     DuplicateProposal(String),
+    /// Proposal identifier does not exist.
     ProposalNotFound(String),
+    /// Voter already cast a vote for this proposal.
     DuplicateVote {
+        /// Proposal identifier.
         proposal_id: String,
+        /// Voter DID.
         voter_did: String,
     },
+    /// Proposal is no longer in voting state.
     ProposalClosed {
+        /// Proposal identifier.
         proposal_id: String,
+        /// Current terminal/non-voting status.
         status: GovernanceProposalStatus,
     },
+    /// Proposal is not approved and cannot be executed.
     ProposalNotApproved {
+        /// Proposal identifier.
         proposal_id: String,
+        /// Current status preventing execution.
         status: GovernanceProposalStatus,
     },
+    /// Proposal already executed.
     AlreadyExecuted(String),
 }
 

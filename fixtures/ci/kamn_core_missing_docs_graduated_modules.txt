@@ -53,3 +53,4 @@ reputation_state
 channel_policies
 bridge_adapter
 channel_models
+governance_workflow
