@@ -53,6 +53,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/kolme/test_run_local_runtime_commit_live_finality_evidence_contract_lane.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_generate_test_harness_loc_report.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_test_harness_loc_soft_budget.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_kolme_test_harness_loc_soft_budget.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_missing_docs_velocity_guard_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_missing_docs_graduation_batch_report_contract.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_assert_local_heavy_opt_in.sh"'

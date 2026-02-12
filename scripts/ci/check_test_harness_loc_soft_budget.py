@@ -55,8 +55,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def fail(error: str) -> int:
+def fail(error: str, reason_code: str) -> int:
     print("status=fail")
+    print(f"reason_codes={reason_code}")
     print(f"error={error}")
     return 1
 
@@ -68,27 +69,36 @@ def main(argv: list[str]) -> int:
     baseline_file = Path(args.baseline_file)
 
     if not report_file.is_file():
-        return fail(f"report file not found: {report_file}")
+        return fail(f"report file not found: {report_file}", "report_file_not_found")
     if not budget_file.is_file():
-        return fail(f"budget file not found: {budget_file}")
+        return fail(f"budget file not found: {budget_file}", "budget_file_not_found")
     if not baseline_file.is_file():
-        return fail(f"baseline file not found: {baseline_file}")
+        return fail(f"baseline file not found: {baseline_file}", "baseline_file_not_found")
 
     try:
         report = json.loads(report_file.read_text(encoding="utf-8"))
     except json.JSONDecodeError as error:
-        return fail(f"report file is not valid JSON: {error}")
+        return fail(f"report file is not valid JSON: {error}", "report_json_invalid")
 
     if report.get("schema_version") != INPUT_SCHEMA:
-        return fail(f"unexpected report schema: {report.get('schema_version')}")
+        return fail(
+            f"unexpected report schema: {report.get('schema_version')}",
+            "report_schema_mismatch",
+        )
 
     harness_script_count = report.get("harness_script_count")
     if not isinstance(harness_script_count, int) or harness_script_count < 0:
-        return fail("report harness_script_count must be a non-negative integer")
+        return fail(
+            "report harness_script_count must be a non-negative integer",
+            "report_harness_script_count_invalid",
+        )
 
     harness_shell_line_total = report.get("harness_shell_line_total")
     if not isinstance(harness_shell_line_total, int) or harness_shell_line_total < 0:
-        return fail("report harness_shell_line_total must be a non-negative integer")
+        return fail(
+            "report harness_shell_line_total must be a non-negative integer",
+            "report_harness_shell_line_total_invalid",
+        )
 
     try:
         budget_values = parse_key_value_budget_file(budget_file)
@@ -101,9 +111,12 @@ def main(argv: list[str]) -> int:
             "TEST_HARNESS_SHELL_LINE_TOTAL_SOFT_MAX",
         )
     except KeyError as error:
-        return fail(f"missing required budget key: {error.args[0]}")
+        return fail(
+            f"missing required budget key: {error.args[0]}",
+            "budget_key_missing",
+        )
     except ValueError as error:
-        return fail(str(error))
+        return fail(str(error), "budget_value_invalid")
 
     try:
         baseline_values = parse_key_value_budget_file(baseline_file)
@@ -116,15 +129,21 @@ def main(argv: list[str]) -> int:
             "TEST_HARNESS_SHELL_LINE_TOTAL_BASELINE",
         )
     except KeyError as error:
-        return fail(f"missing required baseline key: {error.args[0]}")
+        return fail(
+            f"missing required baseline key: {error.args[0]}",
+            "baseline_key_missing",
+        )
     except ValueError as error:
-        return fail(str(error))
+        return fail(str(error), "baseline_value_invalid")
 
     exceeded_metrics: list[str] = []
+    reason_codes: list[str] = []
     if harness_script_count > soft_max_script_count:
         exceeded_metrics.append("harness_script_count")
+        reason_codes.append("harness_script_count_soft_max_exceeded")
     if harness_shell_line_total > soft_max_shell_line_total:
         exceeded_metrics.append("harness_shell_line_total")
+        reason_codes.append("harness_shell_line_total_soft_max_exceeded")
 
     soft_budget_status = "within" if not exceeded_metrics else "exceeded"
     review_required = bool(exceeded_metrics)
@@ -141,6 +160,7 @@ def main(argv: list[str]) -> int:
         "soft_budget_status": soft_budget_status,
         "review_required": review_required,
         "exceeded_metrics": exceeded_metrics,
+        "reason_codes": reason_codes,
         "harness_script_count": harness_script_count,
         "harness_shell_line_total": harness_shell_line_total,
         "soft_max_harness_script_count": soft_max_script_count,
@@ -166,6 +186,7 @@ def main(argv: list[str]) -> int:
     print(f"soft_budget_status={soft_budget_status}")
     print(f"review_required={'true' if review_required else 'false'}")
     print(f"exceeded_metrics={exceeded_marker}")
+    print(f"reason_codes={'none' if not reason_codes else ','.join(reason_codes)}")
     print(f"harness_script_count={harness_script_count}")
     print(f"harness_shell_line_total={harness_shell_line_total}")
     print(f"delta_harness_script_count={delta_harness_script_count}")
