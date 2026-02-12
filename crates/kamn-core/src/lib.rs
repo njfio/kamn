@@ -88,7 +88,7 @@ pub mod redaction_compliance;
 pub mod reputation_signals;
 #[allow(missing_docs)]
 pub mod reputation_state;
-#[allow(missing_docs)]
+/// Retention policy evaluation, tombstone lifecycle, and purge guard contracts.
 pub mod retention_engine;
 #[allow(missing_docs)]
 pub mod runtime;

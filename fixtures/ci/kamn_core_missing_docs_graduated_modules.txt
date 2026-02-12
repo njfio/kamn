@@ -36,3 +36,4 @@ did_registry
 durable_guard_store
 audit_exports
 performance_targets
+retention_engine

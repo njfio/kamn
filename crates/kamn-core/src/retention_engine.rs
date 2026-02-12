@@ -1,52 +1,77 @@
+//! Retention policy contracts and expiration evaluation helpers.
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// Logical domain used to select retention rules for a record.
 pub enum RetentionDomain {
+    /// Message domain records.
     Messages,
+    /// Task domain records.
     Tasks,
+    /// Escrow domain records.
     Escrows,
+    /// Reputation domain records.
     Reputation,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// Retention rule class applied to a record.
 pub enum RetentionClass {
+    /// Maximum record age in seconds.
     MaxAgeSeconds(u64),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Retention policy with default and per-domain class overrides.
 pub struct RetentionEnginePolicy {
+    /// Default class used when no domain override exists.
     pub default_class: RetentionClass,
+    /// Domain-specific retention class overrides.
     pub overrides: BTreeMap<RetentionDomain, RetentionClass>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Canonical retention record input evaluated by the policy engine.
 pub struct RetentionRecord {
+    /// Domain the record belongs to.
     pub domain: RetentionDomain,
+    /// Stable identifier of the retained record.
     pub record_id: String,
+    /// Record creation timestamp (epoch seconds).
     pub created_at_secs: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Retention status projection for a specific record.
 pub struct RetentionStatus {
+    /// Domain of the evaluated record.
     pub domain: RetentionDomain,
+    /// Identifier of the evaluated record.
     pub record_id: String,
+    /// Effective retention class used for evaluation.
     pub class: RetentionClass,
+    /// Expiration timestamp (epoch seconds).
     pub expires_at_secs: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Batch evaluation output containing expired record identifiers.
 pub struct RetentionEvaluation {
+    /// Record IDs that expired during this evaluation cycle.
     pub expired_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// In-memory retention policy engine with resurfaced-record protection.
 pub struct RetentionPolicyEngine {
     policy: RetentionEnginePolicy,
     blocked_ids: BTreeSet<String>,
 }
 
 impl RetentionPolicyEngine {
+    /// Builds a retention policy engine after validating all classes.
     pub fn new(policy: RetentionEnginePolicy) -> Result<Self, RetentionPolicyError> {
         validate_class(policy.default_class)?;
         for class in policy.overrides.values() {
@@ -59,6 +84,7 @@ impl RetentionPolicyEngine {
         })
     }
 
+    /// Evaluates records at `now_secs` and returns records that expired.
     pub fn evaluate(
         &mut self,
         now_secs: u64,
@@ -90,6 +116,7 @@ impl RetentionPolicyEngine {
         Ok(RetentionEvaluation { expired_ids })
     }
 
+    /// Computes retention status for a single record.
     pub fn status_for(
         &self,
         record: &RetentionRecord,
@@ -114,9 +141,13 @@ impl RetentionPolicyEngine {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Error taxonomy for retention policy validation and evaluation failures.
 pub enum RetentionPolicyError {
+    /// Retention class has an invalid maximum age.
     InvalidRetentionClass(u64),
+    /// Required field was empty after trimming.
     EmptyField(&'static str),
+    /// Previously expired record resurfaced in a later evaluation.
     ResurfacedExpiredRecord(String),
 }
 

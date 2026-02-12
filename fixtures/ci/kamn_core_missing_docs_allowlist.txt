@@ -13,7 +13,6 @@ observability
 operator_dashboard_api
 operator_dashboard_ui
 reputation_state
-retention_engine
 runtime
 signer_backend
 task_operations
