@@ -1,52 +1,85 @@
+//! Upgrade proposal orchestration, activation controls, rollback handling, and audit contracts.
+
 use crate::{AgentDid, GovernanceProposalStatus};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+/// Upgrade orchestration audit event categories.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UpgradeAuditEventKind {
+    /// Upgrade proposal created.
     Proposed,
+    /// Validator approval recorded.
     Approved,
+    /// Governance status synchronized into the local proposal record.
     GovernanceStatusSynced,
+    /// Upgrade activation completed.
     Activated,
+    /// Rollback completed.
     RolledBack,
 }
 
+/// Structured audit event emitted by upgrade orchestration operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpgradeAuditEvent {
+    /// Proposal identifier.
     pub proposal_id: String,
+    /// Target version associated with the event.
     pub target_version: String,
+    /// Actor DID responsible for the event.
     pub actor_did: String,
+    /// Event timestamp in Unix seconds.
     pub event_at_unix: u64,
+    /// Event kind.
     pub kind: UpgradeAuditEventKind,
+    /// Optional supplemental note.
     pub note: Option<String>,
 }
 
+/// Audit view snapshot containing current version and event history.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VersionUpgradeAuditView {
+    /// Currently active version.
     pub current_version: String,
+    /// Recorded audit events in insertion order.
     pub events: Vec<UpgradeAuditEvent>,
 }
 
+/// Upgrade proposal lifecycle state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UpgradeProposalState {
+    /// Proposal exists and awaits activation.
     Pending,
+    /// Proposal was activated.
     Activated,
+    /// Proposal was rolled back after activation.
     RolledBack,
 }
 
+/// Mutable upgrade proposal record tracked by the orchestrator.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpgradeProposalRecord {
+    /// Proposal identifier.
     pub proposal_id: String,
+    /// Requested target version.
     pub target_version: String,
+    /// DID of the proposer.
     pub proposed_by: String,
+    /// Proposal timestamp in Unix seconds.
     pub proposed_at_unix: u64,
+    /// Required validator approval quorum.
     pub required_quorum: usize,
+    /// Validator DIDs that approved the proposal.
     pub approvals: BTreeSet<String>,
+    /// Latest governance status for the proposal.
     pub governance_status: GovernanceProposalStatus,
+    /// Current proposal lifecycle state.
     pub state: UpgradeProposalState,
+    /// Activation timestamp when state is `Activated`.
     pub activated_at_unix: Option<u64>,
 }
 
+/// Stateful orchestrator that manages version upgrade proposals and audits.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VersionUpgradeOrchestrator {
     current_version: String,
@@ -55,6 +88,7 @@ pub struct VersionUpgradeOrchestrator {
 }
 
 impl VersionUpgradeOrchestrator {
+    /// Creates a new orchestrator for the provided current version.
     pub fn new(current_version: &str) -> Result<Self, UpgradeOrchestrationError> {
         validate_version_format(current_version)?;
         Ok(Self {
@@ -64,6 +98,7 @@ impl VersionUpgradeOrchestrator {
         })
     }
 
+    /// Registers a new upgrade proposal.
     pub fn propose_upgrade(
         &mut self,
         proposal_id: &str,
@@ -116,6 +151,7 @@ impl VersionUpgradeOrchestrator {
         Ok(())
     }
 
+    /// Records validator approval for an existing proposal.
     pub fn approve_upgrade(
         &mut self,
         proposal_id: &str,
@@ -147,6 +183,7 @@ impl VersionUpgradeOrchestrator {
         Ok(())
     }
 
+    /// Updates governance status for a proposal.
     pub fn mark_governance_status(
         &mut self,
         proposal_id: &str,
@@ -171,6 +208,7 @@ impl VersionUpgradeOrchestrator {
         Ok(())
     }
 
+    /// Activates a proposal once governance and quorum requirements are met.
     pub fn activate_upgrade(
         &mut self,
         proposal_id: &str,
@@ -222,6 +260,7 @@ impl VersionUpgradeOrchestrator {
         Ok(())
     }
 
+    /// Rolls back an activated proposal to a specified version.
     pub fn rollback_upgrade(
         &mut self,
         proposal_id: &str,
@@ -258,10 +297,12 @@ impl VersionUpgradeOrchestrator {
         Ok(())
     }
 
+    /// Returns a cloned proposal record by identifier.
     pub fn proposal(&self, proposal_id: &str) -> Option<UpgradeProposalRecord> {
         self.proposals.get(proposal_id).cloned()
     }
 
+    /// Returns the current audit view snapshot.
     pub fn audit_view(&self) -> VersionUpgradeAuditView {
         VersionUpgradeAuditView {
             current_version: self.current_version.clone(),
@@ -270,32 +311,54 @@ impl VersionUpgradeOrchestrator {
     }
 }
 
+/// Error taxonomy for upgrade orchestration validation and lifecycle failures.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpgradeOrchestrationError {
+    /// Required field is empty.
     EmptyField(&'static str),
+    /// Timestamp is invalid.
     InvalidTimestamp(&'static str),
+    /// DID parsing failed.
     InvalidDid(String),
+    /// Version format is invalid.
     InvalidVersionFormat(String),
+    /// Target version is not a valid forward transition from current version.
     InvalidTargetVersionTransition {
+        /// Current active version.
         current_version: String,
+        /// Proposed target version.
         target_version: String,
     },
+    /// Required quorum value is invalid.
     InvalidRequiredQuorum(usize),
+    /// Duplicate proposal identifier was submitted.
     DuplicateProposal(String),
+    /// Proposal identifier was not found.
     ProposalNotFound(String),
+    /// Duplicate approval from the same validator.
     DuplicateApproval {
+        /// Proposal identifier.
         proposal_id: String,
+        /// Validator DID that duplicated approval.
         validator_did: String,
     },
+    /// Governance status does not allow activation.
     GovernanceNotApproved {
+        /// Proposal identifier.
         proposal_id: String,
+        /// Current governance status.
         status: GovernanceProposalStatus,
     },
+    /// Approval set does not satisfy required quorum.
     InsufficientApprovals {
+        /// Required quorum count.
         required: usize,
+        /// Provided approval count.
         provided: usize,
     },
+    /// Proposal is already activated.
     AlreadyActivated(String),
+    /// Rollback attempted from an invalid proposal state.
     RollbackNotAllowed(String),
 }
 

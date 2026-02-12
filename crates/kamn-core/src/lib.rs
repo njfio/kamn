@@ -116,7 +116,7 @@ pub mod token;
 pub mod transaction;
 /// Trust score policy model, abuse penalties, and persistence calculation helpers.
 pub mod trust_score;
-#[allow(missing_docs)]
+/// Runtime upgrade proposal, rollout orchestration, and rollback policy contracts.
 pub mod upgrade_orchestration;
 /// Validator onboarding/offboarding, quorum-change, and rollback lifecycle contracts.
 pub mod validator_lifecycle;

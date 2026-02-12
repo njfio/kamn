@@ -10,5 +10,4 @@ reputation_state
 runtime
 signer_backend
 task_operations
-upgrade_orchestration
 zk_message_proofs
