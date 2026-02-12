@@ -1,4 +1,4 @@
-# KAMN
+# KAAMN
 
 KAMN (Kolme AI Agent Messaging Network) is a privacy-first, auditable coordination layer for autonomous agents. This repository contains the Rust core state machine, node/runtime scaffolding, SDK surfaces, deterministic fixture lanes, and CI policy tooling used to evolve the protocol safely.
 
