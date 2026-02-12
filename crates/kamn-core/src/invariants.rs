@@ -1,15 +1,21 @@
+//! Invariant catalog and taxonomy contracts for deterministic guardrail mapping.
+
 use std::fmt;
 
 use crate::smoke::SmokeError;
 use crate::transaction::TransactionGuardError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Invariant domain partition used in the canonical catalog.
 pub enum InvariantDomain {
+    /// Invariants tied to transaction envelope and sequencing rules.
     Transactions,
+    /// Invariants tied to state-commit transition rules.
     StateTransitions,
 }
 
 impl InvariantDomain {
+    /// Returns a stable machine-readable domain label.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Transactions => "transactions",
@@ -19,17 +25,26 @@ impl InvariantDomain {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+/// Stable failure-code taxonomy for invariant violations.
 pub enum InvariantFailureCode {
+    /// Required field was empty.
     EmptyField,
+    /// Nonce value was invalid.
     InvalidNonce,
+    /// Nonce value was not sequential for sender.
     NonceOutOfSequence,
+    /// Signature verification failed.
     InvalidSignature,
+    /// State hash did not match expected value.
     StateHashMismatch,
+    /// Transaction identifier was duplicated.
     DuplicateTransactionId,
+    /// Unvalidated transaction attempted state commit.
     UnvalidatedCommittedTransaction,
 }
 
 impl InvariantFailureCode {
+    /// Returns the stable external failure code label.
     pub fn as_code(&self) -> &'static str {
         match self {
             Self::EmptyField => "INV-TX-001-EMPTY-FIELD",
@@ -44,12 +59,19 @@ impl InvariantFailureCode {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Canonical invariant specification entry.
 pub struct InvariantSpec {
+    /// Stable invariant identifier.
     pub id: &'static str,
+    /// Invariant domain.
     pub domain: InvariantDomain,
+    /// Human-readable invariant description.
     pub description: &'static str,
+    /// PRD section references backing the invariant.
     pub prd_refs: &'static [&'static str],
+    /// Owning issue identifier.
     pub owner_issue: &'static str,
+    /// Failure codes associated with this invariant.
     pub failure_codes: &'static [InvariantFailureCode],
 }
 
@@ -64,6 +86,7 @@ const FAILURES_TX_005: &[InvariantFailureCode] = &[InvariantFailureCode::Duplica
 const FAILURES_TX_006: &[InvariantFailureCode] =
     &[InvariantFailureCode::UnvalidatedCommittedTransaction];
 
+/// Canonical sorted invariant catalog used across runtime guardrails.
 pub const INVARIANT_CATALOG: &[InvariantSpec] = &[
     InvariantSpec {
         id: "INV-TX-001",
@@ -115,14 +138,17 @@ pub const INVARIANT_CATALOG: &[InvariantSpec] = &[
     },
 ];
 
+/// Returns the canonical invariant catalog.
 pub fn catalog() -> &'static [InvariantSpec] {
     INVARIANT_CATALOG
 }
 
+/// Looks up an invariant by stable identifier.
 pub fn invariant_by_id(id: &str) -> Option<&'static InvariantSpec> {
     catalog().iter().find(|entry| entry.id == id)
 }
 
+/// Validates catalog shape constraints and identifier ordering.
 pub fn validate_catalog(entries: &[InvariantSpec]) -> Result<(), InvariantCatalogError> {
     if entries.is_empty() {
         return Err(InvariantCatalogError::EmptyCatalog);
@@ -156,12 +182,17 @@ pub fn validate_catalog(entries: &[InvariantSpec]) -> Result<(), InvariantCatalo
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Invariant violation instance produced by taxonomy classification.
 pub struct InvariantViolation {
+    /// Stable invariant identifier.
     pub invariant_id: &'static str,
+    /// Failure code for this violation.
     pub failure_code: InvariantFailureCode,
+    /// Human-readable violation message.
     pub message: String,
 }
 
+/// Maps a transaction guard error to a deterministic invariant violation.
 pub fn classify_transaction_guard_error(error: &TransactionGuardError) -> InvariantViolation {
     match error {
         TransactionGuardError::EmptyField(_) => InvariantViolation {
@@ -202,6 +233,7 @@ pub fn classify_transaction_guard_error(error: &TransactionGuardError) -> Invari
     }
 }
 
+/// Maps a smoke-test error to an optional invariant violation.
 pub fn classify_smoke_error(error: &SmokeError) -> Option<InvariantViolation> {
     match error {
         SmokeError::Guard(guard_error) => Some(classify_transaction_guard_error(guard_error)),
@@ -210,12 +242,23 @@ pub fn classify_smoke_error(error: &SmokeError) -> Option<InvariantViolation> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Error taxonomy for invariant catalog validation failures.
 pub enum InvariantCatalogError {
+    /// Duplicate invariant identifier encountered.
     DuplicateId(String),
+    /// Catalog is empty.
     EmptyCatalog,
+    /// Invariant identifier is empty.
     EmptyInvariantId,
+    /// Invariant has no failure-code mappings.
     MissingFailureCodes(String),
-    Unsorted { previous: String, current: String },
+    /// Catalog ordering is not lexicographically sorted by identifier.
+    Unsorted {
+        /// Previous identifier in sequence.
+        previous: String,
+        /// Current identifier that violated ordering.
+        current: String,
+    },
 }
 
 impl fmt::Display for InvariantCatalogError {

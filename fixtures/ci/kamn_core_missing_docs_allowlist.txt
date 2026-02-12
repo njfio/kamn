@@ -5,7 +5,6 @@ channel_policies
 escrow
 governance_workflow
 instruction_verify
-invariants
 message_delivery_guards
 message_envelope
 message_lifecycle
