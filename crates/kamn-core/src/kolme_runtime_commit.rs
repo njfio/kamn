@@ -49,6 +49,7 @@ use kamn_kolme::{
     lifecycle_state_label as lifecycle_state_label_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
     normalize_broadcast_submit_path_input as normalize_kolme_broadcast_submit_path_input_contract,
+    normalize_finality_endpoint_inputs as normalize_kolme_finality_endpoint_inputs_contract,
     normalize_notifications_provider_input as normalize_kolme_notifications_provider_input_contract,
     normalize_provider_hint_input as normalize_kolme_provider_hint_input_contract,
     normalize_runtime_commit_request_fields as normalize_kolme_runtime_commit_request_fields_contract,
@@ -1226,9 +1227,11 @@ impl<T: KolmeRuntimeCommitFinalityTransport> KolmeRuntimeCommitFinalityChecker<T
                 reason: "must not be empty",
             });
         }
+        let (base_url, status_path) =
+            normalize_kolme_finality_endpoint_inputs_contract(base_url, status_path);
         Ok(Self {
-            base_url: base_url.trim().to_owned(),
-            status_path: status_path.trim().to_owned(),
+            base_url,
+            status_path,
             transport,
         })
     }

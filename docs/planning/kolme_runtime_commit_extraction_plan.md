@@ -76,6 +76,7 @@ Out of scope:
 - #1912: extracted transport idempotency-key normalization contract to `kamn-kolme` (`normalize_transport_idempotency_key_input`) and rewired `kamn-core` HTTP broadcast submission normalization delegation.
 - #1914: extracted provider-hint normalization contract to `kamn-kolme` (`normalize_provider_hint_input`) and rewired `kamn-core` fork broadcast provider construction normalization delegation.
 - #1916: extracted notifications provider normalization contract to `kamn-kolme` (`normalize_notifications_provider_input`) and rewired `kamn-core` notifications consumer construction normalization delegation.
+- #1918: extracted finality endpoint normalization contract to `kamn-kolme` (`normalize_finality_endpoint_inputs`) and rewired `kamn-core` finality checker constructor normalization delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,
