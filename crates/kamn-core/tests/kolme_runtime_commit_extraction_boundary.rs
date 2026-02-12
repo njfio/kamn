@@ -1,4 +1,5 @@
 const RUNTIME_COMMIT_SRC: &str = include_str!("../src/kolme_runtime_commit.rs");
+const RUNTIME_PIPELINE_SRC: &str = include_str!("../src/kolme_runtime_commit/runtime_pipeline.rs");
 
 #[test]
 fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers() {
@@ -48,6 +49,10 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_provider_outcome_policy_error_to_malformed("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn reconnect_exhausted_error("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn configured_tls_ca_file("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub struct RuntimeCommitLifecycleRecord"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub struct RuntimeCommitFinalityProjection"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub struct RuntimeCommitPipeline"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("impl RuntimeCommitPipeline"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let signer_key_id = signer_key_id.trim();"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let message = message.trim();"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let signature = signature.trim();"));
@@ -83,8 +88,8 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(
         RUNTIME_COMMIT_SRC.contains("require_kolme_commit_id_matches_expected_txhash_contract(")
     );
-    assert!(RUNTIME_COMMIT_SRC.contains("lifecycle_state_for_finality_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("lifecycle_state_label_contract("));
+    assert!(RUNTIME_PIPELINE_SRC.contains("lifecycle_state_for_finality_contract("));
+    assert!(RUNTIME_PIPELINE_SRC.contains("lifecycle_state_label_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("commit_finality_label_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_terminal_receipt_finality_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_poll_attempt_budget_contract("));
@@ -175,10 +180,12 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_signed_envelope_signature_input_contract("));
     assert!(RUNTIME_COMMIT_SRC
         .contains("normalize_kolme_runtime_commit_signed_envelope_fields_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_receipt_provider_input_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_receipt_commit_id_input_contract("));
+    assert!(RUNTIME_PIPELINE_SRC.contains("is_kolme_valid_receipt_provider_input_contract("));
+    assert!(RUNTIME_PIPELINE_SRC.contains("is_kolme_valid_receipt_commit_id_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_transport_idempotency_key_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_transport_wire_payload_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_broadcast_submit_path_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("impl From<KamnKolmeTransportIoClassification>"));
+    assert!(RUNTIME_COMMIT_SRC.contains("mod runtime_pipeline;"));
+    assert!(RUNTIME_COMMIT_SRC.contains("pub use runtime_pipeline::{"));
 }
