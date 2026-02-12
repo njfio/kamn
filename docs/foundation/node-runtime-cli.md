@@ -1,4 +1,4 @@
-# Node Runtime CLI Contracts (Issues #306 / #307 / #309 / #310 / #335 / #336 / #348 / #349)
+# Node Runtime CLI Contracts (Issues #306 / #307 / #309 / #310 / #335 / #336 / #348 / #349 / #2175)
 
 This document captures node-runtime productionization slices for machine-readable output, local role profile projection, diagnostics snapshots, deterministic runtime planning execution, and deterministic recovery-check evaluation.
 
@@ -24,6 +24,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - `--runtime-mode planning`
   - `--runtime-mode recovery-check`
   - `--runtime-mode daemon`
+  - `--runtime-mode kolme-live`
 - Added runtime planning inputs:
   - `--expected-state-hash <state-hash>`
   - `--proposal <id|sender-did|nonce|state-hash>` (repeatable)
@@ -36,16 +37,23 @@ This document captures node-runtime productionization slices for machine-readabl
   - `--daemon-tick-interval-ms <positive-integer>`
   - `--daemon-peer-id <peer-id>` (optional)
   - `--daemon-lifecycle-event <start-connect|handshake-succeeded|heartbeat-missed|heartbeat-restored|disconnect|rejoin>` (repeatable)
+- Added Kolme live runtime controls:
+  - `--kolme-live-base-url <http(s)-endpoint>`
+  - `--kolme-live-provider-hint <provider-hint>`
+  - `--kolme-live-signing-profile <signing-profile>`
 - Added explicit runtime mode and proposal validation handling through:
   - `ConfigError::InvalidRuntimeMode`
   - `ConfigError::InvalidExpectedStateVersion`
   - `ConfigError::InvalidDaemonControlArgument`
   - `ConfigError::InvalidDaemonLifecycleEvent`
+  - `ConfigError::InvalidKolmeLiveProviderHint`
+  - `ConfigError::InvalidKolmeLiveSigningProfile`
   - `ConfigError::InvalidProposalArgument`
   - `ConfigError::InvalidRejoinAttemptArgument`
   - `ConfigError::RuntimePlanner`
   - `ConfigError::RuntimeRecovery`
   - `ConfigError::RuntimeDaemonLifecycle`
+  - `ConfigError::RuntimeKolmeLive`
 
 ## Output Mode Rules
 - Default behavior remains text output when `--output` is omitted.
@@ -78,6 +86,11 @@ This document captures node-runtime productionization slices for machine-readabl
   - `daemon_peer_id`
   - `daemon_peer_lifecycle_final_state`
   - `daemon_peer_lifecycle_applied_events`
+  - `kolme_live_provider_client_contract`
+  - `kolme_live_base_url`
+  - `kolme_live_provider_hint`
+  - `kolme_live_signing_profile`
+  - `kolme_live_execution_status`
   - `components`
 - Invalid modes are rejected with explicit typed error.
 
@@ -155,6 +168,9 @@ This document captures node-runtime productionization slices for machine-readabl
 - Daemon mode:
   - `kamn-node --role processor --runtime-mode daemon`
   - `kamn-node --role processor --runtime-mode daemon --daemon-max-ticks 3 --daemon-tick-interval-ms 25`
+- Kolme-live mode:
+  - `kamn-node --role processor --runtime-mode kolme-live`
+  - `kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1`
 
 ## Daemon Runtime Rules
 - Supported runtime modes:
@@ -177,6 +193,21 @@ This document captures node-runtime productionization slices for machine-readabl
   - `daemon_executed_ticks` equals configured `daemon_max_ticks`
   - `daemon_completion_reason` emits `tick-budget-exhausted`
 
+## Kolme Live Runtime Rules
+- Supported runtime modes:
+  - `bootstrap` (default)
+  - `kolme-live`
+- Kolme-live mode requires:
+  - `--kolme-live-base-url`
+  - `--kolme-live-provider-hint`
+  - `--kolme-live-signing-profile`
+- Provider wiring is fail-closed:
+  - runtime config must reject in-memory provider-hint markers such as `InMemoryKolmeRuntimeCommitClient`
+  - signing profile must match `kolme-fork-secp256k1-v1`
+- Runtime path constructs `KolmeRuntimeCommitLiveProvider` with deterministic transport timeout and reports:
+  - `kolme_live_provider_client_contract=KolmeRuntimeCommitLiveProvider`
+  - `kolme_live_execution_status=provider-configured`
+
 ## Test Coverage Mapping
 - Unit:
   - default mode behavior and mode parsing checks
@@ -193,6 +224,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - zero/invalid daemon bounded-loop control rejection (`Regression: #348`)
   - invalid daemon lifecycle transition rejection (`Regression: #349`)
   - daemon lease guard no-lease/invalid-owner rejection (`Regression: #388`)
+  - in-memory fallback and invalid signing profile rejection (`Regression: #2175`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
@@ -217,6 +249,7 @@ cargo test -p kamn-core
 ```bash
 cargo test -p kamn-node integration_runtime_daemon_renders_bounded_completion_output
 cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
+cargo test -p kamn-node integration_runtime_kolme_live_renders_provider_contract_markers
 ```
 
 ## Processor HA Runtime References

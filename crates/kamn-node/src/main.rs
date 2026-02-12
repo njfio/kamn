@@ -2,10 +2,16 @@ use std::env;
 use std::process::ExitCode;
 
 use kamn_core::{
-    bootstrap, BootstrapPlan, ConfigError, DeterministicProposalPlanner, NodeConfig, NodeRole,
+    bootstrap, BootstrapPlan, ConfigError, DeterministicProposalPlanner,
+    KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitLiveProvider, NodeConfig, NodeRole,
     PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, RecoveryRejoinGuard,
     RecoveryStatus, RejoinAttempt, SyncMode,
 };
+
+const KOLME_LIVE_PROVIDER_CONTRACT: &str = "KolmeRuntimeCommitLiveProvider";
+const KOLME_LIVE_SIGNING_PROFILE: &str = "kolme-fork-secp256k1-v1";
+const KOLME_IN_MEMORY_PROVIDER_MARKER: &str = "InMemoryKolmeRuntimeCommitClient";
+const KOLME_LIVE_TRANSPORT_TIMEOUT_SECONDS: u64 = 30;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct OutputMode {
@@ -51,6 +57,7 @@ enum RuntimeModeKind {
     Planning,
     RecoveryCheck,
     Daemon,
+    KolmeLive,
 }
 
 impl RuntimeMode {
@@ -78,12 +85,19 @@ impl RuntimeMode {
         }
     }
 
+    fn kolme_live() -> Self {
+        Self {
+            kind: RuntimeModeKind::KolmeLive,
+        }
+    }
+
     fn parse(value: &str) -> Result<Self, ConfigError> {
         match value {
             "bootstrap" => Ok(Self::bootstrap()),
             "planning" => Ok(Self::planning()),
             "recovery-check" => Ok(Self::recovery_check()),
             "daemon" => Ok(Self::daemon()),
+            "kolme-live" => Ok(Self::kolme_live()),
             other => Err(ConfigError::InvalidRuntimeMode(other.to_owned())),
         }
     }
@@ -94,6 +108,7 @@ impl RuntimeMode {
             RuntimeModeKind::Planning => "planning",
             RuntimeModeKind::RecoveryCheck => "recovery-check",
             RuntimeModeKind::Daemon => "daemon",
+            RuntimeModeKind::KolmeLive => "kolme-live",
         }
     }
 }
@@ -189,6 +204,9 @@ struct NodeCli {
     daemon_tick_interval_ms: Option<u64>,
     daemon_peer_id: Option<String>,
     daemon_lifecycle_events: Vec<PeerLifecycleEvent>,
+    kolme_live_base_url: Option<String>,
+    kolme_live_provider_hint: Option<String>,
+    kolme_live_signing_profile: Option<String>,
     output_mode: OutputMode,
     diagnostics_mode: DiagnosticsMode,
 }
@@ -220,6 +238,23 @@ struct DaemonExecution {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+struct KolmeLiveExecution {
+    provider_client_contract: String,
+    base_url: String,
+    provider_hint: String,
+    signing_profile: String,
+    execution_status: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+struct RuntimeExecutionBundle {
+    planning: Option<PlanningExecution>,
+    recovery: Option<RecoveryExecution>,
+    daemon: Option<DaemonExecution>,
+    kolme_live: Option<KolmeLiveExecution>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct NodeBootstrapReport {
     runtime_mode: String,
     diagnostics_mode: String,
@@ -238,6 +273,11 @@ struct NodeBootstrapReport {
     daemon_peer_id: Option<String>,
     daemon_peer_lifecycle_final_state: Option<String>,
     daemon_peer_lifecycle_applied_events: Option<Vec<String>>,
+    kolme_live_provider_client_contract: Option<String>,
+    kolme_live_base_url: Option<String>,
+    kolme_live_provider_hint: Option<String>,
+    kolme_live_signing_profile: Option<String>,
+    kolme_live_execution_status: Option<String>,
     profile: Option<String>,
     role: String,
     chain_id: String,
@@ -272,6 +312,9 @@ where
     let mut daemon_tick_interval_ms: Option<u64> = None;
     let mut daemon_peer_id: Option<String> = None;
     let mut daemon_lifecycle_events: Vec<PeerLifecycleEvent> = Vec::new();
+    let mut kolme_live_base_url: Option<String> = None;
+    let mut kolme_live_provider_hint: Option<String> = None;
+    let mut kolme_live_signing_profile: Option<String> = None;
     let mut output_mode = OutputMode::text();
     let mut diagnostics_mode = DiagnosticsMode::basic();
     let mut role_overridden = false;
@@ -382,6 +425,22 @@ where
                 ))?;
                 daemon_lifecycle_events.push(parse_daemon_lifecycle_event(&value)?);
             }
+            "--kolme-live-base-url" => {
+                kolme_live_base_url = Some(
+                    iter.next()
+                        .ok_or(ConfigError::MissingArgumentValue("--kolme-live-base-url"))?,
+                );
+            }
+            "--kolme-live-provider-hint" => {
+                kolme_live_provider_hint = Some(iter.next().ok_or(
+                    ConfigError::MissingArgumentValue("--kolme-live-provider-hint"),
+                )?);
+            }
+            "--kolme-live-signing-profile" => {
+                kolme_live_signing_profile = Some(iter.next().ok_or(
+                    ConfigError::MissingArgumentValue("--kolme-live-signing-profile"),
+                )?);
+            }
             "--output" => {
                 let value = iter
                     .next()
@@ -457,6 +516,37 @@ where
             return Err(ConfigError::MissingArgumentValue("--daemon-peer-id"));
         }
     }
+    if runtime_mode.kind == RuntimeModeKind::KolmeLive {
+        if kolme_live_base_url.is_none() {
+            return Err(ConfigError::MissingArgumentValue("--kolme-live-base-url"));
+        }
+        if kolme_live_provider_hint.is_none() {
+            return Err(ConfigError::MissingArgumentValue(
+                "--kolme-live-provider-hint",
+            ));
+        }
+        if kolme_live_signing_profile.is_none() {
+            return Err(ConfigError::MissingArgumentValue(
+                "--kolme-live-signing-profile",
+            ));
+        }
+        let provider_hint = kolme_live_provider_hint
+            .as_ref()
+            .expect("provider hint is required for kolme-live mode");
+        if provider_hint.contains(KOLME_IN_MEMORY_PROVIDER_MARKER) {
+            return Err(ConfigError::InvalidKolmeLiveProviderHint(
+                provider_hint.to_owned(),
+            ));
+        }
+        let signing_profile = kolme_live_signing_profile
+            .as_ref()
+            .expect("signing profile is required for kolme-live mode");
+        if signing_profile != KOLME_LIVE_SIGNING_PROFILE {
+            return Err(ConfigError::InvalidKolmeLiveSigningProfile(
+                signing_profile.to_owned(),
+            ));
+        }
+    }
 
     Ok(NodeCli {
         profile,
@@ -475,6 +565,9 @@ where
         daemon_tick_interval_ms,
         daemon_peer_id,
         daemon_lifecycle_events,
+        kolme_live_base_url,
+        kolme_live_provider_hint,
+        kolme_live_signing_profile,
         output_mode,
         diagnostics_mode,
     })
@@ -583,6 +676,9 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
         daemon_tick_interval_ms,
         daemon_peer_id,
         daemon_lifecycle_events,
+        kolme_live_base_url,
+        kolme_live_provider_hint,
+        kolme_live_signing_profile,
         output_mode: _,
         diagnostics_mode,
     } = cli;
@@ -596,8 +692,8 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
     };
 
     let plan = bootstrap(config)?;
-    let (planning, recovery, daemon) = match runtime_mode.kind {
-        RuntimeModeKind::Bootstrap => (None, None, None),
+    let runtime_execution = match runtime_mode.kind {
+        RuntimeModeKind::Bootstrap => RuntimeExecutionBundle::default(),
         RuntimeModeKind::Planning => {
             let expected_state_hash = expected_state_hash
                 .ok_or(ConfigError::MissingArgumentValue("--expected-state-hash"))?;
@@ -605,15 +701,14 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             let proposal_plan = planner
                 .plan(proposals)
                 .map_err(|error| ConfigError::RuntimePlanner(error.to_string()))?;
-            (
-                Some(PlanningExecution {
+            RuntimeExecutionBundle {
+                planning: Some(PlanningExecution {
                     expected_state_hash,
                     candidate_count: proposal_plan.ordered_candidates().len(),
                     scheduled_candidate_ids: proposal_plan.ordered_candidate_ids(),
                 }),
-                None,
-                None,
-            )
+                ..RuntimeExecutionBundle::default()
+            }
         }
         RuntimeModeKind::RecoveryCheck => {
             let expected_state_version = expected_state_version.ok_or(
@@ -639,16 +734,15 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                 };
                 decisions.push(decision);
             }
-            (
-                None,
-                Some(RecoveryExecution {
+            RuntimeExecutionBundle {
+                recovery: Some(RecoveryExecution {
                     expected_state_version,
                     expected_state_hash,
                     attempt_count: decisions.len(),
                     decisions,
                 }),
-                None,
-            )
+                ..RuntimeExecutionBundle::default()
+            }
         }
         RuntimeModeKind::Daemon => {
             let max_ticks =
@@ -677,10 +771,8 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                     }
                     None => (None, None, None),
                 };
-            (
-                None,
-                None,
-                Some(DaemonExecution {
+            RuntimeExecutionBundle {
+                daemon: Some(DaemonExecution {
                     max_ticks,
                     tick_interval_ms,
                     executed_ticks: max_ticks,
@@ -689,7 +781,43 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                     peer_lifecycle_final_state,
                     peer_lifecycle_applied_events,
                 }),
+                ..RuntimeExecutionBundle::default()
+            }
+        }
+        RuntimeModeKind::KolmeLive => {
+            let base_url = kolme_live_base_url
+                .ok_or(ConfigError::MissingArgumentValue("--kolme-live-base-url"))?;
+            let provider_hint = kolme_live_provider_hint.ok_or(
+                ConfigError::MissingArgumentValue("--kolme-live-provider-hint"),
+            )?;
+            let signing_profile = kolme_live_signing_profile.ok_or(
+                ConfigError::MissingArgumentValue("--kolme-live-signing-profile"),
+            )?;
+            if provider_hint.contains(KOLME_IN_MEMORY_PROVIDER_MARKER) {
+                return Err(ConfigError::InvalidKolmeLiveProviderHint(provider_hint));
+            }
+            if signing_profile != KOLME_LIVE_SIGNING_PROFILE {
+                return Err(ConfigError::InvalidKolmeLiveSigningProfile(signing_profile));
+            }
+            let transport =
+                KolmeRuntimeCommitHttpTransport::new(KOLME_LIVE_TRANSPORT_TIMEOUT_SECONDS)
+                    .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
+            let _provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
+                base_url.as_str(),
+                provider_hint.as_str(),
+                transport,
             )
+            .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
+            RuntimeExecutionBundle {
+                kolme_live: Some(KolmeLiveExecution {
+                    provider_client_contract: KOLME_LIVE_PROVIDER_CONTRACT.to_owned(),
+                    base_url,
+                    provider_hint,
+                    signing_profile,
+                    execution_status: "provider-configured".to_owned(),
+                }),
+                ..RuntimeExecutionBundle::default()
+            }
         }
     };
     let report = build_bootstrap_report(
@@ -697,9 +825,7 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
         profile,
         diagnostics_mode,
         runtime_mode,
-        planning,
-        recovery,
-        daemon,
+        runtime_execution,
     );
 
     Ok(report)
@@ -710,10 +836,14 @@ fn build_bootstrap_report(
     profile: Option<LocalProfile>,
     diagnostics_mode: DiagnosticsMode,
     runtime_mode: RuntimeMode,
-    planning: Option<PlanningExecution>,
-    recovery: Option<RecoveryExecution>,
-    daemon: Option<DaemonExecution>,
+    runtime_execution: RuntimeExecutionBundle,
 ) -> NodeBootstrapReport {
+    let RuntimeExecutionBundle {
+        planning,
+        recovery,
+        daemon,
+        kolme_live,
+    } = runtime_execution;
     let operational_profile = plan.config.operational_profile();
     let components = plan
         .wiring
@@ -749,6 +879,21 @@ fn build_bootstrap_report(
     let daemon_peer_lifecycle_applied_events = daemon
         .as_ref()
         .and_then(|daemon| daemon.peer_lifecycle_applied_events.clone());
+    let kolme_live_provider_client_contract = kolme_live
+        .as_ref()
+        .map(|execution| execution.provider_client_contract.clone());
+    let kolme_live_base_url = kolme_live
+        .as_ref()
+        .map(|execution| execution.base_url.clone());
+    let kolme_live_provider_hint = kolme_live
+        .as_ref()
+        .map(|execution| execution.provider_hint.clone());
+    let kolme_live_signing_profile = kolme_live
+        .as_ref()
+        .map(|execution| execution.signing_profile.clone());
+    let kolme_live_execution_status = kolme_live
+        .as_ref()
+        .map(|execution| execution.execution_status.clone());
     NodeBootstrapReport {
         runtime_mode: runtime_mode.as_str().to_owned(),
         diagnostics_mode: diagnostics_mode.as_str().to_owned(),
@@ -767,6 +912,11 @@ fn build_bootstrap_report(
         daemon_peer_id,
         daemon_peer_lifecycle_final_state,
         daemon_peer_lifecycle_applied_events,
+        kolme_live_provider_client_contract,
+        kolme_live_base_url,
+        kolme_live_provider_hint,
+        kolme_live_signing_profile,
+        kolme_live_execution_status,
         profile: profile.map(LocalProfile::as_str).map(str::to_owned),
         role: plan.config.role.as_str().to_owned(),
         chain_id: plan.config.chain_id.clone(),
@@ -844,8 +994,22 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         .as_ref()
         .map(|value| value.join(", "))
         .unwrap_or_else(|| "none".to_owned());
+    let kolme_live_provider_client_contract = report
+        .kolme_live_provider_client_contract
+        .as_deref()
+        .unwrap_or("none");
+    let kolme_live_base_url = report.kolme_live_base_url.as_deref().unwrap_or("none");
+    let kolme_live_provider_hint = report.kolme_live_provider_hint.as_deref().unwrap_or("none");
+    let kolme_live_signing_profile = report
+        .kolme_live_signing_profile
+        .as_deref()
+        .unwrap_or("none");
+    let kolme_live_execution_status = report
+        .kolme_live_execution_status
+        .as_deref()
+        .unwrap_or("none");
     format!(
-        "KAMN node bootstrap\n  runtime_mode: {}\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  planning_expected_state_hash: {}\n  planning_candidate_count: {}\n  planning_scheduled_candidate_ids: {}\n  recovery_expected_state_version: {}\n  recovery_expected_state_hash: {}\n  recovery_attempt_count: {}\n  recovery_decisions: {}\n  daemon_max_ticks: {}\n  daemon_tick_interval_ms: {}\n  daemon_executed_ticks: {}\n  daemon_completion_reason: {}\n  daemon_peer_id: {}\n  daemon_peer_lifecycle_final_state: {}\n  daemon_peer_lifecycle_applied_events: {}\n  components: {}",
+        "KAMN node bootstrap\n  runtime_mode: {}\n  diagnostics_mode: {}\n  profile: {}\n  role: {}\n  chain: {} ({})\n  storage: {}\n  gossip: {}\n  sync_mode: {}\n  sync_startup: {}\n  sync_recovery: {}\n  state_version: {}\n  pending_migrations: {}\n  component_count: {}\n  planning_expected_state_hash: {}\n  planning_candidate_count: {}\n  planning_scheduled_candidate_ids: {}\n  recovery_expected_state_version: {}\n  recovery_expected_state_hash: {}\n  recovery_attempt_count: {}\n  recovery_decisions: {}\n  daemon_max_ticks: {}\n  daemon_tick_interval_ms: {}\n  daemon_executed_ticks: {}\n  daemon_completion_reason: {}\n  daemon_peer_id: {}\n  daemon_peer_lifecycle_final_state: {}\n  daemon_peer_lifecycle_applied_events: {}\n  kolme_live_provider_client_contract: {}\n  kolme_live_base_url: {}\n  kolme_live_provider_hint: {}\n  kolme_live_signing_profile: {}\n  kolme_live_execution_status: {}\n  components: {}",
         report.runtime_mode,
         report.diagnostics_mode,
         profile,
@@ -878,6 +1042,11 @@ fn render_text_report(report: &NodeBootstrapReport) -> String {
         daemon_peer_id,
         daemon_peer_lifecycle_final_state,
         daemon_peer_lifecycle_applied_events,
+        kolme_live_provider_client_contract,
+        kolme_live_base_url,
+        kolme_live_provider_hint,
+        kolme_live_signing_profile,
+        kolme_live_execution_status,
         report.components.join(", "),
     )
 }
@@ -964,6 +1133,26 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         ),
         None => "null".to_owned(),
     };
+    let kolme_live_provider_client_contract = match &report.kolme_live_provider_client_contract {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
+    let kolme_live_base_url = match &report.kolme_live_base_url {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
+    let kolme_live_provider_hint = match &report.kolme_live_provider_hint {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
+    let kolme_live_signing_profile = match &report.kolme_live_signing_profile {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
+    let kolme_live_execution_status = match &report.kolme_live_execution_status {
+        Some(value) => format!("\"{}\"", json_escape(value)),
+        None => "null".to_owned(),
+    };
     let components = report
         .components
         .iter()
@@ -971,7 +1160,7 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         .collect::<Vec<String>>()
         .join(",");
     format!(
-        "{{\"runtime_mode\":\"{}\",\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"planning_expected_state_hash\":{},\"planning_candidate_count\":{},\"planning_scheduled_candidate_ids\":{},\"recovery_expected_state_version\":{},\"recovery_expected_state_hash\":{},\"recovery_attempt_count\":{},\"recovery_decisions\":{},\"daemon_max_ticks\":{},\"daemon_tick_interval_ms\":{},\"daemon_executed_ticks\":{},\"daemon_completion_reason\":{},\"daemon_peer_id\":{},\"daemon_peer_lifecycle_final_state\":{},\"daemon_peer_lifecycle_applied_events\":{},\"components\":[{}]}}",
+        "{{\"runtime_mode\":\"{}\",\"diagnostics_mode\":\"{}\",\"profile\":{},\"role\":\"{}\",\"chain_id\":\"{}\",\"chain_version\":\"{}\",\"storage_dir\":\"{}\",\"gossip_enabled\":{},\"sync_mode\":\"{}\",\"sync_startup\":\"{}\",\"sync_recovery\":\"{}\",\"state_version\":{},\"pending_migrations\":{},\"component_count\":{},\"planning_expected_state_hash\":{},\"planning_candidate_count\":{},\"planning_scheduled_candidate_ids\":{},\"recovery_expected_state_version\":{},\"recovery_expected_state_hash\":{},\"recovery_attempt_count\":{},\"recovery_decisions\":{},\"daemon_max_ticks\":{},\"daemon_tick_interval_ms\":{},\"daemon_executed_ticks\":{},\"daemon_completion_reason\":{},\"daemon_peer_id\":{},\"daemon_peer_lifecycle_final_state\":{},\"daemon_peer_lifecycle_applied_events\":{},\"kolme_live_provider_client_contract\":{},\"kolme_live_base_url\":{},\"kolme_live_provider_hint\":{},\"kolme_live_signing_profile\":{},\"kolme_live_execution_status\":{},\"components\":[{}]}}",
         json_escape(&report.runtime_mode),
         json_escape(&report.diagnostics_mode),
         profile,
@@ -1000,6 +1189,11 @@ fn render_json_report(report: &NodeBootstrapReport) -> String {
         daemon_peer_id,
         daemon_peer_lifecycle_final_state,
         daemon_peer_lifecycle_applied_events,
+        kolme_live_provider_client_contract,
+        kolme_live_base_url,
+        kolme_live_provider_hint,
+        kolme_live_signing_profile,
+        kolme_live_execution_status,
         components,
     )
 }
@@ -1025,7 +1219,7 @@ fn main() -> ExitCode {
 mod tests {
     use super::{
         build_bootstrap_report, execute, parse_args, render_bootstrap_report, DiagnosticsMode,
-        LocalProfile, NodeBootstrapReport, OutputMode, RuntimeMode,
+        LocalProfile, NodeBootstrapReport, OutputMode, RuntimeExecutionBundle, RuntimeMode,
     };
     use kamn_core::{bootstrap, ConfigError, NodeConfig, NodeRole, SyncMode};
 
@@ -1054,6 +1248,9 @@ mod tests {
         assert_eq!(parsed.daemon_tick_interval_ms, None);
         assert_eq!(parsed.daemon_peer_id, None);
         assert!(parsed.daemon_lifecycle_events.is_empty());
+        assert_eq!(parsed.kolme_live_base_url, None);
+        assert_eq!(parsed.kolme_live_provider_hint, None);
+        assert_eq!(parsed.kolme_live_signing_profile, None);
         assert_eq!(parsed.output_mode, OutputMode::text());
         assert_eq!(parsed.diagnostics_mode, DiagnosticsMode::basic());
     }
@@ -1189,6 +1386,38 @@ mod tests {
     }
 
     #[test]
+    fn parses_runtime_mode_kolme_live_with_required_flags() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            "http://127.0.0.1:3000".to_owned(),
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+        ];
+
+        let parsed = parse_args(args).expect("kolme-live args should parse");
+        assert_eq!(parsed.runtime_mode.as_str(), "kolme-live");
+        assert_eq!(
+            parsed.kolme_live_base_url,
+            Some("http://127.0.0.1:3000".to_owned())
+        );
+        assert_eq!(
+            parsed.kolme_live_provider_hint,
+            Some("kolme-fork-local".to_owned())
+        );
+        assert_eq!(
+            parsed.kolme_live_signing_profile,
+            Some("kolme-fork-secp256k1-v1".to_owned())
+        );
+    }
+
+    #[test]
     fn parses_local_listener_profile_defaults() {
         let args = vec![
             "kamn-node".to_owned(),
@@ -1249,6 +1478,11 @@ mod tests {
             daemon_peer_id: None,
             daemon_peer_lifecycle_final_state: None,
             daemon_peer_lifecycle_applied_events: None,
+            kolme_live_provider_client_contract: None,
+            kolme_live_base_url: None,
+            kolme_live_provider_hint: None,
+            kolme_live_signing_profile: None,
+            kolme_live_execution_status: None,
             profile: None,
             role: "processor".to_owned(),
             chain_id: "kamn-devnet".to_owned(),
@@ -1294,9 +1528,7 @@ mod tests {
             parsed.profile,
             parsed.diagnostics_mode,
             RuntimeMode::bootstrap(),
-            None,
-            None,
-            None,
+            RuntimeExecutionBundle::default(),
         );
         let rendered = render_bootstrap_report(&report, parsed.output_mode);
 
@@ -1332,9 +1564,7 @@ mod tests {
             parsed.profile,
             parsed.diagnostics_mode,
             RuntimeMode::bootstrap(),
-            None,
-            None,
-            None,
+            RuntimeExecutionBundle::default(),
         );
         let rendered = render_bootstrap_report(&report, parsed.output_mode);
 
@@ -1371,9 +1601,7 @@ mod tests {
             parsed.profile,
             parsed.diagnostics_mode,
             RuntimeMode::bootstrap(),
-            None,
-            None,
-            None,
+            RuntimeExecutionBundle::default(),
         );
         let rendered = render_bootstrap_report(&report, parsed.output_mode);
 
@@ -1476,6 +1704,34 @@ mod tests {
                 "\"daemon_peer_lifecycle_applied_events\":[\"start-connect\",\"handshake-succeeded\",\"heartbeat-missed\",\"heartbeat-restored\"]"
             )
         );
+    }
+
+    #[test]
+    fn integration_runtime_kolme_live_renders_provider_contract_markers() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            "http://127.0.0.1:3000".to_owned(),
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+
+        let parsed = parse_args(args).expect("kolme-live args should parse");
+        let report = execute(parsed).expect("kolme-live execution should succeed");
+        let rendered = render_bootstrap_report(&report, OutputMode::json());
+        assert!(rendered.contains("\"runtime_mode\":\"kolme-live\""));
+        assert!(rendered.contains(
+            "\"kolme_live_provider_client_contract\":\"KolmeRuntimeCommitLiveProvider\""
+        ));
+        assert!(rendered.contains("\"kolme_live_signing_profile\":\"kolme-fork-secp256k1-v1\""));
     }
 
     #[test]
@@ -1612,6 +1868,113 @@ mod tests {
             parse_args(args),
             Err(ConfigError::MissingArgumentValue(
                 "--daemon-tick-interval-ms"
+            ))
+        );
+    }
+
+    #[test]
+    fn rejects_kolme_live_without_base_url() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::MissingArgumentValue("--kolme-live-base-url"))
+        );
+    }
+
+    #[test]
+    fn rejects_kolme_live_without_provider_hint() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            "http://127.0.0.1:3000".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::MissingArgumentValue(
+                "--kolme-live-provider-hint"
+            ))
+        );
+    }
+
+    #[test]
+    fn rejects_kolme_live_without_signing_profile() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            "http://127.0.0.1:3000".to_owned(),
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::MissingArgumentValue(
+                "--kolme-live-signing-profile"
+            ))
+        );
+    }
+
+    #[test]
+    fn rejects_kolme_live_with_invalid_signing_profile() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            "http://127.0.0.1:3000".to_owned(),
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "synthetic-signing-profile".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::InvalidKolmeLiveSigningProfile(
+                "synthetic-signing-profile".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn rejects_kolme_live_with_in_memory_provider_hint_marker() {
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            "http://127.0.0.1:3000".to_owned(),
+            "--kolme-live-provider-hint".to_owned(),
+            "InMemoryKolmeRuntimeCommitClient".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            Err(ConfigError::InvalidKolmeLiveProviderHint(
+                "InMemoryKolmeRuntimeCommitClient".to_owned()
             ))
         );
     }

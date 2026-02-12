@@ -215,6 +215,13 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
 - Local-only heavy execution remains opt-in and bounded:
   - all non-dry-run orchestration lanes require `KAMN_KOLME_LOCAL_HEAVY=1`.
   - CI fast-gate remains dry-run/contract focused; local run-mode is intentionally opt-in to control cost.
+- `kamn-node` live-provider runtime profile (CI-safe configuration validation):
+  - `cargo run -p kamn-node -- --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1 --output json`
+  - expected deterministic report markers:
+    - `kolme_live_provider_client_contract=KolmeRuntimeCommitLiveProvider`
+    - `kolme_live_signing_profile=kolme-fork-secp256k1-v1`
+    - `kolme_live_execution_status=provider-configured`
+  - in-memory fallback markers and non-fork signing profiles are rejected fail-closed by typed node config errors.
 - Runtime live lane (submit + optional finality):
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --base-url http://127.0.0.1:3000 --provider-hint kolme-fork-local --max-seconds 90 --preflight-max-seconds 10 --finality-command "printf 'finality=final\n'" --finality-max-seconds 15 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt --finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt`
   - `bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json`
@@ -265,6 +272,7 @@ cargo test -p kamn-core
 - direct signed transaction required-field validation drift remains fail-closed (`Regression: #1519`).
 - local live-node provider smoke preflight and ignored-test dispatch remain fail-closed (`Regression: #1829`).
 - local runtime-commit live evidence policy markers for `KolmeRuntimeCommitLiveProvider` path remain fail-closed (`Regression: #2095`).
+- `kamn-node` kolme-live runtime profile guardrails reject in-memory provider-hint fallback and invalid signing-profile drift (`Regression: #2175`).
 - local runtime-commit submit/finality evidence marker policy and contract lane parity remain fail-closed (`Regression: #2099`).
 - local KAMN live runtime integration runtime-step contract composition remains fail-closed for missing runtime policy evidence artifacts (`Regression: #2101`).
 - typed nonce/broadcast HTTP helper mapping drift remains fail-closed (`Regression: #1533`).
