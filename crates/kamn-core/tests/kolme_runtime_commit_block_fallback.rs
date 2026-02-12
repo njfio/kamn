@@ -180,6 +180,41 @@ fn functional_block_fallback_reconciles_final_receipt_from_block_lookup() {
 }
 
 #[test]
+fn regression_issue_1922_block_fallback_constructor_normalization_delegates_to_contract() {
+    // Regression: #1922
+    let responses = vec![Ok(
+        "{\"provider\":\"kolme-fork-local\",\"block_height\":42,\"tx_hashes\":\"ab12cd34\"}"
+            .to_owned(),
+    )];
+    let (transport, calls) = RecordingBlockLookupTransport::with_responses(responses);
+    let mut reconciler = KolmeRuntimeCommitBlockFallbackReconciler::new(
+        "  http://127.0.0.1:3030  ",
+        "  /block/{height}  ",
+        "  kolme-fork-local  ",
+        2,
+        transport,
+    )
+    .expect("reconciler should build");
+
+    let receipt = reconciler
+        .reconcile_txhash("ab12cd34", 42, 42)
+        .expect("fallback should reconcile with normalized constructor inputs");
+    assert_eq!(receipt.provider, "kolme-fork-local");
+    assert_eq!(receipt.commit_id, "kolme-commit:ab12cd34:h42");
+    assert_eq!(receipt.finality, KolmeCommitReceiptFinality::Final);
+
+    let observed_calls = calls.borrow();
+    assert_eq!(
+        observed_calls[0],
+        (
+            "http://127.0.0.1:3030".to_owned(),
+            "/block/{height}".to_owned(),
+            42
+        )
+    );
+}
+
+#[test]
 fn functional_block_fallback_reconciles_failed_receipt_from_block_lookup() {
     let responses = vec![Ok(
         "{\"provider\":\"kolme-fork-local\",\"block_height\":50,\"failed_tx_hashes\":\"ab12cd34\"}"

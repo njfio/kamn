@@ -128,6 +128,19 @@ pub fn is_valid_block_fallback_provider_input(provider: &str) -> bool {
     !provider.trim().is_empty()
 }
 
+/// Normalizes block-fallback reconciler constructor inputs.
+pub fn normalize_block_fallback_constructor_inputs(
+    base_url: &str,
+    block_path_template: &str,
+    provider: &str,
+) -> (String, String, String) {
+    (
+        base_url.trim().to_owned(),
+        block_path_template.trim().to_owned(),
+        provider.trim().to_owned(),
+    )
+}
+
 /// Validates block-fallback reconciler lookup budget input.
 pub fn is_valid_block_fallback_lookup_budget(max_block_lookups: u64) -> bool {
     max_block_lookups > 0

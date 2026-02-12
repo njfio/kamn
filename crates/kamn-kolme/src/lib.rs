@@ -33,9 +33,10 @@ pub use api_codec::{
 };
 pub use block_fallback_policy::{
     is_valid_block_fallback_base_url_input, is_valid_block_fallback_lookup_budget,
-    is_valid_block_fallback_provider_input, parse_block_fallback_response,
-    parse_fork_block_fallback_response, parse_provider_block_fallback_response,
-    KolmeBlockFallbackPolicyError, KolmeBlockFallbackResponse,
+    is_valid_block_fallback_provider_input, normalize_block_fallback_constructor_inputs,
+    parse_block_fallback_response, parse_fork_block_fallback_response,
+    parse_provider_block_fallback_response, KolmeBlockFallbackPolicyError,
+    KolmeBlockFallbackResponse,
 };
 pub use block_scan_policy::{
     compose_block_fallback_unresolved_reason, is_valid_block_lookup_height,
