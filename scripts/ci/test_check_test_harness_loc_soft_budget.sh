@@ -55,6 +55,10 @@ if ! printf '%s\n' "$within_output" | grep -q '^review_required=false$'; then
   echo "expected review_required=false for within-budget soft checker path" >&2
   exit 1
 fi
+if ! printf '%s\n' "$within_output" | grep -q '^reason_codes=none$'; then
+  echo "expected reason_codes=none for within-budget soft checker path" >&2
+  exit 1
+fi
 
 if ! printf '%s\n' "$within_output" | grep -q '^delta_harness_script_count=2$'; then
   echo "expected deterministic script-count delta for within-budget soft checker path" >&2
@@ -100,6 +104,10 @@ if ! printf '%s\n' "$exceeded_output" | grep -q '^exceeded_metrics=harness_scrip
   echo "expected exceeded metrics marker for soft-budget exceed advisory path" >&2
   exit 1
 fi
+if ! printf '%s\n' "$exceeded_output" | grep -q '^reason_codes=harness_script_count_soft_max_exceeded,harness_shell_line_total_soft_max_exceeded$'; then
+  echo "expected deterministic reason_codes marker for soft-budget exceed advisory path" >&2
+  exit 1
+fi
 
 BROKEN_REPORT="$TMP_DIR/broken-report.json"
 cat >"$BROKEN_REPORT" <<'EOF_REPORT'
@@ -127,6 +135,10 @@ fi
 
 if ! printf '%s\n' "$broken_output" | grep -q '^error=unexpected report schema:'; then
   echo "expected explicit schema error marker for invalid report path" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$broken_output" | grep -q '^reason_codes=report_schema_mismatch$'; then
+  echo "expected deterministic reason_codes marker for invalid report schema path" >&2
   exit 1
 fi
 

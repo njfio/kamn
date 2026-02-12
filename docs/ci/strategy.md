@@ -484,6 +484,15 @@ Fast-mode CI tooling regression coverage includes:
 - Script duplication/surface budget checker (`test_check_script_duplication_budget.sh`)
 - Test-harness LOC report generator (`test_generate_test_harness_loc_report.sh`)
 - Test-harness LOC soft-budget checker (`test_check_test_harness_loc_soft_budget.sh`)
+- Kolme test-harness LOC soft-budget checker (`test_check_kolme_test_harness_loc_soft_budget.sh`)
+  - report command:
+    - `bash scripts/ci/generate_kolme_test_harness_loc_report.sh --output-json /tmp/kolme-test-harness-loc-report.json`
+  - policy command:
+    - `bash scripts/ci/check_kolme_test_harness_loc_soft_budget.sh --report-file /tmp/kolme-test-harness-loc-report.json --output-json /tmp/kolme-test-harness-loc-soft-budget-report.json`
+  - deterministic reason-code surface:
+    - `reason_codes=none` (within soft budget)
+    - `reason_codes=harness_script_count_soft_max_exceeded`
+    - `reason_codes=harness_shell_line_total_soft_max_exceeded`
 - Retry helper (`test_run_with_retry.sh`)
 - Invariant harness runner (`test_run_invariant_harness.sh`)
 - Selector matrix runner with output-env isolation (`test_select_targets.sh`, `Regression: #463`)
