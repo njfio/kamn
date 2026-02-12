@@ -27,6 +27,8 @@ default development loop green while tightening missing-doc policy controls for
   - `python3 scripts/ci/missing_docs_velocity_guard.py check --report-file /tmp/kamn-core-missing-docs-throughput-report.json --baseline-file fixtures/ci/kamn_core_missing_docs_velocity_baseline.json --threshold-file .ci/kamn-core-missing-docs-velocity-thresholds.json --output-json /tmp/kamn-core-missing-docs-velocity-policy.json`
 - Missing-doc velocity guard contract tests:
   - `bash scripts/ci/test_missing_docs_velocity_guard_contract.sh`
+- Missing-doc first-batch graduation report contract tests:
+  - `bash scripts/ci/test_missing_docs_graduation_batch_report_contract.sh`
 - Bounded rustdoc generation command (kamn-core only):
   - `RUSTDOCFLAGS="-D warnings" cargo doc -p kamn-core --no-deps`
 - Rustdoc artifact contract lane and policy checker:
@@ -63,6 +65,8 @@ default development loop green while tightening missing-doc policy controls for
   - `docs/architecture/kamn-core-module-map.md`
   - `docs/architecture/kamn-core-module-map.md#contributor-entrypoint-matrix`
   - `docs/developer/rustdoc-publishing.md`
+- First-batch graduation evidence report is required:
+  - `docs/planning/issues/missing-docs-first-batch-graduation-report.md`
 
 ## Missing-Docs Throughput Report Contract
 
@@ -114,6 +118,7 @@ default development loop green while tightening missing-doc policy controls for
   - `scripts/ci/test_missing_docs_throughput_report_contract.sh`
   - `scripts/ci/missing_docs_velocity_guard.py`
   - `scripts/ci/test_missing_docs_velocity_guard_contract.sh`
+  - `scripts/ci/test_missing_docs_graduation_batch_report_contract.sh`
   - `scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh`
   - `scripts/ci/test_run_kamn_core_rustdoc_artifact_contract_lane.sh`
   - `scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh`
@@ -149,6 +154,7 @@ default development loop green while tightening missing-doc policy controls for
   - `docs/developer/rustdoc-publishing.md`
   - `docs/testing/invariant-and-fuzz-strategy.md`
   - `docs/planning/engineering-hardening-wave.md`
+  - `docs/planning/issues/missing-docs-first-batch-graduation-report.md`
   - `docs/planning/issues/missing-docs-velocity-cadence.md`
   - `README.md`
 - Selector lock for framework helper migration:
@@ -163,6 +169,8 @@ default development loop green while tightening missing-doc policy controls for
 
 - `Regression: #896` — protect against missing-doc policy drift and undocumented
   checker/documentation command changes.
+- `Regression: #2126` — protect first-batch missing-docs graduation report
+  markers from silent drift.
 - `Regression: #2127` — enforce deterministic docs-graduation velocity
   thresholds and fail closed on stagnation/config drift.
 - `Regression: #1526` — keep bounded lifecycle evidence property matrices

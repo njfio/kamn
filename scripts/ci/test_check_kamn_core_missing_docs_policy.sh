@@ -16,6 +16,7 @@ RUSTDOC_GUIDE_FIXTURE="$TMP_DIR/rustdoc-publishing.md"
 VELOCITY_BASELINE_FIXTURE="$TMP_DIR/missing-docs-velocity-baseline.json"
 VELOCITY_THRESHOLD_FIXTURE="$TMP_DIR/missing-docs-velocity-thresholds.json"
 VELOCITY_CADENCE_DOC_FIXTURE="$TMP_DIR/missing-docs-velocity-cadence.md"
+GRADUATION_BATCH_REPORT_FIXTURE="$TMP_DIR/missing-docs-first-batch-graduation-report.md"
 
 run_checker() {
   KAMN_CORE_LIB_PATH="$CORE_LIB_FIXTURE" \
@@ -28,6 +29,7 @@ run_checker() {
   KAMN_MISSING_DOCS_VELOCITY_BASELINE_PATH="$VELOCITY_BASELINE_FIXTURE" \
   KAMN_MISSING_DOCS_VELOCITY_THRESHOLD_PATH="$VELOCITY_THRESHOLD_FIXTURE" \
   KAMN_MISSING_DOCS_VELOCITY_CADENCE_DOC_PATH="$VELOCITY_CADENCE_DOC_FIXTURE" \
+  KAMN_MISSING_DOCS_GRADUATION_BATCH_REPORT_PATH="$GRADUATION_BATCH_REPORT_FIXTURE" \
     bash "$SCRIPT"
 }
 
@@ -42,6 +44,7 @@ reset_fixtures() {
   cp "$ROOT_DIR/fixtures/ci/kamn_core_missing_docs_velocity_baseline.json" "$VELOCITY_BASELINE_FIXTURE"
   cp "$ROOT_DIR/.ci/kamn-core-missing-docs-velocity-thresholds.json" "$VELOCITY_THRESHOLD_FIXTURE"
   cp "$ROOT_DIR/docs/planning/issues/missing-docs-velocity-cadence.md" "$VELOCITY_CADENCE_DOC_FIXTURE"
+  cp "$ROOT_DIR/docs/planning/issues/missing-docs-first-batch-graduation-report.md" "$GRADUATION_BATCH_REPORT_FIXTURE"
 }
 
 expect_failure() {
@@ -97,6 +100,10 @@ expect_failure "README rustdoc link drift should fail"
 reset_fixtures
 sed -i '/Regression: #2127/d' "$VELOCITY_CADENCE_DOC_FIXTURE"
 expect_failure "velocity cadence regression marker drift should fail"
+
+reset_fixtures
+sed -i '/batch_id: first-three-modules-v1/d' "$GRADUATION_BATCH_REPORT_FIXTURE"
+expect_failure "graduation batch report marker drift should fail"
 
 reset_fixtures
 python3 - "$VELOCITY_BASELINE_FIXTURE" <<'PY'

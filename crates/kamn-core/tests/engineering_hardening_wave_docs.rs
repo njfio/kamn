@@ -28,9 +28,14 @@ fn engineering_hardening_wave_doc_declares_missing_docs_policy_contract() {
         .contains("kamn.ci.kamn-core-missing-docs-throughput-report.v1"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("missing_docs_velocity_guard.py"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC
+        .contains("test_missing_docs_graduation_batch_report_contract.sh"));
+    assert!(ENGINEERING_HARDENING_WAVE_DOC
         .contains("kamn.ci.kamn-core-missing-docs-velocity-policy.v1"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC
         .contains("docs/planning/issues/missing-docs-velocity-cadence.md"));
+    assert!(ENGINEERING_HARDENING_WAVE_DOC
+        .contains("docs/planning/issues/missing-docs-first-batch-graduation-report.md"));
+    assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("Regression: #2126"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("Regression: #1526"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("Regression: #1527"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("Regression: #2127"));
