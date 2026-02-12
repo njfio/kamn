@@ -170,7 +170,7 @@ def main() -> int:
             "run",
             "--skip-preflight",
             "--live-command",
-            "printf 'status=submitted\\nintegration_kolme_fork_live_node_submit_reaches_endpoint\\n'",
+            "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\\nintegration_kolme_fork_live_node_submit_reaches_endpoint\\n'",
             "--finality-command",
             "printf 'finality=final\\n'",
             "--max-seconds",
