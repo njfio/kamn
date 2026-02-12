@@ -196,7 +196,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `python3 scripts/kolme/check_local_kolme_fork_bootstrap_readiness_policy.py --report-file /tmp/kolme-local-fork-bootstrap-readiness-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json`
     - `bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_contract_lane.sh --output-json /tmp/kolme-local-fork-bootstrap-readiness-summary.json --policy-output-json /tmp/kolme-local-fork-bootstrap-readiness-policy.json`
   - local KAMN live runtime integration run-mode commands remain excluded from ci-fast-gate.
-    - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 210 --bootstrap-max-seconds 90 --conformance-max-seconds 180 --runtime-commit-max-seconds 30 --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
+    - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 210 --bootstrap-max-seconds 90 --conformance-max-seconds 180 --runtime-commit-max-seconds 30 --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
+    - nested runtime step composes through `run_local_runtime_commit_live_finality_evidence_contract_lane.sh` and captures runtime policy artifacts.
     - `python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
     - `bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
   - local fork process lifecycle integration run-mode commands remain excluded from ci-fast-gate.
@@ -315,6 +316,7 @@ Regression policy:
 - local live API conformance harness run-mode exclusion parity remains fail-closed (`Regression: #1483`).
 - local fork bootstrap/readiness run-mode exclusion parity remains fail-closed (`Regression: #1488`).
 - local KAMN live runtime integration run-mode exclusion parity remains fail-closed (`Regression: #1489`).
+- local KAMN live runtime integration runtime-step contract-lane composition and runtime policy artifact parity remain fail-closed (`Regression: #2101`).
 - local fork process lifecycle integration run-mode exclusion parity remains fail-closed (`Regression: #1494`).
 - local runtime-commit live run-mode exclusion parity remains fail-closed (`Regression: #1451`).
 - local runtime-commit live preflight health-probe and default live-provider ignored-test dispatch parity remains fail-closed (`Regression: #1829`).

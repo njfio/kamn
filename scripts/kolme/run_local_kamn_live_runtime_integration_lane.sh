@@ -6,6 +6,7 @@ BOOTSTRAP_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_bootstrap_readine
 CONFORMANCE_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_api_conformance_harness.sh"
 LOCALHOST_SIGNED_INTEGRATION_RUNNER="$ROOT_DIR/scripts/sdk/run_localhost_signed_integration_contract_lane.sh"
 RUNTIME_COMMIT_LIVE_LANE_RUNNER="$ROOT_DIR/scripts/kolme/run_local_runtime_commit_live_lane.sh"
+RUNTIME_COMMIT_LIVE_CONTRACT_LANE_RUNNER="$ROOT_DIR/scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 
 MODE="dry-run"
@@ -15,6 +16,7 @@ CONFORMANCE_REPORT="/tmp/kolme-local-live-api-conformance-summary.json"
 LOCALHOST_SIGNED_REPORT="/tmp/localhost-signed-integration-contract-report.json"
 RUNTIME_COMMIT_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-endpoint-output.txt"
 RUNTIME_COMMIT_LIVE_SUMMARY="/tmp/kolme-local-runtime-commit-live-summary.json"
+RUNTIME_COMMIT_LIVE_POLICY_REPORT="/tmp/kolme-local-runtime-commit-live-policy.json"
 RUNTIME_COMMIT_FINALITY_COMMAND=""
 RUNTIME_COMMIT_FINALITY_MAX_SECONDS=15
 RUNTIME_COMMIT_FINALITY_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-live-finality-output.txt"
@@ -90,6 +92,14 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       RUNTIME_COMMIT_LIVE_SUMMARY="$2"
+      shift 2
+      ;;
+    --runtime-commit-live-policy-report)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --runtime-commit-live-policy-report" >&2
+        exit 1
+      fi
+      RUNTIME_COMMIT_LIVE_POLICY_REPORT="$2"
       shift 2
       ;;
     --runtime-commit-finality-command)
@@ -216,6 +226,8 @@ Options:
   --localhost-signed-report <path>      Output path for localhost signed integration summary.
   --runtime-commit-output-file <path>   Captured stdout/stderr for runtime-commit endpoint command.
   --runtime-commit-live-summary <path>  Summary report output path for nested runtime-commit live lane runner.
+  --runtime-commit-live-policy-report <path>
+                                      Policy report output path for nested runtime-commit live evidence checks.
   --runtime-commit-finality-command <command>
                                       Optional finality command passed through to nested runtime-commit live lane.
   --runtime-commit-finality-max-seconds <n>
@@ -285,17 +297,26 @@ if [ ! -x "$RUNTIME_COMMIT_LIVE_LANE_RUNNER" ]; then
   exit 1
 fi
 
+if [ ! -x "$RUNTIME_COMMIT_LIVE_CONTRACT_LANE_RUNNER" ]; then
+  echo "expected local runtime commit live finality evidence contract lane runner to be executable" >&2
+  exit 1
+fi
+
 if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   echo "expected shared local-heavy opt-in guard helper to be executable" >&2
   exit 1
 fi
 
-default_runtime_commit_command="KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --base-url $(shell_escape "${BASE_URL}") --provider-hint kolme-fork-local --max-seconds ${RUNTIME_COMMIT_MAX_SECONDS} --preflight-max-seconds 10 --output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_SUMMARY}") --live-output-file $(shell_escape "${RUNTIME_COMMIT_OUTPUT_FILE}")"
-if [ -n "$RUNTIME_COMMIT_FINALITY_COMMAND" ]; then
-  default_runtime_commit_command="${default_runtime_commit_command} --finality-command $(shell_escape "${RUNTIME_COMMIT_FINALITY_COMMAND}") --finality-max-seconds ${RUNTIME_COMMIT_FINALITY_MAX_SECONDS} --finality-output-file $(shell_escape "${RUNTIME_COMMIT_FINALITY_OUTPUT_FILE}")"
+default_runtime_commit_live_submit_command="KAMN_KOLME_LIVE_BASE_URL=$(shell_escape "${BASE_URL}") KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\n'"
+effective_runtime_commit_finality_command="$RUNTIME_COMMIT_FINALITY_COMMAND"
+if [ -z "$effective_runtime_commit_finality_command" ]; then
+  effective_runtime_commit_finality_command="printf 'finality=final\\n'"
 fi
+
+default_runtime_commit_command="KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_SUMMARY}") --policy-output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_POLICY_REPORT}") --live-output-file $(shell_escape "${RUNTIME_COMMIT_OUTPUT_FILE}") --finality-output-file $(shell_escape "${RUNTIME_COMMIT_FINALITY_OUTPUT_FILE}") --max-seconds ${RUNTIME_COMMIT_MAX_SECONDS} --live-command $(shell_escape "${default_runtime_commit_live_submit_command}") --finality-command $(shell_escape "${effective_runtime_commit_finality_command}") --finality-max-seconds ${RUNTIME_COMMIT_FINALITY_MAX_SECONDS}"
 if [ -z "$RUNTIME_COMMIT_COMMAND" ]; then
   RUNTIME_COMMIT_COMMAND="$default_runtime_commit_command"
+  RUNTIME_COMMIT_FINALITY_COMMAND="$effective_runtime_commit_finality_command"
 fi
 
 CHECK_FILE="$(mktemp)"
@@ -337,10 +358,39 @@ else:
 PY
 }
 
+read_policy_final_decision() {
+  local report_file="$1"
+  python3 - "$report_file" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+if not path.exists():
+    print("report_missing")
+    raise SystemExit(0)
+
+try:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+except json.JSONDecodeError:
+    print("report_invalid_json")
+    raise SystemExit(0)
+
+value = payload.get("final_decision")
+if isinstance(value, str) and value.strip():
+    print(value)
+else:
+    print("final_decision_missing")
+PY
+}
+
 bootstrap_command="bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh --mode run --checkout-path ${CHECKOUT_PATH} --expected-remote-url ${EXPECTED_REMOTE_URL} --expected-ref ${EXPECTED_REF} --base-url ${BASE_URL} --fork-chain-version ${FORK_CHAIN_VERSION} --max-seconds ${BOOTSTRAP_MAX_SECONDS} --probe-max-seconds 20 --output-json ${BOOTSTRAP_REPORT}"
 localhost_signed_command="bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json ${LOCALHOST_SIGNED_REPORT}"
 conformance_command="bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run --base-url ${BASE_URL} --fork-chain-version ${FORK_CHAIN_VERSION} --max-seconds ${CONFORMANCE_MAX_SECONDS} --probe-max-seconds 30 --native-max-seconds 120 --output-json ${CONFORMANCE_REPORT}"
 runtime_commit_command="$RUNTIME_COMMIT_COMMAND"
+runtime_commit_policy_command="python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file ${RUNTIME_COMMIT_LIVE_SUMMARY} --expected-final-decision GO --ci-fast-gate PASS --output-json ${RUNTIME_COMMIT_LIVE_POLICY_REPORT}"
 
 overall_status="ok"
 reason_code="dry_run_no_commands_executed"
@@ -350,11 +400,13 @@ bootstrap_reason_code="not_run"
 localhost_signed_reason_code="not_run"
 conformance_reason_code="not_run"
 runtime_commit_reason_code="not_run"
+runtime_commit_policy_reason_code="not_run"
 
 record_check "bootstrap_readiness" "$bootstrap_command" "planned" "not_run"
 record_check "localhost_signed_integration" "$localhost_signed_command" "planned" "not_run"
 record_check "live_api_conformance" "$conformance_command" "planned" "not_run"
 record_check "runtime_commit_endpoint" "$runtime_commit_command" "planned" "not_run"
+record_check "runtime_commit_policy" "$runtime_commit_policy_command" "planned" "not_run"
 
 if [ "$MODE" = "run" ]; then
   : >"$CHECK_FILE"
@@ -365,12 +417,14 @@ if [ "$MODE" = "run" ]; then
     record_check "localhost_signed_integration" "$localhost_signed_command" "skipped" "local_opt_in_missing"
     record_check "live_api_conformance" "$conformance_command" "skipped" "local_opt_in_missing"
     record_check "runtime_commit_endpoint" "$runtime_commit_command" "skipped" "local_opt_in_missing"
+    record_check "runtime_commit_policy" "$runtime_commit_policy_command" "skipped" "local_opt_in_missing"
     overall_status="fail"
     reason_code="local_opt_in_missing"
     bootstrap_reason_code="local_opt_in_missing"
     localhost_signed_reason_code="local_opt_in_missing"
     conformance_reason_code="local_opt_in_missing"
     runtime_commit_reason_code="local_opt_in_missing"
+    runtime_commit_policy_reason_code="local_opt_in_missing"
   else
     if KAMN_KOLME_LOCAL_HEAVY=1 bash "$BOOTSTRAP_RUNNER" \
       --mode run \
@@ -390,11 +444,13 @@ if [ "$MODE" = "run" ]; then
       record_check "localhost_signed_integration" "$localhost_signed_command" "skipped" "bootstrap_readiness_failed"
       record_check "live_api_conformance" "$conformance_command" "skipped" "bootstrap_readiness_failed"
       record_check "runtime_commit_endpoint" "$runtime_commit_command" "skipped" "bootstrap_readiness_failed"
+      record_check "runtime_commit_policy" "$runtime_commit_policy_command" "skipped" "bootstrap_readiness_failed"
       overall_status="fail"
       reason_code="bootstrap_readiness_failed"
       localhost_signed_reason_code="bootstrap_readiness_failed"
       conformance_reason_code="bootstrap_readiness_failed"
       runtime_commit_reason_code="bootstrap_readiness_failed"
+      runtime_commit_policy_reason_code="bootstrap_readiness_failed"
     fi
 
     if [ "$overall_status" = "ok" ]; then
@@ -411,20 +467,24 @@ if [ "$MODE" = "run" ]; then
         record_check "localhost_signed_integration" "$localhost_signed_command" "fail" "localhost_signed_integration_timeout"
         record_check "live_api_conformance" "$conformance_command" "skipped" "localhost_signed_integration_failed"
         record_check "runtime_commit_endpoint" "$runtime_commit_command" "skipped" "localhost_signed_integration_failed"
+        record_check "runtime_commit_policy" "$runtime_commit_policy_command" "skipped" "localhost_signed_integration_failed"
         overall_status="fail"
         reason_code="localhost_signed_integration_failed"
         localhost_signed_reason_code="localhost_signed_integration_timeout"
         conformance_reason_code="localhost_signed_integration_failed"
         runtime_commit_reason_code="localhost_signed_integration_failed"
+        runtime_commit_policy_reason_code="localhost_signed_integration_failed"
       else
         record_check "localhost_signed_integration" "$localhost_signed_command" "fail" "localhost_signed_integration_failed"
         record_check "live_api_conformance" "$conformance_command" "skipped" "localhost_signed_integration_failed"
         record_check "runtime_commit_endpoint" "$runtime_commit_command" "skipped" "localhost_signed_integration_failed"
+        record_check "runtime_commit_policy" "$runtime_commit_policy_command" "skipped" "localhost_signed_integration_failed"
         overall_status="fail"
         reason_code="localhost_signed_integration_failed"
         localhost_signed_reason_code="localhost_signed_integration_failed"
         conformance_reason_code="localhost_signed_integration_failed"
         runtime_commit_reason_code="localhost_signed_integration_failed"
+        runtime_commit_policy_reason_code="localhost_signed_integration_failed"
       fi
     fi
 
@@ -443,9 +503,11 @@ if [ "$MODE" = "run" ]; then
         conformance_reason_code="$(read_report_reason_code "$CONFORMANCE_REPORT")"
         record_check "live_api_conformance" "$conformance_command" "fail" "$conformance_reason_code"
         record_check "runtime_commit_endpoint" "$runtime_commit_command" "skipped" "live_api_conformance_failed"
+        record_check "runtime_commit_policy" "$runtime_commit_policy_command" "skipped" "live_api_conformance_failed"
         overall_status="fail"
         reason_code="live_api_conformance_failed"
         runtime_commit_reason_code="live_api_conformance_failed"
+        runtime_commit_policy_reason_code="live_api_conformance_failed"
       fi
     fi
 
@@ -459,16 +521,31 @@ if [ "$MODE" = "run" ]; then
 
       if [ "$runtime_commit_exit_code" -eq 0 ]; then
         record_check "runtime_commit_endpoint" "$runtime_commit_command" "pass" "runtime_commit_endpoint_passed"
-        runtime_commit_reason_code="runtime_commit_endpoint_passed"
-        reason_code="live_runtime_integration_passed"
+        policy_final_decision="$(read_policy_final_decision "$RUNTIME_COMMIT_LIVE_POLICY_REPORT")"
+        if [ "$policy_final_decision" = "GO" ]; then
+          record_check "runtime_commit_policy" "$runtime_commit_policy_command" "pass" "runtime_commit_policy_passed"
+          runtime_commit_reason_code="runtime_commit_endpoint_passed"
+          runtime_commit_policy_reason_code="runtime_commit_policy_passed"
+          reason_code="live_runtime_integration_passed"
+        else
+          record_check "runtime_commit_policy" "$runtime_commit_policy_command" "fail" "runtime_commit_policy_failed:${policy_final_decision}"
+          runtime_commit_reason_code="runtime_commit_endpoint_passed"
+          runtime_commit_policy_reason_code="runtime_commit_policy_failed:${policy_final_decision}"
+          overall_status="fail"
+          reason_code="runtime_commit_policy_failed"
+        fi
       elif [ "$runtime_commit_exit_code" -eq 124 ]; then
         record_check "runtime_commit_endpoint" "$runtime_commit_command" "fail" "runtime_commit_endpoint_timeout"
+        record_check "runtime_commit_policy" "$runtime_commit_policy_command" "skipped" "runtime_commit_endpoint_failed"
         runtime_commit_reason_code="runtime_commit_endpoint_timeout"
+        runtime_commit_policy_reason_code="runtime_commit_endpoint_failed"
         overall_status="fail"
         reason_code="runtime_commit_endpoint_failed"
       else
         record_check "runtime_commit_endpoint" "$runtime_commit_command" "fail" "runtime_commit_endpoint_failed"
+        record_check "runtime_commit_policy" "$runtime_commit_policy_command" "skipped" "runtime_commit_endpoint_failed"
         runtime_commit_reason_code="runtime_commit_endpoint_failed"
+        runtime_commit_policy_reason_code="runtime_commit_endpoint_failed"
         overall_status="fail"
         reason_code="runtime_commit_endpoint_failed"
       fi
@@ -487,7 +564,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$CHECK_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -509,17 +586,19 @@ budget_status = sys.argv[12]
 runtime_commit_command = sys.argv[13]
 runtime_commit_output_file = sys.argv[14]
 runtime_commit_live_summary = sys.argv[15]
-runtime_commit_finality_command = sys.argv[16]
-runtime_commit_finality_output_file = sys.argv[17]
-runtime_commit_finality_max_seconds = int(sys.argv[18])
-bootstrap_report = sys.argv[19]
-localhost_signed_report = sys.argv[20]
-conformance_report = sys.argv[21]
-bootstrap_reason_code = sys.argv[22]
-localhost_signed_reason_code = sys.argv[23]
-conformance_reason_code = sys.argv[24]
-runtime_commit_reason_code = sys.argv[25]
-checks_path = pathlib.Path(sys.argv[26])
+runtime_commit_live_policy_report = sys.argv[16]
+runtime_commit_finality_command = sys.argv[17]
+runtime_commit_finality_output_file = sys.argv[18]
+runtime_commit_finality_max_seconds = int(sys.argv[19])
+bootstrap_report = sys.argv[20]
+localhost_signed_report = sys.argv[21]
+conformance_report = sys.argv[22]
+bootstrap_reason_code = sys.argv[23]
+localhost_signed_reason_code = sys.argv[24]
+conformance_reason_code = sys.argv[25]
+runtime_commit_reason_code = sys.argv[26]
+runtime_commit_policy_reason_code = sys.argv[27]
+checks_path = pathlib.Path(sys.argv[28])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -553,6 +632,7 @@ summary = {
     "base_url": base_url,
     "fork_chain_version": fork_chain_version,
     "runtime_commit_command": runtime_commit_command,
+    "runtime_commit_live_policy_report": runtime_commit_live_policy_report,
     "runtime_commit_finality_command": runtime_commit_finality_command if runtime_commit_finality_command else "",
     "runtime_commit_finality_output_file": runtime_commit_finality_output_file if runtime_commit_finality_command else "",
     "runtime_commit_finality_enabled": bool(runtime_commit_finality_command),
@@ -561,6 +641,7 @@ summary = {
     "localhost_signed_reason_code": localhost_signed_reason_code,
     "conformance_reason_code": conformance_reason_code,
     "runtime_commit_reason_code": runtime_commit_reason_code,
+    "runtime_commit_policy_reason_code": runtime_commit_policy_reason_code,
     "contracts": {
         "runtime_commit_endpoint": "/broadcast/runtime-commit",
         "runtime_commit_method": "POST",
@@ -574,6 +655,7 @@ summary = {
         conformance_report,
         runtime_commit_output_file,
         runtime_commit_live_summary,
+        runtime_commit_live_policy_report,
     ],
 }
 
