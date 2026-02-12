@@ -433,6 +433,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - NO-GO signer-profile drift proof must surface `runtime_signer_profile_mismatch` when summary signer profile markers drift from `ops-primary`.
   - NO-GO failover proof must surface `runtime_signer_failover_profile_unchanged` when failover is active but profile does not rotate.
   - NO-GO stale-rotation proof must surface `runtime_signer_rotation_epoch_stale` when failover rotation epoch is not strictly increasing.
+  - NO-GO key-source/profile matrix proof must surface `runtime_signer_key_source_profile_pair_disallowed` when signer profile/key-source pair is outside the strict allowlist.
   - NO-GO signer-key-env drift proof must surface `runtime_signer_private_key_env_mismatch` when signer key env marker drifts from `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`.
   - NO-GO synthetic-command regression proof must surface `runtime_commit_non_synthetic_submit_probe_missing` when `runtime_commit_command` omits `integration_kolme_fork_live_node_submit_reaches_endpoint`.
   - NO-GO synthetic-command regression proof must surface `runtime_commit_real_signing_profile_marker_missing` when `runtime_commit_command` omits `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1`.
@@ -485,6 +486,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY`
     - `contracts.runtime_signer_failover_requires_profile_change=true`
     - `contracts.runtime_signer_rotation_epoch_must_increase_on_failover=true`
+  - key-source/profile allowlist matrix contracts:
+    - `ops-primary`: `env-local`, `managed-external`
+    - `ops-secondary`: `env-local` only
   - real-node profile requires runtime command surfaces to include `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1`; checker fails closed with `runtime_commit_real_signing_profile_marker_missing` when omitted.
   - real-node profile requires runtime command surfaces to include `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary`; checker fails closed with `runtime_commit_signer_profile_marker_missing` when omitted.
   - real-node profile requires runtime command surfaces to include `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary` when `runtime_signer_profile=ops-secondary`; checker fails closed with `runtime_commit_signer_profile_marker_missing` when omitted.

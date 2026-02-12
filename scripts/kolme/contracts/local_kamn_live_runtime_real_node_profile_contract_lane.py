@@ -420,6 +420,56 @@ def main() -> int:
             print("expected NO-GO final decision for signer key env drift policy output", file=sys.stderr)
             return 1
 
+        key_source_matrix_drift_summary_file = negative_path / "key_source_matrix_drift_summary.json"
+        key_source_matrix_drift_policy_file = negative_path / "key_source_matrix_drift_policy.json"
+        key_source_matrix_drift_summary = dict(summary)
+        key_source_matrix_drift_summary["runtime_signer_profile"] = "ops-secondary"
+        key_source_matrix_drift_summary["runtime_signer_previous_profile"] = "ops-secondary"
+        key_source_matrix_drift_summary["runtime_signer_key_source"] = "managed-external"
+        key_source_matrix_drift_summary["runtime_signer_private_key_env"] = (
+            SIGNER_PRIVATE_KEY_ENV_BY_PROFILE["ops-secondary"]
+        )
+        key_source_matrix_drift_summary["runtime_commit_command"] = runtime_commit_command.replace(
+            expected_signer_command_marker,
+            "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary",
+        )
+        key_source_matrix_drift_contracts = dict(summary.get("contracts", {}))
+        key_source_matrix_drift_contracts["runtime_signer_profile"] = "ops-secondary"
+        key_source_matrix_drift_contracts["runtime_signer_key_source"] = "managed-external"
+        key_source_matrix_drift_contracts["runtime_signer_private_key_env"] = (
+            SIGNER_PRIVATE_KEY_ENV_BY_PROFILE["ops-secondary"]
+        )
+        key_source_matrix_drift_summary["contracts"] = key_source_matrix_drift_contracts
+        key_source_matrix_drift_summary_file.write_text(
+            json.dumps(key_source_matrix_drift_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        key_source_matrix_drift_result = run_real_node_policy_check(
+            report_file=key_source_matrix_drift_summary_file,
+            output_json=key_source_matrix_drift_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if key_source_matrix_drift_result.returncode == 0:
+            print("expected disallowed key-source/profile pair negative proof to fail closed", file=sys.stderr)
+            return 1
+        key_source_matrix_drift_policy = json.loads(
+            key_source_matrix_drift_policy_file.read_text(encoding="utf-8")
+        )
+        key_source_matrix_drift_reason_codes = key_source_matrix_drift_policy.get("reason_codes")
+        if not isinstance(key_source_matrix_drift_reason_codes, list):
+            print("expected reason_codes list in key-source matrix drift policy output", file=sys.stderr)
+            return 1
+        if "runtime_signer_key_source_profile_pair_disallowed" not in key_source_matrix_drift_reason_codes:
+            print(
+                "expected runtime_signer_key_source_profile_pair_disallowed in key-source matrix drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if key_source_matrix_drift_policy.get("final_decision") != "NO-GO":
+            print("expected NO-GO final decision for key-source matrix drift policy output", file=sys.stderr)
+            return 1
+
         synthetic_regression_summary_file = negative_path / "synthetic_regression_summary.json"
         synthetic_regression_policy_file = negative_path / "synthetic_regression_policy.json"
         synthetic_regression_summary = dict(summary)
@@ -525,6 +575,7 @@ def main() -> int:
         "runtime_signer_key_source",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
+        "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
         "Regression: #2139",
     ]
@@ -540,6 +591,7 @@ def main() -> int:
         "runtime_signer_key_source",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
+        "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
         "Regression: #2139",
     ]
@@ -555,6 +607,7 @@ def main() -> int:
         "runtime_signer_key_source",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
+        "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
         "Regression: #2139",
     ]

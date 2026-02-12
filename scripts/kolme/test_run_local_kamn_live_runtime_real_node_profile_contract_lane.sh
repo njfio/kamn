@@ -18,9 +18,10 @@ TMP_INMEMORY_REPORT="$(mktemp)"
 TMP_SECONDARY_REPORT="$(mktemp)"
 TMP_SECONDARY_POLICY_REPORT="$(mktemp)"
 TMP_SECONDARY_KEY_ENV_DRIFT_REPORT="$(mktemp)"
+TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT="$(mktemp)"
 TMP_NEGATIVE_POLICY="$(mktemp)"
 TMP_NEGATIVE_ERR="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_SECONDARY_REPORT" "$TMP_SECONDARY_POLICY_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_SECONDARY_REPORT" "$TMP_SECONDARY_POLICY_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" "$TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local KAMN live runtime real-node profile contract lane runner to be executable" >&2
@@ -74,6 +75,7 @@ required_coverage_markers=(
   "runtime_signer_profile=ops-secondary"
   "runtime_signer_key_source_contract_version"
   "runtime_signer_key_source"
+  "runtime_signer_key_source_profile_pair_disallowed"
   "runtime_signer_private_key_env_mismatch"
   "runtime_commit_command_profile_mismatch"
   "runtime_signer_failover_profile_unchanged"
@@ -117,6 +119,10 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "runtime_signer_key_source" "$docs_file"; then
     echo "expected docs parity to include signer key-source marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_key_source_profile_pair_disallowed" "$docs_file"; then
+    echo "expected docs parity to include signer key-source/profile pair disallowed reason marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "runtime_signer_private_key_env_mismatch" "$docs_file"; then
@@ -242,7 +248,7 @@ if policy.get("reason_codes") != []:
     raise SystemExit("expected no policy reason codes for secondary signer dry-run composition")
 PY
 
-python3 - "$TMP_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" <<'PY'
+python3 - "$TMP_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" "$TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT" <<'PY'
 import json
 import pathlib
 import sys
@@ -309,6 +315,24 @@ secondary_key_env_drift_summary["runtime_commit_command"] = str(base_summary.get
 )
 pathlib.Path(sys.argv[6]).write_text(
     json.dumps(secondary_key_env_drift_summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+
+key_source_matrix_drift_summary = dict(base_summary)
+key_source_matrix_drift_summary["runtime_signer_profile"] = "ops-secondary"
+key_source_matrix_drift_summary["runtime_signer_previous_profile"] = "ops-secondary"
+key_source_matrix_drift_summary["runtime_signer_key_source"] = "managed-external"
+key_source_matrix_drift_summary["runtime_signer_private_key_env"] = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+key_source_matrix_drift_summary["contracts"] = dict(base_summary.get("contracts", {}))
+key_source_matrix_drift_summary["contracts"]["runtime_signer_profile"] = "ops-secondary"
+key_source_matrix_drift_summary["contracts"]["runtime_signer_key_source"] = "managed-external"
+key_source_matrix_drift_summary["contracts"]["runtime_signer_private_key_env"] = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+key_source_matrix_drift_summary["runtime_commit_command"] = str(base_summary.get("runtime_commit_command", "")).replace(
+    "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary",
+    "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary",
+)
+pathlib.Path(sys.argv[7]).write_text(
+    json.dumps(key_source_matrix_drift_summary, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
 )
 PY
@@ -425,6 +449,26 @@ fi
 
 if ! grep -q "runtime_signer_private_key_env_mismatch" "$TMP_NEGATIVE_ERR"; then
   echo "expected signer private key env mismatch reason in secondary signer negative proof output" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_NEGATIVE_POLICY" >"$TMP_NEGATIVE_ERR" 2>&1
+key_source_matrix_exit_code=$?
+set -e
+
+if [ "$key_source_matrix_exit_code" -eq 0 ]; then
+  echo "expected disallowed signer key-source/profile pair negative proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_key_source_profile_pair_disallowed" "$TMP_NEGATIVE_ERR"; then
+  echo "expected signer key-source/profile pair disallowed reason in negative proof output" >&2
   exit 1
 fi
 
