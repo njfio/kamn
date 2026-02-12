@@ -56,6 +56,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_commit_command_missing")
     elif "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" not in runtime_commit_command:
         reason_codes.append("runtime_commit_contract_lane_missing")
+    elif "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider" not in runtime_commit_command:
+        reason_codes.append("runtime_provider_contract_marker_missing")
+
+    runtime_provider_client_contract = report.get("runtime_provider_client_contract")
+    if not isinstance(runtime_provider_client_contract, str) or not runtime_provider_client_contract.strip():
+        reason_codes.append("runtime_provider_client_contract_missing")
+    elif runtime_provider_client_contract != "KolmeRuntimeCommitLiveProvider":
+        reason_codes.append("runtime_provider_client_contract_mismatch")
 
     runtime_commit_live_policy_report = report.get("runtime_commit_live_policy_report")
     if not isinstance(runtime_commit_live_policy_report, str) or not runtime_commit_live_policy_report.strip():
@@ -69,6 +77,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(contracts, dict):
         reason_codes.append("contracts_missing")
     else:
+        if contracts.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
+            reason_codes.append("runtime_provider_client_contract_contract_mismatch")
         if contracts.get("runtime_commit_endpoint") != "/broadcast/runtime-commit":
             reason_codes.append("runtime_commit_endpoint_mismatch")
         if contracts.get("runtime_commit_method") != "POST":

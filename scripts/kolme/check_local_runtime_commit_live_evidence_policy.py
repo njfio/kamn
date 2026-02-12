@@ -14,6 +14,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--expected-final-decision", required=True, choices=["GO", "NO-GO"])
     parser.add_argument("--ci-fast-gate", required=True, choices=["PASS", "FAIL"])
     parser.add_argument("--require-reason-code", action="append", default=[])
+    parser.add_argument(
+        "--expected-provider-client-contract",
+        default="KolmeRuntimeCommitLiveProvider",
+    )
     parser.add_argument("--output-json", default="")
     return parser.parse_args()
 
@@ -39,7 +43,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if report.get("local_only_enforced") is not True:
         reason_codes.append("local_only_enforced_missing")
 
-    if report.get("provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
+    if report.get("provider_client_contract") != args.expected_provider_client_contract:
         reason_codes.append("provider_client_contract_mismatch")
 
     if report.get("provider_submit_profile_contract") != "kolme_fork_broadcast_profile":
@@ -144,6 +148,7 @@ def main() -> int:
         "expected_final_decision": args.expected_final_decision,
         "ci_fast_gate": args.ci_fast_gate,
         "required_reason_codes": args.require_reason_code,
+        "expected_provider_client_contract": args.expected_provider_client_contract,
         "observed_status": observed_status,
         "observed_final_decision": observed_final_decision,
         "observed_reason_code": report.get("reason_code"),
