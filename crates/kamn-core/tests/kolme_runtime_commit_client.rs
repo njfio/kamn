@@ -938,6 +938,30 @@ fn functional_finality_checker_maps_confirmed_alias_to_final_receipt() {
 }
 
 #[test]
+fn regression_issue_1918_finality_checker_trims_endpoint_inputs() {
+    // Regression: #1918
+    let response = r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34:h42","finality":"pending"}"#.to_owned();
+    let (transport, calls) = RecordingFinalityTransport::with_responses(vec![Ok(response)]);
+    let mut checker = KolmeRuntimeCommitFinalityChecker::new(
+        "  http://127.0.0.1:3030  ",
+        "  /commit/finality  ",
+        transport,
+    )
+    .expect("checker should build");
+
+    let receipt = checker
+        .check_commit_finality("kolme-commit:ab12cd34:h42")
+        .expect("checker should parse finality response");
+    assert_eq!(receipt.provider, "kolme-fork-local");
+    assert_eq!(receipt.finality, KolmeCommitReceiptFinality::Pending);
+
+    let calls = calls.borrow();
+    assert_eq!(calls.len(), 1, "finality transport should be called once");
+    assert_eq!(calls[0].0, "http://127.0.0.1:3030");
+    assert_eq!(calls[0].1, "/commit/finality");
+}
+
+#[test]
 fn functional_finality_checker_polls_pending_then_final() {
     let pending =
         r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34:h42","finality":"pending"}"#.to_owned();

@@ -126,6 +126,11 @@ pub fn is_valid_finality_status_path_input(status_path: &str) -> bool {
     !status_path.trim().is_empty()
 }
 
+/// Normalizes finality checker endpoint inputs for deterministic request composition.
+pub fn normalize_finality_endpoint_inputs(base_url: &str, status_path: &str) -> (String, String) {
+    (base_url.trim().to_owned(), status_path.trim().to_owned())
+}
+
 /// Validates live provider base URL input before broadcast submit requests.
 pub fn is_valid_live_provider_base_url_input(base_url: &str) -> bool {
     !base_url.trim().is_empty()
