@@ -7,7 +7,7 @@
 
 /// Agent key hierarchy roles, rotation, and ephemeral session key contracts.
 pub mod agent_key_hierarchy;
-#[allow(missing_docs)]
+/// Agent-driven upgrade proposal, review, and execution workflow contracts.
 pub mod agent_upgrade_workflow;
 /// Anti-spam admission, rate-limit, and suspension policy contracts.
 pub mod anti_spam;
