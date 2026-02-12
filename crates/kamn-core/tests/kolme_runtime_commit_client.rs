@@ -8,6 +8,7 @@ use kamn_core::{
     KolmeRuntimeCommitRequest, KolmeRuntimeCommitSignedBroadcastEnvelope,
     KolmeRuntimeCommitTransportErrorKind, RuntimeCommitLifecycleState, RuntimeCommitPipeline,
 };
+use kamn_kolme::KolmeRuntimeProviderOutcome as KamnKolmeRuntimeProviderOutcome;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
@@ -849,6 +850,36 @@ fn regression_live_provider_rejects_statusless_response_without_txhash() {
             Err(KolmeRuntimeCommitProviderError::MalformedResponse { .. })
         ),
         "provider must fail closed when neither status nor txhash is present"
+    );
+}
+
+#[test]
+fn regression_issue_1930_live_provider_outcome_conversion_preserves_semantics() {
+    // Regression: #1930
+    let submitted =
+        KolmeRuntimeCommitProviderOutcome::from(KamnKolmeRuntimeProviderOutcome::Submitted {
+            provider: "kolme-live".to_owned(),
+            commit_id: "kolme-commit:ab12cd34".to_owned(),
+            finality: kamn_kolme::KolmeCommitReceiptFinality::Final,
+        });
+    assert_eq!(
+        submitted,
+        KolmeRuntimeCommitProviderOutcome::Submitted(KolmeRuntimeCommitProviderReceipt {
+            provider: "kolme-live".to_owned(),
+            commit_id: "kolme-commit:ab12cd34".to_owned(),
+            finality: KolmeCommitReceiptFinality::Final,
+        })
+    );
+
+    let rejected =
+        KolmeRuntimeCommitProviderOutcome::from(KamnKolmeRuntimeProviderOutcome::Rejected {
+            reason: "duplicate idempotency".to_owned(),
+        });
+    assert_eq!(
+        rejected,
+        KolmeRuntimeCommitProviderOutcome::Rejected {
+            reason: "duplicate idempotency".to_owned(),
+        }
     );
 }
 
