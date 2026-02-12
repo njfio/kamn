@@ -739,6 +739,115 @@ for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
         }
     )
 
+
+def read_nested_runtime_reason_code(mode_value: str, summary_path: str) -> str:
+    if mode_value == "dry-run":
+        return "not_run"
+
+    path = pathlib.Path(summary_path)
+    if not path.exists():
+        return "report_missing"
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return "report_invalid_json"
+
+    nested_value = payload.get("reason_code")
+    if isinstance(nested_value, str) and nested_value.strip():
+        return nested_value
+    return "reason_code_missing"
+
+
+NESTED_RUNTIME_REASON_TO_TAXONOMY = {
+    "live_preflight_timeout": "transport.preflight.timeout",
+    "live_preflight_failed": "transport.preflight.failed",
+    "live_runtime_commit_command_timeout": "transport.submit.timeout",
+    "live_runtime_commit_command_failed": "transport.submit.failed",
+    "live_finality_command_timeout": "finality.timeout",
+    "live_finality_command_failed": "finality.failed",
+    "live_runtime_commit_budget_exceeded": "budget.exceeded",
+}
+
+NESTED_RUNTIME_REASON_TO_HINT = {
+    "live_preflight_timeout": "Verify live-node reachability and preflight latency at the configured --base-url endpoint.",
+    "live_preflight_failed": "Inspect preflight health output and provider-hint wiring before submit/finality checks.",
+    "live_runtime_commit_command_timeout": "Increase --runtime-commit-max-seconds or reduce submit command latency.",
+    "live_runtime_commit_command_failed": "Inspect runtime commit command stderr in runtime_commit_output_file for transport/provider errors.",
+    "live_finality_command_timeout": "Increase --runtime-commit-finality-max-seconds and verify finality endpoint responsiveness.",
+    "live_finality_command_failed": "Inspect runtime finality command output and verify notifications/block fallback endpoint contracts.",
+    "live_runtime_commit_budget_exceeded": "Increase --max-seconds or reduce prerequisite/runtime command cost for local-heavy runs.",
+}
+
+
+def classify_runtime_commit_failure(
+    mode_value: str,
+    status_value: str,
+    reason_value: str,
+    runtime_reason_value: str,
+    runtime_policy_reason_value: str,
+    nested_runtime_reason_value: str,
+) -> tuple[str, str]:
+    if status_value == "ok":
+        if mode_value == "dry-run":
+            return "none", "Dry-run mode does not execute runtime commit submit/finality checks."
+        return "none", "No runtime commit failure observed."
+
+    if reason_value == "runtime_commit_policy_failed":
+        return (
+            "policy.rejected",
+            "Inspect runtime_commit_live_policy_report for final_decision and reason_codes.",
+        )
+
+    if reason_value == "runtime_integration_budget_exceeded":
+        return (
+            "budget.exceeded",
+            "Increase --max-seconds or reduce prerequisite/runtime lane execution time.",
+        )
+
+    if reason_value != "runtime_commit_endpoint_failed":
+        return (
+            "none",
+            "Runtime commit endpoint was not the terminal failure path; inspect prerequisite check reason codes.",
+        )
+
+    if runtime_reason_value == "runtime_commit_endpoint_timeout":
+        return (
+            "transport.submit.timeout",
+            "Increase --runtime-commit-max-seconds or inspect runtime commit endpoint command latency.",
+        )
+
+    if runtime_policy_reason_value == "runtime_commit_endpoint_failed" and nested_runtime_reason_value in (
+        "report_missing",
+        "report_invalid_json",
+        "reason_code_missing",
+    ):
+        return (
+            "runtime.summary.unavailable",
+            "Ensure runtime_commit_live_summary is written and contains a valid reason_code field.",
+        )
+
+    mapped_taxonomy = NESTED_RUNTIME_REASON_TO_TAXONOMY.get(nested_runtime_reason_value)
+    if mapped_taxonomy is not None:
+        mapped_hint = NESTED_RUNTIME_REASON_TO_HINT[nested_runtime_reason_value]
+        return mapped_taxonomy, mapped_hint
+
+    return (
+        "runtime.unknown",
+        f"Inspect nested runtime reason_code={nested_runtime_reason_value} and runtime command artifacts.",
+    )
+
+
+runtime_commit_nested_reason_code = read_nested_runtime_reason_code(mode, runtime_commit_live_summary)
+runtime_commit_failure_taxonomy, runtime_commit_failure_diagnostic_hint = classify_runtime_commit_failure(
+    mode,
+    status,
+    reason_code,
+    runtime_commit_reason_code,
+    runtime_commit_policy_reason_code,
+    runtime_commit_nested_reason_code,
+)
+
 summary = {
     "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
     "mode": mode,
@@ -779,6 +888,10 @@ summary = {
     "conformance_reason_code": conformance_reason_code,
     "runtime_commit_reason_code": runtime_commit_reason_code,
     "runtime_commit_policy_reason_code": runtime_commit_policy_reason_code,
+    "runtime_commit_nested_reason_code": runtime_commit_nested_reason_code,
+    "runtime_commit_failure_taxonomy_version": "v1",
+    "runtime_commit_failure_taxonomy": runtime_commit_failure_taxonomy,
+    "runtime_commit_failure_diagnostic_hint": runtime_commit_failure_diagnostic_hint,
     "contracts": {
         "ci_fast_gate_scope": "local-only",
         "runtime_provider_client_contract": runtime_provider_client_contract,
@@ -794,6 +907,7 @@ summary = {
         "runtime_commit_method": "POST",
         "runtime_commit_finality_primary_endpoint": "/notifications",
         "runtime_commit_finality_fallback_endpoint": "/block/{height}",
+        "runtime_commit_failure_taxonomy_version": "v1",
     },
     "checks": checks,
     "artifact_paths": [

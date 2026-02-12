@@ -128,12 +128,14 @@ required_coverage_markers=(
   "check_local_kamn_live_runtime_integration_policy.py"
   "run_localhost_signed_integration_contract_lane.sh"
   "run_local_runtime_commit_live_finality_evidence_contract_lane.sh"
+  "runtime_commit_failure_taxonomy_mismatch:finality.timeout"
   "Regression: #1489"
   "Regression: #1971"
   "Regression: #2101"
   "Regression: #2112"
   "Regression: #2113"
   "Regression: #2114"
+  "Regression: #2296"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then
@@ -242,6 +244,15 @@ if summary.get("status") != "ok":
     raise SystemExit("expected local KAMN live runtime integration contract-lane summary status ok")
 if summary.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected dry_run_no_commands_executed reason code in contract-lane summary")
+if summary.get("runtime_commit_failure_taxonomy_version") != "v1":
+    raise SystemExit("expected runtime commit failure taxonomy version marker in contract-lane summary")
+if summary.get("runtime_commit_failure_taxonomy") != "none":
+    raise SystemExit("expected runtime commit failure taxonomy none marker in dry-run contract-lane summary")
+if summary.get("runtime_commit_nested_reason_code") != "not_run":
+    raise SystemExit("expected runtime commit nested reason marker not_run in dry-run contract-lane summary")
+diagnostic_hint = summary.get("runtime_commit_failure_diagnostic_hint")
+if not isinstance(diagnostic_hint, str) or not diagnostic_hint.strip():
+    raise SystemExit("expected runtime commit failure diagnostic hint marker in contract-lane summary")
 runtime_policy_report = summary.get("runtime_commit_live_policy_report")
 if not isinstance(runtime_policy_report, str) or not runtime_policy_report:
     raise SystemExit("expected runtime commit live policy report marker in contract-lane summary")

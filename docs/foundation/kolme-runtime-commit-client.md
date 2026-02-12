@@ -275,6 +275,21 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
   - real-node checker fails closed when in-memory provider references appear in strict command/policy surfaces:
     - `runtime_commit_in_memory_provider_reference_detected`
     - `runtime_commit_policy_check_in_memory_provider_reference_detected`
+  - runtime failure taxonomy contract (summary + policy, version `v1`):
+    - `runtime_commit_nested_reason_code` captures nested runtime lane `reason_code` (or deterministic `report_missing` / `report_invalid_json` / `reason_code_missing` diagnostics).
+    - `runtime_commit_failure_taxonomy` and `runtime_commit_failure_diagnostic_hint` provide deterministic operator-triage surfaces.
+    - policy checker `check_local_kamn_live_runtime_integration_policy.py` fails closed on taxonomy drift (`runtime_commit_failure_taxonomy_mismatch:<expected>`).
+  - runtime failure taxonomy/remediation map:
+    - `transport.preflight.timeout`: verify `--base-url` reachability and preflight endpoint latency.
+    - `transport.preflight.failed`: inspect preflight health output and provider-hint wiring.
+    - `transport.submit.timeout`: increase `--runtime-commit-max-seconds` or reduce submit command latency.
+    - `transport.submit.failed`: inspect runtime submit command stderr and live output artifact.
+    - `finality.timeout`: increase `--runtime-commit-finality-max-seconds`; validate notifications/block fallback endpoint responsiveness.
+    - `finality.failed`: inspect finality command output and endpoint contract markers.
+    - `policy.rejected`: inspect nested runtime policy report `final_decision` and `reason_codes`.
+    - `budget.exceeded`: increase `--max-seconds` or reduce local-heavy prerequisite/runtime cost.
+    - `runtime.summary.unavailable`: ensure nested runtime summary artifact exists and contains a valid `reason_code`.
+    - `runtime.unknown`: inspect nested reason + endpoint/finality artifact logs for unmapped failure signatures.
 - Local fork process lifecycle lane:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --serve-command "python3 /tmp/mock_kolme_api.py 3000 v0.15.2" --integration-runtime-commit-finality-command "printf 'finality=final\n'" --integration-runtime-commit-finality-max-seconds 15 --integration-runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json`
 - Real-process wrapper lane with lifecycle run intent:

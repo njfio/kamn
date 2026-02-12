@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 import tempfile
@@ -158,6 +159,97 @@ def main() -> int:
             check=True,
             stdout=subprocess.DEVNULL,
         )
+
+        summary_payload = json.loads(Path(args.output_json).read_text(encoding="utf-8"))
+        if summary_payload.get("runtime_commit_failure_taxonomy_version") != "v1":
+            print("expected runtime commit failure taxonomy version marker v1 in summary", file=sys.stderr)
+            return 1
+        if summary_payload.get("runtime_commit_failure_taxonomy") != "none":
+            print("expected dry-run summary to classify runtime commit failure taxonomy as none", file=sys.stderr)
+            return 1
+        if summary_payload.get("runtime_commit_nested_reason_code") != "not_run":
+            print("expected dry-run summary to classify nested runtime reason as not_run", file=sys.stderr)
+            return 1
+        diagnostic_hint = summary_payload.get("runtime_commit_failure_diagnostic_hint")
+        if not isinstance(diagnostic_hint, str) or not diagnostic_hint.strip():
+            print("expected runtime commit failure diagnostic hint marker in summary", file=sys.stderr)
+            return 1
+
+        # Regression: #2296
+        failure_payload = dict(summary_payload)
+        failure_payload["mode"] = "run"
+        failure_payload["status"] = "fail"
+        failure_payload["reason_code"] = "runtime_commit_endpoint_failed"
+        failure_payload["budget_status"] = "within_budget"
+        failure_payload["runtime_commit_reason_code"] = "runtime_commit_endpoint_failed"
+        failure_payload["runtime_commit_policy_reason_code"] = "runtime_commit_endpoint_failed"
+        failure_payload["runtime_commit_nested_reason_code"] = "live_finality_command_timeout"
+        failure_payload["runtime_commit_failure_taxonomy"] = "finality.timeout"
+        failure_payload["runtime_commit_failure_diagnostic_hint"] = (
+            "Inspect runtime finality command output and verify notifications/block fallback endpoint contracts."
+        )
+        failure_report = temp_path / "runtime_failure_summary.json"
+        failure_policy_output = temp_path / "runtime_failure_policy.json"
+        failure_report.write_text(json.dumps(failure_payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+
+        subprocess.run(
+            [
+                "python3",
+                str(CHECKER),
+                "--report-file",
+                str(failure_report),
+                "--expected-final-decision",
+                "NO-GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--require-reason-code",
+                "runtime_commit_endpoint_failed",
+                "--output-json",
+                str(failure_policy_output),
+            ],
+            cwd=ROOT_DIR,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
+
+        taxonomy_drift_payload = dict(failure_payload)
+        taxonomy_drift_payload["runtime_commit_failure_taxonomy"] = "transport.submit.failed"
+        taxonomy_drift_report = temp_path / "runtime_failure_taxonomy_drift_summary.json"
+        taxonomy_drift_report.write_text(
+            json.dumps(taxonomy_drift_payload, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        taxonomy_drift_run = subprocess.run(
+            [
+                "python3",
+                str(CHECKER),
+                "--report-file",
+                str(taxonomy_drift_report),
+                "--expected-final-decision",
+                "NO-GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--require-reason-code",
+                "runtime_commit_endpoint_failed",
+                "--output-json",
+                str(failure_policy_output),
+            ],
+            cwd=ROOT_DIR,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if taxonomy_drift_run.returncode == 0:
+            print("expected checker to fail when runtime commit failure taxonomy drifts", file=sys.stderr)
+            return 1
+        drift_output = f"{taxonomy_drift_run.stdout}\n{taxonomy_drift_run.stderr}"
+        if "runtime_commit_failure_taxonomy_mismatch:finality.timeout" not in drift_output:
+            print(
+                "expected runtime commit taxonomy mismatch reason for drifted failure taxonomy",
+                file=sys.stderr,
+            )
+            return 1
 
     doc_text = DOC_FILE.read_text(encoding="utf-8")
     readme_text = README_FILE.read_text(encoding="utf-8")
