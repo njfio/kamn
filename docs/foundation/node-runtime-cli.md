@@ -41,6 +41,9 @@ This document captures node-runtime productionization slices for machine-readabl
   - `--kolme-live-base-url <http(s)-endpoint>`
   - `--kolme-live-provider-hint <provider-hint>`
   - `--kolme-live-signing-profile <signing-profile>`
+  - `--kolme-live-strict-signer-contracts`
+  - `--kolme-live-signer-profile <ops-primary|ops-secondary>`
+  - `--kolme-live-signer-key-source <env-local>`
 - Added explicit runtime mode and proposal validation handling through:
   - `ConfigError::InvalidRuntimeMode`
   - `ConfigError::InvalidExpectedStateVersion`
@@ -171,6 +174,7 @@ This document captures node-runtime productionization slices for machine-readabl
 - Kolme-live mode:
   - `kamn-node --role processor --runtime-mode kolme-live`
   - `kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1`
+  - `kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1 --kolme-live-strict-signer-contracts --kolme-live-signer-profile ops-primary --kolme-live-signer-key-source env-local`
 
 ## Daemon Runtime Rules
 - Supported runtime modes:
@@ -201,6 +205,10 @@ This document captures node-runtime productionization slices for machine-readabl
   - `--kolme-live-base-url`
   - `--kolme-live-provider-hint`
   - `--kolme-live-signing-profile`
+- Strict signer contracts:
+  - when `--kolme-live-strict-signer-contracts` is present, `--kolme-live-signer-profile` and `--kolme-live-signer-key-source` are both required
+  - supported signer profiles: `ops-primary`, `ops-secondary`
+  - supported key source marker: `env-local`
 - Provider wiring is fail-closed:
   - runtime config must reject in-memory provider-hint markers such as `InMemoryKolmeRuntimeCommitClient`
   - signing profile must match `kolme-fork-secp256k1-v1`
