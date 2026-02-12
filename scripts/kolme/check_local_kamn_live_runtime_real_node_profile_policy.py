@@ -8,6 +8,10 @@ from pathlib import Path
 NON_SYNTHETIC_SUBMIT_PROBE_MARKER = "integration_kolme_fork_live_node_submit_reaches_endpoint"
 IN_MEMORY_PROVIDER_MARKER = "InMemoryKolmeRuntimeCommitClient"
 REAL_SIGNING_PROFILE_MARKER = "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1"
+REAL_SIGNER_PROFILE_SELECTOR_ENV = "KAMN_KOLME_LIVE_SIGNER_PROFILE"
+REAL_SIGNER_PROFILE = "ops-primary"
+REAL_SIGNER_PRIVATE_KEY_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
+REAL_SIGNER_PROFILE_COMMAND_MARKER = "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary"
 
 
 def parse_args() -> argparse.Namespace:
@@ -78,6 +82,24 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif runtime_provider_client_contract != "KolmeRuntimeCommitLiveProvider":
         reason_codes.append("runtime_provider_client_contract_mismatch")
 
+    runtime_signer_profile_selector_env = report.get("runtime_signer_profile_selector_env")
+    if not isinstance(runtime_signer_profile_selector_env, str) or not runtime_signer_profile_selector_env.strip():
+        reason_codes.append("runtime_signer_profile_selector_env_missing")
+    elif runtime_signer_profile_selector_env != REAL_SIGNER_PROFILE_SELECTOR_ENV:
+        reason_codes.append("runtime_signer_profile_selector_env_mismatch")
+
+    runtime_signer_profile = report.get("runtime_signer_profile")
+    if not isinstance(runtime_signer_profile, str) or not runtime_signer_profile.strip():
+        reason_codes.append("runtime_signer_profile_missing")
+    elif runtime_signer_profile != REAL_SIGNER_PROFILE:
+        reason_codes.append("runtime_signer_profile_mismatch")
+
+    runtime_signer_private_key_env = report.get("runtime_signer_private_key_env")
+    if not isinstance(runtime_signer_private_key_env, str) or not runtime_signer_private_key_env.strip():
+        reason_codes.append("runtime_signer_private_key_env_missing")
+    elif runtime_signer_private_key_env != REAL_SIGNER_PRIVATE_KEY_ENV:
+        reason_codes.append("runtime_signer_private_key_env_mismatch")
+
     runtime_commit_command_profile = report.get("runtime_commit_command_profile")
     if not isinstance(runtime_commit_command_profile, str) or not runtime_commit_command_profile.strip():
         reason_codes.append("runtime_commit_command_profile_missing")
@@ -116,6 +138,11 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             and REAL_SIGNING_PROFILE_MARKER not in runtime_commit_command
         ):
             reason_codes.append("runtime_commit_real_signing_profile_marker_missing")
+        if (
+            runtime_commit_command_profile == "real-node-non-synthetic-v1"
+            and REAL_SIGNER_PROFILE_COMMAND_MARKER not in runtime_commit_command
+        ):
+            reason_codes.append("runtime_commit_signer_profile_marker_missing")
         if IN_MEMORY_PROVIDER_MARKER in runtime_commit_command:
             reason_codes.append("runtime_commit_in_memory_provider_reference_detected")
 
@@ -133,6 +160,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_profile_contract_mismatch")
         if contracts.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
             reason_codes.append("runtime_provider_client_contract_contract_mismatch")
+        if contracts.get("runtime_signer_profile_selector_env") != REAL_SIGNER_PROFILE_SELECTOR_ENV:
+            reason_codes.append("runtime_signer_profile_selector_env_contract_mismatch")
+        if contracts.get("runtime_signer_profile") != REAL_SIGNER_PROFILE:
+            reason_codes.append("runtime_signer_profile_contract_mismatch")
+        if contracts.get("runtime_signer_private_key_env") != REAL_SIGNER_PRIVATE_KEY_ENV:
+            reason_codes.append("runtime_signer_private_key_env_contract_mismatch")
         if contracts.get("runtime_commit_endpoint") != "/broadcast/runtime-commit":
             reason_codes.append("runtime_commit_endpoint_mismatch")
         if contracts.get("runtime_commit_method") != "POST":

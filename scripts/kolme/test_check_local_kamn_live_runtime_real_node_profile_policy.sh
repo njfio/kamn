@@ -58,10 +58,13 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "fork_chain_version": "v0.15.2",
   "runtime_profile": "real-node",
   "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
+  "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
+  "runtime_signer_profile": "ops-primary",
+  "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_command_profile_version": "v1",
-  "runtime_commit_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
+  "runtime_commit_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
   "runtime_commit_live_policy_report": "/tmp/runtime-policy.json",
   "runtime_commit_finality_command": "",
   "runtime_commit_finality_output_file": "",
@@ -76,6 +79,9 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "ci_fast_gate_scope": "local-only",
     "runtime_profile": "real-node",
     "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
+    "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
+    "runtime_signer_profile": "ops-primary",
+    "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
     "runtime_commit_finality_primary_endpoint": "/notifications",
@@ -166,6 +172,9 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
   "budget_status": "not_run",
   "runtime_profile": "standard",
   "runtime_provider_client_contract": "InMemoryKolmeRuntimeCommitClient",
+  "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
+  "runtime_signer_profile": "ops-secondary",
+  "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
   "runtime_commit_command_profile": "standard-default-v1",
   "runtime_commit_policy_command_profile": "standard-default-v1",
   "runtime_commit_command_profile_version": "v0",
@@ -174,7 +183,10 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
   "contracts": {
     "ci_fast_gate_scope": "ci-fast-gate",
     "runtime_profile": "standard",
-    "runtime_provider_client_contract": "InMemoryKolmeRuntimeCommitClient"
+    "runtime_provider_client_contract": "InMemoryKolmeRuntimeCommitClient",
+    "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
+    "runtime_signer_profile": "ops-secondary",
+    "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
   },
   "checks": [
     {
@@ -226,6 +238,16 @@ if ! grep -q "runtime_commit_policy_command_profile_mismatch" "$TMP_ERR"; then
   exit 1
 fi
 
+if ! grep -q "runtime_signer_profile_mismatch" "$TMP_ERR"; then
+  echo "expected signer profile mismatch reason for policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_private_key_env_mismatch" "$TMP_ERR"; then
+  echo "expected signer private key env mismatch reason for policy failure" >&2
+  exit 1
+fi
+
 if ! grep -q "runtime_commit_command_profile_version_mismatch" "$TMP_ERR"; then
   echo "expected runtime commit profile marker version mismatch reason for policy failure" >&2
   exit 1
@@ -254,6 +276,9 @@ cat >"$TMP_REPORT_SYNTHETIC" <<'JSON'
   "budget_status": "not_run",
   "runtime_profile": "real-node",
   "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
+  "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
+  "runtime_signer_profile": "ops-primary",
+  "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_command_profile_version": "v1",
@@ -272,6 +297,9 @@ cat >"$TMP_REPORT_SYNTHETIC" <<'JSON'
     "ci_fast_gate_scope": "local-only",
     "runtime_profile": "real-node",
     "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
+    "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
+    "runtime_signer_profile": "ops-primary",
+    "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
     "runtime_commit_finality_primary_endpoint": "/notifications",
@@ -345,6 +373,11 @@ if ! grep -q "runtime_commit_real_signing_profile_marker_missing" "$TMP_ERR"; th
   exit 1
 fi
 
+if ! grep -q "runtime_commit_signer_profile_marker_missing" "$TMP_ERR"; then
+  echo "expected signer profile marker requirement reason for synthetic policy failure" >&2
+  exit 1
+fi
+
 cat >"$TMP_REPORT_INMEMORY" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
@@ -358,10 +391,13 @@ cat >"$TMP_REPORT_INMEMORY" <<'JSON'
   "budget_status": "not_run",
   "runtime_profile": "real-node",
   "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
+  "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
+  "runtime_signer_profile": "ops-primary",
+  "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_command_profile_version": "v1",
-  "runtime_commit_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" --provider-hint InMemoryKolmeRuntimeCommitClient --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
+  "runtime_commit_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" --provider-hint InMemoryKolmeRuntimeCommitClient --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
   "runtime_commit_live_policy_report": "/tmp/runtime-policy.json",
   "runtime_commit_finality_command": "",
   "runtime_commit_finality_output_file": "",
@@ -376,6 +412,9 @@ cat >"$TMP_REPORT_INMEMORY" <<'JSON'
     "ci_fast_gate_scope": "local-only",
     "runtime_profile": "real-node",
     "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
+    "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
+    "runtime_signer_profile": "ops-primary",
+    "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
     "runtime_commit_finality_primary_endpoint": "/notifications",
@@ -475,12 +514,20 @@ if "integration_kolme_fork_live_node_submit_reaches_endpoint" not in runtime_com
     raise SystemExit("expected non-synthetic runtime submit probe marker in real-node profile runtime commit command")
 if "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1" not in runtime_commit_command:
     raise SystemExit("expected real signing profile marker in real-node profile runtime commit command")
+if "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary" not in runtime_commit_command:
+    raise SystemExit("expected signer profile marker in real-node profile runtime commit command")
 if summary.get("runtime_commit_command_profile") != "real-node-non-synthetic-v1":
     raise SystemExit("expected deterministic runtime commit command profile marker in runner-generated summary")
 if summary.get("runtime_commit_policy_command_profile") != "real-node-non-synthetic-v1":
     raise SystemExit("expected deterministic runtime commit policy command profile marker in runner-generated summary")
 if summary.get("runtime_commit_command_profile_version") != "v1":
     raise SystemExit("expected runtime commit command profile marker version in runner-generated summary")
+if summary.get("runtime_signer_profile_selector_env") != "KAMN_KOLME_LIVE_SIGNER_PROFILE":
+    raise SystemExit("expected signer profile selector env marker in runner-generated summary")
+if summary.get("runtime_signer_profile") != "ops-primary":
+    raise SystemExit("expected signer profile marker in runner-generated summary")
+if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
+    raise SystemExit("expected signer private key env marker in runner-generated summary")
 PY
 
 python3 - "$TMP_INTEGRATION_POLICY_OUT" <<'PY'

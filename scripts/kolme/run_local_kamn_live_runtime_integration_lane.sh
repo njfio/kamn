@@ -33,6 +33,9 @@ BOOTSTRAP_MAX_SECONDS=90
 CONFORMANCE_MAX_SECONDS=180
 LOCALHOST_SIGNED_MAX_SECONDS=45
 RUNTIME_COMMIT_MAX_SECONDS=30
+RUNTIME_SIGNER_PROFILE_SELECTOR_ENV=""
+RUNTIME_SIGNER_PROFILE=""
+RUNTIME_SIGNER_PRIVATE_KEY_ENV=""
 
 shell_escape() {
   printf "%q" "$1"
@@ -344,7 +347,7 @@ if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   exit 1
 fi
 
-default_runtime_commit_live_submit_command="KAMN_KOLME_LIVE_BASE_URL=$(shell_escape "${BASE_URL}") KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\n'"
+default_runtime_commit_live_submit_command_prefix="KAMN_KOLME_LIVE_BASE_URL=$(shell_escape "${BASE_URL}") KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local"
 effective_runtime_commit_finality_command="$RUNTIME_COMMIT_FINALITY_COMMAND"
 if [ -z "$effective_runtime_commit_finality_command" ]; then
   effective_runtime_commit_finality_command="printf 'finality=final\\n'"
@@ -358,7 +361,15 @@ if [ "$RUNTIME_PROFILE" = "real-node" ]; then
   runtime_commit_non_synthetic_flag=" --require-non-synthetic-run-evidence"
   runtime_commit_command_profile="real-node-non-synthetic-v1"
   runtime_commit_policy_command_profile="real-node-non-synthetic-v1"
+  RUNTIME_SIGNER_PROFILE_SELECTOR_ENV="KAMN_KOLME_LIVE_SIGNER_PROFILE"
+  RUNTIME_SIGNER_PROFILE="ops-primary"
+  RUNTIME_SIGNER_PRIVATE_KEY_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
 fi
+
+if [ -n "$RUNTIME_SIGNER_PROFILE" ]; then
+  default_runtime_commit_live_submit_command_prefix="${default_runtime_commit_live_submit_command_prefix} KAMN_KOLME_LIVE_SIGNER_PROFILE=${RUNTIME_SIGNER_PROFILE}"
+fi
+default_runtime_commit_live_submit_command="${default_runtime_commit_live_submit_command_prefix} KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\n'"
 
 default_runtime_commit_command="KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_SUMMARY}") --policy-output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_POLICY_REPORT}") --live-output-file $(shell_escape "${RUNTIME_COMMIT_OUTPUT_FILE}") --finality-output-file $(shell_escape "${RUNTIME_COMMIT_FINALITY_OUTPUT_FILE}") --max-seconds ${RUNTIME_COMMIT_MAX_SECONDS} --expected-provider-client-contract $(shell_escape "${RUNTIME_PROVIDER_CLIENT_CONTRACT}")${runtime_commit_non_synthetic_flag} --live-command $(shell_escape "${default_runtime_commit_live_submit_command}") --finality-command $(shell_escape "${effective_runtime_commit_finality_command}") --finality-max-seconds ${RUNTIME_COMMIT_FINALITY_MAX_SECONDS}"
 if [ -z "$RUNTIME_COMMIT_COMMAND" ]; then
@@ -619,7 +630,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" "$runtime_commit_command_profile" "$runtime_commit_policy_command_profile" "$runtime_commit_command_profile_version" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" "$runtime_commit_command_profile" "$runtime_commit_policy_command_profile" "$runtime_commit_command_profile_version" "$RUNTIME_SIGNER_PROFILE_SELECTOR_ENV" "$RUNTIME_SIGNER_PROFILE" "$RUNTIME_SIGNER_PRIVATE_KEY_ENV" <<'PY'
 from __future__ import annotations
 
 import json
@@ -659,6 +670,9 @@ runtime_provider_client_contract = sys.argv[30]
 runtime_commit_command_profile = sys.argv[31]
 runtime_commit_policy_command_profile = sys.argv[32]
 runtime_commit_command_profile_version = sys.argv[33]
+runtime_signer_profile_selector_env = sys.argv[34]
+runtime_signer_profile = sys.argv[35]
+runtime_signer_private_key_env = sys.argv[36]
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -698,6 +712,9 @@ summary = {
     "runtime_commit_command_profile": runtime_commit_command_profile,
     "runtime_commit_policy_command_profile": runtime_commit_policy_command_profile,
     "runtime_commit_command_profile_version": runtime_commit_command_profile_version,
+    "runtime_signer_profile_selector_env": runtime_signer_profile_selector_env,
+    "runtime_signer_profile": runtime_signer_profile,
+    "runtime_signer_private_key_env": runtime_signer_private_key_env,
     "runtime_commit_live_policy_report": runtime_commit_live_policy_report,
     "runtime_commit_finality_command": runtime_commit_finality_command if runtime_commit_finality_command else "",
     "runtime_commit_finality_output_file": runtime_commit_finality_output_file if runtime_commit_finality_command else "",
@@ -712,6 +729,9 @@ summary = {
         "ci_fast_gate_scope": "local-only",
         "runtime_provider_client_contract": runtime_provider_client_contract,
         "runtime_profile": runtime_profile,
+        "runtime_signer_profile_selector_env": runtime_signer_profile_selector_env,
+        "runtime_signer_profile": runtime_signer_profile,
+        "runtime_signer_private_key_env": runtime_signer_private_key_env,
         "runtime_commit_endpoint": "/broadcast/runtime-commit",
         "runtime_commit_method": "POST",
         "runtime_commit_finality_primary_endpoint": "/notifications",
