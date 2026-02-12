@@ -47,6 +47,7 @@ use kamn_kolme::{
     is_valid_websocket_timeout_seconds as is_kolme_valid_websocket_timeout_seconds_contract,
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
     lifecycle_state_label as lifecycle_state_label_contract,
+    normalize_block_fallback_constructor_inputs as normalize_kolme_block_fallback_constructor_inputs_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
     normalize_broadcast_submit_path_input as normalize_kolme_broadcast_submit_path_input_contract,
     normalize_finality_endpoint_inputs as normalize_kolme_finality_endpoint_inputs_contract,
@@ -1347,10 +1348,16 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
                     }
                 }
             })?;
+        let (base_url, block_path_template, provider) =
+            normalize_kolme_block_fallback_constructor_inputs_contract(
+                base_url,
+                block_path_template,
+                provider,
+            );
         Ok(Self {
-            base_url: base_url.trim().to_owned(),
-            block_path_template: block_path_template.trim().to_owned(),
-            provider: provider.trim().to_owned(),
+            base_url,
+            block_path_template,
+            provider,
             max_block_lookups,
             transport,
         })

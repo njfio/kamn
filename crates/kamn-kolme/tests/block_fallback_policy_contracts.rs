@@ -1,8 +1,9 @@
 use kamn_kolme::{
     is_valid_block_fallback_base_url_input, is_valid_block_fallback_lookup_budget,
-    is_valid_block_fallback_provider_input, parse_block_fallback_response,
-    parse_fork_block_fallback_response, parse_provider_block_fallback_response,
-    KolmeBlockFallbackPolicyError, KolmeBlockFallbackResponse,
+    is_valid_block_fallback_provider_input, normalize_block_fallback_constructor_inputs,
+    parse_block_fallback_response, parse_fork_block_fallback_response,
+    parse_provider_block_fallback_response, KolmeBlockFallbackPolicyError,
+    KolmeBlockFallbackResponse,
 };
 
 #[test]
@@ -115,9 +116,44 @@ fn functional_block_fallback_policy_accepts_valid_constructor_guard_inputs() {
 }
 
 #[test]
+fn functional_block_fallback_policy_normalizes_constructor_inputs() {
+    let normalized = normalize_block_fallback_constructor_inputs(
+        "  https://kolme.example  ",
+        "  /block/{height}  ",
+        "  kolme-fork-local  ",
+    );
+    assert_eq!(
+        normalized,
+        (
+            "https://kolme.example".to_owned(),
+            "/block/{height}".to_owned(),
+            "kolme-fork-local".to_owned(),
+        )
+    );
+}
+
+#[test]
 fn regression_issue_1866_block_fallback_policy_rejects_invalid_constructor_guard_inputs() {
     // Regression: #1866
     assert!(!is_valid_block_fallback_base_url_input(" "));
     assert!(!is_valid_block_fallback_provider_input(""));
     assert!(!is_valid_block_fallback_lookup_budget(0));
+}
+
+#[test]
+fn regression_issue_1922_block_fallback_policy_trims_constructor_input_whitespace() {
+    // Regression: #1922
+    let normalized = normalize_block_fallback_constructor_inputs(
+        "\nhttps://kolme.example\n",
+        "\n/block/{height}\n",
+        "\nkolme-fork-local\n",
+    );
+    assert_eq!(
+        normalized,
+        (
+            "https://kolme.example".to_owned(),
+            "/block/{height}".to_owned(),
+            "kolme-fork-local".to_owned(),
+        )
+    );
 }
