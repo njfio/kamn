@@ -623,6 +623,9 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run 
 # deployment preflight policy checker contract
 python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json
 
+# deployment preflight contract lane (dry-run summary + policy + docs parity)
+bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --output-json /tmp/kolme-local-live-deployment-preflight-summary.json --policy-output-json /tmp/kolme-local-live-deployment-preflight-policy.json
+
 # deterministic preflight marker contracts
 # signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE
 # contracts.ci_fast_gate_scope=ci-fast-gate
@@ -636,6 +639,7 @@ python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --re
 # schema: kamn.kolme.local-live-deployment-preflight-summary.v1
 # schema: kamn.kolme.local-live-deployment-preflight-policy-report.v1
 # Regression: #2225
+# Regression: #2226
 ```
 
 Live Provider Operator Runbook (Issue #2114): `docs/planning/kolme-devnet-ops.md`
