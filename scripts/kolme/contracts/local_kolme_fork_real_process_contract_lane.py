@@ -142,6 +142,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Per-check budget for runtime-commit verification in lifecycle lane.",
     )
     parser.add_argument(
+        "--lifecycle-mode",
+        default="dry-run",
+        choices=("dry-run", "run"),
+        help="Lifecycle lane execution mode forwarded to nested process lifecycle runner.",
+    )
+    parser.add_argument(
         "--lifecycle-runtime-commit-finality-command",
         default="",
         help="Optional runtime finality command forwarded to lifecycle lane integration pass-through.",
@@ -183,8 +189,10 @@ def ensure_docs() -> None:
         "run_local_kolme_fork_checkout_bootstrap_lane.sh",
         "check_local_kolme_fork_checkout_bootstrap_policy.py",
         "Regression: #1644",
+        "--lifecycle-mode",
         "--lifecycle-runtime-commit-finality-command",
         "Regression: #1975",
+        "Regression: #1977",
     )
     for marker in required_doc_markers:
         if marker not in doc_text:
@@ -351,7 +359,7 @@ def run_mode_checks(
             "bash",
             str(LIFECYCLE_RUNNER),
             "--mode",
-            "dry-run",
+            args.lifecycle_mode,
             "--checkout-path",
             str(checkout_path),
             "--expected-remote-url",
@@ -377,6 +385,13 @@ def run_mode_checks(
             "--output-json",
             str(lifecycle_report),
         ]
+        if args.lifecycle_mode == "run":
+            process_lifecycle_command.extend(
+                [
+                    "--serve-command",
+                    args.serve_command,
+                ]
+            )
         if args.lifecycle_runtime_commit_finality_command:
             process_lifecycle_command.extend(
                 [
@@ -654,6 +669,7 @@ def main() -> int:
         "budget_status": budget_status,
         "selected_serve_command": selected_serve_command,
         "allow_non_fork_serve_command": bool(args.allow_non_fork_serve_command),
+        "lifecycle_mode": args.lifecycle_mode,
         "lifecycle_runtime_commit_finality_enabled": bool(args.lifecycle_runtime_commit_finality_command),
         "lifecycle_runtime_commit_finality_command": args.lifecycle_runtime_commit_finality_command,
         "lifecycle_runtime_commit_finality_max_seconds": int(args.lifecycle_runtime_commit_finality_max_seconds),

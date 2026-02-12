@@ -287,6 +287,7 @@ KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_co
 KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh \
   --mode run \
   --checkout-path /tmp/kolme_fork \
+  --lifecycle-mode run \
   --lifecycle-runtime-commit-finality-command "printf 'finality=final\n'" \
   --lifecycle-runtime-commit-finality-max-seconds 15 \
   --lifecycle-runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt \

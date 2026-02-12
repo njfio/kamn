@@ -49,6 +49,7 @@ fi
 
 # Regression: #1975
 required_lifecycle_finality_markers=(
+  "--lifecycle-mode"
   "--lifecycle-runtime-commit-finality-command"
   "--lifecycle-runtime-commit-finality-max-seconds"
   "--lifecycle-runtime-commit-finality-output-file"
@@ -83,6 +84,11 @@ if ! grep -q -- "--lifecycle-runtime-commit-finality-command" "$DOC_FILE"; then
   exit 1
 fi
 
+if ! grep -q -- "--lifecycle-mode" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include lifecycle mode option for real-process wrapper" >&2
+  exit 1
+fi
+
 if ! grep -q "run_local_kolme_fork_real_process_contract_lane.sh" "$README_FILE"; then
   echo "expected README to reference local fork real-process contract lane" >&2
   exit 1
@@ -90,6 +96,11 @@ fi
 
 if ! grep -q -- "--lifecycle-runtime-commit-finality-command" "$README_FILE"; then
   echo "expected README to include lifecycle runtime finality pass-through command option" >&2
+  exit 1
+fi
+
+if ! grep -q -- "--lifecycle-mode" "$README_FILE"; then
+  echo "expected README to include lifecycle mode option for real-process wrapper" >&2
   exit 1
 fi
 
@@ -111,6 +122,7 @@ trap 'rm -f "$TMP_SUMMARY" "$TMP_POLICY" "$TMP_FINALITY_OUTPUT"' EXIT
 KAMN_KOLME_LOCAL_HEAVY=1 python3 "$CONTRACT_IMPL" \
   --mode run \
   --max-seconds 180 \
+  --lifecycle-mode run \
   --lifecycle-runtime-commit-finality-command "printf 'finality=final\n'" \
   --lifecycle-runtime-commit-finality-max-seconds 13 \
   --lifecycle-runtime-commit-finality-output-file "$TMP_FINALITY_OUTPUT" \
@@ -134,6 +146,8 @@ lifecycle_commands = [
 if len(lifecycle_commands) != 1:
     raise SystemExit("expected exactly one process_lifecycle_lane command entry")
 command = lifecycle_commands[0]
+if "--mode run" not in command:
+    raise SystemExit("expected lifecycle command to run in lifecycle-mode run selection")
 if "--integration-bootstrap-max-seconds" not in command:
     raise SystemExit("expected lifecycle command to use integration-bootstrap-max-seconds option name")
 if "--integration-conformance-max-seconds" not in command:
