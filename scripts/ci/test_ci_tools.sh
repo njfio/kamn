@@ -138,6 +138,7 @@ bash "$ROOT_DIR/scripts/kolme/test_run_notifications_consumer_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh"
+bash "$ROOT_DIR/scripts/kolme/test_run_local_runtime_commit_live_finality_evidence_contract_lane.sh"
 if [ "${KAMN_CI_FORCE_DASHBOARD_PACKAGE_TESTS:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/frontend/test_dashboard_package.sh"
 elif node --experimental-strip-types -e "" >/dev/null 2>&1; then

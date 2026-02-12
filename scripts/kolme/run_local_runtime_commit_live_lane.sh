@@ -210,6 +210,18 @@ if [[ "$LIVE_COMMAND" == *"$PROVIDER_COMMAND_MARKER"* ]]; then
   PROVIDER_COMMAND_MARKER_PRESENT="true"
 fi
 
+SUBMIT_EVIDENCE_MARKER="status=submitted"
+SUBMIT_EVIDENCE_MARKER_PRESENT="false"
+if [[ "$LIVE_COMMAND" == *"$SUBMIT_EVIDENCE_MARKER"* ]]; then
+  SUBMIT_EVIDENCE_MARKER_PRESENT="true"
+fi
+
+FINALITY_EVIDENCE_MARKER="finality=final"
+FINALITY_EVIDENCE_MARKER_PRESENT="false"
+if [ -n "$FINALITY_COMMAND" ] && [[ "$FINALITY_COMMAND" == *"$FINALITY_EVIDENCE_MARKER"* ]]; then
+  FINALITY_EVIDENCE_MARKER_PRESENT="true"
+fi
+
 preflight_command="curl --silent --show-error --fail --max-time ${PREFLIGHT_MAX_SECONDS} ${BASE_URL%/}/healthz"
 
 CHECK_FILE="$(mktemp)"
@@ -332,7 +344,21 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$FINALITY_COMMAND" "$FINALITY_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$FINALITY_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" "$PROVIDER_CLIENT_CONTRACT" "$PROVIDER_SUBMIT_PROFILE_CONTRACT" "$PROVIDER_COMMAND_MARKER" "$PROVIDER_COMMAND_MARKER_PRESENT" <<'PY'
+if [ "$MODE" = "run" ]; then
+  if [ -f "$LIVE_OUTPUT_FILE" ] && grep -Fq "$SUBMIT_EVIDENCE_MARKER" "$LIVE_OUTPUT_FILE"; then
+    SUBMIT_EVIDENCE_MARKER_PRESENT="true"
+  else
+    SUBMIT_EVIDENCE_MARKER_PRESENT="false"
+  fi
+
+  if [ -n "$FINALITY_COMMAND" ] && [ -f "$FINALITY_OUTPUT_FILE" ] && grep -Fq "$FINALITY_EVIDENCE_MARKER" "$FINALITY_OUTPUT_FILE"; then
+    FINALITY_EVIDENCE_MARKER_PRESENT="true"
+  else
+    FINALITY_EVIDENCE_MARKER_PRESENT="false"
+  fi
+fi
+
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$FINALITY_COMMAND" "$FINALITY_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$FINALITY_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" "$PROVIDER_CLIENT_CONTRACT" "$PROVIDER_SUBMIT_PROFILE_CONTRACT" "$PROVIDER_COMMAND_MARKER" "$PROVIDER_COMMAND_MARKER_PRESENT" "$SUBMIT_EVIDENCE_MARKER" "$SUBMIT_EVIDENCE_MARKER_PRESENT" "$FINALITY_EVIDENCE_MARKER" "$FINALITY_EVIDENCE_MARKER_PRESENT" <<'PY'
 from __future__ import annotations
 
 import json
@@ -361,6 +387,10 @@ provider_client_contract = sys.argv[19]
 provider_submit_profile_contract = sys.argv[20]
 provider_command_marker = sys.argv[21]
 provider_command_marker_present = sys.argv[22] == "true"
+submit_evidence_marker = sys.argv[23]
+submit_evidence_marker_present = sys.argv[24] == "true"
+finality_evidence_marker = sys.argv[25]
+finality_evidence_marker_present = sys.argv[26] == "true"
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -399,6 +429,10 @@ summary = {
     "provider_submit_profile_contract": provider_submit_profile_contract,
     "provider_command_marker": provider_command_marker,
     "provider_command_marker_present": provider_command_marker_present,
+    "submit_evidence_marker": submit_evidence_marker,
+    "submit_evidence_marker_present": submit_evidence_marker_present,
+    "finality_evidence_marker": finality_evidence_marker,
+    "finality_evidence_marker_present": finality_evidence_marker_present,
     "preflight_enabled": not skip_preflight,
     "preflight_max_seconds": preflight_max_seconds,
     "checks": checks,

@@ -25,6 +25,7 @@ lane_wrappers=(
   "run_local_kolme_fork_rust_test_matrix_contract_lane.sh"
   "run_local_kolme_fork_self_test_contract_lane.sh"
   "run_local_kolme_live_api_conformance_contract_lane.sh"
+  "run_local_runtime_commit_live_finality_evidence_contract_lane.sh"
   "run_local_native_api_parity_live_proof_contract_lane.sh"
   "run_local_signed_to_kolme_demo_contract_lane.sh"
   "run_nonce_broadcast_parity_contract_lane.sh"

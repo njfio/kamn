@@ -40,6 +40,9 @@ fn doc_contains_adapter_types_and_validation_commands() {
         "cargo test -p kamn-core --test kolme_runtime_commit_http_transport functional_https_transport_submit_with_trusted_ca_succeeds -- --exact"
     ));
     assert!(DOC.contains("check_local_runtime_commit_live_evidence_policy.py"));
+    assert!(DOC.contains("run_local_runtime_commit_live_finality_evidence_contract_lane.sh"));
+    assert!(DOC.contains("submit_evidence_marker_present"));
+    assert!(DOC.contains("finality_evidence_marker_present"));
     assert!(DOC.contains("scripts/kolme/run_runtime_commit_contract_lane.sh"));
     assert!(DOC.contains("run_local_kamn_live_runtime_integration_lane.sh --mode run"));
     assert!(DOC.contains("--runtime-commit-finality-command"));
@@ -60,6 +63,7 @@ fn regression_requires_adapter_provider_mismatch_and_non_final_fail_closed_marke
     assert!(DOC.contains("`Regression: #1506`"));
     assert!(DOC.contains("`Regression: #1533`"));
     assert!(DOC.contains("`Regression: #2095`"));
+    assert!(DOC.contains("`Regression: #2099`"));
     assert!(DOC.contains("`Regression: #1775`"));
     assert!(DOC.contains("`Regression: #1777`"));
     assert!(DOC.contains("`Regression: #1779`"));

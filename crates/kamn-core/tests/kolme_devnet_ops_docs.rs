@@ -179,7 +179,12 @@ fn plan_contains_real_fork_wrapper_policy_checker_test_command() {
 fn plan_contains_local_runtime_commit_live_lane() {
     assert!(PLAN.contains("## Local Runtime Commit Live Proof Lane"));
     assert!(PLAN.contains("run_local_runtime_commit_live_lane.sh"));
+    assert!(PLAN.contains("check_local_runtime_commit_live_evidence_policy.py"));
+    assert!(PLAN.contains("run_local_runtime_commit_live_finality_evidence_contract_lane.sh"));
+    assert!(PLAN.contains("submit_evidence_marker_present"));
+    assert!(PLAN.contains("finality_evidence_marker_present"));
     assert!(PLAN.contains("kamn.kolme.local-runtime-commit-live-summary.v1"));
+    assert!(PLAN.contains("`Regression: #2099`"));
 }
 
 #[test]

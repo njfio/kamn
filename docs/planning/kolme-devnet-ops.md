@@ -629,15 +629,19 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --skip-preflight --live-command "printf 'status=submitted\\n'" --finality-command "printf 'finality=final\\n'" --finality-max-seconds 15 --max-seconds 90 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt --finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt`
 - Evidence policy checker command:
   - `python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/kolme-local-runtime-commit-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-runtime-commit-live-policy.json`
+- Finality evidence contract lane command:
+  - `bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json`
 - Default live-provider smoke command executed by run mode:
   - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint`
 - Summary schema:
   - `kamn.kolme.local-runtime-commit-live-summary.v1`
+  - policy schema: `kamn.kolme.local-runtime-commit-live-policy-report.v1`
 - Deterministic checkpoints include:
   - bounded preflight probe against `<base-url>/healthz` before live submit execution (unless `--skip-preflight` is explicitly set)
   - explicit local-only opt-in marker (`KAMN_KOLME_LOCAL_HEAVY=1`)
   - bounded live command timeout via `--max-seconds`
   - optional finality command timeout bound via `--finality-max-seconds`
+  - submit/finality evidence marker fields (`submit_evidence_marker_present`, `finality_evidence_marker_present`) remain fail-closed in policy checks
   - machine-readable pass/fail reason codes for missing opt-in, preflight failure/timeout, command failure, and command timeout
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.
@@ -815,6 +819,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
 - local runtime-commit live proof lane preflight health probe and default live-provider ignored-test dispatch remain fail-closed (`Regression: #1829`).
 - local runtime-commit live proof lane evidence policy remains fail-closed for missing live-provider command marker contracts (`Regression: #2095`).
+- local runtime-commit submit/finality evidence marker policy and contract lane parity remains fail-closed (`Regression: #2099`).
 - local native API parity live proof lane fails closed without local opt-in and on nonce/broadcast/finality timeout or command failures (`Regression: #1465`).
 - native parity fast/local command matrix docs drift remains fail-closed (`Regression: #1468`).
 - local probe fork-info query semantics and native parity broadcast method drift remain fail-closed (`Regression: #1482`).
@@ -858,6 +863,7 @@ bash scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_contract_lane.sh
 bash scripts/kolme/test_check_local_kolme_fork_real_process_policy.sh
 bash scripts/kolme/test_run_local_kolme_fork_real_process_contract_lane.sh
 bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh
+bash scripts/kolme/test_run_local_runtime_commit_live_finality_evidence_contract_lane.sh
 bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh
 bash scripts/kolme/test_run_fast_gate_native_api_parity_contract_lane.sh
 bash scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh
