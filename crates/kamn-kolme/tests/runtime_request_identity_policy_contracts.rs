@@ -1,4 +1,7 @@
-use kamn_kolme::{deterministic_runtime_commit_id, deterministic_runtime_commit_idempotency_key};
+use kamn_kolme::{
+    deterministic_runtime_commit_id, deterministic_runtime_commit_idempotency_key,
+    is_valid_runtime_commit_id_request,
+};
 
 #[test]
 fn unit_runtime_request_identity_policy_idempotency_key_contract() {
@@ -27,4 +30,18 @@ fn regression_runtime_request_identity_policy_payload_length_drift_remains_fail_
     let left = deterministic_runtime_commit_id("op-x", "did:agent", 3, "abc");
     let right = deterministic_runtime_commit_id("op-x", "did:agent", 3, "xyz");
     assert_eq!(left, right);
+}
+
+#[test]
+fn functional_runtime_request_identity_policy_accepts_non_empty_commit_id_request() {
+    assert!(is_valid_runtime_commit_id_request(
+        "kolme-commit:op-9:did:agent:beta:11:8"
+    ));
+}
+
+#[test]
+fn regression_issue_1862_runtime_request_identity_policy_rejects_empty_commit_id_request() {
+    // Regression: #1862
+    assert!(!is_valid_runtime_commit_id_request(""));
+    assert!(!is_valid_runtime_commit_id_request("   "));
 }

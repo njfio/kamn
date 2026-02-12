@@ -34,9 +34,17 @@ pub fn deterministic_runtime_commit_id(
     )
 }
 
+/// Validates runtime finality request commit identifier input.
+pub fn is_valid_runtime_commit_id_request(commit_id: &str) -> bool {
+    !commit_id.trim().is_empty()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{deterministic_runtime_commit_id, deterministic_runtime_commit_idempotency_key};
+    use super::{
+        deterministic_runtime_commit_id, deterministic_runtime_commit_idempotency_key,
+        is_valid_runtime_commit_id_request,
+    };
 
     #[test]
     fn unit_renders_idempotency_key_contract() {
@@ -59,5 +67,13 @@ mod tests {
             deterministic_runtime_commit_id("op-x", "did:agent", 3, "abc"),
             deterministic_runtime_commit_id("op-x", "did:agent", 3, "xyz")
         );
+    }
+
+    #[test]
+    fn unit_validates_runtime_commit_id_request_input() {
+        assert!(is_valid_runtime_commit_id_request(
+            "kolme-commit:op:did:1:12"
+        ));
+        assert!(!is_valid_runtime_commit_id_request("   "));
     }
 }
