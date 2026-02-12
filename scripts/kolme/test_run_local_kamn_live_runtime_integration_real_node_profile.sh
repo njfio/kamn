@@ -181,4 +181,25 @@ if ! grep -q "requires explicit local-only opt-in" "$TMP_ERR"; then
   exit 1
 fi
 
+set +e
+bash "$RUNNER" \
+  --mode run \
+  --runtime-profile standard \
+  --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider \
+  --runtime-commit-live-summary "$TMP_RUNTIME_SUMMARY" \
+  --runtime-commit-live-policy-report "$TMP_RUNTIME_POLICY" \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+run_standard_profile_code=$?
+set -e
+
+if [ "$run_standard_profile_code" -eq 0 ]; then
+  echo "expected run mode with standard runtime profile to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "run mode requires runtime-profile=real-node" "$TMP_ERR"; then
+  echo "expected deterministic run-mode profile gate failure message for standard runtime profile" >&2
+  exit 1
+fi
+
 echo "local KAMN live runtime integration real-node profile tests passed."

@@ -329,6 +329,11 @@ if [ "$RUNTIME_PROFILE" != "standard" ] && [ "$RUNTIME_PROFILE" != "real-node" ]
   exit 1
 fi
 
+if [ "$MODE" = "run" ] && [ "$RUNTIME_PROFILE" != "real-node" ]; then
+  echo "run mode requires runtime-profile=real-node; standard profile is dry-run only" >&2
+  exit 1
+fi
+
 if [ -n "$RUNTIME_SIGNER_PROFILE_OVERRIDE" ] && [ "$RUNTIME_PROFILE" != "real-node" ]; then
   echo "runtime-signer-profile is only valid when runtime-profile=real-node" >&2
   exit 1

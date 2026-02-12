@@ -251,6 +251,49 @@ def main() -> int:
             )
             return 1
 
+        # Regression: #2298
+        simulated_profile_payload = dict(failure_payload)
+        simulated_profile_payload["runtime_profile"] = "standard"
+        contracts = simulated_profile_payload.get("contracts")
+        if isinstance(contracts, dict):
+            contracts["runtime_profile"] = "standard"
+        simulated_profile_report = temp_path / "runtime_failure_simulated_profile_summary.json"
+        simulated_profile_report.write_text(
+            json.dumps(simulated_profile_payload, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        simulated_profile_run = subprocess.run(
+            [
+                "python3",
+                str(CHECKER),
+                "--report-file",
+                str(simulated_profile_report),
+                "--expected-final-decision",
+                "NO-GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--require-reason-code",
+                "runtime_commit_endpoint_failed",
+                "--output-json",
+                str(failure_policy_output),
+            ],
+            cwd=ROOT_DIR,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if simulated_profile_run.returncode == 0:
+            print("expected checker to fail when run-mode uses simulated standard runtime profile", file=sys.stderr)
+            return 1
+        simulated_profile_output = f"{simulated_profile_run.stdout}\n{simulated_profile_run.stderr}"
+        if "runtime_profile_run_mode_mismatch" not in simulated_profile_output:
+            print(
+                "expected run-mode simulated profile mismatch reason for policy failure",
+                file=sys.stderr,
+            )
+            return 1
+
     doc_text = DOC_FILE.read_text(encoding="utf-8")
     readme_text = README_FILE.read_text(encoding="utf-8")
     if "run_local_kamn_live_runtime_integration_lane.sh" not in doc_text:
