@@ -26,6 +26,8 @@ const KOLME_LIVE_SIGNER_KEY_SOURCE_ENV_LOCAL: &str = "env-local";
 const KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX";
 const KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY_ENV: &str =
     "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY";
+const KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK_ENV: &str =
+    "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK";
 const KOLME_LIVE_NATIVE_CREATED_AT: &str = "2026-02-12T00:00:00Z";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -904,23 +906,70 @@ fn resolve_kolme_live_signer_selection(
     })
 }
 
+trait KolmeLiveSignerSecretProvider {
+    fn ensure_no_fallback_private_key_path(&self) -> Result<(), ConfigError>;
+
+    fn read_private_key_hex(
+        &self,
+        selection: &KolmeLiveSignerSelection,
+    ) -> Result<String, ConfigError>;
+}
+
+struct EnvKolmeLiveSignerSecretProvider;
+
+impl KolmeLiveSignerSecretProvider for EnvKolmeLiveSignerSecretProvider {
+    fn ensure_no_fallback_private_key_path(&self) -> Result<(), ConfigError> {
+        match env::var(KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK_ENV) {
+            Ok(_) => Err(ConfigError::RuntimeKolmeLive(format!(
+                "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK_ENV} must remain unset (fallback_signer_secret_present_violation)"
+            ))),
+            Err(env::VarError::NotPresent) => Ok(()),
+            Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
+                "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK_ENV} must be valid utf-8 when present (fallback_signer_secret_present_violation)"
+            ))),
+        }
+    }
+
+    fn read_private_key_hex(
+        &self,
+        selection: &KolmeLiveSignerSelection,
+    ) -> Result<String, ConfigError> {
+        match env::var(selection.private_key_env) {
+            Ok(private_key_hex) => Ok(private_key_hex),
+            Err(env::VarError::NotPresent) => Err(ConfigError::RuntimeKolmeLive(format!(
+                "{} must be set for signer profile {}",
+                selection.private_key_env, selection.profile
+            ))),
+            Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
+                "{} must be valid utf-8 for signer profile {}",
+                selection.private_key_env, selection.profile
+            ))),
+        }
+    }
+}
+
+fn read_kolme_live_signer_private_key_hex_with_provider<P: KolmeLiveSignerSecretProvider>(
+    strict_signer_profile: Option<&str>,
+    strict_signer_key_source: Option<&str>,
+    provider: &P,
+) -> Result<(String, KolmeLiveSignerSelection), ConfigError> {
+    let selection =
+        resolve_kolme_live_signer_selection(strict_signer_profile, strict_signer_key_source)?;
+    provider.ensure_no_fallback_private_key_path()?;
+    let private_key_hex = provider.read_private_key_hex(&selection)?;
+    Ok((private_key_hex, selection))
+}
+
 fn read_kolme_live_signer_private_key_hex(
     strict_signer_profile: Option<&str>,
     strict_signer_key_source: Option<&str>,
 ) -> Result<(String, KolmeLiveSignerSelection), ConfigError> {
-    let selection =
-        resolve_kolme_live_signer_selection(strict_signer_profile, strict_signer_key_source)?;
-    match env::var(selection.private_key_env) {
-        Ok(private_key_hex) => Ok((private_key_hex, selection)),
-        Err(env::VarError::NotPresent) => Err(ConfigError::RuntimeKolmeLive(format!(
-            "{} must be set for signer profile {}",
-            selection.private_key_env, selection.profile
-        ))),
-        Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
-            "{} must be valid utf-8 for signer profile {}",
-            selection.private_key_env, selection.profile
-        ))),
-    }
+    let provider = EnvKolmeLiveSignerSecretProvider;
+    read_kolme_live_signer_private_key_hex_with_provider(
+        strict_signer_profile,
+        strict_signer_key_source,
+        &provider,
+    )
 }
 
 fn escape_kolme_json_string(value: &str) -> String {
@@ -2785,6 +2834,32 @@ mod tests {
                 if message.contains("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX must be set")
             ),
             "missing primary signer private key env must fail closed"
+        );
+    }
+
+    #[test]
+    fn regression_issue_2279_kolme_live_signer_rejects_fallback_private_key_env_path() {
+        // Regression: #2279
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+        let _primary_key_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+        );
+        let _fallback_key_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY),
+        );
+        assert!(
+            matches!(
+                build_kolme_live_signing_key(Some("ops-primary"), Some("env-local")),
+                Err(ConfigError::RuntimeKolmeLive(message))
+                if message.contains("fallback_signer_secret_present_violation")
+            ),
+            "fallback signer private key env path must fail closed"
         );
     }
 

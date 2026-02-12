@@ -47,5 +47,17 @@ cargo test -p kamn-core --test key_management_and_encryption_docs
 - `final_decision` must match derived policy from report booleans.
 - `evidence_key` and `reason_key` must match deterministic lane/decision keys.
 
+## Kolme Live Signer Provider Contracts
+- Production signer secret loading is provider-backed (`KolmeLiveSignerSecretProvider`)
+  with explicit fail-closed checks before private-key material is read.
+- Strict signer profiles remain bounded to `ops-primary` and `ops-secondary`.
+- Supported strict key source remains `env-local` for node runtime signer loading.
+- `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK` must remain unset in
+  production signer flows; presence triggers deterministic
+  `fallback_signer_secret_present_violation` rejection.
+- Profile-selected signer key env contracts remain explicit:
+  - `ops-primary`: `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
+  - `ops-secondary`: `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY`
+
 ## Regression Marker
 - replay/stale key activation drift is rejected (`Regression: #931`)
