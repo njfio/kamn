@@ -203,6 +203,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `trust_score`
   - `transaction`
   - `validator_lifecycle`
+  - `watchdog`
 - Regression marker:
   - `Regression: #1828`
   - `Regression: #1981`
@@ -243,6 +244,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2051`
   - `Regression: #2053`
   - `Regression: #2055`
+  - `Regression: #2057`
 
 ## Contributor Entrypoint Matrix
 

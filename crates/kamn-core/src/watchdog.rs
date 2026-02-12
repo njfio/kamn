@@ -1,40 +1,65 @@
+//! Runtime watchdog anomaly classification and alerting contracts.
+
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Alert severity level emitted by watchdog analysis.
 pub enum WatchdogSeverity {
+    /// Warning-level anomaly.
     Warning,
+    /// Critical anomaly.
     Critical,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Anomaly taxonomy produced by watchdog observations.
 pub enum WatchdogAlertKind {
+    /// Block parent hash mismatch anomaly.
     InvalidBlockParent {
+        /// Block identifier.
         block_id: String,
+        /// Expected parent hash.
         expected_parent: String,
+        /// Observed parent hash.
         observed_parent: String,
     },
+    /// Potential censorship signal from delivery ratio degradation.
     CensorshipSignal {
+        /// Message identifier.
         message_id: String,
+        /// Number of delivered recipients.
         delivered_recipients: usize,
+        /// Number of expected recipients.
         expected_recipients: usize,
+        /// Observed delivery ratio percentage.
         observed_ratio_pct: u8,
     },
+    /// Quorum-signature anomaly for a block.
     QuorumAnomaly {
+        /// Block identifier.
         block_id: String,
+        /// Observed signature count.
         observed_signatures: u16,
+        /// Minimum required signature count.
         min_required_signatures: u16,
     },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Alert record emitted by watchdog analysis.
 pub struct WatchdogAlert {
+    /// Alert severity.
     pub severity: WatchdogSeverity,
+    /// Alert kind payload.
     pub kind: WatchdogAlertKind,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Runtime watchdog policy configuration.
 pub struct WatchdogConfig {
+    /// Minimum signatures required for block quorum.
     pub min_quorum_signatures: u16,
+    /// Minimum healthy delivery ratio percentage.
     pub min_delivery_ratio_pct: u8,
 }
 
@@ -48,23 +73,36 @@ impl Default for WatchdogConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Observation payload ingested by watchdog analysis.
 pub enum WatchdogObservation {
+    /// Block-level observation.
     Block {
+        /// Block identifier.
         block_id: String,
+        /// Current block state hash.
         state_hash: String,
+        /// Parent block state hash.
         parent_state_hash: String,
+        /// Observed quorum signatures.
         quorum_signatures: u16,
+        /// Expected validator count for this block.
         expected_validator_count: u16,
     },
+    /// Gossip delivery observation.
     GossipDelivery {
+        /// Message identifier.
         message_id: String,
+        /// Target recipients count.
         target_recipients: usize,
+        /// Delivered recipients count.
         delivered_recipients: usize,
+        /// Expected recipients count.
         expected_recipients: usize,
     },
 }
 
 impl WatchdogObservation {
+    /// Constructs a block observation payload.
     pub fn block(
         block_id: &str,
         state_hash: &str,
@@ -81,6 +119,7 @@ impl WatchdogObservation {
         }
     }
 
+    /// Constructs a gossip delivery observation payload.
     pub fn gossip_delivery(
         message_id: &str,
         target_recipients: usize,
@@ -97,14 +136,20 @@ impl WatchdogObservation {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Aggregate watchdog counters snapshot.
 pub struct WatchdogSnapshot {
+    /// Total observations processed.
     pub total_observations: usize,
+    /// Total emitted alerts.
     pub total_alerts: usize,
+    /// Total warning alerts.
     pub warning_alerts: usize,
+    /// Total critical alerts.
     pub critical_alerts: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Stateful watchdog engine for runtime anomaly classification.
 pub struct WatchdogNode {
     config: WatchdogConfig,
     last_state_hash: Option<String>,
@@ -114,6 +159,7 @@ pub struct WatchdogNode {
 }
 
 impl WatchdogNode {
+    /// Creates a watchdog node from validated config.
     pub fn new(config: WatchdogConfig) -> Result<Self, WatchdogError> {
         validate_config(config)?;
 
@@ -126,6 +172,7 @@ impl WatchdogNode {
         })
     }
 
+    /// Processes an observation and returns emitted alerts.
     pub fn observe(
         &mut self,
         observation: WatchdogObservation,
@@ -168,6 +215,7 @@ impl WatchdogNode {
         Ok(alerts)
     }
 
+    /// Returns aggregate counters for processed observations and alerts.
     pub fn snapshot(&self) -> WatchdogSnapshot {
         WatchdogSnapshot {
             total_observations: self.total_observations,
@@ -272,8 +320,11 @@ impl WatchdogNode {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Error taxonomy for watchdog configuration and observation validation.
 pub enum WatchdogError {
+    /// Configuration is invalid.
     InvalidConfig(String),
+    /// Observation payload is invalid.
     InvalidObservation(String),
 }
 
