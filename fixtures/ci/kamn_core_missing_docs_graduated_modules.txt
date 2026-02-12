@@ -18,3 +18,4 @@ task_lifecycle
 task_artifacts
 transaction
 direct_message_crypto
+discord_bridge

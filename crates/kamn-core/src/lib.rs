@@ -42,7 +42,7 @@ pub mod did;
 pub mod did_registry;
 /// Direct-message encryption/decryption contracts and error semantics.
 pub mod direct_message_crypto;
-#[allow(missing_docs)]
+/// Discord bridge ingress/egress routing and outbound approval contracts.
 pub mod discord_bridge;
 #[allow(missing_docs)]
 pub mod durable_guard_store;
