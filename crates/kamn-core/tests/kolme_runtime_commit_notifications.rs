@@ -4,6 +4,7 @@ use kamn_core::{
     KolmeRuntimeCommitNotificationsConsumer, KolmeRuntimeCommitProviderError,
     KolmeRuntimeCommitWebsocketConnector,
 };
+use kamn_kolme::KolmeNotificationEvent as KamnKolmeNotificationEvent;
 use std::collections::VecDeque;
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -192,6 +193,22 @@ fn functional_notifications_consumer_decodes_new_block_variant_to_final_receipt(
     assert_eq!(receipt.provider, "kolme-fork-local");
     assert_eq!(receipt.commit_id, "kolme-commit:ab12cd34:h42");
     assert_eq!(receipt.finality, KolmeCommitReceiptFinality::Final);
+}
+
+#[test]
+fn regression_issue_1926_notification_event_conversion_preserves_variant_fields() {
+    // Regression: #1926
+    let event = KolmeRuntimeCommitNotificationEvent::from(KamnKolmeNotificationEvent::NewBlock {
+        txhash: "ab12cd34".to_owned(),
+        block_height: Some(42),
+    });
+    assert_eq!(
+        event,
+        KolmeRuntimeCommitNotificationEvent::NewBlock {
+            txhash: "ab12cd34".to_owned(),
+            block_height: Some(42),
+        }
+    );
 }
 
 #[test]

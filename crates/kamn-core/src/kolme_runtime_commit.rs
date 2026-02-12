@@ -745,6 +745,28 @@ pub enum KolmeRuntimeCommitNotificationEvent {
     },
 }
 
+impl From<KamnKolmeNotificationEvent> for KolmeRuntimeCommitNotificationEvent {
+    fn from(value: KamnKolmeNotificationEvent) -> Self {
+        match value {
+            KamnKolmeNotificationEvent::NewBlock {
+                txhash,
+                block_height,
+            } => Self::NewBlock {
+                txhash,
+                block_height,
+            },
+            KamnKolmeNotificationEvent::FailedTransaction {
+                txhash,
+                proposed_height,
+            } => Self::FailedTransaction {
+                txhash,
+                proposed_height,
+            },
+            KamnKolmeNotificationEvent::LatestBlock { height } => Self::LatestBlock { height },
+        }
+    }
+}
+
 impl KolmeRuntimeCommitNotificationEvent {
     /// Converts notification event to a provider receipt when it carries tx finality information.
     pub fn to_provider_receipt(&self, provider: &str) -> Option<KolmeRuntimeCommitProviderReceipt> {
@@ -1693,7 +1715,14 @@ where
                 .expect("connection should exist before read")
                 .read_text_message();
             match result {
-                Ok(Some(payload)) => return parse_kolme_notification_event(payload.as_str()),
+                Ok(Some(payload)) => {
+                    let event = parse_kolme_notification_event_contract(payload.as_str()).map_err(
+                        |error| KolmeRuntimeCommitProviderError::MalformedResponse {
+                            reason: error.to_string(),
+                        },
+                    )?;
+                    return Ok(event.into());
+                }
                 Ok(None) | Err(_) => {
                     self.connection = None;
                     reconnect_attempts += 1;
@@ -2000,35 +2029,6 @@ fn read_http_header_boundary(
             });
         }
         response_bytes.extend_from_slice(&chunk[..read]);
-    }
-}
-
-fn parse_kolme_notification_event(
-    payload: &str,
-) -> Result<KolmeRuntimeCommitNotificationEvent, KolmeRuntimeCommitProviderError> {
-    let event = parse_kolme_notification_event_contract(payload).map_err(|error| {
-        KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: error.to_string(),
-        }
-    })?;
-    match event {
-        KamnKolmeNotificationEvent::NewBlock {
-            txhash,
-            block_height,
-        } => Ok(KolmeRuntimeCommitNotificationEvent::NewBlock {
-            txhash,
-            block_height,
-        }),
-        KamnKolmeNotificationEvent::FailedTransaction {
-            txhash,
-            proposed_height,
-        } => Ok(KolmeRuntimeCommitNotificationEvent::FailedTransaction {
-            txhash,
-            proposed_height,
-        }),
-        KamnKolmeNotificationEvent::LatestBlock { height } => {
-            Ok(KolmeRuntimeCommitNotificationEvent::LatestBlock { height })
-        }
     }
 }
 
