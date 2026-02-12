@@ -1,3 +1,5 @@
+//! DID registry lifecycle, idempotent submission, and finality tracking contracts.
+
 use crate::{AgentDid, DidDocument};
 use std::collections::HashMap;
 use std::fmt;
@@ -9,10 +11,20 @@ struct DidRegistryRecord {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Lifecycle mutation action applied to a DID record.
 pub enum DidLifecycleMutationAction {
-    Rotate { document: DidDocument },
+    /// Rotate to a new active DID document.
+    Rotate {
+        /// Replacement DID document.
+        document: DidDocument,
+    },
+    /// Revoke the DID record.
     Revoke,
-    Recover { document: DidDocument },
+    /// Recover a revoked DID with replacement document.
+    Recover {
+        /// Recovery DID document.
+        document: DidDocument,
+    },
 }
 
 impl DidLifecycleMutationAction {
@@ -26,76 +38,124 @@ impl DidLifecycleMutationAction {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Lifecycle mutation request envelope.
 pub struct DidLifecycleMutationRequest {
+    /// Target DID for mutation.
     pub did: AgentDid,
+    /// Actor DID authorized to perform mutation.
     pub actor_did: String,
+    /// Strictly increasing mutation nonce.
     pub nonce: u64,
+    /// Requested lifecycle action.
     pub action: DidLifecycleMutationAction,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Evidence produced by successful lifecycle mutation.
 pub struct DidLifecycleMutationEvidence {
+    /// Target DID identifier.
     pub did: String,
+    /// Actor DID that executed mutation.
     pub actor_did: String,
+    /// Mutation nonce accepted by registry.
     pub nonce: u64,
+    /// Action label executed by registry.
     pub action: &'static str,
+    /// Revocation state before mutation.
     pub from_revoked: bool,
+    /// Revocation state after mutation.
     pub to_revoked: bool,
+    /// Stable reason code for policy lanes.
     pub reason_code: &'static str,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Retry classification for register submissions.
 pub enum DidSubmissionRetryClass {
+    /// First submission for DID/key pair.
     NewSubmission,
+    /// Submission in-flight and retry is allowed.
     RetryableInFlight,
+    /// Submission already finalized and should not retry.
     FinalizedNoRetry,
+    /// Idempotency key conflicts with existing submission.
     ConflictNoRetry,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Finality status for DID registration submission.
 pub enum DidSubmissionFinalityStatus {
+    /// Submission finalized successfully.
     Confirmed,
+    /// Submission finalized as rejected.
     Rejected,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Finality record tracked per DID submission.
 pub struct DidSubmissionFinalityRecord {
+    /// Idempotency key associated with submission.
     pub idempotency_key: String,
+    /// Monotonic finality sequence number.
     pub sequence: u64,
+    /// Finality status.
     pub status: DidSubmissionFinalityStatus,
+    /// Provider receipt payload for finality event.
     pub receipt: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Chain adapter request for DID registration submission.
 pub struct DidChainSubmissionRequest {
+    /// DID being submitted.
     pub did: AgentDid,
+    /// Deterministic idempotency key.
     pub idempotency_key: String,
+    /// DID document payload for registration.
     pub document: DidDocument,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Chain adapter receipt for a submission attempt.
 pub struct DidChainSubmissionReceipt {
+    /// Provider name that handled submission.
     pub provider: String,
+    /// Provider transaction identifier.
     pub transaction_id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Submission outcome returned by chain adapter.
 pub enum DidChainSubmissionOutcome {
+    /// New submission accepted by provider.
     Submitted(DidChainSubmissionReceipt),
+    /// Duplicate idempotency key acknowledged with existing receipt.
     Duplicate(DidChainSubmissionReceipt),
-    Rejected { reason: String },
+    /// Submission rejected by provider policy.
+    Rejected {
+        /// Provider-supplied rejection reason.
+        reason: String,
+    },
+    /// Registry determined no provider call was needed.
     FinalizedNoOp,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Result envelope for registry + chain adapter registration flow.
 pub struct DidChainSubmissionResult {
+    /// DID processed by submission flow.
     pub did: AgentDid,
+    /// Idempotency key used for this flow.
     pub idempotency_key: String,
+    /// Retry classification returned by registry.
     pub retry_class: DidSubmissionRetryClass,
+    /// Provider/registry submission outcome.
     pub outcome: DidChainSubmissionOutcome,
 }
 
+/// Chain adapter abstraction for DID registration backends.
 pub trait DidRegistrationChainAdapter {
+    /// Submits a DID registration request via backing provider.
     fn submit_registration(
         &mut self,
         request: &DidChainSubmissionRequest,
@@ -103,6 +163,7 @@ pub trait DidRegistrationChainAdapter {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// In-memory chain adapter used for deterministic tests.
 pub struct InMemoryDidRegistrationChainAdapter {
     provider: String,
     receipts_by_key: HashMap<String, DidChainSubmissionReceipt>,
@@ -110,6 +171,7 @@ pub struct InMemoryDidRegistrationChainAdapter {
 }
 
 impl InMemoryDidRegistrationChainAdapter {
+    /// Creates an in-memory adapter with provider label.
     pub fn new(provider: &str) -> Self {
         Self {
             provider: provider.to_owned(),
@@ -118,6 +180,7 @@ impl InMemoryDidRegistrationChainAdapter {
         }
     }
 
+    /// Configures an idempotency key to return a rejected outcome.
     pub fn reject_idempotency_key(&mut self, idempotency_key: &str, reason: &str) {
         self.rejected_reasons_by_key
             .insert(idempotency_key.to_owned(), reason.to_owned());
@@ -154,6 +217,7 @@ impl DidRegistrationChainAdapter for InMemoryDidRegistrationChainAdapter {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// DID registry state machine and submission/finality index.
 pub struct DidRegistry {
     records: HashMap<AgentDid, DidRegistryRecord>,
     submission_keys_by_did: HashMap<AgentDid, String>,
@@ -162,10 +226,12 @@ pub struct DidRegistry {
 }
 
 impl DidRegistry {
+    /// Creates an empty DID registry.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Registers a new DID document in active state.
     pub fn register(
         &mut self,
         did: AgentDid,
@@ -189,6 +255,7 @@ impl DidRegistry {
         }
     }
 
+    /// Resolves active DID document by identifier.
     pub fn resolve(&self, did: &AgentDid) -> Result<&DidDocument, DidRegistryError> {
         match self.records.get(did) {
             Some(record) if !record.revoked => Ok(&record.document),
@@ -197,6 +264,7 @@ impl DidRegistry {
         }
     }
 
+    /// Replaces document for an active DID.
     pub fn update(&mut self, did: AgentDid, document: DidDocument) -> Result<(), DidRegistryError> {
         Self::validate_document_did(&did, &document)?;
         match self.records.get_mut(&did) {
@@ -211,6 +279,7 @@ impl DidRegistry {
         }
     }
 
+    /// Revokes an active DID.
     pub fn revoke(&mut self, did: &AgentDid) -> Result<(), DidRegistryError> {
         match self.records.get_mut(did) {
             Some(record) if record.revoked => {
@@ -224,6 +293,7 @@ impl DidRegistry {
         }
     }
 
+    /// Computes deterministic idempotency key for register request.
     pub fn idempotency_key_for_register(
         &self,
         did: &AgentDid,
@@ -266,6 +336,7 @@ impl DidRegistry {
         ))
     }
 
+    /// Classifies retry posture for register operation.
     pub fn classify_register_retry(
         &self,
         did: &AgentDid,
@@ -275,6 +346,7 @@ impl DidRegistry {
         Ok(self.classify_retry_by_key(did, &idempotency_key))
     }
 
+    /// Registers DID with built-in retry classification guard.
     pub fn register_with_retry_guard(
         &mut self,
         did: AgentDid,
@@ -308,6 +380,7 @@ impl DidRegistry {
         }
     }
 
+    /// Executes register flow through chain adapter with retry guard.
     pub fn submit_registration_via_chain_adapter<A: DidRegistrationChainAdapter>(
         &mut self,
         adapter: &mut A,
@@ -336,6 +409,7 @@ impl DidRegistry {
         })
     }
 
+    /// Records finality update for prior register submission.
     pub fn record_register_finality(
         &mut self,
         did: &AgentDid,
@@ -400,10 +474,12 @@ impl DidRegistry {
         Ok(())
     }
 
+    /// Returns most recent finality record for DID, if present.
     pub fn register_finality(&self, did: &AgentDid) -> Option<&DidSubmissionFinalityRecord> {
         self.finality_by_did.get(did)
     }
 
+    /// Applies lifecycle mutation with nonce and actor authorization checks.
     pub fn apply_lifecycle_mutation(
         &mut self,
         request: DidLifecycleMutationRequest,
@@ -569,54 +645,91 @@ impl DidRegistry {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// DID registry error taxonomy.
 pub enum DidRegistryError {
+    /// DID already exists in active state.
     AlreadyRegistered(String),
+    /// Finality update conflicts with existing record at same/newer sequence.
     ConflictingFinalityUpdate {
+        /// DID identifier.
         did: String,
+        /// Sequence where conflict occurred.
         sequence: u64,
     },
+    /// Provided idempotency key conflicts with existing key for DID.
     ConflictingSubmissionIdempotencyKey {
+        /// DID identifier.
         did: String,
+        /// Existing idempotency key recorded by registry.
         existing_key: String,
+        /// New idempotency key supplied by caller.
         provided_key: String,
     },
+    /// DID not found in registry.
     NotFound(String),
+    /// Finality update sequence is older than current sequence.
     StaleFinalityUpdate {
+        /// DID identifier.
         did: String,
+        /// Current accepted sequence.
         current_sequence: u64,
+        /// Attempted stale sequence.
         attempted_sequence: u64,
     },
+    /// Finality update references unknown idempotency key.
     UnknownSubmissionIdempotencyKey {
+        /// DID identifier.
         did: String,
+        /// Unrecognized idempotency key.
         idempotency_key: String,
     },
+    /// DID exists but is revoked.
     Revoked(String),
+    /// DID in document payload does not match target DID.
     DocumentDidMismatch {
+        /// Expected DID identifier.
         expected: String,
+        /// DID identifier found in document.
         actual: String,
     },
+    /// Mutation nonce is invalid (zero).
     InvalidMutationNonce {
+        /// DID identifier.
         did: String,
+        /// Invalid nonce value.
         nonce: u64,
     },
+    /// Mutation nonce replay/non-monotonic value detected.
     ReplayedMutationNonce {
+        /// DID identifier.
         did: String,
+        /// Last accepted nonce.
         last_nonce: u64,
+        /// Newly provided nonce.
         found: u64,
     },
+    /// Actor DID is not authorized to mutate lifecycle state.
     UnauthorizedMutationActor {
+        /// DID identifier.
         did: String,
+        /// Actor DID provided by caller.
         actor_did: String,
+        /// Required authorized actor DID.
         required_actor: String,
     },
+    /// Requested lifecycle action is invalid for current state.
     InvalidLifecycleMutationTransition {
+        /// DID identifier.
         did: String,
+        /// Lifecycle action label.
         action: &'static str,
+        /// Revocation state before action.
         from_revoked: bool,
     },
 }
 
 impl DidRegistryError {
+    /// Returns stable reason code for telemetry/policy contract lanes.
     pub fn reason_code(&self) -> &'static str {
         match self {
             Self::AlreadyRegistered(_) => "did_registry_already_registered",

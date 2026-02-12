@@ -38,7 +38,7 @@ pub mod cross_chain_receipt;
 pub mod data_classification;
 /// DID document canonicalization and federated trust-handshake contracts.
 pub mod did;
-#[allow(missing_docs)]
+/// DID registry lifecycle and chain-submission finality contracts.
 pub mod did_registry;
 /// Direct-message encryption/decryption contracts and error semantics.
 pub mod direct_message_crypto;

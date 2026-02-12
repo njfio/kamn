@@ -32,3 +32,4 @@ content_replication
 content_retrieval
 data_classification
 did
+did_registry

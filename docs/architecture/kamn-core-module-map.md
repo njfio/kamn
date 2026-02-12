@@ -166,6 +166,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `content_retrieval`
   - `data_classification`
   - `did`
+  - `did_registry`
   - `content_storage`
   - `cross_chain_bridge`
   - `cross_chain_receipt`
@@ -219,6 +220,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2027`
   - `Regression: #2029`
   - `Regression: #2031`
+  - `Regression: #2033`
 
 ## Contributor Entrypoint Matrix
 
