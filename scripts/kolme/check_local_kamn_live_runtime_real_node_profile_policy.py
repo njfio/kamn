@@ -13,6 +13,8 @@ REAL_SIGNER_PROFILE_PRIMARY = "ops-primary"
 REAL_SIGNER_PROFILE_SECONDARY = "ops-secondary"
 REAL_SIGNER_PRIVATE_KEY_ENV_PRIMARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
 REAL_SIGNER_PRIVATE_KEY_ENV_SECONDARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+REAL_SIGNER_KEY_REF_ENV_PRIMARY = "KAMN_KOLME_LIVE_SIGNER_KEY_REF"
+REAL_SIGNER_KEY_REF_ENV_SECONDARY = "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY"
 REAL_SIGNER_FALLBACK_PRIVATE_KEY_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 REAL_SIGNER_KEY_SOURCE_CONTRACT_VERSION = "v1"
 ALLOWED_SIGNER_PROFILES = (
@@ -27,6 +29,10 @@ ALLOWED_SIGNER_KEY_SOURCES = ("env-local", "managed-external")
 SIGNER_PRIVATE_KEY_ENV_BY_PROFILE = {
     REAL_SIGNER_PROFILE_PRIMARY: REAL_SIGNER_PRIVATE_KEY_ENV_PRIMARY,
     REAL_SIGNER_PROFILE_SECONDARY: REAL_SIGNER_PRIVATE_KEY_ENV_SECONDARY,
+}
+SIGNER_KEY_REF_ENV_BY_PROFILE = {
+    REAL_SIGNER_PROFILE_PRIMARY: REAL_SIGNER_KEY_REF_ENV_PRIMARY,
+    REAL_SIGNER_PROFILE_SECONDARY: REAL_SIGNER_KEY_REF_ENV_SECONDARY,
 }
 NATIVE_PAYLOAD_PUBKEY_MARKER = "pubkey"
 NATIVE_PAYLOAD_NONCE_MARKER = "nonce"
@@ -109,12 +115,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
 
     runtime_signer_profile = report.get("runtime_signer_profile")
     expected_signer_private_key_env = ""
+    expected_signer_key_reference_env = ""
     if not isinstance(runtime_signer_profile, str) or not runtime_signer_profile.strip():
         reason_codes.append("runtime_signer_profile_missing")
     elif runtime_signer_profile not in ALLOWED_SIGNER_PROFILES:
         reason_codes.append("runtime_signer_profile_mismatch")
     else:
         expected_signer_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[runtime_signer_profile]
+        expected_signer_key_reference_env = SIGNER_KEY_REF_ENV_BY_PROFILE[runtime_signer_profile]
 
     runtime_signer_previous_profile = report.get("runtime_signer_previous_profile")
     if not isinstance(runtime_signer_previous_profile, str) or not runtime_signer_previous_profile.strip():
@@ -183,6 +191,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif expected_signer_private_key_env and runtime_signer_private_key_env != expected_signer_private_key_env:
         reason_codes.append("runtime_signer_private_key_env_mismatch")
 
+    runtime_signer_key_reference_env = report.get("runtime_signer_key_reference_env")
+    if not isinstance(runtime_signer_key_reference_env, str) or not runtime_signer_key_reference_env.strip():
+        reason_codes.append("runtime_signer_key_reference_env_missing")
+    elif expected_signer_key_reference_env and runtime_signer_key_reference_env != expected_signer_key_reference_env:
+        reason_codes.append("runtime_signer_key_reference_env_mismatch")
+
     runtime_signer_fallback_private_key_env = report.get("runtime_signer_fallback_private_key_env")
     if not isinstance(runtime_signer_fallback_private_key_env, str) or not runtime_signer_fallback_private_key_env.strip():
         reason_codes.append("runtime_signer_fallback_private_key_env_missing")
@@ -194,6 +208,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_signer_fallback_private_key_present_invalid")
     elif runtime_signer_fallback_private_key_present:
         reason_codes.append("runtime_signer_fallback_private_key_present_violation")
+
+    runtime_signer_raw_private_key_present = report.get("runtime_signer_raw_private_key_present")
+    if not isinstance(runtime_signer_raw_private_key_present, bool):
+        reason_codes.append("runtime_signer_raw_private_key_present_invalid")
+    elif expected_signer_key_source == "managed-external" and runtime_signer_raw_private_key_present:
+        reason_codes.append("runtime_signer_managed_external_raw_private_key_present_violation")
 
     runtime_commit_command_profile = report.get("runtime_commit_command_profile")
     if not isinstance(runtime_commit_command_profile, str) or not runtime_commit_command_profile.strip():
@@ -294,10 +314,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_signer_key_source_contract_mismatch")
         if expected_signer_private_key_env and contracts.get("runtime_signer_private_key_env") != expected_signer_private_key_env:
             reason_codes.append("runtime_signer_private_key_env_contract_mismatch")
+        if expected_signer_key_reference_env and contracts.get("runtime_signer_key_reference_env") != expected_signer_key_reference_env:
+            reason_codes.append("runtime_signer_key_reference_env_contract_mismatch")
         if contracts.get("runtime_signer_fallback_private_key_env") != REAL_SIGNER_FALLBACK_PRIVATE_KEY_ENV:
             reason_codes.append("runtime_signer_fallback_private_key_env_contract_mismatch")
         if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
             reason_codes.append("runtime_signer_fallback_private_key_allowed_contract_mismatch")
+        if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
+            reason_codes.append("runtime_signer_managed_external_raw_private_key_allowed_contract_mismatch")
         if contracts.get("runtime_signer_failover_requires_profile_change") is not True:
             reason_codes.append("runtime_signer_failover_requires_profile_change_contract_mismatch")
         if contracts.get("runtime_signer_rotation_epoch_must_increase_on_failover") is not True:

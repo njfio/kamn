@@ -568,6 +568,10 @@ bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-ru
 # real-node secondary signer profile marker for local failover/operator validation
 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node --runtime-signer-profile ops-secondary --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json
 
+# real-node managed-external key-source marker for local signer-provider validation
+KAMN_KOLME_LIVE_SIGNER_KEY_REF=secure:aws-kms:role-operator/key-live-ops-primary \
+bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node --runtime-signer-key-source managed-external --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json
+
 # optional nested runtime finality follow-up pass-through
 KAMN_KOLME_LOCAL_HEAVY=1 \
 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --runtime-profile real-node --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-finality-command "printf 'finality=final\n'" --runtime-commit-finality-max-seconds 15 --runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json
@@ -591,9 +595,12 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_signer_key_source_contract_version=v1
 # runtime_signer_key_source=env-local
 # runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX
+# runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF
 # runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK
 # runtime_signer_fallback_private_key_present=false
+# runtime_signer_raw_private_key_present=false
 # contracts.runtime_signer_fallback_private_key_allowed=false
+# contracts.runtime_signer_managed_external_raw_private_key_allowed=false
 
 # strict secondary signer summary marker contracts
 # runtime_signer_profile=ops-secondary
@@ -608,6 +615,7 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_signer_key_source_profile_pair_disallowed
 # runtime_signer_private_key_env_mismatch
 # runtime_signer_fallback_private_key_present_violation
+# runtime_signer_managed_external_raw_private_key_present_violation
 # runtime_commit_non_synthetic_submit_probe_missing
 # runtime_commit_real_signing_profile_marker_missing
 # runtime_commit_signer_profile_marker_missing
@@ -634,7 +642,10 @@ bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --ou
 # local-only CI boundary marker: ci_fast_gate_eligible=false (contracts.ci_fast_gate_scope=local-only)
 # fallback signer runtime guard marker:
 # fallback signer secret env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK)
+# managed-external signer runtime guard marker:
+# managed-external signer raw private key env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF)
 # Regression: #2302
+# Regression: #2324
 # Regression: #2139
 ```
 

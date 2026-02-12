@@ -39,8 +39,15 @@ RUNTIME_SIGNER_PROFILE=""
 RUNTIME_SIGNER_KEY_SOURCE_CONTRACT_VERSION=""
 RUNTIME_SIGNER_KEY_SOURCE=""
 RUNTIME_SIGNER_PRIVATE_KEY_ENV=""
+RUNTIME_SIGNER_KEY_REF_ENV=""
 RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 RUNTIME_SIGNER_PROFILE_OVERRIDE=""
+RUNTIME_SIGNER_KEY_SOURCE_OVERRIDE=""
+
+RUNTIME_SIGNER_PRIVATE_KEY_ENV_PRIMARY="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
+RUNTIME_SIGNER_PRIVATE_KEY_ENV_SECONDARY="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+RUNTIME_SIGNER_KEY_REF_ENV_PRIMARY="KAMN_KOLME_LIVE_SIGNER_KEY_REF"
+RUNTIME_SIGNER_KEY_REF_ENV_SECONDARY="KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY"
 
 if [ "${1:-}" != "--manifest-impl" ]; then
   exec bash "$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh" --lane-wrapper "$SCRIPT_NAME" -- "$@"
@@ -139,6 +146,14 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       RUNTIME_SIGNER_PROFILE_OVERRIDE="$2"
+      shift 2
+      ;;
+    --runtime-signer-key-source)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --runtime-signer-key-source" >&2
+        exit 1
+      fi
+      RUNTIME_SIGNER_KEY_SOURCE_OVERRIDE="$2"
       shift 2
       ;;
     --runtime-commit-finality-command)
@@ -273,6 +288,8 @@ Options:
                                       Runtime integration profile contract marker for local evidence interpretation.
   --runtime-signer-profile ops-primary|ops-secondary
                                       Optional signer profile override for real-node runtime profile summaries.
+  --runtime-signer-key-source env-local|managed-external
+                                      Optional signer key-source override for real-node runtime profile summaries.
   --runtime-commit-finality-command <command>
                                       Optional finality command passed through to nested runtime-commit live lane.
   --runtime-commit-finality-max-seconds <n>
@@ -345,6 +362,16 @@ if [ -n "$RUNTIME_SIGNER_PROFILE_OVERRIDE" ] && [ "$RUNTIME_SIGNER_PROFILE_OVERR
   exit 1
 fi
 
+if [ -n "$RUNTIME_SIGNER_KEY_SOURCE_OVERRIDE" ] && [ "$RUNTIME_PROFILE" != "real-node" ]; then
+  echo "runtime-signer-key-source is only valid when runtime-profile=real-node" >&2
+  exit 1
+fi
+
+if [ -n "$RUNTIME_SIGNER_KEY_SOURCE_OVERRIDE" ] && [ "$RUNTIME_SIGNER_KEY_SOURCE_OVERRIDE" != "env-local" ] && [ "$RUNTIME_SIGNER_KEY_SOURCE_OVERRIDE" != "managed-external" ]; then
+  echo "runtime-signer-key-source must be one of: env-local, managed-external" >&2
+  exit 1
+fi
+
 for numeric_value in "$MAX_SECONDS" "$BOOTSTRAP_MAX_SECONDS" "$CONFORMANCE_MAX_SECONDS" "$LOCALHOST_SIGNED_MAX_SECONDS" "$RUNTIME_COMMIT_MAX_SECONDS" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS"; do
   if ! [[ "$numeric_value" =~ ^[0-9]+$ ]] || [ "$numeric_value" -le 0 ]; then
     echo "all max-second arguments must be positive integers" >&2
@@ -407,15 +434,30 @@ if [ "$RUNTIME_PROFILE" = "real-node" ]; then
   RUNTIME_SIGNER_KEY_SOURCE="env-local"
   RUNTIME_SIGNER_PROFILE="${RUNTIME_SIGNER_PROFILE_OVERRIDE:-ops-primary}"
   if [ "$RUNTIME_SIGNER_PROFILE" = "ops-secondary" ]; then
-    RUNTIME_SIGNER_PRIVATE_KEY_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+    RUNTIME_SIGNER_PRIVATE_KEY_ENV="$RUNTIME_SIGNER_PRIVATE_KEY_ENV_SECONDARY"
+    RUNTIME_SIGNER_KEY_REF_ENV="$RUNTIME_SIGNER_KEY_REF_ENV_SECONDARY"
   else
-    RUNTIME_SIGNER_PRIVATE_KEY_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
+    RUNTIME_SIGNER_PRIVATE_KEY_ENV="$RUNTIME_SIGNER_PRIVATE_KEY_ENV_PRIMARY"
+    RUNTIME_SIGNER_KEY_REF_ENV="$RUNTIME_SIGNER_KEY_REF_ENV_PRIMARY"
+  fi
+  if [ -n "$RUNTIME_SIGNER_KEY_SOURCE_OVERRIDE" ]; then
+    RUNTIME_SIGNER_KEY_SOURCE="$RUNTIME_SIGNER_KEY_SOURCE_OVERRIDE"
+  fi
+  if [ "$RUNTIME_SIGNER_PROFILE" = "ops-secondary" ] && [ "$RUNTIME_SIGNER_KEY_SOURCE" = "managed-external" ]; then
+    echo "runtime-signer-key-source managed-external is not allowed for runtime-signer-profile=ops-secondary" >&2
+    exit 1
   fi
   RUNTIME_SIGNER_PREVIOUS_PROFILE="$RUNTIME_SIGNER_PROFILE"
 fi
 
 if [ -n "$RUNTIME_SIGNER_PROFILE" ]; then
   default_runtime_commit_live_submit_command_prefix="${default_runtime_commit_live_submit_command_prefix} KAMN_KOLME_LIVE_SIGNER_PROFILE=${RUNTIME_SIGNER_PROFILE}"
+fi
+if [ -n "$RUNTIME_SIGNER_KEY_SOURCE" ]; then
+  default_runtime_commit_live_submit_command_prefix="${default_runtime_commit_live_submit_command_prefix} KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=${RUNTIME_SIGNER_KEY_SOURCE}"
+fi
+if [ "$RUNTIME_SIGNER_KEY_SOURCE" = "managed-external" ] && [ -n "$RUNTIME_SIGNER_KEY_REF_ENV" ] && [ -n "$RUNTIME_SIGNER_PROFILE" ]; then
+  default_runtime_commit_live_submit_command_prefix="${default_runtime_commit_live_submit_command_prefix} ${RUNTIME_SIGNER_KEY_REF_ENV}=secure:aws-kms:role-operator/key-live-${RUNTIME_SIGNER_PROFILE}"
 fi
 default_runtime_commit_live_submit_command="${default_runtime_commit_live_submit_command_prefix} KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\\n'"
 
@@ -501,6 +543,7 @@ bootstrap_command="bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_l
 localhost_signed_command="bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json ${LOCALHOST_SIGNED_REPORT}"
 conformance_command="bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run --base-url ${BASE_URL} --fork-chain-version ${FORK_CHAIN_VERSION} --max-seconds ${CONFORMANCE_MAX_SECONDS} --probe-max-seconds 30 --native-max-seconds 120 --output-json ${CONFORMANCE_REPORT}"
 runtime_signer_fallback_private_key_command="fallback signer secret env must remain unset for real-node runtime profile"
+runtime_signer_managed_external_raw_private_key_command="managed-external signer profile must reject raw private key env markers for selected profile"
 runtime_commit_command="$RUNTIME_COMMIT_COMMAND"
 runtime_commit_policy_command="python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file ${RUNTIME_COMMIT_LIVE_SUMMARY} --expected-final-decision GO --ci-fast-gate PASS --output-json ${RUNTIME_COMMIT_LIVE_POLICY_REPORT}"
 if [ "$RUNTIME_PROFILE" = "real-node" ]; then
@@ -517,11 +560,13 @@ conformance_reason_code="not_run"
 runtime_commit_reason_code="not_run"
 runtime_commit_policy_reason_code="not_run"
 runtime_signer_fallback_private_key_present="false"
+runtime_signer_raw_private_key_present="false"
 
 record_check "bootstrap_readiness" "$bootstrap_command" "planned" "not_run"
 record_check "localhost_signed_integration" "$localhost_signed_command" "planned" "not_run"
 record_check "live_api_conformance" "$conformance_command" "planned" "not_run"
 record_check "runtime_signer_fallback_private_key_contract" "$runtime_signer_fallback_private_key_command" "planned" "not_run"
+record_check "runtime_signer_managed_external_raw_private_key_contract" "$runtime_signer_managed_external_raw_private_key_command" "planned" "not_run"
 record_check "runtime_commit_endpoint" "$runtime_commit_command" "planned" "not_run"
 record_check "runtime_commit_policy" "$runtime_commit_policy_command" "planned" "not_run"
 
@@ -536,6 +581,7 @@ if [ "$MODE" = "run" ]; then
     record_check "localhost_signed_integration" "$localhost_signed_command" "skipped" "fallback_signer_secret_present_violation"
     record_check "live_api_conformance" "$conformance_command" "skipped" "fallback_signer_secret_present_violation"
     record_check "runtime_signer_fallback_private_key_contract" "$runtime_signer_fallback_private_key_command" "fail" "fallback_signer_secret_present_violation"
+    record_check "runtime_signer_managed_external_raw_private_key_contract" "$runtime_signer_managed_external_raw_private_key_command" "skipped" "fallback_signer_secret_present_violation"
     record_check "runtime_commit_endpoint" "$runtime_commit_command" "skipped" "fallback_signer_secret_present_violation"
     record_check "runtime_commit_policy" "$runtime_commit_policy_command" "skipped" "fallback_signer_secret_present_violation"
     overall_status="fail"
@@ -547,6 +593,32 @@ if [ "$MODE" = "run" ]; then
     runtime_commit_policy_reason_code="fallback_signer_secret_present_violation"
   else
     record_check "runtime_signer_fallback_private_key_contract" "$runtime_signer_fallback_private_key_command" "pass" "fallback_signer_secret_absent"
+  fi
+
+  if [ "$overall_status" = "ok" ]; then
+    if [ "$RUNTIME_PROFILE" = "real-node" ] && [ "$RUNTIME_SIGNER_KEY_SOURCE" = "managed-external" ]; then
+      if [ -n "${!RUNTIME_SIGNER_PRIVATE_KEY_ENV:-}" ]; then
+        runtime_signer_raw_private_key_present="true"
+        echo "managed-external signer raw private key env must not be set: $RUNTIME_SIGNER_PRIVATE_KEY_ENV (remediation: unset $RUNTIME_SIGNER_PRIVATE_KEY_ENV; set $RUNTIME_SIGNER_KEY_REF_ENV)" >&2
+        record_check "bootstrap_readiness" "$bootstrap_command" "skipped" "managed_signer_raw_private_key_present_violation"
+        record_check "localhost_signed_integration" "$localhost_signed_command" "skipped" "managed_signer_raw_private_key_present_violation"
+        record_check "live_api_conformance" "$conformance_command" "skipped" "managed_signer_raw_private_key_present_violation"
+        record_check "runtime_signer_managed_external_raw_private_key_contract" "$runtime_signer_managed_external_raw_private_key_command" "fail" "managed_signer_raw_private_key_present_violation"
+        record_check "runtime_commit_endpoint" "$runtime_commit_command" "skipped" "managed_signer_raw_private_key_present_violation"
+        record_check "runtime_commit_policy" "$runtime_commit_policy_command" "skipped" "managed_signer_raw_private_key_present_violation"
+        overall_status="fail"
+        reason_code="runtime_signer_managed_external_raw_private_key_present_violation"
+        bootstrap_reason_code="managed_signer_raw_private_key_present_violation"
+        localhost_signed_reason_code="managed_signer_raw_private_key_present_violation"
+        conformance_reason_code="managed_signer_raw_private_key_present_violation"
+        runtime_commit_reason_code="managed_signer_raw_private_key_present_violation"
+        runtime_commit_policy_reason_code="managed_signer_raw_private_key_present_violation"
+      else
+        record_check "runtime_signer_managed_external_raw_private_key_contract" "$runtime_signer_managed_external_raw_private_key_command" "pass" "managed_signer_raw_private_key_absent"
+      fi
+    else
+      record_check "runtime_signer_managed_external_raw_private_key_contract" "$runtime_signer_managed_external_raw_private_key_command" "pass" "managed_signer_not_selected"
+    fi
   fi
 
   if [ "$overall_status" = "ok" ]; then
@@ -703,7 +775,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" "$runtime_commit_command_profile" "$runtime_commit_policy_command_profile" "$runtime_commit_command_profile_version" "$RUNTIME_SIGNER_PROFILE_SELECTOR_ENV" "$RUNTIME_SIGNER_PROFILE" "$RUNTIME_SIGNER_PREVIOUS_PROFILE" "$RUNTIME_SIGNER_FAILOVER_ACTIVE" "$RUNTIME_SIGNER_ROTATION_EPOCH" "$RUNTIME_SIGNER_PREVIOUS_ROTATION_EPOCH" "$RUNTIME_SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$RUNTIME_SIGNER_KEY_SOURCE" "$RUNTIME_SIGNER_PRIVATE_KEY_ENV" "$RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV" "$runtime_signer_fallback_private_key_present" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" "$runtime_commit_command_profile" "$runtime_commit_policy_command_profile" "$runtime_commit_command_profile_version" "$RUNTIME_SIGNER_PROFILE_SELECTOR_ENV" "$RUNTIME_SIGNER_PROFILE" "$RUNTIME_SIGNER_PREVIOUS_PROFILE" "$RUNTIME_SIGNER_FAILOVER_ACTIVE" "$RUNTIME_SIGNER_ROTATION_EPOCH" "$RUNTIME_SIGNER_PREVIOUS_ROTATION_EPOCH" "$RUNTIME_SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$RUNTIME_SIGNER_KEY_SOURCE" "$RUNTIME_SIGNER_PRIVATE_KEY_ENV" "$RUNTIME_SIGNER_KEY_REF_ENV" "$RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV" "$runtime_signer_fallback_private_key_present" "$runtime_signer_raw_private_key_present" <<'PY'
 from __future__ import annotations
 
 import json
@@ -752,8 +824,10 @@ runtime_signer_previous_rotation_epoch = int(sys.argv[39])
 runtime_signer_key_source_contract_version = sys.argv[40]
 runtime_signer_key_source = sys.argv[41]
 runtime_signer_private_key_env = sys.argv[42]
-runtime_signer_fallback_private_key_env = sys.argv[43]
-runtime_signer_fallback_private_key_present = sys.argv[44] == "true"
+runtime_signer_key_reference_env = sys.argv[43]
+runtime_signer_fallback_private_key_env = sys.argv[44]
+runtime_signer_fallback_private_key_present = sys.argv[45] == "true"
+runtime_signer_raw_private_key_present = sys.argv[46] == "true"
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -838,6 +912,12 @@ def classify_runtime_commit_failure(
             "Increase --max-seconds or reduce prerequisite/runtime lane execution time.",
         )
 
+    if reason_value == "runtime_signer_managed_external_raw_private_key_present_violation":
+        return (
+            "none",
+            "Unset the selected signer private key env and provide managed signer key-reference env for managed-external mode.",
+        )
+
     if reason_value != "runtime_commit_endpoint_failed":
         return (
             "none",
@@ -911,8 +991,10 @@ summary = {
     "runtime_signer_key_source_contract_version": runtime_signer_key_source_contract_version,
     "runtime_signer_key_source": runtime_signer_key_source,
     "runtime_signer_private_key_env": runtime_signer_private_key_env,
+    "runtime_signer_key_reference_env": runtime_signer_key_reference_env,
     "runtime_signer_fallback_private_key_env": runtime_signer_fallback_private_key_env,
     "runtime_signer_fallback_private_key_present": runtime_signer_fallback_private_key_present,
+    "runtime_signer_raw_private_key_present": runtime_signer_raw_private_key_present,
     "runtime_commit_live_policy_report": runtime_commit_live_policy_report,
     "runtime_commit_finality_command": runtime_commit_finality_command if runtime_commit_finality_command else "",
     "runtime_commit_finality_output_file": runtime_commit_finality_output_file if runtime_commit_finality_command else "",
@@ -938,8 +1020,10 @@ summary = {
         "runtime_signer_key_source_contract_version": runtime_signer_key_source_contract_version,
         "runtime_signer_key_source": runtime_signer_key_source,
         "runtime_signer_private_key_env": runtime_signer_private_key_env,
+        "runtime_signer_key_reference_env": runtime_signer_key_reference_env,
         "runtime_signer_fallback_private_key_env": runtime_signer_fallback_private_key_env,
         "runtime_signer_fallback_private_key_allowed": False,
+        "runtime_signer_managed_external_raw_private_key_allowed": False,
         "runtime_commit_endpoint": "/broadcast/runtime-commit",
         "runtime_commit_method": "POST",
         "runtime_commit_finality_primary_endpoint": "/notifications",

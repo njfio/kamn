@@ -235,6 +235,66 @@ if fallback_checks[0].get("reason_code") != "fallback_signer_secret_present_viol
 PY
 
 set +e
+KAMN_KOLME_LOCAL_HEAVY=1 \
+KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX="1111111111111111111111111111111111111111111111111111111111111111" \
+bash "$RUNNER" \
+  --mode run \
+  --runtime-profile real-node \
+  --runtime-signer-key-source managed-external \
+  --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider \
+  --runtime-commit-live-summary "$TMP_RUNTIME_SUMMARY" \
+  --runtime-commit-live-policy-report "$TMP_RUNTIME_POLICY" \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+run_managed_external_raw_key_present_code=$?
+set -e
+
+if [ "$run_managed_external_raw_key_present_code" -eq 0 ]; then
+  echo "expected real-node profile managed-external run mode to fail closed when raw signer key env is present" >&2
+  exit 1
+fi
+
+if ! grep -q "managed-external signer raw private key env must not be set" "$TMP_ERR"; then
+  echo "expected deterministic managed-external raw signer key rejection message for real-node profile run mode" >&2
+  exit 1
+fi
+
+python3 - "$TMP_SUMMARY" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if summary.get("reason_code") != "runtime_signer_managed_external_raw_private_key_present_violation":
+    raise SystemExit(
+        "expected managed-external raw signer key violation reason code in real-node profile run summary"
+    )
+if summary.get("runtime_signer_raw_private_key_present") is not True:
+    raise SystemExit("expected runtime_signer_raw_private_key_present=true in managed-external violation summary")
+checks = summary.get("checks")
+if not isinstance(checks, list):
+    raise SystemExit("expected checks list in managed-external violation summary")
+managed_external_checks = [
+    check
+    for check in checks
+    if isinstance(check, dict) and check.get("id") == "runtime_signer_managed_external_raw_private_key_contract"
+]
+if len(managed_external_checks) != 1:
+    raise SystemExit(
+        "expected exactly one runtime_signer_managed_external_raw_private_key_contract check in managed-external violation summary"
+    )
+if managed_external_checks[0].get("status") != "fail":
+    raise SystemExit(
+        "expected runtime_signer_managed_external_raw_private_key_contract check status fail in managed-external violation summary"
+    )
+if managed_external_checks[0].get("reason_code") != "managed_signer_raw_private_key_present_violation":
+    raise SystemExit(
+        "expected managed_signer_raw_private_key_present_violation reason for managed-external raw key check"
+    )
+PY
+
+set +e
 bash "$RUNNER" \
   --mode run \
   --runtime-profile standard \

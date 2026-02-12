@@ -334,6 +334,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --runtime-profile real-node --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --max-seconds 210 --bootstrap-max-seconds 90 --conformance-max-seconds 180 --runtime-commit-max-seconds 30 --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
     - `bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
     - `bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node --runtime-signer-profile ops-secondary --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
+    - `KAMN_KOLME_LIVE_SIGNER_KEY_REF=secure:aws-kms:role-operator/key-live-ops-primary bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node --runtime-signer-key-source managed-external --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
     - wrapper routing stays manifest-backed:
       - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kamn_live_runtime_integration_lane.sh --resolve-manifest-path`
       - `scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_lane.json`
@@ -356,8 +357,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_key_source_contract_version=v1`
       - `runtime_signer_key_source=env-local`
       - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
+      - `runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF`
       - `runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
       - `runtime_signer_fallback_private_key_present=false`
+      - `runtime_signer_raw_private_key_present=false`
       - strict secondary signer summary marker contracts:
       - `runtime_signer_profile=ops-secondary`
       - `runtime_signer_previous_profile=ops-secondary`
@@ -370,6 +373,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_key_source_profile_pair_disallowed`
       - `runtime_signer_private_key_env_mismatch`
       - `runtime_signer_fallback_private_key_present_violation`
+      - `runtime_signer_managed_external_raw_private_key_present_violation`
       - `runtime_commit_non_synthetic_submit_probe_missing`
       - `runtime_commit_real_signing_profile_marker_missing`
       - `runtime_commit_signer_profile_marker_missing`
@@ -382,11 +386,14 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary`
     - strict profile fallback-key guard marker:
       - `fallback signer secret env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK)`
+    - strict profile managed-external raw-key guard marker:
+      - `managed-external signer raw private key env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF)`
     - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
     - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --runtime-signer-profile ops-secondary --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
     - strict real-node runtime evidence marker path remains local-only and excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
     - fallback signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2302`).
+    - managed-external raw signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2324`).
   - deployment preflight signer/runtime checks remain fast and ci-fast-gate eligible.
     - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
     - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`

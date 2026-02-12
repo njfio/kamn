@@ -181,6 +181,12 @@ def main() -> int:
         if summary_payload.get("runtime_signer_fallback_private_key_present") is not False:
             print("expected fallback signer private key presence marker false in dry-run summary", file=sys.stderr)
             return 1
+        if summary_payload.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF":
+            print("expected signer key reference env marker in dry-run summary", file=sys.stderr)
+            return 1
+        if summary_payload.get("runtime_signer_raw_private_key_present") is not False:
+            print("expected runtime signer raw private key presence marker false in dry-run summary", file=sys.stderr)
+            return 1
         contracts_payload = summary_payload.get("contracts")
         if not isinstance(contracts_payload, dict):
             print("expected contracts object in dry-run summary", file=sys.stderr)
@@ -190,6 +196,12 @@ def main() -> int:
             return 1
         if contracts_payload.get("runtime_signer_fallback_private_key_allowed") is not False:
             print("expected contracts fallback signer private key allowed=false marker in summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF":
+            print("expected contracts signer key reference env marker in summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
+            print("expected contracts managed-external raw private key allowed=false marker in summary", file=sys.stderr)
             return 1
         checks_payload = summary_payload.get("checks")
         if not isinstance(checks_payload, list):
@@ -206,6 +218,24 @@ def main() -> int:
             return 1
         if fallback_checks[0].get("status") != "planned":
             print("expected fallback signer check planned in dry-run summary", file=sys.stderr)
+            return 1
+        managed_external_raw_key_checks = [
+            check
+            for check in checks_payload
+            if isinstance(check, dict)
+            and check.get("id") == "runtime_signer_managed_external_raw_private_key_contract"
+        ]
+        if len(managed_external_raw_key_checks) != 1:
+            print(
+                "expected one runtime_signer_managed_external_raw_private_key_contract check in summary",
+                file=sys.stderr,
+            )
+            return 1
+        if managed_external_raw_key_checks[0].get("status") != "planned":
+            print(
+                "expected managed-external raw private key check planned in dry-run summary",
+                file=sys.stderr,
+            )
             return 1
 
         # Regression: #2296
@@ -414,6 +444,122 @@ def main() -> int:
             )
             return 1
 
+        # Regression: #2324
+        managed_external_raw_key_violation_payload = dict(summary_payload)
+        managed_external_raw_key_violation_payload["mode"] = "run"
+        managed_external_raw_key_violation_payload["status"] = "fail"
+        managed_external_raw_key_violation_payload["reason_code"] = (
+            "runtime_signer_managed_external_raw_private_key_present_violation"
+        )
+        managed_external_raw_key_violation_payload["runtime_signer_key_source"] = "managed-external"
+        managed_external_raw_key_violation_payload["runtime_signer_raw_private_key_present"] = True
+        managed_external_raw_key_violation_payload["bootstrap_reason_code"] = (
+            "managed_signer_raw_private_key_present_violation"
+        )
+        managed_external_raw_key_violation_payload["localhost_signed_reason_code"] = (
+            "managed_signer_raw_private_key_present_violation"
+        )
+        managed_external_raw_key_violation_payload["conformance_reason_code"] = (
+            "managed_signer_raw_private_key_present_violation"
+        )
+        managed_external_raw_key_violation_payload["runtime_commit_reason_code"] = (
+            "managed_signer_raw_private_key_present_violation"
+        )
+        managed_external_raw_key_violation_payload["runtime_commit_policy_reason_code"] = (
+            "managed_signer_raw_private_key_present_violation"
+        )
+        managed_external_raw_key_violation_contracts = dict(
+            managed_external_raw_key_violation_payload.get("contracts", {})
+        )
+        managed_external_raw_key_violation_contracts["runtime_signer_key_source"] = "managed-external"
+        managed_external_raw_key_violation_payload["contracts"] = managed_external_raw_key_violation_contracts
+        managed_external_raw_key_violation_payload["checks"] = [
+            {
+                "id": "bootstrap_readiness",
+                "command": "bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh --mode run",
+                "status": "skipped",
+                "reason_code": "managed_signer_raw_private_key_present_violation",
+            },
+            {
+                "id": "localhost_signed_integration",
+                "command": "bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed.json",
+                "status": "skipped",
+                "reason_code": "managed_signer_raw_private_key_present_violation",
+            },
+            {
+                "id": "live_api_conformance",
+                "command": "bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run",
+                "status": "skipped",
+                "reason_code": "managed_signer_raw_private_key_present_violation",
+            },
+            {
+                "id": "runtime_signer_fallback_private_key_contract",
+                "command": "fallback signer secret env must remain unset for real-node runtime profile",
+                "status": "pass",
+                "reason_code": "fallback_signer_secret_absent",
+            },
+            {
+                "id": "runtime_signer_managed_external_raw_private_key_contract",
+                "command": "managed-external signer profile must reject raw private key env markers for selected profile",
+                "status": "fail",
+                "reason_code": "managed_signer_raw_private_key_present_violation",
+            },
+            {
+                "id": "runtime_commit_endpoint",
+                "command": summary_payload.get("runtime_commit_command", ""),
+                "status": "skipped",
+                "reason_code": "managed_signer_raw_private_key_present_violation",
+            },
+            {
+                "id": "runtime_commit_policy",
+                "command": "python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/runtime-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/runtime-policy.json",
+                "status": "skipped",
+                "reason_code": "managed_signer_raw_private_key_present_violation",
+            },
+        ]
+        managed_external_raw_key_violation_report = temp_path / "runtime_managed_external_raw_key_violation_summary.json"
+        managed_external_raw_key_violation_report.write_text(
+            json.dumps(managed_external_raw_key_violation_payload, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        managed_external_raw_key_violation_run = subprocess.run(
+            [
+                "python3",
+                str(CHECKER),
+                "--report-file",
+                str(managed_external_raw_key_violation_report),
+                "--expected-final-decision",
+                "NO-GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--require-reason-code",
+                "runtime_signer_managed_external_raw_private_key_present_violation",
+                "--output-json",
+                str(failure_policy_output),
+            ],
+            cwd=ROOT_DIR,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if managed_external_raw_key_violation_run.returncode == 0:
+            print(
+                "expected checker to fail when managed-external signer profile sees raw private key env marker",
+                file=sys.stderr,
+            )
+            return 1
+        managed_external_raw_key_violation_output = (
+            f"{managed_external_raw_key_violation_run.stdout}\n"
+            f"{managed_external_raw_key_violation_run.stderr}"
+        )
+        if "runtime_signer_managed_external_raw_private_key_present_violation" not in managed_external_raw_key_violation_output:
+            print(
+                "expected managed-external raw signer key violation reason for policy failure",
+                file=sys.stderr,
+            )
+            return 1
+
     doc_text = DOC_FILE.read_text(encoding="utf-8")
     readme_text = README_FILE.read_text(encoding="utf-8")
     if "run_local_kamn_live_runtime_integration_lane.sh" not in doc_text:
@@ -482,11 +628,23 @@ def main() -> int:
     if "runtime_signer_fallback_private_key_present=false" not in doc_text:
         print("expected Kolme devnet ops doc to include fallback signer private key presence marker", file=sys.stderr)
         return 1
+    if "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF" not in doc_text:
+        print("expected Kolme devnet ops doc to include signer key reference env marker", file=sys.stderr)
+        return 1
+    if "runtime_signer_raw_private_key_present=false" not in doc_text:
+        print("expected Kolme devnet ops doc to include runtime signer raw private key presence marker", file=sys.stderr)
+        return 1
     if "runtime_signer_fallback_private_key_present_violation" not in doc_text:
         print("expected Kolme devnet ops doc to include fallback signer private key violation marker", file=sys.stderr)
         return 1
+    if "runtime_signer_managed_external_raw_private_key_present_violation" not in doc_text:
+        print("expected Kolme devnet ops doc to include managed-external raw signer key violation marker", file=sys.stderr)
+        return 1
     if "Regression: #2302" not in doc_text:
         print("expected Kolme devnet ops doc to include fallback signer runtime regression marker", file=sys.stderr)
+        return 1
+    if "Regression: #2324" not in doc_text:
+        print("expected Kolme devnet ops doc to include managed-external raw signer key regression marker", file=sys.stderr)
         return 1
     if "run_local_kamn_live_runtime_integration_contract_lane.sh" not in readme_text:
         print("expected README to reference local KAMN live runtime integration contract lane", file=sys.stderr)
@@ -530,11 +688,23 @@ def main() -> int:
     if "runtime_signer_fallback_private_key_present=false" not in readme_text:
         print("expected README to include fallback signer private key presence marker", file=sys.stderr)
         return 1
+    if "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF" not in readme_text:
+        print("expected README to include signer key reference env marker", file=sys.stderr)
+        return 1
+    if "runtime_signer_raw_private_key_present=false" not in readme_text:
+        print("expected README to include runtime signer raw private key presence marker", file=sys.stderr)
+        return 1
     if "runtime_signer_fallback_private_key_present_violation" not in readme_text:
         print("expected README to include fallback signer private key violation marker", file=sys.stderr)
         return 1
+    if "runtime_signer_managed_external_raw_private_key_present_violation" not in readme_text:
+        print("expected README to include managed-external raw signer key violation marker", file=sys.stderr)
+        return 1
     if "Regression: #2302" not in readme_text:
         print("expected README to include fallback signer runtime regression marker", file=sys.stderr)
+        return 1
+    if "Regression: #2324" not in readme_text:
+        print("expected README to include managed-external raw signer key regression marker", file=sys.stderr)
         return 1
 
     elapsed_seconds = int(time.monotonic() - start_epoch)

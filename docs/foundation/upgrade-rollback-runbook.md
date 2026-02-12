@@ -136,6 +136,8 @@ Fallback private-key surfaces are forbidden in deployment preflight and runtime 
   - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --quorum-evidence-file /tmp/kolme-live-signer-quorum.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source env-local --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
 - Runtime integration fallback guard:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --runtime-profile real-node --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
+- Runtime integration managed-external raw-key guard:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --runtime-profile real-node --runtime-signer-key-source managed-external --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
 - Contract/policy coverage:
   - `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_real_node_profile.sh`
   - `bash scripts/kolme/test_check_local_kamn_live_runtime_real_node_profile_policy.sh`
@@ -144,14 +146,20 @@ Fallback private-key surfaces are forbidden in deployment preflight and runtime 
 - Required schema/reason markers:
   - `runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
   - `runtime_signer_fallback_private_key_present=false`
+  - `runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF`
+  - `runtime_signer_raw_private_key_present=false`
   - `runtime_signer_fallback_private_key_present_violation`
+  - `runtime_signer_managed_external_raw_private_key_present_violation`
   - `contracts.runtime_signer_fallback_private_key_allowed=false`
+  - `contracts.runtime_signer_managed_external_raw_private_key_allowed=false`
 - Incident response and remediation:
   - deterministic error output must identify violating source and command-level remediation:
     - `fallback signer secret env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK)`
+    - `managed-external signer raw private key env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF)`
   - runbook response order: freeze launch -> unset fallback env -> re-run deployment preflight -> re-run runtime integration lane -> archive updated evidence.
 - Regression policy:
   - fallback signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2302`).
+  - managed-external raw signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2324`).
 
 ## Deployment SLO Evidence and Rollback Automation Contract
 Deterministic deployment SLO/rollback policy checks are enforced through a bounded deployment lane:

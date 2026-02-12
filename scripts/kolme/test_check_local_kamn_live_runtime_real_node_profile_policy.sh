@@ -73,8 +73,10 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "runtime_signer_key_source_contract_version": "v1",
   "runtime_signer_key_source": "env-local",
   "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+  "runtime_signer_key_reference_env": "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
   "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
   "runtime_signer_fallback_private_key_present": false,
+  "runtime_signer_raw_private_key_present": false,
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_command_profile_version": "v1",
@@ -100,8 +102,10 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "runtime_signer_key_source_contract_version": "v1",
     "runtime_signer_key_source": "env-local",
     "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+    "runtime_signer_key_reference_env": "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
     "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
     "runtime_signer_fallback_private_key_allowed": false,
+    "runtime_signer_managed_external_raw_private_key_allowed": false,
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
     "runtime_commit_finality_primary_endpoint": "/notifications",
@@ -129,6 +133,12 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     {
       "id": "runtime_signer_fallback_private_key_contract",
       "command": "fallback signer secret env must remain unset for real-node runtime profile",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "runtime_signer_managed_external_raw_private_key_contract",
+      "command": "managed-external signer profile must reject raw private key env markers for selected profile",
       "status": "planned",
       "reason_code": "not_run"
     },
@@ -194,6 +204,7 @@ report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_signer_profile"] = "ops-secondary"
 report["runtime_signer_previous_profile"] = "ops-secondary"
 report["runtime_signer_private_key_env"] = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+report["runtime_signer_key_reference_env"] = "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY"
 report["runtime_commit_command"] = str(report["runtime_commit_command"]).replace(
     "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary",
     "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary",
@@ -202,6 +213,7 @@ contracts = report.get("contracts", {})
 if isinstance(contracts, dict):
     contracts["runtime_signer_profile"] = "ops-secondary"
     contracts["runtime_signer_private_key_env"] = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+    contracts["runtime_signer_key_reference_env"] = "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY"
 pathlib.Path(sys.argv[2]).write_text(
     json.dumps(report, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",

@@ -130,6 +130,10 @@ required_coverage_markers=(
   "run_local_runtime_commit_live_finality_evidence_contract_lane.sh"
   "runtime_signer_fallback_private_key_contract"
   "runtime_signer_fallback_private_key_present_violation"
+  "runtime_signer_managed_external_raw_private_key_contract"
+  "runtime_signer_managed_external_raw_private_key_present_violation"
+  "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF"
+  "runtime_signer_raw_private_key_present=false"
   "runtime_commit_failure_taxonomy_mismatch:finality.timeout"
   "runtime_profile_run_mode_mismatch"
   "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
@@ -141,6 +145,7 @@ required_coverage_markers=(
   "Regression: #2113"
   "Regression: #2114"
   "Regression: #2302"
+  "Regression: #2324"
   "Regression: #2296"
   "Regression: #2298"
 )
@@ -210,8 +215,28 @@ if ! grep -q "runtime_signer_fallback_private_key_present_violation" "$DOC_FILE"
   exit 1
 fi
 
+if ! grep -q "runtime_signer_managed_external_raw_private_key_present_violation" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include managed-external raw signer key violation marker" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include signer key reference env marker" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_raw_private_key_present=false" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include runtime signer raw private key presence marker" >&2
+  exit 1
+fi
+
 if ! grep -q "Regression: #2302" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to include fallback signer runtime regression marker" >&2
+  exit 1
+fi
+
+if ! grep -q "Regression: #2324" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include managed-external raw signer key regression marker" >&2
   exit 1
 fi
 
@@ -265,8 +290,28 @@ if ! grep -q "runtime_signer_fallback_private_key_present_violation" "$README_FI
   exit 1
 fi
 
+if ! grep -q "runtime_signer_managed_external_raw_private_key_present_violation" "$README_FILE"; then
+  echo "expected README to include managed-external raw signer key violation marker" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF" "$README_FILE"; then
+  echo "expected README to include signer key reference env marker" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_raw_private_key_present=false" "$README_FILE"; then
+  echo "expected README to include runtime signer raw private key presence marker" >&2
+  exit 1
+fi
+
 if ! grep -q "Regression: #2302" "$README_FILE"; then
   echo "expected README to include fallback signer runtime regression marker" >&2
+  exit 1
+fi
+
+if ! grep -q "Regression: #2324" "$README_FILE"; then
+  echo "expected README to include managed-external raw signer key regression marker" >&2
   exit 1
 fi
 
@@ -297,6 +342,10 @@ if summary.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SI
     raise SystemExit("expected fallback signer private key env marker in contract-lane summary")
 if summary.get("runtime_signer_fallback_private_key_present") is not False:
     raise SystemExit("expected fallback signer private key presence marker false in contract-lane summary")
+if summary.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF":
+    raise SystemExit("expected signer key reference env marker in contract-lane summary")
+if summary.get("runtime_signer_raw_private_key_present") is not False:
+    raise SystemExit("expected runtime signer raw private key presence marker false in contract-lane summary")
 if summary.get("runtime_commit_failure_taxonomy_version") != "v1":
     raise SystemExit("expected runtime commit failure taxonomy version marker in contract-lane summary")
 if summary.get("runtime_commit_failure_taxonomy") != "none":
@@ -322,6 +371,13 @@ if not any(
     for check in checks
 ):
     raise SystemExit("expected fallback signer private key planned check marker in contract-lane summary")
+if not any(
+    check.get("id") == "runtime_signer_managed_external_raw_private_key_contract" and check.get("status") == "planned"
+    for check in checks
+):
+    raise SystemExit(
+        "expected managed-external raw signer key planned check marker in contract-lane summary"
+    )
 if summary.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
     raise SystemExit("expected runtime provider client contract marker in contract-lane summary")
 if summary.get("ci_fast_gate_eligible") is not False:
@@ -333,6 +389,12 @@ if contracts.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_
     raise SystemExit("expected contracts fallback signer private key env marker in contract-lane summary")
 if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
     raise SystemExit("expected contracts fallback signer private key allowed=false marker in contract-lane summary")
+if contracts.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF":
+    raise SystemExit("expected contracts signer key reference env marker in contract-lane summary")
+if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
+    raise SystemExit(
+        "expected contracts managed-external raw private key allowed=false marker in contract-lane summary"
+    )
 if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1":
     raise SystemExit("unexpected local KAMN live runtime integration contract-lane policy schema")
 if policy.get("final_decision") != "GO":
