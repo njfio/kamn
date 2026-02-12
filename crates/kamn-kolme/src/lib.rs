@@ -38,11 +38,11 @@ pub use block_fallback_policy::{
     KolmeBlockFallbackPolicyError, KolmeBlockFallbackResponse,
 };
 pub use block_scan_policy::{
-    compose_block_fallback_unresolved_reason, parse_fork_block_txhash,
-    project_failed_block_txhash_receipt, project_finalized_block_txhash_receipt, render_block_path,
-    resolve_lookup_upper_bound, validate_block_identity, validate_block_path_template,
-    validate_lookup_txhash, validate_lookup_window, BlockScanPolicyError,
-    BlockScanReceiptProjection,
+    compose_block_fallback_unresolved_reason, is_valid_block_lookup_height,
+    parse_fork_block_txhash, project_failed_block_txhash_receipt,
+    project_finalized_block_txhash_receipt, render_block_path, resolve_lookup_upper_bound,
+    validate_block_identity, validate_block_path_template, validate_lookup_txhash,
+    validate_lookup_window, BlockScanPolicyError, BlockScanReceiptProjection,
 };
 pub use broadcast_payload_policy::{normalize_broadcast_payload, KolmeBroadcastPayloadPolicyError};
 pub use codec::{KolmeCodecError, KolmeWireCodec, PassthroughCodec};

@@ -152,6 +152,11 @@ pub fn validate_lookup_txhash(txhash: &str) -> Result<String, BlockScanPolicyErr
     Ok(normalized.to_owned())
 }
 
+/// Validates one concrete block lookup request height.
+pub fn is_valid_block_lookup_height(height: u64) -> bool {
+    height > 0
+}
+
 /// Resolves block-fallback upper bound using one latest-block notification height.
 pub fn resolve_lookup_upper_bound(
     from_height: u64,
@@ -323,8 +328,9 @@ fn skip_ascii_whitespace(value: &str, mut cursor: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{
-        parse_fork_block_txhash, render_block_path, validate_block_identity,
-        validate_block_path_template, validate_lookup_window, BlockScanPolicyError,
+        is_valid_block_lookup_height, parse_fork_block_txhash, render_block_path,
+        validate_block_identity, validate_block_path_template, validate_lookup_window,
+        BlockScanPolicyError,
     };
 
     #[test]
@@ -367,5 +373,11 @@ mod tests {
                 reason: "notification field 'txhash' must not be empty".to_owned(),
             })
         );
+    }
+
+    #[test]
+    fn unit_validates_block_lookup_height_input() {
+        assert!(is_valid_block_lookup_height(1));
+        assert!(!is_valid_block_lookup_height(0));
     }
 }

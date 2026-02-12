@@ -1,6 +1,6 @@
 use kamn_kolme::{
     compose_block_fallback_unresolved_reason as compose_block_fallback_unresolved_reason_contract,
-    parse_fork_block_txhash, parse_receipt_finality,
+    is_valid_block_lookup_height, parse_fork_block_txhash, parse_receipt_finality,
     project_failed_block_txhash_receipt as project_failed_block_txhash_receipt_contract,
     project_finalized_block_txhash_receipt as project_finalized_block_txhash_receipt_contract,
     render_block_path, resolve_lookup_upper_bound, validate_block_identity,
@@ -117,4 +117,16 @@ fn regression_issue_1856_validate_lookup_txhash_rejects_empty_input_and_unresolv
         reason,
         "block fallback did not resolve txhash 'ab12cd34' between heights 40 and 45".to_owned()
     );
+}
+
+#[test]
+fn functional_block_scan_policy_accepts_positive_block_lookup_height() {
+    assert!(is_valid_block_lookup_height(1));
+    assert!(is_valid_block_lookup_height(42));
+}
+
+#[test]
+fn regression_issue_1876_block_scan_policy_rejects_zero_block_lookup_height() {
+    // Regression: #1876
+    assert!(!is_valid_block_lookup_height(0));
 }
