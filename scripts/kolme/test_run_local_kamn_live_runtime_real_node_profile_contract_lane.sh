@@ -57,13 +57,14 @@ required_coverage_markers=(
   "run_local_kamn_live_runtime_integration_lane.sh"
   "check_local_kamn_live_runtime_real_node_profile_policy.py"
   "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh"
+  "--require-non-synthetic-run-evidence"
   "docs/planning/kolme-devnet-ops.md"
   "docs/ci/strategy.md"
   "README.md"
   "Regression: #2139"
 )
 for marker in "${required_coverage_markers[@]}"; do
-  if ! grep -q "$marker" "$CONTRACT_IMPL"; then
+  if ! grep -q -- "$marker" "$CONTRACT_IMPL"; then
     echo "expected local KAMN live runtime real-node profile contract implementation to include coverage marker: $marker" >&2
     exit 1
   fi
@@ -105,6 +106,11 @@ if summary.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected dry-run reason code in real-node profile contract-lane summary")
 if summary.get("runtime_profile") != "real-node":
     raise SystemExit("expected runtime_profile=real-node in real-node profile contract-lane summary")
+runtime_commit_command = summary.get("runtime_commit_command")
+if not isinstance(runtime_commit_command, str):
+    raise SystemExit("expected runtime_commit_command in real-node profile contract-lane summary")
+if "--require-non-synthetic-run-evidence" not in runtime_commit_command:
+    raise SystemExit("expected strict non-synthetic runtime marker in real-node profile contract-lane summary")
 contracts = summary.get("contracts", {})
 if contracts.get("runtime_profile") != "real-node":
     raise SystemExit("expected contracts.runtime_profile=real-node in real-node profile contract-lane summary")

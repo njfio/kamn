@@ -82,6 +82,11 @@ if summary.get("runtime_profile") != "real-node":
     raise SystemExit("expected runtime_profile=real-node in integration summary")
 if summary.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
     raise SystemExit("expected live provider contract marker in integration summary")
+runtime_commit_command = summary.get("runtime_commit_command")
+if not isinstance(runtime_commit_command, str):
+    raise SystemExit("expected runtime_commit_command to be present in integration summary")
+if "--require-non-synthetic-run-evidence" not in runtime_commit_command:
+    raise SystemExit("expected strict non-synthetic runtime marker in integration runtime_commit_command")
 contracts = summary.get("contracts", {})
 if not isinstance(contracts, dict):
     raise SystemExit("expected contracts object in integration summary")

@@ -14,6 +14,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--expected-final-decision", required=True, choices=["GO", "NO-GO"])
     parser.add_argument("--ci-fast-gate", required=True, choices=["PASS", "FAIL"])
     parser.add_argument("--require-reason-code", action="append", default=[])
+    parser.add_argument(
+        "--require-non-synthetic-run-evidence",
+        action="store_true",
+        help="Require strict non-synthetic runtime evidence marker propagation.",
+    )
     parser.add_argument("--output-json", default="")
     return parser.parse_args()
 
@@ -77,6 +82,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_commit_contract_lane_missing")
         if "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider" not in runtime_commit_command:
             reason_codes.append("runtime_provider_contract_marker_missing")
+        if args.require_non_synthetic_run_evidence and "--require-non-synthetic-run-evidence" not in runtime_commit_command:
+            reason_codes.append("runtime_commit_non_synthetic_policy_marker_missing")
 
     runtime_commit_live_policy_report = report.get("runtime_commit_live_policy_report")
     if not isinstance(runtime_commit_live_policy_report, str) or not runtime_commit_live_policy_report.strip():
@@ -113,6 +120,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             "runtime_commit_policy",
         }
         observed_ids: set[str] = set()
+        runtime_commit_policy_check_command: str | None = None
         for entry in checks:
             if not isinstance(entry, dict):
                 reason_codes.append("check_entry_invalid")
@@ -127,6 +135,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             observed_ids.add(check_id)
             if not isinstance(command, str) or not command.strip():
                 reason_codes.append(f"check_command_invalid:{check_id}")
+            elif check_id == "runtime_commit_policy":
+                runtime_commit_policy_check_command = command
             if check_status not in ("planned", "pass", "fail", "skipped"):
                 reason_codes.append(f"check_status_invalid:{check_id}")
             if not isinstance(check_reason_code, str) or not check_reason_code.strip():
@@ -134,6 +144,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         missing_ids = sorted(expected_ids - observed_ids)
         for missing_id in missing_ids:
             reason_codes.append(f"check_missing:{missing_id}")
+        if (
+            args.require_non_synthetic_run_evidence
+            and runtime_commit_policy_check_command is not None
+            and "--require-non-synthetic-run-evidence" not in runtime_commit_policy_check_command
+        ):
+            reason_codes.append("runtime_commit_policy_check_non_synthetic_marker_missing")
 
     artifact_paths = report.get("artifact_paths")
     if not isinstance(artifact_paths, list) or not artifact_paths:
@@ -190,6 +206,7 @@ def main() -> int:
         "expected_final_decision": args.expected_final_decision,
         "ci_fast_gate": args.ci_fast_gate,
         "required_reason_codes": args.require_reason_code,
+        "require_non_synthetic_run_evidence": args.require_non_synthetic_run_evidence,
         "observed_status": observed_status,
         "observed_final_decision": observed_final_decision,
         "observed_reason_code": report.get("reason_code"),

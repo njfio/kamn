@@ -350,7 +350,12 @@ if [ -z "$effective_runtime_commit_finality_command" ]; then
   effective_runtime_commit_finality_command="printf 'finality=final\\n'"
 fi
 
-default_runtime_commit_command="KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_SUMMARY}") --policy-output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_POLICY_REPORT}") --live-output-file $(shell_escape "${RUNTIME_COMMIT_OUTPUT_FILE}") --finality-output-file $(shell_escape "${RUNTIME_COMMIT_FINALITY_OUTPUT_FILE}") --max-seconds ${RUNTIME_COMMIT_MAX_SECONDS} --expected-provider-client-contract $(shell_escape "${RUNTIME_PROVIDER_CLIENT_CONTRACT}") --live-command $(shell_escape "${default_runtime_commit_live_submit_command}") --finality-command $(shell_escape "${effective_runtime_commit_finality_command}") --finality-max-seconds ${RUNTIME_COMMIT_FINALITY_MAX_SECONDS}"
+runtime_commit_non_synthetic_flag=""
+if [ "$RUNTIME_PROFILE" = "real-node" ]; then
+  runtime_commit_non_synthetic_flag=" --require-non-synthetic-run-evidence"
+fi
+
+default_runtime_commit_command="KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_SUMMARY}") --policy-output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_POLICY_REPORT}") --live-output-file $(shell_escape "${RUNTIME_COMMIT_OUTPUT_FILE}") --finality-output-file $(shell_escape "${RUNTIME_COMMIT_FINALITY_OUTPUT_FILE}") --max-seconds ${RUNTIME_COMMIT_MAX_SECONDS} --expected-provider-client-contract $(shell_escape "${RUNTIME_PROVIDER_CLIENT_CONTRACT}")${runtime_commit_non_synthetic_flag} --live-command $(shell_escape "${default_runtime_commit_live_submit_command}") --finality-command $(shell_escape "${effective_runtime_commit_finality_command}") --finality-max-seconds ${RUNTIME_COMMIT_FINALITY_MAX_SECONDS}"
 if [ -z "$RUNTIME_COMMIT_COMMAND" ]; then
   RUNTIME_COMMIT_COMMAND="$default_runtime_commit_command"
   RUNTIME_COMMIT_FINALITY_COMMAND="$effective_runtime_commit_finality_command"
@@ -428,6 +433,9 @@ localhost_signed_command="bash scripts/sdk/run_localhost_signed_integration_cont
 conformance_command="bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run --base-url ${BASE_URL} --fork-chain-version ${FORK_CHAIN_VERSION} --max-seconds ${CONFORMANCE_MAX_SECONDS} --probe-max-seconds 30 --native-max-seconds 120 --output-json ${CONFORMANCE_REPORT}"
 runtime_commit_command="$RUNTIME_COMMIT_COMMAND"
 runtime_commit_policy_command="python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file ${RUNTIME_COMMIT_LIVE_SUMMARY} --expected-final-decision GO --ci-fast-gate PASS --output-json ${RUNTIME_COMMIT_LIVE_POLICY_REPORT}"
+if [ "$RUNTIME_PROFILE" = "real-node" ]; then
+  runtime_commit_policy_command="${runtime_commit_policy_command} --require-non-synthetic-run-evidence"
+fi
 
 overall_status="ok"
 reason_code="dry_run_no_commands_executed"
