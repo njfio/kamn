@@ -3,6 +3,8 @@ const RUNTIME_BLOCK_FALLBACK_RECONCILER_SRC: &str =
     include_str!("../src/kolme_runtime_commit/block_fallback_reconciler.rs");
 const RUNTIME_ADAPTER_BACKED_CLIENT_SRC: &str =
     include_str!("../src/kolme_runtime_commit/adapter_backed_client.rs");
+const RUNTIME_HTTP_TRANSPORT_SRC: &str =
+    include_str!("../src/kolme_runtime_commit/http_transport.rs");
 const RUNTIME_LIVE_PROVIDER_SRC: &str =
     include_str!("../src/kolme_runtime_commit/live_provider.rs");
 const RUNTIME_FINALITY_CHECKER_SRC: &str =
@@ -71,6 +73,7 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitBlockFallbackReconciler"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct AdapterBackedKolmeRuntimeCommitClient"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitLiveProvider"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitHttpTransport"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitFinalityChecker"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitForkFinalityResolver"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitNotificationsConsumer"));
@@ -83,6 +86,13 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC
         .contains("impl<P: KolmeRuntimeCommitProvider> KolmeRuntimeCommitClient"));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl<T: KolmeRuntimeCommitProviderTransport>"));
+    assert!(!RUNTIME_COMMIT_SRC
+        .contains("impl KolmeRuntimeCommitProviderTransport for KolmeRuntimeCommitHttpTransport"));
+    assert!(!RUNTIME_COMMIT_SRC
+        .contains("impl KolmeRuntimeCommitFinalityTransport for KolmeRuntimeCommitHttpTransport"));
+    assert!(!RUNTIME_COMMIT_SRC.contains(
+        "impl KolmeRuntimeCommitBlockFallbackTransport for KolmeRuntimeCommitHttpTransport"
+    ));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl<T: KolmeRuntimeCommitBlockFallbackTransport>"));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl<T: KolmeRuntimeCommitFinalityTransport>"));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl<C, T> KolmeRuntimeCommitForkFinalityResolver<C, T>"));
@@ -134,9 +144,8 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("render_kolme_runtime_commit_wire_payload_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("render_kolme_signed_envelope_wire_payload_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_runtime_commit_request_fields_contract("));
-    assert!(
-        RUNTIME_COMMIT_SRC.contains("normalize_kolme_transport_idempotency_key_input_contract(")
-    );
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC
+        .contains("normalize_kolme_transport_idempotency_key_input_contract("));
     assert!(RUNTIME_LIVE_PROVIDER_SRC.contains("normalize_kolme_provider_hint_input_contract("));
     assert!(RUNTIME_NOTIFICATIONS_CONSUMER_SRC
         .contains("normalize_kolme_notifications_provider_input_contract("));
@@ -148,7 +157,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_LIVE_PROVIDER_SRC
         .contains("normalize_kolme_live_provider_endpoint_inputs_contract("));
     assert!(RUNTIME_FORK_FINALITY_RESOLVER_SRC.contains("txhash_from_kolme_commit_id("));
-    assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_endpoint("));
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC.contains("parse_kolme_http_endpoint("));
     assert!(RUNTIME_NOTIFICATIONS_WS_SRC.contains("parse_kolme_websocket_endpoint("));
     assert!(
         RUNTIME_LIVE_PROVIDER_SRC.contains("is_kolme_valid_live_provider_base_url_input_contract(")
@@ -161,8 +170,8 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
         RUNTIME_NOTIFICATIONS_CONSUMER_SRC.contains("compose_kolme_notifications_websocket_url(")
     );
     assert!(RUNTIME_BLOCK_FALLBACK_RECONCILER_SRC.contains("validate_kolme_block_path_template("));
-    assert!(RUNTIME_COMMIT_SRC.contains("render_kolme_block_path("));
-    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_block_lookup_height_contract("));
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC.contains("render_kolme_block_path("));
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC.contains("is_kolme_valid_block_lookup_height_contract("));
     assert!(RUNTIME_BLOCK_FALLBACK_RECONCILER_SRC
         .contains("parse_kolme_provider_block_fallback_response_contract("));
     assert!(RUNTIME_BLOCK_FALLBACK_RECONCILER_SRC
@@ -171,11 +180,11 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
         .contains("is_kolme_valid_block_fallback_provider_input_contract("));
     assert!(RUNTIME_BLOCK_FALLBACK_RECONCILER_SRC
         .contains("is_kolme_valid_block_fallback_lookup_budget_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("classify_kolme_tls_failure_reason("));
-    assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_broadcast_payload_contract("));
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC.contains("classify_kolme_tls_failure_reason("));
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC.contains("normalize_kolme_broadcast_payload_contract("));
     assert!(RUNTIME_NOTIFICATIONS_WS_SRC.contains("validate_kolme_websocket_handshake_response("));
-    assert!(RUNTIME_COMMIT_SRC.contains("resolve_kolme_tls_ca_file_env_result_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_authorization_header_value("));
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC.contains("resolve_kolme_tls_ca_file_env_result_contract("));
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC.contains("parse_kolme_authorization_header_value("));
     assert!(RUNTIME_BLOCK_FALLBACK_RECONCILER_SRC.contains("validate_kolme_lookup_window("));
     assert!(
         RUNTIME_BLOCK_FALLBACK_RECONCILER_SRC.contains("validate_kolme_lookup_txhash_contract(")
@@ -191,7 +200,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_FORK_FINALITY_RESOLVER_SRC.contains("resolve_kolme_lookup_upper_bound("));
     assert!(RUNTIME_FORK_FINALITY_RESOLVER_SRC
         .contains("require_kolme_commit_id_matches_expected_txhash_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("compose_kolme_finality_status_path("));
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC.contains("compose_kolme_finality_status_path("));
     assert!(
         RUNTIME_FINALITY_CHECKER_SRC.contains("is_kolme_valid_finality_base_url_input_contract(")
     );
@@ -215,7 +224,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains(
         "impl From<KamnKolmeRuntimeProviderOutcome> for KolmeRuntimeCommitProviderOutcome"
     ));
-    assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_response_body("));
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC.contains("parse_kolme_http_response_body("));
     assert!(RUNTIME_NOTIFICATIONS_WS_SRC.contains("find_kolme_http_header_boundary("));
     assert!(
         RUNTIME_NOTIFICATIONS_WS_SRC.contains("is_kolme_valid_websocket_timeout_seconds_contract(")
@@ -231,9 +240,12 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     );
     assert!(RUNTIME_ADAPTER_BACKED_CLIENT_SRC
         .contains("KolmeRuntimeCommitTransportErrorKind::MalformedResponse"));
-    assert!(RUNTIME_COMMIT_SRC.contains("classify_kolme_transport_io_error(&error)"));
-    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_http_transport_timeout_seconds_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_http_response_bytes_input_contract("));
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC.contains("classify_kolme_transport_io_error(&error)"));
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC
+        .contains("is_kolme_valid_http_transport_timeout_seconds_contract("));
+    assert!(
+        RUNTIME_HTTP_TRANSPORT_SRC.contains("is_kolme_valid_http_response_bytes_input_contract(")
+    );
     assert!(RUNTIME_IN_MEMORY_SRC.contains("is_kolme_valid_runtime_provider_input_contract("));
     assert!(RUNTIME_LIVE_PROVIDER_SRC.contains("is_kolme_valid_provider_hint_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_operation_id_input_contract("));
@@ -254,13 +266,17 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
         .contains("normalize_kolme_runtime_commit_signed_envelope_fields_contract("));
     assert!(RUNTIME_PIPELINE_SRC.contains("is_kolme_valid_receipt_provider_input_contract("));
     assert!(RUNTIME_PIPELINE_SRC.contains("is_kolme_valid_receipt_commit_id_input_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_transport_idempotency_key_input_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_transport_wire_payload_input_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_broadcast_submit_path_input_contract("));
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC
+        .contains("is_kolme_valid_transport_idempotency_key_input_contract("));
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC
+        .contains("is_kolme_valid_transport_wire_payload_input_contract("));
+    assert!(RUNTIME_HTTP_TRANSPORT_SRC
+        .contains("normalize_kolme_broadcast_submit_path_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("impl From<KamnKolmeTransportIoClassification>"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod runtime_pipeline;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod in_memory_client;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod adapter_backed_client;"));
+    assert!(RUNTIME_COMMIT_SRC.contains("mod http_transport;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod block_fallback_reconciler;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod live_provider;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod finality_checker;"));
@@ -275,6 +291,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
         .contains("pub use notifications_consumer::KolmeRuntimeCommitNotificationsConsumer;"));
     assert!(RUNTIME_COMMIT_SRC
         .contains("pub use adapter_backed_client::AdapterBackedKolmeRuntimeCommitClient;"));
+    assert!(RUNTIME_COMMIT_SRC.contains("pub use http_transport::KolmeRuntimeCommitHttpTransport;"));
     assert!(RUNTIME_COMMIT_SRC
         .contains("pub use block_fallback_reconciler::KolmeRuntimeCommitBlockFallbackReconciler;"));
     assert!(RUNTIME_COMMIT_SRC.contains("pub use live_provider::KolmeRuntimeCommitLiveProvider;"));
