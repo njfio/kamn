@@ -35,3 +35,4 @@ did
 did_registry
 durable_guard_store
 audit_exports
+performance_targets

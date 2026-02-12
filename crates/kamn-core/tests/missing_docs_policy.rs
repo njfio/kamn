@@ -606,6 +606,23 @@ fn graduated_wave_thirty_two_audit_exports_module_must_not_return_to_allowlist()
 }
 
 #[test]
+fn graduated_wave_thirty_three_performance_targets_module_must_not_return_to_allowlist() {
+    // Regression: #2039
+    let actual = allowlisted_modules_from_core_lib(CORE_LIB);
+    let expected = allowlisted_modules_from_fixture(ALLOWLIST_FIXTURE);
+    let module = "performance_targets";
+
+    assert!(
+        !actual.iter().any(|candidate| candidate == module),
+        "{module} must stay graduated from #[allow(missing_docs)]"
+    );
+    assert!(
+        !expected.iter().any(|candidate| candidate == module),
+        "allowlist fixture must keep {module} removed"
+    );
+}
+
+#[test]
 fn graduated_modules_fixture_must_not_overlap_missing_docs_allowlist() {
     // Regression: #1723
     let actual = allowlisted_modules_from_core_lib(CORE_LIB);
