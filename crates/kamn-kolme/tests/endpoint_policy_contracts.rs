@@ -2,8 +2,8 @@ use kamn_kolme::{
     compose_finality_status_path, compose_notifications_websocket_url,
     is_valid_finality_base_url_input, is_valid_finality_status_path_input,
     is_valid_live_provider_base_url_input, is_valid_live_provider_submit_path_input,
-    normalize_finality_endpoint_inputs, parse_http_endpoint, parse_websocket_endpoint,
-    KolmeEndpointPolicyError, KolmeHttpScheme,
+    normalize_finality_endpoint_inputs, normalize_live_provider_endpoint_inputs,
+    parse_http_endpoint, parse_websocket_endpoint, KolmeEndpointPolicyError, KolmeHttpScheme,
 };
 
 #[test]
@@ -110,8 +110,34 @@ fn functional_endpoint_policy_accepts_non_empty_live_provider_inputs() {
 }
 
 #[test]
+fn functional_endpoint_policy_normalizes_live_provider_endpoint_inputs() {
+    let normalized = normalize_live_provider_endpoint_inputs(
+        "  https://kolme.example  ",
+        "  /broadcast/runtime-commit  ",
+    );
+    assert_eq!(
+        normalized,
+        (
+            "https://kolme.example".to_owned(),
+            "/broadcast/runtime-commit".to_owned(),
+        )
+    );
+}
+
+#[test]
 fn regression_issue_1872_endpoint_policy_rejects_empty_live_provider_inputs() {
     // Regression: #1872
     assert!(!is_valid_live_provider_base_url_input(""));
     assert!(!is_valid_live_provider_submit_path_input("   "));
+}
+
+#[test]
+fn regression_issue_1920_endpoint_policy_trims_outer_live_provider_endpoint_whitespace() {
+    // Regression: #1920
+    let normalized =
+        normalize_live_provider_endpoint_inputs("\nhttps://kolme.example\n", "\n/broadcast\n");
+    assert_eq!(
+        normalized,
+        ("https://kolme.example".to_owned(), "/broadcast".to_owned(),)
+    );
 }
