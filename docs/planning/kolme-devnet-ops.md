@@ -387,9 +387,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 ## Local KAMN Live Runtime Integration Lane (Issue #1489)
 
 - Local KAMN live runtime integration runner:
-  - `bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
+  - `bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
 - Explicit local-only live runtime integration execution:
-  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 210 --bootstrap-max-seconds 90 --localhost-signed-max-seconds 45 --conformance-max-seconds 180 --runtime-commit-max-seconds 30 --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 210 --bootstrap-max-seconds 90 --localhost-signed-max-seconds 45 --conformance-max-seconds 180 --runtime-commit-max-seconds 30 --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
 - Contract lane command:
@@ -400,6 +400,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `run_local_kolme_fork_bootstrap_readiness_lane.sh` run-mode validation for pinned checkout provenance and API readiness.
   - `run_localhost_signed_integration_contract_lane.sh` run-mode validation of signed message admission/replay guards before Kolme runtime commit execution.
   - `run_local_kolme_live_api_conformance_harness.sh` run-mode validation for health/query/nonce/broadcast command contracts.
+  - `run_local_runtime_commit_live_lane.sh` run-mode execution as the default runtime-commit endpoint step (no raw curl fallback by default).
   - explicit runtime-commit submit-profile probe over `PUT /broadcast` with fail-closed reason codes.
   - signed runtime-commit envelope translation enforces `signer_key_id` presence and canonical message/signature binding before broadcast normalization.
   - finality verification uses `/notifications` first with bounded `/block/{height}` fallback; no runtime commit status endpoint dependency.

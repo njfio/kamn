@@ -27,6 +27,12 @@ if ! grep -q "scripts/framework/run_manifest_lane.sh" "$RUNNER"; then
   exit 1
 fi
 
+# Regression: #1967
+if ! grep -q "run_local_runtime_commit_live_lane.sh" "$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"; then
+  echo "expected local KAMN live runtime integration runner to route runtime step through local runtime commit live lane" >&2
+  exit 1
+fi
+
 if [ ! -f "$MANIFEST" ]; then
   echo "expected local KAMN live runtime integration contract lane manifest to exist" >&2
   exit 1

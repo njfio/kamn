@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BOOTSTRAP_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh"
 CONFORMANCE_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_api_conformance_harness.sh"
 LOCALHOST_SIGNED_INTEGRATION_RUNNER="$ROOT_DIR/scripts/sdk/run_localhost_signed_integration_contract_lane.sh"
+RUNTIME_COMMIT_LIVE_LANE_RUNNER="$ROOT_DIR/scripts/kolme/run_local_runtime_commit_live_lane.sh"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 
 MODE="dry-run"
@@ -13,6 +14,7 @@ BOOTSTRAP_REPORT="/tmp/kolme-local-fork-bootstrap-readiness-summary.json"
 CONFORMANCE_REPORT="/tmp/kolme-local-live-api-conformance-summary.json"
 LOCALHOST_SIGNED_REPORT="/tmp/localhost-signed-integration-contract-report.json"
 RUNTIME_COMMIT_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-endpoint-output.txt"
+RUNTIME_COMMIT_LIVE_SUMMARY="/tmp/kolme-local-runtime-commit-live-summary.json"
 CHECKOUT_PATH="/tmp/kolme_fork"
 EXPECTED_REMOTE_URL="https://github.com/njfio/kolme_fork.git"
 EXPECTED_REF="refs/heads/main"
@@ -24,6 +26,10 @@ BOOTSTRAP_MAX_SECONDS=90
 CONFORMANCE_MAX_SECONDS=180
 LOCALHOST_SIGNED_MAX_SECONDS=45
 RUNTIME_COMMIT_MAX_SECONDS=30
+
+shell_escape() {
+  printf "%q" "$1"
+}
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -73,6 +79,14 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       RUNTIME_COMMIT_OUTPUT_FILE="$2"
+      shift 2
+      ;;
+    --runtime-commit-live-summary)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --runtime-commit-live-summary" >&2
+        exit 1
+      fi
+      RUNTIME_COMMIT_LIVE_SUMMARY="$2"
       shift 2
       ;;
     --checkout-path)
@@ -174,6 +188,7 @@ Options:
   --conformance-report <path>           Output path for live API conformance summary.
   --localhost-signed-report <path>      Output path for localhost signed integration summary.
   --runtime-commit-output-file <path>   Captured stdout/stderr for runtime-commit endpoint command.
+  --runtime-commit-live-summary <path>  Summary report output path for nested runtime-commit live lane runner.
   --checkout-path <path>                Local kolme_fork checkout path.
   --expected-remote-url <url>           Expected origin URL for checkout validation.
   --expected-ref <ref>                  Expected symbolic HEAD ref for checkout.
@@ -232,12 +247,17 @@ if [ ! -x "$LOCALHOST_SIGNED_INTEGRATION_RUNNER" ]; then
   exit 1
 fi
 
+if [ ! -x "$RUNTIME_COMMIT_LIVE_LANE_RUNNER" ]; then
+  echo "expected local runtime commit live lane runner to be executable" >&2
+  exit 1
+fi
+
 if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   echo "expected shared local-heavy opt-in guard helper to be executable" >&2
   exit 1
 fi
 
-default_runtime_commit_command="curl --silent --show-error --fail --request POST --header \"Content-Type: application/json\" --data '{\"commit_id\":\"local-runtime-commit\"}' ${BASE_URL%/}/broadcast/runtime-commit"
+default_runtime_commit_command="KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --base-url $(shell_escape "${BASE_URL}") --provider-hint kolme-fork-local --max-seconds ${RUNTIME_COMMIT_MAX_SECONDS} --preflight-max-seconds 10 --output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_SUMMARY}") --live-output-file $(shell_escape "${RUNTIME_COMMIT_OUTPUT_FILE}")"
 if [ -z "$RUNTIME_COMMIT_COMMAND" ]; then
   RUNTIME_COMMIT_COMMAND="$default_runtime_commit_command"
 fi
@@ -431,7 +451,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$CHECK_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -452,14 +472,15 @@ max_seconds = int(sys.argv[11])
 budget_status = sys.argv[12]
 runtime_commit_command = sys.argv[13]
 runtime_commit_output_file = sys.argv[14]
-bootstrap_report = sys.argv[15]
-localhost_signed_report = sys.argv[16]
-conformance_report = sys.argv[17]
-bootstrap_reason_code = sys.argv[18]
-localhost_signed_reason_code = sys.argv[19]
-conformance_reason_code = sys.argv[20]
-runtime_commit_reason_code = sys.argv[21]
-checks_path = pathlib.Path(sys.argv[22])
+runtime_commit_live_summary = sys.argv[15]
+bootstrap_report = sys.argv[16]
+localhost_signed_report = sys.argv[17]
+conformance_report = sys.argv[18]
+bootstrap_reason_code = sys.argv[19]
+localhost_signed_reason_code = sys.argv[20]
+conformance_reason_code = sys.argv[21]
+runtime_commit_reason_code = sys.argv[22]
+checks_path = pathlib.Path(sys.argv[23])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -509,6 +530,7 @@ summary = {
         localhost_signed_report,
         conformance_report,
         runtime_commit_output_file,
+        runtime_commit_live_summary,
     ],
 }
 
