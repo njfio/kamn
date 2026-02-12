@@ -37,6 +37,9 @@ use kamn_kolme::{
     is_valid_runtime_payload_hash_input as is_kolme_valid_runtime_payload_hash_input_contract,
     is_valid_runtime_provider_input as is_kolme_valid_runtime_provider_input_contract,
     is_valid_runtime_state_root_input as is_kolme_valid_runtime_state_root_input_contract,
+    is_valid_signed_envelope_message_input as is_kolme_valid_signed_envelope_message_input_contract,
+    is_valid_signed_envelope_signature_input as is_kolme_valid_signed_envelope_signature_input_contract,
+    is_valid_signed_envelope_signer_key_id_input as is_kolme_valid_signed_envelope_signer_key_id_input_contract,
     is_valid_transport_idempotency_key_input as is_kolme_valid_transport_idempotency_key_input_contract,
     is_valid_transport_wire_payload_input as is_kolme_valid_transport_wire_payload_input_contract,
     is_valid_websocket_timeout_seconds as is_kolme_valid_websocket_timeout_seconds_contract,
@@ -249,27 +252,27 @@ impl KolmeRuntimeCommitSignedBroadcastEnvelope {
         signature: &str,
         recovery_id: u8,
     ) -> Result<Self, KolmeRuntimeCommitError> {
-        let signer_key_id = signer_key_id.trim();
-        if signer_key_id.is_empty() {
+        if !is_kolme_valid_signed_envelope_signer_key_id_input_contract(signer_key_id) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "signer_key_id",
                 reason: "must not be empty",
             });
         }
-        let message = message.trim();
-        if message.is_empty() {
+        if !is_kolme_valid_signed_envelope_message_input_contract(message) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "signed_message",
                 reason: "must not be empty",
             });
         }
-        let signature = signature.trim();
-        if signature.is_empty() {
+        if !is_kolme_valid_signed_envelope_signature_input_contract(signature) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "signature",
                 reason: "must not be empty",
             });
         }
+        let signer_key_id = signer_key_id.trim();
+        let message = message.trim();
+        let signature = signature.trim();
         Ok(Self {
             signer_key_id: signer_key_id.to_owned(),
             message: message.to_owned(),

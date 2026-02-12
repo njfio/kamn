@@ -30,6 +30,21 @@ impl fmt::Display for KolmeBroadcastPayloadPolicyError {
 
 impl Error for KolmeBroadcastPayloadPolicyError {}
 
+/// Returns whether signed-envelope signer key identifier input is non-empty after trimming.
+pub fn is_valid_signed_envelope_signer_key_id_input(signer_key_id: &str) -> bool {
+    !signer_key_id.trim().is_empty()
+}
+
+/// Returns whether signed-envelope message input is non-empty after trimming.
+pub fn is_valid_signed_envelope_message_input(message: &str) -> bool {
+    !message.trim().is_empty()
+}
+
+/// Returns whether signed-envelope signature input is non-empty after trimming.
+pub fn is_valid_signed_envelope_signature_input(signature: &str) -> bool {
+    !signature.trim().is_empty()
+}
+
 /// Normalizes runtime commit wire payload into canonical Kolme `/broadcast` JSON payload.
 pub fn normalize_broadcast_payload(
     wire_payload: &str,
