@@ -18,6 +18,11 @@ def parse_args() -> argparse.Namespace:
         "--expected-provider-client-contract",
         default="KolmeRuntimeCommitLiveProvider",
     )
+    parser.add_argument(
+        "--require-non-synthetic-run-evidence",
+        action="store_true",
+        help="Fail closed when run-mode evidence commands are classified as synthetic.",
+    )
     parser.add_argument("--output-json", default="")
     return parser.parse_args()
 
@@ -79,6 +84,17 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(finality_enabled, bool):
         reason_codes.append("finality_enabled_invalid")
 
+    live_command_synthetic = report.get("live_command_synthetic")
+    if not isinstance(live_command_synthetic, bool):
+        reason_codes.append("live_command_synthetic_invalid")
+
+    finality_command_synthetic = report.get("finality_command_synthetic")
+    if not isinstance(finality_command_synthetic, bool):
+        reason_codes.append("finality_command_synthetic_invalid")
+
+    if report.get("synthetic_evidence_classification_version") != "v1":
+        reason_codes.append("synthetic_evidence_classification_version_mismatch")
+
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
         reason_codes.append("checks_missing")
@@ -104,6 +120,11 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("submit_evidence_marker_missing")
         if mode == "run" and finality_enabled is True and finality_evidence_marker_present is not True:
             reason_codes.append("finality_evidence_marker_missing")
+        if mode == "run" and args.require_non_synthetic_run_evidence:
+            if live_command_synthetic is True:
+                reason_codes.append("synthetic_live_command_detected")
+            if finality_enabled is True and finality_command_synthetic is True:
+                reason_codes.append("synthetic_finality_command_detected")
         if budget_status == "exceeded_budget":
             reason_codes.append("ok_status_budget_exceeded")
     elif status == "fail" and reason_code in allowed_ok_reason_codes:
@@ -149,6 +170,7 @@ def main() -> int:
         "ci_fast_gate": args.ci_fast_gate,
         "required_reason_codes": args.require_reason_code,
         "expected_provider_client_contract": args.expected_provider_client_contract,
+        "require_non_synthetic_run_evidence": args.require_non_synthetic_run_evidence,
         "observed_status": observed_status,
         "observed_final_decision": observed_final_decision,
         "observed_reason_code": report.get("reason_code"),

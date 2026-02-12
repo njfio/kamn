@@ -725,6 +725,7 @@ Operator checkpoints:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --skip-preflight --live-command "printf 'status=submitted\\n'" --finality-command "printf 'finality=final\\n'" --finality-max-seconds 15 --max-seconds 90 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt --finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt`
 - Evidence policy checker command:
   - `python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/kolme-local-runtime-commit-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-runtime-commit-live-policy.json`
+  - `python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/kolme-local-runtime-commit-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-non-synthetic-run-evidence --output-json /tmp/kolme-local-runtime-commit-live-policy.json`
 - Finality evidence contract lane command:
   - `bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json`
 - Default live-provider smoke command executed by run mode:
@@ -738,6 +739,8 @@ Operator checkpoints:
   - bounded live command timeout via `--max-seconds`
   - optional finality command timeout bound via `--finality-max-seconds`
   - submit/finality evidence marker fields (`submit_evidence_marker_present`, `finality_evidence_marker_present`) remain fail-closed in policy checks
+  - summary includes `live_command_synthetic`, `finality_command_synthetic`, and `synthetic_evidence_classification_version=v1` for deterministic synthetic-command detection.
+  - `--require-non-synthetic-run-evidence` enforces NO-GO on synthetic run-mode command paths (`synthetic_live_command_detected`, `synthetic_finality_command_detected`).
   - machine-readable pass/fail reason codes for missing opt-in, preflight failure/timeout, command failure, and command timeout
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.

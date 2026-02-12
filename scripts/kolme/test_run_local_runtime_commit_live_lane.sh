@@ -108,6 +108,12 @@ if report.get("finality_evidence_marker") != "finality=final":
     raise SystemExit("expected deterministic finality evidence marker")
 if report.get("finality_evidence_marker_present") is not False:
     raise SystemExit("expected finality evidence marker to be absent in dry-run default command profile")
+if report.get("live_command_synthetic") is not False:
+    raise SystemExit("expected default dry-run live command to be classified non-synthetic")
+if report.get("finality_command_synthetic") is not False:
+    raise SystemExit("expected default dry-run finality command classification false")
+if report.get("synthetic_evidence_classification_version") != "v1":
+    raise SystemExit("expected synthetic evidence classification version marker")
 checks = report.get("checks")
 if not isinstance(checks, list) or not checks:
     raise SystemExit("expected deterministic checks in summary")
@@ -213,6 +219,10 @@ if report.get("submit_evidence_marker_present") is not True:
     raise SystemExit("expected submit evidence marker to be present for run command output")
 if report.get("finality_evidence_marker_present") is not False:
     raise SystemExit("expected finality evidence marker to remain false when no finality command is configured")
+if report.get("live_command_synthetic") is not True:
+    raise SystemExit("expected printf-only live command to be classified synthetic")
+if report.get("finality_command_synthetic") is not False:
+    raise SystemExit("expected finality command classification false when finality command is disabled")
 PY
 
 run_with_finality_output="$(
@@ -251,7 +261,33 @@ if report.get("submit_evidence_marker_present") is not True:
     raise SystemExit("expected submit evidence marker to remain true in finality-enabled run summary")
 if report.get("finality_evidence_marker_present") is not True:
     raise SystemExit("expected finality evidence marker to be true in finality-enabled run summary")
+if report.get("live_command_synthetic") is not True:
+    raise SystemExit("expected synthetic live command classification for printf fixture")
+if report.get("finality_command_synthetic") is not True:
+    raise SystemExit("expected synthetic finality command classification for printf fixture")
 PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence >"$TMP_POLICY_ERR" 2>&1
+non_synthetic_policy_code=$?
+set -e
+
+if [ "$non_synthetic_policy_code" -eq 0 ]; then
+  echo "expected evidence policy checker to fail when synthetic run commands are disallowed" >&2
+  exit 1
+fi
+if ! grep -q "synthetic_live_command_detected" "$TMP_POLICY_ERR"; then
+  echo "expected synthetic live command failure reason from evidence policy checker" >&2
+  exit 1
+fi
+if ! grep -q "synthetic_finality_command_detected" "$TMP_POLICY_ERR"; then
+  echo "expected synthetic finality command failure reason from evidence policy checker" >&2
+  exit 1
+fi
 
 set +e
 KAMN_KOLME_LOCAL_HEAVY=1 \
