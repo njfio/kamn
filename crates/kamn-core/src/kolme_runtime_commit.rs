@@ -29,6 +29,8 @@ use kamn_kolme::{
     is_valid_notifications_reconnect_budget as is_kolme_valid_notifications_reconnect_budget_contract,
     is_valid_poll_attempt_budget as is_kolme_valid_poll_attempt_budget_contract,
     is_valid_provider_hint_input as is_kolme_valid_provider_hint_input_contract,
+    is_valid_receipt_commit_id_input as is_kolme_valid_receipt_commit_id_input_contract,
+    is_valid_receipt_provider_input as is_kolme_valid_receipt_provider_input_contract,
     is_valid_runtime_commit_id_request as is_kolme_valid_runtime_commit_id_request_contract,
     is_valid_runtime_provider_input as is_kolme_valid_runtime_provider_input_contract,
     is_valid_transport_idempotency_key_input as is_kolme_valid_transport_idempotency_key_input_contract,
@@ -528,13 +530,13 @@ impl RuntimeCommitPipeline {
         receipt_provider: &str,
         receipt_commit_id: &str,
     ) -> Result<RuntimeCommitLifecycleRecord, KolmeRuntimeCommitError> {
-        if receipt_provider.trim().is_empty() {
+        if !is_kolme_valid_receipt_provider_input_contract(receipt_provider) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "receipt_provider",
                 reason: "must not be empty",
             });
         }
-        if receipt_commit_id.trim().is_empty() {
+        if !is_kolme_valid_receipt_commit_id_input_contract(receipt_commit_id) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "receipt_commit_id",
                 reason: "must not be empty",
