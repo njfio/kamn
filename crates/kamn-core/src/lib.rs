@@ -80,7 +80,7 @@ pub mod operator_binding;
 pub mod operator_dashboard_api;
 #[allow(missing_docs)]
 pub mod operator_dashboard_ui;
-#[allow(missing_docs)]
+/// Performance target thresholds and benchmark outcome classification contracts.
 pub mod performance_targets;
 /// Redaction request approval, audit-event, and visibility compliance contracts.
 pub mod redaction_compliance;

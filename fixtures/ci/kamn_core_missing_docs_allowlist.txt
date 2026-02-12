@@ -12,7 +12,6 @@ message_lifecycle
 observability
 operator_dashboard_api
 operator_dashboard_ui
-performance_targets
 reputation_state
 retention_engine
 runtime

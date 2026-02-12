@@ -1,11 +1,18 @@
+//! Performance target contracts and benchmark-go/no-go evaluation helpers.
+
 use crate::observability::ObservabilitySample;
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// Runtime performance dimensions evaluated against PRD thresholds.
 pub enum PerformanceMetric {
+    /// Median end-to-end latency (milliseconds).
     LatencyP50,
+    /// Tail latency (p99, milliseconds).
     LatencyP99,
+    /// Sustained throughput (transactions/messages per second).
     Throughput,
+    /// Service availability percentage.
     Availability,
 }
 
@@ -38,14 +45,20 @@ impl PerformanceMetric {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Performance thresholds derived from the product requirement baseline.
 pub struct PrdPerformanceTargets {
+    /// Maximum allowed p50 latency.
     pub max_latency_p50_ms: u64,
+    /// Maximum allowed p99 latency.
     pub max_latency_p99_ms: u64,
+    /// Minimum required throughput.
     pub min_throughput_tps: u64,
+    /// Minimum required availability percentage.
     pub min_availability_pct: f64,
 }
 
 impl PrdPerformanceTargets {
+    /// Returns the default PRD v13.2 performance threshold set.
     pub fn v13_2() -> Self {
         Self {
             max_latency_p50_ms: 100,
@@ -57,46 +70,72 @@ impl PrdPerformanceTargets {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// Single benchmark sample used in aggregate performance evaluation.
 pub struct PerformanceSample {
+    /// Observed p50 latency in milliseconds.
     pub latency_p50_ms: u64,
+    /// Observed p99 latency in milliseconds.
     pub latency_p99_ms: u64,
+    /// Observed throughput in transactions/messages per second.
     pub throughput_tps: u64,
+    /// Observed availability percentage.
     pub availability_pct: f64,
+    /// Sample timestamp (epoch seconds).
     pub timestamp_epoch_s: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// Aggregated benchmark values used for target comparison.
 pub struct PerformanceAggregate {
+    /// Aggregated p50 latency in milliseconds.
     pub latency_p50_ms: u64,
+    /// Aggregated p99 latency in milliseconds.
     pub latency_p99_ms: u64,
+    /// Aggregated throughput in transactions/messages per second.
     pub throughput_tps: u64,
+    /// Aggregated availability percentage.
     pub availability_pct: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// Result for a single metric compared against its threshold.
 pub struct PerformanceMetricResult {
+    /// Metric that was evaluated.
     pub metric: PerformanceMetric,
+    /// Observed metric value.
     pub observed: f64,
+    /// Threshold applied during evaluation.
     pub threshold: f64,
+    /// Whether the observed value meets the threshold.
     pub met: bool,
+    /// Percent deviation from threshold (0 when met).
     pub deviation_pct: f64,
+    /// Suggested remediation when metric is not met.
     pub remediation: &'static str,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Full run-level performance evaluation report.
 pub struct PerformanceRunReport {
+    /// Identifier for the benchmark run.
     pub run_id: String,
+    /// Number of samples included in this run.
     pub sample_count: usize,
+    /// Aggregate values computed from all samples.
     pub aggregate: PerformanceAggregate,
+    /// Per-metric evaluation results.
     pub results: Vec<PerformanceMetricResult>,
+    /// True when all metrics meet configured thresholds.
     pub meets_targets: bool,
 }
 
 impl PerformanceRunReport {
+    /// Returns the evaluation result for a specific metric, if present.
     pub fn metric_result(&self, metric: PerformanceMetric) -> Option<&PerformanceMetricResult> {
         self.results.iter().find(|result| result.metric == metric)
     }
 
+    /// Returns failed metrics ordered by remediation priority.
     pub fn bottlenecks(&self) -> Vec<PerformanceMetric> {
         let mut failed: Vec<&PerformanceMetricResult> =
             self.results.iter().filter(|result| !result.met).collect();
@@ -112,10 +151,23 @@ impl PerformanceRunReport {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Error taxonomy for performance sample and run validation.
 pub enum PerformanceRunError {
+    /// Run does not contain any samples.
     EmptySamples,
-    InvalidAvailability { value: f64 },
-    InvalidLatencyOrder { p50: u64, p99: u64 },
+    /// Availability sample is outside 0..=100.
+    InvalidAvailability {
+        /// Invalid availability value.
+        value: f64,
+    },
+    /// p99 latency is lower than p50 latency.
+    InvalidLatencyOrder {
+        /// Observed p50 latency.
+        p50: u64,
+        /// Observed p99 latency.
+        p99: u64,
+    },
+    /// Throughput sample is zero.
     ZeroThroughput,
 }
 
@@ -142,6 +194,7 @@ impl fmt::Display for PerformanceRunError {
 
 impl std::error::Error for PerformanceRunError {}
 
+/// Evaluates a benchmark run against PRD target thresholds.
 pub fn evaluate_performance_run(
     run_id: impl Into<String>,
     samples: &[PerformanceSample],
@@ -190,6 +243,7 @@ pub fn evaluate_performance_run(
     })
 }
 
+/// Converts observability samples and evaluates them against PRD targets.
 pub fn evaluate_performance_from_observability(
     run_id: impl Into<String>,
     samples: &[ObservabilitySample],
