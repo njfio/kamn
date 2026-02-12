@@ -98,6 +98,7 @@ Out of scope:
 - #1956: extracted API codec ownership into `kolme_runtime_commit/api_codec.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeApiNextNonce*`/`KolmeApiBroadcast*` types from the dedicated submodule.
 - #1958: extracted runtime request/signed-envelope ownership into `kolme_runtime_commit/request_envelope.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeRuntimeCommitRequest` and `KolmeRuntimeCommitSignedBroadcastEnvelope` from the dedicated submodule.
 - #1960: extracted runtime error ownership into `kolme_runtime_commit/errors.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeRuntimeCommitTransportErrorKind`, `KolmeRuntimeCommitProviderError`, and `KolmeRuntimeCommitError` from the dedicated submodule.
+- #1962: extracted runtime receipt/outcome/notification ownership into `kolme_runtime_commit/outcomes.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeRuntimeCommitReceipt`, `KolmeRuntimeCommitOutcome`, `KolmeRuntimeCommitProviderReceipt`, `KolmeRuntimeCommitProviderOutcome`, and `KolmeRuntimeCommitNotificationEvent` from the dedicated submodule.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,

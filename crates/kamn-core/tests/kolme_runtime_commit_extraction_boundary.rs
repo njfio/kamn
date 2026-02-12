@@ -21,6 +21,7 @@ const RUNTIME_NOTIFICATIONS_WS_SRC: &str =
     include_str!("../src/kolme_runtime_commit/notifications_websocket.rs");
 const RUNTIME_PIPELINE_SRC: &str = include_str!("../src/kolme_runtime_commit/runtime_pipeline.rs");
 const RUNTIME_ERRORS_SRC: &str = include_str!("../src/kolme_runtime_commit/errors.rs");
+const RUNTIME_OUTCOMES_SRC: &str = include_str!("../src/kolme_runtime_commit/outcomes.rs");
 
 #[test]
 fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers() {
@@ -93,6 +94,18 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("pub enum KolmeRuntimeCommitTransportErrorKind"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub enum KolmeRuntimeCommitProviderError"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub enum KolmeRuntimeCommitError"));
+    // Regression: #1962
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitReceipt"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub enum KolmeRuntimeCommitOutcome"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitProviderReceipt"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub enum KolmeRuntimeCommitProviderOutcome"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub enum KolmeRuntimeCommitNotificationEvent"));
+    assert!(!RUNTIME_COMMIT_SRC
+        .contains("impl From<KamnKolmeNotificationEvent> for KolmeRuntimeCommitNotificationEvent"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("notification_event_to_kolme_provider_receipt_contract("));
+    assert!(!RUNTIME_COMMIT_SRC.contains(
+        "impl From<KamnKolmeRuntimeProviderOutcome> for KolmeRuntimeCommitProviderOutcome"
+    ));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl RuntimeCommitPipeline"));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl InMemoryKolmeRuntimeCommitClient"));
     assert!(!RUNTIME_COMMIT_SRC
@@ -230,17 +243,17 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_NOTIFICATIONS_CONSUMER_SRC
         .contains("is_kolme_valid_notifications_reconnect_budget_contract("));
     assert!(RUNTIME_NOTIFICATIONS_CONSUMER_SRC.contains("parse_kolme_notification_event_contract("));
-    assert!(RUNTIME_COMMIT_SRC
+    assert!(RUNTIME_OUTCOMES_SRC
         .contains("impl From<KamnKolmeNotificationEvent> for KolmeRuntimeCommitNotificationEvent"));
     assert!(RUNTIME_NOTIFICATIONS_CONSUMER_SRC
         .contains("compose_kolme_notifications_reconnect_exhausted_reason_contract("));
     assert!(RUNTIME_NOTIFICATIONS_CONSUMER_SRC
         .contains("normalize_kolme_notifications_provider_input_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("notification_event_to_kolme_provider_receipt_contract("));
+    assert!(RUNTIME_OUTCOMES_SRC.contains("notification_event_to_kolme_provider_receipt_contract("));
     assert!(
         RUNTIME_LIVE_PROVIDER_SRC.contains("parse_kolme_live_runtime_provider_outcome_contract(")
     );
-    assert!(RUNTIME_COMMIT_SRC.contains(
+    assert!(RUNTIME_OUTCOMES_SRC.contains(
         "impl From<KamnKolmeRuntimeProviderOutcome> for KolmeRuntimeCommitProviderOutcome"
     ));
     assert!(RUNTIME_HTTP_TRANSPORT_SRC.contains("parse_kolme_http_response_body("));
@@ -309,6 +322,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("mod notifications_consumer;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod notifications_websocket;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod errors;"));
+    assert!(RUNTIME_COMMIT_SRC.contains("mod outcomes;"));
     assert!(RUNTIME_COMMIT_SRC.contains("pub use request_envelope::{"));
     assert!(RUNTIME_COMMIT_SRC.contains("pub use runtime_pipeline::{"));
     assert!(
@@ -330,7 +344,13 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
         .contains("pub use fork_finality_resolver::KolmeRuntimeCommitForkFinalityResolver;"));
     assert!(RUNTIME_COMMIT_SRC.contains("pub use notifications_websocket::{"));
     assert!(RUNTIME_COMMIT_SRC.contains("pub use errors::{"));
+    assert!(RUNTIME_COMMIT_SRC.contains("pub use outcomes::{"));
     assert!(RUNTIME_ERRORS_SRC.contains("pub enum KolmeRuntimeCommitTransportErrorKind"));
     assert!(RUNTIME_ERRORS_SRC.contains("pub enum KolmeRuntimeCommitProviderError"));
     assert!(RUNTIME_ERRORS_SRC.contains("pub enum KolmeRuntimeCommitError"));
+    assert!(RUNTIME_OUTCOMES_SRC.contains("pub struct KolmeRuntimeCommitReceipt"));
+    assert!(RUNTIME_OUTCOMES_SRC.contains("pub enum KolmeRuntimeCommitOutcome"));
+    assert!(RUNTIME_OUTCOMES_SRC.contains("pub struct KolmeRuntimeCommitProviderReceipt"));
+    assert!(RUNTIME_OUTCOMES_SRC.contains("pub enum KolmeRuntimeCommitProviderOutcome"));
+    assert!(RUNTIME_OUTCOMES_SRC.contains("pub enum KolmeRuntimeCommitNotificationEvent"));
 }
