@@ -14,7 +14,7 @@ pub mod anti_spam;
 /// Audit export filters, bundles, and governance evidence contracts.
 pub mod audit_exports;
 pub mod bootstrap;
-#[allow(missing_docs)]
+/// Bridge ingress and egress normalization plus policy evaluation contracts.
 pub mod bridge_adapter;
 #[allow(missing_docs)]
 pub mod channel_models;
