@@ -96,6 +96,7 @@ Out of scope:
 - #1952: extracted live provider ownership into `kolme_runtime_commit/live_provider.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeRuntimeCommitLiveProvider` from the dedicated submodule.
 - #1954: extracted HTTP transport ownership into `kolme_runtime_commit/http_transport.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeRuntimeCommitHttpTransport` from the dedicated submodule.
 - #1956: extracted API codec ownership into `kolme_runtime_commit/api_codec.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeApiNextNonce*`/`KolmeApiBroadcast*` types from the dedicated submodule.
+- #1958: extracted runtime request/signed-envelope ownership into `kolme_runtime_commit/request_envelope.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeRuntimeCommitRequest` and `KolmeRuntimeCommitSignedBroadcastEnvelope` from the dedicated submodule.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,
