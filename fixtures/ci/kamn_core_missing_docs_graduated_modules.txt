@@ -50,3 +50,4 @@ upgrade_orchestration
 escrow
 instruction_verify
 reputation_state
+channel_policies
