@@ -31,6 +31,7 @@ use kamn_kolme::{
     is_valid_provider_hint_input as is_kolme_valid_provider_hint_input_contract,
     is_valid_runtime_commit_id_request as is_kolme_valid_runtime_commit_id_request_contract,
     is_valid_runtime_provider_input as is_kolme_valid_runtime_provider_input_contract,
+    is_valid_transport_idempotency_key_input as is_kolme_valid_transport_idempotency_key_input_contract,
     is_valid_websocket_timeout_seconds as is_kolme_valid_websocket_timeout_seconds_contract,
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
     lifecycle_state_label as lifecycle_state_label_contract,
@@ -876,12 +877,12 @@ impl KolmeRuntimeCommitHttpTransport {
         request: &KolmeApiBroadcastRequest,
         idempotency_key: &str,
     ) -> Result<KolmeApiBroadcastResponse, KolmeRuntimeCommitProviderError> {
-        let idempotency_key = idempotency_key.trim();
-        if idempotency_key.is_empty() {
+        if !is_kolme_valid_transport_idempotency_key_input_contract(idempotency_key) {
             return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                 reason: "idempotency_key must not be empty".to_owned(),
             });
         }
+        let idempotency_key = idempotency_key.trim();
         let submit_path = if submit_path.trim().is_empty() {
             "/broadcast"
         } else {
@@ -1099,7 +1100,7 @@ impl KolmeRuntimeCommitProviderTransport for KolmeRuntimeCommitHttpTransport {
                 reason: "wire_payload must not be empty".to_owned(),
             });
         }
-        if idempotency_key.trim().is_empty() {
+        if !is_kolme_valid_transport_idempotency_key_input_contract(idempotency_key) {
             return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                 reason: "idempotency_key must not be empty".to_owned(),
             });
