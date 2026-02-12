@@ -24,6 +24,7 @@ INTEGRATION_RUNTIME_COMMIT_MAX_SECONDS=30
 INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND=""
 INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS=15
 INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-live-finality-output.txt"
+INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT="/tmp/kolme-local-runtime-commit-live-policy.json"
 PROCESS_PID=""
 
 shell_escape() {
@@ -184,6 +185,14 @@ while [ "$#" -gt 0 ]; do
       INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE="$2"
       shift 2
       ;;
+    --integration-runtime-commit-live-policy-report)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --integration-runtime-commit-live-policy-report" >&2
+        exit 1
+      fi
+      INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT="$2"
+      shift 2
+      ;;
     --help|-h)
       cat <<'USAGE'
 Usage: run_local_kolme_fork_process_lifecycle_lane.sh [options]
@@ -211,6 +220,8 @@ Options:
                                                  Max runtime budget for runtime finality command passed through to nested integration lane.
   --integration-runtime-commit-finality-output-file <path>
                                                  Captured stdout/stderr path for runtime finality command passed through to nested integration lane.
+  --integration-runtime-commit-live-policy-report <path>
+                                                 Output path for nested runtime policy report artifact passed through to nested integration lane.
 USAGE
       exit 0
       ;;
@@ -299,6 +310,34 @@ else:
 PY
 }
 
+read_runtime_policy_reason_code() {
+  local report_file="$1"
+  python3 - "$report_file" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+if not path.exists():
+    print("report_missing")
+    raise SystemExit(0)
+
+try:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+except json.JSONDecodeError:
+    print("report_invalid_json")
+    raise SystemExit(0)
+
+value = payload.get("runtime_commit_policy_reason_code")
+if isinstance(value, str) and value.strip():
+    print(value)
+else:
+    print("runtime_commit_policy_reason_code_missing")
+PY
+}
+
 wait_for_readiness() {
   local base_url="$1"
   local chain_version="$2"
@@ -353,6 +392,7 @@ graceful_teardown() {
 serve_command_planned="${SERVE_COMMAND:-<required-in-run-mode>}"
 readiness_command="curl --silent --show-error --fail ${BASE_URL%/}/healthz && curl --silent --show-error --fail ${BASE_URL%/}/fork-info?chain_version=${FORK_CHAIN_VERSION}"
 integration_command="bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path ${CHECKOUT_PATH} --expected-remote-url ${EXPECTED_REMOTE_URL} --expected-ref ${EXPECTED_REF} --base-url ${BASE_URL} --fork-chain-version ${FORK_CHAIN_VERSION} --max-seconds ${INTEGRATION_MAX_SECONDS} --bootstrap-max-seconds ${INTEGRATION_BOOTSTRAP_MAX_SECONDS} --conformance-max-seconds ${INTEGRATION_CONFORMANCE_MAX_SECONDS} --runtime-commit-max-seconds ${INTEGRATION_RUNTIME_COMMIT_MAX_SECONDS} --output-json ${INTEGRATION_REPORT}"
+integration_command="${integration_command} --runtime-commit-live-policy-report $(shell_escape "${INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT}")"
 if [ -n "$INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND" ]; then
   integration_command="${integration_command} --runtime-commit-finality-command $(shell_escape "${INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND}") --runtime-commit-finality-max-seconds ${INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS} --runtime-commit-finality-output-file $(shell_escape "${INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE}")"
 fi
@@ -366,6 +406,7 @@ start_reason_code="not_run"
 readiness_reason_code="not_run"
 integration_reason_code="not_run"
 teardown_reason_code="not_run"
+integration_runtime_commit_policy_reason_code="not_run"
 
 record_check "process_start" "$serve_command_planned" "planned" "not_run"
 record_check "readiness_probe" "$readiness_command" "planned" "not_run"
@@ -448,6 +489,7 @@ if [ "$MODE" = "run" ]; then
           --conformance-max-seconds "$INTEGRATION_CONFORMANCE_MAX_SECONDS"
           --runtime-commit-max-seconds "$INTEGRATION_RUNTIME_COMMIT_MAX_SECONDS"
           --output-json "$INTEGRATION_REPORT"
+          --runtime-commit-live-policy-report "$INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT"
         )
         if [ -n "$INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND" ]; then
           integration_args+=(
@@ -467,14 +509,17 @@ if [ "$MODE" = "run" ]; then
         if [ "$integration_exit_code" -eq 0 ]; then
           record_check "kamn_live_integration" "$integration_command" "pass" "kamn_live_integration_passed"
           integration_reason_code="kamn_live_integration_passed"
+          integration_runtime_commit_policy_reason_code="$(read_runtime_policy_reason_code "$INTEGRATION_REPORT")"
           reason_code="process_lifecycle_integration_passed"
         elif [ "$integration_exit_code" -eq 124 ]; then
           record_check "kamn_live_integration" "$integration_command" "fail" "kamn_live_integration_timeout"
           overall_status="fail"
           reason_code="kamn_live_integration_failed"
           integration_reason_code="kamn_live_integration_timeout"
+          integration_runtime_commit_policy_reason_code="$(read_runtime_policy_reason_code "$INTEGRATION_REPORT")"
         else
           integration_reason_code="$(read_report_reason_code "$INTEGRATION_REPORT")"
+          integration_runtime_commit_policy_reason_code="$(read_runtime_policy_reason_code "$INTEGRATION_REPORT")"
           record_check "kamn_live_integration" "$integration_command" "fail" "$integration_reason_code"
           overall_status="fail"
           reason_code="kamn_live_integration_failed"
@@ -507,7 +552,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$SERVE_COMMAND" "$PROCESS_OUTPUT_FILE" "$INTEGRATION_REPORT" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$start_reason_code" "$readiness_reason_code" "$integration_reason_code" "$teardown_reason_code" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$SERVE_COMMAND" "$PROCESS_OUTPUT_FILE" "$INTEGRATION_REPORT" "$INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$integration_runtime_commit_policy_reason_code" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$start_reason_code" "$readiness_reason_code" "$integration_reason_code" "$teardown_reason_code" "$CHECK_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -529,14 +574,16 @@ budget_status = sys.argv[12]
 serve_command = sys.argv[13]
 process_output_file = sys.argv[14]
 integration_report = sys.argv[15]
-integration_runtime_commit_finality_command = sys.argv[16]
-integration_runtime_commit_finality_max_seconds = int(sys.argv[17])
-integration_runtime_commit_finality_output_file = sys.argv[18]
-start_reason_code = sys.argv[19]
-readiness_reason_code = sys.argv[20]
-integration_reason_code = sys.argv[21]
-teardown_reason_code = sys.argv[22]
-checks_path = pathlib.Path(sys.argv[23])
+integration_runtime_commit_live_policy_report = sys.argv[16]
+integration_runtime_commit_policy_reason_code = sys.argv[17]
+integration_runtime_commit_finality_command = sys.argv[18]
+integration_runtime_commit_finality_max_seconds = int(sys.argv[19])
+integration_runtime_commit_finality_output_file = sys.argv[20]
+start_reason_code = sys.argv[21]
+readiness_reason_code = sys.argv[22]
+integration_reason_code = sys.argv[23]
+teardown_reason_code = sys.argv[24]
+checks_path = pathlib.Path(sys.argv[25])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -571,6 +618,8 @@ summary = {
     "fork_chain_version": fork_chain_version,
     "serve_command": serve_command,
     "integration_runtime_commit_finality_enabled": bool(integration_runtime_commit_finality_command),
+    "integration_runtime_commit_live_policy_report": integration_runtime_commit_live_policy_report,
+    "integration_runtime_commit_policy_reason_code": integration_runtime_commit_policy_reason_code,
     "integration_runtime_commit_finality_command": (
         integration_runtime_commit_finality_command if integration_runtime_commit_finality_command else ""
     ),
@@ -588,11 +637,13 @@ summary = {
         "runtime_commit_endpoint": "/broadcast/runtime-commit",
         "runtime_commit_method": "POST",
         "integration_runner": "run_local_kamn_live_runtime_integration_lane.sh",
+        "integration_runtime_commit_live_policy_report_option": "--runtime-commit-live-policy-report",
     },
     "checks": checks,
     "artifact_paths": [
         process_output_file,
         integration_report,
+        integration_runtime_commit_live_policy_report,
     ],
 }
 
