@@ -351,8 +351,13 @@ if [ -z "$effective_runtime_commit_finality_command" ]; then
 fi
 
 runtime_commit_non_synthetic_flag=""
+runtime_commit_command_profile="standard-default-v1"
+runtime_commit_policy_command_profile="standard-default-v1"
+runtime_commit_command_profile_version="v1"
 if [ "$RUNTIME_PROFILE" = "real-node" ]; then
   runtime_commit_non_synthetic_flag=" --require-non-synthetic-run-evidence"
+  runtime_commit_command_profile="real-node-non-synthetic-v1"
+  runtime_commit_policy_command_profile="real-node-non-synthetic-v1"
 fi
 
 default_runtime_commit_command="KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_SUMMARY}") --policy-output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_POLICY_REPORT}") --live-output-file $(shell_escape "${RUNTIME_COMMIT_OUTPUT_FILE}") --finality-output-file $(shell_escape "${RUNTIME_COMMIT_FINALITY_OUTPUT_FILE}") --max-seconds ${RUNTIME_COMMIT_MAX_SECONDS} --expected-provider-client-contract $(shell_escape "${RUNTIME_PROVIDER_CLIENT_CONTRACT}")${runtime_commit_non_synthetic_flag} --live-command $(shell_escape "${default_runtime_commit_live_submit_command}") --finality-command $(shell_escape "${effective_runtime_commit_finality_command}") --finality-max-seconds ${RUNTIME_COMMIT_FINALITY_MAX_SECONDS}"
@@ -609,7 +614,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" "$runtime_commit_command_profile" "$runtime_commit_policy_command_profile" "$runtime_commit_command_profile_version" <<'PY'
 from __future__ import annotations
 
 import json
@@ -646,6 +651,9 @@ runtime_commit_policy_reason_code = sys.argv[27]
 runtime_profile = sys.argv[28]
 checks_path = pathlib.Path(sys.argv[29])
 runtime_provider_client_contract = sys.argv[30]
+runtime_commit_command_profile = sys.argv[31]
+runtime_commit_policy_command_profile = sys.argv[32]
+runtime_commit_command_profile_version = sys.argv[33]
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -682,6 +690,9 @@ summary = {
     "runtime_commit_command": runtime_commit_command,
     "runtime_provider_client_contract": runtime_provider_client_contract,
     "runtime_profile": runtime_profile,
+    "runtime_commit_command_profile": runtime_commit_command_profile,
+    "runtime_commit_policy_command_profile": runtime_commit_policy_command_profile,
+    "runtime_commit_command_profile_version": runtime_commit_command_profile_version,
     "runtime_commit_live_policy_report": runtime_commit_live_policy_report,
     "runtime_commit_finality_command": runtime_commit_finality_command if runtime_commit_finality_command else "",
     "runtime_commit_finality_output_file": runtime_commit_finality_output_file if runtime_commit_finality_command else "",

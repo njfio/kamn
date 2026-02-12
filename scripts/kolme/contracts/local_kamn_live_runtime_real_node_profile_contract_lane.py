@@ -195,6 +195,15 @@ def main() -> int:
     if "--require-non-synthetic-run-evidence" not in runtime_commit_command:
         print("expected strict non-synthetic runtime marker in contract-lane summary command", file=sys.stderr)
         return 1
+    if summary.get("runtime_commit_command_profile") != "real-node-non-synthetic-v1":
+        print("expected deterministic runtime commit command profile marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_commit_policy_command_profile") != "real-node-non-synthetic-v1":
+        print("expected deterministic runtime commit policy command profile marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_commit_command_profile_version") != "v1":
+        print("expected runtime commit command profile marker version in contract-lane summary", file=sys.stderr)
+        return 1
     contracts = summary.get("contracts", {})
     if not isinstance(contracts, dict):
         print("expected contracts object in real-node profile contract-lane summary", file=sys.stderr)
