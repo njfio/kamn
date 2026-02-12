@@ -3,13 +3,13 @@ use std::process::ExitCode;
 
 use k256::ecdsa::SigningKey;
 use kamn_core::{
-    bootstrap, BootstrapPlan, ConfigError, DeterministicProposalPlanner,
-    KolmeCommitReceiptFinality, KolmeRuntimeCommitFinalityChecker, KolmeRuntimeCommitHttpTransport,
-    KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitProvider, KolmeRuntimeCommitProviderError,
-    KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderReceipt,
-    KolmeRuntimeCommitRequest, NodeConfig, NodeRole, PeerLifecycle, PeerLifecycleEvent,
-    PeerLifecycleState, ProposalCandidate, RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt,
-    SyncMode,
+    bootstrap, BootstrapPlan, ConfigError, DeterministicProposalPlanner, KolmeApiBroadcastRequest,
+    KolmeApiNextNonceRequest, KolmeCommitReceiptFinality, KolmeRuntimeCommitFinalityChecker,
+    KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitProvider,
+    KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderOutcome,
+    KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitRequest, NodeConfig, NodeRole,
+    PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, RecoveryRejoinGuard,
+    RecoveryStatus, RejoinAttempt, SyncMode,
 };
 
 const KOLME_LIVE_PROVIDER_CONTRACT: &str = "KolmeRuntimeCommitLiveProvider";
@@ -18,13 +18,14 @@ const KOLME_IN_MEMORY_PROVIDER_MARKER: &str = "InMemoryKolmeRuntimeCommitClient"
 const KOLME_LIVE_TRANSPORT_TIMEOUT_SECONDS: u64 = 30;
 const KOLME_LIVE_FINALITY_STATUS_PATH: &str = "/runtime-commit/status";
 const KOLME_LIVE_FINALITY_MAX_ATTEMPTS: u32 = 2;
-const KOLME_LIVE_SIGNER_KEY_ID: &str = "kamn:key:signer:kolme-fork-secp256k1-v1";
+const KOLME_LIVE_NONCE_PATH: &str = "/get-next-nonce";
 const KOLME_LIVE_SIGNER_PROFILE_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_PROFILE";
 const KOLME_LIVE_SIGNER_PROFILE_PRIMARY: &str = "ops-primary";
 const KOLME_LIVE_SIGNER_PROFILE_SECONDARY: &str = "ops-secondary";
 const KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX";
 const KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY_ENV: &str =
     "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY";
+const KOLME_LIVE_NATIVE_CREATED_AT: &str = "2026-02-12T00:00:00Z";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct OutputMode {
@@ -701,29 +702,29 @@ fn decode_kolme_hex_nibble(byte: u8) -> Option<u8> {
     }
 }
 
-fn decode_kolme_hex_bytes(value: &str) -> Result<Vec<u8>, ConfigError> {
+fn decode_kolme_hex_bytes(value: &str, env_name: &str) -> Result<Vec<u8>, ConfigError> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
         return Err(ConfigError::RuntimeKolmeLive(format!(
-            "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV} must not be empty"
+            "{env_name} must not be empty"
         )));
     }
     if !trimmed.len().is_multiple_of(2) {
         return Err(ConfigError::RuntimeKolmeLive(format!(
-            "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV} must have an even number of hex characters"
+            "{env_name} must have an even number of hex characters"
         )));
     }
     let mut decoded = Vec::with_capacity(trimmed.len() / 2);
     for pair in trimmed.as_bytes().chunks_exact(2) {
         let high = decode_kolme_hex_nibble(pair[0]).ok_or_else(|| {
             ConfigError::RuntimeKolmeLive(format!(
-                "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV} contains invalid hex character '{}'",
+                "{env_name} contains invalid hex character '{}'",
                 pair[0] as char
             ))
         })?;
         let low = decode_kolme_hex_nibble(pair[1]).ok_or_else(|| {
             ConfigError::RuntimeKolmeLive(format!(
-                "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV} contains invalid hex character '{}'",
+                "{env_name} contains invalid hex character '{}'",
                 pair[1] as char
             ))
         })?;
@@ -774,10 +775,10 @@ fn resolve_kolme_live_signer_private_key_env_name(
     }
 }
 
-fn read_kolme_live_signer_private_key_hex() -> Result<String, ConfigError> {
+fn read_kolme_live_signer_private_key_hex() -> Result<(String, &'static str), ConfigError> {
     let (profile, key_env) = resolve_kolme_live_signer_private_key_env_name()?;
     match env::var(key_env) {
-        Ok(private_key_hex) => Ok(private_key_hex),
+        Ok(private_key_hex) => Ok((private_key_hex, key_env)),
         Err(env::VarError::NotPresent) => Err(ConfigError::RuntimeKolmeLive(format!(
             "{key_env} must be set for signer profile {profile}"
         ))),
@@ -787,17 +788,107 @@ fn read_kolme_live_signer_private_key_hex() -> Result<String, ConfigError> {
     }
 }
 
-fn build_kolme_live_signed_wire_payload(
+fn escape_kolme_json_string(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '"' => escaped.push_str("\\\""),
+            '\\' => escaped.push_str("\\\\"),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
+}
+
+fn build_kolme_live_signing_key() -> Result<SigningKey, ConfigError> {
+    let (private_key_hex, key_env) = read_kolme_live_signer_private_key_hex()?;
+    let private_key_bytes = decode_kolme_hex_bytes(private_key_hex.as_str(), key_env)?;
+    SigningKey::from_slice(private_key_bytes.as_slice()).map_err(|error| {
+        ConfigError::RuntimeKolmeLive(format!(
+            "{key_env} is not a valid secp256k1 private key: {error}"
+        ))
+    })
+}
+
+fn kolme_live_signer_pubkey_hex(signing_key: &SigningKey) -> String {
+    encode_kolme_hex_lower(
+        signing_key
+            .verifying_key()
+            .to_encoded_point(true)
+            .as_bytes(),
+    )
+}
+
+fn resolve_kolme_live_nonce(
+    base_url: &str,
+    transport: &mut KolmeRuntimeCommitHttpTransport,
+    pubkey: &str,
+) -> Result<u64, ConfigError> {
+    let request = KolmeApiNextNonceRequest::new(pubkey)
+        .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
+    let response = transport
+        .fetch_next_nonce(base_url, KOLME_LIVE_NONCE_PATH, &request)
+        .map_err(|error| match error {
+            KolmeRuntimeCommitProviderError::Timeout => {
+                ConfigError::RuntimeKolmeLive("nonce request timed out".to_owned())
+            }
+            KolmeRuntimeCommitProviderError::Unavailable { reason } => {
+                ConfigError::RuntimeKolmeLive(format!("nonce request unavailable: {reason}"))
+            }
+            KolmeRuntimeCommitProviderError::MalformedResponse { reason } => {
+                ConfigError::RuntimeKolmeLive(format!("nonce response malformed: {reason}"))
+            }
+        })?;
+    Ok(response.next_nonce)
+}
+
+fn render_kolme_live_native_direct_message(
+    request: &KolmeRuntimeCommitRequest,
+    pubkey: &str,
+    nonce: u64,
+) -> Result<String, ConfigError> {
+    if nonce == 0 {
+        return Err(ConfigError::RuntimeKolmeLive(
+            "native direct-signed message nonce must be positive".to_owned(),
+        ));
+    }
+    let pubkey = KolmeApiNextNonceRequest::new(pubkey)
+        .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?
+        .pubkey;
+    request
+        .validate()
+        .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
+    let metadata_message = format!(
+        "{{\"type\":\"kamn-runtime-commit\",\"operation_id\":\"{}\",\"state_root\":\"{}\",\"actor_did\":\"{}\",\"payload_hash\":\"{}\",\"idempotency_key\":\"{}\",\"wire_payload\":\"{}\"}}",
+        escape_kolme_json_string(request.operation_id.as_str()),
+        escape_kolme_json_string(request.state_root.as_str()),
+        escape_kolme_json_string(request.actor_did.as_str()),
+        escape_kolme_json_string(request.payload_hash.as_str()),
+        escape_kolme_json_string(request.idempotency_key()),
+        escape_kolme_json_string(request.to_wire_payload().as_str()),
+    );
+    Ok(format!(
+        "{{\"pubkey\":\"{}\",\"nonce\":{},\"created\":\"{}\",\"messages\":[{}],\"max_height\":null}}",
+        escape_kolme_json_string(pubkey.as_str()),
+        nonce,
+        KOLME_LIVE_NATIVE_CREATED_AT,
+        metadata_message
+    ))
+}
+
+fn build_kolme_live_direct_signed_wire_payload(
+    base_url: &str,
+    transport: &mut KolmeRuntimeCommitHttpTransport,
     request: &KolmeRuntimeCommitRequest,
 ) -> Result<String, ConfigError> {
-    let private_key_hex = read_kolme_live_signer_private_key_hex()?;
-    let private_key_bytes = decode_kolme_hex_bytes(private_key_hex.as_str())?;
-    let signing_key = SigningKey::from_slice(private_key_bytes.as_slice()).map_err(|error| {
-        ConfigError::RuntimeKolmeLive(format!(
-            "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV} is not a valid secp256k1 private key: {error}"
-        ))
-    })?;
-    let canonical_message = request.to_wire_payload();
+    let signing_key = build_kolme_live_signing_key()?;
+    let pubkey = kolme_live_signer_pubkey_hex(&signing_key);
+    let nonce = resolve_kolme_live_nonce(base_url, transport, pubkey.as_str())?;
+    let canonical_message =
+        render_kolme_live_native_direct_message(request, pubkey.as_str(), nonce)?;
     let (signature, recovery_id) = signing_key
         .sign_recoverable(canonical_message.as_bytes())
         .map_err(|error| {
@@ -806,15 +897,13 @@ fn build_kolme_live_signed_wire_payload(
             ))
         })?;
     let signature_hex = encode_kolme_hex_lower(signature.to_bytes().as_ref());
-    let envelope = request
-        .translate_to_signed_broadcast_envelope(
-            KOLME_LIVE_SIGNER_KEY_ID,
-            canonical_message.as_str(),
-            signature_hex.as_str(),
-            recovery_id.to_byte(),
-        )
-        .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
-    Ok(envelope.to_wire_payload())
+    let request = KolmeApiBroadcastRequest::new(
+        canonical_message.as_str(),
+        signature_hex.as_str(),
+        recovery_id.to_byte(),
+    )
+    .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
+    Ok(request.to_json_payload())
 }
 
 fn ensure_kolme_live_provider_marker(expected: &str, observed: &str) -> Result<(), ConfigError> {
@@ -989,17 +1078,21 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             if signing_profile != KOLME_LIVE_SIGNING_PROFILE {
                 return Err(ConfigError::InvalidKolmeLiveSigningProfile(signing_profile));
             }
-            let transport =
+            let mut transport =
                 KolmeRuntimeCommitHttpTransport::new(KOLME_LIVE_TRANSPORT_TIMEOUT_SECONDS)
                     .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
+            let request = build_kolme_live_request(&plan)?;
+            let signed_wire_payload = build_kolme_live_direct_signed_wire_payload(
+                base_url.as_str(),
+                &mut transport,
+                &request,
+            )?;
             let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
                 base_url.as_str(),
                 provider_hint.as_str(),
                 transport.clone(),
             )
             .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
-            let request = build_kolme_live_request(&plan)?;
-            let signed_wire_payload = build_kolme_live_signed_wire_payload(&request)?;
             let submit_outcome = provider
                 .submit_runtime_commit(signed_wire_payload.as_str(), request.idempotency_key())
                 .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
@@ -1451,13 +1544,15 @@ fn main() -> ExitCode {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_bootstrap_report, build_kolme_live_signed_wire_payload, execute, parse_args,
-        render_bootstrap_report, resolve_kolme_live_signer_private_key_env_name, DiagnosticsMode,
-        LocalProfile, NodeBootstrapReport, OutputMode, RuntimeExecutionBundle, RuntimeMode,
-        KOLME_LIVE_SIGNER_KEY_ID,
+        build_bootstrap_report, build_kolme_live_direct_signed_wire_payload,
+        build_kolme_live_signing_key, execute, kolme_live_signer_pubkey_hex, parse_args,
+        render_bootstrap_report, render_kolme_live_native_direct_message, resolve_kolme_live_nonce,
+        resolve_kolme_live_signer_private_key_env_name, DiagnosticsMode, LocalProfile,
+        NodeBootstrapReport, OutputMode, RuntimeExecutionBundle, RuntimeMode,
     };
     use kamn_core::{
-        bootstrap, ConfigError, KolmeRuntimeCommitRequest, NodeConfig, NodeRole, SyncMode,
+        bootstrap, ConfigError, KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitRequest,
+        NodeConfig, NodeRole, SyncMode,
     };
     use std::io::{ErrorKind, Read, Write};
     use std::net::TcpListener;
@@ -2127,6 +2222,7 @@ mod tests {
             Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
         );
         let (base_url, requests) = spawn_kolme_live_mock_server(vec![
+            MockHttpReply::ok(r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#),
             MockHttpReply::ok(
                 r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"pending"}"#,
             ),
@@ -2163,13 +2259,14 @@ mod tests {
         let recorded_requests = requests.lock().expect("request mutex should lock");
         assert_eq!(
             recorded_requests.len(),
-            2,
-            "live runtime should issue submit and finality requests"
+            3,
+            "live runtime should issue nonce, submit, and finality requests"
         );
-        assert!(recorded_requests[0].contains("PUT /broadcast HTTP/1.1"));
-        assert!(recorded_requests[0].contains("X-Idempotency-Key: "));
+        assert!(recorded_requests[0].contains("GET /get-next-nonce?pubkey="));
+        assert!(recorded_requests[1].contains("PUT /broadcast HTTP/1.1"));
+        assert!(recorded_requests[1].contains("X-Idempotency-Key: "));
         let signature =
-            extract_json_string_field(request_body(recorded_requests[0].as_str()), "signature")
+            extract_json_string_field(request_body(recorded_requests[1].as_str()), "signature")
                 .expect("submit request should contain signature JSON field");
         // Regression: #2197
         assert!(
@@ -2180,12 +2277,12 @@ mod tests {
                     .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f')),
             "live runtime submit must not fall back to synthetic idempotency-key signatures"
         );
-        assert!(recorded_requests[1]
+        assert!(recorded_requests[2]
             .contains("GET /runtime-commit/status?commit_id=kolme-commit%3Aab12cd34 HTTP/1.1"));
     }
 
     #[test]
-    fn unit_kolme_live_signer_builds_signed_envelope_wire_payload() {
+    fn unit_kolme_live_signer_builds_direct_signed_wire_payload() {
         let _lock = signer_env_lock()
             .lock()
             .expect("signer env lock should guard test mutation");
@@ -2204,13 +2301,21 @@ mod tests {
         )
         .expect("request should build");
 
-        let signed_wire_payload = build_kolme_live_signed_wire_payload(&request)
-            .expect("signed payload should be produced");
+        let (base_url, _requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+            r#"{"next_nonce":22,"account_id":"acct-2197"}"#,
+        )]);
+        let mut transport =
+            KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+        let signed_wire_payload = build_kolme_live_direct_signed_wire_payload(
+            base_url.as_str(),
+            &mut transport,
+            &request,
+        )
+        .expect("signed payload should be produced");
 
-        assert!(signed_wire_payload.contains("\"signer_key_id\":\""));
-        assert!(signed_wire_payload.contains(KOLME_LIVE_SIGNER_KEY_ID));
+        assert!(signed_wire_payload.contains("\"message\":\"{\\\"pubkey\\\":"));
         let signature = extract_json_string_field(signed_wire_payload.as_str(), "signature")
-            .expect("signed envelope must include signature field");
+            .expect("direct signed payload must include signature field");
         assert_eq!(
             signature.len(),
             128,
@@ -2276,10 +2381,105 @@ mod tests {
         )
         .expect("request should build");
 
-        let signed_wire_payload = build_kolme_live_signed_wire_payload(&request)
-            .expect("secondary profile signing should succeed");
-        assert!(signed_wire_payload.contains("\"signer_key_id\":\""));
-        assert!(signed_wire_payload.contains(KOLME_LIVE_SIGNER_KEY_ID));
+        let (base_url, _requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+            r#"{"next_nonce":31,"account_id":"acct-2222"}"#,
+        )]);
+        let mut transport =
+            KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+        let signed_wire_payload = build_kolme_live_direct_signed_wire_payload(
+            base_url.as_str(),
+            &mut transport,
+            &request,
+        )
+        .expect("secondary profile signing should succeed");
+        let signature = extract_json_string_field(signed_wire_payload.as_str(), "signature")
+            .expect("direct signed payload must include signature field");
+        assert_eq!(signature.len(), 128);
+    }
+
+    #[test]
+    fn unit_kolme_live_native_direct_message_contains_required_fields() {
+        let request = KolmeRuntimeCommitRequest::deterministic(
+            "op-node-live-2207",
+            "state:node-live-2207",
+            "kamn:did:agent:node-live-2207",
+            1,
+            "payload:node-live-2207",
+        )
+        .expect("request should build");
+
+        let message = render_kolme_live_native_direct_message(
+            &request,
+            "02aa55bb66cc77dd88ee99ff00112233445566778899aabbccddeeff0011223344",
+            19,
+        )
+        .expect("native direct message should render");
+
+        assert!(message.contains(
+            "\"pubkey\":\"02aa55bb66cc77dd88ee99ff00112233445566778899aabbccddeeff0011223344\""
+        ));
+        assert!(message.contains("\"nonce\":19"));
+        assert!(message.contains("\"created\":\""));
+        assert!(message.contains("\"messages\":["));
+    }
+
+    #[test]
+    fn integration_kolme_live_nonce_resolver_fetches_next_nonce() {
+        let (base_url, requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+            r#"{"next_nonce":27,"account_id":"acct-2207"}"#,
+        )]);
+        let mut transport =
+            KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+        let signing_key = k256::ecdsa::SigningKey::from_slice(&[7_u8; 32])
+            .expect("deterministic private key should be valid");
+        let pubkey = kolme_live_signer_pubkey_hex(&signing_key);
+
+        let nonce = resolve_kolme_live_nonce(base_url.as_str(), &mut transport, pubkey.as_str())
+            .expect("nonce should resolve");
+        assert_eq!(nonce, 27);
+
+        let recorded_requests = requests.lock().expect("request mutex should lock");
+        assert_eq!(recorded_requests.len(), 1);
+        assert!(recorded_requests[0].contains("GET /get-next-nonce?pubkey="));
+    }
+
+    #[test]
+    fn regression_kolme_live_nonce_resolver_rejects_malformed_response() {
+        // Regression: #2207
+        let (base_url, _requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+            r#"{"next_nonce":0,"account_id":"acct-2207"}"#,
+        )]);
+        let mut transport =
+            KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+        let error = resolve_kolme_live_nonce(
+            base_url.as_str(),
+            &mut transport,
+            "02aa55bb66cc77dd88ee99ff00112233445566778899aabbccddeeff0011223344",
+        )
+        .expect_err("invalid nonce payload must fail closed");
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("nonce response malformed")),
+            "expected fail-closed nonce parser error"
+        );
+    }
+
+    #[test]
+    fn regression_kolme_live_signer_requires_primary_key_env_value() {
+        // Regression: #2222
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+        let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
+        assert!(
+            matches!(
+                build_kolme_live_signing_key(),
+                Err(ConfigError::RuntimeKolmeLive(message))
+                if message.contains("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX must be set")
+            ),
+            "missing primary signer private key env must fail closed"
+        );
     }
 
     #[test]
@@ -2294,9 +2494,12 @@ mod tests {
             "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
             Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
         );
-        let (base_url, requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
-            r#"{"status":"submitted","provider":"unexpected-provider","commit_id":"kolme-commit:ab12cd34","finality":"final"}"#,
-        )]);
+        let (base_url, requests) = spawn_kolme_live_mock_server(vec![
+            MockHttpReply::ok(r#"{"next_nonce":23,"account_id":"acct-2176"}"#),
+            MockHttpReply::ok(
+                r#"{"status":"submitted","provider":"unexpected-provider","commit_id":"kolme-commit:ab12cd34","finality":"final"}"#,
+            ),
+        ]);
         let args = vec![
             "kamn-node".to_owned(),
             "--role".to_owned(),
@@ -2324,8 +2527,8 @@ mod tests {
         let recorded_requests = requests.lock().expect("request mutex should lock");
         assert_eq!(
             recorded_requests.len(),
-            1,
-            "provider drift should fail immediately after submit response mapping"
+            2,
+            "provider drift should fail after nonce lookup and submit response mapping"
         );
     }
 

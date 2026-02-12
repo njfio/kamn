@@ -15,6 +15,16 @@ fn functional_normalize_broadcast_payload_maps_direct_signed_json() {
 }
 
 #[test]
+fn regression_issue_2208_normalize_broadcast_payload_accepts_zero_recovery_id() {
+    // Regression: #2208
+    let payload = "{\"message\":\"{\\\"pubkey\\\":\\\"pk\\\",\\\"nonce\\\":1,\\\"created\\\":\\\"2026-02-11T00:00:00Z\\\",\\\"messages\\\":[],\\\"max_height\\\":null}\",\"signature\":\"sig-direct\",\"recovery_id\":0}";
+    let normalized = normalize_broadcast_payload(payload, "kolme-runtime-commit:direct:1")
+        .expect("zero recovery id should be accepted for secp256k1 compatibility");
+    assert!(normalized.contains("\"recovery_id\":0"));
+    assert!(normalized.contains("\"signature\":\"sig-direct\""));
+}
+
+#[test]
 fn functional_normalize_broadcast_payload_maps_signed_envelope_payload() {
     let payload = "{\"signer_key_id\":\"kamn:key:signer:1\",\"message\":\"operation_id=op\\nidempotency_key=abc\\n\",\"signature\":\"sig-envelope\",\"recovery_id\":1}";
     let normalized = normalize_broadcast_payload(payload, "abc")

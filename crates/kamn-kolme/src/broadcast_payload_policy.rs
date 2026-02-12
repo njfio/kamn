@@ -2,10 +2,9 @@
 
 use crate::{
     parse_flat_json_value_fields, parse_provider_key_value_fields, required_json_string_field,
-    required_positive_u64_json_field, required_provider_response_field,
-    validate_direct_signed_transaction_message, KolmeApiBroadcastRequest, KolmeApiCodecError,
-    KolmeFlatJsonPolicyError, KolmeFlatJsonValue, KolmeProviderOutcomePolicyError,
-    KolmeProviderResponsePolicyError,
+    required_provider_response_field, validate_direct_signed_transaction_message,
+    KolmeApiBroadcastRequest, KolmeApiCodecError, KolmeFlatJsonPolicyError, KolmeFlatJsonValue,
+    KolmeProviderOutcomePolicyError, KolmeProviderResponsePolicyError,
 };
 use std::error::Error;
 use std::fmt;
@@ -91,8 +90,7 @@ pub fn normalize_broadcast_payload(
             required_json_string_field(&fields, "message").map_err(map_flat_json_error)?;
         let signature =
             required_json_string_field(&fields, "signature").map_err(map_flat_json_error)?;
-        let recovery_id_u64 = required_positive_u64_json_field(&fields, "recovery_id")
-            .map_err(map_flat_json_error)?;
+        let recovery_id_u64 = required_non_negative_u64_json_field(&fields, "recovery_id")?;
         let recovery_id = u8::try_from(recovery_id_u64).map_err(|_| {
             KolmeBroadcastPayloadPolicyError::MalformedResponse {
                 reason: "recovery_id must be within u8 range".to_owned(),
@@ -149,6 +147,36 @@ pub fn normalize_broadcast_payload(
     let request =
         KolmeApiBroadcastRequest::new(payload, idempotency_key, 1).map_err(map_codec_error)?;
     Ok(request.to_json_payload())
+}
+
+fn required_non_negative_u64_json_field(
+    fields: &std::collections::HashMap<String, KolmeFlatJsonValue>,
+    field: &'static str,
+) -> Result<u64, KolmeBroadcastPayloadPolicyError> {
+    let value =
+        fields
+            .get(field)
+            .ok_or_else(|| KolmeBroadcastPayloadPolicyError::MalformedResponse {
+                reason: format!("missing required field: {field}"),
+            })?;
+
+    let raw = match value {
+        KolmeFlatJsonValue::Number(value) => value.as_str(),
+        KolmeFlatJsonValue::String(value) => value.trim(),
+        _ => {
+            return Err(KolmeBroadcastPayloadPolicyError::MalformedResponse {
+                reason: format!("field must be numeric: {field}"),
+            })
+        }
+    };
+
+    let parsed =
+        raw.parse::<u64>()
+            .map_err(|_| KolmeBroadcastPayloadPolicyError::MalformedResponse {
+                reason: format!("field must be numeric: {field}"),
+            })?;
+
+    Ok(parsed)
 }
 
 fn map_flat_json_error(error: KolmeFlatJsonPolicyError) -> KolmeBroadcastPayloadPolicyError {

@@ -222,10 +222,10 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
     - `kolme_live_signing_profile=kolme-fork-secp256k1-v1`
     - `kolme_live_execution_status=provider-configured`
   - live submit payload composition:
-    - runtime request payload is signed with secp256k1 before `/broadcast` submission.
-    - signer key marker in signed-envelope source payload: `kamn:key:signer:kolme-fork-secp256k1-v1`.
+    - runtime request intent is rendered into native direct-signed Kolme message payload (`pubkey`, `nonce`, `created`, `messages`) before `/broadcast` submission.
+    - nonce source contract: `GET /get-next-nonce?pubkey=...` through `KolmeRuntimeCommitHttpTransport`.
     - signer profile selector contract: `KAMN_KOLME_LIVE_SIGNER_PROFILE` with supported values `ops-primary` (default) and `ops-secondary`; unsupported values fail closed.
-    - private key source contracts: `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX` for `ops-primary`, `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY` for `ops-secondary` (required for selected profile; missing values fail closed).
+    - private key source contracts: `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX` for `ops-primary`, `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY` for `ops-secondary` (required for selected profile; no fallback private key path).
     - synthetic fallback signature material (`signature=<idempotency_key>`) is rejected by runtime tests/policies.
   - in-memory fallback markers and non-fork signing profiles are rejected fail-closed by typed node config errors.
 - Runtime live lane (submit + optional finality):
