@@ -1014,6 +1014,23 @@ fn graduated_wave_fifty_six_message_lifecycle_module_must_not_return_to_allowlis
 }
 
 #[test]
+fn graduated_wave_fifty_seven_runtime_module_must_not_return_to_allowlist() {
+    // Regression: #2087
+    let actual = allowlisted_modules_from_core_lib(CORE_LIB);
+    let expected = allowlisted_modules_from_fixture(ALLOWLIST_FIXTURE);
+    let module = "runtime";
+
+    assert!(
+        !actual.iter().any(|candidate| candidate == module),
+        "{module} must stay graduated from #[allow(missing_docs)]"
+    );
+    assert!(
+        !expected.iter().any(|candidate| candidate == module),
+        "allowlist fixture must keep {module} removed"
+    );
+}
+
+#[test]
 fn graduated_modules_fixture_must_not_overlap_missing_docs_allowlist() {
     // Regression: #1723
     let actual = allowlisted_modules_from_core_lib(CORE_LIB);
