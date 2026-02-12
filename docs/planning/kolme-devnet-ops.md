@@ -468,6 +468,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json`
 - Explicit local-only process lifecycle execution:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --serve-command "python3 /tmp/mock_kolme_api.py 3000 v0.15.2" --max-seconds 300 --startup-max-seconds 45 --integration-max-seconds 240 --integration-bootstrap-max-seconds 90 --integration-conformance-max-seconds 180 --integration-runtime-commit-max-seconds 30 --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json`
+- Optional nested integration runtime finality pass-through:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --serve-command "python3 /tmp/mock_kolme_api.py 3000 v0.15.2" --integration-runtime-commit-finality-command "printf 'finality=final\n'" --integration-runtime-commit-finality-max-seconds 15 --integration-runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py --report-file /tmp/kolme-local-fork-process-lifecycle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-process-lifecycle-policy.json`
 - Contract lane command:
@@ -476,6 +478,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `kamn.kolme.local-fork-process-lifecycle-summary.v1`
 - Deterministic checkpoints include:
   - process command orchestration: start -> readiness probe -> nested `run_local_kamn_live_runtime_integration_lane.sh` -> teardown.
+  - optional integration runtime finality pass-through (`--integration-runtime-commit-finality-command`, `--integration-runtime-commit-finality-max-seconds`, `--integration-runtime-commit-finality-output-file`) is forwarded to nested integration lane runtime finality options.
   - readiness contract over `GET /healthz` and `GET /fork-info?chain_version=<version>`.
   - fail-closed reason codes for local opt-in, serve-command, bootstrap, readiness, integration, teardown, and budget drift.
 - Cost policy:
@@ -784,6 +787,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - local KAMN live runtime integration lane requires bounded localhost signed integration prerequisite execution before runtime commit submission (`Regression: #1636`).
 - unified local signed-to-Kolme demo lane fails closed for local opt-in, stage prerequisite drift, and runtime budget overruns (`Regression: #1640`).
 - local fork process lifecycle integration lane fails closed for process start/readiness/integration/teardown/budget drift and missing local opt-in (`Regression: #1494`).
+- local fork process lifecycle integration lane propagates integration runtime finality pass-through options and artifacts to nested integration command composition (`Regression: #1973`).
 - local fork profile preflight lane fails closed for local opt-in, checkout/profile contract drift, probe command failures, and runtime budget overruns (`Regression: #1648`).
 - local fork profile preflight policy and contract-lane command/report drift remains fail-closed (`Regression: #1697`).
 - local fork self-test lane fails closed for local opt-in, nested matrix/policy checkpoint failures, and runtime budget overruns (`Regression: #1652`).

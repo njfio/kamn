@@ -27,6 +27,19 @@ if ! grep -q "scripts/framework/run_manifest_lane.sh" "$RUNNER"; then
   exit 1
 fi
 
+# Regression: #1973
+required_integration_finality_markers=(
+  "--integration-runtime-commit-finality-command"
+  "--integration-runtime-commit-finality-max-seconds"
+  "--integration-runtime-commit-finality-output-file"
+)
+for marker in "${required_integration_finality_markers[@]}"; do
+  if ! grep -q -- "$marker" "$ROOT_DIR/scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh"; then
+    echo "expected local fork process lifecycle runner to expose integration finality pass-through marker: $marker" >&2
+    exit 1
+  fi
+done
+
 if [ ! -f "$MANIFEST" ]; then
   echo "expected local fork process lifecycle contract lane manifest to exist" >&2
   exit 1
@@ -57,6 +70,7 @@ required_coverage_markers=(
   "check_local_kolme_fork_process_lifecycle_policy.py"
   "run_local_kamn_live_runtime_integration_lane.sh"
   "Regression: #1494"
+  "Regression: #1973"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then
@@ -75,6 +89,11 @@ if ! grep -q "run_local_kolme_fork_process_lifecycle_contract_lane.sh" "$DOC_FIL
   exit 1
 fi
 
+if ! grep -q -- "--integration-runtime-commit-finality-command" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to document process lifecycle integration finality pass-through command option" >&2
+  exit 1
+fi
+
 if ! grep -q "check_local_kolme_fork_process_lifecycle_policy.py" "$README_FILE"; then
   echo "expected README to reference local fork process lifecycle policy checker" >&2
   exit 1
@@ -82,6 +101,11 @@ fi
 
 if ! grep -q "run_local_kolme_fork_process_lifecycle_contract_lane.sh" "$README_FILE"; then
   echo "expected README to reference local fork process lifecycle contract lane" >&2
+  exit 1
+fi
+
+if ! grep -q -- "--integration-runtime-commit-finality-command" "$README_FILE"; then
+  echo "expected README to document process lifecycle integration finality pass-through command option" >&2
   exit 1
 fi
 
@@ -110,6 +134,49 @@ if policy.get("schema_version") != "kamn.kolme.local-fork-process-lifecycle-poli
     raise SystemExit("unexpected local fork process lifecycle contract-lane policy schema")
 if policy.get("final_decision") != "GO":
     raise SystemExit("expected local fork process lifecycle contract-lane policy final_decision GO")
+PY
+
+TMP_DIRECT_SUMMARY="$(mktemp)"
+TMP_DIRECT_PROCESS_OUTPUT="$(mktemp)"
+TMP_DIRECT_INTEGRATION_REPORT="$(mktemp)"
+TMP_DIRECT_FINALITY_OUTPUT="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_PROCESS_OUTPUT" "$TMP_DIRECT_INTEGRATION_REPORT" "$TMP_DIRECT_FINALITY_OUTPUT"' EXIT
+
+bash "$ROOT_DIR/scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh" \
+  --mode dry-run \
+  --integration-runtime-commit-finality-command "printf 'finality=final\n'" \
+  --integration-runtime-commit-finality-max-seconds 11 \
+  --integration-runtime-commit-finality-output-file "$TMP_DIRECT_FINALITY_OUTPUT" \
+  --process-output-file "$TMP_DIRECT_PROCESS_OUTPUT" \
+  --integration-report "$TMP_DIRECT_INTEGRATION_REPORT" \
+  --output-json "$TMP_DIRECT_SUMMARY" >/dev/null
+
+python3 - "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_FINALITY_OUTPUT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+checks = summary.get("checks", [])
+integration_commands = [
+    check.get("command", "")
+    for check in checks
+    if isinstance(check, dict) and check.get("id") == "kamn_live_integration"
+]
+if len(integration_commands) != 1:
+    raise SystemExit("expected exactly one kamn_live_integration check command")
+integration_command = integration_commands[0]
+if "--runtime-commit-finality-command" not in integration_command:
+    raise SystemExit("expected nested integration command to include runtime finality command pass-through")
+if "--runtime-commit-finality-max-seconds 11" not in integration_command:
+    raise SystemExit("expected nested integration command to include runtime finality max seconds pass-through")
+finality_output_path = pathlib.Path(sys.argv[2]).resolve()
+if f"--runtime-commit-finality-output-file {finality_output_path}" not in integration_command:
+    raise SystemExit("expected nested integration command to include runtime finality output pass-through")
+if str(finality_output_path) not in summary.get("artifact_paths", []):
+    raise SystemExit("expected process lifecycle summary artifact paths to include integration finality output file")
 PY
 
 echo "local fork process lifecycle contract lane tests passed."
