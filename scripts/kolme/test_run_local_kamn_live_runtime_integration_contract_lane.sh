@@ -39,6 +39,7 @@ required_runtime_finality_markers=(
   "--runtime-commit-finality-max-seconds"
   "--runtime-commit-finality-output-file"
   "--runtime-commit-live-policy-report"
+  "--runtime-provider-client-contract"
 )
 for marker in "${required_runtime_finality_markers[@]}"; do
   if ! grep -q -- "$marker" "$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"; then
@@ -86,6 +87,7 @@ required_coverage_markers=(
   "Regression: #1489"
   "Regression: #1971"
   "Regression: #2101"
+  "Regression: #2112"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then
@@ -109,6 +111,11 @@ if ! grep -q -- "--runtime-commit-finality-command" "$DOC_FILE"; then
   exit 1
 fi
 
+if ! grep -q -- "--runtime-provider-client-contract" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to document runtime provider contract option" >&2
+  exit 1
+fi
+
 if ! grep -q "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to reference runtime finality evidence contract lane composition in local KAMN integration lane" >&2
   exit 1
@@ -126,6 +133,11 @@ fi
 
 if ! grep -q -- "--runtime-commit-finality-command" "$README_FILE"; then
   echo "expected README to document runtime finality pass-through command option" >&2
+  exit 1
+fi
+
+if ! grep -q -- "--runtime-provider-client-contract" "$README_FILE"; then
+  echo "expected README to document runtime provider contract option" >&2
   exit 1
 fi
 
@@ -166,6 +178,8 @@ if not isinstance(checks, list) or not any(
     for check in checks
 ):
     raise SystemExit("expected runtime commit policy planned check marker in contract-lane summary")
+if summary.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
+    raise SystemExit("expected runtime provider client contract marker in contract-lane summary")
 if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1":
     raise SystemExit("unexpected local KAMN live runtime integration contract-lane policy schema")
 if policy.get("final_decision") != "GO":
@@ -209,6 +223,8 @@ if f"--finality-output-file {finality_output_path}" not in runtime_command:
 policy_output_path = pathlib.Path(sys.argv[3]).resolve()
 if f"--policy-output-json {policy_output_path}" not in runtime_command:
     raise SystemExit("expected runtime commit command to include runtime policy report pass-through")
+if "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider" not in runtime_command:
+    raise SystemExit("expected runtime commit command to include live provider contract pass-through")
 if str(finality_output_path) not in summary.get("artifact_paths", []):
     raise SystemExit("expected integration summary artifact paths to include runtime finality output file")
 if str(policy_output_path) not in summary.get("artifact_paths", []):

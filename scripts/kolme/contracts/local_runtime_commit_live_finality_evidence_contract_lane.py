@@ -53,6 +53,11 @@ def build_parser() -> argparse.ArgumentParser:
         default="15",
         help="Finality command runtime budget in seconds.",
     )
+    parser.add_argument(
+        "--expected-provider-client-contract",
+        default="KolmeRuntimeCommitLiveProvider",
+        help="Expected provider client contract emitted by runtime live lane summary.",
+    )
     return parser
 
 
@@ -68,6 +73,9 @@ def main() -> int:
         return 1
     if not _is_positive_integer(args.finality_max_seconds):
         print("finality-max-seconds must be a positive integer", file=sys.stderr)
+        return 1
+    if not args.expected_provider_client_contract.strip():
+        print("expected-provider-client-contract must not be empty", file=sys.stderr)
         return 1
 
     max_seconds = int(args.max_seconds)
@@ -142,6 +150,8 @@ def main() -> int:
             "PASS",
             "--require-reason-code",
             "dry_run_no_commands_executed",
+            "--expected-provider-client-contract",
+            args.expected_provider_client_contract,
             "--output-json",
             args.policy_output_json,
         ],
@@ -192,6 +202,8 @@ def main() -> int:
             "PASS",
             "--require-reason-code",
             "live_runtime_commit_and_finality_commands_passed",
+            "--expected-provider-client-contract",
+            args.expected_provider_client_contract,
             "--output-json",
             args.policy_output_json,
         ],
