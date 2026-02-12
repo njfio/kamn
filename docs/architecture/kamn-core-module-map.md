@@ -162,6 +162,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `audit_exports`
   - `bootstrap`
   - `bridge_adapter`
+  - `channel_models`
   - `channel_policies`
   - `config`
   - `content_lifecycle`
@@ -259,6 +260,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2067`
   - `Regression: #2069`
   - `Regression: #2071`
+  - `Regression: #2073`
 
 ## Contributor Entrypoint Matrix
 

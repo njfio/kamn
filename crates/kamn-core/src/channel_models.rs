@@ -1,3 +1,5 @@
+//! Channel model contracts covering membership, admin policy, and snapshot recovery.
+
 use crate::AgentDid;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -6,24 +8,50 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 
+/// Supported channel categories in the KAMN messaging model.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChannelType {
+    /// Two-party direct channel.
     Direct,
+    /// Multi-party group channel.
     Group,
+    /// One-to-many broadcast channel.
     Broadcast,
+    /// Task-scoped collaboration channel.
     Task,
+    /// Marketplace-scoped negotiation channel.
     Marketplace,
+    /// Governance-scoped proposal channel.
     Governance,
 }
 
+/// Channel-type-specific metadata payload.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChannelMetadata {
+    /// Direct channel metadata (no additional payload).
     Direct,
+    /// Group channel metadata (no additional payload).
     Group,
-    Broadcast { topic: String },
-    Task { task_id: String },
-    Marketplace { market_scope: String },
-    Governance { proposal_scope: String },
+    /// Broadcast metadata with topic label.
+    Broadcast {
+        /// Broadcast topic label.
+        topic: String,
+    },
+    /// Task metadata with bound task identifier.
+    Task {
+        /// Associated task identifier.
+        task_id: String,
+    },
+    /// Marketplace metadata with scope identifier.
+    Marketplace {
+        /// Marketplace scope identifier.
+        market_scope: String,
+    },
+    /// Governance metadata with proposal scope identifier.
+    Governance {
+        /// Governance proposal scope identifier.
+        proposal_scope: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,23 +62,34 @@ struct ChannelRecord {
     admins: BTreeSet<String>,
 }
 
+/// Schema version for serialized [`ChannelSnapshot`] payloads.
 pub const CHANNEL_SNAPSHOT_SCHEMA_VERSION: u16 = 1;
 
+/// Serializable channel record used for snapshot export/import.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChannelRecordSnapshot {
+    /// Unique channel identifier.
     pub channel_id: String,
+    /// Channel category.
     pub channel_type: ChannelType,
+    /// Channel metadata payload.
     pub metadata: ChannelMetadata,
+    /// Canonical member DID set.
     pub members: Vec<String>,
+    /// Canonical admin DID set.
     pub admins: Vec<String>,
 }
 
+/// Serializable snapshot of all channel records.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChannelSnapshot {
+    /// Snapshot schema version.
     pub schema_version: u16,
+    /// Serialized channel records.
     pub records: Vec<ChannelRecordSnapshot>,
 }
 
+/// In-memory channel state store with membership and admin indexes.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ChannelStore {
     channels: BTreeMap<String, ChannelRecord>,
@@ -58,10 +97,12 @@ pub struct ChannelStore {
 }
 
 impl ChannelStore {
+    /// Construct an empty channel store.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Create a direct channel between exactly two distinct participants.
     pub fn create_direct(
         &mut self,
         channel_id: &str,
@@ -88,6 +129,7 @@ impl ChannelStore {
         Ok(())
     }
 
+    /// Create a group channel with explicit member/admin sets.
     pub fn create_group(
         &mut self,
         channel_id: &str,
@@ -139,6 +181,7 @@ impl ChannelStore {
         Ok(())
     }
 
+    /// Create a broadcast channel with topic metadata.
     pub fn create_broadcast(
         &mut self,
         channel_id: &str,
@@ -159,6 +202,7 @@ impl ChannelStore {
         )
     }
 
+    /// Create a task channel bound to a task identifier.
     pub fn create_task_channel(
         &mut self,
         channel_id: &str,
@@ -179,6 +223,7 @@ impl ChannelStore {
         )
     }
 
+    /// Create a marketplace channel bound to a market scope.
     pub fn create_marketplace_channel(
         &mut self,
         channel_id: &str,
@@ -199,6 +244,7 @@ impl ChannelStore {
         )
     }
 
+    /// Create a governance channel bound to a proposal scope.
     pub fn create_governance_channel(
         &mut self,
         channel_id: &str,
@@ -245,6 +291,7 @@ impl ChannelStore {
         Ok(())
     }
 
+    /// Look up the channel type for a channel identifier.
     pub fn channel_type(&self, channel_id: &str) -> Result<ChannelType, ChannelModelError> {
         self.channels
             .get(channel_id)
@@ -252,6 +299,7 @@ impl ChannelStore {
             .ok_or_else(|| ChannelModelError::NotFound(channel_id.to_owned()))
     }
 
+    /// Return all channel members for a channel identifier.
     pub fn members(&self, channel_id: &str) -> Result<Vec<String>, ChannelModelError> {
         let record = self
             .channels
@@ -260,6 +308,7 @@ impl ChannelStore {
         Ok(record.members.iter().cloned().collect())
     }
 
+    /// Return all channel admins for a channel identifier.
     pub fn admins(&self, channel_id: &str) -> Result<Vec<String>, ChannelModelError> {
         let record = self
             .channels
@@ -268,6 +317,7 @@ impl ChannelStore {
         Ok(record.admins.iter().cloned().collect())
     }
 
+    /// Return channel IDs where the given DID is currently a member.
     pub fn channels_for_member(&self, member: &str) -> Vec<String> {
         self.channels_by_member
             .get(member)
@@ -275,6 +325,7 @@ impl ChannelStore {
             .unwrap_or_default()
     }
 
+    /// Export all channels into a deterministic snapshot payload.
     pub fn export_snapshot(&self) -> ChannelSnapshot {
         let records = self
             .channels
@@ -294,6 +345,7 @@ impl ChannelStore {
         }
     }
 
+    /// Restore channel state from a validated snapshot payload.
     pub fn restore_snapshot(
         &mut self,
         snapshot: ChannelSnapshot,
@@ -332,6 +384,7 @@ impl ChannelStore {
         Ok(())
     }
 
+    /// Check whether a DID is currently a member of the given channel.
     pub fn is_member(&self, channel_id: &str, member: &str) -> Result<bool, ChannelModelError> {
         let record = self
             .channels
@@ -340,6 +393,7 @@ impl ChannelStore {
         Ok(record.members.contains(member))
     }
 
+    /// Return metadata associated with the given channel.
     pub fn metadata(&self, channel_id: &str) -> Result<ChannelMetadata, ChannelModelError> {
         let record = self
             .channels
@@ -348,6 +402,7 @@ impl ChannelStore {
         Ok(record.metadata.clone())
     }
 
+    /// Invite a new member into a non-direct channel.
     pub fn invite_member(
         &mut self,
         channel_id: &str,
@@ -384,6 +439,7 @@ impl ChannelStore {
         Ok(())
     }
 
+    /// Remove an existing member from a non-direct channel.
     pub fn remove_member(
         &mut self,
         channel_id: &str,
@@ -421,6 +477,7 @@ impl ChannelStore {
         Ok(())
     }
 
+    /// Promote an existing member to admin on a non-direct channel.
     pub fn add_admin(
         &mut self,
         channel_id: &str,
@@ -451,6 +508,7 @@ impl ChannelStore {
         Ok(())
     }
 
+    /// Demote an admin from a non-direct channel while preserving admin quorum.
     pub fn remove_admin(
         &mut self,
         channel_id: &str,
@@ -517,33 +575,58 @@ impl ChannelStore {
     }
 }
 
+/// Errors emitted by channel creation, membership, and metadata workflows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChannelModelError {
+    /// Channel identifier was empty.
     EmptyChannelId,
+    /// DID failed validation.
     InvalidDid(String),
+    /// Channel identifier already exists.
     DuplicateChannelId(String),
+    /// Direct channels require two distinct participants/admins.
     InvalidDirectParticipants,
+    /// Member list is empty.
     EmptyMembers,
+    /// Admin list is empty.
     EmptyAdmins,
+    /// Metadata payload is invalid for the channel type.
     InvalidMetadata(String),
+    /// Channel type requires more members than provided.
     InsufficientMembers {
+        /// Channel type being validated.
         channel_type: ChannelType,
+        /// Required minimum member count.
         minimum: usize,
+        /// Actual member count provided.
         actual: usize,
     },
+    /// Declared creator is not present in members.
     CreatorNotMember(String),
+    /// Declared admin is not present in members.
     AdminNotMember(String),
+    /// Actor lacks required role for the attempted action.
     UnauthorizedActor {
+        /// Actor DID that attempted the action.
         actor: String,
+        /// Required role label for authorization.
         required: &'static str,
     },
+    /// Channel identifier does not exist.
     NotFound(String),
+    /// Member already exists in channel membership set.
     MemberAlreadyPresent(String),
+    /// Member does not exist in channel membership set.
     MemberNotFound(String),
+    /// Admin does not exist in channel admin set.
     AdminNotFound(String),
+    /// Action would remove the final remaining admin.
     LastAdminRemoval(String),
+    /// Action is unsupported for the given channel type.
     UnsupportedOperation {
+        /// Channel type rejecting the action.
         channel_type: ChannelType,
+        /// Action label rejected by policy.
         action: &'static str,
     },
 }
@@ -591,11 +674,21 @@ impl fmt::Display for ChannelModelError {
 
 impl std::error::Error for ChannelModelError {}
 
+/// Errors emitted while validating/restoring snapshots.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChannelSnapshotError {
-    SnapshotVersionMismatch { expected: u16, found: u16 },
+    /// Snapshot schema version mismatched runtime expectation.
+    SnapshotVersionMismatch {
+        /// Expected schema version.
+        expected: u16,
+        /// Schema version found in snapshot payload.
+        found: u16,
+    },
+    /// Duplicate channel identifier was found in snapshot records.
     DuplicateChannelId(String),
+    /// Snapshot payload was malformed or semantically invalid.
     InvalidSnapshot(String),
+    /// Snapshot record failed normal channel-model validation.
     Model(ChannelModelError),
 }
 
@@ -619,10 +712,14 @@ impl fmt::Display for ChannelSnapshotError {
 
 impl std::error::Error for ChannelSnapshotError {}
 
+/// Errors emitted by snapshot-store read/write and recovery operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChannelSnapshotStoreError {
+    /// Filesystem I/O operation failed.
     Io(String),
+    /// Snapshot payload encoding/format was invalid.
     InvalidPayload(String),
+    /// Snapshot payload failed semantic validation.
     Snapshot(ChannelSnapshotError),
 }
 
@@ -640,11 +737,15 @@ impl fmt::Display for ChannelSnapshotStoreError {
 
 impl std::error::Error for ChannelSnapshotStoreError {}
 
+/// Persistence contract for channel snapshots.
 pub trait ChannelSnapshotStore {
+    /// Persist a complete snapshot payload.
     fn write(&mut self, snapshot: ChannelSnapshot) -> Result<(), ChannelSnapshotStoreError>;
+    /// Load the latest persisted snapshot, if present.
     fn read_latest(&self) -> Result<Option<ChannelSnapshot>, ChannelSnapshotStoreError>;
 }
 
+/// In-memory snapshot store for deterministic tests and ephemeral flows.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct InMemoryChannelSnapshotStore {
     latest: Option<ChannelSnapshot>,
@@ -661,18 +762,23 @@ impl ChannelSnapshotStore for InMemoryChannelSnapshotStore {
     }
 }
 
+/// File-backed snapshot store for durable channel-state persistence.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FileChannelSnapshotStore {
     path: PathBuf,
 }
 
+/// Result of file-store recovery attempt.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChannelRecoveryResult {
+    /// Latest recovered snapshot, if one was valid.
     pub latest: Option<ChannelSnapshot>,
+    /// Whether an invalid payload was repaired via truncation.
     pub repaired: bool,
 }
 
 impl FileChannelSnapshotStore {
+    /// Create a file-backed store for the given snapshot path.
     pub fn new(path: PathBuf) -> Result<Self, ChannelSnapshotStoreError> {
         if path.as_os_str().is_empty() {
             return Err(ChannelSnapshotStoreError::InvalidPayload(
@@ -682,6 +788,7 @@ impl FileChannelSnapshotStore {
         Ok(Self { path })
     }
 
+    /// Attempt to read latest snapshot and repair invalid persisted payloads.
     pub fn recover_latest_and_repair(
         &mut self,
     ) -> Result<ChannelRecoveryResult, ChannelSnapshotStoreError> {

@@ -16,7 +16,7 @@ pub mod audit_exports;
 pub mod bootstrap;
 /// Bridge ingress and egress normalization plus policy evaluation contracts.
 pub mod bridge_adapter;
-#[allow(missing_docs)]
+/// Channel metadata, snapshot persistence, and recovery validation contracts.
 pub mod channel_models;
 /// Channel policy registration, membership authorization, and retention contracts.
 pub mod channel_policies;
