@@ -54,6 +54,11 @@ pub fn is_valid_runtime_payload_hash_input(payload_hash: &str) -> bool {
     !payload_hash.trim().is_empty()
 }
 
+/// Validates runtime commit request nonce input.
+pub fn is_valid_runtime_nonce_input(nonce: u64) -> bool {
+    nonce > 0
+}
+
 /// Returns whether runtime commit request fields satisfy single-line constraints.
 pub fn are_runtime_commit_request_fields_single_line(
     operation_id: &str,
@@ -68,8 +73,8 @@ mod tests {
     use super::{
         are_runtime_commit_request_fields_single_line, deterministic_runtime_commit_id,
         deterministic_runtime_commit_idempotency_key, is_valid_runtime_commit_id_request,
-        is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
-        is_valid_runtime_state_root_input,
+        is_valid_runtime_nonce_input, is_valid_runtime_operation_id_input,
+        is_valid_runtime_payload_hash_input, is_valid_runtime_state_root_input,
     };
 
     #[test]
@@ -111,6 +116,12 @@ mod tests {
         assert!(!is_valid_runtime_operation_id_input(" "));
         assert!(!is_valid_runtime_state_root_input(" "));
         assert!(!is_valid_runtime_payload_hash_input(" "));
+    }
+
+    #[test]
+    fn unit_validates_runtime_commit_request_nonce_input() {
+        assert!(is_valid_runtime_nonce_input(1));
+        assert!(!is_valid_runtime_nonce_input(0));
     }
 
     #[test]

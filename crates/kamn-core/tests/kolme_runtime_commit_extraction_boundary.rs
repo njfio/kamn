@@ -110,6 +110,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_operation_id_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_state_root_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_payload_hash_input_contract("));
+    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_nonce_input_contract("));
     assert!(RUNTIME_COMMIT_SRC
         .contains("are_kolme_runtime_commit_request_fields_single_line_contract("));
     assert!(

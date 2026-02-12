@@ -1,8 +1,8 @@
 use kamn_kolme::{
     are_runtime_commit_request_fields_single_line, deterministic_runtime_commit_id,
     deterministic_runtime_commit_idempotency_key, is_valid_runtime_commit_id_request,
-    is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
-    is_valid_runtime_state_root_input,
+    is_valid_runtime_nonce_input, is_valid_runtime_operation_id_input,
+    is_valid_runtime_payload_hash_input, is_valid_runtime_state_root_input,
 };
 
 #[test]
@@ -56,6 +56,11 @@ fn functional_runtime_request_identity_policy_accepts_non_empty_request_fields()
 }
 
 #[test]
+fn functional_runtime_request_identity_policy_accepts_positive_nonce_input() {
+    assert!(is_valid_runtime_nonce_input(1));
+}
+
+#[test]
 fn regression_issue_1892_runtime_request_identity_policy_rejects_empty_request_fields() {
     // Regression: #1892
     assert!(!is_valid_runtime_operation_id_input(" "));
@@ -90,4 +95,10 @@ fn regression_issue_1894_runtime_request_identity_policy_rejects_multiline_reque
         "state:beta",
         "payload:beta\nwrapped"
     ));
+}
+
+#[test]
+fn regression_issue_1900_runtime_request_identity_policy_rejects_zero_nonce_input() {
+    // Regression: #1900
+    assert!(!is_valid_runtime_nonce_input(0));
 }

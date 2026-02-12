@@ -392,6 +392,30 @@ fn regression_issue_1896_signed_envelope_constructor_rejects_empty_fields() {
 }
 
 #[test]
+fn regression_issue_1900_submit_commit_fails_closed_for_zero_nonce() {
+    // Regression: #1900
+    let mut request = KolmeRuntimeCommitRequest::deterministic(
+        "op-sync-1900-nonce",
+        "state:nonce",
+        "kamn:did:agent:runtime-node-1900",
+        1,
+        "payload:nonce",
+    )
+    .expect("request should build");
+    request.nonce = 0;
+
+    let mut client =
+        InMemoryKolmeRuntimeCommitClient::new("kolme-local").expect("client should build");
+    assert_eq!(
+        client.submit_commit(&request),
+        Err(KolmeRuntimeCommitError::InvalidRequest {
+            field: "nonce",
+            reason: "must be positive",
+        })
+    );
+}
+
+#[test]
 fn performance_runtime_commit_contract_lane_stays_within_budget() {
     let mut client =
         InMemoryKolmeRuntimeCommitClient::new("kolme-local").expect("client should build");
