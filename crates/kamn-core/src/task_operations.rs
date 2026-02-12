@@ -1,3 +1,5 @@
+//! Task operation workflow contracts, dependency orchestration, and snapshot persistence.
+
 use crate::{AgentDid, TaskLifecycle, TaskLifecycleError, TaskState, TaskTransition};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -6,55 +8,89 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 
+/// Notice kinds emitted for task operation lifecycle activity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TaskOperationNoticeKind {
+    /// Task was submitted by requester.
     Submitted,
+    /// Task was accepted by assignee.
     Accepted,
+    /// Task assignment was delegated.
     Delegated,
+    /// Assignee started task work.
     Started,
+    /// Assignee requested additional input.
     InputRequired,
+    /// Task was blocked due to external/internal issue.
     Blocked,
+    /// Task was completed successfully.
     Completed,
+    /// Task was marked failed.
     Failed,
+    /// Task was cancelled by requester or assignee.
     Cancelled,
 }
 
+/// Canonical mutable task operation record tracked by engine state.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskOperationRecord {
+    /// Unique task identifier.
     pub task_id: String,
+    /// DID of requester that submitted the task.
     pub requester: String,
+    /// DID of assigned worker, when assigned.
     pub assignee: Option<String>,
+    /// Human-readable task description.
     pub description: String,
+    /// Task lifecycle state machine and transition history.
     pub lifecycle: TaskLifecycle,
 }
 
+/// Draft payload for submitting a task batch with dependency edges.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SwarmTaskDraft {
+    /// Unique task identifier.
     pub task_id: String,
+    /// DID of requester that submitted the task.
     pub requester: String,
+    /// Human-readable task description.
     pub description: String,
+    /// Dependency task identifiers that must complete before work can start.
     pub dependencies: Vec<String>,
 }
 
+/// Schema version for serialized task operation snapshots.
 pub const TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION: u16 = 1;
 
+/// Snapshot projection for a single task operation record.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskOperationRecordSnapshot {
+    /// Unique task identifier.
     pub task_id: String,
+    /// DID of requester that submitted the task.
     pub requester: String,
+    /// DID of assigned worker, when assigned.
     pub assignee: Option<String>,
+    /// Human-readable task description.
     pub description: String,
+    /// Serialized lifecycle history in transition order.
     pub lifecycle_history: Vec<TaskState>,
+    /// Serialized dependency identifiers.
     pub dependencies: Vec<String>,
+    /// Serialized task operation notices.
     pub notices: Vec<TaskOperationNoticeKind>,
 }
 
+/// Serialized snapshot for all task operation engine records.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskOperationSnapshot {
+    /// Snapshot schema version.
     pub schema_version: u16,
+    /// Serialized task records contained in snapshot.
     pub tasks: Vec<TaskOperationRecordSnapshot>,
 }
 
+/// In-memory engine for task operations, dependency gating, and lifecycle transitions.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct TaskOperationEngine {
     tasks: BTreeMap<String, TaskOperationRecord>,
@@ -63,10 +99,12 @@ pub struct TaskOperationEngine {
 }
 
 impl TaskOperationEngine {
+    /// Construct an empty task operation engine.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Submit a single task with requester and description metadata.
     pub fn submit(
         &mut self,
         task_id: &str,
@@ -100,6 +138,7 @@ impl TaskOperationEngine {
         Ok(())
     }
 
+    /// Submit a batch of tasks and validate dependency graph integrity.
     pub fn submit_swarm_tasks(
         &mut self,
         drafts: Vec<SwarmTaskDraft>,
@@ -166,6 +205,7 @@ impl TaskOperationEngine {
         Ok(())
     }
 
+    /// Accept a task as assignee and transition lifecycle to accepted state.
     pub fn accept(&mut self, task_id: &str, actor: &str) -> Result<(), TaskOperationError> {
         validate_did(actor)?;
         let record = self.task_mut(task_id)?;
@@ -188,6 +228,7 @@ impl TaskOperationEngine {
         Ok(())
     }
 
+    /// Delegate a task from current assignee to a new assignee.
     pub fn delegate(
         &mut self,
         task_id: &str,
@@ -208,6 +249,7 @@ impl TaskOperationEngine {
         Ok(())
     }
 
+    /// Start task work after dependency-satisfaction checks pass.
     pub fn start_work(&mut self, task_id: &str, actor: &str) -> Result<(), TaskOperationError> {
         validate_did(actor)?;
         if let Some(dependency_id) = self.unsatisfied_dependency(task_id)? {
@@ -226,6 +268,7 @@ impl TaskOperationEngine {
         Ok(())
     }
 
+    /// Mark task as blocked with a non-empty reason.
     pub fn block(
         &mut self,
         task_id: &str,
@@ -246,6 +289,7 @@ impl TaskOperationEngine {
         Ok(())
     }
 
+    /// Move task into input-required state with a non-empty reason.
     pub fn request_input(
         &mut self,
         task_id: &str,
@@ -266,6 +310,7 @@ impl TaskOperationEngine {
         Ok(())
     }
 
+    /// Complete task as assignee.
     pub fn complete(&mut self, task_id: &str, actor: &str) -> Result<(), TaskOperationError> {
         validate_did(actor)?;
         let record = self.task_mut(task_id)?;
@@ -278,6 +323,7 @@ impl TaskOperationEngine {
         Ok(())
     }
 
+    /// Mark task as failed with a non-empty reason.
     pub fn fail(
         &mut self,
         task_id: &str,
@@ -298,6 +344,7 @@ impl TaskOperationEngine {
         Ok(())
     }
 
+    /// Cancel a task as requester or current assignee.
     pub fn cancel(&mut self, task_id: &str, actor: &str) -> Result<(), TaskOperationError> {
         validate_did(actor)?;
         let record = self.task_mut(task_id)?;
@@ -318,12 +365,14 @@ impl TaskOperationEngine {
         Ok(())
     }
 
+    /// Return immutable task record by identifier.
     pub fn task(&self, task_id: &str) -> Result<&TaskOperationRecord, TaskOperationError> {
         self.tasks
             .get(task_id)
             .ok_or_else(|| TaskOperationError::NotFound(task_id.to_owned()))
     }
 
+    /// Return task notice history in insertion order for the given task.
     pub fn notices(&self, task_id: &str) -> Vec<TaskOperationNoticeKind> {
         self.notices_by_task
             .get(task_id)
@@ -331,6 +380,7 @@ impl TaskOperationEngine {
             .unwrap_or_default()
     }
 
+    /// Return task identifiers that are accepted/delegated and dependency-ready.
     pub fn ready_tasks(&self) -> Vec<String> {
         self.tasks
             .iter()
@@ -352,6 +402,7 @@ impl TaskOperationEngine {
             .collect()
     }
 
+    /// Export full engine state into serializable snapshot form.
     pub fn export_snapshot(&self) -> TaskOperationSnapshot {
         let tasks = self
             .tasks
@@ -376,6 +427,7 @@ impl TaskOperationEngine {
         }
     }
 
+    /// Restore engine state from snapshot after schema, graph, and lifecycle validation.
     pub fn restore_snapshot(
         &mut self,
         snapshot: TaskOperationSnapshot,
@@ -533,43 +585,73 @@ impl TaskOperationEngine {
     }
 }
 
+/// Errors emitted by task operation lifecycle, dependency graph, and snapshot restore flows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TaskOperationError {
+    /// Task identifier was not found.
     NotFound(String),
+    /// Task identifier already exists.
     DuplicateTaskId(String),
+    /// Swarm submission provided no tasks.
     EmptySwarmTaskSet,
+    /// Duplicate dependency edge was declared for a task.
     DuplicateDependency {
+        /// Task identifier containing duplicate dependency.
         task_id: String,
+        /// Duplicate dependency identifier.
         dependency_id: String,
     },
+    /// Dependency references an unknown task identifier.
     UnknownDependency {
+        /// Task identifier referencing unknown dependency.
         task_id: String,
+        /// Unknown dependency identifier.
         dependency_id: String,
     },
+    /// Dependency graph contains a cycle.
     CyclicDependency {
+        /// Task identifier where cycle detection terminated.
         task_id: String,
     },
+    /// Task cannot proceed because dependency is not completed.
     DependencyNotSatisfied {
+        /// Task identifier blocked by dependency.
         task_id: String,
+        /// Unsatisfied dependency identifier.
         dependency_id: String,
     },
+    /// Snapshot schema version does not match expected contract.
     SnapshotVersionMismatch {
+        /// Expected snapshot schema version.
         expected: u16,
+        /// Snapshot schema version found in payload.
         found: u16,
     },
+    /// Snapshot restore detected dependency that is not completed for an in-progress terminal task.
     SnapshotDependencyNotCompleted {
+        /// Task identifier blocked by dependency state.
         task_id: String,
+        /// Dependency identifier in invalid state for restore.
         dependency_id: String,
+        /// Dependency state observed in snapshot payload.
         dependency_state: TaskState,
     },
+    /// Snapshot payload failed semantic validation.
     InvalidSnapshot(String),
+    /// DID parse/validation failed.
     InvalidDid(String),
+    /// Task description is empty.
     EmptyDescription,
+    /// Required reason field is empty for a transition action.
     EmptyReason(&'static str),
+    /// Actor is not authorized for requested operation.
     UnauthorizedActor {
+        /// Actor DID attempting operation.
         actor: String,
+        /// Required actor policy for operation.
         required: &'static str,
     },
+    /// Wrapped lifecycle transition error.
     Lifecycle(String),
 }
 
@@ -623,10 +705,14 @@ impl fmt::Display for TaskOperationError {
 
 impl std::error::Error for TaskOperationError {}
 
+/// Errors emitted by task operation snapshot-store serialization/persistence operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TaskOperationSnapshotStoreError {
+    /// Underlying filesystem I/O operation failed.
     Io(String),
+    /// Serialized payload is malformed or violates delimiter contract.
     InvalidPayload(String),
+    /// Wrapped snapshot validation error from task operation engine.
     Snapshot(TaskOperationError),
 }
 
@@ -644,15 +730,19 @@ impl fmt::Display for TaskOperationSnapshotStoreError {
 
 impl std::error::Error for TaskOperationSnapshotStoreError {}
 
+/// Snapshot persistence abstraction for task operation state.
 pub trait TaskOperationSnapshotStore {
+    /// Persist latest snapshot payload.
     fn write(
         &mut self,
         snapshot: TaskOperationSnapshot,
     ) -> Result<(), TaskOperationSnapshotStoreError>;
+    /// Read latest snapshot payload if present.
     fn read_latest(&self)
         -> Result<Option<TaskOperationSnapshot>, TaskOperationSnapshotStoreError>;
 }
 
+/// In-memory snapshot store implementation for tests and ephemeral runtime paths.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct InMemoryTaskOperationSnapshotStore {
     latest: Option<TaskOperationSnapshot>,
@@ -674,18 +764,23 @@ impl TaskOperationSnapshotStore for InMemoryTaskOperationSnapshotStore {
     }
 }
 
+/// Filesystem-backed snapshot store implementation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FileTaskOperationSnapshotStore {
     path: PathBuf,
 }
 
+/// Recovery outcome for filesystem snapshot repair flow.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskOperationRecoveryResult {
+    /// Latest valid snapshot after recovery path.
     pub latest: Option<TaskOperationSnapshot>,
+    /// Whether recovery rewrote corrupted payload to repaired baseline.
     pub repaired: bool,
 }
 
 impl FileTaskOperationSnapshotStore {
+    /// Construct filesystem snapshot store with target path.
     pub fn new(path: PathBuf) -> Result<Self, TaskOperationSnapshotStoreError> {
         if path.as_os_str().is_empty() {
             return Err(TaskOperationSnapshotStoreError::InvalidPayload(
@@ -695,6 +790,7 @@ impl FileTaskOperationSnapshotStore {
         Ok(Self { path })
     }
 
+    /// Attempt to read latest snapshot; if corrupt, repair file and return empty state.
     pub fn recover_latest_and_repair(
         &mut self,
     ) -> Result<TaskOperationRecoveryResult, TaskOperationSnapshotStoreError> {

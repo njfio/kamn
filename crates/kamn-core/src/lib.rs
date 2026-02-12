@@ -104,7 +104,7 @@ pub mod state;
 /// Task artifact registration, integrity checks, and lookup contracts.
 pub mod task_artifacts;
 pub mod task_lifecycle;
-#[allow(missing_docs)]
+/// Task mutation APIs, dependency graph orchestration, and snapshot persistence contracts.
 pub mod task_operations;
 /// Task payment offer/confirmation workflow backed by escrow release controls.
 pub mod task_payment;
