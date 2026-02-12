@@ -344,7 +344,7 @@ if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   exit 1
 fi
 
-default_runtime_commit_live_submit_command="KAMN_KOLME_LIVE_BASE_URL=$(shell_escape "${BASE_URL}") KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\n'"
+default_runtime_commit_live_submit_command="KAMN_KOLME_LIVE_BASE_URL=$(shell_escape "${BASE_URL}") KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\n'"
 effective_runtime_commit_finality_command="$RUNTIME_COMMIT_FINALITY_COMMAND"
 if [ -z "$effective_runtime_commit_finality_command" ]; then
   effective_runtime_commit_finality_command="printf 'finality=final\\n'"

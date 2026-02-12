@@ -417,6 +417,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_commit_command_profile_version=v1`
   - NO-GO marker-drift proof must surface `runtime_commit_command_profile_mismatch` when profile marker contracts drift from `real-node-non-synthetic-v1`.
   - NO-GO synthetic-command regression proof must surface `runtime_commit_non_synthetic_submit_probe_missing` when `runtime_commit_command` omits `integration_kolme_fork_live_node_submit_reaches_endpoint`.
+  - NO-GO synthetic-command regression proof must surface `runtime_commit_real_signing_profile_marker_missing` when `runtime_commit_command` omits `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1`.
 - Real-node profile contract lane command:
   - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
 - Contract lane command:
@@ -436,6 +437,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_commit_policy_command_profile`
     - `runtime_commit_command_profile_version`
   - real-node profile requires `runtime_commit_command_profile=real-node-non-synthetic-v1`, `runtime_commit_policy_command_profile=real-node-non-synthetic-v1`, and `runtime_commit_command_profile_version=v1`; real-node checker fails closed on marker drift.
+  - real-node profile requires runtime command surfaces to include `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1`; checker fails closed with `runtime_commit_real_signing_profile_marker_missing` when omitted.
   - real-node profile command composition rejects in-memory fallback references at runner boundary:
     - `runtime-commit-command must not reference InMemoryKolmeRuntimeCommitClient when runtime-profile=real-node`
   - real-node profile checker fails closed on in-memory provider references in command/policy surfaces:
@@ -746,7 +748,7 @@ Operator checkpoints:
 - Finality evidence contract lane command:
   - `bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json`
 - Default live-provider smoke command executed by run mode:
-  - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint`
+  - `KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint`
 - Summary schema:
   - `kamn.kolme.local-runtime-commit-live-summary.v1`
   - policy schema: `kamn.kolme.local-runtime-commit-live-policy-report.v1`

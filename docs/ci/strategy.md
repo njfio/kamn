@@ -252,8 +252,11 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - strict profile NO-GO drift/synthetic reasons:
       - `runtime_commit_command_profile_mismatch`
       - `runtime_commit_non_synthetic_submit_probe_missing`
+      - `runtime_commit_real_signing_profile_marker_missing`
     - strict profile non-synthetic submit probe marker:
       - `integration_kolme_fork_live_node_submit_reaches_endpoint`
+    - strict profile real-signing marker:
+      - `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1`
     - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
     - strict real-node runtime evidence marker path remains local-only and excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`

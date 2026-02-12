@@ -26,6 +26,7 @@ default_live_command() {
   local command
   command="KAMN_KOLME_LIVE_BASE_URL=$(shell_escape "$BASE_URL")"
   command="${command} KAMN_KOLME_LIVE_PROVIDER_HINT=$(shell_escape "$PROVIDER_HINT")"
+  command="${command} KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1"
   if [ -n "$AUTHORIZATION_HEADER" ]; then
     command="${command} KAMN_KOLME_LIVE_AUTHORIZATION=$(shell_escape "$AUTHORIZATION_HEADER")"
   fi
@@ -209,6 +210,11 @@ PROVIDER_COMMAND_MARKER_PRESENT="false"
 if [[ "$LIVE_COMMAND" == *"$PROVIDER_COMMAND_MARKER"* ]]; then
   PROVIDER_COMMAND_MARKER_PRESENT="true"
 fi
+PROVIDER_SIGNING_PROFILE_MARKER="KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1"
+PROVIDER_SIGNING_PROFILE_MARKER_PRESENT="false"
+if [[ "$LIVE_COMMAND" == *"$PROVIDER_SIGNING_PROFILE_MARKER"* ]]; then
+  PROVIDER_SIGNING_PROFILE_MARKER_PRESENT="true"
+fi
 
 SUBMIT_EVIDENCE_MARKER="status=submitted"
 SUBMIT_EVIDENCE_MARKER_PRESENT="false"
@@ -358,7 +364,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$FINALITY_COMMAND" "$FINALITY_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$FINALITY_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" "$PROVIDER_CLIENT_CONTRACT" "$PROVIDER_SUBMIT_PROFILE_CONTRACT" "$PROVIDER_COMMAND_MARKER" "$PROVIDER_COMMAND_MARKER_PRESENT" "$SUBMIT_EVIDENCE_MARKER" "$SUBMIT_EVIDENCE_MARKER_PRESENT" "$FINALITY_EVIDENCE_MARKER" "$FINALITY_EVIDENCE_MARKER_PRESENT" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$FINALITY_COMMAND" "$FINALITY_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$FINALITY_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" "$PROVIDER_CLIENT_CONTRACT" "$PROVIDER_SUBMIT_PROFILE_CONTRACT" "$PROVIDER_COMMAND_MARKER" "$PROVIDER_COMMAND_MARKER_PRESENT" "$PROVIDER_SIGNING_PROFILE_MARKER" "$PROVIDER_SIGNING_PROFILE_MARKER_PRESENT" "$SUBMIT_EVIDENCE_MARKER" "$SUBMIT_EVIDENCE_MARKER_PRESENT" "$FINALITY_EVIDENCE_MARKER" "$FINALITY_EVIDENCE_MARKER_PRESENT" <<'PY'
 from __future__ import annotations
 
 import json
@@ -387,10 +393,12 @@ provider_client_contract = sys.argv[19]
 provider_submit_profile_contract = sys.argv[20]
 provider_command_marker = sys.argv[21]
 provider_command_marker_present = sys.argv[22] == "true"
-submit_evidence_marker = sys.argv[23]
-submit_evidence_marker_present = sys.argv[24] == "true"
-finality_evidence_marker = sys.argv[25]
-finality_evidence_marker_present = sys.argv[26] == "true"
+provider_signing_profile_marker = sys.argv[23]
+provider_signing_profile_marker_present = sys.argv[24] == "true"
+submit_evidence_marker = sys.argv[25]
+submit_evidence_marker_present = sys.argv[26] == "true"
+finality_evidence_marker = sys.argv[27]
+finality_evidence_marker_present = sys.argv[28] == "true"
 
 def classify_synthetic_command(command: str) -> bool:
     normalized = " ".join(command.strip().split())
@@ -464,6 +472,8 @@ summary = {
     "provider_submit_profile_contract": provider_submit_profile_contract,
     "provider_command_marker": provider_command_marker,
     "provider_command_marker_present": provider_command_marker_present,
+    "provider_signing_profile_marker": provider_signing_profile_marker,
+    "provider_signing_profile_marker_present": provider_signing_profile_marker_present,
     "submit_evidence_marker": submit_evidence_marker,
     "submit_evidence_marker_present": submit_evidence_marker_present,
     "finality_evidence_marker": finality_evidence_marker,

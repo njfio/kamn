@@ -100,6 +100,10 @@ if report.get("provider_command_marker") != "integration_kolme_fork_live_node_su
     raise SystemExit("expected live provider command marker")
 if report.get("provider_command_marker_present") is not True:
     raise SystemExit("expected default dry-run command to include live provider marker")
+if report.get("provider_signing_profile_marker") != "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1":
+    raise SystemExit("expected deterministic live signing profile marker")
+if report.get("provider_signing_profile_marker_present") is not True:
+    raise SystemExit("expected default dry-run command to include live signing profile marker")
 if report.get("submit_evidence_marker") != "status=submitted":
     raise SystemExit("expected deterministic submit evidence marker")
 if report.get("submit_evidence_marker_present") is not False:

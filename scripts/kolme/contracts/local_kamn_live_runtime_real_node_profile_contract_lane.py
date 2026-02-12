@@ -210,6 +210,9 @@ def main() -> int:
     if "--require-non-synthetic-run-evidence" not in runtime_commit_command:
         print("expected strict non-synthetic runtime marker in contract-lane summary command", file=sys.stderr)
         return 1
+    if "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1" not in runtime_commit_command:
+        print("expected real signing profile marker in contract-lane summary command", file=sys.stderr)
+        return 1
     if "InMemoryKolmeRuntimeCommitClient" in runtime_commit_command:
         print("expected live-provider-only runtime command composition in real-node contract-lane summary", file=sys.stderr)
         return 1
@@ -307,6 +310,12 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
+        if "runtime_commit_real_signing_profile_marker_missing" not in synthetic_regression_reason_codes:
+            print(
+                "expected runtime_commit_real_signing_profile_marker_missing in synthetic regression policy output",
+                file=sys.stderr,
+            )
+            return 1
         if synthetic_regression_policy.get("final_decision") != "NO-GO":
             print("expected NO-GO final decision for synthetic regression policy output", file=sys.stderr)
             return 1
@@ -319,7 +328,7 @@ def main() -> int:
             "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider "
             "--require-non-synthetic-run-evidence "
             "--live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 "
-            "KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local cargo test -p kamn-core --test kolme_runtime_commit_http_transport "
+            "KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport "
             "-- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" "
             "--provider-hint InMemoryKolmeRuntimeCommitClient "
             "--output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json"

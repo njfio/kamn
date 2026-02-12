@@ -121,6 +121,8 @@ if "--require-non-synthetic-run-evidence" not in runtime_commit_command:
     raise SystemExit("expected strict non-synthetic runtime marker in real-node profile contract-lane summary")
 if "integration_kolme_fork_live_node_submit_reaches_endpoint" not in runtime_commit_command:
     raise SystemExit("expected non-synthetic runtime submit probe marker in real-node profile contract-lane summary")
+if "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1" not in runtime_commit_command:
+    raise SystemExit("expected real signing profile marker in real-node profile contract-lane summary")
 contracts = summary.get("contracts", {})
 if contracts.get("runtime_profile") != "real-node":
     raise SystemExit("expected contracts.runtime_profile=real-node in real-node profile contract-lane summary")
@@ -165,7 +167,7 @@ inmemory_summary["runtime_commit_command"] = (
     "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider "
     "--require-non-synthetic-run-evidence "
     "--live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 "
-    "KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local cargo test -p kamn-core --test kolme_runtime_commit_http_transport "
+    "KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport "
     "-- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" "
     "--provider-hint InMemoryKolmeRuntimeCommitClient "
     "--output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json"
@@ -213,6 +215,11 @@ fi
 
 if ! grep -q "runtime_commit_non_synthetic_submit_probe_missing" "$TMP_NEGATIVE_ERR"; then
   echo "expected non-synthetic submit probe marker reason in synthetic-command negative proof output" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_real_signing_profile_marker_missing" "$TMP_NEGATIVE_ERR"; then
+  echo "expected real signing profile marker reason in synthetic-command negative proof output" >&2
   exit 1
 fi
 

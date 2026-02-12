@@ -61,7 +61,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_command_profile_version": "v1",
-  "runtime_commit_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
+  "runtime_commit_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
   "runtime_commit_live_policy_report": "/tmp/runtime-policy.json",
   "runtime_commit_finality_command": "",
   "runtime_commit_finality_output_file": "",
@@ -340,6 +340,11 @@ if ! grep -q "runtime_commit_non_synthetic_submit_probe_missing" "$TMP_ERR"; the
   exit 1
 fi
 
+if ! grep -q "runtime_commit_real_signing_profile_marker_missing" "$TMP_ERR"; then
+  echo "expected real signing profile marker requirement reason for synthetic policy failure" >&2
+  exit 1
+fi
+
 cat >"$TMP_REPORT_INMEMORY" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
@@ -356,7 +361,7 @@ cat >"$TMP_REPORT_INMEMORY" <<'JSON'
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_command_profile_version": "v1",
-  "runtime_commit_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" --provider-hint InMemoryKolmeRuntimeCommitClient --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
+  "runtime_commit_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" --provider-hint InMemoryKolmeRuntimeCommitClient --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
   "runtime_commit_live_policy_report": "/tmp/runtime-policy.json",
   "runtime_commit_finality_command": "",
   "runtime_commit_finality_output_file": "",
@@ -397,7 +402,7 @@ cat >"$TMP_REPORT_INMEMORY" <<'JSON'
     },
     {
       "id": "runtime_commit_endpoint",
-      "command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" --provider-hint InMemoryKolmeRuntimeCommitClient --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
+      "command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" --provider-hint InMemoryKolmeRuntimeCommitClient --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
       "status": "planned",
       "reason_code": "not_run"
     },
@@ -468,6 +473,8 @@ if "--require-non-synthetic-run-evidence" not in runtime_commit_command:
     raise SystemExit("expected strict non-synthetic runtime marker in real-node profile runtime commit command")
 if "integration_kolme_fork_live_node_submit_reaches_endpoint" not in runtime_commit_command:
     raise SystemExit("expected non-synthetic runtime submit probe marker in real-node profile runtime commit command")
+if "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1" not in runtime_commit_command:
+    raise SystemExit("expected real signing profile marker in real-node profile runtime commit command")
 if summary.get("runtime_commit_command_profile") != "real-node-non-synthetic-v1":
     raise SystemExit("expected deterministic runtime commit command profile marker in runner-generated summary")
 if summary.get("runtime_commit_policy_command_profile") != "real-node-non-synthetic-v1":

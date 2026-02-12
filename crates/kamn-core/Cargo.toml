@@ -10,5 +10,8 @@ path = "src/lib.rs"
 [dependencies]
 kamn-kolme = { path = "../kamn-kolme" }
 
+[dev-dependencies]
+k256 = { version = "0.13.4", features = ["ecdsa"] }
+
 [lints]
 workspace = true
