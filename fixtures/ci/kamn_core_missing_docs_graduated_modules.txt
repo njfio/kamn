@@ -43,3 +43,4 @@ operator_dashboard_api
 operator_dashboard_ui
 invariants
 message_delivery_guards
+trust_score

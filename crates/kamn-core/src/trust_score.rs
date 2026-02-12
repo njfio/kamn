@@ -1,8 +1,13 @@
+//! Trust score policy contracts with anti-gaming penalties and decay weighting.
+
 use crate::{AgentReputation, ReputationError, ReputationStore};
 use std::fmt;
 
+/// Stable engine version identifier for trust score policy contracts.
 pub const TRUST_SCORE_ENGINE_VERSION: &str = "v2-prd-8-2-anti-gaming";
+/// Minimum bounded trust score.
 pub const TRUST_SCORE_MIN: i32 = 0;
+/// Maximum bounded trust score.
 pub const TRUST_SCORE_MAX: i32 = 1_000;
 const DECAY_WINDOW_RECENT_BLOCKS: u64 = 128;
 const DECAY_WINDOW_MID_BLOCKS: u64 = 512;
@@ -14,35 +19,59 @@ const ABUSE_PENALTY_CHURN_SPIKE: i32 = 60;
 const ABUSE_PENALTY_COMPOUND: i32 = 140;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Abuse penalty categories applied by trust score classification.
 pub enum AbusePenaltyKind {
+    /// No abuse signals triggered.
     None,
+    /// Delegation reciprocity-ring pattern detected.
     ReciprocityRing,
+    /// Burst-spam failure pattern detected.
     BurstSpam,
+    /// Dispute churn spike pattern detected.
     ChurnSpike,
+    /// Multiple abuse signals triggered simultaneously.
     Compound,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Detailed trust score component breakdown.
 pub struct TrustScoreBreakdown {
+    /// Base score anchor.
     pub base_score: i32,
+    /// Delivery-rate contribution.
     pub delivery_component: i32,
+    /// Response-time contribution.
     pub response_component: i32,
+    /// Dispute-rate penalty.
     pub dispute_penalty: i32,
+    /// Pre-decay volume bonus.
     pub volume_bonus: i32,
+    /// Pre-decay endorsement bonus.
     pub endorsement_bonus: i32,
+    /// Decay multiplier in basis points.
     pub decay_multiplier_bps: u16,
+    /// Post-decay volume bonus.
     pub decayed_volume_bonus: i32,
+    /// Post-decay endorsement bonus.
     pub decayed_endorsement_bonus: i32,
+    /// Abuse penalty kind applied.
     pub abuse_penalty_kind: AbusePenaltyKind,
+    /// Abuse penalty points subtracted.
     pub abuse_penalty_points: i32,
+    /// Unbounded raw score prior to clamp.
     pub raw_score: i32,
+    /// Final bounded score persisted to state.
     pub final_score: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Error taxonomy for trust score calculation and persistence.
 pub enum TrustScoreError {
+    /// Delivery rate is outside `0.0..=1.0`.
     InvalidDeliveryRate(f64),
+    /// Dispute rate is outside `0.0..=1.0`.
     InvalidDisputeRate(f64),
+    /// Underlying reputation store operation failed.
     Reputation(ReputationError),
 }
 
@@ -68,6 +97,7 @@ impl From<ReputationError> for TrustScoreError {
     }
 }
 
+/// Computes a trust score breakdown for an agent reputation record.
 pub fn calculate_trust_score(
     agent: &AgentReputation,
 ) -> Result<TrustScoreBreakdown, TrustScoreError> {
@@ -187,6 +217,7 @@ fn classify_abuse_penalty(agent: &AgentReputation) -> (AbusePenaltyKind, i32) {
     }
 }
 
+/// Recomputes and persists trust score for `agent_did` at `block_height`.
 pub fn recalculate_and_persist_trust_score(
     store: &mut ReputationStore,
     agent_did: &str,
