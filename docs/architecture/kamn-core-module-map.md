@@ -194,6 +194,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `redaction_compliance`
   - `retention_engine`
   - `reputation_signals`
+  - `reputation_state`
   - `service_marketplace`
   - `smoke`
   - `signature_profile`
@@ -253,6 +254,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2061`
   - `Regression: #2063`
   - `Regression: #2065`
+  - `Regression: #2067`
 
 ## Contributor Entrypoint Matrix
 

@@ -86,7 +86,7 @@ pub mod performance_targets;
 pub mod redaction_compliance;
 /// Reputation-signal weighting and candidate-ranking contracts for routing.
 pub mod reputation_signals;
-#[allow(missing_docs)]
+/// Reputation state persistence, restore, and export contracts.
 pub mod reputation_state;
 /// Retention policy evaluation, tombstone lifecycle, and purge guard contracts.
 pub mod retention_engine;

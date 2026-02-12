@@ -49,3 +49,4 @@ message_envelope
 upgrade_orchestration
 escrow
 instruction_verify
+reputation_state
