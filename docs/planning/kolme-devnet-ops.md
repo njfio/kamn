@@ -862,6 +862,7 @@ Operator checkpoints:
   - `kamn.kolme.local-runtime-commit-live-summary.v1`
   - policy schema: `kamn.kolme.local-runtime-commit-live-policy-report.v1`
 - Deterministic checkpoints include:
+  - live-provider pipeline ownership is canonical in `crates/kamn-kolme/src/live_provider_pipeline.rs`; `crates/kamn-core/src/kolme_runtime_commit/live_provider.rs` remains a compatibility facade.
   - wrapper routing remains manifest-backed via `scripts/kolme/run_lane_dispatch.sh` resolving `scripts/framework/manifests/kolme_local_runtime_commit_live_lane.json`.
   - bounded preflight probe against `<base-url>/healthz` before live submit execution (unless `--skip-preflight` is explicitly set)
   - explicit local-only opt-in marker (`KAMN_KOLME_LOCAL_HEAVY=1`)
