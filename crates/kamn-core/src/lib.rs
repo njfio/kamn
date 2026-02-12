@@ -122,7 +122,7 @@ pub mod upgrade_orchestration;
 pub mod validator_lifecycle;
 /// Runtime watchdog anomaly taxonomy and report contracts.
 pub mod watchdog;
-#[allow(missing_docs)]
+/// Zero-knowledge message-proof option evaluation, witness, and consensus contracts.
 pub mod zk_message_proofs;
 
 pub use agent_key_hierarchy::{

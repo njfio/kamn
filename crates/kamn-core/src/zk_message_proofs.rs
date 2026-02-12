@@ -1,54 +1,88 @@
+//! Zero-knowledge message-proof planning, admission, consensus, and watchdog projection contracts.
+
 use crate::{AgentDid, CanonicalMessageEnvelope, MessageEnvelopeError};
 use std::collections::BTreeSet;
 use std::fmt;
 
+/// Supported proof-system families considered by KAMN evaluation flows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ZkProofSystem {
+    /// Pairing-based Groth16 proofs.
     Groth16,
+    /// Plonk-like proof systems with universal setup variants.
     Plonkish,
+    /// Transparent STARK-style proofs.
     Stark,
 }
 
+/// Verification-topology choices for proof checking responsibility.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ZkVerificationTopology {
+    /// Processor performs verification inline before publication.
     ProcessorOnly,
+    /// Validators re-verify across quorum path.
     ValidatorQuorum,
+    /// Watchdog nodes sample and project proof-health alerts.
     WatchdogSampling,
 }
 
+/// Severity classes for architectural and runtime proof risks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ZkRiskSeverity {
+    /// Informational or low-impact risk.
     Low,
+    /// Material but manageable risk.
     Medium,
+    /// High-impact risk requiring mitigation before adoption.
     High,
 }
 
+/// Structured risk entry emitted by option evaluation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZkRisk {
+    /// Stable risk code identifier.
     pub code: String,
+    /// Severity classification.
     pub severity: ZkRiskSeverity,
+    /// Human-readable risk details.
     pub detail: String,
 }
 
+/// Candidate architecture option for proof-system adoption planning.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZkArchitectureOption {
+    /// Option identifier.
     pub name: String,
+    /// Proof-system family.
     pub proof_system: ZkProofSystem,
+    /// Verification-topology model.
     pub verification_topology: ZkVerificationTopology,
+    /// Whether trusted setup ceremony is required.
     pub trusted_setup_required: bool,
+    /// Whether witness-generation inputs are deterministic.
     pub deterministic_witness_inputs: bool,
+    /// Estimated prover latency in milliseconds.
     pub prover_latency_ms: u64,
+    /// Estimated verifier latency in milliseconds.
     pub verifier_latency_ms: u64,
+    /// Estimated proof size in bytes.
     pub proof_size_bytes: u64,
+    /// Whether option supports proof batching.
     pub supports_batching: bool,
+    /// Estimated engineering effort in weeks.
     pub estimated_engineering_weeks: u16,
 }
 
+/// Policy thresholds for option feasibility scoring.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ZkEvaluationPolicy {
+    /// Maximum allowed verifier latency in milliseconds.
     pub max_verifier_latency_ms: u64,
+    /// Maximum allowed proof size in bytes.
     pub max_proof_size_bytes: u64,
+    /// Maximum allowed engineering effort in weeks.
     pub max_engineering_weeks: u16,
+    /// Whether transparent setup is mandatory.
     pub require_transparent_setup: bool,
 }
 
@@ -63,48 +97,75 @@ impl Default for ZkEvaluationPolicy {
     }
 }
 
+/// Evaluation result for a single architecture option under policy constraints.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZkOptionAssessment {
+    /// Evaluated option name.
     pub option_name: String,
+    /// Aggregate score (higher is better).
     pub score: i32,
+    /// Whether option satisfies policy feasibility constraints.
     pub feasible: bool,
+    /// Enumerated trust assumptions for this option.
     pub trust_assumptions: Vec<String>,
+    /// Enumerated risks for this option.
     pub risks: Vec<ZkRisk>,
 }
 
+/// Phase milestone for staged proof-adoption execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZkPhaseMilestone {
+    /// Phase identifier.
     pub phase: String,
+    /// Phase objective.
     pub objective: String,
+    /// Validation emphasis for this phase.
     pub validation_focus: String,
+    /// Exit criteria that must be satisfied.
     pub exit_criteria: Vec<String>,
 }
 
+/// Recommended phased plan and ranked assessments for proof adoption.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZkPhasePlan {
+    /// Recommended option identifier.
     pub recommended_option: String,
+    /// Human-readable recommendation rationale.
     pub rationale: String,
+    /// Ordered implementation milestones.
     pub milestones: Vec<ZkPhaseMilestone>,
+    /// Full ranked option assessments.
     pub assessments: Vec<ZkOptionAssessment>,
 }
 
+/// Witness projection produced from canonical message envelope and privacy selectors.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZkMessageWitness {
+    /// Public commitment derived from redacted payload shape.
     pub public_commitment: String,
+    /// Field names revealed in the witness output.
     pub revealed_fields: Vec<String>,
+    /// Number of hidden/private fields.
     pub hidden_field_count: usize,
+    /// Canonical payload byte size.
     pub payload_bytes: usize,
 }
 
+/// Proof artifact emitted by processor-level proof generation pipeline.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProcessorProofArtifact {
+    /// Unique proof artifact identifier.
     pub artifact_id: String,
+    /// Message identifier this artifact attests.
     pub message_id: String,
+    /// Payload commitment associated with the proof.
     pub payload_commitment: String,
+    /// Serialized proof value.
     pub proof_value: String,
 }
 
 impl ProcessorProofArtifact {
+    /// Construct and validate a processor proof artifact contract.
     pub fn new(
         artifact_id: &str,
         message_id: &str,
@@ -139,14 +200,19 @@ impl ProcessorProofArtifact {
     }
 }
 
+/// Input payload for processor proof-admission evaluation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProcessorProofAdmissionInput {
+    /// Message identifier expected by admission flow.
     pub message_id: String,
+    /// Expected payload commitment for this message.
     pub expected_payload_commitment: String,
+    /// Proof artifact presented for admission.
     pub artifact: ProcessorProofArtifact,
 }
 
 impl ProcessorProofAdmissionInput {
+    /// Construct proof-admission input after required-field validation.
     pub fn new(
         message_id: &str,
         expected_payload_commitment: &str,
@@ -165,23 +231,30 @@ impl ProcessorProofAdmissionInput {
     }
 }
 
+/// Decision emitted when processor proof artifact is admitted.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProcessorProofAdmissionDecision {
+    /// Message identifier associated with decision.
     pub message_id: String,
+    /// Artifact identifier accepted by evaluator.
     pub artifact_id: String,
+    /// Payload commitment bound to decision.
     pub payload_commitment: String,
 }
 
+/// Stateful evaluator for processor proof-admission replay protection.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ProcessorProofAdmissionEvaluator {
     accepted_artifact_ids: BTreeSet<String>,
 }
 
 impl ProcessorProofAdmissionEvaluator {
+    /// Construct an empty proof-admission evaluator.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Validate proof artifact identity/commitment and enforce replay protection.
     pub fn evaluate(
         &mut self,
         input: ProcessorProofAdmissionInput,
@@ -225,23 +298,34 @@ impl ProcessorProofAdmissionEvaluator {
     }
 }
 
+/// Validator attestation verdict classes for consensus evaluation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ValidatorProofVerdict {
+    /// Validator verified proof as valid.
     Valid,
+    /// Validator verified proof as invalid.
     Invalid,
+    /// Validator detected proof/attestation replay behavior.
     Replay,
 }
 
+/// Single validator attestation over proof artifact and message identity.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatorProofAttestation {
+    /// Unique attestation identifier.
     pub attestation_id: String,
+    /// DID of attesting validator.
     pub validator_did: String,
+    /// Message identifier under attestation.
     pub message_id: String,
+    /// Proof artifact identifier under attestation.
     pub artifact_id: String,
+    /// Validator verdict over artifact.
     pub verdict: ValidatorProofVerdict,
 }
 
 impl ValidatorProofAttestation {
+    /// Construct and validate validator proof attestation payload.
     pub fn new(
         attestation_id: &str,
         validator_did: &str,
@@ -266,14 +350,19 @@ impl ValidatorProofAttestation {
     }
 }
 
+/// Consensus-evaluation input payload over validator proof attestations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatorProofConsensusInput {
+    /// Message identifier expected across attestations.
     pub message_id: String,
+    /// Artifact identifier expected across attestations.
     pub artifact_id: String,
+    /// Collected validator attestations for quorum evaluation.
     pub attestations: Vec<ValidatorProofAttestation>,
 }
 
 impl ValidatorProofConsensusInput {
+    /// Construct consensus input after required-field and non-empty-attestation checks.
     pub fn new(
         message_id: &str,
         artifact_id: &str,
@@ -292,39 +381,83 @@ impl ValidatorProofConsensusInput {
     }
 }
 
+/// Terminal consensus statuses for validator proof evaluation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValidatorProofConsensusStatus {
+    /// Quorum converged on valid verdict.
     ConsensusValid,
+    /// Quorum converged on invalid verdict.
     ConsensusInvalid,
+    /// Quorum converged on replay verdict.
     ConsensusReplay,
+    /// Mixed verdict buckets indicate validator mismatch.
     ValidatorMismatch,
 }
 
+/// Consensus decision projection emitted by validator evaluator.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatorProofConsensusDecision {
+    /// Message identifier evaluated.
     pub message_id: String,
+    /// Artifact identifier evaluated.
     pub artifact_id: String,
+    /// Required quorum configured for evaluator.
     pub required_quorum: usize,
+    /// Number of distinct validators observed.
     pub validator_count: usize,
+    /// Sorted validator DID list.
     pub validator_dids: Vec<String>,
+    /// Count of `Valid` verdict attestations.
     pub valid_attestation_count: usize,
+    /// Count of `Invalid` verdict attestations.
     pub invalid_attestation_count: usize,
+    /// Count of `Replay` verdict attestations.
     pub replay_attestation_count: usize,
+    /// Derived consensus status.
     pub status: ValidatorProofConsensusStatus,
 }
 
+/// Errors emitted by validator proof consensus intake/evaluation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValidatorProofConsensusError {
+    /// Required quorum must be positive.
     InvalidRequiredQuorum(usize),
-    InvalidField { field: &'static str },
+    /// Required input field was empty.
+    InvalidField {
+        /// Input field name that failed validation.
+        field: &'static str,
+    },
+    /// No attestations were provided.
     EmptyAttestations,
+    /// Validator DID failed parse/validation.
     InvalidValidatorDid(String),
-    AttestationMessageMismatch { expected: String, found: String },
-    AttestationArtifactMismatch { expected: String, found: String },
+    /// Attestation message id did not match input message id.
+    AttestationMessageMismatch {
+        /// Expected message identifier.
+        expected: String,
+        /// Found message identifier.
+        found: String,
+    },
+    /// Attestation artifact id did not match input artifact id.
+    AttestationArtifactMismatch {
+        /// Expected artifact identifier.
+        expected: String,
+        /// Found artifact identifier.
+        found: String,
+    },
+    /// Duplicate validator attestation detected.
     DuplicateValidator(String),
+    /// Duplicate attestation id detected in input batch.
     DuplicateAttestationId(String),
+    /// Attestation id was already consumed in prior evaluation.
     AttestationReplay(String),
-    InsufficientAttestations { required: usize, received: usize },
+    /// Input count is below required quorum.
+    InsufficientAttestations {
+        /// Required quorum count.
+        required: usize,
+        /// Received attestation count.
+        received: usize,
+    },
 }
 
 impl fmt::Display for ValidatorProofConsensusError {
@@ -379,6 +512,7 @@ impl fmt::Display for ValidatorProofConsensusError {
 
 impl std::error::Error for ValidatorProofConsensusError {}
 
+/// Stateful evaluator for validator proof-consensus decisions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidatorProofConsensusEvaluator {
     required_quorum: usize,
@@ -386,6 +520,7 @@ pub struct ValidatorProofConsensusEvaluator {
 }
 
 impl ValidatorProofConsensusEvaluator {
+    /// Construct consensus evaluator with required quorum.
     pub fn new(required_quorum: usize) -> Result<Self, ValidatorProofConsensusError> {
         if required_quorum == 0 {
             return Err(ValidatorProofConsensusError::InvalidRequiredQuorum(
@@ -398,10 +533,12 @@ impl ValidatorProofConsensusEvaluator {
         })
     }
 
+    /// Return required quorum configured for evaluator.
     pub fn required_quorum(&self) -> usize {
         self.required_quorum
     }
 
+    /// Evaluate validator attestations into deterministic consensus decision.
     pub fn evaluate(
         &mut self,
         input: ValidatorProofConsensusInput,
@@ -496,43 +633,66 @@ impl ValidatorProofConsensusEvaluator {
     }
 }
 
+/// Watchdog projection kinds derived from proof-consensus status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProofWatchdogProjectionKind {
+    /// Consensus aligned on valid proof.
     ConsensusAligned,
+    /// Consensus aligned on invalid proof.
     InvalidProofConsensus,
+    /// Consensus aligned on replay classification.
     ReplayProofConsensus,
+    /// Validators disagreed across verdict classes.
     ValidatorMismatch,
 }
 
+/// Severity classes for watchdog projection outputs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProofWatchdogSeverity {
+    /// Informational signal.
     Info,
+    /// Warning-level signal.
     Warning,
+    /// Critical signal requiring operator attention.
     Critical,
 }
 
+/// Projected watchdog incident built from consensus decision details.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProofWatchdogProjection {
+    /// Stable incident fingerprint identifier.
     pub incident_fingerprint: String,
+    /// Message identifier tied to incident.
     pub message_id: String,
+    /// Artifact identifier tied to incident.
     pub artifact_id: String,
+    /// Projection kind classification.
     pub kind: ProofWatchdogProjectionKind,
+    /// Incident severity classification.
     pub severity: ProofWatchdogSeverity,
+    /// Required consensus quorum used for decision.
     pub required_quorum: usize,
+    /// Validator count observed in decision.
     pub validator_count: usize,
+    /// Valid attestation count in decision.
     pub valid_attestation_count: usize,
+    /// Invalid attestation count in decision.
     pub invalid_attestation_count: usize,
+    /// Replay attestation count in decision.
     pub replay_attestation_count: usize,
 }
 
+/// Stateless projector converting consensus decisions into watchdog incidents.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ProofWatchdogProjector;
 
 impl ProofWatchdogProjector {
+    /// Construct proof-watchdog projector.
     pub fn new() -> Self {
         Self
     }
 
+    /// Convert consensus decision into incident projection.
     pub fn project(&self, decision: &ValidatorProofConsensusDecision) -> ProofWatchdogProjection {
         let (kind, severity) = match decision.status {
             ValidatorProofConsensusStatus::ConsensusValid => (
@@ -578,18 +738,50 @@ impl ProofWatchdogProjector {
     }
 }
 
+/// Errors emitted by proof-option evaluation, witness generation, and proof-admission flows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ZkDesignError {
+    /// Evaluation policy values are invalid.
     InvalidPolicy(String),
-    InvalidOption { option: String, reason: String },
+    /// Candidate option contains invalid/inconsistent fields.
+    InvalidOption {
+        /// Option name.
+        option: String,
+        /// Validation reason.
+        reason: String,
+    },
+    /// No options were supplied for ranking.
     EmptyOptionSet,
+    /// Private field selector is syntactically invalid.
     InvalidPrivateField(String),
+    /// Requested private field selector was absent in envelope.
     MissingPrivateField(String),
+    /// Processor proof artifact is invalid.
     InvalidProofArtifact(String),
-    ProofArtifactMessageMismatch { expected: String, found: String },
-    ProofArtifactCommitmentMismatch { expected: String, found: String },
+    /// Artifact message id did not match expected message id.
+    ProofArtifactMessageMismatch {
+        /// Expected message identifier.
+        expected: String,
+        /// Found message identifier.
+        found: String,
+    },
+    /// Artifact payload commitment did not match expected commitment.
+    ProofArtifactCommitmentMismatch {
+        /// Expected payload commitment.
+        expected: String,
+        /// Found payload commitment.
+        found: String,
+    },
+    /// Artifact identifier has already been admitted.
     ProofArtifactReplay(String),
-    ProofVerificationFailed { artifact_id: String, reason: String },
+    /// Deterministic proof verification failed.
+    ProofVerificationFailed {
+        /// Artifact identifier.
+        artifact_id: String,
+        /// Verification failure reason.
+        reason: String,
+    },
+    /// Wrapped canonical envelope validation failure.
     EnvelopeError(MessageEnvelopeError),
 }
 
@@ -634,6 +826,7 @@ impl fmt::Display for ZkDesignError {
 
 impl std::error::Error for ZkDesignError {}
 
+/// Return baseline phase-4 architecture options for policy evaluation.
 pub fn phase4_baseline_options() -> Vec<ZkArchitectureOption> {
     vec![
         ZkArchitectureOption {
@@ -675,6 +868,7 @@ pub fn phase4_baseline_options() -> Vec<ZkArchitectureOption> {
     ]
 }
 
+/// Evaluate one architecture option against policy thresholds and risk rules.
 pub fn evaluate_zk_option(
     option: &ZkArchitectureOption,
     policy: ZkEvaluationPolicy,
@@ -792,6 +986,7 @@ pub fn evaluate_zk_option(
     })
 }
 
+/// Recommend phase-4 proof adoption plan from ranked architecture options.
 pub fn recommend_phase4_plan(
     options: &[ZkArchitectureOption],
     policy: ZkEvaluationPolicy,
@@ -916,6 +1111,7 @@ pub fn recommend_phase4_plan(
     })
 }
 
+/// Build zero-knowledge witness projection from canonical envelope and private-field selectors.
 pub fn build_message_witness(
     envelope: &CanonicalMessageEnvelope,
     private_fields: &[&str],
