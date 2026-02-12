@@ -1,7 +1,7 @@
 use kamn_kolme::{
     is_broadcast_submit_path, is_valid_transport_idempotency_key_input,
-    is_valid_transport_wire_payload_input, parse_authorization_header_value,
-    KolmeTransportRequestPolicyError,
+    is_valid_transport_wire_payload_input, normalize_broadcast_submit_path_input,
+    parse_authorization_header_value, KolmeTransportRequestPolicyError,
 };
 
 #[test]
@@ -28,6 +28,14 @@ fn functional_transport_request_policy_accepts_non_empty_idempotency_key_input()
 #[test]
 fn functional_transport_request_policy_accepts_non_empty_wire_payload_input() {
     assert!(is_valid_transport_wire_payload_input("operation_id=op-1\n"));
+}
+
+#[test]
+fn functional_transport_request_policy_normalizes_broadcast_submit_path_input() {
+    assert_eq!(
+        normalize_broadcast_submit_path_input(" /broadcast "),
+        "/broadcast"
+    );
 }
 
 #[test]
@@ -75,4 +83,10 @@ fn regression_issue_1884_transport_request_policy_rejects_empty_idempotency_key_
 fn regression_issue_1886_transport_request_policy_rejects_empty_wire_payload_input() {
     // Regression: #1886
     assert!(!is_valid_transport_wire_payload_input(" \t "));
+}
+
+#[test]
+fn regression_issue_1888_transport_request_policy_defaults_empty_submit_path_to_broadcast() {
+    // Regression: #1888
+    assert_eq!(normalize_broadcast_submit_path_input(" "), "/broadcast");
 }
