@@ -174,6 +174,11 @@ pub fn is_valid_notifications_reconnect_budget(max_reconnect_attempts: u32) -> b
     max_reconnect_attempts > 0
 }
 
+/// Composes deterministic notifications reconnect exhaustion reason text.
+pub fn compose_notifications_reconnect_exhausted_reason(max_reconnect_attempts: u32) -> String {
+    format!("notification reconnect attempts exhausted after {max_reconnect_attempts} retries")
+}
+
 fn find_notification_string_field(
     payload: &str,
     field: &str,

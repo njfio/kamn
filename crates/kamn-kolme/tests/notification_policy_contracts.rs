@@ -1,6 +1,6 @@
 use kamn_kolme::{
-    is_valid_notifications_provider_input, is_valid_notifications_reconnect_budget,
-    normalize_notifications_provider_input,
+    compose_notifications_reconnect_exhausted_reason, is_valid_notifications_provider_input,
+    is_valid_notifications_reconnect_budget, normalize_notifications_provider_input,
     notification_event_to_provider_receipt as notification_event_to_provider_receipt_contract,
     notification_event_to_receipt as notification_event_to_receipt_contract,
     parse_notification_event, KolmeCommitReceiptFinality, KolmeNotificationEvent,
@@ -127,5 +127,23 @@ fn regression_issue_1916_notification_policy_trims_outer_provider_whitespace() {
     assert_eq!(
         normalize_notifications_provider_input("\nkolme-fork-local\n"),
         "kolme-fork-local"
+    );
+}
+
+#[test]
+fn functional_notification_policy_composes_reconnect_exhausted_reason() {
+    assert_eq!(
+        compose_notifications_reconnect_exhausted_reason(3),
+        "notification reconnect attempts exhausted after 3 retries"
+    );
+}
+
+#[test]
+fn regression_issue_1924_notification_policy_composes_reconnect_exhausted_reason_deterministically()
+{
+    // Regression: #1924
+    assert_eq!(
+        compose_notifications_reconnect_exhausted_reason(2),
+        "notification reconnect attempts exhausted after 2 retries"
     );
 }

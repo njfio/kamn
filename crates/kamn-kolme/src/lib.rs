@@ -72,10 +72,11 @@ pub use http_response_policy::{
     is_valid_http_response_bytes_input, parse_http_response_body, KolmeHttpResponsePolicyError,
 };
 pub use notification_policy::{
-    is_valid_notifications_provider_input, is_valid_notifications_reconnect_budget,
-    normalize_notifications_provider_input, notification_event_to_provider_receipt,
-    notification_event_to_receipt, parse_notification_event, KolmeNotificationEvent,
-    KolmeNotificationPolicyError, KolmeNotificationReceipt, KolmeProviderNotificationReceipt,
+    compose_notifications_reconnect_exhausted_reason, is_valid_notifications_provider_input,
+    is_valid_notifications_reconnect_budget, normalize_notifications_provider_input,
+    notification_event_to_provider_receipt, notification_event_to_receipt,
+    parse_notification_event, KolmeNotificationEvent, KolmeNotificationPolicyError,
+    KolmeNotificationReceipt, KolmeProviderNotificationReceipt,
 };
 pub use pipeline::{PipelineError, RuntimeCommitPipeline};
 pub use provider_outcome_policy::{
