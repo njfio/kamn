@@ -62,6 +62,7 @@ Out of scope:
 - #1884: extracted transport idempotency-key guard contract to `kamn-kolme` (`is_valid_transport_idempotency_key_input`) and rewired `kamn-core` HTTP transport submit-path idempotency guards.
 - #1886: extracted transport wire-payload guard contract to `kamn-kolme` (`is_valid_transport_wire_payload_input`) and rewired `kamn-core` HTTP transport submit guard delegation.
 - #1888: extracted broadcast submit-path normalization contract to `kamn-kolme` (`normalize_broadcast_submit_path_input`) and rewired `kamn-core` broadcast helper submit-path normalization delegation.
+- #1890: extracted receipt-finality update input guards to `kamn-kolme` (`is_valid_receipt_provider_input` / `is_valid_receipt_commit_id_input`) and rewired `kamn-core` runtime pipeline guard delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,

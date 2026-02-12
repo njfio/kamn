@@ -143,6 +143,62 @@ fn regression_unknown_operation_finality_update_is_rejected() {
 }
 
 #[test]
+fn regression_issue_1890_empty_receipt_provider_is_rejected_fail_closed() {
+    // Regression: #1890
+    let mut client =
+        InMemoryKolmeRuntimeCommitClient::new("kolme-local").expect("client should build");
+    let mut pipeline = RuntimeCommitPipeline::new();
+    let request = request("op-empty-provider", 77);
+    let submitted = pipeline
+        .submit_with_client(&mut client, request.clone())
+        .expect("submit should succeed");
+
+    assert_eq!(
+        pipeline.apply_receipt_finality(
+            request.operation_id.as_str(),
+            KolmeCommitReceiptFinality::Final,
+            " ",
+            submitted
+                .receipt_commit_id
+                .as_deref()
+                .expect("submit must include receipt commit id"),
+        ),
+        Err(KolmeRuntimeCommitError::InvalidRequest {
+            field: "receipt_provider",
+            reason: "must not be empty",
+        })
+    );
+}
+
+#[test]
+fn regression_issue_1890_empty_receipt_commit_id_is_rejected_fail_closed() {
+    // Regression: #1890
+    let mut client =
+        InMemoryKolmeRuntimeCommitClient::new("kolme-local").expect("client should build");
+    let mut pipeline = RuntimeCommitPipeline::new();
+    let request = request("op-empty-commit-id", 78);
+    let submitted = pipeline
+        .submit_with_client(&mut client, request.clone())
+        .expect("submit should succeed");
+
+    assert_eq!(
+        pipeline.apply_receipt_finality(
+            request.operation_id.as_str(),
+            KolmeCommitReceiptFinality::Final,
+            submitted
+                .receipt_provider
+                .as_deref()
+                .expect("submit must include receipt provider"),
+            " ",
+        ),
+        Err(KolmeRuntimeCommitError::InvalidRequest {
+            field: "receipt_commit_id",
+            reason: "must not be empty",
+        })
+    );
+}
+
+#[test]
 fn regression_finalized_operation_cannot_regress_to_pending() {
     // Regression: #826
     let mut client =

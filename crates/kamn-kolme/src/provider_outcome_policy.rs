@@ -330,6 +330,16 @@ pub fn is_valid_provider_hint_input(provider_hint: &str) -> bool {
     is_valid_runtime_provider_input(provider_hint)
 }
 
+/// Validates receipt provider input for runtime lifecycle updates.
+pub fn is_valid_receipt_provider_input(receipt_provider: &str) -> bool {
+    is_valid_runtime_provider_input(receipt_provider)
+}
+
+/// Validates receipt commit identifier input for runtime lifecycle updates.
+pub fn is_valid_receipt_commit_id_input(receipt_commit_id: &str) -> bool {
+    !receipt_commit_id.trim().is_empty()
+}
+
 fn required_response_field(
     fields: &HashMap<String, String>,
     field: &'static str,

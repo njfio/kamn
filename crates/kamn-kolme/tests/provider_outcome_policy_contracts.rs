@@ -1,6 +1,7 @@
 use kamn_kolme::{
     deterministic_backend_commit_id, is_valid_expected_provider_input,
-    is_valid_provider_hint_input, is_valid_runtime_provider_input,
+    is_valid_provider_hint_input, is_valid_receipt_commit_id_input,
+    is_valid_receipt_provider_input, is_valid_runtime_provider_input,
     parse_commit_id_from_response_fields, parse_live_provider_outcome,
     parse_live_runtime_provider_outcome, require_commit_id_matches_expected_txhash,
     required_provider_response_field, txhash_from_commit_id,
@@ -217,4 +218,17 @@ fn functional_provider_outcome_policy_accepts_non_empty_provider_hint_input() {
 fn regression_issue_1882_provider_outcome_policy_rejects_empty_provider_hint_input() {
     // Regression: #1882
     assert!(!is_valid_provider_hint_input(" \t "));
+}
+
+#[test]
+fn functional_provider_outcome_policy_accepts_non_empty_receipt_finality_update_inputs() {
+    assert!(is_valid_receipt_provider_input("kolme-local"));
+    assert!(is_valid_receipt_commit_id_input("kolme-commit:ab12"));
+}
+
+#[test]
+fn regression_issue_1890_provider_outcome_policy_rejects_empty_receipt_finality_update_inputs() {
+    // Regression: #1890
+    assert!(!is_valid_receipt_provider_input(" \t "));
+    assert!(!is_valid_receipt_commit_id_input(" \t "));
 }
