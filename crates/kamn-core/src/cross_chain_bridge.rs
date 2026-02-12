@@ -1,3 +1,8 @@
+//! Cross-chain ingress/egress bridge routing and approval contracts.
+//!
+//! This module validates listener and approver identities, enforces configured
+//! route maps, and normalizes bridge payloads for Ethereum and Solana lanes.
+
 use crate::{
     AgentDid, AllowAllBridgePolicy, BridgeAdapterEngine, BridgeInboundEnvelope,
     BridgeOutboundEnvelope, BridgeOutboundRequest, BridgePlatform, CanonicalMessageEnvelope,
@@ -6,9 +11,12 @@ use crate::{
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+/// Supported external networks for cross-chain bridge routes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum CrossChainNetwork {
+    /// Ethereum bridge lane.
     Ethereum,
+    /// Solana bridge lane.
     Solana,
 }
 
@@ -21,38 +29,59 @@ impl CrossChainNetwork {
     }
 }
 
+/// Static bridge configuration for listener/approver controls and routes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CrossChainBridgeConfig {
+    /// DID used as the bridge service identity.
     pub bridge_agent_did: String,
+    /// Listener DIDs authorized to submit inbound observations.
     pub authorized_listener_dids: BTreeSet<String>,
+    /// Approver DIDs authorized for outbound dispatch quorum.
     pub authorized_approver_dids: BTreeSet<String>,
+    /// Required unique approvals before dispatching outbound envelopes.
     pub required_approvals: usize,
+    /// Route map from external Ethereum channel id to target DID.
     pub ethereum_routes: BTreeMap<String, String>,
+    /// Route map from external Solana channel id to target DID.
     pub solana_routes: BTreeMap<String, String>,
 }
 
+/// Inbound bridge observation submitted by an authorized listener.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CrossChainInboundRequest {
+    /// Listener DID that observed the inbound event.
     pub listener_did: String,
+    /// Unix timestamp when the event was observed.
     pub observed_at_unix: u64,
+    /// External network lane used for routing.
     pub chain: CrossChainNetwork,
+    /// Raw inbound bridge envelope.
     pub inbound: BridgeInboundEnvelope,
 }
 
+/// Approval quorum material for an outbound dispatch request.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CrossChainOutboundApproval {
+    /// External network lane being dispatched.
     pub chain: CrossChainNetwork,
+    /// Outbound request identifier.
     pub request_id: String,
+    /// Required approval threshold for dispatch.
     pub required_approvals: usize,
+    /// Unique approver DIDs that approved this dispatch.
     pub approved_by: BTreeSet<String>,
 }
 
+/// Outbound bridge envelope paired with approval quorum evidence.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CrossChainOutboundDispatch {
+    /// Final outbound envelope produced by bridge adapter processing.
     pub envelope: BridgeOutboundEnvelope,
+    /// Approval proof material used for dispatch authorization.
     pub approval: CrossChainOutboundApproval,
 }
 
+/// Engine coordinating inbound normalization and outbound gated dispatch.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CrossChainBridgeEngine {
     config: CrossChainBridgeConfig,
@@ -61,6 +90,7 @@ pub struct CrossChainBridgeEngine {
 }
 
 impl CrossChainBridgeEngine {
+    /// Constructs a bridge engine from validated configuration.
     pub fn new(config: CrossChainBridgeConfig) -> Result<Self, CrossChainBridgeError> {
         validate_did(&config.bridge_agent_did)?;
 
@@ -128,6 +158,7 @@ impl CrossChainBridgeEngine {
         })
     }
 
+    /// Validates and normalizes an inbound bridge request.
     pub fn process_inbound(
         &self,
         request: &CrossChainInboundRequest,
@@ -138,6 +169,7 @@ impl CrossChainBridgeEngine {
             .map_err(|error| CrossChainBridgeError::Bridge(error.to_string()))
     }
 
+    /// Converts a validated inbound request directly into canonical envelope form.
     pub fn process_inbound_to_envelope(
         &self,
         request: &CrossChainInboundRequest,
@@ -193,6 +225,7 @@ impl CrossChainBridgeEngine {
         Ok(())
     }
 
+    /// Validates approvals and dispatches an outbound bridge request.
     pub fn process_outbound_with_approvals(
         &self,
         chain: CrossChainNetwork,
@@ -276,31 +309,52 @@ impl CrossChainBridgeEngine {
     }
 }
 
+/// Error surface for cross-chain bridge configuration and processing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CrossChainBridgeError {
+    /// Required field was empty.
     EmptyField(&'static str),
+    /// DID value failed validation.
     InvalidDid(String),
+    /// Required approvals value was invalid for configured approver set.
     InvalidRequiredApprovals {
+        /// Required approval threshold requested.
         required: usize,
+        /// Number of configured approvers.
         approver_count: usize,
     },
+    /// Listener DID is not authorized.
     UnauthorizedListener(String),
+    /// Approver DID is not authorized.
     UnauthorizedApprover(String),
+    /// Duplicate approval from the same approver.
     DuplicateApproval(String),
+    /// Provided approvals are below quorum threshold.
     InsufficientApprovals {
+        /// Required approval threshold.
         required: usize,
+        /// Unique approvals provided.
         provided: usize,
     },
+    /// Route channel id was not found for the selected chain.
     UnknownRouteChannel {
+        /// Chain lane where route lookup failed.
         chain: CrossChainNetwork,
+        /// External channel identifier.
         channel_id: String,
     },
+    /// Route target DID did not match inbound envelope target DID.
     RouteTargetMismatch {
+        /// Chain lane where mismatch occurred.
         chain: CrossChainNetwork,
+        /// External channel identifier.
         external_channel_id: String,
+        /// Route table target DID.
         expected_target_did: String,
+        /// Target DID provided by inbound envelope.
         provided_target_did: String,
     },
+    /// Downstream bridge adapter error.
     Bridge(String),
 }
 

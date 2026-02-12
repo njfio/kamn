@@ -30,7 +30,7 @@ pub mod content_replication;
 pub mod content_retrieval;
 /// Content storage adapter contracts, object metadata, and CID/URI helpers.
 pub mod content_storage;
-#[allow(missing_docs)]
+/// Cross-chain route validation, inbound normalization, and outbound quorum dispatch contracts.
 pub mod cross_chain_bridge;
 #[allow(missing_docs)]
 pub mod cross_chain_receipt;
