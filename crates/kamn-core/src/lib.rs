@@ -110,7 +110,7 @@ pub mod task_operations;
 pub mod task_payment;
 /// Telegram inbound bridge validation, route checks, and envelope normalization.
 pub mod telegram_bridge;
-#[allow(missing_docs)]
+/// Token configuration, supply allocation, and transfer guard contracts.
 pub mod token;
 /// Baseline transaction validation and state-hash progression guard contracts.
 pub mod transaction;
