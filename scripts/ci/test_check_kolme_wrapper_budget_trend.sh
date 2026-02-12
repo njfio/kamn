@@ -47,6 +47,7 @@ grep -q '^mode=trend$' "$TMP_DIR/pass.out"
 grep -q '^wrapper_count_delta=0$' "$TMP_DIR/pass.out"
 grep -q '^total_shell_loc_delta=0$' "$TMP_DIR/pass.out"
 grep -q '^violation_count=0$' "$TMP_DIR/pass.out"
+grep -q '^reason_codes=none$' "$TMP_DIR/pass.out"
 
 MUTATED_BASELINE="$TMP_DIR/mutated-baseline.json"
 cp "$BASELINE_FIXTURE" "$MUTATED_BASELINE"
@@ -71,6 +72,7 @@ fi
 
 grep -q '^status=fail$' "$TMP_DIR/fail.out"
 grep -q '^mode=trend$' "$TMP_DIR/fail.out"
+grep -q '^reason_codes=total_shell_loc_delta_threshold_exceeded$' "$TMP_DIR/fail.out"
 grep -q 'total_shell_loc_delta exceeded trend threshold' "$TMP_DIR/fail.out"
 
 RELAXED_THRESHOLD="$TMP_DIR/relaxed-threshold.json"
@@ -91,5 +93,6 @@ python3 "$PYTHON_CHECKER" check \
 
 grep -q '^status=pass$' "$TMP_DIR/relaxed.out"
 grep -q '^mode=trend$' "$TMP_DIR/relaxed.out"
+grep -q '^reason_codes=none$' "$TMP_DIR/relaxed.out"
 
 echo "Kolme wrapper budget trend checker tests passed."

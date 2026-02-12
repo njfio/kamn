@@ -205,6 +205,11 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - trend-policy command:
       - `bash scripts/ci/check_kolme_wrapper_budget_trend.sh --matrix-file fixtures/kolme_compatibility/lane_migration_matrix.json --baseline-file fixtures/kolme_compatibility/wrapper_inventory_baseline.json --output-json /tmp/kolme-wrapper-budget-trend-report.json`
     - trend mode allows shell-surface reductions and fails only on growth beyond configured thresholds.
+    - deterministic reason-code surface is emitted for automation:
+      - `reason_codes=none` (pass)
+      - `reason_codes=wrapper_count_delta_threshold_exceeded`
+      - `reason_codes=total_shell_loc_delta_threshold_exceeded`
+      - `reason_codes=lane_shell_loc_increase_violation`
     - Regression: #2119
   - shared dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh`

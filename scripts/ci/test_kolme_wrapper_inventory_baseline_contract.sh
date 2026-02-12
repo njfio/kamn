@@ -80,6 +80,7 @@ grep -q '^status=pass$' "$TMP_DIR/check-pass.out"
 grep -q '^wrapper_count_delta=0$' "$TMP_DIR/check-pass.out"
 grep -q '^total_shell_loc_delta=0$' "$TMP_DIR/check-pass.out"
 grep -q '^violation_count=0$' "$TMP_DIR/check-pass.out"
+grep -q '^reason_codes=none$' "$TMP_DIR/check-pass.out"
 
 MUTATED_BASELINE="$TMP_DIR/mutated-baseline.json"
 cp "$BASELINE_FIXTURE" "$MUTATED_BASELINE"
@@ -102,6 +103,7 @@ if bash "$CHECK_SCRIPT" \
   exit 1
 fi
 grep -q '^status=fail$' "$TMP_DIR/check-mutated-baseline.out"
+grep -q '^reason_codes=lane_shell_loc_drift$' "$TMP_DIR/check-mutated-baseline.out"
 grep -q 'shell_loc drifted' "$TMP_DIR/check-mutated-baseline.out"
 
 MUTATED_MATRIX="$TMP_DIR/mutated-matrix.json"
