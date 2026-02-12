@@ -50,7 +50,18 @@ def parse_max_seconds(raw_value: str) -> int:
     return int(raw_value)
 
 
-def run_policy_check(report_file: Path, output_json: Path, expected_final_decision: str) -> subprocess.CompletedProcess[str]:
+def run_policy_check(
+    report_file: Path,
+    output_json: Path,
+    expected_final_decision: str,
+    required_reason_code: str | None = None,
+) -> subprocess.CompletedProcess[str]:
+    if required_reason_code is None:
+        required_reason_code = (
+            "dry_run_no_commands_executed"
+            if expected_final_decision == "GO"
+            else "checkpoint_failed_runtime_mode_contract"
+        )
     return subprocess.run(
         [
             "python3",
@@ -62,7 +73,7 @@ def run_policy_check(report_file: Path, output_json: Path, expected_final_decisi
             "--ci-fast-gate",
             "PASS",
             "--require-reason-code",
-            "dry_run_no_commands_executed" if expected_final_decision == "GO" else "checkpoint_failed_runtime_mode_contract",
+            required_reason_code,
             "--output-json",
             str(output_json),
         ],
@@ -172,6 +183,12 @@ def main() -> int:
     if contracts.get("fallback_private_key_path_allowed") is not False:
         print("expected deployment preflight contracts to prohibit fallback private key paths", file=sys.stderr)
         return 1
+    if contracts.get("approval_quorum_required") != 2:
+        print("expected deployment preflight contracts approval_quorum_required=2", file=sys.stderr)
+        return 1
+    if contracts.get("custody_evidence_required") is not True:
+        print("expected deployment preflight contracts custody_evidence_required=true", file=sys.stderr)
+        return 1
     if policy.get("schema_version") != "kamn.kolme.local-live-deployment-preflight-policy-report.v1":
         print("unexpected deployment preflight contract-lane policy schema", file=sys.stderr)
         return 1
@@ -194,6 +211,7 @@ def main() -> int:
             report_file=negative_report,
             output_json=negative_policy,
             expected_final_decision="NO-GO",
+            required_reason_code="checkpoint_failed_runtime_mode_contract",
         )
         if no_go_result.returncode == 0:
             print("expected deployment preflight runtime-mode negative proof to fail closed", file=sys.stderr)
@@ -213,6 +231,49 @@ def main() -> int:
             print("expected deployment preflight negative policy final_decision NO-GO", file=sys.stderr)
             return 1
 
+        quorum_negative_report = temp_path / "signer_quorum_negative_summary.json"
+        quorum_negative_policy = temp_path / "signer_quorum_negative_policy.json"
+        quorum_negative_summary = dict(summary)
+        quorum_negative_summary["mode"] = "run"
+        quorum_negative_summary["status"] = "fail"
+        quorum_negative_summary["reason_code"] = "checkpoint_failed_signer_quorum_contract"
+        quorum_negative_summary["signer_secret_present"] = True
+        quorum_negative_summary["signer_secret_hex_valid"] = True
+        quorum_negative_summary["required_approvals"] = 2
+        quorum_negative_summary["received_approvals"] = 1
+        quorum_negative_summary["custody_evidence_file"] = ""
+        quorum_negative_summary["custody_evidence_present"] = False
+        quorum_negative_summary["custody_evidence_sha256"] = ""
+        quorum_negative_summary["custody_evidence_sha256_valid"] = False
+        quorum_negative_report.write_text(
+            json.dumps(quorum_negative_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        quorum_no_go_result = run_policy_check(
+            report_file=quorum_negative_report,
+            output_json=quorum_negative_policy,
+            expected_final_decision="NO-GO",
+            required_reason_code="checkpoint_failed_signer_quorum_contract",
+        )
+        if quorum_no_go_result.returncode == 0:
+            print("expected signer quorum negative proof to fail closed", file=sys.stderr)
+            return 1
+        quorum_no_go_policy = json.loads(quorum_negative_policy.read_text(encoding="utf-8"))
+        quorum_no_go_reason_codes = quorum_no_go_policy.get("reason_codes")
+        if not isinstance(quorum_no_go_reason_codes, list):
+            print("expected reason_codes list in signer quorum negative policy output", file=sys.stderr)
+            return 1
+        if "signer_quorum_shortfall" not in quorum_no_go_reason_codes:
+            print("expected signer_quorum_shortfall in signer quorum negative policy output", file=sys.stderr)
+            return 1
+        if "custody_evidence_missing" not in quorum_no_go_reason_codes:
+            print("expected custody_evidence_missing in signer quorum negative policy output", file=sys.stderr)
+            return 1
+        if quorum_no_go_policy.get("final_decision") != "NO-GO":
+            print("expected signer quorum negative policy final_decision NO-GO", file=sys.stderr)
+            return 1
+
     doc_markers = [
         "run_local_kolme_live_deployment_preflight_lane.sh",
         "check_local_kolme_live_deployment_preflight_policy.py",
@@ -220,6 +281,11 @@ def main() -> int:
         "runtime_mode_mismatch",
         "checkpoint_failed_signer_secret_contract",
         "fallback_signer_secret_present_violation",
+        "checkpoint_failed_signer_quorum_contract",
+        "checkpoint_failed_custody_evidence_contract",
+        "signer_quorum_shortfall",
+        "custody_evidence_missing",
+        "custody_evidence_sha256_invalid",
         "Regression: #2226",
     ]
     ci_doc_markers = [
@@ -229,6 +295,11 @@ def main() -> int:
         "runtime_mode_mismatch",
         "checkpoint_failed_signer_secret_contract",
         "fallback_signer_secret_present_violation",
+        "checkpoint_failed_signer_quorum_contract",
+        "checkpoint_failed_custody_evidence_contract",
+        "signer_quorum_shortfall",
+        "custody_evidence_missing",
+        "custody_evidence_sha256_invalid",
         "Regression: #2226",
     ]
     readme_markers = [
@@ -238,6 +309,11 @@ def main() -> int:
         "runtime_mode_mismatch",
         "checkpoint_failed_signer_secret_contract",
         "fallback_signer_secret_present_violation",
+        "checkpoint_failed_signer_quorum_contract",
+        "checkpoint_failed_custody_evidence_contract",
+        "signer_quorum_shortfall",
+        "custody_evidence_missing",
+        "custody_evidence_sha256_invalid",
         "Regression: #2226",
     ]
 

@@ -68,6 +68,10 @@ required_coverage_markers=(
   "run_local_kolme_live_deployment_preflight_contract_lane.sh"
   "runtime_mode_mismatch"
   "checkpoint_failed_signer_secret_contract"
+  "checkpoint_failed_signer_quorum_contract"
+  "checkpoint_failed_custody_evidence_contract"
+  "signer_quorum_shortfall"
+  "custody_evidence_missing"
   "Regression: #2226"
 )
 for marker in "${required_coverage_markers[@]}"; do

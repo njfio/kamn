@@ -10,19 +10,29 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - CI fast gate and deferred deep lane both green.
 - Rollback runbook version pinned.
 - Release candidate artifact digest verified.
-- Kolme live signer custody preflight passes with no fallback private-key marker evidence (`fallback_signer_secret_present_violation` is absent).
+- Kolme live signer custody preflight passes with no fallback private-key marker evidence (`fallback_signer_secret_present_violation` is absent), signer quorum shortfall (`signer_quorum_shortfall` is absent), and custody evidence gaps (`custody_evidence_missing` is absent).
 
 ## Kolme Signer Custody Gate (Issue #2240)
 - Deployment preflight lane command:
   - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+- Deployment preflight run-mode command:
+  - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`
+  - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
 - Required signer-custody markers:
   - `fallback_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
   - `fallback_signer_secret_present=false`
   - `contracts.fallback_private_key_path_allowed=false`
+  - `required_approvals=2`
+  - `received_approvals=2`
+  - `contracts.approval_quorum_required=2`
+  - `contracts.custody_evidence_required=true`
 - Fail-closed policy reason:
   - `fallback_signer_secret_present_violation`
+  - `signer_quorum_shortfall`
+  - `custody_evidence_missing`
+  - `custody_evidence_sha256_invalid`
 
 ## Deterministic Dry-Run Workflow
 1. Create release candidate tag.

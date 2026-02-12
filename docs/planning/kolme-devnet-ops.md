@@ -513,7 +513,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Local deployment preflight runner:
   - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
 - Deployment preflight run mode:
-  - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+  - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`
+  - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
 - Deployment preflight policy checker command:
   - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
 - Deployment preflight contract lane command:
@@ -526,6 +527,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `signer_profile_contract`: profile must be `ops-primary` or `ops-secondary`.
   - `signer_secret_contract`: selected signer secret env must be present and 64-char hex.
   - `fallback_private_key_contract`: fallback signer secret env must remain unset.
+  - `signer_quorum_contract`: received approvals must satisfy required approvals threshold.
+  - `custody_evidence_contract`: signer custody evidence file and sha256 marker must be present.
   - node runtime signer-provider guard (`KolmeLiveSignerSecretProvider`) rejects fallback env-key presence before key decode/signing.
   - summary fields include deterministic signer custody markers:
     - `signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE`
@@ -533,17 +536,31 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `signer_private_key_env`
     - `fallback_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
     - `fallback_signer_secret_present=false`
+    - `required_approvals=2`
+    - `received_approvals`
+    - `custody_evidence_file`
+    - `custody_evidence_present`
+    - `custody_evidence_sha256_valid`
   - contracts include:
     - `contracts.ci_fast_gate_scope=ci-fast-gate`
     - `contracts.required_runtime_mode=kolme-live`
     - `contracts.required_secret_hex_length=64`
     - `contracts.fallback_private_key_path_allowed=false`
+    - `contracts.approval_quorum_required=2`
+    - `contracts.approval_quorum_source=local-operator-attestations`
+    - `contracts.custody_evidence_required=true`
+    - `contracts.custody_evidence_sha256_required=true`
 - Fail-closed reasons include:
   - `runtime_mode_mismatch`
   - `signer_profile_mismatch`
   - `signer_private_key_env_mismatch`
   - `fallback_signer_secret_present_violation`
   - `checkpoint_failed_signer_secret_contract`
+  - `checkpoint_failed_signer_quorum_contract`
+  - `checkpoint_failed_custody_evidence_contract`
+  - `signer_quorum_shortfall`
+  - `custody_evidence_missing`
+  - `custody_evidence_sha256_invalid`
 - Cost policy:
   - lane is lightweight and `ci_fast_gate_eligible=true`.
   - no local-heavy opt-in is required for deployment preflight checks.
@@ -566,6 +583,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `export KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary`
   - `export KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=<64-hex-private-key>`
   - `unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+  - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`
 
 ### Execution Flow
 
@@ -609,6 +627,10 @@ Operator checkpoints:
   - inspect `/tmp/kolme-local-runtime-commit-live-policy.json` for provider marker or evidence mismatch.
 - `reason_code=checkpoint_failed_signer_secret_contract`:
   - verify signer profile and selected signer secret env are set with a valid 64-hex key.
+- `reason_code=checkpoint_failed_signer_quorum_contract`:
+  - verify `--received-approvals` is greater than or equal to `--required-approvals`.
+- `reason_code=checkpoint_failed_custody_evidence_contract`:
+  - verify `--custody-evidence-file` exists and its sha256 can be emitted in summary markers.
 - `ci_fast_gate_eligibility_violation` or `ci_fast_gate_scope_mismatch` from policy checker:
   - verify summary still emits `ci_fast_gate_eligible=false` and `contracts.ci_fast_gate_scope=local-only`.
 

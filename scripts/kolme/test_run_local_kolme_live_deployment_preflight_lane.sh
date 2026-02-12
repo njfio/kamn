@@ -8,7 +8,10 @@ CI_DOC_FILE="$ROOT_DIR/docs/ci/strategy.md"
 README_FILE="$ROOT_DIR/README.md"
 TMP_SUMMARY="$(mktemp)"
 TMP_ERR="$(mktemp)"
-trap 'rm -f "$TMP_SUMMARY" "$TMP_ERR"' EXIT
+TMP_CUSTODY="$(mktemp)"
+trap 'rm -f "$TMP_SUMMARY" "$TMP_ERR" "$TMP_CUSTODY"' EXIT
+
+printf '%s\n' "custody-attestation=ops-primary:epoch-1" >"$TMP_CUSTODY"
 
 extract_value() {
   local output="$1"
@@ -96,11 +99,21 @@ if summary.get("fallback_signer_secret_present") is not False:
     raise SystemExit("expected fallback signer secret presence marker to be false in deployment preflight summary")
 if summary.get("ci_fast_gate_eligible") is not True:
     raise SystemExit("expected deployment preflight summary to remain fast-gate eligible")
+if summary.get("required_approvals") != 2:
+    raise SystemExit("expected deployment preflight summary required_approvals=2")
+if summary.get("received_approvals") != 0:
+    raise SystemExit("expected deployment preflight summary received_approvals=0 for dry-run")
+if summary.get("custody_evidence_present") is not False:
+    raise SystemExit("expected deployment preflight summary custody evidence marker to be false in dry-run")
 contracts = summary.get("contracts", {})
 if contracts.get("ci_fast_gate_scope") != "ci-fast-gate":
     raise SystemExit("expected deployment preflight contracts to set ci-fast-gate scope")
 if contracts.get("fallback_private_key_path_allowed") is not False:
     raise SystemExit("expected deployment preflight contracts to prohibit fallback private key paths")
+if contracts.get("custody_evidence_required") is not True:
+    raise SystemExit("expected deployment preflight contracts to require signer custody evidence")
+if contracts.get("approval_quorum_required") != 2:
+    raise SystemExit("expected deployment preflight contracts approval quorum requirement marker")
 PY
 
 set +e
@@ -117,6 +130,27 @@ fi
 
 if ! grep -q "signer secret env is required for selected profile" "$TMP_ERR"; then
   echo "expected deterministic missing signer secret message from deployment preflight lane" >&2
+  exit 1
+fi
+
+set +e
+KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX="1111111111111111111111111111111111111111111111111111111111111111" \
+bash "$RUNNER" \
+  --mode run \
+  --required-approvals 2 \
+  --received-approvals 1 \
+  --custody-evidence-file "$TMP_CUSTODY" \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+quorum_shortfall_exit_code=$?
+set -e
+
+if [ "$quorum_shortfall_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight run mode to fail closed when signer quorum is below threshold" >&2
+  exit 1
+fi
+
+if ! grep -q "signer quorum approvals below required threshold" "$TMP_ERR"; then
+  echo "expected deterministic signer quorum shortfall message from deployment preflight lane" >&2
   exit 1
 fi
 
@@ -139,9 +173,32 @@ if ! grep -q "fallback signer secret env must not be set" "$TMP_ERR"; then
   exit 1
 fi
 
+set +e
 KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX="1111111111111111111111111111111111111111111111111111111111111111" \
 bash "$RUNNER" \
   --mode run \
+  --required-approvals 2 \
+  --received-approvals 2 \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+missing_custody_exit_code=$?
+set -e
+
+if [ "$missing_custody_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight run mode to fail closed when custody evidence is missing" >&2
+  exit 1
+fi
+
+if ! grep -q "signer custody evidence file is required for selected profile" "$TMP_ERR"; then
+  echo "expected deterministic missing custody evidence message from deployment preflight lane" >&2
+  exit 1
+fi
+
+KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX="1111111111111111111111111111111111111111111111111111111111111111" \
+bash "$RUNNER" \
+  --mode run \
+  --required-approvals 2 \
+  --received-approvals 2 \
+  --custody-evidence-file "$TMP_CUSTODY" \
   --output-json "$TMP_SUMMARY" >/dev/null
 
 python3 - "$TMP_SUMMARY" <<'PY'
@@ -156,6 +213,10 @@ if summary.get("status") != "ok":
     raise SystemExit("expected deployment preflight run summary status ok")
 if summary.get("reason_code") != "deployment_preflight_passed":
     raise SystemExit("expected deployment preflight run summary pass reason code")
+if summary.get("required_approvals") != 2 or summary.get("received_approvals") != 2:
+    raise SystemExit("expected deployment preflight run summary to capture signer quorum counts")
+if summary.get("custody_evidence_present") is not True:
+    raise SystemExit("expected deployment preflight run summary custody evidence marker true")
 PY
 
 echo "local Kolme live deployment preflight lane tests passed."
