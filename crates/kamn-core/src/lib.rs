@@ -54,7 +54,7 @@ pub mod governance_workflow;
 pub mod group_channel_crypto;
 #[allow(missing_docs)]
 pub mod instruction_verify;
-#[allow(missing_docs)]
+/// Invariant catalog, taxonomy, and guardrail policy contracts.
 pub mod invariants;
 /// Key rotation/revocation state machine and audit-trail verification contracts.
 pub mod key_lifecycle;
