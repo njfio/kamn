@@ -54,12 +54,22 @@ pub fn is_valid_runtime_payload_hash_input(payload_hash: &str) -> bool {
     !payload_hash.trim().is_empty()
 }
 
+/// Returns whether runtime commit request fields satisfy single-line constraints.
+pub fn are_runtime_commit_request_fields_single_line(
+    operation_id: &str,
+    state_root: &str,
+    payload_hash: &str,
+) -> bool {
+    !operation_id.contains('\n') && !state_root.contains('\n') && !payload_hash.contains('\n')
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        deterministic_runtime_commit_id, deterministic_runtime_commit_idempotency_key,
-        is_valid_runtime_commit_id_request, is_valid_runtime_operation_id_input,
-        is_valid_runtime_payload_hash_input, is_valid_runtime_state_root_input,
+        are_runtime_commit_request_fields_single_line, deterministic_runtime_commit_id,
+        deterministic_runtime_commit_idempotency_key, is_valid_runtime_commit_id_request,
+        is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
+        is_valid_runtime_state_root_input,
     };
 
     #[test]
@@ -101,5 +111,19 @@ mod tests {
         assert!(!is_valid_runtime_operation_id_input(" "));
         assert!(!is_valid_runtime_state_root_input(" "));
         assert!(!is_valid_runtime_payload_hash_input(" "));
+    }
+
+    #[test]
+    fn unit_validates_runtime_commit_request_fields_single_line() {
+        assert!(are_runtime_commit_request_fields_single_line(
+            "op-123",
+            "state:abc",
+            "payload:hash"
+        ));
+        assert!(!are_runtime_commit_request_fields_single_line(
+            "op-123\nwrapped",
+            "state:abc",
+            "payload:hash"
+        ));
     }
 }

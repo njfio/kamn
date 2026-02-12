@@ -92,9 +92,10 @@ pub use runtime_lifecycle_policy::{
     RuntimeCommitLifecycleState, RuntimeLifecyclePolicyError,
 };
 pub use runtime_request_identity_policy::{
-    deterministic_runtime_commit_id, deterministic_runtime_commit_idempotency_key,
-    is_valid_runtime_commit_id_request, is_valid_runtime_operation_id_input,
-    is_valid_runtime_payload_hash_input, is_valid_runtime_state_root_input,
+    are_runtime_commit_request_fields_single_line, deterministic_runtime_commit_id,
+    deterministic_runtime_commit_idempotency_key, is_valid_runtime_commit_id_request,
+    is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
+    is_valid_runtime_state_root_input,
 };
 pub use tls_policy::{
     classify_tls_failure_reason, parse_tls_ca_file_env_value, resolve_tls_ca_file_env_result,

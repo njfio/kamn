@@ -1,7 +1,8 @@
 use kamn_kolme::{
-    deterministic_runtime_commit_id, deterministic_runtime_commit_idempotency_key,
-    is_valid_runtime_commit_id_request, is_valid_runtime_operation_id_input,
-    is_valid_runtime_payload_hash_input, is_valid_runtime_state_root_input,
+    are_runtime_commit_request_fields_single_line, deterministic_runtime_commit_id,
+    deterministic_runtime_commit_idempotency_key, is_valid_runtime_commit_id_request,
+    is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
+    is_valid_runtime_state_root_input,
 };
 
 #[test]
@@ -60,4 +61,33 @@ fn regression_issue_1892_runtime_request_identity_policy_rejects_empty_request_f
     assert!(!is_valid_runtime_operation_id_input(" "));
     assert!(!is_valid_runtime_state_root_input(" "));
     assert!(!is_valid_runtime_payload_hash_input(" "));
+}
+
+#[test]
+fn functional_runtime_request_identity_policy_accepts_single_line_request_fields() {
+    assert!(are_runtime_commit_request_fields_single_line(
+        "op-9",
+        "state:beta",
+        "payload:beta"
+    ));
+}
+
+#[test]
+fn regression_issue_1894_runtime_request_identity_policy_rejects_multiline_request_fields() {
+    // Regression: #1894
+    assert!(!are_runtime_commit_request_fields_single_line(
+        "op-9\nwrapped",
+        "state:beta",
+        "payload:beta"
+    ));
+    assert!(!are_runtime_commit_request_fields_single_line(
+        "op-9",
+        "state:beta\nwrapped",
+        "payload:beta"
+    ));
+    assert!(!are_runtime_commit_request_fields_single_line(
+        "op-9",
+        "state:beta",
+        "payload:beta\nwrapped"
+    ));
 }

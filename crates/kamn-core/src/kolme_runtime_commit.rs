@@ -2,6 +2,7 @@
 
 use crate::AgentDid;
 use kamn_kolme::{
+    are_runtime_commit_request_fields_single_line as are_kolme_runtime_commit_request_fields_single_line_contract,
     classify_tls_failure_reason as classify_kolme_tls_failure_reason,
     classify_transport_io_error as classify_kolme_transport_io_error,
     commit_finality_from_receipt_finality as commit_finality_from_receipt_finality_contract,
@@ -213,10 +214,11 @@ impl KolmeRuntimeCommitRequest {
                 reason: "must not be empty",
             });
         }
-        if self.operation_id.contains('\n')
-            || self.state_root.contains('\n')
-            || self.payload_hash.contains('\n')
-        {
+        if !are_kolme_runtime_commit_request_fields_single_line_contract(
+            self.operation_id.as_str(),
+            self.state_root.as_str(),
+            self.payload_hash.as_str(),
+        ) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "wire_payload",
                 reason: "fields must be single-line",
