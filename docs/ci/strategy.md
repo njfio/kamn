@@ -378,6 +378,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_managed_external_raw_private_key_present_violation`
       - `runtime_signer_attestation_approved_signers_not_unique`
       - `runtime_signer_attestation_quorum_shortfall`
+      - `runtime_signer_attestation_schema_invalid`
       - `runtime_commit_non_synthetic_submit_probe_missing`
       - `runtime_commit_real_signing_profile_marker_missing`
       - `runtime_commit_signer_profile_marker_missing`
@@ -399,6 +400,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - fallback signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2302`).
     - managed-external raw signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2324`).
     - runtime signer-attestation schema + quorum/uniqueness policy checks remain fail-closed across runtime launch + policy/contract lanes (`Regression: #2325`).
+    - replay/tamper/stale-signer attestation regression matrix remains fail-closed (`Regression: #2327`).
   - deployment preflight signer/runtime checks remain fast and ci-fast-gate eligible.
     - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
     - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`
@@ -480,6 +482,7 @@ JSON`
       - `quorum_evidence_custody_sha256_mismatch`
       - `runtime_signer_attestation_approved_signers_not_unique`
       - `runtime_signer_attestation_quorum_shortfall`
+      - `runtime_signer_attestation_schema_invalid`
       - `custody_evidence_missing`
       - `custody_evidence_sha256_invalid`
       - `signer_key_source_contract_version_mismatch`
@@ -492,6 +495,7 @@ JSON`
     - deployment preflight signer provenance + rotation freshness parity remains fail-closed (`Regression: #2300`).
     - deployment preflight signer quorum evidence parity remains fail-closed (`Regression: #2301`).
     - runtime/deployment shared signer-attestation schema + reason-code parity remains fail-closed (`Regression: #2326`).
+    - replay/tamper/stale-signer attestation regression matrix remains fail-closed (`Regression: #2327`).
   - local fork process lifecycle integration run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --serve-command "python3 /tmp/mock_kolme_api.py 3000 v0.15.2" --max-seconds 300 --startup-max-seconds 45 --integration-max-seconds 240 --integration-bootstrap-max-seconds 90 --integration-conformance-max-seconds 180 --integration-runtime-commit-max-seconds 30 --integration-runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --rollback-evidence-file /tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json --recovery-evidence-file /tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json`
     - process lifecycle integration command composition must include `--runtime-commit-live-policy-report` for nested integration evidence lineage.

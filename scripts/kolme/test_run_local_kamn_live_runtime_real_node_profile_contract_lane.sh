@@ -87,6 +87,7 @@ required_coverage_markers=(
   "runtime_signer_managed_external_raw_private_key_present_violation"
   "runtime_signer_attestation_approved_signers_not_unique"
   "runtime_signer_attestation_quorum_shortfall"
+  "runtime_signer_attestation_schema_invalid"
   "runtime_signer_key_source_profile_pair_disallowed"
   "runtime_signer_private_key_env_mismatch"
   "runtime_commit_command_profile_mismatch"
@@ -97,6 +98,7 @@ required_coverage_markers=(
   "runtime_commit_in_memory_provider_reference_detected"
   "Regression: #2302"
   "Regression: #2325"
+  "Regression: #2327"
   "Regression: #2324"
   "Regression: #2139"
 )
@@ -176,6 +178,10 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
     echo "expected docs parity to include runtime signer attestation quorum-shortfall reason marker in $docs_file" >&2
     exit 1
   fi
+  if ! grep -q "runtime_signer_attestation_schema_invalid" "$docs_file"; then
+    echo "expected docs parity to include runtime signer attestation schema invalid reason marker in $docs_file" >&2
+    exit 1
+  fi
   if ! grep -q "runtime_signer_key_source_profile_pair_disallowed" "$docs_file"; then
     echo "expected docs parity to include signer key-source/profile pair disallowed reason marker in $docs_file" >&2
     exit 1
@@ -190,6 +196,10 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "Regression: #2325" "$docs_file"; then
     echo "expected docs parity to include runtime signer attestation regression marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "Regression: #2327" "$docs_file"; then
+    echo "expected docs parity to include attestation replay-tamper-stale regression matrix marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "Regression: #2324" "$docs_file"; then

@@ -620,6 +620,7 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_signer_managed_external_raw_private_key_present_violation
 # runtime_signer_attestation_approved_signers_not_unique
 # runtime_signer_attestation_quorum_shortfall
+# runtime_signer_attestation_schema_invalid
 # runtime_commit_non_synthetic_submit_probe_missing
 # runtime_commit_real_signing_profile_marker_missing
 # runtime_commit_signer_profile_marker_missing
@@ -651,6 +652,7 @@ bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --ou
 # Regression: #2302
 # Regression: #2324
 # Regression: #2325
+# Regression: #2327
 # Regression: #2139
 ```
 
@@ -751,6 +753,7 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # quorum_evidence_custody_sha256_mismatch
 # runtime_signer_attestation_approved_signers_not_unique
 # runtime_signer_attestation_quorum_shortfall
+# runtime_signer_attestation_schema_invalid
 # custody_evidence_missing
 # custody_evidence_sha256_invalid
 # signer_key_source_contract_version_mismatch
@@ -767,6 +770,7 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # Regression: #2300
 # Regression: #2301
 # Regression: #2326
+# Regression: #2327
 ```
 
 Live Provider Operator Runbook (Issue #2114): `docs/planning/kolme-devnet-ops.md`

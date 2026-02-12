@@ -546,6 +546,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - real-node signer-attestation checker fails closed on malformed attestations:
     - `runtime_signer_attestation_approved_signers_not_unique`
     - `runtime_signer_attestation_quorum_shortfall`
+    - `runtime_signer_attestation_schema_invalid`
   - integration summary emits `ci_fast_gate_eligible=false` with `contracts.ci_fast_gate_scope=local-only` for explicit PR-fast-gate exclusion enforcement.
   - explicit runtime-commit submit-profile probe over `PUT /broadcast` with fail-closed reason codes.
   - signed runtime-commit envelope translation enforces `signer_key_id` presence and canonical message/signature binding before broadcast normalization.
@@ -557,6 +558,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - fallback signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2302`).
   - managed-external raw signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2324`).
   - runtime signer-attestation schema + quorum/uniqueness policy checks remain fail-closed across runtime launch + policy/contract lanes (`Regression: #2325`).
+  - replay/tamper/stale-signer attestation regression matrix remains fail-closed (`Regression: #2327`).
   - real-node profile policy + contract lane docs parity markers remain fail-closed (`Regression: #2139`).
 
 ## Local Kolme Live Deployment Preflight Lane (Issue #2225)
@@ -671,6 +673,7 @@ JSON`
   - `quorum_evidence_custody_sha256_mismatch`
   - `runtime_signer_attestation_approved_signers_not_unique`
   - `runtime_signer_attestation_quorum_shortfall`
+  - `runtime_signer_attestation_schema_invalid`
   - `custody_evidence_missing`
   - `custody_evidence_sha256_invalid`
   - `signer_key_source_contract_version_mismatch`
@@ -687,6 +690,7 @@ JSON`
   - signer provenance + rotation freshness marker parity remains fail-closed (`Regression: #2300`).
   - signer quorum evidence schema + custody digest parity remains fail-closed (`Regression: #2301`).
   - runtime/deployment shared signer-attestation schema + reason-code parity remains fail-closed (`Regression: #2326`).
+  - replay/tamper/stale-signer attestation regression matrix remains fail-closed (`Regression: #2327`).
 
 ## Live Provider Operator Runbook (Issue #2114)
 
