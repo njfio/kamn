@@ -515,6 +515,24 @@ fn unit_live_provider_rejects_empty_endpoint_or_submit_path() {
 }
 
 #[test]
+fn unit_adapter_backed_client_rejects_empty_expected_provider() {
+    let (provider, _calls) =
+        RecordingProvider::with_result(Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "unused".to_owned(),
+        }));
+    assert!(
+        matches!(
+            AdapterBackedKolmeRuntimeCommitClient::new(" ", provider),
+            Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "expected_provider",
+                reason: "must not be empty",
+            })
+        ),
+        "expected provider should fail validation when empty"
+    );
+}
+
+#[test]
 fn functional_live_provider_maps_submitted_json_response_to_provider_outcome() {
     let response = r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:runtime:55","finality":"final"}"#.to_owned();
     let (transport, calls) = RecordingTransport::with_result(Ok(response));
