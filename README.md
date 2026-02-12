@@ -547,6 +547,18 @@ bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --ou
 
 Live Provider Operator Runbook (Issue #2114): `docs/planning/kolme-devnet-ops.md`
 
+### Run Local Live-Node Validation Bundle Lane
+
+```bash
+# deterministic bundle plan (no command execution)
+bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json
+
+# explicit local-only bundle execution
+KAMN_KOLME_LOCAL_HEAVY=1 \
+bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json
+# schema: kamn.kolme.local-live-node-validation-bundle-summary.v1
+```
+
 ### Run Local Kolme Fork Process Lifecycle Integration Lane
 
 ```bash

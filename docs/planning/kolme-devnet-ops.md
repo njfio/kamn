@@ -469,6 +469,24 @@ Operator checkpoints:
 - `ci_fast_gate_eligibility_violation` or `ci_fast_gate_scope_mismatch` from policy checker:
   - verify summary still emits `ci_fast_gate_eligible=false` and `contracts.ci_fast_gate_scope=local-only`.
 
+## Local Live-Node Validation Bundle Lane (Issue #2131)
+
+- Deterministic local validation bundle plan:
+  - `bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json`
+- Explicit local-only validation bundle execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json`
+- Summary schema:
+  - `kamn.kolme.local-live-node-validation-bundle-summary.v1`
+- Deterministic checkpoints include:
+  - `integration_bundle`: local KAMN live runtime integration lane command composition with explicit `--runtime-provider-client-contract KolmeRuntimeCommitLiveProvider`.
+  - `integration_policy`: local KAMN live runtime integration policy decision checkpoint.
+  - `process_lifecycle_bundle`: local fork process lifecycle lane command composition with rollback/recovery linkage.
+  - `process_lifecycle_policy`: local fork process lifecycle policy decision checkpoint.
+- Cost policy:
+  - bundle lane run mode remains local-only and requires explicit opt-in.
+  - summary must emit `ci_fast_gate_eligible=false` and `contracts.ci_fast_gate_scope=local-only`.
+  - run-mode execution remains excluded from PR fast-gate workflow routing.
+
 ## Localhost Two-Process Signed-Message Demo Contract (Issue #1612)
 
 - Makefile demo command:
