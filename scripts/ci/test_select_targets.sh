@@ -34,7 +34,21 @@ run_selector_with_bridge_deep() {
 
 run_selector() {
   local changed_files="$1"
-  run_selector_with_bridge_deep "$changed_files" "false" "false"
+  env -u GITHUB_OUTPUT -u GITHUB_STEP_SUMMARY \
+    CI_CHANGED_FILES="$changed_files" \
+    CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS=true \
+    GITHUB_BASE_REF=__missing__ \
+    bash "$SCRIPT"
+}
+
+run_selector_with_local_heavy_opt_in() {
+  local changed_files="$1"
+  local local_heavy_opt_in="${2:-false}"
+  env -u GITHUB_OUTPUT -u GITHUB_STEP_SUMMARY \
+    CI_CHANGED_FILES="$changed_files" \
+    CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS="$local_heavy_opt_in" \
+    GITHUB_BASE_REF=__missing__ \
+    bash "$SCRIPT"
 }
 
 run_selector_with_federated_did_deep() {
@@ -213,6 +227,18 @@ deployment_slo_contract_output="$(run_selector $'scripts/deploy/run_deployment_s
 assert_eq "$(extract_output "$deployment_slo_contract_output" "run_rust")" "false" "deployment slo/rollback contract lane changes should avoid rust lane"
 assert_eq "$(extract_output "$deployment_slo_contract_output" "run_deploy_preflight_tests")" "true" "deployment slo/rollback contract lane changes must run deploy preflight tests"
 assert_eq "$(extract_output "$deployment_slo_contract_output" "test_scope")" "deploy" "deployment slo/rollback contract lane changes should set deploy scope"
+
+# Regression: #2303
+kolme_local_heavy_default_gate_output="$(run_selector_with_local_heavy_opt_in $'scripts/kolme/run_local_heavy_validation_matrix.sh' 'false')"
+assert_eq "$(extract_output "$kolme_local_heavy_default_gate_output" "run_kolme_local_heavy_contract_tests")" "false" "Kolme local-heavy script changes should remain local-only by default"
+assert_eq "$(extract_output "$kolme_local_heavy_default_gate_output" "kolme_local_heavy_selector_opt_in")" "false" "Kolme local-heavy selector output must expose default non-opt-in state"
+assert_eq "$(extract_output "$kolme_local_heavy_default_gate_output" "test_scope")" "kolme-local-heavy-local-only" "Kolme local-heavy script changes should set local-only selector scope by default"
+
+# Regression: #2303
+kolme_local_heavy_opt_in_gate_output="$(run_selector_with_local_heavy_opt_in $'scripts/kolme/run_local_heavy_validation_matrix.sh' 'true')"
+assert_eq "$(extract_output "$kolme_local_heavy_opt_in_gate_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local-heavy script changes should run heavy lane only with explicit opt-in"
+assert_eq "$(extract_output "$kolme_local_heavy_opt_in_gate_output" "kolme_local_heavy_selector_opt_in")" "true" "Kolme local-heavy selector output must expose opt-in state when enabled"
+assert_eq "$(extract_output "$kolme_local_heavy_opt_in_gate_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local-heavy script changes should set local-heavy contract scope when opt-in is enabled"
 
 gonogo_shared_contract_output="$(run_selector $'scripts/deploy/gonogo_evidence_contract.py')"
 assert_eq "$(extract_output "$gonogo_shared_contract_output" "run_rust")" "false" "go/no-go shared contract script-only changes should avoid rust lane"
