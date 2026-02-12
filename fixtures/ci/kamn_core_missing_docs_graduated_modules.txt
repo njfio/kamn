@@ -31,3 +31,4 @@ content_lifecycle
 content_replication
 content_retrieval
 data_classification
+did
