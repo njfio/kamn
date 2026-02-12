@@ -24,6 +24,7 @@ use kamn_kolme::{
     is_valid_notifications_reconnect_budget as is_kolme_valid_notifications_reconnect_budget_contract,
     is_valid_poll_attempt_budget as is_kolme_valid_poll_attempt_budget_contract,
     is_valid_runtime_commit_id_request as is_kolme_valid_runtime_commit_id_request_contract,
+    is_valid_websocket_timeout_seconds as is_kolme_valid_websocket_timeout_seconds_contract,
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
     lifecycle_state_label as lifecycle_state_label_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
@@ -1412,7 +1413,7 @@ pub struct KolmeRuntimeCommitWebsocketConnector {
 impl KolmeRuntimeCommitWebsocketConnector {
     /// Builds a websocket connector with deterministic timeout validation.
     pub fn new(timeout_seconds: u64) -> Result<Self, KolmeRuntimeCommitError> {
-        if timeout_seconds == 0 {
+        if !is_kolme_valid_websocket_timeout_seconds_contract(timeout_seconds) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "notifications_timeout_seconds",
                 reason: "must be positive",
