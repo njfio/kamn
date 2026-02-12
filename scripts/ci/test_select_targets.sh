@@ -1631,6 +1631,27 @@ assert_eq "$(extract_output "$kolme_version_contract_fixture_output" "run_kolme_
 assert_eq "$(extract_output "$kolme_version_contract_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme version fixture changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_version_contract_fixture_output" "test_scope")" "kolme-version-contract" "Kolme version fixture changes should set kolme-version-contract scope"
 
+kolme_runtime_decomposition_parity_fixture_output="$(run_selector $'fixtures/kolme_compatibility/runtime_commit_decomposition_parity_matrix.json')"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_fixture_output" "run_rust")" "false" "Kolme runtime decomposition parity fixture changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_fixture_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime decomposition parity fixture changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_fixture_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime decomposition parity fixture changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_fixture_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime decomposition parity fixture changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_fixture_output" "test_scope")" "kolme-version-contract" "Kolme runtime decomposition parity fixture changes should set kolme-version-contract scope"
+
+kolme_runtime_decomposition_parity_checker_output="$(run_selector $'scripts/kolme/check_runtime_commit_decomposition_parity_matrix.py')"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_output" "run_rust")" "false" "Kolme runtime decomposition parity checker changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime decomposition parity checker changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime decomposition parity checker changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime decomposition parity checker changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_output" "test_scope")" "kolme-version-contract" "Kolme runtime decomposition parity checker changes should set kolme-version-contract scope"
+
+kolme_runtime_decomposition_parity_checker_test_output="$(run_selector $'scripts/kolme/test_check_runtime_commit_decomposition_parity_matrix.sh')"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_test_output" "run_rust")" "false" "Kolme runtime decomposition parity checker test changes should avoid rust lane"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_test_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime decomposition parity checker test changes should skip Kolme snapshot drift contract lane"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_test_output" "run_kolme_version_compatibility_contract_tests")" "true" "Kolme runtime decomposition parity checker test changes must run Kolme version compatibility contract lane"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_test_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme runtime decomposition parity checker test changes should skip triadic devnet smoke contract lane"
+assert_eq "$(extract_output "$kolme_runtime_decomposition_parity_checker_test_output" "test_scope")" "kolme-version-contract" "Kolme runtime decomposition parity checker test changes should set kolme-version-contract scope"
+
 kolme_runtime_commit_contract_script_output="$(run_selector $'scripts/kolme/run_runtime_commit_contract_lane.sh')"
 assert_eq "$(extract_output "$kolme_runtime_commit_contract_script_output" "run_rust")" "false" "Kolme runtime commit contract script-only changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_runtime_commit_contract_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme runtime commit contract script changes should skip Kolme snapshot drift contract lane"

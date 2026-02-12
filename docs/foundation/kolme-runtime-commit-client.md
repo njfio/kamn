@@ -155,6 +155,23 @@ handling.
 - Non-final provider receipt:
   - mapped to `KolmeRuntimeCommitError::NonFinalReceipt`
 
+## Decomposition Parity Matrix (Task #2124)
+
+- Deterministic parity artifact:
+  - `fixtures/kolme_compatibility/runtime_commit_decomposition_parity_matrix.json`
+  - schema: `kamn.kolme.runtime-commit-decomposition-parity-matrix.v1`
+- Deterministic parity checker:
+  - `python3 scripts/kolme/check_runtime_commit_decomposition_parity_matrix.py check --matrix-file fixtures/kolme_compatibility/runtime_commit_decomposition_parity_matrix.json --output-json /tmp/runtime-commit-decomposition-parity-policy.json`
+  - policy schema: `kamn.kolme.runtime-commit-decomposition-parity-policy.v1`
+- Covered decomposition scenarios:
+  - `submit_http_round_trip` (transport + endpoint/response policies)
+  - `submit_fork_broadcast_round_trip` (broadcast payload + provider outcome policies)
+  - `finality_notification_resolution` (notification/finality receipt policies)
+  - `finality_block_fallback_resolution` (block scan/fallback + lifecycle policies)
+- Contract-lane integration:
+  - `scripts/kolme/contracts/runtime_commit_contract_lane.py` runs the parity checker before runtime commit cargo tests.
+  - `scripts/kolme/test_check_runtime_commit_decomposition_parity_matrix.sh` enforces fail-closed schema/parity drift checks.
+
 ## Validation Commands
 
 Run targeted checks first:

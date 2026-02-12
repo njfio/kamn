@@ -51,6 +51,11 @@ fn doc_contains_adapter_types_and_validation_commands() {
     assert!(DOC.contains("--integration-runtime-commit-finality-command"));
     assert!(DOC.contains("run_local_kolme_fork_real_process_contract_lane.sh --mode run"));
     assert!(DOC.contains("--lifecycle-mode run"));
+    assert!(DOC.contains("runtime_commit_decomposition_parity_matrix.json"));
+    assert!(DOC.contains("check_runtime_commit_decomposition_parity_matrix.py"));
+    assert!(DOC.contains("test_check_runtime_commit_decomposition_parity_matrix.sh"));
+    assert!(DOC.contains("submit_http_round_trip"));
+    assert!(DOC.contains("finality_block_fallback_resolution"));
 }
 
 #[test]

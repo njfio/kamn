@@ -41,6 +41,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_checkout_bootstrap_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_contract_lane.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_fork_real_process_policy.sh"'
+  'bash "$ROOT_DIR/scripts/kolme/test_check_runtime_commit_decomposition_parity_matrix.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_local_bootstrap_health_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_run_local_bootstrap_health_checks_contract_lane.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_local_e2e_integration_policy.sh"'
