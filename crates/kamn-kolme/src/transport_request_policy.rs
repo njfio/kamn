@@ -32,6 +32,11 @@ pub fn is_valid_transport_idempotency_key_input(idempotency_key: &str) -> bool {
     !idempotency_key.trim().is_empty()
 }
 
+/// Returns whether wire-payload input is non-empty after trimming.
+pub fn is_valid_transport_wire_payload_input(wire_payload: &str) -> bool {
+    !wire_payload.trim().is_empty()
+}
+
 /// Parses one authorization header value with deterministic trim + CRLF safeguards.
 pub fn parse_authorization_header_value(
     value: &str,
