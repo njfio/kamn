@@ -23,6 +23,9 @@ const RUNTIME_PIPELINE_SRC: &str = include_str!("../src/kolme_runtime_commit/run
 const RUNTIME_ERRORS_SRC: &str = include_str!("../src/kolme_runtime_commit/errors.rs");
 const RUNTIME_OUTCOMES_SRC: &str = include_str!("../src/kolme_runtime_commit/outcomes.rs");
 const RUNTIME_INTERFACES_SRC: &str = include_str!("../src/kolme_runtime_commit/interfaces.rs");
+const KAMN_KOLME_LIB_SRC: &str = include_str!("../../kamn-kolme/src/lib.rs");
+const KAMN_KOLME_RUNTIME_TRANSPORT_CONTRACTS_SRC: &str =
+    include_str!("../../kamn-kolme/src/runtime_transport_contracts.rs");
 
 #[test]
 fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers() {
@@ -317,7 +320,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
         .contains("is_kolme_valid_transport_wire_payload_input_contract("));
     assert!(RUNTIME_HTTP_TRANSPORT_SRC
         .contains("normalize_kolme_broadcast_submit_path_input_contract("));
-    assert!(RUNTIME_ERRORS_SRC.contains("impl From<KamnKolmeTransportIoClassification>"));
+    assert!(!RUNTIME_ERRORS_SRC.contains("impl From<KamnKolmeTransportIoClassification>"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod request_envelope;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod runtime_pipeline;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod in_memory_client;"));
@@ -353,11 +356,13 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC
         .contains("pub use fork_finality_resolver::KolmeRuntimeCommitForkFinalityResolver;"));
     assert!(RUNTIME_COMMIT_SRC.contains("pub use notifications_websocket::{"));
-    assert!(RUNTIME_COMMIT_SRC.contains("pub use errors::{"));
+    assert!(RUNTIME_COMMIT_SRC.contains("pub use errors::KolmeRuntimeCommitError;"));
     assert!(RUNTIME_COMMIT_SRC.contains("pub use outcomes::{"));
-    assert!(RUNTIME_COMMIT_SRC.contains("pub use interfaces::{"));
-    assert!(RUNTIME_ERRORS_SRC.contains("pub enum KolmeRuntimeCommitTransportErrorKind"));
-    assert!(RUNTIME_ERRORS_SRC.contains("pub enum KolmeRuntimeCommitProviderError"));
+    assert!(RUNTIME_COMMIT_SRC
+        .contains("pub use interfaces::{KolmeRuntimeCommitClient, KolmeRuntimeCommitProvider};"));
+    assert!(RUNTIME_COMMIT_SRC.contains("pub use kamn_kolme::{"));
+    assert!(!RUNTIME_ERRORS_SRC.contains("pub enum KolmeRuntimeCommitTransportErrorKind"));
+    assert!(!RUNTIME_ERRORS_SRC.contains("pub enum KolmeRuntimeCommitProviderError"));
     assert!(RUNTIME_ERRORS_SRC.contains("pub enum KolmeRuntimeCommitError"));
     assert!(RUNTIME_OUTCOMES_SRC.contains("pub struct KolmeRuntimeCommitReceipt"));
     assert!(RUNTIME_OUTCOMES_SRC.contains("pub enum KolmeRuntimeCommitOutcome"));
@@ -365,10 +370,45 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_OUTCOMES_SRC.contains("pub enum KolmeRuntimeCommitProviderOutcome"));
     assert!(RUNTIME_OUTCOMES_SRC.contains("pub enum KolmeRuntimeCommitNotificationEvent"));
     assert!(RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitClient"));
-    assert!(RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitNotificationsConnection"));
-    assert!(RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitNotificationsConnector"));
     assert!(RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitProvider"));
-    assert!(RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitProviderTransport"));
-    assert!(RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitFinalityTransport"));
-    assert!(RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitBlockFallbackTransport"));
+    assert!(!RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitNotificationsConnection"));
+    assert!(!RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitNotificationsConnector"));
+    assert!(!RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitProviderTransport"));
+    assert!(!RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitFinalityTransport"));
+    assert!(!RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitBlockFallbackTransport"));
+    assert!(KAMN_KOLME_RUNTIME_TRANSPORT_CONTRACTS_SRC
+        .contains("pub enum KolmeRuntimeCommitTransportErrorKind"));
+    assert!(KAMN_KOLME_RUNTIME_TRANSPORT_CONTRACTS_SRC
+        .contains("pub enum KolmeRuntimeCommitProviderError"));
+    assert!(KAMN_KOLME_RUNTIME_TRANSPORT_CONTRACTS_SRC
+        .contains("impl From<KolmeTransportIoClassification> for KolmeRuntimeCommitProviderError"));
+    assert!(KAMN_KOLME_RUNTIME_TRANSPORT_CONTRACTS_SRC
+        .contains("pub trait KolmeRuntimeCommitNotificationsConnection"));
+    assert!(KAMN_KOLME_RUNTIME_TRANSPORT_CONTRACTS_SRC
+        .contains("pub trait KolmeRuntimeCommitNotificationsConnector"));
+    assert!(KAMN_KOLME_RUNTIME_TRANSPORT_CONTRACTS_SRC
+        .contains("pub trait KolmeRuntimeCommitProviderTransport"));
+    assert!(KAMN_KOLME_RUNTIME_TRANSPORT_CONTRACTS_SRC
+        .contains("pub trait KolmeRuntimeCommitFinalityTransport"));
+    assert!(KAMN_KOLME_RUNTIME_TRANSPORT_CONTRACTS_SRC
+        .contains("pub trait KolmeRuntimeCommitBlockFallbackTransport"));
+}
+
+#[test]
+fn regression_issue_2277_transport_error_and_trait_ownership_moves_to_kamn_kolme() {
+    // Regression: #2277
+    assert!(!RUNTIME_ERRORS_SRC.contains("pub enum KolmeRuntimeCommitTransportErrorKind"));
+    assert!(!RUNTIME_ERRORS_SRC.contains("pub enum KolmeRuntimeCommitProviderError"));
+    assert!(!RUNTIME_ERRORS_SRC.contains("impl From<KamnKolmeTransportIoClassification>"));
+    assert!(!RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitNotificationsConnection"));
+    assert!(!RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitNotificationsConnector"));
+    assert!(!RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitProviderTransport"));
+    assert!(!RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitFinalityTransport"));
+    assert!(!RUNTIME_INTERFACES_SRC.contains("pub trait KolmeRuntimeCommitBlockFallbackTransport"));
+    assert!(KAMN_KOLME_LIB_SRC.contains("pub mod runtime_transport_contracts;"));
+    assert!(KAMN_KOLME_LIB_SRC.contains("KolmeRuntimeCommitProviderError"));
+    assert!(KAMN_KOLME_LIB_SRC.contains("KolmeRuntimeCommitTransportErrorKind"));
+    assert!(KAMN_KOLME_LIB_SRC.contains("KolmeRuntimeCommitProviderTransport"));
+    assert!(KAMN_KOLME_LIB_SRC.contains("KolmeRuntimeCommitFinalityTransport"));
+    assert!(KAMN_KOLME_LIB_SRC.contains("KolmeRuntimeCommitBlockFallbackTransport"));
 }

@@ -96,7 +96,6 @@ use kamn_kolme::{
     KolmeProviderReceiptIdentityError as KamnKolmeProviderReceiptIdentityError,
     KolmeRuntimeProviderOutcome as KamnKolmeRuntimeProviderOutcome,
     KolmeTlsPolicyError as KamnKolmeTlsPolicyError,
-    KolmeTransportIoClassification as KamnKolmeTransportIoClassification,
     KolmeTransportRequestPolicyError as KamnKolmeTransportRequestPolicyError,
     KolmeWebsocketFrame as KamnKolmeWebsocketFrame,
     KolmeWebsocketPolicyError as KamnKolmeWebsocketPolicyError,
@@ -132,18 +131,17 @@ pub use api_codec::{
     KolmeApiNextNonceResponse,
 };
 pub use block_fallback_reconciler::KolmeRuntimeCommitBlockFallbackReconciler;
-pub use errors::{
-    KolmeRuntimeCommitError, KolmeRuntimeCommitProviderError, KolmeRuntimeCommitTransportErrorKind,
-};
+pub use errors::KolmeRuntimeCommitError;
 pub use finality_checker::KolmeRuntimeCommitFinalityChecker;
 pub use fork_finality_resolver::KolmeRuntimeCommitForkFinalityResolver;
 pub use http_transport::KolmeRuntimeCommitHttpTransport;
 pub use in_memory_client::InMemoryKolmeRuntimeCommitClient;
-pub use interfaces::{
-    KolmeRuntimeCommitBlockFallbackTransport, KolmeRuntimeCommitClient,
-    KolmeRuntimeCommitFinalityTransport, KolmeRuntimeCommitNotificationsConnection,
-    KolmeRuntimeCommitNotificationsConnector, KolmeRuntimeCommitProvider,
-    KolmeRuntimeCommitProviderTransport,
+pub use interfaces::{KolmeRuntimeCommitClient, KolmeRuntimeCommitProvider};
+pub use kamn_kolme::{
+    KolmeRuntimeCommitBlockFallbackTransport, KolmeRuntimeCommitFinalityTransport,
+    KolmeRuntimeCommitNotificationsConnection, KolmeRuntimeCommitNotificationsConnector,
+    KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderTransport,
+    KolmeRuntimeCommitTransportErrorKind,
 };
 pub use live_provider::KolmeRuntimeCommitLiveProvider;
 pub use notifications_consumer::KolmeRuntimeCommitNotificationsConsumer;

@@ -21,6 +21,7 @@ pub mod provider_response_policy;
 pub mod receipt_finality;
 pub mod runtime_lifecycle_policy;
 pub mod runtime_request_identity_policy;
+pub mod runtime_transport_contracts;
 pub mod tls_policy;
 pub mod transport;
 pub mod transport_request_policy;
@@ -109,6 +110,12 @@ pub use runtime_request_identity_policy::{
     is_valid_runtime_state_root_input, normalize_runtime_commit_request_fields,
     normalize_runtime_commit_signed_envelope_fields, render_runtime_commit_wire_payload,
     render_signed_envelope_wire_payload,
+};
+pub use runtime_transport_contracts::{
+    KolmeRuntimeCommitBlockFallbackTransport, KolmeRuntimeCommitFinalityTransport,
+    KolmeRuntimeCommitNotificationsConnection, KolmeRuntimeCommitNotificationsConnector,
+    KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderTransport,
+    KolmeRuntimeCommitTransportErrorKind,
 };
 pub use tls_policy::{
     classify_tls_failure_reason, parse_tls_ca_file_env_value, resolve_tls_ca_file_env_result,
