@@ -8,6 +8,7 @@ OUTPUT_JSON="/tmp/kolme-local-fork-sync-metadata-summary.json"
 CHECKOUT_PATH="/tmp/kolme_fork"
 EXPECTED_REMOTE_URL="https://github.com/njfio/kolme_fork.git"
 EXPECTED_REF="refs/heads/main"
+EXPECTED_COMMIT=""
 ALLOW_DIRTY="false"
 
 normalize_remote_url() {
@@ -64,6 +65,14 @@ while [ "$#" -gt 0 ]; do
       EXPECTED_REF="$2"
       shift 2
       ;;
+    --expected-commit)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --expected-commit" >&2
+        exit 1
+      fi
+      EXPECTED_COMMIT="$2"
+      shift 2
+      ;;
     --allow-dirty)
       ALLOW_DIRTY="true"
       shift
@@ -78,6 +87,7 @@ Options:
   --checkout-path <path>          Path to local kolme_fork checkout (default: /tmp/kolme_fork).
   --expected-remote-url <url>     Expected origin URL for the checkout.
   --expected-ref <ref>            Expected HEAD symbolic ref (default: refs/heads/main).
+  --expected-commit <sha>         Optional pinned HEAD commit SHA (40-hex) for drift checks.
   --allow-dirty                   Allow a dirty checkout to pass metadata validation.
 USAGE
       exit 0
@@ -106,6 +116,10 @@ fi
 
 if [ -z "${EXPECTED_REF}" ]; then
   echo "expected ref must not be empty" >&2
+  exit 1
+fi
+if [ -n "${EXPECTED_COMMIT}" ] && ! [[ "${EXPECTED_COMMIT}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+  echo "expected-commit must be a 40-character hex SHA when provided" >&2
   exit 1
 fi
 
@@ -146,6 +160,7 @@ if [ "$MODE" = "dry-run" ]; then
   record_check "origin_remote_matches" "git -C \"$CHECKOUT_PATH\" remote get-url origin" "planned"
   record_check "head_ref_matches" "git -C \"$CHECKOUT_PATH\" symbolic-ref -q HEAD" "planned"
   record_check "head_commit_available" "git -C \"$CHECKOUT_PATH\" rev-parse HEAD" "planned"
+  record_check "head_commit_matches" "git -C \"$CHECKOUT_PATH\" rev-parse HEAD == \"$EXPECTED_COMMIT\"" "planned"
   record_check "checkout_clean" "git -C \"$CHECKOUT_PATH\" status --porcelain --untracked-files=no" "planned"
   reason_code="dry_run_no_commands_executed"
 else
@@ -200,6 +215,20 @@ else
   fi
 
   if [ "$check_failed" -eq 0 ]; then
+    if [ -n "$EXPECTED_COMMIT" ]; then
+      if [ "$head_commit" = "$EXPECTED_COMMIT" ]; then
+        record_check "head_commit_matches" "git -C \"$CHECKOUT_PATH\" rev-parse HEAD == \"$EXPECTED_COMMIT\"" "pass"
+      else
+        fail_check "head_commit_matches" "head_commit_mismatch" "git -C \"$CHECKOUT_PATH\" rev-parse HEAD == \"$EXPECTED_COMMIT\""
+      fi
+    else
+      record_check "head_commit_matches" "git -C \"$CHECKOUT_PATH\" rev-parse HEAD == \"$EXPECTED_COMMIT\"" "skipped"
+    fi
+  else
+    record_check "head_commit_matches" "git -C \"$CHECKOUT_PATH\" rev-parse HEAD == \"$EXPECTED_COMMIT\"" "skipped"
+  fi
+
+  if [ "$check_failed" -eq 0 ]; then
     dirty_output="$(git -C "$CHECKOUT_PATH" status --porcelain --untracked-files=no 2>/dev/null || true)"
     if [ -n "$dirty_output" ]; then
       dirty_checkout="true"
@@ -219,7 +248,7 @@ else
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$remote_url" "$head_ref" "$head_commit" "$dirty_checkout" "$metadata_verified" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$EXPECTED_COMMIT" "$remote_url" "$head_ref" "$head_commit" "$dirty_checkout" "$metadata_verified" "$CHECK_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -233,12 +262,13 @@ reason_code = sys.argv[4]
 checkout_path = sys.argv[5]
 expected_remote_url = sys.argv[6]
 expected_ref = sys.argv[7]
-remote_url = sys.argv[8]
-head_ref = sys.argv[9]
-head_commit = sys.argv[10]
-dirty_checkout = sys.argv[11] == "true"
-metadata_verified = sys.argv[12] == "true"
-checks_path = pathlib.Path(sys.argv[13])
+expected_commit = sys.argv[8]
+remote_url = sys.argv[9]
+head_ref = sys.argv[10]
+head_commit = sys.argv[11]
+dirty_checkout = sys.argv[12] == "true"
+metadata_verified = sys.argv[13] == "true"
+checks_path = pathlib.Path(sys.argv[14])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -264,6 +294,7 @@ summary = {
     "checkout_path": checkout_path,
     "expected_remote_url": expected_remote_url,
     "expected_ref": expected_ref,
+    "expected_commit": expected_commit,
     "metadata": {
         "remote_url": remote_url,
         "head_ref": head_ref,

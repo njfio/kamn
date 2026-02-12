@@ -29,6 +29,10 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "fork_remote_url": "https://github.com/njfio/kolme_fork.git",
   "expected_remote_url": "https://github.com/njfio/kolme_fork.git",
   "expected_ref": "refs/heads/main",
+  "expected_commit": "1111111111111111111111111111111111111111",
+  "commit_pin_enforced": true,
+  "fork_pin_manifest_file": "/tmp/kolme-fork-pin-manifest.json",
+  "fork_pin_manifest_schema_version": "kamn.kolme.fork-pin-manifest.v1",
   "bootstrap_action": "planned",
   "sync_metadata_report": "/tmp/kolme-sync-summary.json",
   "diagnostics": {
@@ -46,6 +50,12 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     {
       "id": "sync_metadata",
       "command": "bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run ...",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "fork_pin_manifest_contract",
+      "command": "fork pin manifest file: /tmp/kolme-fork-pin-manifest.json",
       "status": "planned",
       "reason_code": "not_run"
     }
@@ -91,6 +101,10 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
   "fork_remote_url": "https://github.com/njfio/kolme_fork.git",
   "expected_remote_url": "https://github.com/njfio/kolme_fork.git",
   "expected_ref": "refs/heads/main",
+  "expected_commit": "",
+  "commit_pin_enforced": false,
+  "fork_pin_manifest_file": "",
+  "fork_pin_manifest_schema_version": "",
   "bootstrap_action": "updated",
   "sync_metadata_report": "/tmp/kolme-sync-summary.json",
   "diagnostics": {
@@ -110,6 +124,12 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
       "command": "__missing_cargo__ --version",
       "status": "fail",
       "reason_code": "cargo_version_failed"
+    },
+    {
+      "id": "fork_pin_manifest_contract",
+      "command": "fork pin manifest",
+      "status": "pass",
+      "reason_code": "commit_pin_not_enforced"
     }
   ],
   "artifact_paths": [

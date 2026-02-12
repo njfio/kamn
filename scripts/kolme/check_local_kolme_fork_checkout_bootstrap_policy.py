@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 
@@ -69,6 +70,31 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif not expected_ref.startswith("refs/heads/"):
         reason_codes.append("expected_ref_format_invalid")
 
+    expected_commit = report.get("expected_commit")
+    if not isinstance(expected_commit, str):
+        reason_codes.append("expected_commit_missing")
+    elif expected_commit and not re.fullmatch(r"[0-9a-fA-F]{40}", expected_commit):
+        reason_codes.append("expected_commit_format_invalid")
+
+    commit_pin_enforced = report.get("commit_pin_enforced")
+    if not isinstance(commit_pin_enforced, bool):
+        reason_codes.append("commit_pin_enforced_invalid")
+    elif commit_pin_enforced and (not isinstance(expected_commit, str) or not expected_commit):
+        reason_codes.append("commit_pin_expected_commit_missing")
+
+    fork_pin_manifest_file = report.get("fork_pin_manifest_file")
+    if not isinstance(fork_pin_manifest_file, str):
+        reason_codes.append("fork_pin_manifest_file_missing")
+
+    fork_pin_manifest_schema_version = report.get("fork_pin_manifest_schema_version")
+    if not isinstance(fork_pin_manifest_schema_version, str):
+        reason_codes.append("fork_pin_manifest_schema_version_missing")
+    elif fork_pin_manifest_file and fork_pin_manifest_schema_version not in (
+        "",
+        "kamn.kolme.fork-pin-manifest.v1",
+    ):
+        reason_codes.append("fork_pin_manifest_schema_version_mismatch")
+
     bootstrap_action = report.get("bootstrap_action")
     if bootstrap_action not in ("planned", "validated", "cloned", "updated"):
         reason_codes.append("bootstrap_action_invalid")
@@ -93,6 +119,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         expected_ids = {
             "checkout_prepare",
             "sync_metadata",
+            "fork_pin_manifest_contract",
         }
         observed_ids: set[str] = set()
         for entry in checks:

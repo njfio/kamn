@@ -45,6 +45,7 @@ EOF
 git -C "$TMP_REPO" add README.md
 git -C "$TMP_REPO" commit -q -m "init metadata fixture"
 git -C "$TMP_REPO" remote add origin "https://github.com/njfio/kolme_fork.git"
+EXPECTED_COMMIT="$(git -C "$TMP_REPO" rev-parse HEAD)"
 
 dry_run_output="$(
   bash "$RUNNER" \
@@ -52,6 +53,7 @@ dry_run_output="$(
     --checkout-path "$TMP_REPO" \
     --expected-remote-url "https://github.com/njfio/kolme_fork.git" \
     --expected-ref "refs/heads/main" \
+    --expected-commit "$EXPECTED_COMMIT" \
     --output-json "$TMP_REPORT"
 )"
 
@@ -60,7 +62,7 @@ assert_eq "$(extract_value "$dry_run_output" "sync_mode")" "dry-run" "expected d
 assert_eq "$(extract_value "$dry_run_output" "reason_code")" "dry_run_no_commands_executed" "expected dry-run reason code"
 assert_eq "$(extract_value "$dry_run_output" "metadata_verified")" "false" "expected dry-run metadata verification marker"
 
-python3 - "$TMP_REPORT" <<'PY'
+python3 - "$TMP_REPORT" "$EXPECTED_COMMIT" <<'PY'
 import json
 import pathlib
 import sys
@@ -70,6 +72,8 @@ if report.get("schema_version") != "kamn.kolme.local-fork-sync-metadata-summary.
     raise SystemExit("unexpected metadata sync summary schema")
 if report.get("mode") != "dry-run":
     raise SystemExit("expected dry-run mode in metadata sync summary")
+if report.get("expected_commit") != sys.argv[2]:
+    raise SystemExit("expected expected_commit marker in metadata sync summary")
 checks = report.get("checks")
 if not isinstance(checks, list) or len(checks) < 4:
     raise SystemExit("expected deterministic metadata sync checks in summary")
@@ -83,6 +87,7 @@ run_output="$(
     --checkout-path "$TMP_REPO" \
     --expected-remote-url "https://github.com/njfio/kolme_fork.git" \
     --expected-ref "refs/heads/main" \
+    --expected-commit "$EXPECTED_COMMIT" \
     --output-json "$TMP_REPORT"
 )"
 
@@ -91,7 +96,7 @@ assert_eq "$(extract_value "$run_output" "sync_mode")" "run" "expected run mode 
 assert_eq "$(extract_value "$run_output" "reason_code")" "fork_metadata_verified" "expected verified reason code"
 assert_eq "$(extract_value "$run_output" "metadata_verified")" "true" "expected metadata verification marker"
 
-python3 - "$TMP_REPORT" <<'PY'
+python3 - "$TMP_REPORT" "$EXPECTED_COMMIT" <<'PY'
 import json
 import pathlib
 import sys
@@ -108,7 +113,32 @@ if metadata.get("dirty_checkout") is not False:
     raise SystemExit("expected clean checkout metadata")
 if not metadata.get("head_commit"):
     raise SystemExit("expected non-empty head_commit metadata")
+if report.get("expected_commit") != sys.argv[2]:
+    raise SystemExit("expected expected_commit marker in run metadata sync summary")
+if metadata.get("head_commit") != report.get("expected_commit"):
+    raise SystemExit("expected head_commit to match expected_commit in metadata sync summary")
 PY
+
+set +e
+bash "$RUNNER" \
+  --mode run \
+  --checkout-path "$TMP_REPO" \
+  --expected-remote-url "https://github.com/njfio/kolme_fork.git" \
+  --expected-ref "refs/heads/main" \
+  --expected-commit "0000000000000000000000000000000000000000" \
+  --output-json "$TMP_REPORT" >"$TMP_ERR" 2>&1
+run_commit_mismatch_code=$?
+set -e
+
+if [ "$run_commit_mismatch_code" -eq 0 ]; then
+  echo "expected metadata sync run mode to fail on pinned commit mismatch" >&2
+  exit 1
+fi
+
+if ! grep -q "reason_code=head_commit_mismatch" "$TMP_ERR"; then
+  echo "expected head_commit_mismatch reason marker for pinned commit mismatch failure" >&2
+  exit 1
+fi
 
 set +e
 bash "$RUNNER" \
@@ -116,6 +146,7 @@ bash "$RUNNER" \
   --checkout-path "$TMP_REPO" \
   --expected-remote-url "https://github.com/fpco/kolme.git" \
   --expected-ref "refs/heads/main" \
+  --expected-commit "$EXPECTED_COMMIT" \
   --output-json "$TMP_REPORT" >"$TMP_ERR" 2>&1
 run_mismatch_code=$?
 set -e
