@@ -209,6 +209,10 @@ This document captures node-runtime productionization slices for machine-readabl
   - when `--kolme-live-strict-signer-contracts` is present, `--kolme-live-signer-profile` and `--kolme-live-signer-key-source` are both required
   - supported signer profiles: `ops-primary`, `ops-secondary`
   - supported key source marker: `env-local`
+  - fail-closed error semantics:
+    - empty profile/source declarations are rejected
+    - unsupported profile/source declarations are rejected
+    - strict profile declaration must not conflict with `KAMN_KOLME_LIVE_SIGNER_PROFILE` when that env marker is set
 - Provider wiring is fail-closed:
   - runtime config must reject in-memory provider-hint markers such as `InMemoryKolmeRuntimeCommitClient`
   - signing profile must match `kolme-fork-secp256k1-v1`

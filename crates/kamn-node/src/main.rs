@@ -810,36 +810,48 @@ fn encode_kolme_hex_lower(bytes: &[u8]) -> String {
     output
 }
 
+fn resolve_kolme_live_signer_profile_selector_from_env() -> Result<Option<&'static str>, ConfigError>
+{
+    let profile_value = match env::var(KOLME_LIVE_SIGNER_PROFILE_ENV) {
+        Ok(value) => value,
+        Err(env::VarError::NotPresent) => return Ok(None),
+        Err(env::VarError::NotUnicode(_)) => {
+            return Err(ConfigError::RuntimeKolmeLive(format!(
+                "{KOLME_LIVE_SIGNER_PROFILE_ENV} must be valid utf-8"
+            )))
+        }
+    };
+    let trimmed = profile_value.trim();
+    if trimmed.is_empty() {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_SIGNER_PROFILE_ENV} must not be empty"
+        )));
+    }
+    match trimmed {
+        KOLME_LIVE_SIGNER_PROFILE_PRIMARY => Ok(Some(KOLME_LIVE_SIGNER_PROFILE_PRIMARY)),
+        KOLME_LIVE_SIGNER_PROFILE_SECONDARY => Ok(Some(KOLME_LIVE_SIGNER_PROFILE_SECONDARY)),
+        _ => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_SIGNER_PROFILE_ENV} has unsupported profile: {trimmed}"
+        ))),
+    }
+}
+
 fn resolve_kolme_live_signer_private_key_env_name(
     strict_signer_profile: Option<&str>,
 ) -> Result<(&'static str, &'static str), ConfigError> {
+    let profile_from_env = resolve_kolme_live_signer_profile_selector_from_env()?;
     let profile_value = if let Some(profile) = strict_signer_profile {
-        normalize_kolme_live_signer_profile_selector(profile)?
+        let strict_profile = normalize_kolme_live_signer_profile_selector(profile)?;
+        if let Some(env_profile) = profile_from_env {
+            if env_profile != strict_profile {
+                return Err(ConfigError::RuntimeKolmeLive(format!(
+                    "strict signer profile mismatch: --kolme-live-signer-profile={strict_profile} conflicts with {KOLME_LIVE_SIGNER_PROFILE_ENV}={env_profile}"
+                )));
+            }
+        }
+        strict_profile
     } else {
-        let profile_value = match env::var(KOLME_LIVE_SIGNER_PROFILE_ENV) {
-            Ok(value) => value,
-            Err(env::VarError::NotPresent) => KOLME_LIVE_SIGNER_PROFILE_PRIMARY.to_owned(),
-            Err(env::VarError::NotUnicode(_)) => {
-                return Err(ConfigError::RuntimeKolmeLive(format!(
-                    "{KOLME_LIVE_SIGNER_PROFILE_ENV} must be valid utf-8"
-                )))
-            }
-        };
-        let trimmed = profile_value.trim();
-        if trimmed.is_empty() {
-            return Err(ConfigError::RuntimeKolmeLive(format!(
-                "{KOLME_LIVE_SIGNER_PROFILE_ENV} must not be empty"
-            )));
-        }
-        match trimmed {
-            KOLME_LIVE_SIGNER_PROFILE_PRIMARY => KOLME_LIVE_SIGNER_PROFILE_PRIMARY,
-            KOLME_LIVE_SIGNER_PROFILE_SECONDARY => KOLME_LIVE_SIGNER_PROFILE_SECONDARY,
-            _ => {
-                return Err(ConfigError::RuntimeKolmeLive(format!(
-                    "{KOLME_LIVE_SIGNER_PROFILE_ENV} has unsupported profile: {trimmed}"
-                )))
-            }
-        }
+        profile_from_env.unwrap_or(KOLME_LIVE_SIGNER_PROFILE_PRIMARY)
     };
     match profile_value {
         KOLME_LIVE_SIGNER_PROFILE_PRIMARY => Ok((
@@ -3004,6 +3016,145 @@ mod tests {
             "env-local".to_owned(),
         ];
         parse_args(args).expect("strict signer contract declarations should parse");
+    }
+
+    #[test]
+    fn rejects_kolme_live_strict_signer_contracts_with_empty_signer_profile_selector() {
+        // Regression: #2247
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            "http://127.0.0.1:3000".to_owned(),
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+            "--kolme-live-strict-signer-contracts".to_owned(),
+            "--kolme-live-signer-profile".to_owned(),
+            " ".to_owned(),
+            "--kolme-live-signer-key-source".to_owned(),
+            "env-local".to_owned(),
+        ];
+        assert!(
+            matches!(
+                parse_args(args),
+                Err(ConfigError::RuntimeKolmeLive(message))
+                if message.contains("--kolme-live-signer-profile must not be empty")
+            ),
+            "strict signer contracts must reject empty signer profile selector"
+        );
+    }
+
+    #[test]
+    fn rejects_kolme_live_strict_signer_contracts_with_empty_key_source() {
+        // Regression: #2247
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            "http://127.0.0.1:3000".to_owned(),
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+            "--kolme-live-strict-signer-contracts".to_owned(),
+            "--kolme-live-signer-profile".to_owned(),
+            "ops-primary".to_owned(),
+            "--kolme-live-signer-key-source".to_owned(),
+            " ".to_owned(),
+        ];
+        assert!(
+            matches!(
+                parse_args(args),
+                Err(ConfigError::RuntimeKolmeLive(message))
+                if message.contains("--kolme-live-signer-key-source must not be empty")
+            ),
+            "strict signer contracts must reject empty key-source declaration"
+        );
+    }
+
+    #[test]
+    fn regression_kolme_live_strict_signer_contracts_reject_profile_selector_env_mismatch() {
+        // Regression: #2247
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-secondary"));
+        let _primary_key_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+        );
+
+        assert!(
+            matches!(
+                build_kolme_live_signing_key(Some("ops-primary"), Some("env-local")),
+                Err(ConfigError::RuntimeKolmeLive(message))
+                if message.contains("strict signer profile mismatch")
+            ),
+            "strict signer contracts must reject selector/env profile mismatch"
+        );
+    }
+
+    #[test]
+    fn integration_runtime_kolme_live_strict_signer_contracts_fail_closed_before_network_on_selector_env_mismatch(
+    ) {
+        // Regression: #2247
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-secondary"));
+        let _primary_key_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+        );
+        let (base_url, requests) = spawn_kolme_live_mock_server(vec![
+            MockHttpReply::ok(r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#),
+            MockHttpReply::ok(
+                r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"pending"}"#,
+            ),
+        ]);
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            base_url,
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+            "--kolme-live-strict-signer-contracts".to_owned(),
+            "--kolme-live-signer-profile".to_owned(),
+            "ops-primary".to_owned(),
+            "--kolme-live-signer-key-source".to_owned(),
+            "env-local".to_owned(),
+        ];
+        let parsed = parse_args(args).expect("strict kolme-live args should parse");
+        assert!(
+            matches!(
+                execute(parsed),
+                Err(ConfigError::RuntimeKolmeLive(message))
+                if message.contains("strict signer profile mismatch")
+            ),
+            "runtime must fail closed before network submit when strict signer selector conflicts with env marker"
+        );
+        let recorded_requests = requests.lock().expect("request mutex should lock");
+        assert_eq!(
+            recorded_requests.len(),
+            0,
+            "strict selector/env mismatch should fail before any live network request"
+        );
     }
 
     #[test]
