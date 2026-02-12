@@ -203,6 +203,7 @@ version = "0.1.0"
 name = "kamn-node"
 version = "0.1.0"
 dependencies = [
+ "k256",
  "kamn-core",
 ]
 

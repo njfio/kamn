@@ -1,6 +1,7 @@
 use std::env;
 use std::process::ExitCode;
 
+use k256::ecdsa::SigningKey;
 use kamn_core::{
     bootstrap, BootstrapPlan, ConfigError, DeterministicProposalPlanner,
     KolmeCommitReceiptFinality, KolmeRuntimeCommitFinalityChecker, KolmeRuntimeCommitHttpTransport,
@@ -17,6 +18,10 @@ const KOLME_IN_MEMORY_PROVIDER_MARKER: &str = "InMemoryKolmeRuntimeCommitClient"
 const KOLME_LIVE_TRANSPORT_TIMEOUT_SECONDS: u64 = 30;
 const KOLME_LIVE_FINALITY_STATUS_PATH: &str = "/runtime-commit/status";
 const KOLME_LIVE_FINALITY_MAX_ATTEMPTS: u32 = 2;
+const KOLME_LIVE_SIGNER_KEY_ID: &str = "kamn:key:signer:kolme-fork-secp256k1-v1";
+const KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX";
+const KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK: &str =
+    "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct OutputMode {
@@ -684,6 +689,87 @@ fn build_kolme_live_request(
     .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))
 }
 
+fn decode_kolme_hex_nibble(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(10 + (byte - b'a')),
+        b'A'..=b'F' => Some(10 + (byte - b'A')),
+        _ => None,
+    }
+}
+
+fn decode_kolme_hex_bytes(value: &str) -> Result<Vec<u8>, ConfigError> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV} must not be empty"
+        )));
+    }
+    if !trimmed.len().is_multiple_of(2) {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV} must have an even number of hex characters"
+        )));
+    }
+    let mut decoded = Vec::with_capacity(trimmed.len() / 2);
+    for pair in trimmed.as_bytes().chunks_exact(2) {
+        let high = decode_kolme_hex_nibble(pair[0]).ok_or_else(|| {
+            ConfigError::RuntimeKolmeLive(format!(
+                "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV} contains invalid hex character '{}'",
+                pair[0] as char
+            ))
+        })?;
+        let low = decode_kolme_hex_nibble(pair[1]).ok_or_else(|| {
+            ConfigError::RuntimeKolmeLive(format!(
+                "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV} contains invalid hex character '{}'",
+                pair[1] as char
+            ))
+        })?;
+        decoded.push((high << 4) | low);
+    }
+    Ok(decoded)
+}
+
+fn encode_kolme_hex_lower(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut output = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        output.push(HEX[(byte >> 4) as usize] as char);
+        output.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    output
+}
+
+fn build_kolme_live_signed_wire_payload(
+    request: &KolmeRuntimeCommitRequest,
+) -> Result<String, ConfigError> {
+    let private_key_hex = env::var(KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV)
+        .unwrap_or_else(|_| KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK.to_owned());
+    let private_key_bytes = decode_kolme_hex_bytes(private_key_hex.as_str())?;
+    let signing_key = SigningKey::from_slice(private_key_bytes.as_slice()).map_err(|error| {
+        ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_ENV} is not a valid secp256k1 private key: {error}"
+        ))
+    })?;
+    let canonical_message = request.to_wire_payload();
+    let (signature, recovery_id) = signing_key
+        .sign_recoverable(canonical_message.as_bytes())
+        .map_err(|error| {
+            ConfigError::RuntimeKolmeLive(format!(
+                "failed to sign live runtime commit payload: {error}"
+            ))
+        })?;
+    let signature_hex = encode_kolme_hex_lower(signature.to_bytes().as_ref());
+    let envelope = request
+        .translate_to_signed_broadcast_envelope(
+            KOLME_LIVE_SIGNER_KEY_ID,
+            canonical_message.as_str(),
+            signature_hex.as_str(),
+            recovery_id.to_byte(),
+        )
+        .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
+    Ok(envelope.to_wire_payload())
+}
+
 fn ensure_kolme_live_provider_marker(expected: &str, observed: &str) -> Result<(), ConfigError> {
     if expected == observed {
         return Ok(());
@@ -866,11 +952,9 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             )
             .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
             let request = build_kolme_live_request(&plan)?;
+            let signed_wire_payload = build_kolme_live_signed_wire_payload(&request)?;
             let submit_outcome = provider
-                .submit_runtime_commit(
-                    request.to_wire_payload().as_str(),
-                    request.idempotency_key(),
-                )
+                .submit_runtime_commit(signed_wire_payload.as_str(), request.idempotency_key())
                 .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
             let (submit_status, mut receipt) = map_kolme_live_submit_outcome(submit_outcome)?;
             ensure_kolme_live_provider_marker(provider_hint.as_str(), receipt.provider.as_str())?;
@@ -1320,10 +1404,13 @@ fn main() -> ExitCode {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_bootstrap_report, execute, parse_args, render_bootstrap_report, DiagnosticsMode,
-        LocalProfile, NodeBootstrapReport, OutputMode, RuntimeExecutionBundle, RuntimeMode,
+        build_bootstrap_report, build_kolme_live_signed_wire_payload, execute, parse_args,
+        render_bootstrap_report, DiagnosticsMode, LocalProfile, NodeBootstrapReport, OutputMode,
+        RuntimeExecutionBundle, RuntimeMode, KOLME_LIVE_SIGNER_KEY_ID,
     };
-    use kamn_core::{bootstrap, ConfigError, NodeConfig, NodeRole, SyncMode};
+    use kamn_core::{
+        bootstrap, ConfigError, KolmeRuntimeCommitRequest, NodeConfig, NodeRole, SyncMode,
+    };
     use std::io::{ErrorKind, Read, Write};
     use std::net::TcpListener;
     use std::sync::{Arc, Mutex};
@@ -1397,6 +1484,21 @@ mod tests {
         }
 
         String::from_utf8(buffer).expect("request should be valid utf-8")
+    }
+
+    fn request_body(raw_request: &str) -> &str {
+        raw_request
+            .split_once("\r\n\r\n")
+            .map(|(_, body)| body)
+            .unwrap_or("")
+    }
+
+    fn extract_json_string_field(body: &str, field: &str) -> Option<String> {
+        let marker = format!("\"{field}\":\"");
+        let start = body.find(marker.as_str())?;
+        let remainder = &body[start + marker.len()..];
+        let end = remainder.find('"')?;
+        Some(remainder[..end].to_owned())
     }
 
     fn spawn_kolme_live_mock_server(
@@ -1972,8 +2074,52 @@ mod tests {
         );
         assert!(recorded_requests[0].contains("PUT /broadcast HTTP/1.1"));
         assert!(recorded_requests[0].contains("X-Idempotency-Key: "));
+        let signature =
+            extract_json_string_field(request_body(recorded_requests[0].as_str()), "signature")
+                .expect("submit request should contain signature JSON field");
+        // Regression: #2197
+        assert!(
+            signature.len() == 128
+                && signature
+                    .as_bytes()
+                    .iter()
+                    .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f')),
+            "live runtime submit must not fall back to synthetic idempotency-key signatures"
+        );
         assert!(recorded_requests[1]
             .contains("GET /runtime-commit/status?commit_id=kolme-commit%3Aab12cd34 HTTP/1.1"));
+    }
+
+    #[test]
+    fn unit_kolme_live_signer_builds_signed_envelope_wire_payload() {
+        let request = KolmeRuntimeCommitRequest::deterministic(
+            "op-node-live-2197",
+            "state:node-live-2197",
+            "kamn:did:agent:node-live-2197",
+            1,
+            "payload:node-live-2197",
+        )
+        .expect("request should build");
+
+        let signed_wire_payload = build_kolme_live_signed_wire_payload(&request)
+            .expect("signed payload should be produced");
+
+        assert!(signed_wire_payload.contains("\"signer_key_id\":\""));
+        assert!(signed_wire_payload.contains(KOLME_LIVE_SIGNER_KEY_ID));
+        let signature = extract_json_string_field(signed_wire_payload.as_str(), "signature")
+            .expect("signed envelope must include signature field");
+        assert_eq!(
+            signature.len(),
+            128,
+            "secp256k1 signature must be 64 bytes hex"
+        );
+        assert!(
+            signature
+                .as_bytes()
+                .iter()
+                .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f')),
+            "signature must be lowercase hex"
+        );
     }
 
     #[test]

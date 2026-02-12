@@ -221,6 +221,11 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
     - `kolme_live_provider_client_contract=KolmeRuntimeCommitLiveProvider`
     - `kolme_live_signing_profile=kolme-fork-secp256k1-v1`
     - `kolme_live_execution_status=provider-configured`
+  - live submit payload composition:
+    - runtime request payload is signed with secp256k1 before `/broadcast` submission.
+    - signer key marker in signed-envelope source payload: `kamn:key:signer:kolme-fork-secp256k1-v1`.
+    - private key source contract: `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX` (falls back to deterministic local smoke key when unset).
+    - synthetic fallback signature material (`signature=<idempotency_key>`) is rejected by runtime tests/policies.
   - in-memory fallback markers and non-fork signing profiles are rejected fail-closed by typed node config errors.
 - Runtime live lane (submit + optional finality):
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --base-url http://127.0.0.1:3000 --provider-hint kolme-fork-local --max-seconds 90 --preflight-max-seconds 10 --finality-command "printf 'finality=final\n'" --finality-max-seconds 15 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt --finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt`
