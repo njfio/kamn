@@ -42,6 +42,7 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_transport_io_error("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_transport_io_classification_to_provider_error("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_provider_outcome_policy_error_to_malformed("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("fn reconnect_exhausted_error("));
     assert!(!RUNTIME_COMMIT_SRC.contains("let signer_key_id = signer_key_id.trim();"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let message = message.trim();"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let signature = signature.trim();"));
@@ -126,6 +127,8 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_finality_status_path_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_notifications_provider_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_notifications_reconnect_budget_contract("));
+    assert!(RUNTIME_COMMIT_SRC
+        .contains("compose_kolme_notifications_reconnect_exhausted_reason_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_notification_event_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("notification_event_to_kolme_provider_receipt_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_live_runtime_provider_outcome_contract("));

@@ -287,3 +287,34 @@ fn regression_notifications_consumer_fails_closed_on_decode_and_retry_exhaustion
         })
     );
 }
+
+#[test]
+fn regression_issue_1924_notifications_consumer_reconnect_exhausted_reason_remains_stable() {
+    // Regression: #1924
+    let retry_connector = MockConnector::new(vec![
+        Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "dial failed: refused".to_owned(),
+        }),
+        Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "dial failed: refused".to_owned(),
+        }),
+        Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "dial failed: refused".to_owned(),
+        }),
+    ]);
+    let mut retry_consumer = KolmeRuntimeCommitNotificationsConsumer::new(
+        "http://127.0.0.1:3030",
+        "/notifications",
+        "kolme-fork-local",
+        3,
+        retry_connector,
+    )
+    .expect("notifications consumer should build");
+
+    assert_eq!(
+        retry_consumer.next_notification_event(),
+        Err(KolmeRuntimeCommitProviderError::Unavailable {
+            reason: "notification reconnect attempts exhausted after 3 retries".to_owned(),
+        })
+    );
+}

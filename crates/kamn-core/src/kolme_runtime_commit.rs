@@ -9,6 +9,7 @@ use kamn_kolme::{
     commit_finality_label as commit_finality_label_contract,
     compose_block_fallback_unresolved_reason as compose_kolme_block_fallback_unresolved_reason_contract,
     compose_finality_status_path as compose_kolme_finality_status_path,
+    compose_notifications_reconnect_exhausted_reason as compose_kolme_notifications_reconnect_exhausted_reason_contract,
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
     deterministic_runtime_commit_id as deterministic_runtime_commit_id_contract,
     deterministic_runtime_commit_idempotency_key as deterministic_runtime_commit_idempotency_key_contract,
@@ -1674,7 +1675,12 @@ where
                     Err(_) => {
                         reconnect_attempts += 1;
                         if reconnect_attempts >= self.max_reconnect_attempts {
-                            return Err(reconnect_exhausted_error(self.max_reconnect_attempts));
+                            return Err(KolmeRuntimeCommitProviderError::Unavailable {
+                                reason:
+                                    compose_kolme_notifications_reconnect_exhausted_reason_contract(
+                                        self.max_reconnect_attempts,
+                                    ),
+                            });
                         }
                         continue;
                     }
@@ -1692,7 +1698,11 @@ where
                     self.connection = None;
                     reconnect_attempts += 1;
                     if reconnect_attempts >= self.max_reconnect_attempts {
-                        return Err(reconnect_exhausted_error(self.max_reconnect_attempts));
+                        return Err(KolmeRuntimeCommitProviderError::Unavailable {
+                            reason: compose_kolme_notifications_reconnect_exhausted_reason_contract(
+                                self.max_reconnect_attempts,
+                            ),
+                        });
                     }
                 }
             }
@@ -1960,14 +1970,6 @@ impl<P: KolmeRuntimeCommitProvider> KolmeRuntimeCommitClient
                 Ok(KolmeRuntimeCommitOutcome::Rejected { reason })
             }
         }
-    }
-}
-
-fn reconnect_exhausted_error(max_reconnect_attempts: u32) -> KolmeRuntimeCommitProviderError {
-    KolmeRuntimeCommitProviderError::Unavailable {
-        reason: format!(
-            "notification reconnect attempts exhausted after {max_reconnect_attempts} retries"
-        ),
     }
 }
 
