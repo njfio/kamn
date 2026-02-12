@@ -207,6 +207,7 @@ declare -A MANIFESTS=()
 for file in "${CHANGED_FILES[@]}"; do
   classified=false
   kolme_local_heavy_routing_candidate=false
+  ci_contract_scope_only_candidate=false
 
   case "$file" in
     *.md|*.txt|docs/*)
@@ -225,9 +226,24 @@ for file in "${CHANGED_FILES[@]}"; do
   esac
 
   case "$file" in
-    .github/workflows/*|scripts/ci/*)
+    fixtures/ci/kolme_wave10_wrapper_family_matrix.json|fixtures/ci/kolme_wave10_wrapper_family_baseline.json|fixtures/ci/kolme_wave10_wrapper_family_trend_thresholds.json|scripts/ci/check_kolme_wave10_wrapper_family_budget_trend.sh)
+      CI_STRATEGY_DOC_CONTRACT_CHANGED=true
+      ci_contract_scope_only_candidate=true
+      classified=true
+      ;;
+  esac
+
+  case "$file" in
+    .github/workflows/*)
       CI_INFRA_CHANGED=true
       CRITICAL_PATH_CHANGED=true
+      classified=true
+      ;;
+    scripts/ci/*)
+      if [ "$ci_contract_scope_only_candidate" != true ]; then
+        CI_INFRA_CHANGED=true
+        CRITICAL_PATH_CHANGED=true
+      fi
       classified=true
       ;;
   esac
