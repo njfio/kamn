@@ -88,6 +88,7 @@ Out of scope:
 - #1936: extracted runtime pipeline lifecycle record/projection ownership into `kolme_runtime_commit/runtime_pipeline.rs` and rewired `kolme_runtime_commit.rs` to re-export pipeline types from the dedicated submodule.
 - #1938: extracted in-memory runtime client ownership into `kolme_runtime_commit/in_memory_client.rs` and rewired `kolme_runtime_commit.rs` to re-export `InMemoryKolmeRuntimeCommitClient` from the dedicated submodule.
 - #1940: extracted websocket notifications transport ownership into `kolme_runtime_commit/notifications_websocket.rs` and rewired `kolme_runtime_commit.rs` to re-export connector/connection types from the dedicated submodule.
+- #1942: extracted notifications consumer ownership into `kolme_runtime_commit/notifications_consumer.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeRuntimeCommitNotificationsConsumer` from the dedicated submodule.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,
