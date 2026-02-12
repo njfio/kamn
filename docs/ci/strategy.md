@@ -165,9 +165,17 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `fixtures/kolme_compatibility/wrapper_inventory_baseline.json`
     - deterministic generator/check commands:
       - `bash scripts/ci/generate_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/kolme_compatibility/lane_migration_matrix.json --output-json /tmp/kolme-wrapper-inventory-baseline.json`
-      - `bash scripts/ci/check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/kolme_compatibility/lane_migration_matrix.json --baseline-file fixtures/kolme_compatibility/wrapper_inventory_baseline.json --output-json /tmp/kolme-wrapper-inventory-delta.json`
+    - `bash scripts/ci/check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/kolme_compatibility/lane_migration_matrix.json --baseline-file fixtures/kolme_compatibility/wrapper_inventory_baseline.json --output-json /tmp/kolme-wrapper-inventory-delta.json`
     - emits lane-level and aggregate wrapper-count/shell-LOC deltas for migration trend governance.
     - Regression: #2117
+  - Kolme wrapper budget-trend guard stays on PR fast gate:
+    - `bash scripts/ci/test_check_kolme_wrapper_budget_trend.sh`
+    - threshold policy file:
+      - `.ci/kolme-wrapper-budget-trend-thresholds.json`
+    - trend-policy command:
+      - `bash scripts/ci/check_kolme_wrapper_budget_trend.sh --matrix-file fixtures/kolme_compatibility/lane_migration_matrix.json --baseline-file fixtures/kolme_compatibility/wrapper_inventory_baseline.json --output-json /tmp/kolme-wrapper-budget-trend-report.json`
+    - trend mode allows shell-surface reductions and fails only on growth beyond configured thresholds.
+    - Regression: #2119
   - shared dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh`
     - enforces that all migrated `run_*contract_lane.sh` wrappers dispatch through:
