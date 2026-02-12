@@ -118,6 +118,21 @@ pub fn parse_provider_block_fallback_response(
         .or_else(|_| parse_fork_block_fallback_response(response, provider, expected_height))
 }
 
+/// Validates block-fallback reconciler base URL input before provider lookups.
+pub fn is_valid_block_fallback_base_url_input(base_url: &str) -> bool {
+    !base_url.trim().is_empty()
+}
+
+/// Validates block-fallback reconciler provider input before provider lookups.
+pub fn is_valid_block_fallback_provider_input(provider: &str) -> bool {
+    !provider.trim().is_empty()
+}
+
+/// Validates block-fallback reconciler lookup budget input.
+pub fn is_valid_block_fallback_lookup_budget(max_block_lookups: u64) -> bool {
+    max_block_lookups > 0
+}
+
 fn optional_block_tx_hashes(
     fields: &HashMap<String, String>,
     field: &'static str,
