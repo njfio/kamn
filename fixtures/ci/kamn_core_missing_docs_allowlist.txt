@@ -2,7 +2,6 @@ agent_upgrade_workflow
 bridge_adapter
 channel_models
 channel_policies
-escrow
 governance_workflow
 instruction_verify
 message_lifecycle

@@ -1,29 +1,47 @@
+//! Escrow lifecycle contracts for release, refund, dispute, and receipt-finality reconciliation.
+
 use std::fmt;
 
+/// Escrow lifecycle status projection.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EscrowStatus {
+    /// Funds are locked and no settlement has happened yet.
     Funded,
+    /// Partial release has occurred and a remainder is still locked.
     PartiallyReleased {
+        /// Total amount released to the payee.
         released: u128,
+        /// Remaining amount still held in escrow.
         remaining: u128,
     },
+    /// Full amount has been released to the payee.
     Released,
+    /// Remaining amount has been fully refunded to the payer.
     Refunded,
+    /// Escrow is under dispute.
     Disputed,
+    /// Dispute resolution split has been finalized.
     Resolved {
+        /// Total amount released to the payee after resolution.
         released_total: u128,
+        /// Total amount refunded to the payer after resolution.
         refunded_total: u128,
     },
 }
 
+/// Receipt finality classification used to decide settlement outcomes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EscrowReceiptFinality {
+    /// Receipt finality is confirmed.
     Final,
+    /// Receipt is observed but not yet final.
     Pending,
+    /// Receipt finality indicates failure.
     Failed,
 }
 
 impl EscrowReceiptFinality {
+    /// Parses receipt finality from a case-insensitive string.
     pub fn parse(value: &str) -> Result<Self, EscrowLifecycleError> {
         let normalized = value.trim().to_ascii_uppercase();
         match normalized.as_str() {
@@ -37,47 +55,81 @@ impl EscrowReceiptFinality {
     }
 }
 
+/// Settlement actions gated by receipt finality.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EscrowSettlementAction {
+    /// Release a specific amount to the payee.
     Release {
+        /// Amount to release.
         amount: u128,
     },
+    /// Refund all remaining escrow balance.
     RefundRemaining,
+    /// Refund after timeout threshold is reached.
     TimeoutRefund {
+        /// Current Unix timestamp.
         current_unix: u64,
+        /// Timeout Unix timestamp.
         timeout_unix: u64,
     },
 }
 
+/// State transition actions for evidence-driven escrow mutation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EscrowTransitionAction {
+    /// Release a specific amount to the payee.
     Release {
+        /// Amount to release.
         amount: u128,
     },
+    /// Refund all remaining escrow balance.
     RefundRemaining,
+    /// Move escrow into disputed state.
     Dispute,
+    /// Resolve a dispute by splitting the remaining balance.
     Resolve {
+        /// Amount released to the payee.
         release_to_payee: u128,
+        /// Amount refunded to the payer.
         refund_to_payer: u128,
     },
 }
 
+/// Transition evidence record emitted for successful state mutations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EscrowTransitionEvidence {
+    /// Previous status.
     pub from: EscrowStatus,
+    /// Action that was applied.
     pub action: EscrowTransitionAction,
+    /// Resulting status.
     pub to: EscrowStatus,
+    /// Stable reason code for policy/audit matching.
     pub reason_code: &'static str,
 }
 
+/// Settlement outcome projection after receipt-finality reconciliation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EscrowSettlementOutcome {
-    Settled { status: EscrowStatus },
-    Pending { reason: &'static str },
-    Rejected { reason: &'static str },
+    /// Settlement succeeded and status is finalized.
+    Settled {
+        /// Finalized escrow status after successful settlement.
+        status: EscrowStatus,
+    },
+    /// Settlement is deferred while receipt finality remains pending.
+    Pending {
+        /// Reason the settlement remains pending.
+        reason: &'static str,
+    },
+    /// Settlement was rejected due to failed finality.
+    Rejected {
+        /// Reason settlement was rejected.
+        reason: &'static str,
+    },
 }
 
 impl EscrowSettlementOutcome {
+    /// Returns a stable reason code for the projected settlement outcome.
     pub fn reason_code(&self) -> &'static str {
         match self {
             Self::Settled { .. } => "escrow_settlement_finalized",
@@ -87,6 +139,7 @@ impl EscrowSettlementOutcome {
     }
 }
 
+/// Mutable escrow lifecycle state machine.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EscrowLifecycle {
     total_amount: u128,
@@ -96,6 +149,7 @@ pub struct EscrowLifecycle {
 }
 
 impl EscrowLifecycle {
+    /// Creates a new escrow lifecycle with a non-zero total amount.
     pub fn new(total_amount: u128) -> Result<Self, EscrowLifecycleError> {
         if total_amount == 0 {
             return Err(EscrowLifecycleError::ZeroAmount);
@@ -108,24 +162,29 @@ impl EscrowLifecycle {
         })
     }
 
+    /// Returns the current escrow status.
     pub fn status(&self) -> EscrowStatus {
         self.status.clone()
     }
 
+    /// Returns the currently unreleased and unrefunded amount.
     pub fn remaining_amount(&self) -> u128 {
         self.total_amount
             .saturating_sub(self.released_total)
             .saturating_sub(self.refunded_total)
     }
 
+    /// Returns the total amount released to the payee.
     pub fn released_amount(&self) -> u128 {
         self.released_total
     }
 
+    /// Returns the total amount refunded to the payer.
     pub fn refunded_amount(&self) -> u128 {
         self.refunded_total
     }
 
+    /// Releases an amount from escrow to the payee.
     pub fn release(&mut self, amount: u128) -> Result<(), EscrowLifecycleError> {
         if amount == 0 {
             return Err(EscrowLifecycleError::ZeroAmount);
@@ -161,6 +220,7 @@ impl EscrowLifecycle {
         Ok(())
     }
 
+    /// Refunds the remaining escrow balance to the payer.
     pub fn refund_remaining(&mut self) -> Result<(), EscrowLifecycleError> {
         match self.status {
             EscrowStatus::Funded
@@ -178,6 +238,7 @@ impl EscrowLifecycle {
         Ok(())
     }
 
+    /// Refunds remaining balance only if timeout has elapsed.
     pub fn refund_after_timeout(
         &mut self,
         current_unix: u64,
@@ -192,6 +253,7 @@ impl EscrowLifecycle {
         self.refund_remaining()
     }
 
+    /// Moves escrow into disputed state.
     pub fn dispute(&mut self) -> Result<(), EscrowLifecycleError> {
         match self.status {
             EscrowStatus::Funded | EscrowStatus::PartiallyReleased { .. } => {
@@ -202,6 +264,7 @@ impl EscrowLifecycle {
         }
     }
 
+    /// Resolves a disputed escrow by applying an exact split of remaining balance.
     pub fn resolve(
         &mut self,
         release_to_payee: u128,
@@ -237,6 +300,7 @@ impl EscrowLifecycle {
         Ok(())
     }
 
+    /// Applies a transition action and returns evidence for the successful mutation.
     pub fn apply_transition_with_evidence(
         &mut self,
         action: EscrowTransitionAction,
@@ -260,6 +324,7 @@ impl EscrowLifecycle {
         })
     }
 
+    /// Reconciles settlement action against receipt finality and returns outcome.
     pub fn reconcile_receipt_finality(
         &mut self,
         receipt_id: &str,
@@ -302,34 +367,54 @@ impl EscrowLifecycle {
     }
 }
 
+/// Error taxonomy for escrow lifecycle validation and transition failures.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EscrowLifecycleError {
+    /// Amount is zero where positive value is required.
     ZeroAmount,
+    /// Required receipt evidence is missing.
     MissingReceiptEvidence,
+    /// Receipt finality string is invalid.
     InvalidReceiptFinality {
+        /// Observed finality string.
         found: String,
     },
+    /// Requested amount is invalid for current remaining balance.
     InvalidAmount {
+        /// Action name that failed validation.
         action: &'static str,
+        /// Requested amount.
         amount: u128,
+        /// Remaining amount available for action.
         remaining: u128,
     },
+    /// Requested transition is not allowed from current status.
     InvalidTransition {
+        /// Current status.
         from: EscrowStatus,
+        /// Action name.
         action: &'static str,
     },
+    /// Dispute resolution split does not match remaining balance.
     ResolutionMismatch {
+        /// Remaining amount expected to be split.
         expected_remaining: u128,
+        /// Actual split amount provided.
         actual_split: u128,
     },
+    /// Timeout refund attempted before timeout elapsed.
     TimeoutNotElapsed {
+        /// Current Unix timestamp.
         current_unix: u64,
+        /// Required timeout Unix timestamp.
         timeout_unix: u64,
     },
+    /// Arithmetic overflow occurred while accumulating totals.
     AmountOverflow,
 }
 
 impl EscrowLifecycleError {
+    /// Returns a stable reason code for telemetry and policy contracts.
     pub fn reason_code(&self) -> &'static str {
         match self {
             Self::ZeroAmount => "escrow_amount_zero",
