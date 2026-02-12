@@ -142,6 +142,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Per-check budget for runtime-commit verification in lifecycle lane.",
     )
     parser.add_argument(
+        "--lifecycle-runtime-commit-finality-command",
+        default="",
+        help="Optional runtime finality command forwarded to lifecycle lane integration pass-through.",
+    )
+    parser.add_argument(
+        "--lifecycle-runtime-commit-finality-max-seconds",
+        default="15",
+        help="Per-check budget for runtime finality command in lifecycle lane integration pass-through.",
+    )
+    parser.add_argument(
+        "--lifecycle-runtime-commit-finality-output-file",
+        default="/tmp/kolme-local-runtime-commit-live-finality-output.txt",
+        help="Output file path for lifecycle lane integration finality command pass-through.",
+    )
+    parser.add_argument(
         "--self-test-matrix-command",
         action="append",
         default=[],
@@ -168,12 +183,16 @@ def ensure_docs() -> None:
         "run_local_kolme_fork_checkout_bootstrap_lane.sh",
         "check_local_kolme_fork_checkout_bootstrap_policy.py",
         "Regression: #1644",
+        "--lifecycle-runtime-commit-finality-command",
+        "Regression: #1975",
     )
     for marker in required_doc_markers:
         if marker not in doc_text:
             raise RuntimeError(f"expected Kolme devnet ops doc marker: {marker}")
     if "run_local_kolme_fork_real_process_contract_lane.sh" not in readme_text:
         raise RuntimeError("expected README to reference real-process wrapper contract lane")
+    if "--lifecycle-runtime-commit-finality-command" not in readme_text:
+        raise RuntimeError("expected README to document real-process lifecycle finality pass-through option")
 
 
 def build_contracts() -> dict[str, str]:
@@ -282,6 +301,18 @@ def run_mode_checks(
         self_test_policy = temp_root / "self-test-policy.json"
         lifecycle_report = temp_root / "lifecycle-summary.json"
         lifecycle_policy = temp_root / "lifecycle-policy.json"
+        artifact_paths = [
+            str(bootstrap_report),
+            str(bootstrap_policy),
+            str(preflight_report),
+            str(preflight_policy),
+            str(self_test_report),
+            str(self_test_policy),
+            str(lifecycle_report),
+            str(lifecycle_policy),
+        ]
+        if args.lifecycle_runtime_commit_finality_command:
+            artifact_paths.append(str(Path(args.lifecycle_runtime_commit_finality_output_file).resolve()))
 
         source_repo.mkdir(parents=True, exist_ok=True)
         subprocess.run(["git", "-C", str(source_repo), "init", "-q"], check=True)
@@ -300,7 +331,7 @@ def run_mode_checks(
             for check in checks:
                 check["status"] = "fail"
                 check["reason_code"] = "local_opt_in_missing"
-            return checks, "local_opt_in_missing"
+            return checks, "local_opt_in_missing", artifact_paths
 
         env["KAMN_KOLME_LOCAL_HEAVY"] = "1"
         checks.append(
@@ -315,6 +346,48 @@ def run_mode_checks(
         matrix_args: list[str] = []
         for command in args.self_test_matrix_command:
             matrix_args.extend(["--matrix-command", command])
+
+        process_lifecycle_command = [
+            "bash",
+            str(LIFECYCLE_RUNNER),
+            "--mode",
+            "dry-run",
+            "--checkout-path",
+            str(checkout_path),
+            "--expected-remote-url",
+            str(source_repo),
+            "--expected-ref",
+            "refs/heads/main",
+            "--base-url",
+            args.base_url,
+            "--fork-chain-version",
+            args.fork_chain_version,
+            "--max-seconds",
+            args.lifecycle_max_seconds,
+            "--startup-max-seconds",
+            args.lifecycle_startup_max_seconds,
+            "--integration-max-seconds",
+            args.lifecycle_integration_max_seconds,
+            "--integration-bootstrap-max-seconds",
+            args.lifecycle_bootstrap_max_seconds,
+            "--integration-conformance-max-seconds",
+            args.lifecycle_conformance_max_seconds,
+            "--integration-runtime-commit-max-seconds",
+            args.lifecycle_runtime_commit_max_seconds,
+            "--output-json",
+            str(lifecycle_report),
+        ]
+        if args.lifecycle_runtime_commit_finality_command:
+            process_lifecycle_command.extend(
+                [
+                    "--integration-runtime-commit-finality-command",
+                    args.lifecycle_runtime_commit_finality_command,
+                    "--integration-runtime-commit-finality-max-seconds",
+                    args.lifecycle_runtime_commit_finality_max_seconds,
+                    "--integration-runtime-commit-finality-output-file",
+                    args.lifecycle_runtime_commit_finality_output_file,
+                ]
+            )
 
         ordered_checks = [
             (
@@ -375,10 +448,6 @@ def run_mode_checks(
                     "dry-run",
                     "--checkout-path",
                     str(checkout_path),
-                    "--expected-remote-url",
-                    str(source_repo),
-                    "--expected-ref",
-                    "refs/heads/main",
                     "--output-json",
                     str(preflight_report),
                 ],
@@ -445,36 +514,7 @@ def run_mode_checks(
             ),
             (
                 "process_lifecycle_lane",
-                [
-                    "bash",
-                    str(LIFECYCLE_RUNNER),
-                    "--mode",
-                    "dry-run",
-                    "--checkout-path",
-                    str(checkout_path),
-                    "--expected-remote-url",
-                    str(source_repo),
-                    "--expected-ref",
-                    "refs/heads/main",
-                    "--base-url",
-                    args.base_url,
-                    "--fork-chain-version",
-                    args.fork_chain_version,
-                    "--max-seconds",
-                    args.lifecycle_max_seconds,
-                    "--startup-max-seconds",
-                    args.lifecycle_startup_max_seconds,
-                    "--integration-max-seconds",
-                    args.lifecycle_integration_max_seconds,
-                    "--bootstrap-max-seconds",
-                    args.lifecycle_bootstrap_max_seconds,
-                    "--conformance-max-seconds",
-                    args.lifecycle_conformance_max_seconds,
-                    "--runtime-commit-max-seconds",
-                    args.lifecycle_runtime_commit_max_seconds,
-                    "--output-json",
-                    str(lifecycle_report),
-                ],
+                process_lifecycle_command,
                 "checkpoint_failed_process_lifecycle_lane",
             ),
             (
@@ -543,17 +583,6 @@ def run_mode_checks(
                 }
             )
 
-        artifact_paths = [
-            str(bootstrap_report),
-            str(bootstrap_policy),
-            str(preflight_report),
-            str(preflight_policy),
-            str(self_test_report),
-            str(self_test_policy),
-            str(lifecycle_report),
-            str(lifecycle_policy),
-        ]
-
     return checks, observed_reason, artifact_paths
 
 
@@ -562,6 +591,11 @@ def main() -> int:
 
     if not args.max_seconds.isdigit() or int(args.max_seconds) <= 0:
         print("max-seconds must be a positive integer", file=sys.stderr)
+        return 1
+    if not args.lifecycle_runtime_commit_finality_max_seconds.isdigit() or int(
+        args.lifecycle_runtime_commit_finality_max_seconds
+    ) <= 0:
+        print("lifecycle-runtime-commit-finality-max-seconds must be a positive integer", file=sys.stderr)
         return 1
 
     for script, description in (
@@ -620,6 +654,14 @@ def main() -> int:
         "budget_status": budget_status,
         "selected_serve_command": selected_serve_command,
         "allow_non_fork_serve_command": bool(args.allow_non_fork_serve_command),
+        "lifecycle_runtime_commit_finality_enabled": bool(args.lifecycle_runtime_commit_finality_command),
+        "lifecycle_runtime_commit_finality_command": args.lifecycle_runtime_commit_finality_command,
+        "lifecycle_runtime_commit_finality_max_seconds": int(args.lifecycle_runtime_commit_finality_max_seconds),
+        "lifecycle_runtime_commit_finality_output_file": (
+            str(Path(args.lifecycle_runtime_commit_finality_output_file).resolve())
+            if args.lifecycle_runtime_commit_finality_command
+            else ""
+        ),
         "contracts": build_contracts(),
         "checks": checks,
         "artifact_paths": artifact_paths,

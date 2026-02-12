@@ -582,6 +582,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-real-process-summary.json`
 - Explicit local-only real-fork wrapper execution:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh --mode run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 360 --bootstrap-max-seconds 120 --preflight-max-seconds 45 --self-test-max-seconds 120 --self-test-matrix-max-seconds 60 --lifecycle-max-seconds 300 --lifecycle-startup-max-seconds 45 --lifecycle-integration-max-seconds 240 --lifecycle-bootstrap-max-seconds 90 --lifecycle-conformance-max-seconds 180 --lifecycle-runtime-commit-max-seconds 30 --output-json /tmp/kolme-local-fork-real-process-summary.json`
+- Optional lifecycle runtime finality pass-through:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh --mode run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --lifecycle-runtime-commit-finality-command "printf 'finality=final\n'" --lifecycle-runtime-commit-finality-max-seconds 15 --lifecycle-runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --output-json /tmp/kolme-local-fork-real-process-summary.json`
 - Default serve profile contract:
   - `cd <checkout-path> && cargo run --bin example-six-sigma -- serve api-server`
 - Checkout bootstrap prerequisite commands:
@@ -603,6 +605,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `run_local_kolme_fork_profile_preflight_lane.sh` and policy verification execute before self-test/lifecycle orchestration.
   - `run_local_kolme_fork_self_test_lane.sh` and policy verification execute before lifecycle orchestration.
   - `run_local_kolme_fork_process_lifecycle_lane.sh` run-mode composition with bounded budgets.
+  - optional lifecycle runtime finality pass-through (`--lifecycle-runtime-commit-finality-command`, `--lifecycle-runtime-commit-finality-max-seconds`, `--lifecycle-runtime-commit-finality-output-file`) is forwarded into nested process lifecycle integration finality options.
   - `check_local_kolme_fork_process_lifecycle_policy.py` GO decision verification.
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.
@@ -797,6 +800,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - real-fork local process wrapper bootstrap-first prerequisite ordering remains fail-closed for bootstrap lane/policy checkpoint drift (`Regression: #1667`).
 - local-only heavy E2E lane checkout-bootstrap contract checkpoint composition remains fail-closed for command/id ordering drift (`Regression: #1677`).
 - real-fork local process wrapper lane fails closed for local opt-in, serve-command profile drift, self-test/lifecycle/policy checkpoint failure, and runtime budget overruns (`Regression: #1644`).
+- real-fork local process wrapper lane propagates lifecycle runtime finality pass-through options into nested process lifecycle integration command composition (`Regression: #1975`).
 - real-fork local process wrapper policy checker lane remains fail-closed for schema/contracts/checkpoint drift (`Regression: #1671`).
 - local runtime-commit live proof lane fails closed without local opt-in and for command timeout/failure paths (`Regression: #1450`).
 - local runtime-commit live proof lane preflight health probe and default live-provider ignored-test dispatch remain fail-closed (`Regression: #1829`).
