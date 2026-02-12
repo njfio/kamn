@@ -102,6 +102,9 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - `run_live_transport_parity_contract_tests=true`
   - `live_transport_parity_languages=rust,python,typescript`
 - Core local-heavy Kolme helper/orchestration command changes default to local-only selector scope:
+  - workflow-level guardrail in `ci-fast-gate`:
+    - `workflow_dispatch` input `run_kolme_local_heavy_contract_tests` defaults to `'false'`
+    - selector env pass-through: `CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_kolme_local_heavy_contract_tests || 'false' }}`
   - default selector outputs:
     - `run_kolme_local_heavy_contract_tests=false`
     - `kolme_local_heavy_selector_opt_in=false`

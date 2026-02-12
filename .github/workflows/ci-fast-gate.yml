@@ -4,6 +4,11 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
+    inputs:
+      run_kolme_local_heavy_contract_tests:
+        description: 'Opt in to Kolme local-heavy contract lane execution for this run'
+        required: false
+        default: 'false'
 
 concurrency:
   group: ci-fast-gate-${{ github.ref }}
@@ -31,6 +36,8 @@ jobs:
       - name: Select CI scope
         id: scope
         shell: bash
+        env:
+          CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_kolme_local_heavy_contract_tests || 'false' }}
         run: bash scripts/ci/select_targets.sh
 
       - name: Docs-only hygiene checks
