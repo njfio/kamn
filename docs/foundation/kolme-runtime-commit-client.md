@@ -191,6 +191,20 @@ KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.s
 bash scripts/kolme/run_runtime_commit_contract_lane.sh
 ```
 
+## Local Orchestration Chain (Task #1966)
+
+- Local-only heavy execution remains opt-in and bounded:
+  - all non-dry-run orchestration lanes require `KAMN_KOLME_LOCAL_HEAVY=1`.
+  - CI fast-gate remains dry-run/contract focused; local run-mode is intentionally opt-in to control cost.
+- Runtime live lane (submit + optional finality):
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --base-url http://127.0.0.1:3000 --provider-hint kolme-fork-local --max-seconds 90 --preflight-max-seconds 10 --finality-command "printf 'finality=final\n'" --finality-max-seconds 15 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt --finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt`
+- Local KAMN runtime integration lane:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-commit-finality-command "printf 'finality=final\n'" --runtime-commit-finality-max-seconds 15 --runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
+- Local fork process lifecycle lane:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --serve-command "python3 /tmp/mock_kolme_api.py 3000 v0.15.2" --integration-runtime-commit-finality-command "printf 'finality=final\n'" --integration-runtime-commit-finality-max-seconds 15 --integration-runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json`
+- Real-process wrapper lane with lifecycle run intent:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh --mode run --checkout-path /tmp/kolme_fork --lifecycle-mode run --lifecycle-runtime-commit-finality-command "printf 'finality=final\n'" --lifecycle-runtime-commit-finality-max-seconds 15 --lifecycle-runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --output-json /tmp/kolme-local-fork-real-process-summary.json`
+
 Then run broader regression:
 
 ```bash
@@ -222,3 +236,4 @@ cargo test -p kamn-core
 - receipt-finality mapping extraction parity drift remains fail-closed (`Regression: #1779`).
 - JSON escape helper extraction parity drift remains fail-closed (`Regression: #1781`).
 - commit-finality parse helper extraction parity drift remains fail-closed (`Regression: #1783`).
+- local orchestration chain markers for integration/process/wrapper lifecycle mode and finality pass-through remain fail-closed (`Regression: #1979`).
