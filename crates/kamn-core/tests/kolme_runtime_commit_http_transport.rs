@@ -297,6 +297,20 @@ fn spawn_server_with_raw_response(
 }
 
 #[test]
+fn unit_http_transport_rejects_zero_timeout_seconds() {
+    assert!(
+        matches!(
+            KolmeRuntimeCommitHttpTransport::new(0),
+            Err(kamn_core::KolmeRuntimeCommitError::InvalidRequest {
+                field: "transport_timeout_seconds",
+                reason: "must be positive",
+            })
+        ),
+        "http transport timeout must be positive"
+    );
+}
+
+#[test]
 fn integration_http_transport_submit_and_response_mapping() {
     let wire_payload = "operation_id=op-1\nstate_root=state-1\n";
     let idempotency_key = "kolme-runtime-commit:op-1:state-1:agent-1:1:payload-1";

@@ -20,6 +20,7 @@ use kamn_kolme::{
     is_valid_block_fallback_provider_input as is_kolme_valid_block_fallback_provider_input_contract,
     is_valid_finality_base_url_input as is_kolme_valid_finality_base_url_input_contract,
     is_valid_finality_status_path_input as is_kolme_valid_finality_status_path_input_contract,
+    is_valid_http_transport_timeout_seconds as is_kolme_valid_http_transport_timeout_seconds_contract,
     is_valid_live_provider_base_url_input as is_kolme_valid_live_provider_base_url_input_contract,
     is_valid_live_provider_submit_path_input as is_kolme_valid_live_provider_submit_path_input_contract,
     is_valid_notifications_provider_input as is_kolme_valid_notifications_provider_input_contract,
@@ -821,7 +822,7 @@ pub struct KolmeRuntimeCommitHttpTransport {
 impl KolmeRuntimeCommitHttpTransport {
     /// Builds a concrete HTTP transport with deterministic timeout validation.
     pub fn new(timeout_seconds: u64) -> Result<Self, KolmeRuntimeCommitError> {
-        if timeout_seconds == 0 {
+        if !is_kolme_valid_http_transport_timeout_seconds_contract(timeout_seconds) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "transport_timeout_seconds",
                 reason: "must be positive",

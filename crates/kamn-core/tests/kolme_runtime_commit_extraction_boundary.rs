@@ -101,5 +101,6 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("KolmeRuntimeCommitTransportErrorKind::Timeout"));
     assert!(RUNTIME_COMMIT_SRC.contains("KolmeRuntimeCommitTransportErrorKind::MalformedResponse"));
     assert!(RUNTIME_COMMIT_SRC.contains("classify_kolme_transport_io_error(&error)"));
+    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_http_transport_timeout_seconds_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("impl From<KamnKolmeTransportIoClassification>"));
 }
