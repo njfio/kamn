@@ -206,6 +206,16 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/ci/check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/kolme_compatibility/lane_migration_matrix.json --baseline-file fixtures/kolme_compatibility/wrapper_inventory_baseline.json --output-json /tmp/kolme-wrapper-inventory-delta.json`
     - emits lane-level and aggregate wrapper-count/shell-LOC deltas for migration trend governance.
     - Regression: #2117
+  - Kolme wave-8 wrapper-family baseline guard stays on PR fast gate:
+    - `bash scripts/ci/test_kolme_wave8_wrapper_family_baseline_contract.sh`
+    - deterministic wave-8 baseline artifacts:
+      - `fixtures/ci/kolme_wave8_wrapper_family_matrix.json`
+      - `fixtures/ci/kolme_wave8_wrapper_family_baseline.json`
+    - deterministic generator/check commands:
+      - `bash scripts/ci/generate_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/kolme_wave8_wrapper_family_matrix.json --output-json /tmp/kolme-wave8-wrapper-family-baseline.json`
+      - `bash scripts/ci/check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/kolme_wave8_wrapper_family_matrix.json --baseline-file fixtures/ci/kolme_wave8_wrapper_family_baseline.json --output-json /tmp/kolme-wave8-wrapper-family-delta.json`
+    - captures script-count and shell-LOC baseline drift for migrated runtime run-lane wrappers.
+    - Regression: #2216
   - Kolme wrapper budget-trend guard stays on PR fast gate:
     - `bash scripts/ci/test_check_kolme_wrapper_budget_trend.sh`
     - threshold policy file:
