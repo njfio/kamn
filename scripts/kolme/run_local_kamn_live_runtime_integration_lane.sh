@@ -18,6 +18,7 @@ RUNTIME_COMMIT_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-endpoint-output.txt"
 RUNTIME_COMMIT_LIVE_SUMMARY="/tmp/kolme-local-runtime-commit-live-summary.json"
 RUNTIME_COMMIT_LIVE_POLICY_REPORT="/tmp/kolme-local-runtime-commit-live-policy.json"
 RUNTIME_PROVIDER_CLIENT_CONTRACT="KolmeRuntimeCommitLiveProvider"
+RUNTIME_PROFILE="standard"
 RUNTIME_COMMIT_FINALITY_COMMAND=""
 RUNTIME_COMMIT_FINALITY_MAX_SECONDS=15
 RUNTIME_COMMIT_FINALITY_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-live-finality-output.txt"
@@ -109,6 +110,14 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       RUNTIME_PROVIDER_CLIENT_CONTRACT="$2"
+      shift 2
+      ;;
+    --runtime-profile)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --runtime-profile" >&2
+        exit 1
+      fi
+      RUNTIME_PROFILE="$2"
       shift 2
       ;;
     --runtime-commit-finality-command)
@@ -239,6 +248,8 @@ Options:
                                       Policy report output path for nested runtime-commit live evidence checks.
   --runtime-provider-client-contract <name>
                                       Required runtime provider contract marker forwarded to nested runtime finality evidence policy.
+  --runtime-profile standard|real-node
+                                      Runtime integration profile contract marker for local evidence interpretation.
   --runtime-commit-finality-command <command>
                                       Optional finality command passed through to nested runtime-commit live lane.
   --runtime-commit-finality-max-seconds <n>
@@ -288,6 +299,11 @@ fi
 
 if [ "$RUNTIME_PROVIDER_CLIENT_CONTRACT" != "KolmeRuntimeCommitLiveProvider" ]; then
   echo "runtime-provider-client-contract must be KolmeRuntimeCommitLiveProvider" >&2
+  exit 1
+fi
+
+if [ "$RUNTIME_PROFILE" != "standard" ] && [ "$RUNTIME_PROFILE" != "real-node" ]; then
+  echo "runtime-profile must be one of: standard, real-node" >&2
   exit 1
 fi
 
@@ -585,7 +601,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" <<'PY'
 from __future__ import annotations
 
 import json
@@ -619,8 +635,9 @@ localhost_signed_reason_code = sys.argv[24]
 conformance_reason_code = sys.argv[25]
 runtime_commit_reason_code = sys.argv[26]
 runtime_commit_policy_reason_code = sys.argv[27]
-checks_path = pathlib.Path(sys.argv[28])
-runtime_provider_client_contract = sys.argv[29]
+runtime_profile = sys.argv[28]
+checks_path = pathlib.Path(sys.argv[29])
+runtime_provider_client_contract = sys.argv[30]
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -656,6 +673,7 @@ summary = {
     "fork_chain_version": fork_chain_version,
     "runtime_commit_command": runtime_commit_command,
     "runtime_provider_client_contract": runtime_provider_client_contract,
+    "runtime_profile": runtime_profile,
     "runtime_commit_live_policy_report": runtime_commit_live_policy_report,
     "runtime_commit_finality_command": runtime_commit_finality_command if runtime_commit_finality_command else "",
     "runtime_commit_finality_output_file": runtime_commit_finality_output_file if runtime_commit_finality_command else "",
@@ -669,6 +687,7 @@ summary = {
     "contracts": {
         "ci_fast_gate_scope": "local-only",
         "runtime_provider_client_contract": runtime_provider_client_contract,
+        "runtime_profile": runtime_profile,
         "runtime_commit_endpoint": "/broadcast/runtime-commit",
         "runtime_commit_method": "POST",
         "runtime_commit_finality_primary_endpoint": "/notifications",
@@ -697,6 +716,8 @@ echo "lane_mode=$MODE"
 echo "reason_code=$reason_code"
 echo "budget_status=$budget_status"
 echo "local_only_enforced=true"
+echo "ci_fast_gate_eligible=false"
+echo "runtime_profile=$RUNTIME_PROFILE"
 echo "summary_file=$(realpath "$OUTPUT_JSON")"
 
 if [ "$overall_status" != "ok" ]; then
