@@ -70,9 +70,16 @@ required_coverage_markers=(
   "checkpoint_failed_signer_secret_contract"
   "checkpoint_failed_signer_quorum_contract"
   "checkpoint_failed_custody_evidence_contract"
+  "checkpoint_failed_signer_provenance_contract"
+  "checkpoint_failed_signer_rotation_freshness_contract"
+  "signer_key_source_contract_version"
+  "signer_key_source"
+  "signer_provenance_file"
+  "signer_rotation_epoch_stale"
   "signer_quorum_shortfall"
   "custody_evidence_missing"
   "Regression: #2226"
+  "Regression: #2300"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q -- "$marker" "$CONTRACT_IMPL"; then
@@ -96,6 +103,10 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "Regression: #2226" "$docs_file"; then
     echo "expected docs parity to include deployment preflight contract-lane regression marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "Regression: #2300" "$docs_file"; then
+    echo "expected docs parity to include signer provenance/rotation regression marker in $docs_file" >&2
     exit 1
   fi
 done

@@ -13,6 +13,12 @@ PRIMARY_SIGNER_SECRET_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
 SECONDARY_SIGNER_SECRET_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
 FALLBACK_SIGNER_SECRET_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 REQUIRED_SECRET_HEX_LENGTH = 64
+SIGNER_KEY_SOURCE_CONTRACT_VERSION = "v1"
+ALLOWED_SIGNER_KEY_SOURCES = ("env-local", "managed-external")
+ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE = {
+    PRIMARY_SIGNER_PROFILE: ("env-local", "managed-external"),
+    SECONDARY_SIGNER_PROFILE: ("env-local",),
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -96,6 +102,78 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif expected_signer_env and signer_private_key_env != expected_signer_env:
         reason_codes.append("signer_private_key_env_mismatch")
 
+    signer_key_source_contract_version = report.get("signer_key_source_contract_version")
+    if not isinstance(signer_key_source_contract_version, str) or not signer_key_source_contract_version.strip():
+        reason_codes.append("signer_key_source_contract_version_missing")
+    elif signer_key_source_contract_version != SIGNER_KEY_SOURCE_CONTRACT_VERSION:
+        reason_codes.append("signer_key_source_contract_version_mismatch")
+
+    signer_key_source = report.get("signer_key_source")
+    if not isinstance(signer_key_source, str) or not signer_key_source.strip():
+        reason_codes.append("signer_key_source_missing")
+    elif signer_key_source not in ALLOWED_SIGNER_KEY_SOURCES:
+        reason_codes.append("signer_key_source_invalid")
+    elif (
+        isinstance(signer_profile, str)
+        and signer_profile in ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE
+        and signer_key_source not in ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE[signer_profile]
+    ):
+        reason_codes.append("signer_key_source_profile_pair_disallowed")
+
+    signer_provenance_file = report.get("signer_provenance_file")
+    if not isinstance(signer_provenance_file, str):
+        reason_codes.append("signer_provenance_file_invalid")
+
+    signer_provenance_present = report.get("signer_provenance_present")
+    if not isinstance(signer_provenance_present, bool):
+        reason_codes.append("signer_provenance_present_invalid")
+
+    signer_provenance_sha256 = report.get("signer_provenance_sha256")
+    if not isinstance(signer_provenance_sha256, str):
+        reason_codes.append("signer_provenance_sha256_invalid")
+
+    signer_provenance_sha256_valid = report.get("signer_provenance_sha256_valid")
+    if not isinstance(signer_provenance_sha256_valid, bool):
+        reason_codes.append("signer_provenance_sha256_valid_invalid")
+
+    signer_rotation_epoch = report.get("signer_rotation_epoch")
+    if not isinstance(signer_rotation_epoch, int) or signer_rotation_epoch <= 0:
+        reason_codes.append("signer_rotation_epoch_invalid")
+
+    signer_previous_rotation_epoch = report.get("signer_previous_rotation_epoch")
+    if not isinstance(signer_previous_rotation_epoch, int) or signer_previous_rotation_epoch <= 0:
+        reason_codes.append("signer_previous_rotation_epoch_invalid")
+
+    signer_rotation_freshness_max_delta = report.get("signer_rotation_freshness_max_delta")
+    if not isinstance(signer_rotation_freshness_max_delta, int) or signer_rotation_freshness_max_delta < 0:
+        reason_codes.append("signer_rotation_freshness_max_delta_invalid")
+
+    signer_rotation_delta_epochs = report.get("signer_rotation_delta_epochs")
+    if not isinstance(signer_rotation_delta_epochs, int):
+        reason_codes.append("signer_rotation_delta_epochs_invalid")
+    elif signer_rotation_delta_epochs < 0:
+        reason_codes.append("signer_rotation_epoch_invalid")
+    elif (
+        isinstance(signer_rotation_epoch, int)
+        and signer_rotation_epoch > 0
+        and isinstance(signer_previous_rotation_epoch, int)
+        and signer_previous_rotation_epoch > 0
+        and signer_rotation_delta_epochs != signer_rotation_epoch - signer_previous_rotation_epoch
+    ):
+        reason_codes.append("signer_rotation_delta_epochs_mismatch")
+    elif (
+        isinstance(signer_rotation_freshness_max_delta, int)
+        and signer_rotation_freshness_max_delta >= 0
+        and signer_rotation_delta_epochs > signer_rotation_freshness_max_delta
+    ):
+        reason_codes.append("signer_rotation_epoch_stale")
+
+    signer_rotation_fresh = report.get("signer_rotation_fresh")
+    if not isinstance(signer_rotation_fresh, bool):
+        reason_codes.append("signer_rotation_fresh_invalid")
+    elif "signer_rotation_epoch_stale" in reason_codes and signer_rotation_fresh:
+        reason_codes.append("signer_rotation_fresh_contract_mismatch")
+
     fallback_signer_private_key_env = report.get("fallback_signer_private_key_env")
     if not isinstance(fallback_signer_private_key_env, str) or not fallback_signer_private_key_env.strip():
         reason_codes.append("fallback_signer_private_key_env_missing")
@@ -175,6 +253,26 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("custody_evidence_required_contract_mismatch")
         if contracts.get("custody_evidence_sha256_required") is not True:
             reason_codes.append("custody_evidence_sha256_required_contract_mismatch")
+        if contracts.get("signer_provenance_required") is not True:
+            reason_codes.append("signer_provenance_required_contract_mismatch")
+        if contracts.get("signer_provenance_sha256_required") is not True:
+            reason_codes.append("signer_provenance_sha256_required_contract_mismatch")
+        if contracts.get("signer_key_source_contract_version") != SIGNER_KEY_SOURCE_CONTRACT_VERSION:
+            reason_codes.append("signer_key_source_contract_version_contract_mismatch")
+        if isinstance(signer_key_source, str) and signer_key_source and contracts.get("signer_key_source") != signer_key_source:
+            reason_codes.append("signer_key_source_contract_mismatch")
+        if contracts.get("signer_key_source_allowed_for_ops_primary") != ["env-local", "managed-external"]:
+            reason_codes.append("signer_key_source_allowed_for_ops_primary_contract_mismatch")
+        if contracts.get("signer_key_source_allowed_for_ops_secondary") != ["env-local"]:
+            reason_codes.append("signer_key_source_allowed_for_ops_secondary_contract_mismatch")
+        if (
+            isinstance(signer_rotation_freshness_max_delta, int)
+            and signer_rotation_freshness_max_delta >= 0
+            and contracts.get("signer_rotation_freshness_max_delta") != signer_rotation_freshness_max_delta
+        ):
+            reason_codes.append("signer_rotation_freshness_max_delta_contract_mismatch")
+        if contracts.get("signer_rotation_stale_rejected") is not True:
+            reason_codes.append("signer_rotation_stale_rejected_contract_mismatch")
 
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
@@ -187,6 +285,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             "fallback_private_key_contract",
             "signer_quorum_contract",
             "custody_evidence_contract",
+            "signer_provenance_contract",
+            "signer_rotation_freshness_contract",
         }
         observed_ids: set[str] = set()
         for entry in checks:
@@ -241,6 +341,20 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("custody_evidence_sha256_invalid")
         if isinstance(custody_evidence_file, str) and custody_evidence_present is True and not custody_evidence_file.strip():
             reason_codes.append("custody_evidence_file_missing")
+        if signer_provenance_present is not True:
+            reason_codes.append("signer_provenance_missing")
+        if signer_provenance_sha256_valid is not True:
+            reason_codes.append("signer_provenance_sha256_invalid")
+        if isinstance(signer_provenance_file, str) and signer_provenance_present is True and not signer_provenance_file.strip():
+            reason_codes.append("signer_provenance_file_missing")
+        if (
+            isinstance(signer_rotation_delta_epochs, int)
+            and isinstance(signer_rotation_freshness_max_delta, int)
+            and signer_rotation_delta_epochs > signer_rotation_freshness_max_delta
+        ):
+            reason_codes.append("signer_rotation_epoch_stale")
+        if signer_rotation_fresh is not True:
+            reason_codes.append("signer_rotation_fresh_violation")
 
     for required_reason_code in args.require_reason_code:
         if reason_code != required_reason_code:

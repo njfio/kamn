@@ -384,12 +384,23 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - deployment preflight signer/runtime checks remain fast and ci-fast-gate eligible.
     - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
     - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`
-    - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+    - `printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" > /tmp/kolme-live-signer-provenance.json`
+    - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source env-local --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
     - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
     - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --output-json /tmp/kolme-local-live-deployment-preflight-summary.json --policy-output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
     - deterministic marker contracts:
       - `signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE`
       - `fallback_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+      - `signer_key_source_contract_version=v1`
+      - `signer_key_source=env-local`
+      - `signer_provenance_file`
+      - `signer_provenance_present`
+      - `signer_provenance_sha256_valid`
+      - `signer_rotation_epoch`
+      - `signer_previous_rotation_epoch`
+      - `signer_rotation_freshness_max_delta`
+      - `signer_rotation_delta_epochs`
+      - `signer_rotation_fresh`
       - `required_approvals=2`
       - `received_approvals=2`
       - `contracts.ci_fast_gate_scope=ci-fast-gate`
@@ -397,6 +408,12 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `contracts.fallback_private_key_path_allowed=false`
       - `contracts.approval_quorum_required=2`
       - `contracts.custody_evidence_required=true`
+      - `contracts.signer_provenance_required=true`
+      - `contracts.signer_provenance_sha256_required=true`
+      - `contracts.signer_key_source_contract_version=v1`
+      - `contracts.signer_key_source=env-local`
+      - `contracts.signer_rotation_freshness_max_delta=2`
+      - `contracts.signer_rotation_stale_rejected=true`
     - fail-closed drift reasons:
       - `runtime_mode_mismatch`
       - `signer_profile_mismatch`
@@ -404,10 +421,19 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `checkpoint_failed_signer_secret_contract`
       - `checkpoint_failed_signer_quorum_contract`
       - `checkpoint_failed_custody_evidence_contract`
+      - `checkpoint_failed_signer_provenance_contract`
+      - `checkpoint_failed_signer_rotation_freshness_contract`
       - `signer_quorum_shortfall`
       - `custody_evidence_missing`
       - `custody_evidence_sha256_invalid`
+      - `signer_key_source_contract_version_mismatch`
+      - `signer_key_source_invalid`
+      - `signer_key_source_profile_pair_disallowed`
+      - `signer_provenance_missing`
+      - `signer_provenance_sha256_invalid`
+      - `signer_rotation_epoch_stale`
     - deployment preflight contract lane parity remains fail-closed (`Regression: #2226`).
+    - deployment preflight signer provenance + rotation freshness parity remains fail-closed (`Regression: #2300`).
   - local fork process lifecycle integration run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --serve-command "python3 /tmp/mock_kolme_api.py 3000 v0.15.2" --max-seconds 300 --startup-max-seconds 45 --integration-max-seconds 240 --integration-bootstrap-max-seconds 90 --integration-conformance-max-seconds 180 --integration-runtime-commit-max-seconds 30 --integration-runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --rollback-evidence-file /tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json --recovery-evidence-file /tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json`
     - process lifecycle integration command composition must include `--runtime-commit-live-policy-report` for nested integration evidence lineage.

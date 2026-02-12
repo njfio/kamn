@@ -9,9 +9,11 @@ README_FILE="$ROOT_DIR/README.md"
 TMP_SUMMARY="$(mktemp)"
 TMP_ERR="$(mktemp)"
 TMP_CUSTODY="$(mktemp)"
-trap 'rm -f "$TMP_SUMMARY" "$TMP_ERR" "$TMP_CUSTODY"' EXIT
+TMP_PROVENANCE="$(mktemp)"
+trap 'rm -f "$TMP_SUMMARY" "$TMP_ERR" "$TMP_CUSTODY" "$TMP_PROVENANCE"' EXIT
 
 printf '%s\n' "custody-attestation=ops-primary:epoch-1" >"$TMP_CUSTODY"
+printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" >"$TMP_PROVENANCE"
 
 extract_value() {
   local output="$1"
@@ -105,6 +107,18 @@ if summary.get("received_approvals") != 0:
     raise SystemExit("expected deployment preflight summary received_approvals=0 for dry-run")
 if summary.get("custody_evidence_present") is not False:
     raise SystemExit("expected deployment preflight summary custody evidence marker to be false in dry-run")
+if summary.get("signer_provenance_present") is not False:
+    raise SystemExit("expected deployment preflight summary signer provenance marker to be false in dry-run")
+if summary.get("signer_key_source_contract_version") != "v1":
+    raise SystemExit("expected deployment preflight summary signer key-source contract version marker")
+if summary.get("signer_key_source") != "env-local":
+    raise SystemExit("expected deployment preflight summary signer key-source marker")
+if summary.get("signer_rotation_epoch") != 1:
+    raise SystemExit("expected deployment preflight summary signer rotation epoch marker")
+if summary.get("signer_previous_rotation_epoch") != 1:
+    raise SystemExit("expected deployment preflight summary signer previous rotation epoch marker")
+if summary.get("signer_rotation_freshness_max_delta") != 2:
+    raise SystemExit("expected deployment preflight summary signer rotation freshness max delta marker")
 contracts = summary.get("contracts", {})
 if contracts.get("ci_fast_gate_scope") != "ci-fast-gate":
     raise SystemExit("expected deployment preflight contracts to set ci-fast-gate scope")
@@ -114,6 +128,18 @@ if contracts.get("custody_evidence_required") is not True:
     raise SystemExit("expected deployment preflight contracts to require signer custody evidence")
 if contracts.get("approval_quorum_required") != 2:
     raise SystemExit("expected deployment preflight contracts approval quorum requirement marker")
+if contracts.get("signer_provenance_required") is not True:
+    raise SystemExit("expected deployment preflight contracts to require signer provenance evidence")
+if contracts.get("signer_provenance_sha256_required") is not True:
+    raise SystemExit("expected deployment preflight contracts to require signer provenance sha256 evidence")
+if contracts.get("signer_key_source_contract_version") != "v1":
+    raise SystemExit("expected deployment preflight contracts signer key-source contract version marker")
+if contracts.get("signer_key_source") != "env-local":
+    raise SystemExit("expected deployment preflight contracts signer key-source marker")
+if contracts.get("signer_rotation_freshness_max_delta") != 2:
+    raise SystemExit("expected deployment preflight contracts signer rotation freshness max delta marker")
+if contracts.get("signer_rotation_stale_rejected") is not True:
+    raise SystemExit("expected deployment preflight contracts signer rotation stale rejection marker")
 PY
 
 set +e
@@ -193,12 +219,59 @@ if ! grep -q "signer custody evidence file is required for selected profile" "$T
   exit 1
 fi
 
+set +e
 KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX="1111111111111111111111111111111111111111111111111111111111111111" \
 bash "$RUNNER" \
   --mode run \
   --required-approvals 2 \
   --received-approvals 2 \
   --custody-evidence-file "$TMP_CUSTODY" \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+missing_provenance_exit_code=$?
+set -e
+
+if [ "$missing_provenance_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight run mode to fail closed when signer provenance evidence is missing" >&2
+  exit 1
+fi
+
+if ! grep -q "signer provenance evidence file is required for selected profile" "$TMP_ERR"; then
+  echo "expected deterministic missing signer provenance evidence message from deployment preflight lane" >&2
+  exit 1
+fi
+
+set +e
+KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX="1111111111111111111111111111111111111111111111111111111111111111" \
+bash "$RUNNER" \
+  --mode run \
+  --required-approvals 2 \
+  --received-approvals 2 \
+  --custody-evidence-file "$TMP_CUSTODY" \
+  --signer-provenance-file "$TMP_PROVENANCE" \
+  --signer-rotation-epoch 8 \
+  --signer-previous-rotation-epoch 3 \
+  --signer-rotation-freshness-max-delta 2 \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+stale_rotation_exit_code=$?
+set -e
+
+if [ "$stale_rotation_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight run mode to fail closed when signer rotation metadata is stale" >&2
+  exit 1
+fi
+
+if ! grep -q "signer rotation metadata exceeded freshness threshold" "$TMP_ERR"; then
+  echo "expected deterministic signer rotation stale message from deployment preflight lane" >&2
+  exit 1
+fi
+
+KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX="1111111111111111111111111111111111111111111111111111111111111111" \
+bash "$RUNNER" \
+  --mode run \
+  --required-approvals 2 \
+  --received-approvals 2 \
+  --custody-evidence-file "$TMP_CUSTODY" \
+  --signer-provenance-file "$TMP_PROVENANCE" \
   --output-json "$TMP_SUMMARY" >/dev/null
 
 python3 - "$TMP_SUMMARY" <<'PY'
@@ -217,6 +290,12 @@ if summary.get("required_approvals") != 2 or summary.get("received_approvals") !
     raise SystemExit("expected deployment preflight run summary to capture signer quorum counts")
 if summary.get("custody_evidence_present") is not True:
     raise SystemExit("expected deployment preflight run summary custody evidence marker true")
+if summary.get("signer_provenance_present") is not True:
+    raise SystemExit("expected deployment preflight run summary signer provenance marker true")
+if summary.get("signer_provenance_sha256_valid") is not True:
+    raise SystemExit("expected deployment preflight run summary signer provenance sha256 marker true")
+if summary.get("signer_rotation_fresh") is not True:
+    raise SystemExit("expected deployment preflight run summary signer rotation freshness marker true")
 PY
 
 echo "local Kolme live deployment preflight lane tests passed."

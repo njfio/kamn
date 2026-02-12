@@ -173,6 +173,27 @@ def main() -> int:
     if summary.get("fallback_signer_secret_present") is not False:
         print("expected deployment preflight summary fallback signer secret marker to remain false", file=sys.stderr)
         return 1
+    if summary.get("signer_key_source_contract_version") != "v1":
+        print("expected deployment preflight summary signer key-source contract version marker", file=sys.stderr)
+        return 1
+    if summary.get("signer_key_source") != "env-local":
+        print("expected deployment preflight summary signer key-source marker", file=sys.stderr)
+        return 1
+    if summary.get("signer_rotation_epoch") != 1:
+        print("expected deployment preflight summary signer rotation epoch marker", file=sys.stderr)
+        return 1
+    if summary.get("signer_previous_rotation_epoch") != 1:
+        print("expected deployment preflight summary signer previous rotation epoch marker", file=sys.stderr)
+        return 1
+    if summary.get("signer_rotation_freshness_max_delta") != 2:
+        print("expected deployment preflight summary signer rotation freshness threshold marker", file=sys.stderr)
+        return 1
+    if summary.get("signer_rotation_delta_epochs") != 0:
+        print("expected deployment preflight summary signer rotation delta marker", file=sys.stderr)
+        return 1
+    if summary.get("signer_rotation_fresh") is not False:
+        print("expected deployment preflight summary signer rotation freshness marker false in dry-run", file=sys.stderr)
+        return 1
     contracts = summary.get("contracts", {})
     if not isinstance(contracts, dict):
         print("expected contracts object in deployment preflight summary", file=sys.stderr)
@@ -188,6 +209,24 @@ def main() -> int:
         return 1
     if contracts.get("custody_evidence_required") is not True:
         print("expected deployment preflight contracts custody_evidence_required=true", file=sys.stderr)
+        return 1
+    if contracts.get("signer_provenance_required") is not True:
+        print("expected deployment preflight contracts signer_provenance_required=true", file=sys.stderr)
+        return 1
+    if contracts.get("signer_provenance_sha256_required") is not True:
+        print("expected deployment preflight contracts signer_provenance_sha256_required=true", file=sys.stderr)
+        return 1
+    if contracts.get("signer_key_source_contract_version") != "v1":
+        print("expected deployment preflight contracts signer_key_source_contract_version=v1", file=sys.stderr)
+        return 1
+    if contracts.get("signer_key_source") != "env-local":
+        print("expected deployment preflight contracts signer_key_source=env-local", file=sys.stderr)
+        return 1
+    if contracts.get("signer_rotation_freshness_max_delta") != 2:
+        print("expected deployment preflight contracts signer_rotation_freshness_max_delta=2", file=sys.stderr)
+        return 1
+    if contracts.get("signer_rotation_stale_rejected") is not True:
+        print("expected deployment preflight contracts signer_rotation_stale_rejected=true", file=sys.stderr)
         return 1
     if policy.get("schema_version") != "kamn.kolme.local-live-deployment-preflight-policy-report.v1":
         print("unexpected deployment preflight contract-lane policy schema", file=sys.stderr)
@@ -274,6 +313,114 @@ def main() -> int:
             print("expected signer quorum negative policy final_decision NO-GO", file=sys.stderr)
             return 1
 
+        provenance_negative_report = temp_path / "signer_provenance_negative_summary.json"
+        provenance_negative_policy = temp_path / "signer_provenance_negative_policy.json"
+        provenance_negative_summary = dict(summary)
+        provenance_negative_summary["mode"] = "run"
+        provenance_negative_summary["status"] = "fail"
+        provenance_negative_summary["reason_code"] = "checkpoint_failed_signer_provenance_contract"
+        provenance_negative_summary["signer_secret_present"] = True
+        provenance_negative_summary["signer_secret_hex_valid"] = True
+        provenance_negative_summary["required_approvals"] = 2
+        provenance_negative_summary["received_approvals"] = 2
+        provenance_negative_summary["custody_evidence_file"] = "/tmp/custody-evidence.json"
+        provenance_negative_summary["custody_evidence_present"] = True
+        provenance_negative_summary["custody_evidence_sha256"] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        provenance_negative_summary["custody_evidence_sha256_valid"] = True
+        provenance_negative_summary["signer_provenance_file"] = ""
+        provenance_negative_summary["signer_provenance_present"] = False
+        provenance_negative_summary["signer_provenance_sha256"] = ""
+        provenance_negative_summary["signer_provenance_sha256_valid"] = False
+        provenance_negative_summary["signer_key_source_contract_version"] = "v0"
+        provenance_negative_summary["signer_key_source"] = "legacy-local"
+        provenance_negative_summary["signer_rotation_epoch"] = 1
+        provenance_negative_summary["signer_previous_rotation_epoch"] = 1
+        provenance_negative_summary["signer_rotation_freshness_max_delta"] = 2
+        provenance_negative_summary["signer_rotation_delta_epochs"] = 0
+        provenance_negative_summary["signer_rotation_fresh"] = False
+        provenance_negative_report.write_text(
+            json.dumps(provenance_negative_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        provenance_no_go_result = run_policy_check(
+            report_file=provenance_negative_report,
+            output_json=provenance_negative_policy,
+            expected_final_decision="NO-GO",
+            required_reason_code="checkpoint_failed_signer_provenance_contract",
+        )
+        if provenance_no_go_result.returncode == 0:
+            print("expected signer provenance negative proof to fail closed", file=sys.stderr)
+            return 1
+        provenance_no_go_policy = json.loads(provenance_negative_policy.read_text(encoding="utf-8"))
+        provenance_no_go_reason_codes = provenance_no_go_policy.get("reason_codes")
+        if not isinstance(provenance_no_go_reason_codes, list):
+            print("expected reason_codes list in signer provenance negative policy output", file=sys.stderr)
+            return 1
+        if "signer_provenance_missing" not in provenance_no_go_reason_codes:
+            print("expected signer_provenance_missing in signer provenance negative policy output", file=sys.stderr)
+            return 1
+        if "signer_key_source_contract_version_mismatch" not in provenance_no_go_reason_codes:
+            print("expected signer_key_source_contract_version_mismatch in signer provenance negative policy output", file=sys.stderr)
+            return 1
+        if provenance_no_go_policy.get("final_decision") != "NO-GO":
+            print("expected signer provenance negative policy final_decision NO-GO", file=sys.stderr)
+            return 1
+
+        rotation_negative_report = temp_path / "signer_rotation_negative_summary.json"
+        rotation_negative_policy = temp_path / "signer_rotation_negative_policy.json"
+        rotation_negative_summary = dict(summary)
+        rotation_negative_summary["mode"] = "run"
+        rotation_negative_summary["status"] = "fail"
+        rotation_negative_summary["reason_code"] = "checkpoint_failed_signer_rotation_freshness_contract"
+        rotation_negative_summary["signer_secret_present"] = True
+        rotation_negative_summary["signer_secret_hex_valid"] = True
+        rotation_negative_summary["required_approvals"] = 2
+        rotation_negative_summary["received_approvals"] = 2
+        rotation_negative_summary["custody_evidence_file"] = "/tmp/custody-evidence.json"
+        rotation_negative_summary["custody_evidence_present"] = True
+        rotation_negative_summary["custody_evidence_sha256"] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        rotation_negative_summary["custody_evidence_sha256_valid"] = True
+        rotation_negative_summary["signer_provenance_file"] = "/tmp/provenance-evidence.json"
+        rotation_negative_summary["signer_provenance_present"] = True
+        rotation_negative_summary["signer_provenance_sha256"] = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        rotation_negative_summary["signer_provenance_sha256_valid"] = True
+        rotation_negative_summary["signer_key_source_contract_version"] = "v1"
+        rotation_negative_summary["signer_key_source"] = "env-local"
+        rotation_negative_summary["signer_rotation_epoch"] = 8
+        rotation_negative_summary["signer_previous_rotation_epoch"] = 3
+        rotation_negative_summary["signer_rotation_freshness_max_delta"] = 2
+        rotation_negative_summary["signer_rotation_delta_epochs"] = 5
+        rotation_negative_summary["signer_rotation_fresh"] = False
+        rotation_negative_report.write_text(
+            json.dumps(rotation_negative_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        rotation_no_go_result = run_policy_check(
+            report_file=rotation_negative_report,
+            output_json=rotation_negative_policy,
+            expected_final_decision="NO-GO",
+            required_reason_code="checkpoint_failed_signer_rotation_freshness_contract",
+        )
+        if rotation_no_go_result.returncode == 0:
+            print("expected signer rotation negative proof to fail closed", file=sys.stderr)
+            return 1
+        rotation_no_go_policy = json.loads(rotation_negative_policy.read_text(encoding="utf-8"))
+        rotation_no_go_reason_codes = rotation_no_go_policy.get("reason_codes")
+        if not isinstance(rotation_no_go_reason_codes, list):
+            print("expected reason_codes list in signer rotation negative policy output", file=sys.stderr)
+            return 1
+        if "signer_rotation_epoch_stale" not in rotation_no_go_reason_codes:
+            print("expected signer_rotation_epoch_stale in signer rotation negative policy output", file=sys.stderr)
+            return 1
+        if "signer_rotation_fresh_violation" not in rotation_no_go_reason_codes:
+            print("expected signer_rotation_fresh_violation in signer rotation negative policy output", file=sys.stderr)
+            return 1
+        if rotation_no_go_policy.get("final_decision") != "NO-GO":
+            print("expected signer rotation negative policy final_decision NO-GO", file=sys.stderr)
+            return 1
+
     doc_markers = [
         "run_local_kolme_live_deployment_preflight_lane.sh",
         "check_local_kolme_live_deployment_preflight_policy.py",
@@ -283,10 +430,17 @@ def main() -> int:
         "fallback_signer_secret_present_violation",
         "checkpoint_failed_signer_quorum_contract",
         "checkpoint_failed_custody_evidence_contract",
+        "checkpoint_failed_signer_provenance_contract",
+        "checkpoint_failed_signer_rotation_freshness_contract",
         "signer_quorum_shortfall",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
+        "signer_key_source_contract_version",
+        "signer_key_source",
+        "signer_provenance_file",
+        "signer_rotation_epoch_stale",
         "Regression: #2226",
+        "Regression: #2300",
     ]
     ci_doc_markers = [
         "run_local_kolme_live_deployment_preflight_lane.sh",
@@ -297,10 +451,17 @@ def main() -> int:
         "fallback_signer_secret_present_violation",
         "checkpoint_failed_signer_quorum_contract",
         "checkpoint_failed_custody_evidence_contract",
+        "checkpoint_failed_signer_provenance_contract",
+        "checkpoint_failed_signer_rotation_freshness_contract",
         "signer_quorum_shortfall",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
+        "signer_key_source_contract_version",
+        "signer_key_source",
+        "signer_provenance_file",
+        "signer_rotation_epoch_stale",
         "Regression: #2226",
+        "Regression: #2300",
     ]
     readme_markers = [
         "run_local_kolme_live_deployment_preflight_lane.sh",
@@ -311,10 +472,17 @@ def main() -> int:
         "fallback_signer_secret_present_violation",
         "checkpoint_failed_signer_quorum_contract",
         "checkpoint_failed_custody_evidence_contract",
+        "checkpoint_failed_signer_provenance_contract",
+        "checkpoint_failed_signer_rotation_freshness_contract",
         "signer_quorum_shortfall",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
+        "signer_key_source_contract_version",
+        "signer_key_source",
+        "signer_provenance_file",
+        "signer_rotation_epoch_stale",
         "Regression: #2226",
+        "Regression: #2300",
     ]
 
     missing_markers: list[str] = []
