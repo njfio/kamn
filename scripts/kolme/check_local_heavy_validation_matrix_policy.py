@@ -10,6 +10,10 @@ EXPECTED_COMMAND_SNIPPETS = [
     "run_version_compatibility_replay_deep_lane.sh",
     "run_local_kolme_fork_rust_test_matrix_contract_lane.sh",
     "run_local_kolme_live_api_conformance_contract_lane.sh",
+    "run_local_runtime_commit_live_finality_evidence_contract_lane.sh",
+    "run_local_native_api_parity_live_proof_contract_lane.sh",
+    "run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node",
+    "check_local_kamn_live_runtime_real_node_profile_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json",
 ]
 
 EXPECTED_ARTIFACT_SNIPPETS = [
@@ -19,6 +23,12 @@ EXPECTED_ARTIFACT_SNIPPETS = [
     "/tmp/kolme-local-fork-rust-test-matrix-policy.json",
     "/tmp/kolme-local-live-api-conformance-summary.json",
     "/tmp/kolme-local-live-api-conformance-policy.json",
+    "/tmp/kolme-local-runtime-commit-live-summary.json",
+    "/tmp/kolme-local-runtime-commit-live-policy.json",
+    "/tmp/kolme-local-native-api-parity-live-proof-summary.json",
+    "/tmp/kolme-local-native-api-parity-live-proof-policy.json",
+    "/tmp/kolme-local-kamn-live-runtime-integration-summary.json",
+    "/tmp/kolme-local-kamn-live-runtime-real-node-policy.json",
 ]
 
 
@@ -68,6 +78,61 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         for expected_snippet in EXPECTED_COMMAND_SNIPPETS:
             if not any(expected_snippet in command for command in commands if isinstance(command, str)):
                 reason_codes.append(f"command_missing:{expected_snippet}")
+        if not any(
+            all(
+                marker in command
+                for marker in (
+                    "run_local_runtime_commit_live_finality_evidence_contract_lane.sh",
+                    "--max-seconds 120",
+                    "--finality-max-seconds 15",
+                    "--require-non-synthetic-run-evidence",
+                    "--require-native-payload-evidence",
+                )
+            )
+            for command in commands
+            if isinstance(command, str)
+        ):
+            reason_codes.append("native_runtime_commit_budget_marker_missing")
+        if not any(
+            all(
+                marker in command
+                for marker in (
+                    "run_local_native_api_parity_live_proof_contract_lane.sh",
+                    "--max-seconds 180",
+                )
+            )
+            for command in commands
+            if isinstance(command, str)
+        ):
+            reason_codes.append("native_api_parity_budget_marker_missing")
+        if not any(
+            all(
+                marker in command
+                for marker in (
+                    "run_local_kamn_live_runtime_integration_lane.sh",
+                    "--mode dry-run",
+                    "--runtime-profile real-node",
+                    "--max-seconds 210",
+                    "--runtime-commit-max-seconds 30",
+                    "--runtime-commit-finality-max-seconds 15",
+                )
+            )
+            for command in commands
+            if isinstance(command, str)
+        ):
+            reason_codes.append("native_real_node_budget_marker_missing")
+        if not any(
+            all(
+                marker in command
+                for marker in (
+                    "check_local_kamn_live_runtime_real_node_profile_policy.py",
+                    "--require-non-synthetic-run-evidence",
+                )
+            )
+            for command in commands
+            if isinstance(command, str)
+        ):
+            reason_codes.append("native_real_node_policy_marker_missing")
 
     artifact_paths = report.get("artifact_paths")
     if not isinstance(artifact_paths, list) or not artifact_paths:

@@ -27,7 +27,11 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "bash scripts/kolme/run_local_bootstrap_health_checks.sh --mode run --output-json /tmp/kolme-local-bootstrap-summary.json",
     "bash scripts/kolme/run_version_compatibility_replay_deep_lane.sh --output-json /tmp/kolme-version-compatibility-report.json",
     "bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json --policy-output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json",
-    "bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json"
+    "bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json /tmp/kolme-local-live-api-conformance-summary.json --policy-output-json /tmp/kolme-local-live-api-conformance-policy.json",
+    "bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json --max-seconds 120 --finality-max-seconds 15 --require-non-synthetic-run-evidence --require-native-payload-evidence",
+    "bash scripts/kolme/run_local_native_api_parity_live_proof_contract_lane.sh --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json --policy-output-json /tmp/kolme-local-native-api-parity-live-proof-policy.json --max-seconds 180",
+    "bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --max-seconds 210 --runtime-commit-max-seconds 30 --runtime-commit-finality-max-seconds 15 --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json",
+    "python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --require-non-synthetic-run-evidence --output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json"
   ],
   "artifact_paths": [
     "/tmp/kolme-local-bootstrap-summary.json",
@@ -35,7 +39,13 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "/tmp/kolme-local-fork-rust-test-matrix-summary.json",
     "/tmp/kolme-local-fork-rust-test-matrix-policy.json",
     "/tmp/kolme-local-live-api-conformance-summary.json",
-    "/tmp/kolme-local-live-api-conformance-policy.json"
+    "/tmp/kolme-local-live-api-conformance-policy.json",
+    "/tmp/kolme-local-runtime-commit-live-summary.json",
+    "/tmp/kolme-local-runtime-commit-live-policy.json",
+    "/tmp/kolme-local-native-api-parity-live-proof-summary.json",
+    "/tmp/kolme-local-native-api-parity-live-proof-policy.json",
+    "/tmp/kolme-local-kamn-live-runtime-integration-summary.json",
+    "/tmp/kolme-local-kamn-live-runtime-real-node-policy.json"
   ]
 }
 JSON
@@ -95,6 +105,11 @@ fi
 
 if ! grep -q "command_missing:run_version_compatibility_replay_deep_lane.sh" "$TMP_ERR"; then
   echo "expected missing deep replay command marker for policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "native_runtime_commit_budget_marker_missing" "$TMP_ERR"; then
+  echo "expected missing native runtime commit budget marker reason for policy failure" >&2
   exit 1
 fi
 
