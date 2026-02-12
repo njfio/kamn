@@ -169,6 +169,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `smoke`
   - `signature_profile`
   - `state`
+  - `task_artifacts`
   - `task_payment`
   - `telegram_bridge`
   - `task_lifecycle`
@@ -183,6 +184,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #1991`
   - `Regression: #1993`
   - `Regression: #1995`
+  - `Regression: #1997`
 
 ## Contributor Entrypoint Matrix
 

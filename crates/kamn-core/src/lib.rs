@@ -101,7 +101,7 @@ pub mod signer_backend;
 /// Deterministic triadic runtime smoke simulation contracts.
 pub mod smoke;
 pub mod state;
-#[allow(missing_docs)]
+/// Task artifact registration, integrity checks, and lookup contracts.
 pub mod task_artifacts;
 pub mod task_lifecycle;
 #[allow(missing_docs)]
