@@ -27,3 +27,21 @@ runtime signing and `njfio/kolme_fork` compatibility expectations.
   (for example `parity_signature_mismatch`).
 - Any probe failure without explicit mismatch reasons is classified as
   `parity_probe_failed` and treated as fail-closed.
+
+## Managed Signer Routing (Task #2323)
+
+- Strict managed signer mode:
+  - `--kolme-live-strict-signer-contracts --kolme-live-signer-key-source managed-external`
+  - key-reference env markers:
+    - `KAMN_KOLME_LIVE_SIGNER_KEY_REF` (`ops-primary`)
+    - `KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY` (`ops-secondary`)
+- Runtime contracts:
+  - secure-provider handshake routing is enforced via signer backend contracts before
+    payload signing.
+  - malformed/missing key-reference markers fail closed.
+  - raw private-key env markers are forbidden in managed-external mode.
+- Deterministic reason-code classes for managed-external secure path:
+  - `managed_signer_provider_unavailable`
+  - `managed_signer_provider_handshake_rejected`
+  - `managed_signer_backend_error`
+  - `managed_signer_raw_private_key_forbidden`

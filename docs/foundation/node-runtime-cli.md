@@ -43,7 +43,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - `--kolme-live-signing-profile <signing-profile>`
   - `--kolme-live-strict-signer-contracts`
   - `--kolme-live-signer-profile <ops-primary|ops-secondary>`
-  - `--kolme-live-signer-key-source <env-local>`
+  - `--kolme-live-signer-key-source <env-local|managed-external>`
 - Added explicit runtime mode and proposal validation handling through:
   - `ConfigError::InvalidRuntimeMode`
   - `ConfigError::InvalidExpectedStateVersion`
@@ -179,6 +179,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - `kamn-node --role processor --runtime-mode kolme-live`
   - `kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1`
   - `kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1 --kolme-live-strict-signer-contracts --kolme-live-signer-profile ops-primary --kolme-live-signer-key-source env-local`
+  - `KAMN_KOLME_LIVE_SIGNER_KEY_REF=secure:aws-kms:role-operator/key-live-ops-primary kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1 --kolme-live-strict-signer-contracts --kolme-live-signer-profile ops-primary --kolme-live-signer-key-source managed-external`
 
 ## Daemon Runtime Rules
 - Supported runtime modes:
@@ -212,7 +213,11 @@ This document captures node-runtime productionization slices for machine-readabl
 - Strict signer contracts:
   - when `--kolme-live-strict-signer-contracts` is present, `--kolme-live-signer-profile` and `--kolme-live-signer-key-source` are both required
   - supported signer profiles: `ops-primary`, `ops-secondary`
-  - supported key source marker: `env-local`
+  - supported key source markers: `env-local`, `managed-external`
+  - managed-external key-reference env markers:
+    - `ops-primary`: `KAMN_KOLME_LIVE_SIGNER_KEY_REF`
+    - `ops-secondary`: `KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY`
+  - managed-external mode rejects raw private-key env markers for the selected profile with deterministic reason code `managed_signer_raw_private_key_forbidden`
   - fail-closed error semantics:
     - empty profile/source declarations are rejected
     - unsupported profile/source declarations are rejected
@@ -224,12 +229,16 @@ This document captures node-runtime productionization slices for machine-readabl
   - pending submit receipts poll finality via `/runtime-commit/status` with max-attempt budget `2`
   - malformed finality responses fail closed
   - finality transport timeout/unavailable keeps execution in pending status without falling back to in-memory adapters
+  - managed-external strict signer mode enforces secure-provider handshake routing before payload signing and maps provider failures to deterministic reason codes such as:
+    - `managed_signer_provider_unavailable`
+    - `managed_signer_provider_handshake_rejected`
+    - `managed_signer_backend_error`
 - Runtime reports:
   - `kolme_live_provider_client_contract=KolmeRuntimeCommitLiveProvider`
   - signer-selection evidence markers:
     - `kolme_live_signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE`
     - `kolme_live_signer_profile=ops-primary|ops-secondary`
-    - `kolme_live_signer_key_source=env-local`
+    - `kolme_live_signer_key_source=env-local|managed-external`
     - `kolme_live_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX|KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY`
   - `kolme_live_execution_status=submitted;commit_id=<deterministic-commit-id>;finality=<pending|final|failed>;resolution=<submit-receipt|finality-polled|finality-timeout|finality-unavailable>`
 

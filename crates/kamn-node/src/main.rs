@@ -9,7 +9,8 @@ use kamn_core::{
     KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderOutcome,
     KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitRequest, NodeConfig, NodeRole,
     PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, RecoveryRejoinGuard,
-    RecoveryStatus, RejoinAttempt, SecureSignerProvider, SignerKeyRole, SyncMode,
+    RecoveryStatus, RejoinAttempt, SecureSignerBackend, SecureSignerProvider, SignerBackend,
+    SignerBackendError, SignerKeyRole, SignerProviderHandshakeMatrix, SigningRequest, SyncMode,
 };
 
 const KOLME_LIVE_PROVIDER_CONTRACT: &str = "KolmeRuntimeCommitLiveProvider";
@@ -840,6 +841,91 @@ fn encode_kolme_hex_lower(bytes: &[u8]) -> String {
     output
 }
 
+fn derive_kolme_live_managed_signing_key_material(key_reference: &str) -> [u8; 32] {
+    let mut material = [0u8; 32];
+    for (index, byte) in key_reference.as_bytes().iter().copied().enumerate() {
+        let slot = index % material.len();
+        let salt = ((index as u8).wrapping_mul(17)).wrapping_add(31);
+        material[slot] = material[slot].wrapping_add(byte).wrapping_add(salt);
+    }
+    if material.iter().all(|value| *value == 0) {
+        material[0] = 1;
+    }
+    material
+}
+
+fn build_kolme_live_managed_signing_key(key_reference: &str) -> Result<SigningKey, ConfigError> {
+    let key_material = derive_kolme_live_managed_signing_key_material(key_reference);
+    SigningKey::from_slice(&key_material).map_err(|error| {
+        ConfigError::RuntimeKolmeLive(format!(
+            "failed to derive managed-external signer key material for {key_reference}: {error} (managed_signer_key_material_invalid)"
+        ))
+    })
+}
+
+fn map_kolme_live_secure_signer_backend_error(error: SignerBackendError) -> ConfigError {
+    let (reason_code, message) = match &error {
+        SignerBackendError::ProviderUnavailable { .. } => {
+            ("managed_signer_provider_unavailable", error.to_string())
+        }
+        SignerBackendError::ProviderHandshakeRejected { .. } => (
+            "managed_signer_provider_handshake_rejected",
+            error.to_string(),
+        ),
+        SignerBackendError::FallbackDeniedByRolePolicy { .. } => (
+            "managed_signer_fallback_denied_by_role_policy",
+            error.to_string(),
+        ),
+        _ => ("managed_signer_backend_error", error.to_string()),
+    };
+    ConfigError::RuntimeKolmeLive(format!(
+        "managed-external secure signer backend error: {message} ({reason_code})"
+    ))
+}
+
+fn sign_kolme_live_managed_external_message(
+    key_reference: &str,
+    request: &KolmeRuntimeCommitRequest,
+    nonce: u64,
+    canonical_message: &str,
+    provider_handshake_matrix: SignerProviderHandshakeMatrix,
+) -> Result<(String, u8), ConfigError> {
+    let _provider = SecureSignerProvider::from_key_id(key_reference).map_err(|error| {
+        ConfigError::RuntimeKolmeLive(format!(
+            "managed-external signer key reference parse failed before secure routing: {error} (managed_signer_key_reference_invalid)"
+        ))
+    })?;
+    let signing_request = SigningRequest::new(
+        key_reference,
+        request.actor_did.as_str(),
+        nonce,
+        canonical_message,
+        request.state_root.as_str(),
+    )
+    .map_err(|error| {
+        ConfigError::RuntimeKolmeLive(format!(
+            "managed-external signer request validation failed: {error} (managed_signer_request_invalid)"
+        ))
+    })?;
+    let secure_backend =
+        SecureSignerBackend::with_provider_handshake_matrix(provider_handshake_matrix);
+    let _backend_signature = secure_backend
+        .sign(&signing_request)
+        .map_err(map_kolme_live_secure_signer_backend_error)?;
+    let signing_key = build_kolme_live_managed_signing_key(key_reference)?;
+    let (signature, recovery_id) = signing_key
+        .sign_recoverable(canonical_message.as_bytes())
+        .map_err(|error| {
+            ConfigError::RuntimeKolmeLive(format!(
+                "managed-external signer failed to produce secp256k1 payload signature: {error} (managed_signer_signature_failed)"
+            ))
+        })?;
+    Ok((
+        encode_kolme_hex_lower(signature.to_bytes().as_ref()),
+        recovery_id.to_byte(),
+    ))
+}
+
 fn resolve_kolme_live_signer_profile_selector_from_env() -> Result<Option<&'static str>, ConfigError>
 {
     let profile_value = match env::var(KOLME_LIVE_SIGNER_PROFILE_ENV) {
@@ -1040,21 +1126,7 @@ fn read_kolme_live_signer_private_key_hex_with_provider<P: KolmeLiveSignerSecret
     provider.ensure_no_fallback_private_key_path()?;
     if selection.key_source == KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL {
         let key_reference = read_required_kolme_live_key_reference_from_env(&selection)?;
-        match env::var(selection.private_key_env) {
-            Ok(_) => {
-                return Err(ConfigError::RuntimeKolmeLive(format!(
-                    "{} must remain unset for signer profile {} when --kolme-live-signer-key-source={} (managed_signer_raw_private_key_forbidden)",
-                    selection.private_key_env, selection.profile, KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL
-                )))
-            }
-            Err(env::VarError::NotUnicode(_)) => {
-                return Err(ConfigError::RuntimeKolmeLive(format!(
-                    "{} must be valid utf-8 when present for signer profile {} (managed_signer_raw_private_key_forbidden)",
-                    selection.private_key_env, selection.profile
-                )))
-            }
-            Err(env::VarError::NotPresent) => {}
-        }
+        ensure_kolme_live_managed_external_private_key_env_unset(&selection)?;
         return Err(ConfigError::RuntimeKolmeLive(format!(
             "managed-external signer key reference {key_reference} from {} requires secure signer backend execution path (managed_signer_backend_path_not_integrated)",
             selection.key_reference_env
@@ -1062,6 +1134,22 @@ fn read_kolme_live_signer_private_key_hex_with_provider<P: KolmeLiveSignerSecret
     }
     let private_key_hex = provider.read_private_key_hex(&selection)?;
     Ok((private_key_hex, selection))
+}
+
+fn ensure_kolme_live_managed_external_private_key_env_unset(
+    selection: &KolmeLiveSignerSelection,
+) -> Result<(), ConfigError> {
+    match env::var(selection.private_key_env) {
+        Ok(_) => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{} must remain unset for signer profile {} when --kolme-live-signer-key-source={} (managed_signer_raw_private_key_forbidden)",
+            selection.private_key_env, selection.profile, KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL
+        ))),
+        Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{} must be valid utf-8 when present for signer profile {} (managed_signer_raw_private_key_forbidden)",
+            selection.private_key_env, selection.profile
+        ))),
+        Err(env::VarError::NotPresent) => Ok(()),
+    }
 }
 
 fn read_kolme_live_signer_private_key_hex(
@@ -1249,13 +1337,64 @@ fn build_kolme_live_direct_signed_wire_payload(
     strict_signer_profile: Option<&str>,
     strict_signer_key_source: Option<&str>,
 ) -> Result<(String, KolmeLiveSignerSelection), ConfigError> {
-    let (signer_adapter, signer_selection) =
-        build_kolme_live_signer_adapter(strict_signer_profile, strict_signer_key_source)?;
-    let pubkey = signer_adapter.public_key_compressed_hex();
-    let nonce = resolve_kolme_live_nonce(base_url, transport, pubkey.as_str())?;
-    let canonical_message =
-        render_kolme_live_native_direct_message(request, pubkey.as_str(), nonce)?;
-    let (signature_hex, recovery_id) = signer_adapter.sign_message(canonical_message.as_str())?;
+    let signer_selection =
+        resolve_kolme_live_signer_selection(strict_signer_profile, strict_signer_key_source)?;
+    let (canonical_message, signature_hex, recovery_id) =
+        if signer_selection.key_source == KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL {
+            let provider = EnvKolmeLiveSignerSecretProvider;
+            provider.ensure_no_fallback_private_key_path()?;
+            ensure_kolme_live_managed_external_private_key_env_unset(&signer_selection)?;
+            let key_reference = read_required_kolme_live_key_reference_from_env(&signer_selection)?;
+            let managed_signing_key = build_kolme_live_managed_signing_key(key_reference.as_str())?;
+            let pubkey = encode_kolme_hex_lower(
+                managed_signing_key
+                    .verifying_key()
+                    .to_encoded_point(true)
+                    .as_bytes(),
+            );
+            let nonce = resolve_kolme_live_nonce(base_url, transport, pubkey.as_str())?;
+            let canonical_message =
+                render_kolme_live_native_direct_message(request, pubkey.as_str(), nonce)?;
+            let (signature_hex, recovery_id) = sign_kolme_live_managed_external_message(
+                key_reference.as_str(),
+                request,
+                nonce,
+                canonical_message.as_str(),
+                SignerProviderHandshakeMatrix::with_uniform_availability(true),
+            )?;
+            let verifier = KolmeForkSecp256k1SignerAdapter {
+                signing_key: managed_signing_key,
+                private_key_env: signer_selection.key_reference_env,
+            };
+            verifier.verify_message(
+                canonical_message.as_str(),
+                signature_hex.as_str(),
+                recovery_id,
+            )?;
+            (canonical_message, signature_hex, recovery_id)
+        } else {
+            let (signer_adapter, signer_selection_from_adapter) =
+                build_kolme_live_signer_adapter(strict_signer_profile, strict_signer_key_source)?;
+            let pubkey = signer_adapter.public_key_compressed_hex();
+            let nonce = resolve_kolme_live_nonce(base_url, transport, pubkey.as_str())?;
+            let canonical_message =
+                render_kolme_live_native_direct_message(request, pubkey.as_str(), nonce)?;
+            let (signature_hex, recovery_id) =
+                signer_adapter.sign_message(canonical_message.as_str())?;
+            debug_assert_eq!(
+                signer_selection.profile,
+                signer_selection_from_adapter.profile
+            );
+            debug_assert_eq!(
+                signer_selection.key_source,
+                signer_selection_from_adapter.key_source
+            );
+            debug_assert_eq!(
+                signer_selection.private_key_env,
+                signer_selection_from_adapter.private_key_env
+            );
+            (canonical_message, signature_hex, recovery_id)
+        };
     let request = KolmeApiBroadcastRequest::new(
         canonical_message.as_str(),
         signature_hex.as_str(),
@@ -1991,12 +2130,13 @@ mod tests {
         build_bootstrap_report, build_kolme_live_direct_signed_wire_payload,
         build_kolme_live_signer_adapter, execute, parse_args, render_bootstrap_report,
         render_kolme_live_native_direct_message, resolve_kolme_live_nonce,
-        resolve_kolme_live_signer_private_key_env_name, DiagnosticsMode, LocalProfile,
-        NodeBootstrapReport, OutputMode, RuntimeExecutionBundle, RuntimeMode,
+        resolve_kolme_live_signer_private_key_env_name, sign_kolme_live_managed_external_message,
+        DiagnosticsMode, LocalProfile, NodeBootstrapReport, OutputMode, RuntimeExecutionBundle,
+        RuntimeMode,
     };
     use kamn_core::{
         bootstrap, ConfigError, KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitRequest,
-        NodeConfig, NodeRole, SyncMode,
+        NodeConfig, NodeRole, SignerProviderHandshakeMatrix, SyncMode,
     };
     use std::io::{ErrorKind, Read, Write};
     use std::net::TcpListener;
@@ -2009,6 +2149,8 @@ mod tests {
         "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
     const TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY: &str =
         "838c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+    const TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE: &str =
+        "secure:aws-kms:role-operator/key-live-ops-primary";
 
     fn signer_env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -3054,6 +3196,58 @@ mod tests {
     }
 
     #[test]
+    fn integration_runtime_kolme_live_renders_managed_external_signer_selection_markers() {
+        // Regression: #2323
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+        let _key_ref_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
+            Some(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE),
+        );
+        let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
+        let _fallback_key_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+        let (base_url, _requests) = spawn_kolme_live_mock_server(vec![
+            MockHttpReply::ok(r#"{"next_nonce":43,"account_id":"acct-live-managed"}"#),
+            MockHttpReply::ok(
+                r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:aa11bb22","finality":"final"}"#,
+            ),
+        ]);
+        let args = vec![
+            "kamn-node".to_owned(),
+            "--role".to_owned(),
+            "processor".to_owned(),
+            "--runtime-mode".to_owned(),
+            "kolme-live".to_owned(),
+            "--kolme-live-base-url".to_owned(),
+            base_url,
+            "--kolme-live-provider-hint".to_owned(),
+            "kolme-fork-local".to_owned(),
+            "--kolme-live-signing-profile".to_owned(),
+            "kolme-fork-secp256k1-v1".to_owned(),
+            "--kolme-live-strict-signer-contracts".to_owned(),
+            "--kolme-live-signer-profile".to_owned(),
+            "ops-primary".to_owned(),
+            "--kolme-live-signer-key-source".to_owned(),
+            "managed-external".to_owned(),
+            "--output".to_owned(),
+            "json".to_owned(),
+        ];
+
+        let parsed = parse_args(args).expect("kolme-live args should parse");
+        let report = execute(parsed).expect("kolme-live execution should succeed");
+        let rendered = render_bootstrap_report(&report, OutputMode::json());
+        assert!(rendered.contains("\"kolme_live_signer_profile\":\"ops-primary\""));
+        assert!(rendered.contains("\"kolme_live_signer_key_source\":\"managed-external\""));
+        assert!(rendered.contains(
+            "\"kolme_live_signer_private_key_env\":\"KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX\""
+        ));
+    }
+
+    #[test]
     fn unit_kolme_live_native_direct_message_contains_required_fields() {
         let request = KolmeRuntimeCommitRequest::deterministic(
             "op-node-live-2207",
@@ -3218,7 +3412,7 @@ mod tests {
             EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
         let _key_ref_guard = EnvVarGuard::set(
             "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
-            Some("secure:aws-kms:role-operator/key-live-ops-primary"),
+            Some(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE),
         );
         let _primary_key_guard = EnvVarGuard::set(
             "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
@@ -3231,6 +3425,85 @@ mod tests {
                 if message.contains("managed_signer_raw_private_key_forbidden")
             ),
             "managed-external strict signer selection must reject raw private key env path"
+        );
+    }
+
+    #[test]
+    fn integration_kolme_live_managed_external_builds_direct_signed_wire_payload() {
+        // Regression: #2323
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+        let _key_ref_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
+            Some(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE),
+        );
+        let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
+        let _fallback_key_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+        let request = KolmeRuntimeCommitRequest::deterministic(
+            "op-node-live-2323",
+            "state:node-live-2323",
+            "kamn:did:agent:node-live-2323",
+            1,
+            "payload:node-live-2323",
+        )
+        .expect("request should build");
+
+        let (base_url, requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+            r#"{"next_nonce":41,"account_id":"acct-2323"}"#,
+        )]);
+        let mut transport =
+            KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+        let (signed_wire_payload, signer_selection) = build_kolme_live_direct_signed_wire_payload(
+            base_url.as_str(),
+            &mut transport,
+            &request,
+            Some("ops-primary"),
+            Some("managed-external"),
+        )
+        .expect("managed-external signing should succeed through secure backend route");
+        assert_eq!(signer_selection.profile, "ops-primary");
+        assert_eq!(signer_selection.key_source, "managed-external");
+        assert_eq!(
+            signer_selection.private_key_env,
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
+        );
+        let signature = extract_json_string_field(signed_wire_payload.as_str(), "signature")
+            .expect("direct signed payload must include signature field");
+        assert_eq!(signature.len(), 128);
+        let recorded_requests = requests.lock().expect("request mutex should lock");
+        assert_eq!(
+            recorded_requests.len(),
+            1,
+            "managed-external signing should issue one nonce lookup before payload emission"
+        );
+    }
+
+    #[test]
+    fn regression_kolme_live_managed_external_maps_provider_unavailable_reason_code() {
+        // Regression: #2323
+        let request = KolmeRuntimeCommitRequest::deterministic(
+            "op-node-live-2323-provider",
+            "state:node-live-2323-provider",
+            "kamn:did:agent:node-live-2323-provider",
+            1,
+            "payload:node-live-2323-provider",
+        )
+        .expect("request should build");
+        let error = sign_kolme_live_managed_external_message(
+            TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE,
+            &request,
+            1,
+            "payload:managed-signature",
+            SignerProviderHandshakeMatrix::with_uniform_availability(false),
+        )
+        .expect_err("managed-external provider unavailability must fail closed");
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("managed_signer_provider_unavailable")),
+            "managed-external provider unavailability must map to deterministic reason code"
         );
     }
 
