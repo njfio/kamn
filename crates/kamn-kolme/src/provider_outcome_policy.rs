@@ -315,6 +315,11 @@ pub fn validate_provider_receipt_identity(
     Ok(())
 }
 
+/// Validates adapter expected-provider input before receipt identity enforcement.
+pub fn is_valid_expected_provider_input(expected_provider: &str) -> bool {
+    !expected_provider.trim().is_empty()
+}
+
 fn required_response_field(
     fields: &HashMap<String, String>,
     field: &'static str,

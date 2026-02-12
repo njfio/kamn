@@ -38,6 +38,7 @@ fn regression_requires_phase_gates_and_validation_matrix_markers() {
     assert!(DOC.contains("#1872"));
     assert!(DOC.contains("#1874"));
     assert!(DOC.contains("#1876"));
+    assert!(DOC.contains("#1878"));
     assert!(DOC.contains("## Validation Matrix"));
     assert!(DOC.contains("Regression: #1814"));
 }

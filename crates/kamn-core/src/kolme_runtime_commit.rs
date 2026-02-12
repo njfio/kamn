@@ -19,6 +19,7 @@ use kamn_kolme::{
     is_valid_block_fallback_lookup_budget as is_kolme_valid_block_fallback_lookup_budget_contract,
     is_valid_block_fallback_provider_input as is_kolme_valid_block_fallback_provider_input_contract,
     is_valid_block_lookup_height as is_kolme_valid_block_lookup_height_contract,
+    is_valid_expected_provider_input as is_kolme_valid_expected_provider_input_contract,
     is_valid_finality_base_url_input as is_kolme_valid_finality_base_url_input_contract,
     is_valid_finality_status_path_input as is_kolme_valid_finality_status_path_input_contract,
     is_valid_http_transport_timeout_seconds as is_kolme_valid_http_transport_timeout_seconds_contract,
@@ -1826,7 +1827,7 @@ pub struct AdapterBackedKolmeRuntimeCommitClient<P> {
 impl<P: KolmeRuntimeCommitProvider> AdapterBackedKolmeRuntimeCommitClient<P> {
     /// Builds adapter-backed client with expected provider identifier.
     pub fn new(expected_provider: &str, provider: P) -> Result<Self, KolmeRuntimeCommitError> {
-        if expected_provider.trim().is_empty() {
+        if !is_kolme_valid_expected_provider_input_contract(expected_provider) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "expected_provider",
                 reason: "must not be empty",
