@@ -542,6 +542,9 @@ bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --
 # policy checker contract
 python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json
 
+# real-node profile policy checker contract
+python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json
+
 # bounded contract lane (spawns local mock API server + pinned checkout fixture)
 bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json
 # schema: kamn.kolme.local-kamn-live-runtime-integration-summary.v1
