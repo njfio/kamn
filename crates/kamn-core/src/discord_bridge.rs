@@ -6,35 +6,53 @@ use crate::{
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+/// Discord bridge configuration for listeners, approvers, and channel routes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DiscordBridgeConfig {
+    /// DID used by the bridge agent identity.
     pub bridge_agent_did: String,
+    /// Listener DIDs allowed to submit inbound events.
     pub authorized_listener_dids: BTreeSet<String>,
+    /// Approver DIDs allowed to approve outbound dispatches.
     pub authorized_approver_dids: BTreeSet<String>,
+    /// Number of unique approvals required per outbound request.
     pub required_approvals: usize,
+    /// Mapping from external channel id to target DID.
     pub channel_routes: BTreeMap<String, String>,
 }
 
+/// Inbound request metadata for Discord listener submissions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DiscordInboundRequest {
+    /// Listener DID submitting the inbound request.
     pub listener_did: String,
+    /// Unix timestamp when event was observed.
     pub observed_at_unix: u64,
+    /// Normalized inbound bridge envelope.
     pub inbound: BridgeInboundEnvelope,
 }
 
+/// Approval evidence for an outbound Discord dispatch.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DiscordOutboundApproval {
+    /// Outbound request identifier.
     pub request_id: String,
+    /// Required number of approvals.
     pub required_approvals: usize,
+    /// DID set that approved this request.
     pub approved_by: BTreeSet<String>,
 }
 
+/// Outbound dispatch payload coupled with approval evidence.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DiscordOutboundDispatch {
+    /// Outbound envelope for platform dispatch.
     pub envelope: BridgeOutboundEnvelope,
+    /// Approval summary for dispatch authorization.
     pub approval: DiscordOutboundApproval,
 }
 
+/// Discord bridge engine for inbound normalization and outbound approval-gated dispatch.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DiscordBridgeEngine {
     config: DiscordBridgeConfig,
@@ -42,6 +60,7 @@ pub struct DiscordBridgeEngine {
 }
 
 impl DiscordBridgeEngine {
+    /// Creates a Discord bridge engine after validating config and route policy.
     pub fn new(config: DiscordBridgeConfig) -> Result<Self, DiscordBridgeError> {
         validate_did(&config.bridge_agent_did)?;
         if config.authorized_listener_dids.is_empty() {
@@ -81,6 +100,7 @@ impl DiscordBridgeEngine {
         Ok(Self { config, bridge })
     }
 
+    /// Validates and processes inbound requests into normalized message form.
     pub fn process_inbound(
         &self,
         request: &DiscordInboundRequest,
@@ -92,6 +112,7 @@ impl DiscordBridgeEngine {
             .map_err(|error| DiscordBridgeError::Bridge(error.to_string()))
     }
 
+    /// Validates and processes inbound requests into canonical message-envelope form.
     pub fn process_inbound_to_envelope(
         &self,
         request: &DiscordInboundRequest,
@@ -143,6 +164,7 @@ impl DiscordBridgeEngine {
         Ok(())
     }
 
+    /// Processes outbound request after validating route and required approver set.
     pub fn process_outbound_with_approvals(
         &self,
         request: &BridgeOutboundRequest,
@@ -209,27 +231,45 @@ impl DiscordBridgeEngine {
     }
 }
 
+/// Errors emitted by Discord bridge validation and dispatch flows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DiscordBridgeError {
+    /// Required field was empty.
     EmptyField(&'static str),
+    /// DID failed validation.
     InvalidDid(String),
+    /// Required approval count is invalid for configured approver set.
     InvalidRequiredApprovals {
+        /// Required approval count.
         required: usize,
+        /// Number of configured approvers.
         approver_count: usize,
     },
+    /// Listener DID is not authorized.
     UnauthorizedListener(String),
+    /// Approver DID is not authorized.
     UnauthorizedApprover(String),
+    /// Duplicate approval from same approver DID.
     DuplicateApproval(String),
+    /// Approval set did not meet required threshold.
     InsufficientApprovals {
+        /// Required approval count.
         required: usize,
+        /// Provided unique approvals.
         provided: usize,
     },
+    /// Route channel id is unknown.
     UnknownRouteChannel(String),
+    /// Target DID in payload does not match route mapping.
     RouteTargetMismatch {
+        /// External channel identifier.
         external_channel_id: String,
+        /// Expected target DID.
         expected_target_did: String,
+        /// Provided target DID.
         provided_target_did: String,
     },
+    /// Underlying bridge adapter error.
     Bridge(String),
 }
 

@@ -13,7 +13,6 @@ cross_chain_receipt
 data_classification
 did
 did_registry
-discord_bridge
 durable_guard_store
 escrow
 governance_workflow
