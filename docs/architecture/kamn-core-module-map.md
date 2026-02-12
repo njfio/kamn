@@ -163,6 +163,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `kolme_runtime_commit`
   - `migrations`
   - `namespaces`
+  - `reputation_signals`
   - `service_marketplace`
   - `smoke`
   - `signature_profile`
@@ -175,6 +176,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #1983`
   - `Regression: #1985`
   - `Regression: #1987`
+  - `Regression: #1989`
 
 ## Contributor Entrypoint Matrix
 
