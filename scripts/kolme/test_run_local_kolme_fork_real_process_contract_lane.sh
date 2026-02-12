@@ -53,6 +53,8 @@ required_lifecycle_finality_markers=(
   "--lifecycle-runtime-commit-finality-command"
   "--lifecycle-runtime-commit-finality-max-seconds"
   "--lifecycle-runtime-commit-finality-output-file"
+  "--lifecycle-rollback-evidence-file"
+  "--lifecycle-recovery-evidence-file"
   "--integration-bootstrap-max-seconds"
   "--integration-conformance-max-seconds"
   "--integration-runtime-commit-max-seconds"
@@ -79,6 +81,11 @@ if ! grep -q "Regression: #1644" "$DOC_FILE"; then
   exit 1
 fi
 
+if ! grep -q "Regression: #2109" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include real-process lifecycle rollback/recovery pass-through regression marker" >&2
+  exit 1
+fi
+
 if ! grep -q -- "--lifecycle-runtime-commit-finality-command" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to include lifecycle runtime finality pass-through command option" >&2
   exit 1
@@ -86,6 +93,16 @@ fi
 
 if ! grep -q -- "--lifecycle-mode" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to include lifecycle mode option for real-process wrapper" >&2
+  exit 1
+fi
+
+if ! grep -q -- "--lifecycle-rollback-evidence-file" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include lifecycle rollback evidence pass-through option for real-process wrapper" >&2
+  exit 1
+fi
+
+if ! grep -q -- "--lifecycle-recovery-evidence-file" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include lifecycle recovery evidence pass-through option for real-process wrapper" >&2
   exit 1
 fi
 
@@ -104,6 +121,16 @@ if ! grep -q -- "--lifecycle-mode" "$README_FILE"; then
   exit 1
 fi
 
+if ! grep -q -- "--lifecycle-rollback-evidence-file" "$README_FILE"; then
+  echo "expected README to include lifecycle rollback evidence pass-through option for real-process wrapper" >&2
+  exit 1
+fi
+
+if ! grep -q -- "--lifecycle-recovery-evidence-file" "$README_FILE"; then
+  echo "expected README to include lifecycle recovery evidence pass-through option for real-process wrapper" >&2
+  exit 1
+fi
+
 lane_output="$(
   bash "$CONTRACT_LANE" \
     --mode dry-run \
@@ -117,7 +144,9 @@ fi
 TMP_SUMMARY="$(mktemp)"
 TMP_POLICY="$(mktemp)"
 TMP_FINALITY_OUTPUT="$(mktemp)"
-trap 'rm -f "$TMP_SUMMARY" "$TMP_POLICY" "$TMP_FINALITY_OUTPUT"' EXIT
+TMP_LIFECYCLE_ROLLBACK_EVIDENCE="$(mktemp)"
+TMP_LIFECYCLE_RECOVERY_EVIDENCE="$(mktemp)"
+trap 'rm -f "$TMP_SUMMARY" "$TMP_POLICY" "$TMP_FINALITY_OUTPUT" "$TMP_LIFECYCLE_ROLLBACK_EVIDENCE" "$TMP_LIFECYCLE_RECOVERY_EVIDENCE"' EXIT
 
 KAMN_KOLME_LOCAL_HEAVY=1 python3 "$CONTRACT_IMPL" \
   --mode run \
@@ -126,10 +155,12 @@ KAMN_KOLME_LOCAL_HEAVY=1 python3 "$CONTRACT_IMPL" \
   --lifecycle-runtime-commit-finality-command "printf 'finality=final\n'" \
   --lifecycle-runtime-commit-finality-max-seconds 13 \
   --lifecycle-runtime-commit-finality-output-file "$TMP_FINALITY_OUTPUT" \
+  --lifecycle-rollback-evidence-file "$TMP_LIFECYCLE_ROLLBACK_EVIDENCE" \
+  --lifecycle-recovery-evidence-file "$TMP_LIFECYCLE_RECOVERY_EVIDENCE" \
   --output-json "$TMP_SUMMARY" \
   --policy-output-json "$TMP_POLICY" >/dev/null
 
-python3 - "$TMP_SUMMARY" "$TMP_FINALITY_OUTPUT" <<'PY'
+python3 - "$TMP_SUMMARY" "$TMP_FINALITY_OUTPUT" "$TMP_LIFECYCLE_ROLLBACK_EVIDENCE" "$TMP_LIFECYCLE_RECOVERY_EVIDENCE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -161,6 +192,20 @@ if "--integration-runtime-commit-finality-max-seconds 13" not in command:
 finality_output_path = pathlib.Path(sys.argv[2]).resolve()
 if f"--integration-runtime-commit-finality-output-file {finality_output_path}" not in command:
     raise SystemExit("expected lifecycle command to include runtime finality output pass-through")
+rollback_output_path = pathlib.Path(sys.argv[3]).resolve()
+if f"--rollback-evidence-file {rollback_output_path}" not in command:
+    raise SystemExit("expected lifecycle command to include rollback evidence pass-through")
+recovery_output_path = pathlib.Path(sys.argv[4]).resolve()
+if f"--recovery-evidence-file {recovery_output_path}" not in command:
+    raise SystemExit("expected lifecycle command to include recovery evidence pass-through")
+if summary.get("lifecycle_rollback_evidence_file") != str(rollback_output_path):
+    raise SystemExit("expected real-process summary to expose lifecycle rollback evidence file")
+if summary.get("lifecycle_recovery_evidence_file") != str(recovery_output_path):
+    raise SystemExit("expected real-process summary to expose lifecycle recovery evidence file")
+if str(rollback_output_path) not in summary.get("artifact_paths", []):
+    raise SystemExit("expected real-process artifact paths to include lifecycle rollback evidence file")
+if str(recovery_output_path) not in summary.get("artifact_paths", []):
+    raise SystemExit("expected real-process artifact paths to include lifecycle recovery evidence file")
 PY
 
 echo "local fork real-process contract lane tests passed."

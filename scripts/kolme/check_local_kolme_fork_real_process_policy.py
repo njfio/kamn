@@ -85,6 +85,21 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("lifecycle_runner_mismatch")
         if contracts.get("lifecycle_checker") != "check_local_kolme_fork_process_lifecycle_policy.py":
             reason_codes.append("lifecycle_checker_mismatch")
+        if contracts.get("wrapper_lifecycle_rollback_evidence_option") != "--lifecycle-rollback-evidence-file":
+            reason_codes.append("wrapper_lifecycle_rollback_evidence_option_mismatch")
+        if contracts.get("wrapper_lifecycle_recovery_evidence_option") != "--lifecycle-recovery-evidence-file":
+            reason_codes.append("wrapper_lifecycle_recovery_evidence_option_mismatch")
+        if contracts.get("lifecycle_rollback_evidence_option") != "--rollback-evidence-file":
+            reason_codes.append("lifecycle_rollback_evidence_option_mismatch")
+        if contracts.get("lifecycle_recovery_evidence_option") != "--recovery-evidence-file":
+            reason_codes.append("lifecycle_recovery_evidence_option_mismatch")
+
+    lifecycle_rollback_evidence_file = report.get("lifecycle_rollback_evidence_file")
+    if not isinstance(lifecycle_rollback_evidence_file, str) or not lifecycle_rollback_evidence_file.strip():
+        reason_codes.append("lifecycle_rollback_evidence_file_missing")
+    lifecycle_recovery_evidence_file = report.get("lifecycle_recovery_evidence_file")
+    if not isinstance(lifecycle_recovery_evidence_file, str) or not lifecycle_recovery_evidence_file.strip():
+        reason_codes.append("lifecycle_recovery_evidence_file_missing")
 
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
@@ -120,6 +135,18 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 reason_codes.append(f"check_status_invalid:{check_id}")
             if not isinstance(check_reason_code, str) or not check_reason_code.strip():
                 reason_codes.append(f"check_reason_code_invalid:{check_id}")
+            if (
+                check_id == "process_lifecycle_lane"
+                and isinstance(command, str)
+                and "--rollback-evidence-file" not in command
+            ):
+                reason_codes.append("process_lifecycle_lane_rollback_marker_missing")
+            if (
+                check_id == "process_lifecycle_lane"
+                and isinstance(command, str)
+                and "--recovery-evidence-file" not in command
+            ):
+                reason_codes.append("process_lifecycle_lane_recovery_marker_missing")
         missing_ids = sorted(expected_ids - observed_ids)
         for missing_id in missing_ids:
             reason_codes.append(f"check_missing:{missing_id}")
@@ -127,6 +154,19 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     artifacts = report.get("artifact_paths")
     if not isinstance(artifacts, list) or len(artifacts) < 8:
         reason_codes.append("artifact_paths_missing")
+    else:
+        if (
+            isinstance(lifecycle_rollback_evidence_file, str)
+            and lifecycle_rollback_evidence_file.strip()
+            and lifecycle_rollback_evidence_file not in artifacts
+        ):
+            reason_codes.append("lifecycle_rollback_evidence_artifact_missing")
+        if (
+            isinstance(lifecycle_recovery_evidence_file, str)
+            and lifecycle_recovery_evidence_file.strip()
+            and lifecycle_recovery_evidence_file not in artifacts
+        ):
+            reason_codes.append("lifecycle_recovery_evidence_artifact_missing")
 
     if args.ci_fast_gate != "PASS":
         reason_codes.append("ci_fast_gate_failed")
