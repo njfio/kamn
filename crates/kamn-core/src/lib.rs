@@ -96,7 +96,7 @@ pub mod runtime;
 pub mod service_marketplace;
 /// Signature-profile compatibility fixtures and baseline verification helpers.
 pub mod signature_profile;
-#[allow(missing_docs)]
+/// Signer backend routing, secure-provider policy, and signature validation contracts.
 pub mod signer_backend;
 /// Deterministic triadic runtime smoke simulation contracts.
 pub mod smoke;

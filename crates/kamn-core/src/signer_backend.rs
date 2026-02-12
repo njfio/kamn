@@ -1,3 +1,5 @@
+//! Signer backend contracts for local and secure-provider signing flows.
+
 use crate::signature_profile::{
     baseline_signature_for_fields, signature_matches_supported_profile_for_fields,
 };
@@ -7,16 +9,23 @@ const LOCAL_BACKEND_NAME: &str = "local-software";
 const SECURE_MOCK_BACKEND_NAME: &str = "secure-mock";
 const SECURE_AWS_KMS_BACKEND_NAME: &str = "secure-aws-kms-emulator";
 
+/// Canonical payload sent to signer backends for signature generation and verification.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SigningRequest {
+    /// Key reference used to route signing to local or secure providers.
     pub key_id: String,
+    /// Logical sender identity used in signature preimage construction.
     pub sender: String,
+    /// Monotonic nonce bound to the signature preimage.
     pub nonce: u64,
+    /// Serialized payload bytes represented as UTF-8 string.
     pub payload: String,
+    /// State-hash binding used to anchor signature replay protection.
     pub state_hash: String,
 }
 
 impl SigningRequest {
+    /// Build and validate a signing request from raw request components.
     pub fn new(
         key_id: &str,
         sender: &str,
@@ -49,6 +58,7 @@ impl SigningRequest {
         })
     }
 
+    /// Build a signing request from a canonical baseline transaction record.
     pub fn for_transaction(
         key_id: &str,
         tx: &BaselineTransaction,
@@ -64,23 +74,31 @@ impl SigningRequest {
     }
 }
 
+/// Backend-tagged signature payload returned by routing/signing APIs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BackendSignature {
+    /// Backend identifier that produced this signature.
     pub backend: String,
+    /// Signature material returned by the backend.
     pub signature: String,
 }
 
+/// Supported secure signing providers for canonical secure key references.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SecureSignerProvider {
+    /// In-memory deterministic provider used for local/dev validation flows.
     Mock,
+    /// AWS KMS-compatible emulator provider.
     AwsKmsEmulator,
 }
 
 impl SecureSignerProvider {
+    /// Resolve provider from a secure key reference.
     pub fn from_key_id(key_id: &str) -> Result<Self, SignerBackendError> {
         Ok(CanonicalSecureKeyReference::parse(key_id)?.provider)
     }
 
+    /// Return canonical backend name for this secure provider.
     pub fn backend_name(self) -> &'static str {
         match self {
             Self::Mock => SECURE_MOCK_BACKEND_NAME,
@@ -101,13 +119,18 @@ impl SecureSignerProvider {
     }
 }
 
+/// Handshake outcome classes for secure signer providers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SignerProviderHandshakeStatus {
+    /// Provider is reachable and policy-authorized.
     Available,
+    /// Provider transport is unavailable.
     Unavailable,
+    /// Provider is reachable but blocked by policy.
     PolicyBlocked,
 }
 
+/// Handshake status matrix keyed by secure provider.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignerProviderHandshakeMatrix {
     mock_status: SignerProviderHandshakeStatus,
@@ -115,6 +138,7 @@ pub struct SignerProviderHandshakeMatrix {
 }
 
 impl SignerProviderHandshakeMatrix {
+    /// Construct a matrix where both providers share the same availability class.
     pub fn with_uniform_availability(available: bool) -> Self {
         let status = if available {
             SignerProviderHandshakeStatus::Available
@@ -124,6 +148,7 @@ impl SignerProviderHandshakeMatrix {
         Self::with_statuses(status, status)
     }
 
+    /// Construct a matrix with explicit status values for each provider.
     pub fn with_statuses(
         mock_status: SignerProviderHandshakeStatus,
         aws_kms_status: SignerProviderHandshakeStatus,
@@ -142,19 +167,26 @@ impl SignerProviderHandshakeMatrix {
     }
 }
 
+/// Security roles extracted from signer key references and sender naming policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SignerKeyRole {
+    /// Default operational role that can use secure fallback policy.
     Operator,
+    /// Administrative role for privileged operations.
     Admin,
+    /// Treasury role for settlement-related actions.
     Treasury,
+    /// Audit role for read/evidence workflows.
     Auditor,
 }
 
 impl SignerKeyRole {
+    /// Resolve signer key role from a secure key reference.
     pub fn from_key_id(key_id: &str) -> Result<Self, SignerBackendError> {
         Ok(CanonicalSecureKeyReference::parse(key_id)?.key_role)
     }
 
+    /// Return canonical lowercase label for role-policy and diagnostics output.
     pub fn label(self) -> &'static str {
         match self {
             Self::Operator => "operator",
@@ -221,14 +253,19 @@ impl SignerKeyRole {
     }
 }
 
+/// Canonical parsed representation of a secure key reference string.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CanonicalSecureKeyReference {
+    /// Parsed secure-provider discriminator.
     pub provider: SecureSignerProvider,
+    /// Parsed signer key role used for policy checks.
     pub key_role: SignerKeyRole,
+    /// Provider-scoped key identifier payload.
     pub provider_key_id: String,
 }
 
 impl CanonicalSecureKeyReference {
+    /// Parse secure key references across legacy and explicit provider formats.
     pub fn parse(key_id: &str) -> Result<Self, SignerBackendError> {
         if !key_id.starts_with("secure:") {
             return Err(SignerBackendError::UnsupportedKeyReference {
@@ -268,13 +305,19 @@ impl CanonicalSecureKeyReference {
     }
 }
 
+/// Backend abstraction for signing and verification providers.
 pub trait SignerBackend {
+    /// Return backend identifier used in audit/verification routes.
     fn backend_name(&self) -> &'static str;
+    /// Sign a validated signing request payload.
     fn sign(&self, request: &SigningRequest) -> Result<String, SignerBackendError>;
+    /// Verify signature material for a signing request payload.
     fn verify(&self, request: &SigningRequest, signature: &str) -> Result<(), SignerBackendError>;
 }
 
+/// Client abstraction for provider-backed secure signing.
 pub trait SecureSignerProviderClient {
+    /// Produce backend-tagged signature material using provider-specific signing flow.
     fn sign_with_provider(
         &self,
         request: &SigningRequest,
@@ -282,6 +325,7 @@ pub trait SecureSignerProviderClient {
     ) -> Result<BackendSignature, SignerBackendError>;
 }
 
+/// Deterministic provider client used by default secure backend wiring.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DeterministicSecureSignerProviderClient;
 
@@ -298,6 +342,7 @@ impl SecureSignerProviderClient for DeterministicSecureSignerProviderClient {
     }
 }
 
+/// Function pointer contract for secure-provider client signing callbacks.
 pub type SecureSignerProviderClientSignFn = fn(
     request: &SigningRequest,
     key_reference: &CanonicalSecureKeyReference,
@@ -310,6 +355,7 @@ fn deterministic_secure_provider_client_sign(
     DeterministicSecureSignerProviderClient.sign_with_provider(request, key_reference)
 }
 
+/// Local deterministic software signer backend.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LocalSignerBackend;
 
@@ -342,6 +388,7 @@ impl SignerBackend for LocalSignerBackend {
     }
 }
 
+/// Secure-provider signer backend with handshake and key-role policy enforcement.
 #[derive(Debug, Clone)]
 pub struct SecureSignerBackend {
     provider_handshake_matrix: SignerProviderHandshakeMatrix,
@@ -349,12 +396,14 @@ pub struct SecureSignerBackend {
 }
 
 impl SecureSignerBackend {
+    /// Construct secure signer backend with uniform provider availability.
     pub fn new(available: bool) -> Self {
         Self::with_provider_handshake_matrix(
             SignerProviderHandshakeMatrix::with_uniform_availability(available),
         )
     }
 
+    /// Construct secure signer backend with explicit provider handshake matrix.
     pub fn with_provider_handshake_matrix(
         provider_handshake_matrix: SignerProviderHandshakeMatrix,
     ) -> Self {
@@ -364,6 +413,7 @@ impl SecureSignerBackend {
         )
     }
 
+    /// Construct secure signer backend with explicit handshake matrix and provider client callback.
     pub fn with_provider_client(
         provider_handshake_matrix: SignerProviderHandshakeMatrix,
         provider_client_sign: SecureSignerProviderClientSignFn,
@@ -485,6 +535,7 @@ impl SignerBackend for SecureSignerBackend {
     }
 }
 
+/// Router that prefers secure signer paths and applies policy fallback to local backend.
 #[derive(Debug, Clone)]
 pub struct SignerBackendRouter {
     local: LocalSignerBackend,
@@ -492,12 +543,14 @@ pub struct SignerBackendRouter {
 }
 
 impl SignerBackendRouter {
+    /// Construct router using uniform secure-provider availability.
     pub fn with_secure_availability(secure_available: bool) -> Self {
         Self::with_provider_handshake_matrix(
             SignerProviderHandshakeMatrix::with_uniform_availability(secure_available),
         )
     }
 
+    /// Construct router with explicit provider handshake matrix.
     pub fn with_provider_handshake_matrix(
         provider_handshake_matrix: SignerProviderHandshakeMatrix,
     ) -> Self {
@@ -507,6 +560,7 @@ impl SignerBackendRouter {
         )
     }
 
+    /// Construct router with explicit provider handshake matrix and provider-client callback.
     pub fn with_provider_client(
         provider_handshake_matrix: SignerProviderHandshakeMatrix,
         provider_client_sign: SecureSignerProviderClientSignFn,
@@ -520,6 +574,7 @@ impl SignerBackendRouter {
         }
     }
 
+    /// Sign request with secure backend first, falling back to local backend when policy permits.
     pub fn sign_with_secure_fallback(
         &self,
         request: &SigningRequest,
@@ -544,6 +599,7 @@ impl SignerBackendRouter {
         }
     }
 
+    /// Verify request signature against an explicit backend identity.
     pub fn verify_with_backend(
         &self,
         backend: &str,
@@ -566,57 +622,98 @@ impl Default for SignerBackendRouter {
     }
 }
 
+/// Errors emitted by signer backend request validation, routing, and provider policy checks.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SignerBackendError {
+    /// Required string field was empty or whitespace.
     EmptyField(&'static str),
+    /// Fallback to local backend is denied for this signer key role.
     FallbackDeniedByRolePolicy {
+        /// Parsed signer key role label.
         key_role: String,
+        /// Key reference that triggered fallback-denied policy.
         key_id: String,
     },
+    /// Nonce must be positive.
     InvalidNonce,
+    /// Sender-derived role does not match role encoded in secure key reference.
     KeyRoleMismatch {
+        /// Role encoded by key reference.
         key_role: String,
+        /// Role inferred from sender naming policy.
         sender_role: String,
+        /// Sender identifier provided by request.
         sender: String,
+        /// Key reference used by request.
         key_id: String,
     },
+    /// Secure key reference failed canonical parse/validation.
     MalformedSecureKeyReference {
+        /// Invalid key reference input.
         key_id: String,
     },
+    /// Provider handshake was rejected by policy classification.
     ProviderHandshakeRejected {
+        /// Backend that rejected handshake.
         backend: String,
+        /// Failure class returned by policy gate.
         failure_class: String,
     },
+    /// Provider backend is unavailable.
     ProviderUnavailable {
+        /// Backend that is unavailable.
         backend: String,
     },
+    /// Provider client returned a backend label that does not match parsed key provider.
     ProviderClientBackendMismatch {
+        /// Backend expected from key reference/provider mapping.
         expected_backend: String,
+        /// Backend returned by provider client callback.
         provided_backend: String,
+        /// Key reference being processed.
         key_id: String,
     },
+    /// Verification attempted with backend name that does not match secure key provider.
     SecureProviderBackendMismatch {
+        /// Backend expected from key reference/provider mapping.
         expected_backend: String,
+        /// Backend provided by caller.
         provided_backend: String,
+        /// Key reference being processed.
         key_id: String,
     },
+    /// Signature verification failed.
     SignatureMismatch {
+        /// Backend used for verification.
         backend: String,
+        /// Expected deterministic signature.
         expected: String,
+        /// Signature provided by caller/provider.
         found: String,
     },
+    /// Caller requested unknown backend identifier.
     UnknownBackend(String),
+    /// Secure-provider label is unsupported.
     UnsupportedSecureProvider {
+        /// Backend family where provider label was parsed.
         backend: String,
+        /// Unsupported provider label.
         provider: String,
+        /// Key reference being processed.
         key_id: String,
     },
+    /// Signer role encoded in key reference is unsupported.
     UnsupportedSignerKeyRole {
+        /// Unsupported role label.
         role: String,
+        /// Key reference being processed.
         key_id: String,
     },
+    /// Key reference prefix/backend is unsupported by signer backend contracts.
     UnsupportedKeyReference {
+        /// Backend family expected by parser.
         backend: String,
+        /// Key reference input.
         key_id: String,
     },
 }
