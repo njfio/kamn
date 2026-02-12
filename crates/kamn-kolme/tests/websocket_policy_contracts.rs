@@ -1,5 +1,6 @@
 use kamn_kolme::{
-    try_take_websocket_frame, validate_websocket_handshake_response, KolmeWebsocketFrame,
+    is_valid_websocket_timeout_seconds, try_take_websocket_frame,
+    validate_websocket_handshake_response, KolmeWebsocketFrame,
 };
 
 #[test]
@@ -23,4 +24,16 @@ fn regression_issue_1739_handshake_validation_fails_closed() {
         error.to_string(),
         "websocket handshake response missing upgrade headers"
     );
+}
+
+#[test]
+fn functional_websocket_policy_accepts_positive_timeout_seconds() {
+    assert!(is_valid_websocket_timeout_seconds(1));
+    assert!(is_valid_websocket_timeout_seconds(5));
+}
+
+#[test]
+fn regression_issue_1870_websocket_policy_rejects_zero_timeout_seconds() {
+    // Regression: #1870
+    assert!(!is_valid_websocket_timeout_seconds(0));
 }

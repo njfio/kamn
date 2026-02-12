@@ -224,11 +224,16 @@ pub fn try_take_websocket_frame(
     Ok(Some(frame))
 }
 
+/// Validates websocket connector timeout input in seconds.
+pub fn is_valid_websocket_timeout_seconds(timeout_seconds: u64) -> bool {
+    timeout_seconds > 0
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        find_http_header_boundary, try_take_websocket_frame, validate_websocket_handshake_response,
-        KolmeWebsocketFrame, KolmeWebsocketPolicyError,
+        find_http_header_boundary, is_valid_websocket_timeout_seconds, try_take_websocket_frame,
+        validate_websocket_handshake_response, KolmeWebsocketFrame, KolmeWebsocketPolicyError,
     };
 
     #[test]
@@ -270,5 +275,11 @@ mod tests {
                 .expect("frame should be available"),
             KolmeWebsocketFrame::Close
         );
+    }
+
+    #[test]
+    fn unit_validates_websocket_timeout_seconds_input() {
+        assert!(is_valid_websocket_timeout_seconds(2));
+        assert!(!is_valid_websocket_timeout_seconds(0));
     }
 }

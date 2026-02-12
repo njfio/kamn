@@ -104,8 +104,8 @@ pub use transport_request_policy::{
     is_broadcast_submit_path, parse_authorization_header_value, KolmeTransportRequestPolicyError,
 };
 pub use websocket_policy::{
-    find_http_header_boundary, try_take_websocket_frame, validate_websocket_handshake_response,
-    KolmeWebsocketFrame, KolmeWebsocketPolicyError,
+    find_http_header_boundary, is_valid_websocket_timeout_seconds, try_take_websocket_frame,
+    validate_websocket_handshake_response, KolmeWebsocketFrame, KolmeWebsocketPolicyError,
 };
 
 #[cfg(test)]

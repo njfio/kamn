@@ -91,6 +91,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_live_runtime_provider_outcome_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_response_body("));
     assert!(RUNTIME_COMMIT_SRC.contains("find_kolme_http_header_boundary("));
+    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_websocket_timeout_seconds_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("validate_kolme_provider_receipt_identity_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("require_kolme_final_receipt_finality_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("KamnKolmeApiNextNonceRequest::new("));
