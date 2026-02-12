@@ -40,7 +40,7 @@ pub mod data_classification;
 pub mod did;
 #[allow(missing_docs)]
 pub mod did_registry;
-#[allow(missing_docs)]
+/// Direct-message encryption/decryption contracts and error semantics.
 pub mod direct_message_crypto;
 #[allow(missing_docs)]
 pub mod discord_bridge;

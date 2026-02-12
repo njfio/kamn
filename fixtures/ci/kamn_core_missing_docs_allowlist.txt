@@ -14,7 +14,6 @@ cross_chain_receipt
 data_classification
 did
 did_registry
-direct_message_crypto
 discord_bridge
 durable_guard_store
 escrow

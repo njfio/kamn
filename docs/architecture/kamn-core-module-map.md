@@ -159,6 +159,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
 - Graduated modules currently enforced outside the allow-list:
   - `agent_key_hierarchy`
   - `bootstrap`
+  - `direct_message_crypto`
   - `key_recovery`
   - `kolme_runtime_commit`
   - `migrations`
@@ -185,6 +186,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #1993`
   - `Regression: #1995`
   - `Regression: #1997`
+  - `Regression: #1999`
 
 ## Contributor Entrypoint Matrix
 

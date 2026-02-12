@@ -15,3 +15,4 @@ telegram_bridge
 task_lifecycle
 task_artifacts
 transaction
+direct_message_crypto
