@@ -1,59 +1,91 @@
+//! Data classification policy contracts for write authorization and status reporting.
+
 use crate::{canonical_state_key, AgentDid};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// Ordered classification level applied to domain writes.
 pub enum DataClassificationLevel {
+    /// Lowest-sensitivity data suitable for broad visibility.
     Public,
+    /// Internal-only data that should stay within trusted operators.
     Internal,
+    /// Sensitive data requiring explicit tags and tighter controls.
     Sensitive,
+    /// Highest-sensitivity data requiring strict controls.
     Restricted,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// Write domain used for minimum classification policy lookup.
 pub enum WriteDomain {
+    /// Message and channel payload domain.
     Messages,
+    /// Task and workflow record domain.
     Tasks,
+    /// Escrow and settlement state domain.
     Escrows,
+    /// Reputation and trust signal domain.
     Reputation,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Classification policy defining minimum levels and required tags.
 pub struct ClassificationPolicy {
+    /// Minimum classification level required per write domain.
     pub minimum_by_domain: BTreeMap<WriteDomain, DataClassificationLevel>,
+    /// Required tags keyed by classification level.
     pub required_tags_by_level: BTreeMap<DataClassificationLevel, BTreeSet<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Classification label and tags attached to a write request.
 pub struct WriteTag {
+    /// Provided classification level for the write.
     pub level: DataClassificationLevel,
+    /// Free-form governance/compliance tags attached by caller.
     pub tags: BTreeSet<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Context describing a pending write authorization request.
 pub struct WriteRequestContext {
+    /// Domain receiving the write.
     pub domain: WriteDomain,
+    /// Domain-local record identifier.
     pub record_id: String,
+    /// Actor DID requesting the write.
     pub actor: String,
+    /// Classification metadata for the write.
     pub tag: WriteTag,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Derived classification status for a given record/tag pairing.
 pub struct ClassificationStatus {
+    /// Domain evaluated for status.
     pub domain: WriteDomain,
+    /// Domain-local record identifier.
     pub record_id: String,
+    /// Policy minimum classification for the domain.
     pub minimum_level: DataClassificationLevel,
+    /// Caller-provided classification level.
     pub provided_level: DataClassificationLevel,
+    /// Missing required tags for the provided level.
     pub missing_tags: Vec<String>,
+    /// True when policy checks authorize the write.
     pub authorized: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Engine that validates data classification constraints for writes.
 pub struct DataClassificationEngine {
     policy: ClassificationPolicy,
 }
 
 impl DataClassificationEngine {
+    /// Constructs a classification engine from validated policy.
     pub fn new(policy: ClassificationPolicy) -> Result<Self, DataClassificationError> {
         for domain in [
             WriteDomain::Messages,
@@ -77,6 +109,7 @@ impl DataClassificationEngine {
         Ok(Self { policy })
     }
 
+    /// Authorizes a write request and returns canonical state key on success.
     pub fn authorize_write(
         &mut self,
         context: &WriteRequestContext,
@@ -110,6 +143,7 @@ impl DataClassificationEngine {
         .map_err(|error| DataClassificationError::InvalidPolicy(error.to_string()))
     }
 
+    /// Computes authorization status for a domain/record and provided tag.
     pub fn status_for(
         &self,
         domain: WriteDomain,
@@ -169,20 +203,33 @@ impl DataClassificationEngine {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Data classification engine error taxonomy.
 pub enum DataClassificationError {
+    /// Policy configuration failed validation.
     InvalidPolicy(String),
+    /// Required field value was empty.
     EmptyField(&'static str),
+    /// Tag value failed validation.
     InvalidTag(String),
+    /// Actor DID failed parse/validation.
     InvalidDid(String),
+    /// Caller omitted one or more required tags for classification level.
     MissingRequiredTags {
+        /// Classification level with required tag policy.
         level: DataClassificationLevel,
+        /// Tags missing from caller payload.
         missing: BTreeSet<String>,
     },
+    /// Caller provided classification level below domain minimum.
     ClassificationBelowDomainMinimum {
+        /// Domain enforcing the minimum.
         domain: WriteDomain,
+        /// Required minimum level from policy.
         required: DataClassificationLevel,
+        /// Caller-provided level.
         provided: DataClassificationLevel,
     },
+    /// Sensitive/restricted write was submitted without tags.
     UntaggedSensitiveWrite(String),
 }
 

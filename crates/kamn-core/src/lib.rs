@@ -34,7 +34,7 @@ pub mod content_storage;
 pub mod cross_chain_bridge;
 /// Cross-chain receipt proof normalization and finality mapping contracts.
 pub mod cross_chain_receipt;
-#[allow(missing_docs)]
+/// Data-domain classification policy and write-tag validation contracts.
 pub mod data_classification;
 #[allow(missing_docs)]
 pub mod did;
