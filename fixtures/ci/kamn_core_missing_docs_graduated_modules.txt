@@ -24,3 +24,4 @@ validator_lifecycle
 group_channel_crypto
 config
 content_storage
+redaction_compliance

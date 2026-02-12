@@ -1,44 +1,79 @@
+//! Redaction and tombstone compliance workflow contracts.
+//!
+//! The module models request submission, approval quorum, rejection handling, and
+//! audit trail emission for content visibility protection policies.
+
 use crate::{canonical_state_key, AgentDid};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+/// Action requested by a compliance redaction workflow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RedactionAction {
+    /// Redact the target while keeping placeholder visibility metadata.
     Redact,
+    /// Tombstone the target as removed content.
     Tombstone,
 }
 
+/// Current request lifecycle state for a redaction proposal.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RedactionRequestStatus {
+    /// Request is waiting for additional approvals.
     PendingApproval {
+        /// Unique approvals currently collected.
         approvals_collected: usize,
+        /// Total approvals required to apply the request.
         approvals_required: usize,
     },
+    /// Request was explicitly rejected.
     Rejected,
+    /// Request reached approval quorum and was applied.
     Applied,
 }
 
+/// Visibility outcome for a protected target.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RedactionVisibility {
+    /// Target remains available and unprotected.
     Available,
-    Redacted { request_id: String },
-    Tombstoned { request_id: String },
+    /// Target is redacted under the given request id.
+    Redacted {
+        /// Request identifier that triggered redaction.
+        request_id: String,
+    },
+    /// Target is tombstoned under the given request id.
+    Tombstoned {
+        /// Request identifier that triggered tombstoning.
+        request_id: String,
+    },
 }
 
+/// Audit-event category emitted by redaction workflows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RedactionAuditEventKind {
+    /// Request was submitted.
     Requested,
+    /// Request received an approval.
     Approved,
+    /// Request was rejected.
     Rejected,
+    /// Request was applied after quorum.
     Applied,
 }
 
+/// Audit trail entry attached to a redaction request id.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RedactionAuditEvent {
+    /// Request identifier associated with this audit event.
     pub request_id: String,
+    /// DID of the actor that produced this event.
     pub actor: String,
+    /// Event kind classification.
     pub kind: RedactionAuditEventKind,
+    /// Timestamp when the event occurred.
     pub at: String,
+    /// Human-readable reason or note payload.
     pub note: String,
 }
 
@@ -60,6 +95,7 @@ enum InternalStatus {
     Applied,
 }
 
+/// In-memory engine for redaction request lifecycle and visibility state.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RedactionComplianceEngine {
     approvals_required: usize,
@@ -70,6 +106,7 @@ pub struct RedactionComplianceEngine {
 }
 
 impl RedactionComplianceEngine {
+    /// Constructs an engine with a fixed approval quorum requirement.
     pub fn new(approvals_required: usize) -> Result<Self, RedactionComplianceError> {
         if approvals_required == 0 {
             return Err(RedactionComplianceError::InvalidApprovalsRequired(
@@ -87,6 +124,7 @@ impl RedactionComplianceEngine {
     }
 
     #[allow(clippy::too_many_arguments)]
+    /// Submits a redaction or tombstone request for a target record.
     pub fn submit_request(
         &mut self,
         request_id: &str,
@@ -142,6 +180,7 @@ impl RedactionComplianceEngine {
         Ok(())
     }
 
+    /// Approves a pending request and applies visibility protection at quorum.
     pub fn approve(
         &mut self,
         request_id: &str,
@@ -216,6 +255,7 @@ impl RedactionComplianceEngine {
         Ok(())
     }
 
+    /// Rejects a pending request and records an audit event.
     pub fn reject(
         &mut self,
         request_id: &str,
@@ -247,6 +287,7 @@ impl RedactionComplianceEngine {
         Ok(())
     }
 
+    /// Returns lifecycle status for the given request id.
     pub fn request_status(
         &self,
         request_id: &str,
@@ -266,6 +307,7 @@ impl RedactionComplianceEngine {
         })
     }
 
+    /// Returns current visibility state for a target namespace/entity pair.
     pub fn retrieve_visibility(
         &self,
         target_namespace: &str,
@@ -279,6 +321,7 @@ impl RedactionComplianceEngine {
             .unwrap_or(RedactionVisibility::Available))
     }
 
+    /// Builds the canonical storage key used to address a target record.
     pub fn target_storage_key(
         &self,
         target_namespace: &str,
@@ -288,6 +331,7 @@ impl RedactionComplianceEngine {
             .map_err(|error| RedactionComplianceError::InvalidTarget(error.to_string()))
     }
 
+    /// Returns audit events recorded for a request id.
     pub fn audit_events(
         &self,
         request_id: &str,
@@ -320,21 +364,35 @@ impl RedactionComplianceEngine {
     }
 }
 
+/// Error surface for redaction workflow validation and state transitions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RedactionComplianceError {
+    /// `approvals_required` was zero.
     InvalidApprovalsRequired(usize),
+    /// Required field was empty.
     EmptyField(&'static str),
+    /// DID value failed validation.
     InvalidDid(String),
+    /// Target namespace/entity key could not be canonicalized.
     InvalidTarget(String),
+    /// Request id already exists.
     DuplicateRequestId(String),
+    /// Target already has active protection from a prior request.
     TargetAlreadyProtected {
+        /// Target namespace.
         namespace: String,
+        /// Target entity identifier.
         entity_id: String,
     },
+    /// Request id was not found.
     NotFound(String),
+    /// Request is not in pending-approval state.
     RequestNotPendingApproval(String),
+    /// Approver duplicated an existing approval for the request.
     DuplicateApproval {
+        /// Request identifier.
         request_id: String,
+        /// Approver DID.
         approver: String,
     },
 }
