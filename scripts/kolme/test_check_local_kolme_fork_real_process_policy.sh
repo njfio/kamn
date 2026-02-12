@@ -38,8 +38,14 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "self_test_runner": "run_local_kolme_fork_self_test_lane.sh",
     "self_test_checker": "check_local_kolme_fork_self_test_policy.py",
     "lifecycle_runner": "run_local_kolme_fork_process_lifecycle_lane.sh",
-    "lifecycle_checker": "check_local_kolme_fork_process_lifecycle_policy.py"
+    "lifecycle_checker": "check_local_kolme_fork_process_lifecycle_policy.py",
+    "wrapper_lifecycle_rollback_evidence_option": "--lifecycle-rollback-evidence-file",
+    "wrapper_lifecycle_recovery_evidence_option": "--lifecycle-recovery-evidence-file",
+    "lifecycle_rollback_evidence_option": "--rollback-evidence-file",
+    "lifecycle_recovery_evidence_option": "--recovery-evidence-file"
   },
+  "lifecycle_rollback_evidence_file": "/tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json",
+  "lifecycle_recovery_evidence_file": "/tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json",
   "checks": [
     {
       "id": "real_fork_command_profile",
@@ -85,7 +91,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     },
     {
       "id": "process_lifecycle_lane",
-      "command": "bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh ...",
+      "command": "bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh ... --rollback-evidence-file /tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json --recovery-evidence-file /tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json",
       "status": "planned",
       "reason_code": "not_run"
     },
@@ -104,7 +110,9 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "/tmp/kolme-local-fork-self-test-summary.json",
     "/tmp/kolme-local-fork-self-test-policy.json",
     "/tmp/kolme-local-fork-process-lifecycle-summary.json",
-    "/tmp/kolme-local-fork-process-lifecycle-policy.json"
+    "/tmp/kolme-local-fork-process-lifecycle-policy.json",
+    "/tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json",
+    "/tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json"
   ]
 }
 JSON
