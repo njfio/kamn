@@ -128,6 +128,7 @@ bash "$ROOT_DIR/scripts/kolme/test_check_local_kamn_live_runtime_real_node_profi
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_live_deployment_preflight_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_live_deployment_preflight_policy.sh"
+bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_live_deployment_preflight_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_live_node_validation_bundle_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_check_local_live_node_validation_bundle_policy.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_live_node_validation_bundle_contract_lane.sh"

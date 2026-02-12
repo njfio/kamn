@@ -475,6 +475,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
 - Deployment preflight policy checker command:
   - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+- Deployment preflight contract lane command:
+  - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --output-json /tmp/kolme-local-live-deployment-preflight-summary.json --policy-output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
 - Summary/policy schemas:
   - summary: `kamn.kolme.local-live-deployment-preflight-summary.v1`
   - policy: `kamn.kolme.local-live-deployment-preflight-policy-report.v1`
@@ -499,6 +501,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - lane is lightweight and `ci_fast_gate_eligible=true`.
   - no local-heavy opt-in is required for deployment preflight checks.
   - docs/command/policy parity for this lane remains fail-closed (`Regression: #2225`).
+  - deployment preflight contract lane parity remains fail-closed (`Regression: #2226`).
 
 ## Live Provider Operator Runbook (Issue #2114)
 
@@ -512,20 +515,30 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `GET /fork-info?chain_version=v0.15.2`
 - Local heavy opt-in is explicit for run mode:
   - `export KAMN_KOLME_LOCAL_HEAVY=1`
+- Runtime signer custody contract envs are set for deployment preflight before integration execution:
+  - `export KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary`
+  - `export KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=<64-hex-private-key>`
 
 ### Execution Flow
 
-1. Dry-run integration plan:
+1. Run deployment preflight dry-run:
+   - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+2. Validate deployment preflight policy:
+   - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+3. Run deployment preflight contract lane:
+   - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --output-json /tmp/kolme-local-live-deployment-preflight-summary.json --policy-output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+4. Dry-run integration plan:
    - `bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
-2. Run integration lane (local-only):
+5. Run integration lane (local-only):
    - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --max-seconds 210 --bootstrap-max-seconds 90 --localhost-signed-max-seconds 45 --conformance-max-seconds 180 --runtime-commit-max-seconds 30 --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
-3. Validate policy decision:
+6. Validate policy decision:
    - `python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
 
 Operator checkpoints:
 - summary must include `ci_fast_gate_eligible=false`
 - summary contracts must include `ci_fast_gate_scope=local-only`
 - summary must include `runtime_provider_client_contract=KolmeRuntimeCommitLiveProvider`
+- deployment preflight summary must include `ci_fast_gate_eligible=true` with `contracts.ci_fast_gate_scope=ci-fast-gate`
 
 ### Rollback and Recovery Evidence
 
@@ -546,6 +559,8 @@ Operator checkpoints:
   - re-run bootstrap lane directly and inspect checkout/probe markers.
 - `reason_code=runtime_commit_policy_failed`:
   - inspect `/tmp/kolme-local-runtime-commit-live-policy.json` for provider marker or evidence mismatch.
+- `reason_code=checkpoint_failed_signer_secret_contract`:
+  - verify signer profile and selected signer secret env are set with a valid 64-hex key.
 - `ci_fast_gate_eligibility_violation` or `ci_fast_gate_scope_mismatch` from policy checker:
   - verify summary still emits `ci_fast_gate_eligible=false` and `contracts.ci_fast_gate_scope=local-only`.
 

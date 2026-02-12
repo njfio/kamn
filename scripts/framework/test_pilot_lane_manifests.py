@@ -186,6 +186,11 @@ class PilotLaneManifestTests(unittest.TestCase):
                 "scripts/kolme/contracts/local_kamn_live_runtime_integration_contract_lane.py",
             ),
             (
+                "kolme_local_kolme_live_deployment_preflight_contract_lane.json",
+                "kolme.local_kolme_live_deployment_preflight.contract",
+                "scripts/kolme/contracts/local_kolme_live_deployment_preflight_contract_lane.py",
+            ),
+            (
                 "kolme_local_kolme_fork_process_lifecycle_contract_lane.json",
                 "kolme.local_kolme_fork_process_lifecycle.contract",
                 "scripts/kolme/contracts/local_kolme_fork_process_lifecycle_contract_lane.py",
