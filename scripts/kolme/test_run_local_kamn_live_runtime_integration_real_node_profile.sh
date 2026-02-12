@@ -56,17 +56,16 @@ fi
 dry_run_output="$(
   bash "$RUNNER" \
     --mode dry-run \
-    --runtime-profile real-node \
     --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider \
     --runtime-commit-live-summary "$TMP_RUNTIME_SUMMARY" \
     --runtime-commit-live-policy-report "$TMP_RUNTIME_POLICY" \
     --output-json "$TMP_SUMMARY"
 )"
 
-assert_eq "$(extract_value "$dry_run_output" "status")" "ok" "expected real-node profile dry-run to pass"
-assert_eq "$(extract_value "$dry_run_output" "lane_mode")" "dry-run" "expected dry-run mode marker for real-node profile"
-assert_eq "$(extract_value "$dry_run_output" "reason_code")" "dry_run_no_commands_executed" "expected dry-run reason marker for real-node profile"
-assert_eq "$(extract_value "$dry_run_output" "ci_fast_gate_eligible")" "false" "expected local-only fast-gate marker for real-node profile"
+assert_eq "$(extract_value "$dry_run_output" "status")" "ok" "expected default profile dry-run to pass"
+assert_eq "$(extract_value "$dry_run_output" "lane_mode")" "dry-run" "expected dry-run mode marker for default profile"
+assert_eq "$(extract_value "$dry_run_output" "reason_code")" "dry_run_no_commands_executed" "expected dry-run reason marker for default profile"
+assert_eq "$(extract_value "$dry_run_output" "ci_fast_gate_eligible")" "false" "expected local-only fast-gate marker for default profile"
 
 python3 - "$TMP_SUMMARY" <<'PY'
 from __future__ import annotations
