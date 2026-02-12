@@ -10,14 +10,23 @@ use std::io::Write;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+/// Canonical lifecycle state for a message tracked by [`MessageLifecycleStore`].
 pub enum MessageStatus {
+    /// Message metadata is registered but not signed.
     Created,
+    /// Message is signed and ready for broadcast.
     Signed,
+    /// Message has been broadcast to the transport layer.
     Broadcast,
+    /// Message is included by the target chain/runtime.
     Included,
+    /// Message is delivered to recipients.
     Delivered,
+    /// Message is validated with processor proof evidence.
     Validated,
+    /// Message is rejected after validation or policy checks.
     Rejected,
+    /// Message is expired and no longer active.
     Expired,
 }
 
@@ -31,26 +40,39 @@ struct MessageRecord {
     history: Vec<MessageStatus>,
 }
 
+/// Schema version for serialized lifecycle snapshots.
 pub const MESSAGE_LIFECYCLE_SNAPSHOT_SCHEMA_VERSION: u16 = 1;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Serializable snapshot record for one message lifecycle entry.
 pub struct MessageRecordSnapshot {
+    /// Stable message identifier.
     pub message_id: String,
+    /// Sender DID.
     pub sender: String,
+    /// Recipient DID set.
     pub recipients: Vec<String>,
+    /// Envelope creation timestamp.
     pub created: String,
+    /// Envelope expiry timestamp.
     pub expires: String,
+    /// Current lifecycle status.
     pub status: MessageStatus,
+    /// Ordered status transition history.
     pub history: Vec<MessageStatus>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Serializable snapshot of all lifecycle records.
 pub struct MessageLifecycleSnapshot {
+    /// Snapshot schema version.
     pub schema_version: u16,
+    /// Snapshot records keyed by message id inside the payload.
     pub records: Vec<MessageRecordSnapshot>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// In-memory lifecycle index for message status and participant lookups.
 pub struct MessageLifecycleStore {
     records: BTreeMap<String, MessageRecord>,
     ids_by_status: BTreeMap<MessageStatus, BTreeSet<String>>,
@@ -59,10 +81,12 @@ pub struct MessageLifecycleStore {
 }
 
 impl MessageLifecycleStore {
+    /// Creates an empty lifecycle store.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Registers a new message with sender/recipient metadata and lifecycle timestamps.
     pub fn register(
         &mut self,
         message_id: &str,
@@ -135,6 +159,7 @@ impl MessageLifecycleStore {
         Ok(())
     }
 
+    /// Returns the current status for a message id.
     pub fn status(&self, message_id: &str) -> Result<MessageStatus, MessageLifecycleError> {
         self.records
             .get(message_id)
@@ -142,6 +167,7 @@ impl MessageLifecycleStore {
             .ok_or_else(|| MessageLifecycleError::NotFound(message_id.to_owned()))
     }
 
+    /// Applies a lifecycle transition when the edge is valid under policy.
     pub fn transition(
         &mut self,
         message_id: &str,
@@ -160,6 +186,7 @@ impl MessageLifecycleStore {
         Ok(())
     }
 
+    /// Expires one message when `observed_at` is after the stored expiry timestamp.
     pub fn expire_message_if_overdue(
         &mut self,
         message_id: &str,
@@ -180,6 +207,7 @@ impl MessageLifecycleStore {
         Ok(true)
     }
 
+    /// Expires all active messages that are overdue at `observed_at`.
     pub fn expire_overdue_messages(
         &mut self,
         observed_at: &str,
@@ -204,6 +232,7 @@ impl MessageLifecycleStore {
         Ok(overdue_ids)
     }
 
+    /// Returns message ids in the provided lifecycle status.
     pub fn ids_by_status(&self, status: MessageStatus) -> Vec<String> {
         self.ids_by_status
             .get(&status)
@@ -211,6 +240,7 @@ impl MessageLifecycleStore {
             .unwrap_or_default()
     }
 
+    /// Returns message ids registered by the sender DID.
     pub fn ids_by_sender(&self, sender: &str) -> Vec<String> {
         self.ids_by_sender
             .get(sender)
@@ -218,6 +248,7 @@ impl MessageLifecycleStore {
             .unwrap_or_default()
     }
 
+    /// Returns message ids that include the provided recipient DID.
     pub fn ids_by_recipient(&self, recipient: &str) -> Vec<String> {
         self.ids_by_recipient
             .get(recipient)
@@ -225,6 +256,7 @@ impl MessageLifecycleStore {
             .unwrap_or_default()
     }
 
+    /// Returns `(created, expires)` timestamps for a message envelope.
     pub fn envelope_timestamps(
         &self,
         message_id: &str,
@@ -236,6 +268,7 @@ impl MessageLifecycleStore {
         Ok((&record.created, &record.expires))
     }
 
+    /// Returns the transition history for a message.
     pub fn history(&self, message_id: &str) -> Result<&[MessageStatus], MessageLifecycleError> {
         let record = self
             .records
@@ -244,6 +277,7 @@ impl MessageLifecycleStore {
         Ok(&record.history)
     }
 
+    /// Returns `(sender, recipients)` for a message.
     pub fn participants(
         &self,
         message_id: &str,
@@ -255,6 +289,7 @@ impl MessageLifecycleStore {
         Ok((&record.sender, &record.recipients))
     }
 
+    /// Exports all records into a deterministic snapshot payload model.
     pub fn export_snapshot(&self) -> MessageLifecycleSnapshot {
         let records = self
             .records
@@ -276,6 +311,7 @@ impl MessageLifecycleStore {
         }
     }
 
+    /// Restores all records from a previously exported lifecycle snapshot.
     pub fn restore_snapshot(
         &mut self,
         snapshot: MessageLifecycleSnapshot,
@@ -400,6 +436,7 @@ impl MessageLifecycleStore {
         Ok(())
     }
 
+    /// Validates processor proof evidence for a delivered message and transitions it to validated.
     pub fn validate_with_processor_proof(
         &mut self,
         message_id: &str,
@@ -428,20 +465,34 @@ impl MessageLifecycleStore {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Lifecycle domain validation errors.
 pub enum MessageLifecycleError {
+    /// Message id is empty.
     EmptyMessageId,
+    /// Message id already exists in the store.
     DuplicateMessageId(String),
+    /// Sender DID is invalid.
     InvalidSenderDid(String),
+    /// Recipient list is empty.
     EmptyRecipients,
+    /// One of the recipient DIDs is invalid.
     InvalidRecipientDid(String),
+    /// Timestamp field is empty.
     EmptyTimestamp(&'static str),
+    /// Expiry is not strictly after creation time.
     InvalidExpiryWindow {
+        /// Creation timestamp that failed validation.
         created: String,
+        /// Expiry timestamp that failed validation.
         expires: String,
     },
+    /// Requested message id does not exist.
     NotFound(String),
+    /// Lifecycle transition edge is not permitted.
     InvalidTransition {
+        /// Current status.
         from: MessageStatus,
+        /// Requested next status.
         to: MessageStatus,
     },
 }
@@ -473,9 +524,16 @@ impl fmt::Display for MessageLifecycleError {
 impl std::error::Error for MessageLifecycleError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Proof admission errors while validating delivered messages.
 pub enum MessageProofAdmissionError {
+    /// Underlying lifecycle error.
     Lifecycle(MessageLifecycleError),
-    InvalidValidationState { found: MessageStatus },
+    /// Message is not in `Delivered` state.
+    InvalidValidationState {
+        /// Lifecycle status observed during proof admission.
+        found: MessageStatus,
+    },
+    /// Underlying proof evaluator error.
     Proof(ZkDesignError),
 }
 
@@ -495,10 +553,20 @@ impl fmt::Display for MessageProofAdmissionError {
 impl std::error::Error for MessageProofAdmissionError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Snapshot parsing/restoration errors for lifecycle state.
 pub enum MessageLifecycleSnapshotError {
-    SnapshotVersionMismatch { expected: u16, found: u16 },
+    /// Snapshot schema version differs from the active version.
+    SnapshotVersionMismatch {
+        /// Required schema version.
+        expected: u16,
+        /// Observed schema version in payload.
+        found: u16,
+    },
+    /// Duplicate message id appears in one snapshot payload.
     DuplicateMessageId(String),
+    /// Snapshot payload is malformed or internally inconsistent.
     InvalidSnapshot(String),
+    /// Underlying lifecycle validation error while restoring.
     Lifecycle(MessageLifecycleError),
 }
 
@@ -523,9 +591,13 @@ impl fmt::Display for MessageLifecycleSnapshotError {
 impl std::error::Error for MessageLifecycleSnapshotError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Storage-layer errors for lifecycle snapshot persistence.
 pub enum MessageLifecycleSnapshotStoreError {
+    /// File I/O error detail.
     Io(String),
+    /// Raw snapshot payload is invalid.
     InvalidPayload(String),
+    /// Parsed snapshot is invalid under lifecycle constraints.
     Snapshot(MessageLifecycleSnapshotError),
 }
 
@@ -546,17 +618,21 @@ impl fmt::Display for MessageLifecycleSnapshotStoreError {
 
 impl std::error::Error for MessageLifecycleSnapshotStoreError {}
 
+/// Snapshot persistence contract for lifecycle state.
 pub trait MessageLifecycleSnapshotStore {
+    /// Writes the latest lifecycle snapshot.
     fn write(
         &mut self,
         snapshot: MessageLifecycleSnapshot,
     ) -> Result<(), MessageLifecycleSnapshotStoreError>;
+    /// Reads the latest lifecycle snapshot, if present.
     fn read_latest(
         &self,
     ) -> Result<Option<MessageLifecycleSnapshot>, MessageLifecycleSnapshotStoreError>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// In-memory snapshot store used by tests and lightweight workflows.
 pub struct InMemoryMessageLifecycleSnapshotStore {
     latest: Option<MessageLifecycleSnapshot>,
 }
@@ -578,17 +654,22 @@ impl MessageLifecycleSnapshotStore for InMemoryMessageLifecycleSnapshotStore {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// File-backed snapshot store for lifecycle state recovery.
 pub struct FileMessageLifecycleSnapshotStore {
     path: PathBuf,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Recovery result returned when loading/repairing file-backed snapshots.
 pub struct MessageLifecycleRecoveryResult {
+    /// Latest valid snapshot if one exists.
     pub latest: Option<MessageLifecycleSnapshot>,
+    /// Whether recovery repaired a malformed on-disk payload.
     pub repaired: bool,
 }
 
 impl FileMessageLifecycleSnapshotStore {
+    /// Creates a file-backed snapshot store at `path`.
     pub fn new(path: PathBuf) -> Result<Self, MessageLifecycleSnapshotStoreError> {
         if path.as_os_str().is_empty() {
             return Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
@@ -598,6 +679,7 @@ impl FileMessageLifecycleSnapshotStore {
         Ok(Self { path })
     }
 
+    /// Loads the latest snapshot and repairs malformed payloads by truncating the file.
     pub fn recover_latest_and_repair(
         &mut self,
     ) -> Result<MessageLifecycleRecoveryResult, MessageLifecycleSnapshotStoreError> {
