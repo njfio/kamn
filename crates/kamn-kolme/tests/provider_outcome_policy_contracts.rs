@@ -2,9 +2,10 @@ use kamn_kolme::{
     deterministic_backend_commit_id, is_valid_expected_provider_input,
     is_valid_provider_hint_input, is_valid_receipt_commit_id_input,
     is_valid_receipt_provider_input, is_valid_runtime_provider_input,
-    parse_commit_id_from_response_fields, parse_live_provider_outcome,
-    parse_live_runtime_provider_outcome, require_commit_id_matches_expected_txhash,
-    required_provider_response_field, txhash_from_commit_id,
+    normalize_provider_hint_input, parse_commit_id_from_response_fields,
+    parse_live_provider_outcome, parse_live_runtime_provider_outcome,
+    require_commit_id_matches_expected_txhash, required_provider_response_field,
+    txhash_from_commit_id,
     validate_provider_receipt_identity as validate_provider_receipt_identity_contract,
     KolmeCommitReceiptFinality, KolmeProviderOutcome, KolmeProviderOutcomePolicyError,
     KolmeProviderReceiptIdentityError, KolmeRuntimeProviderOutcome, ReceiptFinality,
@@ -215,9 +216,26 @@ fn functional_provider_outcome_policy_accepts_non_empty_provider_hint_input() {
 }
 
 #[test]
+fn functional_provider_outcome_policy_normalizes_provider_hint_input() {
+    assert_eq!(
+        normalize_provider_hint_input("  kolme-fork  "),
+        "kolme-fork"
+    );
+}
+
+#[test]
 fn regression_issue_1882_provider_outcome_policy_rejects_empty_provider_hint_input() {
     // Regression: #1882
     assert!(!is_valid_provider_hint_input(" \t "));
+}
+
+#[test]
+fn regression_issue_1914_provider_outcome_policy_trims_outer_provider_hint_whitespace() {
+    // Regression: #1914
+    assert_eq!(
+        normalize_provider_hint_input("\nkolme-fork\n"),
+        "kolme-fork"
+    );
 }
 
 #[test]
