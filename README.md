@@ -565,6 +565,9 @@ bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --
 # real-node profile marker for local endpoint/operator validation
 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json
 
+# real-node secondary signer profile marker for local failover/operator validation
+bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node --runtime-signer-profile ops-secondary --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json
+
 # optional nested runtime finality follow-up pass-through
 KAMN_KOLME_LOCAL_HEAVY=1 \
 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-finality-command "printf 'finality=final\n'" --runtime-commit-finality-max-seconds 15 --runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json
@@ -587,6 +590,11 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_signer_previous_rotation_epoch=1
 # runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX
 
+# strict secondary signer summary marker contracts
+# runtime_signer_profile=ops-secondary
+# runtime_signer_previous_profile=ops-secondary
+# runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY
+
 # strict profile NO-GO drift/synthetic reason markers
 # runtime_commit_command_profile_mismatch
 # runtime_signer_profile_mismatch
@@ -605,9 +613,12 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 
 # strict profile signer marker
 # KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary
+# KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary
 
 # real-node profile contract lane (dry-run summary + policy + docs parity)
 bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json
+# real-node profile contract lane for secondary signer profile coverage
+bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --runtime-signer-profile ops-secondary --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json
 # real-node strict runtime evidence checker remains local-only and excluded from ci-fast-gate.
 
 # bounded contract lane (spawns local mock API server + pinned checkout fixture)

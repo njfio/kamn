@@ -15,9 +15,12 @@ TMP_DRIFT_REPORT="$(mktemp)"
 TMP_SIGNER_DRIFT_REPORT="$(mktemp)"
 TMP_SYNTHETIC_REPORT="$(mktemp)"
 TMP_INMEMORY_REPORT="$(mktemp)"
+TMP_SECONDARY_REPORT="$(mktemp)"
+TMP_SECONDARY_POLICY_REPORT="$(mktemp)"
+TMP_SECONDARY_KEY_ENV_DRIFT_REPORT="$(mktemp)"
 TMP_NEGATIVE_POLICY="$(mktemp)"
 TMP_NEGATIVE_ERR="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_SECONDARY_REPORT" "$TMP_SECONDARY_POLICY_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local KAMN live runtime real-node profile contract lane runner to be executable" >&2
@@ -64,9 +67,12 @@ required_coverage_markers=(
   "check_local_kamn_live_runtime_real_node_profile_policy.py"
   "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh"
   "--require-non-synthetic-run-evidence"
+  "--runtime-signer-profile"
   "docs/planning/kolme-devnet-ops.md"
   "docs/ci/strategy.md"
   "README.md"
+  "runtime_signer_profile=ops-secondary"
+  "runtime_signer_private_key_env_mismatch"
   "runtime_commit_command_profile_mismatch"
   "runtime_signer_failover_profile_unchanged"
   "runtime_signer_rotation_epoch_stale"
@@ -87,12 +93,24 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
     echo "expected docs parity to include real-node runtime profile marker in $docs_file" >&2
     exit 1
   fi
+  if ! grep -q -- "--runtime-signer-profile ops-secondary" "$docs_file"; then
+    echo "expected docs parity to include secondary signer profile invocation marker in $docs_file" >&2
+    exit 1
+  fi
   if ! grep -q "check_local_kamn_live_runtime_real_node_profile_policy.py" "$docs_file"; then
     echo "expected docs parity to include real-node profile policy checker marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh" "$docs_file"; then
     echo "expected docs parity to include real-node profile contract lane marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_profile=ops-secondary" "$docs_file"; then
+    echo "expected docs parity to include secondary signer profile marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_private_key_env_mismatch" "$docs_file"; then
+    echo "expected docs parity to include signer private key mismatch reason marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "Regression: #2139" "$docs_file"; then
@@ -164,7 +182,41 @@ if policy.get("reason_codes") != []:
     raise SystemExit("expected no policy reason codes for real-node profile contract-lane dry-run composition")
 PY
 
-python3 - "$TMP_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" <<'PY'
+bash "$RUNNER" \
+  --runtime-signer-profile ops-secondary \
+  --output-json "$TMP_SECONDARY_REPORT" \
+  --policy-output-json "$TMP_SECONDARY_POLICY_REPORT" >/dev/null
+
+python3 - "$TMP_SECONDARY_REPORT" "$TMP_SECONDARY_POLICY_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+policy = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
+runtime_commit_command = summary.get("runtime_commit_command")
+if not isinstance(runtime_commit_command, str):
+    raise SystemExit("expected runtime_commit_command in secondary signer contract-lane summary")
+if "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary" not in runtime_commit_command:
+    raise SystemExit("expected secondary signer profile marker in secondary signer contract-lane summary")
+if summary.get("runtime_signer_profile") != "ops-secondary":
+    raise SystemExit("expected secondary signer profile marker in contract-lane summary")
+if summary.get("runtime_signer_previous_profile") != "ops-secondary":
+    raise SystemExit("expected secondary signer previous-profile marker in contract-lane summary")
+if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
+    raise SystemExit("expected secondary signer private key env marker in contract-lane summary")
+contracts = summary.get("contracts", {})
+if contracts.get("runtime_signer_profile") != "ops-secondary":
+    raise SystemExit("expected contracts secondary signer profile marker in contract-lane summary")
+if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
+    raise SystemExit("expected contracts secondary signer private key env marker in contract-lane summary")
+if policy.get("final_decision") != "GO":
+    raise SystemExit("expected secondary signer policy final_decision GO")
+if policy.get("reason_codes") != []:
+    raise SystemExit("expected no policy reason codes for secondary signer dry-run composition")
+PY
+
+python3 - "$TMP_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" <<'PY'
 import json
 import pathlib
 import sys
@@ -215,6 +267,22 @@ inmemory_summary["runtime_commit_command"] = (
 )
 pathlib.Path(sys.argv[5]).write_text(
     json.dumps(inmemory_summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+
+secondary_key_env_drift_summary = dict(base_summary)
+secondary_key_env_drift_summary["runtime_signer_profile"] = "ops-secondary"
+secondary_key_env_drift_summary["runtime_signer_previous_profile"] = "ops-secondary"
+secondary_key_env_drift_summary["runtime_signer_private_key_env"] = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
+secondary_key_env_drift_summary["contracts"] = dict(base_summary.get("contracts", {}))
+secondary_key_env_drift_summary["contracts"]["runtime_signer_profile"] = "ops-secondary"
+secondary_key_env_drift_summary["contracts"]["runtime_signer_private_key_env"] = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
+secondary_key_env_drift_summary["runtime_commit_command"] = str(base_summary.get("runtime_commit_command", "")).replace(
+    "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary",
+    "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary",
+)
+pathlib.Path(sys.argv[6]).write_text(
+    json.dumps(secondary_key_env_drift_summary, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
 )
 PY
@@ -311,6 +379,26 @@ fi
 
 if ! grep -q "runtime_commit_in_memory_provider_reference_detected" "$TMP_NEGATIVE_ERR"; then
   echo "expected in-memory provider reference reason in negative proof output" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_NEGATIVE_POLICY" >"$TMP_NEGATIVE_ERR" 2>&1
+secondary_key_env_exit_code=$?
+set -e
+
+if [ "$secondary_key_env_exit_code" -eq 0 ]; then
+  echo "expected secondary signer key-env drift negative proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_private_key_env_mismatch" "$TMP_NEGATIVE_ERR"; then
+  echo "expected signer private key env mismatch reason in secondary signer negative proof output" >&2
   exit 1
 fi
 

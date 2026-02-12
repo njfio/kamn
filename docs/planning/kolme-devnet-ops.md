@@ -404,6 +404,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --max-seconds 210 --bootstrap-max-seconds 90 --localhost-signed-max-seconds 45 --conformance-max-seconds 180 --runtime-commit-max-seconds 30 --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
 - Real-node profile contract marker (local endpoint/operator validation):
   - `bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
+  - `bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node --runtime-signer-profile ops-secondary --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
 - Optional runtime finality pass-through to nested live runner:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-finality-command "printf 'finality=final\n'" --runtime-commit-finality-max-seconds 15 --runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
 - Policy checker command:
@@ -422,6 +423,10 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_rotation_epoch=1`
     - `runtime_signer_previous_rotation_epoch=1`
     - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
+  - GO proof also supports deterministic secondary signer markers:
+    - `runtime_signer_profile=ops-secondary`
+    - `runtime_signer_previous_profile=ops-secondary`
+    - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY`
   - NO-GO marker-drift proof must surface `runtime_commit_command_profile_mismatch` when profile marker contracts drift from `real-node-non-synthetic-v1`.
   - NO-GO signer-profile drift proof must surface `runtime_signer_profile_mismatch` when summary signer profile markers drift from `ops-primary`.
   - NO-GO failover proof must surface `runtime_signer_failover_profile_unchanged` when failover is active but profile does not rotate.
@@ -430,8 +435,10 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - NO-GO synthetic-command regression proof must surface `runtime_commit_non_synthetic_submit_probe_missing` when `runtime_commit_command` omits `integration_kolme_fork_live_node_submit_reaches_endpoint`.
   - NO-GO synthetic-command regression proof must surface `runtime_commit_real_signing_profile_marker_missing` when `runtime_commit_command` omits `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1`.
   - NO-GO synthetic-command regression proof must surface `runtime_commit_signer_profile_marker_missing` when `runtime_commit_command` omits `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary`.
+  - NO-GO synthetic-command regression proof must surface `runtime_commit_signer_profile_marker_missing` when `runtime_commit_command` omits `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary`.
 - Real-node profile contract lane command:
   - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
+  - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --runtime-signer-profile ops-secondary --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
 - Contract lane command:
   - `bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
 - Summary schema:
@@ -466,8 +473,15 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
     - `contracts.runtime_signer_failover_requires_profile_change=true`
     - `contracts.runtime_signer_rotation_epoch_must_increase_on_failover=true`
+  - real-node profile accepts secondary signer summary/contracts markers for failover drills:
+    - `runtime_signer_profile=ops-secondary`
+    - `runtime_signer_previous_profile=ops-secondary`
+    - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY`
+    - `contracts.runtime_signer_failover_requires_profile_change=true`
+    - `contracts.runtime_signer_rotation_epoch_must_increase_on_failover=true`
   - real-node profile requires runtime command surfaces to include `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1`; checker fails closed with `runtime_commit_real_signing_profile_marker_missing` when omitted.
   - real-node profile requires runtime command surfaces to include `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary`; checker fails closed with `runtime_commit_signer_profile_marker_missing` when omitted.
+  - real-node profile requires runtime command surfaces to include `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary` when `runtime_signer_profile=ops-secondary`; checker fails closed with `runtime_commit_signer_profile_marker_missing` when omitted.
   - real-node profile command composition rejects in-memory fallback references at runner boundary:
     - `runtime-commit-command must not reference InMemoryKolmeRuntimeCommitClient when runtime-profile=real-node`
   - real-node profile checker fails closed on in-memory provider references in command/policy surfaces:

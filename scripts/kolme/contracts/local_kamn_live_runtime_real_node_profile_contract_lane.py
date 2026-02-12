@@ -17,6 +17,10 @@ CHECKER = ROOT_DIR / "scripts/kolme/check_local_kamn_live_runtime_real_node_prof
 DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
 CI_DOC_FILE = ROOT_DIR / "docs/ci/strategy.md"
 README_FILE = ROOT_DIR / "README.md"
+SIGNER_PRIVATE_KEY_ENV_BY_PROFILE = {
+    "ops-primary": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+    "ops-secondary": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
+}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -42,6 +46,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--fork-chain-version",
         default="v0.15.2",
         help="Required fork-info chain_version query value.",
+    )
+    parser.add_argument(
+        "--runtime-signer-profile",
+        default="ops-primary",
+        choices=sorted(SIGNER_PRIVATE_KEY_ENV_BY_PROFILE.keys()),
+        help="Signer profile marker expected from the real-node runtime lane.",
     )
     return parser
 
@@ -85,6 +95,10 @@ def main() -> int:
         print("max-seconds must be a positive integer", file=sys.stderr)
         return 1
     max_seconds = int(args.max_seconds)
+    expected_signer_profile = args.runtime_signer_profile
+    expected_signer_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[expected_signer_profile]
+    alternate_signer_profile = "ops-secondary" if expected_signer_profile == "ops-primary" else "ops-primary"
+    alternate_signer_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[alternate_signer_profile]
 
     if not RUNNER.is_file() or not RUNNER.stat().st_mode & 0o111:
         print("expected local KAMN live runtime integration runner to be executable", file=sys.stderr)
@@ -165,6 +179,8 @@ def main() -> int:
                 args.fork_chain_version,
                 "--runtime-provider-client-contract",
                 "KolmeRuntimeCommitLiveProvider",
+                "--runtime-signer-profile",
+                expected_signer_profile,
                 "--runtime-commit-live-summary",
                 str(runtime_commit_live_summary),
                 "--runtime-commit-live-policy-report",
@@ -213,7 +229,8 @@ def main() -> int:
     if "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1" not in runtime_commit_command:
         print("expected real signing profile marker in contract-lane summary command", file=sys.stderr)
         return 1
-    if "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary" not in runtime_commit_command:
+    expected_signer_command_marker = f"KAMN_KOLME_LIVE_SIGNER_PROFILE={expected_signer_profile}"
+    if expected_signer_command_marker not in runtime_commit_command:
         print("expected signer profile marker in contract-lane summary command", file=sys.stderr)
         return 1
     if "InMemoryKolmeRuntimeCommitClient" in runtime_commit_command:
@@ -231,10 +248,10 @@ def main() -> int:
     if summary.get("runtime_signer_profile_selector_env") != "KAMN_KOLME_LIVE_SIGNER_PROFILE":
         print("expected signer profile selector env marker in contract-lane summary", file=sys.stderr)
         return 1
-    if summary.get("runtime_signer_profile") != "ops-primary":
+    if summary.get("runtime_signer_profile") != expected_signer_profile:
         print("expected signer profile marker in contract-lane summary", file=sys.stderr)
         return 1
-    if summary.get("runtime_signer_previous_profile") != "ops-primary":
+    if summary.get("runtime_signer_previous_profile") != expected_signer_profile:
         print("expected signer previous profile marker in contract-lane summary", file=sys.stderr)
         return 1
     if summary.get("runtime_signer_failover_active") is not False:
@@ -246,7 +263,7 @@ def main() -> int:
     if summary.get("runtime_signer_previous_rotation_epoch") != 1:
         print("expected signer previous rotation epoch marker in contract-lane summary", file=sys.stderr)
         return 1
-    if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
+    if summary.get("runtime_signer_private_key_env") != expected_signer_private_key_env:
         print("expected signer private key env marker in contract-lane summary", file=sys.stderr)
         return 1
     contracts = summary.get("contracts", {})
@@ -259,7 +276,7 @@ def main() -> int:
     if contracts.get("runtime_signer_profile_selector_env") != "KAMN_KOLME_LIVE_SIGNER_PROFILE":
         print("expected contracts signer profile selector env marker in contract-lane summary", file=sys.stderr)
         return 1
-    if contracts.get("runtime_signer_profile") != "ops-primary":
+    if contracts.get("runtime_signer_profile") != expected_signer_profile:
         print("expected contracts signer profile marker in contract-lane summary", file=sys.stderr)
         return 1
     if contracts.get("runtime_signer_failover_requires_profile_change") is not True:
@@ -268,7 +285,7 @@ def main() -> int:
     if contracts.get("runtime_signer_rotation_epoch_must_increase_on_failover") is not True:
         print("expected contracts signer rotation epoch guard marker in contract-lane summary", file=sys.stderr)
         return 1
-    if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
+    if contracts.get("runtime_signer_private_key_env") != expected_signer_private_key_env:
         print("expected contracts signer private key env marker in contract-lane summary", file=sys.stderr)
         return 1
     if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1":
@@ -316,8 +333,8 @@ def main() -> int:
         failover_stale_summary_file = negative_path / "failover_stale_summary.json"
         failover_stale_policy_file = negative_path / "failover_stale_policy.json"
         failover_stale_summary = dict(summary)
-        failover_stale_summary["runtime_signer_profile"] = "ops-primary"
-        failover_stale_summary["runtime_signer_previous_profile"] = "ops-primary"
+        failover_stale_summary["runtime_signer_profile"] = expected_signer_profile
+        failover_stale_summary["runtime_signer_previous_profile"] = expected_signer_profile
         failover_stale_summary["runtime_signer_failover_active"] = True
         failover_stale_summary["runtime_signer_rotation_epoch"] = 3
         failover_stale_summary["runtime_signer_previous_rotation_epoch"] = 3
@@ -347,6 +364,46 @@ def main() -> int:
             return 1
         if failover_stale_policy.get("final_decision") != "NO-GO":
             print("expected NO-GO final decision for failover stale policy output", file=sys.stderr)
+            return 1
+
+        signer_key_env_drift_summary_file = negative_path / "signer_key_env_drift_summary.json"
+        signer_key_env_drift_policy_file = negative_path / "signer_key_env_drift_policy.json"
+        signer_key_env_drift_summary = dict(summary)
+        signer_key_env_drift_summary["runtime_signer_profile"] = expected_signer_profile
+        signer_key_env_drift_summary["runtime_signer_previous_profile"] = expected_signer_profile
+        signer_key_env_drift_summary["runtime_signer_private_key_env"] = alternate_signer_private_key_env
+        signer_key_env_drift_contracts = dict(summary.get("contracts", {}))
+        signer_key_env_drift_contracts["runtime_signer_profile"] = expected_signer_profile
+        signer_key_env_drift_contracts["runtime_signer_private_key_env"] = alternate_signer_private_key_env
+        signer_key_env_drift_summary["contracts"] = signer_key_env_drift_contracts
+        signer_key_env_drift_summary_file.write_text(
+            json.dumps(signer_key_env_drift_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        signer_key_env_drift_result = run_real_node_policy_check(
+            report_file=signer_key_env_drift_summary_file,
+            output_json=signer_key_env_drift_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if signer_key_env_drift_result.returncode == 0:
+            print("expected signer key env drift negative proof to fail closed", file=sys.stderr)
+            return 1
+        signer_key_env_drift_policy = json.loads(
+            signer_key_env_drift_policy_file.read_text(encoding="utf-8")
+        )
+        signer_key_env_drift_reason_codes = signer_key_env_drift_policy.get("reason_codes")
+        if not isinstance(signer_key_env_drift_reason_codes, list):
+            print("expected reason_codes list in signer key env drift policy output", file=sys.stderr)
+            return 1
+        if "runtime_signer_private_key_env_mismatch" not in signer_key_env_drift_reason_codes:
+            print(
+                "expected runtime_signer_private_key_env_mismatch in signer key env drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if signer_key_env_drift_policy.get("final_decision") != "NO-GO":
+            print("expected NO-GO final decision for signer key env drift policy output", file=sys.stderr)
             return 1
 
         synthetic_regression_summary_file = negative_path / "synthetic_regression_summary.json"
@@ -409,7 +466,7 @@ def main() -> int:
             "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider "
             "--require-non-synthetic-run-evidence "
             "--live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 "
-            "KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport "
+            f"KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNER_PROFILE={expected_signer_profile} KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport "
             "-- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" "
             "--provider-hint InMemoryKolmeRuntimeCommitClient "
             "--output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json"
@@ -444,32 +501,41 @@ def main() -> int:
 
     doc_markers = [
         "--runtime-profile real-node",
+        "--runtime-signer-profile ops-secondary",
         "check_local_kamn_live_runtime_real_node_profile_policy.py",
         "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
         "--require-non-synthetic-run-evidence",
         "runtime_signer_profile=ops-primary",
+        "runtime_signer_profile=ops-secondary",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
+        "runtime_signer_private_key_env_mismatch",
         "Regression: #2139",
     ]
     ci_doc_markers = [
         "--runtime-profile real-node",
+        "--runtime-signer-profile ops-secondary",
         "check_local_kamn_live_runtime_real_node_profile_policy.py",
         "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
         "--require-non-synthetic-run-evidence",
         "runtime_signer_profile=ops-primary",
+        "runtime_signer_profile=ops-secondary",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
+        "runtime_signer_private_key_env_mismatch",
         "Regression: #2139",
     ]
     readme_markers = [
         "--runtime-profile real-node",
+        "--runtime-signer-profile ops-secondary",
         "check_local_kamn_live_runtime_real_node_profile_policy.py",
         "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
         "--require-non-synthetic-run-evidence",
         "runtime_signer_profile=ops-primary",
+        "runtime_signer_profile=ops-secondary",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
+        "runtime_signer_private_key_env_mismatch",
         "Regression: #2139",
     ]
 
