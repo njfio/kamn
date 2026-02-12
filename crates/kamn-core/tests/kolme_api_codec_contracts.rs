@@ -1,7 +1,7 @@
 use kamn_core::{
     KolmeApiBroadcastRequest, KolmeApiBroadcastResponse, KolmeApiNextNonceRequest,
     KolmeApiNextNonceResponse, KolmeRuntimeCommitError, KolmeRuntimeCommitProviderError,
-    KolmeRuntimeCommitRequest,
+    KolmeRuntimeCommitRequest, KolmeRuntimeCommitSignedBroadcastEnvelope,
 };
 
 #[test]
@@ -194,6 +194,22 @@ fn regression_issue_1908_runtime_commit_request_construction_trims_request_field
     assert_eq!(
         request.to_wire_payload(),
         "operation_id=op-1506-e\nstate_root=state:1506\nactor_did=kamn:did:agent:codec-1506-e\nnonce=15\npayload_hash=payload:1506-e\nidempotency_key=kolme-runtime-commit:op-1506-e:state:1506:kamn:did:agent:codec-1506-e:15:14\n"
+    );
+}
+
+#[test]
+fn regression_issue_1910_signed_envelope_wire_payload_escaping_remains_stable() {
+    // Regression: #1910
+    let envelope = KolmeRuntimeCommitSignedBroadcastEnvelope::new(
+        "signer:\"esc\"",
+        "message:\"esc\"",
+        "signature:\"esc\"",
+        1,
+    )
+    .expect("envelope should build");
+    assert_eq!(
+        envelope.to_wire_payload(),
+        "{\"signer_key_id\":\"signer:\\\"esc\\\"\",\"message\":\"message:\\\"esc\\\"\",\"signature\":\"signature:\\\"esc\\\"\",\"recovery_id\":1}"
     );
 }
 

@@ -1,4 +1,5 @@
 //! Runtime-commit deterministic request identity policy contracts.
+use crate::escape_json_string;
 
 /// Renders deterministic idempotency key for a runtime commit request.
 pub fn deterministic_runtime_commit_idempotency_key(
@@ -30,6 +31,22 @@ pub fn render_runtime_commit_wire_payload(
     format!(
         "operation_id={}\nstate_root={}\nactor_did={}\nnonce={}\npayload_hash={}\nidempotency_key={}\n",
         operation_id, state_root, actor_did, nonce, payload_hash, idempotency_key
+    )
+}
+
+/// Renders signed-envelope wire payload in canonical JSON field order.
+pub fn render_signed_envelope_wire_payload(
+    signer_key_id: &str,
+    message: &str,
+    signature: &str,
+    recovery_id: u8,
+) -> String {
+    format!(
+        "{{\"signer_key_id\":\"{}\",\"message\":\"{}\",\"signature\":\"{}\",\"recovery_id\":{}}}",
+        escape_json_string(signer_key_id),
+        escape_json_string(message),
+        escape_json_string(signature),
+        recovery_id
     )
 }
 
@@ -126,6 +143,7 @@ mod tests {
         is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
         is_valid_runtime_state_root_input, normalize_runtime_commit_request_fields,
         normalize_runtime_commit_signed_envelope_fields, render_runtime_commit_wire_payload,
+        render_signed_envelope_wire_payload,
     };
 
     #[test]
@@ -248,6 +266,20 @@ mod tests {
                 "state:epsilon".to_owned(),
                 "payload:epsilon".to_owned(),
             )
+        );
+    }
+
+    #[test]
+    fn unit_renders_signed_envelope_wire_payload_contract() {
+        let payload = render_signed_envelope_wire_payload(
+            "signer:key:7",
+            "message-value",
+            "signature-value",
+            7,
+        );
+        assert_eq!(
+            payload,
+            "{\"signer_key_id\":\"signer:key:7\",\"message\":\"message-value\",\"signature\":\"signature-value\",\"recovery_id\":7}"
         );
     }
 }
