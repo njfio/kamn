@@ -4,6 +4,7 @@ use kamn_kolme::{
     is_valid_runtime_commit_id_request, is_valid_runtime_nonce_input,
     is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
     is_valid_runtime_state_root_input, normalize_runtime_commit_signed_envelope_fields,
+    render_runtime_commit_wire_payload,
 };
 
 #[test]
@@ -104,6 +105,22 @@ fn functional_runtime_request_identity_policy_normalizes_signed_envelope_fields(
 }
 
 #[test]
+fn functional_runtime_request_identity_policy_renders_runtime_commit_wire_payload() {
+    let payload = render_runtime_commit_wire_payload(
+        "op-12",
+        "state:delta",
+        "did:kamn:agent:delta",
+        8,
+        "payload:delta",
+        "idempotency:delta",
+    );
+    assert_eq!(
+        payload,
+        "operation_id=op-12\nstate_root=state:delta\nactor_did=did:kamn:agent:delta\nnonce=8\npayload_hash=payload:delta\nidempotency_key=idempotency:delta\n"
+    );
+}
+
+#[test]
 fn regression_issue_1894_runtime_request_identity_policy_rejects_multiline_request_fields() {
     // Regression: #1894
     assert!(!are_runtime_commit_request_fields_single_line(
@@ -155,4 +172,19 @@ fn regression_issue_1904_runtime_request_identity_policy_preserves_inner_whitesp
             "signature value".to_owned(),
         )
     );
+}
+
+#[test]
+fn regression_issue_1906_runtime_request_identity_policy_wire_payload_field_order_is_stable() {
+    // Regression: #1906
+    let payload = render_runtime_commit_wire_payload(
+        "op-12",
+        "state:delta",
+        "did:kamn:agent:delta",
+        8,
+        "payload:delta",
+        "idempotency:delta",
+    );
+    assert!(payload.starts_with("operation_id=op-12\nstate_root=state:delta\n"));
+    assert!(payload.ends_with("idempotency_key=idempotency:delta\n"));
 }
