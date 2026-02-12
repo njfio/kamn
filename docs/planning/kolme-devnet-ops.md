@@ -467,6 +467,39 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - local KAMN live runtime integration run-mode execution remains excluded from PR fast-gate workflow routing.
   - real-node profile policy + contract lane docs parity markers remain fail-closed (`Regression: #2139`).
 
+## Local Kolme Live Deployment Preflight Lane (Issue #2225)
+
+- Local deployment preflight runner:
+  - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+- Deployment preflight run mode:
+  - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+- Deployment preflight policy checker command:
+  - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+- Summary/policy schemas:
+  - summary: `kamn.kolme.local-live-deployment-preflight-summary.v1`
+  - policy: `kamn.kolme.local-live-deployment-preflight-policy-report.v1`
+- Deterministic checkpoints include:
+  - `runtime_mode_contract`: runtime mode must match `kolme-live`.
+  - `signer_profile_contract`: profile must be `ops-primary` or `ops-secondary`.
+  - `signer_secret_contract`: selected signer secret env must be present and 64-char hex.
+  - summary fields include deterministic signer custody markers:
+    - `signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE`
+    - `signer_profile`
+    - `signer_private_key_env`
+  - contracts include:
+    - `contracts.ci_fast_gate_scope=ci-fast-gate`
+    - `contracts.required_runtime_mode=kolme-live`
+    - `contracts.required_secret_hex_length=64`
+- Fail-closed reasons include:
+  - `runtime_mode_mismatch`
+  - `signer_profile_mismatch`
+  - `signer_private_key_env_mismatch`
+  - `checkpoint_failed_signer_secret_contract`
+- Cost policy:
+  - lane is lightweight and `ci_fast_gate_eligible=true`.
+  - no local-heavy opt-in is required for deployment preflight checks.
+  - docs/command/policy parity for this lane remains fail-closed (`Regression: #2225`).
+
 ## Live Provider Operator Runbook (Issue #2114)
 
 ### Prerequisites (Local)

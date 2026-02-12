@@ -610,6 +610,34 @@ bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --ou
 # Regression: #2139
 ```
 
+### Run Local Kolme Live Deployment Preflight Lane
+
+```bash
+# deterministic deployment preflight plan (no command execution)
+bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json
+
+# deployment preflight run mode (fast-gate eligible, no local-heavy gate required)
+KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 \
+bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json
+
+# deployment preflight policy checker contract
+python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json
+
+# deterministic preflight marker contracts
+# signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE
+# contracts.ci_fast_gate_scope=ci-fast-gate
+# contracts.required_runtime_mode=kolme-live
+
+# strict preflight NO-GO drift reasons
+# runtime_mode_mismatch
+# signer_profile_mismatch
+# checkpoint_failed_signer_secret_contract
+
+# schema: kamn.kolme.local-live-deployment-preflight-summary.v1
+# schema: kamn.kolme.local-live-deployment-preflight-policy-report.v1
+# Regression: #2225
+```
+
 Live Provider Operator Runbook (Issue #2114): `docs/planning/kolme-devnet-ops.md`
 
 ### Run Local Live-Node Validation Bundle Lane
