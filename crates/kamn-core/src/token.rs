@@ -1,21 +1,34 @@
+//! Token configuration and genesis allocation validation contracts.
+
 use std::collections::HashSet;
 use std::fmt;
 
+/// Default token symbol.
 pub const DEFAULT_TOKEN_SYMBOL: &str = "KAMN";
+/// Default total token supply.
 pub const DEFAULT_TOTAL_SUPPLY: u128 = 1_000_000_000;
+/// Default token decimal precision.
 pub const DEFAULT_DECIMALS: u8 = 18;
+/// Basis-point total expected across all genesis allocation buckets.
 pub const TOTAL_ALLOCATION_BPS: u16 = 10_000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// Logical bucket for genesis token allocation.
 pub enum AllocationBucket {
+    /// Ecosystem and growth incentives allocation.
     EcosystemIncentives,
+    /// Protocol development and maintenance allocation.
     ProtocolDevelopment,
+    /// Validator and network participation rewards allocation.
     ValidatorRewards,
+    /// Initial liquidity provisioning allocation.
     InitialLiquidity,
+    /// Community grants and public goods allocation.
     CommunityGrants,
 }
 
 impl AllocationBucket {
+    /// Returns a stable snake_case identifier for the bucket.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::EcosystemIncentives => "ecosystem_incentives",
@@ -28,25 +41,36 @@ impl AllocationBucket {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Genesis allocation entry for one allocation bucket.
 pub struct GenesisAllocation {
+    /// Allocation bucket identifier.
     pub bucket: AllocationBucket,
+    /// Share in basis points.
     pub share_bps: u16,
+    /// Absolute token amount assigned to the bucket.
     pub amount: u128,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Token configuration including supply, precision, and allocations.
 pub struct TokenConfig {
+    /// Token symbol.
     pub symbol: String,
+    /// Total token supply.
     pub total_supply: u128,
+    /// Token decimal precision.
     pub decimals: u8,
+    /// Genesis allocation table.
     pub allocations: Vec<GenesisAllocation>,
 }
 
 impl TokenConfig {
+    /// Returns the allocation entry for `bucket`, if present.
     pub fn allocation_for(&self, bucket: AllocationBucket) -> Option<&GenesisAllocation> {
         self.allocations.iter().find(|item| item.bucket == bucket)
     }
 
+    /// Validates symbol, supply, decimals, and allocation invariants.
     pub fn validate(&self) -> Result<(), TokenConfigError> {
         if self.symbol.trim().is_empty() {
             return Err(TokenConfigError::EmptySymbol);
@@ -104,6 +128,7 @@ impl TokenConfig {
     }
 }
 
+/// Returns the default token configuration.
 pub fn default_token_config() -> TokenConfig {
     TokenConfig {
         symbol: DEFAULT_TOKEN_SYMBOL.to_owned(),
@@ -140,17 +165,39 @@ pub fn default_token_config() -> TokenConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Error taxonomy for token configuration validation failures.
 pub enum TokenConfigError {
+    /// Token symbol is empty after trimming.
     EmptySymbol,
+    /// Token symbol contains invalid characters or casing.
     InvalidSymbol(String),
+    /// Total supply is zero.
     ZeroSupply,
+    /// Decimals exceed the supported precision.
     InvalidDecimals(u8),
+    /// Allocation table is empty.
     EmptyAllocations,
+    /// Allocation bucket appears multiple times.
     DuplicateBucket(AllocationBucket),
+    /// Allocation share is zero.
     ZeroShare(AllocationBucket),
+    /// Allocation amount is zero.
     ZeroAmount(AllocationBucket),
-    AllocationShareSum { expected: u16, actual: u16 },
-    AllocationAmountSum { expected: u128, actual: u128 },
+    /// Allocation share sum does not match total basis points.
+    AllocationShareSum {
+        /// Expected basis-point sum.
+        expected: u16,
+        /// Observed basis-point sum.
+        actual: u16,
+    },
+    /// Allocation amount sum does not match total supply.
+    AllocationAmountSum {
+        /// Expected allocation amount sum.
+        expected: u128,
+        /// Observed allocation amount sum.
+        actual: u128,
+    },
+    /// Allocation amount accumulation overflowed.
     AmountOverflow,
 }
 

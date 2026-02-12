@@ -16,7 +16,6 @@ reputation_state
 runtime
 signer_backend
 task_operations
-token
 trust_score
 upgrade_orchestration
 watchdog
