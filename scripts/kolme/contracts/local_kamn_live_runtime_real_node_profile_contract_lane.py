@@ -165,6 +165,7 @@ def main() -> int:
                 "PASS",
                 "--require-reason-code",
                 "dry_run_no_commands_executed",
+                "--require-non-synthetic-run-evidence",
                 "--output-json",
                 args.policy_output_json,
             ],
@@ -187,6 +188,13 @@ def main() -> int:
     if summary.get("runtime_profile") != "real-node":
         print("expected runtime_profile=real-node in contract-lane summary", file=sys.stderr)
         return 1
+    runtime_commit_command = summary.get("runtime_commit_command")
+    if not isinstance(runtime_commit_command, str):
+        print("expected runtime_commit_command in contract-lane summary", file=sys.stderr)
+        return 1
+    if "--require-non-synthetic-run-evidence" not in runtime_commit_command:
+        print("expected strict non-synthetic runtime marker in contract-lane summary command", file=sys.stderr)
+        return 1
     contracts = summary.get("contracts", {})
     if not isinstance(contracts, dict):
         print("expected contracts object in real-node profile contract-lane summary", file=sys.stderr)
@@ -205,18 +213,21 @@ def main() -> int:
         "--runtime-profile real-node",
         "check_local_kamn_live_runtime_real_node_profile_policy.py",
         "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
+        "--require-non-synthetic-run-evidence",
         "Regression: #2139",
     ]
     ci_doc_markers = [
         "--runtime-profile real-node",
         "check_local_kamn_live_runtime_real_node_profile_policy.py",
         "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
+        "--require-non-synthetic-run-evidence",
         "Regression: #2139",
     ]
     readme_markers = [
         "--runtime-profile real-node",
         "check_local_kamn_live_runtime_real_node_profile_policy.py",
         "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
+        "--require-non-synthetic-run-evidence",
         "Regression: #2139",
     ]
 
