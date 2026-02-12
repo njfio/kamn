@@ -6,6 +6,64 @@ import json
 from pathlib import Path
 
 
+ALLOWED_RUNTIME_COMMIT_FAILURE_TAXONOMIES = {
+    "none",
+    "policy.rejected",
+    "budget.exceeded",
+    "transport.preflight.timeout",
+    "transport.preflight.failed",
+    "transport.submit.timeout",
+    "transport.submit.failed",
+    "finality.timeout",
+    "finality.failed",
+    "runtime.summary.unavailable",
+    "runtime.unknown",
+}
+
+NESTED_RUNTIME_REASON_TO_TAXONOMY = {
+    "live_preflight_timeout": "transport.preflight.timeout",
+    "live_preflight_failed": "transport.preflight.failed",
+    "live_runtime_commit_command_timeout": "transport.submit.timeout",
+    "live_runtime_commit_command_failed": "transport.submit.failed",
+    "live_finality_command_timeout": "finality.timeout",
+    "live_finality_command_failed": "finality.failed",
+    "live_runtime_commit_budget_exceeded": "budget.exceeded",
+}
+
+
+def expected_runtime_commit_failure_taxonomy(
+    status: object,
+    reason_code: object,
+    runtime_commit_reason_code: object,
+    runtime_commit_policy_reason_code: object,
+    runtime_commit_nested_reason_code: object,
+) -> str:
+    if status == "ok":
+        return "none"
+
+    if reason_code == "runtime_commit_policy_failed":
+        return "policy.rejected"
+
+    if reason_code == "runtime_integration_budget_exceeded":
+        return "budget.exceeded"
+
+    if reason_code != "runtime_commit_endpoint_failed":
+        return "none"
+
+    if runtime_commit_reason_code == "runtime_commit_endpoint_timeout":
+        return "transport.submit.timeout"
+
+    if (
+        runtime_commit_policy_reason_code == "runtime_commit_endpoint_failed"
+        and runtime_commit_nested_reason_code in ("report_missing", "report_invalid_json", "reason_code_missing")
+    ):
+        return "runtime.summary.unavailable"
+
+    if isinstance(runtime_commit_nested_reason_code, str):
+        return NESTED_RUNTIME_REASON_TO_TAXONOMY.get(runtime_commit_nested_reason_code, "runtime.unknown")
+    return "runtime.unknown"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Validate local KAMN live runtime integration summary policy."
@@ -75,9 +133,31 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(runtime_commit_live_policy_report, str) or not runtime_commit_live_policy_report.strip():
         reason_codes.append("runtime_commit_live_policy_report_missing")
 
+    runtime_commit_reason_code = report.get("runtime_commit_reason_code")
+    if not isinstance(runtime_commit_reason_code, str) or not runtime_commit_reason_code.strip():
+        reason_codes.append("runtime_commit_reason_code_missing")
+
     runtime_commit_policy_reason_code = report.get("runtime_commit_policy_reason_code")
     if not isinstance(runtime_commit_policy_reason_code, str) or not runtime_commit_policy_reason_code.strip():
         reason_codes.append("runtime_commit_policy_reason_code_missing")
+
+    runtime_commit_nested_reason_code = report.get("runtime_commit_nested_reason_code")
+    if not isinstance(runtime_commit_nested_reason_code, str) or not runtime_commit_nested_reason_code.strip():
+        reason_codes.append("runtime_commit_nested_reason_code_missing")
+
+    runtime_commit_failure_taxonomy_version = report.get("runtime_commit_failure_taxonomy_version")
+    if runtime_commit_failure_taxonomy_version != "v1":
+        reason_codes.append("runtime_commit_failure_taxonomy_version_mismatch")
+
+    runtime_commit_failure_taxonomy = report.get("runtime_commit_failure_taxonomy")
+    if not isinstance(runtime_commit_failure_taxonomy, str) or not runtime_commit_failure_taxonomy.strip():
+        reason_codes.append("runtime_commit_failure_taxonomy_missing")
+    elif runtime_commit_failure_taxonomy not in ALLOWED_RUNTIME_COMMIT_FAILURE_TAXONOMIES:
+        reason_codes.append("runtime_commit_failure_taxonomy_invalid")
+
+    runtime_commit_failure_diagnostic_hint = report.get("runtime_commit_failure_diagnostic_hint")
+    if not isinstance(runtime_commit_failure_diagnostic_hint, str) or not runtime_commit_failure_diagnostic_hint.strip():
+        reason_codes.append("runtime_commit_failure_diagnostic_hint_missing")
 
     contracts = report.get("contracts")
     if not isinstance(contracts, dict):
@@ -95,6 +175,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_commit_finality_primary_endpoint_mismatch")
         if contracts.get("runtime_commit_finality_fallback_endpoint") != "/block/{height}":
             reason_codes.append("runtime_commit_finality_fallback_endpoint_mismatch")
+        if contracts.get("runtime_commit_failure_taxonomy_version") != "v1":
+            reason_codes.append("runtime_commit_failure_taxonomy_contract_version_mismatch")
 
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
@@ -155,6 +237,21 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         observed_final_decision = "NO-GO"
         if reason_code in ("dry_run_no_commands_executed", "live_runtime_integration_passed"):
             reason_codes.append("fail_status_reason_code_mismatch")
+
+    expected_failure_taxonomy = expected_runtime_commit_failure_taxonomy(
+        status,
+        reason_code,
+        runtime_commit_reason_code,
+        runtime_commit_policy_reason_code,
+        runtime_commit_nested_reason_code,
+    )
+    if (
+        isinstance(runtime_commit_failure_taxonomy, str)
+        and runtime_commit_failure_taxonomy.strip()
+        and runtime_commit_failure_taxonomy in ALLOWED_RUNTIME_COMMIT_FAILURE_TAXONOMIES
+        and runtime_commit_failure_taxonomy != expected_failure_taxonomy
+    ):
+        reason_codes.append(f"runtime_commit_failure_taxonomy_mismatch:{expected_failure_taxonomy}")
 
     for required_reason_code in args.require_reason_code:
         if reason_code != required_reason_code:
