@@ -1,33 +1,58 @@
+//! Group channel sender-key lifecycle and message protection contracts.
+//!
+//! The implementation models sender-key distribution and epoch rotation for
+//! group channels plus deterministic encryption/decryption verification paths.
+
 use crate::AgentDid;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+/// Key-derivation algorithm identifier stamped on group ciphertext envelopes.
 pub const GROUP_MESSAGE_KEY_DERIVATION_ALGORITHM: &str = "SenderKey-v1";
+/// Cipher algorithm identifier stamped on group ciphertext envelopes.
 pub const GROUP_MESSAGE_CIPHER_ALGORITHM: &str = "XChaCha20-Poly1305";
 
+/// Persisted sender-key distribution event for one sender generation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SenderKeyDistributionRecord {
+    /// Channel identifier this sender-key distribution belongs to.
     pub channel_id: String,
+    /// Sender DID that owns the sender-key generation.
     pub sender_did: String,
+    /// Sender key reference used to derive message secrets.
     pub sender_key_ref: String,
+    /// Monotonic generation counter for sender-key rotations.
     pub key_generation: u64,
+    /// Recipients authorized to decrypt ciphertext from this generation.
     pub recipient_allowlist: BTreeSet<String>,
+    /// Whether this generation is currently active for encryption.
     pub active: bool,
 }
 
+/// Encrypted group message envelope carrying sender-key metadata and proofs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GroupMessageCiphertext {
+    /// Declared key-derivation algorithm for decryptor compatibility checks.
     pub key_derivation_algorithm: String,
+    /// Declared cipher algorithm for decryptor compatibility checks.
     pub cipher_algorithm: String,
+    /// Channel identifier this ciphertext targets.
     pub channel_id: String,
+    /// Sender DID that produced the ciphertext.
     pub sender_did: String,
+    /// Sender-key generation used to derive this ciphertext.
     pub key_generation: u64,
+    /// Nonce value used for this encryption operation.
     pub nonce: u64,
+    /// Hex-encoded encrypted payload bytes.
     pub ciphertext: String,
+    /// Integrity tag derived from shared secret, nonce, and ciphertext.
     pub auth_tag: String,
+    /// Deterministic signature token for sender-key provenance checks.
     pub signature: String,
 }
 
+/// In-memory engine for sender-key distribution, rotation, and message sealing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GroupChannelCryptoEngine {
     channel_id: String,
@@ -37,6 +62,7 @@ pub struct GroupChannelCryptoEngine {
 }
 
 impl GroupChannelCryptoEngine {
+    /// Constructs an engine for a specific channel identifier.
     pub fn new(channel_id: &str) -> Result<Self, GroupChannelCryptoError> {
         if channel_id.trim().is_empty() {
             return Err(GroupChannelCryptoError::EmptyChannelId);
@@ -50,6 +76,7 @@ impl GroupChannelCryptoEngine {
         })
     }
 
+    /// Distributes a new sender-key generation and marks the previous one inactive.
     pub fn distribute_sender_key(
         &mut self,
         sender_did: &str,
@@ -94,6 +121,7 @@ impl GroupChannelCryptoEngine {
         Ok(record)
     }
 
+    /// Rotates sender-key material by issuing a new distribution generation.
     pub fn rotate_sender_key(
         &mut self,
         sender_did: &str,
@@ -103,6 +131,7 @@ impl GroupChannelCryptoEngine {
         self.distribute_sender_key(sender_did, sender_key_ref, recipients)
     }
 
+    /// Returns the active sender-key generation for a sender DID.
     pub fn active_sender_key_generation(
         &self,
         sender_did: &str,
@@ -113,6 +142,7 @@ impl GroupChannelCryptoEngine {
             .ok_or_else(|| GroupChannelCryptoError::SenderKeyNotFound(sender_did.to_owned()))
     }
 
+    /// Returns a sender-key distribution record for a specific generation.
     pub fn sender_key_record(
         &self,
         sender_did: &str,
@@ -127,6 +157,7 @@ impl GroupChannelCryptoEngine {
             })
     }
 
+    /// Encrypts plaintext for a sender using the active sender-key generation.
     pub fn encrypt(
         &mut self,
         sender_did: &str,
@@ -187,6 +218,7 @@ impl GroupChannelCryptoEngine {
         })
     }
 
+    /// Decrypts a sealed group message for an authorized recipient DID.
     pub fn decrypt(
         &self,
         recipient_did: &str,
@@ -247,32 +279,55 @@ impl GroupChannelCryptoEngine {
     }
 }
 
+/// Error surface for group channel sender-key and ciphertext validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GroupChannelCryptoError {
+    /// Channel identifier was empty.
     EmptyChannelId,
+    /// Recipient allowlist was empty.
     EmptyRecipients,
+    /// Plaintext payload was empty.
     EmptyPayload,
+    /// Nonce value was invalid.
     InvalidNonce(u64),
+    /// Nonce was already used for the same sender/generation.
     NonceReuse(u64),
+    /// DID failed parser validation.
     InvalidDid(String),
+    /// Sender key reference format was invalid.
     InvalidSenderKeyRef,
+    /// Sender DID has no registered sender-key generation.
     SenderKeyNotFound(String),
+    /// Sender DID does not have the requested key generation.
     UnknownSenderKeyGeneration {
+        /// Sender DID requested.
         sender_did: String,
+        /// Sender-key generation requested.
         key_generation: u64,
     },
+    /// Recipient DID is not in the distribution allowlist.
     RecipientNotAuthorized {
+        /// Recipient DID that attempted decryption.
         recipient_did: String,
+        /// Sender DID that produced the ciphertext.
         sender_did: String,
+        /// Sender-key generation used by the ciphertext.
         key_generation: u64,
     },
+    /// Ciphertext declared unsupported algorithm identifiers.
     AlgorithmMismatch,
+    /// Ciphertext channel identifier does not match engine channel.
     ChannelMismatch {
+        /// Channel identifier expected by this engine.
         expected: String,
+        /// Channel identifier supplied by ciphertext.
         actual: String,
     },
+    /// Signature check failed for ciphertext provenance.
     SignatureMismatch,
+    /// Integrity tag verification failed.
     IntegrityCheckFailed,
+    /// Ciphertext encoding could not be decoded as valid hex.
     InvalidCiphertextEncoding,
 }
 

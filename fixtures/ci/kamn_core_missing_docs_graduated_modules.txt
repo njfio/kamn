@@ -21,3 +21,4 @@ transaction
 direct_message_crypto
 discord_bridge
 validator_lifecycle
+group_channel_crypto
