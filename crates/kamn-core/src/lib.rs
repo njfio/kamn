@@ -20,7 +20,7 @@ pub mod bridge_adapter;
 pub mod channel_models;
 #[allow(missing_docs)]
 pub mod channel_policies;
-#[allow(missing_docs)]
+/// Node role, sync mode, and runtime configuration validation contracts.
 pub mod config;
 #[allow(missing_docs)]
 pub mod content_lifecycle;

@@ -160,6 +160,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `agent_key_hierarchy`
   - `anti_spam`
   - `bootstrap`
+  - `config`
   - `direct_message_crypto`
   - `discord_bridge`
   - `group_channel_crypto`
@@ -199,6 +200,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2007`
   - `Regression: #2009`
   - `Regression: #2011`
+  - `Regression: #2013`
 
 ## Contributor Entrypoint Matrix
 
