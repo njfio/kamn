@@ -1,8 +1,8 @@
 use kamn_core::{
     KolmeApiBroadcastRequest, KolmeApiNextNonceRequest, KolmeCommitReceiptFinality,
-    KolmeRuntimeCommitFinalityChecker, KolmeRuntimeCommitHttpTransport,
-    KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitProvider, KolmeRuntimeCommitProviderError,
-    KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitRequest,
+    KolmeRuntimeCommitBlockFallbackTransport, KolmeRuntimeCommitFinalityChecker,
+    KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitProvider,
+    KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitRequest,
 };
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
@@ -307,6 +307,17 @@ fn unit_http_transport_rejects_zero_timeout_seconds() {
             })
         ),
         "http transport timeout must be positive"
+    );
+}
+
+#[test]
+fn unit_http_transport_block_fetch_rejects_zero_height() {
+    let mut transport = KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build");
+    assert_eq!(
+        transport.fetch_block_by_height("http://127.0.0.1:3030", "/block/{height}", 0),
+        Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "block height must be positive".to_owned(),
+        })
     );
 }
 

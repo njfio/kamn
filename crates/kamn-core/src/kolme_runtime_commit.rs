@@ -18,6 +18,7 @@ use kamn_kolme::{
     is_valid_block_fallback_base_url_input as is_kolme_valid_block_fallback_base_url_input_contract,
     is_valid_block_fallback_lookup_budget as is_kolme_valid_block_fallback_lookup_budget_contract,
     is_valid_block_fallback_provider_input as is_kolme_valid_block_fallback_provider_input_contract,
+    is_valid_block_lookup_height as is_kolme_valid_block_lookup_height_contract,
     is_valid_finality_base_url_input as is_kolme_valid_finality_base_url_input_contract,
     is_valid_finality_status_path_input as is_kolme_valid_finality_status_path_input_contract,
     is_valid_http_transport_timeout_seconds as is_kolme_valid_http_transport_timeout_seconds_contract,
@@ -1152,7 +1153,7 @@ impl KolmeRuntimeCommitBlockFallbackTransport for KolmeRuntimeCommitHttpTranspor
         block_path_template: &str,
         height: u64,
     ) -> Result<String, KolmeRuntimeCommitProviderError> {
-        if height == 0 {
+        if !is_kolme_valid_block_lookup_height_contract(height) {
             return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                 reason: "block height must be positive".to_owned(),
             });
