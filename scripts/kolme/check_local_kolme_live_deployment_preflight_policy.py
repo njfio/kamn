@@ -11,6 +11,7 @@ PRIMARY_SIGNER_PROFILE = "ops-primary"
 SECONDARY_SIGNER_PROFILE = "ops-secondary"
 PRIMARY_SIGNER_SECRET_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
 SECONDARY_SIGNER_SECRET_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+FALLBACK_SIGNER_SECRET_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 REQUIRED_SECRET_HEX_LENGTH = 64
 
 
@@ -95,9 +96,21 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif expected_signer_env and signer_private_key_env != expected_signer_env:
         reason_codes.append("signer_private_key_env_mismatch")
 
+    fallback_signer_private_key_env = report.get("fallback_signer_private_key_env")
+    if not isinstance(fallback_signer_private_key_env, str) or not fallback_signer_private_key_env.strip():
+        reason_codes.append("fallback_signer_private_key_env_missing")
+    elif fallback_signer_private_key_env != FALLBACK_SIGNER_SECRET_ENV:
+        reason_codes.append("fallback_signer_private_key_env_mismatch")
+
     signer_secret_present = report.get("signer_secret_present")
     if not isinstance(signer_secret_present, bool):
         reason_codes.append("signer_secret_present_invalid")
+
+    fallback_signer_secret_present = report.get("fallback_signer_secret_present")
+    if not isinstance(fallback_signer_secret_present, bool):
+        reason_codes.append("fallback_signer_secret_present_invalid")
+    elif fallback_signer_secret_present:
+        reason_codes.append("fallback_signer_secret_present_violation")
 
     signer_secret_hex_valid = report.get("signer_secret_hex_valid")
     if not isinstance(signer_secret_hex_valid, bool):
@@ -119,6 +132,10 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("primary_signer_secret_env_contract_mismatch")
         if contracts.get("secondary_signer_secret_env") != SECONDARY_SIGNER_SECRET_ENV:
             reason_codes.append("secondary_signer_secret_env_contract_mismatch")
+        if contracts.get("fallback_signer_secret_env") != FALLBACK_SIGNER_SECRET_ENV:
+            reason_codes.append("fallback_signer_secret_env_contract_mismatch")
+        if contracts.get("fallback_private_key_path_allowed") is not False:
+            reason_codes.append("fallback_private_key_path_allowed_contract_mismatch")
         if contracts.get("required_secret_hex_length") != REQUIRED_SECRET_HEX_LENGTH:
             reason_codes.append("required_secret_hex_length_contract_mismatch")
         if contracts.get("secret_source") != "env":
@@ -132,6 +149,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             "runtime_mode_contract",
             "signer_profile_contract",
             "signer_secret_contract",
+            "fallback_private_key_contract",
         }
         observed_ids: set[str] = set()
         for entry in checks:

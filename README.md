@@ -629,12 +629,15 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 
 # deterministic preflight marker contracts
 # signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE
+# fallback_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK
 # contracts.ci_fast_gate_scope=ci-fast-gate
 # contracts.required_runtime_mode=kolme-live
+# contracts.fallback_private_key_path_allowed=false
 
 # strict preflight NO-GO drift reasons
 # runtime_mode_mismatch
 # signer_profile_mismatch
+# fallback_signer_secret_present_violation
 # checkpoint_failed_signer_secret_contract
 
 # schema: kamn.kolme.local-live-deployment-preflight-summary.v1

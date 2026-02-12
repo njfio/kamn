@@ -484,18 +484,23 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `runtime_mode_contract`: runtime mode must match `kolme-live`.
   - `signer_profile_contract`: profile must be `ops-primary` or `ops-secondary`.
   - `signer_secret_contract`: selected signer secret env must be present and 64-char hex.
+  - `fallback_private_key_contract`: fallback signer secret env must remain unset.
   - summary fields include deterministic signer custody markers:
     - `signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE`
     - `signer_profile`
     - `signer_private_key_env`
+    - `fallback_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+    - `fallback_signer_secret_present=false`
   - contracts include:
     - `contracts.ci_fast_gate_scope=ci-fast-gate`
     - `contracts.required_runtime_mode=kolme-live`
     - `contracts.required_secret_hex_length=64`
+    - `contracts.fallback_private_key_path_allowed=false`
 - Fail-closed reasons include:
   - `runtime_mode_mismatch`
   - `signer_profile_mismatch`
   - `signer_private_key_env_mismatch`
+  - `fallback_signer_secret_present_violation`
   - `checkpoint_failed_signer_secret_contract`
 - Cost policy:
   - lane is lightweight and `ci_fast_gate_eligible=true`.
@@ -518,6 +523,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Runtime signer custody contract envs are set for deployment preflight before integration execution:
   - `export KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary`
   - `export KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=<64-hex-private-key>`
+  - `unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
 
 ### Execution Flow
 

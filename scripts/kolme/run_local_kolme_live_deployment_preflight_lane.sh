@@ -13,6 +13,7 @@ PRIMARY_SIGNER_PROFILE="ops-primary"
 SECONDARY_SIGNER_PROFILE="ops-secondary"
 PRIMARY_SIGNER_SECRET_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
 SECONDARY_SIGNER_SECRET_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+FALLBACK_SIGNER_SECRET_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 REQUIRED_SECRET_HEX_LENGTH=64
 
 while [ "$#" -gt 0 ]; do
@@ -117,6 +118,7 @@ record_check() {
 runtime_mode_command="runtime-mode must equal ${REQUIRED_RUNTIME_MODE}"
 signer_profile_command="signer profile must be ${PRIMARY_SIGNER_PROFILE} or ${SECONDARY_SIGNER_PROFILE}"
 signer_secret_command="selected signer secret env must exist and be ${REQUIRED_SECRET_HEX_LENGTH}-char hex"
+fallback_private_key_command="fallback signer secret env must remain unset"
 
 overall_status="ok"
 reason_code="dry_run_no_commands_executed"
@@ -124,10 +126,12 @@ budget_status="not_run"
 elapsed_seconds=0
 signer_secret_present="false"
 signer_secret_hex_valid="false"
+fallback_signer_secret_present="false"
 
 record_check "runtime_mode_contract" "$runtime_mode_command" "planned" "not_run"
 record_check "signer_profile_contract" "$signer_profile_command" "planned" "not_run"
 record_check "signer_secret_contract" "$signer_secret_command" "planned" "not_run"
+record_check "fallback_private_key_contract" "$fallback_private_key_command" "planned" "not_run"
 
 if [ "$MODE" = "run" ]; then
   : >"$CHECK_FILE"
@@ -137,6 +141,7 @@ if [ "$MODE" = "run" ]; then
     record_check "runtime_mode_contract" "$runtime_mode_command" "fail" "runtime_mode_mismatch"
     record_check "signer_profile_contract" "$signer_profile_command" "skipped" "runtime_mode_mismatch"
     record_check "signer_secret_contract" "$signer_secret_command" "skipped" "runtime_mode_mismatch"
+    record_check "fallback_private_key_contract" "$fallback_private_key_command" "skipped" "runtime_mode_mismatch"
     overall_status="fail"
     reason_code="checkpoint_failed_runtime_mode_contract"
   else
@@ -146,10 +151,25 @@ if [ "$MODE" = "run" ]; then
       echo "signer profile is invalid for deployment preflight: $SIGNER_PROFILE" >&2
       record_check "signer_profile_contract" "$signer_profile_command" "fail" "signer_profile_invalid"
       record_check "signer_secret_contract" "$signer_secret_command" "skipped" "signer_profile_invalid"
+      record_check "fallback_private_key_contract" "$fallback_private_key_command" "skipped" "signer_profile_invalid"
       overall_status="fail"
       reason_code="checkpoint_failed_signer_profile_contract"
     else
       record_check "signer_profile_contract" "$signer_profile_command" "pass" "signer_profile_validated"
+
+      fallback_signer_secret_value="${!FALLBACK_SIGNER_SECRET_ENV:-}"
+      if [ -n "$fallback_signer_secret_value" ]; then
+        fallback_signer_secret_present="true"
+      fi
+
+      if [ "$fallback_signer_secret_present" = "true" ]; then
+        echo "fallback signer secret env must not be set: $FALLBACK_SIGNER_SECRET_ENV" >&2
+        record_check "fallback_private_key_contract" "$fallback_private_key_command" "fail" "fallback_signer_secret_present_violation"
+        record_check "signer_secret_contract" "$signer_secret_command" "skipped" "fallback_signer_secret_present_violation"
+        overall_status="fail"
+        reason_code="checkpoint_failed_fallback_private_key_contract"
+      else
+        record_check "fallback_private_key_contract" "$fallback_private_key_command" "pass" "fallback_signer_secret_absent"
 
       signer_secret_value="${!selected_signer_secret_env:-}"
       if [ -n "$signer_secret_value" ]; then
@@ -173,6 +193,7 @@ if [ "$MODE" = "run" ]; then
         record_check "signer_secret_contract" "$signer_secret_command" "pass" "signer_secret_validated"
         reason_code="deployment_preflight_passed"
       fi
+      fi
     fi
   fi
 
@@ -188,7 +209,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$RUNTIME_MODE" "$SIGNER_PROFILE_SELECTOR_ENV" "$SIGNER_PROFILE" "$selected_signer_secret_env" "$signer_secret_present" "$signer_secret_hex_valid" "$CHECK_FILE" "$REQUIRED_RUNTIME_MODE" "$PRIMARY_SIGNER_PROFILE" "$SECONDARY_SIGNER_PROFILE" "$PRIMARY_SIGNER_SECRET_ENV" "$SECONDARY_SIGNER_SECRET_ENV" "$REQUIRED_SECRET_HEX_LENGTH" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$RUNTIME_MODE" "$SIGNER_PROFILE_SELECTOR_ENV" "$SIGNER_PROFILE" "$selected_signer_secret_env" "$FALLBACK_SIGNER_SECRET_ENV" "$signer_secret_present" "$fallback_signer_secret_present" "$signer_secret_hex_valid" "$CHECK_FILE" "$REQUIRED_RUNTIME_MODE" "$PRIMARY_SIGNER_PROFILE" "$SECONDARY_SIGNER_PROFILE" "$PRIMARY_SIGNER_SECRET_ENV" "$SECONDARY_SIGNER_SECRET_ENV" "$REQUIRED_SECRET_HEX_LENGTH" <<'PY'
 from __future__ import annotations
 
 import json
@@ -206,15 +227,17 @@ runtime_mode = sys.argv[8]
 signer_profile_selector_env = sys.argv[9]
 signer_profile = sys.argv[10]
 signer_private_key_env = sys.argv[11]
-signer_secret_present = sys.argv[12] == "true"
-signer_secret_hex_valid = sys.argv[13] == "true"
-checks_path = pathlib.Path(sys.argv[14])
-required_runtime_mode = sys.argv[15]
-primary_signer_profile = sys.argv[16]
-secondary_signer_profile = sys.argv[17]
-primary_signer_secret_env = sys.argv[18]
-secondary_signer_secret_env = sys.argv[19]
-required_secret_hex_length = int(sys.argv[20])
+fallback_signer_private_key_env = sys.argv[12]
+signer_secret_present = sys.argv[13] == "true"
+fallback_signer_secret_present = sys.argv[14] == "true"
+signer_secret_hex_valid = sys.argv[15] == "true"
+checks_path = pathlib.Path(sys.argv[16])
+required_runtime_mode = sys.argv[17]
+primary_signer_profile = sys.argv[18]
+secondary_signer_profile = sys.argv[19]
+primary_signer_secret_env = sys.argv[20]
+secondary_signer_secret_env = sys.argv[21]
+required_secret_hex_length = int(sys.argv[22])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -247,7 +270,9 @@ summary = {
     "signer_profile_selector_env": signer_profile_selector_env,
     "signer_profile": signer_profile,
     "signer_private_key_env": signer_private_key_env,
+    "fallback_signer_private_key_env": fallback_signer_private_key_env,
     "signer_secret_present": signer_secret_present,
+    "fallback_signer_secret_present": fallback_signer_secret_present,
     "signer_secret_hex_valid": signer_secret_hex_valid,
     "contracts": {
         "ci_fast_gate_scope": "ci-fast-gate",
@@ -256,6 +281,8 @@ summary = {
         "supported_signer_profiles": [primary_signer_profile, secondary_signer_profile],
         "primary_signer_secret_env": primary_signer_secret_env,
         "secondary_signer_secret_env": secondary_signer_secret_env,
+        "fallback_signer_secret_env": fallback_signer_private_key_env,
+        "fallback_private_key_path_allowed": False,
         "required_secret_hex_length": required_secret_hex_length,
         "secret_source": "env",
     },

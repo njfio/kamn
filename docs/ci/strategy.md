@@ -299,11 +299,14 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --output-json /tmp/kolme-local-live-deployment-preflight-summary.json --policy-output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
     - deterministic marker contracts:
       - `signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE`
+      - `fallback_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
       - `contracts.ci_fast_gate_scope=ci-fast-gate`
       - `contracts.required_runtime_mode=kolme-live`
+      - `contracts.fallback_private_key_path_allowed=false`
     - fail-closed drift reasons:
       - `runtime_mode_mismatch`
       - `signer_profile_mismatch`
+      - `fallback_signer_secret_present_violation`
       - `checkpoint_failed_signer_secret_contract`
     - deployment preflight contract lane parity remains fail-closed (`Regression: #2226`).
   - local fork process lifecycle integration run-mode commands remain excluded from ci-fast-gate.

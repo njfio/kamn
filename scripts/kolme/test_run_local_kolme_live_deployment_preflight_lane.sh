@@ -90,11 +90,17 @@ if summary.get("signer_profile") != "ops-primary":
     raise SystemExit("expected signer profile marker in deployment preflight summary")
 if summary.get("signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected signer private key env marker in deployment preflight summary")
+if summary.get("fallback_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
+    raise SystemExit("expected fallback signer private key env marker in deployment preflight summary")
+if summary.get("fallback_signer_secret_present") is not False:
+    raise SystemExit("expected fallback signer secret presence marker to be false in deployment preflight summary")
 if summary.get("ci_fast_gate_eligible") is not True:
     raise SystemExit("expected deployment preflight summary to remain fast-gate eligible")
 contracts = summary.get("contracts", {})
 if contracts.get("ci_fast_gate_scope") != "ci-fast-gate":
     raise SystemExit("expected deployment preflight contracts to set ci-fast-gate scope")
+if contracts.get("fallback_private_key_path_allowed") is not False:
+    raise SystemExit("expected deployment preflight contracts to prohibit fallback private key paths")
 PY
 
 set +e
@@ -111,6 +117,25 @@ fi
 
 if ! grep -q "signer secret env is required for selected profile" "$TMP_ERR"; then
   echo "expected deterministic missing signer secret message from deployment preflight lane" >&2
+  exit 1
+fi
+
+set +e
+KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX="1111111111111111111111111111111111111111111111111111111111111111" \
+KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK="2222222222222222222222222222222222222222222222222222222222222222" \
+bash "$RUNNER" \
+  --mode run \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+fallback_secret_exit_code=$?
+set -e
+
+if [ "$fallback_secret_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight run mode to fail closed when fallback signer secret env is present" >&2
+  exit 1
+fi
+
+if ! grep -q "fallback signer secret env must not be set" "$TMP_ERR"; then
+  echo "expected deterministic fallback signer secret rejection message from deployment preflight lane" >&2
   exit 1
 fi
 

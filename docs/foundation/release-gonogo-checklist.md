@@ -10,6 +10,19 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - CI fast gate and deferred deep lane both green.
 - Rollback runbook version pinned.
 - Release candidate artifact digest verified.
+- Kolme live signer custody preflight passes with no fallback private-key marker evidence (`fallback_signer_secret_present_violation` is absent).
+
+## Kolme Signer Custody Gate (Issue #2240)
+- Deployment preflight lane command:
+  - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+- Policy checker command:
+  - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+- Required signer-custody markers:
+  - `fallback_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+  - `fallback_signer_secret_present=false`
+  - `contracts.fallback_private_key_path_allowed=false`
+- Fail-closed policy reason:
+  - `fallback_signer_secret_present_violation`
 
 ## Deterministic Dry-Run Workflow
 1. Create release candidate tag.
