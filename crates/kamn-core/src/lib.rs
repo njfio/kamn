@@ -120,7 +120,7 @@ pub mod trust_score;
 pub mod upgrade_orchestration;
 /// Validator onboarding/offboarding, quorum-change, and rollback lifecycle contracts.
 pub mod validator_lifecycle;
-#[allow(missing_docs)]
+/// Runtime watchdog anomaly taxonomy and report contracts.
 pub mod watchdog;
 #[allow(missing_docs)]
 pub mod zk_message_proofs;

@@ -12,5 +12,4 @@ runtime
 signer_backend
 task_operations
 upgrade_orchestration
-watchdog
 zk_message_proofs
