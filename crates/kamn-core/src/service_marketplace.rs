@@ -2,42 +2,62 @@ use crate::{AgentDid, ChannelModelError, ChannelStore, ChannelType};
 use std::collections::BTreeMap;
 use std::fmt;
 
+/// Marketplace listing metadata published by a provider.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServiceListing {
+    /// Stable listing identifier.
     pub listing_id: String,
+    /// Provider DID that owns the listing.
     pub provider_did: String,
+    /// Human-readable service name.
     pub service_name: String,
+    /// Service category label.
     pub category: String,
+    /// Search tags attached to the listing.
     pub tags: Vec<String>,
+    /// Hourly rate in atomic units.
     pub hourly_rate: u128,
+    /// Marketplace negotiation channel identifier.
     pub negotiation_channel_id: String,
 }
 
+/// Optional filters applied to listing searches.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct MarketplaceSearchFilter {
+    /// Optional exact category filter.
     pub category: Option<String>,
+    /// Optional tag filter.
     pub tag: Option<String>,
+    /// Optional maximum hourly rate.
     pub max_hourly_rate: Option<u128>,
 }
 
+/// Negotiation metadata produced when opening a thread for a listing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NegotiationThreadHook {
+    /// Listing identifier used for negotiation.
     pub listing_id: String,
+    /// Negotiation channel identifier bound to the listing.
     pub negotiation_channel_id: String,
+    /// Provider DID for the listing.
     pub provider_did: String,
+    /// Requester DID opening the negotiation.
     pub requester_did: String,
 }
 
+/// In-memory marketplace engine for listing registration and lookup.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ServiceMarketplaceEngine {
     listings: BTreeMap<String, ServiceListing>,
 }
 
 impl ServiceMarketplaceEngine {
+    /// Creates an empty marketplace engine.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Registers a new listing after validating shape, DID, and channel policy.
     pub fn register_listing(
         &mut self,
         listing: ServiceListing,
@@ -76,6 +96,7 @@ impl ServiceMarketplaceEngine {
         Ok(())
     }
 
+    /// Returns listings that match the provided search filter.
     pub fn search(&self, filter: &MarketplaceSearchFilter) -> Vec<ServiceListing> {
         self.listings
             .values()
@@ -84,6 +105,7 @@ impl ServiceMarketplaceEngine {
             .collect()
     }
 
+    /// Opens a negotiation thread hook for a listing and requester DID.
     pub fn open_negotiation_thread(
         &self,
         listing_id: &str,
@@ -107,20 +129,33 @@ impl ServiceMarketplaceEngine {
     }
 }
 
+/// Errors produced by marketplace validation, registration, and lookup flows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ServiceMarketplaceError {
+    /// Channel lookup failed.
     ChannelLookup(String),
+    /// Listing id already exists.
     DuplicateListing(String),
+    /// Required field was empty.
     EmptyField(&'static str),
+    /// DID validation failed.
     InvalidDid(String),
+    /// Hourly rate was invalid.
     InvalidHourlyRate(u128),
+    /// Listing was not found.
     ListingNotFound(String),
+    /// Negotiation channel has the wrong channel type.
     NegotiationChannelType {
+        /// Channel identifier.
         channel_id: String,
+        /// Observed channel type.
         found: ChannelType,
     },
+    /// Provider is not a member of the negotiation channel.
     ProviderNotChannelMember {
+        /// Provider DID.
         provider_did: String,
+        /// Channel identifier.
         channel_id: String,
     },
 }

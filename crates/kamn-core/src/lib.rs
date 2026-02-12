@@ -92,7 +92,7 @@ pub mod reputation_state;
 pub mod retention_engine;
 #[allow(missing_docs)]
 pub mod runtime;
-#[allow(missing_docs)]
+/// Service marketplace listing registration, search, and negotiation hooks.
 pub mod service_marketplace;
 /// Signature-profile compatibility fixtures and baseline verification helpers.
 pub mod signature_profile;
