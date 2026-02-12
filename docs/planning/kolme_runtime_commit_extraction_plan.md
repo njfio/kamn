@@ -50,6 +50,7 @@ Out of scope:
 - #1860: extracted poll-attempt budget validation to `kamn-kolme` (`is_valid_poll_attempt_budget`) and rewired `kamn-core` finality poller budget guard delegation.
 - #1862: extracted finality check commit-id request guard to `kamn-kolme` (`is_valid_runtime_commit_id_request`) and rewired `kamn-core` finality checker input validation delegation.
 - #1864: extracted finality checker constructor endpoint input guards to `kamn-kolme` (`is_valid_finality_base_url_input` / `is_valid_finality_status_path_input`) and rewired `kamn-core` constructor guard delegation.
+- #1866: extracted block-fallback constructor input guards to `kamn-kolme` (`is_valid_block_fallback_base_url_input` / `is_valid_block_fallback_provider_input` / `is_valid_block_fallback_lookup_budget`) and rewired `kamn-core` block-fallback constructor guard delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,

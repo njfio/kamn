@@ -15,6 +15,9 @@ use kamn_kolme::{
     find_http_header_boundary as find_kolme_http_header_boundary,
     is_broadcast_submit_path as is_kolme_broadcast_submit_path_contract,
     is_terminal_receipt_finality as is_kolme_terminal_receipt_finality_contract,
+    is_valid_block_fallback_base_url_input as is_kolme_valid_block_fallback_base_url_input_contract,
+    is_valid_block_fallback_lookup_budget as is_kolme_valid_block_fallback_lookup_budget_contract,
+    is_valid_block_fallback_provider_input as is_kolme_valid_block_fallback_provider_input_contract,
     is_valid_finality_base_url_input as is_kolme_valid_finality_base_url_input_contract,
     is_valid_finality_status_path_input as is_kolme_valid_finality_status_path_input_contract,
     is_valid_poll_attempt_budget as is_kolme_valid_poll_attempt_budget_contract,
@@ -1259,19 +1262,19 @@ impl<T: KolmeRuntimeCommitBlockFallbackTransport> KolmeRuntimeCommitBlockFallbac
         max_block_lookups: u64,
         transport: T,
     ) -> Result<Self, KolmeRuntimeCommitError> {
-        if base_url.trim().is_empty() {
+        if !is_kolme_valid_block_fallback_base_url_input_contract(base_url) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "provider_base_url",
                 reason: "must not be empty",
             });
         }
-        if provider.trim().is_empty() {
+        if !is_kolme_valid_block_fallback_provider_input_contract(provider) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "provider",
                 reason: "must not be empty",
             });
         }
-        if max_block_lookups == 0 {
+        if !is_kolme_valid_block_fallback_lookup_budget_contract(max_block_lookups) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "max_block_lookups",
                 reason: "must be positive",

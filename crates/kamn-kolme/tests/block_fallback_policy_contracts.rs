@@ -1,7 +1,8 @@
 use kamn_kolme::{
-    parse_block_fallback_response, parse_fork_block_fallback_response,
-    parse_provider_block_fallback_response, KolmeBlockFallbackPolicyError,
-    KolmeBlockFallbackResponse,
+    is_valid_block_fallback_base_url_input, is_valid_block_fallback_lookup_budget,
+    is_valid_block_fallback_provider_input, parse_block_fallback_response,
+    parse_fork_block_fallback_response, parse_provider_block_fallback_response,
+    KolmeBlockFallbackPolicyError, KolmeBlockFallbackResponse,
 };
 
 #[test]
@@ -102,4 +103,21 @@ fn regression_issue_1751_parse_fork_block_fallback_response_rejects_empty_provid
             reason: "provider must not be empty".to_owned(),
         }
     );
+}
+
+#[test]
+fn functional_block_fallback_policy_accepts_valid_constructor_guard_inputs() {
+    assert!(is_valid_block_fallback_base_url_input(
+        "https://kolme.example"
+    ));
+    assert!(is_valid_block_fallback_provider_input("kolme-fork-local"));
+    assert!(is_valid_block_fallback_lookup_budget(5));
+}
+
+#[test]
+fn regression_issue_1866_block_fallback_policy_rejects_invalid_constructor_guard_inputs() {
+    // Regression: #1866
+    assert!(!is_valid_block_fallback_base_url_input(" "));
+    assert!(!is_valid_block_fallback_provider_input(""));
+    assert!(!is_valid_block_fallback_lookup_budget(0));
 }
