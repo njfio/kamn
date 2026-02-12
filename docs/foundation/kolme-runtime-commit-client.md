@@ -233,6 +233,11 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
     - `runtime_commit_policy_command_profile=real-node-non-synthetic-v1`
     - `runtime_commit_command_profile_version=v1`
   - marker/profile drift is fail-closed in `check_local_kamn_live_runtime_real_node_profile_policy.py`.
+  - real-node runner composition rejects in-memory fallback references:
+    - `runtime-commit-command must not reference InMemoryKolmeRuntimeCommitClient when runtime-profile=real-node`
+  - real-node checker fails closed when in-memory provider references appear in strict command/policy surfaces:
+    - `runtime_commit_in_memory_provider_reference_detected`
+    - `runtime_commit_policy_check_in_memory_provider_reference_detected`
 - Local fork process lifecycle lane:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --serve-command "python3 /tmp/mock_kolme_api.py 3000 v0.15.2" --integration-runtime-commit-finality-command "printf 'finality=final\n'" --integration-runtime-commit-finality-max-seconds 15 --integration-runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json`
 - Real-process wrapper lane with lifecycle run intent:

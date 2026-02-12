@@ -106,6 +106,28 @@ PY
 
 set +e
 bash "$RUNNER" \
+  --mode dry-run \
+  --runtime-profile real-node \
+  --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider \
+  --runtime-commit-command "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --live-command \"printf 'runtime=in-memory\\n'\" --provider-hint InMemoryKolmeRuntimeCommitClient --output-json $TMP_RUNTIME_SUMMARY --policy-output-json $TMP_RUNTIME_POLICY" \
+  --runtime-commit-live-summary "$TMP_RUNTIME_SUMMARY" \
+  --runtime-commit-live-policy-report "$TMP_RUNTIME_POLICY" \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+dry_run_inmemory_exit_code=$?
+set -e
+
+if [ "$dry_run_inmemory_exit_code" -eq 0 ]; then
+  echo "expected real-node profile dry-run to fail closed when runtime commit command references InMemory provider" >&2
+  exit 1
+fi
+
+if ! grep -q "must not reference InMemoryKolmeRuntimeCommitClient" "$TMP_ERR"; then
+  echo "expected deterministic in-memory provider rejection message for real-node profile dry-run" >&2
+  exit 1
+fi
+
+set +e
+bash "$RUNNER" \
   --mode run \
   --runtime-profile real-node \
   --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider \

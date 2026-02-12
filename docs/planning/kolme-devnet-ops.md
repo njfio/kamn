@@ -436,6 +436,11 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_commit_policy_command_profile`
     - `runtime_commit_command_profile_version`
   - real-node profile requires `runtime_commit_command_profile=real-node-non-synthetic-v1`, `runtime_commit_policy_command_profile=real-node-non-synthetic-v1`, and `runtime_commit_command_profile_version=v1`; real-node checker fails closed on marker drift.
+  - real-node profile command composition rejects in-memory fallback references at runner boundary:
+    - `runtime-commit-command must not reference InMemoryKolmeRuntimeCommitClient when runtime-profile=real-node`
+  - real-node profile checker fails closed on in-memory provider references in command/policy surfaces:
+    - `runtime_commit_in_memory_provider_reference_detected`
+    - `runtime_commit_policy_check_in_memory_provider_reference_detected`
   - integration summary emits `ci_fast_gate_eligible=false` with `contracts.ci_fast_gate_scope=local-only` for explicit PR-fast-gate exclusion enforcement.
   - explicit runtime-commit submit-profile probe over `PUT /broadcast` with fail-closed reason codes.
   - signed runtime-commit envelope translation enforces `signer_key_id` presence and canonical message/signature binding before broadcast normalization.
