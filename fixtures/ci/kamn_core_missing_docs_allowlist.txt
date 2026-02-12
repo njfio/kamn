@@ -4,7 +4,6 @@ channel_models
 channel_policies
 governance_workflow
 message_lifecycle
-reputation_state
 runtime
 signer_backend
 task_operations
