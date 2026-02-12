@@ -50,6 +50,7 @@ use kamn_kolme::{
     lifecycle_state_label as lifecycle_state_label_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
     normalize_broadcast_submit_path_input as normalize_kolme_broadcast_submit_path_input_contract,
+    normalize_runtime_commit_signed_envelope_fields as normalize_kolme_runtime_commit_signed_envelope_fields_contract,
     notification_event_to_provider_receipt as notification_event_to_kolme_provider_receipt_contract,
     parse_authorization_header_value as parse_kolme_authorization_header_value,
     parse_http_endpoint as parse_kolme_http_endpoint,
@@ -276,13 +277,16 @@ impl KolmeRuntimeCommitSignedBroadcastEnvelope {
                 reason: "must not be empty",
             });
         }
-        let signer_key_id = signer_key_id.trim();
-        let message = message.trim();
-        let signature = signature.trim();
+        let (signer_key_id, message, signature) =
+            normalize_kolme_runtime_commit_signed_envelope_fields_contract(
+                signer_key_id,
+                message,
+                signature,
+            );
         Ok(Self {
-            signer_key_id: signer_key_id.to_owned(),
-            message: message.to_owned(),
-            signature: signature.to_owned(),
+            signer_key_id,
+            message,
+            signature,
             recovery_id,
         })
     }
