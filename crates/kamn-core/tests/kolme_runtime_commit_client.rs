@@ -337,6 +337,30 @@ fn regression_issue_1892_submit_commit_fails_closed_for_empty_state_root() {
 }
 
 #[test]
+fn regression_issue_1894_submit_commit_fails_closed_for_multiline_operation_id() {
+    // Regression: #1894
+    let mut request = KolmeRuntimeCommitRequest::deterministic(
+        "op-sync-1894-multiline",
+        "state:op",
+        "kamn:did:agent:runtime-node-1894",
+        15,
+        "payload:op",
+    )
+    .expect("request should build");
+    request.operation_id.push_str("\nwrapped");
+
+    let mut client =
+        InMemoryKolmeRuntimeCommitClient::new("kolme-local").expect("client should build");
+    assert_eq!(
+        client.submit_commit(&request),
+        Err(KolmeRuntimeCommitError::InvalidRequest {
+            field: "wire_payload",
+            reason: "fields must be single-line",
+        })
+    );
+}
+
+#[test]
 fn performance_runtime_commit_contract_lane_stays_within_budget() {
     let mut client =
         InMemoryKolmeRuntimeCommitClient::new("kolme-local").expect("client should build");
