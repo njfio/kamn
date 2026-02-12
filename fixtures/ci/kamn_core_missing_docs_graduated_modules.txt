@@ -56,3 +56,4 @@ channel_models
 governance_workflow
 agent_upgrade_workflow
 signer_backend
+task_operations
