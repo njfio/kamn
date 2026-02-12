@@ -29,6 +29,7 @@ use kamn_kolme::{
     is_valid_notifications_reconnect_budget as is_kolme_valid_notifications_reconnect_budget_contract,
     is_valid_poll_attempt_budget as is_kolme_valid_poll_attempt_budget_contract,
     is_valid_runtime_commit_id_request as is_kolme_valid_runtime_commit_id_request_contract,
+    is_valid_runtime_provider_input as is_kolme_valid_runtime_provider_input_contract,
     is_valid_websocket_timeout_seconds as is_kolme_valid_websocket_timeout_seconds_contract,
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
     lifecycle_state_label as lifecycle_state_label_contract,
@@ -2045,7 +2046,7 @@ pub struct InMemoryKolmeRuntimeCommitClient {
 impl InMemoryKolmeRuntimeCommitClient {
     /// Constructs an in-memory commit client.
     pub fn new(provider: &str) -> Result<Self, KolmeRuntimeCommitError> {
-        if provider.trim().is_empty() {
+        if !is_kolme_valid_runtime_provider_input_contract(provider) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "provider",
                 reason: "must not be empty",

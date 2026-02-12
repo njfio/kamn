@@ -533,6 +533,20 @@ fn unit_adapter_backed_client_rejects_empty_expected_provider() {
 }
 
 #[test]
+fn unit_in_memory_client_rejects_empty_provider() {
+    assert!(
+        matches!(
+            InMemoryKolmeRuntimeCommitClient::new(""),
+            Err(KolmeRuntimeCommitError::InvalidRequest {
+                field: "provider",
+                reason: "must not be empty",
+            })
+        ),
+        "in-memory provider should fail validation when empty"
+    );
+}
+
+#[test]
 fn functional_live_provider_maps_submitted_json_response_to_provider_outcome() {
     let response = r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:runtime:55","finality":"final"}"#.to_owned();
     let (transport, calls) = RecordingTransport::with_result(Ok(response));
