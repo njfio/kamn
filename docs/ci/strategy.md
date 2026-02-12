@@ -211,6 +211,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - local live-node validation bundle run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json`
     - `python3 scripts/kolme/check_local_live_node_validation_bundle_policy.py --report-file /tmp/kolme-local-live-node-validation-bundle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-node-validation-bundle-policy.json`
+    - `bash scripts/kolme/run_local_live_node_validation_bundle_contract_lane.sh --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json --policy-output-json /tmp/kolme-local-live-node-validation-bundle-policy.json`
     - bundle policy GO decisions require `ci_fast_gate_eligible=false` with `contracts.ci_fast_gate_scope=local-only` and complete nested evidence lineage.
   - local fork profile preflight run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_profile_preflight_lane.sh --mode run --checkout-path /tmp/kolme_fork --max-seconds 45 --output-json /tmp/kolme-local-fork-profile-preflight-summary.json`
@@ -328,6 +329,7 @@ Regression policy:
 - local KAMN live runtime integration runtime provider contract pass-through and nested runtime policy parity remain fail-closed (`Regression: #2112`).
 - local KAMN live runtime integration local-only fast-gate exclusion summary markers remain fail-closed (`Regression: #2113`).
 - live provider operator runbook command/checkpoint/troubleshooting marker parity remains fail-closed across docs and README references (`Regression: #2114`).
+- local live-node validation bundle contract lane and docs parity command surfaces remain fail-closed across devnet ops, CI strategy, and README (`Regression: #2134`).
 - local fork process lifecycle integration run-mode exclusion parity remains fail-closed (`Regression: #1494`).
 - local fork process lifecycle integration runtime policy report linkage to nested integration command composition and artifact lineage remains fail-closed (`Regression: #2104`).
 - local fork process lifecycle rollback/recovery evidence linkage markers remain fail-closed in summary/policy/docs contracts (`Regression: #2107`).

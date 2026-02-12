@@ -477,6 +477,8 @@ Operator checkpoints:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_live_node_validation_bundle_policy.py --report-file /tmp/kolme-local-live-node-validation-bundle-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-node-validation-bundle-policy.json`
+- Contract lane command:
+  - `bash scripts/kolme/run_local_live_node_validation_bundle_contract_lane.sh --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json --policy-output-json /tmp/kolme-local-live-node-validation-bundle-policy.json`
 - Summary schema:
   - `kamn.kolme.local-live-node-validation-bundle-summary.v1`
 - Policy schema:
@@ -493,6 +495,7 @@ Operator checkpoints:
   - bundle lane run mode remains local-only and requires explicit opt-in.
   - summary must emit `ci_fast_gate_eligible=false` and `contracts.ci_fast_gate_scope=local-only`.
   - run-mode execution remains excluded from PR fast-gate workflow routing.
+  - contract lane remains dry-run-only and bounded for low-cost docs/command parity enforcement (`Regression: #2134`).
 
 ## Localhost Two-Process Signed-Message Demo Contract (Issue #1612)
 
@@ -883,6 +886,7 @@ Operator checkpoints:
 - local KAMN live runtime integration lane forwards explicit runtime provider contract markers into nested runtime policy checks and remains fail-closed on provider-contract drift (`Regression: #2112`).
 - local KAMN live runtime integration lane emits fail-closed local-only fast-gate exclusion markers (`ci_fast_gate_eligible=false`, `contracts.ci_fast_gate_scope=local-only`) in summary/policy/docs contracts (`Regression: #2113`).
 - live provider operator runbook command/checkpoint/troubleshooting markers remain fail-closed across devnet ops docs and README cross-reference (`Regression: #2114`).
+- local live-node validation bundle contract lane and docs parity markers remain fail-closed across devnet ops, CI strategy, and README command surfaces (`Regression: #2134`).
 - local KAMN live runtime integration lane requires bounded localhost signed integration prerequisite execution before runtime commit submission (`Regression: #1636`).
 - unified local signed-to-Kolme demo lane fails closed for local opt-in, stage prerequisite drift, and runtime budget overruns (`Regression: #1640`).
 - local fork process lifecycle integration lane fails closed for process start/readiness/integration/teardown/budget drift and missing local opt-in (`Regression: #1494`).

@@ -556,7 +556,15 @@ bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode dry-run 
 # explicit local-only bundle execution
 KAMN_KOLME_LOCAL_HEAVY=1 \
 bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json
+
+# policy checker contract
+python3 scripts/kolme/check_local_live_node_validation_bundle_policy.py --report-file /tmp/kolme-local-live-node-validation-bundle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-node-validation-bundle-policy.json
+
+# bounded contract lane (dry-run + policy composition + docs parity checks)
+bash scripts/kolme/run_local_live_node_validation_bundle_contract_lane.sh --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json --policy-output-json /tmp/kolme-local-live-node-validation-bundle-policy.json
 # schema: kamn.kolme.local-live-node-validation-bundle-summary.v1
+# policy schema: kamn.kolme.local-live-node-validation-bundle-policy-report.v1
+# Regression: #2134
 ```
 
 ### Run Local Kolme Fork Process Lifecycle Integration Lane
