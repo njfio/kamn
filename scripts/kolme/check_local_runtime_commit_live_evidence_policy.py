@@ -23,6 +23,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Fail closed when run-mode evidence commands are classified as synthetic.",
     )
+    parser.add_argument(
+        "--require-native-payload-evidence",
+        action="store_true",
+        help="Fail closed when native payload markers are absent from run-mode evidence.",
+    )
     parser.add_argument("--output-json", default="")
     return parser.parse_args()
 
@@ -96,6 +101,27 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(finality_enabled, bool):
         reason_codes.append("finality_enabled_invalid")
 
+    if report.get("native_payload_pubkey_marker") != '"pubkey"':
+        reason_codes.append("native_payload_pubkey_marker_mismatch")
+    native_payload_pubkey_marker_present = report.get("native_payload_pubkey_marker_present")
+    if not isinstance(native_payload_pubkey_marker_present, bool):
+        reason_codes.append("native_payload_pubkey_marker_present_invalid")
+
+    if report.get("native_payload_nonce_marker") != '"nonce"':
+        reason_codes.append("native_payload_nonce_marker_mismatch")
+    native_payload_nonce_marker_present = report.get("native_payload_nonce_marker_present")
+    if not isinstance(native_payload_nonce_marker_present, bool):
+        reason_codes.append("native_payload_nonce_marker_present_invalid")
+
+    if report.get("native_payload_messages_marker") != '"messages"':
+        reason_codes.append("native_payload_messages_marker_mismatch")
+    native_payload_messages_marker_present = report.get("native_payload_messages_marker_present")
+    if not isinstance(native_payload_messages_marker_present, bool):
+        reason_codes.append("native_payload_messages_marker_present_invalid")
+
+    if report.get("native_payload_marker_contract_version") != "v1":
+        reason_codes.append("native_payload_marker_contract_version_mismatch")
+
     live_command_synthetic = report.get("live_command_synthetic")
     if not isinstance(live_command_synthetic, bool):
         reason_codes.append("live_command_synthetic_invalid")
@@ -137,6 +163,13 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 reason_codes.append("synthetic_live_command_detected")
             if finality_enabled is True and finality_command_synthetic is True:
                 reason_codes.append("synthetic_finality_command_detected")
+        if mode == "run" and args.require_native_payload_evidence:
+            if native_payload_pubkey_marker_present is not True:
+                reason_codes.append("native_payload_pubkey_marker_missing")
+            if native_payload_nonce_marker_present is not True:
+                reason_codes.append("native_payload_nonce_marker_missing")
+            if native_payload_messages_marker_present is not True:
+                reason_codes.append("native_payload_messages_marker_missing")
         if budget_status == "exceeded_budget":
             reason_codes.append("ok_status_budget_exceeded")
     elif status == "fail" and reason_code in allowed_ok_reason_codes:
@@ -183,6 +216,7 @@ def main() -> int:
         "required_reason_codes": args.require_reason_code,
         "expected_provider_client_contract": args.expected_provider_client_contract,
         "require_non_synthetic_run_evidence": args.require_non_synthetic_run_evidence,
+        "require_native_payload_evidence": args.require_native_payload_evidence,
         "observed_status": observed_status,
         "observed_final_decision": observed_final_decision,
         "observed_reason_code": report.get("reason_code"),

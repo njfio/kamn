@@ -513,6 +513,7 @@ python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --repor
 # bounded contract lane (dry-run + run-mode evidence + policy checks)
 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json
 # summary markers: submit_evidence_marker_present, finality_evidence_marker_present
+# strict marker mode: add --require-native-payload-evidence to enforce pubkey/nonce/messages evidence markers
 ```
 
 ### Run Local-Only Live Kolme API Conformance Harness

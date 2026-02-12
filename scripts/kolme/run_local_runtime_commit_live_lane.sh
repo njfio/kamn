@@ -228,6 +228,24 @@ if [ -n "$FINALITY_COMMAND" ] && [[ "$FINALITY_COMMAND" == *"$FINALITY_EVIDENCE_
   FINALITY_EVIDENCE_MARKER_PRESENT="true"
 fi
 
+NATIVE_PAYLOAD_PUBKEY_MARKER='"pubkey"'
+NATIVE_PAYLOAD_PUBKEY_MARKER_PRESENT="false"
+if [[ "$LIVE_COMMAND" == *"$NATIVE_PAYLOAD_PUBKEY_MARKER"* ]]; then
+  NATIVE_PAYLOAD_PUBKEY_MARKER_PRESENT="true"
+fi
+
+NATIVE_PAYLOAD_NONCE_MARKER='"nonce"'
+NATIVE_PAYLOAD_NONCE_MARKER_PRESENT="false"
+if [[ "$LIVE_COMMAND" == *"$NATIVE_PAYLOAD_NONCE_MARKER"* ]]; then
+  NATIVE_PAYLOAD_NONCE_MARKER_PRESENT="true"
+fi
+
+NATIVE_PAYLOAD_MESSAGES_MARKER='"messages"'
+NATIVE_PAYLOAD_MESSAGES_MARKER_PRESENT="false"
+if [[ "$LIVE_COMMAND" == *"$NATIVE_PAYLOAD_MESSAGES_MARKER"* ]]; then
+  NATIVE_PAYLOAD_MESSAGES_MARKER_PRESENT="true"
+fi
+
 preflight_command="curl --silent --show-error --fail --max-time ${PREFLIGHT_MAX_SECONDS} ${BASE_URL%/}/healthz"
 
 CHECK_FILE="$(mktemp)"
@@ -362,9 +380,27 @@ if [ "$MODE" = "run" ]; then
   else
     FINALITY_EVIDENCE_MARKER_PRESENT="false"
   fi
+
+  if [ -f "$LIVE_OUTPUT_FILE" ] && grep -Fq "$NATIVE_PAYLOAD_PUBKEY_MARKER" "$LIVE_OUTPUT_FILE"; then
+    NATIVE_PAYLOAD_PUBKEY_MARKER_PRESENT="true"
+  else
+    NATIVE_PAYLOAD_PUBKEY_MARKER_PRESENT="false"
+  fi
+
+  if [ -f "$LIVE_OUTPUT_FILE" ] && grep -Fq "$NATIVE_PAYLOAD_NONCE_MARKER" "$LIVE_OUTPUT_FILE"; then
+    NATIVE_PAYLOAD_NONCE_MARKER_PRESENT="true"
+  else
+    NATIVE_PAYLOAD_NONCE_MARKER_PRESENT="false"
+  fi
+
+  if [ -f "$LIVE_OUTPUT_FILE" ] && grep -Fq "$NATIVE_PAYLOAD_MESSAGES_MARKER" "$LIVE_OUTPUT_FILE"; then
+    NATIVE_PAYLOAD_MESSAGES_MARKER_PRESENT="true"
+  else
+    NATIVE_PAYLOAD_MESSAGES_MARKER_PRESENT="false"
+  fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$FINALITY_COMMAND" "$FINALITY_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$FINALITY_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" "$PROVIDER_CLIENT_CONTRACT" "$PROVIDER_SUBMIT_PROFILE_CONTRACT" "$PROVIDER_COMMAND_MARKER" "$PROVIDER_COMMAND_MARKER_PRESENT" "$PROVIDER_SIGNING_PROFILE_MARKER" "$PROVIDER_SIGNING_PROFILE_MARKER_PRESENT" "$SUBMIT_EVIDENCE_MARKER" "$SUBMIT_EVIDENCE_MARKER_PRESENT" "$FINALITY_EVIDENCE_MARKER" "$FINALITY_EVIDENCE_MARKER_PRESENT" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$FINALITY_COMMAND" "$FINALITY_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$FINALITY_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" "$PROVIDER_CLIENT_CONTRACT" "$PROVIDER_SUBMIT_PROFILE_CONTRACT" "$PROVIDER_COMMAND_MARKER" "$PROVIDER_COMMAND_MARKER_PRESENT" "$PROVIDER_SIGNING_PROFILE_MARKER" "$PROVIDER_SIGNING_PROFILE_MARKER_PRESENT" "$SUBMIT_EVIDENCE_MARKER" "$SUBMIT_EVIDENCE_MARKER_PRESENT" "$FINALITY_EVIDENCE_MARKER" "$FINALITY_EVIDENCE_MARKER_PRESENT" "$NATIVE_PAYLOAD_PUBKEY_MARKER" "$NATIVE_PAYLOAD_PUBKEY_MARKER_PRESENT" "$NATIVE_PAYLOAD_NONCE_MARKER" "$NATIVE_PAYLOAD_NONCE_MARKER_PRESENT" "$NATIVE_PAYLOAD_MESSAGES_MARKER" "$NATIVE_PAYLOAD_MESSAGES_MARKER_PRESENT" <<'PY'
 from __future__ import annotations
 
 import json
@@ -399,6 +435,12 @@ submit_evidence_marker = sys.argv[25]
 submit_evidence_marker_present = sys.argv[26] == "true"
 finality_evidence_marker = sys.argv[27]
 finality_evidence_marker_present = sys.argv[28] == "true"
+native_payload_pubkey_marker = sys.argv[29]
+native_payload_pubkey_marker_present = sys.argv[30] == "true"
+native_payload_nonce_marker = sys.argv[31]
+native_payload_nonce_marker_present = sys.argv[32] == "true"
+native_payload_messages_marker = sys.argv[33]
+native_payload_messages_marker_present = sys.argv[34] == "true"
 
 def classify_synthetic_command(command: str) -> bool:
     normalized = " ".join(command.strip().split())
@@ -478,6 +520,13 @@ summary = {
     "submit_evidence_marker_present": submit_evidence_marker_present,
     "finality_evidence_marker": finality_evidence_marker,
     "finality_evidence_marker_present": finality_evidence_marker_present,
+    "native_payload_pubkey_marker": native_payload_pubkey_marker,
+    "native_payload_pubkey_marker_present": native_payload_pubkey_marker_present,
+    "native_payload_nonce_marker": native_payload_nonce_marker,
+    "native_payload_nonce_marker_present": native_payload_nonce_marker_present,
+    "native_payload_messages_marker": native_payload_messages_marker,
+    "native_payload_messages_marker_present": native_payload_messages_marker_present,
+    "native_payload_marker_contract_version": "v1",
     "preflight_enabled": not skip_preflight,
     "preflight_max_seconds": preflight_max_seconds,
     "checks": checks,

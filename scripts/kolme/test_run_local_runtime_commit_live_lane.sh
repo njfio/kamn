@@ -112,6 +112,20 @@ if report.get("finality_evidence_marker") != "finality=final":
     raise SystemExit("expected deterministic finality evidence marker")
 if report.get("finality_evidence_marker_present") is not False:
     raise SystemExit("expected finality evidence marker to be absent in dry-run default command profile")
+if report.get("native_payload_pubkey_marker") != '"pubkey"':
+    raise SystemExit("expected deterministic native payload pubkey marker")
+if report.get("native_payload_nonce_marker") != '"nonce"':
+    raise SystemExit("expected deterministic native payload nonce marker")
+if report.get("native_payload_messages_marker") != '"messages"':
+    raise SystemExit("expected deterministic native payload messages marker")
+if report.get("native_payload_marker_contract_version") != "v1":
+    raise SystemExit("expected native payload marker contract version")
+if report.get("native_payload_pubkey_marker_present") is not False:
+    raise SystemExit("expected native payload pubkey marker to be absent in dry-run default command profile")
+if report.get("native_payload_nonce_marker_present") is not False:
+    raise SystemExit("expected native payload nonce marker to be absent in dry-run default command profile")
+if report.get("native_payload_messages_marker_present") is not False:
+    raise SystemExit("expected native payload messages marker to be absent in dry-run default command profile")
 if report.get("live_command_synthetic") is not False:
     raise SystemExit("expected default dry-run live command to be classified non-synthetic")
 if report.get("finality_command_synthetic") is not False:
@@ -229,12 +243,38 @@ if report.get("finality_command_synthetic") is not False:
     raise SystemExit("expected finality command classification false when finality command is disabled")
 PY
 
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --require-native-payload-evidence >"$TMP_POLICY_ERR" 2>&1
+native_payload_policy_code=$?
+set -e
+
+if [ "$native_payload_policy_code" -eq 0 ]; then
+  echo "expected evidence policy checker to fail when native payload evidence markers are absent" >&2
+  exit 1
+fi
+if ! grep -q "native_payload_pubkey_marker_missing" "$TMP_POLICY_ERR"; then
+  echo "expected native payload pubkey marker failure reason from evidence policy checker" >&2
+  exit 1
+fi
+if ! grep -q "native_payload_nonce_marker_missing" "$TMP_POLICY_ERR"; then
+  echo "expected native payload nonce marker failure reason from evidence policy checker" >&2
+  exit 1
+fi
+if ! grep -q "native_payload_messages_marker_missing" "$TMP_POLICY_ERR"; then
+  echo "expected native payload messages marker failure reason from evidence policy checker" >&2
+  exit 1
+fi
+
 run_with_finality_output="$(
   KAMN_KOLME_LOCAL_HEAVY=1 \
     bash "$RUNNER" \
       --mode run \
       --skip-preflight \
-      --live-command "printf 'status=submitted\n'" \
+      --live-command "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\nintegration_kolme_fork_live_node_submit_reaches_endpoint\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\n'" \
       --finality-command "printf 'finality=final\n'" \
       --finality-max-seconds 3 \
       --max-seconds 5 \
@@ -269,7 +309,23 @@ if report.get("live_command_synthetic") is not True:
     raise SystemExit("expected synthetic live command classification for printf fixture")
 if report.get("finality_command_synthetic") is not True:
     raise SystemExit("expected synthetic finality command classification for printf fixture")
+if report.get("native_payload_pubkey_marker_present") is not True:
+    raise SystemExit("expected native payload pubkey marker evidence for finality-enabled run summary")
+if report.get("native_payload_nonce_marker_present") is not True:
+    raise SystemExit("expected native payload nonce marker evidence for finality-enabled run summary")
+if report.get("native_payload_messages_marker_present") is not True:
+    raise SystemExit("expected native payload messages marker evidence for finality-enabled run summary")
 PY
+
+checker_native_payload_output="$(
+  python3 "$CHECKER" \
+    --report-file "$TMP_REPORT" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --require-native-payload-evidence \
+    --output-json "$TMP_POLICY_REPORT"
+)"
+assert_eq "$(extract_value "$checker_native_payload_output" "status")" "ok" "expected native payload evidence policy checker to pass marker-complete run report"
 
 set +e
 python3 "$CHECKER" \
