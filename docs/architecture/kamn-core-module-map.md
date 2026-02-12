@@ -163,6 +163,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `config`
   - `content_lifecycle`
   - `content_replication`
+  - `content_retrieval`
   - `content_storage`
   - `cross_chain_bridge`
   - `cross_chain_receipt`
@@ -213,6 +214,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2021`
   - `Regression: #2023`
   - `Regression: #2025`
+  - `Regression: #2027`
 
 ## Contributor Entrypoint Matrix
 

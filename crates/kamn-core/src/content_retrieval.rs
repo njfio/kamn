@@ -1,3 +1,5 @@
+//! Content retrieval authorization, caching, and audit-event contracts.
+
 use crate::{
     AgentDid, ChannelAction, ChannelPermissionEngine, ChannelPolicyError, ContentStorageAdapter,
     ContentStorageError,
@@ -6,11 +8,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Retrieval engine cache configuration.
 pub struct ContentRetrievalConfig {
+    /// Maximum seconds cached retrieval entries remain valid.
     pub cache_ttl_secs: u64,
 }
 
 impl ContentRetrievalConfig {
+    /// Builds a validated retrieval config.
     pub fn new(cache_ttl_secs: u64) -> Result<Self, ContentRetrievalError> {
         if cache_ttl_secs == 0 {
             return Err(ContentRetrievalError::InvalidConfig("cache_ttl_secs"));
@@ -20,8 +25,11 @@ impl ContentRetrievalConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Resource scope requested for content retrieval.
 pub enum ContentRetrievalScope {
+    /// Channel-scoped retrieval keyed by channel identifier.
     Channel(String),
+    /// Task-scoped retrieval keyed by task identifier.
     Task(String),
 }
 
@@ -35,14 +43,20 @@ impl ContentRetrievalScope {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Authenticated retrieval request envelope.
 pub struct ContentRetrievalRequest {
+    /// Content identifier requested by caller.
     pub cid: String,
+    /// Requester DID initiating the read.
     pub requester: String,
+    /// Retrieval scope controlling authorization path.
     pub scope: ContentRetrievalScope,
+    /// Unix timestamp when the request was created.
     pub requested_at_unix: u64,
 }
 
 impl ContentRetrievalRequest {
+    /// Constructs a validated retrieval request.
     pub fn new(
         cid: &str,
         requester: &str,
@@ -68,30 +82,46 @@ impl ContentRetrievalRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Authorization outcome recorded for retrieval attempts.
 pub enum ContentRetrievalOutcome {
+    /// Request was authorized and retrieval completed.
     Allowed,
+    /// Request failed authorization.
     Denied,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Audit event emitted for each retrieval decision.
 pub struct ContentRetrievalAuditEvent {
+    /// Content identifier targeted by the request.
     pub cid: String,
+    /// Requester DID that initiated retrieval.
     pub requester: String,
+    /// Scope used during authorization.
     pub scope: ContentRetrievalScope,
+    /// Unix timestamp when retrieval was requested.
     pub requested_at_unix: u64,
+    /// Authorization decision outcome.
     pub outcome: ContentRetrievalOutcome,
+    /// Whether payload came from cache.
     pub cache_hit: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Retrieval result payload returned to authorized callers.
 pub struct ContentRetrievalResult {
+    /// Content identifier returned by storage.
     pub cid: String,
+    /// MIME media type associated with payload.
     pub media_type: String,
+    /// Raw content payload bytes.
     pub payload: Vec<u8>,
+    /// True when result came from cache.
     pub from_cache: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Retrieval engine implementing scope-based authorization and cache behavior.
 pub struct ContentRetrievalEngine {
     config: ContentRetrievalConfig,
     task_read_allowlist: BTreeMap<String, BTreeSet<String>>,
@@ -100,6 +130,7 @@ pub struct ContentRetrievalEngine {
 }
 
 impl ContentRetrievalEngine {
+    /// Creates a retrieval engine from validated config.
     pub fn new(config: ContentRetrievalConfig) -> Self {
         Self {
             config,
@@ -109,6 +140,7 @@ impl ContentRetrievalEngine {
         }
     }
 
+    /// Grants task-scoped read permission to a requester DID.
     pub fn grant_task_read(
         &mut self,
         task_id: &str,
@@ -125,14 +157,17 @@ impl ContentRetrievalEngine {
         Ok(())
     }
 
+    /// Invalidates cached retrieval entries for a CID.
     pub fn invalidate_cache_for_cid(&mut self, cid: &str) {
         self.cache.retain(|_, entry| entry.cid != cid);
     }
 
+    /// Returns retrieval audit events accumulated by this engine.
     pub fn audit_events(&self) -> Vec<ContentRetrievalAuditEvent> {
         self.audit_events.clone()
     }
 
+    /// Retrieves content for an authorized request, applying cache policy.
     pub fn retrieve<A: ContentStorageAdapter>(
         &mut self,
         adapter: &A,
@@ -245,16 +280,26 @@ impl ContentRetrievalEngine {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Retrieval engine error taxonomy.
 pub enum ContentRetrievalError {
+    /// Retrieval config contained invalid values.
     InvalidConfig(&'static str),
+    /// A required field was empty or zero.
     EmptyField(&'static str),
+    /// Requester DID failed parsing/validation.
     InvalidDid(String),
+    /// Requester is not authorized for target scope.
     Unauthorized {
+        /// Requester DID rejected by authorization.
         requester: String,
+        /// Scope where authorization failed.
         scope: ContentRetrievalScope,
     },
+    /// Channel permission engine was required but not provided.
     MissingChannelPermissions(String),
+    /// Channel authorization call returned a policy error.
     ChannelPolicy(ChannelPolicyError),
+    /// Storage adapter returned retrieval/validation failure.
     Storage(ContentStorageError),
 }
 
