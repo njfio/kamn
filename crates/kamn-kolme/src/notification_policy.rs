@@ -159,6 +159,16 @@ pub fn notification_event_to_provider_receipt(
     })
 }
 
+/// Validates notifications consumer provider input.
+pub fn is_valid_notifications_provider_input(provider: &str) -> bool {
+    !provider.trim().is_empty()
+}
+
+/// Validates notifications consumer reconnect budget input.
+pub fn is_valid_notifications_reconnect_budget(max_reconnect_attempts: u32) -> bool {
+    max_reconnect_attempts > 0
+}
+
 fn find_notification_string_field(
     payload: &str,
     field: &str,
@@ -369,7 +379,10 @@ fn parse_json_string(token: &str) -> Result<String, &'static str> {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_notification_event, KolmeNotificationEvent, KolmeNotificationPolicyError};
+    use super::{
+        is_valid_notifications_provider_input, is_valid_notifications_reconnect_budget,
+        parse_notification_event, KolmeNotificationEvent, KolmeNotificationPolicyError,
+    };
 
     #[test]
     fn unit_parse_notification_event_rejects_empty_payload() {
@@ -393,5 +406,13 @@ mod tests {
                 proposed_height: Some(44),
             }
         );
+    }
+
+    #[test]
+    fn unit_validates_notifications_consumer_guard_inputs() {
+        assert!(is_valid_notifications_provider_input("kolme-fork-local"));
+        assert!(!is_valid_notifications_provider_input(" "));
+        assert!(is_valid_notifications_reconnect_budget(2));
+        assert!(!is_valid_notifications_reconnect_budget(0));
     }
 }
