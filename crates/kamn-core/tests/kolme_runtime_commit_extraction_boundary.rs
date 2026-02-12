@@ -106,6 +106,9 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_http_transport_timeout_seconds_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_provider_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_provider_hint_input_contract("));
+    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_operation_id_input_contract("));
+    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_state_root_input_contract("));
+    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_payload_hash_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_receipt_provider_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_receipt_commit_id_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_transport_idempotency_key_input_contract("));

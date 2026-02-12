@@ -289,6 +289,54 @@ fn regression_submit_commit_fails_closed_for_mutated_invalid_request() {
 }
 
 #[test]
+fn regression_issue_1892_submit_commit_fails_closed_for_empty_operation_id() {
+    // Regression: #1892
+    let mut request = KolmeRuntimeCommitRequest::deterministic(
+        "op-sync-1892-operation",
+        "state:op",
+        "kamn:did:agent:runtime-node-1892",
+        13,
+        "payload:op",
+    )
+    .expect("request should build");
+    request.operation_id.clear();
+
+    let mut client =
+        InMemoryKolmeRuntimeCommitClient::new("kolme-local").expect("client should build");
+    assert_eq!(
+        client.submit_commit(&request),
+        Err(KolmeRuntimeCommitError::InvalidRequest {
+            field: "operation_id",
+            reason: "must not be empty",
+        })
+    );
+}
+
+#[test]
+fn regression_issue_1892_submit_commit_fails_closed_for_empty_state_root() {
+    // Regression: #1892
+    let mut request = KolmeRuntimeCommitRequest::deterministic(
+        "op-sync-1892-state-root",
+        "state:op",
+        "kamn:did:agent:runtime-node-1892",
+        14,
+        "payload:state",
+    )
+    .expect("request should build");
+    request.state_root.clear();
+
+    let mut client =
+        InMemoryKolmeRuntimeCommitClient::new("kolme-local").expect("client should build");
+    assert_eq!(
+        client.submit_commit(&request),
+        Err(KolmeRuntimeCommitError::InvalidRequest {
+            field: "state_root",
+            reason: "must not be empty",
+        })
+    );
+}
+
+#[test]
 fn performance_runtime_commit_contract_lane_stays_within_budget() {
     let mut client =
         InMemoryKolmeRuntimeCommitClient::new("kolme-local").expect("client should build");
