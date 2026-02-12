@@ -46,7 +46,7 @@ pub mod direct_message_crypto;
 pub mod discord_bridge;
 /// Durable snapshot contracts for guard-state and policy persistence.
 pub mod durable_guard_store;
-#[allow(missing_docs)]
+/// Escrow hold, release, refund, and dispute lifecycle contracts.
 pub mod escrow;
 #[allow(missing_docs)]
 pub mod governance_workflow;
