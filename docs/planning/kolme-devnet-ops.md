@@ -526,6 +526,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `signer_profile_contract`: profile must be `ops-primary` or `ops-secondary`.
   - `signer_secret_contract`: selected signer secret env must be present and 64-char hex.
   - `fallback_private_key_contract`: fallback signer secret env must remain unset.
+  - node runtime signer-provider guard (`KolmeLiveSignerSecretProvider`) rejects fallback env-key presence before key decode/signing.
   - summary fields include deterministic signer custody markers:
     - `signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE`
     - `signer_profile`
