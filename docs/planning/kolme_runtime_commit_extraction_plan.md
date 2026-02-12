@@ -58,6 +58,7 @@ Out of scope:
 - #1876: extracted HTTP block-fetch height guard contract to `kamn-kolme` (`is_valid_block_lookup_height`) and rewired `kamn-core` block-fetch transport height validation delegation.
 - #1878: extracted adapter expected-provider guard contract to `kamn-kolme` (`is_valid_expected_provider_input`) and rewired `kamn-core` adapter-backed client constructor guard delegation.
 - #1880: extracted in-memory provider guard contract to `kamn-kolme` (`is_valid_runtime_provider_input`) and rewired `kamn-core` in-memory client constructor guard delegation.
+- #1882: extracted fork provider-hint guard contract to `kamn-kolme` (`is_valid_provider_hint_input`) and rewired `kamn-core` fork broadcast profile provider-hint guard delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,
