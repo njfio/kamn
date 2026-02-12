@@ -27,6 +27,11 @@ impl fmt::Display for KolmeTransportRequestPolicyError {
 
 impl Error for KolmeTransportRequestPolicyError {}
 
+/// Returns whether idempotency-key input is non-empty after trimming.
+pub fn is_valid_transport_idempotency_key_input(idempotency_key: &str) -> bool {
+    !idempotency_key.trim().is_empty()
+}
+
 /// Parses one authorization header value with deterministic trim + CRLF safeguards.
 pub fn parse_authorization_header_value(
     value: &str,

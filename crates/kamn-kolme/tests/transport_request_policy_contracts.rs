@@ -1,5 +1,6 @@
 use kamn_kolme::{
-    is_broadcast_submit_path, parse_authorization_header_value, KolmeTransportRequestPolicyError,
+    is_broadcast_submit_path, is_valid_transport_idempotency_key_input,
+    parse_authorization_header_value, KolmeTransportRequestPolicyError,
 };
 
 #[test]
@@ -14,6 +15,13 @@ fn functional_is_broadcast_submit_path_accepts_query_and_trailing_slash() {
     assert!(is_broadcast_submit_path("/broadcast"));
     assert!(is_broadcast_submit_path("/broadcast/"));
     assert!(is_broadcast_submit_path("/broadcast?mode=sync"));
+}
+
+#[test]
+fn functional_transport_request_policy_accepts_non_empty_idempotency_key_input() {
+    assert!(is_valid_transport_idempotency_key_input(
+        "kolme-runtime-commit:op-1"
+    ));
 }
 
 #[test]
@@ -49,4 +57,10 @@ fn regression_issue_1755_is_broadcast_submit_path_rejects_non_broadcast_paths() 
     assert!(!is_broadcast_submit_path(""));
     assert!(!is_broadcast_submit_path("/runtime-commit/submit"));
     assert!(!is_broadcast_submit_path("/broadcasting"));
+}
+
+#[test]
+fn regression_issue_1884_transport_request_policy_rejects_empty_idempotency_key_input() {
+    // Regression: #1884
+    assert!(!is_valid_transport_idempotency_key_input(" \t "));
 }
