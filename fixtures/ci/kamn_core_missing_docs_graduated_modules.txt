@@ -33,3 +33,4 @@ content_retrieval
 data_classification
 did
 did_registry
+durable_guard_store

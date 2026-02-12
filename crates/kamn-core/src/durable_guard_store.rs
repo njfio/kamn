@@ -1,3 +1,5 @@
+//! Durable snapshot store contracts for delivery guard and channel policy state.
+
 use crate::{
     ChannelPermissionEngine, ChannelPermissions, ChannelPolicySnapshot,
     ChannelPolicySnapshotChannel, ChannelPolicySnapshotError, DeliveryGuardSnapshot,
@@ -10,16 +12,22 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 
+/// Schema version for serialized durable guard bundles.
 pub const DURABLE_GUARD_BUNDLE_SCHEMA_VERSION: u16 = 1;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Combined snapshot bundle for delivery guards and channel policy state.
 pub struct DurableGuardSnapshotBundle {
+    /// Bundle schema version.
     pub schema_version: u16,
+    /// Delivery guard snapshot payload.
     pub delivery_guard: DeliveryGuardSnapshot,
+    /// Channel policy snapshot payload.
     pub channel_policy: ChannelPolicySnapshot,
 }
 
 impl DurableGuardSnapshotBundle {
+    /// Captures a snapshot bundle from live guard engines.
     pub fn capture(
         delivery_guards: &MessageDeliveryGuards,
         channel_permissions: &ChannelPermissionEngine,
@@ -31,6 +39,7 @@ impl DurableGuardSnapshotBundle {
         }
     }
 
+    /// Restores snapshot bundle into live guard engines.
     pub fn restore_into(
         self,
         delivery_guards: &mut MessageDeliveryGuards,
@@ -55,11 +64,22 @@ impl DurableGuardSnapshotBundle {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Durable snapshot store error taxonomy.
 pub enum DurableGuardSnapshotStoreError {
-    BundleSchemaVersionMismatch { expected: u16, found: u16 },
+    /// Bundle schema version does not match current runtime schema.
+    BundleSchemaVersionMismatch {
+        /// Expected schema version.
+        expected: u16,
+        /// Found schema version in payload.
+        found: u16,
+    },
+    /// I/O failure while reading or writing snapshot payload.
     Io(String),
+    /// Payload failed structural or semantic validation.
     InvalidPayload(String),
+    /// Delivery snapshot payload could not be restored.
     DeliverySnapshot(DeliveryGuardSnapshotError),
+    /// Channel-policy snapshot payload could not be restored.
     ChannelPolicySnapshot(ChannelPolicySnapshotError),
 }
 
@@ -94,40 +114,50 @@ impl From<ChannelPolicySnapshotError> for DurableGuardSnapshotStoreError {
     }
 }
 
+/// Store interface for whole durable guard bundles.
 pub trait DurableGuardBundleSnapshotStore {
+    /// Saves a durable guard bundle.
     fn save_bundle(
         &mut self,
         bundle: DurableGuardSnapshotBundle,
     ) -> Result<(), DurableGuardSnapshotStoreError>;
 
+    /// Loads a durable guard bundle, if present.
     fn load_bundle(
         &self,
     ) -> Result<Option<DurableGuardSnapshotBundle>, DurableGuardSnapshotStoreError>;
 }
 
+/// Store interface for delivery-guard snapshot lane.
 pub trait DeliveryGuardSnapshotStore {
+    /// Saves only delivery-guard snapshot payload.
     fn save_delivery_guard(
         &mut self,
         snapshot: DeliveryGuardSnapshot,
     ) -> Result<(), DurableGuardSnapshotStoreError>;
 
+    /// Loads only delivery-guard snapshot payload, if present.
     fn load_delivery_guard(
         &self,
     ) -> Result<Option<DeliveryGuardSnapshot>, DurableGuardSnapshotStoreError>;
 }
 
+/// Store interface for channel-policy snapshot lane.
 pub trait ChannelPolicySnapshotStore {
+    /// Saves only channel-policy snapshot payload.
     fn save_channel_policy(
         &mut self,
         snapshot: ChannelPolicySnapshot,
     ) -> Result<(), DurableGuardSnapshotStoreError>;
 
+    /// Loads only channel-policy snapshot payload, if present.
     fn load_channel_policy(
         &self,
     ) -> Result<Option<ChannelPolicySnapshot>, DurableGuardSnapshotStoreError>;
 }
 
 #[derive(Debug, Clone, Default)]
+/// In-memory durable snapshot store implementation for tests and local runtime.
 pub struct InMemoryDurableGuardSnapshotStore {
     bundle: Option<DurableGuardSnapshotBundle>,
 }
@@ -187,11 +217,13 @@ impl ChannelPolicySnapshotStore for InMemoryDurableGuardSnapshotStore {
 }
 
 #[derive(Debug, Clone)]
+/// File-backed durable snapshot store implementation.
 pub struct FileDurableGuardSnapshotStore {
     path: PathBuf,
 }
 
 impl FileDurableGuardSnapshotStore {
+    /// Creates a file-backed snapshot store rooted at `path`.
     pub fn new(path: PathBuf) -> Result<Self, DurableGuardSnapshotStoreError> {
         if path.is_dir() {
             return Err(DurableGuardSnapshotStoreError::InvalidPayload(

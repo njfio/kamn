@@ -44,7 +44,7 @@ pub mod did_registry;
 pub mod direct_message_crypto;
 /// Discord bridge ingress/egress routing and outbound approval contracts.
 pub mod discord_bridge;
-#[allow(missing_docs)]
+/// Durable snapshot contracts for guard-state and policy persistence.
 pub mod durable_guard_store;
 #[allow(missing_docs)]
 pub mod escrow;
