@@ -68,7 +68,8 @@ required_coverage_markers=(
   "docs/ci/strategy.md"
   "README.md"
   "runtime_commit_command_profile_mismatch"
-  "runtime_signer_profile_mismatch"
+  "runtime_signer_failover_profile_unchanged"
+  "runtime_signer_rotation_epoch_stale"
   "runtime_commit_signer_profile_marker_missing"
   "runtime_commit_non_synthetic_submit_probe_missing"
   "runtime_commit_in_memory_provider_reference_detected"
@@ -132,6 +133,14 @@ if summary.get("runtime_signer_profile_selector_env") != "KAMN_KOLME_LIVE_SIGNER
     raise SystemExit("expected signer profile selector env marker in real-node profile contract-lane summary")
 if summary.get("runtime_signer_profile") != "ops-primary":
     raise SystemExit("expected signer profile marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_previous_profile") != "ops-primary":
+    raise SystemExit("expected signer previous profile marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_failover_active") is not False:
+    raise SystemExit("expected signer failover marker false in real-node profile contract-lane summary")
+if summary.get("runtime_signer_rotation_epoch") != 1:
+    raise SystemExit("expected signer rotation epoch marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_previous_rotation_epoch") != 1:
+    raise SystemExit("expected signer previous rotation epoch marker in real-node profile contract-lane summary")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected signer private key env marker in real-node profile contract-lane summary")
 contracts = summary.get("contracts", {})
@@ -141,6 +150,10 @@ if contracts.get("runtime_signer_profile_selector_env") != "KAMN_KOLME_LIVE_SIGN
     raise SystemExit("expected contracts signer profile selector env marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_profile") != "ops-primary":
     raise SystemExit("expected contracts signer profile marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_failover_requires_profile_change") is not True:
+    raise SystemExit("expected contracts failover profile-change guard marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_rotation_epoch_must_increase_on_failover") is not True:
+    raise SystemExit("expected contracts rotation epoch guard marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected contracts signer private key env marker in real-node profile contract-lane summary")
 if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1":
@@ -166,8 +179,11 @@ pathlib.Path(sys.argv[2]).write_text(
 )
 
 signer_drift_summary = dict(base_summary)
-signer_drift_summary["runtime_signer_profile"] = "ops-secondary"
-signer_drift_summary["runtime_signer_private_key_env"] = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+signer_drift_summary["runtime_signer_profile"] = "ops-primary"
+signer_drift_summary["runtime_signer_previous_profile"] = "ops-primary"
+signer_drift_summary["runtime_signer_failover_active"] = True
+signer_drift_summary["runtime_signer_rotation_epoch"] = 3
+signer_drift_summary["runtime_signer_previous_rotation_epoch"] = 3
 pathlib.Path(sys.argv[3]).write_text(
     json.dumps(signer_drift_summary, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
@@ -238,8 +254,13 @@ if [ "$signer_drift_exit_code" -eq 0 ]; then
   exit 1
 fi
 
-if ! grep -q "runtime_signer_profile_mismatch" "$TMP_NEGATIVE_ERR"; then
-  echo "expected signer profile drift reason in negative proof output" >&2
+if ! grep -q "runtime_signer_failover_profile_unchanged" "$TMP_NEGATIVE_ERR"; then
+  echo "expected signer failover unchanged reason in negative proof output" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_rotation_epoch_stale" "$TMP_NEGATIVE_ERR"; then
+  echo "expected signer stale rotation epoch reason in negative proof output" >&2
   exit 1
 fi
 

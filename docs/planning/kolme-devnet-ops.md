@@ -417,9 +417,15 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_commit_command_profile_version=v1`
     - `runtime_signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE`
     - `runtime_signer_profile=ops-primary`
+    - `runtime_signer_previous_profile=ops-primary`
+    - `runtime_signer_failover_active=false`
+    - `runtime_signer_rotation_epoch=1`
+    - `runtime_signer_previous_rotation_epoch=1`
     - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
   - NO-GO marker-drift proof must surface `runtime_commit_command_profile_mismatch` when profile marker contracts drift from `real-node-non-synthetic-v1`.
   - NO-GO signer-profile drift proof must surface `runtime_signer_profile_mismatch` when summary signer profile markers drift from `ops-primary`.
+  - NO-GO failover proof must surface `runtime_signer_failover_profile_unchanged` when failover is active but profile does not rotate.
+  - NO-GO stale-rotation proof must surface `runtime_signer_rotation_epoch_stale` when failover rotation epoch is not strictly increasing.
   - NO-GO signer-key-env drift proof must surface `runtime_signer_private_key_env_mismatch` when signer key env marker drifts from `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`.
   - NO-GO synthetic-command regression proof must surface `runtime_commit_non_synthetic_submit_probe_missing` when `runtime_commit_command` omits `integration_kolme_fork_live_node_submit_reaches_endpoint`.
   - NO-GO synthetic-command regression proof must surface `runtime_commit_real_signing_profile_marker_missing` when `runtime_commit_command` omits `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1`.
@@ -444,12 +450,22 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_commit_command_profile_version`
     - `runtime_signer_profile_selector_env`
     - `runtime_signer_profile`
+    - `runtime_signer_previous_profile`
+    - `runtime_signer_failover_active`
+    - `runtime_signer_rotation_epoch`
+    - `runtime_signer_previous_rotation_epoch`
     - `runtime_signer_private_key_env`
   - real-node profile requires `runtime_commit_command_profile=real-node-non-synthetic-v1`, `runtime_commit_policy_command_profile=real-node-non-synthetic-v1`, and `runtime_commit_command_profile_version=v1`; real-node checker fails closed on marker drift.
   - real-node profile requires signer profile summary/contracts markers:
     - `runtime_signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE`
     - `runtime_signer_profile=ops-primary`
+    - `runtime_signer_previous_profile=ops-primary`
+    - `runtime_signer_failover_active=false`
+    - `runtime_signer_rotation_epoch=1`
+    - `runtime_signer_previous_rotation_epoch=1`
     - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
+    - `contracts.runtime_signer_failover_requires_profile_change=true`
+    - `contracts.runtime_signer_rotation_epoch_must_increase_on_failover=true`
   - real-node profile requires runtime command surfaces to include `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1`; checker fails closed with `runtime_commit_real_signing_profile_marker_missing` when omitted.
   - real-node profile requires runtime command surfaces to include `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary`; checker fails closed with `runtime_commit_signer_profile_marker_missing` when omitted.
   - real-node profile command composition rejects in-memory fallback references at runner boundary:

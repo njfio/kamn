@@ -358,6 +358,10 @@ runtime_commit_native_payload_flag=""
 runtime_commit_command_profile="standard-default-v1"
 runtime_commit_policy_command_profile="standard-default-v1"
 runtime_commit_command_profile_version="v1"
+RUNTIME_SIGNER_PREVIOUS_PROFILE=""
+RUNTIME_SIGNER_FAILOVER_ACTIVE="false"
+RUNTIME_SIGNER_ROTATION_EPOCH="1"
+RUNTIME_SIGNER_PREVIOUS_ROTATION_EPOCH="1"
 if [ "$RUNTIME_PROFILE" = "real-node" ]; then
   runtime_commit_non_synthetic_flag=" --require-non-synthetic-run-evidence"
   runtime_commit_native_payload_flag=" --require-native-payload-evidence"
@@ -366,6 +370,7 @@ if [ "$RUNTIME_PROFILE" = "real-node" ]; then
   RUNTIME_SIGNER_PROFILE_SELECTOR_ENV="KAMN_KOLME_LIVE_SIGNER_PROFILE"
   RUNTIME_SIGNER_PROFILE="ops-primary"
   RUNTIME_SIGNER_PRIVATE_KEY_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
+  RUNTIME_SIGNER_PREVIOUS_PROFILE="ops-primary"
 fi
 
 if [ -n "$RUNTIME_SIGNER_PROFILE" ]; then
@@ -632,7 +637,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" "$runtime_commit_command_profile" "$runtime_commit_policy_command_profile" "$runtime_commit_command_profile_version" "$RUNTIME_SIGNER_PROFILE_SELECTOR_ENV" "$RUNTIME_SIGNER_PROFILE" "$RUNTIME_SIGNER_PRIVATE_KEY_ENV" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" "$runtime_commit_command_profile" "$runtime_commit_policy_command_profile" "$runtime_commit_command_profile_version" "$RUNTIME_SIGNER_PROFILE_SELECTOR_ENV" "$RUNTIME_SIGNER_PROFILE" "$RUNTIME_SIGNER_PREVIOUS_PROFILE" "$RUNTIME_SIGNER_FAILOVER_ACTIVE" "$RUNTIME_SIGNER_ROTATION_EPOCH" "$RUNTIME_SIGNER_PREVIOUS_ROTATION_EPOCH" "$RUNTIME_SIGNER_PRIVATE_KEY_ENV" <<'PY'
 from __future__ import annotations
 
 import json
@@ -674,7 +679,11 @@ runtime_commit_policy_command_profile = sys.argv[32]
 runtime_commit_command_profile_version = sys.argv[33]
 runtime_signer_profile_selector_env = sys.argv[34]
 runtime_signer_profile = sys.argv[35]
-runtime_signer_private_key_env = sys.argv[36]
+runtime_signer_previous_profile = sys.argv[36]
+runtime_signer_failover_active = sys.argv[37] == "true"
+runtime_signer_rotation_epoch = int(sys.argv[38])
+runtime_signer_previous_rotation_epoch = int(sys.argv[39])
+runtime_signer_private_key_env = sys.argv[40]
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -716,6 +725,10 @@ summary = {
     "runtime_commit_command_profile_version": runtime_commit_command_profile_version,
     "runtime_signer_profile_selector_env": runtime_signer_profile_selector_env,
     "runtime_signer_profile": runtime_signer_profile,
+    "runtime_signer_previous_profile": runtime_signer_previous_profile,
+    "runtime_signer_failover_active": runtime_signer_failover_active,
+    "runtime_signer_rotation_epoch": runtime_signer_rotation_epoch,
+    "runtime_signer_previous_rotation_epoch": runtime_signer_previous_rotation_epoch,
     "runtime_signer_private_key_env": runtime_signer_private_key_env,
     "runtime_commit_live_policy_report": runtime_commit_live_policy_report,
     "runtime_commit_finality_command": runtime_commit_finality_command if runtime_commit_finality_command else "",
@@ -733,6 +746,8 @@ summary = {
         "runtime_profile": runtime_profile,
         "runtime_signer_profile_selector_env": runtime_signer_profile_selector_env,
         "runtime_signer_profile": runtime_signer_profile,
+        "runtime_signer_failover_requires_profile_change": True,
+        "runtime_signer_rotation_epoch_must_increase_on_failover": True,
         "runtime_signer_private_key_env": runtime_signer_private_key_env,
         "runtime_commit_endpoint": "/broadcast/runtime-commit",
         "runtime_commit_method": "POST",
