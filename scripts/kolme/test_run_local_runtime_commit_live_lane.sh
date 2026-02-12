@@ -7,8 +7,9 @@ LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 TMP_REPORT="$(mktemp)"
 TMP_OUTPUT="$(mktemp)"
+TMP_FINALITY_OUTPUT="$(mktemp)"
 TMP_ERR="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_ERR"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_ERR"' EXIT
 
 extract_value() {
   local output="$1"
@@ -38,6 +39,17 @@ fi
 
 if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER"; then
   echo "expected runtime commit live runner to invoke shared local-heavy opt-in guard helper" >&2
+  exit 1
+fi
+
+# Regression: #1969
+if ! grep -q -- "--finality-command" "$RUNNER"; then
+  echo "expected runtime commit live runner to expose optional finality command argument" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_live_finality_command" "$RUNNER"; then
+  echo "expected runtime commit live runner to emit finality command check markers" >&2
   exit 1
 fi
 
@@ -80,6 +92,11 @@ if not any(
     for check in checks
 ):
     raise SystemExit("expected planned runtime commit live preflight check")
+if not any(
+    check.get("id") == "runtime_commit_live_finality_command" and check.get("status") == "planned"
+    for check in checks
+):
+    raise SystemExit("expected planned runtime commit live finality check")
 PY
 
 set +e
@@ -127,10 +144,10 @@ run_output="$(
     bash "$RUNNER" \
       --mode run \
       --skip-preflight \
-      --live-command "printf 'status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:1\nfinality=final\n'" \
-      --max-seconds 5 \
-      --output-json "$TMP_REPORT" \
-      --live-output-file "$TMP_OUTPUT"
+    --live-command "printf 'status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:1\nfinality=final\n'" \
+    --max-seconds 5 \
+    --output-json "$TMP_REPORT" \
+    --live-output-file "$TMP_OUTPUT"
 )"
 
 assert_eq "$(extract_value "$run_output" "status")" "ok" "expected run mode to pass"
@@ -157,6 +174,42 @@ if report.get("max_seconds") != 5:
     raise SystemExit("expected max_seconds=5")
 if "status=submitted" not in live_output:
     raise SystemExit("expected live command output marker")
+if report.get("finality_enabled") is not False:
+    raise SystemExit("expected finality_enabled=false when no finality command is configured")
+PY
+
+run_with_finality_output="$(
+  KAMN_KOLME_LOCAL_HEAVY=1 \
+    bash "$RUNNER" \
+      --mode run \
+      --skip-preflight \
+      --live-command "printf 'status=submitted\n'" \
+      --finality-command "printf 'finality=final\n'" \
+      --finality-max-seconds 3 \
+      --max-seconds 5 \
+      --output-json "$TMP_REPORT" \
+      --live-output-file "$TMP_OUTPUT" \
+      --finality-output-file "$TMP_FINALITY_OUTPUT"
+)"
+
+assert_eq "$(extract_value "$run_with_finality_output" "status")" "ok" "expected run mode with finality command to pass"
+assert_eq "$(extract_value "$run_with_finality_output" "reason_code")" "live_runtime_commit_and_finality_commands_passed" "expected combined pass reason code"
+
+python3 - "$TMP_REPORT" "$TMP_FINALITY_OUTPUT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+finality_output = pathlib.Path(sys.argv[2]).read_text(encoding="utf-8")
+if report.get("finality_enabled") is not True:
+    raise SystemExit("expected finality_enabled=true when finality command is configured")
+if report.get("reason_code") != "live_runtime_commit_and_finality_commands_passed":
+    raise SystemExit("expected combined pass reason code in summary")
+if "finality=final" not in finality_output:
+    raise SystemExit("expected finality command output marker")
 PY
 
 set +e
@@ -178,6 +231,31 @@ fi
 
 if ! grep -q "reason_code=live_runtime_commit_command_timeout" "$TMP_ERR"; then
   echo "expected timeout reason marker" >&2
+  exit 1
+fi
+
+set +e
+KAMN_KOLME_LOCAL_HEAVY=1 \
+  bash "$RUNNER" \
+    --mode run \
+    --skip-preflight \
+    --live-command "printf 'status=submitted\n'" \
+    --finality-command "sleep 2" \
+    --finality-max-seconds 1 \
+    --max-seconds 5 \
+    --output-json "$TMP_REPORT" \
+    --live-output-file "$TMP_OUTPUT" \
+    --finality-output-file "$TMP_FINALITY_OUTPUT" >"$TMP_ERR" 2>&1
+finality_timeout_code=$?
+set -e
+
+if [ "$finality_timeout_code" -eq 0 ]; then
+  echo "expected finality command timeout to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "reason_code=live_finality_command_timeout" "$TMP_ERR"; then
+  echo "expected finality timeout reason marker" >&2
   exit 1
 fi
 
