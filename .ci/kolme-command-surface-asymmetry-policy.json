@@ -33,6 +33,7 @@
     "scripts/kolme/test_run_local_kolme_fork_self_test_contract_lane.sh",
     "scripts/kolme/test_run_local_kolme_fork_real_process_contract_lane.sh",
     "scripts/kolme/test_run_local_live_node_validation_bundle_lane.sh",
+    "scripts/kolme/test_run_local_live_node_validation_bundle_contract_lane.sh",
     "scripts/kolme/test_run_local_signed_to_kolme_demo_contract_lane.sh",
     "scripts/kolme/test_run_runtime_commit_contract_lane.sh",
     "scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh",

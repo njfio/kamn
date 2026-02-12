@@ -16,6 +16,7 @@ lane_wrappers=(
   "run_local_e2e_integration_contract_lane.sh"
   "run_local_heavy_validation_matrix_contract_lane.sh"
   "run_local_kamn_live_runtime_integration_contract_lane.sh"
+  "run_local_live_node_validation_bundle_contract_lane.sh"
   "run_local_kolme_fork_bootstrap_readiness_contract_lane.sh"
   "run_local_kolme_fork_checkout_bootstrap_contract_lane.sh"
   "run_local_kolme_fork_portability_preflight_contract_lane.sh"
