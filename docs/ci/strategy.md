@@ -329,7 +329,12 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - fork pin manifest + expected commit drift contracts remain fail-closed (`Regression: #2328`).
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_fork_smoke_evidence_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --smoke-command "cargo test -p merkle-map --test version -- --exact load_from_zero_example" --max-seconds 120 --output-json /tmp/kolme-local-fork-smoke-evidence-summary.json`
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json`
+    - `python3 scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py --report-file /tmp/kolme-local-fork-rust-test-matrix-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json`
     - `bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json --policy-output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json`
+    - evidence bundle marker contract: `evidence_bundle_schema_version=kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1`
+    - evidence bundle payload contract: `evidence_bundle` must include summary linkage and budget/command artifacts for policy parity checks
+    - Regression: #1541
+    - Regression: #2329
   - local Kolme API probe/smoke run-mode commands remain excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 30 --output-json /tmp/kolme-local-api-probe-summary.json`
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_api_smoke_lane.sh --mode run --base-url http://127.0.0.1:3000 --smoke-command "curl --silent --show-error --fail http://127.0.0.1:3000/healthz" --max-seconds 60 --output-json /tmp/kolme-local-api-smoke-summary.json`

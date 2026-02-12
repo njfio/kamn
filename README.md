@@ -476,6 +476,10 @@ python3 scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py --report
 
 # bounded contract lane (dry-run + local-only run + fail-closed policy checks)
 bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json --policy-output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json
+# evidence bundle marker contract: evidence_bundle_schema_version=kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1
+# evidence bundle payload contract: evidence_bundle includes schema linkage, status, reason_code, budget_status, command_count, artifact_paths
+# Regression: #1541
+# Regression: #2329
 ```
 
 ### Run Local Kolme API Probe Lane

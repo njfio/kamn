@@ -118,6 +118,15 @@ if report.get("local_only_enforced") is not True:
     raise SystemExit("expected local_only_enforced=true in local fork rust test matrix summary")
 if report.get("command_count") != 2:
     raise SystemExit("expected command_count=2 for dry-run matrix")
+if report.get("evidence_bundle_schema_version") != "kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1":
+    raise SystemExit("expected evidence bundle schema marker in local fork rust test matrix summary")
+bundle = report.get("evidence_bundle")
+if not isinstance(bundle, dict):
+    raise SystemExit("expected evidence_bundle object in local fork rust test matrix summary")
+if bundle.get("schema_version") != "kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1":
+    raise SystemExit("expected evidence bundle schema version in local fork rust test matrix summary")
+if bundle.get("summary_schema_version") != report.get("schema_version"):
+    raise SystemExit("expected evidence bundle summary schema marker in local fork rust test matrix summary")
 checkpoints = report.get("checkpoints")
 if not isinstance(checkpoints, list) or len(checkpoints) < 3:
     raise SystemExit("expected metadata + command checkpoint entries in matrix summary")
@@ -179,6 +188,15 @@ if report.get("status") != "ok":
     raise SystemExit("expected ok status for run mode matrix summary")
 if report.get("budget_status") != "within_budget":
     raise SystemExit("expected within_budget for run mode matrix summary")
+if report.get("evidence_bundle_schema_version") != "kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1":
+    raise SystemExit("expected evidence bundle schema marker in run mode matrix summary")
+bundle = report.get("evidence_bundle")
+if not isinstance(bundle, dict):
+    raise SystemExit("expected evidence_bundle object in run mode matrix summary")
+if bundle.get("budget_status") != report.get("budget_status"):
+    raise SystemExit("expected evidence bundle budget status marker in run mode matrix summary")
+if bundle.get("command_count") != report.get("command_count"):
+    raise SystemExit("expected evidence bundle command_count marker in run mode matrix summary")
 log_files = sorted(out_dir.glob("command-*.log"))
 if len(log_files) != 2:
     raise SystemExit("expected two command output files in matrix output directory")

@@ -14,8 +14,24 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 RUNNER = ROOT_DIR / "scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh"
 CHECKER = ROOT_DIR / "scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py"
 DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
+CI_DOC_FILE = ROOT_DIR / "docs/ci/strategy.md"
+README_FILE = ROOT_DIR / "README.md"
 MAX_SECONDS_ENV = "KAMN_KOLME_LOCAL_FORK_RUST_MATRIX_MAX_SECONDS"
 DEFAULT_MAX_SECONDS = 120
+EVIDENCE_BUNDLE_SCHEMA_MARKER = (
+    "evidence_bundle_schema_version=kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1"
+)
+# Regression: #1541
+# Regression: #2329
+REQUIRED_DOC_MARKERS = [
+    "run_local_kolme_fork_rust_test_matrix_lane.sh",
+    "check_local_kolme_fork_rust_test_matrix_policy.py",
+    "run_local_kolme_fork_rust_test_matrix_contract_lane.sh",
+    EVIDENCE_BUNDLE_SCHEMA_MARKER,
+    "evidence_bundle",
+    "Regression: #1541",
+    "Regression: #2329",
+]
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -62,9 +78,11 @@ def main() -> int:
     if not CHECKER.is_file() or not CHECKER.stat().st_mode & 0o111:
         print("expected local fork rust test matrix policy checker to be executable", file=sys.stderr)
         return 1
-    if not DOC_FILE.is_file():
-        print("expected Kolme devnet ops documentation to exist", file=sys.stderr)
-        return 1
+    docs_files = [DOC_FILE, CI_DOC_FILE, README_FILE]
+    for docs_file in docs_files:
+        if not docs_file.is_file():
+            print(f"expected docs parity file to exist: {docs_file}", file=sys.stderr)
+            return 1
 
     start_epoch = time.monotonic()
 
@@ -151,31 +169,15 @@ def main() -> int:
         stdout=subprocess.DEVNULL,
     )
 
-    doc_text = DOC_FILE.read_text(encoding="utf-8")
-    if "run_local_kolme_fork_rust_test_matrix_lane.sh" not in doc_text:
-        print(
-            "expected Kolme devnet ops doc to reference local fork rust test matrix lane runner",
-            file=sys.stderr,
-        )
-        return 1
-    if "check_local_kolme_fork_rust_test_matrix_policy.py" not in doc_text:
-        print(
-            "expected Kolme devnet ops doc to reference local fork rust test matrix policy checker",
-            file=sys.stderr,
-        )
-        return 1
-    if "run_local_kolme_fork_rust_test_matrix_contract_lane.sh" not in doc_text:
-        print(
-            "expected Kolme devnet ops doc to reference local fork rust test matrix contract lane",
-            file=sys.stderr,
-        )
-        return 1
-    if "Regression: #1541" not in doc_text:
-        print(
-            "expected Kolme devnet ops doc to include local fork rust test matrix regression marker",
-            file=sys.stderr,
-        )
-        return 1
+    for docs_file in docs_files:
+        doc_text = docs_file.read_text(encoding="utf-8")
+        for marker in REQUIRED_DOC_MARKERS:
+            if marker not in doc_text:
+                print(
+                    f"expected docs parity marker '{marker}' in {docs_file}",
+                    file=sys.stderr,
+                )
+                return 1
 
     elapsed_seconds = int(time.monotonic() - start_epoch)
     if elapsed_seconds > max_seconds:

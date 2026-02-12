@@ -27,6 +27,19 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "command_count": 2,
   "cargo_profile": "strict",
   "budget_status": "not_run",
+  "evidence_bundle_schema_version": "kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1",
+  "evidence_bundle": {
+    "schema_version": "kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1",
+    "summary_schema_version": "kamn.kolme.local-fork-rust-test-matrix-summary.v1",
+    "status": "ok",
+    "reason_code": "dry_run_no_commands_executed",
+    "budget_status": "not_run",
+    "command_count": 2,
+    "artifact_paths": [
+      "/tmp/meta.json",
+      "/tmp/matrix-logs"
+    ]
+  },
   "checkpoints": [
     {
       "id": "fork_sync_metadata",
@@ -83,6 +96,18 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
   "command_count": 1,
   "cargo_profile": "strict",
   "budget_status": "exceeded_budget",
+  "evidence_bundle_schema_version": "kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v0",
+  "evidence_bundle": {
+    "schema_version": "kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v0",
+    "summary_schema_version": "kamn.kolme.local-fork-rust-test-matrix-summary.v1",
+    "status": "fail",
+    "reason_code": "fork_rust_test_command_timeout",
+    "budget_status": "exceeded_budget",
+    "command_count": 1,
+    "artifact_paths": [
+      "/tmp/meta.json"
+    ]
+  },
   "checkpoints": [
     {
       "id": "fork_sync_metadata",
@@ -121,6 +146,11 @@ fi
 
 if ! grep -q "observed_final_decision_mismatch" "$TMP_ERR"; then
   echo "expected mismatch reason code for failing policy decision" >&2
+  exit 1
+fi
+
+if ! grep -q "evidence_bundle_schema_invalid" "$TMP_ERR"; then
+  echo "expected evidence_bundle_schema_invalid reason marker for invalid evidence bundle schema" >&2
   exit 1
 fi
 
