@@ -1054,7 +1054,14 @@ impl KolmeRuntimeCommitHttpTransport {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
-        if let Some(ca_file) = configured_tls_ca_file()? {
+        let configured_ca_file =
+            resolve_kolme_tls_ca_file_env_result_contract(std::env::var("KAMN_KOLME_TLS_CA_FILE"))
+                .map_err(|error| match error {
+                    KamnKolmeTlsPolicyError::Unavailable { reason } => {
+                        KolmeRuntimeCommitProviderError::Unavailable { reason }
+                    }
+                })?;
+        if let Some(ca_file) = configured_ca_file {
             command.arg("-CAfile").arg(ca_file);
         }
 
@@ -2030,16 +2037,6 @@ fn read_http_header_boundary(
         }
         response_bytes.extend_from_slice(&chunk[..read]);
     }
-}
-
-fn configured_tls_ca_file() -> Result<Option<String>, KolmeRuntimeCommitProviderError> {
-    resolve_kolme_tls_ca_file_env_result_contract(std::env::var("KAMN_KOLME_TLS_CA_FILE")).map_err(
-        |error| match error {
-            KamnKolmeTlsPolicyError::Unavailable { reason } => {
-                KolmeRuntimeCommitProviderError::Unavailable { reason }
-            }
-        },
-    )
 }
 
 fn parse_live_provider_response(
