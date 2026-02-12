@@ -6,7 +6,6 @@ channel_policies
 content_lifecycle
 content_replication
 content_retrieval
-content_storage
 cross_chain_bridge
 cross_chain_receipt
 data_classification
