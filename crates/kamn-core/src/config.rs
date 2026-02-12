@@ -1,14 +1,24 @@
+//! Node configuration contracts for role and sync-mode policy surfaces.
+//!
+//! This module defines strongly typed role and synchronization profiles used by
+//! runtime startup, recovery, and CLI/config validation paths.
+
 use std::fmt;
 use std::str::FromStr;
 
+/// Node execution role determining primary runtime responsibilities.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NodeRole {
+    /// Processes and executes protocol work units.
     Processor,
+    /// Primarily listens and relays events without approval authority.
     Listener,
+    /// Reviews and approves gated transitions or proposals.
     Approver,
 }
 
 impl NodeRole {
+    /// Returns the canonical lowercase string form used in config parsing.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Processor => "processor",
@@ -31,14 +41,19 @@ impl FromStr for NodeRole {
     }
 }
 
+/// Chain synchronization mode used for startup and recovery planning.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SyncMode {
+    /// Prioritize fast startup with minimal replay.
     Fast,
+    /// Replay more history with stricter version matching.
     Slow,
+    /// Maintain complete historical state and replay coverage.
     Archive,
 }
 
 impl SyncMode {
+    /// Returns the canonical lowercase string form used in config parsing.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Fast => "fast",
@@ -47,6 +62,7 @@ impl SyncMode {
         }
     }
 
+    /// Resolves the operational startup/recovery profile for this sync mode.
     pub fn profile(self) -> SyncOperationalProfile {
         match self {
             Self::Fast => SyncOperationalProfile {
@@ -87,40 +103,62 @@ impl FromStr for SyncMode {
     }
 }
 
+/// Startup strategy chosen by sync-mode policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SyncStartupStrategy {
+    /// Sync to latest state before serving traffic.
     StateSyncToLatest,
+    /// Replay blocks from genesis to construct local state.
     BlockReplayFromGenesis,
+    /// Perform archive-grade sync from genesis state.
     ArchiveStateSyncFromGenesis,
 }
 
+/// Recovery strategy chosen by sync-mode policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SyncRecoveryStrategy {
+    /// Resume from recent persisted state with minimal replay.
     ResumeRecentState,
+    /// Replay only missing block range after outage.
     ReplayMissingBlocks,
+    /// Replay archived history to preserve full lineage.
     ReplayArchivedHistory,
 }
 
+/// Derived operational profile for a selected synchronization mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SyncOperationalProfile {
+    /// Source sync mode that generated this profile.
     pub mode: SyncMode,
+    /// Startup strategy contract for initialization.
     pub startup_strategy: SyncStartupStrategy,
+    /// Recovery strategy contract after interruption.
     pub recovery_strategy: SyncRecoveryStrategy,
+    /// Whether chain-version parity is required before joining.
     pub requires_chain_version_match: bool,
+    /// Whether full historical state retention is required.
     pub maintain_full_history: bool,
 }
 
+/// Node runtime configuration envelope validated before startup.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NodeConfig {
+    /// Logical chain identifier the node should join.
     pub chain_id: String,
+    /// Expected chain runtime/schema version.
     pub chain_version: String,
+    /// Node runtime role.
     pub role: NodeRole,
+    /// Filesystem path used for durable node storage.
     pub storage_dir: String,
+    /// Whether gossip transport is enabled.
     pub enable_gossip: bool,
+    /// Synchronization mode used for startup/recovery.
     pub sync_mode: SyncMode,
 }
 
 impl NodeConfig {
+    /// Validates required configuration fields for non-empty values.
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.chain_id.trim().is_empty() {
             return Err(ConfigError::EmptyChainId);
@@ -134,33 +172,56 @@ impl NodeConfig {
         Ok(())
     }
 
+    /// Returns the derived operational sync profile for this configuration.
     pub fn operational_profile(&self) -> SyncOperationalProfile {
         self.sync_mode.profile()
     }
 }
 
+/// Error surface for config parsing and runtime option validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConfigError {
+    /// `chain_id` was empty.
     EmptyChainId,
+    /// `chain_version` was empty.
     EmptyChainVersion,
+    /// `storage_dir` was empty.
     EmptyStorageDir,
+    /// Migration planning argument validation failed.
     MigrationPlan(String),
+    /// Token model argument validation failed.
     TokenModel(String),
+    /// Unknown or invalid node role string.
     InvalidRole(String),
+    /// Unknown or invalid sync mode string.
     InvalidSyncMode(String),
+    /// Unknown or invalid output mode string.
     InvalidOutputMode(String),
+    /// Unknown or invalid node profile string.
     InvalidNodeProfile(String),
+    /// Unknown or invalid diagnostics mode string.
     InvalidDiagnosticsMode(String),
+    /// Unknown or invalid runtime mode string.
     InvalidRuntimeMode(String),
+    /// Invalid expected state version argument.
     InvalidExpectedStateVersion(String),
+    /// Invalid daemon control argument.
     InvalidDaemonControlArgument(String),
+    /// Invalid daemon lifecycle event argument.
     InvalidDaemonLifecycleEvent(String),
+    /// Invalid governance proposal argument.
     InvalidProposalArgument(String),
+    /// Invalid rejoin-attempt argument.
     InvalidRejoinAttemptArgument(String),
+    /// Runtime planner argument validation failure.
     RuntimePlanner(String),
+    /// Runtime recovery argument validation failure.
     RuntimeRecovery(String),
+    /// Runtime daemon lifecycle argument validation failure.
     RuntimeDaemonLifecycle(String),
+    /// Unknown command-line/config argument.
     UnknownArgument(String),
+    /// Argument flag required a value but none was provided.
     MissingArgumentValue(&'static str),
 }
 
