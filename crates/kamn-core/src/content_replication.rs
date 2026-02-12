@@ -1,15 +1,24 @@
+//! Content replication policy, availability health, and repair planning contracts.
+
 use crate::{ContentStorageAdapter, ContentStorageError};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Replication policy constraints used by the manager.
 pub struct ContentReplicationPolicy {
+    /// Minimum replicas required for healthy availability.
     pub minimum_replicas: u16,
+    /// Desired replicas used for repair planning.
     pub target_replicas: u16,
+    /// Maximum sequential repair failures before hard stop.
     pub max_repair_attempts: u8,
 }
 
 impl ContentReplicationPolicy {
+    /// Builds a validated replication policy.
+    ///
+    /// Returns an error if bounds are zero or inconsistent.
     pub fn new(
         minimum_replicas: u16,
         target_replicas: u16,
@@ -38,54 +47,83 @@ impl ContentReplicationPolicy {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Availability health classification derived from replica counts.
 pub enum ContentAvailabilityHealth {
+    /// Replica count satisfies minimum threshold.
     Healthy,
+    /// Content exists but replicas are below minimum threshold.
     Degraded,
+    /// No replicas currently available.
     Unavailable,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Availability snapshot for a tracked content object.
 pub struct ContentAvailabilitySnapshot {
+    /// Content identifier the snapshot describes.
     pub cid: String,
+    /// Derived health state for the current replica count.
     pub health: ContentAvailabilityHealth,
+    /// Number of currently known replicas.
     pub available_replicas: u16,
+    /// Minimum replicas required for healthy state.
     pub minimum_replicas: u16,
+    /// Target replicas expected after repair.
     pub target_replicas: u16,
+    /// Number of consecutive repair failures.
     pub repair_attempts: u8,
+    /// Unix timestamp for last replication check.
     pub last_checked_unix: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Alert payload emitted for non-healthy availability states.
 pub struct ContentAvailabilityAlert {
+    /// Content identifier in alert.
     pub cid: String,
+    /// Non-healthy availability status.
     pub health: ContentAvailabilityHealth,
+    /// Number of currently known replicas.
     pub available_replicas: u16,
+    /// Minimum replicas required for healthy state.
     pub minimum_replicas: u16,
+    /// Target replicas expected after repair.
     pub target_replicas: u16,
+    /// Number of consecutive repair failures.
     pub repair_attempts: u8,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Reason why a repair action was generated.
 pub enum ContentRepairReason {
+    /// Replicas exist but target has not been reached.
     UnderReplicated,
+    /// No replicas exist for tracked content.
     MissingContent,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Planned repair action emitted by replication manager.
 pub struct ContentRepairAction {
+    /// Content identifier to repair.
     pub cid: String,
+    /// Number of replicas required to reach target.
     pub missing_replicas: u16,
+    /// Reason for this repair plan.
     pub reason: ContentRepairReason,
+    /// Repair attempt number that will be executed.
     pub attempt: u8,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// In-memory replication health and repair orchestration manager.
 pub struct ContentReplicationManager {
     policy: ContentReplicationPolicy,
     records: BTreeMap<String, ContentReplicationRecord>,
 }
 
 impl ContentReplicationManager {
+    /// Creates a manager bound to a validated replication policy.
     pub fn new(policy: ContentReplicationPolicy) -> Self {
         Self {
             policy,
@@ -93,6 +131,7 @@ impl ContentReplicationManager {
         }
     }
 
+    /// Registers or refreshes tracked replicas for `cid` after storage validation.
     pub fn register_content<A: ContentStorageAdapter>(
         &mut self,
         adapter: &A,
@@ -122,6 +161,7 @@ impl ContentReplicationManager {
         self.availability(cid)
     }
 
+    /// Returns the current availability snapshot for `cid`.
     pub fn availability(
         &self,
         cid: &str,
@@ -133,6 +173,7 @@ impl ContentReplicationManager {
         Ok(build_snapshot(cid, record, &self.policy))
     }
 
+    /// Lists alerts for tracked content in degraded or unavailable health.
     pub fn availability_alerts(&self) -> Vec<ContentAvailabilityAlert> {
         self.records
             .iter()
@@ -154,6 +195,7 @@ impl ContentReplicationManager {
             .collect()
     }
 
+    /// Plans repair actions for tracked content below target replicas.
     pub fn plan_repairs(&mut self) -> Vec<ContentRepairAction> {
         let mut actions = Vec::new();
 
@@ -192,6 +234,7 @@ impl ContentReplicationManager {
         actions
     }
 
+    /// Applies a successful repair result for `cid` and returns updated snapshot.
     pub fn apply_repair_success(
         &mut self,
         cid: &str,
@@ -216,6 +259,9 @@ impl ContentReplicationManager {
         Ok(build_snapshot(cid, record, &self.policy))
     }
 
+    /// Records a failed repair attempt for `cid`.
+    ///
+    /// Returns `RepairAttemptsExceeded` when max retries are already consumed.
     pub fn apply_repair_failure(
         &mut self,
         cid: &str,
@@ -245,11 +291,22 @@ impl ContentReplicationManager {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Replication manager error taxonomy.
 pub enum ContentReplicationError {
+    /// Replication policy contains invalid bounds.
     InvalidPolicy(&'static str),
+    /// Required input field was empty or zero.
     EmptyField(&'static str),
+    /// Content identifier is not registered in manager state.
     UnknownContent(String),
-    RepairAttemptsExceeded { cid: String, max_attempts: u8 },
+    /// Repair retry budget has been exhausted for content.
+    RepairAttemptsExceeded {
+        /// Content identifier that exceeded retry budget.
+        cid: String,
+        /// Maximum repair attempts allowed by policy.
+        max_attempts: u8,
+    },
+    /// Underlying storage validation failed.
     Storage(ContentStorageError),
 }
 
