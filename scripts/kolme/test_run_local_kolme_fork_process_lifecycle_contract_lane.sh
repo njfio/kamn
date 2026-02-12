@@ -33,6 +33,8 @@ required_integration_finality_markers=(
   "--integration-runtime-commit-finality-max-seconds"
   "--integration-runtime-commit-finality-output-file"
   "--integration-runtime-commit-live-policy-report"
+  "--rollback-evidence-file"
+  "--recovery-evidence-file"
 )
 for marker in "${required_integration_finality_markers[@]}"; do
   if ! grep -q -- "$marker" "$ROOT_DIR/scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh"; then
@@ -73,6 +75,7 @@ required_coverage_markers=(
   "Regression: #1494"
   "Regression: #1973"
   "Regression: #2104"
+  "Regression: #2107"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then
@@ -101,6 +104,16 @@ if ! grep -q -- "--integration-runtime-commit-live-policy-report" "$DOC_FILE"; t
   exit 1
 fi
 
+if ! grep -q -- "--rollback-evidence-file" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to document process lifecycle rollback evidence option" >&2
+  exit 1
+fi
+
+if ! grep -q -- "--recovery-evidence-file" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to document process lifecycle recovery evidence option" >&2
+  exit 1
+fi
+
 if ! grep -q "check_local_kolme_fork_process_lifecycle_policy.py" "$README_FILE"; then
   echo "expected README to reference local fork process lifecycle policy checker" >&2
   exit 1
@@ -121,8 +134,23 @@ if ! grep -q -- "--integration-runtime-commit-live-policy-report" "$README_FILE"
   exit 1
 fi
 
+if ! grep -q -- "--rollback-evidence-file" "$README_FILE"; then
+  echo "expected README to document process lifecycle rollback evidence option" >&2
+  exit 1
+fi
+
+if ! grep -q -- "--recovery-evidence-file" "$README_FILE"; then
+  echo "expected README to document process lifecycle recovery evidence option" >&2
+  exit 1
+fi
+
 if ! grep -q "Regression: #2104" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to include process lifecycle runtime policy pass-through regression marker" >&2
+  exit 1
+fi
+
+if ! grep -q "Regression: #2107" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include process lifecycle rollback/recovery linkage regression marker" >&2
   exit 1
 fi
 
@@ -158,7 +186,9 @@ TMP_DIRECT_PROCESS_OUTPUT="$(mktemp)"
 TMP_DIRECT_INTEGRATION_REPORT="$(mktemp)"
 TMP_DIRECT_FINALITY_OUTPUT="$(mktemp)"
 TMP_DIRECT_RUNTIME_POLICY_REPORT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_PROCESS_OUTPUT" "$TMP_DIRECT_INTEGRATION_REPORT" "$TMP_DIRECT_FINALITY_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY_REPORT"' EXIT
+TMP_DIRECT_ROLLBACK_EVIDENCE_FILE="$(mktemp)"
+TMP_DIRECT_RECOVERY_EVIDENCE_FILE="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_PROCESS_OUTPUT" "$TMP_DIRECT_INTEGRATION_REPORT" "$TMP_DIRECT_FINALITY_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY_REPORT" "$TMP_DIRECT_ROLLBACK_EVIDENCE_FILE" "$TMP_DIRECT_RECOVERY_EVIDENCE_FILE"' EXIT
 
 bash "$ROOT_DIR/scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh" \
   --mode dry-run \
@@ -166,11 +196,13 @@ bash "$ROOT_DIR/scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh" \
   --integration-runtime-commit-finality-max-seconds 11 \
   --integration-runtime-commit-finality-output-file "$TMP_DIRECT_FINALITY_OUTPUT" \
   --integration-runtime-commit-live-policy-report "$TMP_DIRECT_RUNTIME_POLICY_REPORT" \
+  --rollback-evidence-file "$TMP_DIRECT_ROLLBACK_EVIDENCE_FILE" \
+  --recovery-evidence-file "$TMP_DIRECT_RECOVERY_EVIDENCE_FILE" \
   --process-output-file "$TMP_DIRECT_PROCESS_OUTPUT" \
   --integration-report "$TMP_DIRECT_INTEGRATION_REPORT" \
   --output-json "$TMP_DIRECT_SUMMARY" >/dev/null
 
-python3 - "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_FINALITY_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY_REPORT" <<'PY'
+python3 - "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_FINALITY_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY_REPORT" "$TMP_DIRECT_ROLLBACK_EVIDENCE_FILE" "$TMP_DIRECT_RECOVERY_EVIDENCE_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -203,6 +235,20 @@ if summary.get("integration_runtime_commit_live_policy_report") != str(runtime_p
     raise SystemExit("expected summary to expose runtime policy report path")
 if str(runtime_policy_report_path) not in summary.get("artifact_paths", []):
     raise SystemExit("expected process lifecycle summary artifact paths to include runtime policy report path")
+rollback_evidence_path = pathlib.Path(sys.argv[4]).resolve()
+recovery_evidence_path = pathlib.Path(sys.argv[5]).resolve()
+if summary.get("rollback_evidence_file") != str(rollback_evidence_path):
+    raise SystemExit("expected summary to expose rollback evidence file path")
+if summary.get("recovery_evidence_file") != str(recovery_evidence_path):
+    raise SystemExit("expected summary to expose recovery evidence file path")
+if summary.get("rollback_evidence_status") != "planned":
+    raise SystemExit("expected dry-run rollback evidence status to be planned")
+if summary.get("recovery_evidence_status") != "planned":
+    raise SystemExit("expected dry-run recovery evidence status to be planned")
+if str(rollback_evidence_path) not in summary.get("artifact_paths", []):
+    raise SystemExit("expected process lifecycle summary artifact paths to include rollback evidence file path")
+if str(recovery_evidence_path) not in summary.get("artifact_paths", []):
+    raise SystemExit("expected process lifecycle summary artifact paths to include recovery evidence file path")
 PY
 
 echo "local fork process lifecycle contract lane tests passed."
