@@ -1,71 +1,111 @@
+//! Audit export contracts for compliance and operator evidence workflows.
+
 use crate::AgentDid;
 use std::collections::BTreeSet;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// Domain namespace for an auditable event record.
 pub enum AuditDomain {
+    /// Message lifecycle and delivery events.
     Messages,
+    /// Task lifecycle and assignment events.
     Tasks,
+    /// Escrow state and settlement events.
     Escrows,
+    /// Reputation signal and score mutation events.
     Reputation,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Canonical audit event record captured for export bundles.
 pub struct AuditEventRecord {
+    /// Logical domain this event belongs to.
     pub domain: AuditDomain,
+    /// Stable event identifier in the source domain.
     pub event_id: String,
+    /// Event timestamp in canonical UTC string form.
     pub occurred_at: String,
+    /// DID of the actor that caused the event.
     pub actor: String,
+    /// Action label describing the event mutation.
     pub action: String,
+    /// Digest of the payload associated with this event.
     pub payload_digest: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// Export wire format for rendered audit bundles.
 pub enum AuditExportFormat {
+    /// Single JSON object bundle.
     Json,
+    /// JSON Lines stream format.
     JsonLines,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// Filter constraints applied during audit export selection.
 pub struct AuditExportFilter {
+    /// Optional domain allowlist. Empty means all domains.
     pub domains: BTreeSet<AuditDomain>,
+    /// Optional actor DID allowlist. Empty means all actors.
     pub actor_allowlist: BTreeSet<String>,
+    /// Optional lower-bound timestamp (inclusive).
     pub from_inclusive: Option<String>,
+    /// Optional upper-bound timestamp (inclusive).
     pub to_inclusive: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Request payload used to materialize an audit export bundle.
 pub struct AuditExportRequest {
+    /// Stable identifier for the export request.
     pub request_id: String,
+    /// DID requesting the export.
     pub requested_by: String,
+    /// Request timestamp in canonical UTC string form.
     pub requested_at: String,
+    /// Desired export output format.
     pub format: AuditExportFormat,
+    /// Selection filter for records included in the bundle.
     pub filter: AuditExportFilter,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Manifest metadata emitted with every audit export bundle.
 pub struct AuditExportManifest {
+    /// Identifier of the originating request.
     pub request_id: String,
+    /// DID that requested the export.
     pub requested_by: String,
+    /// Timestamp when the export was produced.
     pub exported_at: String,
+    /// Format used to render this bundle.
     pub format: AuditExportFormat,
+    /// Number of records included in the bundle.
     pub record_count: usize,
+    /// Deterministic integrity digest across exported records.
     pub integrity_hash: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Full audit export payload including records and manifest metadata.
 pub struct AuditExportBundle {
+    /// Exported audit records after filter application.
     pub records: Vec<AuditEventRecord>,
+    /// Bundle manifest metadata and integrity digest.
     pub manifest: AuditExportManifest,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// In-memory audit export engine with exporter authorization controls.
 pub struct AuditExportEngine {
     authorized_exporters: BTreeSet<String>,
     events: Vec<AuditEventRecord>,
 }
 
 impl AuditExportEngine {
+    /// Builds an export engine from an authorized exporter DID set.
     pub fn new(authorized_exporters: Vec<String>) -> Result<Self, AuditExportError> {
         if authorized_exporters.is_empty() {
             return Err(AuditExportError::EmptyAuthorizedExporters);
@@ -83,6 +123,7 @@ impl AuditExportEngine {
         })
     }
 
+    /// Ingests and validates a new audit record into the export store.
     pub fn ingest_event(&mut self, event: AuditEventRecord) -> Result<(), AuditExportError> {
         validate_non_empty("event_id", &event.event_id)?;
         validate_non_empty("occurred_at", &event.occurred_at)?;
@@ -93,6 +134,7 @@ impl AuditExportEngine {
         Ok(())
     }
 
+    /// Exports a filtered bundle for an authorized requestor DID.
     pub fn export(
         &self,
         request: &AuditExportRequest,
@@ -153,11 +195,22 @@ impl AuditExportEngine {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Error taxonomy for audit export validation and authorization failures.
 pub enum AuditExportError {
+    /// Engine constructor received an empty exporter allowlist.
     EmptyAuthorizedExporters,
+    /// A required field was empty after trimming.
     EmptyField(&'static str),
+    /// A DID field failed syntactic validation.
     InvalidDid(String),
-    InvalidTimeWindow { from: String, to: String },
+    /// Time window lower-bound is later than the upper-bound.
+    InvalidTimeWindow {
+        /// Inclusive lower-bound supplied by the request.
+        from: String,
+        /// Inclusive upper-bound supplied by the request.
+        to: String,
+    },
+    /// Request DID is not authorized to export audit data.
     UnauthorizedExporter(String),
 }
 
