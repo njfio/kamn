@@ -229,6 +229,20 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=total_shell_loc_delta_threshold_exceeded`
       - `reason_codes=lane_shell_loc_increase_violation`
     - Regression: #2119
+  - Kolme wave-8 wrapper-family trend guard stays on PR fast gate:
+    - `bash scripts/ci/test_check_kolme_wave8_wrapper_family_budget_trend.sh`
+    - threshold policy file:
+      - `fixtures/ci/kolme_wave8_wrapper_family_trend_thresholds.json`
+    - trend-policy command:
+      - `bash scripts/ci/check_kolme_wave8_wrapper_family_budget_trend.sh --matrix-file fixtures/ci/kolme_wave8_wrapper_family_matrix.json --baseline-file fixtures/ci/kolme_wave8_wrapper_family_baseline.json --output-json /tmp/kolme-wave8-wrapper-family-trend-report.json`
+    - fails closed on wrapper-count/shell-LOC growth and stale lane-inventory baseline drift.
+    - deterministic reason-code surface is emitted for automation:
+      - `reason_codes=none` (pass)
+      - `reason_codes=wrapper_count_delta_threshold_exceeded`
+      - `reason_codes=total_shell_loc_delta_threshold_exceeded`
+      - `reason_codes=lane_shell_loc_increase_violation`
+      - `reason_codes=unexpected_new_lanes_in_current_inventory`
+    - Regression: #2217
   - shared dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh`
     - enforces that all migrated `run_*contract_lane.sh` wrappers dispatch through:
