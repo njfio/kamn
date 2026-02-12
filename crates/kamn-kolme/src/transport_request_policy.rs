@@ -32,6 +32,11 @@ pub fn is_valid_transport_idempotency_key_input(idempotency_key: &str) -> bool {
     !idempotency_key.trim().is_empty()
 }
 
+/// Normalizes transport idempotency-key input for deterministic header rendering.
+pub fn normalize_transport_idempotency_key_input(idempotency_key: &str) -> &str {
+    idempotency_key.trim()
+}
+
 /// Returns whether wire-payload input is non-empty after trimming.
 pub fn is_valid_transport_wire_payload_input(wire_payload: &str) -> bool {
     !wire_payload.trim().is_empty()

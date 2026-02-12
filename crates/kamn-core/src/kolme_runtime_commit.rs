@@ -51,6 +51,7 @@ use kamn_kolme::{
     normalize_broadcast_submit_path_input as normalize_kolme_broadcast_submit_path_input_contract,
     normalize_runtime_commit_request_fields as normalize_kolme_runtime_commit_request_fields_contract,
     normalize_runtime_commit_signed_envelope_fields as normalize_kolme_runtime_commit_signed_envelope_fields_contract,
+    normalize_transport_idempotency_key_input as normalize_kolme_transport_idempotency_key_input_contract,
     notification_event_to_provider_receipt as notification_event_to_kolme_provider_receipt_contract,
     parse_authorization_header_value as parse_kolme_authorization_header_value,
     parse_http_endpoint as parse_kolme_http_endpoint,
@@ -910,7 +911,8 @@ impl KolmeRuntimeCommitHttpTransport {
                 reason: "idempotency_key must not be empty".to_owned(),
             });
         }
-        let idempotency_key = idempotency_key.trim();
+        let idempotency_key =
+            normalize_kolme_transport_idempotency_key_input_contract(idempotency_key);
         let submit_path = normalize_kolme_broadcast_submit_path_input_contract(submit_path);
         let payload = request.to_json_payload();
         let response = self.execute_request(
