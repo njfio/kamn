@@ -3,6 +3,7 @@ const RUNTIME_BLOCK_FALLBACK_RECONCILER_SRC: &str =
     include_str!("../src/kolme_runtime_commit/block_fallback_reconciler.rs");
 const RUNTIME_ADAPTER_BACKED_CLIENT_SRC: &str =
     include_str!("../src/kolme_runtime_commit/adapter_backed_client.rs");
+const RUNTIME_API_CODEC_SRC: &str = include_str!("../src/kolme_runtime_commit/api_codec.rs");
 const RUNTIME_HTTP_TRANSPORT_SRC: &str =
     include_str!("../src/kolme_runtime_commit/http_transport.rs");
 const RUNTIME_LIVE_PROVIDER_SRC: &str =
@@ -74,6 +75,10 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct AdapterBackedKolmeRuntimeCommitClient"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitLiveProvider"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitHttpTransport"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeApiNextNonceRequest"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeApiNextNonceResponse"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeApiBroadcastRequest"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeApiBroadcastResponse"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitFinalityChecker"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitForkFinalityResolver"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitNotificationsConsumer"));
@@ -233,8 +238,8 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
         .contains("validate_kolme_provider_receipt_identity_contract("));
     assert!(RUNTIME_ADAPTER_BACKED_CLIENT_SRC
         .contains("require_kolme_final_receipt_finality_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("KamnKolmeApiNextNonceRequest::new("));
-    assert!(RUNTIME_COMMIT_SRC.contains("KamnKolmeApiBroadcastResponse::parse_json("));
+    assert!(RUNTIME_API_CODEC_SRC.contains("KamnKolmeApiNextNonceRequest::new("));
+    assert!(RUNTIME_API_CODEC_SRC.contains("KamnKolmeApiBroadcastResponse::parse_json("));
     assert!(
         RUNTIME_ADAPTER_BACKED_CLIENT_SRC.contains("KolmeRuntimeCommitTransportErrorKind::Timeout")
     );
@@ -275,6 +280,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("impl From<KamnKolmeTransportIoClassification>"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod runtime_pipeline;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod in_memory_client;"));
+    assert!(RUNTIME_COMMIT_SRC.contains("mod api_codec;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod adapter_backed_client;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod http_transport;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod block_fallback_reconciler;"));
@@ -289,6 +295,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     );
     assert!(RUNTIME_COMMIT_SRC
         .contains("pub use notifications_consumer::KolmeRuntimeCommitNotificationsConsumer;"));
+    assert!(RUNTIME_COMMIT_SRC.contains("pub use api_codec::{"));
     assert!(RUNTIME_COMMIT_SRC
         .contains("pub use adapter_backed_client::AdapterBackedKolmeRuntimeCommitClient;"));
     assert!(RUNTIME_COMMIT_SRC.contains("pub use http_transport::KolmeRuntimeCommitHttpTransport;"));
