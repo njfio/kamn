@@ -63,6 +63,7 @@ use kamn_kolme::{
     project_failed_block_txhash_receipt as project_kolme_failed_block_txhash_receipt_contract,
     project_finalized_block_txhash_receipt as project_kolme_finalized_block_txhash_receipt_contract,
     render_block_path as render_kolme_block_path,
+    render_runtime_commit_wire_payload as render_kolme_runtime_commit_wire_payload_contract,
     require_commit_id_matches_expected_txhash as require_kolme_commit_id_matches_expected_txhash_contract,
     require_final_receipt_finality as require_kolme_final_receipt_finality_contract,
     resolve_lookup_upper_bound as resolve_kolme_lookup_upper_bound,
@@ -155,14 +156,13 @@ impl KolmeRuntimeCommitRequest {
 
     /// Returns deterministic request payload in canonical field order.
     pub fn to_wire_payload(&self) -> String {
-        format!(
-            "operation_id={}\nstate_root={}\nactor_did={}\nnonce={}\npayload_hash={}\nidempotency_key={}\n",
-            self.operation_id,
-            self.state_root,
+        render_kolme_runtime_commit_wire_payload_contract(
+            self.operation_id.as_str(),
+            self.state_root.as_str(),
             self.actor_did.as_str(),
             self.nonce,
-            self.payload_hash,
-            self.idempotency_key
+            self.payload_hash.as_str(),
+            self.idempotency_key.as_str(),
         )
     }
 

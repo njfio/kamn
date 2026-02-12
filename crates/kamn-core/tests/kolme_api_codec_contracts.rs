@@ -162,6 +162,24 @@ fn functional_runtime_commit_signed_translation_emits_canonical_signed_envelope(
 }
 
 #[test]
+fn regression_issue_1906_runtime_commit_wire_payload_order_remains_canonical() {
+    // Regression: #1906
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-1506-d",
+        "state:1506",
+        "kamn:did:agent:codec-1506-d",
+        14,
+        "payload:1506-d",
+    )
+    .expect("request should build");
+
+    assert_eq!(
+        request.to_wire_payload(),
+        "operation_id=op-1506-d\nstate_root=state:1506\nactor_did=kamn:did:agent:codec-1506-d\nnonce=14\npayload_hash=payload:1506-d\nidempotency_key=kolme-runtime-commit:op-1506-d:state:1506:kamn:did:agent:codec-1506-d:14:14\n"
+    );
+}
+
+#[test]
 fn regression_issue_1904_runtime_commit_signed_translation_trims_outer_whitespace() {
     // Regression: #1904
     let request = KolmeRuntimeCommitRequest::deterministic(

@@ -18,6 +18,21 @@ pub fn deterministic_runtime_commit_idempotency_key(
     )
 }
 
+/// Renders runtime commit wire payload in canonical field order.
+pub fn render_runtime_commit_wire_payload(
+    operation_id: &str,
+    state_root: &str,
+    actor_did: &str,
+    nonce: u64,
+    payload_hash: &str,
+    idempotency_key: &str,
+) -> String {
+    format!(
+        "operation_id={}\nstate_root={}\nactor_did={}\nnonce={}\npayload_hash={}\nidempotency_key={}\n",
+        operation_id, state_root, actor_did, nonce, payload_hash, idempotency_key
+    )
+}
+
 /// Renders deterministic runtime commit identifier from request fields.
 pub fn deterministic_runtime_commit_id(
     operation_id: &str,
@@ -97,6 +112,7 @@ mod tests {
         is_valid_runtime_commit_id_request, is_valid_runtime_nonce_input,
         is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
         is_valid_runtime_state_root_input, normalize_runtime_commit_signed_envelope_fields,
+        render_runtime_commit_wire_payload,
     };
 
     #[test]
@@ -186,6 +202,22 @@ mod tests {
                 "canonical-payload".to_owned(),
                 "signature-hex".to_owned(),
             )
+        );
+    }
+
+    #[test]
+    fn unit_renders_runtime_commit_wire_payload_contract() {
+        let payload = render_runtime_commit_wire_payload(
+            "op-11",
+            "state:gamma",
+            "did:kamn:agent:gamma",
+            4,
+            "payload:gamma",
+            "idempotency:gamma",
+        );
+        assert_eq!(
+            payload,
+            "operation_id=op-11\nstate_root=state:gamma\nactor_did=did:kamn:agent:gamma\nnonce=4\npayload_hash=payload:gamma\nidempotency_key=idempotency:gamma\n"
         );
     }
 }
