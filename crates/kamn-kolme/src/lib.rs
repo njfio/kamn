@@ -48,9 +48,10 @@ pub use broadcast_payload_policy::{normalize_broadcast_payload, KolmeBroadcastPa
 pub use codec::{KolmeCodecError, KolmeWireCodec, PassthroughCodec};
 pub use endpoint_policy::{
     compose_finality_status_path, compose_notifications_websocket_url,
-    is_valid_finality_base_url_input, is_valid_finality_status_path_input, parse_http_endpoint,
-    parse_websocket_endpoint, KolmeEndpointPolicyError, KolmeHttpScheme, KolmeParsedHttpEndpoint,
-    KolmeParsedWebsocketEndpoint,
+    is_valid_finality_base_url_input, is_valid_finality_status_path_input,
+    is_valid_live_provider_base_url_input, is_valid_live_provider_submit_path_input,
+    parse_http_endpoint, parse_websocket_endpoint, KolmeEndpointPolicyError, KolmeHttpScheme,
+    KolmeParsedHttpEndpoint, KolmeParsedWebsocketEndpoint,
 };
 pub use finality::{resolve_finality, FinalityResolution, FinalityState};
 pub use finality_receipt_policy::{

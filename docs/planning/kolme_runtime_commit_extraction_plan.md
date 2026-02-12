@@ -53,6 +53,7 @@ Out of scope:
 - #1866: extracted block-fallback constructor input guards to `kamn-kolme` (`is_valid_block_fallback_base_url_input` / `is_valid_block_fallback_provider_input` / `is_valid_block_fallback_lookup_budget`) and rewired `kamn-core` block-fallback constructor guard delegation.
 - #1868: extracted notifications consumer constructor guard contracts to `kamn-kolme` (`is_valid_notifications_provider_input` / `is_valid_notifications_reconnect_budget`) and rewired `kamn-core` notifications consumer guard delegation.
 - #1870: extracted websocket connector timeout guard contract to `kamn-kolme` (`is_valid_websocket_timeout_seconds`) and rewired `kamn-core` websocket connector constructor guard delegation.
+- #1872: extracted live provider constructor endpoint guard contracts to `kamn-kolme` (`is_valid_live_provider_base_url_input` / `is_valid_live_provider_submit_path_input`) and rewired `kamn-core` live provider constructor guard delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,

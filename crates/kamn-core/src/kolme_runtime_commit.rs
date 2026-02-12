@@ -20,6 +20,8 @@ use kamn_kolme::{
     is_valid_block_fallback_provider_input as is_kolme_valid_block_fallback_provider_input_contract,
     is_valid_finality_base_url_input as is_kolme_valid_finality_base_url_input_contract,
     is_valid_finality_status_path_input as is_kolme_valid_finality_status_path_input_contract,
+    is_valid_live_provider_base_url_input as is_kolme_valid_live_provider_base_url_input_contract,
+    is_valid_live_provider_submit_path_input as is_kolme_valid_live_provider_submit_path_input_contract,
     is_valid_notifications_provider_input as is_kolme_valid_notifications_provider_input_contract,
     is_valid_notifications_reconnect_budget as is_kolme_valid_notifications_reconnect_budget_contract,
     is_valid_poll_attempt_budget as is_kolme_valid_poll_attempt_budget_contract,
@@ -1749,13 +1751,13 @@ impl<T: KolmeRuntimeCommitProviderTransport> KolmeRuntimeCommitLiveProvider<T> {
         submit_path: &str,
         transport: T,
     ) -> Result<Self, KolmeRuntimeCommitError> {
-        if base_url.trim().is_empty() {
+        if !is_kolme_valid_live_provider_base_url_input_contract(base_url) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "provider_base_url",
                 reason: "must not be empty",
             });
         }
-        if submit_path.trim().is_empty() {
+        if !is_kolme_valid_live_provider_submit_path_input_contract(submit_path) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "provider_submit_path",
                 reason: "must not be empty",
