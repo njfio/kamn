@@ -83,6 +83,7 @@ Out of scope:
 - #1926: removed local notification parse wrapper glue from `kamn-core` by introducing direct `KamnKolmeNotificationEvent` -> `KolmeRuntimeCommitNotificationEvent` conversion and inlining delegated parse contract mapping in notifications consumer flow.
 - #1928: removed local TLS CA env wrapper glue from `kamn-core` by inlining delegated `resolve_tls_ca_file_env_result` contract mapping in HTTPS transport setup and deleting `configured_tls_ca_file` helper ownership.
 - #1930: removed local live-provider parse wrapper glue from `kamn-core` by introducing direct `KamnKolmeRuntimeProviderOutcome` -> `KolmeRuntimeCommitProviderOutcome` conversion and inlining delegated parse mapping in live-provider submission flow.
+- #1932: removed local lifecycle-record helper glue from `kamn-core` by inlining deterministic lifecycle-record construction in runtime pipeline submit path and deleting `lifecycle_record_from_outcome` helper ownership.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,

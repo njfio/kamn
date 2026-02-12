@@ -547,7 +547,30 @@ impl RuntimeCommitPipeline {
         request: KolmeRuntimeCommitRequest,
     ) -> Result<RuntimeCommitLifecycleRecord, KolmeRuntimeCommitError> {
         let outcome = client.submit_commit(&request)?;
-        let record = lifecycle_record_from_outcome(&request, &outcome);
+        let record = match &outcome {
+            KolmeRuntimeCommitOutcome::Submitted(receipt)
+            | KolmeRuntimeCommitOutcome::Duplicate(receipt) => {
+                let state = lifecycle_state_for_finality_contract(receipt.finality);
+                RuntimeCommitLifecycleRecord {
+                    operation_id: request.operation_id.clone(),
+                    idempotency_key: request.idempotency_key().to_owned(),
+                    state,
+                    needs_requeue: matches!(state, RuntimeCommitLifecycleState::Pending),
+                    receipt_provider: Some(receipt.provider.clone()),
+                    receipt_commit_id: Some(receipt.commit_id.clone()),
+                    last_error_reason: None,
+                }
+            }
+            KolmeRuntimeCommitOutcome::Rejected { reason } => RuntimeCommitLifecycleRecord {
+                operation_id: request.operation_id.clone(),
+                idempotency_key: request.idempotency_key().to_owned(),
+                state: RuntimeCommitLifecycleState::Failed,
+                needs_requeue: false,
+                receipt_provider: None,
+                receipt_commit_id: None,
+                last_error_reason: Some(reason.clone()),
+            },
+        };
         self.records_by_operation_id
             .insert(request.operation_id.clone(), record.clone());
         Ok(record)
@@ -2251,36 +2274,6 @@ impl fmt::Display for KolmeRuntimeCommitError {
 }
 
 impl std::error::Error for KolmeRuntimeCommitError {}
-
-fn lifecycle_record_from_outcome(
-    request: &KolmeRuntimeCommitRequest,
-    outcome: &KolmeRuntimeCommitOutcome,
-) -> RuntimeCommitLifecycleRecord {
-    match outcome {
-        KolmeRuntimeCommitOutcome::Submitted(receipt)
-        | KolmeRuntimeCommitOutcome::Duplicate(receipt) => {
-            let state = lifecycle_state_for_finality_contract(receipt.finality);
-            RuntimeCommitLifecycleRecord {
-                operation_id: request.operation_id.clone(),
-                idempotency_key: request.idempotency_key().to_owned(),
-                state,
-                needs_requeue: matches!(state, RuntimeCommitLifecycleState::Pending),
-                receipt_provider: Some(receipt.provider.clone()),
-                receipt_commit_id: Some(receipt.commit_id.clone()),
-                last_error_reason: None,
-            }
-        }
-        KolmeRuntimeCommitOutcome::Rejected { reason } => RuntimeCommitLifecycleRecord {
-            operation_id: request.operation_id.clone(),
-            idempotency_key: request.idempotency_key().to_owned(),
-            state: RuntimeCommitLifecycleState::Failed,
-            needs_requeue: false,
-            receipt_provider: None,
-            receipt_commit_id: None,
-            last_error_reason: Some(reason.clone()),
-        },
-    }
-}
 
 #[cfg(test)]
 mod tests {
