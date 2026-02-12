@@ -37,6 +37,45 @@ SIGNER_KEY_REF_ENV_BY_PROFILE = {
 NATIVE_PAYLOAD_PUBKEY_MARKER = "pubkey"
 NATIVE_PAYLOAD_NONCE_MARKER = "nonce"
 NATIVE_PAYLOAD_MESSAGES_MARKER = "messages"
+RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION = "kamn.kolme.runtime-signer-attestation.v1"
+
+
+def evaluate_runtime_signer_attestation_bundle(
+    attestation_bundle: object, runtime_signer_profile: object
+) -> list[str]:
+    reason_codes: list[str] = []
+    if not isinstance(attestation_bundle, dict):
+        return ["runtime_signer_attestation_bundle_missing"]
+
+    if attestation_bundle.get("schema_version") != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
+        reason_codes.append("runtime_signer_attestation_schema_invalid")
+
+    required_approvals = attestation_bundle.get("required_approvals")
+    if not isinstance(required_approvals, int) or required_approvals <= 0:
+        reason_codes.append("runtime_signer_attestation_required_approvals_invalid")
+
+    approved_signers = attestation_bundle.get("approved_signers")
+    normalized_signers: list[str] = []
+    if not isinstance(approved_signers, list) or not approved_signers:
+        reason_codes.append("runtime_signer_attestation_approved_signers_invalid")
+    else:
+        for entry in approved_signers:
+            if not isinstance(entry, str) or not entry.strip():
+                reason_codes.append("runtime_signer_attestation_approved_signers_invalid")
+                break
+            normalized_signers.append(entry.strip())
+        if len(set(normalized_signers)) != len(normalized_signers):
+            reason_codes.append("runtime_signer_attestation_approved_signers_not_unique")
+        if isinstance(required_approvals, int) and len(normalized_signers) < required_approvals:
+            reason_codes.append("runtime_signer_attestation_quorum_shortfall")
+        if (
+            isinstance(runtime_signer_profile, str)
+            and runtime_signer_profile.strip()
+            and runtime_signer_profile not in normalized_signers
+        ):
+            reason_codes.append("runtime_signer_attestation_profile_not_approved")
+
+    return reason_codes
 
 
 def parse_args() -> argparse.Namespace:
@@ -215,6 +254,22 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif expected_signer_key_source == "managed-external" and runtime_signer_raw_private_key_present:
         reason_codes.append("runtime_signer_managed_external_raw_private_key_present_violation")
 
+    runtime_signer_attestation_schema_version = report.get("runtime_signer_attestation_schema_version")
+    if (
+        not isinstance(runtime_signer_attestation_schema_version, str)
+        or not runtime_signer_attestation_schema_version.strip()
+    ):
+        reason_codes.append("runtime_signer_attestation_schema_version_missing")
+    elif runtime_signer_attestation_schema_version != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
+        reason_codes.append("runtime_signer_attestation_schema_version_mismatch")
+
+    reason_codes.extend(
+        evaluate_runtime_signer_attestation_bundle(
+            report.get("runtime_signer_attestation_bundle"),
+            runtime_signer_profile,
+        )
+    )
+
     runtime_commit_command_profile = report.get("runtime_commit_command_profile")
     if not isinstance(runtime_commit_command_profile, str) or not runtime_commit_command_profile.strip():
         reason_codes.append("runtime_commit_command_profile_missing")
@@ -322,6 +377,16 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_signer_fallback_private_key_allowed_contract_mismatch")
         if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
             reason_codes.append("runtime_signer_managed_external_raw_private_key_allowed_contract_mismatch")
+        if contracts.get("runtime_signer_attestation_schema_version") != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
+            reason_codes.append("runtime_signer_attestation_schema_version_contract_mismatch")
+        if contracts.get("runtime_signer_attestation_signer_uniqueness_required") is not True:
+            reason_codes.append("runtime_signer_attestation_signer_uniqueness_required_contract_mismatch")
+        if contracts.get("runtime_signer_attestation_threshold_required") is not True:
+            reason_codes.append("runtime_signer_attestation_threshold_required_contract_mismatch")
+        if contracts.get("runtime_signer_attestation_profile_membership_required") is not True:
+            reason_codes.append("runtime_signer_attestation_profile_membership_required_contract_mismatch")
+        if contracts.get("runtime_signer_attestation_required_approvals") != 1:
+            reason_codes.append("runtime_signer_attestation_required_approvals_contract_mismatch")
         if contracts.get("runtime_signer_failover_requires_profile_change") is not True:
             reason_codes.append("runtime_signer_failover_requires_profile_change_contract_mismatch")
         if contracts.get("runtime_signer_rotation_epoch_must_increase_on_failover") is not True:

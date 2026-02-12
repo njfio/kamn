@@ -12,6 +12,8 @@ TMP_REPORT_OK="$TMP_DIR/ok-report.json"
 TMP_REPORT_OK_SECONDARY="$TMP_DIR/ok-report-secondary.json"
 TMP_REPORT_OK_MANAGED="$TMP_DIR/ok-report-managed.json"
 TMP_REPORT_KEY_SOURCE_PAIR_BAD="$TMP_DIR/key-source-pair-bad-report.json"
+TMP_REPORT_ATTESTATION_DUPLICATE="$TMP_DIR/attestation-duplicate-report.json"
+TMP_REPORT_ATTESTATION_QUORUM_SHORTFALL="$TMP_DIR/attestation-quorum-shortfall-report.json"
 TMP_REPORT_BAD="$TMP_DIR/bad-report.json"
 TMP_REPORT_SYNTHETIC="$TMP_DIR/synthetic-report.json"
 TMP_REPORT_INMEMORY="$TMP_DIR/inmemory-report.json"
@@ -77,6 +79,16 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
   "runtime_signer_fallback_private_key_present": false,
   "runtime_signer_raw_private_key_present": false,
+  "runtime_signer_attestation_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
+  "runtime_signer_attestation_bundle": {
+    "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
+    "required_approvals": 1,
+    "approved_signers": [
+      "ops-primary"
+    ],
+    "signer_profile": "ops-primary",
+    "signer_key_source": "env-local"
+  },
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_command_profile_version": "v1",
@@ -106,6 +118,11 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
     "runtime_signer_fallback_private_key_allowed": false,
     "runtime_signer_managed_external_raw_private_key_allowed": false,
+    "runtime_signer_attestation_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
+    "runtime_signer_attestation_signer_uniqueness_required": true,
+    "runtime_signer_attestation_threshold_required": true,
+    "runtime_signer_attestation_profile_membership_required": true,
+    "runtime_signer_attestation_required_approvals": 1,
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
     "runtime_commit_finality_primary_endpoint": "/notifications",
@@ -209,6 +226,10 @@ report["runtime_commit_command"] = str(report["runtime_commit_command"]).replace
     "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary",
     "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary",
 )
+attestation_bundle = report.get("runtime_signer_attestation_bundle", {})
+if isinstance(attestation_bundle, dict):
+    attestation_bundle["approved_signers"] = ["ops-secondary"]
+    attestation_bundle["signer_profile"] = "ops-secondary"
 contracts = report.get("contracts", {})
 if isinstance(contracts, dict):
     contracts["runtime_signer_profile"] = "ops-secondary"
@@ -299,6 +320,73 @@ fi
 
 if ! grep -q "runtime_signer_key_source_profile_pair_disallowed" "$TMP_ERR"; then
   echo "expected disallowed key-source/profile pair reason for policy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_ATTESTATION_DUPLICATE" "$TMP_REPORT_ATTESTATION_QUORUM_SHORTFALL" <<'PY'
+import json
+import pathlib
+import sys
+
+base_report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+
+duplicate_report = dict(base_report)
+duplicate_bundle = dict(duplicate_report.get("runtime_signer_attestation_bundle", {}))
+duplicate_bundle["approved_signers"] = ["ops-primary", "ops-primary"]
+duplicate_report["runtime_signer_attestation_bundle"] = duplicate_bundle
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(duplicate_report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+
+quorum_shortfall_report = dict(base_report)
+quorum_shortfall_bundle = dict(quorum_shortfall_report.get("runtime_signer_attestation_bundle", {}))
+quorum_shortfall_bundle["required_approvals"] = 2
+quorum_shortfall_bundle["approved_signers"] = ["ops-primary"]
+quorum_shortfall_report["runtime_signer_attestation_bundle"] = quorum_shortfall_bundle
+pathlib.Path(sys.argv[3]).write_text(
+    json.dumps(quorum_shortfall_report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_ATTESTATION_DUPLICATE" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+attestation_duplicate_exit_code=$?
+set -e
+
+if [ "$attestation_duplicate_exit_code" -eq 0 ]; then
+  echo "expected duplicate attestation signer proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_attestation_approved_signers_not_unique" "$TMP_ERR"; then
+  echo "expected duplicate attestation signer reason for policy failure" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_ATTESTATION_QUORUM_SHORTFALL" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+attestation_quorum_shortfall_exit_code=$?
+set -e
+
+if [ "$attestation_quorum_shortfall_exit_code" -eq 0 ]; then
+  echo "expected attestation quorum shortfall proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_attestation_quorum_shortfall" "$TMP_ERR"; then
+  echo "expected attestation quorum shortfall reason for policy failure" >&2
   exit 1
 fi
 

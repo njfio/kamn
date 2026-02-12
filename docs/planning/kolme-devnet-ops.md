@@ -516,6 +516,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
     - `runtime_signer_fallback_private_key_present=false`
     - `runtime_signer_raw_private_key_present=false`
+    - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
+    - `runtime_signer_attestation_bundle`
     - `contracts.runtime_signer_failover_requires_profile_change=true`
     - `contracts.runtime_signer_rotation_epoch_must_increase_on_failover=true`
     - `contracts.runtime_signer_fallback_private_key_allowed=false`
@@ -541,6 +543,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - real-node profile checker fails closed on in-memory provider references in command/policy surfaces:
     - `runtime_commit_in_memory_provider_reference_detected`
     - `runtime_commit_policy_check_in_memory_provider_reference_detected`
+  - real-node signer-attestation checker fails closed on malformed attestations:
+    - `runtime_signer_attestation_approved_signers_not_unique`
+    - `runtime_signer_attestation_quorum_shortfall`
   - integration summary emits `ci_fast_gate_eligible=false` with `contracts.ci_fast_gate_scope=local-only` for explicit PR-fast-gate exclusion enforcement.
   - explicit runtime-commit submit-profile probe over `PUT /broadcast` with fail-closed reason codes.
   - signed runtime-commit envelope translation enforces `signer_key_id` presence and canonical message/signature binding before broadcast normalization.
@@ -551,6 +556,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - local KAMN live runtime integration run-mode execution remains excluded from PR fast-gate workflow routing.
   - fallback signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2302`).
   - managed-external raw signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2324`).
+  - runtime signer-attestation schema + quorum/uniqueness policy checks remain fail-closed across runtime launch + policy/contract lanes (`Regression: #2325`).
   - real-node profile policy + contract lane docs parity markers remain fail-closed (`Regression: #2139`).
 
 ## Local Kolme Live Deployment Preflight Lane (Issue #2225)

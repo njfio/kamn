@@ -77,12 +77,16 @@ required_coverage_markers=(
   "runtime_signer_profile=ops-secondary"
   "runtime_signer_key_source_contract_version"
   "runtime_signer_key_source"
+  "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1"
+  "runtime_signer_attestation_bundle"
   "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF"
   "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
   "runtime_signer_fallback_private_key_present=false"
   "runtime_signer_raw_private_key_present=false"
   "runtime_signer_fallback_private_key_present_violation"
   "runtime_signer_managed_external_raw_private_key_present_violation"
+  "runtime_signer_attestation_approved_signers_not_unique"
+  "runtime_signer_attestation_quorum_shortfall"
   "runtime_signer_key_source_profile_pair_disallowed"
   "runtime_signer_private_key_env_mismatch"
   "runtime_commit_command_profile_mismatch"
@@ -92,6 +96,7 @@ required_coverage_markers=(
   "runtime_commit_non_synthetic_submit_probe_missing"
   "runtime_commit_in_memory_provider_reference_detected"
   "Regression: #2302"
+  "Regression: #2325"
   "Regression: #2324"
   "Regression: #2139"
 )
@@ -131,6 +136,14 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
     echo "expected docs parity to include signer key-source marker in $docs_file" >&2
     exit 1
   fi
+  if ! grep -q "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1" "$docs_file"; then
+    echo "expected docs parity to include runtime signer attestation schema marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_attestation_bundle" "$docs_file"; then
+    echo "expected docs parity to include runtime signer attestation bundle marker in $docs_file" >&2
+    exit 1
+  fi
   if ! grep -q "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF" "$docs_file"; then
     echo "expected docs parity to include signer key reference env marker in $docs_file" >&2
     exit 1
@@ -155,6 +168,14 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
     echo "expected docs parity to include managed-external raw signer key violation marker in $docs_file" >&2
     exit 1
   fi
+  if ! grep -q "runtime_signer_attestation_approved_signers_not_unique" "$docs_file"; then
+    echo "expected docs parity to include runtime signer attestation duplicate-signer reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_attestation_quorum_shortfall" "$docs_file"; then
+    echo "expected docs parity to include runtime signer attestation quorum-shortfall reason marker in $docs_file" >&2
+    exit 1
+  fi
   if ! grep -q "runtime_signer_key_source_profile_pair_disallowed" "$docs_file"; then
     echo "expected docs parity to include signer key-source/profile pair disallowed reason marker in $docs_file" >&2
     exit 1
@@ -165,6 +186,10 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "Regression: #2302" "$docs_file"; then
     echo "expected docs parity to include fallback signer runtime regression marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "Regression: #2325" "$docs_file"; then
+    echo "expected docs parity to include runtime signer attestation regression marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "Regression: #2324" "$docs_file"; then
@@ -231,6 +256,17 @@ if summary.get("runtime_signer_fallback_private_key_present") is not False:
     raise SystemExit("expected fallback signer private key presence marker false in real-node profile contract-lane summary")
 if summary.get("runtime_signer_raw_private_key_present") is not False:
     raise SystemExit("expected runtime signer raw private key presence marker false in real-node profile contract-lane summary")
+if summary.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+    raise SystemExit("expected runtime signer attestation schema marker in real-node profile contract-lane summary")
+attestation_bundle = summary.get("runtime_signer_attestation_bundle")
+if not isinstance(attestation_bundle, dict):
+    raise SystemExit("expected runtime signer attestation bundle in real-node profile contract-lane summary")
+if attestation_bundle.get("schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+    raise SystemExit("expected runtime signer attestation bundle schema marker in real-node profile contract-lane summary")
+if attestation_bundle.get("required_approvals") != 1:
+    raise SystemExit("expected runtime signer attestation required approvals marker in real-node profile contract-lane summary")
+if attestation_bundle.get("approved_signers") != ["ops-primary"]:
+    raise SystemExit("expected runtime signer attestation approved signer marker in real-node profile contract-lane summary")
 checks = summary.get("checks", [])
 if not any(
     isinstance(check, dict)
@@ -264,6 +300,12 @@ if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
     raise SystemExit("expected contracts fallback signer private key allowed=false marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
     raise SystemExit("expected contracts managed-external raw private key allowed=false marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+    raise SystemExit("expected contracts runtime signer attestation schema marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_attestation_signer_uniqueness_required") is not True:
+    raise SystemExit("expected contracts runtime signer attestation signer-uniqueness requirement marker")
+if contracts.get("runtime_signer_attestation_threshold_required") is not True:
+    raise SystemExit("expected contracts runtime signer attestation threshold requirement marker")
 if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1":
     raise SystemExit("unexpected real-node profile contract-lane policy schema")
 if policy.get("final_decision") != "GO":

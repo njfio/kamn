@@ -48,6 +48,7 @@ RUNTIME_SIGNER_PRIVATE_KEY_ENV_PRIMARY="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
 RUNTIME_SIGNER_PRIVATE_KEY_ENV_SECONDARY="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
 RUNTIME_SIGNER_KEY_REF_ENV_PRIMARY="KAMN_KOLME_LIVE_SIGNER_KEY_REF"
 RUNTIME_SIGNER_KEY_REF_ENV_SECONDARY="KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY"
+RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION="kamn.kolme.runtime-signer-attestation.v1"
 
 if [ "${1:-}" != "--manifest-impl" ]; then
   exec bash "$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh" --lane-wrapper "$SCRIPT_NAME" -- "$@"
@@ -775,7 +776,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" "$runtime_commit_command_profile" "$runtime_commit_policy_command_profile" "$runtime_commit_command_profile_version" "$RUNTIME_SIGNER_PROFILE_SELECTOR_ENV" "$RUNTIME_SIGNER_PROFILE" "$RUNTIME_SIGNER_PREVIOUS_PROFILE" "$RUNTIME_SIGNER_FAILOVER_ACTIVE" "$RUNTIME_SIGNER_ROTATION_EPOCH" "$RUNTIME_SIGNER_PREVIOUS_ROTATION_EPOCH" "$RUNTIME_SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$RUNTIME_SIGNER_KEY_SOURCE" "$RUNTIME_SIGNER_PRIVATE_KEY_ENV" "$RUNTIME_SIGNER_KEY_REF_ENV" "$RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV" "$runtime_signer_fallback_private_key_present" "$runtime_signer_raw_private_key_present" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" "$runtime_commit_command_profile" "$runtime_commit_policy_command_profile" "$runtime_commit_command_profile_version" "$RUNTIME_SIGNER_PROFILE_SELECTOR_ENV" "$RUNTIME_SIGNER_PROFILE" "$RUNTIME_SIGNER_PREVIOUS_PROFILE" "$RUNTIME_SIGNER_FAILOVER_ACTIVE" "$RUNTIME_SIGNER_ROTATION_EPOCH" "$RUNTIME_SIGNER_PREVIOUS_ROTATION_EPOCH" "$RUNTIME_SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$RUNTIME_SIGNER_KEY_SOURCE" "$RUNTIME_SIGNER_PRIVATE_KEY_ENV" "$RUNTIME_SIGNER_KEY_REF_ENV" "$RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV" "$runtime_signer_fallback_private_key_present" "$runtime_signer_raw_private_key_present" "$RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION" <<'PY'
 from __future__ import annotations
 
 import json
@@ -828,6 +829,7 @@ runtime_signer_key_reference_env = sys.argv[43]
 runtime_signer_fallback_private_key_env = sys.argv[44]
 runtime_signer_fallback_private_key_present = sys.argv[45] == "true"
 runtime_signer_raw_private_key_present = sys.argv[46] == "true"
+runtime_signer_attestation_schema_version = sys.argv[47]
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -961,6 +963,18 @@ runtime_commit_failure_taxonomy, runtime_commit_failure_diagnostic_hint = classi
     runtime_commit_nested_reason_code,
 )
 
+runtime_signer_attestation_approved_signers: list[str] = []
+if isinstance(runtime_signer_profile, str) and runtime_signer_profile.strip():
+    runtime_signer_attestation_approved_signers = [runtime_signer_profile]
+runtime_signer_attestation_required_approvals = 1
+runtime_signer_attestation_bundle = {
+    "schema_version": runtime_signer_attestation_schema_version,
+    "required_approvals": runtime_signer_attestation_required_approvals,
+    "approved_signers": runtime_signer_attestation_approved_signers,
+    "signer_profile": runtime_signer_profile,
+    "signer_key_source": runtime_signer_key_source,
+}
+
 summary = {
     "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
     "mode": mode,
@@ -995,6 +1009,8 @@ summary = {
     "runtime_signer_fallback_private_key_env": runtime_signer_fallback_private_key_env,
     "runtime_signer_fallback_private_key_present": runtime_signer_fallback_private_key_present,
     "runtime_signer_raw_private_key_present": runtime_signer_raw_private_key_present,
+    "runtime_signer_attestation_schema_version": runtime_signer_attestation_schema_version,
+    "runtime_signer_attestation_bundle": runtime_signer_attestation_bundle,
     "runtime_commit_live_policy_report": runtime_commit_live_policy_report,
     "runtime_commit_finality_command": runtime_commit_finality_command if runtime_commit_finality_command else "",
     "runtime_commit_finality_output_file": runtime_commit_finality_output_file if runtime_commit_finality_command else "",
@@ -1024,6 +1040,11 @@ summary = {
         "runtime_signer_fallback_private_key_env": runtime_signer_fallback_private_key_env,
         "runtime_signer_fallback_private_key_allowed": False,
         "runtime_signer_managed_external_raw_private_key_allowed": False,
+        "runtime_signer_attestation_schema_version": runtime_signer_attestation_schema_version,
+        "runtime_signer_attestation_signer_uniqueness_required": True,
+        "runtime_signer_attestation_threshold_required": True,
+        "runtime_signer_attestation_profile_membership_required": True,
+        "runtime_signer_attestation_required_approvals": runtime_signer_attestation_required_approvals,
         "runtime_commit_endpoint": "/broadcast/runtime-commit",
         "runtime_commit_method": "POST",
         "runtime_commit_finality_primary_endpoint": "/notifications",

@@ -187,6 +187,22 @@ def main() -> int:
         if summary_payload.get("runtime_signer_raw_private_key_present") is not False:
             print("expected runtime signer raw private key presence marker false in dry-run summary", file=sys.stderr)
             return 1
+        if summary_payload.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+            print("expected runtime signer attestation schema marker in dry-run summary", file=sys.stderr)
+            return 1
+        runtime_signer_attestation_bundle = summary_payload.get("runtime_signer_attestation_bundle")
+        if not isinstance(runtime_signer_attestation_bundle, dict):
+            print("expected runtime signer attestation bundle in dry-run summary", file=sys.stderr)
+            return 1
+        if runtime_signer_attestation_bundle.get("schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+            print("expected runtime signer attestation bundle schema marker in dry-run summary", file=sys.stderr)
+            return 1
+        if runtime_signer_attestation_bundle.get("required_approvals") != 1:
+            print("expected runtime signer attestation required approvals marker in dry-run summary", file=sys.stderr)
+            return 1
+        if runtime_signer_attestation_bundle.get("approved_signers") != ["ops-primary"]:
+            print("expected runtime signer attestation approved signers marker in dry-run summary", file=sys.stderr)
+            return 1
         contracts_payload = summary_payload.get("contracts")
         if not isinstance(contracts_payload, dict):
             print("expected contracts object in dry-run summary", file=sys.stderr)
@@ -202,6 +218,21 @@ def main() -> int:
             return 1
         if contracts_payload.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
             print("expected contracts managed-external raw private key allowed=false marker in summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+            print("expected contracts runtime signer attestation schema marker in summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_attestation_signer_uniqueness_required") is not True:
+            print("expected contracts runtime signer attestation signer-uniqueness marker in summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_attestation_threshold_required") is not True:
+            print("expected contracts runtime signer attestation threshold marker in summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_attestation_profile_membership_required") is not True:
+            print("expected contracts runtime signer attestation profile-membership marker in summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_attestation_required_approvals") != 1:
+            print("expected contracts runtime signer attestation required approvals marker in summary", file=sys.stderr)
             return 1
         checks_payload = summary_payload.get("checks")
         if not isinstance(checks_payload, list):
@@ -560,6 +591,101 @@ def main() -> int:
             )
             return 1
 
+        attestation_duplicate_signers_payload = dict(summary_payload)
+        attestation_duplicate_signers_bundle = dict(
+            attestation_duplicate_signers_payload.get("runtime_signer_attestation_bundle", {})
+        )
+        attestation_duplicate_signers_bundle["approved_signers"] = ["ops-primary", "ops-primary"]
+        attestation_duplicate_signers_payload["runtime_signer_attestation_bundle"] = (
+            attestation_duplicate_signers_bundle
+        )
+        attestation_duplicate_signers_report = temp_path / "runtime_attestation_duplicate_signers_summary.json"
+        attestation_duplicate_signers_report.write_text(
+            json.dumps(attestation_duplicate_signers_payload, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        attestation_duplicate_signers_run = subprocess.run(
+            [
+                "python3",
+                str(CHECKER),
+                "--report-file",
+                str(attestation_duplicate_signers_report),
+                "--expected-final-decision",
+                "NO-GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--require-reason-code",
+                "dry_run_no_commands_executed",
+                "--output-json",
+                str(failure_policy_output),
+            ],
+            cwd=ROOT_DIR,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if attestation_duplicate_signers_run.returncode == 0:
+            print("expected checker to fail when attestation bundle has duplicate approved signers", file=sys.stderr)
+            return 1
+        attestation_duplicate_signers_output = (
+            f"{attestation_duplicate_signers_run.stdout}\n"
+            f"{attestation_duplicate_signers_run.stderr}"
+        )
+        if "runtime_signer_attestation_approved_signers_not_unique" not in attestation_duplicate_signers_output:
+            print(
+                "expected runtime signer attestation duplicate signer reason for policy failure",
+                file=sys.stderr,
+            )
+            return 1
+
+        attestation_quorum_shortfall_payload = dict(summary_payload)
+        attestation_quorum_shortfall_bundle = dict(
+            attestation_quorum_shortfall_payload.get("runtime_signer_attestation_bundle", {})
+        )
+        attestation_quorum_shortfall_bundle["required_approvals"] = 2
+        attestation_quorum_shortfall_bundle["approved_signers"] = ["ops-primary"]
+        attestation_quorum_shortfall_payload["runtime_signer_attestation_bundle"] = (
+            attestation_quorum_shortfall_bundle
+        )
+        attestation_quorum_shortfall_report = temp_path / "runtime_attestation_quorum_shortfall_summary.json"
+        attestation_quorum_shortfall_report.write_text(
+            json.dumps(attestation_quorum_shortfall_payload, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        attestation_quorum_shortfall_run = subprocess.run(
+            [
+                "python3",
+                str(CHECKER),
+                "--report-file",
+                str(attestation_quorum_shortfall_report),
+                "--expected-final-decision",
+                "NO-GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--require-reason-code",
+                "dry_run_no_commands_executed",
+                "--output-json",
+                str(failure_policy_output),
+            ],
+            cwd=ROOT_DIR,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if attestation_quorum_shortfall_run.returncode == 0:
+            print("expected checker to fail when attestation quorum thresholds drift", file=sys.stderr)
+            return 1
+        attestation_quorum_shortfall_output = (
+            f"{attestation_quorum_shortfall_run.stdout}\n"
+            f"{attestation_quorum_shortfall_run.stderr}"
+        )
+        if "runtime_signer_attestation_quorum_shortfall" not in attestation_quorum_shortfall_output:
+            print(
+                "expected runtime signer attestation quorum shortfall reason for policy failure",
+                file=sys.stderr,
+            )
+            return 1
+
     doc_text = DOC_FILE.read_text(encoding="utf-8")
     readme_text = README_FILE.read_text(encoding="utf-8")
     if "run_local_kamn_live_runtime_integration_lane.sh" not in doc_text:
@@ -634,17 +760,32 @@ def main() -> int:
     if "runtime_signer_raw_private_key_present=false" not in doc_text:
         print("expected Kolme devnet ops doc to include runtime signer raw private key presence marker", file=sys.stderr)
         return 1
+    if "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1" not in doc_text:
+        print("expected Kolme devnet ops doc to include runtime signer attestation schema marker", file=sys.stderr)
+        return 1
+    if "runtime_signer_attestation_bundle" not in doc_text:
+        print("expected Kolme devnet ops doc to include runtime signer attestation bundle marker", file=sys.stderr)
+        return 1
     if "runtime_signer_fallback_private_key_present_violation" not in doc_text:
         print("expected Kolme devnet ops doc to include fallback signer private key violation marker", file=sys.stderr)
         return 1
     if "runtime_signer_managed_external_raw_private_key_present_violation" not in doc_text:
         print("expected Kolme devnet ops doc to include managed-external raw signer key violation marker", file=sys.stderr)
         return 1
+    if "runtime_signer_attestation_approved_signers_not_unique" not in doc_text:
+        print("expected Kolme devnet ops doc to include runtime signer attestation duplicate signer reason marker", file=sys.stderr)
+        return 1
+    if "runtime_signer_attestation_quorum_shortfall" not in doc_text:
+        print("expected Kolme devnet ops doc to include runtime signer attestation quorum shortfall reason marker", file=sys.stderr)
+        return 1
     if "Regression: #2302" not in doc_text:
         print("expected Kolme devnet ops doc to include fallback signer runtime regression marker", file=sys.stderr)
         return 1
     if "Regression: #2324" not in doc_text:
         print("expected Kolme devnet ops doc to include managed-external raw signer key regression marker", file=sys.stderr)
+        return 1
+    if "Regression: #2325" not in doc_text:
+        print("expected Kolme devnet ops doc to include runtime signer attestation regression marker", file=sys.stderr)
         return 1
     if "run_local_kamn_live_runtime_integration_contract_lane.sh" not in readme_text:
         print("expected README to reference local KAMN live runtime integration contract lane", file=sys.stderr)
@@ -694,17 +835,32 @@ def main() -> int:
     if "runtime_signer_raw_private_key_present=false" not in readme_text:
         print("expected README to include runtime signer raw private key presence marker", file=sys.stderr)
         return 1
+    if "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1" not in readme_text:
+        print("expected README to include runtime signer attestation schema marker", file=sys.stderr)
+        return 1
+    if "runtime_signer_attestation_bundle" not in readme_text:
+        print("expected README to include runtime signer attestation bundle marker", file=sys.stderr)
+        return 1
     if "runtime_signer_fallback_private_key_present_violation" not in readme_text:
         print("expected README to include fallback signer private key violation marker", file=sys.stderr)
         return 1
     if "runtime_signer_managed_external_raw_private_key_present_violation" not in readme_text:
         print("expected README to include managed-external raw signer key violation marker", file=sys.stderr)
         return 1
+    if "runtime_signer_attestation_approved_signers_not_unique" not in readme_text:
+        print("expected README to include runtime signer attestation duplicate signer reason marker", file=sys.stderr)
+        return 1
+    if "runtime_signer_attestation_quorum_shortfall" not in readme_text:
+        print("expected README to include runtime signer attestation quorum shortfall reason marker", file=sys.stderr)
+        return 1
     if "Regression: #2302" not in readme_text:
         print("expected README to include fallback signer runtime regression marker", file=sys.stderr)
         return 1
     if "Regression: #2324" not in readme_text:
         print("expected README to include managed-external raw signer key regression marker", file=sys.stderr)
+        return 1
+    if "Regression: #2325" not in readme_text:
+        print("expected README to include runtime signer attestation regression marker", file=sys.stderr)
         return 1
 
     elapsed_seconds = int(time.monotonic() - start_epoch)
