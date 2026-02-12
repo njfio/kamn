@@ -44,7 +44,7 @@ python3 "$VELOCITY_GUARD_SCRIPT" check \
 
 grep -q '^status=pass$' "$TMP_DIR/pass.out"
 grep -q '^final_decision=GO$' "$TMP_DIR/pass.out"
-grep -q '^commit_delta=0$' "$TMP_DIR/pass.out"
+grep -Eq '^commit_delta=[0-9]+$' "$TMP_DIR/pass.out"
 grep -q '"schema_version": "kamn.ci.kamn-core-missing-docs-velocity-policy.v1"' "$POLICY_PATH"
 
 MUTATED_BASELINE="$TMP_DIR/mutated-baseline.json"

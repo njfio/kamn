@@ -14,6 +14,7 @@ VELOCITY_GUARD_SCRIPT_PATH="${KAMN_MISSING_DOCS_VELOCITY_GUARD_SCRIPT_PATH:-$ROO
 VELOCITY_BASELINE_PATH="${KAMN_MISSING_DOCS_VELOCITY_BASELINE_PATH:-$ROOT_DIR/fixtures/ci/kamn_core_missing_docs_velocity_baseline.json}"
 VELOCITY_THRESHOLD_PATH="${KAMN_MISSING_DOCS_VELOCITY_THRESHOLD_PATH:-$ROOT_DIR/.ci/kamn-core-missing-docs-velocity-thresholds.json}"
 VELOCITY_CADENCE_DOC_PATH="${KAMN_MISSING_DOCS_VELOCITY_CADENCE_DOC_PATH:-$ROOT_DIR/docs/planning/issues/missing-docs-velocity-cadence.md}"
+GRADUATION_BATCH_REPORT_PATH="${KAMN_MISSING_DOCS_GRADUATION_BATCH_REPORT_PATH:-$ROOT_DIR/docs/planning/issues/missing-docs-first-batch-graduation-report.md}"
 
 require_file() {
   local file="$1"
@@ -36,6 +37,7 @@ require_file "$VELOCITY_GUARD_SCRIPT_PATH" "missing-docs velocity guard script"
 require_file "$VELOCITY_BASELINE_PATH" "missing-docs velocity baseline fixture"
 require_file "$VELOCITY_THRESHOLD_PATH" "missing-docs velocity threshold config"
 require_file "$VELOCITY_CADENCE_DOC_PATH" "missing-docs velocity cadence doc"
+require_file "$GRADUATION_BATCH_REPORT_PATH" "missing-docs graduation batch report doc"
 
 if ! grep -Fq "#![warn(missing_docs)]" "$CORE_LIB_PATH"; then
   echo "missing-docs policy contract failed: kamn-core must declare #![warn(missing_docs)]." >&2
@@ -159,6 +161,11 @@ if ! grep -Fq "docs/planning/issues/missing-docs-velocity-cadence.md" "$PLAN_DOC
   exit 1
 fi
 
+if ! grep -Fq "docs/planning/issues/missing-docs-first-batch-graduation-report.md" "$PLAN_DOC_PATH"; then
+  echo "missing-docs policy contract failed: engineering hardening plan must link missing-docs graduation batch report doc." >&2
+  exit 1
+fi
+
 if ! grep -Fq "#![warn(missing_docs)]" "$PLAN_DOC_PATH"; then
   echo "missing-docs policy contract failed: engineering hardening plan must include #![warn(missing_docs)] policy marker." >&2
   exit 1
@@ -221,6 +228,33 @@ fi
 
 if ! grep -Fq "Regression: #2127" "$VELOCITY_CADENCE_DOC_PATH"; then
   echo "missing-docs policy contract failed: velocity cadence doc must include regression marker." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Missing-Docs First Batch Graduation Report" "$GRADUATION_BATCH_REPORT_PATH"; then
+  echo "missing-docs policy contract failed: graduation batch report doc must include title marker." >&2
+  exit 1
+fi
+
+if ! grep -Fq "schema_version: kamn.ci.kamn-core-missing-docs-graduation-batch-report.v1" "$GRADUATION_BATCH_REPORT_PATH"; then
+  echo "missing-docs policy contract failed: graduation batch report doc must include schema marker." >&2
+  exit 1
+fi
+
+if ! grep -Fq "batch_id: first-three-modules-v1" "$GRADUATION_BATCH_REPORT_PATH"; then
+  echo "missing-docs policy contract failed: graduation batch report doc must include batch id marker." >&2
+  exit 1
+fi
+
+for batch_module in bootstrap key_recovery kolme_runtime_commit; do
+  if ! grep -Fq "$batch_module" "$GRADUATION_BATCH_REPORT_PATH"; then
+    echo "missing-docs policy contract failed: graduation batch report doc must include module marker '$batch_module'." >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "Regression: #2126" "$GRADUATION_BATCH_REPORT_PATH"; then
+  echo "missing-docs policy contract failed: graduation batch report doc must include regression marker." >&2
   exit 1
 fi
 
