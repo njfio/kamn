@@ -66,6 +66,7 @@ Out of scope:
 - #1892: extracted runtime-commit request field guards to `kamn-kolme` (`is_valid_runtime_operation_id_input` / `is_valid_runtime_state_root_input` / `is_valid_runtime_payload_hash_input`) and rewired `kamn-core` request validation delegation.
 - #1894: extracted runtime-commit request single-line field guard to `kamn-kolme` (`are_runtime_commit_request_fields_single_line`) and rewired `kamn-core` request validation newline checks delegation.
 - #1896: extracted signed-envelope field guards to `kamn-kolme` (`is_valid_signed_envelope_signer_key_id_input` / `is_valid_signed_envelope_message_input` / `is_valid_signed_envelope_signature_input`) and rewired `kamn-core` signed-envelope constructor guard delegation.
+- #1898: extracted HTTPS transport stdout non-empty guard to `kamn-kolme` (`is_valid_http_response_bytes_input`) and rewired `kamn-core` TLS response-byte validation delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,
