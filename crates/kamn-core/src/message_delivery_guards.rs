@@ -1,24 +1,45 @@
+//! Message delivery replay, nonce, and snapshot guardrail contracts.
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+/// Schema version for serialized delivery guard snapshots.
 pub const DELIVERY_GUARD_SNAPSHOT_SCHEMA_VERSION: u16 = 1;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Input contract for delivery guard validation.
 pub struct DeliveryGuardInput {
+    /// Stable message identifier.
     pub message_id: String,
+    /// Sender DID.
     pub sender: String,
+    /// Recipient DID.
     pub recipient: String,
+    /// Monotonic sender nonce.
     pub nonce: u64,
+    /// Message creation timestamp.
     pub created: String,
+    /// Message expiration timestamp.
     pub expires: String,
+    /// Delivery receive timestamp.
     pub received_at: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Failure taxonomy for delivery validation rejections.
 pub enum DeliveryFailureCode {
-    NonceOutOfSequence { expected: u64, found: u64 },
+    /// Nonce does not match the expected sender sequence.
+    NonceOutOfSequence {
+        /// Expected nonce value.
+        expected: u64,
+        /// Observed nonce value.
+        found: u64,
+    },
+    /// Message identifier has already been accepted.
     Replay,
+    /// Message was received after expiration.
     Expired,
+    /// Created/expires window is invalid.
     InvalidWindow,
 }
 
@@ -34,52 +55,86 @@ impl DeliveryFailureCode {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Signed notice emitted for rejected deliveries.
 pub struct FailedDeliveryNotice {
+    /// Message identifier.
     pub message_id: String,
+    /// Sender DID.
     pub sender: String,
+    /// Recipient DID.
     pub recipient: String,
+    /// Failure classification.
     pub code: DeliveryFailureCode,
+    /// Human-readable rejection details.
     pub detail: String,
+    /// Notice timestamp.
     pub timestamp: String,
+    /// Deterministic notice signature payload.
     pub signature: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Delivery validation output.
 pub enum DeliveryValidationResult {
+    /// Delivery was accepted and nonce state updated.
     Accepted,
+    /// Delivery was rejected with failure notice.
     Rejected(FailedDeliveryNotice),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// In-memory delivery guard engine.
 pub struct MessageDeliveryGuards {
     next_nonce_by_sender: BTreeMap<String, u64>,
     seen_message_ids: BTreeSet<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Snapshot payload for persisting delivery guard state.
 pub struct DeliveryGuardSnapshot {
+    /// Snapshot schema version.
     pub schema_version: u16,
+    /// Expected next nonce per sender.
     pub next_nonce_by_sender: BTreeMap<String, u64>,
+    /// Set of already accepted message ids.
     pub seen_message_ids: BTreeSet<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Error taxonomy for delivery guard snapshot restoration.
 pub enum DeliveryGuardSnapshotError {
-    SchemaVersionMismatch { expected: u16, found: u16 },
+    /// Snapshot schema version does not match runtime expectation.
+    SchemaVersionMismatch {
+        /// Expected schema version.
+        expected: u16,
+        /// Found schema version.
+        found: u16,
+    },
+    /// Sender id in snapshot is invalid.
     InvalidSender(String),
-    InvalidNonce { sender: String, nonce: u64 },
+    /// Nonce in snapshot is invalid.
+    InvalidNonce {
+        /// Sender id associated with the invalid nonce.
+        sender: String,
+        /// Invalid nonce value.
+        nonce: u64,
+    },
+    /// Message id in snapshot is invalid.
     InvalidMessageId(String),
 }
 
 impl MessageDeliveryGuards {
+    /// Creates an empty delivery guard state.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Returns the expected nonce for `sender`.
     pub fn expected_nonce(&self, sender: &str) -> u64 {
         self.next_nonce_by_sender.get(sender).copied().unwrap_or(1)
     }
 
+    /// Validates a delivery input and updates guard state on success.
     pub fn validate(&mut self, input: DeliveryGuardInput) -> DeliveryValidationResult {
         if input.expires <= input.created {
             return DeliveryValidationResult::Rejected(self.failed_notice(
@@ -124,6 +179,7 @@ impl MessageDeliveryGuards {
         DeliveryValidationResult::Accepted
     }
 
+    /// Exports current state as a snapshot payload.
     pub fn export_snapshot(&self) -> DeliveryGuardSnapshot {
         DeliveryGuardSnapshot {
             schema_version: DELIVERY_GUARD_SNAPSHOT_SCHEMA_VERSION,
@@ -132,6 +188,7 @@ impl MessageDeliveryGuards {
         }
     }
 
+    /// Restores state from a validated snapshot payload.
     pub fn restore_snapshot(
         &mut self,
         snapshot: DeliveryGuardSnapshot,
@@ -168,6 +225,7 @@ impl MessageDeliveryGuards {
         Ok(())
     }
 
+    /// Constructs a guard engine from a snapshot payload.
     pub fn from_snapshot(
         snapshot: DeliveryGuardSnapshot,
     ) -> Result<Self, DeliveryGuardSnapshotError> {

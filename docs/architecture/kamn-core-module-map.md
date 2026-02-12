@@ -179,6 +179,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `key_lifecycle`
   - `key_recovery`
   - `kolme_runtime_commit`
+  - `message_delivery_guards`
   - `migrations`
   - `namespaces`
   - `observability`
@@ -239,6 +240,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2047`
   - `Regression: #2049`
   - `Regression: #2051`
+  - `Regression: #2053`
 
 ## Contributor Entrypoint Matrix
 
