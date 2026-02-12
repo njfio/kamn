@@ -4,6 +4,7 @@ key_recovery
 kolme_runtime_commit
 migrations
 namespaces
+operator_actions
 reputation_signals
 signature_profile
 smoke

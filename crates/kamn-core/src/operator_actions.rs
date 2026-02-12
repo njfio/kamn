@@ -2,23 +2,35 @@ use crate::{OperatorBindingAction, OperatorBindingEngine, OperatorBindingError};
 use std::collections::BTreeMap;
 use std::fmt;
 
+/// Authorization outcome for a requested operator action.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OperatorActionOutcome {
+    /// Action passed authorization and was applied.
     Allowed,
+    /// Action failed authorization and was denied.
     Denied,
 }
 
+/// Immutable audit record for a permissioned operator action request.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OperatorActionAuditRecord {
+    /// Agent DID owning the target configuration namespace.
     pub agent_did: String,
+    /// Operator DID requesting the action.
     pub operator_did: String,
+    /// Action type requested through operator binding policy.
     pub action: OperatorBindingAction,
+    /// Action target key/resource.
     pub target: String,
+    /// Optional action value payload.
     pub value: Option<String>,
+    /// Request timestamp in unix seconds.
     pub requested_at_unix: u64,
+    /// Final authorization outcome.
     pub outcome: OperatorActionOutcome,
 }
 
+/// Service that gates operator actions through binding authorization and audit logging.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PermissionedOperatorActionService {
     bindings: OperatorBindingEngine,
@@ -27,6 +39,7 @@ pub struct PermissionedOperatorActionService {
 }
 
 impl PermissionedOperatorActionService {
+    /// Creates a permissioned operator action service with the provided binding engine.
     pub fn new(bindings: OperatorBindingEngine) -> Self {
         Self {
             bindings,
@@ -35,6 +48,7 @@ impl PermissionedOperatorActionService {
         }
     }
 
+    /// Applies a configuration update when binding authorization allows the request.
     pub fn configure(
         &mut self,
         agent_did: &str,
@@ -85,6 +99,7 @@ impl PermissionedOperatorActionService {
         Ok(())
     }
 
+    /// Revokes an operator binding and records an audit decision.
     pub fn revoke_binding(
         &mut self,
         agent_did: &str,
@@ -122,6 +137,7 @@ impl PermissionedOperatorActionService {
         }
     }
 
+    /// Reads action audit history after authorization against read-history capability.
     pub fn read_history(
         &mut self,
         agent_did: &str,
@@ -160,12 +176,14 @@ impl PermissionedOperatorActionService {
         Ok(self.audit_log.clone())
     }
 
+    /// Returns the configured value for `(agent_did, config_key)` if present.
     pub fn setting(&self, agent_did: &str, config_key: &str) -> Option<String> {
         self.settings
             .get(&(agent_did.to_owned(), config_key.to_owned()))
             .cloned()
     }
 
+    /// Returns a snapshot copy of the full audit log.
     pub fn audit_log(&self) -> Vec<OperatorActionAuditRecord> {
         self.audit_log.clone()
     }
@@ -175,9 +193,12 @@ impl PermissionedOperatorActionService {
     }
 }
 
+/// Errors returned by permissioned operator action service operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OperatorActionServiceError {
+    /// Required input field was empty.
     EmptyField(&'static str),
+    /// Binding authorization or binding mutation failed.
     Binding(String),
 }
 
