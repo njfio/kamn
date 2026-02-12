@@ -1,5 +1,7 @@
 const RUNTIME_COMMIT_SRC: &str = include_str!("../src/kolme_runtime_commit.rs");
 const RUNTIME_IN_MEMORY_SRC: &str = include_str!("../src/kolme_runtime_commit/in_memory_client.rs");
+const RUNTIME_NOTIFICATIONS_WS_SRC: &str =
+    include_str!("../src/kolme_runtime_commit/notifications_websocket.rs");
 const RUNTIME_PIPELINE_SRC: &str = include_str!("../src/kolme_runtime_commit/runtime_pipeline.rs");
 
 #[test]
@@ -54,6 +56,8 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct RuntimeCommitFinalityProjection"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct RuntimeCommitPipeline"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct InMemoryKolmeRuntimeCommitClient"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitWebsocketConnector"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitWebsocketConnection"));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl RuntimeCommitPipeline"));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl InMemoryKolmeRuntimeCommitClient"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let signer_key_id = signer_key_id.trim();"));
@@ -114,7 +118,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_live_provider_endpoint_inputs_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("txhash_from_kolme_commit_id("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_endpoint("));
-    assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_websocket_endpoint("));
+    assert!(RUNTIME_NOTIFICATIONS_WS_SRC.contains("parse_kolme_websocket_endpoint("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_live_provider_base_url_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_live_provider_submit_path_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_expected_provider_input_contract("));
@@ -128,7 +132,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_block_fallback_lookup_budget_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("classify_kolme_tls_failure_reason("));
     assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_broadcast_payload_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("validate_kolme_websocket_handshake_response("));
+    assert!(RUNTIME_NOTIFICATIONS_WS_SRC.contains("validate_kolme_websocket_handshake_response("));
     assert!(RUNTIME_COMMIT_SRC.contains("resolve_kolme_tls_ca_file_env_result_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_authorization_header_value("));
     assert!(RUNTIME_COMMIT_SRC.contains("validate_kolme_lookup_window("));
@@ -154,8 +158,10 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
         "impl From<KamnKolmeRuntimeProviderOutcome> for KolmeRuntimeCommitProviderOutcome"
     ));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_response_body("));
-    assert!(RUNTIME_COMMIT_SRC.contains("find_kolme_http_header_boundary("));
-    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_websocket_timeout_seconds_contract("));
+    assert!(RUNTIME_NOTIFICATIONS_WS_SRC.contains("find_kolme_http_header_boundary("));
+    assert!(
+        RUNTIME_NOTIFICATIONS_WS_SRC.contains("is_kolme_valid_websocket_timeout_seconds_contract(")
+    );
     assert!(RUNTIME_COMMIT_SRC.contains("validate_kolme_provider_receipt_identity_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("require_kolme_final_receipt_finality_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("KamnKolmeApiNextNonceRequest::new("));
@@ -191,8 +197,10 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("impl From<KamnKolmeTransportIoClassification>"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod runtime_pipeline;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod in_memory_client;"));
+    assert!(RUNTIME_COMMIT_SRC.contains("mod notifications_websocket;"));
     assert!(RUNTIME_COMMIT_SRC.contains("pub use runtime_pipeline::{"));
     assert!(
         RUNTIME_COMMIT_SRC.contains("pub use in_memory_client::InMemoryKolmeRuntimeCommitClient;")
     );
+    assert!(RUNTIME_COMMIT_SRC.contains("pub use notifications_websocket::{"));
 }
