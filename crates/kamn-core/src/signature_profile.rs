@@ -1,22 +1,35 @@
+/// Canonical algorithm identifier for supported baseline signatures.
 pub const BASELINE_SIGNATURE_ALGORITHM: &str = "ed25519";
+/// Canonical profile identifier for supported baseline signatures.
 pub const BASELINE_SIGNATURE_PROFILE_ID: &str = "baseline-v1";
+/// Legacy unversioned profile identifier retained for compatibility fixtures.
 pub const LEGACY_SIGNATURE_PROFILE_ID: &str = "legacy-unversioned";
+/// Canonical unsupported algorithm identifier used in negative fixtures.
 pub const UNKNOWN_SIGNATURE_ALGORITHM_ID: &str = "secp256k1";
 
+/// Parsed metadata extracted from a `sig:<algorithm>:<profile_id>:...` signature.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignatureProfileMetadata {
+    /// Signature algorithm identifier segment.
     pub algorithm: String,
+    /// Signature profile identifier segment.
     pub profile_id: String,
 }
 
+/// Returns the canonical baseline signature algorithm identifier.
 pub fn baseline_signature_algorithm() -> &'static str {
     BASELINE_SIGNATURE_ALGORITHM
 }
 
+/// Returns the canonical baseline signature profile identifier.
 pub fn baseline_signature_profile_id() -> &'static str {
     BASELINE_SIGNATURE_PROFILE_ID
 }
 
+/// Parses signature profile metadata from a canonical `sig:` signature string.
+///
+/// Returns `None` when the signature does not match the expected segmented form
+/// or required segments are empty.
 pub fn parse_signature_profile_metadata(signature: &str) -> Option<SignatureProfileMetadata> {
     let suffix = signature.strip_prefix("sig:")?;
     let mut segments = suffix.splitn(3, ':');
@@ -34,6 +47,7 @@ pub fn parse_signature_profile_metadata(signature: &str) -> Option<SignatureProf
     })
 }
 
+/// Builds a deterministic baseline signature fixture for the provided fields.
 pub fn baseline_signature_for_fields(
     sender: &str,
     nonce: u64,
@@ -51,6 +65,7 @@ pub fn baseline_signature_for_fields(
     )
 }
 
+/// Builds a deterministic legacy signature fixture for compatibility tests.
 pub fn legacy_signature_for_fields(
     sender: &str,
     nonce: u64,
@@ -60,6 +75,7 @@ pub fn legacy_signature_for_fields(
     format!("sig:{}:{}:{}:{}", sender, nonce, state_hash, payload.len())
 }
 
+/// Builds a fixture with an unsupported profile identifier.
 pub fn unknown_signature_profile_for_fields(
     sender: &str,
     nonce: u64,
@@ -76,6 +92,7 @@ pub fn unknown_signature_profile_for_fields(
     )
 }
 
+/// Builds a fixture with an unsupported signature algorithm identifier.
 pub fn unknown_signature_algorithm_for_fields(
     sender: &str,
     nonce: u64,
@@ -93,13 +110,18 @@ pub fn unknown_signature_algorithm_for_fields(
     )
 }
 
+/// Compatibility fixture entry for signature profile verification behavior.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignatureProfileCompatibilityFixture {
+    /// Fixture identifier used in compatibility tables.
     pub fixture_id: &'static str,
+    /// Signature payload used for verification checks.
     pub signature: String,
+    /// Whether the fixture should pass supported-profile verification.
     pub should_verify: bool,
 }
 
+/// Returns compatibility fixtures for baseline, legacy, and unsupported variants.
 pub fn signature_profile_compatibility_fixtures_for_fields(
     sender: &str,
     nonce: u64,
@@ -130,6 +152,12 @@ pub fn signature_profile_compatibility_fixtures_for_fields(
     ]
 }
 
+/// Returns whether a signature matches the supported baseline profile.
+///
+/// This requires:
+/// - canonical algorithm id (`ed25519`),
+/// - canonical profile id (`baseline-v1`),
+/// - deterministic field rendering match.
 pub fn signature_matches_supported_profile_for_fields(
     signature: &str,
     sender: &str,

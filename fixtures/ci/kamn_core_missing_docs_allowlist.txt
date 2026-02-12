@@ -39,7 +39,6 @@ reputation_state
 retention_engine
 runtime
 service_marketplace
-signature_profile
 signer_backend
 task_artifacts
 task_operations

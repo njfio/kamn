@@ -3,6 +3,7 @@ key_recovery
 kolme_runtime_commit
 migrations
 namespaces
+signature_profile
 smoke
 state
 task_lifecycle
