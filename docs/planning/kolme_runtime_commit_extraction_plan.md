@@ -74,6 +74,7 @@ Out of scope:
 - #1908: extracted runtime request field normalization contract to `kamn-kolme` (`normalize_runtime_commit_request_fields`) and rewired `kamn-core` deterministic request construction normalization delegation.
 - #1910: extracted signed-envelope wire payload renderer to `kamn-kolme` (`render_signed_envelope_wire_payload`) and rewired `kamn-core` signed-envelope wire rendering delegation.
 - #1912: extracted transport idempotency-key normalization contract to `kamn-kolme` (`normalize_transport_idempotency_key_input`) and rewired `kamn-core` HTTP broadcast submission normalization delegation.
+- #1914: extracted provider-hint normalization contract to `kamn-kolme` (`normalize_provider_hint_input`) and rewired `kamn-core` fork broadcast provider construction normalization delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,

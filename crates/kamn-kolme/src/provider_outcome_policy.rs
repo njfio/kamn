@@ -330,6 +330,11 @@ pub fn is_valid_provider_hint_input(provider_hint: &str) -> bool {
     is_valid_runtime_provider_input(provider_hint)
 }
 
+/// Normalizes provider hint input for deterministic fork submit profile identity.
+pub fn normalize_provider_hint_input(provider_hint: &str) -> &str {
+    provider_hint.trim()
+}
+
 /// Validates receipt provider input for runtime lifecycle updates.
 pub fn is_valid_receipt_provider_input(receipt_provider: &str) -> bool {
     is_valid_runtime_provider_input(receipt_provider)

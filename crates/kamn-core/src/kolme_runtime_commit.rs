@@ -49,6 +49,7 @@ use kamn_kolme::{
     lifecycle_state_label as lifecycle_state_label_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
     normalize_broadcast_submit_path_input as normalize_kolme_broadcast_submit_path_input_contract,
+    normalize_provider_hint_input as normalize_kolme_provider_hint_input_contract,
     normalize_runtime_commit_request_fields as normalize_kolme_runtime_commit_request_fields_contract,
     normalize_runtime_commit_signed_envelope_fields as normalize_kolme_runtime_commit_signed_envelope_fields_contract,
     normalize_transport_idempotency_key_input as normalize_kolme_transport_idempotency_key_input_contract,
@@ -1816,7 +1817,7 @@ impl<T: KolmeRuntimeCommitProviderTransport> KolmeRuntimeCommitLiveProvider<T> {
                 reason: "must not be empty",
             });
         }
-        let provider_hint = provider_hint.trim();
+        let provider_hint = normalize_kolme_provider_hint_input_contract(provider_hint);
         let mut provider = Self::new(base_url, "/broadcast", transport)?;
         provider.profile = KolmeRuntimeCommitSubmitProfile::KolmeForkBroadcast;
         provider.provider_hint = Some(provider_hint.to_owned());
