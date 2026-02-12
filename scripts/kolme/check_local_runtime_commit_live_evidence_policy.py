@@ -66,6 +66,18 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif provider_command_marker_present is False:
         reason_codes.append("provider_command_marker_missing")
 
+    if (
+        report.get("provider_signing_profile_marker")
+        != "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1"
+    ):
+        reason_codes.append("provider_signing_profile_marker_mismatch")
+
+    provider_signing_profile_marker_present = report.get("provider_signing_profile_marker_present")
+    if not isinstance(provider_signing_profile_marker_present, bool):
+        reason_codes.append("provider_signing_profile_marker_present_invalid")
+    elif provider_signing_profile_marker_present is False:
+        reason_codes.append("provider_signing_profile_marker_missing")
+
     if report.get("submit_evidence_marker") != "status=submitted":
         reason_codes.append("submit_evidence_marker_mismatch")
 

@@ -1,3 +1,4 @@
+use k256::ecdsa::{RecoveryId, Signature, SigningKey, VerifyingKey};
 use kamn_core::{
     KolmeApiBroadcastRequest, KolmeApiNextNonceRequest, KolmeCommitReceiptFinality,
     KolmeRuntimeCommitBlockFallbackTransport, KolmeRuntimeCommitFinalityChecker,
@@ -14,6 +15,10 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
 
 const TLS_CA_FILE_ENV: &str = "KAMN_KOLME_TLS_CA_FILE";
+const KOLME_LIVE_SIGNING_PROFILE_ENV: &str = "KAMN_KOLME_LIVE_SIGNING_PROFILE";
+const KOLME_FORK_SECP256K1_PROFILE: &str = "kolme-fork-secp256k1-v1";
+const KOLME_FORK_LIVE_SMOKE_SECRET_KEY_HEX: &str =
+    "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
 
 fn tls_env_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -89,6 +94,72 @@ fn unique_temp_dir(prefix: &str) -> PathBuf {
     let path = env::temp_dir().join(format!("{prefix}-{}-{nanos}", std::process::id()));
     fs::create_dir_all(&path).expect("temporary directory should be created");
     path
+}
+
+fn decode_hex_nibble(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(10 + (byte - b'a')),
+        b'A'..=b'F' => Some(10 + (byte - b'A')),
+        _ => None,
+    }
+}
+
+fn decode_hex_bytes(input: &str) -> Result<Vec<u8>, String> {
+    let trimmed = input.trim();
+    if !trimmed.len().is_multiple_of(2) {
+        return Err("hex string must contain an even number of characters".to_owned());
+    }
+
+    let mut bytes = Vec::with_capacity(trimmed.len() / 2);
+    for pair in trimmed.as_bytes().chunks_exact(2) {
+        let high = decode_hex_nibble(pair[0])
+            .ok_or_else(|| format!("invalid hex character: {}", pair[0] as char))?;
+        let low = decode_hex_nibble(pair[1])
+            .ok_or_else(|| format!("invalid hex character: {}", pair[1] as char))?;
+        bytes.push((high << 4) | low);
+    }
+
+    Ok(bytes)
+}
+
+fn encode_hex_lower(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut output = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        output.push(HEX[(byte >> 4) as usize] as char);
+        output.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    output
+}
+
+fn kolme_fork_live_smoke_signing_key() -> SigningKey {
+    let private_key = decode_hex_bytes(KOLME_FORK_LIVE_SMOKE_SECRET_KEY_HEX)
+        .expect("kolme fork live smoke private key hex must decode");
+    SigningKey::from_slice(private_key.as_slice())
+        .expect("kolme fork live smoke private key bytes must be valid secp256k1 key")
+}
+
+fn kolme_fork_live_smoke_pubkey_hex() -> String {
+    let signing_key = kolme_fork_live_smoke_signing_key();
+    encode_hex_lower(
+        signing_key
+            .verifying_key()
+            .to_encoded_point(true)
+            .as_bytes(),
+    )
+}
+
+fn kolme_fork_sign_message(message: &str) -> (String, u8) {
+    let signing_key = kolme_fork_live_smoke_signing_key();
+    let (signature, recovery_id) = signing_key
+        .sign_recoverable(message.as_bytes())
+        .expect("kolme fork live smoke signature generation must succeed");
+    let signature_bytes = signature.to_bytes();
+    (
+        encode_hex_lower(signature_bytes.as_ref()),
+        recovery_id.to_byte(),
+    )
 }
 
 fn generate_self_signed_certificate(temp_dir: &Path) -> (PathBuf, PathBuf) {
@@ -1093,7 +1164,13 @@ fn integration_kolme_fork_live_node_submit_reaches_endpoint() {
         .expect("KAMN_KOLME_LIVE_BASE_URL must be set for live node smoke");
     let provider_hint =
         env::var("KAMN_KOLME_LIVE_PROVIDER_HINT").unwrap_or_else(|_| "kolme-fork-local".to_owned());
+    let signing_profile = env::var(KOLME_LIVE_SIGNING_PROFILE_ENV)
+        .unwrap_or_else(|_| KOLME_FORK_SECP256K1_PROFILE.to_owned());
     let authorization_header = env::var("KAMN_KOLME_LIVE_AUTHORIZATION").ok();
+    assert_eq!(
+        signing_profile, KOLME_FORK_SECP256K1_PROFILE,
+        "live node smoke must use fork-compatible secp256k1 signing profile"
+    );
 
     let transport = if let Some(value) = authorization_header {
         KolmeRuntimeCommitHttpTransport::new_with_authorization(10, value.as_str())
@@ -1113,12 +1190,17 @@ fn integration_kolme_fork_live_node_submit_reaches_endpoint() {
         .duration_since(UNIX_EPOCH)
         .expect("system clock should be after unix epoch")
         .as_nanos();
+    let signer_pubkey = kolme_fork_live_smoke_pubkey_hex();
+    let nonce = ((unique_suffix % 1_000_000_000_u128) as u64) + 1;
     let message_json = format!(
-        "{{\"pubkey\":\"pk-live-smoke-{unique_suffix}\",\"nonce\":1,\"created\":\"2026-02-11T00:00:00Z\",\"messages\":[],\"max_height\":null}}"
+        "{{\"pubkey\":\"{signer_pubkey}\",\"nonce\":{nonce},\"created\":\"2026-02-11T00:00:00Z\",\"messages\":[],\"max_height\":null}}"
     );
+    let (signature, recovery_id) = kolme_fork_sign_message(message_json.as_str());
     let wire_payload = format!(
-        "{{\"message\":\"{}\",\"signature\":\"sig-live-smoke-{unique_suffix}\",\"recovery_id\":1}}",
-        message_json.replace('\\', "\\\\").replace('\"', "\\\"")
+        "{{\"message\":\"{}\",\"signature\":\"{}\",\"recovery_id\":{}}}",
+        message_json.replace('\\', "\\\\").replace('\"', "\\\""),
+        signature,
+        recovery_id
     );
     let idempotency_key = format!("kolme-runtime-commit:live-smoke:{unique_suffix}");
 
@@ -1144,4 +1226,42 @@ fn integration_kolme_fork_live_node_submit_reaches_endpoint() {
             panic!("live node smoke expected endpoint reachability outcome, got error: {other:?}");
         }
     }
+}
+
+#[test]
+fn unit_kolme_fork_live_smoke_signer_emits_recoverable_secp256k1_signature() {
+    let pubkey = kolme_fork_live_smoke_pubkey_hex();
+    let message_json = format!(
+        "{{\"pubkey\":\"{pubkey}\",\"nonce\":7,\"created\":\"2026-02-11T00:00:00Z\",\"messages\":[],\"max_height\":null}}"
+    );
+    let (signature_hex, recovery_id) = kolme_fork_sign_message(message_json.as_str());
+
+    assert_eq!(signature_hex.len(), 128);
+    assert!(
+        signature_hex
+            .chars()
+            .all(|character| character.is_ascii_hexdigit()),
+        "signature must be lowercase/uppercase hex bytes"
+    );
+    assert!(recovery_id <= 3, "recovery id must be in secp256k1 range");
+
+    let signature_bytes =
+        decode_hex_bytes(signature_hex.as_str()).expect("signature hex must decode for recovery");
+    let signature = Signature::from_slice(signature_bytes.as_slice())
+        .expect("signature bytes must decode into a secp256k1 signature");
+    let recovery = RecoveryId::from_byte(recovery_id).expect("recovery id must decode");
+    let recovered_key =
+        VerifyingKey::recover_from_msg(message_json.as_bytes(), &signature, recovery)
+            .expect("signature must recover a verifying key");
+    let recovered_pubkey = encode_hex_lower(recovered_key.to_encoded_point(true).as_bytes());
+    assert_eq!(recovered_pubkey, pubkey);
+}
+
+#[test]
+fn regression_live_node_smoke_signature_payload_must_not_use_synthetic_literal() {
+    const SOURCE: &str = include_str!("kolme_runtime_commit_http_transport.rs");
+    assert!(
+        !SOURCE.contains("\\\"signature\\\":\\\"sig-live-smoke-"),
+        "live-node smoke payload must use real secp256k1 signature generation"
+    );
 }

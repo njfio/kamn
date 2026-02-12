@@ -89,6 +89,8 @@ if "--require-non-synthetic-run-evidence" not in runtime_commit_command:
     raise SystemExit("expected strict non-synthetic runtime marker in integration runtime_commit_command")
 if "integration_kolme_fork_live_node_submit_reaches_endpoint" not in runtime_commit_command:
     raise SystemExit("expected non-synthetic runtime submit probe marker in integration runtime_commit_command")
+if "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1" not in runtime_commit_command:
+    raise SystemExit("expected real signing profile marker in integration runtime_commit_command")
 if summary.get("runtime_commit_command_profile") != "real-node-non-synthetic-v1":
     raise SystemExit("expected deterministic runtime commit command profile marker for real-node profile")
 if summary.get("runtime_commit_policy_command_profile") != "real-node-non-synthetic-v1":

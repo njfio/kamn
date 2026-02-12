@@ -7,6 +7,7 @@ from pathlib import Path
 
 NON_SYNTHETIC_SUBMIT_PROBE_MARKER = "integration_kolme_fork_live_node_submit_reaches_endpoint"
 IN_MEMORY_PROVIDER_MARKER = "InMemoryKolmeRuntimeCommitClient"
+REAL_SIGNING_PROFILE_MARKER = "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1"
 
 
 def parse_args() -> argparse.Namespace:
@@ -110,6 +111,11 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             and NON_SYNTHETIC_SUBMIT_PROBE_MARKER not in runtime_commit_command
         ):
             reason_codes.append("runtime_commit_non_synthetic_submit_probe_missing")
+        if (
+            runtime_commit_command_profile == "real-node-non-synthetic-v1"
+            and REAL_SIGNING_PROFILE_MARKER not in runtime_commit_command
+        ):
+            reason_codes.append("runtime_commit_real_signing_profile_marker_missing")
         if IN_MEMORY_PROVIDER_MARKER in runtime_commit_command:
             reason_codes.append("runtime_commit_in_memory_provider_reference_detected")
 

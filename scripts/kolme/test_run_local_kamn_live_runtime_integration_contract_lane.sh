@@ -261,6 +261,8 @@ if f"--policy-output-json {policy_output_path}" not in runtime_command:
     raise SystemExit("expected runtime commit command to include runtime policy report pass-through")
 if "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider" not in runtime_command:
     raise SystemExit("expected runtime commit command to include live provider contract pass-through")
+if "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1" not in runtime_command:
+    raise SystemExit("expected runtime commit command to include real signing profile marker")
 if str(finality_output_path) not in summary.get("artifact_paths", []):
     raise SystemExit("expected integration summary artifact paths to include runtime finality output file")
 if str(policy_output_path) not in summary.get("artifact_paths", []):
