@@ -21,6 +21,7 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("fn parse_kolme_notification_event("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn parse_live_provider_response("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn lifecycle_record_from_outcome("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("fn read_http_header_boundary("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn classify_tls_failure_reason("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn normalize_kolme_broadcast_payload("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn validate_websocket_handshake_response("));
@@ -69,6 +70,7 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     ));
     assert!(!RUNTIME_COMMIT_SRC.contains("if let Some(ca_file) = configured_tls_ca_file()?"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let record = lifecycle_record_from_outcome("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("let header_end = read_http_header_boundary("));
     assert!(!RUNTIME_COMMIT_SRC.contains(
         "\"operation_id={}\\nstate_root={}\\nactor_did={}\\nnonce={}\\npayload_hash={}\\nidempotency_key={}\\n\""
     ));

@@ -1653,7 +1653,30 @@ impl KolmeRuntimeCommitNotificationsConnector for KolmeRuntimeCommitWebsocketCon
         })?;
 
         let mut response_bytes = Vec::new();
-        let header_end = read_http_header_boundary(&mut stream, &mut response_bytes)?;
+        let header_end = loop {
+            if let Some(position) =
+                find_kolme_http_header_boundary(&response_bytes).map_err(|error| match error {
+                    KamnKolmeWebsocketPolicyError::Unavailable { reason } => {
+                        KolmeRuntimeCommitProviderError::Unavailable { reason }
+                    }
+                    KamnKolmeWebsocketPolicyError::Malformed { reason } => {
+                        KolmeRuntimeCommitProviderError::MalformedResponse { reason }
+                    }
+                })?
+            {
+                break position;
+            }
+            let mut chunk = [0_u8; 1024];
+            let read = stream.read(&mut chunk).map_err(|error| {
+                KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
+            })?;
+            if read == 0 {
+                return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: "websocket handshake response is incomplete".to_owned(),
+                });
+            }
+            response_bytes.extend_from_slice(&chunk[..read]);
+        };
         let (header_bytes, trailing) = response_bytes.split_at(header_end + 4);
         validate_kolme_websocket_handshake_response(header_bytes).map_err(|error| match error {
             KamnKolmeWebsocketPolicyError::Unavailable { reason } => {
@@ -2060,36 +2083,6 @@ impl<P: KolmeRuntimeCommitProvider> KolmeRuntimeCommitClient
                 Ok(KolmeRuntimeCommitOutcome::Rejected { reason })
             }
         }
-    }
-}
-
-fn read_http_header_boundary(
-    stream: &mut TcpStream,
-    response_bytes: &mut Vec<u8>,
-) -> Result<usize, KolmeRuntimeCommitProviderError> {
-    loop {
-        if let Some(position) =
-            find_kolme_http_header_boundary(response_bytes).map_err(|error| match error {
-                KamnKolmeWebsocketPolicyError::Unavailable { reason } => {
-                    KolmeRuntimeCommitProviderError::Unavailable { reason }
-                }
-                KamnKolmeWebsocketPolicyError::Malformed { reason } => {
-                    KolmeRuntimeCommitProviderError::MalformedResponse { reason }
-                }
-            })?
-        {
-            return Ok(position);
-        }
-        let mut chunk = [0_u8; 1024];
-        let read = stream.read(&mut chunk).map_err(|error| {
-            KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
-        })?;
-        if read == 0 {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "websocket handshake response is incomplete".to_owned(),
-            });
-        }
-        response_bytes.extend_from_slice(&chunk[..read]);
     }
 }
 
