@@ -1,20 +1,31 @@
 use std::collections::BTreeSet;
 use std::fmt;
 
+/// Key agreement algorithm identifier used for direct-message shared-secret derivation.
 pub const DIRECT_MESSAGE_KEY_AGREEMENT_ALGORITHM: &str = "X25519";
+/// Cipher algorithm identifier used for direct-message payload encryption.
 pub const DIRECT_MESSAGE_CIPHER_ALGORITHM: &str = "XChaCha20-Poly1305";
 
+/// Encrypted direct-message payload and metadata.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirectMessageCiphertext {
+    /// Key agreement algorithm used to derive the shared secret.
     pub key_agreement_algorithm: String,
+    /// Cipher algorithm used to encrypt the payload.
     pub cipher_algorithm: String,
+    /// Sender key reference used in key agreement.
     pub sender_key_ref: String,
+    /// Recipient key reference used in key agreement.
     pub recipient_key_ref: String,
+    /// Nonce used for encryption.
     pub nonce: u64,
+    /// Hex-encoded ciphertext bytes.
     pub ciphertext: String,
+    /// Integrity/authentication tag for ciphertext verification.
     pub auth_tag: String,
 }
 
+/// Deterministic direct-message crypto engine with nonce reuse protection.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirectMessageCryptoEngine {
     sender_key_ref: String,
@@ -24,6 +35,7 @@ pub struct DirectMessageCryptoEngine {
 }
 
 impl DirectMessageCryptoEngine {
+    /// Creates a new engine for sender/recipient key references.
     pub fn new(
         sender_key_ref: &str,
         recipient_key_ref: &str,
@@ -42,6 +54,7 @@ impl DirectMessageCryptoEngine {
         })
     }
 
+    /// Encrypts plaintext with the provided nonce and returns ciphertext metadata.
     pub fn encrypt(
         &mut self,
         plaintext: &str,
@@ -82,6 +95,7 @@ impl DirectMessageCryptoEngine {
         })
     }
 
+    /// Decrypts ciphertext after algorithm and integrity validation.
     pub fn decrypt(
         &self,
         sealed: &DirectMessageCiphertext,
@@ -116,15 +130,24 @@ impl DirectMessageCryptoEngine {
     }
 }
 
+/// Errors emitted by direct-message crypto construction and processing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DirectMessageCryptoError {
+    /// Key reference for role was empty.
     EmptyKeyRef(&'static str),
+    /// Key reference for role did not match expected shape.
     InvalidKeyRef(&'static str),
+    /// Plaintext payload was empty.
     EmptyPayload,
+    /// Nonce value was invalid.
     InvalidNonce(u64),
+    /// Nonce was reused.
     NonceReuse(u64),
+    /// Ciphertext algorithm metadata did not match expected algorithms.
     AlgorithmMismatch,
+    /// Ciphertext integrity verification failed.
     IntegrityCheckFailed,
+    /// Ciphertext bytes were not valid hex or UTF-8 output.
     InvalidCiphertextEncoding,
 }
 
