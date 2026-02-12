@@ -806,6 +806,54 @@ def main() -> int:
             )
             return 1
 
+        attestation_schema_invalid_summary_file = negative_path / "attestation_schema_invalid_summary.json"
+        attestation_schema_invalid_policy_file = negative_path / "attestation_schema_invalid_policy.json"
+        attestation_schema_invalid_summary = dict(summary)
+        attestation_schema_invalid_bundle = dict(
+            attestation_schema_invalid_summary.get("runtime_signer_attestation_bundle", {})
+        )
+        attestation_schema_invalid_bundle["schema_version"] = "kamn.kolme.runtime-signer-attestation.v0"
+        attestation_schema_invalid_summary["runtime_signer_attestation_bundle"] = (
+            attestation_schema_invalid_bundle
+        )
+        attestation_schema_invalid_summary_file.write_text(
+            json.dumps(attestation_schema_invalid_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        attestation_schema_invalid_result = run_real_node_policy_check(
+            report_file=attestation_schema_invalid_summary_file,
+            output_json=attestation_schema_invalid_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if attestation_schema_invalid_result.returncode == 0:
+            print("expected schema-invalid signer attestation proof to fail closed", file=sys.stderr)
+            return 1
+        attestation_schema_invalid_policy = json.loads(
+            attestation_schema_invalid_policy_file.read_text(encoding="utf-8")
+        )
+        attestation_schema_invalid_reason_codes = attestation_schema_invalid_policy.get(
+            "reason_codes"
+        )
+        if not isinstance(attestation_schema_invalid_reason_codes, list):
+            print(
+                "expected reason_codes list in schema-invalid signer attestation policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if "runtime_signer_attestation_schema_invalid" not in attestation_schema_invalid_reason_codes:
+            print(
+                "expected runtime_signer_attestation_schema_invalid in schema-invalid signer attestation policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if attestation_schema_invalid_policy.get("final_decision") != "NO-GO":
+            print(
+                "expected NO-GO final decision for schema-invalid signer attestation policy output",
+                file=sys.stderr,
+            )
+            return 1
+
         key_source_matrix_drift_summary_file = negative_path / "key_source_matrix_drift_summary.json"
         key_source_matrix_drift_policy_file = negative_path / "key_source_matrix_drift_policy.json"
         key_source_matrix_drift_summary = dict(summary)
@@ -967,6 +1015,7 @@ def main() -> int:
         "runtime_signer_raw_private_key_present=false",
         "runtime_signer_fallback_private_key_present_violation",
         "runtime_signer_managed_external_raw_private_key_present_violation",
+        "runtime_signer_attestation_schema_invalid",
         "runtime_signer_attestation_approved_signers_not_unique",
         "runtime_signer_attestation_quorum_shortfall",
         "runtime_signer_failover_profile_unchanged",
@@ -975,6 +1024,7 @@ def main() -> int:
         "runtime_signer_private_key_env_mismatch",
         "Regression: #2302",
         "Regression: #2325",
+        "Regression: #2327",
         "Regression: #2324",
         "Regression: #2139",
     ]
@@ -996,6 +1046,7 @@ def main() -> int:
         "runtime_signer_raw_private_key_present=false",
         "runtime_signer_fallback_private_key_present_violation",
         "runtime_signer_managed_external_raw_private_key_present_violation",
+        "runtime_signer_attestation_schema_invalid",
         "runtime_signer_attestation_approved_signers_not_unique",
         "runtime_signer_attestation_quorum_shortfall",
         "runtime_signer_failover_profile_unchanged",
@@ -1004,6 +1055,7 @@ def main() -> int:
         "runtime_signer_private_key_env_mismatch",
         "Regression: #2302",
         "Regression: #2325",
+        "Regression: #2327",
         "Regression: #2324",
         "Regression: #2139",
     ]
@@ -1025,6 +1077,7 @@ def main() -> int:
         "runtime_signer_raw_private_key_present=false",
         "runtime_signer_fallback_private_key_present_violation",
         "runtime_signer_managed_external_raw_private_key_present_violation",
+        "runtime_signer_attestation_schema_invalid",
         "runtime_signer_attestation_approved_signers_not_unique",
         "runtime_signer_attestation_quorum_shortfall",
         "runtime_signer_failover_profile_unchanged",
@@ -1033,6 +1086,7 @@ def main() -> int:
         "runtime_signer_private_key_env_mismatch",
         "Regression: #2302",
         "Regression: #2325",
+        "Regression: #2327",
         "Regression: #2324",
         "Regression: #2139",
     ]

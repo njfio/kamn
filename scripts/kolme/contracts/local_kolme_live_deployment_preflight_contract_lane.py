@@ -491,6 +491,72 @@ def main() -> int:
             print("expected duplicate signer attestation policy final_decision NO-GO", file=sys.stderr)
             return 1
 
+        attestation_schema_invalid_report = temp_path / "attestation_schema_invalid_summary.json"
+        attestation_schema_invalid_policy = temp_path / "attestation_schema_invalid_policy.json"
+        attestation_schema_invalid_summary = dict(summary)
+        attestation_schema_invalid_summary["mode"] = "run"
+        attestation_schema_invalid_summary["status"] = "fail"
+        attestation_schema_invalid_summary["reason_code"] = "checkpoint_failed_quorum_evidence_contract"
+        attestation_schema_invalid_summary["signer_secret_present"] = True
+        attestation_schema_invalid_summary["signer_secret_hex_valid"] = True
+        attestation_schema_invalid_summary["required_approvals"] = 2
+        attestation_schema_invalid_summary["received_approvals"] = 2
+        attestation_schema_invalid_summary["custody_evidence_file"] = "/tmp/custody-evidence.json"
+        attestation_schema_invalid_summary["custody_evidence_present"] = True
+        attestation_schema_invalid_summary["custody_evidence_sha256"] = (
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        )
+        attestation_schema_invalid_summary["custody_evidence_sha256_valid"] = True
+        attestation_schema_invalid_summary["quorum_evidence_file"] = "/tmp/attestation-schema-invalid.json"
+        attestation_schema_invalid_summary["quorum_evidence_present"] = True
+        attestation_schema_invalid_summary["quorum_evidence_sha256"] = (
+            "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        )
+        attestation_schema_invalid_summary["quorum_evidence_sha256_valid"] = True
+        attestation_schema_invalid_summary["quorum_evidence_schema_valid"] = True
+        attestation_schema_invalid_summary["quorum_evidence_approval_count"] = 2
+        attestation_schema_invalid_summary["quorum_evidence_signers_unique"] = True
+        attestation_schema_invalid_summary["quorum_evidence_matches_threshold"] = True
+        attestation_schema_invalid_summary["quorum_evidence_custody_sha256_match"] = True
+        attestation_schema_invalid_summary["runtime_signer_attestation_bundle"] = {
+            "schema_version": "kamn.kolme.runtime-signer-attestation.v0",
+            "required_approvals": 2,
+            "approved_signers": ["ops-primary", "ops-secondary"],
+            "signer_profile": "ops-primary",
+            "signer_key_source": "env-local",
+        }
+        attestation_schema_invalid_summary["runtime_signer_attestation_profile_approved"] = True
+        attestation_schema_invalid_report.write_text(
+            json.dumps(attestation_schema_invalid_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        attestation_schema_invalid_result = run_policy_check(
+            report_file=attestation_schema_invalid_report,
+            output_json=attestation_schema_invalid_policy,
+            expected_final_decision="NO-GO",
+            required_reason_code="checkpoint_failed_quorum_evidence_contract",
+        )
+        if attestation_schema_invalid_result.returncode == 0:
+            print("expected schema-invalid signer attestation proof to fail closed", file=sys.stderr)
+            return 1
+        attestation_schema_invalid_policy_payload = json.loads(
+            attestation_schema_invalid_policy.read_text(encoding="utf-8")
+        )
+        attestation_schema_invalid_reason_codes = attestation_schema_invalid_policy_payload.get("reason_codes")
+        if not isinstance(attestation_schema_invalid_reason_codes, list):
+            print("expected reason_codes list in schema-invalid signer attestation policy output", file=sys.stderr)
+            return 1
+        if "runtime_signer_attestation_schema_invalid" not in attestation_schema_invalid_reason_codes:
+            print(
+                "expected runtime_signer_attestation_schema_invalid in schema-invalid signer attestation policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if attestation_schema_invalid_policy_payload.get("final_decision") != "NO-GO":
+            print("expected schema-invalid signer attestation policy final_decision NO-GO", file=sys.stderr)
+            return 1
+
         provenance_negative_report = temp_path / "signer_provenance_negative_summary.json"
         provenance_negative_policy = temp_path / "signer_provenance_negative_policy.json"
         provenance_negative_summary = dict(summary)
@@ -617,6 +683,7 @@ def main() -> int:
         "quorum_evidence_custody_sha256_mismatch",
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
+        "runtime_signer_attestation_schema_invalid",
         "runtime_signer_attestation_approved_signers_not_unique",
         "runtime_signer_attestation_quorum_shortfall",
         "custody_evidence_missing",
@@ -629,6 +696,7 @@ def main() -> int:
         "Regression: #2300",
         "Regression: #2301",
         "Regression: #2326",
+        "Regression: #2327",
     ]
     ci_doc_markers = [
         "run_local_kolme_live_deployment_preflight_lane.sh",
@@ -648,6 +716,7 @@ def main() -> int:
         "quorum_evidence_custody_sha256_mismatch",
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
+        "runtime_signer_attestation_schema_invalid",
         "runtime_signer_attestation_approved_signers_not_unique",
         "runtime_signer_attestation_quorum_shortfall",
         "custody_evidence_missing",
@@ -660,6 +729,7 @@ def main() -> int:
         "Regression: #2300",
         "Regression: #2301",
         "Regression: #2326",
+        "Regression: #2327",
     ]
     readme_markers = [
         "run_local_kolme_live_deployment_preflight_lane.sh",
@@ -679,6 +749,7 @@ def main() -> int:
         "quorum_evidence_custody_sha256_mismatch",
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
+        "runtime_signer_attestation_schema_invalid",
         "runtime_signer_attestation_approved_signers_not_unique",
         "runtime_signer_attestation_quorum_shortfall",
         "custody_evidence_missing",
@@ -691,6 +762,7 @@ def main() -> int:
         "Regression: #2300",
         "Regression: #2301",
         "Regression: #2326",
+        "Regression: #2327",
     ]
 
     missing_markers: list[str] = []
