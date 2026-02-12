@@ -62,6 +62,8 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("txhash_from_kolme_commit_id("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_endpoint("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_websocket_endpoint("));
+    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_live_provider_base_url_input_contract("));
+    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_live_provider_submit_path_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("compose_kolme_notifications_websocket_url("));
     assert!(RUNTIME_COMMIT_SRC.contains("validate_kolme_block_path_template("));
     assert!(RUNTIME_COMMIT_SRC.contains("render_kolme_block_path("));
