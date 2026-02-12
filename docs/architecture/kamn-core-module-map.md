@@ -162,6 +162,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `bootstrap`
   - `config`
   - `content_storage`
+  - `cross_chain_bridge`
   - `direct_message_crypto`
   - `discord_bridge`
   - `group_channel_crypto`
@@ -205,6 +206,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2013`
   - `Regression: #2015`
   - `Regression: #2017`
+  - `Regression: #2019`
 
 ## Contributor Entrypoint Matrix
 

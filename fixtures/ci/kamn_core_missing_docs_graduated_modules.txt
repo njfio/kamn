@@ -25,3 +25,4 @@ group_channel_crypto
 config
 content_storage
 redaction_compliance
+cross_chain_bridge
