@@ -5,6 +5,8 @@ import argparse
 import json
 from pathlib import Path
 
+NON_SYNTHETIC_SUBMIT_PROBE_MARKER = "integration_kolme_fork_live_node_submit_reaches_endpoint"
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -102,6 +104,11 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_provider_contract_marker_missing")
         if args.require_non_synthetic_run_evidence and "--require-non-synthetic-run-evidence" not in runtime_commit_command:
             reason_codes.append("runtime_commit_non_synthetic_policy_marker_missing")
+        if (
+            runtime_commit_command_profile == "real-node-non-synthetic-v1"
+            and NON_SYNTHETIC_SUBMIT_PROBE_MARKER not in runtime_commit_command
+        ):
+            reason_codes.append("runtime_commit_non_synthetic_submit_probe_missing")
 
     runtime_commit_live_policy_report = report.get("runtime_commit_live_policy_report")
     if not isinstance(runtime_commit_live_policy_report, str) or not runtime_commit_live_policy_report.strip():

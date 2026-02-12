@@ -54,6 +54,30 @@ def ensure_markers_present(text: str, markers: list[str], source_name: str) -> l
     return missing
 
 
+def run_real_node_policy_check(
+    report_file: Path, output_json: Path, expected_final_decision: str
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            "python3",
+            str(CHECKER),
+            "--report-file",
+            str(report_file),
+            "--expected-final-decision",
+            expected_final_decision,
+            "--ci-fast-gate",
+            "PASS",
+            "--require-non-synthetic-run-evidence",
+            "--output-json",
+            str(output_json),
+        ],
+        cwd=ROOT_DIR,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
 def main() -> int:
     args = build_parser().parse_args()
 
@@ -153,26 +177,17 @@ def main() -> int:
             stdout=subprocess.DEVNULL,
         )
 
-        subprocess.run(
-            [
-                "python3",
-                str(CHECKER),
-                "--report-file",
-                args.output_json,
-                "--expected-final-decision",
-                "GO",
-                "--ci-fast-gate",
-                "PASS",
-                "--require-reason-code",
-                "dry_run_no_commands_executed",
-                "--require-non-synthetic-run-evidence",
-                "--output-json",
-                args.policy_output_json,
-            ],
-            cwd=ROOT_DIR,
-            check=True,
-            stdout=subprocess.DEVNULL,
+        policy_result = run_real_node_policy_check(
+            report_file=Path(args.output_json),
+            output_json=Path(args.policy_output_json),
+            expected_final_decision="GO",
         )
+        if policy_result.returncode != 0:
+            print("expected real-node policy checker GO path to pass", file=sys.stderr)
+            stderr = policy_result.stderr.strip()
+            if stderr:
+                print(stderr, file=sys.stderr)
+            return 1
 
     summary = json.loads(Path(args.output_json).read_text(encoding="utf-8"))
     policy = json.loads(Path(args.policy_output_json).read_text(encoding="utf-8"))
@@ -217,6 +232,81 @@ def main() -> int:
     if policy.get("final_decision") != "GO":
         print("expected real-node profile policy final_decision GO", file=sys.stderr)
         return 1
+    if policy.get("observed_reason_code") != "dry_run_no_commands_executed":
+        print("expected dry-run observed reason code in real-node profile policy output", file=sys.stderr)
+        return 1
+
+    with tempfile.TemporaryDirectory(prefix="kolme-runtime-real-node-negative-") as temp_dir:
+        negative_path = Path(temp_dir)
+
+        marker_drift_summary_file = negative_path / "marker_drift_summary.json"
+        marker_drift_policy_file = negative_path / "marker_drift_policy.json"
+        marker_drift_summary = dict(summary)
+        marker_drift_summary["runtime_commit_command_profile"] = "standard-default-v1"
+        marker_drift_summary_file.write_text(
+            json.dumps(marker_drift_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        marker_drift_result = run_real_node_policy_check(
+            report_file=marker_drift_summary_file,
+            output_json=marker_drift_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if marker_drift_result.returncode == 0:
+            print("expected marker drift negative proof to fail closed", file=sys.stderr)
+            return 1
+        marker_drift_policy = json.loads(marker_drift_policy_file.read_text(encoding="utf-8"))
+        marker_drift_reason_codes = marker_drift_policy.get("reason_codes")
+        if not isinstance(marker_drift_reason_codes, list):
+            print("expected reason_codes list in marker drift policy output", file=sys.stderr)
+            return 1
+        if "runtime_commit_command_profile_mismatch" not in marker_drift_reason_codes:
+            print("expected runtime_commit_command_profile_mismatch in marker drift policy output", file=sys.stderr)
+            return 1
+        if marker_drift_policy.get("final_decision") != "NO-GO":
+            print("expected NO-GO final decision for marker drift policy output", file=sys.stderr)
+            return 1
+
+        synthetic_regression_summary_file = negative_path / "synthetic_regression_summary.json"
+        synthetic_regression_policy_file = negative_path / "synthetic_regression_policy.json"
+        synthetic_regression_summary = dict(summary)
+        synthetic_regression_summary["runtime_commit_command"] = (
+            "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh "
+            "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider "
+            "--require-non-synthetic-run-evidence "
+            "--live-command \"printf 'runtime=synthetic\\\\n'\" "
+            "--output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json"
+        )
+        synthetic_regression_summary_file.write_text(
+            json.dumps(synthetic_regression_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        synthetic_regression_result = run_real_node_policy_check(
+            report_file=synthetic_regression_summary_file,
+            output_json=synthetic_regression_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if synthetic_regression_result.returncode == 0:
+            print("expected synthetic command regression negative proof to fail closed", file=sys.stderr)
+            return 1
+        synthetic_regression_policy = json.loads(
+            synthetic_regression_policy_file.read_text(encoding="utf-8")
+        )
+        synthetic_regression_reason_codes = synthetic_regression_policy.get("reason_codes")
+        if not isinstance(synthetic_regression_reason_codes, list):
+            print("expected reason_codes list in synthetic regression policy output", file=sys.stderr)
+            return 1
+        if "runtime_commit_non_synthetic_submit_probe_missing" not in synthetic_regression_reason_codes:
+            print(
+                "expected runtime_commit_non_synthetic_submit_probe_missing in synthetic regression policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if synthetic_regression_policy.get("final_decision") != "NO-GO":
+            print("expected NO-GO final decision for synthetic regression policy output", file=sys.stderr)
+            return 1
 
     doc_markers = [
         "--runtime-profile real-node",
