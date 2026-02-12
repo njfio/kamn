@@ -65,6 +65,18 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "quorum_evidence_signers_unique": false,
   "quorum_evidence_matches_threshold": false,
   "quorum_evidence_custody_sha256_match": false,
+  "runtime_signer_attestation_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
+  "runtime_signer_attestation_bundle": {
+    "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
+    "required_approvals": 2,
+    "approved_signers": [
+      "ops-primary",
+      "ops-secondary"
+    ],
+    "signer_profile": "ops-primary",
+    "signer_key_source": "env-local"
+  },
+  "runtime_signer_attestation_profile_approved": true,
   "custody_evidence_file": "",
   "custody_evidence_present": false,
   "custody_evidence_sha256": "",
@@ -98,10 +110,15 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "approval_quorum_source": "local-operator-attestations",
     "quorum_evidence_required": true,
     "quorum_evidence_sha256_required": true,
-    "quorum_evidence_schema_version": "kamn.kolme.signer-quorum-evidence.v1",
+    "quorum_evidence_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
     "quorum_evidence_signer_uniqueness_required": true,
     "quorum_evidence_custody_sha256_match_required": true,
     "quorum_evidence_source": "operator-attestation-bundle",
+    "runtime_signer_attestation_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
+    "runtime_signer_attestation_signer_uniqueness_required": true,
+    "runtime_signer_attestation_threshold_required": true,
+    "runtime_signer_attestation_profile_membership_required": true,
+    "runtime_signer_attestation_required_approvals": 2,
     "custody_evidence_required": true,
     "custody_evidence_sha256_required": true,
     "signer_provenance_required": true,
@@ -229,6 +246,18 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
   "quorum_evidence_signers_unique": false,
   "quorum_evidence_matches_threshold": false,
   "quorum_evidence_custody_sha256_match": false,
+  "runtime_signer_attestation_schema_version": "",
+  "runtime_signer_attestation_bundle": {
+    "schema_version": "kamn.kolme.runtime-signer-attestation.v0",
+    "required_approvals": 3,
+    "approved_signers": [
+      "ops-primary",
+      "ops-primary"
+    ],
+    "signer_profile": "ops-primary",
+    "signer_key_source": "legacy-local"
+  },
+  "runtime_signer_attestation_profile_approved": false,
   "custody_evidence_file": "",
   "custody_evidence_present": false,
   "custody_evidence_sha256": "",
@@ -262,10 +291,15 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
     "approval_quorum_source": "local-operator-attestations",
     "quorum_evidence_required": true,
     "quorum_evidence_sha256_required": true,
-    "quorum_evidence_schema_version": "kamn.kolme.signer-quorum-evidence.v1",
+    "quorum_evidence_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
     "quorum_evidence_signer_uniqueness_required": true,
     "quorum_evidence_custody_sha256_match_required": true,
     "quorum_evidence_source": "operator-attestation-bundle",
+    "runtime_signer_attestation_schema_version": "kamn.kolme.runtime-signer-attestation.v0",
+    "runtime_signer_attestation_signer_uniqueness_required": false,
+    "runtime_signer_attestation_threshold_required": false,
+    "runtime_signer_attestation_profile_membership_required": false,
+    "runtime_signer_attestation_required_approvals": 1,
     "custody_evidence_required": true,
     "custody_evidence_sha256_required": true,
     "signer_provenance_required": false,
@@ -395,6 +429,31 @@ fi
 
 if ! grep -q "quorum_evidence_missing" "$TMP_ERR"; then
   echo "expected quorum evidence missing reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_attestation_schema_version_missing" "$TMP_ERR"; then
+  echo "expected runtime signer attestation schema version missing reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_attestation_schema_invalid" "$TMP_ERR"; then
+  echo "expected runtime signer attestation schema invalid reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_attestation_approved_signers_not_unique" "$TMP_ERR"; then
+  echo "expected runtime signer attestation duplicate signer reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_attestation_quorum_shortfall" "$TMP_ERR"; then
+  echo "expected runtime signer attestation quorum shortfall reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_attestation_profile_not_approved" "$TMP_ERR"; then
+  echo "expected runtime signer attestation profile membership reason for deployment preflight policy failure" >&2
   exit 1
 fi
 

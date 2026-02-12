@@ -200,6 +200,22 @@ def main() -> int:
     if summary.get("quorum_evidence_matches_threshold") is not False:
         print("expected deployment preflight summary quorum threshold marker false in dry-run", file=sys.stderr)
         return 1
+    if summary.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+        print("expected deployment preflight summary runtime signer attestation schema marker", file=sys.stderr)
+        return 1
+    runtime_signer_attestation_bundle = summary.get("runtime_signer_attestation_bundle")
+    if not isinstance(runtime_signer_attestation_bundle, dict):
+        print("expected deployment preflight summary runtime signer attestation bundle", file=sys.stderr)
+        return 1
+    if runtime_signer_attestation_bundle.get("schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+        print("expected deployment preflight summary runtime signer attestation bundle schema marker", file=sys.stderr)
+        return 1
+    if runtime_signer_attestation_bundle.get("required_approvals") != 2:
+        print("expected deployment preflight summary runtime signer attestation required approvals marker", file=sys.stderr)
+        return 1
+    if runtime_signer_attestation_bundle.get("approved_signers") != ["ops-primary", "ops-secondary"]:
+        print("expected deployment preflight summary runtime signer attestation approved signers marker", file=sys.stderr)
+        return 1
     contracts = summary.get("contracts", {})
     if not isinstance(contracts, dict):
         print("expected contracts object in deployment preflight summary", file=sys.stderr)
@@ -219,7 +235,7 @@ def main() -> int:
     if contracts.get("quorum_evidence_sha256_required") is not True:
         print("expected deployment preflight contracts quorum_evidence_sha256_required=true", file=sys.stderr)
         return 1
-    if contracts.get("quorum_evidence_schema_version") != "kamn.kolme.signer-quorum-evidence.v1":
+    if contracts.get("quorum_evidence_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
         print("expected deployment preflight contracts quorum_evidence_schema_version marker", file=sys.stderr)
         return 1
     if contracts.get("quorum_evidence_signer_uniqueness_required") is not True:
@@ -227,6 +243,21 @@ def main() -> int:
         return 1
     if contracts.get("quorum_evidence_custody_sha256_match_required") is not True:
         print("expected deployment preflight contracts quorum_evidence_custody_sha256_match_required=true", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+        print("expected deployment preflight contracts runtime signer attestation schema marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_attestation_signer_uniqueness_required") is not True:
+        print("expected deployment preflight contracts runtime signer attestation uniqueness marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_attestation_threshold_required") is not True:
+        print("expected deployment preflight contracts runtime signer attestation threshold marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_attestation_profile_membership_required") is not True:
+        print("expected deployment preflight contracts runtime signer attestation profile membership marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_attestation_required_approvals") != 2:
+        print("expected deployment preflight contracts runtime signer attestation required approvals marker", file=sys.stderr)
         return 1
     if contracts.get("custody_evidence_required") is not True:
         print("expected deployment preflight contracts custody_evidence_required=true", file=sys.stderr)
@@ -357,6 +388,14 @@ def main() -> int:
         quorum_evidence_negative_summary["quorum_evidence_signers_unique"] = False
         quorum_evidence_negative_summary["quorum_evidence_matches_threshold"] = False
         quorum_evidence_negative_summary["quorum_evidence_custody_sha256_match"] = False
+        quorum_evidence_negative_summary["runtime_signer_attestation_bundle"] = {
+            "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
+            "required_approvals": 2,
+            "approved_signers": ["ops-primary"],
+            "signer_profile": "ops-primary",
+            "signer_key_source": "env-local",
+        }
+        quorum_evidence_negative_summary["runtime_signer_attestation_profile_approved"] = True
         quorum_evidence_negative_report.write_text(
             json.dumps(quorum_evidence_negative_summary, sort_keys=True, indent=2) + "\n",
             encoding="utf-8",
@@ -382,8 +421,74 @@ def main() -> int:
         if "quorum_evidence_approvals_mismatch" not in quorum_evidence_no_go_reason_codes:
             print("expected quorum_evidence_approvals_mismatch in quorum evidence negative policy output", file=sys.stderr)
             return 1
+        if "runtime_signer_attestation_quorum_shortfall" not in quorum_evidence_no_go_reason_codes:
+            print(
+                "expected runtime_signer_attestation_quorum_shortfall in quorum evidence negative policy output",
+                file=sys.stderr,
+            )
+            return 1
         if quorum_evidence_no_go_policy.get("final_decision") != "NO-GO":
             print("expected quorum evidence negative policy final_decision NO-GO", file=sys.stderr)
+            return 1
+
+        attestation_duplicate_report = temp_path / "attestation_duplicate_summary.json"
+        attestation_duplicate_policy = temp_path / "attestation_duplicate_policy.json"
+        attestation_duplicate_summary = dict(summary)
+        attestation_duplicate_summary["mode"] = "run"
+        attestation_duplicate_summary["status"] = "fail"
+        attestation_duplicate_summary["reason_code"] = "checkpoint_failed_quorum_evidence_contract"
+        attestation_duplicate_summary["signer_secret_present"] = True
+        attestation_duplicate_summary["signer_secret_hex_valid"] = True
+        attestation_duplicate_summary["required_approvals"] = 2
+        attestation_duplicate_summary["received_approvals"] = 2
+        attestation_duplicate_summary["custody_evidence_file"] = "/tmp/custody-evidence.json"
+        attestation_duplicate_summary["custody_evidence_present"] = True
+        attestation_duplicate_summary["custody_evidence_sha256"] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        attestation_duplicate_summary["custody_evidence_sha256_valid"] = True
+        attestation_duplicate_summary["quorum_evidence_file"] = "/tmp/attestation-duplicate.json"
+        attestation_duplicate_summary["quorum_evidence_present"] = True
+        attestation_duplicate_summary["quorum_evidence_sha256"] = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        attestation_duplicate_summary["quorum_evidence_sha256_valid"] = True
+        attestation_duplicate_summary["quorum_evidence_schema_valid"] = True
+        attestation_duplicate_summary["quorum_evidence_approval_count"] = 2
+        attestation_duplicate_summary["quorum_evidence_signers_unique"] = False
+        attestation_duplicate_summary["quorum_evidence_matches_threshold"] = True
+        attestation_duplicate_summary["quorum_evidence_custody_sha256_match"] = True
+        attestation_duplicate_summary["runtime_signer_attestation_bundle"] = {
+            "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
+            "required_approvals": 2,
+            "approved_signers": ["ops-primary", "ops-primary"],
+            "signer_profile": "ops-primary",
+            "signer_key_source": "env-local",
+        }
+        attestation_duplicate_summary["runtime_signer_attestation_profile_approved"] = True
+        attestation_duplicate_report.write_text(
+            json.dumps(attestation_duplicate_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        attestation_duplicate_result = run_policy_check(
+            report_file=attestation_duplicate_report,
+            output_json=attestation_duplicate_policy,
+            expected_final_decision="NO-GO",
+            required_reason_code="checkpoint_failed_quorum_evidence_contract",
+        )
+        if attestation_duplicate_result.returncode == 0:
+            print("expected duplicate signer attestation proof to fail closed", file=sys.stderr)
+            return 1
+        attestation_duplicate_policy_payload = json.loads(attestation_duplicate_policy.read_text(encoding="utf-8"))
+        attestation_duplicate_reason_codes = attestation_duplicate_policy_payload.get("reason_codes")
+        if not isinstance(attestation_duplicate_reason_codes, list):
+            print("expected reason_codes list in duplicate signer attestation policy output", file=sys.stderr)
+            return 1
+        if "runtime_signer_attestation_approved_signers_not_unique" not in attestation_duplicate_reason_codes:
+            print(
+                "expected runtime_signer_attestation_approved_signers_not_unique in duplicate signer attestation policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if attestation_duplicate_policy_payload.get("final_decision") != "NO-GO":
+            print("expected duplicate signer attestation policy final_decision NO-GO", file=sys.stderr)
             return 1
 
         provenance_negative_report = temp_path / "signer_provenance_negative_summary.json"
@@ -510,6 +615,10 @@ def main() -> int:
         "quorum_evidence_missing",
         "quorum_evidence_approvals_mismatch",
         "quorum_evidence_custody_sha256_mismatch",
+        "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
+        "runtime_signer_attestation_bundle",
+        "runtime_signer_attestation_approved_signers_not_unique",
+        "runtime_signer_attestation_quorum_shortfall",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",
@@ -519,6 +628,7 @@ def main() -> int:
         "Regression: #2226",
         "Regression: #2300",
         "Regression: #2301",
+        "Regression: #2326",
     ]
     ci_doc_markers = [
         "run_local_kolme_live_deployment_preflight_lane.sh",
@@ -536,6 +646,10 @@ def main() -> int:
         "quorum_evidence_missing",
         "quorum_evidence_approvals_mismatch",
         "quorum_evidence_custody_sha256_mismatch",
+        "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
+        "runtime_signer_attestation_bundle",
+        "runtime_signer_attestation_approved_signers_not_unique",
+        "runtime_signer_attestation_quorum_shortfall",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",
@@ -545,6 +659,7 @@ def main() -> int:
         "Regression: #2226",
         "Regression: #2300",
         "Regression: #2301",
+        "Regression: #2326",
     ]
     readme_markers = [
         "run_local_kolme_live_deployment_preflight_lane.sh",
@@ -562,6 +677,10 @@ def main() -> int:
         "quorum_evidence_missing",
         "quorum_evidence_approvals_mismatch",
         "quorum_evidence_custody_sha256_mismatch",
+        "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
+        "runtime_signer_attestation_bundle",
+        "runtime_signer_attestation_approved_signers_not_unique",
+        "runtime_signer_attestation_quorum_shortfall",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",
@@ -571,6 +690,7 @@ def main() -> int:
         "Regression: #2226",
         "Regression: #2300",
         "Regression: #2301",
+        "Regression: #2326",
     ]
 
     missing_markers: list[str] = []

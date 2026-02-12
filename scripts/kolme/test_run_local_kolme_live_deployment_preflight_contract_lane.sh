@@ -82,9 +82,14 @@ required_coverage_markers=(
   "quorum_evidence_approvals_mismatch"
   "quorum_evidence_custody_sha256_mismatch"
   "custody_evidence_missing"
+  "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1"
+  "runtime_signer_attestation_bundle"
+  "runtime_signer_attestation_approved_signers_not_unique"
+  "runtime_signer_attestation_quorum_shortfall"
   "Regression: #2226"
   "Regression: #2300"
   "Regression: #2301"
+  "Regression: #2326"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q -- "$marker" "$CONTRACT_IMPL"; then
@@ -106,6 +111,22 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
     echo "expected docs parity to include deployment preflight contract lane marker in $docs_file" >&2
     exit 1
   fi
+  if ! grep -q "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1" "$docs_file"; then
+    echo "expected docs parity to include runtime signer attestation schema marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_attestation_bundle" "$docs_file"; then
+    echo "expected docs parity to include runtime signer attestation bundle marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_attestation_approved_signers_not_unique" "$docs_file"; then
+    echo "expected docs parity to include runtime signer attestation duplicate-signer reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_attestation_quorum_shortfall" "$docs_file"; then
+    echo "expected docs parity to include runtime signer attestation quorum shortfall reason marker in $docs_file" >&2
+    exit 1
+  fi
   if ! grep -q "Regression: #2226" "$docs_file"; then
     echo "expected docs parity to include deployment preflight contract-lane regression marker in $docs_file" >&2
     exit 1
@@ -116,6 +137,10 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "Regression: #2301" "$docs_file"; then
     echo "expected docs parity to include signer quorum/custody regression marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "Regression: #2326" "$docs_file"; then
+    echo "expected docs parity to include runtime/deployment attestation-alignment regression marker in $docs_file" >&2
     exit 1
   fi
 done
@@ -137,9 +162,28 @@ if summary.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected deployment preflight dry-run reason code in contract-lane summary")
 if summary.get("ci_fast_gate_eligible") is not True:
     raise SystemExit("expected deployment preflight contract-lane summary ci_fast_gate_eligible=true")
+if summary.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+    raise SystemExit("expected deployment preflight summary runtime signer attestation schema marker")
+attestation_bundle = summary.get("runtime_signer_attestation_bundle")
+if not isinstance(attestation_bundle, dict):
+    raise SystemExit("expected deployment preflight summary runtime signer attestation bundle")
+if attestation_bundle.get("schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+    raise SystemExit("expected deployment preflight summary attestation bundle schema marker")
+if attestation_bundle.get("required_approvals") != summary.get("required_approvals"):
+    raise SystemExit("expected deployment preflight summary attestation required approvals to mirror quorum threshold")
+if attestation_bundle.get("approved_signers") != ["ops-primary", "ops-secondary"]:
+    raise SystemExit("expected deployment preflight summary attestation approved signers marker")
 contracts = summary.get("contracts", {})
 if contracts.get("ci_fast_gate_scope") != "ci-fast-gate":
     raise SystemExit("expected deployment preflight contracts ci_fast_gate_scope=ci-fast-gate")
+if contracts.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+    raise SystemExit("expected deployment preflight contracts runtime signer attestation schema marker")
+if contracts.get("runtime_signer_attestation_signer_uniqueness_required") is not True:
+    raise SystemExit("expected deployment preflight contracts runtime signer attestation uniqueness marker")
+if contracts.get("runtime_signer_attestation_threshold_required") is not True:
+    raise SystemExit("expected deployment preflight contracts runtime signer attestation threshold marker")
+if contracts.get("runtime_signer_attestation_profile_membership_required") is not True:
+    raise SystemExit("expected deployment preflight contracts runtime signer attestation profile membership marker")
 if policy.get("schema_version") != "kamn.kolme.local-live-deployment-preflight-policy-report.v1":
     raise SystemExit("unexpected deployment preflight contract-lane policy schema")
 if policy.get("final_decision") != "GO":
