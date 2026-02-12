@@ -50,7 +50,9 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
   "signer_profile": "ops-primary",
   "signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+  "fallback_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
   "signer_secret_present": false,
+  "fallback_signer_secret_present": false,
   "signer_secret_hex_valid": false,
   "contracts": {
     "ci_fast_gate_scope": "ci-fast-gate",
@@ -62,6 +64,8 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     ],
     "primary_signer_secret_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "secondary_signer_secret_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
+    "fallback_signer_secret_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+    "fallback_private_key_path_allowed": false,
     "required_secret_hex_length": 64,
     "secret_source": "env"
   },
@@ -81,6 +85,12 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     {
       "id": "signer_secret_contract",
       "command": "selected signer secret env must exist and be 64-char hex",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "fallback_private_key_contract",
+      "command": "fallback signer secret env must remain unset",
       "status": "planned",
       "reason_code": "not_run"
     }
@@ -125,7 +135,9 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
   "signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
   "signer_profile": "legacy",
   "signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+  "fallback_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
   "signer_secret_present": true,
+  "fallback_signer_secret_present": true,
   "signer_secret_hex_valid": true,
   "contracts": {
     "ci_fast_gate_scope": "local-only",
@@ -137,6 +149,8 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
     ],
     "primary_signer_secret_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "secondary_signer_secret_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
+    "fallback_signer_secret_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+    "fallback_private_key_path_allowed": true,
     "required_secret_hex_length": 64,
     "secret_source": "env"
   },
@@ -184,6 +198,16 @@ fi
 
 if ! grep -q "check_missing:signer_secret_contract" "$TMP_ERR"; then
   echo "expected missing signer_secret_contract check reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "fallback_signer_secret_present_violation" "$TMP_ERR"; then
+  echo "expected fallback signer secret presence violation reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "check_missing:fallback_private_key_contract" "$TMP_ERR"; then
+  echo "expected missing fallback_private_key_contract check reason for deployment preflight policy failure" >&2
   exit 1
 fi
 

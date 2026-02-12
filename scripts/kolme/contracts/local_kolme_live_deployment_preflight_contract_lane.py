@@ -156,12 +156,21 @@ def main() -> int:
     if summary.get("ci_fast_gate_eligible") is not True:
         print("expected deployment preflight contract-lane summary ci_fast_gate_eligible=true", file=sys.stderr)
         return 1
+    if summary.get("fallback_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
+        print("expected deployment preflight summary fallback signer env marker", file=sys.stderr)
+        return 1
+    if summary.get("fallback_signer_secret_present") is not False:
+        print("expected deployment preflight summary fallback signer secret marker to remain false", file=sys.stderr)
+        return 1
     contracts = summary.get("contracts", {})
     if not isinstance(contracts, dict):
         print("expected contracts object in deployment preflight summary", file=sys.stderr)
         return 1
     if contracts.get("ci_fast_gate_scope") != "ci-fast-gate":
         print("expected deployment preflight contracts ci_fast_gate_scope=ci-fast-gate", file=sys.stderr)
+        return 1
+    if contracts.get("fallback_private_key_path_allowed") is not False:
+        print("expected deployment preflight contracts to prohibit fallback private key paths", file=sys.stderr)
         return 1
     if policy.get("schema_version") != "kamn.kolme.local-live-deployment-preflight-policy-report.v1":
         print("unexpected deployment preflight contract-lane policy schema", file=sys.stderr)
@@ -178,6 +187,7 @@ def main() -> int:
         negative_summary["runtime_mode"] = "kolme-standard"
         negative_summary["status"] = "fail"
         negative_summary["reason_code"] = "checkpoint_failed_runtime_mode_contract"
+        negative_summary["fallback_signer_secret_present"] = True
         negative_report.write_text(json.dumps(negative_summary, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 
         no_go_result = run_policy_check(
@@ -196,6 +206,9 @@ def main() -> int:
         if "runtime_mode_mismatch" not in no_go_reason_codes:
             print("expected runtime_mode_mismatch in deployment preflight negative policy output", file=sys.stderr)
             return 1
+        if "fallback_signer_secret_present_violation" not in no_go_reason_codes:
+            print("expected fallback signer secret presence violation in deployment preflight negative policy output", file=sys.stderr)
+            return 1
         if no_go_policy.get("final_decision") != "NO-GO":
             print("expected deployment preflight negative policy final_decision NO-GO", file=sys.stderr)
             return 1
@@ -206,6 +219,7 @@ def main() -> int:
         "run_local_kolme_live_deployment_preflight_contract_lane.sh",
         "runtime_mode_mismatch",
         "checkpoint_failed_signer_secret_contract",
+        "fallback_signer_secret_present_violation",
         "Regression: #2226",
     ]
     ci_doc_markers = [
@@ -214,6 +228,7 @@ def main() -> int:
         "run_local_kolme_live_deployment_preflight_contract_lane.sh",
         "runtime_mode_mismatch",
         "checkpoint_failed_signer_secret_contract",
+        "fallback_signer_secret_present_violation",
         "Regression: #2226",
     ]
     readme_markers = [
@@ -222,6 +237,7 @@ def main() -> int:
         "run_local_kolme_live_deployment_preflight_contract_lane.sh",
         "runtime_mode_mismatch",
         "checkpoint_failed_signer_secret_contract",
+        "fallback_signer_secret_present_violation",
         "Regression: #2226",
     ]
 
