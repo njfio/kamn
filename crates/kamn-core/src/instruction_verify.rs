@@ -1,37 +1,60 @@
+//! Instruction claim verification contracts and replay-safe consumption flow.
+
 use crate::AgentDid;
 use std::collections::{HashMap, HashSet};
 
+/// Default maximum claim validity window in seconds (24h).
 pub const DEFAULT_MAX_CLAIM_VALIDITY_WINDOW_SECS: u64 = 24 * 60 * 60;
 
+/// Canonical instruction record persisted for verification.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstructionRecord {
+    /// Instruction identifier.
     pub id: String,
+    /// Sender DID associated with the instruction.
     pub from_did: String,
+    /// Canonical payload hash.
     pub payload_hash: String,
+    /// Signature over the instruction payload.
     pub signature: String,
+    /// Inclusion proof reference for chain anchoring.
     pub inclusion_proof_ref: String,
 }
 
+/// Verification claim supplied by a caller for a specific instruction.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstructionClaim {
+    /// Referenced instruction identifier.
     pub instruction_id: String,
+    /// Claimed sender DID.
     pub from_did: String,
+    /// Claimed payload hash.
     pub payload_hash: String,
+    /// Claimed signature.
     pub signature: String,
+    /// Claimed inclusion proof reference.
     pub inclusion_proof_ref: String,
+    /// Claim expiry timestamp in Unix seconds.
     pub expires_at_unix: u64,
 }
 
+/// Verification context containing instruction records and policy controls.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VerificationContext {
+    /// Current evaluation timestamp in Unix seconds.
     pub now_unix: u64,
+    /// Instruction records keyed by instruction id.
     pub instructions: HashMap<String, InstructionRecord>,
+    /// Sender DID allowlist for accepted claims.
     pub authorized_senders: HashSet<String>,
+    /// Maximum allowed claim validity window in seconds.
     pub max_claim_validity_window_secs: u64,
+    /// Instruction ids already consumed by successful verification.
     pub consumed_instruction_ids: HashSet<String>,
 }
 
 impl VerificationContext {
+    /// Creates a context with default bounded validity-window policy.
     pub fn new(now_unix: u64) -> Self {
         Self {
             now_unix,
@@ -42,21 +65,25 @@ impl VerificationContext {
         }
     }
 
+    /// Inserts an instruction record into the context.
     pub fn with_instruction(mut self, record: InstructionRecord) -> Self {
         self.instructions.insert(record.id.clone(), record);
         self
     }
 
+    /// Adds an authorized sender DID to the allowlist.
     pub fn with_authorized_sender(mut self, did: &str) -> Self {
         self.authorized_senders.insert(did.to_owned());
         self
     }
 
+    /// Overrides the maximum claim validity window in seconds.
     pub fn with_max_claim_validity_window_secs(mut self, max_window_secs: u64) -> Self {
         self.max_claim_validity_window_secs = max_window_secs;
         self
     }
 
+    /// Marks an instruction id as already consumed.
     pub fn with_consumed_instruction_id(mut self, instruction_id: &str) -> Self {
         self.consumed_instruction_ids
             .insert(instruction_id.to_owned());
@@ -64,47 +91,76 @@ impl VerificationContext {
     }
 }
 
+/// Verification failure taxonomy.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VerificationFailure {
+    /// Referenced instruction id is not present in context.
     MissingInstruction(String),
+    /// Claim or record inclusion proof reference is missing.
     MissingInclusionProofReference,
+    /// Claim sender DID is invalid.
     InvalidClaimSenderDid(String),
+    /// Record sender DID is invalid.
     InvalidRecordSenderDid(String),
+    /// Claim sender does not match record sender.
     SenderMismatch {
+        /// Expected sender DID from record.
         expected: String,
+        /// Sender DID provided by claim.
         actual: String,
     },
+    /// Claim payload hash does not match record payload hash.
     PayloadMismatch,
+    /// Claim signature is missing.
     MissingClaimSignature,
+    /// Record signature is missing.
     MissingRecordSignature,
+    /// Claim signature does not match record signature.
     SignatureMismatch,
+    /// Inclusion proof reference does not match record.
     InclusionProofMismatch {
+        /// Expected inclusion proof reference from record.
         expected: String,
+        /// Inclusion proof reference provided by claim.
         actual: String,
     },
+    /// Claim sender is not in authorized sender allowlist.
     UnauthorizedSender(String),
+    /// Claim is expired at evaluation time.
     Expired {
+        /// Claim expiry timestamp.
         expires_at: u64,
+        /// Evaluation timestamp.
         now: u64,
     },
+    /// Claim validity window exceeds configured maximum.
     OverlongValidityWindow {
+        /// Maximum allowed window in seconds.
         max_window_secs: u64,
+        /// Requested window in seconds.
         requested_window_secs: u64,
     },
+    /// Instruction id was already consumed by a previous valid claim.
     ReplayClaim {
+        /// Replayed instruction identifier.
         instruction_id: String,
     },
 }
 
+/// Verification result.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VerificationOutcome {
+    /// Verification succeeded.
     Valid,
+    /// Verification failed with specific reason.
     Rejected(VerificationFailure),
 }
 
+/// Stateless instruction verifier.
 pub struct InstructionVerifier;
 
 impl InstructionVerifier {
+    /// Verifies a claim against instruction record data and policy context.
     pub fn verify(claim: &InstructionClaim, context: &VerificationContext) -> VerificationOutcome {
         let record = match context.instructions.get(&claim.instruction_id) {
             Some(value) => value,
@@ -177,6 +233,7 @@ impl InstructionVerifier {
         VerificationOutcome::Valid
     }
 
+    /// Verifies a claim and records consumption on success.
     pub fn verify_and_record(
         claim: &InstructionClaim,
         context: &mut VerificationContext,

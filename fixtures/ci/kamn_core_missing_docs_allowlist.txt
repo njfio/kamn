@@ -3,7 +3,6 @@ bridge_adapter
 channel_models
 channel_policies
 governance_workflow
-instruction_verify
 message_lifecycle
 reputation_state
 runtime

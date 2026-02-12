@@ -177,6 +177,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `escrow`
   - `group_channel_crypto`
   - `invariants`
+  - `instruction_verify`
   - `key_lifecycle`
   - `key_recovery`
   - `kolme_runtime_commit`
@@ -251,6 +252,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2059`
   - `Regression: #2061`
   - `Regression: #2063`
+  - `Regression: #2065`
 
 ## Contributor Entrypoint Matrix
 

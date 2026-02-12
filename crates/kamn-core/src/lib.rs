@@ -52,7 +52,7 @@ pub mod escrow;
 pub mod governance_workflow;
 /// Group sender-key distribution, rotation, and encryption integrity contracts.
 pub mod group_channel_crypto;
-#[allow(missing_docs)]
+/// Instruction claim verification, inclusion-proof checks, and record contracts.
 pub mod instruction_verify;
 /// Invariant catalog, taxonomy, and guardrail policy contracts.
 pub mod invariants;
