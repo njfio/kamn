@@ -639,10 +639,12 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-
 
 # sample signer custody evidence marker for run mode
 printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json
+# sample signer provenance evidence marker for run mode
+printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" > /tmp/kolme-live-signer-provenance.json
 
 # deployment preflight run mode (fast-gate eligible, no local-heavy gate required)
 KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 \
-bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json
+bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source env-local --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json
 
 # deployment preflight policy checker contract
 python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json
@@ -653,6 +655,16 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # deterministic preflight marker contracts
 # signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE
 # fallback_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK
+# signer_key_source_contract_version=v1
+# signer_key_source=env-local
+# signer_provenance_file
+# signer_provenance_present
+# signer_provenance_sha256_valid
+# signer_rotation_epoch
+# signer_previous_rotation_epoch
+# signer_rotation_freshness_max_delta
+# signer_rotation_delta_epochs
+# signer_rotation_fresh
 # required_approvals=2
 # received_approvals=2
 # contracts.ci_fast_gate_scope=ci-fast-gate
@@ -660,6 +672,12 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # contracts.fallback_private_key_path_allowed=false
 # contracts.approval_quorum_required=2
 # contracts.custody_evidence_required=true
+# contracts.signer_provenance_required=true
+# contracts.signer_provenance_sha256_required=true
+# contracts.signer_key_source_contract_version=v1
+# contracts.signer_key_source=env-local
+# contracts.signer_rotation_freshness_max_delta=2
+# contracts.signer_rotation_stale_rejected=true
 
 # strict preflight NO-GO drift reasons
 # runtime_mode_mismatch
@@ -668,14 +686,23 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # checkpoint_failed_signer_secret_contract
 # checkpoint_failed_signer_quorum_contract
 # checkpoint_failed_custody_evidence_contract
+# checkpoint_failed_signer_provenance_contract
+# checkpoint_failed_signer_rotation_freshness_contract
 # signer_quorum_shortfall
 # custody_evidence_missing
 # custody_evidence_sha256_invalid
+# signer_key_source_contract_version_mismatch
+# signer_key_source_invalid
+# signer_key_source_profile_pair_disallowed
+# signer_provenance_missing
+# signer_provenance_sha256_invalid
+# signer_rotation_epoch_stale
 
 # schema: kamn.kolme.local-live-deployment-preflight-summary.v1
 # schema: kamn.kolme.local-live-deployment-preflight-policy-report.v1
 # Regression: #2225
 # Regression: #2226
+# Regression: #2300
 ```
 
 Live Provider Operator Runbook (Issue #2114): `docs/planning/kolme-devnet-ops.md`

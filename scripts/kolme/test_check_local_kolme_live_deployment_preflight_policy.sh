@@ -60,6 +60,17 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "custody_evidence_present": false,
   "custody_evidence_sha256": "",
   "custody_evidence_sha256_valid": false,
+  "signer_provenance_file": "",
+  "signer_provenance_present": false,
+  "signer_provenance_sha256": "",
+  "signer_provenance_sha256_valid": false,
+  "signer_key_source_contract_version": "v1",
+  "signer_key_source": "env-local",
+  "signer_rotation_epoch": 1,
+  "signer_previous_rotation_epoch": 1,
+  "signer_rotation_freshness_max_delta": 2,
+  "signer_rotation_delta_epochs": 0,
+  "signer_rotation_fresh": false,
   "contracts": {
     "ci_fast_gate_scope": "ci-fast-gate",
     "required_runtime_mode": "kolme-live",
@@ -77,7 +88,20 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "approval_quorum_required": 2,
     "approval_quorum_source": "local-operator-attestations",
     "custody_evidence_required": true,
-    "custody_evidence_sha256_required": true
+    "custody_evidence_sha256_required": true,
+    "signer_provenance_required": true,
+    "signer_provenance_sha256_required": true,
+    "signer_key_source_contract_version": "v1",
+    "signer_key_source": "env-local",
+    "signer_key_source_allowed_for_ops_primary": [
+      "env-local",
+      "managed-external"
+    ],
+    "signer_key_source_allowed_for_ops_secondary": [
+      "env-local"
+    ],
+    "signer_rotation_freshness_max_delta": 2,
+    "signer_rotation_stale_rejected": true
   },
   "checks": [
     {
@@ -113,6 +137,18 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     {
       "id": "custody_evidence_contract",
       "command": "signer custody evidence file and sha256 marker must be present",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "signer_provenance_contract",
+      "command": "signer provenance evidence file and sha256 marker must be present",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "signer_rotation_freshness_contract",
+      "command": "signer rotation metadata must satisfy freshness threshold",
       "status": "planned",
       "reason_code": "not_run"
     }
@@ -167,6 +203,17 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
   "custody_evidence_present": false,
   "custody_evidence_sha256": "",
   "custody_evidence_sha256_valid": false,
+  "signer_provenance_file": "",
+  "signer_provenance_present": false,
+  "signer_provenance_sha256": "",
+  "signer_provenance_sha256_valid": false,
+  "signer_key_source_contract_version": "v0",
+  "signer_key_source": "legacy-local",
+  "signer_rotation_epoch": 7,
+  "signer_previous_rotation_epoch": 1,
+  "signer_rotation_freshness_max_delta": 2,
+  "signer_rotation_delta_epochs": 6,
+  "signer_rotation_fresh": false,
   "contracts": {
     "ci_fast_gate_scope": "local-only",
     "required_runtime_mode": "kolme-live",
@@ -184,7 +231,19 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
     "approval_quorum_required": 2,
     "approval_quorum_source": "local-operator-attestations",
     "custody_evidence_required": true,
-    "custody_evidence_sha256_required": true
+    "custody_evidence_sha256_required": true,
+    "signer_provenance_required": false,
+    "signer_provenance_sha256_required": false,
+    "signer_key_source_contract_version": "v0",
+    "signer_key_source": "legacy-local",
+    "signer_key_source_allowed_for_ops_primary": [
+      "legacy-local"
+    ],
+    "signer_key_source_allowed_for_ops_secondary": [
+      "legacy-local"
+    ],
+    "signer_rotation_freshness_max_delta": 4,
+    "signer_rotation_stale_rejected": false
   },
   "checks": [
     {
@@ -233,6 +292,11 @@ if ! grep -q "check_missing:signer_secret_contract" "$TMP_ERR"; then
   exit 1
 fi
 
+if ! grep -q "check_missing:signer_provenance_contract" "$TMP_ERR"; then
+  echo "expected missing signer_provenance_contract check reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
 if ! grep -q "fallback_signer_secret_present_violation" "$TMP_ERR"; then
   echo "expected fallback signer secret presence violation reason for deployment preflight policy failure" >&2
   exit 1
@@ -260,6 +324,31 @@ fi
 
 if ! grep -q "check_missing:custody_evidence_contract" "$TMP_ERR"; then
   echo "expected missing custody_evidence_contract check reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "check_missing:signer_rotation_freshness_contract" "$TMP_ERR"; then
+  echo "expected missing signer_rotation_freshness_contract check reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "signer_key_source_contract_version_mismatch" "$TMP_ERR"; then
+  echo "expected signer key-source contract version mismatch reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "signer_key_source_invalid" "$TMP_ERR"; then
+  echo "expected signer key-source invalid reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "signer_provenance_missing" "$TMP_ERR"; then
+  echo "expected signer provenance missing reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "signer_rotation_epoch_stale" "$TMP_ERR"; then
+  echo "expected signer rotation stale reason for deployment preflight policy failure" >&2
   exit 1
 fi
 
