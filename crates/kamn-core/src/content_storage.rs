@@ -1,3 +1,8 @@
+//! Content storage adapter contracts and CID/URI mapping helpers.
+//!
+//! This module defines in-memory reference behavior for storing content payloads,
+//! retrieving metadata, and verifying deterministic integrity tags.
+
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -5,40 +10,61 @@ const CID_PREFIX: &str = "kamn:cid:v1:";
 const CONTENT_URI_PREFIX: &str = "kamn:content:v1:";
 const CID_HASH_HEX_LEN: usize = 16;
 
+/// Stored content payload and metadata returned by `get`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContentObject {
+    /// Deterministic content identifier.
     pub cid: String,
+    /// MIME media type associated with the payload.
     pub media_type: String,
+    /// Raw payload bytes.
     pub payload: Vec<u8>,
+    /// Deterministic integrity tag for payload verification.
     pub integrity_tag: String,
 }
 
+/// Content metadata returned by `head` and `put`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContentHead {
+    /// Deterministic content identifier.
     pub cid: String,
+    /// MIME media type associated with the payload.
     pub media_type: String,
+    /// Payload length in bytes.
     pub size_bytes: u64,
+    /// Deterministic integrity tag for payload verification.
     pub integrity_tag: String,
 }
 
+/// Storage adapter interface for content put/get/head/verify operations.
 pub trait ContentStorageAdapter {
+    /// Stores payload bytes and returns metadata for the persisted object.
     fn put(&mut self, media_type: &str, payload: &[u8])
         -> Result<ContentHead, ContentStorageError>;
+    /// Loads a full content object by CID.
     fn get(&self, cid: &str) -> Result<ContentObject, ContentStorageError>;
+    /// Loads only metadata for a CID without payload bytes.
     fn head(&self, cid: &str) -> Result<ContentHead, ContentStorageError>;
+    /// Verifies CID and integrity tag against current stored payload.
     fn verify(&self, cid: &str) -> Result<(), ContentStorageError>;
 }
 
+/// In-memory reference implementation of `ContentStorageAdapter`.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct InMemoryContentAdapter {
     objects: BTreeMap<String, StoredObject>,
 }
 
 impl InMemoryContentAdapter {
+    /// Constructs an empty in-memory content adapter.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Replaces payload bytes for a CID without updating integrity metadata.
+    ///
+    /// This helper is intentionally unsafe for integrity and is used in tests to
+    /// simulate storage corruption.
     pub fn replace_payload_unchecked(
         &mut self,
         cid: &str,
@@ -118,11 +144,13 @@ impl ContentStorageAdapter for InMemoryContentAdapter {
     }
 }
 
+/// Converts a CID into canonical content URI form.
 pub fn content_uri_for_cid(cid: &str) -> Result<String, ContentStorageError> {
     validate_cid(cid)?;
     Ok(format!("{CONTENT_URI_PREFIX}{cid}"))
 }
 
+/// Extracts and validates a CID from canonical content URI form.
 pub fn cid_from_content_uri(uri: &str) -> Result<String, ContentStorageError> {
     let cid = uri
         .strip_prefix(CONTENT_URI_PREFIX)
@@ -131,15 +159,24 @@ pub fn cid_from_content_uri(uri: &str) -> Result<String, ContentStorageError> {
     Ok(cid.to_owned())
 }
 
+/// Error surface for content storage parsing and integrity checks.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ContentStorageError {
+    /// Required string field was empty.
     EmptyField(&'static str),
+    /// CID string failed validation.
     InvalidCid(String),
+    /// Content URI string failed validation.
     InvalidContentUri(String),
+    /// Requested CID was not found in storage.
     NotFound(String),
+    /// Stored payload no longer matches expected integrity metadata.
     IntegrityMismatch {
+        /// CID that failed integrity verification.
         cid: String,
+        /// Expected integrity tag for current payload.
         expected: String,
+        /// Integrity tag found in stored metadata.
         found: String,
     },
 }

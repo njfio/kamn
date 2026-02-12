@@ -28,7 +28,7 @@ pub mod content_lifecycle;
 pub mod content_replication;
 #[allow(missing_docs)]
 pub mod content_retrieval;
-#[allow(missing_docs)]
+/// Content storage adapter contracts, object metadata, and CID/URI helpers.
 pub mod content_storage;
 #[allow(missing_docs)]
 pub mod cross_chain_bridge;
