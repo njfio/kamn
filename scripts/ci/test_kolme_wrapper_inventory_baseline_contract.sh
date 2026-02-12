@@ -7,6 +7,8 @@ CHECK_SCRIPT="$ROOT_DIR/scripts/ci/check_kolme_wrapper_inventory_baseline.sh"
 PYTHON_SCRIPT="$ROOT_DIR/scripts/ci/kolme_wrapper_inventory_baseline.py"
 MATRIX_FIXTURE="$ROOT_DIR/fixtures/kolme_compatibility/lane_migration_matrix.json"
 BASELINE_FIXTURE="$ROOT_DIR/fixtures/kolme_compatibility/wrapper_inventory_baseline.json"
+WAVE10_MATRIX_FIXTURE="$ROOT_DIR/fixtures/ci/kolme_wave10_wrapper_family_matrix.json"
+WAVE10_BASELINE_FIXTURE="$ROOT_DIR/fixtures/ci/kolme_wave10_wrapper_family_baseline.json"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -33,6 +35,16 @@ fi
 
 if [ ! -f "$BASELINE_FIXTURE" ]; then
   echo "expected wrapper inventory baseline fixture to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$WAVE10_MATRIX_FIXTURE" ]; then
+  echo "expected wave-10 wrapper-family matrix fixture to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$WAVE10_BASELINE_FIXTURE" ]; then
+  echo "expected wave-10 wrapper-family baseline fixture to exist" >&2
   exit 1
 fi
 
@@ -68,6 +80,40 @@ baseline = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 generated = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 if baseline != generated:
     raise SystemExit("generated baseline fixture drift detected")
+PY
+
+WAVE10_GENERATED_BASELINE="$TMP_DIR/generated-wave10-baseline.json"
+bash "$GENERATE_SCRIPT" \
+  --matrix-file "$WAVE10_MATRIX_FIXTURE" \
+  --output-json "$WAVE10_GENERATED_BASELINE" >"$TMP_DIR/generate-wave10.out"
+
+grep -q '^status=generated$' "$TMP_DIR/generate-wave10.out"
+grep -q '^wrapper_count=2$' "$TMP_DIR/generate-wave10.out"
+grep -q '^total_shell_loc=2$' "$TMP_DIR/generate-wave10.out"
+
+python3 - "$WAVE10_GENERATED_BASELINE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload["symlink_wrapper_count"] != 2:
+    raise SystemExit("expected wave-10 symlink_wrapper_count to be 2")
+if payload["regular_file_wrapper_count"] != 0:
+    raise SystemExit("expected wave-10 regular_file_wrapper_count to be 0")
+if payload["total_shell_loc"] != 2:
+    raise SystemExit("expected wave-10 total_shell_loc to be 2")
+PY
+
+python3 - "$WAVE10_BASELINE_FIXTURE" "$WAVE10_GENERATED_BASELINE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+baseline = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+generated = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+if baseline != generated:
+    raise SystemExit("wave-10 generated baseline fixture drift detected")
 PY
 
 DELTA_REPORT="$TMP_DIR/delta-report.json"

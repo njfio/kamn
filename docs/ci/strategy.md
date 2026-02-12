@@ -216,6 +216,16 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `bash scripts/ci/check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/kolme_wave8_wrapper_family_matrix.json --baseline-file fixtures/ci/kolme_wave8_wrapper_family_baseline.json --output-json /tmp/kolme-wave8-wrapper-family-delta.json`
     - captures script-count and shell-LOC baseline drift for migrated runtime run-lane wrappers.
     - Regression: #2216
+  - Kolme wave-10 wrapper-family baseline guard stays on PR fast gate:
+    - `bash scripts/ci/test_kolme_wrapper_inventory_baseline_contract.sh`
+    - deterministic wave-10 baseline artifacts:
+      - `fixtures/ci/kolme_wave10_wrapper_family_matrix.json`
+      - `fixtures/ci/kolme_wave10_wrapper_family_baseline.json`
+    - deterministic generator/check commands:
+      - `bash scripts/ci/generate_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/kolme_wave10_wrapper_family_matrix.json --output-json /tmp/kolme-wave10-wrapper-family-baseline.json`
+      - `bash scripts/ci/check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/kolme_wave10_wrapper_family_matrix.json --baseline-file fixtures/ci/kolme_wave10_wrapper_family_baseline.json --output-json /tmp/kolme-wave10-wrapper-family-delta.json`
+    - covers runtime real-node profile and live-deployment preflight contract wrappers.
+    - Regression: #2281
   - Kolme wrapper budget-trend guard stays on PR fast gate:
     - `bash scripts/ci/test_check_kolme_wrapper_budget_trend.sh`
     - threshold policy file:
@@ -243,6 +253,20 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=lane_shell_loc_increase_violation`
       - `reason_codes=unexpected_new_lanes_in_current_inventory`
     - Regression: #2217
+  - Kolme wave-10 wrapper-family trend guard stays on PR fast gate:
+    - `bash scripts/ci/test_check_kolme_wrapper_budget_trend.sh`
+    - threshold policy file:
+      - `fixtures/ci/kolme_wave10_wrapper_family_trend_thresholds.json`
+    - trend-policy command:
+      - `bash scripts/ci/check_kolme_wave10_wrapper_family_budget_trend.sh --matrix-file fixtures/ci/kolme_wave10_wrapper_family_matrix.json --baseline-file fixtures/ci/kolme_wave10_wrapper_family_baseline.json --output-json /tmp/kolme-wave10-wrapper-family-trend-report.json`
+    - fails closed on wrapper-count/shell-LOC growth and stale lane-inventory baseline drift.
+    - deterministic reason-code surface is emitted for automation:
+      - `reason_codes=none` (pass)
+      - `reason_codes=wrapper_count_delta_threshold_exceeded`
+      - `reason_codes=total_shell_loc_delta_threshold_exceeded`
+      - `reason_codes=lane_shell_loc_increase_violation`
+      - `reason_codes=unexpected_new_lanes_in_current_inventory`
+    - Regression: #2281
   - shared dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh`
     - enforces that all migrated `run_*contract_lane.sh` wrappers dispatch through:
