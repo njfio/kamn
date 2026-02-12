@@ -16,7 +16,6 @@ did_registry
 durable_guard_store
 escrow
 governance_workflow
-group_channel_crypto
 instruction_verify
 invariants
 message_delivery_guards

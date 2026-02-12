@@ -162,6 +162,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `bootstrap`
   - `direct_message_crypto`
   - `discord_bridge`
+  - `group_channel_crypto`
   - `key_lifecycle`
   - `key_recovery`
   - `kolme_runtime_commit`
@@ -197,6 +198,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2005`
   - `Regression: #2007`
   - `Regression: #2009`
+  - `Regression: #2011`
 
 ## Contributor Entrypoint Matrix
 

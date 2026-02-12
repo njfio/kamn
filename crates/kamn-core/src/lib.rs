@@ -50,7 +50,7 @@ pub mod durable_guard_store;
 pub mod escrow;
 #[allow(missing_docs)]
 pub mod governance_workflow;
-#[allow(missing_docs)]
+/// Group sender-key distribution, rotation, and encryption integrity contracts.
 pub mod group_channel_crypto;
 #[allow(missing_docs)]
 pub mod instruction_verify;
