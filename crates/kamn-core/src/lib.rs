@@ -32,7 +32,7 @@ pub mod content_retrieval;
 pub mod content_storage;
 /// Cross-chain route validation, inbound normalization, and outbound quorum dispatch contracts.
 pub mod cross_chain_bridge;
-#[allow(missing_docs)]
+/// Cross-chain receipt proof normalization and finality mapping contracts.
 pub mod cross_chain_receipt;
 #[allow(missing_docs)]
 pub mod data_classification;
