@@ -24,7 +24,7 @@ pub mod channel_policies;
 pub mod config;
 /// Content retention, tombstone scheduling, and purge eligibility contracts.
 pub mod content_lifecycle;
-#[allow(missing_docs)]
+/// Replication policy, availability health, and repair action contracts.
 pub mod content_replication;
 #[allow(missing_docs)]
 pub mod content_retrieval;
