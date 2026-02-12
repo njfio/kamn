@@ -9,7 +9,7 @@
 pub mod agent_key_hierarchy;
 #[allow(missing_docs)]
 pub mod agent_upgrade_workflow;
-#[allow(missing_docs)]
+/// Anti-spam admission, rate-limit, and suspension policy contracts.
 pub mod anti_spam;
 #[allow(missing_docs)]
 pub mod audit_exports;

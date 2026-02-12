@@ -1,5 +1,4 @@
 agent_upgrade_workflow
-anti_spam
 audit_exports
 bridge_adapter
 channel_models
