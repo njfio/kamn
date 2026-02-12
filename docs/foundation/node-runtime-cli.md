@@ -204,9 +204,13 @@ This document captures node-runtime productionization slices for machine-readabl
 - Provider wiring is fail-closed:
   - runtime config must reject in-memory provider-hint markers such as `InMemoryKolmeRuntimeCommitClient`
   - signing profile must match `kolme-fork-secp256k1-v1`
-- Runtime path constructs `KolmeRuntimeCommitLiveProvider` with deterministic transport timeout and reports:
+- Runtime path constructs `KolmeRuntimeCommitLiveProvider` with deterministic transport timeout, submits one deterministic runtime-commit request, and emits bounded finality follow-up checks:
+  - pending submit receipts poll finality via `/runtime-commit/status` with max-attempt budget `2`
+  - malformed finality responses fail closed
+  - finality transport timeout/unavailable keeps execution in pending status without falling back to in-memory adapters
+- Runtime reports:
   - `kolme_live_provider_client_contract=KolmeRuntimeCommitLiveProvider`
-  - `kolme_live_execution_status=provider-configured`
+  - `kolme_live_execution_status=submitted;commit_id=<deterministic-commit-id>;finality=<pending|final|failed>;resolution=<submit-receipt|finality-polled|finality-timeout|finality-unavailable>`
 
 ## Test Coverage Mapping
 - Unit:
@@ -225,6 +229,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - invalid daemon lifecycle transition rejection (`Regression: #349`)
   - daemon lease guard no-lease/invalid-owner rejection (`Regression: #388`)
   - in-memory fallback and invalid signing profile rejection (`Regression: #2175`)
+  - provider marker drift rejection in live submit/finality flow (`Regression: #2176`)
 
 ## Fast and Cost-Effective Validation
 Run targeted checks first:
@@ -250,6 +255,7 @@ cargo test -p kamn-core
 cargo test -p kamn-node integration_runtime_daemon_renders_bounded_completion_output
 cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
 cargo test -p kamn-node integration_runtime_kolme_live_renders_provider_contract_markers
+cargo test -p kamn-node regression_runtime_kolme_live_rejects_provider_marker_drift
 ```
 
 ## Processor HA Runtime References

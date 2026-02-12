@@ -26,6 +26,17 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Invariant-related changes (`invariants.rs`, `transaction.rs`, smoke/invariant harness tests, or harness scripts): run deterministic invariant harness in `fast` mode (single seed) after Rust tests.
 - Runtime evaluator tests use direct unit-struct construction to avoid strict-clippy baseline noise (`Regression: #490`).
 
+## Node Runtime Kolme-Live Fast Lane
+- For `kamn-node` live-runtime wiring/doc changes, keep PR validation on deterministic local harness tests:
+  - `cargo test -p kamn-node runtime_kolme_live`
+  - `cargo test -p kamn-node --test node_runtime_cli_docs doc_contains_runtime_kolme_live_rules`
+  - `cargo test -p kamn-node --test node_runtime_cli_docs regression_requires_runtime_kolme_live_provider_drift_guard_rules`
+- This lane is intentionally bounded and cost-effective:
+  - uses an in-process localhost mock HTTP server (no external Kolme process)
+  - submit/finality path is capped at two request/response exchanges
+  - harness accept windows are bounded to 2 seconds to avoid hanging PR runners
+- Heavy local Kolme node tests stay outside `ci-fast-gate` in local/manual lanes.
+
 ## kamn-core Missing-Docs Velocity Guard
 - Fast-gate missing-docs velocity regression command:
   - `bash scripts/ci/test_missing_docs_velocity_guard_contract.sh`
