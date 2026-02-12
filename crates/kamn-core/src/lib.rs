@@ -72,7 +72,7 @@ pub mod migrations;
 pub mod namespaces;
 #[allow(missing_docs)]
 pub mod observability;
-#[allow(missing_docs)]
+/// Permissioned operator configuration actions and audit-log service contracts.
 pub mod operator_actions;
 #[allow(missing_docs)]
 pub mod operator_binding;

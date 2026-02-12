@@ -27,7 +27,6 @@ message_delivery_guards
 message_envelope
 message_lifecycle
 observability
-operator_actions
 operator_binding
 operator_dashboard_api
 operator_dashboard_ui
