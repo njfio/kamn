@@ -404,6 +404,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
 - Real-node profile policy checker command:
   - `python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
+- Real-node profile contract lane command:
+  - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
 - Contract lane command:
   - `bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
 - Summary schema:
@@ -424,6 +426,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - run mode fails closed without explicit local-only opt-in.
   - lane default budget is bounded to 210 seconds with per-stage budget caps.
   - local KAMN live runtime integration run-mode execution remains excluded from PR fast-gate workflow routing.
+  - real-node profile policy + contract lane docs parity markers remain fail-closed (`Regression: #2139`).
 
 ## Live Provider Operator Runbook (Issue #2114)
 

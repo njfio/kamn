@@ -34,6 +34,7 @@
     "scripts/kolme/test_run_local_kolme_fork_real_process_contract_lane.sh",
     "scripts/kolme/test_run_local_kamn_live_runtime_integration_real_node_profile.sh",
     "scripts/kolme/test_check_local_kamn_live_runtime_real_node_profile_policy.sh",
+    "scripts/kolme/test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
     "scripts/kolme/test_run_local_live_node_validation_bundle_lane.sh",
     "scripts/kolme/test_run_local_live_node_validation_bundle_contract_lane.sh",
     "scripts/kolme/test_run_local_signed_to_kolme_demo_contract_lane.sh",
