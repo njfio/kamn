@@ -203,7 +203,8 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
   - `bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json`
   - evidence markers `submit_evidence_marker_present` and `finality_evidence_marker_present` must both pass for GO decisions in run mode.
 - Local KAMN runtime integration lane:
-  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-commit-finality-command "printf 'finality=final\n'" --runtime-commit-finality-max-seconds 15 --runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-commit-finality-command "printf 'finality=final\n'" --runtime-commit-finality-max-seconds 15 --runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
+  - runtime step composes through `run_local_runtime_commit_live_finality_evidence_contract_lane.sh` and captures nested runtime evidence policy artifacts.
 - Local fork process lifecycle lane:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --serve-command "python3 /tmp/mock_kolme_api.py 3000 v0.15.2" --integration-runtime-commit-finality-command "printf 'finality=final\n'" --integration-runtime-commit-finality-max-seconds 15 --integration-runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json`
 - Real-process wrapper lane with lifecycle run intent:
@@ -229,6 +230,7 @@ cargo test -p kamn-core
 - local live-node provider smoke preflight and ignored-test dispatch remain fail-closed (`Regression: #1829`).
 - local runtime-commit live evidence policy markers for `KolmeRuntimeCommitLiveProvider` path remain fail-closed (`Regression: #2095`).
 - local runtime-commit submit/finality evidence marker policy and contract lane parity remain fail-closed (`Regression: #2099`).
+- local KAMN live runtime integration runtime-step contract composition remains fail-closed for missing runtime policy evidence artifacts (`Regression: #2101`).
 - typed nonce/broadcast HTTP helper mapping drift remains fail-closed (`Regression: #1533`).
 - provider response field parser extraction parity drift remains fail-closed (`Regression: #1745`).
 - flat JSON parser extraction parity drift remains fail-closed (`Regression: #1747`).

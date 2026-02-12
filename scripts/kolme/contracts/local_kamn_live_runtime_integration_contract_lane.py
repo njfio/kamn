@@ -168,9 +168,21 @@ def main() -> int:
     if "run_local_kamn_live_runtime_integration_contract_lane.sh" not in doc_text:
         print("expected Kolme devnet ops doc to reference local KAMN live runtime integration contract lane", file=sys.stderr)
         return 1
+    if "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" not in doc_text:
+        print(
+            "expected Kolme devnet ops doc to reference runtime finality evidence contract lane composition",
+            file=sys.stderr,
+        )
+        return 1
     # Regression: #1971
     if "--runtime-commit-finality-command" not in doc_text:
         print("expected Kolme devnet ops doc to document runtime finality pass-through command option", file=sys.stderr)
+        return 1
+    if "--runtime-commit-live-policy-report" not in doc_text:
+        print(
+            "expected Kolme devnet ops doc to document runtime finality policy report composition option",
+            file=sys.stderr,
+        )
         return 1
     if "run_localhost_signed_integration_contract_lane.sh" not in doc_text:
         print("expected Kolme devnet ops doc to reference localhost signed integration prerequisite lane", file=sys.stderr)
@@ -181,11 +193,27 @@ def main() -> int:
     if "Regression: #1971" not in doc_text:
         print("expected Kolme devnet ops doc to include runtime finality pass-through regression marker", file=sys.stderr)
         return 1
+    # Regression: #2101
+    if "Regression: #2101" not in doc_text:
+        print("expected Kolme devnet ops doc to include runtime finality contract composition regression marker", file=sys.stderr)
+        return 1
     if "run_local_kamn_live_runtime_integration_contract_lane.sh" not in readme_text:
         print("expected README to reference local KAMN live runtime integration contract lane", file=sys.stderr)
         return 1
+    if "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" not in readme_text:
+        print(
+            "expected README to reference runtime finality evidence contract lane composition",
+            file=sys.stderr,
+        )
+        return 1
     if "--runtime-commit-finality-command" not in readme_text:
         print("expected README to document runtime finality pass-through command option", file=sys.stderr)
+        return 1
+    if "--runtime-commit-live-policy-report" not in readme_text:
+        print(
+            "expected README to document runtime finality policy report composition option",
+            file=sys.stderr,
+        )
         return 1
 
     elapsed_seconds = int(time.monotonic() - start_epoch)

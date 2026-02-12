@@ -38,6 +38,7 @@ required_runtime_finality_markers=(
   "--runtime-commit-finality-command"
   "--runtime-commit-finality-max-seconds"
   "--runtime-commit-finality-output-file"
+  "--runtime-commit-live-policy-report"
 )
 for marker in "${required_runtime_finality_markers[@]}"; do
   if ! grep -q -- "$marker" "$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"; then
@@ -45,6 +46,12 @@ for marker in "${required_runtime_finality_markers[@]}"; do
     exit 1
   fi
 done
+
+# Regression: #2101
+if ! grep -q "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" "$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"; then
+  echo "expected local KAMN live runtime integration runner to compose runtime step through runtime finality evidence contract lane" >&2
+  exit 1
+fi
 
 if [ ! -f "$MANIFEST" ]; then
   echo "expected local KAMN live runtime integration contract lane manifest to exist" >&2
@@ -75,8 +82,10 @@ required_coverage_markers=(
   "run_local_kamn_live_runtime_integration_lane.sh"
   "check_local_kamn_live_runtime_integration_policy.py"
   "run_localhost_signed_integration_contract_lane.sh"
+  "run_local_runtime_commit_live_finality_evidence_contract_lane.sh"
   "Regression: #1489"
   "Regression: #1971"
+  "Regression: #2101"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then
@@ -100,6 +109,11 @@ if ! grep -q -- "--runtime-commit-finality-command" "$DOC_FILE"; then
   exit 1
 fi
 
+if ! grep -q "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference runtime finality evidence contract lane composition in local KAMN integration lane" >&2
+  exit 1
+fi
+
 if ! grep -q "check_local_kamn_live_runtime_integration_policy.py" "$README_FILE"; then
   echo "expected README to reference local KAMN live runtime integration policy checker" >&2
   exit 1
@@ -112,6 +126,11 @@ fi
 
 if ! grep -q -- "--runtime-commit-finality-command" "$README_FILE"; then
   echo "expected README to document runtime finality pass-through command option" >&2
+  exit 1
+fi
+
+if ! grep -q "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" "$README_FILE"; then
+  echo "expected README to reference runtime finality evidence contract lane composition in local KAMN integration lane" >&2
   exit 1
 fi
 
@@ -136,6 +155,17 @@ if summary.get("status") != "ok":
     raise SystemExit("expected local KAMN live runtime integration contract-lane summary status ok")
 if summary.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected dry_run_no_commands_executed reason code in contract-lane summary")
+runtime_policy_report = summary.get("runtime_commit_live_policy_report")
+if not isinstance(runtime_policy_report, str) or not runtime_policy_report:
+    raise SystemExit("expected runtime commit live policy report marker in contract-lane summary")
+if runtime_policy_report not in summary.get("artifact_paths", []):
+    raise SystemExit("expected runtime policy report artifact in contract-lane summary artifact paths")
+checks = summary.get("checks")
+if not isinstance(checks, list) or not any(
+    check.get("id") == "runtime_commit_policy" and check.get("status") == "planned"
+    for check in checks
+):
+    raise SystemExit("expected runtime commit policy planned check marker in contract-lane summary")
 if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1":
     raise SystemExit("unexpected local KAMN live runtime integration contract-lane policy schema")
 if policy.get("final_decision") != "GO":
@@ -144,19 +174,21 @@ PY
 
 TMP_DIRECT_SUMMARY="$(mktemp)"
 TMP_DIRECT_RUNTIME_OUTPUT="$(mktemp)"
+TMP_DIRECT_RUNTIME_POLICY="$(mktemp)"
 TMP_DIRECT_RUNTIME_FINALITY_OUTPUT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_RUNTIME_OUTPUT" "$TMP_DIRECT_RUNTIME_FINALITY_OUTPUT"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_RUNTIME_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY" "$TMP_DIRECT_RUNTIME_FINALITY_OUTPUT"' EXIT
 
 bash "$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh" \
   --mode dry-run \
   --runtime-commit-finality-command "printf 'finality=final\n'" \
   --runtime-commit-finality-max-seconds 12 \
   --runtime-commit-finality-output-file "$TMP_DIRECT_RUNTIME_FINALITY_OUTPUT" \
+  --runtime-commit-live-policy-report "$TMP_DIRECT_RUNTIME_POLICY" \
   --runtime-commit-output-file "$TMP_DIRECT_RUNTIME_OUTPUT" \
   --runtime-commit-live-summary "$TMP_DIRECT_SUMMARY.runtime.json" \
   --output-json "$TMP_DIRECT_SUMMARY" >/dev/null
 
-python3 - "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_RUNTIME_FINALITY_OUTPUT" <<'PY'
+python3 - "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_RUNTIME_FINALITY_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY" <<'PY'
 from __future__ import annotations
 
 import json
@@ -165,6 +197,8 @@ import sys
 
 summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 runtime_command = summary.get("runtime_commit_command", "")
+if "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" not in runtime_command:
+    raise SystemExit("expected runtime commit command to compose through runtime finality evidence contract lane")
 if "--finality-command" not in runtime_command:
     raise SystemExit("expected runtime commit command to include finality command pass-through")
 if "--finality-max-seconds 12" not in runtime_command:
@@ -172,8 +206,15 @@ if "--finality-max-seconds 12" not in runtime_command:
 finality_output_path = pathlib.Path(sys.argv[2]).resolve()
 if f"--finality-output-file {finality_output_path}" not in runtime_command:
     raise SystemExit("expected runtime commit command to include finality output pass-through")
+policy_output_path = pathlib.Path(sys.argv[3]).resolve()
+if f"--policy-output-json {policy_output_path}" not in runtime_command:
+    raise SystemExit("expected runtime commit command to include runtime policy report pass-through")
 if str(finality_output_path) not in summary.get("artifact_paths", []):
     raise SystemExit("expected integration summary artifact paths to include runtime finality output file")
+if str(policy_output_path) not in summary.get("artifact_paths", []):
+    raise SystemExit("expected integration summary artifact paths to include runtime policy report file")
+if summary.get("runtime_commit_live_policy_report") != str(policy_output_path):
+    raise SystemExit("expected integration summary to expose runtime commit live policy report path")
 PY
 
 echo "local KAMN live runtime integration contract lane tests passed."

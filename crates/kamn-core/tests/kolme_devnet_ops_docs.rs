@@ -89,6 +89,8 @@ fn plan_contains_local_kamn_live_runtime_integration_lane() {
     assert!(PLAN.contains("run_local_kamn_live_runtime_integration_lane.sh"));
     assert!(PLAN.contains("check_local_kamn_live_runtime_integration_policy.py"));
     assert!(PLAN.contains("run_local_kamn_live_runtime_integration_contract_lane.sh"));
+    assert!(PLAN.contains("run_local_runtime_commit_live_finality_evidence_contract_lane.sh"));
+    assert!(PLAN.contains("--runtime-commit-live-policy-report"));
     assert!(PLAN.contains("run_localhost_signed_integration_contract_lane.sh"));
     assert!(PLAN.contains("kamn.kolme.local-kamn-live-runtime-integration-summary.v1"));
     assert!(PLAN.contains(
@@ -97,6 +99,7 @@ fn plan_contains_local_kamn_live_runtime_integration_lane() {
     assert!(PLAN.contains(
         "finality verification uses `/notifications` first with bounded `/block/{height}` fallback; no runtime commit status endpoint dependency."
     ));
+    assert!(PLAN.contains("`Regression: #2101`"));
 }
 
 #[test]
