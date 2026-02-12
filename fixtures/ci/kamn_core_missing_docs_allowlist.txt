@@ -5,7 +5,6 @@ channel_policies
 escrow
 governance_workflow
 instruction_verify
-message_envelope
 message_lifecycle
 reputation_state
 runtime
