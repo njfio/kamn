@@ -56,7 +56,7 @@ pub mod group_channel_crypto;
 pub mod instruction_verify;
 #[allow(missing_docs)]
 pub mod invariants;
-#[allow(missing_docs)]
+/// Key rotation/revocation state machine and audit-trail verification contracts.
 pub mod key_lifecycle;
 /// Key compromise and recovery lifecycle contracts.
 pub mod key_recovery;

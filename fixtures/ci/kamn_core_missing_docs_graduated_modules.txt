@@ -2,6 +2,7 @@ agent_key_hierarchy
 anti_spam
 bootstrap
 key_recovery
+key_lifecycle
 kolme_runtime_commit
 migrations
 namespaces
