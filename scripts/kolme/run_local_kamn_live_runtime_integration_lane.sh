@@ -15,6 +15,9 @@ CONFORMANCE_REPORT="/tmp/kolme-local-live-api-conformance-summary.json"
 LOCALHOST_SIGNED_REPORT="/tmp/localhost-signed-integration-contract-report.json"
 RUNTIME_COMMIT_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-endpoint-output.txt"
 RUNTIME_COMMIT_LIVE_SUMMARY="/tmp/kolme-local-runtime-commit-live-summary.json"
+RUNTIME_COMMIT_FINALITY_COMMAND=""
+RUNTIME_COMMIT_FINALITY_MAX_SECONDS=15
+RUNTIME_COMMIT_FINALITY_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-live-finality-output.txt"
 CHECKOUT_PATH="/tmp/kolme_fork"
 EXPECTED_REMOTE_URL="https://github.com/njfio/kolme_fork.git"
 EXPECTED_REF="refs/heads/main"
@@ -87,6 +90,30 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       RUNTIME_COMMIT_LIVE_SUMMARY="$2"
+      shift 2
+      ;;
+    --runtime-commit-finality-command)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --runtime-commit-finality-command" >&2
+        exit 1
+      fi
+      RUNTIME_COMMIT_FINALITY_COMMAND="$2"
+      shift 2
+      ;;
+    --runtime-commit-finality-max-seconds)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --runtime-commit-finality-max-seconds" >&2
+        exit 1
+      fi
+      RUNTIME_COMMIT_FINALITY_MAX_SECONDS="$2"
+      shift 2
+      ;;
+    --runtime-commit-finality-output-file)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --runtime-commit-finality-output-file" >&2
+        exit 1
+      fi
+      RUNTIME_COMMIT_FINALITY_OUTPUT_FILE="$2"
       shift 2
       ;;
     --checkout-path)
@@ -189,6 +216,12 @@ Options:
   --localhost-signed-report <path>      Output path for localhost signed integration summary.
   --runtime-commit-output-file <path>   Captured stdout/stderr for runtime-commit endpoint command.
   --runtime-commit-live-summary <path>  Summary report output path for nested runtime-commit live lane runner.
+  --runtime-commit-finality-command <command>
+                                      Optional finality command passed through to nested runtime-commit live lane.
+  --runtime-commit-finality-max-seconds <n>
+                                      Max budget for runtime finality command passed through to nested live lane.
+  --runtime-commit-finality-output-file <path>
+                                      Captured stdout/stderr path for runtime finality command passed through to nested live lane.
   --checkout-path <path>                Local kolme_fork checkout path.
   --expected-remote-url <url>           Expected origin URL for checkout validation.
   --expected-ref <ref>                  Expected symbolic HEAD ref for checkout.
@@ -225,7 +258,7 @@ if [ -z "$BASE_URL" ] || [ -z "$FORK_CHAIN_VERSION" ]; then
   exit 1
 fi
 
-for numeric_value in "$MAX_SECONDS" "$BOOTSTRAP_MAX_SECONDS" "$CONFORMANCE_MAX_SECONDS" "$LOCALHOST_SIGNED_MAX_SECONDS" "$RUNTIME_COMMIT_MAX_SECONDS"; do
+for numeric_value in "$MAX_SECONDS" "$BOOTSTRAP_MAX_SECONDS" "$CONFORMANCE_MAX_SECONDS" "$LOCALHOST_SIGNED_MAX_SECONDS" "$RUNTIME_COMMIT_MAX_SECONDS" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS"; do
   if ! [[ "$numeric_value" =~ ^[0-9]+$ ]] || [ "$numeric_value" -le 0 ]; then
     echo "all max-second arguments must be positive integers" >&2
     exit 1
@@ -258,6 +291,9 @@ if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
 fi
 
 default_runtime_commit_command="KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --base-url $(shell_escape "${BASE_URL}") --provider-hint kolme-fork-local --max-seconds ${RUNTIME_COMMIT_MAX_SECONDS} --preflight-max-seconds 10 --output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_SUMMARY}") --live-output-file $(shell_escape "${RUNTIME_COMMIT_OUTPUT_FILE}")"
+if [ -n "$RUNTIME_COMMIT_FINALITY_COMMAND" ]; then
+  default_runtime_commit_command="${default_runtime_commit_command} --finality-command $(shell_escape "${RUNTIME_COMMIT_FINALITY_COMMAND}") --finality-max-seconds ${RUNTIME_COMMIT_FINALITY_MAX_SECONDS} --finality-output-file $(shell_escape "${RUNTIME_COMMIT_FINALITY_OUTPUT_FILE}")"
+fi
 if [ -z "$RUNTIME_COMMIT_COMMAND" ]; then
   RUNTIME_COMMIT_COMMAND="$default_runtime_commit_command"
 fi
@@ -451,7 +487,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$CHECK_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -473,14 +509,17 @@ budget_status = sys.argv[12]
 runtime_commit_command = sys.argv[13]
 runtime_commit_output_file = sys.argv[14]
 runtime_commit_live_summary = sys.argv[15]
-bootstrap_report = sys.argv[16]
-localhost_signed_report = sys.argv[17]
-conformance_report = sys.argv[18]
-bootstrap_reason_code = sys.argv[19]
-localhost_signed_reason_code = sys.argv[20]
-conformance_reason_code = sys.argv[21]
-runtime_commit_reason_code = sys.argv[22]
-checks_path = pathlib.Path(sys.argv[23])
+runtime_commit_finality_command = sys.argv[16]
+runtime_commit_finality_output_file = sys.argv[17]
+runtime_commit_finality_max_seconds = int(sys.argv[18])
+bootstrap_report = sys.argv[19]
+localhost_signed_report = sys.argv[20]
+conformance_report = sys.argv[21]
+bootstrap_reason_code = sys.argv[22]
+localhost_signed_reason_code = sys.argv[23]
+conformance_reason_code = sys.argv[24]
+runtime_commit_reason_code = sys.argv[25]
+checks_path = pathlib.Path(sys.argv[26])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -514,6 +553,10 @@ summary = {
     "base_url": base_url,
     "fork_chain_version": fork_chain_version,
     "runtime_commit_command": runtime_commit_command,
+    "runtime_commit_finality_command": runtime_commit_finality_command if runtime_commit_finality_command else "",
+    "runtime_commit_finality_output_file": runtime_commit_finality_output_file if runtime_commit_finality_command else "",
+    "runtime_commit_finality_enabled": bool(runtime_commit_finality_command),
+    "runtime_commit_finality_max_seconds": runtime_commit_finality_max_seconds,
     "bootstrap_reason_code": bootstrap_reason_code,
     "localhost_signed_reason_code": localhost_signed_reason_code,
     "conformance_reason_code": conformance_reason_code,
@@ -533,6 +576,9 @@ summary = {
         runtime_commit_live_summary,
     ],
 }
+
+if runtime_commit_finality_command:
+    summary["artifact_paths"].append(runtime_commit_finality_output_file)
 
 output_path.parent.mkdir(parents=True, exist_ok=True)
 output_path.write_text(json.dumps(summary, sort_keys=True, indent=2) + "\n", encoding="utf-8")
