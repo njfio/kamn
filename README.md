@@ -291,6 +291,8 @@ KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_co
   --lifecycle-runtime-commit-finality-command "printf 'finality=final\n'" \
   --lifecycle-runtime-commit-finality-max-seconds 15 \
   --lifecycle-runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt \
+  --lifecycle-rollback-evidence-file /tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json \
+  --lifecycle-recovery-evidence-file /tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json \
   --output-json /tmp/kolme-local-fork-real-process-summary.json
 python3 scripts/kolme/check_local_kolme_fork_real_process_policy.py \
   --report-file /tmp/kolme-local-fork-real-process-summary.json \

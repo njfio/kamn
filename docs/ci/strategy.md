@@ -322,6 +322,7 @@ Regression policy:
 - local fork process lifecycle integration run-mode exclusion parity remains fail-closed (`Regression: #1494`).
 - local fork process lifecycle integration runtime policy report linkage to nested integration command composition and artifact lineage remains fail-closed (`Regression: #2104`).
 - local fork process lifecycle rollback/recovery evidence linkage markers remain fail-closed in summary/policy/docs contracts (`Regression: #2107`).
+- real-process wrapper lifecycle rollback/recovery evidence pass-through markers remain fail-closed across wrapper/lifecycle command composition and docs contracts (`Regression: #2109`).
 - local runtime-commit live run-mode exclusion parity remains fail-closed (`Regression: #1451`).
 - local runtime-commit live preflight health-probe and default live-provider ignored-test dispatch parity remains fail-closed (`Regression: #1829`).
 - local runtime-commit live evidence policy marker parity remains fail-closed for missing `KolmeRuntimeCommitLiveProvider` command markers (`Regression: #2095`).

@@ -163,6 +163,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output file path for lifecycle lane integration finality command pass-through.",
     )
     parser.add_argument(
+        "--lifecycle-rollback-evidence-file",
+        default="/tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json",
+        help="Output file path for lifecycle rollback evidence pass-through.",
+    )
+    parser.add_argument(
+        "--lifecycle-recovery-evidence-file",
+        default="/tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json",
+        help="Output file path for lifecycle recovery evidence pass-through.",
+    )
+    parser.add_argument(
         "--self-test-matrix-command",
         action="append",
         default=[],
@@ -191,8 +201,11 @@ def ensure_docs() -> None:
         "Regression: #1644",
         "--lifecycle-mode",
         "--lifecycle-runtime-commit-finality-command",
+        "--lifecycle-rollback-evidence-file",
+        "--lifecycle-recovery-evidence-file",
         "Regression: #1975",
         "Regression: #1977",
+        "Regression: #2109",
     )
     for marker in required_doc_markers:
         if marker not in doc_text:
@@ -201,6 +214,10 @@ def ensure_docs() -> None:
         raise RuntimeError("expected README to reference real-process wrapper contract lane")
     if "--lifecycle-runtime-commit-finality-command" not in readme_text:
         raise RuntimeError("expected README to document real-process lifecycle finality pass-through option")
+    if "--lifecycle-rollback-evidence-file" not in readme_text:
+        raise RuntimeError("expected README to document real-process lifecycle rollback evidence pass-through option")
+    if "--lifecycle-recovery-evidence-file" not in readme_text:
+        raise RuntimeError("expected README to document real-process lifecycle recovery evidence pass-through option")
 
 
 def build_contracts() -> dict[str, str]:
@@ -216,6 +233,10 @@ def build_contracts() -> dict[str, str]:
         "self_test_checker": "check_local_kolme_fork_self_test_policy.py",
         "lifecycle_runner": "run_local_kolme_fork_process_lifecycle_lane.sh",
         "lifecycle_checker": "check_local_kolme_fork_process_lifecycle_policy.py",
+        "wrapper_lifecycle_rollback_evidence_option": "--lifecycle-rollback-evidence-file",
+        "wrapper_lifecycle_recovery_evidence_option": "--lifecycle-recovery-evidence-file",
+        "lifecycle_rollback_evidence_option": "--rollback-evidence-file",
+        "lifecycle_recovery_evidence_option": "--recovery-evidence-file",
     }
 
 
@@ -277,7 +298,7 @@ def planned_checks(selected_serve_command: str) -> list[dict[str, str]]:
         },
         {
             "id": "process_lifecycle_lane",
-            "command": "bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode dry-run ...",
+            "command": "bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode dry-run --rollback-evidence-file ... --recovery-evidence-file ...",
             "status": "planned",
             "reason_code": "not_run",
         },
@@ -318,6 +339,8 @@ def run_mode_checks(
             str(self_test_policy),
             str(lifecycle_report),
             str(lifecycle_policy),
+            str(Path(args.lifecycle_rollback_evidence_file).resolve()),
+            str(Path(args.lifecycle_recovery_evidence_file).resolve()),
         ]
         if args.lifecycle_runtime_commit_finality_command:
             artifact_paths.append(str(Path(args.lifecycle_runtime_commit_finality_output_file).resolve()))
@@ -382,6 +405,10 @@ def run_mode_checks(
             args.lifecycle_conformance_max_seconds,
             "--integration-runtime-commit-max-seconds",
             args.lifecycle_runtime_commit_max_seconds,
+            "--rollback-evidence-file",
+            args.lifecycle_rollback_evidence_file,
+            "--recovery-evidence-file",
+            args.lifecycle_recovery_evidence_file,
             "--output-json",
             str(lifecycle_report),
         ]
@@ -643,6 +670,8 @@ def main() -> int:
         "/tmp/kolme-local-fork-self-test-policy.json",
         "/tmp/kolme-local-fork-process-lifecycle-summary.json",
         "/tmp/kolme-local-fork-process-lifecycle-policy.json",
+        str(Path(args.lifecycle_rollback_evidence_file).resolve()),
+        str(Path(args.lifecycle_recovery_evidence_file).resolve()),
     ]
 
     if args.mode == "run":
@@ -678,6 +707,8 @@ def main() -> int:
             if args.lifecycle_runtime_commit_finality_command
             else ""
         ),
+        "lifecycle_rollback_evidence_file": str(Path(args.lifecycle_rollback_evidence_file).resolve()),
+        "lifecycle_recovery_evidence_file": str(Path(args.lifecycle_recovery_evidence_file).resolve()),
         "contracts": build_contracts(),
         "checks": checks,
         "artifact_paths": artifact_paths,
