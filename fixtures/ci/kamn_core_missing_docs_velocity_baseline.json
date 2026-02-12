@@ -1,0 +1,8 @@
+{
+  "schema_version": "kamn.ci.kamn-core-missing-docs-velocity-baseline.v1",
+  "commit_count": 1145,
+  "graduated_module_count": 62,
+  "allowlisted_module_count": 0,
+  "target_modules_per_100_commits": 5,
+  "observed_modules_per_100_commits": 5.4148
+}

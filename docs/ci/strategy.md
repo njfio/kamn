@@ -26,6 +26,19 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Invariant-related changes (`invariants.rs`, `transaction.rs`, smoke/invariant harness tests, or harness scripts): run deterministic invariant harness in `fast` mode (single seed) after Rust tests.
 - Runtime evaluator tests use direct unit-struct construction to avoid strict-clippy baseline noise (`Regression: #490`).
 
+## kamn-core Missing-Docs Velocity Guard
+- Fast-gate missing-docs velocity regression command:
+  - `bash scripts/ci/test_missing_docs_velocity_guard_contract.sh`
+- Throughput + velocity policy commands:
+  - `python3 scripts/ci/missing_docs_throughput_report_contract.py generate --output-json /tmp/kamn-core-missing-docs-throughput-report.json`
+  - `python3 scripts/ci/missing_docs_velocity_guard.py check --report-file /tmp/kamn-core-missing-docs-throughput-report.json --baseline-file fixtures/ci/kamn_core_missing_docs_velocity_baseline.json --threshold-file .ci/kamn-core-missing-docs-velocity-thresholds.json --output-json /tmp/kamn-core-missing-docs-velocity-policy.json`
+- Baseline and threshold source of truth:
+  - `fixtures/ci/kamn_core_missing_docs_velocity_baseline.json`
+  - `.ci/kamn-core-missing-docs-velocity-thresholds.json`
+- Cadence/issue documentation:
+  - `docs/planning/issues/missing-docs-velocity-cadence.md`
+- Regression: #2127
+
 ## Make and Selector Command-Surface Contract
 Contributor entrypoint commands must remain stable and synchronized across `Makefile`, `README.md`, and selector routing policy:
 

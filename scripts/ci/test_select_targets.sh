@@ -100,6 +100,12 @@ assert_eq "$(extract_output "$hardening_docs_output" "run_rust")" "false" "engin
 assert_eq "$(extract_output "$hardening_docs_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "engineering hardening docs must run kamn-core missing-docs policy checks"
 assert_eq "$(extract_output "$hardening_docs_output" "test_scope")" "qa-doc-contract" "engineering hardening docs should set qa-doc-contract scope"
 
+velocity_cadence_docs_output="$(run_selector $'docs/planning/issues/missing-docs-velocity-cadence.md')"
+assert_eq "$(extract_output "$velocity_cadence_docs_output" "docs_only")" "true" "missing-docs velocity cadence docs should remain docs-only"
+assert_eq "$(extract_output "$velocity_cadence_docs_output" "run_rust")" "false" "missing-docs velocity cadence docs should avoid rust lane"
+assert_eq "$(extract_output "$velocity_cadence_docs_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "missing-docs velocity cadence docs must run missing-docs policy checks"
+assert_eq "$(extract_output "$velocity_cadence_docs_output" "test_scope")" "qa-doc-contract" "missing-docs velocity cadence docs should set qa-doc-contract scope"
+
 module_map_docs_output="$(run_selector $'docs/architecture/kamn-core-module-map.md')"
 assert_eq "$(extract_output "$module_map_docs_output" "docs_only")" "true" "kamn-core module map docs should remain docs-only"
 assert_eq "$(extract_output "$module_map_docs_output" "run_rust")" "false" "kamn-core module map docs should avoid rust lane"
@@ -319,6 +325,14 @@ assert_eq "$(extract_output "$graduated_modules_fixture_output" "test_scope")" "
 throughput_contract_output="$(run_selector $'scripts/ci/missing_docs_throughput_report_contract.py')"
 assert_eq "$(extract_output "$throughput_contract_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "throughput contract tool changes must run missing-docs policy checks"
 assert_eq "$(extract_output "$throughput_contract_output" "test_scope")" "full" "throughput contract tool changes should keep full fallback scope"
+
+velocity_guard_script_output="$(run_selector $'scripts/ci/missing_docs_velocity_guard.py')"
+assert_eq "$(extract_output "$velocity_guard_script_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "velocity guard tool changes must run missing-docs policy checks"
+assert_eq "$(extract_output "$velocity_guard_script_output" "test_scope")" "full" "velocity guard tool changes should keep full fallback scope"
+
+velocity_threshold_fixture_output="$(run_selector $'.ci/kamn-core-missing-docs-velocity-thresholds.json')"
+assert_eq "$(extract_output "$velocity_threshold_fixture_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "velocity threshold config changes must run missing-docs policy checks"
+assert_eq "$(extract_output "$velocity_threshold_fixture_output" "test_scope")" "qa-doc-contract" "velocity threshold config changes should stay in docs-contract scope"
 
 kolme_scaffold_output="$(run_selector $'crates/kamn-kolme/src/lib.rs')"
 assert_eq "$(extract_output "$kolme_scaffold_output" "run_rust")" "true" "kamn-kolme scaffold changes should run rust lane"

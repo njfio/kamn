@@ -1,0 +1,7 @@
+{
+  "schema_version": "kamn.ci.kamn-core-missing-docs-velocity-thresholds.v1",
+  "max_commits_without_graduation": 120,
+  "velocity_window_commits": 100,
+  "min_modules_per_100_commits": 5,
+  "enforce_window_target": true
+}

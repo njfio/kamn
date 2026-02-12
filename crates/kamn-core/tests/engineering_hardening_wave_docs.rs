@@ -26,8 +26,14 @@ fn engineering_hardening_wave_doc_declares_missing_docs_policy_contract() {
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("target_modules_per_100_commits"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC
         .contains("kamn.ci.kamn-core-missing-docs-throughput-report.v1"));
+    assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("missing_docs_velocity_guard.py"));
+    assert!(ENGINEERING_HARDENING_WAVE_DOC
+        .contains("kamn.ci.kamn-core-missing-docs-velocity-policy.v1"));
+    assert!(ENGINEERING_HARDENING_WAVE_DOC
+        .contains("docs/planning/issues/missing-docs-velocity-cadence.md"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("Regression: #1526"));
     assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("Regression: #1527"));
+    assert!(ENGINEERING_HARDENING_WAVE_DOC.contains("Regression: #2127"));
 }
 
 #[test]
@@ -63,6 +69,8 @@ fn readme_references_engineering_hardening_wave_and_policy_checker() {
     assert!(README.contains("docs/planning/engineering-hardening-wave.md"));
     assert!(README.contains("docs/planning/engineering-hardening-wave.md#commands"));
     assert!(README.contains("check_kamn_core_missing_docs_policy.sh"));
+    assert!(README.contains("missing_docs_velocity_guard.py"));
+    assert!(README.contains(".ci/kamn-core-missing-docs-velocity-thresholds.json"));
     assert!(README.contains("docs/architecture/kamn-core-module-map.md"));
     assert!(README.contains("docs/architecture/kamn-core-module-map.md#ownership-matrix"));
     assert!(

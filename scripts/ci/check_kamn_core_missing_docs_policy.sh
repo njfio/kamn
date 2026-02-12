@@ -10,6 +10,10 @@ PLAN_DOC_PATH="${KAMN_ENGINEERING_HARDENING_DOC_PATH:-$ROOT_DIR/docs/planning/en
 ARCH_DOC_PATH="${KAMN_CORE_MODULE_MAP_DOC_PATH:-$ROOT_DIR/docs/architecture/kamn-core-module-map.md}"
 RUSTDOC_GUIDE_PATH="${KAMN_RUSTDOC_PUBLISHING_DOC_PATH:-$ROOT_DIR/docs/developer/rustdoc-publishing.md}"
 THROUGHPUT_CONTRACT_SCRIPT_PATH="${KAMN_MISSING_DOCS_THROUGHPUT_CONTRACT_SCRIPT_PATH:-$ROOT_DIR/scripts/ci/missing_docs_throughput_report_contract.py}"
+VELOCITY_GUARD_SCRIPT_PATH="${KAMN_MISSING_DOCS_VELOCITY_GUARD_SCRIPT_PATH:-$ROOT_DIR/scripts/ci/missing_docs_velocity_guard.py}"
+VELOCITY_BASELINE_PATH="${KAMN_MISSING_DOCS_VELOCITY_BASELINE_PATH:-$ROOT_DIR/fixtures/ci/kamn_core_missing_docs_velocity_baseline.json}"
+VELOCITY_THRESHOLD_PATH="${KAMN_MISSING_DOCS_VELOCITY_THRESHOLD_PATH:-$ROOT_DIR/.ci/kamn-core-missing-docs-velocity-thresholds.json}"
+VELOCITY_CADENCE_DOC_PATH="${KAMN_MISSING_DOCS_VELOCITY_CADENCE_DOC_PATH:-$ROOT_DIR/docs/planning/issues/missing-docs-velocity-cadence.md}"
 
 require_file() {
   local file="$1"
@@ -28,6 +32,10 @@ require_file "$PLAN_DOC_PATH" "engineering hardening plan"
 require_file "$ARCH_DOC_PATH" "kamn-core module map"
 require_file "$RUSTDOC_GUIDE_PATH" "rustdoc publishing guide"
 require_file "$THROUGHPUT_CONTRACT_SCRIPT_PATH" "missing-docs throughput report contract script"
+require_file "$VELOCITY_GUARD_SCRIPT_PATH" "missing-docs velocity guard script"
+require_file "$VELOCITY_BASELINE_PATH" "missing-docs velocity baseline fixture"
+require_file "$VELOCITY_THRESHOLD_PATH" "missing-docs velocity threshold config"
+require_file "$VELOCITY_CADENCE_DOC_PATH" "missing-docs velocity cadence doc"
 
 if ! grep -Fq "#![warn(missing_docs)]" "$CORE_LIB_PATH"; then
   echo "missing-docs policy contract failed: kamn-core must declare #![warn(missing_docs)]." >&2
@@ -136,6 +144,21 @@ if ! grep -Fq "kamn.ci.kamn-core-missing-docs-throughput-report.v1" "$PLAN_DOC_P
   exit 1
 fi
 
+if ! grep -Fq "missing_docs_velocity_guard.py" "$PLAN_DOC_PATH"; then
+  echo "missing-docs policy contract failed: engineering hardening plan must include velocity guard command marker." >&2
+  exit 1
+fi
+
+if ! grep -Fq "kamn.ci.kamn-core-missing-docs-velocity-policy.v1" "$PLAN_DOC_PATH"; then
+  echo "missing-docs policy contract failed: engineering hardening plan must include velocity policy schema marker." >&2
+  exit 1
+fi
+
+if ! grep -Fq "docs/planning/issues/missing-docs-velocity-cadence.md" "$PLAN_DOC_PATH"; then
+  echo "missing-docs policy contract failed: engineering hardening plan must link missing-docs velocity cadence doc." >&2
+  exit 1
+fi
+
 if ! grep -Fq "#![warn(missing_docs)]" "$PLAN_DOC_PATH"; then
   echo "missing-docs policy contract failed: engineering hardening plan must include #![warn(missing_docs)] policy marker." >&2
   exit 1
@@ -181,6 +204,26 @@ if ! grep -Fq "target/doc" "$RUSTDOC_GUIDE_PATH"; then
   exit 1
 fi
 
+if ! grep -Fq "missing_docs_velocity_guard.py" "$VELOCITY_CADENCE_DOC_PATH"; then
+  echo "missing-docs policy contract failed: velocity cadence doc must include velocity guard command." >&2
+  exit 1
+fi
+
+if ! grep -Fq ".ci/kamn-core-missing-docs-velocity-thresholds.json" "$VELOCITY_CADENCE_DOC_PATH"; then
+  echo "missing-docs policy contract failed: velocity cadence doc must include threshold config path." >&2
+  exit 1
+fi
+
+if ! grep -Fq "fixtures/ci/kamn_core_missing_docs_velocity_baseline.json" "$VELOCITY_CADENCE_DOC_PATH"; then
+  echo "missing-docs policy contract failed: velocity cadence doc must include baseline fixture path." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Regression: #2127" "$VELOCITY_CADENCE_DOC_PATH"; then
+  echo "missing-docs policy contract failed: velocity cadence doc must include regression marker." >&2
+  exit 1
+fi
+
 tmp_throughput_report="$(mktemp)"
 if ! python3 "$THROUGHPUT_CONTRACT_SCRIPT_PATH" generate \
   --core-lib "$CORE_LIB_PATH" \
@@ -198,6 +241,17 @@ if ! python3 "$THROUGHPUT_CONTRACT_SCRIPT_PATH" check \
   rm -f "$tmp_throughput_report"
   exit 1
 fi
-rm -f "$tmp_throughput_report"
+
+tmp_velocity_policy_report="$(mktemp)"
+if ! python3 "$VELOCITY_GUARD_SCRIPT_PATH" check \
+  --report-file "$tmp_throughput_report" \
+  --baseline-file "$VELOCITY_BASELINE_PATH" \
+  --threshold-file "$VELOCITY_THRESHOLD_PATH" \
+  --output-json "$tmp_velocity_policy_report" >/dev/null; then
+  echo "missing-docs policy contract failed: velocity guard policy check failed." >&2
+  rm -f "$tmp_throughput_report" "$tmp_velocity_policy_report"
+  exit 1
+fi
+rm -f "$tmp_throughput_report" "$tmp_velocity_policy_report"
 
 echo "kamn-core missing-docs policy contract passed."
