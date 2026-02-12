@@ -812,6 +812,32 @@ pub enum KolmeRuntimeCommitProviderOutcome {
     },
 }
 
+impl From<KamnKolmeRuntimeProviderOutcome> for KolmeRuntimeCommitProviderOutcome {
+    fn from(value: KamnKolmeRuntimeProviderOutcome) -> Self {
+        match value {
+            KamnKolmeRuntimeProviderOutcome::Submitted {
+                provider,
+                commit_id,
+                finality,
+            } => Self::Submitted(KolmeRuntimeCommitProviderReceipt {
+                provider,
+                commit_id,
+                finality,
+            }),
+            KamnKolmeRuntimeProviderOutcome::Duplicate {
+                provider,
+                commit_id,
+                finality,
+            } => Self::Duplicate(KolmeRuntimeCommitProviderReceipt {
+                provider,
+                commit_id,
+                finality,
+            }),
+            KamnKolmeRuntimeProviderOutcome::Rejected { reason } => Self::Rejected { reason },
+        }
+    }
+}
+
 /// Transport connection abstraction for consuming notifications text messages.
 pub trait KolmeRuntimeCommitNotificationsConnection {
     /// Reads the next notifications text message.
@@ -1903,7 +1929,12 @@ impl<T: KolmeRuntimeCommitProviderTransport> KolmeRuntimeCommitProvider
             KolmeRuntimeCommitSubmitProfile::KolmeForkBroadcast => self.provider_hint.as_deref(),
             KolmeRuntimeCommitSubmitProfile::LegacyRuntimeCommit => None,
         };
-        parse_live_provider_response(response.as_str(), provider_hint)
+        let outcome =
+            parse_kolme_live_runtime_provider_outcome_contract(response.as_str(), provider_hint)
+                .map_err(|error| KolmeRuntimeCommitProviderError::MalformedResponse {
+                    reason: error.to_string(),
+                })?;
+        Ok(outcome.into())
     }
 }
 
@@ -2036,43 +2067,6 @@ fn read_http_header_boundary(
             });
         }
         response_bytes.extend_from_slice(&chunk[..read]);
-    }
-}
-
-fn parse_live_provider_response(
-    response: &str,
-    provider_hint: Option<&str>,
-) -> Result<KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderError> {
-    match parse_kolme_live_runtime_provider_outcome_contract(response, provider_hint).map_err(
-        |error| KolmeRuntimeCommitProviderError::MalformedResponse {
-            reason: error.to_string(),
-        },
-    )? {
-        KamnKolmeRuntimeProviderOutcome::Submitted {
-            provider,
-            commit_id,
-            finality,
-        } => Ok(KolmeRuntimeCommitProviderOutcome::Submitted(
-            KolmeRuntimeCommitProviderReceipt {
-                provider,
-                commit_id,
-                finality,
-            },
-        )),
-        KamnKolmeRuntimeProviderOutcome::Duplicate {
-            provider,
-            commit_id,
-            finality,
-        } => Ok(KolmeRuntimeCommitProviderOutcome::Duplicate(
-            KolmeRuntimeCommitProviderReceipt {
-                provider,
-                commit_id,
-                finality,
-            },
-        )),
-        KamnKolmeRuntimeProviderOutcome::Rejected { reason } => {
-            Ok(KolmeRuntimeCommitProviderOutcome::Rejected { reason })
-        }
     }
 }
 

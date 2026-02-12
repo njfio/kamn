@@ -19,6 +19,7 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("fn parse_block_fallback_response("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn parse_kolme_fork_block_fallback_response("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn parse_kolme_notification_event("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("fn parse_live_provider_response("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn classify_tls_failure_reason("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn normalize_kolme_broadcast_payload("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn validate_websocket_handshake_response("));
@@ -137,6 +138,9 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
         .contains("impl From<KamnKolmeNotificationEvent> for KolmeRuntimeCommitNotificationEvent"));
     assert!(RUNTIME_COMMIT_SRC.contains("notification_event_to_kolme_provider_receipt_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_live_runtime_provider_outcome_contract("));
+    assert!(RUNTIME_COMMIT_SRC.contains(
+        "impl From<KamnKolmeRuntimeProviderOutcome> for KolmeRuntimeCommitProviderOutcome"
+    ));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_response_body("));
     assert!(RUNTIME_COMMIT_SRC.contains("find_kolme_http_header_boundary("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_websocket_timeout_seconds_contract("));
