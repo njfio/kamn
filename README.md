@@ -637,9 +637,12 @@ bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --ou
 # deterministic deployment preflight plan (no command execution)
 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json
 
+# sample signer custody evidence marker for run mode
+printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json
+
 # deployment preflight run mode (fast-gate eligible, no local-heavy gate required)
 KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 \
-bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json
+bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json
 
 # deployment preflight policy checker contract
 python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json
@@ -650,15 +653,24 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # deterministic preflight marker contracts
 # signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE
 # fallback_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK
+# required_approvals=2
+# received_approvals=2
 # contracts.ci_fast_gate_scope=ci-fast-gate
 # contracts.required_runtime_mode=kolme-live
 # contracts.fallback_private_key_path_allowed=false
+# contracts.approval_quorum_required=2
+# contracts.custody_evidence_required=true
 
 # strict preflight NO-GO drift reasons
 # runtime_mode_mismatch
 # signer_profile_mismatch
 # fallback_signer_secret_present_violation
 # checkpoint_failed_signer_secret_contract
+# checkpoint_failed_signer_quorum_contract
+# checkpoint_failed_custody_evidence_contract
+# signer_quorum_shortfall
+# custody_evidence_missing
+# custody_evidence_sha256_invalid
 
 # schema: kamn.kolme.local-live-deployment-preflight-summary.v1
 # schema: kamn.kolme.local-live-deployment-preflight-policy-report.v1

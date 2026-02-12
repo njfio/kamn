@@ -54,6 +54,12 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "signer_secret_present": false,
   "fallback_signer_secret_present": false,
   "signer_secret_hex_valid": false,
+  "required_approvals": 2,
+  "received_approvals": 0,
+  "custody_evidence_file": "",
+  "custody_evidence_present": false,
+  "custody_evidence_sha256": "",
+  "custody_evidence_sha256_valid": false,
   "contracts": {
     "ci_fast_gate_scope": "ci-fast-gate",
     "required_runtime_mode": "kolme-live",
@@ -67,7 +73,11 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "fallback_signer_secret_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
     "fallback_private_key_path_allowed": false,
     "required_secret_hex_length": 64,
-    "secret_source": "env"
+    "secret_source": "env",
+    "approval_quorum_required": 2,
+    "approval_quorum_source": "local-operator-attestations",
+    "custody_evidence_required": true,
+    "custody_evidence_sha256_required": true
   },
   "checks": [
     {
@@ -91,6 +101,18 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     {
       "id": "fallback_private_key_contract",
       "command": "fallback signer secret env must remain unset",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "signer_quorum_contract",
+      "command": "received approvals must satisfy required approvals threshold",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "custody_evidence_contract",
+      "command": "signer custody evidence file and sha256 marker must be present",
       "status": "planned",
       "reason_code": "not_run"
     }
@@ -139,6 +161,12 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
   "signer_secret_present": true,
   "fallback_signer_secret_present": true,
   "signer_secret_hex_valid": true,
+  "required_approvals": 2,
+  "received_approvals": 1,
+  "custody_evidence_file": "",
+  "custody_evidence_present": false,
+  "custody_evidence_sha256": "",
+  "custody_evidence_sha256_valid": false,
   "contracts": {
     "ci_fast_gate_scope": "local-only",
     "required_runtime_mode": "kolme-live",
@@ -152,7 +180,11 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
     "fallback_signer_secret_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
     "fallback_private_key_path_allowed": true,
     "required_secret_hex_length": 64,
-    "secret_source": "env"
+    "secret_source": "env",
+    "approval_quorum_required": 2,
+    "approval_quorum_source": "local-operator-attestations",
+    "custody_evidence_required": true,
+    "custody_evidence_sha256_required": true
   },
   "checks": [
     {
@@ -208,6 +240,26 @@ fi
 
 if ! grep -q "check_missing:fallback_private_key_contract" "$TMP_ERR"; then
   echo "expected missing fallback_private_key_contract check reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "signer_quorum_shortfall" "$TMP_ERR"; then
+  echo "expected signer quorum shortfall reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "custody_evidence_missing" "$TMP_ERR"; then
+  echo "expected custody evidence missing reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "check_missing:signer_quorum_contract" "$TMP_ERR"; then
+  echo "expected missing signer_quorum_contract check reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "check_missing:custody_evidence_contract" "$TMP_ERR"; then
+  echo "expected missing custody_evidence_contract check reason for deployment preflight policy failure" >&2
   exit 1
 fi
 

@@ -116,6 +116,30 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(signer_secret_hex_valid, bool):
         reason_codes.append("signer_secret_hex_valid_invalid")
 
+    required_approvals = report.get("required_approvals")
+    if not isinstance(required_approvals, int) or required_approvals <= 0:
+        reason_codes.append("required_approvals_invalid")
+
+    received_approvals = report.get("received_approvals")
+    if not isinstance(received_approvals, int) or received_approvals < 0:
+        reason_codes.append("received_approvals_invalid")
+
+    custody_evidence_file = report.get("custody_evidence_file")
+    if not isinstance(custody_evidence_file, str):
+        reason_codes.append("custody_evidence_file_invalid")
+
+    custody_evidence_present = report.get("custody_evidence_present")
+    if not isinstance(custody_evidence_present, bool):
+        reason_codes.append("custody_evidence_present_invalid")
+
+    custody_evidence_sha256 = report.get("custody_evidence_sha256")
+    if not isinstance(custody_evidence_sha256, str):
+        reason_codes.append("custody_evidence_sha256_invalid")
+
+    custody_evidence_sha256_valid = report.get("custody_evidence_sha256_valid")
+    if not isinstance(custody_evidence_sha256_valid, bool):
+        reason_codes.append("custody_evidence_sha256_valid_invalid")
+
     contracts = report.get("contracts")
     if not isinstance(contracts, dict):
         reason_codes.append("contracts_missing")
@@ -140,6 +164,17 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("required_secret_hex_length_contract_mismatch")
         if contracts.get("secret_source") != "env":
             reason_codes.append("secret_source_contract_mismatch")
+        approval_quorum_required = contracts.get("approval_quorum_required")
+        if not isinstance(approval_quorum_required, int) or approval_quorum_required <= 0:
+            reason_codes.append("approval_quorum_required_contract_invalid")
+        elif isinstance(required_approvals, int) and approval_quorum_required != required_approvals:
+            reason_codes.append("approval_quorum_required_contract_mismatch")
+        if contracts.get("approval_quorum_source") != "local-operator-attestations":
+            reason_codes.append("approval_quorum_source_contract_mismatch")
+        if contracts.get("custody_evidence_required") is not True:
+            reason_codes.append("custody_evidence_required_contract_mismatch")
+        if contracts.get("custody_evidence_sha256_required") is not True:
+            reason_codes.append("custody_evidence_sha256_required_contract_mismatch")
 
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
@@ -150,6 +185,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             "signer_profile_contract",
             "signer_secret_contract",
             "fallback_private_key_contract",
+            "signer_quorum_contract",
+            "custody_evidence_contract",
         }
         observed_ids: set[str] = set()
         for entry in checks:
@@ -193,6 +230,17 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         observed_final_decision = "NO-GO"
         if reason_code in ("dry_run_no_commands_executed", "deployment_preflight_passed"):
             reason_codes.append("fail_status_reason_code_mismatch")
+
+    if mode == "run":
+        if isinstance(required_approvals, int) and isinstance(received_approvals, int):
+            if received_approvals < required_approvals:
+                reason_codes.append("signer_quorum_shortfall")
+        if custody_evidence_present is not True:
+            reason_codes.append("custody_evidence_missing")
+        if custody_evidence_sha256_valid is not True:
+            reason_codes.append("custody_evidence_sha256_invalid")
+        if isinstance(custody_evidence_file, str) and custody_evidence_present is True and not custody_evidence_file.strip():
+            reason_codes.append("custody_evidence_file_missing")
 
     for required_reason_code in args.require_reason_code:
         if reason_code != required_reason_code:
