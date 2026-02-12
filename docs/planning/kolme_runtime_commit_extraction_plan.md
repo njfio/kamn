@@ -80,6 +80,7 @@ Out of scope:
 - #1920: extracted live provider endpoint normalization contract to `kamn-kolme` (`normalize_live_provider_endpoint_inputs`) and rewired `kamn-core` live provider constructor normalization delegation.
 - #1922: extracted block-fallback constructor normalization contract to `kamn-kolme` (`normalize_block_fallback_constructor_inputs`) and rewired `kamn-core` block-fallback reconciler constructor normalization delegation.
 - #1924: extracted reconnect exhaustion reason composition contract to `kamn-kolme` (`compose_notifications_reconnect_exhausted_reason`) and rewired `kamn-core` notifications consumer reconnect exhaustion errors to delegate text composition.
+- #1926: removed local notification parse wrapper glue from `kamn-core` by introducing direct `KamnKolmeNotificationEvent` -> `KolmeRuntimeCommitNotificationEvent` conversion and inlining delegated parse contract mapping in notifications consumer flow.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,
