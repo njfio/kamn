@@ -13,6 +13,9 @@ README_FIXTURE="$TMP_DIR/README.md"
 PLAN_DOC_FIXTURE="$TMP_DIR/engineering-hardening-wave.md"
 ARCH_DOC_FIXTURE="$TMP_DIR/kamn-core-module-map.md"
 RUSTDOC_GUIDE_FIXTURE="$TMP_DIR/rustdoc-publishing.md"
+VELOCITY_BASELINE_FIXTURE="$TMP_DIR/missing-docs-velocity-baseline.json"
+VELOCITY_THRESHOLD_FIXTURE="$TMP_DIR/missing-docs-velocity-thresholds.json"
+VELOCITY_CADENCE_DOC_FIXTURE="$TMP_DIR/missing-docs-velocity-cadence.md"
 
 run_checker() {
   KAMN_CORE_LIB_PATH="$CORE_LIB_FIXTURE" \
@@ -22,6 +25,9 @@ run_checker() {
   KAMN_ENGINEERING_HARDENING_DOC_PATH="$PLAN_DOC_FIXTURE" \
   KAMN_CORE_MODULE_MAP_DOC_PATH="$ARCH_DOC_FIXTURE" \
   KAMN_RUSTDOC_PUBLISHING_DOC_PATH="$RUSTDOC_GUIDE_FIXTURE" \
+  KAMN_MISSING_DOCS_VELOCITY_BASELINE_PATH="$VELOCITY_BASELINE_FIXTURE" \
+  KAMN_MISSING_DOCS_VELOCITY_THRESHOLD_PATH="$VELOCITY_THRESHOLD_FIXTURE" \
+  KAMN_MISSING_DOCS_VELOCITY_CADENCE_DOC_PATH="$VELOCITY_CADENCE_DOC_FIXTURE" \
     bash "$SCRIPT"
 }
 
@@ -33,6 +39,9 @@ reset_fixtures() {
   cp "$ROOT_DIR/docs/planning/engineering-hardening-wave.md" "$PLAN_DOC_FIXTURE"
   cp "$ROOT_DIR/docs/architecture/kamn-core-module-map.md" "$ARCH_DOC_FIXTURE"
   cp "$ROOT_DIR/docs/developer/rustdoc-publishing.md" "$RUSTDOC_GUIDE_FIXTURE"
+  cp "$ROOT_DIR/fixtures/ci/kamn_core_missing_docs_velocity_baseline.json" "$VELOCITY_BASELINE_FIXTURE"
+  cp "$ROOT_DIR/.ci/kamn-core-missing-docs-velocity-thresholds.json" "$VELOCITY_THRESHOLD_FIXTURE"
+  cp "$ROOT_DIR/docs/planning/issues/missing-docs-velocity-cadence.md" "$VELOCITY_CADENCE_DOC_FIXTURE"
 }
 
 expect_failure() {
@@ -70,6 +79,10 @@ sed -i '/missing_docs_throughput_report_contract.py/d' "$PLAN_DOC_FIXTURE"
 expect_failure "plan doc throughput command drift should fail"
 
 reset_fixtures
+sed -i '/missing_docs_velocity_guard.py/d' "$PLAN_DOC_FIXTURE"
+expect_failure "plan doc velocity guard command drift should fail"
+
+reset_fixtures
 sed -i '/## Runtime Flow (Condensed)/d' "$ARCH_DOC_FIXTURE"
 expect_failure "architecture map runtime flow marker drift should fail"
 
@@ -80,6 +93,23 @@ expect_failure "rustdoc publishing command drift should fail"
 reset_fixtures
 sed -i '/docs\/developer\/rustdoc-publishing.md/d' "$README_FIXTURE"
 expect_failure "README rustdoc link drift should fail"
+
+reset_fixtures
+sed -i '/Regression: #2127/d' "$VELOCITY_CADENCE_DOC_FIXTURE"
+expect_failure "velocity cadence regression marker drift should fail"
+
+reset_fixtures
+python3 - "$VELOCITY_BASELINE_FIXTURE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["commit_count"] = 1
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+expect_failure "velocity guard stagnation policy drift should fail"
 
 # Regression: #1723
 reset_fixtures

@@ -56,6 +56,10 @@ bash scripts/ci/test_ci_tools.sh
 # kamn-core missing-docs policy contract checker
 bash scripts/ci/check_kamn_core_missing_docs_policy.sh
 
+# kamn-core missing-docs throughput + velocity guard evidence
+python3 scripts/ci/missing_docs_throughput_report_contract.py generate --output-json /tmp/kamn-core-missing-docs-throughput-report.json
+python3 scripts/ci/missing_docs_velocity_guard.py check --report-file /tmp/kamn-core-missing-docs-throughput-report.json --baseline-file fixtures/ci/kamn_core_missing_docs_velocity_baseline.json --threshold-file .ci/kamn-core-missing-docs-velocity-thresholds.json --output-json /tmp/kamn-core-missing-docs-velocity-policy.json
+
 # settlement evidence verification (payout/refund/dispute schema policy)
 bash scripts/escrow/generate_settlement_reconciliation_evidence_bundle.sh --output-file /tmp/settlement-evidence.json --escrow-id escrow-001 --settlement-outcome RELEASED --receipt-id receipt-001 --receipt-finality FINAL --expected-release-amount 120 --expected-refund-amount 0 --observed-release-amount 120 --observed-refund-amount 0 --ledger-reference-id ledger-entry-001 --timeout-elapsed false --ci-fast-gate PASS
 bash scripts/escrow/check_settlement_reconciliation_evidence_policy.sh --bundle-file /tmp/settlement-evidence.json

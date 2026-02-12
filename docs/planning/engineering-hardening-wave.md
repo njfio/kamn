@@ -23,6 +23,10 @@ default development loop green while tightening missing-doc policy controls for
 - Missing-doc throughput report generation and policy checker:
   - `python3 scripts/ci/missing_docs_throughput_report_contract.py generate --output-json /tmp/kamn-core-missing-docs-throughput-report.json`
   - `python3 scripts/ci/missing_docs_throughput_report_contract.py check --report-file /tmp/kamn-core-missing-docs-throughput-report.json`
+- Missing-doc velocity guard policy checker:
+  - `python3 scripts/ci/missing_docs_velocity_guard.py check --report-file /tmp/kamn-core-missing-docs-throughput-report.json --baseline-file fixtures/ci/kamn_core_missing_docs_velocity_baseline.json --threshold-file .ci/kamn-core-missing-docs-velocity-thresholds.json --output-json /tmp/kamn-core-missing-docs-velocity-policy.json`
+- Missing-doc velocity guard contract tests:
+  - `bash scripts/ci/test_missing_docs_velocity_guard_contract.sh`
 - Bounded rustdoc generation command (kamn-core only):
   - `RUSTDOCFLAGS="-D warnings" cargo doc -p kamn-core --no-deps`
 - Rustdoc artifact contract lane and policy checker:
@@ -52,6 +56,9 @@ default development loop green while tightening missing-doc policy controls for
   - `5` graduated modules per `100` commits (`target_modules_per_100_commits`).
 - Any allowlist drift fails closed via:
   - `scripts/ci/check_kamn_core_missing_docs_policy.sh`
+- Velocity baseline + threshold policy inputs:
+  - `fixtures/ci/kamn_core_missing_docs_velocity_baseline.json`
+  - `.ci/kamn-core-missing-docs-velocity-thresholds.json`
 - Architecture/runtime flow and rustdoc publication docs are required:
   - `docs/architecture/kamn-core-module-map.md`
   - `docs/architecture/kamn-core-module-map.md#contributor-entrypoint-matrix`
@@ -70,6 +77,19 @@ default development loop green while tightening missing-doc policy controls for
   - If `target_met` is `true`, post evidence to `#1718` and retain policy checks
     to guard against regressions.
 
+## Missing-Docs Velocity Guard Contract
+
+- Velocity guard policy schema:
+  - `kamn.ci.kamn-core-missing-docs-velocity-policy.v1`
+- Threshold schema:
+  - `kamn.ci.kamn-core-missing-docs-velocity-thresholds.v1`
+- Baseline schema:
+  - `kamn.ci.kamn-core-missing-docs-velocity-baseline.v1`
+- Velocity guard command:
+  - `python3 scripts/ci/missing_docs_velocity_guard.py check --report-file /tmp/kamn-core-missing-docs-throughput-report.json --baseline-file fixtures/ci/kamn_core_missing_docs_velocity_baseline.json --threshold-file .ci/kamn-core-missing-docs-velocity-thresholds.json --output-json /tmp/kamn-core-missing-docs-velocity-policy.json`
+- Required planning/cadence document:
+  - `docs/planning/issues/missing-docs-velocity-cadence.md`
+
 ## Cost and Runtime Policy
 
 - The policy checker is shell-based (`grep`/`awk` + fixture diff) and avoids
@@ -86,10 +106,14 @@ default development loop green while tightening missing-doc policy controls for
   - `crates/kamn-core/tests/engineering_hardening_wave_docs.rs`
   - `fixtures/ci/kamn_core_missing_docs_allowlist.txt`
   - `fixtures/ci/kamn_core_missing_docs_graduated_modules.txt`
+  - `fixtures/ci/kamn_core_missing_docs_velocity_baseline.json`
+  - `.ci/kamn-core-missing-docs-velocity-thresholds.json`
   - `scripts/ci/check_kamn_core_missing_docs_policy.sh`
   - `scripts/ci/test_check_kamn_core_missing_docs_policy.sh`
   - `scripts/ci/missing_docs_throughput_report_contract.py`
   - `scripts/ci/test_missing_docs_throughput_report_contract.sh`
+  - `scripts/ci/missing_docs_velocity_guard.py`
+  - `scripts/ci/test_missing_docs_velocity_guard_contract.sh`
   - `scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh`
   - `scripts/ci/test_run_kamn_core_rustdoc_artifact_contract_lane.sh`
   - `scripts/ci/check_kamn_core_rustdoc_artifact_policy.sh`
@@ -125,6 +149,7 @@ default development loop green while tightening missing-doc policy controls for
   - `docs/developer/rustdoc-publishing.md`
   - `docs/testing/invariant-and-fuzz-strategy.md`
   - `docs/planning/engineering-hardening-wave.md`
+  - `docs/planning/issues/missing-docs-velocity-cadence.md`
   - `README.md`
 - Selector lock for framework helper migration:
   - `scripts/framework/contract_lane_helpers.py` and
@@ -138,6 +163,8 @@ default development loop green while tightening missing-doc policy controls for
 
 - `Regression: #896` — protect against missing-doc policy drift and undocumented
   checker/documentation command changes.
+- `Regression: #2127` — enforce deterministic docs-graduation velocity
+  thresholds and fail closed on stagnation/config drift.
 - `Regression: #1526` — keep bounded lifecycle evidence property matrices
   deterministic and fail-closed for runtime/task/escrow transition contracts.
 - `Regression: #1527` — keep deterministic task terminal concurrency replay
