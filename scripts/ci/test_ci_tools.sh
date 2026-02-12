@@ -109,6 +109,7 @@ bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_cont
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kamn_live_runtime_integration_real_node_profile.sh"
 bash "$ROOT_DIR/scripts/kolme/test_check_local_kamn_live_runtime_real_node_profile_policy.sh"
+bash "$ROOT_DIR/scripts/kolme/test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_live_node_validation_bundle_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_check_local_live_node_validation_bundle_policy.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_live_node_validation_bundle_contract_lane.sh"
