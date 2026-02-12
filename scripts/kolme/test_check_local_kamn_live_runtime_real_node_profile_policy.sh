@@ -10,6 +10,8 @@ README_FILE="$ROOT_DIR/README.md"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT_OK="$TMP_DIR/ok-report.json"
 TMP_REPORT_OK_SECONDARY="$TMP_DIR/ok-report-secondary.json"
+TMP_REPORT_OK_MANAGED="$TMP_DIR/ok-report-managed.json"
+TMP_REPORT_KEY_SOURCE_PAIR_BAD="$TMP_DIR/key-source-pair-bad-report.json"
 TMP_REPORT_BAD="$TMP_DIR/bad-report.json"
 TMP_REPORT_SYNTHETIC="$TMP_DIR/synthetic-report.json"
 TMP_REPORT_INMEMORY="$TMP_DIR/inmemory-report.json"
@@ -217,6 +219,66 @@ if report.get("final_decision") != "GO":
 if report.get("reason_codes") != []:
     raise SystemExit("expected no reason codes for valid secondary real-node profile report")
 PY
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_OK_MANAGED" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["runtime_signer_key_source"] = "managed-external"
+contracts = report.get("contracts", {})
+if isinstance(contracts, dict):
+    contracts["runtime_signer_key_source"] = "managed-external"
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_OK_MANAGED" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --require-reason-code dry_run_no_commands_executed \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT" >/dev/null
+
+python3 - "$TMP_REPORT_OK_SECONDARY" "$TMP_REPORT_KEY_SOURCE_PAIR_BAD" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["runtime_signer_key_source"] = "managed-external"
+contracts = report.get("contracts", {})
+if isinstance(contracts, dict):
+    contracts["runtime_signer_key_source"] = "managed-external"
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_KEY_SOURCE_PAIR_BAD" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+key_source_pair_bad_exit_code=$?
+set -e
+
+if [ "$key_source_pair_bad_exit_code" -eq 0 ]; then
+  echo "expected disallowed key-source/profile pair proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_key_source_profile_pair_disallowed" "$TMP_ERR"; then
+  echo "expected disallowed key-source/profile pair reason for policy failure" >&2
+  exit 1
+fi
 
 cat >"$TMP_REPORT_BAD" <<'JSON'
 {

@@ -602,6 +602,7 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_signer_profile_mismatch
 # runtime_signer_failover_profile_unchanged
 # runtime_signer_rotation_epoch_stale
+# runtime_signer_key_source_profile_pair_disallowed
 # runtime_signer_private_key_env_mismatch
 # runtime_commit_non_synthetic_submit_probe_missing
 # runtime_commit_real_signing_profile_marker_missing

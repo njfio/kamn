@@ -14,11 +14,15 @@ REAL_SIGNER_PROFILE_SECONDARY = "ops-secondary"
 REAL_SIGNER_PRIVATE_KEY_ENV_PRIMARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
 REAL_SIGNER_PRIVATE_KEY_ENV_SECONDARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
 REAL_SIGNER_KEY_SOURCE_CONTRACT_VERSION = "v1"
-ALLOWED_SIGNER_KEY_SOURCES = ("env-local", "managed-external")
 ALLOWED_SIGNER_PROFILES = (
     REAL_SIGNER_PROFILE_PRIMARY,
     REAL_SIGNER_PROFILE_SECONDARY,
 )
+ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE = {
+    REAL_SIGNER_PROFILE_PRIMARY: ("env-local", "managed-external"),
+    REAL_SIGNER_PROFILE_SECONDARY: ("env-local",),
+}
+ALLOWED_SIGNER_KEY_SOURCES = ("env-local", "managed-external")
 SIGNER_PRIVATE_KEY_ENV_BY_PROFILE = {
     REAL_SIGNER_PROFILE_PRIMARY: REAL_SIGNER_PRIVATE_KEY_ENV_PRIMARY,
     REAL_SIGNER_PROFILE_SECONDARY: REAL_SIGNER_PRIVATE_KEY_ENV_SECONDARY,
@@ -163,6 +167,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         expected_signer_key_source = runtime_signer_key_source.strip()
         if expected_signer_key_source not in ALLOWED_SIGNER_KEY_SOURCES:
             reason_codes.append("runtime_signer_key_source_invalid")
+    if (
+        isinstance(runtime_signer_profile, str)
+        and runtime_signer_profile in ALLOWED_SIGNER_PROFILES
+        and expected_signer_key_source
+        and expected_signer_key_source in ALLOWED_SIGNER_KEY_SOURCES
+        and expected_signer_key_source not in ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE[runtime_signer_profile]
+    ):
+        reason_codes.append("runtime_signer_key_source_profile_pair_disallowed")
 
     runtime_signer_private_key_env = report.get("runtime_signer_private_key_env")
     if not isinstance(runtime_signer_private_key_env, str) or not runtime_signer_private_key_env.strip():
