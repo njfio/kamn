@@ -82,6 +82,15 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - `run_ci_tool_checks=true`
   - `test_scope=ci-doc-contract`
   - unknown/full fallback remains disabled for this path
+- Wave-10 wrapper-family fixture and trend-checker changes map to CI contract scope:
+  - `fixtures/ci/kolme_wave10_wrapper_family_matrix.json`
+  - `fixtures/ci/kolme_wave10_wrapper_family_baseline.json`
+  - `fixtures/ci/kolme_wave10_wrapper_family_trend_thresholds.json`
+  - `scripts/ci/check_kolme_wave10_wrapper_family_budget_trend.sh`
+  - selector outputs:
+    - `run_ci_tool_checks=true`
+    - `test_scope=ci-doc-contract`
+    - unknown/full fallback remains disabled for this wave-10 path set
 - Localhost signed integration command changes map to dedicated scope:
   - `run_localhost_signed_integration_contract_lane_tests=true`
   - `test_scope=sdk-live-localhost-integration`

@@ -94,6 +94,25 @@ assert_eq "$(extract_output "$ci_strategy_docs_output" "run_rust")" "false" "ci 
 assert_eq "$(extract_output "$ci_strategy_docs_output" "run_ci_tool_checks")" "true" "ci strategy docs must run CI tool contract checks"
 assert_eq "$(extract_output "$ci_strategy_docs_output" "test_scope")" "ci-doc-contract" "ci strategy docs should set ci-doc-contract scope"
 
+wave10_matrix_fixture_output="$(run_selector $'fixtures/ci/kolme_wave10_wrapper_family_matrix.json')"
+assert_eq "$(extract_output "$wave10_matrix_fixture_output" "run_rust")" "false" "wave-10 wrapper-family matrix fixture changes should avoid rust full fallback"
+assert_eq "$(extract_output "$wave10_matrix_fixture_output" "run_ci_tool_checks")" "true" "wave-10 wrapper-family matrix fixture changes must run CI tool checks"
+assert_eq "$(extract_output "$wave10_matrix_fixture_output" "unknown_risk_changed")" "false" "wave-10 wrapper-family matrix fixture changes should be classified"
+assert_eq "$(extract_output "$wave10_matrix_fixture_output" "test_scope")" "ci-doc-contract" "wave-10 wrapper-family matrix fixture changes should use ci-doc-contract scope"
+
+wave10_threshold_fixture_output="$(run_selector $'fixtures/ci/kolme_wave10_wrapper_family_trend_thresholds.json')"
+assert_eq "$(extract_output "$wave10_threshold_fixture_output" "run_rust")" "false" "wave-10 trend threshold fixture changes should avoid rust full fallback"
+assert_eq "$(extract_output "$wave10_threshold_fixture_output" "run_ci_tool_checks")" "true" "wave-10 trend threshold fixture changes must run CI tool checks"
+assert_eq "$(extract_output "$wave10_threshold_fixture_output" "unknown_risk_changed")" "false" "wave-10 trend threshold fixture changes should be classified"
+assert_eq "$(extract_output "$wave10_threshold_fixture_output" "test_scope")" "ci-doc-contract" "wave-10 trend threshold fixture changes should use ci-doc-contract scope"
+
+wave10_trend_checker_script_output="$(run_selector $'scripts/ci/check_kolme_wave10_wrapper_family_budget_trend.sh')"
+assert_eq "$(extract_output "$wave10_trend_checker_script_output" "run_rust")" "false" "wave-10 trend checker script changes should avoid rust full fallback"
+assert_eq "$(extract_output "$wave10_trend_checker_script_output" "run_ci_tool_checks")" "true" "wave-10 trend checker script changes must run CI tool checks"
+assert_eq "$(extract_output "$wave10_trend_checker_script_output" "run_script_surface_budget_checks")" "true" "wave-10 trend checker script changes should run script-surface budget checks"
+assert_eq "$(extract_output "$wave10_trend_checker_script_output" "unknown_risk_changed")" "false" "wave-10 trend checker script changes should be classified"
+assert_eq "$(extract_output "$wave10_trend_checker_script_output" "test_scope")" "ci-doc-contract" "wave-10 trend checker script changes should use ci-doc-contract scope"
+
 hardening_docs_output="$(run_selector $'docs/planning/engineering-hardening-wave.md')"
 assert_eq "$(extract_output "$hardening_docs_output" "docs_only")" "true" "engineering hardening docs should remain docs-only"
 assert_eq "$(extract_output "$hardening_docs_output" "run_rust")" "false" "engineering hardening docs should avoid rust lane"
