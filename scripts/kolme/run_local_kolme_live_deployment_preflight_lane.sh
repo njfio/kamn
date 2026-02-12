@@ -8,6 +8,7 @@ SIGNER_PROFILE=""
 MAX_SECONDS=12
 REQUIRED_APPROVALS=2
 RECEIVED_APPROVALS=0
+QUORUM_EVIDENCE_FILE=""
 CUSTODY_EVIDENCE_FILE=""
 SIGNER_PROVENANCE_FILE=""
 SIGNER_KEY_SOURCE_CONTRACT_VERSION="v1"
@@ -25,6 +26,7 @@ SECONDARY_SIGNER_SECRET_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
 FALLBACK_SIGNER_SECRET_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 REQUIRED_SECRET_HEX_LENGTH=64
 SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED="v1"
+QUORUM_EVIDENCE_SCHEMA_VERSION="kamn.kolme.signer-quorum-evidence.v1"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -82,6 +84,14 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       RECEIVED_APPROVALS="$2"
+      shift 2
+      ;;
+    --quorum-evidence-file)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --quorum-evidence-file" >&2
+        exit 1
+      fi
+      QUORUM_EVIDENCE_FILE="$2"
       shift 2
       ;;
     --custody-evidence-file)
@@ -152,6 +162,7 @@ Options:
   --max-seconds <n>                   Max total runtime budget for run mode.
   --required-approvals <n>            Required signer approvals threshold (run-mode fail-closed).
   --received-approvals <n>            Received signer approvals count (run-mode fail-closed).
+  --quorum-evidence-file <path>       Required quorum evidence bundle in run mode.
   --custody-evidence-file <path>      Required signer custody evidence file in run mode.
   --signer-provenance-file <path>     Required signer provenance evidence file in run mode.
   --signer-key-source-contract-version <value>
@@ -239,6 +250,7 @@ signer_profile_command="signer profile must be ${PRIMARY_SIGNER_PROFILE} or ${SE
 signer_secret_command="selected signer secret env must exist and be ${REQUIRED_SECRET_HEX_LENGTH}-char hex"
 fallback_private_key_command="fallback signer secret env must remain unset"
 signer_quorum_command="received approvals must satisfy required approvals threshold"
+quorum_evidence_command="quorum evidence bundle must satisfy schema, signer uniqueness, threshold, and custody digest match"
 custody_evidence_command="signer custody evidence file and sha256 marker must be present"
 signer_provenance_command="signer provenance evidence file and sha256 marker must be present"
 signer_rotation_freshness_command="signer rotation metadata must satisfy freshness threshold"
@@ -250,6 +262,14 @@ elapsed_seconds=0
 signer_secret_present="false"
 signer_secret_hex_valid="false"
 fallback_signer_secret_present="false"
+quorum_evidence_present="false"
+quorum_evidence_sha256=""
+quorum_evidence_sha256_valid="false"
+quorum_evidence_schema_valid="false"
+quorum_evidence_approval_count=0
+quorum_evidence_signers_unique="false"
+quorum_evidence_matches_threshold="false"
+quorum_evidence_custody_sha256_match="false"
 custody_evidence_present="false"
 custody_evidence_sha256=""
 custody_evidence_sha256_valid="false"
@@ -264,6 +284,7 @@ record_check "signer_profile_contract" "$signer_profile_command" "planned" "not_
 record_check "signer_secret_contract" "$signer_secret_command" "planned" "not_run"
 record_check "fallback_private_key_contract" "$fallback_private_key_command" "planned" "not_run"
 record_check "signer_quorum_contract" "$signer_quorum_command" "planned" "not_run"
+record_check "quorum_evidence_contract" "$quorum_evidence_command" "planned" "not_run"
 record_check "custody_evidence_contract" "$custody_evidence_command" "planned" "not_run"
 record_check "signer_provenance_contract" "$signer_provenance_command" "planned" "not_run"
 record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "planned" "not_run"
@@ -278,6 +299,7 @@ if [ "$MODE" = "run" ]; then
     record_check "signer_secret_contract" "$signer_secret_command" "skipped" "runtime_mode_mismatch"
     record_check "fallback_private_key_contract" "$fallback_private_key_command" "skipped" "runtime_mode_mismatch"
     record_check "signer_quorum_contract" "$signer_quorum_command" "skipped" "runtime_mode_mismatch"
+    record_check "quorum_evidence_contract" "$quorum_evidence_command" "skipped" "runtime_mode_mismatch"
     record_check "custody_evidence_contract" "$custody_evidence_command" "skipped" "runtime_mode_mismatch"
     record_check "signer_provenance_contract" "$signer_provenance_command" "skipped" "runtime_mode_mismatch"
     record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "skipped" "runtime_mode_mismatch"
@@ -292,6 +314,7 @@ if [ "$MODE" = "run" ]; then
       record_check "signer_secret_contract" "$signer_secret_command" "skipped" "signer_profile_invalid"
       record_check "fallback_private_key_contract" "$fallback_private_key_command" "skipped" "signer_profile_invalid"
       record_check "signer_quorum_contract" "$signer_quorum_command" "skipped" "signer_profile_invalid"
+      record_check "quorum_evidence_contract" "$quorum_evidence_command" "skipped" "signer_profile_invalid"
       record_check "custody_evidence_contract" "$custody_evidence_command" "skipped" "signer_profile_invalid"
       record_check "signer_provenance_contract" "$signer_provenance_command" "skipped" "signer_profile_invalid"
       record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "skipped" "signer_profile_invalid"
@@ -310,6 +333,7 @@ if [ "$MODE" = "run" ]; then
         record_check "fallback_private_key_contract" "$fallback_private_key_command" "fail" "fallback_signer_secret_present_violation"
         record_check "signer_secret_contract" "$signer_secret_command" "skipped" "fallback_signer_secret_present_violation"
         record_check "signer_quorum_contract" "$signer_quorum_command" "skipped" "fallback_signer_secret_present_violation"
+        record_check "quorum_evidence_contract" "$quorum_evidence_command" "skipped" "fallback_signer_secret_present_violation"
         record_check "custody_evidence_contract" "$custody_evidence_command" "skipped" "fallback_signer_secret_present_violation"
         record_check "signer_provenance_contract" "$signer_provenance_command" "skipped" "fallback_signer_secret_present_violation"
         record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "skipped" "fallback_signer_secret_present_violation"
@@ -330,6 +354,7 @@ if [ "$MODE" = "run" ]; then
           echo "signer secret env is required for selected profile: $selected_signer_secret_env" >&2
           record_check "signer_secret_contract" "$signer_secret_command" "fail" "signer_secret_missing"
           record_check "signer_quorum_contract" "$signer_quorum_command" "skipped" "signer_secret_missing"
+          record_check "quorum_evidence_contract" "$quorum_evidence_command" "skipped" "signer_secret_missing"
           record_check "custody_evidence_contract" "$custody_evidence_command" "skipped" "signer_secret_missing"
           record_check "signer_provenance_contract" "$signer_provenance_command" "skipped" "signer_secret_missing"
           record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "skipped" "signer_secret_missing"
@@ -339,6 +364,7 @@ if [ "$MODE" = "run" ]; then
           echo "signer secret env must be ${REQUIRED_SECRET_HEX_LENGTH} hex characters: $selected_signer_secret_env" >&2
           record_check "signer_secret_contract" "$signer_secret_command" "fail" "signer_secret_invalid_hex"
           record_check "signer_quorum_contract" "$signer_quorum_command" "skipped" "signer_secret_invalid_hex"
+          record_check "quorum_evidence_contract" "$quorum_evidence_command" "skipped" "signer_secret_invalid_hex"
           record_check "custody_evidence_contract" "$custody_evidence_command" "skipped" "signer_secret_invalid_hex"
           record_check "signer_provenance_contract" "$signer_provenance_command" "skipped" "signer_secret_invalid_hex"
           record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "skipped" "signer_secret_invalid_hex"
@@ -349,6 +375,7 @@ if [ "$MODE" = "run" ]; then
           if [ "$RECEIVED_APPROVALS" -lt "$REQUIRED_APPROVALS" ]; then
             echo "signer quorum approvals below required threshold: required=$REQUIRED_APPROVALS received=$RECEIVED_APPROVALS" >&2
             record_check "signer_quorum_contract" "$signer_quorum_command" "fail" "signer_quorum_shortfall"
+            record_check "quorum_evidence_contract" "$quorum_evidence_command" "skipped" "signer_quorum_shortfall"
             record_check "custody_evidence_contract" "$custody_evidence_command" "skipped" "signer_quorum_shortfall"
             record_check "signer_provenance_contract" "$signer_provenance_command" "skipped" "signer_quorum_shortfall"
             record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "skipped" "signer_quorum_shortfall"
@@ -367,6 +394,7 @@ if [ "$MODE" = "run" ]; then
             if [ "$custody_evidence_present" != "true" ]; then
               echo "signer custody evidence file is required for selected profile" >&2
               record_check "custody_evidence_contract" "$custody_evidence_command" "fail" "custody_evidence_missing"
+              record_check "quorum_evidence_contract" "$quorum_evidence_command" "skipped" "custody_evidence_missing"
               record_check "signer_provenance_contract" "$signer_provenance_command" "skipped" "custody_evidence_missing"
               record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "skipped" "custody_evidence_missing"
               overall_status="fail"
@@ -374,6 +402,7 @@ if [ "$MODE" = "run" ]; then
             elif [ "$custody_evidence_sha256_valid" != "true" ]; then
               echo "signer custody evidence sha256 marker is invalid: $CUSTODY_EVIDENCE_FILE" >&2
               record_check "custody_evidence_contract" "$custody_evidence_command" "fail" "custody_evidence_sha256_invalid"
+              record_check "quorum_evidence_contract" "$quorum_evidence_command" "skipped" "custody_evidence_sha256_invalid"
               record_check "signer_provenance_contract" "$signer_provenance_command" "skipped" "custody_evidence_sha256_invalid"
               record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "skipped" "custody_evidence_sha256_invalid"
               overall_status="fail"
@@ -381,64 +410,231 @@ if [ "$MODE" = "run" ]; then
             else
               record_check "custody_evidence_contract" "$custody_evidence_command" "pass" "custody_evidence_validated"
 
-              signer_provenance_reason=""
-              signer_provenance_message=""
-              if [ "$SIGNER_KEY_SOURCE_CONTRACT_VERSION" != "$SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED" ]; then
-                signer_provenance_reason="signer_key_source_contract_version_mismatch"
-                signer_provenance_message="signer key source contract version must remain ${SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED}: $SIGNER_KEY_SOURCE_CONTRACT_VERSION"
-              elif [ "$SIGNER_KEY_SOURCE" != "env-local" ] && [ "$SIGNER_KEY_SOURCE" != "managed-external" ]; then
-                signer_provenance_reason="signer_key_source_invalid"
-                signer_provenance_message="signer key source is unsupported: $SIGNER_KEY_SOURCE"
-              elif [ "$SIGNER_PROFILE" = "$SECONDARY_SIGNER_PROFILE" ] && [ "$SIGNER_KEY_SOURCE" != "env-local" ]; then
-                signer_provenance_reason="signer_key_source_profile_pair_disallowed"
-                signer_provenance_message="signer key source/profile pair is not allowed: profile=$SIGNER_PROFILE source=$SIGNER_KEY_SOURCE"
-              else
-                if [ -n "$SIGNER_PROVENANCE_FILE" ] && [ -f "$SIGNER_PROVENANCE_FILE" ]; then
-                  signer_provenance_present="true"
-                  signer_provenance_sha256="$(sha256sum "$SIGNER_PROVENANCE_FILE" | awk '{print $1}')"
-                  if [[ "$signer_provenance_sha256" =~ ^[0-9a-fA-F]{64}$ ]]; then
-                    signer_provenance_sha256_valid="true"
-                  fi
-                fi
-                if [ "$signer_provenance_present" != "true" ]; then
-                  signer_provenance_reason="signer_provenance_missing"
-                  signer_provenance_message="signer provenance evidence file is required for selected profile"
-                elif [ "$signer_provenance_sha256_valid" != "true" ]; then
-                  signer_provenance_reason="signer_provenance_sha256_invalid"
-                  signer_provenance_message="signer provenance evidence sha256 marker is invalid: $SIGNER_PROVENANCE_FILE"
+              quorum_evidence_reason=""
+              quorum_evidence_message=""
+              if [ -n "$QUORUM_EVIDENCE_FILE" ] && [ -f "$QUORUM_EVIDENCE_FILE" ]; then
+                quorum_evidence_present="true"
+                quorum_evidence_sha256="$(sha256sum "$QUORUM_EVIDENCE_FILE" | awk '{print $1}')"
+                if [[ "$quorum_evidence_sha256" =~ ^[0-9a-fA-F]{64}$ ]]; then
+                  quorum_evidence_sha256_valid="true"
                 fi
               fi
 
-              if [ -n "$signer_provenance_reason" ]; then
-                echo "$signer_provenance_message" >&2
-                record_check "signer_provenance_contract" "$signer_provenance_command" "fail" "$signer_provenance_reason"
-                record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "skipped" "$signer_provenance_reason"
-                overall_status="fail"
-                reason_code="checkpoint_failed_signer_provenance_contract"
+              if [ "$quorum_evidence_present" != "true" ]; then
+                quorum_evidence_reason="quorum_evidence_missing"
+                quorum_evidence_message="signer quorum evidence file is required for selected profile"
+              elif [ "$quorum_evidence_sha256_valid" != "true" ]; then
+                quorum_evidence_reason="quorum_evidence_sha256_invalid"
+                quorum_evidence_message="signer quorum evidence sha256 marker is invalid: $QUORUM_EVIDENCE_FILE"
               else
-                record_check "signer_provenance_contract" "$signer_provenance_command" "pass" "signer_provenance_validated"
+                quorum_evidence_parse_output="$(
+                  python3 - "$QUORUM_EVIDENCE_FILE" "$QUORUM_EVIDENCE_SCHEMA_VERSION" "$REQUIRED_APPROVALS" "$RECEIVED_APPROVALS" "$custody_evidence_sha256" <<'PY'
+from __future__ import annotations
 
-                signer_rotation_delta_epochs="$(( SIGNER_ROTATION_EPOCH - SIGNER_PREVIOUS_ROTATION_EPOCH ))"
-                signer_rotation_reason=""
-                signer_rotation_message=""
-                if [ "$signer_rotation_delta_epochs" -lt 0 ]; then
-                  signer_rotation_reason="signer_rotation_epoch_invalid"
-                  signer_rotation_message="signer rotation epoch must be greater than or equal to previous rotation epoch"
-                elif [ "$signer_rotation_delta_epochs" -gt "$SIGNER_ROTATION_FRESHNESS_MAX_DELTA" ]; then
-                  signer_rotation_reason="signer_rotation_epoch_stale"
-                  signer_rotation_message="signer rotation metadata exceeded freshness threshold: delta=$signer_rotation_delta_epochs max=$SIGNER_ROTATION_FRESHNESS_MAX_DELTA"
+import json
+import pathlib
+import sys
+
+payload_path = pathlib.Path(sys.argv[1])
+expected_schema = sys.argv[2]
+required_approvals = int(sys.argv[3])
+received_approvals = int(sys.argv[4])
+custody_sha256 = sys.argv[5]
+
+result = {
+    "schema_valid": False,
+    "approval_count": 0,
+    "signers_unique": False,
+    "matches_threshold": False,
+    "custody_sha256_match": False,
+    "reason_code": "quorum_evidence_schema_invalid",
+}
+
+try:
+    payload = json.loads(payload_path.read_text(encoding="utf-8"))
+except Exception:
+    payload = None
+
+if isinstance(payload, dict):
+    schema_valid = payload.get("schema_version") == expected_schema
+    approved_signers_raw = payload.get("approved_signers")
+    normalized_signers: list[str] = []
+    if isinstance(approved_signers_raw, list):
+        for item in approved_signers_raw:
+            if isinstance(item, str) and item.strip():
+                normalized_signers.append(item.strip())
+    approval_count = len(normalized_signers)
+    signers_unique = approval_count > 0 and len(set(normalized_signers)) == approval_count
+    required_matches = payload.get("required_approvals") == required_approvals
+    received_matches = payload.get("received_approvals") == received_approvals
+    matches_threshold = (
+        required_matches
+        and received_matches
+        and approval_count == received_approvals
+        and received_approvals >= required_approvals
+    )
+    custody_field = payload.get("custody_evidence_sha256")
+    custody_match = isinstance(custody_field, str) and custody_field == custody_sha256
+
+    result["schema_valid"] = schema_valid
+    result["approval_count"] = approval_count
+    result["signers_unique"] = signers_unique
+    result["matches_threshold"] = matches_threshold
+    result["custody_sha256_match"] = custody_match
+
+    if not schema_valid:
+        result["reason_code"] = "quorum_evidence_schema_invalid"
+    elif not signers_unique:
+        result["reason_code"] = "quorum_evidence_signers_not_unique"
+    elif not matches_threshold:
+        result["reason_code"] = "quorum_evidence_approvals_mismatch"
+    elif not custody_match:
+        result["reason_code"] = "quorum_evidence_custody_sha256_mismatch"
+    else:
+        result["reason_code"] = "ok"
+
+for key in (
+    "schema_valid",
+    "approval_count",
+    "signers_unique",
+    "matches_threshold",
+    "custody_sha256_match",
+    "reason_code",
+):
+    print(f"{key}={result[key]}")
+PY
+                )"
+
+                parsed_quorum_reason_code=""
+                while IFS='=' read -r key value; do
+                  case "$key" in
+                    schema_valid)
+                      if [ "$value" = "True" ] || [ "$value" = "true" ]; then
+                        quorum_evidence_schema_valid="true"
+                      else
+                        quorum_evidence_schema_valid="false"
+                      fi
+                      ;;
+                    approval_count)
+                      if [[ "$value" =~ ^[0-9]+$ ]]; then
+                        quorum_evidence_approval_count="$value"
+                      else
+                        quorum_evidence_approval_count=0
+                      fi
+                      ;;
+                    signers_unique)
+                      if [ "$value" = "True" ] || [ "$value" = "true" ]; then
+                        quorum_evidence_signers_unique="true"
+                      else
+                        quorum_evidence_signers_unique="false"
+                      fi
+                      ;;
+                    matches_threshold)
+                      if [ "$value" = "True" ] || [ "$value" = "true" ]; then
+                        quorum_evidence_matches_threshold="true"
+                      else
+                        quorum_evidence_matches_threshold="false"
+                      fi
+                      ;;
+                    custody_sha256_match)
+                      if [ "$value" = "True" ] || [ "$value" = "true" ]; then
+                        quorum_evidence_custody_sha256_match="true"
+                      else
+                        quorum_evidence_custody_sha256_match="false"
+                      fi
+                      ;;
+                    reason_code)
+                      parsed_quorum_reason_code="$value"
+                      ;;
+                  esac
+                done <<<"$quorum_evidence_parse_output"
+
+                if [ "$parsed_quorum_reason_code" != "ok" ]; then
+                  quorum_evidence_reason="$parsed_quorum_reason_code"
+                  if [ "$parsed_quorum_reason_code" = "quorum_evidence_schema_invalid" ]; then
+                    quorum_evidence_message="signer quorum evidence schema is invalid: $QUORUM_EVIDENCE_FILE"
+                  elif [ "$parsed_quorum_reason_code" = "quorum_evidence_signers_not_unique" ]; then
+                    quorum_evidence_message="signer quorum evidence signers must be unique: $QUORUM_EVIDENCE_FILE"
+                  elif [ "$parsed_quorum_reason_code" = "quorum_evidence_approvals_mismatch" ]; then
+                    quorum_evidence_message="signer quorum evidence approvals must match received approvals and threshold"
+                  elif [ "$parsed_quorum_reason_code" = "quorum_evidence_custody_sha256_mismatch" ]; then
+                    quorum_evidence_message="signer quorum evidence custody digest must match custody evidence sha256"
+                  else
+                    quorum_evidence_reason="quorum_evidence_schema_invalid"
+                    quorum_evidence_message="signer quorum evidence schema is invalid: $QUORUM_EVIDENCE_FILE"
+                  fi
+                fi
+              fi
+
+              if [ -n "$quorum_evidence_reason" ]; then
+                echo "$quorum_evidence_message" >&2
+                record_check "quorum_evidence_contract" "$quorum_evidence_command" "fail" "$quorum_evidence_reason"
+                record_check "signer_provenance_contract" "$signer_provenance_command" "skipped" "$quorum_evidence_reason"
+                record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "skipped" "$quorum_evidence_reason"
+                overall_status="fail"
+                reason_code="checkpoint_failed_quorum_evidence_contract"
+              else
+                record_check "quorum_evidence_contract" "$quorum_evidence_command" "pass" "quorum_evidence_validated"
+
+                signer_provenance_reason=""
+                signer_provenance_message=""
+                if [ "$SIGNER_KEY_SOURCE_CONTRACT_VERSION" != "$SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED" ]; then
+                  signer_provenance_reason="signer_key_source_contract_version_mismatch"
+                  signer_provenance_message="signer key source contract version must remain ${SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED}: $SIGNER_KEY_SOURCE_CONTRACT_VERSION"
+                elif [ "$SIGNER_KEY_SOURCE" != "env-local" ] && [ "$SIGNER_KEY_SOURCE" != "managed-external" ]; then
+                  signer_provenance_reason="signer_key_source_invalid"
+                  signer_provenance_message="signer key source is unsupported: $SIGNER_KEY_SOURCE"
+                elif [ "$SIGNER_PROFILE" = "$SECONDARY_SIGNER_PROFILE" ] && [ "$SIGNER_KEY_SOURCE" != "env-local" ]; then
+                  signer_provenance_reason="signer_key_source_profile_pair_disallowed"
+                  signer_provenance_message="signer key source/profile pair is not allowed: profile=$SIGNER_PROFILE source=$SIGNER_KEY_SOURCE"
+                else
+                  if [ -n "$SIGNER_PROVENANCE_FILE" ] && [ -f "$SIGNER_PROVENANCE_FILE" ]; then
+                    signer_provenance_present="true"
+                    signer_provenance_sha256="$(sha256sum "$SIGNER_PROVENANCE_FILE" | awk '{print $1}')"
+                    if [[ "$signer_provenance_sha256" =~ ^[0-9a-fA-F]{64}$ ]]; then
+                      signer_provenance_sha256_valid="true"
+                    fi
+                  fi
+                  if [ "$signer_provenance_present" != "true" ]; then
+                    signer_provenance_reason="signer_provenance_missing"
+                    signer_provenance_message="signer provenance evidence file is required for selected profile"
+                  elif [ "$signer_provenance_sha256_valid" != "true" ]; then
+                    signer_provenance_reason="signer_provenance_sha256_invalid"
+                    signer_provenance_message="signer provenance evidence sha256 marker is invalid: $SIGNER_PROVENANCE_FILE"
+                  fi
                 fi
 
-                if [ -n "$signer_rotation_reason" ]; then
-                  echo "$signer_rotation_message" >&2
-                  signer_rotation_fresh="false"
-                  record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "fail" "$signer_rotation_reason"
+                if [ -n "$signer_provenance_reason" ]; then
+                  echo "$signer_provenance_message" >&2
+                  record_check "signer_provenance_contract" "$signer_provenance_command" "fail" "$signer_provenance_reason"
+                  record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "skipped" "$signer_provenance_reason"
                   overall_status="fail"
-                  reason_code="checkpoint_failed_signer_rotation_freshness_contract"
+                  reason_code="checkpoint_failed_signer_provenance_contract"
                 else
-                  signer_rotation_fresh="true"
-                  record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "pass" "signer_rotation_freshness_validated"
-                  reason_code="deployment_preflight_passed"
+                  record_check "signer_provenance_contract" "$signer_provenance_command" "pass" "signer_provenance_validated"
+
+                  signer_rotation_delta_epochs="$(( SIGNER_ROTATION_EPOCH - SIGNER_PREVIOUS_ROTATION_EPOCH ))"
+                  signer_rotation_reason=""
+                  signer_rotation_message=""
+                  if [ "$signer_rotation_delta_epochs" -lt 0 ]; then
+                    signer_rotation_reason="signer_rotation_epoch_invalid"
+                    signer_rotation_message="signer rotation epoch must be greater than or equal to previous rotation epoch"
+                  elif [ "$signer_rotation_delta_epochs" -gt "$SIGNER_ROTATION_FRESHNESS_MAX_DELTA" ]; then
+                    signer_rotation_reason="signer_rotation_epoch_stale"
+                    signer_rotation_message="signer rotation metadata exceeded freshness threshold: delta=$signer_rotation_delta_epochs max=$SIGNER_ROTATION_FRESHNESS_MAX_DELTA"
+                  fi
+
+                  if [ -n "$signer_rotation_reason" ]; then
+                    echo "$signer_rotation_message" >&2
+                    signer_rotation_fresh="false"
+                    record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "fail" "$signer_rotation_reason"
+                    overall_status="fail"
+                    reason_code="checkpoint_failed_signer_rotation_freshness_contract"
+                  else
+                    signer_rotation_fresh="true"
+                    record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "pass" "signer_rotation_freshness_validated"
+                    reason_code="deployment_preflight_passed"
+                  fi
                 fi
               fi
             fi
@@ -460,7 +656,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$RUNTIME_MODE" "$SIGNER_PROFILE_SELECTOR_ENV" "$SIGNER_PROFILE" "$selected_signer_secret_env" "$FALLBACK_SIGNER_SECRET_ENV" "$signer_secret_present" "$fallback_signer_secret_present" "$signer_secret_hex_valid" "$CHECK_FILE" "$REQUIRED_RUNTIME_MODE" "$PRIMARY_SIGNER_PROFILE" "$SECONDARY_SIGNER_PROFILE" "$PRIMARY_SIGNER_SECRET_ENV" "$SECONDARY_SIGNER_SECRET_ENV" "$REQUIRED_SECRET_HEX_LENGTH" "$REQUIRED_APPROVALS" "$RECEIVED_APPROVALS" "$CUSTODY_EVIDENCE_FILE" "$custody_evidence_present" "$custody_evidence_sha256" "$custody_evidence_sha256_valid" "$SIGNER_PROVENANCE_FILE" "$signer_provenance_present" "$signer_provenance_sha256" "$signer_provenance_sha256_valid" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$SIGNER_KEY_SOURCE" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED" "$SIGNER_ROTATION_EPOCH" "$SIGNER_PREVIOUS_ROTATION_EPOCH" "$SIGNER_ROTATION_FRESHNESS_MAX_DELTA" "$signer_rotation_delta_epochs" "$signer_rotation_fresh" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$RUNTIME_MODE" "$SIGNER_PROFILE_SELECTOR_ENV" "$SIGNER_PROFILE" "$selected_signer_secret_env" "$FALLBACK_SIGNER_SECRET_ENV" "$signer_secret_present" "$fallback_signer_secret_present" "$signer_secret_hex_valid" "$CHECK_FILE" "$REQUIRED_RUNTIME_MODE" "$PRIMARY_SIGNER_PROFILE" "$SECONDARY_SIGNER_PROFILE" "$PRIMARY_SIGNER_SECRET_ENV" "$SECONDARY_SIGNER_SECRET_ENV" "$REQUIRED_SECRET_HEX_LENGTH" "$REQUIRED_APPROVALS" "$RECEIVED_APPROVALS" "$QUORUM_EVIDENCE_FILE" "$quorum_evidence_present" "$quorum_evidence_sha256" "$quorum_evidence_sha256_valid" "$quorum_evidence_schema_valid" "$quorum_evidence_approval_count" "$quorum_evidence_signers_unique" "$quorum_evidence_matches_threshold" "$quorum_evidence_custody_sha256_match" "$QUORUM_EVIDENCE_SCHEMA_VERSION" "$CUSTODY_EVIDENCE_FILE" "$custody_evidence_present" "$custody_evidence_sha256" "$custody_evidence_sha256_valid" "$SIGNER_PROVENANCE_FILE" "$signer_provenance_present" "$signer_provenance_sha256" "$signer_provenance_sha256_valid" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$SIGNER_KEY_SOURCE" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED" "$SIGNER_ROTATION_EPOCH" "$SIGNER_PREVIOUS_ROTATION_EPOCH" "$SIGNER_ROTATION_FRESHNESS_MAX_DELTA" "$signer_rotation_delta_epochs" "$signer_rotation_fresh" <<'PY'
 from __future__ import annotations
 
 import json
@@ -491,22 +687,32 @@ secondary_signer_secret_env = sys.argv[21]
 required_secret_hex_length = int(sys.argv[22])
 required_approvals = int(sys.argv[23])
 received_approvals = int(sys.argv[24])
-custody_evidence_file = sys.argv[25]
-custody_evidence_present = sys.argv[26] == "true"
-custody_evidence_sha256 = sys.argv[27]
-custody_evidence_sha256_valid = sys.argv[28] == "true"
-signer_provenance_file = sys.argv[29]
-signer_provenance_present = sys.argv[30] == "true"
-signer_provenance_sha256 = sys.argv[31]
-signer_provenance_sha256_valid = sys.argv[32] == "true"
-signer_key_source_contract_version = sys.argv[33]
-signer_key_source = sys.argv[34]
-signer_key_source_contract_version_supported = sys.argv[35]
-signer_rotation_epoch = int(sys.argv[36])
-signer_previous_rotation_epoch = int(sys.argv[37])
-signer_rotation_freshness_max_delta = int(sys.argv[38])
-signer_rotation_delta_epochs = int(sys.argv[39])
-signer_rotation_fresh = sys.argv[40] == "true"
+quorum_evidence_file = sys.argv[25]
+quorum_evidence_present = sys.argv[26] == "true"
+quorum_evidence_sha256 = sys.argv[27]
+quorum_evidence_sha256_valid = sys.argv[28] == "true"
+quorum_evidence_schema_valid = sys.argv[29] == "true"
+quorum_evidence_approval_count = int(sys.argv[30])
+quorum_evidence_signers_unique = sys.argv[31] == "true"
+quorum_evidence_matches_threshold = sys.argv[32] == "true"
+quorum_evidence_custody_sha256_match = sys.argv[33] == "true"
+quorum_evidence_schema_version = sys.argv[34]
+custody_evidence_file = sys.argv[35]
+custody_evidence_present = sys.argv[36] == "true"
+custody_evidence_sha256 = sys.argv[37]
+custody_evidence_sha256_valid = sys.argv[38] == "true"
+signer_provenance_file = sys.argv[39]
+signer_provenance_present = sys.argv[40] == "true"
+signer_provenance_sha256 = sys.argv[41]
+signer_provenance_sha256_valid = sys.argv[42] == "true"
+signer_key_source_contract_version = sys.argv[43]
+signer_key_source = sys.argv[44]
+signer_key_source_contract_version_supported = sys.argv[45]
+signer_rotation_epoch = int(sys.argv[46])
+signer_previous_rotation_epoch = int(sys.argv[47])
+signer_rotation_freshness_max_delta = int(sys.argv[48])
+signer_rotation_delta_epochs = int(sys.argv[49])
+signer_rotation_fresh = sys.argv[50] == "true"
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -545,6 +751,15 @@ summary = {
     "signer_secret_hex_valid": signer_secret_hex_valid,
     "required_approvals": required_approvals,
     "received_approvals": received_approvals,
+    "quorum_evidence_file": quorum_evidence_file,
+    "quorum_evidence_present": quorum_evidence_present,
+    "quorum_evidence_sha256": quorum_evidence_sha256,
+    "quorum_evidence_sha256_valid": quorum_evidence_sha256_valid,
+    "quorum_evidence_schema_valid": quorum_evidence_schema_valid,
+    "quorum_evidence_approval_count": quorum_evidence_approval_count,
+    "quorum_evidence_signers_unique": quorum_evidence_signers_unique,
+    "quorum_evidence_matches_threshold": quorum_evidence_matches_threshold,
+    "quorum_evidence_custody_sha256_match": quorum_evidence_custody_sha256_match,
     "custody_evidence_file": custody_evidence_file,
     "custody_evidence_present": custody_evidence_present,
     "custody_evidence_sha256": custody_evidence_sha256,
@@ -573,6 +788,12 @@ summary = {
         "secret_source": "env",
         "approval_quorum_required": required_approvals,
         "approval_quorum_source": "local-operator-attestations",
+        "quorum_evidence_required": True,
+        "quorum_evidence_sha256_required": True,
+        "quorum_evidence_schema_version": quorum_evidence_schema_version,
+        "quorum_evidence_signer_uniqueness_required": True,
+        "quorum_evidence_custody_sha256_match_required": True,
+        "quorum_evidence_source": "operator-attestation-bundle",
         "custody_evidence_required": True,
         "custody_evidence_sha256_required": True,
         "signer_provenance_required": True,

@@ -10,10 +10,24 @@ TMP_SUMMARY="$(mktemp)"
 TMP_ERR="$(mktemp)"
 TMP_CUSTODY="$(mktemp)"
 TMP_PROVENANCE="$(mktemp)"
-trap 'rm -f "$TMP_SUMMARY" "$TMP_ERR" "$TMP_CUSTODY" "$TMP_PROVENANCE"' EXIT
+TMP_QUORUM="$(mktemp)"
+trap 'rm -f "$TMP_SUMMARY" "$TMP_ERR" "$TMP_CUSTODY" "$TMP_PROVENANCE" "$TMP_QUORUM"' EXIT
 
 printf '%s\n' "custody-attestation=ops-primary:epoch-1" >"$TMP_CUSTODY"
 printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" >"$TMP_PROVENANCE"
+TMP_CUSTODY_SHA="$(sha256sum "$TMP_CUSTODY" | awk '{print $1}')"
+cat >"$TMP_QUORUM" <<JSON
+{
+  "schema_version": "kamn.kolme.signer-quorum-evidence.v1",
+  "required_approvals": 2,
+  "received_approvals": 2,
+  "approved_signers": [
+    "ops-primary",
+    "ops-secondary"
+  ],
+  "custody_evidence_sha256": "$TMP_CUSTODY_SHA"
+}
+JSON
 
 extract_value() {
   local output="$1"
@@ -105,6 +119,10 @@ if summary.get("required_approvals") != 2:
     raise SystemExit("expected deployment preflight summary required_approvals=2")
 if summary.get("received_approvals") != 0:
     raise SystemExit("expected deployment preflight summary received_approvals=0 for dry-run")
+if summary.get("quorum_evidence_present") is not False:
+    raise SystemExit("expected deployment preflight summary quorum evidence marker to be false in dry-run")
+if summary.get("quorum_evidence_matches_threshold") is not False:
+    raise SystemExit("expected deployment preflight summary quorum threshold marker to be false in dry-run")
 if summary.get("custody_evidence_present") is not False:
     raise SystemExit("expected deployment preflight summary custody evidence marker to be false in dry-run")
 if summary.get("signer_provenance_present") is not False:
@@ -128,6 +146,16 @@ if contracts.get("custody_evidence_required") is not True:
     raise SystemExit("expected deployment preflight contracts to require signer custody evidence")
 if contracts.get("approval_quorum_required") != 2:
     raise SystemExit("expected deployment preflight contracts approval quorum requirement marker")
+if contracts.get("quorum_evidence_required") is not True:
+    raise SystemExit("expected deployment preflight contracts to require quorum evidence")
+if contracts.get("quorum_evidence_sha256_required") is not True:
+    raise SystemExit("expected deployment preflight contracts to require quorum evidence sha256")
+if contracts.get("quorum_evidence_schema_version") != "kamn.kolme.signer-quorum-evidence.v1":
+    raise SystemExit("expected deployment preflight contracts quorum evidence schema marker")
+if contracts.get("quorum_evidence_signer_uniqueness_required") is not True:
+    raise SystemExit("expected deployment preflight contracts quorum signer uniqueness requirement marker")
+if contracts.get("quorum_evidence_custody_sha256_match_required") is not True:
+    raise SystemExit("expected deployment preflight contracts quorum custody sha256 match requirement marker")
 if contracts.get("signer_provenance_required") is not True:
     raise SystemExit("expected deployment preflight contracts to require signer provenance evidence")
 if contracts.get("signer_provenance_sha256_required") is not True:
@@ -227,6 +255,28 @@ bash "$RUNNER" \
   --received-approvals 2 \
   --custody-evidence-file "$TMP_CUSTODY" \
   --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+missing_quorum_evidence_exit_code=$?
+set -e
+
+if [ "$missing_quorum_evidence_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight run mode to fail closed when signer quorum evidence is missing" >&2
+  exit 1
+fi
+
+if ! grep -q "signer quorum evidence file is required for selected profile" "$TMP_ERR"; then
+  echo "expected deterministic missing signer quorum evidence message from deployment preflight lane" >&2
+  exit 1
+fi
+
+set +e
+KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX="1111111111111111111111111111111111111111111111111111111111111111" \
+bash "$RUNNER" \
+  --mode run \
+  --required-approvals 2 \
+  --received-approvals 2 \
+  --custody-evidence-file "$TMP_CUSTODY" \
+  --quorum-evidence-file "$TMP_QUORUM" \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
 missing_provenance_exit_code=$?
 set -e
 
@@ -247,6 +297,7 @@ bash "$RUNNER" \
   --required-approvals 2 \
   --received-approvals 2 \
   --custody-evidence-file "$TMP_CUSTODY" \
+  --quorum-evidence-file "$TMP_QUORUM" \
   --signer-provenance-file "$TMP_PROVENANCE" \
   --signer-rotation-epoch 8 \
   --signer-previous-rotation-epoch 3 \
@@ -271,6 +322,7 @@ bash "$RUNNER" \
   --required-approvals 2 \
   --received-approvals 2 \
   --custody-evidence-file "$TMP_CUSTODY" \
+  --quorum-evidence-file "$TMP_QUORUM" \
   --signer-provenance-file "$TMP_PROVENANCE" \
   --output-json "$TMP_SUMMARY" >/dev/null
 
@@ -288,6 +340,16 @@ if summary.get("reason_code") != "deployment_preflight_passed":
     raise SystemExit("expected deployment preflight run summary pass reason code")
 if summary.get("required_approvals") != 2 or summary.get("received_approvals") != 2:
     raise SystemExit("expected deployment preflight run summary to capture signer quorum counts")
+if summary.get("quorum_evidence_present") is not True:
+    raise SystemExit("expected deployment preflight run summary quorum evidence marker true")
+if summary.get("quorum_evidence_sha256_valid") is not True:
+    raise SystemExit("expected deployment preflight run summary quorum evidence sha256 marker true")
+if summary.get("quorum_evidence_schema_valid") is not True:
+    raise SystemExit("expected deployment preflight run summary quorum evidence schema marker true")
+if summary.get("quorum_evidence_matches_threshold") is not True:
+    raise SystemExit("expected deployment preflight run summary quorum threshold marker true")
+if summary.get("quorum_evidence_custody_sha256_match") is not True:
+    raise SystemExit("expected deployment preflight run summary quorum custody sha256 match marker true")
 if summary.get("custody_evidence_present") is not True:
     raise SystemExit("expected deployment preflight run summary custody evidence marker true")
 if summary.get("signer_provenance_present") is not True:

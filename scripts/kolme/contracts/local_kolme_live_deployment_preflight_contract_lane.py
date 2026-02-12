@@ -194,6 +194,12 @@ def main() -> int:
     if summary.get("signer_rotation_fresh") is not False:
         print("expected deployment preflight summary signer rotation freshness marker false in dry-run", file=sys.stderr)
         return 1
+    if summary.get("quorum_evidence_present") is not False:
+        print("expected deployment preflight summary quorum evidence marker false in dry-run", file=sys.stderr)
+        return 1
+    if summary.get("quorum_evidence_matches_threshold") is not False:
+        print("expected deployment preflight summary quorum threshold marker false in dry-run", file=sys.stderr)
+        return 1
     contracts = summary.get("contracts", {})
     if not isinstance(contracts, dict):
         print("expected contracts object in deployment preflight summary", file=sys.stderr)
@@ -206,6 +212,21 @@ def main() -> int:
         return 1
     if contracts.get("approval_quorum_required") != 2:
         print("expected deployment preflight contracts approval_quorum_required=2", file=sys.stderr)
+        return 1
+    if contracts.get("quorum_evidence_required") is not True:
+        print("expected deployment preflight contracts quorum_evidence_required=true", file=sys.stderr)
+        return 1
+    if contracts.get("quorum_evidence_sha256_required") is not True:
+        print("expected deployment preflight contracts quorum_evidence_sha256_required=true", file=sys.stderr)
+        return 1
+    if contracts.get("quorum_evidence_schema_version") != "kamn.kolme.signer-quorum-evidence.v1":
+        print("expected deployment preflight contracts quorum_evidence_schema_version marker", file=sys.stderr)
+        return 1
+    if contracts.get("quorum_evidence_signer_uniqueness_required") is not True:
+        print("expected deployment preflight contracts quorum_evidence_signer_uniqueness_required=true", file=sys.stderr)
+        return 1
+    if contracts.get("quorum_evidence_custody_sha256_match_required") is not True:
+        print("expected deployment preflight contracts quorum_evidence_custody_sha256_match_required=true", file=sys.stderr)
         return 1
     if contracts.get("custody_evidence_required") is not True:
         print("expected deployment preflight contracts custody_evidence_required=true", file=sys.stderr)
@@ -311,6 +332,58 @@ def main() -> int:
             return 1
         if quorum_no_go_policy.get("final_decision") != "NO-GO":
             print("expected signer quorum negative policy final_decision NO-GO", file=sys.stderr)
+            return 1
+
+        quorum_evidence_negative_report = temp_path / "quorum_evidence_negative_summary.json"
+        quorum_evidence_negative_policy = temp_path / "quorum_evidence_negative_policy.json"
+        quorum_evidence_negative_summary = dict(summary)
+        quorum_evidence_negative_summary["mode"] = "run"
+        quorum_evidence_negative_summary["status"] = "fail"
+        quorum_evidence_negative_summary["reason_code"] = "checkpoint_failed_quorum_evidence_contract"
+        quorum_evidence_negative_summary["signer_secret_present"] = True
+        quorum_evidence_negative_summary["signer_secret_hex_valid"] = True
+        quorum_evidence_negative_summary["required_approvals"] = 2
+        quorum_evidence_negative_summary["received_approvals"] = 2
+        quorum_evidence_negative_summary["custody_evidence_file"] = "/tmp/custody-evidence.json"
+        quorum_evidence_negative_summary["custody_evidence_present"] = True
+        quorum_evidence_negative_summary["custody_evidence_sha256"] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        quorum_evidence_negative_summary["custody_evidence_sha256_valid"] = True
+        quorum_evidence_negative_summary["quorum_evidence_file"] = ""
+        quorum_evidence_negative_summary["quorum_evidence_present"] = False
+        quorum_evidence_negative_summary["quorum_evidence_sha256"] = ""
+        quorum_evidence_negative_summary["quorum_evidence_sha256_valid"] = False
+        quorum_evidence_negative_summary["quorum_evidence_schema_valid"] = False
+        quorum_evidence_negative_summary["quorum_evidence_approval_count"] = 0
+        quorum_evidence_negative_summary["quorum_evidence_signers_unique"] = False
+        quorum_evidence_negative_summary["quorum_evidence_matches_threshold"] = False
+        quorum_evidence_negative_summary["quorum_evidence_custody_sha256_match"] = False
+        quorum_evidence_negative_report.write_text(
+            json.dumps(quorum_evidence_negative_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        quorum_evidence_no_go_result = run_policy_check(
+            report_file=quorum_evidence_negative_report,
+            output_json=quorum_evidence_negative_policy,
+            expected_final_decision="NO-GO",
+            required_reason_code="checkpoint_failed_quorum_evidence_contract",
+        )
+        if quorum_evidence_no_go_result.returncode == 0:
+            print("expected quorum evidence negative proof to fail closed", file=sys.stderr)
+            return 1
+        quorum_evidence_no_go_policy = json.loads(quorum_evidence_negative_policy.read_text(encoding="utf-8"))
+        quorum_evidence_no_go_reason_codes = quorum_evidence_no_go_policy.get("reason_codes")
+        if not isinstance(quorum_evidence_no_go_reason_codes, list):
+            print("expected reason_codes list in quorum evidence negative policy output", file=sys.stderr)
+            return 1
+        if "quorum_evidence_missing" not in quorum_evidence_no_go_reason_codes:
+            print("expected quorum_evidence_missing in quorum evidence negative policy output", file=sys.stderr)
+            return 1
+        if "quorum_evidence_approvals_mismatch" not in quorum_evidence_no_go_reason_codes:
+            print("expected quorum_evidence_approvals_mismatch in quorum evidence negative policy output", file=sys.stderr)
+            return 1
+        if quorum_evidence_no_go_policy.get("final_decision") != "NO-GO":
+            print("expected quorum evidence negative policy final_decision NO-GO", file=sys.stderr)
             return 1
 
         provenance_negative_report = temp_path / "signer_provenance_negative_summary.json"
@@ -429,10 +502,14 @@ def main() -> int:
         "checkpoint_failed_signer_secret_contract",
         "fallback_signer_secret_present_violation",
         "checkpoint_failed_signer_quorum_contract",
+        "checkpoint_failed_quorum_evidence_contract",
         "checkpoint_failed_custody_evidence_contract",
         "checkpoint_failed_signer_provenance_contract",
         "checkpoint_failed_signer_rotation_freshness_contract",
         "signer_quorum_shortfall",
+        "quorum_evidence_missing",
+        "quorum_evidence_approvals_mismatch",
+        "quorum_evidence_custody_sha256_mismatch",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",
@@ -441,6 +518,7 @@ def main() -> int:
         "signer_rotation_epoch_stale",
         "Regression: #2226",
         "Regression: #2300",
+        "Regression: #2301",
     ]
     ci_doc_markers = [
         "run_local_kolme_live_deployment_preflight_lane.sh",
@@ -450,10 +528,14 @@ def main() -> int:
         "checkpoint_failed_signer_secret_contract",
         "fallback_signer_secret_present_violation",
         "checkpoint_failed_signer_quorum_contract",
+        "checkpoint_failed_quorum_evidence_contract",
         "checkpoint_failed_custody_evidence_contract",
         "checkpoint_failed_signer_provenance_contract",
         "checkpoint_failed_signer_rotation_freshness_contract",
         "signer_quorum_shortfall",
+        "quorum_evidence_missing",
+        "quorum_evidence_approvals_mismatch",
+        "quorum_evidence_custody_sha256_mismatch",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",
@@ -462,6 +544,7 @@ def main() -> int:
         "signer_rotation_epoch_stale",
         "Regression: #2226",
         "Regression: #2300",
+        "Regression: #2301",
     ]
     readme_markers = [
         "run_local_kolme_live_deployment_preflight_lane.sh",
@@ -471,10 +554,14 @@ def main() -> int:
         "checkpoint_failed_signer_secret_contract",
         "fallback_signer_secret_present_violation",
         "checkpoint_failed_signer_quorum_contract",
+        "checkpoint_failed_quorum_evidence_contract",
         "checkpoint_failed_custody_evidence_contract",
         "checkpoint_failed_signer_provenance_contract",
         "checkpoint_failed_signer_rotation_freshness_contract",
         "signer_quorum_shortfall",
+        "quorum_evidence_missing",
+        "quorum_evidence_approvals_mismatch",
+        "quorum_evidence_custody_sha256_mismatch",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",
@@ -483,6 +570,7 @@ def main() -> int:
         "signer_rotation_epoch_stale",
         "Regression: #2226",
         "Regression: #2300",
+        "Regression: #2301",
     ]
 
     missing_markers: list[str] = []
