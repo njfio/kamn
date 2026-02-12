@@ -80,6 +80,16 @@ python3 scripts/kolme/check_local_native_api_parity_live_proof_policy.py --repor
 
 Local-only heavy Kolme run-mode commands stay excluded from ci-fast-gate.
 
+### Kolme Tranche-1 Wrapper/Dispatcher Execution Parity
+
+```bash
+# Runs in aggregate CI-tools lane (not fast-gate) to keep PR cost bounded.
+bash scripts/ci/test_kolme_tranche1_dispatch_execution_parity_contract.sh
+```
+
+This validates that tranche-1 wrapper entrypoints and direct manifest dispatch
+produce equivalent normalized execution output.
+
 ### Fast Make Lanes
 
 ```bash

@@ -70,6 +70,7 @@ bash "$ROOT_DIR/scripts/ci/test_kolme_bootstrap_conformance_runtime_process_mani
 bash "$ROOT_DIR/scripts/ci/test_kolme_parity_demo_real_process_manifest_migration_contract.sh"
 bash "$ROOT_DIR/scripts/ci/test_kolme_manifest_migration_contract_dispatch_wrapper_matrix.sh"
 bash "$ROOT_DIR/scripts/ci/test_run_kolme_manifest_migration_contract_dispatch.sh"
+bash "$ROOT_DIR/scripts/ci/test_kolme_tranche1_dispatch_execution_parity_contract.sh"
 bash "$ROOT_DIR/scripts/ci/test_kolme_wrapper_inventory_baseline_contract.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_flaky_registry.sh"
 bash "$ROOT_DIR/scripts/ci/test_summarize_budget_artifacts.sh"

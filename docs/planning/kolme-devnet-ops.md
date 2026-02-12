@@ -75,6 +75,12 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 
 - Migration guard contract:
   - `bash scripts/ci/test_kolme_tranche1_manifest_migration_contract.sh`
+- Execution parity contract (wrapper entrypoint vs direct manifest dispatch):
+  - `bash scripts/ci/test_kolme_tranche1_dispatch_execution_parity_contract.sh`
+  - compares normalized execution output for each tranche lane between:
+    - `scripts/kolme/run_*_contract_lane.sh`
+    - `scripts/framework/run_manifest_lane.sh --manifest ... --phase contract`
+  - stays in aggregate `scripts/ci/test_ci_tools.sh` (not PR fast gate) to preserve bounded fast-gate runtime cost.
 - Migrated manifest-backed wrappers:
   - `scripts/kolme/run_snapshot_drift_contract_lane.sh`
   - `scripts/kolme/run_notifications_consumer_contract_lane.sh`
@@ -873,6 +879,7 @@ Operator checkpoints:
 - local bootstrap health summary policy and contract-lane command/report drift remain fail-closed (`Regression: #1692`).
 - lane migration matrix schema/order/required-lane drift remains fail-closed (`Regression: #1721`).
 - tranche-1 manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1722`).
+- tranche-1 wrapper/direct manifest execution parity drift remains fail-closed (`Regression: #2118`).
 - runtime+nonce manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1763`).
 - version+matrix manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1765`).
 - profile+self-test+portability manifest migration wrapper routing and shell-LOC budget drift remains fail-closed (`Regression: #1767`).
