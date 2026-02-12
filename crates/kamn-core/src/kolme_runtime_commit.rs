@@ -12,7 +12,6 @@ use kamn_kolme::{
     compose_notifications_websocket_url as compose_kolme_notifications_websocket_url,
     deterministic_runtime_commit_id as deterministic_runtime_commit_id_contract,
     deterministic_runtime_commit_idempotency_key as deterministic_runtime_commit_idempotency_key_contract,
-    escape_json_string as escape_kolme_json_string,
     find_http_header_boundary as find_kolme_http_header_boundary,
     is_broadcast_submit_path as is_kolme_broadcast_submit_path_contract,
     is_canonical_runtime_commit_signed_message as is_kolme_canonical_runtime_commit_signed_message_contract,
@@ -65,6 +64,7 @@ use kamn_kolme::{
     project_finalized_block_txhash_receipt as project_kolme_finalized_block_txhash_receipt_contract,
     render_block_path as render_kolme_block_path,
     render_runtime_commit_wire_payload as render_kolme_runtime_commit_wire_payload_contract,
+    render_signed_envelope_wire_payload as render_kolme_signed_envelope_wire_payload_contract,
     require_commit_id_matches_expected_txhash as require_kolme_commit_id_matches_expected_txhash_contract,
     require_final_receipt_finality as require_kolme_final_receipt_finality_contract,
     resolve_lookup_upper_bound as resolve_kolme_lookup_upper_bound,
@@ -300,12 +300,11 @@ impl KolmeRuntimeCommitSignedBroadcastEnvelope {
 
     /// Returns canonical wire payload used by fork submit profile before normalization.
     pub fn to_wire_payload(&self) -> String {
-        format!(
-            "{{\"signer_key_id\":\"{}\",\"message\":\"{}\",\"signature\":\"{}\",\"recovery_id\":{}}}",
-            escape_kolme_json_string(self.signer_key_id.as_str()),
-            escape_kolme_json_string(self.message.as_str()),
-            escape_kolme_json_string(self.signature.as_str()),
-            self.recovery_id
+        render_kolme_signed_envelope_wire_payload_contract(
+            self.signer_key_id.as_str(),
+            self.message.as_str(),
+            self.signature.as_str(),
+            self.recovery_id,
         )
     }
 

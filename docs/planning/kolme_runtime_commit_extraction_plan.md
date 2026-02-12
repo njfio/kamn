@@ -72,6 +72,7 @@ Out of scope:
 - #1904: extracted signed-envelope field normalization contract to `kamn-kolme` (`normalize_runtime_commit_signed_envelope_fields`) and rewired `kamn-core` signed-envelope construction normalization delegation.
 - #1906: extracted runtime-commit canonical wire-payload renderer to `kamn-kolme` (`render_runtime_commit_wire_payload`) and rewired `kamn-core` runtime request payload serialization delegation.
 - #1908: extracted runtime request field normalization contract to `kamn-kolme` (`normalize_runtime_commit_request_fields`) and rewired `kamn-core` deterministic request construction normalization delegation.
+- #1910: extracted signed-envelope wire payload renderer to `kamn-kolme` (`render_signed_envelope_wire_payload`) and rewired `kamn-core` signed-envelope wire rendering delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,

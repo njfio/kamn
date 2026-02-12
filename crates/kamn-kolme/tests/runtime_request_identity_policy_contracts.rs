@@ -5,6 +5,7 @@ use kamn_kolme::{
     is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
     is_valid_runtime_state_root_input, normalize_runtime_commit_request_fields,
     normalize_runtime_commit_signed_envelope_fields, render_runtime_commit_wire_payload,
+    render_signed_envelope_wire_payload,
 };
 
 #[test]
@@ -135,6 +136,16 @@ fn functional_runtime_request_identity_policy_normalizes_runtime_commit_request_
 }
 
 #[test]
+fn functional_runtime_request_identity_policy_renders_signed_envelope_wire_payload() {
+    let payload =
+        render_signed_envelope_wire_payload("signer:key:9", "message:delta", "signature:delta", 9);
+    assert_eq!(
+        payload,
+        "{\"signer_key_id\":\"signer:key:9\",\"message\":\"message:delta\",\"signature\":\"signature:delta\",\"recovery_id\":9}"
+    );
+}
+
+#[test]
 fn regression_issue_1894_runtime_request_identity_policy_rejects_multiline_request_fields() {
     // Regression: #1894
     assert!(!are_runtime_commit_request_fields_single_line(
@@ -215,5 +226,20 @@ fn regression_issue_1908_runtime_request_identity_policy_trims_outer_request_whi
             "state:zeta".to_owned(),
             "payload:zeta".to_owned(),
         )
+    );
+}
+
+#[test]
+fn regression_issue_1910_runtime_request_identity_policy_escapes_signed_envelope_fields() {
+    // Regression: #1910
+    let payload = render_signed_envelope_wire_payload(
+        "signer:key:\"x\"",
+        "message:\"x\"",
+        "signature:\"x\"",
+        1,
+    );
+    assert_eq!(
+        payload,
+        "{\"signer_key_id\":\"signer:key:\\\"x\\\"\",\"message\":\"message:\\\"x\\\"\",\"signature\":\"signature:\\\"x\\\"\",\"recovery_id\":1}"
     );
 }
