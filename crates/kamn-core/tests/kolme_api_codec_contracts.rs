@@ -160,3 +160,33 @@ fn functional_runtime_commit_signed_translation_emits_canonical_signed_envelope(
     assert_eq!(broadcast_request.signature, "sig-1506-b");
     assert_eq!(broadcast_request.recovery_id, 2);
 }
+
+#[test]
+fn regression_issue_1904_runtime_commit_signed_translation_trims_outer_whitespace() {
+    // Regression: #1904
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-1506-c",
+        "state:1506",
+        "kamn:did:agent:codec-1506-c",
+        13,
+        "payload:1506-c",
+    )
+    .expect("request should build");
+    let canonical_message = request.to_wire_payload();
+
+    let envelope = request
+        .translate_to_signed_broadcast_envelope(
+            " kamn:key:signer:3 ",
+            canonical_message.as_str(),
+            " sig-1506-c ",
+            3,
+        )
+        .expect("signed envelope should build");
+
+    assert_eq!(envelope.signer_key_id, "kamn:key:signer:3");
+    assert_eq!(envelope.signature, "sig-1506-c");
+    let broadcast_request = envelope
+        .to_broadcast_request()
+        .expect("broadcast request should build");
+    assert_eq!(broadcast_request.signature, "sig-1506-c");
+}

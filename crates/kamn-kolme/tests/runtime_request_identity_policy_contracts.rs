@@ -3,7 +3,7 @@ use kamn_kolme::{
     deterministic_runtime_commit_idempotency_key, is_canonical_runtime_commit_signed_message,
     is_valid_runtime_commit_id_request, is_valid_runtime_nonce_input,
     is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
-    is_valid_runtime_state_root_input,
+    is_valid_runtime_state_root_input, normalize_runtime_commit_signed_envelope_fields,
 };
 
 #[test]
@@ -87,6 +87,23 @@ fn functional_runtime_request_identity_policy_accepts_canonical_signed_message_m
 }
 
 #[test]
+fn functional_runtime_request_identity_policy_normalizes_signed_envelope_fields() {
+    let normalized = normalize_runtime_commit_signed_envelope_fields(
+        " signer-key-2 ",
+        " message-body ",
+        " signature-body ",
+    );
+    assert_eq!(
+        normalized,
+        (
+            "signer-key-2".to_owned(),
+            "message-body".to_owned(),
+            "signature-body".to_owned(),
+        )
+    );
+}
+
+#[test]
 fn regression_issue_1894_runtime_request_identity_policy_rejects_multiline_request_fields() {
     // Regression: #1894
     assert!(!are_runtime_commit_request_fields_single_line(
@@ -120,4 +137,22 @@ fn regression_issue_1902_runtime_request_identity_policy_rejects_noncanonical_si
     assert!(!is_canonical_runtime_commit_signed_message(
         canonical, tampered
     ));
+}
+
+#[test]
+fn regression_issue_1904_runtime_request_identity_policy_preserves_inner_whitespace() {
+    // Regression: #1904
+    let normalized = normalize_runtime_commit_signed_envelope_fields(
+        "\t signer-key-2\t",
+        " message value with spaces ",
+        "\n signature value \n",
+    );
+    assert_eq!(
+        normalized,
+        (
+            "signer-key-2".to_owned(),
+            "message value with spaces".to_owned(),
+            "signature value".to_owned(),
+        )
+    );
 }

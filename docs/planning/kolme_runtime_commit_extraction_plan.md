@@ -69,6 +69,7 @@ Out of scope:
 - #1898: extracted HTTPS transport stdout non-empty guard to `kamn-kolme` (`is_valid_http_response_bytes_input`) and rewired `kamn-core` TLS response-byte validation delegation.
 - #1900: extracted runtime request nonce guard to `kamn-kolme` (`is_valid_runtime_nonce_input`) and rewired `kamn-core` request validation nonce delegation.
 - #1902: extracted canonical signed-message match guard to `kamn-kolme` (`is_canonical_runtime_commit_signed_message`) and rewired `kamn-core` signed-envelope canonical payload match validation delegation.
+- #1904: extracted signed-envelope field normalization contract to `kamn-kolme` (`normalize_runtime_commit_signed_envelope_fields`) and rewired `kamn-core` signed-envelope construction normalization delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,

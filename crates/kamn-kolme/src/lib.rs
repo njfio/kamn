@@ -102,7 +102,7 @@ pub use runtime_request_identity_policy::{
     deterministic_runtime_commit_idempotency_key, is_canonical_runtime_commit_signed_message,
     is_valid_runtime_commit_id_request, is_valid_runtime_nonce_input,
     is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
-    is_valid_runtime_state_root_input,
+    is_valid_runtime_state_root_input, normalize_runtime_commit_signed_envelope_fields,
 };
 pub use tls_policy::{
     classify_tls_failure_reason, parse_tls_ca_file_env_value, resolve_tls_ca_file_env_result,

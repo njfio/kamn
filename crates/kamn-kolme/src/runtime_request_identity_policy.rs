@@ -76,6 +76,19 @@ pub fn is_canonical_runtime_commit_signed_message(
     signed_message == canonical_message
 }
 
+/// Normalizes signed-envelope fields for deterministic runtime commit wiring.
+pub fn normalize_runtime_commit_signed_envelope_fields(
+    signer_key_id: &str,
+    signed_message: &str,
+    signature: &str,
+) -> (String, String, String) {
+    (
+        signer_key_id.trim().to_owned(),
+        signed_message.trim().to_owned(),
+        signature.trim().to_owned(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -83,7 +96,7 @@ mod tests {
         deterministic_runtime_commit_idempotency_key, is_canonical_runtime_commit_signed_message,
         is_valid_runtime_commit_id_request, is_valid_runtime_nonce_input,
         is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
-        is_valid_runtime_state_root_input,
+        is_valid_runtime_state_root_input, normalize_runtime_commit_signed_envelope_fields,
     };
 
     #[test]
@@ -157,5 +170,22 @@ mod tests {
             "operation_id=op-1\nstate_root=state-1\n",
             "operation_id=op-2\nstate_root=state-1\n",
         ));
+    }
+
+    #[test]
+    fn unit_normalizes_runtime_commit_signed_envelope_fields() {
+        let normalized = normalize_runtime_commit_signed_envelope_fields(
+            " signer-key-1 ",
+            " canonical-payload ",
+            " signature-hex ",
+        );
+        assert_eq!(
+            normalized,
+            (
+                "signer-key-1".to_owned(),
+                "canonical-payload".to_owned(),
+                "signature-hex".to_owned(),
+            )
+        );
     }
 }

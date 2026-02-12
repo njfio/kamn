@@ -42,6 +42,9 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_transport_io_error("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_transport_io_classification_to_provider_error("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_provider_outcome_policy_error_to_malformed("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("let signer_key_id = signer_key_id.trim();"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("let message = message.trim();"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("let signature = signature.trim();"));
 }
 
 #[test]
@@ -121,6 +124,8 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     );
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_signed_envelope_message_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_signed_envelope_signature_input_contract("));
+    assert!(RUNTIME_COMMIT_SRC
+        .contains("normalize_kolme_runtime_commit_signed_envelope_fields_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_receipt_provider_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_receipt_commit_id_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_transport_idempotency_key_input_contract("));
