@@ -5,6 +5,8 @@ import argparse
 import json
 from pathlib import Path
 
+RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
+
 
 ALLOWED_RUNTIME_COMMIT_FAILURE_TAXONOMIES = {
     "none",
@@ -167,6 +169,18 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(runtime_commit_failure_diagnostic_hint, str) or not runtime_commit_failure_diagnostic_hint.strip():
         reason_codes.append("runtime_commit_failure_diagnostic_hint_missing")
 
+    runtime_signer_fallback_private_key_env = report.get("runtime_signer_fallback_private_key_env")
+    if not isinstance(runtime_signer_fallback_private_key_env, str) or not runtime_signer_fallback_private_key_env.strip():
+        reason_codes.append("runtime_signer_fallback_private_key_env_missing")
+    elif runtime_signer_fallback_private_key_env != RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV:
+        reason_codes.append("runtime_signer_fallback_private_key_env_mismatch")
+
+    runtime_signer_fallback_private_key_present = report.get("runtime_signer_fallback_private_key_present")
+    if not isinstance(runtime_signer_fallback_private_key_present, bool):
+        reason_codes.append("runtime_signer_fallback_private_key_present_invalid")
+    elif runtime_signer_fallback_private_key_present:
+        reason_codes.append("runtime_signer_fallback_private_key_present_violation")
+
     contracts = report.get("contracts")
     if not isinstance(contracts, dict):
         reason_codes.append("contracts_missing")
@@ -188,6 +202,10 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_commit_finality_fallback_endpoint_mismatch")
         if contracts.get("runtime_commit_failure_taxonomy_version") != "v1":
             reason_codes.append("runtime_commit_failure_taxonomy_contract_version_mismatch")
+        if contracts.get("runtime_signer_fallback_private_key_env") != RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV:
+            reason_codes.append("runtime_signer_fallback_private_key_env_contract_mismatch")
+        if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
+            reason_codes.append("runtime_signer_fallback_private_key_allowed_contract_mismatch")
 
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
@@ -197,6 +215,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             "bootstrap_readiness",
             "localhost_signed_integration",
             "live_api_conformance",
+            "runtime_signer_fallback_private_key_contract",
             "runtime_commit_endpoint",
             "runtime_commit_policy",
         }

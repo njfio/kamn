@@ -591,6 +591,9 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_signer_key_source_contract_version=v1
 # runtime_signer_key_source=env-local
 # runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX
+# runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK
+# runtime_signer_fallback_private_key_present=false
+# contracts.runtime_signer_fallback_private_key_allowed=false
 
 # strict secondary signer summary marker contracts
 # runtime_signer_profile=ops-secondary
@@ -604,6 +607,7 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_signer_rotation_epoch_stale
 # runtime_signer_key_source_profile_pair_disallowed
 # runtime_signer_private_key_env_mismatch
+# runtime_signer_fallback_private_key_present_violation
 # runtime_commit_non_synthetic_submit_probe_missing
 # runtime_commit_real_signing_profile_marker_missing
 # runtime_commit_signer_profile_marker_missing
@@ -628,6 +632,9 @@ bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.s
 bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json
 # schema: kamn.kolme.local-kamn-live-runtime-integration-summary.v1
 # local-only CI boundary marker: ci_fast_gate_eligible=false (contracts.ci_fast_gate_scope=local-only)
+# fallback signer runtime guard marker:
+# fallback signer secret env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK)
+# Regression: #2302
 # Regression: #2139
 ```
 

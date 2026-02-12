@@ -13,6 +13,7 @@ REAL_SIGNER_PROFILE_PRIMARY = "ops-primary"
 REAL_SIGNER_PROFILE_SECONDARY = "ops-secondary"
 REAL_SIGNER_PRIVATE_KEY_ENV_PRIMARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
 REAL_SIGNER_PRIVATE_KEY_ENV_SECONDARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+REAL_SIGNER_FALLBACK_PRIVATE_KEY_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 REAL_SIGNER_KEY_SOURCE_CONTRACT_VERSION = "v1"
 ALLOWED_SIGNER_PROFILES = (
     REAL_SIGNER_PROFILE_PRIMARY,
@@ -182,6 +183,18 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif expected_signer_private_key_env and runtime_signer_private_key_env != expected_signer_private_key_env:
         reason_codes.append("runtime_signer_private_key_env_mismatch")
 
+    runtime_signer_fallback_private_key_env = report.get("runtime_signer_fallback_private_key_env")
+    if not isinstance(runtime_signer_fallback_private_key_env, str) or not runtime_signer_fallback_private_key_env.strip():
+        reason_codes.append("runtime_signer_fallback_private_key_env_missing")
+    elif runtime_signer_fallback_private_key_env != REAL_SIGNER_FALLBACK_PRIVATE_KEY_ENV:
+        reason_codes.append("runtime_signer_fallback_private_key_env_mismatch")
+
+    runtime_signer_fallback_private_key_present = report.get("runtime_signer_fallback_private_key_present")
+    if not isinstance(runtime_signer_fallback_private_key_present, bool):
+        reason_codes.append("runtime_signer_fallback_private_key_present_invalid")
+    elif runtime_signer_fallback_private_key_present:
+        reason_codes.append("runtime_signer_fallback_private_key_present_violation")
+
     runtime_commit_command_profile = report.get("runtime_commit_command_profile")
     if not isinstance(runtime_commit_command_profile, str) or not runtime_commit_command_profile.strip():
         reason_codes.append("runtime_commit_command_profile_missing")
@@ -281,6 +294,10 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_signer_key_source_contract_mismatch")
         if expected_signer_private_key_env and contracts.get("runtime_signer_private_key_env") != expected_signer_private_key_env:
             reason_codes.append("runtime_signer_private_key_env_contract_mismatch")
+        if contracts.get("runtime_signer_fallback_private_key_env") != REAL_SIGNER_FALLBACK_PRIVATE_KEY_ENV:
+            reason_codes.append("runtime_signer_fallback_private_key_env_contract_mismatch")
+        if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
+            reason_codes.append("runtime_signer_fallback_private_key_allowed_contract_mismatch")
         if contracts.get("runtime_signer_failover_requires_profile_change") is not True:
             reason_codes.append("runtime_signer_failover_requires_profile_change_contract_mismatch")
         if contracts.get("runtime_signer_rotation_epoch_must_increase_on_failover") is not True:
@@ -302,6 +319,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             "bootstrap_readiness",
             "localhost_signed_integration",
             "live_api_conformance",
+            "runtime_signer_fallback_private_key_contract",
             "runtime_commit_endpoint",
             "runtime_commit_policy",
         }

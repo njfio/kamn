@@ -182,6 +182,59 @@ if ! grep -q "requires explicit local-only opt-in" "$TMP_ERR"; then
 fi
 
 set +e
+KAMN_KOLME_LOCAL_HEAVY=1 \
+KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK="2222222222222222222222222222222222222222222222222222222222222222" \
+bash "$RUNNER" \
+  --mode run \
+  --runtime-profile real-node \
+  --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider \
+  --runtime-commit-live-summary "$TMP_RUNTIME_SUMMARY" \
+  --runtime-commit-live-policy-report "$TMP_RUNTIME_POLICY" \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+run_fallback_key_present_code=$?
+set -e
+
+if [ "$run_fallback_key_present_code" -eq 0 ]; then
+  echo "expected real-node profile run mode to fail closed when fallback signer key env is present" >&2
+  exit 1
+fi
+
+if ! grep -q "fallback signer secret env must not be set" "$TMP_ERR"; then
+  echo "expected deterministic fallback signer key rejection message for real-node profile run mode" >&2
+  exit 1
+fi
+
+python3 - "$TMP_SUMMARY" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if summary.get("reason_code") != "runtime_signer_fallback_private_key_present_violation":
+    raise SystemExit("expected fallback signer private key violation reason code in real-node profile run summary")
+if summary.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
+    raise SystemExit("expected fallback signer private key env marker in real-node profile run summary")
+if summary.get("runtime_signer_fallback_private_key_present") is not True:
+    raise SystemExit("expected fallback signer private key presence marker true in real-node profile run summary")
+checks = summary.get("checks")
+if not isinstance(checks, list):
+    raise SystemExit("expected checks list in real-node profile run summary")
+fallback_checks = [
+    check
+    for check in checks
+    if isinstance(check, dict) and check.get("id") == "runtime_signer_fallback_private_key_contract"
+]
+if len(fallback_checks) != 1:
+    raise SystemExit("expected exactly one fallback signer private key contract check in run summary")
+if fallback_checks[0].get("status") != "fail":
+    raise SystemExit("expected fallback signer private key contract check status fail in run summary")
+if fallback_checks[0].get("reason_code") != "fallback_signer_secret_present_violation":
+    raise SystemExit("expected fallback signer private key contract check reason in run summary")
+PY
+
+set +e
 bash "$RUNNER" \
   --mode run \
   --runtime-profile standard \

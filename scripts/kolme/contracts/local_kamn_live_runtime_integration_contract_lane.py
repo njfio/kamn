@@ -16,6 +16,7 @@ RUNNER = ROOT_DIR / "scripts/kolme/run_local_kamn_live_runtime_integration_lane.
 CHECKER = ROOT_DIR / "scripts/kolme/check_local_kamn_live_runtime_integration_policy.py"
 DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
 README_FILE = ROOT_DIR / "README.md"
+FALLBACK_SIGNER_PRIVATE_KEY_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -174,6 +175,38 @@ def main() -> int:
         if not isinstance(diagnostic_hint, str) or not diagnostic_hint.strip():
             print("expected runtime commit failure diagnostic hint marker in summary", file=sys.stderr)
             return 1
+        if summary_payload.get("runtime_signer_fallback_private_key_env") != FALLBACK_SIGNER_PRIVATE_KEY_ENV:
+            print("expected fallback signer private key env marker in summary", file=sys.stderr)
+            return 1
+        if summary_payload.get("runtime_signer_fallback_private_key_present") is not False:
+            print("expected fallback signer private key presence marker false in dry-run summary", file=sys.stderr)
+            return 1
+        contracts_payload = summary_payload.get("contracts")
+        if not isinstance(contracts_payload, dict):
+            print("expected contracts object in dry-run summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_fallback_private_key_env") != FALLBACK_SIGNER_PRIVATE_KEY_ENV:
+            print("expected contracts fallback signer private key env marker in summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_fallback_private_key_allowed") is not False:
+            print("expected contracts fallback signer private key allowed=false marker in summary", file=sys.stderr)
+            return 1
+        checks_payload = summary_payload.get("checks")
+        if not isinstance(checks_payload, list):
+            print("expected checks list in dry-run summary", file=sys.stderr)
+            return 1
+        fallback_checks = [
+            check
+            for check in checks_payload
+            if isinstance(check, dict)
+            and check.get("id") == "runtime_signer_fallback_private_key_contract"
+        ]
+        if len(fallback_checks) != 1:
+            print("expected one runtime_signer_fallback_private_key_contract check in summary", file=sys.stderr)
+            return 1
+        if fallback_checks[0].get("status") != "planned":
+            print("expected fallback signer check planned in dry-run summary", file=sys.stderr)
+            return 1
 
         # Regression: #2296
         failure_payload = dict(summary_payload)
@@ -294,6 +327,93 @@ def main() -> int:
             )
             return 1
 
+        # Regression: #2302
+        fallback_violation_payload = dict(summary_payload)
+        fallback_violation_payload["mode"] = "run"
+        fallback_violation_payload["status"] = "fail"
+        fallback_violation_payload["reason_code"] = "runtime_signer_fallback_private_key_present_violation"
+        fallback_violation_payload["runtime_signer_fallback_private_key_present"] = True
+        fallback_violation_payload["bootstrap_reason_code"] = "fallback_signer_secret_present_violation"
+        fallback_violation_payload["localhost_signed_reason_code"] = "fallback_signer_secret_present_violation"
+        fallback_violation_payload["conformance_reason_code"] = "fallback_signer_secret_present_violation"
+        fallback_violation_payload["runtime_commit_reason_code"] = "fallback_signer_secret_present_violation"
+        fallback_violation_payload["runtime_commit_policy_reason_code"] = "fallback_signer_secret_present_violation"
+        fallback_violation_checks = [
+            {
+                "id": "bootstrap_readiness",
+                "command": "bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh --mode run",
+                "status": "skipped",
+                "reason_code": "fallback_signer_secret_present_violation",
+            },
+            {
+                "id": "localhost_signed_integration",
+                "command": "bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed.json",
+                "status": "skipped",
+                "reason_code": "fallback_signer_secret_present_violation",
+            },
+            {
+                "id": "live_api_conformance",
+                "command": "bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run",
+                "status": "skipped",
+                "reason_code": "fallback_signer_secret_present_violation",
+            },
+            {
+                "id": "runtime_signer_fallback_private_key_contract",
+                "command": "fallback signer secret env must remain unset for real-node runtime profile",
+                "status": "fail",
+                "reason_code": "fallback_signer_secret_present_violation",
+            },
+            {
+                "id": "runtime_commit_endpoint",
+                "command": summary_payload.get("runtime_commit_command", ""),
+                "status": "skipped",
+                "reason_code": "fallback_signer_secret_present_violation",
+            },
+            {
+                "id": "runtime_commit_policy",
+                "command": "python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/runtime-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/runtime-policy.json",
+                "status": "skipped",
+                "reason_code": "fallback_signer_secret_present_violation",
+            },
+        ]
+        fallback_violation_payload["checks"] = fallback_violation_checks
+        fallback_violation_report = temp_path / "runtime_fallback_violation_summary.json"
+        fallback_violation_report.write_text(
+            json.dumps(fallback_violation_payload, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        fallback_violation_run = subprocess.run(
+            [
+                "python3",
+                str(CHECKER),
+                "--report-file",
+                str(fallback_violation_report),
+                "--expected-final-decision",
+                "NO-GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--require-reason-code",
+                "runtime_signer_fallback_private_key_present_violation",
+                "--output-json",
+                str(failure_policy_output),
+            ],
+            cwd=ROOT_DIR,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if fallback_violation_run.returncode == 0:
+            print("expected checker to fail when fallback signer private key marker is present", file=sys.stderr)
+            return 1
+        fallback_violation_output = f"{fallback_violation_run.stdout}\n{fallback_violation_run.stderr}"
+        if "runtime_signer_fallback_private_key_present_violation" not in fallback_violation_output:
+            print(
+                "expected fallback signer private key violation reason for policy failure",
+                file=sys.stderr,
+            )
+            return 1
+
     doc_text = DOC_FILE.read_text(encoding="utf-8")
     readme_text = README_FILE.read_text(encoding="utf-8")
     if "run_local_kamn_live_runtime_integration_lane.sh" not in doc_text:
@@ -355,6 +475,19 @@ def main() -> int:
     if "Regression: #2101" not in doc_text:
         print("expected Kolme devnet ops doc to include runtime finality contract composition regression marker", file=sys.stderr)
         return 1
+    # Regression: #2302
+    if "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK" not in doc_text:
+        print("expected Kolme devnet ops doc to include fallback signer private key env marker", file=sys.stderr)
+        return 1
+    if "runtime_signer_fallback_private_key_present=false" not in doc_text:
+        print("expected Kolme devnet ops doc to include fallback signer private key presence marker", file=sys.stderr)
+        return 1
+    if "runtime_signer_fallback_private_key_present_violation" not in doc_text:
+        print("expected Kolme devnet ops doc to include fallback signer private key violation marker", file=sys.stderr)
+        return 1
+    if "Regression: #2302" not in doc_text:
+        print("expected Kolme devnet ops doc to include fallback signer runtime regression marker", file=sys.stderr)
+        return 1
     if "run_local_kamn_live_runtime_integration_contract_lane.sh" not in readme_text:
         print("expected README to reference local KAMN live runtime integration contract lane", file=sys.stderr)
         return 1
@@ -390,6 +523,18 @@ def main() -> int:
             "expected README to reference live provider operator runbook section marker",
             file=sys.stderr,
         )
+        return 1
+    if "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK" not in readme_text:
+        print("expected README to include fallback signer private key env marker", file=sys.stderr)
+        return 1
+    if "runtime_signer_fallback_private_key_present=false" not in readme_text:
+        print("expected README to include fallback signer private key presence marker", file=sys.stderr)
+        return 1
+    if "runtime_signer_fallback_private_key_present_violation" not in readme_text:
+        print("expected README to include fallback signer private key violation marker", file=sys.stderr)
+        return 1
+    if "Regression: #2302" not in readme_text:
+        print("expected README to include fallback signer runtime regression marker", file=sys.stderr)
         return 1
 
     elapsed_seconds = int(time.monotonic() - start_epoch)

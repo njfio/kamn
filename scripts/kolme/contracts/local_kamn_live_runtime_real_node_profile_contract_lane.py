@@ -21,6 +21,7 @@ SIGNER_PRIVATE_KEY_ENV_BY_PROFILE = {
     "ops-primary": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "ops-secondary": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
 }
+FALLBACK_SIGNER_PRIVATE_KEY_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -274,6 +275,33 @@ def main() -> int:
     if summary.get("runtime_signer_private_key_env") != expected_signer_private_key_env:
         print("expected signer private key env marker in contract-lane summary", file=sys.stderr)
         return 1
+    if summary.get("runtime_signer_fallback_private_key_env") != FALLBACK_SIGNER_PRIVATE_KEY_ENV:
+        print("expected fallback signer private key env marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_signer_fallback_private_key_present") is not False:
+        print("expected fallback signer private key presence marker false in contract-lane summary", file=sys.stderr)
+        return 1
+    checks = summary.get("checks")
+    if not isinstance(checks, list):
+        print("expected checks list in real-node profile contract-lane summary", file=sys.stderr)
+        return 1
+    fallback_signer_checks = [
+        check
+        for check in checks
+        if isinstance(check, dict) and check.get("id") == "runtime_signer_fallback_private_key_contract"
+    ]
+    if len(fallback_signer_checks) != 1:
+        print(
+            "expected one runtime_signer_fallback_private_key_contract check in contract-lane summary",
+            file=sys.stderr,
+        )
+        return 1
+    if fallback_signer_checks[0].get("status") != "planned":
+        print(
+            "expected runtime_signer_fallback_private_key_contract planned status in dry-run contract-lane summary",
+            file=sys.stderr,
+        )
+        return 1
     contracts = summary.get("contracts", {})
     if not isinstance(contracts, dict):
         print("expected contracts object in real-node profile contract-lane summary", file=sys.stderr)
@@ -301,6 +329,12 @@ def main() -> int:
         return 1
     if contracts.get("runtime_signer_private_key_env") != expected_signer_private_key_env:
         print("expected contracts signer private key env marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_fallback_private_key_env") != FALLBACK_SIGNER_PRIVATE_KEY_ENV:
+        print("expected contracts fallback signer private key env marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
+        print("expected contracts fallback signer private key allowed=false marker in contract-lane summary", file=sys.stderr)
         return 1
     if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1":
         print("unexpected real-node profile policy schema in contract-lane output", file=sys.stderr)
@@ -418,6 +452,87 @@ def main() -> int:
             return 1
         if signer_key_env_drift_policy.get("final_decision") != "NO-GO":
             print("expected NO-GO final decision for signer key env drift policy output", file=sys.stderr)
+            return 1
+
+        # Regression: #2302
+        fallback_signer_violation_summary_file = negative_path / "fallback_signer_violation_summary.json"
+        fallback_signer_violation_policy_file = negative_path / "fallback_signer_violation_policy.json"
+        fallback_signer_violation_summary = dict(summary)
+        fallback_signer_violation_summary["mode"] = "run"
+        fallback_signer_violation_summary["status"] = "fail"
+        fallback_signer_violation_summary["reason_code"] = "runtime_signer_fallback_private_key_present_violation"
+        fallback_signer_violation_summary["runtime_signer_fallback_private_key_present"] = True
+        fallback_signer_violation_summary["bootstrap_reason_code"] = "fallback_signer_secret_present_violation"
+        fallback_signer_violation_summary["localhost_signed_reason_code"] = "fallback_signer_secret_present_violation"
+        fallback_signer_violation_summary["conformance_reason_code"] = "fallback_signer_secret_present_violation"
+        fallback_signer_violation_summary["runtime_commit_reason_code"] = "fallback_signer_secret_present_violation"
+        fallback_signer_violation_summary["runtime_commit_policy_reason_code"] = "fallback_signer_secret_present_violation"
+        fallback_signer_violation_summary["checks"] = [
+            {
+                "id": "bootstrap_readiness",
+                "command": "bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh --mode run",
+                "status": "skipped",
+                "reason_code": "fallback_signer_secret_present_violation",
+            },
+            {
+                "id": "localhost_signed_integration",
+                "command": "bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh --output-json /tmp/localhost-signed.json",
+                "status": "skipped",
+                "reason_code": "fallback_signer_secret_present_violation",
+            },
+            {
+                "id": "live_api_conformance",
+                "command": "bash scripts/kolme/run_local_kolme_live_api_conformance_harness.sh --mode run",
+                "status": "skipped",
+                "reason_code": "fallback_signer_secret_present_violation",
+            },
+            {
+                "id": "runtime_signer_fallback_private_key_contract",
+                "command": "fallback signer secret env must remain unset for real-node runtime profile",
+                "status": "fail",
+                "reason_code": "fallback_signer_secret_present_violation",
+            },
+            {
+                "id": "runtime_commit_endpoint",
+                "command": runtime_commit_command,
+                "status": "skipped",
+                "reason_code": "fallback_signer_secret_present_violation",
+            },
+            {
+                "id": "runtime_commit_policy",
+                "command": "python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/runtime-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-non-synthetic-run-evidence --require-native-payload-evidence --output-json /tmp/runtime-policy.json",
+                "status": "skipped",
+                "reason_code": "fallback_signer_secret_present_violation",
+            },
+        ]
+        fallback_signer_violation_summary_file.write_text(
+            json.dumps(fallback_signer_violation_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        fallback_signer_violation_result = run_real_node_policy_check(
+            report_file=fallback_signer_violation_summary_file,
+            output_json=fallback_signer_violation_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if fallback_signer_violation_result.returncode == 0:
+            print("expected fallback signer violation negative proof to fail closed", file=sys.stderr)
+            return 1
+        fallback_signer_violation_policy = json.loads(
+            fallback_signer_violation_policy_file.read_text(encoding="utf-8")
+        )
+        fallback_signer_violation_reason_codes = fallback_signer_violation_policy.get("reason_codes")
+        if not isinstance(fallback_signer_violation_reason_codes, list):
+            print("expected reason_codes list in fallback signer violation policy output", file=sys.stderr)
+            return 1
+        if "runtime_signer_fallback_private_key_present_violation" not in fallback_signer_violation_reason_codes:
+            print(
+                "expected runtime_signer_fallback_private_key_present_violation in fallback signer policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if fallback_signer_violation_policy.get("final_decision") != "NO-GO":
+            print("expected NO-GO final decision for fallback signer violation policy output", file=sys.stderr)
             return 1
 
         key_source_matrix_drift_summary_file = negative_path / "key_source_matrix_drift_summary.json"
@@ -573,10 +688,14 @@ def main() -> int:
         "runtime_signer_profile=ops-secondary",
         "runtime_signer_key_source_contract_version",
         "runtime_signer_key_source",
+        "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+        "runtime_signer_fallback_private_key_present=false",
+        "runtime_signer_fallback_private_key_present_violation",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
+        "Regression: #2302",
         "Regression: #2139",
     ]
     ci_doc_markers = [
@@ -589,10 +708,14 @@ def main() -> int:
         "runtime_signer_profile=ops-secondary",
         "runtime_signer_key_source_contract_version",
         "runtime_signer_key_source",
+        "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+        "runtime_signer_fallback_private_key_present=false",
+        "runtime_signer_fallback_private_key_present_violation",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
+        "Regression: #2302",
         "Regression: #2139",
     ]
     readme_markers = [
@@ -605,10 +728,14 @@ def main() -> int:
         "runtime_signer_profile=ops-secondary",
         "runtime_signer_key_source_contract_version",
         "runtime_signer_key_source",
+        "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+        "runtime_signer_fallback_private_key_present=false",
+        "runtime_signer_fallback_private_key_present_violation",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
+        "Regression: #2302",
         "Regression: #2139",
     ]
 

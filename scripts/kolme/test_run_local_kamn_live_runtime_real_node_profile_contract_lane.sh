@@ -15,13 +15,14 @@ TMP_DRIFT_REPORT="$(mktemp)"
 TMP_SIGNER_DRIFT_REPORT="$(mktemp)"
 TMP_SYNTHETIC_REPORT="$(mktemp)"
 TMP_INMEMORY_REPORT="$(mktemp)"
+TMP_FALLBACK_PRESENT_REPORT="$(mktemp)"
 TMP_SECONDARY_REPORT="$(mktemp)"
 TMP_SECONDARY_POLICY_REPORT="$(mktemp)"
 TMP_SECONDARY_KEY_ENV_DRIFT_REPORT="$(mktemp)"
 TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT="$(mktemp)"
 TMP_NEGATIVE_POLICY="$(mktemp)"
 TMP_NEGATIVE_ERR="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_SECONDARY_REPORT" "$TMP_SECONDARY_POLICY_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" "$TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_FALLBACK_PRESENT_REPORT" "$TMP_SECONDARY_REPORT" "$TMP_SECONDARY_POLICY_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" "$TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local KAMN live runtime real-node profile contract lane runner to be executable" >&2
@@ -75,6 +76,9 @@ required_coverage_markers=(
   "runtime_signer_profile=ops-secondary"
   "runtime_signer_key_source_contract_version"
   "runtime_signer_key_source"
+  "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
+  "runtime_signer_fallback_private_key_present=false"
+  "runtime_signer_fallback_private_key_present_violation"
   "runtime_signer_key_source_profile_pair_disallowed"
   "runtime_signer_private_key_env_mismatch"
   "runtime_commit_command_profile_mismatch"
@@ -83,6 +87,7 @@ required_coverage_markers=(
   "runtime_commit_signer_profile_marker_missing"
   "runtime_commit_non_synthetic_submit_probe_missing"
   "runtime_commit_in_memory_provider_reference_detected"
+  "Regression: #2302"
   "Regression: #2139"
 )
 for marker in "${required_coverage_markers[@]}"; do
@@ -121,12 +126,28 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
     echo "expected docs parity to include signer key-source marker in $docs_file" >&2
     exit 1
   fi
+  if ! grep -q "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK" "$docs_file"; then
+    echo "expected docs parity to include fallback signer private key env marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_fallback_private_key_present=false" "$docs_file"; then
+    echo "expected docs parity to include fallback signer private key presence marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_fallback_private_key_present_violation" "$docs_file"; then
+    echo "expected docs parity to include fallback signer private key violation marker in $docs_file" >&2
+    exit 1
+  fi
   if ! grep -q "runtime_signer_key_source_profile_pair_disallowed" "$docs_file"; then
     echo "expected docs parity to include signer key-source/profile pair disallowed reason marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "runtime_signer_private_key_env_mismatch" "$docs_file"; then
     echo "expected docs parity to include signer private key mismatch reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "Regression: #2302" "$docs_file"; then
+    echo "expected docs parity to include fallback signer runtime regression marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "Regression: #2139" "$docs_file"; then
@@ -181,6 +202,18 @@ if summary.get("runtime_signer_key_source") != "env-local":
     raise SystemExit("expected signer key-source marker in real-node profile contract-lane summary")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected signer private key env marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
+    raise SystemExit("expected fallback signer private key env marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_fallback_private_key_present") is not False:
+    raise SystemExit("expected fallback signer private key presence marker false in real-node profile contract-lane summary")
+checks = summary.get("checks", [])
+if not any(
+    isinstance(check, dict)
+    and check.get("id") == "runtime_signer_fallback_private_key_contract"
+    and check.get("status") == "planned"
+    for check in checks
+):
+    raise SystemExit("expected fallback signer private key planned check marker in real-node profile contract-lane summary")
 contracts = summary.get("contracts", {})
 if contracts.get("runtime_profile") != "real-node":
     raise SystemExit("expected contracts.runtime_profile=real-node in real-node profile contract-lane summary")
@@ -198,6 +231,10 @@ if contracts.get("runtime_signer_key_source") != "env-local":
     raise SystemExit("expected contracts signer key-source marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected contracts signer private key env marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
+    raise SystemExit("expected contracts fallback signer private key env marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
+    raise SystemExit("expected contracts fallback signer private key allowed=false marker in real-node profile contract-lane summary")
 if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1":
     raise SystemExit("unexpected real-node profile contract-lane policy schema")
 if policy.get("final_decision") != "GO":
@@ -233,6 +270,10 @@ if summary.get("runtime_signer_key_source") != "env-local":
     raise SystemExit("expected secondary signer key-source marker in contract-lane summary")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
     raise SystemExit("expected secondary signer private key env marker in contract-lane summary")
+if summary.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
+    raise SystemExit("expected secondary signer fallback private key env marker in contract-lane summary")
+if summary.get("runtime_signer_fallback_private_key_present") is not False:
+    raise SystemExit("expected secondary signer fallback private key presence marker false in contract-lane summary")
 contracts = summary.get("contracts", {})
 if contracts.get("runtime_signer_profile") != "ops-secondary":
     raise SystemExit("expected contracts secondary signer profile marker in contract-lane summary")
@@ -242,13 +283,17 @@ if contracts.get("runtime_signer_key_source") != "env-local":
     raise SystemExit("expected contracts secondary signer key-source marker in contract-lane summary")
 if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
     raise SystemExit("expected contracts secondary signer private key env marker in contract-lane summary")
+if contracts.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
+    raise SystemExit("expected contracts secondary signer fallback private key env marker in contract-lane summary")
+if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
+    raise SystemExit("expected contracts secondary signer fallback private key allowed=false marker in contract-lane summary")
 if policy.get("final_decision") != "GO":
     raise SystemExit("expected secondary signer policy final_decision GO")
 if policy.get("reason_codes") != []:
     raise SystemExit("expected no policy reason codes for secondary signer dry-run composition")
 PY
 
-python3 - "$TMP_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" "$TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT" <<'PY'
+python3 - "$TMP_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_FALLBACK_PRESENT_REPORT" "$TMP_SECONDARY_KEY_ENV_DRIFT_REPORT" "$TMP_KEY_SOURCE_MATRIX_DRIFT_REPORT" <<'PY'
 import json
 import pathlib
 import sys
@@ -302,6 +347,21 @@ pathlib.Path(sys.argv[5]).write_text(
     encoding="utf-8",
 )
 
+fallback_present_summary = dict(base_summary)
+fallback_present_summary["mode"] = "run"
+fallback_present_summary["status"] = "fail"
+fallback_present_summary["reason_code"] = "runtime_signer_fallback_private_key_present_violation"
+fallback_present_summary["runtime_signer_fallback_private_key_present"] = True
+fallback_present_summary["bootstrap_reason_code"] = "fallback_signer_secret_present_violation"
+fallback_present_summary["localhost_signed_reason_code"] = "fallback_signer_secret_present_violation"
+fallback_present_summary["conformance_reason_code"] = "fallback_signer_secret_present_violation"
+fallback_present_summary["runtime_commit_reason_code"] = "fallback_signer_secret_present_violation"
+fallback_present_summary["runtime_commit_policy_reason_code"] = "fallback_signer_secret_present_violation"
+pathlib.Path(sys.argv[6]).write_text(
+    json.dumps(fallback_present_summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+
 secondary_key_env_drift_summary = dict(base_summary)
 secondary_key_env_drift_summary["runtime_signer_profile"] = "ops-secondary"
 secondary_key_env_drift_summary["runtime_signer_previous_profile"] = "ops-secondary"
@@ -313,7 +373,7 @@ secondary_key_env_drift_summary["runtime_commit_command"] = str(base_summary.get
     "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary",
     "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary",
 )
-pathlib.Path(sys.argv[6]).write_text(
+pathlib.Path(sys.argv[7]).write_text(
     json.dumps(secondary_key_env_drift_summary, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
 )
@@ -331,7 +391,7 @@ key_source_matrix_drift_summary["runtime_commit_command"] = str(base_summary.get
     "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary",
     "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary",
 )
-pathlib.Path(sys.argv[7]).write_text(
+pathlib.Path(sys.argv[8]).write_text(
     json.dumps(key_source_matrix_drift_summary, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
 )
@@ -429,6 +489,26 @@ fi
 
 if ! grep -q "runtime_commit_in_memory_provider_reference_detected" "$TMP_NEGATIVE_ERR"; then
   echo "expected in-memory provider reference reason in negative proof output" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_FALLBACK_PRESENT_REPORT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_NEGATIVE_POLICY" >"$TMP_NEGATIVE_ERR" 2>&1
+fallback_present_exit_code=$?
+set -e
+
+if [ "$fallback_present_exit_code" -eq 0 ]; then
+  echo "expected fallback signer private key presence negative proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_fallback_private_key_present_violation" "$TMP_NEGATIVE_ERR"; then
+  echo "expected fallback signer private key violation reason in negative proof output" >&2
   exit 1
 fi
 
