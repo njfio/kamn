@@ -101,10 +101,17 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 - Live transport parity command changes map to parity scope:
   - `run_live_transport_parity_contract_tests=true`
   - `live_transport_parity_languages=rust,python,typescript`
-- Core local-heavy Kolme helper/orchestration command changes map to dedicated local-heavy scope:
-  - `run_kolme_local_heavy_contract_tests=true`
-  - `test_scope=kolme-local-heavy-contract`
-  - fast-gate commands:
+- Core local-heavy Kolme helper/orchestration command changes default to local-only selector scope:
+  - default selector outputs:
+    - `run_kolme_local_heavy_contract_tests=false`
+    - `kolme_local_heavy_selector_opt_in=false`
+    - `test_scope=kolme-local-heavy-local-only`
+  - explicit selector opt-in for CI execution:
+    - `CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS=true`
+    - `run_kolme_local_heavy_contract_tests=true`
+    - `kolme_local_heavy_selector_opt_in=true`
+    - `test_scope=kolme-local-heavy-contract`
+  - opt-in fast-gate commands:
     - `bash scripts/framework/test_assert_local_heavy_opt_in.sh`
     - `bash scripts/kolme/test_run_local_bootstrap_health_checks.sh`
     - `bash scripts/kolme/test_run_local_e2e_integration_lane.sh`
@@ -423,8 +430,13 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
   - local runtime-commit live run-mode commands remain excluded from ci-fast-gate.
     - selector routing for native parity command/policy/manifest changes:
-      - `run_kolme_local_heavy_contract_tests=true`
-      - `test_scope=kolme-local-heavy-contract`
+      - default: `run_kolme_local_heavy_contract_tests=false`
+      - default: `kolme_local_heavy_selector_opt_in=false`
+      - default: `test_scope=kolme-local-heavy-local-only`
+      - opt-in: `CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS=true`
+      - opt-in: `run_kolme_local_heavy_contract_tests=true`
+      - opt-in: `kolme_local_heavy_selector_opt_in=true`
+      - opt-in: `test_scope=kolme-local-heavy-contract`
     - wrapper routing stays manifest-backed:
       - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_runtime_commit_live_lane.sh --resolve-manifest-path`
       - `scripts/framework/manifests/kolme_local_runtime_commit_live_lane.json`
@@ -516,6 +528,7 @@ Regression policy:
 - governance lifecycle/rollback selector/docs parity remains fail-closed (`Regression: #910`).
 - governance quorum attestation selector/docs parity remains fail-closed (`Regression: #911`).
 - local-only heavy Kolme selector/workflow/docs parity remains fail-closed (`Regression: #1419`).
+- local-only heavy Kolme selector default-off and explicit CI opt-in semantics remain fail-closed (`Regression: #2303`).
 - aggregate CI-tools fork Rust matrix command-surface coverage remains fail-closed (`Regression: #1549`).
 - local-only fork sync/smoke run-mode exclusion parity remains fail-closed (`Regression: #1431`).
 - local-only heavy E2E policy and contract lane command-surface parity remains fail-closed (`Regression: #1682`).

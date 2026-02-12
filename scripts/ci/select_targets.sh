@@ -37,6 +37,7 @@ append_summary() {
     echo "- Run federated DID handshake deep lane: ${RUN_FEDERATED_DID_HANDSHAKE_DEEP_LANE}"
     echo "- Run Kolme snapshot drift contract tests: ${RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS}"
     echo "- Run Kolme local-heavy contract tests: ${RUN_KOLME_LOCAL_HEAVY_CONTRACT_TESTS}"
+    echo "- Kolme local-heavy selector opt-in: ${KOLME_LOCAL_HEAVY_SELECTOR_OPT_IN}"
     echo "- Run Kolme version compatibility contract tests: ${RUN_KOLME_VERSION_COMPATIBILITY_CONTRACT_TESTS}"
     echo "- Run Kolme triadic devnet smoke contract tests: ${RUN_KOLME_TRIADIC_DEVNET_SMOKE_CONTRACT_TESTS}"
     echo "- Run federated delegation settlement contract tests: ${RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS}"
@@ -670,6 +671,13 @@ TEST_SCOPE="none"
 CHANGED_MANIFESTS=""
 RUN_INVARIANT_HARNESS=false
 BRIDGE_REPLAY_SUITES=""
+KOLME_LOCAL_HEAVY_SELECTOR_OPT_IN=false
+
+case "${CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS:-false}" in
+  1|true|TRUE|yes|YES|on|ON)
+    KOLME_LOCAL_HEAVY_SELECTOR_OPT_IN=true
+    ;;
+esac
 
 if [ "$REPO_HAS_RUST" = true ] && { [ "$RUST_CHANGED" = true ] || [ "$CI_INFRA_CHANGED" = true ] || [ "$FULL_SUITE" = true ]; }; then
   RUN_RUST=true
@@ -806,9 +814,13 @@ if [ "$FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_CHANGED" = true ]; then
 fi
 
 if [ "$KOLME_LOCAL_HEAVY_CONTRACT_CHANGED" = true ]; then
-  RUN_KOLME_LOCAL_HEAVY_CONTRACT_TESTS=true
-  if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
-    TEST_SCOPE="kolme-local-heavy-contract"
+  if [ "$KOLME_LOCAL_HEAVY_SELECTOR_OPT_IN" = true ]; then
+    RUN_KOLME_LOCAL_HEAVY_CONTRACT_TESTS=true
+    if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+      TEST_SCOPE="kolme-local-heavy-contract"
+    fi
+  elif [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+    TEST_SCOPE="kolme-local-heavy-local-only"
   fi
 fi
 
@@ -1015,6 +1027,10 @@ if [ "$CI_STRATEGY_DOC_CONTRACT_CHANGED" = true ]; then
   fi
 fi
 
+if [ "$KOLME_LOCAL_HEAVY_CONTRACT_CHANGED" = true ]; then
+  RUN_CI_TOOL_CHECKS=true
+fi
+
 if [ "$SCRIPT_SURFACE_BUDGET_CHANGED" = true ] || [ "$CI_INFRA_CHANGED" = true ]; then
   RUN_SCRIPT_SURFACE_BUDGET_CHECKS=true
 fi
@@ -1032,6 +1048,7 @@ write_output "run_federated_did_handshake_contract_tests" "$RUN_FEDERATED_DID_HA
 write_output "run_federated_did_handshake_deep_lane" "$RUN_FEDERATED_DID_HANDSHAKE_DEEP_LANE"
 write_output "run_kolme_snapshot_drift_contract_tests" "$RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS"
 write_output "run_kolme_local_heavy_contract_tests" "$RUN_KOLME_LOCAL_HEAVY_CONTRACT_TESTS"
+write_output "kolme_local_heavy_selector_opt_in" "$KOLME_LOCAL_HEAVY_SELECTOR_OPT_IN"
 write_output "run_kolme_version_compatibility_contract_tests" "$RUN_KOLME_VERSION_COMPATIBILITY_CONTRACT_TESTS"
 write_output "run_kolme_triadic_devnet_smoke_contract_tests" "$RUN_KOLME_TRIADIC_DEVNET_SMOKE_CONTRACT_TESTS"
 write_output "run_federated_delegation_settlement_contract_tests" "$RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS"
