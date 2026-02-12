@@ -51,3 +51,4 @@ escrow
 instruction_verify
 reputation_state
 channel_policies
+bridge_adapter
