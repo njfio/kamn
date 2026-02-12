@@ -466,6 +466,24 @@ bash scripts/kolme/run_local_kolme_api_smoke_lane.sh --mode run --base-url http:
 # schema: kamn.kolme.local-api-smoke-summary.v1
 ```
 
+### Run Local Runtime Commit Live Finality Evidence Contract Lane
+
+```bash
+# deterministic runtime-commit live plan (no command execution)
+bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode dry-run --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt
+
+# explicit local-only runtime submit+finality evidence execution
+KAMN_KOLME_LOCAL_HEAVY=1 \
+bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --skip-preflight --live-command "printf 'status=submitted\n'" --finality-command "printf 'finality=final\n'" --max-seconds 90 --finality-max-seconds 15 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt --finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt
+
+# fail-closed policy checker
+python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/kolme-local-runtime-commit-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-runtime-commit-live-policy.json
+
+# bounded contract lane (dry-run + run-mode evidence + policy checks)
+bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json
+# summary markers: submit_evidence_marker_present, finality_evidence_marker_present
+```
+
 ### Run Local-Only Live Kolme API Conformance Harness
 
 ```bash

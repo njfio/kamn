@@ -57,6 +57,24 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif provider_command_marker_present is False:
         reason_codes.append("provider_command_marker_missing")
 
+    if report.get("submit_evidence_marker") != "status=submitted":
+        reason_codes.append("submit_evidence_marker_mismatch")
+
+    submit_evidence_marker_present = report.get("submit_evidence_marker_present")
+    if not isinstance(submit_evidence_marker_present, bool):
+        reason_codes.append("submit_evidence_marker_present_invalid")
+
+    if report.get("finality_evidence_marker") != "finality=final":
+        reason_codes.append("finality_evidence_marker_mismatch")
+
+    finality_evidence_marker_present = report.get("finality_evidence_marker_present")
+    if not isinstance(finality_evidence_marker_present, bool):
+        reason_codes.append("finality_evidence_marker_present_invalid")
+
+    finality_enabled = report.get("finality_enabled")
+    if not isinstance(finality_enabled, bool):
+        reason_codes.append("finality_enabled_invalid")
+
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
         reason_codes.append("checks_missing")
@@ -78,6 +96,10 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("dry_run_reason_code_mismatch")
         if mode == "run" and reason_code == "dry_run_no_commands_executed":
             reason_codes.append("run_reason_code_mismatch")
+        if mode == "run" and submit_evidence_marker_present is not True:
+            reason_codes.append("submit_evidence_marker_missing")
+        if mode == "run" and finality_enabled is True and finality_evidence_marker_present is not True:
+            reason_codes.append("finality_evidence_marker_missing")
         if budget_status == "exceeded_budget":
             reason_codes.append("ok_status_budget_exceeded")
     elif status == "fail" and reason_code in allowed_ok_reason_codes:

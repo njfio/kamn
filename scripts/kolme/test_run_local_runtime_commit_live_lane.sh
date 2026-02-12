@@ -100,6 +100,14 @@ if report.get("provider_command_marker") != "integration_kolme_fork_live_node_su
     raise SystemExit("expected live provider command marker")
 if report.get("provider_command_marker_present") is not True:
     raise SystemExit("expected default dry-run command to include live provider marker")
+if report.get("submit_evidence_marker") != "status=submitted":
+    raise SystemExit("expected deterministic submit evidence marker")
+if report.get("submit_evidence_marker_present") is not False:
+    raise SystemExit("expected submit evidence marker to be absent in dry-run default command profile")
+if report.get("finality_evidence_marker") != "finality=final":
+    raise SystemExit("expected deterministic finality evidence marker")
+if report.get("finality_evidence_marker_present") is not False:
+    raise SystemExit("expected finality evidence marker to be absent in dry-run default command profile")
 checks = report.get("checks")
 if not isinstance(checks, list) or not checks:
     raise SystemExit("expected deterministic checks in summary")
@@ -201,6 +209,10 @@ if "status=submitted" not in live_output:
     raise SystemExit("expected live command output marker")
 if report.get("finality_enabled") is not False:
     raise SystemExit("expected finality_enabled=false when no finality command is configured")
+if report.get("submit_evidence_marker_present") is not True:
+    raise SystemExit("expected submit evidence marker to be present for run command output")
+if report.get("finality_evidence_marker_present") is not False:
+    raise SystemExit("expected finality evidence marker to remain false when no finality command is configured")
 PY
 
 run_with_finality_output="$(
@@ -235,6 +247,10 @@ if report.get("reason_code") != "live_runtime_commit_and_finality_commands_passe
     raise SystemExit("expected combined pass reason code in summary")
 if "finality=final" not in finality_output:
     raise SystemExit("expected finality command output marker")
+if report.get("submit_evidence_marker_present") is not True:
+    raise SystemExit("expected submit evidence marker to remain true in finality-enabled run summary")
+if report.get("finality_evidence_marker_present") is not True:
+    raise SystemExit("expected finality evidence marker to be true in finality-enabled run summary")
 PY
 
 set +e
@@ -273,6 +289,38 @@ if [ "$policy_failure_code" -eq 0 ]; then
 fi
 if ! grep -q "provider_command_marker_missing" "$TMP_POLICY_ERR"; then
   echo "expected provider marker failure reason from evidence policy checker" >&2
+  exit 1
+fi
+
+run_missing_submit_evidence_output="$(
+  KAMN_KOLME_LOCAL_HEAVY=1 \
+    bash "$RUNNER" \
+      --mode run \
+      --skip-preflight \
+      --live-command "printf 'integration_kolme_fork_live_node_submit_reaches_endpoint\n'" \
+      --finality-command "printf 'finality=final\n'" \
+      --max-seconds 5 \
+      --finality-max-seconds 3 \
+      --output-json "$TMP_REPORT" \
+      --live-output-file "$TMP_OUTPUT" \
+      --finality-output-file "$TMP_FINALITY_OUTPUT"
+)"
+assert_eq "$(extract_value "$run_missing_submit_evidence_output" "status")" "ok" "expected run mode to pass even when submit evidence marker is absent from output"
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS >"$TMP_POLICY_ERR" 2>&1
+missing_submit_policy_code=$?
+set -e
+
+if [ "$missing_submit_policy_code" -eq 0 ]; then
+  echo "expected evidence policy checker to fail when submit evidence marker is absent in run output" >&2
+  exit 1
+fi
+if ! grep -q "submit_evidence_marker_missing" "$TMP_POLICY_ERR"; then
+  echo "expected submit evidence marker failure reason from evidence policy checker" >&2
   exit 1
 fi
 
