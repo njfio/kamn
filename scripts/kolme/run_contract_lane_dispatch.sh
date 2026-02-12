@@ -79,6 +79,7 @@ resolve_manifest_name() {
     run_runtime_commit_adapter_contract_lane.sh) echo "kolme_runtime_commit_adapter_contract_lane.json" ;;
     run_runtime_commit_contract_lane.sh) echo "kolme_runtime_commit_contract_lane.json" ;;
     run_runtime_commit_replay_contract_lane.sh) echo "kolme_runtime_commit_replay_contract_lane.json" ;;
+    run_signature_parity_contract_lane.sh) echo "kolme_signature_parity_contract_lane.json" ;;
     run_snapshot_drift_contract_lane.sh) echo "kolme_snapshot_drift_contract_lane.json" ;;
     run_triadic_devnet_smoke_contract_lane.sh) echo "kolme_triadic_devnet_smoke_contract_lane.json" ;;
     run_version_compatibility_contract_lane.sh) echo "kolme_version_compatibility_contract_lane.json" ;;

@@ -2786,6 +2786,56 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
+    fn integration_kolme_live_signer_vector_probe_contract() {
+        let private_key_hex = env::var("KAMN_KOLME_SIGNATURE_VECTOR_PRIVATE_KEY_HEX")
+            .expect("KAMN_KOLME_SIGNATURE_VECTOR_PRIVATE_KEY_HEX must be set");
+        let message = env::var("KAMN_KOLME_SIGNATURE_VECTOR_MESSAGE")
+            .expect("KAMN_KOLME_SIGNATURE_VECTOR_MESSAGE must be set");
+
+        let adapter = super::KolmeForkSecp256k1SignerAdapter::from_private_key_hex(
+            private_key_hex.as_str(),
+            "KAMN_KOLME_SIGNATURE_VECTOR_PRIVATE_KEY_HEX",
+        )
+        .expect("signature parity adapter should build");
+        let (signature_hex, recovery_id) = adapter
+            .sign_message(message.as_str())
+            .expect("signature parity adapter signing should succeed");
+        let pubkey_hex = adapter.public_key_compressed_hex();
+
+        println!("signature_hex={signature_hex}");
+        println!("recovery_id={recovery_id}");
+        println!("pubkey_hex={pubkey_hex}");
+
+        if let Ok(expected_signature_hex) =
+            env::var("KAMN_KOLME_SIGNATURE_VECTOR_EXPECTED_SIGNATURE_HEX")
+        {
+            assert_eq!(
+                signature_hex, expected_signature_hex,
+                "signature parity probe must match expected signature vector"
+            );
+        }
+        if let Ok(expected_recovery_id) =
+            env::var("KAMN_KOLME_SIGNATURE_VECTOR_EXPECTED_RECOVERY_ID")
+        {
+            let expected_recovery_id = expected_recovery_id
+                .parse::<u8>()
+                .expect("expected recovery id must parse as u8");
+            assert_eq!(
+                recovery_id, expected_recovery_id,
+                "signature parity probe must match expected recovery id vector"
+            );
+        }
+        if let Ok(expected_pubkey_hex) = env::var("KAMN_KOLME_SIGNATURE_VECTOR_EXPECTED_PUBKEY_HEX")
+        {
+            assert_eq!(
+                pubkey_hex, expected_pubkey_hex,
+                "signature parity probe must match expected pubkey vector"
+            );
+        }
+    }
+
+    #[test]
     fn unit_kolme_live_signer_profile_defaults_to_primary_key_env() {
         let _lock = signer_env_lock()
             .lock()
