@@ -292,6 +292,23 @@ def main() -> int:
     if summary.get("runtime_signer_raw_private_key_present") is not False:
         print("expected runtime signer raw private key presence marker false in contract-lane summary", file=sys.stderr)
         return 1
+    if summary.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+        print("expected runtime signer attestation schema marker in contract-lane summary", file=sys.stderr)
+        return 1
+    runtime_signer_attestation_bundle = summary.get("runtime_signer_attestation_bundle")
+    if not isinstance(runtime_signer_attestation_bundle, dict):
+        print("expected runtime signer attestation bundle in contract-lane summary", file=sys.stderr)
+        return 1
+    if runtime_signer_attestation_bundle.get("schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+        print("expected runtime signer attestation bundle schema marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if runtime_signer_attestation_bundle.get("required_approvals") != 1:
+        print("expected runtime signer attestation required approvals marker in contract-lane summary", file=sys.stderr)
+        return 1
+    expected_attestation_signers = [expected_signer_profile]
+    if runtime_signer_attestation_bundle.get("approved_signers") != expected_attestation_signers:
+        print("expected runtime signer attestation approved signers marker in contract-lane summary", file=sys.stderr)
+        return 1
     checks = summary.get("checks")
     if not isinstance(checks, list):
         print("expected checks list in real-node profile contract-lane summary", file=sys.stderr)
@@ -352,6 +369,21 @@ def main() -> int:
         return 1
     if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
         print("expected contracts managed-external raw private key allowed=false marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+        print("expected contracts runtime signer attestation schema marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_attestation_signer_uniqueness_required") is not True:
+        print("expected contracts runtime signer attestation signer uniqueness marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_attestation_threshold_required") is not True:
+        print("expected contracts runtime signer attestation threshold marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_attestation_profile_membership_required") is not True:
+        print("expected contracts runtime signer attestation profile membership marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_attestation_required_approvals") != 1:
+        print("expected contracts runtime signer attestation required approvals marker in contract-lane summary", file=sys.stderr)
         return 1
     if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1":
         print("unexpected real-node profile policy schema in contract-lane output", file=sys.stderr)
@@ -674,6 +706,106 @@ def main() -> int:
             )
             return 1
 
+        attestation_duplicate_signers_summary_file = negative_path / "attestation_duplicate_signers_summary.json"
+        attestation_duplicate_signers_policy_file = negative_path / "attestation_duplicate_signers_policy.json"
+        attestation_duplicate_signers_summary = dict(summary)
+        attestation_duplicate_signers_bundle = dict(
+            attestation_duplicate_signers_summary.get("runtime_signer_attestation_bundle", {})
+        )
+        attestation_duplicate_signers_bundle["approved_signers"] = [
+            expected_signer_profile,
+            expected_signer_profile,
+        ]
+        attestation_duplicate_signers_summary["runtime_signer_attestation_bundle"] = (
+            attestation_duplicate_signers_bundle
+        )
+        attestation_duplicate_signers_summary_file.write_text(
+            json.dumps(attestation_duplicate_signers_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        attestation_duplicate_signers_result = run_real_node_policy_check(
+            report_file=attestation_duplicate_signers_summary_file,
+            output_json=attestation_duplicate_signers_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if attestation_duplicate_signers_result.returncode == 0:
+            print("expected duplicate signer attestation proof to fail closed", file=sys.stderr)
+            return 1
+        attestation_duplicate_signers_policy = json.loads(
+            attestation_duplicate_signers_policy_file.read_text(encoding="utf-8")
+        )
+        attestation_duplicate_signers_reason_codes = attestation_duplicate_signers_policy.get(
+            "reason_codes"
+        )
+        if not isinstance(attestation_duplicate_signers_reason_codes, list):
+            print(
+                "expected reason_codes list in duplicate signer attestation policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if "runtime_signer_attestation_approved_signers_not_unique" not in attestation_duplicate_signers_reason_codes:
+            print(
+                "expected runtime_signer_attestation_approved_signers_not_unique in duplicate signer attestation policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if attestation_duplicate_signers_policy.get("final_decision") != "NO-GO":
+            print(
+                "expected NO-GO final decision for duplicate signer attestation policy output",
+                file=sys.stderr,
+            )
+            return 1
+
+        attestation_quorum_shortfall_summary_file = negative_path / "attestation_quorum_shortfall_summary.json"
+        attestation_quorum_shortfall_policy_file = negative_path / "attestation_quorum_shortfall_policy.json"
+        attestation_quorum_shortfall_summary = dict(summary)
+        attestation_quorum_shortfall_bundle = dict(
+            attestation_quorum_shortfall_summary.get("runtime_signer_attestation_bundle", {})
+        )
+        attestation_quorum_shortfall_bundle["required_approvals"] = 2
+        attestation_quorum_shortfall_bundle["approved_signers"] = [expected_signer_profile]
+        attestation_quorum_shortfall_summary["runtime_signer_attestation_bundle"] = (
+            attestation_quorum_shortfall_bundle
+        )
+        attestation_quorum_shortfall_summary_file.write_text(
+            json.dumps(attestation_quorum_shortfall_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        attestation_quorum_shortfall_result = run_real_node_policy_check(
+            report_file=attestation_quorum_shortfall_summary_file,
+            output_json=attestation_quorum_shortfall_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if attestation_quorum_shortfall_result.returncode == 0:
+            print("expected attestation quorum shortfall proof to fail closed", file=sys.stderr)
+            return 1
+        attestation_quorum_shortfall_policy = json.loads(
+            attestation_quorum_shortfall_policy_file.read_text(encoding="utf-8")
+        )
+        attestation_quorum_shortfall_reason_codes = attestation_quorum_shortfall_policy.get(
+            "reason_codes"
+        )
+        if not isinstance(attestation_quorum_shortfall_reason_codes, list):
+            print(
+                "expected reason_codes list in attestation quorum shortfall policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if "runtime_signer_attestation_quorum_shortfall" not in attestation_quorum_shortfall_reason_codes:
+            print(
+                "expected runtime_signer_attestation_quorum_shortfall in attestation quorum shortfall policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if attestation_quorum_shortfall_policy.get("final_decision") != "NO-GO":
+            print(
+                "expected NO-GO final decision for attestation quorum shortfall policy output",
+                file=sys.stderr,
+            )
+            return 1
+
         key_source_matrix_drift_summary_file = negative_path / "key_source_matrix_drift_summary.json"
         key_source_matrix_drift_policy_file = negative_path / "key_source_matrix_drift_policy.json"
         key_source_matrix_drift_summary = dict(summary)
@@ -827,17 +959,22 @@ def main() -> int:
         "runtime_signer_profile=ops-secondary",
         "runtime_signer_key_source_contract_version",
         "runtime_signer_key_source",
+        "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
+        "runtime_signer_attestation_bundle",
         "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF",
         "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
         "runtime_signer_fallback_private_key_present=false",
         "runtime_signer_raw_private_key_present=false",
         "runtime_signer_fallback_private_key_present_violation",
         "runtime_signer_managed_external_raw_private_key_present_violation",
+        "runtime_signer_attestation_approved_signers_not_unique",
+        "runtime_signer_attestation_quorum_shortfall",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
         "Regression: #2302",
+        "Regression: #2325",
         "Regression: #2324",
         "Regression: #2139",
     ]
@@ -851,17 +988,22 @@ def main() -> int:
         "runtime_signer_profile=ops-secondary",
         "runtime_signer_key_source_contract_version",
         "runtime_signer_key_source",
+        "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
+        "runtime_signer_attestation_bundle",
         "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF",
         "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
         "runtime_signer_fallback_private_key_present=false",
         "runtime_signer_raw_private_key_present=false",
         "runtime_signer_fallback_private_key_present_violation",
         "runtime_signer_managed_external_raw_private_key_present_violation",
+        "runtime_signer_attestation_approved_signers_not_unique",
+        "runtime_signer_attestation_quorum_shortfall",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
         "Regression: #2302",
+        "Regression: #2325",
         "Regression: #2324",
         "Regression: #2139",
     ]
@@ -875,17 +1017,22 @@ def main() -> int:
         "runtime_signer_profile=ops-secondary",
         "runtime_signer_key_source_contract_version",
         "runtime_signer_key_source",
+        "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
+        "runtime_signer_attestation_bundle",
         "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF",
         "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
         "runtime_signer_fallback_private_key_present=false",
         "runtime_signer_raw_private_key_present=false",
         "runtime_signer_fallback_private_key_present_violation",
         "runtime_signer_managed_external_raw_private_key_present_violation",
+        "runtime_signer_attestation_approved_signers_not_unique",
+        "runtime_signer_attestation_quorum_shortfall",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
         "Regression: #2302",
+        "Regression: #2325",
         "Regression: #2324",
         "Regression: #2139",
     ]

@@ -361,6 +361,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
       - `runtime_signer_fallback_private_key_present=false`
       - `runtime_signer_raw_private_key_present=false`
+      - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
+      - `runtime_signer_attestation_bundle`
       - strict secondary signer summary marker contracts:
       - `runtime_signer_profile=ops-secondary`
       - `runtime_signer_previous_profile=ops-secondary`
@@ -374,6 +376,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_private_key_env_mismatch`
       - `runtime_signer_fallback_private_key_present_violation`
       - `runtime_signer_managed_external_raw_private_key_present_violation`
+      - `runtime_signer_attestation_approved_signers_not_unique`
+      - `runtime_signer_attestation_quorum_shortfall`
       - `runtime_commit_non_synthetic_submit_probe_missing`
       - `runtime_commit_real_signing_profile_marker_missing`
       - `runtime_commit_signer_profile_marker_missing`
@@ -394,6 +398,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
     - fallback signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2302`).
     - managed-external raw signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2324`).
+    - runtime signer-attestation schema + quorum/uniqueness policy checks remain fail-closed across runtime launch + policy/contract lanes (`Regression: #2325`).
   - deployment preflight signer/runtime checks remain fast and ci-fast-gate eligible.
     - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
     - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`
