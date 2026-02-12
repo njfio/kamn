@@ -89,6 +89,7 @@ required_coverage_markers=(
   "Regression: #2101"
   "Regression: #2112"
   "Regression: #2113"
+  "Regression: #2114"
 )
 for marker in "${required_coverage_markers[@]}"; do
   if ! grep -q "$marker" "$CONTRACT_IMPL"; then
@@ -122,6 +123,20 @@ if ! grep -q "ci_fast_gate_eligible" "$DOC_FILE"; then
   exit 1
 fi
 
+required_runbook_doc_markers=(
+  "Live Provider Operator Runbook (Issue #2114)"
+  "Prerequisites (Local)"
+  "Execution Flow"
+  "Rollback and Recovery Evidence"
+  "Troubleshooting"
+)
+for marker in "${required_runbook_doc_markers[@]}"; do
+  if ! grep -q "$marker" "$DOC_FILE"; then
+    echo "expected Kolme devnet ops doc to include runbook marker: $marker" >&2
+    exit 1
+  fi
+done
+
 if ! grep -q "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to reference runtime finality evidence contract lane composition in local KAMN integration lane" >&2
   exit 1
@@ -149,6 +164,11 @@ fi
 
 if ! grep -q "ci_fast_gate_eligible" "$README_FILE"; then
   echo "expected README to document local-only fast-gate eligibility marker" >&2
+  exit 1
+fi
+
+if ! grep -q "Live Provider Operator Runbook (Issue #2114)" "$README_FILE"; then
+  echo "expected README to reference live provider operator runbook section" >&2
   exit 1
 fi
 
