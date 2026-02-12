@@ -157,6 +157,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
 ## Missing-Docs Graduation Status
 
 - Graduated modules currently enforced outside the allow-list:
+  - `agent_key_hierarchy`
   - `bootstrap`
   - `key_recovery`
   - `kolme_runtime_commit`
@@ -169,6 +170,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
 - Regression marker:
   - `Regression: #1828`
   - `Regression: #1981`
+  - `Regression: #1983`
 
 ## Contributor Entrypoint Matrix
 

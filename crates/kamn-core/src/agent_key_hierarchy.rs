@@ -1,19 +1,27 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
+/// Logical role binding for agent key material.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyRole {
+    /// Long-lived identity root key role.
     Identity,
+    /// Signing key role used for message and transaction signatures.
     Signing,
+    /// Agreement key role used for session/key-agreement flows.
     Agreement,
 }
 
+/// Ephemeral session key metadata tracked per session identifier.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EphemeralSessionKey {
+    /// Session-scoped key identifier.
     pub key_id: String,
+    /// Expiration timestamp in seconds.
     pub expires_at_secs: u64,
 }
 
+/// In-memory key hierarchy manager for role-bound and ephemeral keys.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AgentKeyHierarchy {
     identity_key_id: String,
@@ -23,6 +31,7 @@ pub struct AgentKeyHierarchy {
 }
 
 impl AgentKeyHierarchy {
+    /// Creates a new hierarchy with distinct non-empty role key identifiers.
     pub fn new(
         identity_key_id: &str,
         signing_key_id: &str,
@@ -41,6 +50,7 @@ impl AgentKeyHierarchy {
         })
     }
 
+    /// Returns the current key identifier for the requested role.
     pub fn current_key(&self, role: KeyRole) -> Result<&str, AgentKeyHierarchyError> {
         Ok(match role {
             KeyRole::Identity => &self.identity_key_id,
@@ -49,6 +59,7 @@ impl AgentKeyHierarchy {
         })
     }
 
+    /// Rotates the signing key while enforcing non-empty and cross-role uniqueness.
     pub fn rotate_signing_key(&mut self, key_id: &str) -> Result<(), AgentKeyHierarchyError> {
         ensure_non_empty("signing", key_id)?;
         if key_id == self.identity_key_id || key_id == self.agreement_key_id {
@@ -58,6 +69,7 @@ impl AgentKeyHierarchy {
         Ok(())
     }
 
+    /// Rotates the agreement key while enforcing non-empty and cross-role uniqueness.
     pub fn rotate_agreement_key(&mut self, key_id: &str) -> Result<(), AgentKeyHierarchyError> {
         ensure_non_empty("agreement", key_id)?;
         if key_id == self.identity_key_id || key_id == self.signing_key_id {
@@ -67,6 +79,10 @@ impl AgentKeyHierarchy {
         Ok(())
     }
 
+    /// Registers a new ephemeral key for a session.
+    ///
+    /// Fails when the session id is empty, the key id is empty, the expiry is
+    /// zero, or the session already exists.
     pub fn register_ephemeral(
         &mut self,
         session_id: &str,
@@ -96,6 +112,7 @@ impl AgentKeyHierarchy {
         Ok(())
     }
 
+    /// Returns the ephemeral key metadata for a session id.
     pub fn ephemeral_key(
         &self,
         session_id: &str,
@@ -105,6 +122,9 @@ impl AgentKeyHierarchy {
             .ok_or_else(|| AgentKeyHierarchyError::SessionNotFound(session_id.to_owned()))
     }
 
+    /// Removes an ephemeral session binding.
+    ///
+    /// Returns an error when the session id is not registered.
     pub fn retire_ephemeral(&mut self, session_id: &str) -> Result<(), AgentKeyHierarchyError> {
         if self.ephemeral_by_session.remove(session_id).is_none() {
             return Err(AgentKeyHierarchyError::SessionNotFound(
@@ -115,13 +135,20 @@ impl AgentKeyHierarchy {
     }
 }
 
+/// Errors produced by key hierarchy validation and mutation operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AgentKeyHierarchyError {
+    /// A role-bound or ephemeral key id was empty.
     EmptyKeyId(&'static str),
+    /// A key id was reused across role bindings.
     DuplicateRoleKey(String),
+    /// Session id for an ephemeral binding was empty.
     EmptySessionId,
+    /// Ephemeral session already exists.
     DuplicateSession(String),
+    /// Ephemeral session was not found.
     SessionNotFound(String),
+    /// Ephemeral expiry value was invalid.
     InvalidExpiry(u64),
 }
 
