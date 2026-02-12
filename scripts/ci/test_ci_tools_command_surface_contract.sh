@@ -38,6 +38,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/kolme/test_check_local_bootstrap_health_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_run_local_bootstrap_health_checks_contract_lane.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_local_e2e_integration_policy.sh"'
+  'bash "$ROOT_DIR/scripts/kolme/test_check_local_live_node_validation_bundle_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_run_local_e2e_integration_contract_lane.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_local_heavy_validation_matrix_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_run_local_heavy_validation_matrix_contract_lane.sh"'
