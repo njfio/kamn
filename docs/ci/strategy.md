@@ -285,6 +285,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - additional Kolme contract checks stay covered by aggregate CI tools lane:
     - `bash scripts/kolme/test_check_runtime_commit_decomposition_parity_matrix.sh`
     - `bash scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh`
+    - `bash scripts/kolme/test_run_signature_parity_contract_lane.sh`
     - `bash scripts/kolme/test_check_local_bootstrap_health_policy.sh`
     - `bash scripts/kolme/test_run_local_bootstrap_health_checks_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_fork_profile_preflight_contract_lane.sh`
@@ -296,6 +297,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `python3 scripts/kolme/check_runtime_commit_decomposition_parity_matrix.py check --matrix-file fixtures/kolme_compatibility/runtime_commit_decomposition_parity_matrix.json --output-json /tmp/runtime-commit-decomposition-parity-policy.json`
   - nonce/broadcast parity matrix fast-lane budget stays bounded:
     - `KAMN_KOLME_NONCE_BROADCAST_PARITY_MAX_SECONDS=60`
+  - signature parity matrix fast-lane budget stays bounded:
+    - `KAMN_KOLME_SIGNATURE_PARITY_MAX_SECONDS=120`
   - fast-gate native API parity lane remains bounded:
     - `bash scripts/kolme/run_fast_gate_native_api_parity_contract_lane.sh --output-json /tmp/kolme-fast-gate-native-api-parity-summary.json`
     - `python3 scripts/kolme/check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-fast-gate-native-api-parity-policy.json`

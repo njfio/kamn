@@ -1,0 +1,36 @@
+{
+  "schema_version": "kamn.kolme.signature-parity-vectors.v1",
+  "source_contract": "njfio/kolme_fork-secp256k1-v1",
+  "vectors": [
+    {
+      "vector_id": "kolme_fork_primary_alpha",
+      "private_key_hex": "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4",
+      "message": "{\"pubkey\":\"pk-parity-1\",\"nonce\":11,\"created\":\"2026-02-12T00:00:00Z\",\"messages\":[{\"type\":\"note\",\"value\":\"alpha\"}]}",
+      "expected_signature_hex": "6242ce6924ca946ebc4b2fb5372f4b51c624716ad4142173d91cf10a5ac1e2bf69e85c802702a0a553121e5261487628c5484bbcfa7f3c603d6f6cf9df03671c",
+      "expected_recovery_id": 1,
+      "expected_pubkey_hex": "0264eb26609d15e709227b9ddc46c11a738b210bb237949aa86d7d490a35ae0f0a",
+      "expected_final_decision": "GO"
+    },
+    {
+      "vector_id": "kolme_fork_secondary_beta",
+      "private_key_hex": "838c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4",
+      "message": "{\"pubkey\":\"pk-parity-2\",\"nonce\":29,\"created\":\"2026-02-12T00:00:00Z\",\"messages\":[{\"type\":\"note\",\"value\":\"beta\"}]}",
+      "expected_signature_hex": "82fd55f830720136beec1331778895a23fc9c1ddf6ec50fe4de376d33f88c5dc08501b8037653ffff3e5e46433a7ab0cce8f5ed4574b05eaee25ce44a95c4ad3",
+      "expected_recovery_id": 0,
+      "expected_pubkey_hex": "032ea4599f4e21cba5d319a16770864db05f33c4de2ef5c82b6f8135e915fa0d7e",
+      "expected_final_decision": "GO"
+    },
+    {
+      "vector_id": "kolme_fork_primary_alpha_bad_signature",
+      "private_key_hex": "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4",
+      "message": "{\"pubkey\":\"pk-parity-1\",\"nonce\":11,\"created\":\"2026-02-12T00:00:00Z\",\"messages\":[{\"type\":\"note\",\"value\":\"alpha\"}]}",
+      "expected_signature_hex": "7242ce6924ca946ebc4b2fb5372f4b51c624716ad4142173d91cf10a5ac1e2bf69e85c802702a0a553121e5261487628c5484bbcfa7f3c603d6f6cf9df03671c",
+      "expected_recovery_id": 1,
+      "expected_pubkey_hex": "0264eb26609d15e709227b9ddc46c11a738b210bb237949aa86d7d490a35ae0f0a",
+      "expected_final_decision": "NO-GO",
+      "required_reason_codes": [
+        "parity_signature_mismatch"
+      ]
+    }
+  ]
+}
