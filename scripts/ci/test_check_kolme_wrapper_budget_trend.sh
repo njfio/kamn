@@ -3,10 +3,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TREND_CHECKER="$ROOT_DIR/scripts/ci/check_kolme_wrapper_budget_trend.sh"
+WAVE10_TREND_CHECKER="$ROOT_DIR/scripts/ci/check_kolme_wave10_wrapper_family_budget_trend.sh"
 PYTHON_CHECKER="$ROOT_DIR/scripts/ci/kolme_wrapper_inventory_baseline.py"
 THRESHOLD_FILE="$ROOT_DIR/.ci/kolme-wrapper-budget-trend-thresholds.json"
 BASELINE_FIXTURE="$ROOT_DIR/fixtures/kolme_compatibility/wrapper_inventory_baseline.json"
 MATRIX_FIXTURE="$ROOT_DIR/fixtures/kolme_compatibility/lane_migration_matrix.json"
+WAVE10_THRESHOLD_FILE="$ROOT_DIR/fixtures/ci/kolme_wave10_wrapper_family_trend_thresholds.json"
+WAVE10_BASELINE_FIXTURE="$ROOT_DIR/fixtures/ci/kolme_wave10_wrapper_family_baseline.json"
+WAVE10_MATRIX_FIXTURE="$ROOT_DIR/fixtures/ci/kolme_wave10_wrapper_family_matrix.json"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -18,6 +22,11 @@ fi
 
 if [ ! -x "$PYTHON_CHECKER" ]; then
   echo "expected python baseline checker script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$WAVE10_TREND_CHECKER" ]; then
+  echo "expected wave-10 trend checker wrapper to be executable" >&2
   exit 1
 fi
 
@@ -33,6 +42,21 @@ fi
 
 if [ ! -f "$MATRIX_FIXTURE" ]; then
   echo "expected matrix fixture to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$WAVE10_THRESHOLD_FILE" ]; then
+  echo "expected wave-10 trend threshold fixture to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$WAVE10_BASELINE_FIXTURE" ]; then
+  echo "expected wave-10 baseline fixture to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$WAVE10_MATRIX_FIXTURE" ]; then
+  echo "expected wave-10 matrix fixture to exist" >&2
   exit 1
 fi
 
@@ -94,5 +118,69 @@ python3 "$PYTHON_CHECKER" check \
 grep -q '^status=pass$' "$TMP_DIR/relaxed.out"
 grep -q '^mode=trend$' "$TMP_DIR/relaxed.out"
 grep -q '^reason_codes=none$' "$TMP_DIR/relaxed.out"
+
+WAVE10_PASS_REPORT="$TMP_DIR/wave10-pass-report.json"
+bash "$WAVE10_TREND_CHECKER" \
+  --matrix-file "$WAVE10_MATRIX_FIXTURE" \
+  --baseline-file "$WAVE10_BASELINE_FIXTURE" \
+  --output-json "$WAVE10_PASS_REPORT" >"$TMP_DIR/wave10-pass.out"
+
+grep -q '^status=pass$' "$TMP_DIR/wave10-pass.out"
+grep -q '^mode=trend$' "$TMP_DIR/wave10-pass.out"
+grep -q '^wrapper_count_delta=0$' "$TMP_DIR/wave10-pass.out"
+grep -q '^total_shell_loc_delta=0$' "$TMP_DIR/wave10-pass.out"
+grep -q '^violation_count=0$' "$TMP_DIR/wave10-pass.out"
+grep -q '^reason_codes=none$' "$TMP_DIR/wave10-pass.out"
+
+WAVE10_MUTATED_BASELINE="$TMP_DIR/wave10-mutated-baseline.json"
+cp "$WAVE10_BASELINE_FIXTURE" "$WAVE10_MUTATED_BASELINE"
+python3 - "$WAVE10_MUTATED_BASELINE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+baseline_path = Path(sys.argv[1])
+payload = json.loads(baseline_path.read_text(encoding="utf-8"))
+payload["total_shell_loc"] = 0
+baseline_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if bash "$WAVE10_TREND_CHECKER" \
+  --matrix-file "$WAVE10_MATRIX_FIXTURE" \
+  --baseline-file "$WAVE10_MUTATED_BASELINE" >"$TMP_DIR/wave10-fail-total.out" 2>&1; then
+  echo "expected wave-10 trend checker to fail when total shell LOC delta exceeds threshold" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/wave10-fail-total.out"
+grep -q '^mode=trend$' "$TMP_DIR/wave10-fail-total.out"
+grep -q 'total_shell_loc_delta_threshold_exceeded' "$TMP_DIR/wave10-fail-total.out"
+
+WAVE10_MUTATED_STALE_BASELINE="$TMP_DIR/wave10-mutated-stale-baseline.json"
+cp "$WAVE10_BASELINE_FIXTURE" "$WAVE10_MUTATED_STALE_BASELINE"
+python3 - "$WAVE10_MUTATED_STALE_BASELINE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+baseline_path = Path(sys.argv[1])
+payload = json.loads(baseline_path.read_text(encoding="utf-8"))
+payload["lanes"] = payload["lanes"][:-1]
+payload["wrapper_count"] = len(payload["lanes"])
+payload["symlink_wrapper_count"] = len(payload["lanes"])
+payload["total_shell_loc"] = sum(int(lane["shell_loc"]) for lane in payload["lanes"])
+baseline_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if bash "$WAVE10_TREND_CHECKER" \
+  --matrix-file "$WAVE10_MATRIX_FIXTURE" \
+  --baseline-file "$WAVE10_MUTATED_STALE_BASELINE" >"$TMP_DIR/wave10-fail-stale.out" 2>&1; then
+  echo "expected wave-10 trend checker to fail on stale baseline lane inventory" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/wave10-fail-stale.out"
+grep -q '^mode=trend$' "$TMP_DIR/wave10-fail-stale.out"
+grep -q 'unexpected_new_lanes_in_current_inventory' "$TMP_DIR/wave10-fail-stale.out"
 
 echo "Kolme wrapper budget trend checker tests passed."

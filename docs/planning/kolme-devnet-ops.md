@@ -54,6 +54,28 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `Regression: #2090`
   - `Regression: #2093`
 
+## Wave-10 Wrapper Baseline + Trend Governance (Issue #2281)
+
+- Wave-10 wrapper-family matrix fixture:
+  - `fixtures/ci/kolme_wave10_wrapper_family_matrix.json`
+- Wave-10 baseline fixture:
+  - `fixtures/ci/kolme_wave10_wrapper_family_baseline.json`
+- Wave-10 trend threshold fixture:
+  - `fixtures/ci/kolme_wave10_wrapper_family_trend_thresholds.json`
+- Baseline generator/check commands:
+  - `bash scripts/ci/generate_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/kolme_wave10_wrapper_family_matrix.json --output-json /tmp/kolme-wave10-wrapper-family-baseline.json`
+  - `bash scripts/ci/check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/kolme_wave10_wrapper_family_matrix.json --baseline-file fixtures/ci/kolme_wave10_wrapper_family_baseline.json --output-json /tmp/kolme-wave10-wrapper-family-delta.json`
+- Trend checker command:
+  - `bash scripts/ci/check_kolme_wave10_wrapper_family_budget_trend.sh --matrix-file fixtures/ci/kolme_wave10_wrapper_family_matrix.json --baseline-file fixtures/ci/kolme_wave10_wrapper_family_baseline.json --output-json /tmp/kolme-wave10-wrapper-family-trend-report.json`
+- Wave-10 lane family coverage:
+  - `scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh`
+  - `scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh`
+- Fail-closed reason-code surface:
+  - `wrapper_count_delta_threshold_exceeded`
+  - `total_shell_loc_delta_threshold_exceeded`
+  - `lane_shell_loc_increase_violation`
+  - `unexpected_new_lanes_in_current_inventory`
+
 ## Shared Manifest-Migration CI Dispatcher (Issue #1833)
 
 - Shared migration CI dispatcher:
