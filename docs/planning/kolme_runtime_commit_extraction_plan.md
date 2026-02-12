@@ -90,6 +90,7 @@ Out of scope:
 - #1940: extracted websocket notifications transport ownership into `kolme_runtime_commit/notifications_websocket.rs` and rewired `kolme_runtime_commit.rs` to re-export connector/connection types from the dedicated submodule.
 - #1942: extracted notifications consumer ownership into `kolme_runtime_commit/notifications_consumer.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeRuntimeCommitNotificationsConsumer` from the dedicated submodule.
 - #1944: extracted fork finality resolver ownership into `kolme_runtime_commit/fork_finality_resolver.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeRuntimeCommitForkFinalityResolver` from the dedicated submodule.
+- #1946: extracted finality checker ownership into `kolme_runtime_commit/finality_checker.rs` and rewired `kolme_runtime_commit.rs` to re-export `KolmeRuntimeCommitFinalityChecker` from the dedicated submodule.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,

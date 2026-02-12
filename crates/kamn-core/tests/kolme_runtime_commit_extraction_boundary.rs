@@ -1,4 +1,6 @@
 const RUNTIME_COMMIT_SRC: &str = include_str!("../src/kolme_runtime_commit.rs");
+const RUNTIME_FINALITY_CHECKER_SRC: &str =
+    include_str!("../src/kolme_runtime_commit/finality_checker.rs");
 const RUNTIME_IN_MEMORY_SRC: &str = include_str!("../src/kolme_runtime_commit/in_memory_client.rs");
 const RUNTIME_FORK_FINALITY_RESOLVER_SRC: &str =
     include_str!("../src/kolme_runtime_commit/fork_finality_resolver.rs");
@@ -60,12 +62,14 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct RuntimeCommitFinalityProjection"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct RuntimeCommitPipeline"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct InMemoryKolmeRuntimeCommitClient"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitFinalityChecker"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitForkFinalityResolver"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitNotificationsConsumer"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitWebsocketConnector"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitWebsocketConnection"));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl RuntimeCommitPipeline"));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl InMemoryKolmeRuntimeCommitClient"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("impl<T: KolmeRuntimeCommitFinalityTransport>"));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl<C, T> KolmeRuntimeCommitForkFinalityResolver<C, T>"));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl<C> KolmeRuntimeCommitNotificationsConsumer<C>"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let signer_key_id = signer_key_id.trim();"));
@@ -99,15 +103,17 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
 #[test]
 fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation() {
     // Regression: #1824
-    assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_provider_finality_receipt("));
+    assert!(RUNTIME_FINALITY_CHECKER_SRC.contains("parse_kolme_provider_finality_receipt("));
     assert!(RUNTIME_FORK_FINALITY_RESOLVER_SRC
         .contains("require_kolme_commit_id_matches_expected_txhash_contract("));
     assert!(RUNTIME_PIPELINE_SRC.contains("lifecycle_state_for_finality_contract("));
     assert!(RUNTIME_PIPELINE_SRC.contains("lifecycle_state_label_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("commit_finality_label_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_terminal_receipt_finality_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_poll_attempt_budget_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_commit_id_request_contract("));
+    assert!(RUNTIME_FINALITY_CHECKER_SRC.contains("is_kolme_terminal_receipt_finality_contract("));
+    assert!(RUNTIME_FINALITY_CHECKER_SRC.contains("is_kolme_valid_poll_attempt_budget_contract("));
+    assert!(
+        RUNTIME_FINALITY_CHECKER_SRC.contains("is_kolme_valid_runtime_commit_id_request_contract(")
+    );
     assert!(RUNTIME_COMMIT_SRC.contains("deterministic_runtime_commit_idempotency_key_contract("));
     assert!(RUNTIME_IN_MEMORY_SRC.contains("deterministic_runtime_commit_id_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("render_kolme_runtime_commit_wire_payload_contract("));
@@ -122,7 +128,9 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(
         RUNTIME_COMMIT_SRC.contains("normalize_kolme_block_fallback_constructor_inputs_contract(")
     );
-    assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_finality_endpoint_inputs_contract("));
+    assert!(
+        RUNTIME_FINALITY_CHECKER_SRC.contains("normalize_kolme_finality_endpoint_inputs_contract(")
+    );
     assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_live_provider_endpoint_inputs_contract("));
     assert!(RUNTIME_FORK_FINALITY_RESOLVER_SRC.contains("txhash_from_kolme_commit_id("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_endpoint("));
@@ -156,8 +164,11 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_FORK_FINALITY_RESOLVER_SRC
         .contains("require_kolme_commit_id_matches_expected_txhash_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("compose_kolme_finality_status_path("));
-    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_finality_base_url_input_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_finality_status_path_input_contract("));
+    assert!(
+        RUNTIME_FINALITY_CHECKER_SRC.contains("is_kolme_valid_finality_base_url_input_contract(")
+    );
+    assert!(RUNTIME_FINALITY_CHECKER_SRC
+        .contains("is_kolme_valid_finality_status_path_input_contract("));
     assert!(RUNTIME_NOTIFICATIONS_CONSUMER_SRC
         .contains("is_kolme_valid_notifications_provider_input_contract("));
     assert!(RUNTIME_NOTIFICATIONS_CONSUMER_SRC
@@ -214,6 +225,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("impl From<KamnKolmeTransportIoClassification>"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod runtime_pipeline;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod in_memory_client;"));
+    assert!(RUNTIME_COMMIT_SRC.contains("mod finality_checker;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod fork_finality_resolver;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod notifications_consumer;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod notifications_websocket;"));
@@ -223,6 +235,9 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     );
     assert!(RUNTIME_COMMIT_SRC
         .contains("pub use notifications_consumer::KolmeRuntimeCommitNotificationsConsumer;"));
+    assert!(
+        RUNTIME_COMMIT_SRC.contains("pub use finality_checker::KolmeRuntimeCommitFinalityChecker;")
+    );
     assert!(RUNTIME_COMMIT_SRC
         .contains("pub use fork_finality_resolver::KolmeRuntimeCommitForkFinalityResolver;"));
     assert!(RUNTIME_COMMIT_SRC.contains("pub use notifications_websocket::{"));
