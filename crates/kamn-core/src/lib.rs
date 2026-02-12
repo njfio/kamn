@@ -108,7 +108,7 @@ pub mod task_lifecycle;
 pub mod task_operations;
 /// Task payment offer/confirmation workflow backed by escrow release controls.
 pub mod task_payment;
-#[allow(missing_docs)]
+/// Telegram inbound bridge validation, route checks, and envelope normalization.
 pub mod telegram_bridge;
 #[allow(missing_docs)]
 pub mod token;

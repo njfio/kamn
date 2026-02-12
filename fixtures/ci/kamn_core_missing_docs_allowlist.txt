@@ -39,7 +39,6 @@ runtime
 signer_backend
 task_artifacts
 task_operations
-telegram_bridge
 token
 transaction
 trust_score
