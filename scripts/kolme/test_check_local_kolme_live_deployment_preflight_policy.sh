@@ -56,6 +56,15 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "signer_secret_hex_valid": false,
   "required_approvals": 2,
   "received_approvals": 0,
+  "quorum_evidence_file": "",
+  "quorum_evidence_present": false,
+  "quorum_evidence_sha256": "",
+  "quorum_evidence_sha256_valid": false,
+  "quorum_evidence_schema_valid": false,
+  "quorum_evidence_approval_count": 0,
+  "quorum_evidence_signers_unique": false,
+  "quorum_evidence_matches_threshold": false,
+  "quorum_evidence_custody_sha256_match": false,
   "custody_evidence_file": "",
   "custody_evidence_present": false,
   "custody_evidence_sha256": "",
@@ -87,6 +96,12 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "secret_source": "env",
     "approval_quorum_required": 2,
     "approval_quorum_source": "local-operator-attestations",
+    "quorum_evidence_required": true,
+    "quorum_evidence_sha256_required": true,
+    "quorum_evidence_schema_version": "kamn.kolme.signer-quorum-evidence.v1",
+    "quorum_evidence_signer_uniqueness_required": true,
+    "quorum_evidence_custody_sha256_match_required": true,
+    "quorum_evidence_source": "operator-attestation-bundle",
     "custody_evidence_required": true,
     "custody_evidence_sha256_required": true,
     "signer_provenance_required": true,
@@ -131,6 +146,12 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     {
       "id": "signer_quorum_contract",
       "command": "received approvals must satisfy required approvals threshold",
+      "status": "planned",
+      "reason_code": "not_run"
+    },
+    {
+      "id": "quorum_evidence_contract",
+      "command": "quorum evidence bundle must satisfy schema, signer uniqueness, threshold, and custody digest match",
       "status": "planned",
       "reason_code": "not_run"
     },
@@ -199,6 +220,15 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
   "signer_secret_hex_valid": true,
   "required_approvals": 2,
   "received_approvals": 1,
+  "quorum_evidence_file": "",
+  "quorum_evidence_present": false,
+  "quorum_evidence_sha256": "",
+  "quorum_evidence_sha256_valid": false,
+  "quorum_evidence_schema_valid": false,
+  "quorum_evidence_approval_count": 0,
+  "quorum_evidence_signers_unique": false,
+  "quorum_evidence_matches_threshold": false,
+  "quorum_evidence_custody_sha256_match": false,
   "custody_evidence_file": "",
   "custody_evidence_present": false,
   "custody_evidence_sha256": "",
@@ -230,6 +260,12 @@ cat >"$TMP_REPORT_BAD" <<'JSON'
     "secret_source": "env",
     "approval_quorum_required": 2,
     "approval_quorum_source": "local-operator-attestations",
+    "quorum_evidence_required": true,
+    "quorum_evidence_sha256_required": true,
+    "quorum_evidence_schema_version": "kamn.kolme.signer-quorum-evidence.v1",
+    "quorum_evidence_signer_uniqueness_required": true,
+    "quorum_evidence_custody_sha256_match_required": true,
+    "quorum_evidence_source": "operator-attestation-bundle",
     "custody_evidence_required": true,
     "custody_evidence_sha256_required": true,
     "signer_provenance_required": false,
@@ -322,6 +358,11 @@ if ! grep -q "check_missing:signer_quorum_contract" "$TMP_ERR"; then
   exit 1
 fi
 
+if ! grep -q "check_missing:quorum_evidence_contract" "$TMP_ERR"; then
+  echo "expected missing quorum_evidence_contract check reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
 if ! grep -q "check_missing:custody_evidence_contract" "$TMP_ERR"; then
   echo "expected missing custody_evidence_contract check reason for deployment preflight policy failure" >&2
   exit 1
@@ -349,6 +390,11 @@ fi
 
 if ! grep -q "signer_rotation_epoch_stale" "$TMP_ERR"; then
   echo "expected signer rotation stale reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "quorum_evidence_missing" "$TMP_ERR"; then
+  echo "expected quorum evidence missing reason for deployment preflight policy failure" >&2
   exit 1
 fi
 

@@ -14,6 +14,7 @@ SECONDARY_SIGNER_SECRET_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
 FALLBACK_SIGNER_SECRET_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 REQUIRED_SECRET_HEX_LENGTH = 64
 SIGNER_KEY_SOURCE_CONTRACT_VERSION = "v1"
+QUORUM_EVIDENCE_SCHEMA_VERSION = "kamn.kolme.signer-quorum-evidence.v1"
 ALLOWED_SIGNER_KEY_SOURCES = ("env-local", "managed-external")
 ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE = {
     PRIMARY_SIGNER_PROFILE: ("env-local", "managed-external"),
@@ -202,6 +203,42 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(received_approvals, int) or received_approvals < 0:
         reason_codes.append("received_approvals_invalid")
 
+    quorum_evidence_file = report.get("quorum_evidence_file")
+    if not isinstance(quorum_evidence_file, str):
+        reason_codes.append("quorum_evidence_file_invalid")
+
+    quorum_evidence_present = report.get("quorum_evidence_present")
+    if not isinstance(quorum_evidence_present, bool):
+        reason_codes.append("quorum_evidence_present_invalid")
+
+    quorum_evidence_sha256 = report.get("quorum_evidence_sha256")
+    if not isinstance(quorum_evidence_sha256, str):
+        reason_codes.append("quorum_evidence_sha256_invalid")
+
+    quorum_evidence_sha256_valid = report.get("quorum_evidence_sha256_valid")
+    if not isinstance(quorum_evidence_sha256_valid, bool):
+        reason_codes.append("quorum_evidence_sha256_valid_invalid")
+
+    quorum_evidence_schema_valid = report.get("quorum_evidence_schema_valid")
+    if not isinstance(quorum_evidence_schema_valid, bool):
+        reason_codes.append("quorum_evidence_schema_valid_invalid")
+
+    quorum_evidence_approval_count = report.get("quorum_evidence_approval_count")
+    if not isinstance(quorum_evidence_approval_count, int) or quorum_evidence_approval_count < 0:
+        reason_codes.append("quorum_evidence_approval_count_invalid")
+
+    quorum_evidence_signers_unique = report.get("quorum_evidence_signers_unique")
+    if not isinstance(quorum_evidence_signers_unique, bool):
+        reason_codes.append("quorum_evidence_signers_unique_invalid")
+
+    quorum_evidence_matches_threshold = report.get("quorum_evidence_matches_threshold")
+    if not isinstance(quorum_evidence_matches_threshold, bool):
+        reason_codes.append("quorum_evidence_matches_threshold_invalid")
+
+    quorum_evidence_custody_sha256_match = report.get("quorum_evidence_custody_sha256_match")
+    if not isinstance(quorum_evidence_custody_sha256_match, bool):
+        reason_codes.append("quorum_evidence_custody_sha256_match_invalid")
+
     custody_evidence_file = report.get("custody_evidence_file")
     if not isinstance(custody_evidence_file, str):
         reason_codes.append("custody_evidence_file_invalid")
@@ -249,6 +286,18 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("approval_quorum_required_contract_mismatch")
         if contracts.get("approval_quorum_source") != "local-operator-attestations":
             reason_codes.append("approval_quorum_source_contract_mismatch")
+        if contracts.get("quorum_evidence_required") is not True:
+            reason_codes.append("quorum_evidence_required_contract_mismatch")
+        if contracts.get("quorum_evidence_sha256_required") is not True:
+            reason_codes.append("quorum_evidence_sha256_required_contract_mismatch")
+        if contracts.get("quorum_evidence_schema_version") != QUORUM_EVIDENCE_SCHEMA_VERSION:
+            reason_codes.append("quorum_evidence_schema_version_contract_mismatch")
+        if contracts.get("quorum_evidence_signer_uniqueness_required") is not True:
+            reason_codes.append("quorum_evidence_signer_uniqueness_required_contract_mismatch")
+        if contracts.get("quorum_evidence_custody_sha256_match_required") is not True:
+            reason_codes.append("quorum_evidence_custody_sha256_match_required_contract_mismatch")
+        if contracts.get("quorum_evidence_source") != "operator-attestation-bundle":
+            reason_codes.append("quorum_evidence_source_contract_mismatch")
         if contracts.get("custody_evidence_required") is not True:
             reason_codes.append("custody_evidence_required_contract_mismatch")
         if contracts.get("custody_evidence_sha256_required") is not True:
@@ -284,6 +333,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             "signer_secret_contract",
             "fallback_private_key_contract",
             "signer_quorum_contract",
+            "quorum_evidence_contract",
             "custody_evidence_contract",
             "signer_provenance_contract",
             "signer_rotation_freshness_contract",
@@ -335,6 +385,26 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         if isinstance(required_approvals, int) and isinstance(received_approvals, int):
             if received_approvals < required_approvals:
                 reason_codes.append("signer_quorum_shortfall")
+        if quorum_evidence_present is not True:
+            reason_codes.append("quorum_evidence_missing")
+        if quorum_evidence_sha256_valid is not True:
+            reason_codes.append("quorum_evidence_sha256_invalid")
+        if quorum_evidence_schema_valid is not True:
+            reason_codes.append("quorum_evidence_schema_invalid")
+        if quorum_evidence_signers_unique is not True:
+            reason_codes.append("quorum_evidence_signers_not_unique")
+        if quorum_evidence_matches_threshold is not True:
+            reason_codes.append("quorum_evidence_approvals_mismatch")
+        if quorum_evidence_custody_sha256_match is not True:
+            reason_codes.append("quorum_evidence_custody_sha256_mismatch")
+        if isinstance(quorum_evidence_file, str) and quorum_evidence_present is True and not quorum_evidence_file.strip():
+            reason_codes.append("quorum_evidence_file_missing")
+        if (
+            isinstance(quorum_evidence_approval_count, int)
+            and isinstance(received_approvals, int)
+            and quorum_evidence_approval_count != received_approvals
+        ):
+            reason_codes.append("quorum_evidence_approval_count_mismatch")
         if custody_evidence_present is not True:
             reason_codes.append("custody_evidence_missing")
         if custody_evidence_sha256_valid is not True:

@@ -94,6 +94,41 @@ Signer incident response requires deterministic lane reports, fail-closed policy
 - Regression policy:
   - runbook-step drift, revocation propagation gaps, stale deep-lane artifacts, or cadence violations force `NO-GO` (`Regression: #989`).
 
+## Kolme Multi-Signer Deployment Preflight Contract Lane (Issue #2301)
+Local Kolme deployment gates require deterministic multi-signer quorum and custody evidence before live runtime operations proceed.
+
+- Deployment preflight lane command:
+  - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+- Quorum/custody/provenance evidence preparation:
+  - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`
+  - `printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" > /tmp/kolme-live-signer-provenance.json`
+  - `custody_sha="$(sha256sum /tmp/kolme-live-signer-custody.json | awk '{print $1}')"; cat > /tmp/kolme-live-signer-quorum.json <<JSON
+{
+  "schema_version": "kamn.kolme.signer-quorum-evidence.v1",
+  "required_approvals": 2,
+  "received_approvals": 2,
+  "approved_signers": ["ops-primary", "ops-secondary"],
+  "custody_evidence_sha256": "$custody_sha"
+}
+JSON`
+- Deployment preflight run mode:
+  - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --quorum-evidence-file /tmp/kolme-live-signer-quorum.json --custody-evidence-file /tmp/kolme-live-signer-custody.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source env-local --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+- Deployment preflight policy checker:
+  - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+- Deployment preflight contract lane:
+  - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --output-json /tmp/kolme-local-live-deployment-preflight-summary.json --policy-output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+- Required schema/reason markers:
+  - `kamn.kolme.local-live-deployment-preflight-summary.v1`
+  - `kamn.kolme.local-live-deployment-preflight-policy-report.v1`
+  - `kamn.kolme.signer-quorum-evidence.v1`
+  - `checkpoint_failed_signer_quorum_contract`
+  - `checkpoint_failed_quorum_evidence_contract`
+  - `checkpoint_failed_custody_evidence_contract`
+  - `quorum_evidence_missing`
+  - `quorum_evidence_custody_sha256_mismatch`
+- Regression policy:
+  - signer quorum/custody/provenance drift, quorum evidence schema drift, or contract-lane/docs parity drift force `NO-GO` (`Regression: #2301`).
+
 ## Deployment SLO Evidence and Rollback Automation Contract
 Deterministic deployment SLO/rollback policy checks are enforced through a bounded deployment lane:
 
@@ -192,6 +227,9 @@ bash scripts/signer/test_run_signer_incident_recovery_lane.sh
 bash scripts/signer/test_check_signer_incident_recovery_policy.sh
 bash scripts/signer/test_run_signer_incident_recovery_contract_lane.sh
 bash scripts/signer/test_run_signer_incident_recovery_deep_lane.sh
+bash scripts/kolme/test_run_local_kolme_live_deployment_preflight_lane.sh
+bash scripts/kolme/test_check_local_kolme_live_deployment_preflight_policy.sh
+bash scripts/kolme/test_run_local_kolme_live_deployment_preflight_contract_lane.sh
 bash scripts/governance/test_run_governance_lifecycle_rollback_lane.sh
 bash scripts/governance/test_check_governance_lifecycle_rollback_policy.sh
 bash scripts/governance/test_run_governance_lifecycle_rollback_contract_lane.sh

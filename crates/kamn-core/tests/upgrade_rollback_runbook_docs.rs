@@ -67,6 +67,19 @@ fn runbook_contains_signer_incident_recovery_contract_lanes() {
 }
 
 #[test]
+fn runbook_contains_kolme_multi_signer_deployment_preflight_contract_lane() {
+    assert!(
+        RUNBOOK.contains("## Kolme Multi-Signer Deployment Preflight Contract Lane (Issue #2301)")
+    );
+    assert!(RUNBOOK.contains("run_local_kolme_live_deployment_preflight_lane.sh"));
+    assert!(RUNBOOK.contains("check_local_kolme_live_deployment_preflight_policy.py"));
+    assert!(RUNBOOK.contains("run_local_kolme_live_deployment_preflight_contract_lane.sh"));
+    assert!(RUNBOOK.contains("kamn.kolme.signer-quorum-evidence.v1"));
+    assert!(RUNBOOK.contains("checkpoint_failed_quorum_evidence_contract"));
+    assert!(RUNBOOK.contains("quorum_evidence_custody_sha256_mismatch"));
+}
+
+#[test]
 fn runbook_contains_live_network_pilot_rollback_evidence_gate() {
     assert!(RUNBOOK.contains("## Live-Network Pilot Rollback Evidence Gate"));
     assert!(RUNBOOK.contains("run_live_network_pilot_deep_lane.sh"));
@@ -146,5 +159,13 @@ fn regression_requires_signer_incident_recovery_fail_closed_guard() {
     // Regression: #989
     assert!(RUNBOOK.contains(
         "runbook-step drift, revocation propagation gaps, stale deep-lane artifacts, or cadence violations force `NO-GO` (`Regression: #989`)."
+    ));
+}
+
+#[test]
+fn regression_requires_kolme_multi_signer_preflight_fail_closed_guard() {
+    // Regression: #2301
+    assert!(RUNBOOK.contains(
+        "signer quorum/custody/provenance drift, quorum evidence schema drift, or contract-lane/docs parity drift force `NO-GO` (`Regression: #2301`)."
     ));
 }

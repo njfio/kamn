@@ -537,7 +537,16 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Deployment preflight run mode:
   - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`
   - `printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" > /tmp/kolme-live-signer-provenance.json`
-  - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source env-local --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+  - `custody_sha="$(sha256sum /tmp/kolme-live-signer-custody.json | awk '{print $1}')"; cat > /tmp/kolme-live-signer-quorum.json <<JSON
+{
+  "schema_version": "kamn.kolme.signer-quorum-evidence.v1",
+  "required_approvals": 2,
+  "received_approvals": 2,
+  "approved_signers": ["ops-primary", "ops-secondary"],
+  "custody_evidence_sha256": "$custody_sha"
+}
+JSON`
+  - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --quorum-evidence-file /tmp/kolme-live-signer-quorum.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source env-local --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
 - Deployment preflight policy checker command:
   - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
 - Deployment preflight contract lane command:
@@ -551,6 +560,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `signer_secret_contract`: selected signer secret env must be present and 64-char hex.
   - `fallback_private_key_contract`: fallback signer secret env must remain unset.
   - `signer_quorum_contract`: received approvals must satisfy required approvals threshold.
+  - `quorum_evidence_contract`: quorum evidence bundle must satisfy schema, signer uniqueness, threshold, and custody digest match.
   - `custody_evidence_contract`: signer custody evidence file and sha256 marker must be present.
   - `signer_provenance_contract`: signer provenance evidence file and sha256 marker must be present.
   - `signer_rotation_freshness_contract`: signer rotation metadata must satisfy freshness threshold.
@@ -573,6 +583,14 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `signer_rotation_fresh`
     - `required_approvals=2`
     - `received_approvals`
+    - `quorum_evidence_file`
+    - `quorum_evidence_present`
+    - `quorum_evidence_sha256_valid`
+    - `quorum_evidence_schema_valid`
+    - `quorum_evidence_approval_count`
+    - `quorum_evidence_signers_unique`
+    - `quorum_evidence_matches_threshold`
+    - `quorum_evidence_custody_sha256_match`
     - `custody_evidence_file`
     - `custody_evidence_present`
     - `custody_evidence_sha256_valid`
@@ -583,6 +601,12 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `contracts.fallback_private_key_path_allowed=false`
     - `contracts.approval_quorum_required=2`
     - `contracts.approval_quorum_source=local-operator-attestations`
+    - `contracts.quorum_evidence_required=true`
+    - `contracts.quorum_evidence_sha256_required=true`
+    - `contracts.quorum_evidence_schema_version=kamn.kolme.signer-quorum-evidence.v1`
+    - `contracts.quorum_evidence_signer_uniqueness_required=true`
+    - `contracts.quorum_evidence_custody_sha256_match_required=true`
+    - `contracts.quorum_evidence_source=operator-attestation-bundle`
     - `contracts.custody_evidence_required=true`
     - `contracts.custody_evidence_sha256_required=true`
     - `contracts.signer_provenance_required=true`
@@ -598,10 +622,17 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `fallback_signer_secret_present_violation`
   - `checkpoint_failed_signer_secret_contract`
   - `checkpoint_failed_signer_quorum_contract`
+  - `checkpoint_failed_quorum_evidence_contract`
   - `checkpoint_failed_custody_evidence_contract`
   - `checkpoint_failed_signer_provenance_contract`
   - `checkpoint_failed_signer_rotation_freshness_contract`
   - `signer_quorum_shortfall`
+  - `quorum_evidence_missing`
+  - `quorum_evidence_sha256_invalid`
+  - `quorum_evidence_schema_invalid`
+  - `quorum_evidence_signers_not_unique`
+  - `quorum_evidence_approvals_mismatch`
+  - `quorum_evidence_custody_sha256_mismatch`
   - `custody_evidence_missing`
   - `custody_evidence_sha256_invalid`
   - `signer_key_source_contract_version_mismatch`
@@ -616,6 +647,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - docs/command/policy parity for this lane remains fail-closed (`Regression: #2225`).
   - deployment preflight contract lane parity remains fail-closed (`Regression: #2226`).
   - signer provenance + rotation freshness marker parity remains fail-closed (`Regression: #2300`).
+  - signer quorum evidence schema + custody digest parity remains fail-closed (`Regression: #2301`).
 
 ## Live Provider Operator Runbook (Issue #2114)
 
@@ -635,6 +667,15 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
   - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`
   - `printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" > /tmp/kolme-live-signer-provenance.json`
+  - `custody_sha="$(sha256sum /tmp/kolme-live-signer-custody.json | awk '{print $1}')"; cat > /tmp/kolme-live-signer-quorum.json <<JSON
+{
+  "schema_version": "kamn.kolme.signer-quorum-evidence.v1",
+  "required_approvals": 2,
+  "received_approvals": 2,
+  "approved_signers": ["ops-primary", "ops-secondary"],
+  "custody_evidence_sha256": "$custody_sha"
+}
+JSON`
 
 ### Execution Flow
 
@@ -680,6 +721,8 @@ Operator checkpoints:
   - verify signer profile and selected signer secret env are set with a valid 64-hex key.
 - `reason_code=checkpoint_failed_signer_quorum_contract`:
   - verify `--received-approvals` is greater than or equal to `--required-approvals`.
+- `reason_code=checkpoint_failed_quorum_evidence_contract`:
+  - verify `--quorum-evidence-file` exists, `schema_version=kamn.kolme.signer-quorum-evidence.v1`, signer IDs are unique, approval counts match `--received-approvals`, and custody digest matches `--custody-evidence-file`.
 - `reason_code=checkpoint_failed_custody_evidence_contract`:
   - verify `--custody-evidence-file` exists and its sha256 can be emitted in summary markers.
 - `reason_code=checkpoint_failed_signer_provenance_contract`:

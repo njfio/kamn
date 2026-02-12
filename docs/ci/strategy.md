@@ -385,7 +385,16 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
     - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`
     - `printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" > /tmp/kolme-live-signer-provenance.json`
-    - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source env-local --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+    - `custody_sha="$(sha256sum /tmp/kolme-live-signer-custody.json | awk '{print $1}')"; cat > /tmp/kolme-live-signer-quorum.json <<JSON
+{
+  "schema_version": "kamn.kolme.signer-quorum-evidence.v1",
+  "required_approvals": 2,
+  "received_approvals": 2,
+  "approved_signers": ["ops-primary", "ops-secondary"],
+  "custody_evidence_sha256": "$custody_sha"
+}
+JSON`
+    - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --quorum-evidence-file /tmp/kolme-live-signer-quorum.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source env-local --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
     - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
     - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --output-json /tmp/kolme-local-live-deployment-preflight-summary.json --policy-output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
     - deterministic marker contracts:
@@ -403,10 +412,23 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `signer_rotation_fresh`
       - `required_approvals=2`
       - `received_approvals=2`
+      - `quorum_evidence_file`
+      - `quorum_evidence_present`
+      - `quorum_evidence_sha256_valid`
+      - `quorum_evidence_schema_valid`
+      - `quorum_evidence_approval_count`
+      - `quorum_evidence_signers_unique`
+      - `quorum_evidence_matches_threshold`
+      - `quorum_evidence_custody_sha256_match`
       - `contracts.ci_fast_gate_scope=ci-fast-gate`
       - `contracts.required_runtime_mode=kolme-live`
       - `contracts.fallback_private_key_path_allowed=false`
       - `contracts.approval_quorum_required=2`
+      - `contracts.quorum_evidence_required=true`
+      - `contracts.quorum_evidence_sha256_required=true`
+      - `contracts.quorum_evidence_schema_version=kamn.kolme.signer-quorum-evidence.v1`
+      - `contracts.quorum_evidence_signer_uniqueness_required=true`
+      - `contracts.quorum_evidence_custody_sha256_match_required=true`
       - `contracts.custody_evidence_required=true`
       - `contracts.signer_provenance_required=true`
       - `contracts.signer_provenance_sha256_required=true`
@@ -420,10 +442,17 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `fallback_signer_secret_present_violation`
       - `checkpoint_failed_signer_secret_contract`
       - `checkpoint_failed_signer_quorum_contract`
+      - `checkpoint_failed_quorum_evidence_contract`
       - `checkpoint_failed_custody_evidence_contract`
       - `checkpoint_failed_signer_provenance_contract`
       - `checkpoint_failed_signer_rotation_freshness_contract`
       - `signer_quorum_shortfall`
+      - `quorum_evidence_missing`
+      - `quorum_evidence_sha256_invalid`
+      - `quorum_evidence_schema_invalid`
+      - `quorum_evidence_signers_not_unique`
+      - `quorum_evidence_approvals_mismatch`
+      - `quorum_evidence_custody_sha256_mismatch`
       - `custody_evidence_missing`
       - `custody_evidence_sha256_invalid`
       - `signer_key_source_contract_version_mismatch`
@@ -434,6 +463,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `signer_rotation_epoch_stale`
     - deployment preflight contract lane parity remains fail-closed (`Regression: #2226`).
     - deployment preflight signer provenance + rotation freshness parity remains fail-closed (`Regression: #2300`).
+    - deployment preflight signer quorum evidence parity remains fail-closed (`Regression: #2301`).
   - local fork process lifecycle integration run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --serve-command "python3 /tmp/mock_kolme_api.py 3000 v0.15.2" --max-seconds 300 --startup-max-seconds 45 --integration-max-seconds 240 --integration-bootstrap-max-seconds 90 --integration-conformance-max-seconds 180 --integration-runtime-commit-max-seconds 30 --integration-runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --rollback-evidence-file /tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json --recovery-evidence-file /tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json`
     - process lifecycle integration command composition must include `--runtime-commit-live-policy-report` for nested integration evidence lineage.
