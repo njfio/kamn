@@ -1,3 +1,5 @@
+//! Operator dashboard API contracts for paginated runtime visibility views.
+
 use crate::{
     AgentDid, AgentKeyHierarchy, EscrowLifecycle, EscrowStatus, KeyRole, MessageLifecycleStore,
     MessageStatus, ReputationError, TaskOperationError, TaskOperationRecord, TaskState,
@@ -6,13 +8,18 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Pagination request contract for dashboard list endpoints.
 pub struct DashboardPageRequest {
+    /// Maximum number of items to return in the page.
     pub limit: usize,
+    /// Cursor pointing to the last item of the previous page.
     pub cursor: Option<String>,
+    /// Optional prefix filter applied to the item key space.
     pub filter_prefix: Option<String>,
 }
 
 impl DashboardPageRequest {
+    /// Builds a pagination request and rejects zero limits.
     pub fn new(
         limit: usize,
         cursor: Option<String>,
@@ -30,62 +37,98 @@ impl DashboardPageRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Generic paginated response container used by dashboard list APIs.
 pub struct DashboardPage<T> {
+    /// Items included in the current page.
     pub items: Vec<T>,
+    /// Cursor token for fetching the next page.
     pub next_cursor: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Dashboard projection of agent key hierarchy state.
 pub struct OperatorAgentView {
+    /// Agent DID identifier.
     pub agent_did: String,
+    /// Active identity key reference.
     pub identity_key_id: String,
+    /// Active signing key reference.
     pub signing_key_id: String,
+    /// Active key-agreement key reference.
     pub agreement_key_id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Dashboard projection of task lifecycle state.
 pub struct OperatorTaskView {
+    /// Unique task identifier.
     pub task_id: String,
+    /// Task requester DID.
     pub requester: String,
+    /// Optional assignee DID.
     pub assignee: Option<String>,
+    /// Current task lifecycle state.
     pub state: TaskState,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Dashboard projection of message delivery state.
 pub struct OperatorMessageView {
+    /// Unique message identifier.
     pub message_id: String,
+    /// Sender DID.
     pub sender: String,
+    /// Recipient DIDs.
     pub recipients: Vec<String>,
+    /// Current message status.
     pub status: MessageStatus,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Dashboard projection of escrow contract state.
 pub struct OperatorEscrowView {
+    /// Escrow record identifier.
     pub escrow_id: String,
+    /// Payer DID.
     pub payer: String,
+    /// Payee DID.
     pub payee: String,
+    /// Current escrow status.
     pub status: EscrowStatus,
+    /// Remaining escrow amount in base units.
     pub remaining_amount: u128,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Dashboard projection of reputation indicators per agent.
 pub struct OperatorReputationView {
+    /// Agent DID identifier.
     pub agent_did: String,
+    /// Trust score scalar.
     pub trust_score: u32,
+    /// Delivery success rate percentage.
     pub delivery_rate: f64,
+    /// Dispute rate percentage.
     pub dispute_rate: f64,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Aggregated dashboard snapshot across all operator-visible domains.
 pub struct OperatorDashboardSnapshot {
+    /// Paginated agent records.
     pub agents: DashboardPage<OperatorAgentView>,
+    /// Paginated task records.
     pub tasks: DashboardPage<OperatorTaskView>,
+    /// Paginated message records.
     pub messages: DashboardPage<OperatorMessageView>,
+    /// Paginated escrow records.
     pub escrows: DashboardPage<OperatorEscrowView>,
+    /// Paginated reputation records.
     pub reputation: DashboardPage<OperatorReputationView>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+/// In-memory operator dashboard API projection store.
 pub struct OperatorDashboardApi {
     agents: BTreeMap<String, OperatorAgentView>,
     tasks: BTreeMap<String, OperatorTaskView>,
@@ -95,10 +138,12 @@ pub struct OperatorDashboardApi {
 }
 
 impl OperatorDashboardApi {
+    /// Creates an empty dashboard API projection store.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Upserts an agent projection using its current key hierarchy.
     pub fn upsert_agent_from_hierarchy(
         &mut self,
         agent_did: &str,
@@ -130,6 +175,7 @@ impl OperatorDashboardApi {
         Ok(())
     }
 
+    /// Upserts a task projection from a task operation record.
     pub fn upsert_task(
         &mut self,
         task: &TaskOperationRecord,
@@ -153,6 +199,7 @@ impl OperatorDashboardApi {
         Ok(())
     }
 
+    /// Upserts a message projection from lifecycle store state.
     pub fn upsert_message_from_store(
         &mut self,
         store: &MessageLifecycleStore,
@@ -181,6 +228,7 @@ impl OperatorDashboardApi {
         Ok(())
     }
 
+    /// Upserts an escrow projection from escrow lifecycle state.
     pub fn upsert_escrow(
         &mut self,
         escrow_id: &str,
@@ -207,6 +255,7 @@ impl OperatorDashboardApi {
         Ok(())
     }
 
+    /// Upserts a reputation projection from an agent reputation record.
     pub fn upsert_reputation(
         &mut self,
         reputation: &crate::AgentReputation,
@@ -224,6 +273,7 @@ impl OperatorDashboardApi {
         Ok(())
     }
 
+    /// Returns a paginated list of agent projections.
     pub fn list_agents(
         &self,
         request: &DashboardPageRequest,
@@ -231,6 +281,7 @@ impl OperatorDashboardApi {
         paginate_map(&self.agents, request)
     }
 
+    /// Returns a paginated list of task projections.
     pub fn list_tasks(
         &self,
         request: &DashboardPageRequest,
@@ -238,6 +289,7 @@ impl OperatorDashboardApi {
         paginate_map(&self.tasks, request)
     }
 
+    /// Returns a paginated list of message projections.
     pub fn list_messages(
         &self,
         request: &DashboardPageRequest,
@@ -245,6 +297,7 @@ impl OperatorDashboardApi {
         paginate_map(&self.messages, request)
     }
 
+    /// Returns a paginated list of escrow projections.
     pub fn list_escrows(
         &self,
         request: &DashboardPageRequest,
@@ -252,6 +305,7 @@ impl OperatorDashboardApi {
         paginate_map(&self.escrows, request)
     }
 
+    /// Returns a paginated list of reputation projections.
     pub fn list_reputation(
         &self,
         request: &DashboardPageRequest,
@@ -259,6 +313,7 @@ impl OperatorDashboardApi {
         paginate_map(&self.reputation, request)
     }
 
+    /// Returns a multi-domain dashboard snapshot for a shared page request.
     pub fn snapshot(
         &self,
         request: &DashboardPageRequest,
@@ -274,14 +329,23 @@ impl OperatorDashboardApi {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Error taxonomy for dashboard API validation and projection failures.
 pub enum OperatorDashboardApiError {
+    /// Page limit is invalid.
     InvalidPageLimit(usize),
+    /// Cursor does not exist in the current key space.
     InvalidPaginationCursor(String),
+    /// Required field is empty.
     EmptyField(&'static str),
+    /// DID value is invalid.
     InvalidDid(String),
+    /// Agent key hierarchy lookup failed.
     Hierarchy(String),
+    /// Message lifecycle lookup failed.
     Message(String),
+    /// Task projection conversion failed.
     Task(String),
+    /// Reputation projection conversion failed.
     Reputation(String),
 }
 
