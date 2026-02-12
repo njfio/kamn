@@ -29,3 +29,4 @@ cross_chain_bridge
 cross_chain_receipt
 content_lifecycle
 content_replication
+content_retrieval

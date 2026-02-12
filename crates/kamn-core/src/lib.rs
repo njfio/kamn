@@ -26,7 +26,7 @@ pub mod config;
 pub mod content_lifecycle;
 /// Replication policy, availability health, and repair action contracts.
 pub mod content_replication;
-#[allow(missing_docs)]
+/// Retrieval access policy, caching controls, and audit event contracts.
 pub mod content_retrieval;
 /// Content storage adapter contracts, object metadata, and CID/URI helpers.
 pub mod content_storage;
