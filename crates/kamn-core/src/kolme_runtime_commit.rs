@@ -15,6 +15,7 @@ use kamn_kolme::{
     escape_json_string as escape_kolme_json_string,
     find_http_header_boundary as find_kolme_http_header_boundary,
     is_broadcast_submit_path as is_kolme_broadcast_submit_path_contract,
+    is_canonical_runtime_commit_signed_message as is_kolme_canonical_runtime_commit_signed_message_contract,
     is_terminal_receipt_finality as is_kolme_terminal_receipt_finality_contract,
     is_valid_block_fallback_base_url_input as is_kolme_valid_block_fallback_base_url_input_contract,
     is_valid_block_fallback_lookup_budget as is_kolme_valid_block_fallback_lookup_budget_contract,
@@ -179,7 +180,10 @@ impl KolmeRuntimeCommitRequest {
     ) -> Result<KolmeRuntimeCommitSignedBroadcastEnvelope, KolmeRuntimeCommitError> {
         self.validate()?;
         let canonical_message = self.to_wire_payload();
-        if signed_message != canonical_message {
+        if !is_kolme_canonical_runtime_commit_signed_message_contract(
+            canonical_message.as_str(),
+            signed_message,
+        ) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "signed_message",
                 reason: "must match canonical runtime commit wire payload",
