@@ -1,12 +1,18 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt;
 
+/// Anti-spam threshold configuration for deposit, rate, and suspension policies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AntiSpamConfig {
+    /// Maximum accepted messages per sender within a rolling window.
     pub max_messages_per_window: usize,
+    /// Rolling-window size in seconds for rate-limit evaluation.
     pub window_seconds: u64,
+    /// Minimum deposit required for sender admission.
     pub minimum_sybil_deposit: u64,
+    /// Consecutive rate-limit violations required to trigger suspension.
     pub suspension_violation_threshold: u32,
+    /// Suspension duration in seconds after threshold is exceeded.
     pub suspension_seconds: u64,
 }
 
@@ -22,42 +28,66 @@ impl Default for AntiSpamConfig {
     }
 }
 
+/// Admission decision returned by anti-spam evaluation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AntiSpamDecision {
+    /// Message is accepted for downstream processing.
     Accepted,
+    /// Message is rejected with a typed reason.
     Rejected(AntiSpamRejection),
 }
 
+/// Typed rejection reasons emitted by anti-spam evaluation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AntiSpamRejection {
+    /// Sender deposit is below required threshold.
     InsufficientDeposit {
+        /// Required minimum deposit.
         required: u64,
+        /// Provided sender deposit.
         provided: u64,
     },
+    /// Sender exceeded rolling-window rate limit.
     RateLimitExceeded {
+        /// Configured message limit.
         limit: usize,
+        /// Observed messages in window.
         observed: usize,
+        /// Window size in seconds.
         window_seconds: u64,
     },
+    /// Sender is currently suspended.
     SenderSuspended {
+        /// Unix timestamp when suspension expires.
         until_unix: u64,
     },
+    /// Message id has already been seen.
     DuplicateMessageId(String),
 }
 
+/// Aggregate anti-spam telemetry counters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct AntiSpamTelemetry {
+    /// Total evaluated messages.
     pub total_processed: u64,
+    /// Count of accepted messages.
     pub accepted: u64,
+    /// Count of insufficient-deposit rejections.
     pub rejected_insufficient_deposit: u64,
+    /// Count of rate-limit rejections.
     pub rejected_rate_limit: u64,
+    /// Count of suspension rejections.
     pub rejected_suspended: u64,
+    /// Count of duplicate-message-id rejections.
     pub rejected_duplicate_message: u64,
 }
 
+/// Errors returned by anti-spam configuration and input validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AntiSpamError {
+    /// Anti-spam config is invalid.
     InvalidConfig(String),
+    /// Runtime input is invalid.
     InvalidInput(String),
 }
 
@@ -79,6 +109,7 @@ struct SenderState {
     suspended_until_unix: Option<u64>,
 }
 
+/// Stateful anti-spam engine tracking deposits, message ids, sender windows, and telemetry.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AntiSpamEngine {
     config: AntiSpamConfig,
@@ -89,6 +120,7 @@ pub struct AntiSpamEngine {
 }
 
 impl AntiSpamEngine {
+    /// Creates a new anti-spam engine after validating configuration.
     pub fn new(config: AntiSpamConfig) -> Result<Self, AntiSpamError> {
         validate_config(config)?;
 
@@ -101,12 +133,14 @@ impl AntiSpamEngine {
         })
     }
 
+    /// Sets or updates sender deposit used for sybil-admission checks.
     pub fn set_deposit(&mut self, sender_did: &str, deposit: u64) -> Result<(), AntiSpamError> {
         validate_sender_did(sender_did)?;
         self.deposits.insert(sender_did.to_owned(), deposit);
         Ok(())
     }
 
+    /// Evaluates a sender/message at `now_unix` and returns admission decision.
     pub fn evaluate(
         &mut self,
         sender_did: &str,
@@ -178,6 +212,7 @@ impl AntiSpamEngine {
         Ok(AntiSpamDecision::Accepted)
     }
 
+    /// Returns a snapshot of anti-spam telemetry counters.
     pub fn telemetry(&self) -> AntiSpamTelemetry {
         self.telemetry
     }
