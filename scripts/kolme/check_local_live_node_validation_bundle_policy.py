@@ -76,6 +76,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("integration_runner_missing")
         if "--runtime-provider-client-contract KolmeRuntimeCommitLiveProvider" not in integration_command:
             reason_codes.append("runtime_provider_contract_marker_missing")
+        if "--runtime-profile real-node" not in integration_command:
+            reason_codes.append("integration_runtime_profile_marker_missing")
 
     integration_policy_command = report.get("integration_policy_command")
     if not isinstance(integration_policy_command, str) or not integration_policy_command.strip():
@@ -156,6 +158,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 and "--runtime-provider-client-contract KolmeRuntimeCommitLiveProvider" not in command
             ):
                 reason_codes.append("integration_bundle_provider_marker_missing")
+            if (
+                check_id == "integration_bundle"
+                and isinstance(command, str)
+                and "--runtime-profile real-node" not in command
+            ):
+                reason_codes.append("integration_bundle_runtime_profile_marker_missing")
             if (
                 check_id == "process_lifecycle_bundle"
                 and isinstance(command, str)

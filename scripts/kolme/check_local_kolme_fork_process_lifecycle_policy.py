@@ -171,6 +171,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             ):
                 reason_codes.append("kamn_live_integration_policy_report_marker_missing")
             if (
+                check_id == "kamn_live_integration"
+                and isinstance(command, str)
+                and "--runtime-profile real-node" not in command
+            ):
+                reason_codes.append("kamn_live_integration_runtime_profile_marker_missing")
+            if (
                 check_id == "rollback_evidence"
                 and isinstance(command, str)
                 and "--rollback-evidence-file" not in command
