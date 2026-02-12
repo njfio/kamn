@@ -6,7 +6,6 @@ channel_policies
 content_lifecycle
 content_replication
 content_retrieval
-cross_chain_receipt
 data_classification
 did
 did_registry
