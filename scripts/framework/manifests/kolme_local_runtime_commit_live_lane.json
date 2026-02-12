@@ -1,0 +1,13 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "kolme.local_runtime_commit_live.run",
+  "evidence_key": "kolme_local_runtime_commit_live_lane:v1",
+  "reason_key": "kolme_local_runtime_commit_live_lane_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/kolme/run_local_runtime_commit_live_lane.sh",
+      "--manifest-impl"
+    ]
+  }
+}

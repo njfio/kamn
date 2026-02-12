@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_NAME="$(basename "$0")"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 
 MODE="dry-run"
@@ -17,6 +18,11 @@ PREFLIGHT_MAX_SECONDS=10
 FINALITY_MAX_SECONDS=15
 SKIP_PREFLIGHT=0
 FINALITY_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-live-finality-output.txt"
+
+if [ "${1:-}" != "--manifest-impl" ]; then
+  exec bash "$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh" --lane-wrapper "$SCRIPT_NAME" -- "$@"
+fi
+shift
 
 shell_escape() {
   printf "%q" "$1"
