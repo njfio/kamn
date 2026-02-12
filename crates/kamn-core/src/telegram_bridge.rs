@@ -6,23 +6,35 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::sync::Mutex;
 
+/// Telegram bridge configuration for listener authorization and channel routing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TelegramBridgeConfig {
+    /// DID used by the bridge agent identity.
     pub bridge_agent_did: String,
+    /// Listener DIDs allowed to submit inbound webhook payloads.
     pub authorized_listener_dids: BTreeSet<String>,
+    /// Shared webhook token expected on inbound requests.
     pub webhook_token: String,
+    /// Mapping from external Telegram channel id to target DID.
     pub channel_routes: BTreeMap<String, String>,
 }
 
+/// Normalized inbound webhook request metadata for Telegram bridge processing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TelegramInboundRequest {
+    /// DID of the listener submitting the inbound payload.
     pub listener_did: String,
+    /// Webhook token presented by the listener.
     pub webhook_token: String,
+    /// Monotonic checkpoint value from external channel stream.
     pub checkpoint: u64,
+    /// Unix timestamp when listener observed the payload.
     pub observed_at_unix: u64,
+    /// Inbound envelope normalized for bridge adapter processing.
     pub inbound: BridgeInboundEnvelope,
 }
 
+/// Telegram bridge engine that validates inbound requests and normalizes payloads.
 #[derive(Debug)]
 pub struct TelegramBridgeEngine {
     config: TelegramBridgeConfig,
@@ -31,6 +43,7 @@ pub struct TelegramBridgeEngine {
 }
 
 impl TelegramBridgeEngine {
+    /// Creates a Telegram bridge engine after validating configuration shape and DIDs.
     pub fn new(config: TelegramBridgeConfig) -> Result<Self, TelegramBridgeError> {
         validate_did(&config.bridge_agent_did)?;
         if config.authorized_listener_dids.is_empty() {
@@ -60,6 +73,7 @@ impl TelegramBridgeEngine {
         })
     }
 
+    /// Validates and processes an inbound request into normalized bridge message form.
     pub fn process_inbound(
         &self,
         request: &TelegramInboundRequest,
@@ -74,6 +88,7 @@ impl TelegramBridgeEngine {
         Ok(normalized)
     }
 
+    /// Validates and processes an inbound request into canonical message-envelope form.
     pub fn process_inbound_to_envelope(
         &self,
         request: &TelegramInboundRequest,
@@ -158,24 +173,40 @@ impl TelegramBridgeEngine {
     }
 }
 
+/// Errors emitted by Telegram bridge configuration and inbound processing paths.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TelegramBridgeError {
+    /// Required field was empty.
     EmptyField(&'static str),
+    /// DID failed validation.
     InvalidDid(String),
+    /// Listener DID is not authorized.
     UnauthorizedListener(String),
+    /// Webhook token did not match configured value.
     InvalidWebhookToken,
+    /// Checkpoint is not strictly monotonic for a route channel.
     NonMonotonicCheckpoint {
+        /// External route channel identifier.
         external_channel_id: String,
+        /// Previously accepted checkpoint.
         last_checkpoint: u64,
+        /// Newly received checkpoint.
         received_checkpoint: u64,
     },
+    /// Checkpoint state lock could not be acquired.
     CheckpointStateUnavailable,
+    /// Route channel id does not exist in configured mapping.
     UnknownRouteChannel(String),
+    /// Inbound envelope target DID does not match configured route target DID.
     RouteTargetMismatch {
+        /// External route channel identifier.
         external_channel_id: String,
+        /// Expected route target DID from configuration.
         expected_target_did: String,
+        /// Target DID present in inbound payload.
         provided_target_did: String,
     },
+    /// Underlying bridge-adapter processing error.
     Bridge(String),
 }
 
