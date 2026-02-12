@@ -84,7 +84,7 @@ pub mod operator_dashboard_ui;
 pub mod performance_targets;
 #[allow(missing_docs)]
 pub mod redaction_compliance;
-#[allow(missing_docs)]
+/// Reputation-signal weighting and candidate-ranking contracts for routing.
 pub mod reputation_signals;
 #[allow(missing_docs)]
 pub mod reputation_state;

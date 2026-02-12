@@ -2,12 +2,18 @@ use crate::{AgentDid, ReputationStore, ServiceListing};
 use std::collections::BTreeSet;
 use std::fmt;
 
+/// Weight configuration used to convert reputation evidence into routing adjustments.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RoutingSignalWeights {
+    /// Bonus per endorsement signal.
     pub endorsement_weight: i32,
+    /// Penalty per dispute signal.
     pub dispute_penalty_weight: i32,
+    /// Bonus applied when required capabilities are fully matched.
     pub capability_match_bonus: i32,
+    /// Penalty applied when required capabilities are not fully matched.
     pub capability_miss_penalty: i32,
+    /// Bonus per verified capability.
     pub verification_weight: i32,
 }
 
@@ -23,40 +29,65 @@ impl Default for RoutingSignalWeights {
     }
 }
 
+/// Aggregated reputation signal counts used in candidate ranking explanations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReputationSignalSummary {
+    /// Number of endorsements on record.
     pub endorsements: usize,
+    /// Number of disputes on record.
     pub disputes: usize,
+    /// Number of verified capabilities on record.
     pub verified_capabilities: usize,
+    /// Required capabilities matched by the candidate.
     pub matched_capabilities: Vec<String>,
 }
 
+/// Ranked agent candidate for routing decisions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RankedAgentCandidate {
+    /// Candidate agent DID.
     pub agent_did: String,
+    /// Baseline trust score.
     pub trust_score: u32,
+    /// Reputation signal adjustment applied to the baseline score.
     pub signal_adjustment: i32,
+    /// Final routing score after adjustment and clamping.
     pub routing_score: i32,
+    /// Signal breakdown used to compute adjustment.
     pub summary: ReputationSignalSummary,
 }
 
+/// Ranked service-listing candidate for marketplace discovery.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RankedListingCandidate {
+    /// Marketplace listing identifier.
     pub listing_id: String,
+    /// Provider DID for the listing.
     pub provider_did: String,
+    /// Baseline trust score.
     pub trust_score: u32,
+    /// Reputation signal adjustment applied to the baseline score.
     pub signal_adjustment: i32,
+    /// Final routing score after adjustment and clamping.
     pub routing_score: i32,
+    /// Required capabilities matched by the listing provider.
     pub matched_capabilities: Vec<String>,
 }
 
+/// Errors emitted while ranking candidates by reputation signals.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ReputationSignalError {
+    /// No candidates were supplied.
     EmptyCandidates,
+    /// Candidate DID failed validation.
     InvalidCandidateDid(String),
+    /// Candidate DID appeared more than once.
     DuplicateCandidateDid(String),
+    /// Candidate has no reputation record.
     MissingReputation(String),
+    /// Required capabilities input contains invalid entries.
     InvalidRequiredCapability,
+    /// A weight value is negative.
     InvalidWeight(&'static str),
 }
 
@@ -83,6 +114,7 @@ impl fmt::Display for ReputationSignalError {
 
 impl std::error::Error for ReputationSignalError {}
 
+/// Ranks agent candidates using trust score plus weighted reputation signals.
 pub fn rank_agents_for_routing(
     store: &ReputationStore,
     candidate_dids: &[&str],
@@ -135,6 +167,7 @@ pub fn rank_agents_for_routing(
     Ok(ranked)
 }
 
+/// Ranks marketplace listings by provider reputation and capability fit.
 pub fn rank_listings_by_reputation(
     listings: &[ServiceListing],
     store: &ReputationStore,
