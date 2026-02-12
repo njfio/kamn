@@ -83,6 +83,11 @@ pub fn classify_transport_io_error(error: &std::io::Error) -> KolmeTransportIoCl
     }
 }
 
+/// Validates HTTP transport timeout configuration in seconds.
+pub fn is_valid_http_transport_timeout_seconds(timeout_seconds: u64) -> bool {
+    timeout_seconds > 0
+}
+
 /// Transport boundary for runtime-commit submissions.
 pub trait KolmeTransport {
     /// Submits a request and returns a response envelope.
@@ -104,7 +109,10 @@ impl KolmeTransport for EchoTransport {
 
 #[cfg(test)]
 mod tests {
-    use super::{EchoTransport, KolmeTransport, TransportError, TransportRequest};
+    use super::{
+        is_valid_http_transport_timeout_seconds, EchoTransport, KolmeTransport, TransportError,
+        TransportRequest,
+    };
 
     #[test]
     fn unit_echo_transport_requires_endpoint() {
@@ -128,5 +136,11 @@ mod tests {
             .expect("submit should succeed");
         assert_eq!(response.status, 200);
         assert_eq!(response.body, payload);
+    }
+
+    #[test]
+    fn unit_validates_http_transport_timeout_seconds_input() {
+        assert!(is_valid_http_transport_timeout_seconds(1));
+        assert!(!is_valid_http_transport_timeout_seconds(0));
     }
 }

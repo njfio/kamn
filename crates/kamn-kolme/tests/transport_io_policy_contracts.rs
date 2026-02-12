@@ -1,5 +1,6 @@
 use kamn_kolme::{
-    classify_transport_io_error, KolmeTransportIoClassification as TransportIoClassification,
+    classify_transport_io_error, is_valid_http_transport_timeout_seconds,
+    KolmeTransportIoClassification as TransportIoClassification,
 };
 use std::io;
 
@@ -27,4 +28,16 @@ fn unit_classify_transport_io_error_maps_other_kinds_to_unavailable() {
             reason: "transport io error: reset by peer".to_owned(),
         }
     );
+}
+
+#[test]
+fn functional_transport_io_policy_accepts_positive_http_transport_timeout() {
+    assert!(is_valid_http_transport_timeout_seconds(1));
+    assert!(is_valid_http_transport_timeout_seconds(3));
+}
+
+#[test]
+fn regression_issue_1874_transport_io_policy_rejects_zero_http_transport_timeout() {
+    // Regression: #1874
+    assert!(!is_valid_http_transport_timeout_seconds(0));
 }

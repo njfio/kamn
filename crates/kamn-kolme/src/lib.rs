@@ -98,8 +98,9 @@ pub use tls_policy::{
     KolmeTlsPolicyError,
 };
 pub use transport::{
-    classify_transport_io_error, EchoTransport, KolmeTransport, KolmeTransportIoClassification,
-    TransportError, TransportRequest, TransportResponse,
+    classify_transport_io_error, is_valid_http_transport_timeout_seconds, EchoTransport,
+    KolmeTransport, KolmeTransportIoClassification, TransportError, TransportRequest,
+    TransportResponse,
 };
 pub use transport_request_policy::{
     is_broadcast_submit_path, parse_authorization_header_value, KolmeTransportRequestPolicyError,
