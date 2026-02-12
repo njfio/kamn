@@ -3,7 +3,6 @@ audit_exports
 bridge_adapter
 channel_models
 channel_policies
-data_classification
 did
 did_registry
 durable_guard_store
