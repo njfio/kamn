@@ -1,6 +1,7 @@
 use kamn_kolme::{
     is_broadcast_submit_path, is_valid_transport_idempotency_key_input,
-    parse_authorization_header_value, KolmeTransportRequestPolicyError,
+    is_valid_transport_wire_payload_input, parse_authorization_header_value,
+    KolmeTransportRequestPolicyError,
 };
 
 #[test]
@@ -22,6 +23,11 @@ fn functional_transport_request_policy_accepts_non_empty_idempotency_key_input()
     assert!(is_valid_transport_idempotency_key_input(
         "kolme-runtime-commit:op-1"
     ));
+}
+
+#[test]
+fn functional_transport_request_policy_accepts_non_empty_wire_payload_input() {
+    assert!(is_valid_transport_wire_payload_input("operation_id=op-1\n"));
 }
 
 #[test]
@@ -63,4 +69,10 @@ fn regression_issue_1755_is_broadcast_submit_path_rejects_non_broadcast_paths() 
 fn regression_issue_1884_transport_request_policy_rejects_empty_idempotency_key_input() {
     // Regression: #1884
     assert!(!is_valid_transport_idempotency_key_input(" \t "));
+}
+
+#[test]
+fn regression_issue_1886_transport_request_policy_rejects_empty_wire_payload_input() {
+    // Regression: #1886
+    assert!(!is_valid_transport_wire_payload_input(" \t "));
 }

@@ -60,6 +60,7 @@ Out of scope:
 - #1880: extracted in-memory provider guard contract to `kamn-kolme` (`is_valid_runtime_provider_input`) and rewired `kamn-core` in-memory client constructor guard delegation.
 - #1882: extracted fork provider-hint guard contract to `kamn-kolme` (`is_valid_provider_hint_input`) and rewired `kamn-core` fork broadcast profile provider-hint guard delegation.
 - #1884: extracted transport idempotency-key guard contract to `kamn-kolme` (`is_valid_transport_idempotency_key_input`) and rewired `kamn-core` HTTP transport submit-path idempotency guards.
+- #1886: extracted transport wire-payload guard contract to `kamn-kolme` (`is_valid_transport_wire_payload_input`) and rewired `kamn-core` HTTP transport submit guard delegation.
 
 ## Phase 3 - Adapter and lifecycle orchestration extraction
 - split remaining adapter/transport bridge glue into dedicated modules (or subcrate) with explicit ownership,

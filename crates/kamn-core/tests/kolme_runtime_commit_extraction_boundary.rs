@@ -107,5 +107,6 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_runtime_provider_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_provider_hint_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_transport_idempotency_key_input_contract("));
+    assert!(RUNTIME_COMMIT_SRC.contains("is_kolme_valid_transport_wire_payload_input_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("impl From<KamnKolmeTransportIoClassification>"));
 }

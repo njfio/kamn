@@ -528,6 +528,25 @@ fn regression_issue_1884_http_transport_rejects_empty_idempotency_key() {
 }
 
 #[test]
+fn regression_issue_1886_http_transport_rejects_empty_wire_payload() {
+    // Regression: #1886
+    let transport = KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        "http://127.0.0.1:1",
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    assert_eq!(
+        provider.submit_runtime_commit(" ", "idempotency-key-1"),
+        Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+            reason: "wire_payload must not be empty".to_owned(),
+        })
+    );
+}
+
+#[test]
 fn regression_http_transport_fails_closed_on_content_length_mismatch() {
     let body = "status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:1\nfinality=final\n";
     let declared_length = body.len() + 9;

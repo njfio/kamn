@@ -32,6 +32,7 @@ use kamn_kolme::{
     is_valid_runtime_commit_id_request as is_kolme_valid_runtime_commit_id_request_contract,
     is_valid_runtime_provider_input as is_kolme_valid_runtime_provider_input_contract,
     is_valid_transport_idempotency_key_input as is_kolme_valid_transport_idempotency_key_input_contract,
+    is_valid_transport_wire_payload_input as is_kolme_valid_transport_wire_payload_input_contract,
     is_valid_websocket_timeout_seconds as is_kolme_valid_websocket_timeout_seconds_contract,
     lifecycle_state_for_finality as lifecycle_state_for_finality_contract,
     lifecycle_state_label as lifecycle_state_label_contract,
@@ -1095,7 +1096,7 @@ impl KolmeRuntimeCommitProviderTransport for KolmeRuntimeCommitHttpTransport {
         wire_payload: &str,
         idempotency_key: &str,
     ) -> Result<String, KolmeRuntimeCommitProviderError> {
-        if wire_payload.trim().is_empty() {
+        if !is_kolme_valid_transport_wire_payload_input_contract(wire_payload) {
             return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
                 reason: "wire_payload must not be empty".to_owned(),
             });
