@@ -4,19 +4,28 @@ use crate::signature_profile::{
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+/// Initial expected state hash before any block commits.
 pub const GENESIS_STATE_HASH: &str = "state:genesis";
 
+/// Baseline transaction payload used by transaction guard validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BaselineTransaction {
+    /// Unique transaction identifier.
     pub id: String,
+    /// Sender identifier.
     pub sender: String,
+    /// Sender nonce expected to increase sequentially.
     pub nonce: u64,
+    /// Serialized payload content.
     pub payload: String,
+    /// State hash the transaction expects to build upon.
     pub state_hash: String,
+    /// Transaction signature for baseline profile validation.
     pub signature: String,
 }
 
 impl BaselineTransaction {
+    /// Creates a transaction and fills a baseline signature for its fields.
     pub fn signed(id: &str, sender: &str, nonce: u64, payload: &str, state_hash: &str) -> Self {
         let mut tx = Self {
             id: id.to_owned(),
@@ -30,6 +39,7 @@ impl BaselineTransaction {
         tx
     }
 
+    /// Computes the expected baseline signature for this transaction.
     pub fn expected_signature(&self) -> String {
         baseline_signature_for_fields(&self.sender, self.nonce, &self.state_hash, &self.payload)
     }
@@ -57,6 +67,7 @@ impl BaselineTransaction {
     }
 }
 
+/// Guard engine that validates transaction shape, signature, nonce, and state continuity.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TransactionGuards {
     expected_state_hash: String,
@@ -75,14 +86,17 @@ impl Default for TransactionGuards {
 }
 
 impl TransactionGuards {
+    /// Creates a new guard engine initialized at `GENESIS_STATE_HASH`.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Returns the state hash expected by the next transaction validation.
     pub fn expected_state_hash(&self) -> &str {
         &self.expected_state_hash
     }
 
+    /// Validates a transaction against guard rules and records nonce/id progression.
     pub fn validate_and_record(
         &mut self,
         tx: &BaselineTransaction,
@@ -134,6 +148,7 @@ impl TransactionGuards {
         Ok(())
     }
 
+    /// Commits a validated block and advances expected state hash.
     pub fn commit_block(
         &mut self,
         transactions: &[BaselineTransaction],
@@ -163,25 +178,41 @@ impl TransactionGuards {
     }
 }
 
+/// Errors emitted by transaction guard validation and commit flows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TransactionGuardError {
+    /// Transaction id has already been recorded.
     DuplicateTransactionId(String),
+    /// Required field was empty.
     EmptyField(&'static str),
+    /// Nonce value was invalid.
     InvalidNonce(u64),
+    /// Signature did not match baseline profile expectations.
     InvalidSignature {
+        /// Transaction identifier.
         tx_id: String,
+        /// Expected signature value.
         expected: String,
+        /// Observed signature value.
         found: String,
     },
+    /// Nonce did not match expected sender sequence.
     NonceOutOfSequence {
+        /// Sender identifier.
         sender: String,
+        /// Expected nonce value.
         expected: u64,
+        /// Observed nonce value.
         found: u64,
     },
+    /// Transaction state hash did not match current guard expectation.
     StateHashMismatch {
+        /// Expected state hash.
         expected: String,
+        /// Observed state hash.
         found: String,
     },
+    /// Block commit attempted for a transaction that was never validated.
     UnvalidatedCommittedTransaction(String),
 }
 

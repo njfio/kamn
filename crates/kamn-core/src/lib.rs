@@ -112,7 +112,7 @@ pub mod task_payment;
 pub mod telegram_bridge;
 #[allow(missing_docs)]
 pub mod token;
-#[allow(missing_docs)]
+/// Baseline transaction validation and state-hash progression guard contracts.
 pub mod transaction;
 #[allow(missing_docs)]
 pub mod trust_score;
