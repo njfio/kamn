@@ -6,15 +6,23 @@ handling.
 
 ## Scope Delivered
 
-- Added provider-facing adapter interfaces in `kamn-core`:
+- Provider-facing transport/error contracts are canonically owned in
+  `kamn-kolme` (`runtime_transport_contracts`) and re-exported through the
+  `kamn-core` compatibility surface:
   - `KolmeRuntimeCommitProvider`
   - `KolmeRuntimeCommitProviderOutcome`
   - `KolmeRuntimeCommitProviderReceipt`
   - `KolmeRuntimeCommitProviderError`
+  - `KolmeRuntimeCommitProviderTransport`
+  - `KolmeRuntimeCommitFinalityTransport`
+  - `KolmeRuntimeCommitBlockFallbackTransport`
+  - `KolmeRuntimeCommitNotificationsConnection`
+  - `KolmeRuntimeCommitNotificationsConnector`
   - `KolmeRuntimeCommitHttpTransport`
-- Added adapter-backed runtime commit client:
+- Added adapter-backed runtime commit client in `kamn-core`:
   - `AdapterBackedKolmeRuntimeCommitClient<P>`
-- Added typed transport error classification:
+- Added typed transport error classification (canonical in `kamn-kolme`,
+  compatibility export in `kamn-core`):
   - `KolmeRuntimeCommitTransportErrorKind::{Timeout, Unavailable, MalformedResponse}`
 - Extended runtime commit error contracts:
   - `KolmeRuntimeCommitError::ProviderTransport`

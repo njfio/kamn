@@ -1,62 +1,10 @@
 //! Runtime-commit error ownership.
 
 use super::{
-    commit_finality_label_contract, KamnKolmeTransportIoClassification, KolmeCommitReceiptFinality,
+    commit_finality_label_contract, KolmeCommitReceiptFinality,
+    KolmeRuntimeCommitTransportErrorKind,
 };
 use std::fmt;
-
-/// Typed transport error class emitted when adapter-backed provider calls fail.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum KolmeRuntimeCommitTransportErrorKind {
-    /// Provider call timed out.
-    Timeout,
-    /// Provider transport/channel is unavailable.
-    Unavailable,
-    /// Provider response payload is malformed.
-    MalformedResponse,
-}
-
-/// Provider-facing error for runtime commit adapter wiring.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum KolmeRuntimeCommitProviderError {
-    /// Provider call timed out before a response.
-    Timeout,
-    /// Provider transport/channel is unavailable.
-    Unavailable {
-        /// Provider-specific availability failure reason.
-        reason: String,
-    },
-    /// Provider emitted malformed payload/shape.
-    MalformedResponse {
-        /// Provider-specific malformed payload reason.
-        reason: String,
-    },
-}
-
-impl fmt::Display for KolmeRuntimeCommitProviderError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Timeout => write!(f, "provider request timed out"),
-            Self::Unavailable { reason } => write!(f, "provider unavailable: {reason}"),
-            Self::MalformedResponse { reason } => {
-                write!(f, "provider malformed response: {reason}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for KolmeRuntimeCommitProviderError {}
-
-impl From<KamnKolmeTransportIoClassification> for KolmeRuntimeCommitProviderError {
-    fn from(value: KamnKolmeTransportIoClassification) -> Self {
-        match value {
-            KamnKolmeTransportIoClassification::Timeout => Self::Timeout,
-            KamnKolmeTransportIoClassification::Unavailable { reason } => {
-                Self::Unavailable { reason }
-            }
-        }
-    }
-}
 
 /// Error returned by runtime commit request validation or submission.
 #[derive(Debug, Clone, PartialEq, Eq)]
