@@ -180,6 +180,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `kolme_runtime_commit`
   - `migrations`
   - `namespaces`
+  - `observability`
   - `operator_actions`
   - `operator_binding`
   - `performance_targets`
@@ -231,6 +232,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2039`
   - `Regression: #2041`
   - `Regression: #2043`
+  - `Regression: #2045`
 
 ## Contributor Entrypoint Matrix
 

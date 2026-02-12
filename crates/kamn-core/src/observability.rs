@@ -1,47 +1,76 @@
+//! Observability sampling and SLO evaluation contracts for runtime health.
+
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Metric dimensions tracked by the observability monitor.
 pub enum ObservabilityMetric {
+    /// Median latency in milliseconds.
     LatencyP50,
+    /// Tail latency (p99) in milliseconds.
     LatencyP99,
+    /// Throughput in operations per second.
     Throughput,
+    /// Error-rate percentage.
     ErrorRate,
+    /// Availability percentage.
     Availability,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Alert severity level.
 pub enum ObservabilitySeverity {
+    /// Warning-level threshold breach.
     Warning,
+    /// Critical threshold breach.
     Critical,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Aggregate health state after alert classification.
 pub enum ObservabilityHealth {
+    /// No alert thresholds were breached.
     Healthy,
+    /// Warning-level alerts exist but no critical alerts.
     Degraded,
+    /// At least one critical alert exists.
     Critical,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Single observability sample captured at a point in time.
 pub struct ObservabilitySample {
+    /// Observed p50 latency (milliseconds).
     pub latency_p50_ms: u64,
+    /// Observed p99 latency (milliseconds).
     pub latency_p99_ms: u64,
+    /// Observed throughput (operations per second).
     pub throughput_tps: u64,
+    /// Observed error-rate percentage.
     pub error_rate_pct: f64,
+    /// Observed availability percentage.
     pub availability_pct: f64,
+    /// Sample timestamp (epoch seconds).
     pub timestamp_epoch_s: u64,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// SLO threshold profile used for observability evaluation.
 pub struct ObservabilitySloProfile {
+    /// Maximum allowed p50 latency.
     pub max_latency_p50_ms: u64,
+    /// Maximum allowed p99 latency.
     pub max_latency_p99_ms: u64,
+    /// Minimum required throughput.
     pub min_throughput_tps: u64,
+    /// Maximum allowed error-rate percentage.
     pub max_error_rate_pct: f64,
+    /// Minimum required availability percentage.
     pub min_availability_pct: f64,
 }
 
 impl ObservabilitySloProfile {
+    /// Returns the baseline SLO threshold profile.
     pub fn baseline() -> Self {
         Self {
             max_latency_p50_ms: 100,
@@ -54,36 +83,53 @@ impl ObservabilitySloProfile {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Alert entry generated from a metric threshold breach.
 pub struct ObservabilityAlert {
+    /// Metric that breached its threshold.
     pub metric: ObservabilityMetric,
+    /// Classified severity for the breach.
     pub severity: ObservabilitySeverity,
+    /// Observed metric value.
     pub observed: f64,
+    /// Threshold value used for comparison.
     pub threshold: f64,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Evaluation output for a single sample.
 pub struct ObservabilityReport {
+    /// Evaluated sample.
     pub sample: ObservabilitySample,
+    /// Overall health derived from generated alerts.
     pub overall_health: ObservabilityHealth,
+    /// Alerts produced for this sample.
     pub alerts: Vec<ObservabilityAlert>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Rolling health summary over monitor history.
 pub struct ObservabilitySnapshot {
+    /// Total number of evaluated samples.
     pub total_samples: usize,
+    /// Count of healthy samples.
     pub healthy_samples: usize,
+    /// Count of degraded samples.
     pub degraded_samples: usize,
+    /// Count of critical samples.
     pub critical_samples: usize,
+    /// Health state of the latest sample.
     pub latest_health: ObservabilityHealth,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// In-memory observability monitor with SLO-based alerting.
 pub struct ObservabilityMonitor {
     profile: ObservabilitySloProfile,
     history: Vec<ObservabilityReport>,
 }
 
 impl ObservabilityMonitor {
+    /// Creates an observability monitor for `profile`.
     pub fn new(profile: ObservabilitySloProfile) -> Self {
         Self {
             profile,
@@ -91,6 +137,7 @@ impl ObservabilityMonitor {
         }
     }
 
+    /// Evaluates a sample against SLO thresholds and stores the report.
     pub fn evaluate(
         &mut self,
         sample: ObservabilitySample,
@@ -172,6 +219,7 @@ impl ObservabilityMonitor {
         Ok(report)
     }
 
+    /// Produces a summary snapshot across all evaluated samples.
     pub fn snapshot(&self) -> ObservabilitySnapshot {
         let total_samples = self.history.len();
         let healthy_samples = self
@@ -206,9 +254,23 @@ impl ObservabilityMonitor {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Error taxonomy for observability sample validation failures.
 pub enum ObservabilityError {
-    InvalidPercentage { field: &'static str, value: f64 },
-    InvalidLatencyOrder { p50: u64, p99: u64 },
+    /// Percentage field is outside `0..=100`.
+    InvalidPercentage {
+        /// Name of the invalid field.
+        field: &'static str,
+        /// Invalid percentage value.
+        value: f64,
+    },
+    /// p99 latency is lower than p50 latency.
+    InvalidLatencyOrder {
+        /// Observed p50 latency.
+        p50: u64,
+        /// Observed p99 latency.
+        p99: u64,
+    },
+    /// Throughput field is zero.
     ZeroThroughput,
 }
 

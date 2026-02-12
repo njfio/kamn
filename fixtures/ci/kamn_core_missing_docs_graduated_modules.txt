@@ -38,3 +38,4 @@ audit_exports
 performance_targets
 retention_engine
 token
+observability

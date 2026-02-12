@@ -70,7 +70,7 @@ pub mod message_lifecycle;
 /// State schema migration planning and validation contracts.
 pub mod migrations;
 pub mod namespaces;
-#[allow(missing_docs)]
+/// Observability sampling, SLO projection, and report synthesis contracts.
 pub mod observability;
 /// Permissioned operator configuration actions and audit-log service contracts.
 pub mod operator_actions;
