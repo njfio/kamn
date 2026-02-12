@@ -1,7 +1,7 @@
 use std::env;
 use std::process::ExitCode;
 
-use k256::ecdsa::SigningKey;
+use k256::ecdsa::{RecoveryId, Signature, SigningKey, VerifyingKey};
 use kamn_core::{
     bootstrap, BootstrapPlan, ConfigError, DeterministicProposalPlanner, KolmeApiBroadcastRequest,
     KolmeApiNextNonceRequest, KolmeCommitReceiptFinality, KolmeRuntimeCommitFinalityChecker,
@@ -274,6 +274,12 @@ struct KolmeLiveExecution {
 struct KolmeLiveSignerSelection {
     profile: &'static str,
     key_source: &'static str,
+    private_key_env: &'static str,
+}
+
+#[derive(Debug, Clone)]
+struct KolmeForkSecp256k1SignerAdapter {
+    signing_key: SigningKey,
     private_key_env: &'static str,
 }
 
@@ -987,30 +993,98 @@ fn escape_kolme_json_string(value: &str) -> String {
     escaped
 }
 
-fn build_kolme_live_signing_key(
-    strict_signer_profile: Option<&str>,
-    strict_signer_key_source: Option<&str>,
-) -> Result<(SigningKey, KolmeLiveSignerSelection), ConfigError> {
-    let (private_key_hex, selection) =
-        read_kolme_live_signer_private_key_hex(strict_signer_profile, strict_signer_key_source)?;
-    let private_key_bytes =
-        decode_kolme_hex_bytes(private_key_hex.as_str(), selection.private_key_env)?;
-    let signing_key = SigningKey::from_slice(private_key_bytes.as_slice()).map_err(|error| {
-        ConfigError::RuntimeKolmeLive(format!(
-            "{} is not a valid secp256k1 private key: {error}",
-            selection.private_key_env
-        ))
-    })?;
-    Ok((signing_key, selection))
+impl KolmeForkSecp256k1SignerAdapter {
+    fn from_private_key_hex(
+        private_key_hex: &str,
+        private_key_env: &'static str,
+    ) -> Result<Self, ConfigError> {
+        let private_key_bytes = decode_kolme_hex_bytes(private_key_hex, private_key_env)?;
+        let signing_key =
+            SigningKey::from_slice(private_key_bytes.as_slice()).map_err(|error| {
+                ConfigError::RuntimeKolmeLive(format!(
+                    "{private_key_env} is not a valid secp256k1 private key: {error}",
+                ))
+            })?;
+        Ok(Self {
+            signing_key,
+            private_key_env,
+        })
+    }
+
+    fn public_key_compressed_hex(&self) -> String {
+        encode_kolme_hex_lower(
+            self.signing_key
+                .verifying_key()
+                .to_encoded_point(true)
+                .as_bytes(),
+        )
+    }
+
+    fn verify_message(
+        &self,
+        message: &str,
+        signature_hex: &str,
+        recovery_id: u8,
+    ) -> Result<(), ConfigError> {
+        let signature_bytes =
+            decode_kolme_hex_bytes(signature_hex, "runtime_commit_signature_hex")?;
+        if signature_bytes.len() != 64 {
+            return Err(ConfigError::RuntimeKolmeLive(
+                "runtime commit signature hex must decode to exactly 64 bytes".to_owned(),
+            ));
+        }
+        let signature = Signature::from_slice(signature_bytes.as_slice()).map_err(|error| {
+            ConfigError::RuntimeKolmeLive(format!(
+                "runtime commit signature bytes are invalid secp256k1 material: {error}",
+            ))
+        })?;
+        let recovery = RecoveryId::from_byte(recovery_id).ok_or_else(|| {
+            ConfigError::RuntimeKolmeLive(format!(
+                "runtime commit recovery id must be within secp256k1 range [0,3], found {recovery_id}",
+            ))
+        })?;
+        let recovered = VerifyingKey::recover_from_msg(message.as_bytes(), &signature, recovery)
+            .map_err(|error| {
+                ConfigError::RuntimeKolmeLive(format!(
+                    "failed to recover secp256k1 public key from runtime commit signature: {error}",
+                ))
+            })?;
+        if recovered != *self.signing_key.verifying_key() {
+            return Err(ConfigError::RuntimeKolmeLive(format!(
+                "runtime commit signature recovered public key does not match signer selection {}",
+                self.private_key_env,
+            )));
+        }
+        Ok(())
+    }
+
+    fn sign_message(&self, message: &str) -> Result<(String, u8), ConfigError> {
+        let (signature, recovery_id) = self
+            .signing_key
+            .sign_recoverable(message.as_bytes())
+            .map_err(|error| {
+                ConfigError::RuntimeKolmeLive(format!(
+                    "failed to sign live runtime commit payload: {error}",
+                ))
+            })?;
+        let signature_hex = encode_kolme_hex_lower(signature.to_bytes().as_ref());
+        let recovery_id = recovery_id.to_byte();
+        self.verify_message(message, signature_hex.as_str(), recovery_id)?;
+        Ok((signature_hex, recovery_id))
+    }
 }
 
-fn kolme_live_signer_pubkey_hex(signing_key: &SigningKey) -> String {
-    encode_kolme_hex_lower(
-        signing_key
-            .verifying_key()
-            .to_encoded_point(true)
-            .as_bytes(),
-    )
+fn build_kolme_live_signer_adapter(
+    strict_signer_profile: Option<&str>,
+    strict_signer_key_source: Option<&str>,
+) -> Result<(KolmeForkSecp256k1SignerAdapter, KolmeLiveSignerSelection), ConfigError> {
+    let (private_key_hex, selection) =
+        read_kolme_live_signer_private_key_hex(strict_signer_profile, strict_signer_key_source)?;
+    let signer_adapter = KolmeForkSecp256k1SignerAdapter::from_private_key_hex(
+        private_key_hex.as_str(),
+        selection.private_key_env,
+    )?;
+    Ok((signer_adapter, selection))
 }
 
 fn resolve_kolme_live_nonce(
@@ -1077,24 +1151,17 @@ fn build_kolme_live_direct_signed_wire_payload(
     strict_signer_profile: Option<&str>,
     strict_signer_key_source: Option<&str>,
 ) -> Result<(String, KolmeLiveSignerSelection), ConfigError> {
-    let (signing_key, signer_selection) =
-        build_kolme_live_signing_key(strict_signer_profile, strict_signer_key_source)?;
-    let pubkey = kolme_live_signer_pubkey_hex(&signing_key);
+    let (signer_adapter, signer_selection) =
+        build_kolme_live_signer_adapter(strict_signer_profile, strict_signer_key_source)?;
+    let pubkey = signer_adapter.public_key_compressed_hex();
     let nonce = resolve_kolme_live_nonce(base_url, transport, pubkey.as_str())?;
     let canonical_message =
         render_kolme_live_native_direct_message(request, pubkey.as_str(), nonce)?;
-    let (signature, recovery_id) = signing_key
-        .sign_recoverable(canonical_message.as_bytes())
-        .map_err(|error| {
-            ConfigError::RuntimeKolmeLive(format!(
-                "failed to sign live runtime commit payload: {error}"
-            ))
-        })?;
-    let signature_hex = encode_kolme_hex_lower(signature.to_bytes().as_ref());
+    let (signature_hex, recovery_id) = signer_adapter.sign_message(canonical_message.as_str())?;
     let request = KolmeApiBroadcastRequest::new(
         canonical_message.as_str(),
         signature_hex.as_str(),
-        recovery_id.to_byte(),
+        recovery_id,
     )
     .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
     Ok((request.to_json_payload(), signer_selection))
@@ -1824,8 +1891,8 @@ fn main() -> ExitCode {
 mod tests {
     use super::{
         build_bootstrap_report, build_kolme_live_direct_signed_wire_payload,
-        build_kolme_live_signing_key, execute, kolme_live_signer_pubkey_hex, parse_args,
-        render_bootstrap_report, render_kolme_live_native_direct_message, resolve_kolme_live_nonce,
+        build_kolme_live_signer_adapter, execute, parse_args, render_bootstrap_report,
+        render_kolme_live_native_direct_message, resolve_kolme_live_nonce,
         resolve_kolme_live_signer_private_key_env_name, DiagnosticsMode, LocalProfile,
         NodeBootstrapReport, OutputMode, RuntimeExecutionBundle, RuntimeMode,
     };
@@ -2633,6 +2700,92 @@ mod tests {
     }
 
     #[test]
+    fn unit_kolme_live_signer_adapter_signs_and_verifies_runtime_message() {
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+        let _env_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+        );
+        let message = "{\"pubkey\":\"pk-adapter\",\"nonce\":7,\"created\":\"2026-02-12T00:00:00Z\",\"messages\":[]}";
+        let (adapter, selection) =
+            build_kolme_live_signer_adapter(None, None).expect("adapter should build");
+        assert_eq!(selection.profile, "ops-primary");
+        let (signature_hex, recovery_id) = adapter
+            .sign_message(message)
+            .expect("adapter signing should succeed");
+        assert_eq!(signature_hex.len(), 128);
+        assert!(
+            signature_hex
+                .as_bytes()
+                .iter()
+                .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f')),
+            "adapter signature must be lowercase hex"
+        );
+        adapter
+            .verify_message(message, signature_hex.as_str(), recovery_id)
+            .expect("adapter signature verification should succeed");
+    }
+
+    #[test]
+    fn regression_kolme_live_signer_adapter_rejects_malformed_signature_hex() {
+        // Regression: #2297
+        let _lock = signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _profile_env_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+        let _env_guard = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+        );
+        let (adapter, _selection) =
+            build_kolme_live_signer_adapter(None, None).expect("adapter should build");
+        assert!(
+            matches!(
+                adapter.verify_message(
+                    "{\"pubkey\":\"pk-adapter\",\"nonce\":7,\"created\":\"2026-02-12T00:00:00Z\",\"messages\":[]}",
+                    "zz",
+                    0,
+                ),
+                Err(ConfigError::RuntimeKolmeLive(message))
+                if message.contains("runtime_commit_signature_hex contains invalid hex character")
+            ),
+            "malformed signature hex must fail closed in adapter verification"
+        );
+    }
+
+    #[test]
+    fn regression_kolme_live_signer_adapter_rejects_recovered_key_mismatch() {
+        // Regression: #2297
+        let primary = super::KolmeForkSecp256k1SignerAdapter::from_private_key_hex(
+            TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX,
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+        )
+        .expect("primary adapter should build");
+        let secondary = super::KolmeForkSecp256k1SignerAdapter::from_private_key_hex(
+            TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY,
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
+        )
+        .expect("secondary adapter should build");
+        let message = "{\"pubkey\":\"pk-adapter\",\"nonce\":9,\"created\":\"2026-02-12T00:00:00Z\",\"messages\":[]}";
+        let (signature_hex, recovery_id) = primary
+            .sign_message(message)
+            .expect("primary adapter signature should succeed");
+        assert!(
+            matches!(
+                secondary.verify_message(message, signature_hex.as_str(), recovery_id),
+                Err(ConfigError::RuntimeKolmeLive(message))
+                if message.contains("recovered public key does not match signer selection")
+            ),
+            "signature verification must fail closed when recovered key mismatches signer adapter key"
+        );
+    }
+
+    #[test]
     fn unit_kolme_live_signer_profile_defaults_to_primary_key_env() {
         let _lock = signer_env_lock()
             .lock()
@@ -2785,9 +2938,12 @@ mod tests {
         )]);
         let mut transport =
             KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
-        let signing_key = k256::ecdsa::SigningKey::from_slice(&[7_u8; 32])
-            .expect("deterministic private key should be valid");
-        let pubkey = kolme_live_signer_pubkey_hex(&signing_key);
+        let signer_adapter = super::KolmeForkSecp256k1SignerAdapter::from_private_key_hex(
+            TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX,
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+        )
+        .expect("deterministic signer adapter should build");
+        let pubkey = signer_adapter.public_key_compressed_hex();
 
         let nonce = resolve_kolme_live_nonce(base_url.as_str(), &mut transport, pubkey.as_str())
             .expect("nonce should resolve");
@@ -2829,7 +2985,7 @@ mod tests {
         let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
         assert!(
             matches!(
-                build_kolme_live_signing_key(None, None),
+                build_kolme_live_signer_adapter(None, None),
                 Err(ConfigError::RuntimeKolmeLive(message))
                 if message.contains("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX must be set")
             ),
@@ -2855,7 +3011,7 @@ mod tests {
         );
         assert!(
             matches!(
-                build_kolme_live_signing_key(Some("ops-primary"), Some("env-local")),
+                build_kolme_live_signer_adapter(Some("ops-primary"), Some("env-local")),
                 Err(ConfigError::RuntimeKolmeLive(message))
                 if message.contains("fallback_signer_secret_present_violation")
             ),
@@ -3336,7 +3492,7 @@ mod tests {
 
         assert!(
             matches!(
-                build_kolme_live_signing_key(Some("ops-primary"), Some("env-local")),
+                build_kolme_live_signer_adapter(Some("ops-primary"), Some("env-local")),
                 Err(ConfigError::RuntimeKolmeLive(message))
                 if message.contains("strict signer profile mismatch")
             ),
