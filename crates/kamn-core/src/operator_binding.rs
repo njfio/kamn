@@ -5,40 +5,58 @@ use std::fmt;
 const HUMAN_DID_PREFIX: &str = "kamn:did:human:";
 const CANONICAL_PROOF_TYPE: &str = "Ed25519Signature2020";
 
+/// Permissioned actions that an operator binding may authorize.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum OperatorBindingAction {
+    /// Allow configuration mutations.
     Configure,
+    /// Allow binding revocation.
     Revoke,
+    /// Allow audit/history reads.
     ReadHistory,
 }
 
+/// Proof payload that attests operator authorization intent.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OperatorBindingProof {
+    /// Proof type identifier.
     pub type_name: String,
+    /// Proof creation timestamp.
     pub created: String,
+    /// Verification method reference.
     pub verification_method: String,
+    /// Proof signature value.
     pub proof_value: String,
 }
 
+/// Persisted operator binding record.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OperatorBindingRecord {
+    /// Agent DID owner of the binding scope.
     pub agent_did: String,
+    /// Operator DID granted permissions.
     pub operator_did: String,
+    /// Optional proof object for binding establishment.
     pub proof: Option<OperatorBindingProof>,
+    /// Authorized permission set.
     pub permissions: BTreeSet<OperatorBindingAction>,
+    /// Revocation flag.
     pub revoked: bool,
 }
 
+/// Engine that manages operator bindings and authorization checks.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct OperatorBindingEngine {
     bindings: BTreeMap<(String, String), OperatorBindingRecord>,
 }
 
 impl OperatorBindingEngine {
+    /// Creates an empty operator binding engine.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Registers a new operator binding with required permissions and optional proof.
     pub fn register_binding(
         &mut self,
         agent_did: &str,
@@ -77,6 +95,7 @@ impl OperatorBindingEngine {
         Ok(())
     }
 
+    /// Authorizes operator action against a non-revoked binding record.
     pub fn authorize(
         &self,
         agent_did: &str,
@@ -102,6 +121,7 @@ impl OperatorBindingEngine {
         Ok(())
     }
 
+    /// Revokes an existing binding if caller has revoke permission.
     pub fn revoke_binding(
         &mut self,
         agent_did: &str,
@@ -137,6 +157,7 @@ impl OperatorBindingEngine {
         Ok(())
     }
 
+    /// Returns binding record for `(agent_did, operator_did)`.
     pub fn binding_for(
         &self,
         agent_did: &str,
@@ -161,31 +182,52 @@ impl OperatorBindingEngine {
     }
 }
 
+/// Errors emitted by operator binding registration and authorization.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OperatorBindingError {
+    /// Permission set was empty.
     EmptyPermissions,
+    /// Proof field was empty.
     EmptyProofField(&'static str),
+    /// Agent DID failed validation.
     InvalidAgentDid(String),
+    /// Operator DID failed validation.
     InvalidOperatorDid(String),
+    /// Proof type did not match required canonical type.
     InvalidProofType(String),
+    /// Proof verification method prefix did not match operator DID.
     ProofVerificationMethodMismatch {
+        /// Expected verification method prefix.
         expected_prefix: String,
+        /// Actual verification method value.
         actual: String,
     },
+    /// Binding already exists for `(agent_did, operator_did)`.
     DuplicateBinding {
+        /// Agent DID.
         agent_did: String,
+        /// Operator DID.
         operator_did: String,
     },
+    /// Binding not found for `(agent_did, operator_did)`.
     MissingBinding {
+        /// Agent DID.
         agent_did: String,
+        /// Operator DID.
         operator_did: String,
     },
+    /// Binding already revoked for `(agent_did, operator_did)`.
     RevokedBinding {
+        /// Agent DID.
         agent_did: String,
+        /// Operator DID.
         operator_did: String,
     },
+    /// Operator attempted an unauthorized action.
     UnauthorizedAction {
+        /// Operator DID.
         operator_did: String,
+        /// Unauthorized action.
         action: OperatorBindingAction,
     },
 }

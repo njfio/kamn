@@ -5,6 +5,7 @@ kolme_runtime_commit
 migrations
 namespaces
 operator_actions
+operator_binding
 reputation_signals
 signature_profile
 smoke

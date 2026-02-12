@@ -283,6 +283,23 @@ fn graduated_wave_thirteen_direct_message_crypto_module_must_not_return_to_allow
 }
 
 #[test]
+fn graduated_wave_fourteen_operator_binding_module_must_not_return_to_allowlist() {
+    // Regression: #2001
+    let actual = allowlisted_modules_from_core_lib(CORE_LIB);
+    let expected = allowlisted_modules_from_fixture(ALLOWLIST_FIXTURE);
+    let module = "operator_binding";
+
+    assert!(
+        !actual.iter().any(|candidate| candidate == module),
+        "{module} must stay graduated from #[allow(missing_docs)]"
+    );
+    assert!(
+        !expected.iter().any(|candidate| candidate == module),
+        "allowlist fixture must keep {module} removed"
+    );
+}
+
+#[test]
 fn graduated_modules_fixture_must_not_overlap_missing_docs_allowlist() {
     // Regression: #1723
     let actual = allowlisted_modules_from_core_lib(CORE_LIB);

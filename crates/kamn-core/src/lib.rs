@@ -74,7 +74,7 @@ pub mod namespaces;
 pub mod observability;
 /// Permissioned operator configuration actions and audit-log service contracts.
 pub mod operator_actions;
-#[allow(missing_docs)]
+/// Operator identity binding, proof validation, and authorization contracts.
 pub mod operator_binding;
 #[allow(missing_docs)]
 pub mod operator_dashboard_api;
