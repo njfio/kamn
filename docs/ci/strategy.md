@@ -280,6 +280,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_failover_active=false`
       - `runtime_signer_rotation_epoch=1`
       - `runtime_signer_previous_rotation_epoch=1`
+      - `runtime_signer_key_source_contract_version=v1`
+      - `runtime_signer_key_source=env-local`
       - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
     - strict secondary signer summary marker contracts:
       - `runtime_signer_profile=ops-secondary`

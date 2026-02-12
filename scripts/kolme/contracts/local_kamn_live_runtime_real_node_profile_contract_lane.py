@@ -96,6 +96,8 @@ def main() -> int:
         return 1
     max_seconds = int(args.max_seconds)
     expected_signer_profile = args.runtime_signer_profile
+    expected_signer_key_source_contract_version = "v1"
+    expected_signer_key_source = "env-local"
     expected_signer_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[expected_signer_profile]
     alternate_signer_profile = "ops-secondary" if expected_signer_profile == "ops-primary" else "ops-primary"
     alternate_signer_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[alternate_signer_profile]
@@ -263,6 +265,12 @@ def main() -> int:
     if summary.get("runtime_signer_previous_rotation_epoch") != 1:
         print("expected signer previous rotation epoch marker in contract-lane summary", file=sys.stderr)
         return 1
+    if summary.get("runtime_signer_key_source_contract_version") != expected_signer_key_source_contract_version:
+        print("expected signer key-source contract version marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_signer_key_source") != expected_signer_key_source:
+        print("expected signer key-source marker in contract-lane summary", file=sys.stderr)
+        return 1
     if summary.get("runtime_signer_private_key_env") != expected_signer_private_key_env:
         print("expected signer private key env marker in contract-lane summary", file=sys.stderr)
         return 1
@@ -284,6 +292,12 @@ def main() -> int:
         return 1
     if contracts.get("runtime_signer_rotation_epoch_must_increase_on_failover") is not True:
         print("expected contracts signer rotation epoch guard marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_key_source_contract_version") != expected_signer_key_source_contract_version:
+        print("expected contracts signer key-source contract version marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_key_source") != expected_signer_key_source:
+        print("expected contracts signer key-source marker in contract-lane summary", file=sys.stderr)
         return 1
     if contracts.get("runtime_signer_private_key_env") != expected_signer_private_key_env:
         print("expected contracts signer private key env marker in contract-lane summary", file=sys.stderr)
@@ -507,6 +521,8 @@ def main() -> int:
         "--require-non-synthetic-run-evidence",
         "runtime_signer_profile=ops-primary",
         "runtime_signer_profile=ops-secondary",
+        "runtime_signer_key_source_contract_version",
+        "runtime_signer_key_source",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_private_key_env_mismatch",
@@ -520,6 +536,8 @@ def main() -> int:
         "--require-non-synthetic-run-evidence",
         "runtime_signer_profile=ops-primary",
         "runtime_signer_profile=ops-secondary",
+        "runtime_signer_key_source_contract_version",
+        "runtime_signer_key_source",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_private_key_env_mismatch",
@@ -533,6 +551,8 @@ def main() -> int:
         "--require-non-synthetic-run-evidence",
         "runtime_signer_profile=ops-primary",
         "runtime_signer_profile=ops-secondary",
+        "runtime_signer_key_source_contract_version",
+        "runtime_signer_key_source",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_private_key_env_mismatch",

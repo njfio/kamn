@@ -13,6 +13,8 @@ REAL_SIGNER_PROFILE_PRIMARY = "ops-primary"
 REAL_SIGNER_PROFILE_SECONDARY = "ops-secondary"
 REAL_SIGNER_PRIVATE_KEY_ENV_PRIMARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
 REAL_SIGNER_PRIVATE_KEY_ENV_SECONDARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+REAL_SIGNER_KEY_SOURCE_CONTRACT_VERSION = "v1"
+ALLOWED_SIGNER_KEY_SOURCES = ("env-local", "managed-external")
 ALLOWED_SIGNER_PROFILES = (
     REAL_SIGNER_PROFILE_PRIMARY,
     REAL_SIGNER_PROFILE_SECONDARY,
@@ -147,6 +149,21 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     ):
         reason_codes.append("runtime_signer_rotation_epoch_stale")
 
+    runtime_signer_key_source_contract_version = report.get("runtime_signer_key_source_contract_version")
+    if not isinstance(runtime_signer_key_source_contract_version, str) or not runtime_signer_key_source_contract_version.strip():
+        reason_codes.append("runtime_signer_key_source_contract_version_missing")
+    elif runtime_signer_key_source_contract_version != REAL_SIGNER_KEY_SOURCE_CONTRACT_VERSION:
+        reason_codes.append("runtime_signer_key_source_contract_version_mismatch")
+
+    runtime_signer_key_source = report.get("runtime_signer_key_source")
+    expected_signer_key_source = ""
+    if not isinstance(runtime_signer_key_source, str) or not runtime_signer_key_source.strip():
+        reason_codes.append("runtime_signer_key_source_missing")
+    else:
+        expected_signer_key_source = runtime_signer_key_source.strip()
+        if expected_signer_key_source not in ALLOWED_SIGNER_KEY_SOURCES:
+            reason_codes.append("runtime_signer_key_source_invalid")
+
     runtime_signer_private_key_env = report.get("runtime_signer_private_key_env")
     if not isinstance(runtime_signer_private_key_env, str) or not runtime_signer_private_key_env.strip():
         reason_codes.append("runtime_signer_private_key_env_missing")
@@ -242,6 +259,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             and contracts.get("runtime_signer_profile") != runtime_signer_profile
         ):
             reason_codes.append("runtime_signer_profile_contract_mismatch")
+        if (
+            isinstance(runtime_signer_key_source_contract_version, str)
+            and runtime_signer_key_source_contract_version == REAL_SIGNER_KEY_SOURCE_CONTRACT_VERSION
+            and contracts.get("runtime_signer_key_source_contract_version") != runtime_signer_key_source_contract_version
+        ):
+            reason_codes.append("runtime_signer_key_source_contract_version_contract_mismatch")
+        if expected_signer_key_source and contracts.get("runtime_signer_key_source") != expected_signer_key_source:
+            reason_codes.append("runtime_signer_key_source_contract_mismatch")
         if expected_signer_private_key_env and contracts.get("runtime_signer_private_key_env") != expected_signer_private_key_env:
             reason_codes.append("runtime_signer_private_key_env_contract_mismatch")
         if contracts.get("runtime_signer_failover_requires_profile_change") is not True:
