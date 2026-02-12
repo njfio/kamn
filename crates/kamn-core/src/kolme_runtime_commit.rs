@@ -34,6 +34,7 @@ use kamn_kolme::{
     is_valid_receipt_commit_id_input as is_kolme_valid_receipt_commit_id_input_contract,
     is_valid_receipt_provider_input as is_kolme_valid_receipt_provider_input_contract,
     is_valid_runtime_commit_id_request as is_kolme_valid_runtime_commit_id_request_contract,
+    is_valid_runtime_nonce_input as is_kolme_valid_runtime_nonce_input_contract,
     is_valid_runtime_operation_id_input as is_kolme_valid_runtime_operation_id_input_contract,
     is_valid_runtime_payload_hash_input as is_kolme_valid_runtime_payload_hash_input_contract,
     is_valid_runtime_provider_input as is_kolme_valid_runtime_provider_input_contract,
@@ -206,7 +207,7 @@ impl KolmeRuntimeCommitRequest {
                 reason: "must not be empty",
             });
         }
-        if self.nonce == 0 {
+        if !is_kolme_valid_runtime_nonce_input_contract(self.nonce) {
             return Err(KolmeRuntimeCommitError::InvalidRequest {
                 field: "nonce",
                 reason: "must be positive",
