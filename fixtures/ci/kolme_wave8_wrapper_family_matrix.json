@@ -1,0 +1,27 @@
+{
+  "schema_version": "kamn.kolme.lane-migration-matrix.v1",
+  "lanes": [
+    {
+      "current_runner": "hybrid_shell_python",
+      "lane_id": "kolme.local.runtime_commit_live",
+      "owner": "devops",
+      "parent_issue": "#2212",
+      "priority": "P1",
+      "source_entry": "scripts/kolme/run_local_runtime_commit_live_lane.sh",
+      "status": "planned",
+      "target_issue": "#2214",
+      "target_runner": "framework_manifest_lane"
+    },
+    {
+      "current_runner": "hybrid_shell_python",
+      "lane_id": "kolme.local.kamn.live_runtime_integration",
+      "owner": "devops",
+      "parent_issue": "#2212",
+      "priority": "P1",
+      "source_entry": "scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh",
+      "status": "planned",
+      "target_issue": "#2215",
+      "target_runner": "framework_manifest_lane"
+    }
+  ]
+}

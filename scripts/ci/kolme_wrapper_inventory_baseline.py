@@ -65,40 +65,60 @@ def count_shell_loc(path: Path) -> int:
 
 def resolve_manifest_file(*, repo_root: Path, source_entry: str) -> str:
     wrapper_name = Path(source_entry).name
-    dispatcher = repo_root / "scripts/kolme/run_contract_lane_dispatch.sh"
-    if not dispatcher.is_file():
-        fail(f"dispatcher script not found: {dispatcher}")
-
-    result = subprocess.run(
-        [
-            "bash",
-            str(dispatcher),
-            "--lane-wrapper",
-            wrapper_name,
-            "--resolve-manifest-path",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
+    dispatchers = (
+        repo_root / "scripts/kolme/run_contract_lane_dispatch.sh",
+        repo_root / "scripts/kolme/run_lane_dispatch.sh",
     )
-    if result.returncode != 0:
-        stderr = result.stderr.strip() or "unknown dispatcher error"
+
+    resolution_errors: list[str] = []
+    for dispatcher in dispatchers:
+        if not dispatcher.is_file():
+            continue
+
+        result = subprocess.run(
+            [
+                "bash",
+                str(dispatcher),
+                "--lane-wrapper",
+                wrapper_name,
+                "--resolve-manifest-path",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            stderr = result.stderr.strip() or "unknown dispatcher error"
+            resolution_errors.append(f"{dispatcher.name}: {stderr}")
+            continue
+
+        resolved = result.stdout.strip()
+        if not resolved:
+            resolution_errors.append(f"{dispatcher.name}: returned empty manifest path")
+            continue
+
+        manifest_path = Path(resolved)
+        if not manifest_path.is_absolute():
+            manifest_path = (repo_root / manifest_path).resolve()
+        if not manifest_path.is_file():
+            resolution_errors.append(
+                f"{dispatcher.name}: resolved manifest does not exist {manifest_path}"
+            )
+            continue
+
+        return to_repo_relative(manifest_path, repo_root)
+
+    if not resolution_errors:
         fail(
             "failed to resolve manifest for wrapper "
-            f"{wrapper_name} from source_entry {source_entry}: {stderr}"
+            f"{wrapper_name} from source_entry {source_entry}: no dispatcher script found"
         )
 
-    resolved = result.stdout.strip()
-    if not resolved:
-        fail(f"dispatcher returned empty manifest path for wrapper {wrapper_name}")
-
-    manifest_path = Path(resolved)
-    if not manifest_path.is_absolute():
-        manifest_path = (repo_root / manifest_path).resolve()
-    if not manifest_path.is_file():
-        fail(f"resolved manifest does not exist for wrapper {wrapper_name}: {manifest_path}")
-
-    return to_repo_relative(manifest_path, repo_root)
+    fail(
+        "failed to resolve manifest for wrapper "
+        f"{wrapper_name} from source_entry {source_entry}: "
+        + " | ".join(resolution_errors)
+    )
 
 
 def build_inventory(*, matrix_file: Path, repo_root: Path) -> dict[str, Any]:
