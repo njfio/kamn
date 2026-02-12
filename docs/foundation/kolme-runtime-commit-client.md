@@ -245,10 +245,14 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
     - `runtime_commit_command_profile`
     - `runtime_commit_policy_command_profile`
     - `runtime_commit_command_profile_version`
+    - `runtime_signer_key_source_contract_version`
+    - `runtime_signer_key_source`
   - real-node summary/profile checker contract requires:
     - `runtime_commit_command_profile=real-node-non-synthetic-v1`
     - `runtime_commit_policy_command_profile=real-node-non-synthetic-v1`
     - `runtime_commit_command_profile_version=v1`
+    - `runtime_signer_key_source_contract_version=v1`
+    - `runtime_signer_key_source=env-local`
   - marker/profile drift is fail-closed in `check_local_kamn_live_runtime_real_node_profile_policy.py`.
   - strict real-node checker additionally fails closed when runtime command surfaces omit fork-aligned signing profile marker:
     - `runtime_commit_real_signing_profile_marker_missing`

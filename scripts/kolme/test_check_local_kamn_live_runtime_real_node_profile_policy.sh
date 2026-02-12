@@ -68,6 +68,8 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "runtime_signer_failover_active": false,
   "runtime_signer_rotation_epoch": 1,
   "runtime_signer_previous_rotation_epoch": 1,
+  "runtime_signer_key_source_contract_version": "v1",
+  "runtime_signer_key_source": "env-local",
   "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
@@ -91,6 +93,8 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "runtime_signer_profile": "ops-primary",
     "runtime_signer_failover_requires_profile_change": true,
     "runtime_signer_rotation_epoch_must_increase_on_failover": true,
+    "runtime_signer_key_source_contract_version": "v1",
+    "runtime_signer_key_source": "env-local",
     "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
@@ -314,6 +318,16 @@ if ! grep -q "runtime_signer_private_key_env_mismatch" "$TMP_ERR"; then
   exit 1
 fi
 
+if ! grep -q "runtime_signer_key_source_contract_version_missing" "$TMP_ERR"; then
+  echo "expected signer key-source contract version missing reason for policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_key_source_missing" "$TMP_ERR"; then
+  echo "expected signer key-source missing reason for policy failure" >&2
+  exit 1
+fi
+
 if ! grep -q "runtime_commit_command_profile_version_mismatch" "$TMP_ERR"; then
   echo "expected runtime commit profile marker version mismatch reason for policy failure" >&2
   exit 1
@@ -344,6 +358,8 @@ cat >"$TMP_REPORT_SYNTHETIC" <<'JSON'
   "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
   "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
   "runtime_signer_profile": "ops-primary",
+  "runtime_signer_key_source_contract_version": "v1",
+  "runtime_signer_key_source": "env-local",
   "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
@@ -365,6 +381,8 @@ cat >"$TMP_REPORT_SYNTHETIC" <<'JSON'
     "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
     "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
     "runtime_signer_profile": "ops-primary",
+    "runtime_signer_key_source_contract_version": "v1",
+    "runtime_signer_key_source": "env-local",
     "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
@@ -459,6 +477,8 @@ cat >"$TMP_REPORT_INMEMORY" <<'JSON'
   "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
   "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
   "runtime_signer_profile": "ops-primary",
+  "runtime_signer_key_source_contract_version": "v1",
+  "runtime_signer_key_source": "env-local",
   "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
@@ -480,6 +500,8 @@ cat >"$TMP_REPORT_INMEMORY" <<'JSON'
     "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
     "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
     "runtime_signer_profile": "ops-primary",
+    "runtime_signer_key_source_contract_version": "v1",
+    "runtime_signer_key_source": "env-local",
     "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
@@ -625,6 +647,10 @@ if summary.get("runtime_signer_rotation_epoch") != 1:
     raise SystemExit("expected signer rotation epoch marker in runner-generated summary")
 if summary.get("runtime_signer_previous_rotation_epoch") != 1:
     raise SystemExit("expected signer previous rotation epoch marker in runner-generated summary")
+if summary.get("runtime_signer_key_source_contract_version") != "v1":
+    raise SystemExit("expected signer key-source contract version marker in runner-generated summary")
+if summary.get("runtime_signer_key_source") != "env-local":
+    raise SystemExit("expected signer key-source marker in runner-generated summary")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected signer private key env marker in runner-generated summary")
 checks = summary.get("checks")
@@ -657,6 +683,10 @@ if summary.get("runtime_signer_profile") != "ops-secondary":
     raise SystemExit("expected secondary signer profile marker in secondary runner-generated summary")
 if summary.get("runtime_signer_previous_profile") != "ops-secondary":
     raise SystemExit("expected secondary signer previous-profile marker in secondary runner-generated summary")
+if summary.get("runtime_signer_key_source_contract_version") != "v1":
+    raise SystemExit("expected secondary signer key-source contract version marker in secondary runner-generated summary")
+if summary.get("runtime_signer_key_source") != "env-local":
+    raise SystemExit("expected secondary signer key-source marker in secondary runner-generated summary")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
     raise SystemExit("expected secondary signer private key env marker in secondary runner-generated summary")
 contracts = summary.get("contracts")
@@ -664,6 +694,10 @@ if not isinstance(contracts, dict):
     raise SystemExit("expected contracts object in secondary runner-generated summary")
 if contracts.get("runtime_signer_profile") != "ops-secondary":
     raise SystemExit("expected contracts secondary signer profile marker in secondary runner-generated summary")
+if contracts.get("runtime_signer_key_source_contract_version") != "v1":
+    raise SystemExit("expected contracts signer key-source contract version marker in secondary runner-generated summary")
+if contracts.get("runtime_signer_key_source") != "env-local":
+    raise SystemExit("expected contracts signer key-source marker in secondary runner-generated summary")
 if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
     raise SystemExit("expected contracts secondary signer private key env marker in secondary runner-generated summary")
 PY

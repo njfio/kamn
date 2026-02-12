@@ -72,6 +72,8 @@ required_coverage_markers=(
   "docs/ci/strategy.md"
   "README.md"
   "runtime_signer_profile=ops-secondary"
+  "runtime_signer_key_source_contract_version"
+  "runtime_signer_key_source"
   "runtime_signer_private_key_env_mismatch"
   "runtime_commit_command_profile_mismatch"
   "runtime_signer_failover_profile_unchanged"
@@ -107,6 +109,14 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "runtime_signer_profile=ops-secondary" "$docs_file"; then
     echo "expected docs parity to include secondary signer profile marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_key_source_contract_version" "$docs_file"; then
+    echo "expected docs parity to include signer key-source contract version marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_key_source" "$docs_file"; then
+    echo "expected docs parity to include signer key-source marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "runtime_signer_private_key_env_mismatch" "$docs_file"; then
@@ -159,6 +169,10 @@ if summary.get("runtime_signer_rotation_epoch") != 1:
     raise SystemExit("expected signer rotation epoch marker in real-node profile contract-lane summary")
 if summary.get("runtime_signer_previous_rotation_epoch") != 1:
     raise SystemExit("expected signer previous rotation epoch marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_key_source_contract_version") != "v1":
+    raise SystemExit("expected signer key-source contract version marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_key_source") != "env-local":
+    raise SystemExit("expected signer key-source marker in real-node profile contract-lane summary")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected signer private key env marker in real-node profile contract-lane summary")
 contracts = summary.get("contracts", {})
@@ -172,6 +186,10 @@ if contracts.get("runtime_signer_failover_requires_profile_change") is not True:
     raise SystemExit("expected contracts failover profile-change guard marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_rotation_epoch_must_increase_on_failover") is not True:
     raise SystemExit("expected contracts rotation epoch guard marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_key_source_contract_version") != "v1":
+    raise SystemExit("expected contracts signer key-source contract version marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_key_source") != "env-local":
+    raise SystemExit("expected contracts signer key-source marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected contracts signer private key env marker in real-node profile contract-lane summary")
 if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1":
@@ -203,11 +221,19 @@ if summary.get("runtime_signer_profile") != "ops-secondary":
     raise SystemExit("expected secondary signer profile marker in contract-lane summary")
 if summary.get("runtime_signer_previous_profile") != "ops-secondary":
     raise SystemExit("expected secondary signer previous-profile marker in contract-lane summary")
+if summary.get("runtime_signer_key_source_contract_version") != "v1":
+    raise SystemExit("expected secondary signer key-source contract version marker in contract-lane summary")
+if summary.get("runtime_signer_key_source") != "env-local":
+    raise SystemExit("expected secondary signer key-source marker in contract-lane summary")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
     raise SystemExit("expected secondary signer private key env marker in contract-lane summary")
 contracts = summary.get("contracts", {})
 if contracts.get("runtime_signer_profile") != "ops-secondary":
     raise SystemExit("expected contracts secondary signer profile marker in contract-lane summary")
+if contracts.get("runtime_signer_key_source_contract_version") != "v1":
+    raise SystemExit("expected contracts secondary signer key-source contract version marker in contract-lane summary")
+if contracts.get("runtime_signer_key_source") != "env-local":
+    raise SystemExit("expected contracts secondary signer key-source marker in contract-lane summary")
 if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
     raise SystemExit("expected contracts secondary signer private key env marker in contract-lane summary")
 if policy.get("final_decision") != "GO":

@@ -422,6 +422,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_failover_active=false`
     - `runtime_signer_rotation_epoch=1`
     - `runtime_signer_previous_rotation_epoch=1`
+    - `runtime_signer_key_source_contract_version=v1`
+    - `runtime_signer_key_source=env-local`
     - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
   - GO proof also supports deterministic secondary signer markers:
     - `runtime_signer_profile=ops-secondary`
@@ -461,6 +463,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_failover_active`
     - `runtime_signer_rotation_epoch`
     - `runtime_signer_previous_rotation_epoch`
+    - `runtime_signer_key_source_contract_version`
+    - `runtime_signer_key_source`
     - `runtime_signer_private_key_env`
   - real-node profile requires `runtime_commit_command_profile=real-node-non-synthetic-v1`, `runtime_commit_policy_command_profile=real-node-non-synthetic-v1`, and `runtime_commit_command_profile_version=v1`; real-node checker fails closed on marker drift.
   - real-node profile requires signer profile summary/contracts markers:
@@ -470,6 +474,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_failover_active=false`
     - `runtime_signer_rotation_epoch=1`
     - `runtime_signer_previous_rotation_epoch=1`
+    - `runtime_signer_key_source_contract_version=v1`
+    - `runtime_signer_key_source=env-local`
     - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
     - `contracts.runtime_signer_failover_requires_profile_change=true`
     - `contracts.runtime_signer_rotation_epoch_must_increase_on_failover=true`
