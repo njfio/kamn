@@ -5,7 +5,7 @@
 //! explicitly allow-listed while new public surfaces should carry docs by default.
 #![warn(missing_docs)]
 
-#[allow(missing_docs)]
+/// Agent key hierarchy roles, rotation, and ephemeral session key contracts.
 pub mod agent_key_hierarchy;
 #[allow(missing_docs)]
 pub mod agent_upgrade_workflow;
