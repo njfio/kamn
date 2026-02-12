@@ -51,6 +51,20 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if budget_status not in ("not_run", "within_budget", "exceeded_budget"):
         reason_codes.append("budget_status_invalid")
 
+    runtime_commit_command = report.get("runtime_commit_command")
+    if not isinstance(runtime_commit_command, str) or not runtime_commit_command.strip():
+        reason_codes.append("runtime_commit_command_missing")
+    elif "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" not in runtime_commit_command:
+        reason_codes.append("runtime_commit_contract_lane_missing")
+
+    runtime_commit_live_policy_report = report.get("runtime_commit_live_policy_report")
+    if not isinstance(runtime_commit_live_policy_report, str) or not runtime_commit_live_policy_report.strip():
+        reason_codes.append("runtime_commit_live_policy_report_missing")
+
+    runtime_commit_policy_reason_code = report.get("runtime_commit_policy_reason_code")
+    if not isinstance(runtime_commit_policy_reason_code, str) or not runtime_commit_policy_reason_code.strip():
+        reason_codes.append("runtime_commit_policy_reason_code_missing")
+
     contracts = report.get("contracts")
     if not isinstance(contracts, dict):
         reason_codes.append("contracts_missing")
@@ -73,6 +87,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             "localhost_signed_integration",
             "live_api_conformance",
             "runtime_commit_endpoint",
+            "runtime_commit_policy",
         }
         observed_ids: set[str] = set()
         for entry in checks:
@@ -97,6 +112,15 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         for missing_id in missing_ids:
             reason_codes.append(f"check_missing:{missing_id}")
 
+    artifact_paths = report.get("artifact_paths")
+    if not isinstance(artifact_paths, list) or not all(
+        isinstance(path, str) and path.strip() for path in artifact_paths
+    ):
+        reason_codes.append("artifact_paths_invalid")
+    elif isinstance(runtime_commit_live_policy_report, str):
+        if runtime_commit_live_policy_report not in artifact_paths:
+            reason_codes.append("runtime_commit_live_policy_report_artifact_missing")
+
     if args.ci_fast_gate != "PASS":
         reason_codes.append("ci_fast_gate_failed")
 
@@ -105,6 +129,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         observed_final_decision = "GO"
         if reason_code not in ("dry_run_no_commands_executed", "live_runtime_integration_passed"):
             reason_codes.append("ok_status_reason_code_mismatch")
+        if mode == "run" and runtime_commit_policy_reason_code != "runtime_commit_policy_passed":
+            reason_codes.append("runtime_commit_policy_reason_code_mismatch")
         if budget_status == "exceeded_budget":
             reason_codes.append("ok_status_budget_exceeded")
     elif status == "fail":

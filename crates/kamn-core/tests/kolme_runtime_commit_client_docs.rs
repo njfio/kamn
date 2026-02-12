@@ -46,6 +46,7 @@ fn doc_contains_adapter_types_and_validation_commands() {
     assert!(DOC.contains("scripts/kolme/run_runtime_commit_contract_lane.sh"));
     assert!(DOC.contains("run_local_kamn_live_runtime_integration_lane.sh --mode run"));
     assert!(DOC.contains("--runtime-commit-finality-command"));
+    assert!(DOC.contains("--runtime-commit-live-policy-report"));
     assert!(DOC.contains("run_local_kolme_fork_process_lifecycle_lane.sh --mode run"));
     assert!(DOC.contains("--integration-runtime-commit-finality-command"));
     assert!(DOC.contains("run_local_kolme_fork_real_process_contract_lane.sh --mode run"));
@@ -64,6 +65,7 @@ fn regression_requires_adapter_provider_mismatch_and_non_final_fail_closed_marke
     assert!(DOC.contains("`Regression: #1533`"));
     assert!(DOC.contains("`Regression: #2095`"));
     assert!(DOC.contains("`Regression: #2099`"));
+    assert!(DOC.contains("`Regression: #2101`"));
     assert!(DOC.contains("`Regression: #1775`"));
     assert!(DOC.contains("`Regression: #1777`"));
     assert!(DOC.contains("`Regression: #1779`"));
