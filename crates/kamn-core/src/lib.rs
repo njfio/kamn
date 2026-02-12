@@ -90,7 +90,7 @@ pub mod reputation_signals;
 pub mod reputation_state;
 /// Retention policy evaluation, tombstone lifecycle, and purge guard contracts.
 pub mod retention_engine;
-#[allow(missing_docs)]
+/// Runtime lifecycle, queue, quorum, watchdog, and recovery contracts.
 pub mod runtime;
 /// Service marketplace listing registration, search, and negotiation hooks.
 pub mod service_marketplace;

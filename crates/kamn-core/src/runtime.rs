@@ -8,33 +8,51 @@ use std::io::Write;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Peer lifecycle state.
 pub enum PeerLifecycleState {
+    /// Disconnected.
     Disconnected,
+    /// Connecting.
     Connecting,
+    /// Active.
     Active,
+    /// Degraded.
     Degraded,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Peer lifecycle event.
 pub enum PeerLifecycleEvent {
+    /// Start connect.
     StartConnect,
+    /// Handshake succeeded.
     HandshakeSucceeded,
+    /// Heartbeat missed.
     HeartbeatMissed,
+    /// Heartbeat restored.
     HeartbeatRestored,
+    /// Disconnect.
     Disconnect,
+    /// Rejoin.
     Rejoin,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Runtime lifecycle error.
 pub enum RuntimeLifecycleError {
+    /// Invalid peer id.
     InvalidPeerId,
+    /// Invalid transition.
     InvalidTransition {
+        /// From.
         from: PeerLifecycleState,
+        /// Event.
         event: PeerLifecycleEvent,
     },
 }
 
 impl RuntimeLifecycleError {
+    /// Handles reason code.
     pub fn reason_code(&self) -> &'static str {
         match self {
             Self::InvalidPeerId => "runtime_peer_id_invalid",
@@ -60,12 +78,14 @@ impl Display for RuntimeLifecycleError {
 impl Error for RuntimeLifecycleError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Peer lifecycle.
 pub struct PeerLifecycle {
     peer_id: String,
     state: PeerLifecycleState,
 }
 
 impl PeerLifecycle {
+    /// Handles new.
     pub fn new(peer_id: &str) -> Result<Self, RuntimeLifecycleError> {
         if peer_id.trim().is_empty() {
             return Err(RuntimeLifecycleError::InvalidPeerId);
@@ -76,14 +96,17 @@ impl PeerLifecycle {
         })
     }
 
+    /// Handles peer id.
     pub fn peer_id(&self) -> &str {
         &self.peer_id
     }
 
+    /// Handles state.
     pub fn state(&self) -> PeerLifecycleState {
         self.state
     }
 
+    /// Handles transition.
     pub fn transition(
         &mut self,
         event: PeerLifecycleEvent,
@@ -127,12 +150,18 @@ fn next_peer_state(
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Runtime queue error.
 pub enum RuntimeQueueError {
+    /// Invalid capacity.
     InvalidCapacity {
+        /// Capacity.
         capacity: usize,
     },
+    /// Overflow.
     Overflow {
+        /// Capacity.
         capacity: usize,
+        /// Attempted len.
         attempted_len: usize,
     },
 }
@@ -160,12 +189,14 @@ impl Display for RuntimeQueueError {
 impl Error for RuntimeQueueError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Bounded runtime queue.
 pub struct BoundedRuntimeQueue<T> {
     capacity: usize,
     entries: VecDeque<T>,
 }
 
 impl<T> BoundedRuntimeQueue<T> {
+    /// Handles new.
     pub fn new(capacity: usize) -> Result<Self, RuntimeQueueError> {
         if capacity == 0 {
             return Err(RuntimeQueueError::InvalidCapacity { capacity });
@@ -176,18 +207,22 @@ impl<T> BoundedRuntimeQueue<T> {
         })
     }
 
+    /// Handles capacity.
     pub fn capacity(&self) -> usize {
         self.capacity
     }
 
+    /// Handles len.
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
+    /// Handles is empty.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
 
+    /// Handles enqueue.
     pub fn enqueue(&mut self, item: T) -> Result<(), RuntimeQueueError> {
         if self.entries.len() >= self.capacity {
             return Err(RuntimeQueueError::Overflow {
@@ -199,27 +234,38 @@ impl<T> BoundedRuntimeQueue<T> {
         Ok(())
     }
 
+    /// Handles dequeue.
     pub fn dequeue(&mut self) -> Option<T> {
         self.entries.pop_front()
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Runtime backpressure action.
 pub enum RuntimeBackpressureAction {
+    /// Accept.
     Accept,
+    /// Slow producer.
     SlowProducer,
+    /// Reject new enqueue.
     RejectNewEnqueue,
+    /// Purge stale peer queue.
     PurgeStalePeerQueue,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Runtime backpressure decision.
 pub struct RuntimeBackpressureDecision {
+    /// Action.
     pub action: RuntimeBackpressureAction,
+    /// Queue utilization per mille.
     pub queue_utilization_per_mille: u16,
+    /// Stale peer queue.
     pub stale_peer_queue: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Runtime backpressure policy.
 pub struct RuntimeBackpressurePolicy {
     slow_threshold_per_mille: u16,
     reject_threshold_per_mille: u16,
@@ -227,6 +273,7 @@ pub struct RuntimeBackpressurePolicy {
 }
 
 impl RuntimeBackpressurePolicy {
+    /// Handles new.
     pub fn new(
         slow_threshold_per_mille: u16,
         reject_threshold_per_mille: u16,
@@ -258,20 +305,24 @@ impl RuntimeBackpressurePolicy {
         })
     }
 
+    /// Handles slow threshold per mille.
     pub fn slow_threshold_per_mille(&self) -> u16 {
         self.slow_threshold_per_mille
     }
 
+    /// Handles reject threshold per mille.
     pub fn reject_threshold_per_mille(&self) -> u16 {
         self.reject_threshold_per_mille
     }
 
+    /// Handles purge disconnected with pending queue.
     pub fn purge_disconnected_with_pending_queue(&self) -> bool {
         self.purge_disconnected_with_pending_queue
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Runtime backpressure input.
 pub struct RuntimeBackpressureInput {
     peer_id: String,
     queue_depth: usize,
@@ -280,6 +331,7 @@ pub struct RuntimeBackpressureInput {
 }
 
 impl RuntimeBackpressureInput {
+    /// Handles new.
     pub fn new(
         peer_id: &str,
         queue_depth: usize,
@@ -309,39 +361,56 @@ impl RuntimeBackpressureInput {
         })
     }
 
+    /// Handles peer id.
     pub fn peer_id(&self) -> &str {
         &self.peer_id
     }
 
+    /// Handles queue depth.
     pub fn queue_depth(&self) -> usize {
         self.queue_depth
     }
 
+    /// Handles queue capacity.
     pub fn queue_capacity(&self) -> usize {
         self.queue_capacity
     }
 
+    /// Handles lifecycle state.
     pub fn lifecycle_state(&self) -> PeerLifecycleState {
         self.lifecycle_state
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Runtime backpressure error.
 pub enum RuntimeBackpressureError {
+    /// Invalid threshold range.
     InvalidThresholdRange {
+        /// Field.
         field: &'static str,
+        /// Found.
         found: u16,
     },
+    /// Invalid threshold order.
     InvalidThresholdOrder {
+        /// Slow threshold per mille.
         slow_threshold_per_mille: u16,
+        /// Reject threshold per mille.
         reject_threshold_per_mille: u16,
     },
+    /// Invalid peer id.
     InvalidPeerId,
+    /// Invalid queue capacity.
     InvalidQueueCapacity {
+        /// Capacity.
         capacity: usize,
     },
+    /// Queue depth exceeds capacity.
     QueueDepthExceedsCapacity {
+        /// Depth.
         depth: usize,
+        /// Capacity.
         capacity: usize,
     },
 }
@@ -376,15 +445,18 @@ impl Display for RuntimeBackpressureError {
 impl Error for RuntimeBackpressureError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Deterministic backpressure controller.
 pub struct DeterministicBackpressureController {
     policy: RuntimeBackpressurePolicy,
 }
 
 impl DeterministicBackpressureController {
+    /// Handles new.
     pub fn new(policy: RuntimeBackpressurePolicy) -> Self {
         Self { policy }
     }
 
+    /// Handles evaluate.
     pub fn evaluate(
         &self,
         input: RuntimeBackpressureInput,
@@ -417,31 +489,54 @@ fn queue_utilization_per_mille(queue_depth: usize, queue_capacity: usize) -> u16
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Authenticated peer frame error.
 pub enum AuthenticatedPeerFrameError {
+    /// Invalid frame id.
     InvalidFrameId,
+    /// Invalid sender did.
     InvalidSenderDid,
+    /// Invalid recipient did.
     InvalidRecipientDid,
+    /// Invalid local peer did.
     InvalidLocalPeerDid,
+    /// Empty allowed senders.
     EmptyAllowedSenders,
+    /// Invalid nonce.
     InvalidNonce,
+    /// Empty payload.
     EmptyPayload,
+    /// Empty signature.
     EmptySignature,
+    /// Invalid wire field delimiter.
     InvalidWireFieldDelimiter {
+        /// Field.
         field: &'static str,
     },
+    /// Invalid wire format.
     InvalidWireFormat(String),
+    /// Signature mismatch.
     SignatureMismatch {
+        /// Expected.
         expected: String,
+        /// Found.
         found: String,
     },
+    /// Unauthorized sender.
     UnauthorizedSender(String),
+    /// Wrong recipient.
     WrongRecipient {
+        /// Expected.
         expected: String,
+        /// Found.
         found: String,
     },
+    /// Replay nonce.
     ReplayNonce {
+        /// Sender did.
         sender_did: String,
+        /// Last nonce.
         last_nonce: u64,
+        /// Found.
         found: u64,
     },
 }
@@ -492,6 +587,7 @@ impl Display for AuthenticatedPeerFrameError {
 impl Error for AuthenticatedPeerFrameError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Authenticated peer frame.
 pub struct AuthenticatedPeerFrame {
     frame_id: String,
     sender_peer_did: String,
@@ -502,6 +598,7 @@ pub struct AuthenticatedPeerFrame {
 }
 
 impl AuthenticatedPeerFrame {
+    /// Handles new.
     pub fn new(
         frame_id: &str,
         sender_peer_did: &str,
@@ -544,6 +641,7 @@ impl AuthenticatedPeerFrame {
         })
     }
 
+    /// Handles signed.
     pub fn signed(
         frame_id: &str,
         sender_peer_did: &str,
@@ -563,30 +661,37 @@ impl AuthenticatedPeerFrame {
         )
     }
 
+    /// Handles frame id.
     pub fn frame_id(&self) -> &str {
         &self.frame_id
     }
 
+    /// Handles sender peer did.
     pub fn sender_peer_did(&self) -> &str {
         &self.sender_peer_did
     }
 
+    /// Handles recipient peer did.
     pub fn recipient_peer_did(&self) -> &str {
         &self.recipient_peer_did
     }
 
+    /// Handles nonce.
     pub fn nonce(&self) -> u64 {
         self.nonce
     }
 
+    /// Handles payload.
     pub fn payload(&self) -> &str {
         &self.payload
     }
 
+    /// Handles signature.
     pub fn signature(&self) -> &str {
         &self.signature
     }
 
+    /// Handles verify signature.
     pub fn verify_signature(&self) -> Result<(), AuthenticatedPeerFrameError> {
         let expected = expected_peer_frame_signature(
             &self.sender_peer_did,
@@ -603,6 +708,7 @@ impl AuthenticatedPeerFrame {
         Ok(())
     }
 
+    /// Handles to wire.
     pub fn to_wire(&self) -> Result<String, AuthenticatedPeerFrameError> {
         ensure_peer_frame_wire_field(&self.frame_id, "frame_id")?;
         ensure_peer_frame_wire_field(&self.sender_peer_did, "sender_peer_did")?;
@@ -620,6 +726,7 @@ impl AuthenticatedPeerFrame {
         ))
     }
 
+    /// Handles from wire.
     pub fn from_wire(raw: &str) -> Result<Self, AuthenticatedPeerFrameError> {
         let mut segments = raw.split('|');
         let Some(prefix) = segments.next() else {
@@ -679,6 +786,7 @@ impl AuthenticatedPeerFrame {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Peer frame authenticator.
 pub struct PeerFrameAuthenticator {
     local_peer_did: String,
     allowed_sender_dids: BTreeSet<String>,
@@ -686,6 +794,7 @@ pub struct PeerFrameAuthenticator {
 }
 
 impl PeerFrameAuthenticator {
+    /// Handles new.
     pub fn new(
         local_peer_did: &str,
         allowed_sender_dids: Vec<String>,
@@ -712,6 +821,7 @@ impl PeerFrameAuthenticator {
         })
     }
 
+    /// Handles validate inbound.
     pub fn validate_inbound(
         &mut self,
         frame: &AuthenticatedPeerFrame,
@@ -767,6 +877,7 @@ fn ensure_peer_frame_wire_field(
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Proposal candidate.
 pub struct ProposalCandidate {
     id: String,
     sender_did: String,
@@ -775,6 +886,7 @@ pub struct ProposalCandidate {
 }
 
 impl ProposalCandidate {
+    /// Handles new.
     pub fn new(
         id: &str,
         sender_did: &str,
@@ -801,33 +913,40 @@ impl ProposalCandidate {
         })
     }
 
+    /// Handles id.
     pub fn id(&self) -> &str {
         &self.id
     }
 
+    /// Handles sender did.
     pub fn sender_did(&self) -> &str {
         &self.sender_did
     }
 
+    /// Handles nonce.
     pub fn nonce(&self) -> u64 {
         self.nonce
     }
 
+    /// Handles state hash.
     pub fn state_hash(&self) -> &str {
         &self.state_hash
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Proposal plan.
 pub struct ProposalPlan {
     ordered_candidates: Vec<ProposalCandidate>,
 }
 
 impl ProposalPlan {
+    /// Handles ordered candidates.
     pub fn ordered_candidates(&self) -> &[ProposalCandidate] {
         &self.ordered_candidates
     }
 
+    /// Handles ordered candidate ids.
     pub fn ordered_candidate_ids(&self) -> Vec<String> {
         self.ordered_candidates
             .iter()
@@ -837,13 +956,25 @@ impl ProposalPlan {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Proposal planner error.
 pub enum ProposalPlannerError {
+    /// Invalid candidate id.
     InvalidCandidateId,
+    /// Invalid sender did.
     InvalidSenderDid,
+    /// Invalid state hash.
     InvalidStateHash,
+    /// Invalid nonce.
     InvalidNonce,
+    /// Duplicate candidate id.
     DuplicateCandidateId(String),
-    StaleStateHash { expected: String, found: String },
+    /// Stale state hash.
+    StaleStateHash {
+        /// Expected state hash.
+        expected: String,
+        /// Observed state hash.
+        found: String,
+    },
 }
 
 impl Display for ProposalPlannerError {
@@ -869,17 +1000,20 @@ impl Display for ProposalPlannerError {
 impl Error for ProposalPlannerError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Deterministic proposal planner.
 pub struct DeterministicProposalPlanner {
     expected_state_hash: String,
 }
 
 impl DeterministicProposalPlanner {
+    /// Handles new.
     pub fn new(expected_state_hash: &str) -> Self {
         Self {
             expected_state_hash: expected_state_hash.to_owned(),
         }
     }
 
+    /// Handles plan.
     pub fn plan(
         &self,
         mut candidates: Vec<ProposalCandidate>,
@@ -913,6 +1047,7 @@ impl DeterministicProposalPlanner {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Rejoin attempt.
 pub struct RejoinAttempt {
     node_id: String,
     state_version: u64,
@@ -921,6 +1056,7 @@ pub struct RejoinAttempt {
 }
 
 impl RejoinAttempt {
+    /// Handles new.
     pub fn new(
         node_id: &str,
         state_version: u64,
@@ -947,24 +1083,29 @@ impl RejoinAttempt {
         })
     }
 
+    /// Handles node id.
     pub fn node_id(&self) -> &str {
         &self.node_id
     }
 
+    /// Handles state version.
     pub fn state_version(&self) -> u64 {
         self.state_version
     }
 
+    /// Handles state hash.
     pub fn state_hash(&self) -> &str {
         &self.state_hash
     }
 
+    /// Handles resume token.
     pub fn resume_token(&self) -> &str {
         &self.resume_token
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Runtime snapshot.
 pub struct RuntimeSnapshot {
     state_version: u64,
     state_hash: String,
@@ -972,10 +1113,12 @@ pub struct RuntimeSnapshot {
 }
 
 impl RuntimeSnapshot {
+    /// Handles new.
     pub fn new(state_version: u64, state_hash: &str) -> Result<Self, SnapshotRestoreError> {
         Self::with_cursor(state_version, state_hash, state_version)
     }
 
+    /// Handles with cursor.
     pub fn with_cursor(
         state_version: u64,
         state_hash: &str,
@@ -997,27 +1140,52 @@ impl RuntimeSnapshot {
         })
     }
 
+    /// Handles state version.
     pub fn state_version(&self) -> u64 {
         self.state_version
     }
 
+    /// Handles state hash.
     pub fn state_hash(&self) -> &str {
         &self.state_hash
     }
 
+    /// Handles cursor.
     pub fn cursor(&self) -> u64 {
         self.cursor
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Snapshot restore error.
 pub enum SnapshotRestoreError {
+    /// Invalid state version.
     InvalidStateVersion,
+    /// Invalid state hash.
     InvalidStateHash,
+    /// Invalid cursor.
     InvalidCursor,
-    StateVersionMismatch { expected: u64, found: u64 },
-    StateHashMismatch { expected: String, found: String },
-    CursorMismatch { expected: u64, found: u64 },
+    /// State version mismatch.
+    StateVersionMismatch {
+        /// Expected state version.
+        expected: u64,
+        /// Observed state version.
+        found: u64,
+    },
+    /// State hash mismatch.
+    StateHashMismatch {
+        /// Expected state hash.
+        expected: String,
+        /// Observed state hash.
+        found: String,
+    },
+    /// Cursor mismatch.
+    CursorMismatch {
+        /// Expected cursor value.
+        expected: u64,
+        /// Observed cursor value.
+        found: u64,
+    },
 }
 
 impl Display for SnapshotRestoreError {
@@ -1051,6 +1219,7 @@ impl Display for SnapshotRestoreError {
 impl Error for SnapshotRestoreError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Snapshot restore guard.
 pub struct SnapshotRestoreGuard {
     expected_state_version: u64,
     expected_state_hash: String,
@@ -1058,6 +1227,7 @@ pub struct SnapshotRestoreGuard {
 }
 
 impl SnapshotRestoreGuard {
+    /// Handles new.
     pub fn new(
         expected_state_version: u64,
         expected_state_hash: &str,
@@ -1065,6 +1235,7 @@ impl SnapshotRestoreGuard {
         Self::with_cursor(expected_state_version, expected_state_hash, None)
     }
 
+    /// Handles with expected cursor.
     pub fn with_expected_cursor(
         expected_state_version: u64,
         expected_state_hash: &str,
@@ -1098,6 +1269,7 @@ impl SnapshotRestoreGuard {
         })
     }
 
+    /// Handles validate.
     pub fn validate(&self, snapshot: RuntimeSnapshot) -> Result<(), SnapshotRestoreError> {
         if snapshot.state_version() != self.expected_state_version {
             return Err(SnapshotRestoreError::StateVersionMismatch {
@@ -1124,20 +1296,33 @@ impl SnapshotRestoreGuard {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Snapshot store error.
 pub enum SnapshotStoreError {
+    /// Io.
     Io(String),
+    /// Invalid payload.
     InvalidPayload(String),
+    /// State version regression.
     StateVersionRegression {
+        /// Previous.
         previous: u64,
+        /// Found.
         found: u64,
     },
+    /// Cursor regression.
     CursorRegression {
+        /// Previous.
         previous: u64,
+        /// Found.
         found: u64,
     },
+    /// Stale state hash.
     StaleStateHash {
+        /// State hash.
         state_hash: String,
+        /// Previous version.
         previous_version: u64,
+        /// Found version.
         found_version: u64,
     },
 }
@@ -1177,13 +1362,18 @@ impl Display for SnapshotStoreError {
 
 impl Error for SnapshotStoreError {}
 
+/// Runtime snapshot store.
 pub trait RuntimeSnapshotStore {
+    /// Handles write.
     fn write(&mut self, snapshot: RuntimeSnapshot) -> Result<(), SnapshotStoreError>;
+    /// Handles read latest.
     fn read_latest(&self) -> Result<Option<RuntimeSnapshot>, SnapshotStoreError>;
+    /// Handles list.
     fn list(&self) -> Result<Vec<RuntimeSnapshot>, SnapshotStoreError>;
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+/// In memory runtime snapshot store.
 pub struct InMemoryRuntimeSnapshotStore {
     entries: Vec<RuntimeSnapshot>,
 }
@@ -1205,18 +1395,24 @@ impl RuntimeSnapshotStore for InMemoryRuntimeSnapshotStore {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// File runtime snapshot store.
 pub struct FileRuntimeSnapshotStore {
     path: PathBuf,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Snapshot recovery result.
 pub struct SnapshotRecoveryResult {
+    /// Latest.
     pub latest: Option<RuntimeSnapshot>,
+    /// Recovered entries.
     pub recovered_entries: usize,
+    /// Dropped corrupt entries.
     pub dropped_corrupt_entries: usize,
 }
 
 impl FileRuntimeSnapshotStore {
+    /// Handles new.
     pub fn new(path: PathBuf) -> Result<Self, SnapshotStoreError> {
         if path.as_os_str().is_empty() {
             return Err(SnapshotStoreError::InvalidPayload(
@@ -1226,6 +1422,7 @@ impl FileRuntimeSnapshotStore {
         Ok(Self { path })
     }
 
+    /// Handles recover latest and repair.
     pub fn recover_latest_and_repair(
         &mut self,
     ) -> Result<SnapshotRecoveryResult, SnapshotStoreError> {
@@ -1407,6 +1604,7 @@ fn validate_snapshot_continuity(
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Construct lock lease.
 pub struct ConstructLockLease {
     owner_id: String,
     fencing_token: u64,
@@ -1420,24 +1618,47 @@ impl ConstructLockLease {
         }
     }
 
+    /// Handles owner id.
     pub fn owner_id(&self) -> &str {
         &self.owner_id
     }
 
+    /// Handles fencing token.
     pub fn fencing_token(&self) -> u64 {
         self.fencing_token
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Construct lock error.
 pub enum ConstructLockError {
+    /// Invalid lease ttl.
     InvalidLeaseTtl,
+    /// Invalid owner id.
     InvalidOwnerId,
+    /// No active lease.
     NoActiveLease,
+    /// No lease for execution.
     NoLeaseForExecution,
-    LeaseAlreadyHeld { owner: String },
-    LeaseOwnerMismatch { expected: String, found: String },
-    StaleFencingToken { expected: u64, found: u64 },
+    /// Lease already held.
+    LeaseAlreadyHeld {
+        /// Current lock owner id.
+        owner: String,
+    },
+    /// Lease owner mismatch.
+    LeaseOwnerMismatch {
+        /// Expected owner id.
+        expected: String,
+        /// Observed owner id.
+        found: String,
+    },
+    /// Stale fencing token.
+    StaleFencingToken {
+        /// Expected fencing token.
+        expected: u64,
+        /// Observed fencing token.
+        found: u64,
+    },
 }
 
 impl Display for ConstructLockError {
@@ -1474,12 +1695,14 @@ impl Display for ConstructLockError {
 impl Error for ConstructLockError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Construct lock guard.
 pub struct ConstructLockGuard {
     lease_ttl_ticks: u64,
     current_lease: Option<ConstructLockLease>,
 }
 
 impl ConstructLockGuard {
+    /// Handles new.
     pub fn new(lease_ttl_ticks: u64) -> Result<Self, ConstructLockError> {
         if lease_ttl_ticks == 0 {
             return Err(ConstructLockError::InvalidLeaseTtl);
@@ -1490,10 +1713,12 @@ impl ConstructLockGuard {
         })
     }
 
+    /// Handles lease ttl ticks.
     pub fn lease_ttl_ticks(&self) -> u64 {
         self.lease_ttl_ticks
     }
 
+    /// Handles acquire for.
     pub fn acquire_for(
         &mut self,
         owner_id: &str,
@@ -1516,6 +1741,7 @@ impl ConstructLockGuard {
         Ok(lease)
     }
 
+    /// Handles renew.
     pub fn renew(
         &mut self,
         owner_id: &str,
@@ -1551,6 +1777,7 @@ impl ConstructLockGuard {
         Ok(renewed)
     }
 
+    /// Handles release.
     pub fn release(
         &mut self,
         owner_id: &str,
@@ -1582,6 +1809,7 @@ impl ConstructLockGuard {
         Ok(())
     }
 
+    /// Handles transfer.
     pub fn transfer(
         &mut self,
         owner_id: &str,
@@ -1622,6 +1850,7 @@ impl ConstructLockGuard {
         Ok(transferred)
     }
 
+    /// Handles validate execution lease.
     pub fn validate_execution_lease(
         &self,
         owner_id: &str,
@@ -1653,6 +1882,7 @@ impl ConstructLockGuard {
     }
 }
 
+/// Handles execute processor daemon tick.
 pub fn execute_processor_daemon_tick(
     lock_guard: &ConstructLockGuard,
     owner_id: &str,
@@ -1664,12 +1894,14 @@ pub fn execute_processor_daemon_tick(
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Listener attestation.
 pub struct ListenerAttestation {
     listener_did: String,
     attestation_id: String,
 }
 
 impl ListenerAttestation {
+    /// Handles new.
     pub fn new(listener_did: &str, attestation_id: &str) -> Result<Self, ListenerQuorumError> {
         if !is_valid_listener_did(listener_did) {
             return Err(ListenerQuorumError::InvalidListenerDid);
@@ -1683,16 +1915,19 @@ impl ListenerAttestation {
         })
     }
 
+    /// Handles listener did.
     pub fn listener_did(&self) -> &str {
         &self.listener_did
     }
 
+    /// Handles attestation id.
     pub fn attestation_id(&self) -> &str {
         &self.attestation_id
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Listener quorum input.
 pub struct ListenerQuorumInput {
     event_id: String,
     event_sequence: u64,
@@ -1700,6 +1935,7 @@ pub struct ListenerQuorumInput {
 }
 
 impl ListenerQuorumInput {
+    /// Handles new.
     pub fn new(
         event_id: &str,
         event_sequence: u64,
@@ -1718,47 +1954,72 @@ impl ListenerQuorumInput {
         })
     }
 
+    /// Handles event id.
     pub fn event_id(&self) -> &str {
         &self.event_id
     }
 
+    /// Handles event sequence.
     pub fn event_sequence(&self) -> u64 {
         self.event_sequence
     }
 
+    /// Handles attestations.
     pub fn attestations(&self) -> &[ListenerAttestation] {
         &self.attestations
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Listener quorum decision.
 pub struct ListenerQuorumDecision {
+    /// Event id.
     pub event_id: String,
+    /// Event sequence.
     pub event_sequence: u64,
+    /// Required confirmations.
     pub required_confirmations: usize,
+    /// Confirmed listeners.
     pub confirmed_listeners: Vec<String>,
+    /// Accepted.
     pub accepted: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Listener quorum error.
 pub enum ListenerQuorumError {
+    /// Invalid required confirmations.
     InvalidRequiredConfirmations {
+        /// Required.
         required: usize,
     },
+    /// Invalid event id.
     InvalidEventId,
+    /// Invalid event sequence.
     InvalidEventSequence,
+    /// Invalid listener did.
     InvalidListenerDid,
+    /// Invalid attestation id.
     InvalidAttestationId,
+    /// Duplicate listener attestation.
     DuplicateListenerAttestation {
+        /// Listener did.
         listener_did: String,
     },
+    /// Replayed event sequence.
     ReplayedEventSequence {
+        /// Event id.
         event_id: String,
+        /// Previous sequence.
         previous_sequence: u64,
+        /// Received sequence.
         received_sequence: u64,
     },
+    /// Insufficient confirmations.
     InsufficientConfirmations {
+        /// Required.
         required: usize,
+        /// Received.
         received: usize,
     },
 }
@@ -1804,12 +2065,14 @@ impl Display for ListenerQuorumError {
 impl Error for ListenerQuorumError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Listener quorum evaluator.
 pub struct ListenerQuorumEvaluator {
     required_confirmations: usize,
     latest_sequence_by_event: BTreeMap<String, u64>,
 }
 
 impl ListenerQuorumEvaluator {
+    /// Handles new.
     pub fn new(required_confirmations: usize) -> Result<Self, ListenerQuorumError> {
         if required_confirmations == 0 {
             return Err(ListenerQuorumError::InvalidRequiredConfirmations {
@@ -1822,6 +2085,7 @@ impl ListenerQuorumEvaluator {
         })
     }
 
+    /// Handles evaluate.
     pub fn evaluate(
         &mut self,
         input: ListenerQuorumInput,
@@ -1869,6 +2133,7 @@ impl ListenerQuorumEvaluator {
     }
 }
 
+/// Handles evaluate daemon listener quorum.
 pub fn evaluate_daemon_listener_quorum(
     evaluator: &mut ListenerQuorumEvaluator,
     input: ListenerQuorumInput,
@@ -1877,6 +2142,7 @@ pub fn evaluate_daemon_listener_quorum(
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Approver attestation.
 pub struct ApproverAttestation {
     approver_did: String,
     payload_digest: String,
@@ -1884,6 +2150,7 @@ pub struct ApproverAttestation {
 }
 
 impl ApproverAttestation {
+    /// Handles new.
     pub fn new(
         approver_did: &str,
         payload_digest: &str,
@@ -1905,16 +2172,19 @@ impl ApproverAttestation {
         })
     }
 
+    /// Handles approver did.
     pub fn approver_did(&self) -> &str {
         &self.approver_did
     }
 
+    /// Handles payload digest.
     pub fn payload_digest(&self) -> &str {
         &self.payload_digest
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Approver quorum input.
 pub struct ApproverQuorumInput {
     action_id: String,
     payload_digest: String,
@@ -1922,6 +2192,7 @@ pub struct ApproverQuorumInput {
 }
 
 impl ApproverQuorumInput {
+    /// Handles new.
     pub fn new(
         action_id: &str,
         payload_digest: &str,
@@ -1940,37 +2211,70 @@ impl ApproverQuorumInput {
         })
     }
 
+    /// Handles action id.
     pub fn action_id(&self) -> &str {
         &self.action_id
     }
 
+    /// Handles payload digest.
     pub fn payload_digest(&self) -> &str {
         &self.payload_digest
     }
 
+    /// Handles attestations.
     pub fn attestations(&self) -> &[ApproverAttestation] {
         &self.attestations
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Approver quorum decision.
 pub struct ApproverQuorumDecision {
+    /// Action id.
     pub action_id: String,
+    /// Required approvals.
     pub required_approvals: usize,
+    /// Approved by.
     pub approved_by: Vec<String>,
+    /// Authorized.
     pub authorized: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Approver quorum error.
 pub enum ApproverQuorumError {
-    InvalidRequiredApprovals { required: usize },
+    /// Invalid required approvals.
+    InvalidRequiredApprovals {
+        /// Required approval threshold.
+        required: usize,
+    },
+    /// Invalid action id.
     InvalidActionId,
+    /// Invalid payload digest.
     InvalidPayloadDigest,
+    /// Invalid approver did.
     InvalidApproverDid,
+    /// Invalid attestation id.
     InvalidAttestationId,
-    DuplicateApproverAttestation { approver_did: String },
-    PayloadDigestMismatch { expected: String, found: String },
-    InsufficientApprovals { required: usize, received: usize },
+    /// Duplicate approver attestation.
+    DuplicateApproverAttestation {
+        /// Approver DID that duplicated an attestation.
+        approver_did: String,
+    },
+    /// Payload digest mismatch.
+    PayloadDigestMismatch {
+        /// Expected payload digest.
+        expected: String,
+        /// Observed payload digest.
+        found: String,
+    },
+    /// Insufficient approvals.
+    InsufficientApprovals {
+        /// Required approval threshold.
+        required: usize,
+        /// Number of received approvals.
+        received: usize,
+    },
 }
 
 impl Display for ApproverQuorumError {
@@ -2010,11 +2314,13 @@ impl Display for ApproverQuorumError {
 impl Error for ApproverQuorumError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Approver quorum evaluator.
 pub struct ApproverQuorumEvaluator {
     required_approvals: usize,
 }
 
 impl ApproverQuorumEvaluator {
+    /// Handles new.
     pub fn new(required_approvals: usize) -> Result<Self, ApproverQuorumError> {
         if required_approvals == 0 {
             return Err(ApproverQuorumError::InvalidRequiredApprovals {
@@ -2024,6 +2330,7 @@ impl ApproverQuorumEvaluator {
         Ok(Self { required_approvals })
     }
 
+    /// Handles authorize.
     pub fn authorize(
         &self,
         input: ApproverQuorumInput,
@@ -2064,6 +2371,7 @@ impl ApproverQuorumEvaluator {
     }
 }
 
+/// Handles authorize daemon outbound action.
 pub fn authorize_daemon_outbound_action(
     evaluator: &ApproverQuorumEvaluator,
     input: ApproverQuorumInput,
@@ -2072,28 +2380,42 @@ pub fn authorize_daemon_outbound_action(
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// State divergence status.
 pub enum StateDivergenceStatus {
+    /// In sync.
     InSync,
+    /// Diverged.
     Diverged,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// State divergence severity.
 pub enum StateDivergenceSeverity {
+    /// Info.
     Info,
+    /// Critical.
     Critical,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// State divergence evidence.
 pub struct StateDivergenceEvidence {
+    /// Peer id.
     pub peer_id: String,
+    /// Expected state version.
     pub expected_state_version: u64,
+    /// Observed state version.
     pub observed_state_version: u64,
+    /// Expected state hash.
     pub expected_state_hash: String,
+    /// Observed state hash.
     pub observed_state_hash: String,
+    /// Observed at tick.
     pub observed_at_tick: u64,
 }
 
 impl StateDivergenceEvidence {
+    /// Handles new.
     pub fn new(
         peer_id: &str,
         expected_state_version: u64,
@@ -2145,11 +2467,13 @@ impl StateDivergenceEvidence {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// State divergence watch input.
 pub struct StateDivergenceWatchInput {
     evidence: StateDivergenceEvidence,
 }
 
 impl StateDivergenceWatchInput {
+    /// Handles new.
     pub fn new(
         peer_id: &str,
         expected_state_version: u64,
@@ -2169,25 +2493,47 @@ impl StateDivergenceWatchInput {
         Ok(Self { evidence })
     }
 
+    /// Handles evidence.
     pub fn evidence(&self) -> &StateDivergenceEvidence {
         &self.evidence
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// State divergence report.
 pub struct StateDivergenceReport {
+    /// Status.
     pub status: StateDivergenceStatus,
+    /// Severity.
     pub severity: StateDivergenceSeverity,
+    /// Incident fingerprint.
     pub incident_fingerprint: String,
+    /// Evidence.
     pub evidence: StateDivergenceEvidence,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// State divergence error.
 pub enum StateDivergenceError {
+    /// Invalid peer did.
     InvalidPeerDid,
-    InvalidStateVersion { field: &'static str, value: u64 },
-    IncompleteEvidenceField { field: &'static str },
-    InvalidObservedTick { tick: u64 },
+    /// Invalid state version.
+    InvalidStateVersion {
+        /// Field name associated with the invalid value.
+        field: &'static str,
+        /// Provided state version value.
+        value: u64,
+    },
+    /// Incomplete evidence field.
+    IncompleteEvidenceField {
+        /// Missing or empty evidence field name.
+        field: &'static str,
+    },
+    /// Invalid observed tick.
+    InvalidObservedTick {
+        /// Observed daemon tick value.
+        tick: u64,
+    },
 }
 
 impl Display for StateDivergenceError {
@@ -2219,9 +2565,11 @@ impl Display for StateDivergenceError {
 impl Error for StateDivergenceError {}
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+/// State divergence evaluator.
 pub struct StateDivergenceEvaluator;
 
 impl StateDivergenceEvaluator {
+    /// Handles evaluate.
     pub fn evaluate(
         &self,
         input: StateDivergenceWatchInput,
@@ -2258,6 +2606,7 @@ impl StateDivergenceEvaluator {
     }
 }
 
+/// Handles evaluate daemon state divergence.
 pub fn evaluate_daemon_state_divergence(
     evaluator: &StateDivergenceEvaluator,
     input: StateDivergenceWatchInput,
@@ -2266,20 +2615,29 @@ pub fn evaluate_daemon_state_divergence(
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Watchdog anomaly kind.
 pub enum WatchdogAnomalyKind {
+    /// Nominal.
     Nominal,
+    /// Liveness degradation.
     LivenessDegradation,
+    /// Censorship signal.
     CensorshipSignal,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Watchdog anomaly severity.
 pub enum WatchdogAnomalySeverity {
+    /// Info.
     Info,
+    /// Warning.
     Warning,
+    /// Critical.
     Critical,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Watchdog anomaly watch input.
 pub struct WatchdogAnomalyWatchInput {
     sample_id: String,
     expected_deliveries: u32,
@@ -2292,6 +2650,7 @@ pub struct WatchdogAnomalyWatchInput {
 
 impl WatchdogAnomalyWatchInput {
     #[allow(clippy::too_many_arguments)]
+    /// Handles new.
     pub fn new(
         sample_id: &str,
         expected_deliveries: u32,
@@ -2346,31 +2705,51 @@ impl WatchdogAnomalyWatchInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Watchdog anomaly report.
 pub struct WatchdogAnomalyReport {
+    /// Sample id.
     pub sample_id: String,
+    /// Kind.
     pub kind: WatchdogAnomalyKind,
+    /// Severity.
     pub severity: WatchdogAnomalySeverity,
+    /// Delivery ratio per mille.
     pub delivery_ratio_per_mille: u16,
+    /// Liveness ratio per mille.
     pub liveness_ratio_per_mille: u16,
+    /// Targeted peer count.
     pub targeted_peer_count: u32,
+    /// Sample window secs.
     pub sample_window_secs: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Watchdog anomaly error.
 pub enum WatchdogAnomalyError {
+    /// Invalid sample id.
     InvalidSampleId,
+    /// Invalid expected deliveries.
     InvalidExpectedDeliveries {
+        /// Expected deliveries.
         expected_deliveries: u32,
     },
+    /// Invalid sample counts.
     InvalidSampleCounts {
+        /// Expected deliveries.
         expected_deliveries: u32,
+        /// Delivered deliveries.
         delivered_deliveries: u32,
     },
+    /// Invalid peer counts.
     InvalidPeerCounts {
+        /// Active peers.
         active_peers: u32,
+        /// Healthy peers.
         healthy_peers: u32,
     },
+    /// Invalid sample window.
     InvalidSampleWindow {
+        /// Sample window secs.
         sample_window_secs: u64,
     },
 }
@@ -2410,9 +2789,11 @@ impl Display for WatchdogAnomalyError {
 impl Error for WatchdogAnomalyError {}
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+/// Watchdog anomaly evaluator.
 pub struct WatchdogAnomalyEvaluator;
 
 impl WatchdogAnomalyEvaluator {
+    /// Handles evaluate.
     pub fn evaluate(
         &self,
         input: WatchdogAnomalyWatchInput,
@@ -2457,6 +2838,7 @@ impl WatchdogAnomalyEvaluator {
     }
 }
 
+/// Handles evaluate daemon watchdog anomaly.
 pub fn evaluate_daemon_watchdog_anomaly(
     evaluator: &WatchdogAnomalyEvaluator,
     input: WatchdogAnomalyWatchInput,
@@ -2465,6 +2847,7 @@ pub fn evaluate_daemon_watchdog_anomaly(
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Network fault simulation input.
 pub struct NetworkFaultSimulationInput {
     sample_id: String,
     peer_id: String,
@@ -2480,6 +2863,7 @@ pub struct NetworkFaultSimulationInput {
 
 impl NetworkFaultSimulationInput {
     #[allow(clippy::too_many_arguments)]
+    /// Handles new.
     pub fn new(
         sample_id: &str,
         peer_id: &str,
@@ -2528,24 +2912,43 @@ impl NetworkFaultSimulationInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Network fault simulation report.
 pub struct NetworkFaultSimulationReport {
+    /// Sample id.
     pub sample_id: String,
+    /// Final lifecycle state.
     pub final_lifecycle_state: PeerLifecycleState,
+    /// Queue capacity.
     pub queue_capacity: usize,
+    /// Queued events.
     pub queued_events: usize,
+    /// Queue overflow attempts.
     pub queue_overflow_attempts: usize,
+    /// Watchdog kind.
     pub watchdog_kind: WatchdogAnomalyKind,
+    /// Watchdog severity.
     pub watchdog_severity: WatchdogAnomalySeverity,
+    /// Watchdog delivery ratio per mille.
     pub watchdog_delivery_ratio_per_mille: u16,
+    /// Watchdog liveness ratio per mille.
     pub watchdog_liveness_ratio_per_mille: u16,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Network fault simulation error.
 pub enum NetworkFaultSimulationError {
+    /// Invalid sample id.
     InvalidSampleId,
+    /// Invalid peer id.
     InvalidPeerId,
-    InvalidQueueCapacity { capacity: usize },
+    /// Invalid queue capacity.
+    InvalidQueueCapacity {
+        /// Queue capacity value.
+        capacity: usize,
+    },
+    /// Lifecycle.
     Lifecycle(RuntimeLifecycleError),
+    /// Watchdog.
     Watchdog(WatchdogAnomalyError),
 }
 
@@ -2569,11 +2972,13 @@ impl Display for NetworkFaultSimulationError {
 impl Error for NetworkFaultSimulationError {}
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+/// Deterministic network fault simulator.
 pub struct DeterministicNetworkFaultSimulator {
     anomaly_evaluator: WatchdogAnomalyEvaluator,
 }
 
 impl DeterministicNetworkFaultSimulator {
+    /// Handles simulate.
     pub fn simulate(
         &self,
         input: NetworkFaultSimulationInput,
@@ -2633,6 +3038,7 @@ impl DeterministicNetworkFaultSimulator {
     }
 }
 
+/// Handles simulate daemon network fault.
 pub fn simulate_daemon_network_fault(
     simulator: &DeterministicNetworkFaultSimulator,
     input: NetworkFaultSimulationInput,
@@ -2650,20 +3056,46 @@ fn is_valid_kamn_did(value: &str) -> bool {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Recovery status.
 pub enum RecoveryStatus {
+    /// Rejoin accepted.
     RejoinAccepted,
-    CatchUpRequired { from_version: u64, to_version: u64 },
+    /// Catch up required.
+    CatchUpRequired {
+        /// Current local state version.
+        from_version: u64,
+        /// Target remote state version.
+        to_version: u64,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Recovery guard error.
 pub enum RecoveryGuardError {
+    /// Invalid node id.
     InvalidNodeId,
+    /// Invalid state version.
     InvalidStateVersion,
+    /// Invalid state hash.
     InvalidStateHash,
+    /// Invalid resume token.
     InvalidResumeToken,
+    /// Replay resume token.
     ReplayResumeToken(String),
-    StateVersionMismatch { expected: u64, found: u64 },
-    StateHashMismatch { expected: String, found: String },
+    /// State version mismatch.
+    StateVersionMismatch {
+        /// Expected state version.
+        expected: u64,
+        /// Observed state version.
+        found: u64,
+    },
+    /// State hash mismatch.
+    StateHashMismatch {
+        /// Expected state hash.
+        expected: String,
+        /// Observed state hash.
+        found: String,
+    },
 }
 
 impl Display for RecoveryGuardError {
@@ -2695,6 +3127,7 @@ impl Display for RecoveryGuardError {
 impl Error for RecoveryGuardError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Recovery rejoin guard.
 pub struct RecoveryRejoinGuard {
     expected_state_version: u64,
     expected_state_hash: String,
@@ -2702,6 +3135,7 @@ pub struct RecoveryRejoinGuard {
 }
 
 impl RecoveryRejoinGuard {
+    /// Handles new.
     pub fn new(
         expected_state_version: u64,
         expected_state_hash: &str,
@@ -2719,6 +3153,7 @@ impl RecoveryRejoinGuard {
         })
     }
 
+    /// Handles evaluate.
     pub fn evaluate(
         &mut self,
         attempt: RejoinAttempt,
@@ -2756,12 +3191,16 @@ impl RecoveryRejoinGuard {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Runtime wiring.
 pub struct RuntimeWiring {
+    /// Common components.
     pub common_components: Vec<&'static str>,
+    /// Role components.
     pub role_components: Vec<&'static str>,
 }
 
 impl RuntimeWiring {
+    /// Handles all components.
     pub fn all_components(&self) -> Vec<&'static str> {
         let mut components = self.common_components.clone();
         components.extend(self.role_components.iter().copied());
@@ -2769,6 +3208,7 @@ impl RuntimeWiring {
     }
 }
 
+/// Handles build runtime wiring.
 pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
     let common_components = vec!["state-store", "message-router", "audit-log", "api-surface"];
 
