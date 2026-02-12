@@ -76,7 +76,7 @@ pub mod observability;
 pub mod operator_actions;
 /// Operator identity binding, proof validation, and authorization contracts.
 pub mod operator_binding;
-#[allow(missing_docs)]
+/// Operator dashboard API payload contracts and audit feed query validation.
 pub mod operator_dashboard_api;
 #[allow(missing_docs)]
 pub mod operator_dashboard_ui;
