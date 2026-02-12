@@ -178,6 +178,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `discord_bridge`
   - `durable_guard_store`
   - `escrow`
+  - `governance_workflow`
   - `group_channel_crypto`
   - `invariants`
   - `instruction_verify`
@@ -261,6 +262,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2069`
   - `Regression: #2071`
   - `Regression: #2073`
+  - `Regression: #2075`
 
 ## Contributor Entrypoint Matrix
 

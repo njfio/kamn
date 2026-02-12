@@ -1,5 +1,4 @@
 agent_upgrade_workflow
-governance_workflow
 message_lifecycle
 runtime
 signer_backend

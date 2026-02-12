@@ -48,7 +48,7 @@ pub mod discord_bridge;
 pub mod durable_guard_store;
 /// Escrow hold, release, refund, and dispute lifecycle contracts.
 pub mod escrow;
-#[allow(missing_docs)]
+/// Governance proposal, voting, and execution lifecycle contracts.
 pub mod governance_workflow;
 /// Group sender-key distribution, rotation, and encryption integrity contracts.
 pub mod group_channel_crypto;
