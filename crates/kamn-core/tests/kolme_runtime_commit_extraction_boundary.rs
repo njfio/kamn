@@ -20,6 +20,7 @@ const RUNTIME_NOTIFICATIONS_CONSUMER_SRC: &str =
 const RUNTIME_NOTIFICATIONS_WS_SRC: &str =
     include_str!("../src/kolme_runtime_commit/notifications_websocket.rs");
 const RUNTIME_PIPELINE_SRC: &str = include_str!("../src/kolme_runtime_commit/runtime_pipeline.rs");
+const RUNTIME_ERRORS_SRC: &str = include_str!("../src/kolme_runtime_commit/errors.rs");
 
 #[test]
 fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers() {
@@ -88,6 +89,10 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitNotificationsConsumer"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitWebsocketConnector"));
     assert!(!RUNTIME_COMMIT_SRC.contains("pub struct KolmeRuntimeCommitWebsocketConnection"));
+    // Regression: #1960
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub enum KolmeRuntimeCommitTransportErrorKind"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub enum KolmeRuntimeCommitProviderError"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("pub enum KolmeRuntimeCommitError"));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl RuntimeCommitPipeline"));
     assert!(!RUNTIME_COMMIT_SRC.contains("impl InMemoryKolmeRuntimeCommitClient"));
     assert!(!RUNTIME_COMMIT_SRC
@@ -142,7 +147,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
         .contains("require_kolme_commit_id_matches_expected_txhash_contract("));
     assert!(RUNTIME_PIPELINE_SRC.contains("lifecycle_state_for_finality_contract("));
     assert!(RUNTIME_PIPELINE_SRC.contains("lifecycle_state_label_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("commit_finality_label_contract("));
+    assert!(RUNTIME_ERRORS_SRC.contains("commit_finality_label_contract("));
     assert!(RUNTIME_FINALITY_CHECKER_SRC.contains("is_kolme_terminal_receipt_finality_contract("));
     assert!(RUNTIME_FINALITY_CHECKER_SRC.contains("is_kolme_valid_poll_attempt_budget_contract("));
     assert!(
@@ -290,7 +295,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
         .contains("is_kolme_valid_transport_wire_payload_input_contract("));
     assert!(RUNTIME_HTTP_TRANSPORT_SRC
         .contains("normalize_kolme_broadcast_submit_path_input_contract("));
-    assert!(RUNTIME_COMMIT_SRC.contains("impl From<KamnKolmeTransportIoClassification>"));
+    assert!(RUNTIME_ERRORS_SRC.contains("impl From<KamnKolmeTransportIoClassification>"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod request_envelope;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod runtime_pipeline;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod in_memory_client;"));
@@ -303,6 +308,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("mod fork_finality_resolver;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod notifications_consumer;"));
     assert!(RUNTIME_COMMIT_SRC.contains("mod notifications_websocket;"));
+    assert!(RUNTIME_COMMIT_SRC.contains("mod errors;"));
     assert!(RUNTIME_COMMIT_SRC.contains("pub use request_envelope::{"));
     assert!(RUNTIME_COMMIT_SRC.contains("pub use runtime_pipeline::{"));
     assert!(
@@ -323,4 +329,8 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC
         .contains("pub use fork_finality_resolver::KolmeRuntimeCommitForkFinalityResolver;"));
     assert!(RUNTIME_COMMIT_SRC.contains("pub use notifications_websocket::{"));
+    assert!(RUNTIME_COMMIT_SRC.contains("pub use errors::{"));
+    assert!(RUNTIME_ERRORS_SRC.contains("pub enum KolmeRuntimeCommitTransportErrorKind"));
+    assert!(RUNTIME_ERRORS_SRC.contains("pub enum KolmeRuntimeCommitProviderError"));
+    assert!(RUNTIME_ERRORS_SRC.contains("pub enum KolmeRuntimeCommitError"));
 }

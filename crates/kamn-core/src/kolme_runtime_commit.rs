@@ -103,11 +103,11 @@ use kamn_kolme::{
     RuntimeCommitLifecycleState as KamnKolmeRuntimeCommitLifecycleState,
     RuntimeLifecyclePolicyError as KamnKolmeRuntimeLifecyclePolicyError,
 };
-use std::fmt;
 
 mod adapter_backed_client;
 mod api_codec;
 mod block_fallback_reconciler;
+mod errors;
 mod finality_checker;
 mod fork_finality_resolver;
 mod http_transport;
@@ -155,6 +155,9 @@ pub use api_codec::{
     KolmeApiNextNonceResponse,
 };
 pub use block_fallback_reconciler::KolmeRuntimeCommitBlockFallbackReconciler;
+pub use errors::{
+    KolmeRuntimeCommitError, KolmeRuntimeCommitProviderError, KolmeRuntimeCommitTransportErrorKind,
+};
 pub use finality_checker::KolmeRuntimeCommitFinalityChecker;
 pub use fork_finality_resolver::KolmeRuntimeCommitForkFinalityResolver;
 pub use http_transport::KolmeRuntimeCommitHttpTransport;
@@ -176,59 +179,6 @@ pub trait KolmeRuntimeCommitClient {
         &mut self,
         request: &KolmeRuntimeCommitRequest,
     ) -> Result<KolmeRuntimeCommitOutcome, KolmeRuntimeCommitError>;
-}
-
-/// Typed transport error class emitted when adapter-backed provider calls fail.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum KolmeRuntimeCommitTransportErrorKind {
-    /// Provider call timed out.
-    Timeout,
-    /// Provider transport/channel is unavailable.
-    Unavailable,
-    /// Provider response payload is malformed.
-    MalformedResponse,
-}
-
-/// Provider-facing error for runtime commit adapter wiring.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum KolmeRuntimeCommitProviderError {
-    /// Provider call timed out before a response.
-    Timeout,
-    /// Provider transport/channel is unavailable.
-    Unavailable {
-        /// Provider-specific availability failure reason.
-        reason: String,
-    },
-    /// Provider emitted malformed payload/shape.
-    MalformedResponse {
-        /// Provider-specific malformed payload reason.
-        reason: String,
-    },
-}
-
-impl fmt::Display for KolmeRuntimeCommitProviderError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Timeout => write!(f, "provider request timed out"),
-            Self::Unavailable { reason } => write!(f, "provider unavailable: {reason}"),
-            Self::MalformedResponse { reason } => {
-                write!(f, "provider malformed response: {reason}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for KolmeRuntimeCommitProviderError {}
-
-impl From<KamnKolmeTransportIoClassification> for KolmeRuntimeCommitProviderError {
-    fn from(value: KamnKolmeTransportIoClassification) -> Self {
-        match value {
-            KamnKolmeTransportIoClassification::Timeout => Self::Timeout,
-            KamnKolmeTransportIoClassification::Unavailable { reason } => {
-                Self::Unavailable { reason }
-            }
-        }
-    }
 }
 
 /// Provider receipt payload returned by adapter-facing transport.
@@ -422,101 +372,6 @@ pub trait KolmeRuntimeCommitBlockFallbackTransport {
         height: u64,
     ) -> Result<String, KolmeRuntimeCommitProviderError>;
 }
-
-/// Error returned by runtime commit request validation or submission.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum KolmeRuntimeCommitError {
-    /// Request payload failed validation.
-    InvalidRequest {
-        /// Field failing validation.
-        field: &'static str,
-        /// Validation reason.
-        reason: &'static str,
-    },
-    /// Operation identifier was not found in runtime pipeline state.
-    UnknownOperationId {
-        /// Missing operation identifier.
-        operation_id: String,
-    },
-    /// Runtime attempted invalid lifecycle transition for receipt finality.
-    InvalidFinalityTransition {
-        /// Current lifecycle state label.
-        from: &'static str,
-        /// Target lifecycle state label.
-        to: &'static str,
-    },
-    /// Runtime receipt field differs from the operation's existing receipt marker.
-    ReceiptFieldMismatch {
-        /// Field name that mismatched.
-        field: &'static str,
-        /// Expected persisted value.
-        expected: String,
-        /// Observed incoming value.
-        observed: String,
-    },
-    /// Provider transport failed while submitting runtime commit payload.
-    ProviderTransport {
-        /// Typed transport error kind.
-        kind: KolmeRuntimeCommitTransportErrorKind,
-        /// Deterministic detail text for the transport error.
-        detail: String,
-    },
-    /// Provider identifier did not match configured expected provider.
-    ProviderMismatch {
-        /// Configured provider identifier.
-        expected: String,
-        /// Observed provider identifier from response.
-        observed: String,
-    },
-    /// Provider returned a non-final receipt which is rejected in adapter mode.
-    NonFinalReceipt {
-        /// Commit identifier returned by provider.
-        commit_id: String,
-        /// Observed non-final receipt state.
-        finality: KolmeCommitReceiptFinality,
-    },
-}
-
-impl fmt::Display for KolmeRuntimeCommitError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidRequest { field, reason } => {
-                write!(f, "invalid runtime commit request {field}: {reason}")
-            }
-            Self::UnknownOperationId { operation_id } => {
-                write!(f, "unknown runtime operation id: {operation_id}")
-            }
-            Self::InvalidFinalityTransition { from, to } => {
-                write!(f, "invalid finality transition from {from} to {to}")
-            }
-            Self::ReceiptFieldMismatch {
-                field,
-                expected,
-                observed,
-            } => write!(
-                f,
-                "receipt field mismatch for {field}: expected '{expected}', observed '{observed}'"
-            ),
-            Self::ProviderTransport { kind, detail } => {
-                write!(f, "provider transport failure ({kind:?}): {detail}")
-            }
-            Self::ProviderMismatch { expected, observed } => write!(
-                f,
-                "provider mismatch: expected '{expected}', observed '{observed}'"
-            ),
-            Self::NonFinalReceipt {
-                commit_id,
-                finality,
-            } => write!(
-                f,
-                "provider receipt must be final for commit '{commit_id}', observed {}",
-                commit_finality_label_contract(*finality)
-            ),
-        }
-    }
-}
-
-impl std::error::Error for KolmeRuntimeCommitError {}
 
 #[cfg(test)]
 mod tests {
