@@ -91,12 +91,20 @@ if "integration_kolme_fork_live_node_submit_reaches_endpoint" not in runtime_com
     raise SystemExit("expected non-synthetic runtime submit probe marker in integration runtime_commit_command")
 if "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1" not in runtime_commit_command:
     raise SystemExit("expected real signing profile marker in integration runtime_commit_command")
+if "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary" not in runtime_commit_command:
+    raise SystemExit("expected signer profile marker in integration runtime_commit_command")
 if summary.get("runtime_commit_command_profile") != "real-node-non-synthetic-v1":
     raise SystemExit("expected deterministic runtime commit command profile marker for real-node profile")
 if summary.get("runtime_commit_policy_command_profile") != "real-node-non-synthetic-v1":
     raise SystemExit("expected deterministic runtime commit policy command profile marker for real-node profile")
 if summary.get("runtime_commit_command_profile_version") != "v1":
     raise SystemExit("expected runtime commit command profile marker version for real-node profile")
+if summary.get("runtime_signer_profile_selector_env") != "KAMN_KOLME_LIVE_SIGNER_PROFILE":
+    raise SystemExit("expected signer profile selector env marker for real-node profile")
+if summary.get("runtime_signer_profile") != "ops-primary":
+    raise SystemExit("expected signer profile marker for real-node profile")
+if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
+    raise SystemExit("expected signer private key env marker for real-node profile")
 contracts = summary.get("contracts", {})
 if not isinstance(contracts, dict):
     raise SystemExit("expected contracts object in integration summary")
@@ -104,6 +112,12 @@ if contracts.get("runtime_profile") != "real-node":
     raise SystemExit("expected contracts.runtime_profile=real-node in integration summary")
 if contracts.get("ci_fast_gate_scope") != "local-only":
     raise SystemExit("expected local-only fast-gate scope marker in integration summary")
+if contracts.get("runtime_signer_profile_selector_env") != "KAMN_KOLME_LIVE_SIGNER_PROFILE":
+    raise SystemExit("expected contracts signer profile selector env marker in integration summary")
+if contracts.get("runtime_signer_profile") != "ops-primary":
+    raise SystemExit("expected contracts signer profile marker in integration summary")
+if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
+    raise SystemExit("expected contracts signer private key env marker in integration summary")
 PY
 
 set +e

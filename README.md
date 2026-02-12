@@ -578,17 +578,26 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_commit_command_profile=real-node-non-synthetic-v1
 # runtime_commit_policy_command_profile=real-node-non-synthetic-v1
 # runtime_commit_command_profile_version=v1
+# runtime_signer_profile_selector_env=KAMN_KOLME_LIVE_SIGNER_PROFILE
+# runtime_signer_profile=ops-primary
+# runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX
 
 # strict profile NO-GO drift/synthetic reason markers
 # runtime_commit_command_profile_mismatch
+# runtime_signer_profile_mismatch
+# runtime_signer_private_key_env_mismatch
 # runtime_commit_non_synthetic_submit_probe_missing
 # runtime_commit_real_signing_profile_marker_missing
+# runtime_commit_signer_profile_marker_missing
 
 # strict profile non-synthetic submit probe marker
 # integration_kolme_fork_live_node_submit_reaches_endpoint
 
 # strict profile real-signing marker
 # KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1
+
+# strict profile signer marker
+# KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary
 
 # real-node profile contract lane (dry-run summary + policy + docs parity)
 bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json

@@ -12,11 +12,12 @@ README_FILE="$ROOT_DIR/README.md"
 TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 TMP_DRIFT_REPORT="$(mktemp)"
+TMP_SIGNER_DRIFT_REPORT="$(mktemp)"
 TMP_SYNTHETIC_REPORT="$(mktemp)"
 TMP_INMEMORY_REPORT="$(mktemp)"
 TMP_NEGATIVE_POLICY="$(mktemp)"
 TMP_NEGATIVE_ERR="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local KAMN live runtime real-node profile contract lane runner to be executable" >&2
@@ -67,6 +68,8 @@ required_coverage_markers=(
   "docs/ci/strategy.md"
   "README.md"
   "runtime_commit_command_profile_mismatch"
+  "runtime_signer_profile_mismatch"
+  "runtime_commit_signer_profile_marker_missing"
   "runtime_commit_non_synthetic_submit_probe_missing"
   "runtime_commit_in_memory_provider_reference_detected"
   "Regression: #2139"
@@ -123,9 +126,23 @@ if "integration_kolme_fork_live_node_submit_reaches_endpoint" not in runtime_com
     raise SystemExit("expected non-synthetic runtime submit probe marker in real-node profile contract-lane summary")
 if "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1" not in runtime_commit_command:
     raise SystemExit("expected real signing profile marker in real-node profile contract-lane summary")
+if "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary" not in runtime_commit_command:
+    raise SystemExit("expected signer profile marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_profile_selector_env") != "KAMN_KOLME_LIVE_SIGNER_PROFILE":
+    raise SystemExit("expected signer profile selector env marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_profile") != "ops-primary":
+    raise SystemExit("expected signer profile marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
+    raise SystemExit("expected signer private key env marker in real-node profile contract-lane summary")
 contracts = summary.get("contracts", {})
 if contracts.get("runtime_profile") != "real-node":
     raise SystemExit("expected contracts.runtime_profile=real-node in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_profile_selector_env") != "KAMN_KOLME_LIVE_SIGNER_PROFILE":
+    raise SystemExit("expected contracts signer profile selector env marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_profile") != "ops-primary":
+    raise SystemExit("expected contracts signer profile marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
+    raise SystemExit("expected contracts signer private key env marker in real-node profile contract-lane summary")
 if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1":
     raise SystemExit("unexpected real-node profile contract-lane policy schema")
 if policy.get("final_decision") != "GO":
@@ -134,7 +151,7 @@ if policy.get("reason_codes") != []:
     raise SystemExit("expected no policy reason codes for real-node profile contract-lane dry-run composition")
 PY
 
-python3 - "$TMP_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" <<'PY'
+python3 - "$TMP_REPORT" "$TMP_DRIFT_REPORT" "$TMP_SIGNER_DRIFT_REPORT" "$TMP_SYNTHETIC_REPORT" "$TMP_INMEMORY_REPORT" <<'PY'
 import json
 import pathlib
 import sys
@@ -148,6 +165,14 @@ pathlib.Path(sys.argv[2]).write_text(
     encoding="utf-8",
 )
 
+signer_drift_summary = dict(base_summary)
+signer_drift_summary["runtime_signer_profile"] = "ops-secondary"
+signer_drift_summary["runtime_signer_private_key_env"] = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+pathlib.Path(sys.argv[3]).write_text(
+    json.dumps(signer_drift_summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+
 synthetic_summary = dict(base_summary)
 synthetic_summary["runtime_commit_command"] = (
     "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh "
@@ -156,7 +181,7 @@ synthetic_summary["runtime_commit_command"] = (
     "--live-command \"printf 'runtime=synthetic\\\\n'\" "
     "--output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json"
 )
-pathlib.Path(sys.argv[3]).write_text(
+pathlib.Path(sys.argv[4]).write_text(
     json.dumps(synthetic_summary, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
 )
@@ -167,12 +192,12 @@ inmemory_summary["runtime_commit_command"] = (
     "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider "
     "--require-non-synthetic-run-evidence "
     "--live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 "
-    "KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport "
+    "KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport "
     "-- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" "
     "--provider-hint InMemoryKolmeRuntimeCommitClient "
     "--output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json"
 )
-pathlib.Path(sys.argv[4]).write_text(
+pathlib.Path(sys.argv[5]).write_text(
     json.dumps(inmemory_summary, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
 )
@@ -200,6 +225,26 @@ fi
 
 set +e
 python3 "$CHECKER" \
+  --report-file "$TMP_SIGNER_DRIFT_REPORT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_NEGATIVE_POLICY" >"$TMP_NEGATIVE_ERR" 2>&1
+signer_drift_exit_code=$?
+set -e
+
+if [ "$signer_drift_exit_code" -eq 0 ]; then
+  echo "expected signer profile drift negative proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_profile_mismatch" "$TMP_NEGATIVE_ERR"; then
+  echo "expected signer profile drift reason in negative proof output" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
   --report-file "$TMP_SYNTHETIC_REPORT" \
   --expected-final-decision NO-GO \
   --ci-fast-gate PASS \
@@ -220,6 +265,11 @@ fi
 
 if ! grep -q "runtime_commit_real_signing_profile_marker_missing" "$TMP_NEGATIVE_ERR"; then
   echo "expected real signing profile marker reason in synthetic-command negative proof output" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_signer_profile_marker_missing" "$TMP_NEGATIVE_ERR"; then
+  echo "expected signer profile marker reason in synthetic-command negative proof output" >&2
   exit 1
 fi
 

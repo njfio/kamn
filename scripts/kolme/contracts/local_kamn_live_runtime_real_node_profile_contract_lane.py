@@ -213,6 +213,9 @@ def main() -> int:
     if "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1" not in runtime_commit_command:
         print("expected real signing profile marker in contract-lane summary command", file=sys.stderr)
         return 1
+    if "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary" not in runtime_commit_command:
+        print("expected signer profile marker in contract-lane summary command", file=sys.stderr)
+        return 1
     if "InMemoryKolmeRuntimeCommitClient" in runtime_commit_command:
         print("expected live-provider-only runtime command composition in real-node contract-lane summary", file=sys.stderr)
         return 1
@@ -225,12 +228,30 @@ def main() -> int:
     if summary.get("runtime_commit_command_profile_version") != "v1":
         print("expected runtime commit command profile marker version in contract-lane summary", file=sys.stderr)
         return 1
+    if summary.get("runtime_signer_profile_selector_env") != "KAMN_KOLME_LIVE_SIGNER_PROFILE":
+        print("expected signer profile selector env marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_signer_profile") != "ops-primary":
+        print("expected signer profile marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
+        print("expected signer private key env marker in contract-lane summary", file=sys.stderr)
+        return 1
     contracts = summary.get("contracts", {})
     if not isinstance(contracts, dict):
         print("expected contracts object in real-node profile contract-lane summary", file=sys.stderr)
         return 1
     if contracts.get("runtime_profile") != "real-node":
         print("expected contracts.runtime_profile=real-node in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_profile_selector_env") != "KAMN_KOLME_LIVE_SIGNER_PROFILE":
+        print("expected contracts signer profile selector env marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_profile") != "ops-primary":
+        print("expected contracts signer profile marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
+        print("expected contracts signer private key env marker in contract-lane summary", file=sys.stderr)
         return 1
     if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1":
         print("unexpected real-node profile policy schema in contract-lane output", file=sys.stderr)
@@ -272,6 +293,38 @@ def main() -> int:
             return 1
         if marker_drift_policy.get("final_decision") != "NO-GO":
             print("expected NO-GO final decision for marker drift policy output", file=sys.stderr)
+            return 1
+
+        signer_profile_drift_summary_file = negative_path / "signer_profile_drift_summary.json"
+        signer_profile_drift_policy_file = negative_path / "signer_profile_drift_policy.json"
+        signer_profile_drift_summary = dict(summary)
+        signer_profile_drift_summary["runtime_signer_profile"] = "ops-secondary"
+        signer_profile_drift_summary["runtime_signer_private_key_env"] = (
+            "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
+        )
+        signer_profile_drift_summary_file.write_text(
+            json.dumps(signer_profile_drift_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        signer_profile_drift_result = run_real_node_policy_check(
+            report_file=signer_profile_drift_summary_file,
+            output_json=signer_profile_drift_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if signer_profile_drift_result.returncode == 0:
+            print("expected signer profile drift negative proof to fail closed", file=sys.stderr)
+            return 1
+        signer_profile_drift_policy = json.loads(signer_profile_drift_policy_file.read_text(encoding="utf-8"))
+        signer_profile_drift_reason_codes = signer_profile_drift_policy.get("reason_codes")
+        if not isinstance(signer_profile_drift_reason_codes, list):
+            print("expected reason_codes list in signer profile drift policy output", file=sys.stderr)
+            return 1
+        if "runtime_signer_profile_mismatch" not in signer_profile_drift_reason_codes:
+            print("expected runtime_signer_profile_mismatch in signer profile drift policy output", file=sys.stderr)
+            return 1
+        if signer_profile_drift_policy.get("final_decision") != "NO-GO":
+            print("expected NO-GO final decision for signer profile drift policy output", file=sys.stderr)
             return 1
 
         synthetic_regression_summary_file = negative_path / "synthetic_regression_summary.json"
@@ -316,6 +369,12 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
+        if "runtime_commit_signer_profile_marker_missing" not in synthetic_regression_reason_codes:
+            print(
+                "expected runtime_commit_signer_profile_marker_missing in synthetic regression policy output",
+                file=sys.stderr,
+            )
+            return 1
         if synthetic_regression_policy.get("final_decision") != "NO-GO":
             print("expected NO-GO final decision for synthetic regression policy output", file=sys.stderr)
             return 1
@@ -328,7 +387,7 @@ def main() -> int:
             "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider "
             "--require-non-synthetic-run-evidence "
             "--live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 "
-            "KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport "
+            "KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport "
             "-- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" "
             "--provider-hint InMemoryKolmeRuntimeCommitClient "
             "--output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json"
@@ -366,6 +425,7 @@ def main() -> int:
         "check_local_kamn_live_runtime_real_node_profile_policy.py",
         "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
         "--require-non-synthetic-run-evidence",
+        "runtime_signer_profile=ops-primary",
         "Regression: #2139",
     ]
     ci_doc_markers = [
@@ -373,6 +433,7 @@ def main() -> int:
         "check_local_kamn_live_runtime_real_node_profile_policy.py",
         "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
         "--require-non-synthetic-run-evidence",
+        "runtime_signer_profile=ops-primary",
         "Regression: #2139",
     ]
     readme_markers = [
@@ -380,6 +441,7 @@ def main() -> int:
         "check_local_kamn_live_runtime_real_node_profile_policy.py",
         "run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
         "--require-non-synthetic-run-evidence",
+        "runtime_signer_profile=ops-primary",
         "Regression: #2139",
     ]
 
