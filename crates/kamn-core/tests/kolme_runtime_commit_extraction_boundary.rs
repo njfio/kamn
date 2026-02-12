@@ -45,6 +45,9 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("let signer_key_id = signer_key_id.trim();"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let message = message.trim();"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let signature = signature.trim();"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("operation_id: operation_id.trim().to_owned(),"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("state_root: state_root.trim().to_owned(),"));
+    assert!(!RUNTIME_COMMIT_SRC.contains("payload_hash: payload_hash.trim().to_owned(),"));
     assert!(!RUNTIME_COMMIT_SRC.contains(
         "\"operation_id={}\\nstate_root={}\\nactor_did={}\\nnonce={}\\npayload_hash={}\\nidempotency_key={}\\n\""
     ));
@@ -66,6 +69,7 @@ fn regression_runtime_commit_extraction_boundary_keeps_direct_helper_delegation(
     assert!(RUNTIME_COMMIT_SRC.contains("deterministic_runtime_commit_idempotency_key_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("deterministic_runtime_commit_id_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("render_kolme_runtime_commit_wire_payload_contract("));
+    assert!(RUNTIME_COMMIT_SRC.contains("normalize_kolme_runtime_commit_request_fields_contract("));
     assert!(RUNTIME_COMMIT_SRC.contains("txhash_from_kolme_commit_id("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_http_endpoint("));
     assert!(RUNTIME_COMMIT_SRC.contains("parse_kolme_websocket_endpoint("));

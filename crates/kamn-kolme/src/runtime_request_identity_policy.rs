@@ -33,6 +33,19 @@ pub fn render_runtime_commit_wire_payload(
     )
 }
 
+/// Normalizes runtime commit request fields before deterministic identity/rendering.
+pub fn normalize_runtime_commit_request_fields(
+    operation_id: &str,
+    state_root: &str,
+    payload_hash: &str,
+) -> (String, String, String) {
+    (
+        operation_id.trim().to_owned(),
+        state_root.trim().to_owned(),
+        payload_hash.trim().to_owned(),
+    )
+}
+
 /// Renders deterministic runtime commit identifier from request fields.
 pub fn deterministic_runtime_commit_id(
     operation_id: &str,
@@ -111,8 +124,8 @@ mod tests {
         deterministic_runtime_commit_idempotency_key, is_canonical_runtime_commit_signed_message,
         is_valid_runtime_commit_id_request, is_valid_runtime_nonce_input,
         is_valid_runtime_operation_id_input, is_valid_runtime_payload_hash_input,
-        is_valid_runtime_state_root_input, normalize_runtime_commit_signed_envelope_fields,
-        render_runtime_commit_wire_payload,
+        is_valid_runtime_state_root_input, normalize_runtime_commit_request_fields,
+        normalize_runtime_commit_signed_envelope_fields, render_runtime_commit_wire_payload,
     };
 
     #[test]
@@ -218,6 +231,23 @@ mod tests {
         assert_eq!(
             payload,
             "operation_id=op-11\nstate_root=state:gamma\nactor_did=did:kamn:agent:gamma\nnonce=4\npayload_hash=payload:gamma\nidempotency_key=idempotency:gamma\n"
+        );
+    }
+
+    #[test]
+    fn unit_normalizes_runtime_commit_request_fields() {
+        let normalized = normalize_runtime_commit_request_fields(
+            " operation-42 ",
+            " state:epsilon ",
+            " payload:epsilon ",
+        );
+        assert_eq!(
+            normalized,
+            (
+                "operation-42".to_owned(),
+                "state:epsilon".to_owned(),
+                "payload:epsilon".to_owned(),
+            )
         );
     }
 }

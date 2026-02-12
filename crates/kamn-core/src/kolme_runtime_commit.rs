@@ -50,6 +50,7 @@ use kamn_kolme::{
     lifecycle_state_label as lifecycle_state_label_contract,
     normalize_broadcast_payload as normalize_kolme_broadcast_payload_contract,
     normalize_broadcast_submit_path_input as normalize_kolme_broadcast_submit_path_input_contract,
+    normalize_runtime_commit_request_fields as normalize_kolme_runtime_commit_request_fields_contract,
     normalize_runtime_commit_signed_envelope_fields as normalize_kolme_runtime_commit_signed_envelope_fields_contract,
     notification_event_to_provider_receipt as notification_event_to_kolme_provider_receipt_contract,
     parse_authorization_header_value as parse_kolme_authorization_header_value,
@@ -133,21 +134,27 @@ impl KolmeRuntimeCommitRequest {
                 field: "actor_did",
                 reason: "must be a valid KAMN DID",
             })?;
+        let (operation_id, state_root, payload_hash) =
+            normalize_kolme_runtime_commit_request_fields_contract(
+                operation_id,
+                state_root,
+                payload_hash,
+            );
         let actor_did_value = actor_did.as_str().to_owned();
         let idempotency_key = deterministic_runtime_commit_idempotency_key_contract(
-            operation_id,
-            state_root,
+            operation_id.as_str(),
+            state_root.as_str(),
             actor_did_value.as_str(),
             nonce,
-            payload_hash,
+            payload_hash.as_str(),
         );
 
         let request = Self {
-            operation_id: operation_id.trim().to_owned(),
-            state_root: state_root.trim().to_owned(),
+            operation_id,
+            state_root,
             actor_did,
             nonce,
-            payload_hash: payload_hash.trim().to_owned(),
+            payload_hash,
             idempotency_key,
         };
         request.validate()?;
