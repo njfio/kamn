@@ -78,7 +78,7 @@ pub mod operator_actions;
 pub mod operator_binding;
 /// Operator dashboard API payload contracts and audit feed query validation.
 pub mod operator_dashboard_api;
-#[allow(missing_docs)]
+/// Operator dashboard UI composition contracts and presentation-ready projections.
 pub mod operator_dashboard_ui;
 /// Performance target thresholds and benchmark outcome classification contracts.
 pub mod performance_targets;

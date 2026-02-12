@@ -9,7 +9,6 @@ invariants
 message_delivery_guards
 message_envelope
 message_lifecycle
-operator_dashboard_ui
 reputation_state
 runtime
 signer_backend
