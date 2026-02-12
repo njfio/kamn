@@ -1,9 +1,14 @@
+//! Canonical message envelope schema, validation rules, and payload normalization.
+
 use crate::AgentDid;
 use std::collections::BTreeMap;
 use std::fmt;
 
+/// Required envelope type identifier for canonical KAMN messages.
 pub const CANONICAL_MESSAGE_ENVELOPE_TYPE: &str = "kamn:message:v1";
+/// Required encryption algorithm for canonical envelope headers.
 pub const CANONICAL_ENCRYPTION_ALGORITHM: &str = "X25519-XChaCha20-Poly1305";
+/// Required proof purpose for canonical envelope signatures.
 pub const CANONICAL_PROOF_PURPOSE: &str = "authentication";
 
 const ALLOWED_MESSAGE_TYPES: [&str; 11] = [
@@ -20,59 +25,94 @@ const ALLOWED_MESSAGE_TYPES: [&str; 11] = [
     "Revocation",
 ];
 
+/// Envelope metadata fields used for routing, replay protection, and threading.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnvelopeMetadata {
+    /// Stable message identifier.
     pub id: String,
+    /// Envelope schema type discriminator.
     pub type_name: String,
+    /// Sender DID.
     pub from: String,
+    /// Recipient DID list.
     pub to: Vec<String>,
+    /// Creation timestamp string.
     pub created: String,
+    /// Expiration timestamp string.
     pub expires: String,
+    /// Optional thread identifier.
     pub thread_id: Option<String>,
+    /// Optional parent message identifier.
     pub parent_id: Option<String>,
+    /// Monotonic sender nonce.
     pub nonce: u64,
 }
 
+/// Envelope encryption descriptor for recipient key distribution.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnvelopeEncryption {
+    /// Encryption algorithm name.
     pub algorithm: String,
+    /// Recipient public key references.
     pub recipient_keys: Vec<String>,
 }
 
+/// Header metadata describing message semantics and encryption policy.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnvelopeHeader {
+    /// Domain-specific message type.
     pub message_type: String,
+    /// Delivery priority label.
     pub priority: String,
+    /// Payload content type.
     pub content_type: String,
+    /// Encryption parameters.
     pub encryption: EnvelopeEncryption,
 }
 
+/// Attachment pointer included in the envelope body.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AttachmentRef {
+    /// Attachment identifier.
     pub id: String,
+    /// Attachment media type.
     pub media_type: String,
+    /// Attachment retrieval URI.
     pub uri: String,
 }
 
+/// Signature proof block for envelope authenticity checks.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnvelopeProof {
+    /// Proof type name.
     pub type_name: String,
+    /// Proof creation timestamp string.
     pub created: String,
+    /// Verification method DID URL.
     pub verification_method: String,
+    /// Proof purpose value.
     pub proof_purpose: String,
+    /// Signature payload value.
     pub proof_value: String,
 }
 
+/// Canonical message envelope contract with metadata, payload, and proof sections.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CanonicalMessageEnvelope {
+    /// Envelope metadata section.
     pub envelope: EnvelopeMetadata,
+    /// Envelope header section.
     pub header: EnvelopeHeader,
+    /// Canonical body key/value payload.
     pub body: BTreeMap<String, String>,
+    /// Attachment references for out-of-band content.
     pub attachments: Vec<AttachmentRef>,
+    /// Signature proof section.
     pub proof: EnvelopeProof,
 }
 
 impl CanonicalMessageEnvelope {
+    /// Validates all envelope contract rules.
     pub fn validate(&self) -> Result<(), MessageEnvelopeError> {
         require_non_empty("envelope.id", &self.envelope.id)?;
         if self.envelope.type_name != CANONICAL_MESSAGE_ENVELOPE_TYPE {
@@ -189,6 +229,7 @@ impl CanonicalMessageEnvelope {
         Ok(())
     }
 
+    /// Renders a deterministic canonical payload string for signing and verification.
     pub fn canonical_payload(&self) -> String {
         let mut recipients = self.envelope.to.clone();
         recipients.sort();
@@ -262,30 +303,52 @@ impl CanonicalMessageEnvelope {
     }
 }
 
+/// Validation and normalization error taxonomy for canonical message envelopes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MessageEnvelopeError {
+    /// A required field is empty.
     EmptyField(&'static str),
+    /// Envelope type does not match the canonical type.
     InvalidEnvelopeType(String),
+    /// Sender DID is invalid.
     InvalidSenderDid(String),
+    /// Recipient list is empty.
     EmptyRecipients,
+    /// A recipient DID is invalid.
     InvalidRecipientDid(String),
+    /// Envelope expiry is not strictly after creation time.
     InvalidExpiryWindow {
+        /// Creation timestamp string.
         created: String,
+        /// Expiration timestamp string.
         expires: String,
     },
+    /// Envelope nonce is invalid.
     InvalidNonce(u64),
+    /// Header message type is not supported.
     InvalidMessageType(String),
+    /// Header encryption algorithm does not match the canonical algorithm.
     InvalidEncryptionAlgorithm(String),
+    /// Header recipient key list is empty.
     EmptyRecipientKeys,
+    /// Body map is empty.
     EmptyBody,
+    /// Body entry contains invalid key/value data.
     InvalidBodyEntry(String),
+    /// Attachment has an invalid required field.
     InvalidAttachmentField {
+        /// Attachment identifier.
         attachment_id: String,
+        /// Field name that failed validation.
         field: &'static str,
     },
+    /// Proof purpose does not match the canonical purpose.
     InvalidProofPurpose(String),
+    /// Proof verification method does not match sender DID prefix.
     ProofVerificationMethodMismatch {
+        /// Expected verification method DID URL prefix.
         expected_prefix: String,
+        /// Observed verification method DID URL.
         actual: String,
     },
 }

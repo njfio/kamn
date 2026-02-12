@@ -63,7 +63,7 @@ pub mod key_recovery;
 pub mod kolme_runtime_commit;
 /// Message delivery replay, nonce, and acceptance window guardrail contracts.
 pub mod message_delivery_guards;
-#[allow(missing_docs)]
+/// Canonical message envelope schema validation and normalization contracts.
 pub mod message_envelope;
 #[allow(missing_docs)]
 pub mod message_lifecycle;
