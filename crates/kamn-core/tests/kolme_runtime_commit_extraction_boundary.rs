@@ -44,6 +44,7 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_transport_io_classification_to_provider_error("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn map_provider_outcome_policy_error_to_malformed("));
     assert!(!RUNTIME_COMMIT_SRC.contains("fn reconnect_exhausted_error("));
+    assert!(!RUNTIME_COMMIT_SRC.contains("fn configured_tls_ca_file("));
     assert!(!RUNTIME_COMMIT_SRC.contains("let signer_key_id = signer_key_id.trim();"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let message = message.trim();"));
     assert!(!RUNTIME_COMMIT_SRC.contains("let signature = signature.trim();"));
@@ -64,6 +65,7 @@ fn unit_runtime_commit_extraction_boundary_removes_local_finality_glue_wrappers(
     assert!(!RUNTIME_COMMIT_SRC.contains(
         "base_url: base_url.trim().to_owned(),\n            block_path_template: block_path_template.trim().to_owned(),\n            provider: provider.trim().to_owned(),"
     ));
+    assert!(!RUNTIME_COMMIT_SRC.contains("if let Some(ca_file) = configured_tls_ca_file()?"));
     assert!(!RUNTIME_COMMIT_SRC.contains(
         "\"operation_id={}\\nstate_root={}\\nactor_did={}\\nnonce={}\\npayload_hash={}\\nidempotency_key={}\\n\""
     ));
