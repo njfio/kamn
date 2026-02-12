@@ -410,6 +410,13 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
 - Real-node profile policy checker command:
   - `python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --require-non-synthetic-run-evidence --output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
+- Strict-marker GO/NO-GO proofs:
+  - GO proof uses the command above and requires deterministic markers:
+    - `runtime_commit_command_profile=real-node-non-synthetic-v1`
+    - `runtime_commit_policy_command_profile=real-node-non-synthetic-v1`
+    - `runtime_commit_command_profile_version=v1`
+  - NO-GO marker-drift proof must surface `runtime_commit_command_profile_mismatch` when profile marker contracts drift from `real-node-non-synthetic-v1`.
+  - NO-GO synthetic-command regression proof must surface `runtime_commit_non_synthetic_submit_probe_missing` when `runtime_commit_command` omits `integration_kolme_fork_live_node_submit_reaches_endpoint`.
 - Real-node profile contract lane command:
   - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
 - Contract lane command:
