@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -15,7 +16,10 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 RUNNER = ROOT_DIR / "scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh"
 CHECKER = ROOT_DIR / "scripts/kolme/check_local_kolme_fork_checkout_bootstrap_policy.py"
 DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
+CI_DOC_FILE = ROOT_DIR / "docs/ci/strategy.md"
 README_FILE = ROOT_DIR / "README.md"
+PIN_MANIFEST_SCHEMA = "kamn.kolme.fork-pin-manifest.v1"
+PIN_MANIFEST_FIXTURE = ROOT_DIR / "fixtures/kolme_compatibility/kolme_fork_pin_manifest.json"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -63,6 +67,11 @@ def build_parser() -> argparse.ArgumentParser:
         default="refs/heads/main",
         help="Expected checkout symbolic head ref.",
     )
+    parser.add_argument(
+        "--fork-pin-manifest-file",
+        default=str(PIN_MANIFEST_FIXTURE),
+        help="Fork pin manifest file providing remote/ref/commit tuple.",
+    )
     return parser
 
 
@@ -74,21 +83,26 @@ def ensure_executable(path: Path, description: str) -> None:
 def ensure_docs() -> None:
     if not DOC_FILE.is_file():
         raise RuntimeError("expected Kolme devnet ops documentation to exist")
+    if not CI_DOC_FILE.is_file():
+        raise RuntimeError("expected CI strategy documentation to exist")
     if not README_FILE.is_file():
         raise RuntimeError("expected README to exist")
-    doc_text = DOC_FILE.read_text(encoding="utf-8")
-    readme_text = README_FILE.read_text(encoding="utf-8")
     required_doc_markers = (
         "run_local_kolme_fork_checkout_bootstrap_lane.sh",
         "check_local_kolme_fork_checkout_bootstrap_policy.py",
         "run_local_kolme_fork_checkout_bootstrap_contract_lane.sh",
+        "--fork-pin-manifest-file",
+        "--expected-commit",
+        "fork_pin_manifest_schema_version=kamn.kolme.fork-pin-manifest.v1",
+        "head_commit_mismatch",
         "Regression: #1663",
+        "Regression: #2328",
     )
-    for marker in required_doc_markers:
-        if marker not in doc_text:
-            raise RuntimeError(f"expected Kolme devnet ops doc marker: {marker}")
-    if "run_local_kolme_fork_checkout_bootstrap_contract_lane.sh" not in readme_text:
-        raise RuntimeError("expected README to reference checkout bootstrap contract lane")
+    for doc_path in (DOC_FILE, CI_DOC_FILE, README_FILE):
+        doc_text = doc_path.read_text(encoding="utf-8")
+        for marker in required_doc_markers:
+            if marker not in doc_text:
+                raise RuntimeError(f"expected docs marker in {doc_path}: {marker}")
 
 
 def create_local_source_repo(root: Path) -> Path:
@@ -110,80 +124,124 @@ def create_local_source_repo(root: Path) -> Path:
     return source_repo
 
 
-def run_lane(args: argparse.Namespace) -> tuple[str, str]:
-    expected_reason = "dry_run_no_commands_executed"
-    ci_env = dict(os.environ)
+def resolve_head_commit(repo_path: Path) -> str:
+    return (
+        subprocess.check_output(
+            ["git", "-C", str(repo_path), "rev-parse", "HEAD"],
+            text=True,
+        )
+        .strip()
+    )
+
+
+def write_fork_pin_manifest(
+    *,
+    path: Path,
+    fork_remote_url: str,
+    expected_remote_url: str,
+    expected_ref: str,
+    expected_commit: str,
+) -> None:
+    payload = {
+        "schema_version": PIN_MANIFEST_SCHEMA,
+        "fork_remote_url": fork_remote_url,
+        "expected_remote_url": expected_remote_url,
+        "expected_ref": expected_ref,
+        "expected_commit": expected_commit,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+
+
+def run_policy_check(
+    *,
+    report_file: Path,
+    output_json: Path,
+    expected_final_decision: str,
+    required_reason_code: str,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            "python3",
+            str(CHECKER),
+            "--report-file",
+            str(report_file),
+            "--expected-final-decision",
+            expected_final_decision,
+            "--ci-fast-gate",
+            "PASS",
+            "--require-reason-code",
+            required_reason_code,
+            "--output-json",
+            str(output_json),
+        ],
+        cwd=ROOT_DIR,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
+def run_bootstrap_lane(
+    *,
+    mode: str,
+    output_json: Path,
+    sync_metadata_report: Path,
+    max_seconds: str,
+    checkout_path: Path,
+    fork_remote_url: str,
+    expected_remote_url: str,
+    expected_ref: str,
+    fork_pin_manifest_file: Path,
+    allow_non_default_diagnostics: bool,
+) -> subprocess.CompletedProcess[str]:
+    env = dict(os.environ)
+    if mode == "run":
+        env["KAMN_KOLME_LOCAL_HEAVY"] = "1"
+
     lane_args = [
         "bash",
         str(RUNNER),
         "--mode",
-        args.mode,
+        mode,
         "--output-json",
-        args.output_json,
+        str(output_json),
         "--sync-metadata-report",
-        args.sync_metadata_report,
+        str(sync_metadata_report),
         "--max-seconds",
-        args.max_seconds,
+        max_seconds,
+        "--checkout-path",
+        str(checkout_path),
+        "--fork-remote-url",
+        fork_remote_url,
+        "--expected-remote-url",
+        expected_remote_url,
+        "--expected-ref",
+        expected_ref,
+        "--fork-pin-manifest-file",
+        str(fork_pin_manifest_file),
     ]
-
-    if args.mode == "dry-run":
+    if allow_non_default_diagnostics:
         lane_args.extend(
             [
-                "--checkout-path",
-                "/tmp/kolme_fork",
-                "--fork-remote-url",
-                args.fork_remote_url,
-                "--expected-remote-url",
-                args.expected_remote_url,
-                "--expected-ref",
-                args.expected_ref,
+                "--allow-non-default-diagnostic-commands",
+                "--git-version-command",
+                "printf 'git version fixture'",
+                "--cargo-version-command",
+                "printf 'cargo version fixture'",
+                "--rustc-version-command",
+                "printf 'rustc version fixture'",
             ]
         )
-    else:
-        expected_reason = "fork_checkout_bootstrap_passed"
-        ci_env["KAMN_KOLME_LOCAL_HEAVY"] = "1"
-        with tempfile.TemporaryDirectory(prefix="kolme-fork-checkout-bootstrap-") as tmpdir:
-            temp_root = Path(tmpdir)
-            source_repo = create_local_source_repo(temp_root)
-            checkout_path = temp_root / "kolme_fork_checkout"
-            lane_args.extend(
-                [
-                    "--checkout-path",
-                    str(checkout_path),
-                    "--fork-remote-url",
-                    str(source_repo),
-                    "--expected-remote-url",
-                    str(source_repo),
-                    "--expected-ref",
-                    "refs/heads/main",
-                    "--allow-non-default-diagnostic-commands",
-                    "--git-version-command",
-                    "printf 'git version fixture'",
-                    "--cargo-version-command",
-                    "printf 'cargo version fixture'",
-                    "--rustc-version-command",
-                    "printf 'rustc version fixture'",
-                ]
-            )
-            subprocess.run(
-                lane_args,
-                cwd=ROOT_DIR,
-                env=ci_env,
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            return expected_reason, args.output_json
 
-    subprocess.run(
+    return subprocess.run(
         lane_args,
         cwd=ROOT_DIR,
-        env=ci_env,
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
     )
-    return expected_reason, args.output_json
 
 
 def main() -> int:
@@ -196,29 +254,159 @@ def main() -> int:
     ensure_executable(RUNNER, "checkout bootstrap runner")
     ensure_executable(CHECKER, "checkout bootstrap policy checker")
     ensure_docs()
+    pin_manifest_fixture = Path(args.fork_pin_manifest_file).resolve()
+    if not pin_manifest_fixture.is_file():
+        print("expected fork pin manifest fixture to exist", file=sys.stderr)
+        return 1
 
     start_epoch = time.monotonic()
-    expected_reason, report_file = run_lane(args)
-
-    subprocess.run(
-        [
-            "python3",
-            str(CHECKER),
-            "--report-file",
-            report_file,
-            "--expected-final-decision",
-            "GO",
-            "--ci-fast-gate",
-            "PASS",
-            "--require-reason-code",
-            expected_reason,
-            "--output-json",
-            args.policy_output_json,
-        ],
-        cwd=ROOT_DIR,
-        check=True,
-        stdout=subprocess.DEVNULL,
+    dry_run_report_file = Path(args.output_json).resolve()
+    dry_run_sync_metadata = Path(args.sync_metadata_report).resolve()
+    dry_run_result = run_bootstrap_lane(
+        mode="dry-run",
+        output_json=dry_run_report_file,
+        sync_metadata_report=dry_run_sync_metadata,
+        max_seconds=args.max_seconds,
+        checkout_path=Path("/tmp/kolme_fork"),
+        fork_remote_url=args.fork_remote_url,
+        expected_remote_url=args.expected_remote_url,
+        expected_ref=args.expected_ref,
+        fork_pin_manifest_file=pin_manifest_fixture,
+        allow_non_default_diagnostics=False,
     )
+    if dry_run_result.returncode != 0:
+        print("expected dry-run checkout bootstrap lane to pass", file=sys.stderr)
+        stderr = dry_run_result.stderr.strip()
+        if stderr:
+            print(stderr, file=sys.stderr)
+        return 1
+
+    dry_run_policy_result = run_policy_check(
+        report_file=dry_run_report_file,
+        output_json=Path(args.policy_output_json).resolve(),
+        expected_final_decision="GO",
+        required_reason_code="dry_run_no_commands_executed",
+    )
+    if dry_run_policy_result.returncode != 0:
+        print("expected checkout bootstrap policy checker GO path to pass in dry-run mode", file=sys.stderr)
+        stderr = dry_run_policy_result.stderr.strip()
+        if stderr:
+            print(stderr, file=sys.stderr)
+        return 1
+
+    dry_run_summary = json.loads(dry_run_report_file.read_text(encoding="utf-8"))
+    if dry_run_summary.get("schema_version") != "kamn.kolme.local-fork-checkout-bootstrap-summary.v1":
+        print("unexpected checkout bootstrap dry-run summary schema", file=sys.stderr)
+        return 1
+    if dry_run_summary.get("commit_pin_enforced") is not True:
+        print("expected checkout bootstrap dry-run summary commit_pin_enforced=true", file=sys.stderr)
+        return 1
+    if dry_run_summary.get("fork_pin_manifest_schema_version") != PIN_MANIFEST_SCHEMA:
+        print(
+            "expected fork_pin_manifest_schema_version=kamn.kolme.fork-pin-manifest.v1 in dry-run summary",
+            file=sys.stderr,
+        )
+        return 1
+    if not isinstance(dry_run_summary.get("expected_commit"), str) or len(
+        dry_run_summary.get("expected_commit", "")
+    ) != 40:
+        print("expected checkout bootstrap dry-run summary expected_commit marker", file=sys.stderr)
+        return 1
+
+    with tempfile.TemporaryDirectory(prefix="kolme-fork-checkout-bootstrap-contract-") as tmpdir:
+        temp_root = Path(tmpdir)
+        source_repo = create_local_source_repo(temp_root)
+        source_commit = resolve_head_commit(source_repo)
+        checkout_path = temp_root / "kolme_fork_checkout"
+
+        matching_manifest = temp_root / "fork-pin-manifest-match.json"
+        write_fork_pin_manifest(
+            path=matching_manifest,
+            fork_remote_url=str(source_repo),
+            expected_remote_url=str(source_repo),
+            expected_ref="refs/heads/main",
+            expected_commit=source_commit,
+        )
+        run_mode_report = temp_root / "checkout-bootstrap-run-summary.json"
+        run_mode_sync = temp_root / "sync-metadata-run-summary.json"
+        run_mode_policy = temp_root / "checkout-bootstrap-run-policy.json"
+        run_mode_result = run_bootstrap_lane(
+            mode="run",
+            output_json=run_mode_report,
+            sync_metadata_report=run_mode_sync,
+            max_seconds=args.max_seconds,
+            checkout_path=checkout_path,
+            fork_remote_url=str(source_repo),
+            expected_remote_url=str(source_repo),
+            expected_ref="refs/heads/main",
+            fork_pin_manifest_file=matching_manifest,
+            allow_non_default_diagnostics=True,
+        )
+        if run_mode_result.returncode != 0:
+            print("expected run-mode checkout bootstrap lane to pass with matching fork pin manifest", file=sys.stderr)
+            stderr = run_mode_result.stderr.strip()
+            if stderr:
+                print(stderr, file=sys.stderr)
+            return 1
+
+        run_mode_policy_result = run_policy_check(
+            report_file=run_mode_report,
+            output_json=run_mode_policy,
+            expected_final_decision="GO",
+            required_reason_code="fork_checkout_bootstrap_passed",
+        )
+        if run_mode_policy_result.returncode != 0:
+            print("expected checkout bootstrap policy checker GO path to pass in run mode", file=sys.stderr)
+            stderr = run_mode_policy_result.stderr.strip()
+            if stderr:
+                print(stderr, file=sys.stderr)
+            return 1
+
+        run_mode_summary = json.loads(run_mode_report.read_text(encoding="utf-8"))
+        if run_mode_summary.get("expected_commit") != source_commit:
+            print("expected checkout bootstrap run summary expected_commit to match source HEAD", file=sys.stderr)
+            return 1
+
+        mismatched_manifest = temp_root / "fork-pin-manifest-mismatch.json"
+        write_fork_pin_manifest(
+            path=mismatched_manifest,
+            fork_remote_url=str(source_repo),
+            expected_remote_url=str(source_repo),
+            expected_ref="refs/heads/main",
+            expected_commit="0000000000000000000000000000000000000000",
+        )
+        mismatch_report = temp_root / "checkout-bootstrap-mismatch-summary.json"
+        mismatch_sync_report = temp_root / "sync-metadata-mismatch-summary.json"
+        mismatch_result = run_bootstrap_lane(
+            mode="run",
+            output_json=mismatch_report,
+            sync_metadata_report=mismatch_sync_report,
+            max_seconds=args.max_seconds,
+            checkout_path=checkout_path,
+            fork_remote_url=str(source_repo),
+            expected_remote_url=str(source_repo),
+            expected_ref="refs/heads/main",
+            fork_pin_manifest_file=mismatched_manifest,
+            allow_non_default_diagnostics=True,
+        )
+        if mismatch_result.returncode == 0:
+            print("expected fork pin manifest commit mismatch to fail closed", file=sys.stderr)
+            return 1
+        mismatch_summary = json.loads(mismatch_report.read_text(encoding="utf-8"))
+        if mismatch_summary.get("reason_code") != "checkpoint_failed_sync_metadata":
+            print("expected checkpoint_failed_sync_metadata for commit mismatch fail-closed path", file=sys.stderr)
+            return 1
+        checks = mismatch_summary.get("checks")
+        if not isinstance(checks, list):
+            print("expected checks list in mismatch summary", file=sys.stderr)
+            return 1
+        sync_check = next(
+            (entry for entry in checks if isinstance(entry, dict) and entry.get("id") == "sync_metadata"),
+            None,
+        )
+        if not isinstance(sync_check, dict) or sync_check.get("reason_code") != "head_commit_mismatch":
+            print("expected head_commit_mismatch reason marker in mismatch summary sync_metadata check", file=sys.stderr)
+            return 1
 
     elapsed_seconds = int(time.monotonic() - start_epoch)
     if elapsed_seconds > int(args.max_seconds):

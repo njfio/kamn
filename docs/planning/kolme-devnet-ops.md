@@ -950,9 +950,9 @@ Operator checkpoints:
 ## Local Fork Checkout Bootstrap Lane (Issue #1663)
 
 - Local fork checkout bootstrap runner:
-  - `bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json`
+  - `bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --expected-commit 0000000000000000000000000000000000000000 --fork-pin-manifest-file fixtures/kolme_compatibility/kolme_fork_pin_manifest.json --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json`
 - Explicit local-only checkout bootstrap execution:
-  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh --mode run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json`
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh --mode run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --expected-commit <40-hex-pinned-sha> --fork-pin-manifest-file /tmp/kolme-fork-pin-manifest.json --max-seconds 120 --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_checkout_bootstrap_policy.py --report-file /tmp/kolme-local-fork-checkout-bootstrap-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json`
 - Contract lane command:
@@ -961,13 +961,20 @@ Operator checkpoints:
   - `kamn.kolme.local-fork-checkout-bootstrap-summary.v1`
 - Deterministic checkpoints include:
   - checkout preparation (clone/update) against pinned `fork-remote-url`.
-  - nested `run_local_fork_sync_metadata_lane.sh` run-mode validation for remote/ref provenance.
+  - nested `run_local_fork_sync_metadata_lane.sh` run-mode validation for remote/ref/commit provenance.
+  - commit pin contract fields:
+    - `expected_commit`
+    - `commit_pin_enforced=true`
+    - `fork_pin_manifest_schema_version=kamn.kolme.fork-pin-manifest.v1`
   - deterministic diagnostics capture for `git --version`, `cargo --version`, and `rustc --version`.
   - fail-closed reason codes for missing local opt-in, checkout bootstrap failure, metadata drift, diagnostics failure, and runtime budget overrun.
+  - pinned commit drift reason marker:
+    - `head_commit_mismatch`
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.
   - lane default budget remains bounded to 120 seconds.
   - run-mode execution remains local-only and excluded from PR fast-gate workflow routing.
+  - pinned fork remote/ref/commit manifest and drift checker contracts remain fail-closed (`Regression: #2328`).
 
 ## Real Fork Local Process Wrapper Contract Lane (Issue #1644)
 

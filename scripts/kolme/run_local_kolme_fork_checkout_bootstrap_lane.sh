@@ -11,6 +11,10 @@ CHECKOUT_PATH="/tmp/kolme_fork"
 FORK_REMOTE_URL="https://github.com/njfio/kolme_fork.git"
 EXPECTED_REMOTE_URL="https://github.com/njfio/kolme_fork.git"
 EXPECTED_REF="refs/heads/main"
+EXPECTED_COMMIT=""
+FORK_PIN_MANIFEST_FILE=""
+FORK_PIN_MANIFEST_SCHEMA_VERSION=""
+COMMIT_PIN_ENFORCED="false"
 SYNC_METADATA_REPORT="/tmp/kolme-local-fork-sync-metadata-summary.json"
 MAX_SECONDS=90
 ALLOW_NON_DEFAULT_DIAGNOSTIC_COMMANDS="false"
@@ -68,6 +72,22 @@ while [ "$#" -gt 0 ]; do
       EXPECTED_REF="$2"
       shift 2
       ;;
+    --expected-commit)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --expected-commit" >&2
+        exit 1
+      fi
+      EXPECTED_COMMIT="$2"
+      shift 2
+      ;;
+    --fork-pin-manifest-file)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --fork-pin-manifest-file" >&2
+        exit 1
+      fi
+      FORK_PIN_MANIFEST_FILE="$2"
+      shift 2
+      ;;
     --sync-metadata-report)
       if [ "$#" -lt 2 ]; then
         echo "missing value for --sync-metadata-report" >&2
@@ -123,6 +143,8 @@ Options:
   --fork-remote-url <url-or-path>                 Clone/fetch source used to bootstrap checkout.
   --expected-remote-url <url-or-path>             Expected origin URL used by sync metadata verification.
   --expected-ref <ref>                            Expected symbolic HEAD ref (for example refs/heads/main).
+  --expected-commit <sha>                         Optional expected HEAD commit SHA (40-hex).
+  --fork-pin-manifest-file <path>                 Optional pin manifest with remote/ref/commit tuple.
   --sync-metadata-report <path>                   Output path for nested sync metadata summary.
   --max-seconds <n>                               Max runtime budget for run mode.
   --git-version-command <command>                 Optional override for git diagnostics command.
@@ -152,6 +174,67 @@ fi
 if [ -z "$CHECKOUT_PATH" ] || [ -z "$FORK_REMOTE_URL" ] || [ -z "$EXPECTED_REMOTE_URL" ] || [ -z "$EXPECTED_REF" ]; then
   echo "checkout-path, fork-remote-url, expected-remote-url, and expected-ref must not be empty" >&2
   exit 1
+fi
+
+if [ -n "$FORK_PIN_MANIFEST_FILE" ]; then
+  if [ ! -f "$FORK_PIN_MANIFEST_FILE" ]; then
+    echo "fork-pin-manifest-file must exist: $FORK_PIN_MANIFEST_FILE" >&2
+    exit 1
+  fi
+  manifest_values="$(
+    python3 - "$FORK_PIN_MANIFEST_FILE" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import re
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+schema_version = payload.get("schema_version")
+fork_remote_url = payload.get("fork_remote_url")
+expected_remote_url = payload.get("expected_remote_url")
+expected_ref = payload.get("expected_ref")
+expected_commit = payload.get("expected_commit")
+
+if schema_version != "kamn.kolme.fork-pin-manifest.v1":
+    raise SystemExit("fork pin manifest schema_version must be kamn.kolme.fork-pin-manifest.v1")
+if not isinstance(fork_remote_url, str) or not fork_remote_url.strip():
+    raise SystemExit("fork pin manifest fork_remote_url must be non-empty")
+if not isinstance(expected_remote_url, str) or not expected_remote_url.strip():
+    raise SystemExit("fork pin manifest expected_remote_url must be non-empty")
+if not isinstance(expected_ref, str) or not expected_ref.startswith("refs/heads/"):
+    raise SystemExit("fork pin manifest expected_ref must use refs/heads/* format")
+if not isinstance(expected_commit, str) or not re.fullmatch(r"[0-9a-fA-F]{40}", expected_commit):
+    raise SystemExit("fork pin manifest expected_commit must be a 40-character hex SHA")
+
+print(schema_version)
+print(fork_remote_url.strip())
+print(expected_remote_url.strip())
+print(expected_ref.strip())
+print(expected_commit.strip())
+PY
+  )" || exit 1
+  mapfile -t manifest_lines <<<"$manifest_values"
+  if [ "${#manifest_lines[@]}" -ne 5 ]; then
+    echo "fork pin manifest parse returned unexpected field count" >&2
+    exit 1
+  fi
+  FORK_PIN_MANIFEST_SCHEMA_VERSION="${manifest_lines[0]}"
+  FORK_REMOTE_URL="${manifest_lines[1]}"
+  EXPECTED_REMOTE_URL="${manifest_lines[2]}"
+  EXPECTED_REF="${manifest_lines[3]}"
+  EXPECTED_COMMIT="${manifest_lines[4]}"
+  COMMIT_PIN_ENFORCED="true"
+fi
+
+if [ -n "$EXPECTED_COMMIT" ]; then
+  COMMIT_PIN_ENFORCED="true"
+  if ! [[ "$EXPECTED_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]]; then
+    echo "expected-commit must be a 40-character hex SHA when provided" >&2
+    exit 1
+  fi
 fi
 
 if [ ! -x "$SYNC_RUNNER" ]; then
@@ -247,7 +330,15 @@ sanitize_single_line() {
 }
 
 checkout_prepare_command="if checkout exists: git -C \"$CHECKOUT_PATH\" fetch origin \"$EXPECTED_BRANCH\" && git -C \"$CHECKOUT_PATH\" checkout -B \"$EXPECTED_BRANCH\" \"origin/$EXPECTED_BRANCH\"; else: git clone --depth 1 --branch \"$EXPECTED_BRANCH\" \"$FORK_REMOTE_URL\" \"$CHECKOUT_PATH\""
-sync_metadata_command="bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path \"$CHECKOUT_PATH\" --expected-remote-url \"$EXPECTED_REMOTE_URL\" --expected-ref \"$EXPECTED_REF\" --output-json \"$SYNC_METADATA_REPORT\""
+sync_metadata_command="bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path \"$CHECKOUT_PATH\" --expected-remote-url \"$EXPECTED_REMOTE_URL\" --expected-ref \"$EXPECTED_REF\""
+if [ -n "$EXPECTED_COMMIT" ]; then
+  sync_metadata_command="$sync_metadata_command --expected-commit \"$EXPECTED_COMMIT\""
+fi
+sync_metadata_command="$sync_metadata_command --output-json \"$SYNC_METADATA_REPORT\""
+fork_pin_manifest_command="fork pin manifest"
+if [ -n "$FORK_PIN_MANIFEST_FILE" ]; then
+  fork_pin_manifest_command="fork pin manifest file: $FORK_PIN_MANIFEST_FILE"
+fi
 git_version_command="$GIT_VERSION_COMMAND"
 cargo_version_command="$CARGO_VERSION_COMMAND"
 rustc_version_command="$RUSTC_VERSION_COMMAND"
@@ -263,6 +354,7 @@ rustc_version="not_run"
 
 record_check "checkout_prepare" "$checkout_prepare_command" "planned" "not_run"
 record_check "sync_metadata" "$sync_metadata_command" "planned" "not_run"
+record_check "fork_pin_manifest_contract" "$fork_pin_manifest_command" "planned" "not_run"
 record_check "diagnostics_git_version" "$git_version_command" "planned" "not_run"
 record_check "diagnostics_cargo_version" "$cargo_version_command" "planned" "not_run"
 record_check "diagnostics_rustc_version" "$rustc_version_command" "planned" "not_run"
@@ -270,6 +362,13 @@ record_check "diagnostics_rustc_version" "$rustc_version_command" "planned" "not
 if [ "$MODE" = "run" ]; then
   : >"$CHECK_FILE"
   start_epoch="$(date +%s)"
+  fork_pin_manifest_reason="commit_pin_not_enforced"
+  if [ -n "$FORK_PIN_MANIFEST_FILE" ]; then
+    fork_pin_manifest_reason="fork_pin_manifest_loaded"
+  elif [ "$COMMIT_PIN_ENFORCED" = "true" ]; then
+    fork_pin_manifest_reason="expected_commit_configured"
+  fi
+  record_check "fork_pin_manifest_contract" "$fork_pin_manifest_command" "pass" "$fork_pin_manifest_reason"
 
   if ! "$LOCAL_HEAVY_GUARD"; then
     record_check "checkout_prepare" "$checkout_prepare_command" "fail" "local_opt_in_missing"
@@ -333,7 +432,11 @@ if [ "$MODE" = "run" ]; then
 
     if [ "$overall_status" = "ok" ]; then
       sync_output="$(mktemp)"
-      sync_exec="bash $(printf '%q' "$SYNC_RUNNER") --mode run --checkout-path $(printf '%q' "$CHECKOUT_PATH") --expected-remote-url $(printf '%q' "$EXPECTED_REMOTE_URL") --expected-ref $(printf '%q' "$EXPECTED_REF") --output-json $(printf '%q' "$SYNC_METADATA_REPORT")"
+      sync_exec="bash $(printf '%q' "$SYNC_RUNNER") --mode run --checkout-path $(printf '%q' "$CHECKOUT_PATH") --expected-remote-url $(printf '%q' "$EXPECTED_REMOTE_URL") --expected-ref $(printf '%q' "$EXPECTED_REF")"
+      if [ -n "$EXPECTED_COMMIT" ]; then
+        sync_exec="$sync_exec --expected-commit $(printf '%q' "$EXPECTED_COMMIT")"
+      fi
+      sync_exec="$sync_exec --output-json $(printf '%q' "$SYNC_METADATA_REPORT")"
       if run_command "$sync_exec" "$sync_output"; then
         record_check "sync_metadata" "$sync_metadata_command" "pass" "sync_metadata_passed"
       else
@@ -436,7 +539,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$CHECKOUT_PATH" "$FORK_REMOTE_URL" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$bootstrap_action" "$SYNC_METADATA_REPORT" "$git_version" "$cargo_version" "$rustc_version" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$CHECKOUT_PATH" "$FORK_REMOTE_URL" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$EXPECTED_COMMIT" "$COMMIT_PIN_ENFORCED" "$FORK_PIN_MANIFEST_FILE" "$FORK_PIN_MANIFEST_SCHEMA_VERSION" "$bootstrap_action" "$SYNC_METADATA_REPORT" "$git_version" "$cargo_version" "$rustc_version" "$CHECK_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -454,12 +557,16 @@ checkout_path = sys.argv[8]
 fork_remote_url = sys.argv[9]
 expected_remote_url = sys.argv[10]
 expected_ref = sys.argv[11]
-bootstrap_action = sys.argv[12]
-sync_metadata_report = sys.argv[13]
-git_version = sys.argv[14]
-cargo_version = sys.argv[15]
-rustc_version = sys.argv[16]
-checks_path = pathlib.Path(sys.argv[17])
+expected_commit = sys.argv[12]
+commit_pin_enforced = sys.argv[13] == "true"
+fork_pin_manifest_file = sys.argv[14]
+fork_pin_manifest_schema_version = sys.argv[15]
+bootstrap_action = sys.argv[16]
+sync_metadata_report = sys.argv[17]
+git_version = sys.argv[18]
+cargo_version = sys.argv[19]
+rustc_version = sys.argv[20]
+checks_path = pathlib.Path(sys.argv[21])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -491,6 +598,10 @@ summary = {
     "fork_remote_url": fork_remote_url,
     "expected_remote_url": expected_remote_url,
     "expected_ref": expected_ref,
+    "expected_commit": expected_commit,
+    "commit_pin_enforced": commit_pin_enforced,
+    "fork_pin_manifest_file": fork_pin_manifest_file,
+    "fork_pin_manifest_schema_version": fork_pin_manifest_schema_version,
     "bootstrap_action": bootstrap_action,
     "sync_metadata_report": sync_metadata_report,
     "diagnostics": {

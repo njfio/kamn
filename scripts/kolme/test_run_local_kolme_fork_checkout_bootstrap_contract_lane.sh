@@ -6,6 +6,7 @@ CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_checkout_bootstrap_c
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_kolme_fork_checkout_bootstrap_contract_lane.py"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
+CI_DOC_FILE="$ROOT_DIR/docs/ci/strategy.md"
 README_FILE="$ROOT_DIR/README.md"
 
 if [ ! -x "$CONTRACT_LANE" ]; then
@@ -47,23 +48,61 @@ if [ ! -f "$CONTRACT_IMPL" ]; then
   exit 1
 fi
 
-if ! grep -q "run_local_kolme_fork_checkout_bootstrap_contract_lane.sh" "$DOC_FILE"; then
-  echo "expected Kolme devnet ops doc to reference local fork checkout bootstrap contract lane" >&2
-  exit 1
-fi
+required_coverage_markers=(
+  "run_local_kolme_fork_checkout_bootstrap_lane.sh"
+  "check_local_kolme_fork_checkout_bootstrap_policy.py"
+  "run_local_kolme_fork_checkout_bootstrap_contract_lane.sh"
+  "--fork-pin-manifest-file"
+  "--expected-commit"
+  "fork_pin_manifest_schema_version=kamn.kolme.fork-pin-manifest.v1"
+  "head_commit_mismatch"
+  "checkpoint_failed_sync_metadata"
+  "Regression: #2328"
+)
+for marker in "${required_coverage_markers[@]}"; do
+  if ! grep -q -- "$marker" "$CONTRACT_IMPL"; then
+    echo "expected local fork checkout bootstrap contract implementation to include coverage marker: $marker" >&2
+    exit 1
+  fi
+done
 
-if ! grep -q "check_local_kolme_fork_checkout_bootstrap_policy.py" "$DOC_FILE"; then
-  echo "expected Kolme devnet ops doc to reference local fork checkout bootstrap policy checker" >&2
-  exit 1
-fi
+for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
+  if ! grep -q "run_local_kolme_fork_checkout_bootstrap_contract_lane.sh" "$docs_file"; then
+    echo "expected docs parity to reference local fork checkout bootstrap contract lane in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "run_local_kolme_fork_checkout_bootstrap_lane.sh" "$docs_file"; then
+    echo "expected docs parity to reference local fork checkout bootstrap runner in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "check_local_kolme_fork_checkout_bootstrap_policy.py" "$docs_file"; then
+    echo "expected docs parity to reference local fork checkout bootstrap policy checker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q -- "--fork-pin-manifest-file" "$docs_file"; then
+    echo "expected docs parity to include fork pin manifest command marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q -- "--expected-commit" "$docs_file"; then
+    echo "expected docs parity to include expected-commit command marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "fork_pin_manifest_schema_version=kamn.kolme.fork-pin-manifest.v1" "$docs_file"; then
+    echo "expected docs parity to include fork pin manifest schema marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "head_commit_mismatch" "$docs_file"; then
+    echo "expected docs parity to include head_commit_mismatch reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "Regression: #2328" "$docs_file"; then
+    echo "expected docs parity to include fork checkout pinning regression marker in $docs_file" >&2
+    exit 1
+  fi
+done
 
 if ! grep -q "Regression: #1663" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to include checkout bootstrap regression marker" >&2
-  exit 1
-fi
-
-if ! grep -q "run_local_kolme_fork_checkout_bootstrap_contract_lane.sh" "$README_FILE"; then
-  echo "expected README to reference local fork checkout bootstrap contract lane" >&2
   exit 1
 fi
 

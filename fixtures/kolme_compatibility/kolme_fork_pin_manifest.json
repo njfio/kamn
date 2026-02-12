@@ -1,0 +1,7 @@
+{
+  "schema_version": "kamn.kolme.fork-pin-manifest.v1",
+  "fork_remote_url": "https://github.com/njfio/kolme_fork.git",
+  "expected_remote_url": "https://github.com/njfio/kolme_fork.git",
+  "expected_ref": "refs/heads/main",
+  "expected_commit": "0000000000000000000000000000000000000000"
+}

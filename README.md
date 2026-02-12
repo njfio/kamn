@@ -280,11 +280,15 @@ bash scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh -
 ### Run Local Fork Checkout Bootstrap Lane
 
 ```bash
-bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json
-KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh --mode run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json
+bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --expected-commit 0000000000000000000000000000000000000000 --fork-pin-manifest-file fixtures/kolme_compatibility/kolme_fork_pin_manifest.json --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json
+KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh --mode run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --expected-commit <40-hex-pinned-sha> --fork-pin-manifest-file /tmp/kolme-fork-pin-manifest.json --max-seconds 120 --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json
 python3 scripts/kolme/check_local_kolme_fork_checkout_bootstrap_policy.py --report-file /tmp/kolme-local-fork-checkout-bootstrap-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json
 bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_contract_lane.sh --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json --policy-output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json
 # schema: kamn.kolme.local-fork-checkout-bootstrap-summary.v1
+# fork_pin_manifest_schema_version=kamn.kolme.fork-pin-manifest.v1
+# head_commit_mismatch
+# Regression: #1663
+# Regression: #2328
 ```
 
 ### Run Real Fork Local Process Wrapper Contract Lane
