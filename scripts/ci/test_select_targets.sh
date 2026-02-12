@@ -127,6 +127,26 @@ assert_eq "$(extract_output "$wave10_trend_checker_script_output" "run_script_su
 assert_eq "$(extract_output "$wave10_trend_checker_script_output" "unknown_risk_changed")" "false" "wave-10 trend checker script changes should be classified"
 assert_eq "$(extract_output "$wave10_trend_checker_script_output" "test_scope")" "ci-doc-contract" "wave-10 trend checker script changes should use ci-doc-contract scope"
 
+kolme_harness_trend_threshold_output="$(run_selector $'.ci/kolme-test-harness-loc-trend-thresholds.env')"
+assert_eq "$(extract_output "$kolme_harness_trend_threshold_output" "run_rust")" "false" "Kolme harness trend-threshold config changes should avoid rust full fallback"
+assert_eq "$(extract_output "$kolme_harness_trend_threshold_output" "run_ci_tool_checks")" "true" "Kolme harness trend-threshold config changes must run CI tool checks"
+assert_eq "$(extract_output "$kolme_harness_trend_threshold_output" "unknown_risk_changed")" "false" "Kolme harness trend-threshold config changes should be classified"
+assert_eq "$(extract_output "$kolme_harness_trend_threshold_output" "test_scope")" "ci-doc-contract" "Kolme harness trend-threshold config changes should use ci-doc-contract scope"
+
+kolme_harness_trend_report_script_output="$(run_selector $'scripts/ci/generate_kolme_test_harness_loc_trend_report.sh')"
+assert_eq "$(extract_output "$kolme_harness_trend_report_script_output" "run_rust")" "false" "Kolme harness trend-report script changes should avoid rust full fallback"
+assert_eq "$(extract_output "$kolme_harness_trend_report_script_output" "run_ci_tool_checks")" "true" "Kolme harness trend-report script changes must run CI tool checks"
+assert_eq "$(extract_output "$kolme_harness_trend_report_script_output" "run_script_surface_budget_checks")" "true" "Kolme harness trend-report script changes should run script-surface budget checks"
+assert_eq "$(extract_output "$kolme_harness_trend_report_script_output" "unknown_risk_changed")" "false" "Kolme harness trend-report script changes should be classified"
+assert_eq "$(extract_output "$kolme_harness_trend_report_script_output" "test_scope")" "ci-doc-contract" "Kolme harness trend-report script changes should use ci-doc-contract scope"
+
+kolme_harness_trend_report_test_script_output="$(run_selector $'scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh')"
+assert_eq "$(extract_output "$kolme_harness_trend_report_test_script_output" "run_rust")" "false" "Kolme harness trend-report test script changes should avoid rust full fallback"
+assert_eq "$(extract_output "$kolme_harness_trend_report_test_script_output" "run_ci_tool_checks")" "true" "Kolme harness trend-report test script changes must run CI tool checks"
+assert_eq "$(extract_output "$kolme_harness_trend_report_test_script_output" "run_script_surface_budget_checks")" "true" "Kolme harness trend-report test script changes should run script-surface budget checks"
+assert_eq "$(extract_output "$kolme_harness_trend_report_test_script_output" "unknown_risk_changed")" "false" "Kolme harness trend-report test script changes should be classified"
+assert_eq "$(extract_output "$kolme_harness_trend_report_test_script_output" "test_scope")" "ci-doc-contract" "Kolme harness trend-report test script changes should use ci-doc-contract scope"
+
 hardening_docs_output="$(run_selector $'docs/planning/engineering-hardening-wave.md')"
 assert_eq "$(extract_output "$hardening_docs_output" "docs_only")" "true" "engineering hardening docs should remain docs-only"
 assert_eq "$(extract_output "$hardening_docs_output" "run_rust")" "false" "engineering hardening docs should avoid rust lane"

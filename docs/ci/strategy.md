@@ -532,6 +532,7 @@ Regression policy:
 - governance quorum attestation selector/docs parity remains fail-closed (`Regression: #911`).
 - local-only heavy Kolme selector/workflow/docs parity remains fail-closed (`Regression: #1419`).
 - local-only heavy Kolme selector default-off and explicit CI opt-in semantics remain fail-closed (`Regression: #2303`).
+- Kolme harness soft-budget trend escalation states and threshold-driven policy decisions remain fail-closed (`Regression: #2304`).
 - aggregate CI-tools fork Rust matrix command-surface coverage remains fail-closed (`Regression: #1549`).
 - local-only fork sync/smoke run-mode exclusion parity remains fail-closed (`Regression: #1431`).
 - local-only heavy E2E policy and contract lane command-surface parity remains fail-closed (`Regression: #1682`).
@@ -598,6 +599,19 @@ Test-harness growth advisory (non-blocking):
 - `scripts/ci/check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --output-json /tmp/test-harness-loc-soft-budget-report.json`
 - Exceeded soft thresholds emit `soft_budget_status=exceeded` with `review_required=true` for reviewer visibility, but do not fail fast-gate by themselves.
 
+Kolme harness trend policy (warning-to-fail escalation contract):
+- trend thresholds file: `.ci/kolme-test-harness-loc-trend-thresholds.env`
+- policy wrapper:
+  - `bash scripts/ci/check_kolme_test_harness_loc_soft_budget.sh --report-file /tmp/kolme-test-harness-loc-report.json --output-json /tmp/kolme-test-harness-loc-soft-budget-report.json`
+- trend report generator:
+  - `bash scripts/ci/generate_kolme_test_harness_loc_trend_report.sh --output-json /tmp/kolme-test-harness-loc-trend-report.json`
+- policy emits deterministic escalation markers:
+  - `trend_status=within|warn|fail`
+  - `policy_decision=GO|WARN|NO-GO`
+  - `reason_codes=...` (soft-budget and/or trend threshold reason markers)
+- optional enforcement mode for hard-fail gating:
+  - `--enforce-trend-fail` exits non-zero when `trend_status=fail`.
+
 Policy:
 - Warning at 90% of configured budget.
 - Failure at 100% of configured budget for `ci-fast-gate` (merge-critical lane).
@@ -628,16 +642,23 @@ Fast-mode CI tooling regression coverage includes:
 - Budget evaluator (`test_evaluate_budget.sh`)
 - Script duplication/surface budget checker (`test_check_script_duplication_budget.sh`)
 - Test-harness LOC report generator (`test_generate_test_harness_loc_report.sh`)
+- Kolme harness trend-report generator (`test_generate_kolme_test_harness_loc_trend_report.sh`)
 - Test-harness LOC soft-budget checker (`test_check_test_harness_loc_soft_budget.sh`)
 - Kolme test-harness LOC soft-budget checker (`test_check_kolme_test_harness_loc_soft_budget.sh`)
   - report command:
     - `bash scripts/ci/generate_kolme_test_harness_loc_report.sh --output-json /tmp/kolme-test-harness-loc-report.json`
   - policy command:
     - `bash scripts/ci/check_kolme_test_harness_loc_soft_budget.sh --report-file /tmp/kolme-test-harness-loc-report.json --output-json /tmp/kolme-test-harness-loc-soft-budget-report.json`
+  - trend report command:
+    - `bash scripts/ci/generate_kolme_test_harness_loc_trend_report.sh --output-json /tmp/kolme-test-harness-loc-trend-report.json`
   - deterministic reason-code surface:
-    - `reason_codes=none` (within soft budget)
+    - `reason_codes=none`
     - `reason_codes=harness_script_count_soft_max_exceeded`
     - `reason_codes=harness_shell_line_total_soft_max_exceeded`
+    - `reason_codes=harness_script_count_trend_warn_delta_exceeded`
+    - `reason_codes=harness_shell_line_total_trend_warn_delta_exceeded`
+    - `reason_codes=harness_script_count_trend_fail_delta_exceeded`
+    - `reason_codes=harness_shell_line_total_trend_fail_delta_exceeded`
 - Retry helper (`test_run_with_retry.sh`)
 - Invariant harness runner (`test_run_invariant_harness.sh`)
 - Selector matrix runner with output-env isolation (`test_select_targets.sh`, `Regression: #463`)
