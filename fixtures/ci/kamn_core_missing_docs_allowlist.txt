@@ -39,7 +39,6 @@ signer_backend
 task_artifacts
 task_operations
 token
-transaction
 trust_score
 upgrade_orchestration
 validator_lifecycle
