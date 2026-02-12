@@ -41,6 +41,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - all manifest-only `scripts/kolme/run_*contract_lane.sh` wrappers are symlinks to the shared dispatcher.
 - Script-surface duplicate-content policy alignment:
   - symlinked dispatcher wrappers are excluded from `duplicate_content` budget checks; duplicate-content enforcement remains fail-closed for regular files.
+  - `test_*.sh` harness scripts are excluded from script-surface `script_count`/`shell_line_total` metrics so budget gates track operational shell command surface only.
+  - current script-surface budgets pass without `.ci/script-surface-budget-waiver.json`; waiver dependency is retired on mainline.
 - Dispatcher matrix guard:
   - `bash scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh`
 - CI contract surface:
@@ -50,6 +52,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Regression marker:
   - `Regression: #1827`
   - `Regression: #2090`
+  - `Regression: #2093`
 
 ## Shared Manifest-Migration CI Dispatcher (Issue #1833)
 

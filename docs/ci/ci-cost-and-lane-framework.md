@@ -26,12 +26,16 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 `scripts/ci/check_fast_gate_budget_delta_threshold.sh` fails closed when positive variance exceeds configured limits without a valid waiver.
 
 ## Script-Surface Budget Policy
-`scripts/ci/check_script_duplication_budget.py` computes deterministic metrics over `scripts/**/*.sh`:
+`scripts/ci/check_script_duplication_budget.py` computes deterministic metrics over non-test shell command surface under `scripts/**/*.sh`:
+
+- files named `test_*.sh` are excluded from metric totals
+- symlink wrappers remain counted for `script_count`/`shell_line_total`
+- symlink wrappers are excluded from `duplicate_content`
 
 - `script_count`
 - `shell_line_total`
 - `duplicate_basename`
-- `duplicate_content` (regular files only; symlink wrappers are excluded)
+- `duplicate_content` (regular files only)
 
 The checker also computes per-PR deltas against `.ci/script-surface-baseline.env` and emits:
 
@@ -44,6 +48,7 @@ The checker fails closed when any metric exceeds its configured threshold and em
 
 ## Waiver Rules
 Temporary exceptions are allowed through `.ci/script-surface-budget-waiver.json`.
+The repository currently runs without this waiver file; budget checks stay fail-closed with no waiver present.
 Required fields:
 
 - `reason` (non-empty string)

@@ -193,6 +193,7 @@ required_snippets=(
   "Regression: #1462"
   "Regression: #1466"
   "Regression: #1497"
+  "Regression: #2093"
   "Regression: #1561"
   "Regression: #1565"
   "Regression: #1569"
