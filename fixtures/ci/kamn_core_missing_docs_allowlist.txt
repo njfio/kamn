@@ -3,7 +3,6 @@ audit_exports
 bridge_adapter
 channel_models
 channel_policies
-durable_guard_store
 escrow
 governance_workflow
 instruction_verify
