@@ -188,6 +188,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `kolme_runtime_commit`
   - `message_delivery_guards`
   - `message_envelope`
+  - `message_lifecycle`
   - `migrations`
   - `namespaces`
   - `observability`
@@ -271,6 +272,7 @@ contributors can locate runtime/domain ownership responsibilities quickly.
   - `Regression: #2079`
   - `Regression: #2081`
   - `Regression: #2083`
+  - `Regression: #2085`
 
 ## Contributor Entrypoint Matrix
 
