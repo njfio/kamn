@@ -74,6 +74,8 @@ def main() -> int:
         process_output_file = temp_path / "kolme_process.log"
         integration_report = temp_path / "kolme_runtime_integration_summary.json"
         runtime_policy_report = temp_path / "kolme_runtime_commit_live_policy.json"
+        rollback_evidence_file = temp_path / "kolme_process_lifecycle_rollback_evidence.json"
+        recovery_evidence_file = temp_path / "kolme_process_lifecycle_recovery_evidence.json"
         checkout_path.mkdir(parents=True, exist_ok=True)
 
         subprocess.run(["git", "-C", str(checkout_path), "init", "-q"], check=True)
@@ -134,6 +136,10 @@ def main() -> int:
                 str(integration_report),
                 "--integration-runtime-commit-live-policy-report",
                 str(runtime_policy_report),
+                "--rollback-evidence-file",
+                str(rollback_evidence_file),
+                "--recovery-evidence-file",
+                str(recovery_evidence_file),
                 "--output-json",
                 args.output_json,
             ],
@@ -175,6 +181,42 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
+        if summary.get("rollback_evidence_file") != str(rollback_evidence_file):
+            print(
+                "expected process lifecycle summary to expose rollback evidence file path",
+                file=sys.stderr,
+            )
+            return 1
+        if summary.get("recovery_evidence_file") != str(recovery_evidence_file):
+            print(
+                "expected process lifecycle summary to expose recovery evidence file path",
+                file=sys.stderr,
+            )
+            return 1
+        if summary.get("rollback_evidence_status") != "planned":
+            print(
+                "expected process lifecycle summary to keep rollback evidence status planned in dry-run",
+                file=sys.stderr,
+            )
+            return 1
+        if summary.get("recovery_evidence_status") != "planned":
+            print(
+                "expected process lifecycle summary to keep recovery evidence status planned in dry-run",
+                file=sys.stderr,
+            )
+            return 1
+        if str(rollback_evidence_file) not in summary.get("artifact_paths", []):
+            print(
+                "expected process lifecycle summary artifact paths to include rollback evidence file",
+                file=sys.stderr,
+            )
+            return 1
+        if str(recovery_evidence_file) not in summary.get("artifact_paths", []):
+            print(
+                "expected process lifecycle summary artifact paths to include recovery evidence file",
+                file=sys.stderr,
+            )
+            return 1
         runtime_policy_reason_code = summary.get("integration_runtime_commit_policy_reason_code")
         if not isinstance(runtime_policy_reason_code, str) or not runtime_policy_reason_code.strip():
             print(
@@ -208,6 +250,19 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
+    # Regression: #2107
+    if "--rollback-evidence-file" not in doc_text:
+        print(
+            "expected Kolme devnet ops doc to document process lifecycle rollback evidence option",
+            file=sys.stderr,
+        )
+        return 1
+    if "--recovery-evidence-file" not in doc_text:
+        print(
+            "expected Kolme devnet ops doc to document process lifecycle recovery evidence option",
+            file=sys.stderr,
+        )
+        return 1
     if "run_local_kamn_live_runtime_integration_lane.sh" not in doc_text:
         print("expected Kolme devnet ops doc to reference local KAMN live runtime integration prerequisite lane", file=sys.stderr)
         return 1
@@ -232,6 +287,18 @@ def main() -> int:
     if "--integration-runtime-commit-live-policy-report" not in readme_text:
         print(
             "expected README to document process lifecycle runtime policy report pass-through option",
+            file=sys.stderr,
+        )
+        return 1
+    if "--rollback-evidence-file" not in readme_text:
+        print(
+            "expected README to document process lifecycle rollback evidence option",
+            file=sys.stderr,
+        )
+        return 1
+    if "--recovery-evidence-file" not in readme_text:
+        print(
+            "expected README to document process lifecycle recovery evidence option",
             file=sys.stderr,
         )
         return 1

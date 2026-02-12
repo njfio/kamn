@@ -67,6 +67,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("integration_runner_mismatch")
         if contracts.get("integration_runtime_commit_live_policy_report_option") != "--runtime-commit-live-policy-report":
             reason_codes.append("integration_runtime_commit_live_policy_report_option_mismatch")
+        if contracts.get("rollback_evidence_option") != "--rollback-evidence-file":
+            reason_codes.append("rollback_evidence_option_mismatch")
+        if contracts.get("recovery_evidence_option") != "--recovery-evidence-file":
+            reason_codes.append("recovery_evidence_option_mismatch")
+        if contracts.get("rollback_evidence_marker") != "kamn.kolme.local-fork-process-lifecycle.rollback-evidence.v1":
+            reason_codes.append("rollback_evidence_marker_mismatch")
+        if contracts.get("recovery_evidence_marker") != "kamn.kolme.local-fork-process-lifecycle.recovery-evidence.v1":
+            reason_codes.append("recovery_evidence_marker_mismatch")
 
     integration_runtime_commit_live_policy_report = report.get("integration_runtime_commit_live_policy_report")
     if (
@@ -82,6 +90,25 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     ):
         reason_codes.append("integration_runtime_commit_policy_reason_code_missing")
 
+    rollback_evidence_file = report.get("rollback_evidence_file")
+    if not isinstance(rollback_evidence_file, str) or not rollback_evidence_file.strip():
+        reason_codes.append("rollback_evidence_file_missing")
+    recovery_evidence_file = report.get("recovery_evidence_file")
+    if not isinstance(recovery_evidence_file, str) or not recovery_evidence_file.strip():
+        reason_codes.append("recovery_evidence_file_missing")
+    rollback_evidence_status = report.get("rollback_evidence_status")
+    if rollback_evidence_status not in ("planned", "not_required", "required"):
+        reason_codes.append("rollback_evidence_status_invalid")
+    recovery_evidence_status = report.get("recovery_evidence_status")
+    if recovery_evidence_status not in ("planned", "validated", "required"):
+        reason_codes.append("recovery_evidence_status_invalid")
+    rollback_evidence_reason_code = report.get("rollback_evidence_reason_code")
+    if not isinstance(rollback_evidence_reason_code, str) or not rollback_evidence_reason_code.strip():
+        reason_codes.append("rollback_evidence_reason_code_missing")
+    recovery_evidence_reason_code = report.get("recovery_evidence_reason_code")
+    if not isinstance(recovery_evidence_reason_code, str) or not recovery_evidence_reason_code.strip():
+        reason_codes.append("recovery_evidence_reason_code_missing")
+
     artifact_paths = report.get("artifact_paths")
     if not isinstance(artifact_paths, list) or not artifact_paths:
         reason_codes.append("artifact_paths_missing")
@@ -91,6 +118,20 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         and integration_runtime_commit_live_policy_report not in artifact_paths
     ):
         reason_codes.append("integration_runtime_commit_live_policy_report_artifact_missing")
+    if (
+        isinstance(artifact_paths, list)
+        and isinstance(rollback_evidence_file, str)
+        and rollback_evidence_file.strip()
+        and rollback_evidence_file not in artifact_paths
+    ):
+        reason_codes.append("rollback_evidence_artifact_missing")
+    if (
+        isinstance(artifact_paths, list)
+        and isinstance(recovery_evidence_file, str)
+        and recovery_evidence_file.strip()
+        and recovery_evidence_file not in artifact_paths
+    ):
+        reason_codes.append("recovery_evidence_artifact_missing")
 
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
@@ -101,6 +142,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             "readiness_probe",
             "kamn_live_integration",
             "process_teardown",
+            "rollback_evidence",
+            "recovery_evidence",
         }
         observed_ids: set[str] = set()
         for entry in checks:
@@ -127,6 +170,18 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 and "--runtime-commit-live-policy-report" not in command
             ):
                 reason_codes.append("kamn_live_integration_policy_report_marker_missing")
+            if (
+                check_id == "rollback_evidence"
+                and isinstance(command, str)
+                and "--rollback-evidence-file" not in command
+            ):
+                reason_codes.append("rollback_evidence_marker_missing")
+            if (
+                check_id == "recovery_evidence"
+                and isinstance(command, str)
+                and "--recovery-evidence-file" not in command
+            ):
+                reason_codes.append("recovery_evidence_marker_missing")
         missing_ids = sorted(expected_ids - observed_ids)
         for missing_id in missing_ids:
             reason_codes.append(f"check_missing:{missing_id}")

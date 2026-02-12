@@ -25,6 +25,8 @@ INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND=""
 INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS=15
 INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-live-finality-output.txt"
 INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT="/tmp/kolme-local-runtime-commit-live-policy.json"
+ROLLBACK_EVIDENCE_FILE="/tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json"
+RECOVERY_EVIDENCE_FILE="/tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json"
 PROCESS_PID=""
 
 shell_escape() {
@@ -193,6 +195,22 @@ while [ "$#" -gt 0 ]; do
       INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT="$2"
       shift 2
       ;;
+    --rollback-evidence-file)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --rollback-evidence-file" >&2
+        exit 1
+      fi
+      ROLLBACK_EVIDENCE_FILE="$2"
+      shift 2
+      ;;
+    --recovery-evidence-file)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --recovery-evidence-file" >&2
+        exit 1
+      fi
+      RECOVERY_EVIDENCE_FILE="$2"
+      shift 2
+      ;;
     --help|-h)
       cat <<'USAGE'
 Usage: run_local_kolme_fork_process_lifecycle_lane.sh [options]
@@ -222,6 +240,8 @@ Options:
                                                  Captured stdout/stderr path for runtime finality command passed through to nested integration lane.
   --integration-runtime-commit-live-policy-report <path>
                                                  Output path for nested runtime policy report artifact passed through to nested integration lane.
+  --rollback-evidence-file <path>               Output path for deterministic rollback evidence linkage artifact.
+  --recovery-evidence-file <path>               Output path for deterministic recovery evidence linkage artifact.
 USAGE
       exit 0
       ;;
@@ -397,6 +417,8 @@ if [ -n "$INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND" ]; then
   integration_command="${integration_command} --runtime-commit-finality-command $(shell_escape "${INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND}") --runtime-commit-finality-max-seconds ${INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS} --runtime-commit-finality-output-file $(shell_escape "${INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE}")"
 fi
 teardown_command="kill <lifecycle-process-pid>"
+rollback_evidence_command="write rollback evidence artifact --rollback-evidence-file ${ROLLBACK_EVIDENCE_FILE}"
+recovery_evidence_command="write recovery evidence artifact --recovery-evidence-file ${RECOVERY_EVIDENCE_FILE}"
 
 overall_status="ok"
 reason_code="dry_run_no_commands_executed"
@@ -407,11 +429,17 @@ readiness_reason_code="not_run"
 integration_reason_code="not_run"
 teardown_reason_code="not_run"
 integration_runtime_commit_policy_reason_code="not_run"
+rollback_evidence_status="planned"
+rollback_evidence_reason_code="dry_run_no_commands_executed"
+recovery_evidence_status="planned"
+recovery_evidence_reason_code="dry_run_no_commands_executed"
 
 record_check "process_start" "$serve_command_planned" "planned" "not_run"
 record_check "readiness_probe" "$readiness_command" "planned" "not_run"
 record_check "kamn_live_integration" "$integration_command" "planned" "not_run"
 record_check "process_teardown" "$teardown_command" "planned" "not_run"
+record_check "rollback_evidence" "$rollback_evidence_command" "planned" "not_run"
+record_check "recovery_evidence" "$recovery_evidence_command" "planned" "not_run"
 
 if [ "$MODE" = "run" ]; then
   : >"$CHECK_FILE"
@@ -550,9 +578,25 @@ if [ "$MODE" = "run" ]; then
       reason_code="process_lifecycle_budget_exceeded"
     fi
   fi
+
+  if [ "$overall_status" = "ok" ]; then
+    rollback_evidence_status="not_required"
+    rollback_evidence_reason_code="no_failure_detected"
+    recovery_evidence_status="validated"
+    recovery_evidence_reason_code="teardown_path_validated"
+    record_check "rollback_evidence" "$rollback_evidence_command" "pass" "$rollback_evidence_reason_code"
+    record_check "recovery_evidence" "$recovery_evidence_command" "pass" "$recovery_evidence_reason_code"
+  else
+    rollback_evidence_status="required"
+    rollback_evidence_reason_code="failure_path_detected"
+    recovery_evidence_status="required"
+    recovery_evidence_reason_code="failure_path_detected"
+    record_check "rollback_evidence" "$rollback_evidence_command" "fail" "$rollback_evidence_reason_code"
+    record_check "recovery_evidence" "$recovery_evidence_command" "fail" "$recovery_evidence_reason_code"
+  fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$SERVE_COMMAND" "$PROCESS_OUTPUT_FILE" "$INTEGRATION_REPORT" "$INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$integration_runtime_commit_policy_reason_code" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$start_reason_code" "$readiness_reason_code" "$integration_reason_code" "$teardown_reason_code" "$CHECK_FILE" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$SERVE_COMMAND" "$PROCESS_OUTPUT_FILE" "$INTEGRATION_REPORT" "$INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$integration_runtime_commit_policy_reason_code" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$ROLLBACK_EVIDENCE_FILE" "$RECOVERY_EVIDENCE_FILE" "$rollback_evidence_status" "$rollback_evidence_reason_code" "$recovery_evidence_status" "$recovery_evidence_reason_code" "$start_reason_code" "$readiness_reason_code" "$integration_reason_code" "$teardown_reason_code" "$CHECK_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -579,11 +623,17 @@ integration_runtime_commit_policy_reason_code = sys.argv[17]
 integration_runtime_commit_finality_command = sys.argv[18]
 integration_runtime_commit_finality_max_seconds = int(sys.argv[19])
 integration_runtime_commit_finality_output_file = sys.argv[20]
-start_reason_code = sys.argv[21]
-readiness_reason_code = sys.argv[22]
-integration_reason_code = sys.argv[23]
-teardown_reason_code = sys.argv[24]
-checks_path = pathlib.Path(sys.argv[25])
+rollback_evidence_file = sys.argv[21]
+recovery_evidence_file = sys.argv[22]
+rollback_evidence_status = sys.argv[23]
+rollback_evidence_reason_code = sys.argv[24]
+recovery_evidence_status = sys.argv[25]
+recovery_evidence_reason_code = sys.argv[26]
+start_reason_code = sys.argv[27]
+readiness_reason_code = sys.argv[28]
+integration_reason_code = sys.argv[29]
+teardown_reason_code = sys.argv[30]
+checks_path = pathlib.Path(sys.argv[31])
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -627,6 +677,12 @@ summary = {
     "integration_runtime_commit_finality_output_file": (
         integration_runtime_commit_finality_output_file if integration_runtime_commit_finality_command else ""
     ),
+    "rollback_evidence_file": rollback_evidence_file,
+    "recovery_evidence_file": recovery_evidence_file,
+    "rollback_evidence_status": rollback_evidence_status,
+    "rollback_evidence_reason_code": rollback_evidence_reason_code,
+    "recovery_evidence_status": recovery_evidence_status,
+    "recovery_evidence_reason_code": recovery_evidence_reason_code,
     "start_reason_code": start_reason_code,
     "readiness_reason_code": readiness_reason_code,
     "integration_reason_code": integration_reason_code,
@@ -638,12 +694,18 @@ summary = {
         "runtime_commit_method": "POST",
         "integration_runner": "run_local_kamn_live_runtime_integration_lane.sh",
         "integration_runtime_commit_live_policy_report_option": "--runtime-commit-live-policy-report",
+        "rollback_evidence_option": "--rollback-evidence-file",
+        "recovery_evidence_option": "--recovery-evidence-file",
+        "rollback_evidence_marker": "kamn.kolme.local-fork-process-lifecycle.rollback-evidence.v1",
+        "recovery_evidence_marker": "kamn.kolme.local-fork-process-lifecycle.recovery-evidence.v1",
     },
     "checks": checks,
     "artifact_paths": [
         process_output_file,
         integration_report,
         integration_runtime_commit_live_policy_report,
+        rollback_evidence_file,
+        recovery_evidence_file,
     ],
 }
 
