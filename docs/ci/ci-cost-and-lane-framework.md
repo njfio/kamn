@@ -67,6 +67,9 @@ Kolme deployment admission preflight emits deterministic runtime signer drift te
 - `runtime_signer_drift_thresholds_bundle`
 - `runtime_signer_drift_admission_matrix_decision=GO|WARN|NO-GO`
 - `runtime_signer_drift_admission_matrix_class=healthy|warning-edge|hard-fail`
+- `signer_key_source=managed-external`
+- `contracts.required_signer_key_source_for_production=managed-external`
+- `contracts.signer_key_source_production_requirement_reason_code=signer_key_source_production_managed_external_required`
 
 Fail-closed reason codes for missing/malformed telemetry:
 
@@ -75,6 +78,13 @@ Fail-closed reason codes for missing/malformed telemetry:
 - `runtime_signer_drift_telemetry_rotation_delta_invalid`
 - `runtime_signer_drift_quorum_fail_threshold_exceeded`
 - `runtime_signer_drift_rotation_fail_threshold_exceeded`
+- `signer_key_source_production_managed_external_required`
+
+Deterministic response matrix:
+
+1. `GO` + `healthy`: continue promotion with standard artifact archival.
+2. `WARN` + `warning-edge`: freeze promotion, rotate signer evidence within threshold, rerun preflight lane + policy checker, then resume only on `GO`.
+3. `NO-GO` + `hard-fail`: block rollout, execute signer rollback runbook, refresh quorum/custody/provenance evidence, and require a clean rerun before unfreeze.
 
 Coverage split for cost control:
 
