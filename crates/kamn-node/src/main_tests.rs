@@ -1,13 +1,15 @@
 use super::{
     build_bootstrap_report, build_kolme_live_direct_signed_wire_payload,
     build_kolme_live_managed_signing_key, build_kolme_live_request,
-    build_kolme_live_signer_adapter, capture_test_logs, encode_kolme_hex_lower, execute,
-    parse_args, render_bootstrap_report, render_kolme_live_native_direct_message,
-    render_log_event_line, resolve_kolme_live_managed_signer_required_marker,
+    build_kolme_live_signer_adapter, build_runtime_observability_snapshot, capture_test_logs,
+    encode_kolme_hex_lower, execute, parse_args, render_bootstrap_report,
+    render_kolme_live_native_direct_message, render_log_event_line,
+    render_observability_endpoint_response, resolve_kolme_live_managed_signer_required_marker,
     resolve_kolme_live_nonce, resolve_kolme_live_signer_private_key_env_name,
-    resolve_log_config_from_inputs, sign_kolme_live_managed_external_message, DiagnosticsMode,
-    KolmeForkSecp256k1SignerAdapter, LocalProfile, NodeBootstrapReport, NodeLogConfig,
-    NodeLogFormat, NodeLogLevel, OutputMode, RuntimeExecutionBundle, RuntimeMode,
+    resolve_log_config_from_inputs, serve_observability_endpoint,
+    sign_kolme_live_managed_external_message, DiagnosticsMode, KolmeForkSecp256k1SignerAdapter,
+    LocalProfile, NodeBootstrapReport, NodeLogConfig, NodeLogFormat, NodeLogLevel,
+    ObservabilityEndpointConfig, OutputMode, RuntimeExecutionBundle, RuntimeMode,
 };
 use kamn_core::{
     bootstrap, ConfigError, KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitRequest, NodeConfig,
@@ -204,4 +206,5 @@ fn spawn_kolme_live_mock_server(replies: Vec<MockHttpReply>) -> (String, Arc<Mut
 
 mod cli_contract_tests;
 mod core_behavior_tests;
+mod observability_endpoint_tests;
 mod signer_tests;
