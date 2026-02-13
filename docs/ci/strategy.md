@@ -684,6 +684,9 @@ JSON`
     - `bash scripts/kolme/run_local_kolme_fork_self_test_contract_lane.sh --output-json /tmp/kolme-local-fork-self-test-summary.json --policy-output-json /tmp/kolme-local-fork-self-test-policy.json`
   - local fork portability preflight run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_portability_preflight_lane.sh --mode run --checkout-path /tmp/kolme_fork --max-seconds 300 --output-json /tmp/kolme-local-fork-portability-preflight-summary.json`
+    - wrapper routing stays manifest-backed:
+      - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_portability_preflight_lane.sh --resolve-manifest-path`
+      - `scripts/framework/manifests/kolme_local_kolme_fork_portability_preflight_lane.json`
     - `python3 scripts/kolme/check_local_kolme_fork_portability_preflight_policy.py --report-file /tmp/kolme-local-fork-portability-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code portability_preflight_passed --output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
     - `bash scripts/kolme/run_local_kolme_fork_portability_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-portability-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-portability-preflight-policy.json`
   - local runtime-commit live run-mode commands remain excluded from ci-fast-gate.
