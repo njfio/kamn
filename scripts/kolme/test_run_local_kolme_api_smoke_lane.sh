@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_api_smoke_lane.sh"
+RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kolme_api_smoke_lane_impl.sh"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_api_smoke_lane.json"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 TMP_DIR="$(mktemp -d)"
@@ -45,13 +48,64 @@ if [ ! -x "$RUNNER" ]; then
   exit 1
 fi
 
+if [ ! -x "$RUNNER_IMPL" ]; then
+  echo "expected local Kolme API smoke implementation runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected local run lane dispatcher to be executable" >&2
+  exit 1
+fi
+
 if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   echo "expected shared local-heavy opt-in guard helper to be executable" >&2
   exit 1
 fi
 
-if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER"; then
-  echo "expected local Kolme API smoke runner to invoke shared local-heavy opt-in guard helper" >&2
+if [ ! -L "$RUNNER" ]; then
+  echo "expected local Kolme API smoke runner to be a symlink to shared runtime lane dispatcher" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$RUNNER")" != "run_lane_dispatch.sh" ]; then
+  echo "expected local Kolme API smoke runner symlink target to be run_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected local Kolme API smoke lane manifest to exist" >&2
+  exit 1
+fi
+
+python3 - "$MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.contract-lane.manifest.v1":
+    raise SystemExit("expected local Kolme API smoke lane manifest schema")
+if payload.get("lane_id") != "kolme.local_kolme_api_smoke.run":
+    raise SystemExit("expected local Kolme API smoke lane manifest lane_id")
+run_command = payload.get("phases", {}).get("run")
+if run_command != [
+    "bash",
+    "scripts/kolme/run_local_kolme_api_smoke_lane_impl.sh",
+]:
+    raise SystemExit("expected local Kolme API smoke lane manifest run command")
+PY
+
+manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUNNER")" --resolve-manifest-path)"
+assert_eq "$manifest_path" "$MANIFEST" "expected local Kolme API smoke wrapper to resolve deterministic manifest"
+if bash "$DISPATCHER" --lane-wrapper run_missing_api_smoke_lane.sh --resolve-manifest-path >/dev/null 2>&1; then
+  echo "expected local run lane dispatcher to fail closed for unknown wrapper" >&2
+  exit 1
+fi
+
+if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER_IMPL"; then
+  echo "expected local Kolme API smoke implementation runner to invoke shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 
