@@ -31,6 +31,8 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave5_wrapper_family_budget_trend.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave6_wrapper_family_baseline_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave6_wrapper_family_budget_trend.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave7_wrapper_family_baseline_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave7_wrapper_family_budget_trend.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_non_kolme_contract_lane_dispatch_wrapper_matrix.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_non_kolme_compliance_contract_lane_dispatch_wrapper_matrix.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_non_kolme_manifest_backed_contract_lane_dispatch_wrapper_matrix.sh"'

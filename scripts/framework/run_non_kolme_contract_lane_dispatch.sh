@@ -74,6 +74,7 @@ resolve_manifest_name() {
     run_quorum_attestation_replay_contract_lane.sh) echo "governance_quorum_attestation_replay_contract_lane.json" ;;
     run_soc2_control_evidence_contract_lane.sh) echo "compliance_soc2_control_evidence_contract_lane.json" ;;
     run_stake_slash_risk_contract_lane.sh) echo "governance_stake_slash_risk_contract_lane.json" ;;
+    run_telegram_ingress_contract_lane.sh) echo "bridge_telegram_ingress_contract_lane.json" ;;
     run_token_launch_handoff_contract_lane.sh) echo "token_launch_handoff_contract_lane.json" ;;
     run_treasury_disbursement_contract_lane.sh) echo "treasury_disbursement_contract_lane.json" ;;
     *)

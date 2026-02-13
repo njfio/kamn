@@ -18,6 +18,7 @@ lane_wrappers=(
   "scripts/bridge/run_cross_chain_outbound_intent_contract_lane.sh"
   "scripts/bridge/run_localhost_bridge_demo_evidence_contract_lane.sh"
   "scripts/bridge/run_localhost_bridge_relay_demo_contract_lane.sh"
+  "scripts/bridge/run_telegram_ingress_contract_lane.sh"
 )
 
 for wrapper_rel_path in "${lane_wrappers[@]}"; do
