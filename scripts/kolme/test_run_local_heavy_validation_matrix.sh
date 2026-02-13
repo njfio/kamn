@@ -57,6 +57,16 @@ if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$MATRIX_RUNNER"; 
   exit 1
 fi
 
+if ! grep -q -- "--mode \$MODE --runtime-profile real-node" "$MATRIX_RUNNER"; then
+  echo "expected real-node integration command to track selected matrix mode" >&2
+  exit 1
+fi
+
+if ! grep -q "REAL_NODE_POLICY_REQUIRED_REASON_CODE" "$MATRIX_RUNNER"; then
+  echo "expected matrix runner to declare dynamic real-node policy reason-code marker" >&2
+  exit 1
+fi
+
 dry_run_output="$(
   bash "$MATRIX_RUNNER" \
     --mode dry-run \
