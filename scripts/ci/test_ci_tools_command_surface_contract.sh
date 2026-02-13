@@ -87,18 +87,31 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/framework/test_generate_local_lane_summary.sh"'
 )
 
-for wave in {1..19}; do
-  required_commands+=(
-    "bash \"\$ROOT_DIR/scripts/ci/test_non_kolme_wave${wave}_wrapper_family_baseline_contract.sh\""
-    "bash \"\$ROOT_DIR/scripts/ci/test_check_non_kolme_wave${wave}_wrapper_family_budget_trend.sh\""
-  )
-done
-
 for command in "${required_commands[@]}"; do
   if ! grep -Fq "$command" "$CI_TOOLS_SCRIPT"; then
     echo "expected ci tools regression lane to include command: $command" >&2
     exit 1
   fi
 done
+
+required_wave_loop_snippets=(
+  'run_non_kolme_wave_wrapper_family_contracts()'
+  'for wave in {1..19}; do'
+  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave${wave}_wrapper_family_baseline_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave${wave}_wrapper_family_budget_trend.sh"'
+)
+
+for snippet in "${required_wave_loop_snippets[@]}"; do
+  if ! grep -Fq "$snippet" "$CI_TOOLS_SCRIPT"; then
+    echo "expected ci tools regression lane to include non-Kolme wave helper snippet: $snippet" >&2
+    exit 1
+  fi
+done
+
+wave_helper_invocation_count="$(grep -Ec '^[[:space:]]*run_non_kolme_wave_wrapper_family_contracts$' "$CI_TOOLS_SCRIPT")"
+if [ "$wave_helper_invocation_count" -ne 2 ]; then
+  echo "expected ci tools regression lane to invoke run_non_kolme_wave_wrapper_family_contracts exactly twice; found $wave_helper_invocation_count" >&2
+  exit 1
+fi
 
 echo "ci tools command surface contract tests passed."
