@@ -10,6 +10,13 @@ use kamn_core::{
     KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderOutcome,
     KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitRequest,
 };
+use std::thread;
+use std::time::Duration;
+
+const KOLME_LIVE_SUBMIT_RETRY_MAX_ATTEMPTS: u32 = 3;
+const KOLME_LIVE_FINALITY_RETRY_MAX_ATTEMPTS: u32 = 3;
+const KOLME_LIVE_RETRY_BASE_BACKOFF_MILLIS: u64 = 10;
+const KOLME_LIVE_RETRY_MAX_BACKOFF_MILLIS: u64 = 40;
 
 pub(crate) fn build_kolme_live_request(
     plan: &BootstrapPlan,
@@ -66,6 +73,25 @@ pub(crate) fn map_kolme_live_submit_outcome(
     }
 }
 
+fn classify_retry_category(error: &KolmeRuntimeCommitProviderError) -> Option<&'static str> {
+    match error {
+        KolmeRuntimeCommitProviderError::Timeout => Some("timeout"),
+        KolmeRuntimeCommitProviderError::Unavailable { .. } => Some("unavailable"),
+        KolmeRuntimeCommitProviderError::MalformedResponse { .. } => None,
+    }
+}
+
+fn deterministic_retry_backoff_millis(retry_attempt: u32) -> u64 {
+    let exponent = retry_attempt.saturating_sub(1).min(4);
+    let multiplier = 1_u64 << exponent;
+    (KOLME_LIVE_RETRY_BASE_BACKOFF_MILLIS * multiplier).min(KOLME_LIVE_RETRY_MAX_BACKOFF_MILLIS)
+}
+
+fn maybe_sleep_retry_backoff(retry_attempt: u32) {
+    let backoff = deterministic_retry_backoff_millis(retry_attempt);
+    thread::sleep(Duration::from_millis(backoff));
+}
+
 pub(crate) fn execute_kolme_live_runtime(
     plan: &BootstrapPlan,
     base_url: String,
@@ -97,12 +123,34 @@ pub(crate) fn execute_kolme_live_runtime(
         transport.clone(),
     )
     .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
-    let submit_outcome = provider
-        .submit_runtime_commit(signed_wire_payload.as_str(), request.idempotency_key())
-        .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
+    let mut submit_attempts = 0_u32;
+    let mut submit_retry_reason = "none";
+    let submit_outcome = loop {
+        submit_attempts += 1;
+        match provider
+            .submit_runtime_commit(signed_wire_payload.as_str(), request.idempotency_key())
+        {
+            Ok(outcome) => break outcome,
+            Err(error) => {
+                if let Some(reason_code) = classify_retry_category(&error) {
+                    if submit_attempts < KOLME_LIVE_SUBMIT_RETRY_MAX_ATTEMPTS {
+                        submit_retry_reason = reason_code;
+                        maybe_sleep_retry_backoff(submit_attempts);
+                        continue;
+                    }
+                    return Err(ConfigError::RuntimeKolmeLive(format!(
+                        "submit retries exhausted after {submit_attempts} attempts ({reason_code}): {error}"
+                    )));
+                }
+                return Err(ConfigError::RuntimeKolmeLive(error.to_string()));
+            }
+        }
+    };
     let (submit_status, mut receipt) = map_kolme_live_submit_outcome(submit_outcome)?;
     ensure_kolme_live_provider_marker(provider_hint.as_str(), receipt.provider.as_str())?;
     let mut resolution = "submit-receipt".to_owned();
+    let mut finality_retry_attempts = 0_u32;
+    let mut finality_retry_reason = "none";
 
     if matches!(receipt.finality, KolmeCommitReceiptFinality::Pending) {
         let mut checker = KolmeRuntimeCommitFinalityChecker::new(
@@ -111,25 +159,40 @@ pub(crate) fn execute_kolme_live_runtime(
             transport,
         )
         .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
-        match checker.poll_finality(receipt.commit_id.as_str(), KOLME_LIVE_FINALITY_MAX_ATTEMPTS) {
-            Ok(polled_receipt) => {
-                ensure_kolme_live_provider_marker(
-                    provider_hint.as_str(),
-                    polled_receipt.provider.as_str(),
-                )?;
-                receipt = polled_receipt;
-                resolution = "finality-polled".to_owned();
-            }
-            Err(KolmeRuntimeCommitProviderError::Timeout) => {
-                resolution = "finality-timeout".to_owned();
-            }
-            Err(KolmeRuntimeCommitProviderError::Unavailable { .. }) => {
-                resolution = "finality-unavailable".to_owned();
-            }
-            Err(KolmeRuntimeCommitProviderError::MalformedResponse { reason }) => {
-                return Err(ConfigError::RuntimeKolmeLive(format!(
-                    "finality response malformed: {reason}"
-                )));
+        loop {
+            finality_retry_attempts += 1;
+            match checker
+                .poll_finality(receipt.commit_id.as_str(), KOLME_LIVE_FINALITY_MAX_ATTEMPTS)
+            {
+                Ok(polled_receipt) => {
+                    ensure_kolme_live_provider_marker(
+                        provider_hint.as_str(),
+                        polled_receipt.provider.as_str(),
+                    )?;
+                    receipt = polled_receipt;
+                    resolution = "finality-polled".to_owned();
+                    break;
+                }
+                Err(error) => {
+                    if let Some(reason_code) = classify_retry_category(&error) {
+                        if finality_retry_attempts < KOLME_LIVE_FINALITY_RETRY_MAX_ATTEMPTS {
+                            finality_retry_reason = reason_code;
+                            maybe_sleep_retry_backoff(finality_retry_attempts);
+                            continue;
+                        }
+                        resolution = if reason_code == "timeout" {
+                            "finality-timeout".to_owned()
+                        } else {
+                            "finality-unavailable".to_owned()
+                        };
+                        break;
+                    }
+                    if let KolmeRuntimeCommitProviderError::MalformedResponse { reason } = error {
+                        return Err(ConfigError::RuntimeKolmeLive(format!(
+                            "finality response malformed: {reason}"
+                        )));
+                    }
+                }
             }
         }
     }
@@ -145,8 +208,61 @@ pub(crate) fn execute_kolme_live_runtime(
         signer_key_source: signer_selection.key_source.to_owned(),
         signer_private_key_env: signer_selection.private_key_env.to_owned(),
         execution_status: format!(
-            "{submit_status};commit_id={};finality={finality};resolution={resolution}",
-            receipt.commit_id
+            "{submit_status};commit_id={};finality={finality};resolution={resolution};submit_attempts={submit_attempts};submit_retry_reason={submit_retry_reason};finality_retry_attempts={finality_retry_attempts};finality_retry_reason={finality_retry_reason}",
+            receipt.commit_id,
         ),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        classify_retry_category, deterministic_retry_backoff_millis, ConfigError,
+        KolmeRuntimeCommitProviderError,
+    };
+
+    #[test]
+    fn unit_retry_classifier_marks_transient_provider_errors() {
+        assert_eq!(
+            classify_retry_category(&KolmeRuntimeCommitProviderError::Timeout),
+            Some("timeout")
+        );
+        assert_eq!(
+            classify_retry_category(&KolmeRuntimeCommitProviderError::Unavailable {
+                reason: "network unavailable".to_owned(),
+            }),
+            Some("unavailable")
+        );
+        assert_eq!(
+            classify_retry_category(&KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "payload malformed".to_owned(),
+            }),
+            None
+        );
+    }
+
+    #[test]
+    fn unit_retry_backoff_policy_is_deterministic_and_bounded() {
+        assert_eq!(deterministic_retry_backoff_millis(1), 10);
+        assert_eq!(deterministic_retry_backoff_millis(2), 20);
+        assert_eq!(deterministic_retry_backoff_millis(3), 40);
+        assert_eq!(deterministic_retry_backoff_millis(8), 40);
+    }
+
+    #[test]
+    fn regression_retry_classifier_keeps_malformed_fail_fast() {
+        // Regression: #2673
+        assert_eq!(
+            classify_retry_category(&KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "status field missing".to_owned(),
+            }),
+            None
+        );
+        let message =
+            ConfigError::RuntimeKolmeLive("finality response malformed: x".to_owned()).to_string();
+        assert!(
+            message.contains("runtime kolme live validation failed"),
+            "runtime malformed response errors should remain explicit and fail-fast"
+        );
+    }
 }

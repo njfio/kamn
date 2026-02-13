@@ -744,6 +744,10 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
         "\"kolme_live_signer_private_key_env\":\"KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX\""
     ));
     assert!(rendered.contains("\"kolme_live_execution_status\":\"submitted;"));
+    assert!(rendered.contains("submit_attempts=1"));
+    assert!(rendered.contains("submit_retry_reason=none"));
+    assert!(rendered.contains("finality_retry_attempts=1"));
+    assert!(rendered.contains("finality_retry_reason=none"));
 
     let recorded_requests = requests.lock().expect("request mutex should lock");
     assert_eq!(
@@ -768,6 +772,168 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
     );
     assert!(recorded_requests[2]
         .contains("GET /runtime-commit/status?commit_id=kolme-commit%3Aab12cd34 HTTP/1.1"));
+}
+
+#[test]
+fn functional_runtime_kolme_live_retries_transient_submit_and_finality_unavailable_errors() {
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+    let _env_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+        Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+    );
+    let (base_url, requests) = spawn_kolme_live_mock_server(vec![
+        MockHttpReply::ok(r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#),
+        MockHttpReply {
+            status_line: "HTTP/1.1 503 Service Unavailable",
+            body: "{\"error\":\"submit unavailable\"}".to_owned(),
+        },
+        MockHttpReply::ok(
+            r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"pending"}"#,
+        ),
+        MockHttpReply {
+            status_line: "HTTP/1.1 503 Service Unavailable",
+            body: "{\"error\":\"finality unavailable\"}".to_owned(),
+        },
+        MockHttpReply::ok(
+            r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"final"}"#,
+        ),
+    ]);
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        base_url,
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
+        "--output".to_owned(),
+        "json".to_owned(),
+    ];
+
+    let parsed = parse_args(args).expect("kolme-live args should parse");
+    let report = execute(parsed).expect("runtime should recover from transient provider failures");
+    let rendered = render_bootstrap_report(&report, OutputMode::json());
+    assert!(rendered.contains("submit_attempts=2"));
+    assert!(rendered.contains("submit_retry_reason=unavailable"));
+    assert!(rendered.contains("finality_retry_attempts=2"));
+    assert!(rendered.contains("finality_retry_reason=unavailable"));
+    assert!(rendered.contains("resolution=finality-polled"));
+
+    let recorded_requests = requests.lock().expect("request mutex should lock");
+    assert_eq!(
+        recorded_requests.len(),
+        5,
+        "retry path should issue one extra submit and one extra finality request"
+    );
+}
+
+#[test]
+fn regression_runtime_kolme_live_submit_malformed_response_fails_fast_without_retry() {
+    // Regression: #2673
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+    let _env_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+        Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+    );
+    let (base_url, requests) = spawn_kolme_live_mock_server(vec![
+        MockHttpReply::ok(r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#),
+        MockHttpReply::ok(r#"{"provider":"kolme-fork-local"}"#),
+    ]);
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        base_url,
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
+    ])
+    .expect("kolme-live args should parse");
+    let error = execute(parsed).expect_err("malformed submit response must fail closed");
+    assert!(
+        matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("malformed")),
+        "malformed submit responses should stay fail-fast and non-retriable"
+    );
+
+    let recorded_requests = requests.lock().expect("request mutex should lock");
+    assert_eq!(
+        recorded_requests.len(),
+        2,
+        "malformed submit response should fail without retrying submit requests"
+    );
+}
+
+#[test]
+fn performance_runtime_kolme_live_retry_recovery_stays_within_budget() {
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+    let _env_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+        Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+    );
+    let (base_url, _requests) = spawn_kolme_live_mock_server(vec![
+        MockHttpReply::ok(r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#),
+        MockHttpReply {
+            status_line: "HTTP/1.1 503 Service Unavailable",
+            body: "{\"error\":\"submit unavailable\"}".to_owned(),
+        },
+        MockHttpReply::ok(
+            r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"pending"}"#,
+        ),
+        MockHttpReply {
+            status_line: "HTTP/1.1 503 Service Unavailable",
+            body: "{\"error\":\"finality unavailable\"}".to_owned(),
+        },
+        MockHttpReply::ok(
+            r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"final"}"#,
+        ),
+    ]);
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        base_url,
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
+    ])
+    .expect("kolme-live args should parse");
+    let started = Instant::now();
+    let report = execute(parsed).expect("retry flow should recover within bounded runtime budget");
+    assert_eq!(report.runtime_mode, "kolme-live");
+    assert!(
+        started.elapsed() < Duration::from_secs(1),
+        "retry flow exceeded 1s budget for one submit and one finality retry"
+    );
 }
 
 #[test]
