@@ -198,6 +198,14 @@ fn resolve_optional_kolme_live_managed_signer_command() -> Result<Option<String>
     }
 }
 
+fn resolve_required_kolme_live_managed_signer_command() -> Result<String, ConfigError> {
+    resolve_optional_kolme_live_managed_signer_command()?.ok_or_else(|| {
+        ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV} must be set when managed-external signing is selected (managed_signer_backend_required_missing)"
+        ))
+    })
+}
+
 pub(crate) fn resolve_kolme_live_managed_signer_required_marker() -> Result<bool, ConfigError> {
     match env::var(KOLME_LIVE_MANAGED_SIGNER_REQUIRED_ENV) {
         Ok(value) => {
@@ -560,11 +568,7 @@ pub(crate) fn sign_kolme_live_managed_external_message(
     let _backend_signature = secure_backend
         .sign(&signing_request)
         .map_err(map_kolme_live_secure_signer_backend_error)?;
-    let command = resolve_optional_kolme_live_managed_signer_command()?.ok_or_else(|| {
-        ConfigError::RuntimeKolmeLive(format!(
-            "{KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV} must be set when managed-external signing is selected (managed_signer_backend_required_missing)"
-        ))
-    })?;
+    let command = resolve_required_kolme_live_managed_signer_command()?;
     let timeout_seconds = resolve_kolme_live_managed_signer_timeout_seconds()?;
     let backend_signature = execute_kolme_live_managed_signer_backend_command(
         command.as_str(),
@@ -1014,6 +1018,7 @@ pub(crate) fn build_kolme_live_direct_signed_wire_payload(
         provider.ensure_no_fallback_private_key_path()?;
         ensure_kolme_live_managed_external_private_key_env_unset(&signer_selection)?;
         let _managed_signer_required_marker = resolve_kolme_live_managed_signer_required_marker()?;
+        let _managed_signer_command = resolve_required_kolme_live_managed_signer_command()?;
         let signer_public_key_hex =
             resolve_required_managed_signer_public_key_hex(&signer_selection)?;
         let key_reference = read_required_kolme_live_key_reference_from_env(&signer_selection)?;
