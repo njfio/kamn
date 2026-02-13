@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECK_SCRIPT="$ROOT_DIR/scripts/ci/check_ignored_test_inventory_drift.sh"
 BASELINE_FILE="$ROOT_DIR/fixtures/ci/ignored_test_inventory_baseline.json"
 METADATA_FILE="$ROOT_DIR/fixtures/ci/ignored_test_inventory_metadata.json"
+PROMOTION_CRITERIA_FILE="$ROOT_DIR/fixtures/ci/ignored_test_promotion_criteria.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -23,10 +24,16 @@ if [ ! -f "$METADATA_FILE" ]; then
   exit 1
 fi
 
+if [ ! -f "$PROMOTION_CRITERIA_FILE" ]; then
+  echo "expected ignored-test promotion criteria fixture to exist" >&2
+  exit 1
+fi
+
 PASS_REPORT="$TMP_DIR/ignored-test-metadata-pass.json"
 bash "$CHECK_SCRIPT" \
   --baseline-file "$BASELINE_FILE" \
   --metadata-file "$METADATA_FILE" \
+  --promotion-criteria-file "$PROMOTION_CRITERIA_FILE" \
   --output-json "$PASS_REPORT" >"$TMP_DIR/check-pass.out"
 
 grep -q '^status=pass$' "$TMP_DIR/check-pass.out"
@@ -49,6 +56,7 @@ PY
 if bash "$CHECK_SCRIPT" \
   --baseline-file "$BASELINE_FILE" \
   --metadata-file "$MUTATED_METADATA" \
+  --promotion-criteria-file "$PROMOTION_CRITERIA_FILE" \
   --output-json "$TMP_DIR/check-metadata-fail.json" >"$TMP_DIR/check-metadata-fail.out" 2>&1; then
   echo "expected ignored-test checker to fail when metadata coverage drifts" >&2
   exit 1
@@ -76,6 +84,7 @@ PY
 if bash "$CHECK_SCRIPT" \
   --baseline-file "$BASELINE_FILE" \
   --metadata-file "$MUTATED_PRIORITY_METADATA" \
+  --promotion-criteria-file "$PROMOTION_CRITERIA_FILE" \
   --output-json "$TMP_DIR/check-priority-fail.json" >"$TMP_DIR/check-priority-fail.out" 2>&1; then
   echo "expected ignored-test checker to fail when high-priority tracking linkage is missing" >&2
   exit 1
@@ -83,5 +92,31 @@ fi
 
 grep -q '^status=fail$' "$TMP_DIR/check-priority-fail.out"
 grep -q 'high_priority_tracking_issue_missing' "$TMP_DIR/check-priority-fail.out"
+
+MUTATED_CRITERIA="$TMP_DIR/mutated-ignored-test-promotion-criteria.json"
+cp "$PROMOTION_CRITERIA_FILE" "$MUTATED_CRITERIA"
+python3 - "$MUTATED_CRITERIA" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+criteria_path = Path(sys.argv[1])
+payload = json.loads(criteria_path.read_text(encoding="utf-8"))
+if payload.get("categories"):
+    payload["categories"] = payload["categories"][:-1]
+criteria_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if bash "$CHECK_SCRIPT" \
+  --baseline-file "$BASELINE_FILE" \
+  --metadata-file "$METADATA_FILE" \
+  --promotion-criteria-file "$MUTATED_CRITERIA" \
+  --output-json "$TMP_DIR/check-promotion-fail.json" >"$TMP_DIR/check-promotion-fail.out" 2>&1; then
+  echo "expected ignored-test checker to fail when promotion criteria category coverage drifts" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/check-promotion-fail.out"
+grep -q 'ignored_test_promotion_criteria_missing' "$TMP_DIR/check-promotion-fail.out"
 
 echo "Ignored-test metadata policy tests passed."

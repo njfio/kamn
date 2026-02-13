@@ -13,9 +13,11 @@ from typing import Any
 INVENTORY_SCHEMA_VERSION = "kamn.ci.ignored-test-inventory.v1"
 DRIFT_REPORT_SCHEMA_VERSION = "kamn.ci.ignored-test-inventory-drift-report.v1"
 METADATA_SCHEMA_VERSION = "kamn.ci.ignored-test-inventory-metadata.v1"
+PROMOTION_CRITERIA_SCHEMA_VERSION = "kamn.ci.ignored-test-promotion-criteria.v1"
 DEFAULT_SCAN_ROOT = "crates"
 DEFAULT_BASELINE_FILE = "fixtures/ci/ignored_test_inventory_baseline.json"
 DEFAULT_METADATA_FILE = "fixtures/ci/ignored_test_inventory_metadata.json"
+DEFAULT_PROMOTION_CRITERIA_FILE = "fixtures/ci/ignored_test_promotion_criteria.json"
 ALLOWED_PRIORITY_LEVELS = {"P0", "P1", "P2", "P3"}
 
 IGNORE_ATTRIBUTE_PATTERN = re.compile(r"^\s*#\s*\[\s*ignore(?:\s*=.*)?\s*\]")
@@ -86,6 +88,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--metadata-file",
         default=DEFAULT_METADATA_FILE,
         help="Path to ignored-test metadata fixture.",
+    )
+    check_parser.add_argument(
+        "--promotion-criteria-file",
+        default=DEFAULT_PROMOTION_CRITERIA_FILE,
+        help="Path to ignored-test promotion-criteria fixture.",
     )
     check_parser.add_argument(
         "--output-json",
@@ -267,6 +274,44 @@ def validate_metadata_payload(payload: dict[str, Any], *, label: str) -> dict[tu
     return metadata_by_key
 
 
+def validate_promotion_criteria_payload(
+    payload: dict[str, Any], *, label: str
+) -> dict[str, list[str]]:
+    if payload.get("schema_version") != PROMOTION_CRITERIA_SCHEMA_VERSION:
+        fail(f"{label} schema_version must be {PROMOTION_CRITERIA_SCHEMA_VERSION}")
+
+    categories = payload.get("categories")
+    if not isinstance(categories, list) or not categories:
+        fail(f"{label} categories must be a non-empty array")
+
+    criteria_by_category: dict[str, list[str]] = {}
+    for index, entry in enumerate(categories):
+        if not isinstance(entry, dict):
+            fail(f"{label} categories[{index}] must be an object")
+        category = entry.get("category")
+        promotion_criteria = entry.get("promotion_criteria")
+        if not isinstance(category, str) or not category.strip():
+            fail(f"{label} categories[{index}].category must be a non-empty string")
+        category_key = category.strip()
+        if category_key in criteria_by_category:
+            fail(f"{label} categories contains duplicate category: {category_key}")
+        if not isinstance(promotion_criteria, list) or not promotion_criteria:
+            fail(
+                f"{label} categories[{index}].promotion_criteria must be a non-empty array"
+            )
+        normalized_criteria: list[str] = []
+        for criterion_index, criterion in enumerate(promotion_criteria):
+            if not isinstance(criterion, str) or not criterion.strip():
+                fail(
+                    f"{label} categories[{index}].promotion_criteria[{criterion_index}] "
+                    "must be a non-empty string"
+                )
+            normalized_criteria.append(criterion.strip())
+        criteria_by_category[category_key] = normalized_criteria
+
+    return criteria_by_category
+
+
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -346,11 +391,22 @@ def run_check(args: argparse.Namespace) -> int:
     metadata_path = Path(args.metadata_file)
     if not metadata_path.is_absolute():
         metadata_path = (repo_root / metadata_path).resolve()
+    promotion_criteria_path = Path(args.promotion_criteria_file)
+    if not promotion_criteria_path.is_absolute():
+        promotion_criteria_path = (repo_root / promotion_criteria_path).resolve()
 
     baseline_payload = load_json_object(baseline_path, label="baseline file")
     baseline_ignored_tests = validate_inventory_payload(baseline_payload, label="baseline")
     metadata_payload = load_json_object(metadata_path, label="metadata file")
     metadata_by_key = validate_metadata_payload(metadata_payload, label="metadata")
+    promotion_criteria_payload = load_json_object(
+        promotion_criteria_path,
+        label="promotion criteria file",
+    )
+    promotion_criteria_by_category = validate_promotion_criteria_payload(
+        promotion_criteria_payload,
+        label="promotion criteria",
+    )
 
     current_inventory, unresolved_markers = generate_inventory(
         repo_root=repo_root,
@@ -380,6 +436,13 @@ def run_check(args: argparse.Namespace) -> int:
             metadata["tracking_issue"]
         ):
             high_priority_tracking_issue_missing_entries.append(key)
+    missing_promotion_criteria_entries: list[tuple[str, str]] = []
+    for key in sorted(current_set):
+        metadata = metadata_by_key.get(key)
+        if metadata is None:
+            continue
+        if metadata["reason"] not in promotion_criteria_by_category:
+            missing_promotion_criteria_entries.append(key)
 
     reason_codes: list[str] = []
     if unresolved_markers:
@@ -394,6 +457,8 @@ def run_check(args: argparse.Namespace) -> int:
         reason_codes.append("ignored_test_metadata_stale_entry")
     if high_priority_tracking_issue_missing_entries:
         reason_codes.append("high_priority_tracking_issue_missing")
+    if missing_promotion_criteria_entries:
+        reason_codes.append("ignored_test_promotion_criteria_missing")
 
     status = "pass" if not reason_codes else "fail"
     report = {
@@ -402,10 +467,12 @@ def run_check(args: argparse.Namespace) -> int:
         "repo_root": repo_root.as_posix(),
         "baseline_file": baseline_path.as_posix(),
         "metadata_file": metadata_path.as_posix(),
+        "promotion_criteria_file": promotion_criteria_path.as_posix(),
         "scan_roots": args.scan_root or [DEFAULT_SCAN_ROOT],
         "ignored_test_count": len(current_ignored_tests),
         "baseline_ignored_test_count": len(baseline_ignored_tests),
         "metadata_entry_count": len(metadata_by_key),
+        "promotion_criteria_category_count": len(promotion_criteria_by_category),
         "unexpected_entries": [
             {"source_file": source_file, "test_name": test_name}
             for source_file, test_name in unexpected_entries
@@ -426,6 +493,10 @@ def run_check(args: argparse.Namespace) -> int:
             {"source_file": source_file, "test_name": test_name}
             for source_file, test_name in high_priority_tracking_issue_missing_entries
         ],
+        "missing_promotion_criteria_entries": [
+            {"source_file": source_file, "test_name": test_name}
+            for source_file, test_name in missing_promotion_criteria_entries
+        ],
         "unresolved_markers": unresolved_markers,
         "reason_codes": reason_codes,
         "violation_count": len(unexpected_entries)
@@ -433,6 +504,7 @@ def run_check(args: argparse.Namespace) -> int:
         + len(missing_metadata_entries)
         + len(stale_metadata_entries)
         + len(high_priority_tracking_issue_missing_entries)
+        + len(missing_promotion_criteria_entries)
         + (len(unresolved_markers) if unresolved_markers else 0),
     }
 
@@ -445,6 +517,10 @@ def run_check(args: argparse.Namespace) -> int:
     print(f"ignored_test_count={len(current_ignored_tests)}")
     print(f"baseline_ignored_test_count={len(baseline_ignored_tests)}")
     print(f"metadata_entry_count={len(metadata_by_key)}")
+    print(
+        "promotion_criteria_category_count="
+        f"{len(promotion_criteria_by_category)}"
+    )
     print(f"unexpected_count={len(unexpected_entries)}")
     print(f"missing_count={len(missing_entries)}")
     print(f"missing_metadata_count={len(missing_metadata_entries)}")
@@ -452,6 +528,10 @@ def run_check(args: argparse.Namespace) -> int:
     print(
         "high_priority_tracking_issue_missing_count="
         f"{len(high_priority_tracking_issue_missing_entries)}"
+    )
+    print(
+        "missing_promotion_criteria_count="
+        f"{len(missing_promotion_criteria_entries)}"
     )
     print(f"unresolved_marker_count={len(unresolved_markers)}")
     print(f"violation_count={report['violation_count']}")
@@ -488,6 +568,12 @@ def run_check(args: argparse.Namespace) -> int:
         for entry in report["high_priority_tracking_issue_missing_entries"]:
             print(
                 "missing_high_priority_tracking_issue="
+                f"{entry['source_file']}::{entry['test_name']}",
+                file=sys.stderr,
+            )
+        for entry in report["missing_promotion_criteria_entries"]:
+            print(
+                "missing_promotion_criteria="
                 f"{entry['source_file']}::{entry['test_name']}",
                 file=sys.stderr,
             )

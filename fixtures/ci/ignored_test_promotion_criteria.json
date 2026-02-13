@@ -1,0 +1,24 @@
+{
+  "categories": [
+    {
+      "category": "deep-lane-performance",
+      "description": "Deep-lane stress tests can graduate when deterministic preflight and bounded runtime evidence are stable.",
+      "promotion_criteria": [
+        "deterministic_local_heavy_opt_in_guard",
+        "bounded_runtime_budget_evidence",
+        "non_flaky_three_run_window"
+      ]
+    },
+    {
+      "category": "local-heavy-live-node",
+      "description": "Live-node integration tests can graduate when local node bootstrap and signer/runtime evidence are deterministic.",
+      "promotion_criteria": [
+        "local_fork_bootstrap_readiness_pass",
+        "live_signer_profile_preflight_pass",
+        "runtime_commit_live_evidence_contract_pass",
+        "non_synthetic_submission_probe_pass"
+      ]
+    }
+  ],
+  "schema_version": "kamn.ci.ignored-test-promotion-criteria.v1"
+}
