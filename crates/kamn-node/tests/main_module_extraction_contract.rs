@@ -19,6 +19,14 @@ fn main_module_extraction_contract_declares_signer_and_wire_modules() {
         main_rs.contains("mod wire_payload;"),
         "main.rs should declare wire_payload module"
     );
+    assert!(
+        main_rs.contains("mod main_tests;"),
+        "main.rs should declare sidecar test module for maintainability"
+    );
+    assert!(
+        !main_rs.contains("mod tests {"),
+        "main.rs should not keep inline monolithic tests module"
+    );
 }
 
 #[test]
