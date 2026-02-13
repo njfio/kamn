@@ -8,6 +8,8 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 - Fast-gate delta baseline/thresholds: `.ci/fast-gate-budget-delta.env`
 - Script-surface budgets: `.ci/script-surface-budget.env`
 - Script-surface delta baseline: `.ci/script-surface-baseline.env`
+- Test-harness soft budget: `.ci/test-harness-loc-soft-budget.env`
+- Test-harness baseline: `.ci/test-harness-loc-baseline.env`
 - Kolme command-surface soft budget: `.ci/kolme-command-surface-soft-budget.env`
 - Kolme command-surface baseline: `.ci/kolme-command-surface-baseline.env`
 - Kolme command-surface trend thresholds: `.ci/kolme-command-surface-trend-thresholds.env`
@@ -17,6 +19,7 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 - Fast-gate delta report generator: `scripts/ci/generate_fast_gate_budget_delta_report.sh`
 - Fast-gate delta threshold gate: `scripts/ci/check_fast_gate_budget_delta_threshold.sh`
 - Script surface gate: `scripts/ci/check_script_duplication_budget.sh`
+- Test-harness soft-budget contract lane: `scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh`
 - Kolme harness+command-surface trend report: `scripts/ci/generate_kolme_test_harness_loc_trend_report.sh`
 - Kolme harness+command-surface budget contract lane: `scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh`
 - CI helper regression suite: `scripts/ci/test_ci_tools.sh`
@@ -199,6 +202,14 @@ bash scripts/ci/generate_kolme_test_harness_loc_report.sh --output-json /tmp/kol
 bash scripts/ci/check_kolme_test_harness_loc_soft_budget.sh --report-file /tmp/kolme-test-harness-loc-report.json --output-json /tmp/kolme-test-harness-loc-soft-budget-report.json
 bash scripts/ci/generate_kolme_test_harness_loc_trend_report.sh --output-json /tmp/kolme-test-harness-loc-trend-report.json
 bash scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/kolme-test-harness-loc-soft-budget-contract-report.json
+```
+
+Generic test-harness soft-budget contract validation:
+
+```bash
+bash scripts/ci/generate_test_harness_loc_report.sh --output-json /tmp/test-harness-loc-report.json
+bash scripts/ci/check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --output-json /tmp/test-harness-loc-soft-budget-report.json
+bash scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/test-harness-loc-soft-budget-contract-report.json
 ```
 
 Deterministic command-surface drift markers in trend artifacts:

@@ -894,6 +894,7 @@ Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
 Test-harness growth advisory (non-blocking):
 - `scripts/ci/generate_test_harness_loc_report.sh --output-json /tmp/test-harness-loc-report.json`
 - `scripts/ci/check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --output-json /tmp/test-harness-loc-soft-budget-report.json`
+- `scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/test-harness-loc-soft-budget-contract-report.json`
 - Exceeded soft thresholds emit `soft_budget_status=exceeded` with `review_required=true` for reviewer visibility, but do not fail fast-gate by themselves.
 
 Kolme harness trend policy (warning-to-fail escalation contract):
@@ -951,6 +952,12 @@ Fast-mode CI tooling regression coverage includes:
 - Kolme harness trend-report generator (`test_generate_kolme_test_harness_loc_trend_report.sh`)
 - Test-harness LOC soft-budget checker (`test_check_test_harness_loc_soft_budget.sh`)
 - Kolme test-harness LOC soft-budget checker (`test_check_kolme_test_harness_loc_soft_budget.sh`)
+- Generic test-harness LOC soft-budget contract lane (`test_run_test_harness_loc_soft_budget_contract_lane.sh`)
+  - contract lane command:
+    - `bash scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/test-harness-loc-soft-budget-contract-report.json`
+  - deterministic decision surface:
+    - `test_harness_loc_soft_budget_contract_within_decision=GO`
+    - `test_harness_loc_soft_budget_contract_exceeded_decision=WARN`
 - Kolme test-harness LOC soft-budget contract lane (`test_run_kolme_test_harness_loc_soft_budget_contract_lane.sh`)
   - report command:
     - `bash scripts/ci/generate_kolme_test_harness_loc_report.sh --output-json /tmp/kolme-test-harness-loc-report.json`
