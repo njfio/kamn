@@ -72,6 +72,12 @@ resolve_manifest_name() {
     run_governance_lifecycle_rollback_contract_lane.sh) echo "governance_lifecycle_rollback_contract_lane.json" ;;
     run_governance_simulation_contract_lane.sh) echo "governance_simulation_contract_lane.json" ;;
     run_quorum_attestation_replay_contract_lane.sh) echo "governance_quorum_attestation_replay_contract_lane.json" ;;
+    run_example_fixture_drift_contract_lane.sh) echo "sdk_example_fixture_drift_contract_lane.json" ;;
+    run_live_transport_parity_contract_lane.sh) echo "sdk_live_transport_parity_contract_lane.json" ;;
+    run_live_transport_replay_tamper_contract_lane.sh) echo "sdk_live_transport_replay_tamper_contract_lane.json" ;;
+    run_live_transport_smoke_parity_contract_lane.sh) echo "sdk_live_transport_smoke_parity_contract_lane.json" ;;
+    run_localhost_signed_integration_contract_lane.sh) echo "sdk_localhost_signed_integration_contract_lane.json" ;;
+    run_sdk_schema_compatibility_contract_lane.sh) echo "sdk_schema_compatibility_contract_lane.json" ;;
     run_soc2_control_evidence_contract_lane.sh) echo "compliance_soc2_control_evidence_contract_lane.json" ;;
     run_stake_slash_risk_contract_lane.sh) echo "governance_stake_slash_risk_contract_lane.json" ;;
     run_telegram_ingress_contract_lane.sh) echo "bridge_telegram_ingress_contract_lane.json" ;;

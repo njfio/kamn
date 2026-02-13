@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE_SCRIPT="$ROOT_DIR/scripts/sdk/run_localhost_signed_integration_contract_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/sdk/localhost_signed_integration_contract_lane_contract.py"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/sdk_localhost_signed_integration_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 REPORT_COMPOSER="$ROOT_DIR/scripts/sdk/localhost_signed_report_composer.py"
 SCENARIO_RUNNER_HELPER="$ROOT_DIR/scripts/sdk/localhost_signed_scenario_runner.py"
 FIXTURE_FILE="$ROOT_DIR/fixtures/runtime/localhost_signed_integration_cases.json"
@@ -164,8 +166,24 @@ assert payload["scenario_ids"] == [
 ]
 PY
 
-if ! grep -Fq "localhost_signed_integration_contract_lane_contract.py" "$LANE_SCRIPT"; then
-  echo "expected localhost signed integration contract lane wrapper to dispatch shared contract module" >&2
+if [ ! -L "$LANE_SCRIPT" ]; then
+  echo "expected localhost signed integration contract lane wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$LANE_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected localhost signed integration contract lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$LANE_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected localhost signed integration wrapper to resolve sdk manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -Fq "localhost_signed_integration_contract_lane_contract.py" "$MANIFEST_FILE"; then
+  echo "expected localhost signed integration manifest to dispatch shared contract module" >&2
   exit 1
 fi
 
