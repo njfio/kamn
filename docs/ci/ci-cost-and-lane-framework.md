@@ -29,6 +29,32 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 
 `scripts/ci/check_fast_gate_budget_delta_threshold.sh` fails closed when positive variance exceeds configured limits without a valid waiver.
 
+## Staging Soak Telemetry Policy
+Staging soak/rehearsal evidence for rollout readiness is generated and checked with:
+
+- `scripts/deploy/generate_staging_rehearsal_bundle.sh`
+- `scripts/deploy/check_staging_rehearsal_policy.sh`
+- `scripts/deploy/run_staging_rehearsal_contract_lane.sh`
+- `scripts/deploy/run_staging_rehearsal_deep_lane.sh` (manual/deep validation path)
+
+Deterministic runtime telemetry threshold fields in `kamn.release.staging-rehearsal.v1`:
+
+- `runtime_submit_success_rate_bps` with threshold `min_runtime_submit_success_rate_bps`
+- `runtime_finality_timeout_count` with threshold `max_runtime_finality_timeout_count`
+- `signer_profile_drift_events` with threshold `max_signer_profile_drift_events`
+
+Fail-closed reason codes for threshold overruns:
+
+- `runtime_submit_success_rate_below_threshold`
+- `runtime_finality_timeout_threshold_exceeded`
+- `signer_profile_drift_threshold_exceeded`
+
+Escalation path when telemetry thresholds fail:
+
+1. Open/update a tracking issue with threshold overrun evidence and candidate mitigation.
+2. Re-run `run_staging_rehearsal_contract_lane.sh` after mitigation.
+3. Use `run_staging_rehearsal_deep_lane.sh` for manual drift rehearsal before rollout approval.
+
 ## Script-Surface Budget Policy
 `scripts/ci/check_script_duplication_budget.py` computes deterministic metrics over non-test shell command surface under `scripts/**/*.sh`:
 
@@ -87,6 +113,8 @@ bash scripts/ci/test_check_script_duplication_budget.sh
 bash scripts/ci/test_generate_fast_gate_budget_delta_report.sh
 bash scripts/ci/test_check_fast_gate_budget_delta_threshold.sh
 bash scripts/ci/test_ci_tools.sh
+bash scripts/deploy/test_generate_staging_rehearsal_bundle.sh
+bash scripts/deploy/test_run_staging_rehearsal_contract_lane.sh
 ```
 
 Kolme harness + command-surface trend validation:
