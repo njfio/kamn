@@ -89,14 +89,6 @@
       "tracking_issue": "#2843"
     },
     {
-      "owner": "team-kolme",
-      "priority": "P1",
-      "reason": "local-heavy-live-node",
-      "source_file": "crates/kamn-node/src/main_tests/signer_tests.rs",
-      "test_name": "integration_kolme_live_signer_vector_probe_contract",
-      "tracking_issue": "#2846"
-    },
-    {
       "owner": "team-sdk",
       "priority": "P2",
       "reason": "deep-lane-performance",

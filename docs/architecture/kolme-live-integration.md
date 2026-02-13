@@ -13,7 +13,7 @@ runtime signing and `njfio/kolme_fork` compatibility expectations.
   - `python3 scripts/kolme/run_signature_parity_matrix.py --fixture fixtures/kolme_commit/signature_parity_vectors.json --output-json /tmp/kolme-signature-parity-matrix-report.json`
   - report schema: `kamn.kolme.signature-parity-matrix-report.v1`
   - runner executes deterministic adapter probe:
-    - `cargo test -p kamn-node integration_kolme_live_signer_vector_probe_contract -- --ignored --nocapture`
+    - `KAMN_KOLME_LOCAL_HEAVY=1 cargo test -p kamn-node integration_kolme_live_signer_vector_probe_contract -- --nocapture`
 - Policy checker:
   - `python3 scripts/kolme/check_signature_parity_policy.py --report-file /tmp/kolme-signature-parity-matrix-report.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-signature-parity-policy-report.json`
   - policy schema: `kamn.kolme.signature-parity-policy-report.v1`

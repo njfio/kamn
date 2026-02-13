@@ -61,6 +61,7 @@ def classify_reason_codes(exit_code: int, output: str) -> list[str]:
 
 def run_vector_case(vector: dict[str, Any]) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
+    env["KAMN_KOLME_LOCAL_HEAVY"] = "1"
     env["KAMN_KOLME_SIGNATURE_VECTOR_PRIVATE_KEY_HEX"] = str(vector["private_key_hex"])
     env["KAMN_KOLME_SIGNATURE_VECTOR_MESSAGE"] = str(vector["message"])
     env["KAMN_KOLME_SIGNATURE_VECTOR_EXPECTED_SIGNATURE_HEX"] = str(
@@ -78,7 +79,6 @@ def run_vector_case(vector: dict[str, Any]) -> subprocess.CompletedProcess[str]:
         "kamn-node",
         VECTOR_TEST_NAME,
         "--",
-        "--ignored",
         "--nocapture",
     ]
     return subprocess.run(

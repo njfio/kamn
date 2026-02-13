@@ -74,10 +74,18 @@ from pathlib import Path
 
 metadata_path = Path(sys.argv[1])
 payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+mutated = False
 for entry in payload.get("ignored_tests", []):
-    if entry.get("priority") == "P1":
+    if entry.get("priority") in {"P0", "P1"}:
         entry["tracking_issue"] = ""
+        mutated = True
         break
+if not mutated and payload.get("ignored_tests"):
+    payload["ignored_tests"][0]["priority"] = "P1"
+    payload["ignored_tests"][0]["tracking_issue"] = ""
+    mutated = True
+if not mutated:
+    raise SystemExit("expected at least one ignored-test metadata entry")
 metadata_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 
@@ -95,15 +103,30 @@ grep -q 'high_priority_tracking_issue_missing' "$TMP_DIR/check-priority-fail.out
 
 MUTATED_CRITERIA="$TMP_DIR/mutated-ignored-test-promotion-criteria.json"
 cp "$PROMOTION_CRITERIA_FILE" "$MUTATED_CRITERIA"
-python3 - "$MUTATED_CRITERIA" <<'PY'
+python3 - "$MUTATED_CRITERIA" "$METADATA_FILE" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 criteria_path = Path(sys.argv[1])
+metadata_path = Path(sys.argv[2])
 payload = json.loads(criteria_path.read_text(encoding="utf-8"))
-if payload.get("categories"):
-    payload["categories"] = payload["categories"][:-1]
+metadata_payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+categories = payload.get("categories", [])
+used_reasons = {
+    entry.get("reason")
+    for entry in metadata_payload.get("ignored_tests", [])
+    if isinstance(entry, dict) and isinstance(entry.get("reason"), str)
+}
+if categories:
+    filtered = [
+        category
+        for category in categories
+        if category.get("category") not in used_reasons
+    ]
+    if len(filtered) == len(categories):
+        filtered = categories[:-1]
+    payload["categories"] = filtered
 criteria_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 
