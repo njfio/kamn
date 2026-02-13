@@ -504,6 +504,13 @@ fn functional_json_render_is_deterministic() {
         kolme_live_signer_key_source: None,
         kolme_live_signer_private_key_env: None,
         kolme_live_execution_status: None,
+        kolme_live_observability_latency_p50_ms: None,
+        kolme_live_observability_latency_p99_ms: None,
+        kolme_live_observability_throughput_tps: None,
+        kolme_live_observability_error_rate_bps: None,
+        kolme_live_observability_availability_bps: None,
+        kolme_live_observability_health: None,
+        kolme_live_observability_alert_count: None,
         profile: None,
         role: "processor".to_owned(),
         chain_id: "kamn-devnet".to_owned(),
@@ -858,6 +865,13 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
         "\"kolme_live_signer_private_key_env\":\"KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX\""
     ));
     assert!(rendered.contains("\"kolme_live_execution_status\":\"submitted;"));
+    assert!(rendered.contains("\"kolme_live_observability_latency_p50_ms\":40"));
+    assert!(rendered.contains("\"kolme_live_observability_latency_p99_ms\":120"));
+    assert!(rendered.contains("\"kolme_live_observability_throughput_tps\":2200"));
+    assert!(rendered.contains("\"kolme_live_observability_error_rate_bps\":40"));
+    assert!(rendered.contains("\"kolme_live_observability_availability_bps\":9995"));
+    assert!(rendered.contains("\"kolme_live_observability_health\":\"healthy\""));
+    assert!(rendered.contains("\"kolme_live_observability_alert_count\":0"));
 
     let recorded_requests = requests.lock().expect("request mutex should lock");
     assert_eq!(

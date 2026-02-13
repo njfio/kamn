@@ -108,6 +108,13 @@ This document captures node-runtime productionization slices for machine-readabl
   - `kolme_live_signer_key_source`
   - `kolme_live_signer_private_key_env`
   - `kolme_live_execution_status`
+  - `kolme_live_observability_latency_p50_ms`
+  - `kolme_live_observability_latency_p99_ms`
+  - `kolme_live_observability_throughput_tps`
+  - `kolme_live_observability_error_rate_bps`
+  - `kolme_live_observability_availability_bps`
+  - `kolme_live_observability_health`
+  - `kolme_live_observability_alert_count`
   - `components`
 - Invalid modes are rejected with explicit typed error.
 
@@ -283,6 +290,13 @@ This document captures node-runtime productionization slices for machine-readabl
     - `kolme_live_signer_key_source=env-local|managed-external`
     - `kolme_live_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX|KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY`
   - `kolme_live_execution_status=submitted;commit_id=<deterministic-commit-id>;finality=<pending|final|failed>;resolution=<submit-receipt|finality-polled|finality-timeout|finality-unavailable>`
+  - `kolme_live_observability_latency_p50_ms=<u64>`
+  - `kolme_live_observability_latency_p99_ms=<u64>`
+  - `kolme_live_observability_throughput_tps=<u64>`
+  - `kolme_live_observability_error_rate_bps=<u64>`
+  - `kolme_live_observability_availability_bps=<u64>`
+  - `kolme_live_observability_health=<healthy|degraded|critical>`
+  - `kolme_live_observability_alert_count=<usize>`
 
 ## Decomposition Guardrails
 - `main.rs` orchestrates only and must not absorb parser/signer/wire/live-runtime implementation details.

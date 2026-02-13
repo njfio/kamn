@@ -29,6 +29,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 ## Node Runtime Kolme-Live Fast Lane
 - For `kamn-node` live-runtime wiring/doc changes, keep PR validation on deterministic local harness tests:
   - `cargo test -p kamn-node runtime_kolme_live`
+  - `cargo test -p kamn-node integration_runtime_kolme_live_renders_provider_contract_markers`
   - `cargo test -p kamn-node --test node_runtime_cli_docs doc_contains_runtime_kolme_live_rules`
   - `cargo test -p kamn-node --test node_runtime_cli_docs regression_requires_runtime_kolme_live_provider_drift_guard_rules`
 - This lane is intentionally bounded and cost-effective:
