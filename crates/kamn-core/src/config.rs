@@ -201,6 +201,8 @@ pub enum ConfigError {
     InvalidNodeProfile(String),
     /// Unknown or invalid diagnostics mode string.
     InvalidDiagnosticsMode(String),
+    /// Unknown or invalid node log configuration.
+    InvalidLogConfig(String),
     /// Unknown or invalid runtime mode string.
     InvalidRuntimeMode(String),
     /// Invalid expected state version argument.
@@ -246,6 +248,7 @@ impl fmt::Display for ConfigError {
             Self::InvalidDiagnosticsMode(value) => {
                 write!(f, "invalid diagnostics mode: {value}")
             }
+            Self::InvalidLogConfig(value) => write!(f, "invalid log config: {value}"),
             Self::InvalidRuntimeMode(value) => write!(f, "invalid runtime mode: {value}"),
             Self::InvalidExpectedStateVersion(value) => {
                 write!(f, "invalid expected state version: {value}")
