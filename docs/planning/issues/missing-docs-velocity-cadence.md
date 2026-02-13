@@ -15,6 +15,10 @@ and the reporting cadence for issue `#2127`.
   `graduated_module_delta == 0`
 - `window_target_met`:
   `observed_window_modules_per_100_commits >= min_modules_per_100_commits`
+- `allowlist_exhausted`: `report.allowlisted_module_count == 0`
+  - terminal behavior: when true, policy returns
+    `reason_key=allowlist_fully_graduated` with `final_decision=GO`
+    and skips stagnation/velocity-window threshold checks.
 
 ## Reporting Cadence
 

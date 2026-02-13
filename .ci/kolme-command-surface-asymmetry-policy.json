@@ -10,6 +10,7 @@
     "scripts/kolme/test_validate_version_compatibility.sh"
   ],
   "ci_tools_only": [
+    "scripts/kolme/test_check_fallback_signer_marker_matrix_policy.sh",
     "scripts/kolme/test_check_lane_migration_matrix_policy.sh",
     "scripts/kolme/test_check_local_bootstrap_health_policy.sh",
     "scripts/kolme/test_check_local_e2e_integration_policy.sh",

@@ -44,25 +44,50 @@ python3 "$VELOCITY_GUARD_SCRIPT" check \
 
 grep -q '^status=pass$' "$TMP_DIR/pass.out"
 grep -q '^final_decision=GO$' "$TMP_DIR/pass.out"
+grep -q '^reason_key=allowlist_fully_graduated$' "$TMP_DIR/pass.out"
 grep -Eq '^commit_delta=[0-9]+$' "$TMP_DIR/pass.out"
 grep -q '"schema_version": "kamn.ci.kamn-core-missing-docs-velocity-policy.v1"' "$POLICY_PATH"
-
-MUTATED_BASELINE="$TMP_DIR/mutated-baseline.json"
-cp "$BASELINE_FILE" "$MUTATED_BASELINE"
-python3 - "$MUTATED_BASELINE" <<'PY'
+python3 - "$POLICY_PATH" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-path = Path(sys.argv[1])
-payload = json.loads(path.read_text(encoding="utf-8"))
-payload["commit_count"] = 1
-payload["graduated_module_count"] = payload["graduated_module_count"]
-path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("allowlist_exhausted") is not True:
+    raise SystemExit("expected allowlist_exhausted=true for fully graduated baseline")
+if payload.get("reason_key") != "allowlist_fully_graduated":
+    raise SystemExit("expected terminal allowlist reason key")
+PY
+
+MUTATED_BASELINE="$TMP_DIR/mutated-baseline.json"
+cp "$BASELINE_FILE" "$MUTATED_BASELINE"
+MUTATED_REPORT="$TMP_DIR/mutated-report.json"
+cp "$REPORT_PATH" "$MUTATED_REPORT"
+python3 - "$MUTATED_BASELINE" "$MUTATED_REPORT" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+baseline_path = Path(sys.argv[1])
+report_path = Path(sys.argv[2])
+
+baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+baseline["commit_count"] = 1
+baseline_path.write_text(
+    json.dumps(baseline, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+
+report = json.loads(report_path.read_text(encoding="utf-8"))
+report["allowlisted_module_count"] = 1
+report_path.write_text(
+    json.dumps(report, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
 PY
 
 if python3 "$VELOCITY_GUARD_SCRIPT" check \
-  --report-file "$REPORT_PATH" \
+  --report-file "$MUTATED_REPORT" \
   --baseline-file "$MUTATED_BASELINE" \
   --threshold-file "$THRESHOLD_FILE" \
   --output-json "$TMP_DIR/fail-policy.json" >"$TMP_DIR/fail.out" 2>&1; then
