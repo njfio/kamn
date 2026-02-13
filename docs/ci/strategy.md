@@ -427,6 +427,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_attestation_schema_invalid`
       - `runtime_commit_non_synthetic_submit_probe_missing`
       - `runtime_commit_real_signing_profile_marker_missing`
+      - `runtime_commit_simulated_signing_profile_detected`
       - `runtime_commit_signer_profile_marker_missing`
       - `runtime_commit_signer_profile_split_brain_detected`
       - `runtime_commit_in_memory_provider_reference_detected`
@@ -581,10 +582,15 @@ JSON`
     - `python3 scripts/kolme/check_local_live_node_validation_bundle_policy.py --report-file /tmp/kolme-local-live-node-validation-bundle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-node-validation-bundle-policy.json`
     - `bash scripts/kolme/run_local_live_node_validation_bundle_contract_lane.sh --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json --policy-output-json /tmp/kolme-local-live-node-validation-bundle-policy.json`
     - bundle policy GO decisions require `ci_fast_gate_eligible=false` with `contracts.ci_fast_gate_scope=local-only` and complete nested evidence lineage.
+    - bundle integration command surfaces must include `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1`; simulated profile references fail closed.
     - bundle summary/policy lineage markers remain fail-closed:
       - `rollback_evidence_file`
       - `recovery_evidence_file`
       - `rollback_evidence_file_missing`
+      - `integration_signing_profile_marker_missing`
+      - `integration_simulated_signing_profile_detected`
+      - `integration_bundle_signing_profile_marker_missing`
+      - `integration_bundle_simulated_signing_profile_detected`
       - `contracts.rollback_recovery_artifact_lineage_required=true`
       - `contracts.process_lifecycle_rollback_evidence_option=--rollback-evidence-file`
       - `contracts.process_lifecycle_recovery_evidence_option=--recovery-evidence-file`

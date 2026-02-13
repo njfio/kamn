@@ -22,6 +22,10 @@ RUNTIME_SIGNER_KEY_REF_ENV_BY_PROFILE = {
     RUNTIME_SIGNER_PROFILE_SECONDARY: "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY",
 }
 RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION = "kamn.kolme.runtime-signer-attestation.v1"
+RUNTIME_REAL_SIGNING_PROFILE_VALUE = "kolme-fork-secp256k1-v1"
+RUNTIME_REAL_SIGNING_PROFILE_MARKER = (
+    f"KAMN_KOLME_LIVE_SIGNING_PROFILE={RUNTIME_REAL_SIGNING_PROFILE_VALUE}"
+)
 
 
 ALLOWED_RUNTIME_COMMIT_FAILURE_TAXONOMIES = {
@@ -174,16 +178,27 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     runtime_commit_command = report.get("runtime_commit_command")
     if not isinstance(runtime_commit_command, str) or not runtime_commit_command.strip():
         reason_codes.append("runtime_commit_command_missing")
-    elif "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" not in runtime_commit_command:
-        reason_codes.append("runtime_commit_contract_lane_missing")
-    elif "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider" not in runtime_commit_command:
-        reason_codes.append("runtime_provider_contract_marker_missing")
+    else:
+        if "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" not in runtime_commit_command:
+            reason_codes.append("runtime_commit_contract_lane_missing")
+        if "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider" not in runtime_commit_command:
+            reason_codes.append("runtime_provider_contract_marker_missing")
+        if RUNTIME_REAL_SIGNING_PROFILE_MARKER not in runtime_commit_command:
+            reason_codes.append("runtime_commit_real_signing_profile_marker_missing")
+        if "KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated" in runtime_commit_command:
+            reason_codes.append("runtime_commit_simulated_signing_profile_detected")
 
     runtime_provider_client_contract = report.get("runtime_provider_client_contract")
     if not isinstance(runtime_provider_client_contract, str) or not runtime_provider_client_contract.strip():
         reason_codes.append("runtime_provider_client_contract_missing")
     elif runtime_provider_client_contract != "KolmeRuntimeCommitLiveProvider":
         reason_codes.append("runtime_provider_client_contract_mismatch")
+
+    runtime_signing_profile = report.get("runtime_signing_profile")
+    if not isinstance(runtime_signing_profile, str) or not runtime_signing_profile.strip():
+        reason_codes.append("runtime_signing_profile_missing")
+    elif runtime_signing_profile != RUNTIME_REAL_SIGNING_PROFILE_VALUE:
+        reason_codes.append("runtime_signing_profile_mismatch")
 
     runtime_profile = report.get("runtime_profile")
     if not isinstance(runtime_profile, str) or not runtime_profile.strip():
@@ -308,6 +323,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("ci_fast_gate_scope_mismatch")
         if contracts.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
             reason_codes.append("runtime_provider_client_contract_contract_mismatch")
+        if contracts.get("runtime_signing_profile") != RUNTIME_REAL_SIGNING_PROFILE_VALUE:
+            reason_codes.append("runtime_signing_profile_contract_mismatch")
         if isinstance(runtime_profile, str) and runtime_profile in ("standard", "real-node"):
             if contracts.get("runtime_profile") != runtime_profile:
                 reason_codes.append("runtime_profile_contract_mismatch")

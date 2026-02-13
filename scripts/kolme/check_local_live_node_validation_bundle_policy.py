@@ -20,6 +20,7 @@ def parse_args() -> argparse.Namespace:
 
 def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, list[str]]:
     reason_codes: list[str] = []
+    required_signing_profile_marker = "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1"
 
     if report.get("schema_version") != "kamn.kolme.local-live-node-validation-bundle-summary.v1":
         reason_codes.append("schema_version_mismatch")
@@ -78,6 +79,10 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_provider_contract_marker_missing")
         if "--runtime-profile real-node" not in integration_command:
             reason_codes.append("integration_runtime_profile_marker_missing")
+        if required_signing_profile_marker not in integration_command:
+            reason_codes.append("integration_signing_profile_marker_missing")
+        if "KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated" in integration_command:
+            reason_codes.append("integration_simulated_signing_profile_detected")
 
     integration_policy_command = report.get("integration_policy_command")
     if not isinstance(integration_policy_command, str) or not integration_policy_command.strip():
@@ -190,6 +195,18 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 and "--runtime-profile real-node" not in command
             ):
                 reason_codes.append("integration_bundle_runtime_profile_marker_missing")
+            if (
+                check_id == "integration_bundle"
+                and isinstance(command, str)
+                and required_signing_profile_marker not in command
+            ):
+                reason_codes.append("integration_bundle_signing_profile_marker_missing")
+            if (
+                check_id == "integration_bundle"
+                and isinstance(command, str)
+                and "KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated" in command
+            ):
+                reason_codes.append("integration_bundle_simulated_signing_profile_detected")
             if (
                 check_id == "process_lifecycle_bundle"
                 and isinstance(command, str)
