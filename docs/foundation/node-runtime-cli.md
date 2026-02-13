@@ -35,6 +35,9 @@ This document captures node-runtime productionization slices for machine-readabl
 - Added daemon bounded-loop controls:
   - `--daemon-max-ticks <positive-integer>`
   - `--daemon-tick-interval-ms <positive-integer>`
+  - `--daemon-shutdown-signal-tick <positive-integer>` (repeatable, optional)
+  - `--daemon-shutdown-drain-ticks <positive-integer>` (required when shutdown signal tick is configured)
+  - `--daemon-shutdown-timeout-ticks <positive-integer>` (required when shutdown signal tick is configured)
   - `--daemon-peer-id <peer-id>` (optional)
   - `--daemon-lifecycle-event <start-connect|handshake-succeeded|heartbeat-missed|heartbeat-restored|disconnect|rejoin>` (repeatable)
 - Added Kolme live runtime controls:
@@ -175,6 +178,7 @@ This document captures node-runtime productionization slices for machine-readabl
 - Daemon mode:
   - `kamn-node --role processor --runtime-mode daemon`
   - `kamn-node --role processor --runtime-mode daemon --daemon-max-ticks 3 --daemon-tick-interval-ms 25`
+  - `kamn-node --role processor --runtime-mode daemon --daemon-max-ticks 10 --daemon-tick-interval-ms 25 --daemon-shutdown-signal-tick 3 --daemon-shutdown-drain-ticks 2 --daemon-shutdown-timeout-ticks 4`
 - Kolme-live mode:
   - `kamn-node --role processor --runtime-mode kolme-live`
   - `kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1`
@@ -188,6 +192,10 @@ This document captures node-runtime productionization slices for machine-readabl
 - Daemon mode requires:
   - `--daemon-max-ticks`
   - `--daemon-tick-interval-ms`
+- Shutdown contract controls:
+  - `--daemon-shutdown-signal-tick` may be supplied multiple times to inject deterministic shutdown signals.
+  - when any shutdown signal tick is supplied, both `--daemon-shutdown-drain-ticks` and `--daemon-shutdown-timeout-ticks` are mandatory.
+  - drain/timeout controls without a shutdown signal tick are rejected.
 - Daemon loop controls must be positive integers.
 - Optional daemon lifecycle inputs:
   - `--daemon-peer-id`
@@ -198,9 +206,11 @@ This document captures node-runtime productionization slices for machine-readabl
 - Processor daemon tick execution requires an active construct-lock lease owner and matching fencing token.
 - Daemon lease checks align with `execute_processor_daemon_tick` validation in `kamn-core`.
 - Missing or invalid daemon lease execution is rejected with typed construct-lock errors.
-- Daemon execution is deterministic and bounded by tick budget:
-  - `daemon_executed_ticks` equals configured `daemon_max_ticks`
-  - `daemon_completion_reason` emits `tick-budget-exhausted`
+- Daemon execution is deterministic and bounded:
+  - no valid shutdown signal => `daemon_executed_ticks` equals configured `daemon_max_ticks` and `daemon_completion_reason` emits `tick-budget-exhausted`
+  - graceful completion => `daemon_completion_reason` emits `graceful-shutdown:...`
+  - timeout/fail-closed completion => `daemon_completion_reason` emits `graceful-shutdown-timeout:...`
+  - repeated/late shutdown signals are counted as `ignored_signals` in completion metadata.
 
 ## Kolme Live Runtime Rules
 - Supported runtime modes:
@@ -314,6 +324,8 @@ cargo test -p kamn-core
 ```bash
 cargo test -p kamn-node integration_runtime_daemon_renders_bounded_completion_output
 cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
+cargo test -p kamn-node functional_runtime_daemon_applies_graceful_shutdown_signal
+cargo test -p kamn-node integration_runtime_daemon_shutdown_timeout_is_fail_closed
 cargo test -p kamn-node integration_runtime_kolme_live_renders_provider_contract_markers
 cargo test -p kamn-node regression_runtime_kolme_live_rejects_provider_marker_drift
 ```

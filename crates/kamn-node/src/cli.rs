@@ -23,6 +23,9 @@ where
     let mut rejoin_attempts: Vec<RejoinAttempt> = Vec::new();
     let mut daemon_max_ticks: Option<u64> = None;
     let mut daemon_tick_interval_ms: Option<u64> = None;
+    let mut daemon_shutdown_signal_ticks: Vec<u64> = Vec::new();
+    let mut daemon_shutdown_drain_ticks: Option<u64> = None;
+    let mut daemon_shutdown_timeout_ticks: Option<u64> = None;
     let mut daemon_peer_id: Option<String> = None;
     let mut daemon_lifecycle_events: Vec<PeerLifecycleEvent> = Vec::new();
     let mut kolme_live_base_url: Option<String> = None;
@@ -128,6 +131,24 @@ where
                     "--daemon-tick-interval-ms",
                 ))?;
                 daemon_tick_interval_ms = Some(parse_daemon_control_arg(&value)?);
+            }
+            "--daemon-shutdown-signal-tick" => {
+                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
+                    "--daemon-shutdown-signal-tick",
+                ))?;
+                daemon_shutdown_signal_ticks.push(parse_daemon_control_arg(&value)?);
+            }
+            "--daemon-shutdown-drain-ticks" => {
+                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
+                    "--daemon-shutdown-drain-ticks",
+                ))?;
+                daemon_shutdown_drain_ticks = Some(parse_daemon_control_arg(&value)?);
+            }
+            "--daemon-shutdown-timeout-ticks" => {
+                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
+                    "--daemon-shutdown-timeout-ticks",
+                ))?;
+                daemon_shutdown_timeout_ticks = Some(parse_daemon_control_arg(&value)?);
             }
             "--daemon-peer-id" => {
                 daemon_peer_id = Some(
@@ -244,6 +265,22 @@ where
         if !daemon_lifecycle_events.is_empty() && daemon_peer_id.is_none() {
             return Err(ConfigError::MissingArgumentValue("--daemon-peer-id"));
         }
+        if !daemon_shutdown_signal_ticks.is_empty() {
+            if daemon_shutdown_drain_ticks.is_none() {
+                return Err(ConfigError::MissingArgumentValue(
+                    "--daemon-shutdown-drain-ticks",
+                ));
+            }
+            if daemon_shutdown_timeout_ticks.is_none() {
+                return Err(ConfigError::MissingArgumentValue(
+                    "--daemon-shutdown-timeout-ticks",
+                ));
+            }
+        } else if daemon_shutdown_drain_ticks.is_some() || daemon_shutdown_timeout_ticks.is_some() {
+            return Err(ConfigError::MissingArgumentValue(
+                "--daemon-shutdown-signal-tick",
+            ));
+        }
     }
     if runtime_mode.kind == RuntimeModeKind::KolmeLive {
         if kolme_live_base_url.is_none() {
@@ -308,6 +345,9 @@ where
         rejoin_attempts,
         daemon_max_ticks,
         daemon_tick_interval_ms,
+        daemon_shutdown_signal_ticks,
+        daemon_shutdown_drain_ticks,
+        daemon_shutdown_timeout_ticks,
         daemon_peer_id,
         daemon_lifecycle_events,
         kolme_live_base_url,

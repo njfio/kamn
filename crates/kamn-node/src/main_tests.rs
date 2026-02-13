@@ -219,6 +219,9 @@ fn parses_required_role_and_defaults() {
     assert!(parsed.rejoin_attempts.is_empty());
     assert_eq!(parsed.daemon_max_ticks, None);
     assert_eq!(parsed.daemon_tick_interval_ms, None);
+    assert!(parsed.daemon_shutdown_signal_ticks.is_empty());
+    assert_eq!(parsed.daemon_shutdown_drain_ticks, None);
+    assert_eq!(parsed.daemon_shutdown_timeout_ticks, None);
     assert_eq!(parsed.daemon_peer_id, None);
     assert!(parsed.daemon_lifecycle_events.is_empty());
     assert_eq!(parsed.kolme_live_base_url, None);
@@ -356,6 +359,32 @@ fn parses_runtime_mode_daemon_with_bounded_controls() {
     assert_eq!(parsed.daemon_tick_interval_ms, Some(25));
     assert_eq!(parsed.daemon_peer_id, Some("peer-alpha".to_owned()));
     assert_eq!(parsed.daemon_lifecycle_events.len(), 2);
+}
+
+#[test]
+fn parses_runtime_mode_daemon_with_shutdown_controls() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "8".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "3".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "4".to_owned(),
+    ];
+
+    let parsed = parse_args(args).expect("daemon args with shutdown controls should parse");
+    assert_eq!(parsed.daemon_shutdown_signal_ticks, vec![3]);
+    assert_eq!(parsed.daemon_shutdown_drain_ticks, Some(2));
+    assert_eq!(parsed.daemon_shutdown_timeout_ticks, Some(4));
 }
 
 #[test]
@@ -689,6 +718,68 @@ fn integration_runtime_daemon_renders_bounded_completion_output() {
             "\"daemon_peer_lifecycle_applied_events\":[\"start-connect\",\"handshake-succeeded\",\"heartbeat-missed\",\"heartbeat-restored\"]"
         )
     );
+}
+
+#[test]
+fn functional_runtime_daemon_applies_graceful_shutdown_signal() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "10".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "3".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "4".to_owned(),
+        "--output".to_owned(),
+        "json".to_owned(),
+    ];
+
+    let parsed = parse_args(args).expect("daemon shutdown args should parse");
+    let report = execute(parsed).expect("daemon graceful shutdown execution should succeed");
+    let rendered = render_bootstrap_report(&report, OutputMode::json());
+    assert!(rendered.contains("\"daemon_executed_ticks\":5"));
+    assert!(rendered.contains(
+        "\"daemon_completion_reason\":\"graceful-shutdown:signal@3;drain_ticks=2;timeout_ticks=4;ignored_signals=0\""
+    ));
+}
+
+#[test]
+fn integration_runtime_daemon_shutdown_timeout_is_fail_closed() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "10".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "7".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "4".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "2".to_owned(),
+        "--output".to_owned(),
+        "json".to_owned(),
+    ];
+
+    let parsed = parse_args(args).expect("daemon timeout args should parse");
+    let report = execute(parsed).expect("daemon timeout execution should succeed");
+    let rendered = render_bootstrap_report(&report, OutputMode::json());
+    assert!(rendered.contains("\"daemon_executed_ticks\":9"));
+    assert!(rendered.contains(
+        "\"daemon_completion_reason\":\"graceful-shutdown-timeout:signal@7;drain_ticks=4;timeout_ticks=2;ignored_signals=0\""
+    ));
 }
 
 #[test]
@@ -2298,6 +2389,81 @@ fn rejects_daemon_without_tick_interval() {
 }
 
 #[test]
+fn rejects_daemon_shutdown_signal_without_drain_ticks() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "8".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "3".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "2".to_owned(),
+    ];
+    assert_eq!(
+        parse_args(args),
+        Err(ConfigError::MissingArgumentValue(
+            "--daemon-shutdown-drain-ticks"
+        ))
+    );
+}
+
+#[test]
+fn rejects_daemon_shutdown_signal_without_timeout_ticks() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "8".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "3".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "2".to_owned(),
+    ];
+    assert_eq!(
+        parse_args(args),
+        Err(ConfigError::MissingArgumentValue(
+            "--daemon-shutdown-timeout-ticks"
+        ))
+    );
+}
+
+#[test]
+fn rejects_daemon_shutdown_controls_without_signal_tick() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "8".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "4".to_owned(),
+    ];
+    assert_eq!(
+        parse_args(args),
+        Err(ConfigError::MissingArgumentValue(
+            "--daemon-shutdown-signal-tick"
+        ))
+    );
+}
+
+#[test]
 fn rejects_kolme_live_without_base_url() {
     let args = vec![
         "kamn-node".to_owned(),
@@ -3023,5 +3189,74 @@ fn regression_runtime_daemon_rejects_invalid_lifecycle_transition() {
         Err(ConfigError::RuntimeDaemonLifecycle(
             "invalid peer lifecycle transition from Disconnected via HandshakeSucceeded".to_owned()
         ))
+    );
+}
+
+#[test]
+fn regression_runtime_daemon_ignores_replayed_and_late_shutdown_signals() {
+    // Regression: #2674
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "8".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "3".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "7".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "11".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "4".to_owned(),
+        "--output".to_owned(),
+        "json".to_owned(),
+    ];
+    let parsed = parse_args(args).expect("daemon replay args should parse");
+    let report = execute(parsed).expect("daemon replay execution should succeed");
+    let rendered = render_bootstrap_report(&report, OutputMode::json());
+    assert!(rendered.contains("\"daemon_executed_ticks\":5"));
+    assert!(rendered.contains(
+        "\"daemon_completion_reason\":\"graceful-shutdown:signal@3;drain_ticks=2;timeout_ticks=4;ignored_signals=2\""
+    ));
+}
+
+#[test]
+fn performance_runtime_daemon_shutdown_drain_stays_bounded_by_timeout_budget() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "9".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "8".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "5".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "1".to_owned(),
+    ];
+    let parsed = parse_args(args).expect("daemon bounded shutdown args should parse");
+    let report = execute(parsed).expect("daemon bounded shutdown should succeed");
+    let executed_ticks = report
+        .daemon_executed_ticks
+        .expect("daemon execution must report executed ticks");
+    assert!(
+        executed_ticks <= 9,
+        "shutdown drain execution must remain within max tick budget"
+    );
+    assert_eq!(
+        report.daemon_completion_reason.as_deref(),
+        Some("graceful-shutdown-timeout:signal@8;drain_ticks=5;timeout_ticks=1;ignored_signals=0")
     );
 }

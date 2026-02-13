@@ -25,6 +25,15 @@ refactors stay modular and auditable.
     validation.
   - Produces deterministic `NodeCli` parsing outcomes consumed by orchestration.
 
+### Daemon Shutdown Evaluation Surface
+
+- File:
+  - `crates/kamn-node/src/daemon_shutdown.rs`
+- Ownership boundary:
+  - Owns deterministic daemon shutdown signal, drain, and timeout evaluation.
+  - Emits bounded completion reason contracts for graceful and fail-closed
+    shutdown outcomes.
+
 ### Kolme Live Runtime Surface
 
 - File:
