@@ -1212,7 +1212,9 @@ Operator checkpoints:
   - request/finality linkage markers (`request_payload_evidence_marker_present`, `request_payload_evidence_artifact_path`, `submit_evidence_artifact_path`, `finality_evidence_artifact_path`, `request_finality_evidence_contract_version`, `request_finality_evidence_linked`) remain fail-closed in policy checks
   - finality retry evidence markers (`finality_retry_contract_version`, `finality_retry_max_attempts`, `finality_retry_backoff_seconds`, `finality_retry_attempts_used`, `finality_retry_exhausted`, `finality_retry_failure_class`) remain fail-closed in policy checks
   - live-provider marker contracts (`provider_contract_enforcement_mode`, `provider_live_contract_marker`, `provider_live_contract_marker_present`, `provider_in_memory_reference_detected`) remain fail-closed in policy checks
+  - real-signing marker contracts (`provider_signer_adapter_contract=KolmeForkSecp256k1SignerAdapter`, `provider_signing_curve_contract=secp256k1`, `provider_signing_profile_contract_version=v1`) remain fail-closed in policy checks
   - provider mismatch remains fail-closed with deterministic reason `provider_client_contract_mismatch`.
+  - signer-adapter drift remains fail-closed with deterministic reason `provider_signer_adapter_contract_mismatch`.
   - bounded localhost integration proof lane validates deterministic NO-GO on node-unavailable preflight reasons `live_preflight_failed` or `live_preflight_timeout`.
   - native payload evidence marker fields (`native_payload_pubkey_marker_present`, `native_payload_nonce_marker_present`, `native_payload_messages_marker_present`) remain fail-closed in strict real-node policy checks
   - summary includes `live_command_synthetic`, `finality_command_synthetic`, and `synthetic_evidence_classification_version=v1` for deterministic synthetic-command detection.

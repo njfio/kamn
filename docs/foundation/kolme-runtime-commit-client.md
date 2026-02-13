@@ -276,8 +276,13 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
     - `provider_live_contract_marker=provider_client_contract=KolmeRuntimeCommitLiveProvider`
     - `provider_live_contract_marker_present=true`
     - `provider_in_memory_reference_detected=false`
+    - `provider_signer_adapter_contract=KolmeForkSecp256k1SignerAdapter`
+    - `provider_signing_curve_contract=secp256k1`
+    - `provider_signing_profile_contract_version=v1`
   - provider drift fails closed when summary flags in-memory provider usage:
     - `provider_in_memory_reference_detected`
+  - real-signing adapter drift fails closed with deterministic reason:
+    - `provider_signer_adapter_contract_mismatch`
   - summary emits synthetic-command classification markers: `live_command_synthetic`, `finality_command_synthetic`, and `synthetic_evidence_classification_version=v1`.
   - use `--require-non-synthetic-run-evidence` in `check_local_runtime_commit_live_evidence_policy.py` when validating real-node run evidence to fail closed on marker-only command paths.
   - use `--require-native-payload-evidence` in `check_local_runtime_commit_live_evidence_policy.py` when validating real-node run evidence to fail closed on missing native payload markers.
