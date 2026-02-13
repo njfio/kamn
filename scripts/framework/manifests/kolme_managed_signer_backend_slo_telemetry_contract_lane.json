@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "kolme.managed_signer_backend_slo_telemetry.contract",
+  "evidence_key": "kolme_managed_signer_backend_slo_telemetry_contract_lane:v1",
+  "reason_key": "kolme_managed_signer_backend_slo_telemetry_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "python3",
+      "scripts/kolme/contracts/managed_signer_backend_slo_telemetry_contract_lane.py"
+    ]
+  }
+}

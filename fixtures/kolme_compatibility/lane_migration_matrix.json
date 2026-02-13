@@ -67,6 +67,28 @@
       "target_runner": "framework_manifest_lane"
     },
     {
+      "current_runner": "framework_manifest_lane",
+      "lane_id": "kolme.managed_signer_backend_slo.policy",
+      "owner": "devops",
+      "parent_issue": "#2630",
+      "priority": "P1",
+      "source_entry": "scripts/kolme/run_managed_signer_backend_slo_policy_contract_lane.sh",
+      "status": "migrated",
+      "target_issue": "#2632",
+      "target_runner": "framework_manifest_lane"
+    },
+    {
+      "current_runner": "framework_manifest_lane",
+      "lane_id": "kolme.managed_signer_backend_slo.telemetry",
+      "owner": "devops",
+      "parent_issue": "#2630",
+      "priority": "P1",
+      "source_entry": "scripts/kolme/run_managed_signer_backend_slo_telemetry_contract_lane.sh",
+      "status": "migrated",
+      "target_issue": "#2632",
+      "target_runner": "framework_manifest_lane"
+    },
+    {
       "current_runner": "legacy_bash_lane",
       "lane_id": "kolme.nonce.broadcast.parity",
       "owner": "backend",

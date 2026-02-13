@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_managed_signer_backend_slo_policy_contract_lane.sh"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_contract_lane_dispatch.sh"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_managed_signer_backend_slo_policy_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/managed_signer_backend_slo_policy_contract_lane.py"
 GENERATOR="$ROOT_DIR/scripts/kolme/generate_managed_signer_backend_slo_telemetry_bundle.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_managed_signer_backend_slo_policy.py"
@@ -14,6 +16,16 @@ trap 'rm -f "$TMP_REPORT"' EXIT
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected managed-signer backend SLO policy contract lane runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected managed-signer backend SLO policy dispatcher to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected managed-signer backend SLO policy manifest to exist" >&2
   exit 1
 fi
 
@@ -31,6 +43,41 @@ if [ ! -f "$CONTRACT_IMPL" ]; then
   echo "expected managed-signer backend SLO policy contract lane implementation to exist" >&2
   exit 1
 fi
+
+if [ ! -L "$RUNNER" ]; then
+  echo "expected managed-signer backend SLO policy contract lane runner to be a symlink to shared dispatcher" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$RUNNER")" != "run_contract_lane_dispatch.sh" ]; then
+  echo "expected managed-signer backend SLO policy runner symlink target to be run_contract_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUNNER")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST" ]; then
+  echo "expected managed-signer backend SLO policy dispatcher to resolve deterministic manifest path" >&2
+  exit 1
+fi
+
+python3 - "$MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.contract-lane.manifest.v1":
+    raise SystemExit("unexpected managed-signer backend SLO policy manifest schema")
+if payload.get("lane_id") != "kolme.managed_signer_backend_slo_policy.contract":
+    raise SystemExit("unexpected managed-signer backend SLO policy manifest lane_id")
+contract_command = payload.get("phases", {}).get("contract")
+if contract_command != [
+    "python3",
+    "scripts/kolme/contracts/managed_signer_backend_slo_policy_contract_lane.py",
+]:
+    raise SystemExit("unexpected managed-signer backend SLO policy manifest contract command")
+PY
 
 required_markers=(
   "check_managed_signer_backend_slo_policy.py"

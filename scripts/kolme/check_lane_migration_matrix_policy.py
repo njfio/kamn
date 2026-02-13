@@ -27,6 +27,8 @@ REQUIRED_LANE_IDS = {
     "kolme.runtime.commit.replay",
     "kolme.notifications.consumer",
     "kolme.block.fallback.reconciliation",
+    "kolme.managed_signer_backend_slo.policy",
+    "kolme.managed_signer_backend_slo.telemetry",
     "kolme.nonce.broadcast.parity",
     "kolme.local.fork.rust_matrix",
     "kolme.local.kamn.live_runtime_integration",
