@@ -3,11 +3,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 NON_SYNTHETIC_SUBMIT_PROBE_MARKER = "integration_kolme_fork_live_node_submit_reaches_endpoint"
 IN_MEMORY_PROVIDER_MARKER = "InMemoryKolmeRuntimeCommitClient"
-REAL_SIGNING_PROFILE_MARKER = "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1"
+REAL_SIGNING_PROFILE_ENV = "KAMN_KOLME_LIVE_SIGNING_PROFILE"
+REAL_SIGNING_PROFILE_VALUE = "kolme-fork-secp256k1-v1"
+REAL_SIGNING_PROFILE_MARKER = f"{REAL_SIGNING_PROFILE_ENV}={REAL_SIGNING_PROFILE_VALUE}"
+REAL_SIGNING_PROFILE_PATTERN = re.compile(rf"{REAL_SIGNING_PROFILE_ENV}=([^\s\"']+)")
 REAL_SIGNER_PROFILE_SELECTOR_ENV = "KAMN_KOLME_LIVE_SIGNER_PROFILE"
 REAL_SIGNER_PROFILE_PRIMARY = "ops-primary"
 REAL_SIGNER_PROFILE_SECONDARY = "ops-secondary"
@@ -139,6 +143,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_profile_missing")
     elif runtime_profile != "real-node":
         reason_codes.append("runtime_profile_mismatch")
+
+    runtime_signing_profile = report.get("runtime_signing_profile")
+    if not isinstance(runtime_signing_profile, str) or not runtime_signing_profile.strip():
+        reason_codes.append("runtime_signing_profile_missing")
+    elif runtime_signing_profile != REAL_SIGNING_PROFILE_VALUE:
+        reason_codes.append("runtime_signing_profile_mismatch")
 
     runtime_provider_client_contract = report.get("runtime_provider_client_contract")
     if not isinstance(runtime_provider_client_contract, str) or not runtime_provider_client_contract.strip():
@@ -292,6 +302,10 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(runtime_commit_command, str) or not runtime_commit_command.strip():
         reason_codes.append("runtime_commit_command_missing")
     else:
+        observed_signing_profile_values = [
+            observed_value.rstrip("\\")
+            for observed_value in REAL_SIGNING_PROFILE_PATTERN.findall(runtime_commit_command)
+        ]
         if "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" not in runtime_commit_command:
             reason_codes.append("runtime_commit_contract_lane_missing")
         if "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider" not in runtime_commit_command:
@@ -308,6 +322,19 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             and REAL_SIGNING_PROFILE_MARKER not in runtime_commit_command
         ):
             reason_codes.append("runtime_commit_real_signing_profile_marker_missing")
+        if (
+            runtime_commit_command_profile == "real-node-non-synthetic-v1"
+            and any(
+                observed_signing_profile and observed_signing_profile != REAL_SIGNING_PROFILE_VALUE
+                for observed_signing_profile in observed_signing_profile_values
+            )
+        ):
+            reason_codes.append("runtime_commit_signing_profile_value_disallowed")
+        if (
+            runtime_commit_command_profile == "real-node-non-synthetic-v1"
+            and any("simulated" in observed_signing_profile.lower() for observed_signing_profile in observed_signing_profile_values)
+        ):
+            reason_codes.append("runtime_commit_simulated_signing_profile_detected")
         expected_profile_command_marker = ""
         if isinstance(runtime_signer_profile, str) and runtime_signer_profile in ALLOWED_SIGNER_PROFILES:
             expected_profile_command_marker = (
@@ -349,6 +376,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("ci_fast_gate_scope_mismatch")
         if contracts.get("runtime_profile") != "real-node":
             reason_codes.append("runtime_profile_contract_mismatch")
+        if contracts.get("runtime_signing_profile") != REAL_SIGNING_PROFILE_VALUE:
+            reason_codes.append("runtime_signing_profile_contract_mismatch")
         if contracts.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
             reason_codes.append("runtime_provider_client_contract_contract_mismatch")
         if contracts.get("runtime_signer_profile_selector_env") != REAL_SIGNER_PROFILE_SELECTOR_ENV:
