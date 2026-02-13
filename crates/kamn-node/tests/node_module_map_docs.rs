@@ -5,6 +5,7 @@ fn doc_contains_module_ownership_boundaries() {
     assert!(DOC.contains("# KAMN Node Module Map"));
     assert!(DOC.contains("src/main.rs"));
     assert!(DOC.contains("src/cli.rs"));
+    assert!(DOC.contains("src/daemon_shutdown.rs"));
     assert!(DOC.contains("src/runtime_kolme_live.rs"));
     assert!(DOC.contains("src/signer.rs"));
     assert!(DOC.contains("src/wire_payload.rs"));

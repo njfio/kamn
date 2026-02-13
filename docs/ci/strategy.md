@@ -37,6 +37,15 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - harness accept windows are bounded to 2 seconds to avoid hanging PR runners
 - Heavy local Kolme node tests stay outside `ci-fast-gate` in local/manual lanes.
 
+## Node Runtime Daemon Shutdown Fast Lane
+- For `kamn-node` daemon-shutdown contract changes, keep PR validation on bounded deterministic tests:
+  - `cargo test -p kamn-node graceful_shutdown`
+  - `cargo test -p kamn-node runtime_daemon`
+- This lane is cost-effective:
+  - no external processes or signal orchestration harnesses required
+  - deterministic tick-budget simulation with bounded loop-free assertions
+  - timeout behavior validated through direct state transitions instead of wall-clock waits
+
 ## kamn-core Missing-Docs Velocity Guard
 - Fast-gate missing-docs velocity regression command:
   - `bash scripts/ci/test_missing_docs_velocity_guard_contract.sh`

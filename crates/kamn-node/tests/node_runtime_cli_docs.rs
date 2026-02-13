@@ -102,11 +102,17 @@ fn doc_contains_runtime_daemon_rules() {
     assert!(DOC.contains("## Daemon Runtime Rules"));
     assert!(DOC.contains("--daemon-max-ticks"));
     assert!(DOC.contains("--daemon-tick-interval-ms"));
+    assert!(DOC.contains("--daemon-shutdown-signal-tick"));
+    assert!(DOC.contains("--daemon-shutdown-drain-ticks"));
+    assert!(DOC.contains("--daemon-shutdown-timeout-ticks"));
     assert!(DOC.contains("--daemon-lifecycle-event"));
     assert!(DOC.contains("active construct-lock lease owner"));
     assert!(DOC.contains("execute_processor_daemon_tick"));
     assert!(DOC.contains("typed construct-lock errors"));
     assert!(DOC.contains("tick-budget-exhausted"));
+    assert!(DOC.contains("graceful-shutdown:"));
+    assert!(DOC.contains("graceful-shutdown-timeout:"));
+    assert!(DOC.contains("ignored_signals"));
 }
 
 #[test]
@@ -172,6 +178,12 @@ fn doc_contains_daemon_focused_fast_lane_commands() {
     ));
     assert!(DOC.contains(
         "cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node functional_runtime_daemon_applies_graceful_shutdown_signal"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node integration_runtime_daemon_shutdown_timeout_is_fail_closed"
     ));
     assert!(DOC.contains(
         "cargo test -p kamn-node regression_runtime_kolme_live_rejects_provider_marker_drift"

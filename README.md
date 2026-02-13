@@ -137,6 +137,28 @@ bash scripts/ci/test_makefile_execution_contract.sh
 Deep/scheduled lanes remain opt-in via scripts in `scripts/sdk/` and `scripts/ci/`.
 CI fast gate provisions Node.js 22 for frontend and TypeScript contract lanes.
 
+### Daemon Graceful Shutdown Contract
+
+```bash
+cargo run -p kamn-node -- \
+  --role processor \
+  --runtime-mode daemon \
+  --daemon-max-ticks 10 \
+  --daemon-tick-interval-ms 25 \
+  --daemon-shutdown-signal-tick 3 \
+  --daemon-shutdown-drain-ticks 2 \
+  --daemon-shutdown-timeout-ticks 4 \
+  --output json
+```
+
+Daemon completion reasons are deterministic:
+- `tick-budget-exhausted` when no valid shutdown signal is observed.
+- `graceful-shutdown:...` when drain completes within the configured timeout budget.
+- `graceful-shutdown-timeout:...` when drain exceeds timeout or remaining tick budget (fail closed).
+
+`--daemon-shutdown-signal-tick` can be repeated; only the first valid signal is applied and
+remaining replay/late signals are counted in `ignored_signals`.
+
 ### Run A Focused Core Slice
 
 ```bash

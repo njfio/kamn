@@ -7,6 +7,7 @@ use std::env;
 use std::process::ExitCode;
 
 mod cli;
+mod daemon_shutdown;
 mod report_builder;
 mod report_render;
 mod runtime_kolme_live;
@@ -14,6 +15,7 @@ mod signer;
 mod wire_payload;
 
 use cli::parse_args;
+use daemon_shutdown::evaluate_daemon_completion;
 use report_builder::build_bootstrap_report;
 use report_render::render_bootstrap_report;
 #[cfg(test)]
@@ -252,6 +254,9 @@ struct NodeCli {
     rejoin_attempts: Vec<RejoinAttempt>,
     daemon_max_ticks: Option<u64>,
     daemon_tick_interval_ms: Option<u64>,
+    daemon_shutdown_signal_ticks: Vec<u64>,
+    daemon_shutdown_drain_ticks: Option<u64>,
+    daemon_shutdown_timeout_ticks: Option<u64>,
     daemon_peer_id: Option<String>,
     daemon_lifecycle_events: Vec<PeerLifecycleEvent>,
     kolme_live_base_url: Option<String>,
@@ -398,6 +403,9 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
         rejoin_attempts,
         daemon_max_ticks,
         daemon_tick_interval_ms,
+        daemon_shutdown_signal_ticks,
+        daemon_shutdown_drain_ticks,
+        daemon_shutdown_timeout_ticks,
         daemon_peer_id,
         daemon_lifecycle_events,
         kolme_live_base_url,
@@ -498,12 +506,18 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                     }
                     None => (None, None, None),
                 };
+            let daemon_completion = evaluate_daemon_completion(
+                max_ticks,
+                daemon_shutdown_signal_ticks.as_slice(),
+                daemon_shutdown_drain_ticks,
+                daemon_shutdown_timeout_ticks,
+            );
             RuntimeExecutionBundle {
                 daemon: Some(DaemonExecution {
                     max_ticks,
                     tick_interval_ms,
-                    executed_ticks: max_ticks,
-                    completion_reason: "tick-budget-exhausted".to_owned(),
+                    executed_ticks: daemon_completion.executed_ticks,
+                    completion_reason: daemon_completion.completion_reason,
                     peer_id,
                     peer_lifecycle_final_state,
                     peer_lifecycle_applied_events,
