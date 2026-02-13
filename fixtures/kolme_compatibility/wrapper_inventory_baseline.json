@@ -41,6 +41,26 @@
       "wrapper_kind": "symlink"
     },
     {
+      "lane_id": "kolme.managed_signer_backend_slo.policy",
+      "manifest_file": "scripts/framework/manifests/kolme_managed_signer_backend_slo_policy_contract_lane.json",
+      "priority": "P1",
+      "shell_loc": 1,
+      "source_entry": "scripts/kolme/run_managed_signer_backend_slo_policy_contract_lane.sh",
+      "status": "migrated",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "kolme.managed_signer_backend_slo.telemetry",
+      "manifest_file": "scripts/framework/manifests/kolme_managed_signer_backend_slo_telemetry_contract_lane.json",
+      "priority": "P1",
+      "shell_loc": 1,
+      "source_entry": "scripts/kolme/run_managed_signer_backend_slo_telemetry_contract_lane.sh",
+      "status": "migrated",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
       "lane_id": "kolme.nonce.broadcast.parity",
       "manifest_file": "scripts/framework/manifests/kolme_nonce_broadcast_parity_contract_lane.json",
       "priority": "P1",
@@ -94,7 +114,7 @@
   "regular_file_wrapper_count": 0,
   "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
   "source_matrix_file": "fixtures/kolme_compatibility/lane_migration_matrix.json",
-  "symlink_wrapper_count": 9,
-  "total_shell_loc": 9,
-  "wrapper_count": 9
+  "symlink_wrapper_count": 11,
+  "total_shell_loc": 11,
+  "wrapper_count": 11
 }

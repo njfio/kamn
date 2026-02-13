@@ -104,7 +104,7 @@ cat >"$RELAXED_THRESHOLD" <<'JSON'
 {
   "schema_version": "kamn.kolme.wrapper-budget-trend-thresholds.v1",
   "max_wrapper_count_increase": 1,
-  "max_total_shell_loc_increase": 10,
+  "max_total_shell_loc_increase": 11,
   "enforce_lane_shell_loc_nonincreasing": false,
   "min_wrapper_count_reduction": 0,
   "min_total_shell_loc_reduction": 0
