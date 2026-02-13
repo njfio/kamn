@@ -6,6 +6,7 @@ RUNNER="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_contract
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kamn_live_runtime_integration_policy.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_contract_lane.json"
 RUNTIME_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"
+RUNTIME_RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane_impl.sh"
 RUNTIME_DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 RUNTIME_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_kamn_live_runtime_integration_contract_lane.py"
@@ -35,8 +36,18 @@ if [ ! -x "$RUNTIME_DISPATCHER" ]; then
   exit 1
 fi
 
-if ! grep -q "scripts/kolme/run_lane_dispatch.sh" "$RUNTIME_RUNNER"; then
-  echo "expected local KAMN live runtime integration runner to dispatch through shared runtime lane dispatcher" >&2
+if [ ! -x "$RUNTIME_RUNNER_IMPL" ]; then
+  echo "expected local KAMN live runtime integration implementation to be executable" >&2
+  exit 1
+fi
+
+if [ ! -L "$RUNTIME_RUNNER" ]; then
+  echo "expected local KAMN live runtime integration runner to be a symlink to shared runtime lane dispatcher" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$RUNTIME_RUNNER")" != "run_lane_dispatch.sh" ]; then
+  echo "expected local KAMN live runtime integration runner symlink target to be run_lane_dispatch.sh" >&2
   exit 1
 fi
 
@@ -59,8 +70,7 @@ if payload.get("lane_id") != "kolme.local_kamn_live_runtime_integration.run":
 run_command = payload.get("phases", {}).get("run")
 if run_command != [
     "bash",
-    "scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh",
-    "--manifest-impl",
+    "scripts/kolme/run_local_kamn_live_runtime_integration_lane_impl.sh",
 ]:
     raise SystemExit("expected local KAMN live runtime integration lane manifest run command")
 PY
@@ -72,7 +82,7 @@ if [ "$resolved_runtime_manifest" != "$RUNTIME_MANIFEST" ]; then
 fi
 
 # Regression: #1967
-if ! grep -q "run_local_runtime_commit_live_lane.sh" "$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"; then
+if ! grep -q "run_local_runtime_commit_live_lane.sh" "$RUNTIME_RUNNER_IMPL"; then
   echo "expected local KAMN live runtime integration runner to route runtime step through local runtime commit live lane" >&2
   exit 1
 fi
@@ -86,14 +96,14 @@ required_runtime_finality_markers=(
   "--runtime-provider-client-contract"
 )
 for marker in "${required_runtime_finality_markers[@]}"; do
-  if ! grep -q -- "$marker" "$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"; then
+  if ! grep -q -- "$marker" "$RUNTIME_RUNNER_IMPL"; then
     echo "expected local KAMN live runtime integration runner to expose finality pass-through marker: $marker" >&2
     exit 1
   fi
 done
 
 # Regression: #2101
-if ! grep -q "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" "$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"; then
+if ! grep -q "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" "$RUNTIME_RUNNER_IMPL"; then
   echo "expected local KAMN live runtime integration runner to compose runtime step through runtime finality evidence contract lane" >&2
   exit 1
 fi

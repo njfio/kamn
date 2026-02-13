@@ -42,8 +42,22 @@ bash "$GENERATE_SCRIPT" \
   --output-json "$GENERATED_BASELINE" >"$TMP_DIR/generate.out"
 
 grep -q '^status=generated$' "$TMP_DIR/generate.out"
-grep -q '^wrapper_count=' "$TMP_DIR/generate.out"
-grep -q '^total_shell_loc=' "$TMP_DIR/generate.out"
+grep -q '^wrapper_count=2$' "$TMP_DIR/generate.out"
+grep -q '^total_shell_loc=2$' "$TMP_DIR/generate.out"
+
+python3 - "$GENERATED_BASELINE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload["symlink_wrapper_count"] != 2:
+    raise SystemExit("expected wave-8 symlink_wrapper_count to be 2")
+if payload["regular_file_wrapper_count"] != 0:
+    raise SystemExit("expected wave-8 regular_file_wrapper_count to be 0")
+if payload["total_shell_loc"] != 2:
+    raise SystemExit("expected wave-8 total_shell_loc to be 2")
+PY
 
 python3 - "$BASELINE_FIXTURE" "$GENERATED_BASELINE" <<'PY'
 import json

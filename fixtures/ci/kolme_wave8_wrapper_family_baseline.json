@@ -4,27 +4,27 @@
       "lane_id": "kolme.local.kamn.live_runtime_integration",
       "manifest_file": "scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_lane.json",
       "priority": "P1",
-      "shell_loc": 827,
+      "shell_loc": 1,
       "source_entry": "scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh",
       "status": "planned",
       "target_runner": "framework_manifest_lane",
-      "wrapper_kind": "regular_file"
+      "wrapper_kind": "symlink"
     },
     {
       "lane_id": "kolme.local.runtime_commit_live",
       "manifest_file": "scripts/framework/manifests/kolme_local_runtime_commit_live_lane.json",
       "priority": "P1",
-      "shell_loc": 558,
+      "shell_loc": 1,
       "source_entry": "scripts/kolme/run_local_runtime_commit_live_lane.sh",
       "status": "planned",
       "target_runner": "framework_manifest_lane",
-      "wrapper_kind": "regular_file"
+      "wrapper_kind": "symlink"
     }
   ],
-  "regular_file_wrapper_count": 2,
+  "regular_file_wrapper_count": 0,
   "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
   "source_matrix_file": "fixtures/ci/kolme_wave8_wrapper_family_matrix.json",
-  "symlink_wrapper_count": 0,
-  "total_shell_loc": 1385,
+  "symlink_wrapper_count": 2,
+  "total_shell_loc": 2,
   "wrapper_count": 2
 }

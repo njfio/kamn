@@ -73,23 +73,36 @@ grep -q '^status=fail$' "$TMP_DIR/fail-total.out"
 grep -q '^mode=trend$' "$TMP_DIR/fail-total.out"
 grep -q 'total_shell_loc_delta_threshold_exceeded' "$TMP_DIR/fail-total.out"
 
-MUTATED_LANE_BASELINE="$TMP_DIR/mutated-lane-baseline.json"
-cp "$BASELINE_FIXTURE" "$MUTATED_LANE_BASELINE"
-python3 - "$MUTATED_LANE_BASELINE" <<'PY'
+MUTATED_LANE_MATRIX="$TMP_DIR/mutated-lane-matrix.json"
+MUTATED_LANE_WRAPPER="$TMP_DIR/run_local_runtime_commit_live_lane.sh"
+cp "$MATRIX_FIXTURE" "$MUTATED_LANE_MATRIX"
+cat >"$MUTATED_LANE_WRAPPER" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+printf 'mutated runtime commit lane\n'
+EOF
+
+python3 - "$MUTATED_LANE_MATRIX" "$MUTATED_LANE_WRAPPER" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-baseline_path = Path(sys.argv[1])
-payload = json.loads(baseline_path.read_text(encoding="utf-8"))
-payload["lanes"][0]["shell_loc"] = payload["lanes"][0]["shell_loc"] - 1
-payload["total_shell_loc"] = payload["total_shell_loc"] - 1
-baseline_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+matrix_path = Path(sys.argv[1])
+wrapper_path = Path(sys.argv[2]).resolve()
+payload = json.loads(matrix_path.read_text(encoding="utf-8"))
+
+for lane in payload["lanes"]:
+    if lane.get("lane_id") == "kolme.local.runtime_commit_live":
+        lane["source_entry"] = str(wrapper_path)
+        break
+
+matrix_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 
 if bash "$TREND_CHECKER" \
-  --matrix-file "$MATRIX_FIXTURE" \
-  --baseline-file "$MUTATED_LANE_BASELINE" >"$TMP_DIR/fail-lane.out" 2>&1; then
+  --matrix-file "$MUTATED_LANE_MATRIX" \
+  --baseline-file "$BASELINE_FIXTURE" >"$TMP_DIR/fail-lane.out" 2>&1; then
   echo "expected wave-8 trend checker to fail when lane shell LOC increases beyond nonincreasing policy" >&2
   exit 1
 fi

@@ -6,8 +6,7 @@
   "phases": {
     "run": [
       "bash",
-      "scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh",
-      "--manifest-impl"
+      "scripts/kolme/run_local_kamn_live_runtime_integration_lane_impl.sh"
     ]
   }
 }
