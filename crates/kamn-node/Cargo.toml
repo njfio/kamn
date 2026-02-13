@@ -11,6 +11,7 @@ path = "src/main.rs"
 [dependencies]
 kamn-core = { path = "../kamn-core" }
 k256 = { version = "0.13.4", features = ["ecdsa"] }
+zeroize = "1.8.2"
 
 [lints]
 workspace = true
