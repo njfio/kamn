@@ -40,6 +40,16 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("run_input_mutation_coverage_guided_deep_lane.sh"));
     assert!(DOC.contains("runtime_input_mutation_coverage_guided_deep=skipped_local_only"));
     assert!(DOC.contains("KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_LOCAL_ONLY=true"));
+    assert!(DOC.contains(
+        "main_tests::functional_kolme_live_retry_emits_structured_retry_markers -- --exact"
+    ));
+    assert!(DOC.contains(
+        "main_tests::functional_runtime_daemon_emits_structured_transition_markers -- --exact"
+    ));
+    assert!(DOC.contains("kolme.live.submit.retry"));
+    assert!(DOC.contains("kolme.live.finality.retry"));
+    assert!(DOC.contains("node.runtime.daemon.execute.start"));
+    assert!(DOC.contains("node.runtime.daemon.execute.complete"));
     assert!(DOC.contains("layering_marker_missing"));
     assert!(DOC.contains("run_localhost_signed_integration_contract_lane_tests"));
     assert!(DOC.contains("sdk-live-localhost-integration"));

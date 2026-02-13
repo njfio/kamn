@@ -146,6 +146,17 @@ pub(crate) fn execute_kolme_live_runtime(
                 if let Some(reason_code) = classify_retry_category(&error) {
                     if submit_attempts < KOLME_LIVE_SUBMIT_RETRY_MAX_ATTEMPTS {
                         submit_retry_reason = reason_code;
+                        let attempt_label = submit_attempts.to_string();
+                        let max_attempts_label = KOLME_LIVE_SUBMIT_RETRY_MAX_ATTEMPTS.to_string();
+                        log_warn(
+                            "kolme.live.submit.retry",
+                            &[
+                                ("correlation_id", correlation_id.as_str()),
+                                ("attempt", attempt_label.as_str()),
+                                ("max_attempts", max_attempts_label.as_str()),
+                                ("reason", reason_code),
+                            ],
+                        )?;
                         maybe_sleep_retry_backoff(submit_attempts);
                         continue;
                     }
@@ -204,6 +215,19 @@ pub(crate) fn execute_kolme_live_runtime(
                     if let Some(reason_code) = classify_retry_category(&error) {
                         if finality_retry_attempts < KOLME_LIVE_FINALITY_RETRY_MAX_ATTEMPTS {
                             finality_retry_reason = reason_code;
+                            let attempt_label = finality_retry_attempts.to_string();
+                            let max_attempts_label =
+                                KOLME_LIVE_FINALITY_RETRY_MAX_ATTEMPTS.to_string();
+                            log_warn(
+                                "kolme.live.finality.retry",
+                                &[
+                                    ("correlation_id", correlation_id.as_str()),
+                                    ("commit_id", receipt.commit_id.as_str()),
+                                    ("attempt", attempt_label.as_str()),
+                                    ("max_attempts", max_attempts_label.as_str()),
+                                    ("reason", reason_code),
+                                ],
+                            )?;
                             maybe_sleep_retry_backoff(finality_retry_attempts);
                             continue;
                         }
