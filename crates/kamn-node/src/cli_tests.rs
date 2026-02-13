@@ -21,6 +21,11 @@ fn cli_module_parses_required_role_and_defaults() {
     assert!(!parsed.daemon_shutdown_os_signals);
     assert_eq!(parsed.daemon_shutdown_drain_ticks, None);
     assert_eq!(parsed.daemon_shutdown_timeout_ticks, None);
+    assert_eq!(parsed.observability_endpoint_bind_addr, None);
+    assert_eq!(parsed.observability_endpoint_metrics_path, "/metrics");
+    assert_eq!(parsed.observability_endpoint_health_path, "/healthz");
+    assert_eq!(parsed.observability_endpoint_max_requests, 1);
+    assert_eq!(parsed.observability_endpoint_idle_timeout_ms, 5_000);
     assert_eq!(parsed.output_mode, OutputMode::text());
     assert_eq!(parsed.diagnostics_mode, DiagnosticsMode::basic());
 }

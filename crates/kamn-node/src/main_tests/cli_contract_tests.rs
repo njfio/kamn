@@ -1008,6 +1008,24 @@ fn regression_runtime_daemon_rejects_zero_tick_budget() {
 }
 
 #[test]
+fn regression_runtime_observability_endpoint_rejects_custom_path_without_bind_address() {
+    // Regression: #2830
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--observability-endpoint-metrics-path".to_owned(),
+        "/runtime/metrics".to_owned(),
+    ];
+    assert_eq!(
+        parse_args(args),
+        Err(ConfigError::MissingArgumentValue(
+            "--observability-endpoint-bind"
+        ))
+    );
+}
+
+#[test]
 fn regression_runtime_daemon_rejects_invalid_lifecycle_transition() {
     // Regression: #349
     let args = vec![

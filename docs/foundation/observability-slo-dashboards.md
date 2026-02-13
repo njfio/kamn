@@ -14,6 +14,34 @@ This document captures the first implementation slice for deterministic observab
 - Added frontend dashboard projection linkage in `packages/kamn-dashboard`:
   - deterministic severity mapping from SLO values to UI badge classes.
   - stale snapshot banner behavior for operator triage.
+- Added `kamn-node` runtime observability endpoint export (`Issue #2830`):
+  - `--observability-endpoint-bind <host:port>`
+  - `--observability-endpoint-metrics-path </path>` (default `/metrics`)
+  - `--observability-endpoint-health-path </path>` (default `/healthz`)
+  - bounded request/timeout controls for fast and cost-effective scrape loops.
+
+## Runtime Endpoint Contract (Issue #2830)
+- Endpoint paths:
+  - metrics: `/metrics` (Prometheus text format)
+  - health: `/healthz` (JSON payload)
+- Metrics payload keys:
+  - `kamn_observability_latency_p50_ms`
+  - `kamn_observability_latency_p99_ms`
+  - `kamn_observability_throughput_tps`
+  - `kamn_observability_error_rate_bps`
+  - `kamn_observability_availability_bps`
+  - `kamn_observability_alert_count`
+  - `kamn_observability_health{health="<healthy|degraded|critical>"}`
+- Health payload fields:
+  - `source`
+  - `runtime_mode`
+  - `health`
+  - `alert_count`
+  - latency/throughput/error/availability numeric fields
+- Export characteristics:
+  - deterministic payloads derived from runtime report telemetry fields.
+  - bounded endpoint lifetime controlled by `--observability-endpoint-max-requests` and `--observability-endpoint-idle-timeout-ms`.
+  - no report-rendering mutation: text/json report contracts remain unchanged (`Regression: #2830`).
 
 ## SLO Evaluation Rules
 - `LatencyP50`: warning when above max threshold.

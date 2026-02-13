@@ -40,6 +40,11 @@ fn parses_required_role_and_defaults() {
     assert_eq!(parsed.kolme_live_base_url, None);
     assert_eq!(parsed.kolme_live_provider_hint, None);
     assert_eq!(parsed.kolme_live_signing_profile, None);
+    assert_eq!(parsed.observability_endpoint_bind_addr, None);
+    assert_eq!(parsed.observability_endpoint_metrics_path, "/metrics");
+    assert_eq!(parsed.observability_endpoint_health_path, "/healthz");
+    assert_eq!(parsed.observability_endpoint_max_requests, 1);
+    assert_eq!(parsed.observability_endpoint_idle_timeout_ms, 5_000);
     assert_eq!(parsed.output_mode, OutputMode::text());
     assert_eq!(parsed.diagnostics_mode, DiagnosticsMode::basic());
 }
@@ -535,6 +540,44 @@ fn parses_runtime_mode_daemon_with_os_signal_shutdown_controls() {
     assert!(parsed.daemon_shutdown_os_signals);
     assert_eq!(parsed.daemon_shutdown_drain_ticks, Some(2));
     assert_eq!(parsed.daemon_shutdown_timeout_ticks, Some(4));
+}
+
+#[test]
+fn parses_runtime_mode_daemon_with_observability_endpoint_controls() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "12".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "5".to_owned(),
+        "--observability-endpoint-bind".to_owned(),
+        "127.0.0.1:9108".to_owned(),
+        "--observability-endpoint-metrics-path".to_owned(),
+        "/runtime/metrics".to_owned(),
+        "--observability-endpoint-health-path".to_owned(),
+        "/runtime/health".to_owned(),
+        "--observability-endpoint-max-requests".to_owned(),
+        "3".to_owned(),
+        "--observability-endpoint-idle-timeout-ms".to_owned(),
+        "1200".to_owned(),
+    ];
+
+    let parsed = parse_args(args).expect("daemon args with observability endpoint should parse");
+    assert_eq!(
+        parsed.observability_endpoint_bind_addr,
+        Some("127.0.0.1:9108".to_owned())
+    );
+    assert_eq!(
+        parsed.observability_endpoint_metrics_path,
+        "/runtime/metrics"
+    );
+    assert_eq!(parsed.observability_endpoint_health_path, "/runtime/health");
+    assert_eq!(parsed.observability_endpoint_max_requests, 3);
+    assert_eq!(parsed.observability_endpoint_idle_timeout_ms, 1200);
 }
 
 #[test]

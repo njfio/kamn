@@ -2,6 +2,8 @@ use super::{
     normalize_kolme_live_signer_key_source, normalize_kolme_live_signer_profile_selector,
     ConfigError, DiagnosticsMode, LocalProfile, NodeCli, NodeRole, OutputMode, PeerLifecycleEvent,
     ProposalCandidate, RejoinAttempt, RuntimeMode, RuntimeModeKind, SyncMode,
+    DEFAULT_OBSERVABILITY_ENDPOINT_HEALTH_PATH, DEFAULT_OBSERVABILITY_ENDPOINT_IDLE_TIMEOUT_MS,
+    DEFAULT_OBSERVABILITY_ENDPOINT_MAX_REQUESTS, DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH,
     KOLME_IN_MEMORY_PROVIDER_MARKER, KOLME_LIVE_SIGNING_PROFILE,
 };
 
@@ -35,8 +37,19 @@ where
     let mut kolme_live_strict_signer_contracts = false;
     let mut kolme_live_signer_profile: Option<String> = None;
     let mut kolme_live_signer_key_source: Option<String> = None;
+    let mut observability_endpoint_bind_addr: Option<String> = None;
+    let mut observability_endpoint_metrics_path =
+        DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH.to_owned();
+    let mut observability_endpoint_health_path =
+        DEFAULT_OBSERVABILITY_ENDPOINT_HEALTH_PATH.to_owned();
+    let mut observability_endpoint_max_requests = DEFAULT_OBSERVABILITY_ENDPOINT_MAX_REQUESTS;
+    let mut observability_endpoint_idle_timeout_ms = DEFAULT_OBSERVABILITY_ENDPOINT_IDLE_TIMEOUT_MS;
     let mut output_mode = OutputMode::text();
     let mut diagnostics_mode = DiagnosticsMode::basic();
+    let mut observability_endpoint_metrics_path_overridden = false;
+    let mut observability_endpoint_health_path_overridden = false;
+    let mut observability_endpoint_max_requests_overridden = false;
+    let mut observability_endpoint_idle_timeout_ms_overridden = false;
     let mut role_overridden = false;
     let mut chain_id_overridden = false;
     let mut chain_version_overridden = false;
@@ -195,6 +208,37 @@ where
                     ConfigError::MissingArgumentValue("--kolme-live-signer-key-source"),
                 )?);
             }
+            "--observability-endpoint-bind" => {
+                observability_endpoint_bind_addr = Some(iter.next().ok_or(
+                    ConfigError::MissingArgumentValue("--observability-endpoint-bind"),
+                )?);
+            }
+            "--observability-endpoint-metrics-path" => {
+                observability_endpoint_metrics_path = iter.next().ok_or(
+                    ConfigError::MissingArgumentValue("--observability-endpoint-metrics-path"),
+                )?;
+                observability_endpoint_metrics_path_overridden = true;
+            }
+            "--observability-endpoint-health-path" => {
+                observability_endpoint_health_path = iter.next().ok_or(
+                    ConfigError::MissingArgumentValue("--observability-endpoint-health-path"),
+                )?;
+                observability_endpoint_health_path_overridden = true;
+            }
+            "--observability-endpoint-max-requests" => {
+                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
+                    "--observability-endpoint-max-requests",
+                ))?;
+                observability_endpoint_max_requests = parse_daemon_control_arg(&value)?;
+                observability_endpoint_max_requests_overridden = true;
+            }
+            "--observability-endpoint-idle-timeout-ms" => {
+                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
+                    "--observability-endpoint-idle-timeout-ms",
+                ))?;
+                observability_endpoint_idle_timeout_ms = parse_daemon_control_arg(&value)?;
+                observability_endpoint_idle_timeout_ms_overridden = true;
+            }
             "--output" => {
                 let value = iter
                     .next()
@@ -341,6 +385,28 @@ where
             normalize_kolme_live_signer_profile_selector(signer_profile)?;
         }
     }
+    if observability_endpoint_bind_addr.is_none()
+        && (observability_endpoint_metrics_path_overridden
+            || observability_endpoint_health_path_overridden
+            || observability_endpoint_max_requests_overridden
+            || observability_endpoint_idle_timeout_ms_overridden)
+    {
+        return Err(ConfigError::MissingArgumentValue(
+            "--observability-endpoint-bind",
+        ));
+    }
+    if observability_endpoint_bind_addr.is_some() {
+        if !observability_endpoint_metrics_path.starts_with('/') {
+            return Err(ConfigError::RuntimeDaemonLifecycle(
+                "observability endpoint metrics path must start with '/'".to_owned(),
+            ));
+        }
+        if !observability_endpoint_health_path.starts_with('/') {
+            return Err(ConfigError::RuntimeDaemonLifecycle(
+                "observability endpoint health path must start with '/'".to_owned(),
+            ));
+        }
+    }
 
     Ok(NodeCli {
         profile,
@@ -369,6 +435,11 @@ where
         kolme_live_strict_signer_contracts,
         kolme_live_signer_profile,
         kolme_live_signer_key_source,
+        observability_endpoint_bind_addr,
+        observability_endpoint_metrics_path,
+        observability_endpoint_health_path,
+        observability_endpoint_max_requests,
+        observability_endpoint_idle_timeout_ms,
         output_mode,
         diagnostics_mode,
     })

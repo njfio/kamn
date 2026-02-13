@@ -11,6 +11,7 @@ mod daemon_observability;
 mod daemon_shutdown;
 mod kolme_live_observability;
 mod logging;
+mod observability_endpoint;
 mod report_builder;
 mod report_render;
 mod runtime_kolme_live;
@@ -26,6 +27,14 @@ use logging::{
     NodeLogFormat, NodeLogLevel,
 };
 use logging::{log_error, log_info};
+#[cfg(test)]
+pub(crate) use observability_endpoint::render_observability_endpoint_response;
+pub(crate) use observability_endpoint::{
+    build_runtime_observability_snapshot, serve_observability_endpoint,
+    ObservabilityEndpointConfig, DEFAULT_OBSERVABILITY_ENDPOINT_HEALTH_PATH,
+    DEFAULT_OBSERVABILITY_ENDPOINT_IDLE_TIMEOUT_MS, DEFAULT_OBSERVABILITY_ENDPOINT_MAX_REQUESTS,
+    DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH,
+};
 use report_builder::build_bootstrap_report;
 use report_render::render_bootstrap_report;
 #[cfg(test)]
@@ -276,6 +285,11 @@ struct NodeCli {
     kolme_live_strict_signer_contracts: bool,
     kolme_live_signer_profile: Option<String>,
     kolme_live_signer_key_source: Option<String>,
+    observability_endpoint_bind_addr: Option<String>,
+    observability_endpoint_metrics_path: String,
+    observability_endpoint_health_path: String,
+    observability_endpoint_max_requests: u64,
+    observability_endpoint_idle_timeout_ms: u64,
     output_mode: OutputMode,
     diagnostics_mode: DiagnosticsMode,
 }
@@ -425,6 +439,16 @@ fn run() -> Result<(), ConfigError> {
         &[("runtime_mode", runtime_mode)],
     )?;
     let output_mode = cli.output_mode;
+    let observability_endpoint_config =
+        cli.observability_endpoint_bind_addr
+            .as_ref()
+            .map(|bind_addr| ObservabilityEndpointConfig {
+                bind_addr: bind_addr.clone(),
+                metrics_path: cli.observability_endpoint_metrics_path.clone(),
+                health_path: cli.observability_endpoint_health_path.clone(),
+                max_requests: cli.observability_endpoint_max_requests,
+                idle_timeout_ms: cli.observability_endpoint_idle_timeout_ms,
+            });
     let report = execute(cli)?;
     log_info(
         "node.runtime.execute.complete",
@@ -434,6 +458,31 @@ fn run() -> Result<(), ConfigError> {
         ],
     )?;
     println!("{}", render_bootstrap_report(&report, output_mode));
+    if let Some(endpoint_config) = observability_endpoint_config {
+        let snapshot = build_runtime_observability_snapshot(&report).ok_or_else(|| {
+            ConfigError::RuntimeDaemonLifecycle(
+                "observability endpoint export requires daemon or kolme-live telemetry".to_owned(),
+            )
+        })?;
+        let max_requests_label = endpoint_config.max_requests.to_string();
+        let idle_timeout_ms_label = endpoint_config.idle_timeout_ms.to_string();
+        log_info(
+            "node.runtime.observability.endpoint.start",
+            &[
+                ("bind_addr", endpoint_config.bind_addr.as_str()),
+                ("metrics_path", endpoint_config.metrics_path.as_str()),
+                ("health_path", endpoint_config.health_path.as_str()),
+                ("max_requests", max_requests_label.as_str()),
+                ("idle_timeout_ms", idle_timeout_ms_label.as_str()),
+            ],
+        )?;
+        serve_observability_endpoint(&endpoint_config, &snapshot)
+            .map_err(ConfigError::RuntimeDaemonLifecycle)?;
+        log_info(
+            "node.runtime.observability.endpoint.complete",
+            &[("bind_addr", endpoint_config.bind_addr.as_str())],
+        )?;
+    }
 
     Ok(())
 }
@@ -466,6 +515,11 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
         kolme_live_strict_signer_contracts,
         kolme_live_signer_profile,
         kolme_live_signer_key_source,
+        observability_endpoint_bind_addr: _,
+        observability_endpoint_metrics_path: _,
+        observability_endpoint_health_path: _,
+        observability_endpoint_max_requests: _,
+        observability_endpoint_idle_timeout_ms: _,
         output_mode: _,
         diagnostics_mode,
     } = cli;

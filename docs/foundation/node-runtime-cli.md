@@ -40,6 +40,12 @@ This document captures node-runtime productionization slices for machine-readabl
   - `--daemon-shutdown-timeout-ticks <positive-integer>` (required when shutdown signal tick is configured)
   - `--daemon-peer-id <peer-id>` (optional)
   - `--daemon-lifecycle-event <start-connect|handshake-succeeded|heartbeat-missed|heartbeat-restored|disconnect|rejoin>` (repeatable)
+- Added runtime observability endpoint controls:
+  - `--observability-endpoint-bind <host:port>`
+  - `--observability-endpoint-metrics-path </path>` (default: `/metrics`)
+  - `--observability-endpoint-health-path </path>` (default: `/healthz`)
+  - `--observability-endpoint-max-requests <positive-integer>` (default: `1`)
+  - `--observability-endpoint-idle-timeout-ms <positive-integer>` (default: `5000`)
 - Added Kolme live runtime controls:
   - `--kolme-live-base-url <http(s)-endpoint>`
   - `--kolme-live-provider-hint <provider-hint>`
@@ -233,6 +239,24 @@ This document captures node-runtime productionization slices for machine-readabl
   - `daemon_observability_availability_bps`
   - `daemon_observability_health`
   - `daemon_observability_alert_count`
+
+## Runtime Observability Endpoint Rules
+- Endpoint export is optional and enabled only when `--observability-endpoint-bind` is set.
+- Endpoint path controls:
+  - metrics: `--observability-endpoint-metrics-path` (defaults to `/metrics`)
+  - health: `--observability-endpoint-health-path` (defaults to `/healthz`)
+- Endpoint budget controls:
+  - `--observability-endpoint-max-requests` bounds accepted requests before shutdown.
+  - `--observability-endpoint-idle-timeout-ms` bounds wait time for incoming requests.
+- Endpoint validation:
+  - endpoint path controls without bind address are rejected.
+  - metrics/health paths must start with `/`.
+  - request and timeout controls must be positive integers.
+- Supported payloads:
+  - `/metrics` returns deterministic Prometheus text metrics for latency/throughput/error/availability, health, and alert count.
+  - `/healthz` returns deterministic JSON health snapshot for runtime mode and source telemetry.
+- Example:
+  - `kamn-node --role processor --runtime-mode daemon --daemon-max-ticks 3 --daemon-tick-interval-ms 25 --observability-endpoint-bind 127.0.0.1:9108 --observability-endpoint-max-requests 1`
 
 ## Kolme Live Runtime Rules
 - Supported runtime modes:
