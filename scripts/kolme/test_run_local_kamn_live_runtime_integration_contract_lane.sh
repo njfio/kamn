@@ -412,6 +412,30 @@ if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is n
     raise SystemExit(
         "expected contracts managed-external raw private key allowed=false marker in contract-lane summary"
     )
+if summary.get("runtime_signer_quorum_linkage_contract_version") != "v1":
+    raise SystemExit("expected runtime signer quorum linkage contract version marker in contract-lane summary")
+if summary.get("runtime_signer_quorum_required_approvals") != 1:
+    raise SystemExit("expected runtime signer quorum required approvals marker in contract-lane summary")
+if summary.get("runtime_signer_quorum_approved_signers_count") != 1:
+    raise SystemExit("expected runtime signer quorum approved signers count marker in contract-lane summary")
+if summary.get("runtime_signer_quorum_profile_linked") is not True:
+    raise SystemExit("expected runtime signer quorum profile-linked marker true in contract-lane summary")
+if summary.get("runtime_signer_quorum_satisfied") is not True:
+    raise SystemExit("expected runtime signer quorum satisfied marker true in contract-lane summary")
+if summary.get("runtime_signer_quorum_linked") is not True:
+    raise SystemExit("expected runtime signer quorum linked marker true in contract-lane summary")
+if contracts.get("runtime_signer_quorum_linkage_contract_version") != "v1":
+    raise SystemExit("expected contracts runtime signer quorum linkage contract version marker in contract-lane summary")
+if contracts.get("runtime_signer_quorum_required_approvals") != 1:
+    raise SystemExit("expected contracts runtime signer quorum required approvals marker in contract-lane summary")
+if contracts.get("runtime_signer_quorum_linked_required") is not True:
+    raise SystemExit("expected contracts runtime signer quorum linked-required marker in contract-lane summary")
+if contracts.get("runtime_signer_quorum_threshold_required") is not True:
+    raise SystemExit("expected contracts runtime signer quorum threshold-required marker in contract-lane summary")
+if contracts.get("runtime_signer_quorum_profile_membership_required") is not True:
+    raise SystemExit("expected contracts runtime signer quorum profile-membership marker in contract-lane summary")
+if contracts.get("runtime_signer_quorum_linked") is not True:
+    raise SystemExit("expected contracts runtime signer quorum linked marker in contract-lane summary")
 if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1":
     raise SystemExit("unexpected local KAMN live runtime integration contract-lane policy schema")
 if policy.get("final_decision") != "GO":

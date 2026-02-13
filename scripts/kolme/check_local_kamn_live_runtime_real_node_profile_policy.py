@@ -298,6 +298,90 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 if isinstance(entry, str) and entry.strip():
                     runtime_signer_attestation_approved_signers.append(entry.strip())
 
+    runtime_signer_quorum_linkage_contract_version = report.get(
+        "runtime_signer_quorum_linkage_contract_version"
+    )
+    if runtime_signer_quorum_linkage_contract_version is not None:
+        if (
+            not isinstance(runtime_signer_quorum_linkage_contract_version, str)
+            or not runtime_signer_quorum_linkage_contract_version.strip()
+        ):
+            reason_codes.append("runtime_signer_quorum_linkage_contract_version_invalid")
+        elif runtime_signer_quorum_linkage_contract_version != "v1":
+            reason_codes.append("runtime_signer_quorum_linkage_contract_version_mismatch")
+
+    runtime_signer_quorum_required_approvals = report.get(
+        "runtime_signer_quorum_required_approvals"
+    )
+    if runtime_signer_quorum_required_approvals is not None:
+        if (
+            not isinstance(runtime_signer_quorum_required_approvals, int)
+            or runtime_signer_quorum_required_approvals <= 0
+        ):
+            reason_codes.append("runtime_signer_quorum_required_approvals_invalid")
+        elif (
+            isinstance(runtime_signer_attestation_required_approvals, int)
+            and runtime_signer_quorum_required_approvals
+            != runtime_signer_attestation_required_approvals
+        ):
+            reason_codes.append("runtime_signer_quorum_required_approvals_mismatch")
+
+    expected_runtime_signer_quorum_profile_linked = (
+        isinstance(runtime_signer_profile, str)
+        and runtime_signer_profile.strip()
+        and runtime_signer_profile in runtime_signer_attestation_approved_signers
+    )
+    expected_runtime_signer_quorum_satisfied = (
+        isinstance(runtime_signer_attestation_required_approvals, int)
+        and len(runtime_signer_attestation_approved_signers)
+        >= runtime_signer_attestation_required_approvals
+    )
+    expected_runtime_signer_quorum_linked = (
+        expected_runtime_signer_quorum_profile_linked
+        and expected_runtime_signer_quorum_satisfied
+    )
+
+    runtime_signer_quorum_approved_signers_count = report.get(
+        "runtime_signer_quorum_approved_signers_count"
+    )
+    if runtime_signer_quorum_approved_signers_count is not None:
+        if (
+            not isinstance(runtime_signer_quorum_approved_signers_count, int)
+            or runtime_signer_quorum_approved_signers_count < 0
+        ):
+            reason_codes.append("runtime_signer_quorum_approved_signers_count_invalid")
+        elif runtime_signer_quorum_approved_signers_count != len(
+            runtime_signer_attestation_approved_signers
+        ):
+            reason_codes.append("runtime_signer_quorum_approved_signers_count_mismatch")
+
+    runtime_signer_quorum_profile_linked = report.get("runtime_signer_quorum_profile_linked")
+    if runtime_signer_quorum_profile_linked is not None:
+        if not isinstance(runtime_signer_quorum_profile_linked, bool):
+            reason_codes.append("runtime_signer_quorum_profile_linked_invalid")
+        elif runtime_signer_quorum_profile_linked != bool(
+            expected_runtime_signer_quorum_profile_linked
+        ):
+            reason_codes.append("runtime_signer_quorum_profile_linked_mismatch")
+
+    runtime_signer_quorum_satisfied = report.get("runtime_signer_quorum_satisfied")
+    if runtime_signer_quorum_satisfied is not None:
+        if not isinstance(runtime_signer_quorum_satisfied, bool):
+            reason_codes.append("runtime_signer_quorum_satisfied_invalid")
+        elif runtime_signer_quorum_satisfied != bool(expected_runtime_signer_quorum_satisfied):
+            reason_codes.append("runtime_signer_quorum_satisfied_mismatch")
+
+    runtime_signer_quorum_linked = report.get("runtime_signer_quorum_linked")
+    if runtime_signer_quorum_linked is None:
+        runtime_signer_quorum_linked = expected_runtime_signer_quorum_linked
+    elif not isinstance(runtime_signer_quorum_linked, bool):
+        reason_codes.append("runtime_signer_quorum_linked_invalid")
+    elif runtime_signer_quorum_linked != bool(expected_runtime_signer_quorum_linked):
+        reason_codes.append("runtime_signer_quorum_linkage_drift")
+
+    if runtime_signer_quorum_linked is False:
+        reason_codes.append("runtime_signer_quorum_linkage_violation")
+
     if isinstance(runtime_signer_failover_active, bool) and runtime_signer_failover_active:
         if (
             not isinstance(runtime_signer_attestation_required_approvals, int)
@@ -494,6 +578,34 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_signer_attestation_threshold_required_contract_mismatch")
         if contracts.get("runtime_signer_attestation_profile_membership_required") is not True:
             reason_codes.append("runtime_signer_attestation_profile_membership_required_contract_mismatch")
+        if contracts.get("runtime_signer_quorum_linkage_contract_version") not in (None, "v1"):
+            reason_codes.append("runtime_signer_quorum_linkage_contract_version_contract_mismatch")
+        expected_runtime_signer_quorum_required_approvals = (
+            runtime_signer_attestation_required_approvals
+            if isinstance(runtime_signer_attestation_required_approvals, int)
+            else 1
+        )
+        if contracts.get("runtime_signer_quorum_required_approvals") not in (
+            None,
+            expected_runtime_signer_quorum_required_approvals,
+        ):
+            reason_codes.append("runtime_signer_quorum_required_approvals_contract_mismatch")
+        if contracts.get("runtime_signer_quorum_linked_required") not in (None, True):
+            reason_codes.append("runtime_signer_quorum_linked_required_contract_mismatch")
+        if contracts.get("runtime_signer_quorum_threshold_required") not in (None, True):
+            reason_codes.append("runtime_signer_quorum_threshold_required_contract_mismatch")
+        if contracts.get("runtime_signer_quorum_profile_membership_required") not in (
+            None,
+            True,
+        ):
+            reason_codes.append(
+                "runtime_signer_quorum_profile_membership_required_contract_mismatch"
+            )
+        if contracts.get("runtime_signer_quorum_linked") not in (
+            None,
+            bool(expected_runtime_signer_quorum_linked),
+        ):
+            reason_codes.append("runtime_signer_quorum_linked_contract_mismatch")
         expected_runtime_signer_attestation_required_approvals = (
             RUNTIME_SIGNER_FAILOVER_ATTESTATION_MIN_REQUIRED_APPROVALS
             if runtime_signer_failover_active is True

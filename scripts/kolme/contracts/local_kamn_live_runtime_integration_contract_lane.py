@@ -203,6 +203,24 @@ def main() -> int:
         if runtime_signer_attestation_bundle.get("approved_signers") != ["ops-primary"]:
             print("expected runtime signer attestation approved signers marker in dry-run summary", file=sys.stderr)
             return 1
+        if summary_payload.get("runtime_signer_quorum_linkage_contract_version") != "v1":
+            print("expected runtime signer quorum linkage contract version marker in dry-run summary", file=sys.stderr)
+            return 1
+        if summary_payload.get("runtime_signer_quorum_required_approvals") != 1:
+            print("expected runtime signer quorum required approvals marker in dry-run summary", file=sys.stderr)
+            return 1
+        if summary_payload.get("runtime_signer_quorum_approved_signers_count") != 1:
+            print("expected runtime signer quorum approved signers count marker in dry-run summary", file=sys.stderr)
+            return 1
+        if summary_payload.get("runtime_signer_quorum_profile_linked") is not True:
+            print("expected runtime signer quorum profile linked marker true in dry-run summary", file=sys.stderr)
+            return 1
+        if summary_payload.get("runtime_signer_quorum_satisfied") is not True:
+            print("expected runtime signer quorum satisfied marker true in dry-run summary", file=sys.stderr)
+            return 1
+        if summary_payload.get("runtime_signer_quorum_linked") is not True:
+            print("expected runtime signer quorum linked marker true in dry-run summary", file=sys.stderr)
+            return 1
         contracts_payload = summary_payload.get("contracts")
         if not isinstance(contracts_payload, dict):
             print("expected contracts object in dry-run summary", file=sys.stderr)
@@ -239,6 +257,24 @@ def main() -> int:
             return 1
         if contracts_payload.get("runtime_signer_attestation_required_approvals") != 1:
             print("expected contracts runtime signer attestation required approvals marker in summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_quorum_linkage_contract_version") != "v1":
+            print("expected contracts runtime signer quorum linkage contract version marker in summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_quorum_required_approvals") != 1:
+            print("expected contracts runtime signer quorum required approvals marker in summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_quorum_linked_required") is not True:
+            print("expected contracts runtime signer quorum linked-required marker in summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_quorum_threshold_required") is not True:
+            print("expected contracts runtime signer quorum threshold-required marker in summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_quorum_profile_membership_required") is not True:
+            print("expected contracts runtime signer quorum profile-membership marker in summary", file=sys.stderr)
+            return 1
+        if contracts_payload.get("runtime_signer_quorum_linked") is not True:
+            print("expected contracts runtime signer quorum linked marker in summary", file=sys.stderr)
             return 1
         checks_payload = summary_payload.get("checks")
         if not isinstance(checks_payload, list):
@@ -653,6 +689,19 @@ def main() -> int:
         attestation_quorum_shortfall_payload["runtime_signer_attestation_bundle"] = (
             attestation_quorum_shortfall_bundle
         )
+        attestation_quorum_shortfall_payload["runtime_signer_quorum_required_approvals"] = 2
+        attestation_quorum_shortfall_payload["runtime_signer_quorum_approved_signers_count"] = 1
+        attestation_quorum_shortfall_payload["runtime_signer_quorum_profile_linked"] = True
+        attestation_quorum_shortfall_payload["runtime_signer_quorum_satisfied"] = False
+        attestation_quorum_shortfall_payload["runtime_signer_quorum_linked"] = False
+        attestation_quorum_shortfall_contracts = dict(
+            attestation_quorum_shortfall_payload.get("contracts", {})
+        )
+        attestation_quorum_shortfall_contracts["runtime_signer_quorum_required_approvals"] = 2
+        attestation_quorum_shortfall_contracts["runtime_signer_quorum_linked"] = False
+        attestation_quorum_shortfall_payload["contracts"] = (
+            attestation_quorum_shortfall_contracts
+        )
         attestation_quorum_shortfall_report = temp_path / "runtime_attestation_quorum_shortfall_summary.json"
         attestation_quorum_shortfall_report.write_text(
             json.dumps(attestation_quorum_shortfall_payload, sort_keys=True, indent=2) + "\n",
@@ -688,6 +737,12 @@ def main() -> int:
         if "runtime_signer_attestation_quorum_shortfall" not in attestation_quorum_shortfall_output:
             print(
                 "expected runtime signer attestation quorum shortfall reason for policy failure",
+                file=sys.stderr,
+            )
+            return 1
+        if "runtime_signer_quorum_linkage_violation" not in attestation_quorum_shortfall_output:
+            print(
+                "expected runtime signer quorum linkage violation reason for policy failure",
                 file=sys.stderr,
             )
             return 1

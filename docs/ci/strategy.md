@@ -405,6 +405,12 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_raw_private_key_present=false`
       - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
       - `runtime_signer_attestation_bundle`
+      - `runtime_signer_quorum_linkage_contract_version=v1`
+      - `runtime_signer_quorum_required_approvals`
+      - `runtime_signer_quorum_approved_signers_count`
+      - `runtime_signer_quorum_profile_linked`
+      - `runtime_signer_quorum_satisfied`
+      - `runtime_signer_quorum_linked`
     - strict secondary signer summary marker contracts:
       - `runtime_signer_profile=ops-secondary`
       - `runtime_signer_previous_profile=ops-secondary`
@@ -432,6 +438,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_attestation_approved_signers_not_unique`
       - `runtime_signer_attestation_quorum_shortfall`
       - `runtime_signer_attestation_schema_invalid`
+      - `runtime_signer_quorum_linkage_drift`
+      - `runtime_signer_quorum_linkage_violation`
       - `runtime_commit_non_synthetic_submit_probe_missing`
       - `runtime_commit_real_signing_profile_marker_missing`
       - `runtime_commit_simulated_signing_profile_detected`
@@ -529,6 +537,11 @@ JSON`
       - `contracts.runtime_signer_attestation_threshold_required=true`
       - `contracts.runtime_signer_attestation_profile_membership_required=true`
       - `contracts.runtime_signer_attestation_required_approvals=2`
+      - `contracts.runtime_signer_quorum_linkage_contract_version=v1`
+      - `contracts.runtime_signer_quorum_required_approvals=2`
+      - `contracts.runtime_signer_quorum_linked_required=true`
+      - `contracts.runtime_signer_quorum_threshold_required=true`
+      - `contracts.runtime_signer_quorum_profile_membership_required=true`
       - `contracts.custody_evidence_required=true`
       - `contracts.signer_provenance_required=true`
       - `contracts.signer_provenance_sha256_required=true`

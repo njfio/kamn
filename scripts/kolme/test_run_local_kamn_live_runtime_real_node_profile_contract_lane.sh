@@ -347,6 +347,18 @@ if attestation_bundle.get("required_approvals") != 1:
     raise SystemExit("expected runtime signer attestation required approvals marker in real-node profile contract-lane summary")
 if attestation_bundle.get("approved_signers") != ["ops-primary"]:
     raise SystemExit("expected runtime signer attestation approved signer marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_quorum_linkage_contract_version") != "v1":
+    raise SystemExit("expected runtime signer quorum linkage contract version marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_quorum_required_approvals") != 1:
+    raise SystemExit("expected runtime signer quorum required approvals marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_quorum_approved_signers_count") != 1:
+    raise SystemExit("expected runtime signer quorum approved signers count marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_quorum_profile_linked") is not True:
+    raise SystemExit("expected runtime signer quorum profile-linked marker true in real-node profile contract-lane summary")
+if summary.get("runtime_signer_quorum_satisfied") is not True:
+    raise SystemExit("expected runtime signer quorum satisfied marker true in real-node profile contract-lane summary")
+if summary.get("runtime_signer_quorum_linked") is not True:
+    raise SystemExit("expected runtime signer quorum linked marker true in real-node profile contract-lane summary")
 checks = summary.get("checks", [])
 if not any(
     isinstance(check, dict)
@@ -392,6 +404,18 @@ if contracts.get("runtime_signer_attestation_signer_uniqueness_required") is not
     raise SystemExit("expected contracts runtime signer attestation signer-uniqueness requirement marker")
 if contracts.get("runtime_signer_attestation_threshold_required") is not True:
     raise SystemExit("expected contracts runtime signer attestation threshold requirement marker")
+if contracts.get("runtime_signer_quorum_linkage_contract_version") != "v1":
+    raise SystemExit("expected contracts runtime signer quorum linkage contract version marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_quorum_required_approvals") != 1:
+    raise SystemExit("expected contracts runtime signer quorum required approvals marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_quorum_linked_required") is not True:
+    raise SystemExit("expected contracts runtime signer quorum linked-required marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_quorum_threshold_required") is not True:
+    raise SystemExit("expected contracts runtime signer quorum threshold-required marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_quorum_profile_membership_required") is not True:
+    raise SystemExit("expected contracts runtime signer quorum profile-membership marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_quorum_linked") is not True:
+    raise SystemExit("expected contracts runtime signer quorum linked marker in real-node profile contract-lane summary")
 if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1":
     raise SystemExit("unexpected real-node profile contract-lane policy schema")
 if policy.get("final_decision") != "GO":
@@ -437,6 +461,18 @@ if summary.get("runtime_signer_fallback_private_key_present") is not False:
     raise SystemExit("expected secondary signer fallback private key presence marker false in contract-lane summary")
 if summary.get("runtime_signer_raw_private_key_present") is not False:
     raise SystemExit("expected secondary signer raw private key presence marker false in contract-lane summary")
+if summary.get("runtime_signer_quorum_linkage_contract_version") != "v1":
+    raise SystemExit("expected secondary signer quorum linkage contract version marker in contract-lane summary")
+if summary.get("runtime_signer_quorum_required_approvals") != 1:
+    raise SystemExit("expected secondary signer quorum required approvals marker in contract-lane summary")
+if summary.get("runtime_signer_quorum_approved_signers_count") != 1:
+    raise SystemExit("expected secondary signer quorum approved signers count marker in contract-lane summary")
+if summary.get("runtime_signer_quorum_profile_linked") is not True:
+    raise SystemExit("expected secondary signer quorum profile-linked marker true in contract-lane summary")
+if summary.get("runtime_signer_quorum_satisfied") is not True:
+    raise SystemExit("expected secondary signer quorum satisfied marker true in contract-lane summary")
+if summary.get("runtime_signer_quorum_linked") is not True:
+    raise SystemExit("expected secondary signer quorum linked marker true in contract-lane summary")
 contracts = summary.get("contracts", {})
 if contracts.get("runtime_signer_profile") != "ops-secondary":
     raise SystemExit("expected contracts secondary signer profile marker in contract-lane summary")
@@ -460,6 +496,18 @@ if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") i
     )
 if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
     raise SystemExit("expected contracts secondary signer managed-external raw private key allowed=false marker in contract-lane summary")
+if contracts.get("runtime_signer_quorum_linkage_contract_version") != "v1":
+    raise SystemExit("expected contracts secondary signer quorum linkage contract version marker in contract-lane summary")
+if contracts.get("runtime_signer_quorum_required_approvals") != 1:
+    raise SystemExit("expected contracts secondary signer quorum required approvals marker in contract-lane summary")
+if contracts.get("runtime_signer_quorum_linked_required") is not True:
+    raise SystemExit("expected contracts secondary signer quorum linked-required marker in contract-lane summary")
+if contracts.get("runtime_signer_quorum_threshold_required") is not True:
+    raise SystemExit("expected contracts secondary signer quorum threshold-required marker in contract-lane summary")
+if contracts.get("runtime_signer_quorum_profile_membership_required") is not True:
+    raise SystemExit("expected contracts secondary signer quorum profile-membership marker in contract-lane summary")
+if contracts.get("runtime_signer_quorum_linked") is not True:
+    raise SystemExit("expected contracts secondary signer quorum linked marker in contract-lane summary")
 if policy.get("final_decision") != "GO":
     raise SystemExit("expected secondary signer policy final_decision GO")
 if policy.get("reason_codes") != []:

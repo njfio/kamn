@@ -20,6 +20,7 @@ TMP_REPORT_SPLIT_BRAIN="$TMP_DIR/split-brain-report.json"
 TMP_REPORT_FAILOVER_ATTESTATION_QUORUM_INSUFFICIENT="$TMP_DIR/failover-attestation-quorum-insufficient-report.json"
 TMP_REPORT_ATTESTATION_DUPLICATE="$TMP_DIR/attestation-duplicate-report.json"
 TMP_REPORT_ATTESTATION_QUORUM_SHORTFALL="$TMP_DIR/attestation-quorum-shortfall-report.json"
+TMP_REPORT_QUORUM_LINKAGE_DRIFT="$TMP_DIR/quorum-linkage-drift-report.json"
 TMP_REPORT_BAD="$TMP_DIR/bad-report.json"
 TMP_REPORT_SYNTHETIC="$TMP_DIR/synthetic-report.json"
 TMP_REPORT_SIMULATED="$TMP_DIR/simulated-signing-profile-report.json"
@@ -97,6 +98,12 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "signer_profile": "ops-primary",
     "signer_key_source": "env-local"
   },
+  "runtime_signer_quorum_linkage_contract_version": "v1",
+  "runtime_signer_quorum_required_approvals": 1,
+  "runtime_signer_quorum_approved_signers_count": 1,
+  "runtime_signer_quorum_profile_linked": true,
+  "runtime_signer_quorum_satisfied": true,
+  "runtime_signer_quorum_linked": true,
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_command_profile_version": "v1",
@@ -135,6 +142,12 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "runtime_signer_attestation_threshold_required": true,
     "runtime_signer_attestation_profile_membership_required": true,
     "runtime_signer_attestation_required_approvals": 1,
+    "runtime_signer_quorum_linkage_contract_version": "v1",
+    "runtime_signer_quorum_required_approvals": 1,
+    "runtime_signer_quorum_linked_required": true,
+    "runtime_signer_quorum_threshold_required": true,
+    "runtime_signer_quorum_profile_membership_required": true,
+    "runtime_signer_quorum_linked": true,
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
     "runtime_commit_finality_primary_endpoint": "/notifications",
@@ -640,6 +653,39 @@ fi
 
 if ! grep -q "runtime_signer_attestation_quorum_shortfall" "$TMP_ERR"; then
   echo "expected attestation quorum shortfall reason for policy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_QUORUM_LINKAGE_DRIFT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["runtime_signer_quorum_linked"] = False
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_QUORUM_LINKAGE_DRIFT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+quorum_linkage_drift_exit_code=$?
+set -e
+
+if [ "$quorum_linkage_drift_exit_code" -eq 0 ]; then
+  echo "expected signer quorum linkage drift proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_quorum_linkage_drift" "$TMP_ERR"; then
+  echo "expected signer quorum linkage drift reason for policy failure" >&2
   exit 1
 fi
 

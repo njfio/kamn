@@ -1005,6 +1005,19 @@ runtime_signer_attestation_bundle = {
     "signer_profile": runtime_signer_profile,
     "signer_key_source": runtime_signer_key_source,
 }
+runtime_signer_quorum_linkage_contract_version = "v1"
+runtime_signer_quorum_approved_signers_count = len(runtime_signer_attestation_approved_signers)
+runtime_signer_quorum_profile_linked = (
+    isinstance(runtime_signer_profile, str)
+    and runtime_signer_profile.strip()
+    and runtime_signer_profile in runtime_signer_attestation_approved_signers
+)
+runtime_signer_quorum_satisfied = (
+    runtime_signer_quorum_approved_signers_count >= runtime_signer_attestation_required_approvals
+)
+runtime_signer_quorum_linked = (
+    runtime_signer_quorum_profile_linked and runtime_signer_quorum_satisfied
+)
 
 summary = {
     "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
@@ -1043,6 +1056,12 @@ summary = {
     "runtime_signer_raw_private_key_present": runtime_signer_raw_private_key_present,
     "runtime_signer_attestation_schema_version": runtime_signer_attestation_schema_version,
     "runtime_signer_attestation_bundle": runtime_signer_attestation_bundle,
+    "runtime_signer_quorum_linkage_contract_version": runtime_signer_quorum_linkage_contract_version,
+    "runtime_signer_quorum_required_approvals": runtime_signer_attestation_required_approvals,
+    "runtime_signer_quorum_approved_signers_count": runtime_signer_quorum_approved_signers_count,
+    "runtime_signer_quorum_profile_linked": runtime_signer_quorum_profile_linked,
+    "runtime_signer_quorum_satisfied": runtime_signer_quorum_satisfied,
+    "runtime_signer_quorum_linked": runtime_signer_quorum_linked,
     "runtime_commit_live_policy_report": runtime_commit_live_policy_report,
     "runtime_commit_finality_command": runtime_commit_finality_command if runtime_commit_finality_command else "",
     "runtime_commit_finality_output_file": runtime_commit_finality_output_file if runtime_commit_finality_command else "",
@@ -1081,6 +1100,12 @@ summary = {
         "runtime_signer_attestation_threshold_required": True,
         "runtime_signer_attestation_profile_membership_required": True,
         "runtime_signer_attestation_required_approvals": runtime_signer_attestation_required_approvals,
+        "runtime_signer_quorum_linkage_contract_version": runtime_signer_quorum_linkage_contract_version,
+        "runtime_signer_quorum_required_approvals": runtime_signer_attestation_required_approvals,
+        "runtime_signer_quorum_linked_required": True,
+        "runtime_signer_quorum_threshold_required": True,
+        "runtime_signer_quorum_profile_membership_required": True,
+        "runtime_signer_quorum_linked": runtime_signer_quorum_linked,
         "runtime_commit_endpoint": "/broadcast/runtime-commit",
         "runtime_commit_method": "POST",
         "runtime_commit_finality_primary_endpoint": "/notifications",
