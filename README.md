@@ -237,12 +237,18 @@ bash scripts/sdk/run_localhost_signed_demo_contract_lane.sh \
 bash scripts/kolme/run_local_signed_to_kolme_demo_contract_lane.sh \
   --mode dry-run \
   --output-json /tmp/kolme-local-signed-to-kolme-demo-summary.json
+KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_signed_to_kolme_demo_contract_lane.sh \
+  --mode run \
+  --max-seconds 240 \
+  --output-json /tmp/kolme-local-signed-to-kolme-demo-summary.json
 python3 scripts/kolme/check_local_signed_to_kolme_demo_policy.py \
   --report-file /tmp/kolme-local-signed-to-kolme-demo-summary.json \
   --expected-final-decision GO \
   --ci-fast-gate PASS \
   --output-json /tmp/kolme-local-signed-to-kolme-demo-policy.json
 # schema: kamn.kolme.local-signed-to-kolme-demo-summary.v1
+# runtime_commit_submit_evidence_marker_present=true
+# runtime_commit_finality_evidence_marker_present=true
 ```
 
 ### Run Local Fork Profile Preflight Lane

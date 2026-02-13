@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+CHECKER="$ROOT_DIR/scripts/kolme/check_local_signed_to_kolme_demo_policy.py"
+DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
+README_FILE="$ROOT_DIR/README.md"
+TMP_DIR="$(mktemp -d)"
+TMP_REPORT_OK="$TMP_DIR/signed_to_kolme_ok.json"
+TMP_REPORT_MISSING_SUBMIT="$TMP_DIR/signed_to_kolme_missing_submit.json"
+TMP_REPORT_MISSING_FINALITY="$TMP_DIR/signed_to_kolme_missing_finality.json"
+TMP_POLICY_OK="$TMP_DIR/signed_to_kolme_policy_ok.json"
+TMP_POLICY_BAD="$TMP_DIR/signed_to_kolme_policy_bad.json"
+TMP_ERR="$TMP_DIR/policy_error.log"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+if [ ! -x "$CHECKER" ]; then
+  echo "expected local signed-to-Kolme demo policy checker to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "check_local_signed_to_kolme_demo_policy.py" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops docs to reference signed-to-Kolme policy checker command" >&2
+  exit 1
+fi
+
+if ! grep -q "check_local_signed_to_kolme_demo_policy.py" "$README_FILE"; then
+  echo "expected README to reference signed-to-Kolme policy checker command" >&2
+  exit 1
+fi
+
+cat >"$TMP_REPORT_OK" <<'JSON'
+{
+  "schema_version": "kamn.kolme.local-signed-to-kolme-demo-summary.v1",
+  "mode": "run",
+  "status": "ok",
+  "reason_code": "signed_to_kolme_demo_passed",
+  "local_only_enforced": true,
+  "elapsed_seconds": 12,
+  "max_seconds": 240,
+  "budget_status": "within_budget",
+  "runtime_commit_submit_evidence_marker": "status=submitted",
+  "runtime_commit_submit_evidence_marker_present": true,
+  "runtime_commit_finality_evidence_marker": "finality=final",
+  "runtime_commit_finality_evidence_marker_present": true,
+  "runtime_commit_submit_finality_contract_version": "v1",
+  "runtime_commit_submit_finality_linked": true,
+  "runtime_commit_live_status": "ok",
+  "runtime_commit_live_reason_code": "live_runtime_commit_and_finality_commands_passed",
+  "runtime_commit_live_summary_path": "/tmp/kolme-local-runtime-commit-live-summary.json",
+  "runtime_commit_live_policy_report_path": "/tmp/kolme-local-runtime-commit-live-policy.json",
+  "checks": [
+    {
+      "id": "localhost_signed_demo_contract",
+      "command": "bash scripts/sdk/run_localhost_signed_demo_contract_lane.sh",
+      "status": "pass",
+      "reason_code": "localhost_signed_demo_contract_passed"
+    },
+    {
+      "id": "localhost_signed_integration_contract",
+      "command": "bash scripts/sdk/run_localhost_signed_integration_contract_lane.sh",
+      "status": "pass",
+      "reason_code": "localhost_signed_integration_contract_passed"
+    },
+    {
+      "id": "local_kamn_runtime_integration_run",
+      "command": "bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run",
+      "status": "pass",
+      "reason_code": "local_kamn_runtime_integration_run_passed"
+    }
+  ],
+  "artifact_paths": [
+    "/tmp/localhost-signed-demo-contract-report.json",
+    "/tmp/localhost-signed-integration-contract-report.json",
+    "/tmp/kolme-local-kamn-live-runtime-integration-summary.json",
+    "/tmp/kolme-local-kamn-live-runtime-integration-policy.json",
+    "/tmp/kolme-local-runtime-commit-live-summary.json",
+    "/tmp/kolme-local-runtime-commit-live-policy.json",
+    "/tmp/kolme-local-runtime-commit-endpoint-output.txt",
+    "/tmp/kolme-local-runtime-commit-live-finality-output.txt"
+  ]
+}
+JSON
+
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_OK" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --require-reason-code signed_to_kolme_demo_passed \
+  --output-json "$TMP_POLICY_OK" >/dev/null
+
+python3 - "$TMP_POLICY_OK" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if report.get("schema_version") != "kamn.kolme.local-signed-to-kolme-demo-policy-report.v1":
+    raise SystemExit("unexpected signed-to-Kolme policy report schema")
+if report.get("final_decision") != "GO":
+    raise SystemExit("expected final_decision GO for valid signed-to-Kolme report")
+if report.get("reason_codes") != []:
+    raise SystemExit("expected no reason codes for valid signed-to-Kolme report")
+PY
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_MISSING_SUBMIT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["runtime_commit_submit_evidence_marker_present"] = False
+pathlib.Path(sys.argv[2]).write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_MISSING_SUBMIT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_BAD" >"$TMP_ERR" 2>&1
+missing_submit_code=$?
+set -e
+
+if [ "$missing_submit_code" -eq 0 ]; then
+  echo "expected checker to fail when runtime commit submit evidence marker is missing" >&2
+  exit 1
+fi
+if ! grep -q "runtime_commit_submit_evidence_marker_missing" "$TMP_ERR"; then
+  echo "expected runtime_commit_submit_evidence_marker_missing reason code" >&2
+  exit 1
+fi
+
+# Regression: #2388
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_MISSING_FINALITY" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["runtime_commit_finality_evidence_marker_present"] = False
+report["runtime_commit_submit_finality_linked"] = False
+pathlib.Path(sys.argv[2]).write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_MISSING_FINALITY" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_BAD" >"$TMP_ERR" 2>&1
+missing_finality_code=$?
+set -e
+
+if [ "$missing_finality_code" -eq 0 ]; then
+  echo "expected checker to fail when runtime commit finality evidence marker is missing" >&2
+  exit 1
+fi
+if ! grep -q "runtime_commit_finality_evidence_marker_missing" "$TMP_ERR"; then
+  echo "expected runtime_commit_finality_evidence_marker_missing reason code" >&2
+  exit 1
+fi
+if ! grep -q "runtime_commit_submit_finality_linkage_missing" "$TMP_ERR"; then
+  echo "expected runtime_commit_submit_finality_linkage_missing reason code" >&2
+  exit 1
+fi
+
+echo "local signed-to-Kolme demo policy checker tests passed."

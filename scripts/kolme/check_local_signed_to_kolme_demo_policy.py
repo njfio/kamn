@@ -51,6 +51,52 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if budget_status not in ("not_run", "within_budget", "exceeded_budget"):
         reason_codes.append("budget_status_invalid")
 
+    runtime_commit_submit_evidence_marker = report.get("runtime_commit_submit_evidence_marker")
+    if runtime_commit_submit_evidence_marker != "status=submitted":
+        reason_codes.append("runtime_commit_submit_evidence_marker_mismatch")
+
+    runtime_commit_submit_evidence_marker_present = report.get(
+        "runtime_commit_submit_evidence_marker_present"
+    )
+    if not isinstance(runtime_commit_submit_evidence_marker_present, bool):
+        reason_codes.append("runtime_commit_submit_evidence_marker_present_invalid")
+
+    runtime_commit_finality_evidence_marker = report.get("runtime_commit_finality_evidence_marker")
+    if runtime_commit_finality_evidence_marker != "finality=final":
+        reason_codes.append("runtime_commit_finality_evidence_marker_mismatch")
+
+    runtime_commit_finality_evidence_marker_present = report.get(
+        "runtime_commit_finality_evidence_marker_present"
+    )
+    if not isinstance(runtime_commit_finality_evidence_marker_present, bool):
+        reason_codes.append("runtime_commit_finality_evidence_marker_present_invalid")
+
+    runtime_commit_submit_finality_contract_version = report.get(
+        "runtime_commit_submit_finality_contract_version"
+    )
+    if runtime_commit_submit_finality_contract_version != "v1":
+        reason_codes.append("runtime_commit_submit_finality_contract_version_mismatch")
+
+    runtime_commit_submit_finality_linked = report.get("runtime_commit_submit_finality_linked")
+    if not isinstance(runtime_commit_submit_finality_linked, bool):
+        reason_codes.append("runtime_commit_submit_finality_linked_invalid")
+
+    runtime_commit_live_status = report.get("runtime_commit_live_status")
+    if not isinstance(runtime_commit_live_status, str) or not runtime_commit_live_status.strip():
+        reason_codes.append("runtime_commit_live_status_missing")
+
+    runtime_commit_live_reason_code = report.get("runtime_commit_live_reason_code")
+    if not isinstance(runtime_commit_live_reason_code, str) or not runtime_commit_live_reason_code.strip():
+        reason_codes.append("runtime_commit_live_reason_code_missing")
+
+    runtime_commit_live_summary_path = report.get("runtime_commit_live_summary_path")
+    if not isinstance(runtime_commit_live_summary_path, str) or not runtime_commit_live_summary_path.strip():
+        reason_codes.append("runtime_commit_live_summary_path_missing")
+
+    runtime_commit_live_policy_report_path = report.get("runtime_commit_live_policy_report_path")
+    if not isinstance(runtime_commit_live_policy_report_path, str) or not runtime_commit_live_policy_report_path.strip():
+        reason_codes.append("runtime_commit_live_policy_report_path_missing")
+
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
         reason_codes.append("checks_missing")
@@ -58,7 +104,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         expected_ids = {
             "localhost_signed_demo_contract",
             "localhost_signed_integration_contract",
-            "local_kamn_runtime_integration_contract",
+            "local_kamn_runtime_integration_run",
         }
         observed_ids: set[str] = set()
         for entry in checks:
@@ -84,8 +130,21 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append(f"check_missing:{missing_id}")
 
     artifacts = report.get("artifact_paths")
-    if not isinstance(artifacts, list) or len(artifacts) < 4:
+    if not isinstance(artifacts, list) or len(artifacts) < 8:
         reason_codes.append("artifact_paths_missing")
+    else:
+        if (
+            isinstance(runtime_commit_live_summary_path, str)
+            and runtime_commit_live_summary_path.strip()
+            and runtime_commit_live_summary_path not in artifacts
+        ):
+            reason_codes.append("runtime_commit_live_summary_artifact_path_missing")
+        if (
+            isinstance(runtime_commit_live_policy_report_path, str)
+            and runtime_commit_live_policy_report_path.strip()
+            and runtime_commit_live_policy_report_path not in artifacts
+        ):
+            reason_codes.append("runtime_commit_live_policy_artifact_path_missing")
 
     if args.ci_fast_gate != "PASS":
         reason_codes.append("ci_fast_gate_failed")
@@ -97,6 +156,22 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("ok_status_reason_code_mismatch")
         if budget_status == "exceeded_budget":
             reason_codes.append("ok_status_budget_exceeded")
+        if mode == "dry-run":
+            if runtime_commit_submit_evidence_marker_present is not False:
+                reason_codes.append("runtime_commit_submit_evidence_marker_unexpected_in_dry_run")
+            if runtime_commit_finality_evidence_marker_present is not False:
+                reason_codes.append("runtime_commit_finality_evidence_marker_unexpected_in_dry_run")
+            if runtime_commit_submit_finality_linked is not False:
+                reason_codes.append("runtime_commit_submit_finality_linkage_unexpected_in_dry_run")
+        elif mode == "run":
+            if runtime_commit_live_status != "ok":
+                reason_codes.append("runtime_commit_live_status_mismatch")
+            if runtime_commit_submit_evidence_marker_present is not True:
+                reason_codes.append("runtime_commit_submit_evidence_marker_missing")
+            if runtime_commit_finality_evidence_marker_present is not True:
+                reason_codes.append("runtime_commit_finality_evidence_marker_missing")
+            if runtime_commit_submit_finality_linked is not True:
+                reason_codes.append("runtime_commit_submit_finality_linkage_missing")
     elif status == "fail":
         observed_final_decision = "NO-GO"
         if reason_code in ("dry_run_no_commands_executed", "signed_to_kolme_demo_passed"):
