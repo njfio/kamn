@@ -45,6 +45,7 @@ NATIVE_PAYLOAD_PUBKEY_MARKER = "pubkey"
 NATIVE_PAYLOAD_NONCE_MARKER = "nonce"
 NATIVE_PAYLOAD_MESSAGES_MARKER = "messages"
 RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION = "kamn.kolme.runtime-signer-attestation.v1"
+RUNTIME_SIGNER_FAILOVER_ATTESTATION_MIN_REQUIRED_APPROVALS = 2
 
 
 def evaluate_runtime_signer_attestation_bundle(
@@ -276,12 +277,40 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif runtime_signer_attestation_schema_version != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
         reason_codes.append("runtime_signer_attestation_schema_version_mismatch")
 
+    runtime_signer_attestation_bundle = report.get("runtime_signer_attestation_bundle")
     reason_codes.extend(
         evaluate_runtime_signer_attestation_bundle(
-            report.get("runtime_signer_attestation_bundle"),
+            runtime_signer_attestation_bundle,
             runtime_signer_profile,
         )
     )
+
+    runtime_signer_attestation_required_approvals: int | None = None
+    runtime_signer_attestation_approved_signers: list[str] = []
+    if isinstance(runtime_signer_attestation_bundle, dict):
+        required_approvals_value = runtime_signer_attestation_bundle.get("required_approvals")
+        if isinstance(required_approvals_value, int):
+            runtime_signer_attestation_required_approvals = required_approvals_value
+
+        approved_signers_value = runtime_signer_attestation_bundle.get("approved_signers")
+        if isinstance(approved_signers_value, list):
+            for entry in approved_signers_value:
+                if isinstance(entry, str) and entry.strip():
+                    runtime_signer_attestation_approved_signers.append(entry.strip())
+
+    if isinstance(runtime_signer_failover_active, bool) and runtime_signer_failover_active:
+        if (
+            not isinstance(runtime_signer_attestation_required_approvals, int)
+            or runtime_signer_attestation_required_approvals
+            < RUNTIME_SIGNER_FAILOVER_ATTESTATION_MIN_REQUIRED_APPROVALS
+        ):
+            reason_codes.append("runtime_signer_failover_attestation_required_approvals_insufficient")
+        if (
+            isinstance(runtime_signer_previous_profile, str)
+            and runtime_signer_previous_profile.strip()
+            and runtime_signer_previous_profile not in runtime_signer_attestation_approved_signers
+        ):
+            reason_codes.append("runtime_signer_failover_attestation_previous_profile_not_approved")
 
     runtime_commit_command_profile = report.get("runtime_commit_command_profile")
     if not isinstance(runtime_commit_command_profile, str) or not runtime_commit_command_profile.strip():
@@ -465,8 +494,30 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_signer_attestation_threshold_required_contract_mismatch")
         if contracts.get("runtime_signer_attestation_profile_membership_required") is not True:
             reason_codes.append("runtime_signer_attestation_profile_membership_required_contract_mismatch")
-        if contracts.get("runtime_signer_attestation_required_approvals") != 1:
+        expected_runtime_signer_attestation_required_approvals = (
+            RUNTIME_SIGNER_FAILOVER_ATTESTATION_MIN_REQUIRED_APPROVALS
+            if runtime_signer_failover_active is True
+            else 1
+        )
+        if (
+            contracts.get("runtime_signer_attestation_required_approvals")
+            != expected_runtime_signer_attestation_required_approvals
+        ):
             reason_codes.append("runtime_signer_attestation_required_approvals_contract_mismatch")
+        if (
+            contracts.get("runtime_signer_failover_attestation_min_required_approvals")
+            != RUNTIME_SIGNER_FAILOVER_ATTESTATION_MIN_REQUIRED_APPROVALS
+        ):
+            reason_codes.append(
+                "runtime_signer_failover_attestation_min_required_approvals_contract_mismatch"
+            )
+        if (
+            contracts.get("runtime_signer_failover_attestation_previous_profile_membership_required")
+            is not True
+        ):
+            reason_codes.append(
+                "runtime_signer_failover_attestation_previous_profile_membership_contract_mismatch"
+            )
         if contracts.get("runtime_signer_failover_requires_profile_change") is not True:
             reason_codes.append("runtime_signer_failover_requires_profile_change_contract_mismatch")
         if contracts.get("runtime_signer_rotation_epoch_must_increase_on_failover") is not True:

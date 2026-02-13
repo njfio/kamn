@@ -11,7 +11,8 @@ TMP_ERR="$(mktemp)"
 TMP_CUSTODY="$(mktemp)"
 TMP_PROVENANCE="$(mktemp)"
 TMP_QUORUM="$(mktemp)"
-trap 'rm -f "$TMP_SUMMARY" "$TMP_ERR" "$TMP_CUSTODY" "$TMP_PROVENANCE" "$TMP_QUORUM"' EXIT
+TMP_QUORUM_SINGLE="$(mktemp)"
+trap 'rm -f "$TMP_SUMMARY" "$TMP_ERR" "$TMP_CUSTODY" "$TMP_PROVENANCE" "$TMP_QUORUM" "$TMP_QUORUM_SINGLE"' EXIT
 
 printf '%s\n' "custody-attestation=ops-primary:epoch-1" >"$TMP_CUSTODY"
 printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" >"$TMP_PROVENANCE"
@@ -33,6 +34,24 @@ cat >"$TMP_QUORUM" <<JSON
   "signer_rotation_epochs": {
     "ops-primary": 3,
     "ops-secondary": 2
+  }
+}
+JSON
+
+cat >"$TMP_QUORUM_SINGLE" <<JSON
+{
+  "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
+  "required_approvals": 1,
+  "received_approvals": 1,
+  "approved_signers": [
+    "ops-primary"
+  ],
+  "custody_evidence_sha256": "$TMP_CUSTODY_SHA",
+  "signer_roles": {
+    "ops-primary": "primary"
+  },
+  "signer_rotation_epochs": {
+    "ops-primary": 3
   }
 }
 JSON
@@ -176,6 +195,8 @@ if contracts.get("custody_evidence_required") is not True:
     raise SystemExit("expected deployment preflight contracts to require signer custody evidence")
 if contracts.get("approval_quorum_required") != 2:
     raise SystemExit("expected deployment preflight contracts approval quorum requirement marker")
+if contracts.get("approval_quorum_minimum") != 2:
+    raise SystemExit("expected deployment preflight contracts approval quorum minimum marker")
 if contracts.get("quorum_evidence_required") is not True:
     raise SystemExit("expected deployment preflight contracts to require quorum evidence")
 if contracts.get("quorum_evidence_sha256_required") is not True:
@@ -222,6 +243,29 @@ fi
 
 if ! grep -q "signer secret env is required for selected profile" "$TMP_ERR"; then
   echo "expected deterministic missing signer secret message from deployment preflight lane" >&2
+  exit 1
+fi
+
+set +e
+KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX="1111111111111111111111111111111111111111111111111111111111111111" \
+bash "$RUNNER" \
+  --mode run \
+  --required-approvals 1 \
+  --received-approvals 1 \
+  --custody-evidence-file "$TMP_CUSTODY" \
+  --quorum-evidence-file "$TMP_QUORUM_SINGLE" \
+  --signer-provenance-file "$TMP_PROVENANCE" \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+minimum_quorum_exit_code=$?
+set -e
+
+if [ "$minimum_quorum_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight run mode to fail closed when required approvals are below production multi-signer minimum" >&2
+  exit 1
+fi
+
+if ! grep -q "required approvals must be at least 2 for production signer profiles" "$TMP_ERR"; then
+  echo "expected deterministic production multi-signer minimum quorum message from deployment preflight lane" >&2
   exit 1
 fi
 

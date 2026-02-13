@@ -1062,6 +1062,8 @@ summary = {
         "runtime_signer_profile": runtime_signer_profile,
         "runtime_signer_failover_requires_profile_change": True,
         "runtime_signer_rotation_epoch_must_increase_on_failover": True,
+        "runtime_signer_failover_attestation_min_required_approvals": 2,
+        "runtime_signer_failover_attestation_previous_profile_membership_required": True,
         "runtime_signer_key_source_contract_version": runtime_signer_key_source_contract_version,
         "runtime_signer_key_source": runtime_signer_key_source,
         "runtime_signer_private_key_env": runtime_signer_private_key_env,
