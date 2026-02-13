@@ -14,7 +14,9 @@ DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 README_FILE="$ROOT_DIR/README.md"
 TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT"' EXIT
+TMP_POLICY_ERR="$(mktemp)"
+TMP_SIMULATED_SUMMARY="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY"' EXIT
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local KAMN live runtime integration contract lane runner to be executable" >&2
@@ -411,11 +413,48 @@ if policy.get("final_decision") != "GO":
     raise SystemExit("expected local KAMN live runtime integration contract-lane policy final_decision GO")
 PY
 
+python3 - "$TMP_REPORT" "$TMP_SIMULATED_SUMMARY" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary_path = pathlib.Path(sys.argv[1])
+simulated_path = pathlib.Path(sys.argv[2])
+payload = json.loads(summary_path.read_text(encoding="utf-8"))
+runtime_command = str(payload.get("runtime_commit_command", ""))
+payload["runtime_commit_command"] = runtime_command.replace(
+    "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1",
+    "KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated-v1",
+)
+simulated_path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_SIMULATED_SUMMARY" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_REPORT" >"$TMP_POLICY_ERR" 2>&1
+simulated_profile_policy_code=$?
+set -e
+
+if [ "$simulated_profile_policy_code" -eq 0 ]; then
+  echo "expected runtime integration policy checker to fail when runtime command uses simulated signing profile marker" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_simulated_signing_profile_detected" "$TMP_POLICY_ERR"; then
+  echo "expected runtime_commit_simulated_signing_profile_detected reason for runtime integration policy failure" >&2
+  exit 1
+fi
+
 TMP_DIRECT_SUMMARY="$(mktemp)"
 TMP_DIRECT_RUNTIME_OUTPUT="$(mktemp)"
 TMP_DIRECT_RUNTIME_POLICY="$(mktemp)"
 TMP_DIRECT_RUNTIME_FINALITY_OUTPUT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_RUNTIME_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY" "$TMP_DIRECT_RUNTIME_FINALITY_OUTPUT"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_RUNTIME_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY" "$TMP_DIRECT_RUNTIME_FINALITY_OUTPUT"' EXIT
 
 bash "$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh" \
   --mode dry-run \
