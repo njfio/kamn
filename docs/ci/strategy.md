@@ -1900,6 +1900,18 @@ Kolme harness trend policy (warning-to-fail escalation contract):
   - `--enforce-trend-fail` exits non-zero when `trend_status=fail`.
   - `--enforce-command-surface-fail` exits non-zero when `command_surface_policy_decision=NO-GO`.
 
+Ignored-test inventory drift policy (fail-closed):
+- baseline fixture: `fixtures/ci/ignored_test_inventory_baseline.json`
+- baseline generator:
+  - `bash scripts/ci/generate_ignored_test_inventory_baseline.sh --output-json /tmp/ignored-test-inventory-baseline.json`
+- drift checker:
+  - `bash scripts/ci/check_ignored_test_inventory_drift.sh --baseline-file fixtures/ci/ignored_test_inventory_baseline.json --output-json /tmp/ignored-test-inventory-drift-report.json`
+- policy emits deterministic drift markers:
+  - `status=pass|fail`
+  - `reason_codes=none|unexpected_ignored_tests_present|baseline_ignored_tests_missing|ignored_test_marker_without_function`
+  - `violation_count=<n>`
+- drift policy remains fail-closed on unapproved ignored-test inventory changes (`Regression: #2836`).
+
 Policy:
 - Warning at 90% of configured budget.
 - Failure at 100% of configured budget for `ci-fast-gate` (merge-critical lane).
@@ -1934,6 +1946,16 @@ Fast-mode CI tooling regression coverage includes:
 - Kolme harness trend-report generator (`test_generate_kolme_test_harness_loc_trend_report.sh`)
 - Test-harness LOC soft-budget checker (`test_check_test_harness_loc_soft_budget.sh`)
 - Kolme test-harness LOC soft-budget checker (`test_check_kolme_test_harness_loc_soft_budget.sh`)
+- Ignored-test inventory drift checker (`test_check_ignored_test_inventory_drift.sh`)
+  - generator command:
+    - `bash scripts/ci/generate_ignored_test_inventory_baseline.sh --output-json /tmp/ignored-test-inventory-baseline.json`
+  - checker command:
+    - `bash scripts/ci/check_ignored_test_inventory_drift.sh --baseline-file fixtures/ci/ignored_test_inventory_baseline.json --output-json /tmp/ignored-test-inventory-drift-report.json`
+  - deterministic reason-code surface:
+    - `reason_codes=none`
+    - `reason_codes=unexpected_ignored_tests_present`
+    - `reason_codes=baseline_ignored_tests_missing`
+    - `reason_codes=ignored_test_marker_without_function`
 - Generic test-harness LOC soft-budget contract lane (`test_run_test_harness_loc_soft_budget_contract_lane.sh`)
   - contract lane command:
     - `bash scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/test-harness-loc-soft-budget-contract-report.json`
