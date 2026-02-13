@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "bridge.outbound_quorum.contract",
+  "evidence_key": "bridge_outbound_quorum_contract_lane:v1",
+  "reason_key": "bridge_outbound_quorum_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "bash",
+      "scripts/bridge/run_bridge_outbound_quorum_contract_lane_impl.sh"
+    ]
+  }
+}
