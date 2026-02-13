@@ -3,7 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_version_compatibility_contract_lane.sh"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_version_compatibility_contract_lane.json"
+DEEP_LANE_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_version_compatibility_replay_deep_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/version_compatibility_contract_lane.py"
 DEEP_LANE="$ROOT_DIR/scripts/kolme/run_version_compatibility_replay_deep_lane.sh"
 TMP_REPORT="$(mktemp)"
@@ -16,6 +18,21 @@ fi
 
 if [ ! -x "$DEEP_LANE" ]; then
   echo "expected Kolme version compatibility deep lane script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected Kolme run lane dispatcher script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -L "$DEEP_LANE" ]; then
+  echo "expected Kolme version compatibility deep lane script to be a symlink to shared run lane dispatcher" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$DEEP_LANE")" != "run_lane_dispatch.sh" ]; then
+  echo "expected Kolme version compatibility deep lane script symlink target to be run_lane_dispatch.sh" >&2
   exit 1
 fi
 
@@ -46,6 +63,32 @@ PY
 
 if [ ! -f "$CONTRACT_IMPL" ]; then
   echo "expected Kolme version compatibility contract implementation to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$DEEP_LANE_MANIFEST" ]; then
+  echo "expected Kolme version compatibility replay deep lane manifest to exist" >&2
+  exit 1
+fi
+
+python3 - "$DEEP_LANE_MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+run_command = payload.get("phases", {}).get("run")
+if run_command != [
+    "bash",
+    "scripts/kolme/run_version_compatibility_replay_deep_lane_impl.sh",
+]:
+    raise SystemExit("expected version compatibility replay deep lane manifest run command")
+PY
+
+resolved_deep_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$DEEP_LANE")" --resolve-manifest-path)"
+if [ "$resolved_deep_manifest" != "$DEEP_LANE_MANIFEST" ]; then
+  echo "expected Kolme version compatibility deep lane wrapper to resolve deterministic manifest path" >&2
   exit 1
 fi
 

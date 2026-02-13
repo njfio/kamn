@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "kolme.version_compatibility_replay_deep.run",
+  "evidence_key": "kolme_version_compatibility_replay_deep_lane:v1",
+  "reason_key": "kolme_version_compatibility_replay_deep_lane_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/kolme/run_version_compatibility_replay_deep_lane_impl.sh"
+    ]
+  }
+}
