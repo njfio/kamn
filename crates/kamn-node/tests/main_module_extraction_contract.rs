@@ -28,6 +28,10 @@ fn main_module_extraction_contract_declares_signer_and_wire_modules() {
         "main.rs should declare report_builder module"
     );
     assert!(
+        main_rs.contains("mod runtime_kolme_live;"),
+        "main.rs should declare runtime_kolme_live module"
+    );
+    assert!(
         main_rs.contains("mod main_tests;"),
         "main.rs should declare sidecar test module for maintainability"
     );
@@ -60,6 +64,22 @@ fn main_module_extraction_contract_removes_inline_report_rendering_impls() {
         !main_rs.contains("fn build_bootstrap_report("),
         "main.rs should not keep inline bootstrap report assembly"
     );
+    assert!(
+        !main_rs.contains("fn build_kolme_live_request("),
+        "main.rs should not keep inline Kolme live request builder"
+    );
+    assert!(
+        !main_rs.contains("fn ensure_kolme_live_provider_marker("),
+        "main.rs should not keep inline Kolme provider marker guard"
+    );
+    assert!(
+        !main_rs.contains("fn map_kolme_live_submit_outcome("),
+        "main.rs should not keep inline Kolme submit outcome mapper"
+    );
+    assert!(
+        !main_rs.contains("fn kolme_live_finality_label("),
+        "main.rs should not keep inline Kolme finality label helper"
+    );
 }
 
 #[test]
@@ -84,6 +104,7 @@ fn main_module_extraction_contract_keeps_impls_in_new_modules() {
     let signer_rs = read_repo_file("src/signer.rs");
     let report_builder_rs = read_repo_file("src/report_builder.rs");
     let report_render_rs = read_repo_file("src/report_render.rs");
+    let runtime_kolme_live_rs = read_repo_file("src/runtime_kolme_live.rs");
     let wire_payload_rs = read_repo_file("src/wire_payload.rs");
     assert!(
         signer_rs.contains("pub(crate) fn build_kolme_live_direct_signed_wire_payload("),
@@ -104,5 +125,17 @@ fn main_module_extraction_contract_keeps_impls_in_new_modules() {
     assert!(
         report_builder_rs.contains("pub(crate) fn build_bootstrap_report("),
         "report_builder module should own bootstrap report assembly"
+    );
+    assert!(
+        runtime_kolme_live_rs.contains("pub(crate) fn build_kolme_live_request("),
+        "runtime_kolme_live module should own request builder"
+    );
+    assert!(
+        runtime_kolme_live_rs.contains("pub(crate) fn ensure_kolme_live_provider_marker("),
+        "runtime_kolme_live module should own provider marker guard"
+    );
+    assert!(
+        runtime_kolme_live_rs.contains("pub(crate) fn map_kolme_live_submit_outcome("),
+        "runtime_kolme_live module should own submit outcome mapper"
     );
 }
