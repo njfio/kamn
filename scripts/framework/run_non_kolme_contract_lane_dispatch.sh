@@ -75,6 +75,10 @@ resolve_manifest_name() {
     run_channel_lifecycle_contract_lane.sh) echo "channel_channel_lifecycle_contract_lane.json" ;;
     run_channel_policy_contract_lane.sh) echo "channel_channel_policy_contract_lane.json" ;;
     run_dashboard_shell_determinism_matrix_contract_lane.sh) echo "frontend_dashboard_shell_determinism_matrix_contract_lane.json" ;;
+    run_a2a_mcp_conformance_contract_lane.sh) echo "message_a2a_mcp_conformance_contract_lane.json" ;;
+    run_didcomm_envelope_compatibility_contract_lane.sh) echo "message_didcomm_envelope_compatibility_contract_lane.json" ;;
+    run_group_sender_replay_ratchet_contract_lane.sh) echo "message_group_sender_replay_ratchet_contract_lane.json" ;;
+    run_key_hierarchy_invariant_contract_lane.sh) echo "message_key_hierarchy_invariant_contract_lane.json" ;;
     run_message_lifecycle_contract_lane.sh) echo "message_message_lifecycle_contract_lane.json" ;;
     run_reputation_dispute_contract_lane.sh) echo "reputation_dispute_contract_lane.json" ;;
     run_rust_live_transport_contract_lane.sh) echo "sdk_rust_live_transport_contract_lane.json" ;;

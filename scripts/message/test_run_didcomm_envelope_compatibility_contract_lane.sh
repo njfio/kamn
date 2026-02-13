@@ -3,39 +3,39 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/message/run_didcomm_envelope_compatibility_contract_lane.sh"
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+CONTRACT_MODULE="$ROOT_DIR/scripts/message/didcomm_envelope_compatibility_contract_lane_contract.sh"
+EXPECTED_MANIFEST="$ROOT_DIR/scripts/framework/manifests/message_didcomm_envelope_compatibility_contract_lane.json"
 
 if [ ! -x "$SCRIPT" ]; then
   echo "expected DIDComm envelope compatibility contract lane script to be executable" >&2
   exit 1
 fi
 
-report_file="$TMP_DIR/didcomm-envelope-compatibility-contract-report.json"
-output="$(
-  bash "$SCRIPT" \
-    --output-json "$report_file" \
-    --skip-tests
-)"
-
-if ! printf '%s\n' "$output" | grep -q "DIDComm envelope compatibility contract lane tests passed."; then
-  echo "expected success output from DIDComm envelope compatibility contract lane" >&2
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected non-Kolme dispatcher to be executable: $DISPATCHER" >&2
   exit 1
 fi
 
-if [ ! -f "$report_file" ]; then
-  echo "expected DIDComm envelope compatibility contract lane to emit report" >&2
+if [ ! -x "$CONTRACT_MODULE" ]; then
+  echo "expected shared DIDComm envelope compatibility contract module to be executable: $CONTRACT_MODULE" >&2
   exit 1
 fi
 
-if ! grep -q '"schema_version": "kamn.didcomm.envelope-compatibility-report.v1"' "$report_file"; then
-  echo "expected DIDComm envelope compatibility report schema marker" >&2
+if [ ! -L "$SCRIPT" ]; then
+  echo "expected DIDComm envelope compatibility contract lane wrapper to be a symlink: $SCRIPT" >&2
   exit 1
 fi
 
-if ! grep -q '"reason_key": "didcomm_envelope_compatibility_reason_codes:GO:v1"' "$report_file"; then
-  echo "expected DIDComm envelope compatibility reason key marker in report" >&2
+manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$SCRIPT")" --resolve-manifest-path)"
+if [ "$manifest_path" != "$EXPECTED_MANIFEST" ]; then
+  echo "expected dispatcher to resolve $EXPECTED_MANIFEST but found $manifest_path" >&2
   exit 1
 fi
 
-echo "DIDComm envelope compatibility contract lane script tests passed."
+if ! grep -Fq "\"scripts/message/$(basename "$CONTRACT_MODULE")\"" "$manifest_path"; then
+  echo "expected manifest to dispatch shared DIDComm envelope compatibility contract module: $manifest_path" >&2
+  exit 1
+fi
+
+echo "DIDComm envelope compatibility contract lane wrapper tests passed."
