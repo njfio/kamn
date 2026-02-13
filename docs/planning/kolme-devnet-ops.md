@@ -1187,6 +1187,9 @@ Operator checkpoints:
   - `bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --expected-commit 0000000000000000000000000000000000000000 --fork-pin-manifest-file fixtures/kolme_compatibility/kolme_fork_pin_manifest.json --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json`
 - Explicit local-only checkout bootstrap execution:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh --mode run --checkout-path /tmp/kolme_fork --fork-remote-url https://github.com/njfio/kolme_fork.git --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --expected-commit <40-hex-pinned-sha> --fork-pin-manifest-file /tmp/kolme-fork-pin-manifest.json --max-seconds 120 --output-json /tmp/kolme-local-fork-checkout-bootstrap-summary.json`
+- Wrapper routing stays manifest-backed:
+  - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_checkout_bootstrap_lane.sh --resolve-manifest-path`
+  - `scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_lane.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_checkout_bootstrap_policy.py --report-file /tmp/kolme-local-fork-checkout-bootstrap-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-checkout-bootstrap-policy.json`
 - Contract lane command:

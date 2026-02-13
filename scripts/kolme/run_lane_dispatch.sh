@@ -59,6 +59,7 @@ resolve_manifest_name() {
     run_local_kolme_api_probe_lane.sh) echo "kolme_local_kolme_api_probe_lane.json" ;;
     run_local_kolme_api_smoke_lane.sh) echo "kolme_local_kolme_api_smoke_lane.json" ;;
     run_local_kolme_fork_bootstrap_readiness_lane.sh) echo "kolme_local_kolme_fork_bootstrap_readiness_lane.json" ;;
+    run_local_kolme_fork_checkout_bootstrap_lane.sh) echo "kolme_local_kolme_fork_checkout_bootstrap_lane.json" ;;
     run_local_kolme_fork_portability_preflight_lane.sh) echo "kolme_local_kolme_fork_portability_preflight_lane.json" ;;
     run_local_kolme_fork_profile_preflight_lane.sh) echo "kolme_local_kolme_fork_profile_preflight_lane.json" ;;
     run_local_kolme_fork_self_test_lane.sh) echo "kolme_local_kolme_fork_self_test_lane.json" ;;

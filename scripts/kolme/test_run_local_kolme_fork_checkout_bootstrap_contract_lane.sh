@@ -5,12 +5,71 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_checkout_bootstrap_contract_lane.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_kolme_fork_checkout_bootstrap_contract_lane.py"
+RUN_WRAPPER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane.sh"
+RUN_WRAPPER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane_impl.sh"
+RUN_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_fork_checkout_bootstrap_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 CI_DOC_FILE="$ROOT_DIR/docs/ci/strategy.md"
 README_FILE="$ROOT_DIR/README.md"
 
 if [ ! -x "$CONTRACT_LANE" ]; then
   echo "expected local fork checkout bootstrap contract lane script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$RUN_WRAPPER_IMPL" ]; then
+  echo "expected local fork checkout bootstrap implementation runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected local run lane dispatcher to be executable" >&2
+  exit 1
+fi
+
+if [ ! -L "$RUN_WRAPPER" ]; then
+  echo "expected local fork checkout bootstrap runner to be a symlink to shared runtime lane dispatcher" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$RUN_WRAPPER")" != "run_lane_dispatch.sh" ]; then
+  echo "expected local fork checkout bootstrap runner symlink target to be run_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+if [ ! -f "$RUN_MANIFEST" ]; then
+  echo "expected local fork checkout bootstrap run manifest to exist" >&2
+  exit 1
+fi
+
+python3 - "$RUN_MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.contract-lane.manifest.v1":
+    raise SystemExit("expected local fork checkout bootstrap run manifest schema")
+if payload.get("lane_id") != "kolme.local_kolme_fork_checkout_bootstrap.run":
+    raise SystemExit("expected local fork checkout bootstrap run manifest lane_id")
+run_command = payload.get("phases", {}).get("run")
+if run_command != [
+    "bash",
+    "scripts/kolme/run_local_kolme_fork_checkout_bootstrap_lane_impl.sh",
+]:
+    raise SystemExit("expected local fork checkout bootstrap run manifest command")
+PY
+
+resolved_run_manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUN_WRAPPER")" --resolve-manifest-path)"
+if [ "$resolved_run_manifest_path" != "$RUN_MANIFEST" ]; then
+  echo "expected local fork checkout bootstrap wrapper to resolve deterministic run manifest" >&2
+  exit 1
+fi
+
+if bash "$DISPATCHER" --lane-wrapper run_missing_local_kolme_fork_checkout_bootstrap_lane.sh --resolve-manifest-path >/dev/null 2>&1; then
+  echo "expected local run lane dispatcher to fail closed for unknown local fork checkout bootstrap wrapper" >&2
   exit 1
 fi
 
@@ -73,6 +132,14 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "run_local_kolme_fork_checkout_bootstrap_lane.sh" "$docs_file"; then
     echo "expected docs parity to reference local fork checkout bootstrap runner in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_checkout_bootstrap_lane.sh --resolve-manifest-path" "$docs_file"; then
+    echo "expected docs parity to reference local fork checkout bootstrap run-wrapper dispatcher mapping in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "kolme_local_kolme_fork_checkout_bootstrap_lane.json" "$docs_file"; then
+    echo "expected docs parity to reference local fork checkout bootstrap run manifest in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "check_local_kolme_fork_checkout_bootstrap_policy.py" "$docs_file"; then
