@@ -23,6 +23,9 @@ REAL_SIGNER_PRIVATE_KEY_ENV_SECONDARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_
 REAL_SIGNER_KEY_REF_ENV_PRIMARY = "KAMN_KOLME_LIVE_SIGNER_KEY_REF"
 REAL_SIGNER_KEY_REF_ENV_SECONDARY = "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY"
 REAL_SIGNER_FALLBACK_PRIVATE_KEY_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
+REAL_SIGNER_FALLBACK_PRIVATE_KEY_REMEDIATION = (
+    f"unset {REAL_SIGNER_FALLBACK_PRIVATE_KEY_ENV}"
+)
 REAL_SIGNER_KEY_SOURCE_CONTRACT_VERSION = "v1"
 ALLOWED_SIGNER_PROFILES = (
     REAL_SIGNER_PROFILE_PRIMARY,
@@ -255,6 +258,38 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("runtime_signer_fallback_private_key_env_missing")
     elif runtime_signer_fallback_private_key_env != REAL_SIGNER_FALLBACK_PRIVATE_KEY_ENV:
         reason_codes.append("runtime_signer_fallback_private_key_env_mismatch")
+
+    runtime_signer_fallback_private_key_remediation = report.get(
+        "runtime_signer_fallback_private_key_remediation"
+    )
+    if (
+        not isinstance(runtime_signer_fallback_private_key_remediation, str)
+        or not runtime_signer_fallback_private_key_remediation.strip()
+    ):
+        reason_codes.append("runtime_signer_fallback_private_key_remediation_missing")
+    elif runtime_signer_fallback_private_key_remediation != REAL_SIGNER_FALLBACK_PRIVATE_KEY_REMEDIATION:
+        reason_codes.append("runtime_signer_fallback_private_key_remediation_mismatch")
+
+    expected_managed_external_raw_private_key_remediation = ""
+    if expected_signer_private_key_env and expected_signer_key_reference_env:
+        expected_managed_external_raw_private_key_remediation = (
+            f"unset {expected_signer_private_key_env}; set {expected_signer_key_reference_env}"
+        )
+
+    runtime_signer_managed_external_raw_private_key_remediation = report.get(
+        "runtime_signer_managed_external_raw_private_key_remediation"
+    )
+    if (
+        not isinstance(runtime_signer_managed_external_raw_private_key_remediation, str)
+        or not runtime_signer_managed_external_raw_private_key_remediation.strip()
+    ):
+        reason_codes.append("runtime_signer_managed_external_raw_private_key_remediation_missing")
+    elif (
+        expected_managed_external_raw_private_key_remediation
+        and runtime_signer_managed_external_raw_private_key_remediation
+        != expected_managed_external_raw_private_key_remediation
+    ):
+        reason_codes.append("runtime_signer_managed_external_raw_private_key_remediation_mismatch")
 
     runtime_signer_fallback_private_key_present = report.get("runtime_signer_fallback_private_key_present")
     if not isinstance(runtime_signer_fallback_private_key_present, bool):
@@ -564,6 +599,19 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_signer_key_reference_env_contract_mismatch")
         if contracts.get("runtime_signer_fallback_private_key_env") != REAL_SIGNER_FALLBACK_PRIVATE_KEY_ENV:
             reason_codes.append("runtime_signer_fallback_private_key_env_contract_mismatch")
+        if (
+            contracts.get("runtime_signer_fallback_private_key_remediation")
+            != REAL_SIGNER_FALLBACK_PRIVATE_KEY_REMEDIATION
+        ):
+            reason_codes.append("runtime_signer_fallback_private_key_remediation_contract_mismatch")
+        if (
+            expected_managed_external_raw_private_key_remediation
+            and contracts.get("runtime_signer_managed_external_raw_private_key_remediation")
+            != expected_managed_external_raw_private_key_remediation
+        ):
+            reason_codes.append(
+                "runtime_signer_managed_external_raw_private_key_remediation_contract_mismatch"
+            )
         if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
             reason_codes.append("runtime_signer_fallback_private_key_allowed_contract_mismatch")
         if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") is not False:

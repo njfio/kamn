@@ -455,6 +455,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
     - `runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF`
     - `runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+    - `runtime_signer_fallback_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+    - `runtime_signer_managed_external_raw_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF`
     - `runtime_signer_fallback_private_key_present=false`
     - `runtime_signer_raw_private_key_present=false`
   - GO proof also supports deterministic secondary signer markers:
@@ -542,12 +544,16 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `contracts.runtime_signer_quorum_linked_required=true`
     - `contracts.runtime_signer_quorum_threshold_required=true`
     - `contracts.runtime_signer_quorum_profile_membership_required=true`
+    - `contracts.runtime_signer_fallback_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+    - `contracts.runtime_signer_managed_external_raw_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF`
     - `contracts.runtime_signer_fallback_private_key_allowed=false`
     - `contracts.runtime_signer_managed_external_raw_private_key_allowed=false`
   - real-node profile accepts secondary signer summary/contracts markers for failover drills:
     - `runtime_signer_profile=ops-secondary`
     - `runtime_signer_previous_profile=ops-secondary`
     - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY`
+    - `runtime_signer_managed_external_raw_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY; set KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY`
+    - `contracts.runtime_signer_managed_external_raw_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY; set KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY`
     - `contracts.runtime_signer_failover_requires_profile_change=true`
     - `contracts.runtime_signer_rotation_epoch_must_increase_on_failover=true`
   - forced failover scenario matrix markers:

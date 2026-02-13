@@ -105,6 +105,12 @@ def main() -> int:
     expected_signer_key_source = "env-local"
     expected_signer_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[expected_signer_profile]
     expected_signer_key_reference_env = SIGNER_KEY_REF_ENV_BY_PROFILE[expected_signer_profile]
+    expected_fallback_signer_private_key_remediation = (
+        f"unset {FALLBACK_SIGNER_PRIVATE_KEY_ENV}"
+    )
+    expected_managed_external_raw_private_key_remediation = (
+        f"unset {expected_signer_private_key_env}; set {expected_signer_key_reference_env}"
+    )
     alternate_signer_profile = "ops-secondary" if expected_signer_profile == "ops-primary" else "ops-primary"
     alternate_signer_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[alternate_signer_profile]
 
@@ -295,6 +301,24 @@ def main() -> int:
     if summary.get("runtime_signer_fallback_private_key_env") != FALLBACK_SIGNER_PRIVATE_KEY_ENV:
         print("expected fallback signer private key env marker in contract-lane summary", file=sys.stderr)
         return 1
+    if (
+        summary.get("runtime_signer_fallback_private_key_remediation")
+        != expected_fallback_signer_private_key_remediation
+    ):
+        print(
+            "expected fallback signer private key remediation marker in contract-lane summary",
+            file=sys.stderr,
+        )
+        return 1
+    if (
+        summary.get("runtime_signer_managed_external_raw_private_key_remediation")
+        != expected_managed_external_raw_private_key_remediation
+    ):
+        print(
+            "expected managed-external signer raw private key remediation marker in contract-lane summary",
+            file=sys.stderr,
+        )
+        return 1
     if summary.get("runtime_signer_fallback_private_key_present") is not False:
         print("expected fallback signer private key presence marker false in contract-lane summary", file=sys.stderr)
         return 1
@@ -393,6 +417,24 @@ def main() -> int:
         return 1
     if contracts.get("runtime_signer_fallback_private_key_env") != FALLBACK_SIGNER_PRIVATE_KEY_ENV:
         print("expected contracts fallback signer private key env marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if (
+        contracts.get("runtime_signer_fallback_private_key_remediation")
+        != expected_fallback_signer_private_key_remediation
+    ):
+        print(
+            "expected contracts fallback signer private key remediation marker in contract-lane summary",
+            file=sys.stderr,
+        )
+        return 1
+    if (
+        contracts.get("runtime_signer_managed_external_raw_private_key_remediation")
+        != expected_managed_external_raw_private_key_remediation
+    ):
+        print(
+            "expected contracts managed-external signer raw private key remediation marker in contract-lane summary",
+            file=sys.stderr,
+        )
         return 1
     if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
         print("expected contracts fallback signer private key allowed=false marker in contract-lane summary", file=sys.stderr)
@@ -507,6 +549,12 @@ def main() -> int:
         forced_failover_go_summary["runtime_signer_key_reference_env"] = SIGNER_KEY_REF_ENV_BY_PROFILE[
             alternate_signer_profile
         ]
+        forced_failover_go_summary["runtime_signer_managed_external_raw_private_key_remediation"] = (
+            "unset "
+            f"{SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[alternate_signer_profile]}; "
+            "set "
+            f"{SIGNER_KEY_REF_ENV_BY_PROFILE[alternate_signer_profile]}"
+        )
         forced_failover_go_summary["runtime_commit_command"] = runtime_commit_command.replace(
             expected_signer_command_marker,
             f"KAMN_KOLME_LIVE_SIGNER_PROFILE={alternate_signer_profile}",
@@ -534,6 +582,12 @@ def main() -> int:
         )
         forced_failover_go_contracts["runtime_signer_key_reference_env"] = (
             SIGNER_KEY_REF_ENV_BY_PROFILE[alternate_signer_profile]
+        )
+        forced_failover_go_contracts["runtime_signer_managed_external_raw_private_key_remediation"] = (
+            "unset "
+            f"{SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[alternate_signer_profile]}; "
+            "set "
+            f"{SIGNER_KEY_REF_ENV_BY_PROFILE[alternate_signer_profile]}"
         )
         forced_failover_go_contracts["runtime_signer_attestation_required_approvals"] = 2
         forced_failover_go_contracts["runtime_signer_quorum_required_approvals"] = 2
