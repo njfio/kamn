@@ -439,6 +439,70 @@ def main() -> int:
             print("expected NO-GO final decision for marker drift policy output", file=sys.stderr)
             return 1
 
+        forced_failover_go_summary_file = negative_path / "forced_failover_go_summary.json"
+        forced_failover_go_policy_file = negative_path / "forced_failover_go_policy.json"
+        forced_failover_go_summary = dict(summary)
+        forced_failover_go_summary["runtime_signer_profile"] = alternate_signer_profile
+        forced_failover_go_summary["runtime_signer_previous_profile"] = expected_signer_profile
+        forced_failover_go_summary["runtime_signer_failover_active"] = True
+        forced_failover_go_summary["runtime_signer_rotation_epoch"] = 2
+        forced_failover_go_summary["runtime_signer_previous_rotation_epoch"] = 1
+        forced_failover_go_summary["runtime_signer_private_key_env"] = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[
+            alternate_signer_profile
+        ]
+        forced_failover_go_summary["runtime_signer_key_reference_env"] = SIGNER_KEY_REF_ENV_BY_PROFILE[
+            alternate_signer_profile
+        ]
+        forced_failover_go_summary["runtime_commit_command"] = runtime_commit_command.replace(
+            expected_signer_command_marker,
+            f"KAMN_KOLME_LIVE_SIGNER_PROFILE={alternate_signer_profile}",
+            1,
+        )
+        forced_failover_go_attestation_bundle = dict(runtime_signer_attestation_bundle)
+        forced_failover_go_attestation_bundle["approved_signers"] = [
+            expected_signer_profile,
+            alternate_signer_profile,
+        ]
+        forced_failover_go_attestation_bundle["signer_profile"] = alternate_signer_profile
+        forced_failover_go_summary["runtime_signer_attestation_bundle"] = (
+            forced_failover_go_attestation_bundle
+        )
+        forced_failover_go_contracts = dict(summary.get("contracts", {}))
+        forced_failover_go_contracts["runtime_signer_profile"] = alternate_signer_profile
+        forced_failover_go_contracts["runtime_signer_private_key_env"] = (
+            SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[alternate_signer_profile]
+        )
+        forced_failover_go_contracts["runtime_signer_key_reference_env"] = (
+            SIGNER_KEY_REF_ENV_BY_PROFILE[alternate_signer_profile]
+        )
+        forced_failover_go_summary["contracts"] = forced_failover_go_contracts
+        forced_failover_go_summary_file.write_text(
+            json.dumps(forced_failover_go_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        forced_failover_go_result = run_real_node_policy_check(
+            report_file=forced_failover_go_summary_file,
+            output_json=forced_failover_go_policy_file,
+            expected_final_decision="GO",
+        )
+        if forced_failover_go_result.returncode != 0:
+            print("expected forced failover GO scenario matrix proof to pass", file=sys.stderr)
+            stderr = forced_failover_go_result.stderr.strip()
+            if stderr:
+                print(stderr, file=sys.stderr)
+            return 1
+        forced_failover_go_policy = json.loads(
+            forced_failover_go_policy_file.read_text(encoding="utf-8")
+        )
+        if forced_failover_go_policy.get("final_decision") != "GO":
+            print("expected GO final decision for forced failover scenario matrix policy output", file=sys.stderr)
+            return 1
+        forced_failover_go_reason_codes = forced_failover_go_policy.get("reason_codes")
+        if forced_failover_go_reason_codes != []:
+            print("expected no reason codes in forced failover scenario matrix policy output", file=sys.stderr)
+            return 1
+
         failover_stale_summary_file = negative_path / "failover_stale_summary.json"
         failover_stale_policy_file = negative_path / "failover_stale_policy.json"
         failover_stale_summary = dict(summary)
@@ -1288,6 +1352,9 @@ def main() -> int:
         "--require-non-synthetic-run-evidence",
         "runtime_signer_profile=ops-primary",
         "runtime_signer_profile=ops-secondary",
+        "runtime_signer_failover_active=true",
+        "runtime_signer_previous_profile=ops-primary",
+        "runtime_signer_rotation_epoch=2",
         "runtime_signer_key_source_contract_version",
         "runtime_signer_key_source",
         "runtime_signing_profile=kolme-fork-secp256k1-v1",
@@ -1312,6 +1379,7 @@ def main() -> int:
         "runtime_signing_profile_mismatch",
         "runtime_signing_profile_contract_mismatch",
         "Regression: #2302",
+        "Regression: #2337",
         "Regression: #2325",
         "Regression: #2327",
         "Regression: #2324",
@@ -1325,6 +1393,9 @@ def main() -> int:
         "--require-non-synthetic-run-evidence",
         "runtime_signer_profile=ops-primary",
         "runtime_signer_profile=ops-secondary",
+        "runtime_signer_failover_active=true",
+        "runtime_signer_previous_profile=ops-primary",
+        "runtime_signer_rotation_epoch=2",
         "runtime_signer_key_source_contract_version",
         "runtime_signer_key_source",
         "runtime_signing_profile=kolme-fork-secp256k1-v1",
@@ -1349,6 +1420,7 @@ def main() -> int:
         "runtime_signing_profile_mismatch",
         "runtime_signing_profile_contract_mismatch",
         "Regression: #2302",
+        "Regression: #2337",
         "Regression: #2325",
         "Regression: #2327",
         "Regression: #2324",
@@ -1362,6 +1434,9 @@ def main() -> int:
         "--require-non-synthetic-run-evidence",
         "runtime_signer_profile=ops-primary",
         "runtime_signer_profile=ops-secondary",
+        "runtime_signer_failover_active=true",
+        "runtime_signer_previous_profile=ops-primary",
+        "runtime_signer_rotation_epoch=2",
         "runtime_signer_key_source_contract_version",
         "runtime_signer_key_source",
         "runtime_signing_profile=kolme-fork-secp256k1-v1",
@@ -1386,6 +1461,7 @@ def main() -> int:
         "runtime_signing_profile_mismatch",
         "runtime_signing_profile_contract_mismatch",
         "Regression: #2302",
+        "Regression: #2337",
         "Regression: #2325",
         "Regression: #2327",
         "Regression: #2324",

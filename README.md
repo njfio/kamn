@@ -619,6 +619,11 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_signer_profile=ops-secondary
 # runtime_signer_previous_profile=ops-secondary
 # runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY
+# forced failover scenario matrix markers
+# runtime_signer_failover_active=true
+# runtime_signer_previous_profile=ops-primary
+# runtime_signer_rotation_epoch=2
+# runtime_signer_previous_rotation_epoch=1
 
 # strict profile NO-GO drift/synthetic reason markers
 # runtime_commit_command_profile_mismatch
@@ -671,6 +676,7 @@ bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --ou
 # managed-external signer runtime guard marker:
 # managed-external signer raw private key env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF)
 # Regression: #2302
+# Regression: #2337
 # Regression: #2324
 # Regression: #2325
 # Regression: #2327

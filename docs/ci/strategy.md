@@ -390,10 +390,15 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_raw_private_key_present=false`
       - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
       - `runtime_signer_attestation_bundle`
-      - strict secondary signer summary marker contracts:
+    - strict secondary signer summary marker contracts:
       - `runtime_signer_profile=ops-secondary`
       - `runtime_signer_previous_profile=ops-secondary`
       - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY`
+    - forced failover scenario matrix markers:
+      - `runtime_signer_failover_active=true`
+      - `runtime_signer_previous_profile=ops-primary`
+      - `runtime_signer_rotation_epoch=2`
+      - `runtime_signer_previous_rotation_epoch=1`
     - strict profile NO-GO drift/synthetic reasons:
       - `runtime_commit_command_profile_mismatch`
       - `runtime_signer_profile_mismatch`
@@ -432,6 +437,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - strict real-node runtime evidence marker path remains local-only and excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
     - fallback signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2302`).
+    - forced failover scenario matrix contracts remain fail-closed (`Regression: #2337`).
     - managed-external raw signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2324`).
     - runtime signer-attestation schema + quorum/uniqueness policy checks remain fail-closed across runtime launch + policy/contract lanes (`Regression: #2325`).
     - replay/tamper/stale-signer attestation regression matrix remains fail-closed (`Regression: #2327`).
