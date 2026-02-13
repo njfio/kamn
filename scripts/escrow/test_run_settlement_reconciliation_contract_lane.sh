@@ -2,11 +2,40 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-FAST_SCRIPT="$ROOT_DIR/scripts/escrow/run_settlement_reconciliation_contract_lane.sh"
+SCRIPT="$ROOT_DIR/scripts/escrow/run_settlement_reconciliation_contract_lane.sh"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+CONTRACT_MODULE="$ROOT_DIR/scripts/escrow/settlement_reconciliation_contract_lane_contract.sh"
+EXPECTED_MANIFEST="$ROOT_DIR/scripts/framework/manifests/escrow_settlement_reconciliation_contract_lane.json"
 DEEP_SCRIPT="$ROOT_DIR/scripts/escrow/run_settlement_reconciliation_deep_lane.sh"
 
-if [ ! -x "$FAST_SCRIPT" ]; then
+if [ ! -x "$SCRIPT" ]; then
   echo "expected settlement reconciliation fast-lane runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected non-Kolme dispatcher to be executable: $DISPATCHER" >&2
+  exit 1
+fi
+
+if [ ! -x "$CONTRACT_MODULE" ]; then
+  echo "expected shared settlement reconciliation contract module to be executable: $CONTRACT_MODULE" >&2
+  exit 1
+fi
+
+if [ ! -L "$SCRIPT" ]; then
+  echo "expected settlement reconciliation wrapper to be a symlink: $SCRIPT" >&2
+  exit 1
+fi
+
+manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$SCRIPT")" --resolve-manifest-path)"
+if [ "$manifest_path" != "$EXPECTED_MANIFEST" ]; then
+  echo "expected dispatcher to resolve $EXPECTED_MANIFEST but found $manifest_path" >&2
+  exit 1
+fi
+
+if ! grep -Fq "\"scripts/escrow/$(basename "$CONTRACT_MODULE")\"" "$manifest_path"; then
+  echo "expected manifest to dispatch shared settlement reconciliation contract module: $manifest_path" >&2
   exit 1
 fi
 
@@ -15,38 +44,9 @@ if [ ! -x "$DEEP_SCRIPT" ]; then
   exit 1
 fi
 
-TMP_OUT="$(mktemp)"
-trap 'rm -f "$TMP_OUT"' EXIT
-
-bash "$FAST_SCRIPT" >"$TMP_OUT"
-if ! grep -q "settlement reconciliation contract lane tests passed." "$TMP_OUT"; then
-  echo "expected settlement reconciliation contract lane success marker" >&2
-  exit 1
-fi
-
 if ! grep -Fq "run_settlement_reconciliation_contract_lane.sh" "$DEEP_SCRIPT"; then
   echo "expected deep-lane script to execute settlement reconciliation fast-lane checks first" >&2
   exit 1
 fi
 
-if ! grep -q "settlement-reconciliation-report.json" "$DEEP_SCRIPT"; then
-  echo "expected deep-lane script to emit settlement reconciliation report artifact" >&2
-  exit 1
-fi
-
-if ! grep -q "final_decision=NO-GO" "$DEEP_SCRIPT"; then
-  echo "expected deep-lane script to validate NO-GO settlement decision path" >&2
-  exit 1
-fi
-
-if ! grep -q "run_settlement_reconciliation_race_matrix.py" "$DEEP_SCRIPT"; then
-  echo "expected deep-lane script to execute settlement reconciliation race matrix checks" >&2
-  exit 1
-fi
-
-if ! grep -q "fixtures/escrow_reconciliation/finality_race_cases.json" "$DEEP_SCRIPT"; then
-  echo "expected deep-lane script to consume settlement race fixture matrix" >&2
-  exit 1
-fi
-
-echo "settlement reconciliation contract lane script tests passed."
+echo "settlement reconciliation contract lane wrapper tests passed."

@@ -1,0 +1,40 @@
+{
+  "lanes": [
+    {
+      "lane_id": "non_kolme.channel.channel_retention_redaction",
+      "manifest_file": "scripts/framework/manifests/channel_channel_retention_redaction_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/channel/run_channel_retention_redaction_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.escrow.settlement_reconciliation",
+      "manifest_file": "scripts/framework/manifests/escrow_settlement_reconciliation_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/escrow/run_settlement_reconciliation_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.task.federated_delegation_settlement",
+      "manifest_file": "scripts/framework/manifests/task_federated_delegation_settlement_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/task/run_federated_delegation_settlement_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    }
+  ],
+  "regular_file_wrapper_count": 0,
+  "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
+  "source_matrix_file": "fixtures/ci/non_kolme_wave17_wrapper_family_matrix.json",
+  "symlink_wrapper_count": 3,
+  "total_shell_loc": 3,
+  "wrapper_count": 3
+}
