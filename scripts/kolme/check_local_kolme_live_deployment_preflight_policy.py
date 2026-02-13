@@ -131,6 +131,18 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif signer_profile not in (PRIMARY_SIGNER_PROFILE, SECONDARY_SIGNER_PROFILE):
         reason_codes.append("signer_profile_mismatch")
 
+    signer_profile_class = report.get("signer_profile_class")
+    if not isinstance(signer_profile_class, str) or not signer_profile_class.strip():
+        reason_codes.append("signer_profile_class_missing")
+    elif signer_profile_class not in ("production", "unknown"):
+        reason_codes.append("signer_profile_class_invalid")
+    elif (
+        isinstance(signer_profile, str)
+        and signer_profile in (PRIMARY_SIGNER_PROFILE, SECONDARY_SIGNER_PROFILE)
+        and signer_profile_class != "production"
+    ):
+        reason_codes.append("signer_profile_class_mismatch")
+
     signer_private_key_env = report.get("signer_private_key_env")
     expected_signer_env = ""
     if signer_profile == PRIMARY_SIGNER_PROFILE:
@@ -220,6 +232,13 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif fallback_signer_private_key_env != FALLBACK_SIGNER_SECRET_ENV:
         reason_codes.append("fallback_signer_private_key_env_mismatch")
 
+    fallback_signer_secret_remediation = report.get("fallback_signer_secret_remediation")
+    expected_fallback_remediation = f"unset {FALLBACK_SIGNER_SECRET_ENV}"
+    if not isinstance(fallback_signer_secret_remediation, str) or not fallback_signer_secret_remediation.strip():
+        reason_codes.append("fallback_signer_secret_remediation_missing")
+    elif fallback_signer_secret_remediation != expected_fallback_remediation:
+        reason_codes.append("fallback_signer_secret_remediation_mismatch")
+
     signer_secret_present = report.get("signer_secret_present")
     if not isinstance(signer_secret_present, bool):
         reason_codes.append("signer_secret_present_invalid")
@@ -229,6 +248,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("fallback_signer_secret_present_invalid")
     elif fallback_signer_secret_present:
         reason_codes.append("fallback_signer_secret_present_violation")
+        if reason_code != "checkpoint_failed_fallback_private_key_contract":
+            reason_codes.append("fallback_signer_secret_checkpoint_reason_mismatch")
 
     signer_secret_hex_valid = report.get("signer_secret_hex_valid")
     if not isinstance(signer_secret_hex_valid, bool):
@@ -334,6 +355,16 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("secondary_signer_secret_env_contract_mismatch")
         if contracts.get("fallback_signer_secret_env") != FALLBACK_SIGNER_SECRET_ENV:
             reason_codes.append("fallback_signer_secret_env_contract_mismatch")
+        if contracts.get("fallback_signer_secret_rejected_profile_class") != "production":
+            reason_codes.append("fallback_signer_secret_rejected_profile_class_contract_mismatch")
+        if contracts.get("fallback_signer_secret_rejected_profiles") != [PRIMARY_SIGNER_PROFILE, SECONDARY_SIGNER_PROFILE]:
+            reason_codes.append("fallback_signer_secret_rejected_profiles_contract_mismatch")
+        if contracts.get("fallback_signer_secret_remediation") != expected_fallback_remediation:
+            reason_codes.append("fallback_signer_secret_remediation_contract_mismatch")
+        if contracts.get("fallback_signer_secret_rejection_reason_code") != "fallback_signer_secret_present_violation":
+            reason_codes.append("fallback_signer_secret_rejection_reason_code_contract_mismatch")
+        if contracts.get("fallback_signer_secret_checkpoint_reason_code") != "checkpoint_failed_fallback_private_key_contract":
+            reason_codes.append("fallback_signer_secret_checkpoint_reason_code_contract_mismatch")
         if contracts.get("fallback_private_key_path_allowed") is not False:
             reason_codes.append("fallback_private_key_path_allowed_contract_mismatch")
         if contracts.get("required_secret_hex_length") != REQUIRED_SECRET_HEX_LENGTH:

@@ -170,6 +170,12 @@ def main() -> int:
     if summary.get("fallback_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
         print("expected deployment preflight summary fallback signer env marker", file=sys.stderr)
         return 1
+    if summary.get("signer_profile_class") != "production":
+        print("expected deployment preflight summary signer profile class marker", file=sys.stderr)
+        return 1
+    if summary.get("fallback_signer_secret_remediation") != "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
+        print("expected deployment preflight summary fallback signer remediation marker", file=sys.stderr)
+        return 1
     if summary.get("fallback_signer_secret_present") is not False:
         print("expected deployment preflight summary fallback signer secret marker to remain false", file=sys.stderr)
         return 1
@@ -225,6 +231,21 @@ def main() -> int:
         return 1
     if contracts.get("fallback_private_key_path_allowed") is not False:
         print("expected deployment preflight contracts to prohibit fallback private key paths", file=sys.stderr)
+        return 1
+    if contracts.get("fallback_signer_secret_rejected_profile_class") != "production":
+        print("expected deployment preflight contracts fallback signer rejection profile class marker", file=sys.stderr)
+        return 1
+    if contracts.get("fallback_signer_secret_rejected_profiles") != ["ops-primary", "ops-secondary"]:
+        print("expected deployment preflight contracts fallback signer rejected profiles marker", file=sys.stderr)
+        return 1
+    if contracts.get("fallback_signer_secret_remediation") != "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
+        print("expected deployment preflight contracts fallback signer remediation marker", file=sys.stderr)
+        return 1
+    if contracts.get("fallback_signer_secret_rejection_reason_code") != "fallback_signer_secret_present_violation":
+        print("expected deployment preflight contracts fallback signer rejection reason marker", file=sys.stderr)
+        return 1
+    if contracts.get("fallback_signer_secret_checkpoint_reason_code") != "checkpoint_failed_fallback_private_key_contract":
+        print("expected deployment preflight contracts fallback signer checkpoint reason marker", file=sys.stderr)
         return 1
     if contracts.get("approval_quorum_required") != 2:
         print("expected deployment preflight contracts approval_quorum_required=2", file=sys.stderr)
@@ -317,6 +338,12 @@ def main() -> int:
             return 1
         if "fallback_signer_secret_present_violation" not in no_go_reason_codes:
             print("expected fallback signer secret presence violation in deployment preflight negative policy output", file=sys.stderr)
+            return 1
+        if "fallback_signer_secret_checkpoint_reason_mismatch" not in no_go_reason_codes:
+            print(
+                "expected fallback signer secret checkpoint reason mismatch in deployment preflight negative policy output",
+                file=sys.stderr,
+            )
             return 1
         if no_go_policy.get("final_decision") != "NO-GO":
             print("expected deployment preflight negative policy final_decision NO-GO", file=sys.stderr)
@@ -672,6 +699,10 @@ def main() -> int:
         "runtime_mode_mismatch",
         "checkpoint_failed_signer_secret_contract",
         "fallback_signer_secret_present_violation",
+        "fallback_signer_secret_checkpoint_reason_mismatch",
+        "fallback_signer_secret_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+        "contracts.fallback_signer_secret_rejected_profile_class=production",
+        "contracts.fallback_signer_secret_checkpoint_reason_code=checkpoint_failed_fallback_private_key_contract",
         "checkpoint_failed_signer_quorum_contract",
         "checkpoint_failed_quorum_evidence_contract",
         "checkpoint_failed_custody_evidence_contract",
@@ -705,6 +736,10 @@ def main() -> int:
         "runtime_mode_mismatch",
         "checkpoint_failed_signer_secret_contract",
         "fallback_signer_secret_present_violation",
+        "fallback_signer_secret_checkpoint_reason_mismatch",
+        "fallback_signer_secret_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+        "contracts.fallback_signer_secret_rejected_profile_class=production",
+        "contracts.fallback_signer_secret_checkpoint_reason_code=checkpoint_failed_fallback_private_key_contract",
         "checkpoint_failed_signer_quorum_contract",
         "checkpoint_failed_quorum_evidence_contract",
         "checkpoint_failed_custody_evidence_contract",
@@ -738,6 +773,10 @@ def main() -> int:
         "runtime_mode_mismatch",
         "checkpoint_failed_signer_secret_contract",
         "fallback_signer_secret_present_violation",
+        "fallback_signer_secret_checkpoint_reason_mismatch",
+        "fallback_signer_secret_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+        "contracts.fallback_signer_secret_rejected_profile_class=production",
+        "contracts.fallback_signer_secret_checkpoint_reason_code=checkpoint_failed_fallback_private_key_contract",
         "checkpoint_failed_signer_quorum_contract",
         "checkpoint_failed_quorum_evidence_contract",
         "checkpoint_failed_custody_evidence_contract",

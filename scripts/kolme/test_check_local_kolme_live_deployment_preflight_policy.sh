@@ -49,8 +49,10 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "runtime_mode": "kolme-live",
   "signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
   "signer_profile": "ops-primary",
+  "signer_profile_class": "production",
   "signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
   "fallback_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+  "fallback_signer_secret_remediation": "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
   "signer_secret_present": false,
   "fallback_signer_secret_present": false,
   "signer_secret_hex_valid": false,
@@ -103,6 +105,14 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "primary_signer_secret_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "secondary_signer_secret_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
     "fallback_signer_secret_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+    "fallback_signer_secret_rejected_profile_class": "production",
+    "fallback_signer_secret_rejected_profiles": [
+      "ops-primary",
+      "ops-secondary"
+    ],
+    "fallback_signer_secret_remediation": "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+    "fallback_signer_secret_rejection_reason_code": "fallback_signer_secret_present_violation",
+    "fallback_signer_secret_checkpoint_reason_code": "checkpoint_failed_fallback_private_key_contract",
     "fallback_private_key_path_allowed": false,
     "required_secret_hex_length": 64,
     "secret_source": "env",
@@ -369,6 +379,16 @@ fi
 
 if ! grep -q "fallback_signer_secret_present_violation" "$TMP_ERR"; then
   echo "expected fallback signer secret presence violation reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "fallback_signer_secret_checkpoint_reason_mismatch" "$TMP_ERR"; then
+  echo "expected fallback signer secret checkpoint reason mismatch for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "fallback_signer_secret_remediation_missing" "$TMP_ERR"; then
+  echo "expected fallback signer secret remediation missing reason for deployment preflight policy failure" >&2
   exit 1
 fi
 
