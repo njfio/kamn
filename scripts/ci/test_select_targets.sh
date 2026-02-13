@@ -20,6 +20,17 @@ assert_eq() {
   fi
 }
 
+assert_selector_keys_match() {
+  local output="$1"
+  local expected="$2"
+  local message_prefix="$3"
+  shift 3
+  local key
+  for key in "$@"; do
+    assert_eq "$(extract_output "$output" "$key")" "$expected" "$message_prefix ($key)"
+  done
+}
+
 run_selector_with_bridge_deep() {
   local changed_files="$1"
   local bridge_deep="${2:-false}"
@@ -311,42 +322,44 @@ assert_eq "$(extract_output "$deploy_output" "docs_only")" "false" "deploy-only 
 assert_eq "$(extract_output "$deploy_output" "run_rust")" "false" "deploy-only changes should avoid rust lane"
 assert_eq "$(extract_output "$deploy_output" "run_script_surface_budget_checks")" "true" "deploy shell changes must run script-surface budget checks"
 assert_eq "$(extract_output "$deploy_output" "run_deploy_preflight_tests")" "true" "deploy-only changes must run deploy preflight tests"
-assert_eq "$(extract_output "$deploy_output" "run_frontend_dashboard_tests")" "false" "deploy-only changes should skip frontend dashboard tests"
-assert_eq "$(extract_output "$deploy_output" "run_dashboard_contract_tests")" "false" "deploy-only changes should skip dashboard contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_signer_emulator_contract_tests")" "false" "deploy-only changes should skip signer emulator contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_did_registry_contract_tests")" "false" "deploy-only changes should skip did registry contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_kolme_snapshot_drift_contract_tests")" "false" "deploy-only changes should skip Kolme snapshot drift contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_kolme_version_compatibility_contract_tests")" "false" "deploy-only changes should skip Kolme version compatibility contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "deploy-only changes should skip Kolme triadic devnet smoke contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_federated_delegation_settlement_contract_tests")" "false" "deploy-only changes should skip federated delegation settlement contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_runtime_snapshot_contract_tests")" "false" "deploy-only changes should skip runtime snapshot contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_message_lifecycle_contract_tests")" "false" "deploy-only changes should skip message lifecycle contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_channel_lifecycle_contract_tests")" "false" "deploy-only changes should skip channel lifecycle contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_task_operation_snapshot_contract_tests")" "false" "deploy-only changes should skip task operation snapshot contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_durable_guard_recovery_contract_tests")" "false" "deploy-only changes should skip durable guard recovery contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_settlement_reconciliation_contract_tests")" "false" "deploy-only changes should skip settlement reconciliation contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_soc2_control_evidence_contract_tests")" "false" "deploy-only changes should skip SOC2 control evidence contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_dsar_legal_hold_contract_tests")" "false" "deploy-only changes should skip DSAR legal-hold contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_governance_simulation_contract_tests")" "false" "deploy-only changes should skip governance simulation contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_governance_stake_slash_contract_tests")" "false" "deploy-only changes should skip governance stake/slash contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_reputation_decay_contract_tests")" "false" "deploy-only changes should skip reputation decay contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_reputation_dispute_contract_tests")" "false" "deploy-only changes should skip reputation dispute contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_token_launch_contract_tests")" "false" "deploy-only changes should skip token launch contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_treasury_disbursement_contract_tests")" "false" "deploy-only changes should skip treasury disbursement contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_mainnet_cutover_contract_tests")" "false" "deploy-only changes should skip mainnet cutover contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_launch_canary_contract_tests")" "false" "deploy-only changes should skip launch canary contract tests"
-assert_eq "$(extract_output "$deploy_output" "run_bridge_replay_harness")" "false" "deploy-only changes should skip bridge replay harness"
-assert_eq "$(extract_output "$deploy_output" "run_bridge_replay_deep_lane")" "false" "deploy-only changes should skip bridge replay deep lane"
-assert_eq "$(extract_output "$deploy_output" "run_federated_did_handshake_deep_lane")" "false" "deploy-only changes should skip federated DID handshake deep lane"
-assert_eq "$(extract_output "$deploy_output" "bridge_replay_suites")" "" "deploy-only changes should not select bridge replay suites"
-assert_eq "$(extract_output "$deploy_output" "run_rust_live_transport_contract_tests")" "false" "deploy-only changes should skip rust live transport lane"
-assert_eq "$(extract_output "$deploy_output" "run_python_live_transport_contract_tests")" "false" "deploy-only changes should skip python live transport lane"
-assert_eq "$(extract_output "$deploy_output" "run_typescript_live_transport_contract_tests")" "false" "deploy-only changes should skip typescript live transport lane"
-assert_eq "$(extract_output "$deploy_output" "run_live_transport_parity_contract_tests")" "false" "deploy-only changes should skip live transport parity lane"
-assert_eq "$(extract_output "$deploy_output" "run_live_transport_parity_rust_contract_tests")" "false" "deploy-only changes should not require rust parity setup"
-assert_eq "$(extract_output "$deploy_output" "run_localhost_signed_integration_contract_lane_tests")" "false" "deploy-only changes should skip localhost signed integration contract lane"
-assert_eq "$(extract_output "$deploy_output" "live_transport_parity_languages")" "" "deploy-only changes should not select parity languages"
-assert_eq "$(extract_output "$deploy_output" "run_sdk_parity_matrix")" "false" "deploy-only changes should skip sdk parity matrix"
+assert_selector_keys_match "$deploy_output" "false" "deploy-only changes should keep disabled" \
+  "run_frontend_dashboard_tests" \
+  "run_dashboard_contract_tests" \
+  "run_signer_emulator_contract_tests" \
+  "run_did_registry_contract_tests" \
+  "run_kolme_snapshot_drift_contract_tests" \
+  "run_kolme_version_compatibility_contract_tests" \
+  "run_kolme_triadic_devnet_smoke_contract_tests" \
+  "run_federated_delegation_settlement_contract_tests" \
+  "run_runtime_snapshot_contract_tests" \
+  "run_message_lifecycle_contract_tests" \
+  "run_channel_lifecycle_contract_tests" \
+  "run_task_operation_snapshot_contract_tests" \
+  "run_durable_guard_recovery_contract_tests" \
+  "run_settlement_reconciliation_contract_tests" \
+  "run_soc2_control_evidence_contract_tests" \
+  "run_dsar_legal_hold_contract_tests" \
+  "run_governance_simulation_contract_tests" \
+  "run_governance_stake_slash_contract_tests" \
+  "run_reputation_decay_contract_tests" \
+  "run_reputation_dispute_contract_tests" \
+  "run_token_launch_contract_tests" \
+  "run_treasury_disbursement_contract_tests" \
+  "run_mainnet_cutover_contract_tests" \
+  "run_launch_canary_contract_tests" \
+  "run_bridge_replay_harness" \
+  "run_bridge_replay_deep_lane" \
+  "run_federated_did_handshake_deep_lane" \
+  "run_rust_live_transport_contract_tests" \
+  "run_python_live_transport_contract_tests" \
+  "run_typescript_live_transport_contract_tests" \
+  "run_live_transport_parity_contract_tests" \
+  "run_live_transport_parity_rust_contract_tests" \
+  "run_localhost_signed_integration_contract_lane_tests" \
+  "run_sdk_parity_matrix"
+assert_selector_keys_match "$deploy_output" "" "deploy-only changes should not select" \
+  "bridge_replay_suites" \
+  "live_transport_parity_languages"
 assert_eq "$(extract_output "$deploy_output" "test_scope")" "deploy" "deploy-only changes must use deploy scope"
 
 rollback_runbook_output="$(run_selector $'docs/foundation/upgrade-rollback-runbook.md')"
