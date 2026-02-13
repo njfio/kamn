@@ -100,6 +100,29 @@ fn main_module_extraction_contract_removes_inline_signer_payload_impls() {
 }
 
 #[test]
+fn main_module_extraction_contract_removes_inline_kolme_live_branch_execution_impls() {
+    let main_rs = read_repo_file("src/main.rs");
+    assert!(
+        !main_rs.contains("KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile("),
+        "main.rs should not keep inline Kolme live provider constructor path"
+    );
+    assert!(
+        !main_rs.contains(
+            "submit_runtime_commit(signed_wire_payload.as_str(), request.idempotency_key())"
+        ),
+        "main.rs should not keep inline Kolme live submit invocation"
+    );
+    assert!(
+        !main_rs.contains("KolmeRuntimeCommitFinalityChecker::new("),
+        "main.rs should not keep inline Kolme live finality checker orchestration"
+    );
+    assert!(
+        main_rs.contains("execute_kolme_live_runtime("),
+        "main.rs should delegate Kolme live runtime branch to extracted module function"
+    );
+}
+
+#[test]
 fn main_module_extraction_contract_keeps_impls_in_new_modules() {
     let signer_rs = read_repo_file("src/signer.rs");
     let report_builder_rs = read_repo_file("src/report_builder.rs");
@@ -137,5 +160,9 @@ fn main_module_extraction_contract_keeps_impls_in_new_modules() {
     assert!(
         runtime_kolme_live_rs.contains("pub(crate) fn map_kolme_live_submit_outcome("),
         "runtime_kolme_live module should own submit outcome mapper"
+    );
+    assert!(
+        runtime_kolme_live_rs.contains("pub(crate) fn execute_kolme_live_runtime("),
+        "runtime_kolme_live module should own Kolme live runtime branch execution"
     );
 }
