@@ -111,6 +111,18 @@ resolve_manifest_name() {
     run_secure_provider_key_lifecycle_contract_lane.sh) echo "signer_secure_provider_key_lifecycle_contract_lane.json" ;;
     run_staging_rehearsal_contract_lane.sh) echo "deploy_staging_rehearsal_contract_lane.json" ;;
     run_task_operation_snapshot_contract_lane.sh) echo "task_task_operation_snapshot_contract_lane.json" ;;
+    run_concurrency_state_mutation_contract_lane.sh) echo "runtime_concurrency_state_mutation_contract_lane.json" ;;
+    run_failover_sync_drill_preflight_contract_lane.sh) echo "runtime_failover_sync_drill_preflight_contract_lane.json" ;;
+    run_input_mutation_contract_lane.sh) echo "runtime_input_mutation_contract_lane.json" ;;
+    run_input_mutation_coverage_guided_contract_lane.sh) echo "runtime_input_mutation_coverage_guided_contract_lane.json" ;;
+    run_invariant_fuzz_concurrency_contract_lane.sh) echo "runtime_invariant_fuzz_concurrency_contract_lane.json" ;;
+    run_lifecycle_property_contract_lane.sh) echo "runtime_lifecycle_property_contract_lane.json" ;;
+    run_live_network_partition_reconnect_contract_lane.sh) echo "runtime_live_network_partition_reconnect_contract_lane.json" ;;
+    run_live_network_pilot_deep_contract_lane.sh) echo "runtime_live_network_pilot_deep_contract_lane.json" ;;
+    run_live_network_smoke_contract_lane.sh) echo "runtime_live_network_smoke_contract_lane.json" ;;
+    run_processor_proof_admission_contract_lane.sh) echo "runtime_processor_proof_admission_contract_lane.json" ;;
+    run_runtime_snapshot_contract_lane.sh) echo "runtime_runtime_snapshot_contract_lane.json" ;;
+    run_watchdog_proof_consensus_contract_lane.sh) echo "runtime_watchdog_proof_consensus_contract_lane.json" ;;
     run_zk_witness_mutation_contract_lane.sh) echo "runtime_zk_witness_mutation_contract_lane.json" ;;
     run_soc2_control_evidence_contract_lane.sh) echo "compliance_soc2_control_evidence_contract_lane.json" ;;
     run_stake_slash_risk_contract_lane.sh) echo "governance_stake_slash_risk_contract_lane.json" ;;

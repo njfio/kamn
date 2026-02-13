@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "runtime.concurrency_state_mutation.contract",
+  "evidence_key": "runtime_concurrency_state_mutation_contract_lane:v1",
+  "reason_key": "runtime_concurrency_state_mutation_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "bash",
+      "scripts/runtime/concurrency_state_mutation_contract_lane_contract.sh"
+    ]
+  }
+}

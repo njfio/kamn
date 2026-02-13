@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "runtime.input_mutation.contract",
+  "evidence_key": "runtime_input_mutation_contract_lane:v1",
+  "reason_key": "runtime_input_mutation_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "bash",
+      "scripts/runtime/input_mutation_contract_lane_contract.sh"
+    ]
+  }
+}

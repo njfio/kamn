@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh"
+SHARED_CONTRACT="$ROOT_DIR/scripts/runtime/input_mutation_coverage_guided_contract_lane_contract.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_input_mutation_coverage_guided_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -11,22 +14,27 @@ if [ ! -x "$CONTRACT_LANE" ]; then
   exit 1
 fi
 
-if ! grep -q "unit_input_mutation_coverage_guided_envelope_seed_corpus_covers_boundary_classes" "$CONTRACT_LANE"; then
+if [ ! -x "$SHARED_CONTRACT" ]; then
+  echo "expected runtime input mutation coverage-guided shared contract module to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "unit_input_mutation_coverage_guided_envelope_seed_corpus_covers_boundary_classes" "$SHARED_CONTRACT"; then
   echo "expected coverage-guided lane to include envelope boundary class coverage" >&2
   exit 1
 fi
 
-if ! grep -q "unit_input_mutation_coverage_guided_did_seed_corpus_covers_boundary_classes" "$CONTRACT_LANE"; then
+if ! grep -q "unit_input_mutation_coverage_guided_did_seed_corpus_covers_boundary_classes" "$SHARED_CONTRACT"; then
   echo "expected coverage-guided lane to include did boundary class coverage" >&2
   exit 1
 fi
 
-if ! grep -q "minimal_failing_seed_prefix" "$CONTRACT_LANE"; then
+if ! grep -q "minimal_failing_seed_prefix" "$SHARED_CONTRACT"; then
   echo "expected coverage-guided lane to emit minimizer contract marker" >&2
   exit 1
 fi
 
-if ! grep -q "KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_MAX_SECONDS" "$CONTRACT_LANE"; then
+if ! grep -q "KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_MAX_SECONDS" "$SHARED_CONTRACT"; then
   echo "expected coverage-guided lane to enforce deterministic runtime budget" >&2
   exit 1
 fi
@@ -90,5 +98,26 @@ assert report["envelope_test_count"] == 0
 assert report["did_test_count"] >= 1
 assert report["shared_test_count"] == 0
 PY
+
+if [ ! -L "$CONTRACT_LANE" ]; then
+  echo "expected runtime input mutation coverage-guided wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$CONTRACT_LANE")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected runtime input mutation coverage-guided wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$CONTRACT_LANE")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected runtime input mutation coverage-guided wrapper to resolve runtime manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -Fq "input_mutation_coverage_guided_contract_lane_contract.sh" "$MANIFEST_FILE"; then
+  echo "expected runtime input mutation coverage-guided manifest to dispatch shared contract module" >&2
+  exit 1
+fi
 
 echo "runtime input mutation coverage-guided contract lane script tests passed."
