@@ -39,6 +39,53 @@ assert_deploy_scope_triplet() {
   assert_eq "$(extract_output "$output" "test_scope")" "deploy" "$context should set deploy scope"
 }
 
+assert_docs_only_invariants() {
+  local output="$1"
+  assert_selector_keys_match "$output" "false" "docs_only should keep disabled" \
+    "run_rust" \
+    "run_ci_tool_checks" \
+    "run_script_surface_budget_checks" \
+    "run_frontend_dashboard_tests" \
+    "run_dashboard_contract_tests" \
+    "run_signer_emulator_contract_tests" \
+    "run_did_registry_contract_tests" \
+    "run_kolme_snapshot_drift_contract_tests" \
+    "run_kolme_version_compatibility_contract_tests" \
+    "run_kolme_triadic_devnet_smoke_contract_tests" \
+    "run_federated_delegation_settlement_contract_tests" \
+    "run_runtime_snapshot_contract_tests" \
+    "run_message_lifecycle_contract_tests" \
+    "run_channel_lifecycle_contract_tests" \
+    "run_task_operation_snapshot_contract_tests" \
+    "run_durable_guard_recovery_contract_tests" \
+    "run_settlement_reconciliation_contract_tests" \
+    "run_soc2_control_evidence_contract_tests" \
+    "run_dsar_legal_hold_contract_tests" \
+    "run_governance_simulation_contract_tests" \
+    "run_governance_stake_slash_contract_tests" \
+    "run_reputation_decay_contract_tests" \
+    "run_reputation_dispute_contract_tests" \
+    "run_token_launch_contract_tests" \
+    "run_treasury_disbursement_contract_tests" \
+    "run_mainnet_cutover_contract_tests" \
+    "run_launch_canary_contract_tests" \
+    "run_bridge_replay_harness" \
+    "run_bridge_replay_deep_lane" \
+    "run_localhost_bridge_demo_evidence_deep_lane" \
+    "run_federated_did_handshake_deep_lane" \
+    "run_rust_live_transport_contract_tests" \
+    "run_python_live_transport_contract_tests" \
+    "run_typescript_live_transport_contract_tests" \
+    "run_live_transport_parity_contract_tests" \
+    "run_live_transport_parity_rust_contract_tests" \
+    "run_localhost_signed_integration_contract_lane_tests" \
+    "run_kamn_core_missing_docs_policy_contract_tests" \
+    "run_sdk_parity_matrix"
+  assert_selector_keys_match "$output" "" "docs_only should keep empty" \
+    "bridge_replay_suites" \
+    "live_transport_parity_languages"
+}
+
 run_selector_with_bridge_deep() {
   local changed_files="$1"
   local bridge_deep="${2:-false}"
@@ -78,47 +125,7 @@ run_selector_with_federated_did_deep() {
 
 docs_output="$(run_selector $'docs/foundation/ci-caching-parallelism.md')"
 assert_eq "$(extract_output "$docs_output" "docs_only")" "true" "docs_only selection mismatch"
-assert_eq "$(extract_output "$docs_output" "run_rust")" "false" "docs_only should not run rust"
-assert_eq "$(extract_output "$docs_output" "run_ci_tool_checks")" "false" "docs_only should not run CI tool checks"
-assert_eq "$(extract_output "$docs_output" "run_script_surface_budget_checks")" "false" "docs_only should not run script-surface budget checks"
-assert_eq "$(extract_output "$docs_output" "run_frontend_dashboard_tests")" "false" "docs_only should not run frontend dashboard tests"
-assert_eq "$(extract_output "$docs_output" "run_dashboard_contract_tests")" "false" "docs_only should not run dashboard contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_signer_emulator_contract_tests")" "false" "docs_only should not run signer emulator contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_did_registry_contract_tests")" "false" "docs_only should not run did registry contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_kolme_snapshot_drift_contract_tests")" "false" "docs_only should not run Kolme snapshot drift contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_kolme_version_compatibility_contract_tests")" "false" "docs_only should not run Kolme version compatibility contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "docs_only should not run Kolme triadic devnet smoke contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_federated_delegation_settlement_contract_tests")" "false" "docs_only should not run federated delegation settlement contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_runtime_snapshot_contract_tests")" "false" "docs_only should not run runtime snapshot contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_message_lifecycle_contract_tests")" "false" "docs_only should not run message lifecycle contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_channel_lifecycle_contract_tests")" "false" "docs_only should not run channel lifecycle contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_task_operation_snapshot_contract_tests")" "false" "docs_only should not run task operation snapshot contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_durable_guard_recovery_contract_tests")" "false" "docs_only should not run durable guard recovery contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_settlement_reconciliation_contract_tests")" "false" "docs_only should not run settlement reconciliation contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_soc2_control_evidence_contract_tests")" "false" "docs_only should not run SOC2 control evidence contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_dsar_legal_hold_contract_tests")" "false" "docs_only should not run DSAR legal-hold contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_governance_simulation_contract_tests")" "false" "docs_only should not run governance simulation contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_governance_stake_slash_contract_tests")" "false" "docs_only should not run governance stake/slash contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_reputation_decay_contract_tests")" "false" "docs_only should not run reputation decay contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_reputation_dispute_contract_tests")" "false" "docs_only should not run reputation dispute contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_token_launch_contract_tests")" "false" "docs_only should not run token launch contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_treasury_disbursement_contract_tests")" "false" "docs_only should not run treasury disbursement contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_mainnet_cutover_contract_tests")" "false" "docs_only should not run mainnet cutover contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_launch_canary_contract_tests")" "false" "docs_only should not run launch canary contract tests for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "run_bridge_replay_harness")" "false" "docs_only should not run bridge replay harness"
-assert_eq "$(extract_output "$docs_output" "run_bridge_replay_deep_lane")" "false" "docs_only should not run bridge replay deep lane"
-assert_eq "$(extract_output "$docs_output" "run_localhost_bridge_demo_evidence_deep_lane")" "false" "docs_only should not run localhost bridge demo evidence deep lane"
-assert_eq "$(extract_output "$docs_output" "run_federated_did_handshake_deep_lane")" "false" "docs_only should not run federated DID handshake deep lane"
-assert_eq "$(extract_output "$docs_output" "bridge_replay_suites")" "" "docs_only should not select bridge replay suites"
-assert_eq "$(extract_output "$docs_output" "run_rust_live_transport_contract_tests")" "false" "docs_only should not run rust live transport lane"
-assert_eq "$(extract_output "$docs_output" "run_python_live_transport_contract_tests")" "false" "docs_only should not run python live transport lane"
-assert_eq "$(extract_output "$docs_output" "run_typescript_live_transport_contract_tests")" "false" "docs_only should not run typescript live transport lane"
-assert_eq "$(extract_output "$docs_output" "run_live_transport_parity_contract_tests")" "false" "docs_only should not run live transport parity lane"
-assert_eq "$(extract_output "$docs_output" "run_live_transport_parity_rust_contract_tests")" "false" "docs_only should not require rust setup for parity lane"
-assert_eq "$(extract_output "$docs_output" "run_localhost_signed_integration_contract_lane_tests")" "false" "docs_only should not run localhost signed integration contract lane"
-assert_eq "$(extract_output "$docs_output" "run_kamn_core_missing_docs_policy_contract_tests")" "false" "docs_only should not run kamn-core missing-docs policy checks for unrelated docs"
-assert_eq "$(extract_output "$docs_output" "live_transport_parity_languages")" "" "docs_only should not select live transport parity languages"
-assert_eq "$(extract_output "$docs_output" "run_sdk_parity_matrix")" "false" "docs_only should not run sdk parity matrix"
+assert_docs_only_invariants "$docs_output"
 assert_eq "$(extract_output "$docs_output" "test_scope")" "none" "docs_only should keep none scope"
 
 ci_strategy_docs_output="$(run_selector $'docs/ci/strategy.md')"
