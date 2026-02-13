@@ -116,6 +116,36 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(finality_enabled, bool):
         reason_codes.append("finality_enabled_invalid")
 
+    if report.get("finality_retry_contract_version") != "v1":
+        reason_codes.append("finality_retry_contract_version_mismatch")
+
+    finality_retry_max_attempts = report.get("finality_retry_max_attempts")
+    if not isinstance(finality_retry_max_attempts, int) or finality_retry_max_attempts <= 0:
+        reason_codes.append("finality_retry_max_attempts_invalid")
+
+    finality_retry_backoff_seconds = report.get("finality_retry_backoff_seconds")
+    if not isinstance(finality_retry_backoff_seconds, int) or finality_retry_backoff_seconds < 0:
+        reason_codes.append("finality_retry_backoff_seconds_invalid")
+
+    finality_retry_attempts_used = report.get("finality_retry_attempts_used")
+    if not isinstance(finality_retry_attempts_used, int) or finality_retry_attempts_used < 0:
+        reason_codes.append("finality_retry_attempts_used_invalid")
+
+    finality_retry_exhausted = report.get("finality_retry_exhausted")
+    if not isinstance(finality_retry_exhausted, bool):
+        reason_codes.append("finality_retry_exhausted_invalid")
+
+    finality_retry_failure_class = report.get("finality_retry_failure_class")
+    if finality_retry_failure_class not in ("none", "timeout", "failed"):
+        reason_codes.append("finality_retry_failure_class_invalid")
+
+    if (
+        isinstance(finality_retry_attempts_used, int)
+        and isinstance(finality_retry_max_attempts, int)
+        and finality_retry_attempts_used > finality_retry_max_attempts
+    ):
+        reason_codes.append("finality_retry_attempts_used_exceeds_max_attempts")
+
     if report.get("native_payload_pubkey_marker") != '"pubkey"':
         reason_codes.append("native_payload_pubkey_marker_mismatch")
     native_payload_pubkey_marker_present = report.get("native_payload_pubkey_marker_present")
@@ -195,6 +225,19 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         "live_runtime_commit_command_passed",
         "live_runtime_commit_and_finality_commands_passed",
     }
+    allowed_fail_reason_codes = {
+        "local_opt_in_missing",
+        "live_preflight_timeout",
+        "live_preflight_failed",
+        "live_runtime_commit_command_timeout",
+        "live_runtime_commit_command_failed",
+        "live_finality_retry_exhausted_timeout",
+        "live_finality_retry_exhausted_failed",
+        # Backward-compatible legacy markers retained for older summaries.
+        "live_finality_command_timeout",
+        "live_finality_command_failed",
+        "live_runtime_commit_budget_exceeded",
+    }
 
     if status == "ok":
         if reason_code not in allowed_ok_reason_codes:
@@ -209,6 +252,18 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("request_payload_evidence_marker_missing")
         if mode == "run" and finality_enabled is True and finality_evidence_marker_present is not True:
             reason_codes.append("finality_evidence_marker_missing")
+        if mode == "run" and finality_enabled is True and finality_retry_attempts_used == 0:
+            reason_codes.append("finality_retry_attempts_used_missing")
+        if mode == "run" and finality_enabled is True and finality_retry_exhausted is True:
+            reason_codes.append("finality_retry_exhausted_unexpected_for_ok_status")
+        if mode == "run" and finality_enabled is True and finality_retry_failure_class != "none":
+            reason_codes.append("finality_retry_failure_class_unexpected_for_ok_status")
+        if mode == "run" and finality_enabled is False and finality_retry_attempts_used != 0:
+            reason_codes.append("finality_retry_attempts_used_unexpected_without_finality")
+        if mode == "run" and finality_enabled is False and finality_retry_exhausted is True:
+            reason_codes.append("finality_retry_exhausted_unexpected_without_finality")
+        if mode == "run" and finality_enabled is False and finality_retry_failure_class != "none":
+            reason_codes.append("finality_retry_failure_class_unexpected_without_finality")
         if (
             mode == "run"
             and isinstance(artifact_paths, list)
@@ -249,8 +304,39 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 reason_codes.append("native_payload_messages_marker_missing")
         if budget_status == "exceeded_budget":
             reason_codes.append("ok_status_budget_exceeded")
-    elif status == "fail" and reason_code in allowed_ok_reason_codes:
-        reason_codes.append("fail_status_reason_code_mismatch")
+    elif status == "fail":
+        if reason_code in allowed_ok_reason_codes:
+            reason_codes.append("fail_status_reason_code_mismatch")
+        elif reason_code not in allowed_fail_reason_codes:
+            reason_codes.append("fail_status_reason_code_invalid")
+
+        if reason_code == "live_finality_retry_exhausted_timeout":
+            if finality_enabled is not True:
+                reason_codes.append("finality_retry_timeout_reason_without_finality")
+            if finality_retry_exhausted is not True:
+                reason_codes.append("finality_retry_exhausted_missing_for_timeout_reason")
+            if finality_retry_failure_class != "timeout":
+                reason_codes.append("finality_retry_failure_class_mismatch_for_timeout_reason")
+            if (
+                isinstance(finality_retry_attempts_used, int)
+                and isinstance(finality_retry_max_attempts, int)
+                and finality_retry_attempts_used != finality_retry_max_attempts
+            ):
+                reason_codes.append("finality_retry_attempts_used_mismatch_for_timeout_reason")
+
+        if reason_code == "live_finality_retry_exhausted_failed":
+            if finality_enabled is not True:
+                reason_codes.append("finality_retry_failed_reason_without_finality")
+            if finality_retry_exhausted is not True:
+                reason_codes.append("finality_retry_exhausted_missing_for_failed_reason")
+            if finality_retry_failure_class != "failed":
+                reason_codes.append("finality_retry_failure_class_mismatch_for_failed_reason")
+            if (
+                isinstance(finality_retry_attempts_used, int)
+                and isinstance(finality_retry_max_attempts, int)
+                and finality_retry_attempts_used != finality_retry_max_attempts
+            ):
+                reason_codes.append("finality_retry_attempts_used_mismatch_for_failed_reason")
 
     if args.ci_fast_gate != "PASS":
         reason_codes.append("ci_fast_gate_failed")

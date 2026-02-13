@@ -68,6 +68,16 @@ required_markers=(
   "request_payload_evidence_marker_missing"
   "finality_evidence_artifact_path_missing"
   "request_finality_evidence_linkage_missing"
+  "finality_retry_contract_version"
+  "finality_retry_max_attempts"
+  "finality_retry_backoff_seconds"
+  "finality_retry_attempts_used"
+  "finality_retry_exhausted"
+  "finality_retry_failure_class"
+  "live_finality_retry_exhausted_timeout"
+  "live_finality_retry_exhausted_failed"
+  "finality_retry_failure_class_mismatch_for_timeout_reason"
+  "finality_retry_attempts_used_mismatch_for_timeout_reason"
   "native_payload_pubkey_marker_present"
   "native_payload_nonce_marker_present"
   "native_payload_messages_marker_present"
@@ -94,6 +104,14 @@ required_doc_markers=(
   "request_payload_evidence_marker_missing"
   "finality_evidence_artifact_path_missing"
   "request_finality_evidence_linkage_missing"
+  "finality_retry_contract_version"
+  "finality_retry_max_attempts"
+  "finality_retry_backoff_seconds"
+  "finality_retry_attempts_used"
+  "finality_retry_exhausted"
+  "finality_retry_failure_class"
+  "live_finality_retry_exhausted_timeout"
+  "live_finality_retry_exhausted_failed"
   "native_payload_pubkey_marker_present"
   "native_payload_nonce_marker_present"
   "native_payload_messages_marker_present"
@@ -154,6 +172,18 @@ if summary.get("request_finality_evidence_contract_version") != "v1":
     raise SystemExit("expected request_finality_evidence_contract_version=v1 in runtime-commit live finality evidence summary")
 if summary.get("request_finality_evidence_linked") is not True:
     raise SystemExit("expected request_finality_evidence_linked=true in runtime-commit live finality evidence summary")
+if summary.get("finality_retry_contract_version") != "v1":
+    raise SystemExit("expected finality_retry_contract_version=v1 in runtime-commit live finality evidence summary")
+if summary.get("finality_retry_max_attempts") != 2:
+    raise SystemExit("expected finality_retry_max_attempts=2 in runtime-commit live finality evidence summary")
+if summary.get("finality_retry_backoff_seconds") != 0:
+    raise SystemExit("expected finality_retry_backoff_seconds=0 in runtime-commit live finality evidence summary")
+if summary.get("finality_retry_attempts_used") != 1:
+    raise SystemExit("expected finality_retry_attempts_used=1 in runtime-commit live finality evidence summary")
+if summary.get("finality_retry_exhausted") is not False:
+    raise SystemExit("expected finality_retry_exhausted=false in runtime-commit live finality evidence summary")
+if summary.get("finality_retry_failure_class") != "none":
+    raise SystemExit("expected finality_retry_failure_class=none in runtime-commit live finality evidence summary")
 if summary.get("native_payload_pubkey_marker_present") is not True:
     raise SystemExit("expected native_payload_pubkey_marker_present=true in runtime-commit live finality evidence summary")
 if summary.get("native_payload_nonce_marker_present") is not True:
@@ -215,6 +245,48 @@ fi
 
 if ! grep -q "request_payload_evidence_marker_missing" "$TMP_NEGATIVE_ERR"; then
   echo "expected request_payload_evidence_marker_missing reason in negative proof output" >&2
+  exit 1
+fi
+
+TMP_RETRY_DRIFT_REPORT="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_LINKAGE_DRIFT_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR" "$TMP_RETRY_DRIFT_REPORT"' EXIT
+
+python3 - "$TMP_REPORT" "$TMP_RETRY_DRIFT_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+base_summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+drift_summary = dict(base_summary)
+drift_summary["status"] = "fail"
+drift_summary["reason_code"] = "live_finality_retry_exhausted_timeout"
+drift_summary["finality_retry_attempts_used"] = 2
+drift_summary["finality_retry_exhausted"] = True
+drift_summary["finality_evidence_marker_present"] = False
+drift_summary["finality_retry_failure_class"] = "failed"
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(drift_summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_RETRY_DRIFT_REPORT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-reason-code live_finality_retry_exhausted_timeout \
+  --output-json "$TMP_NEGATIVE_POLICY" >"$TMP_NEGATIVE_ERR" 2>&1
+retry_negative_exit_code=$?
+set -e
+
+if [ "$retry_negative_exit_code" -eq 0 ]; then
+  echo "expected retry failure-class drift proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "finality_retry_failure_class_mismatch_for_timeout_reason" "$TMP_NEGATIVE_ERR"; then
+  echo "expected finality_retry_failure_class_mismatch_for_timeout_reason in retry drift output" >&2
   exit 1
 fi
 

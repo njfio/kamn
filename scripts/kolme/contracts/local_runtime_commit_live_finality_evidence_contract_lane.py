@@ -56,6 +56,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Finality command runtime budget in seconds.",
     )
     parser.add_argument(
+        "--finality-retry-max-attempts",
+        default="2",
+        help="Bounded retry attempts for finality command execution.",
+    )
+    parser.add_argument(
+        "--finality-retry-backoff-seconds",
+        default="0",
+        help="Retry backoff in seconds between finality command attempts.",
+    )
+    parser.add_argument(
         "--expected-provider-client-contract",
         default="KolmeRuntimeCommitLiveProvider",
         help="Expected provider client contract emitted by runtime live lane summary.",
@@ -77,6 +87,10 @@ def _is_positive_integer(raw_value: str) -> bool:
     return raw_value.isdigit() and int(raw_value) > 0
 
 
+def _is_non_negative_integer(raw_value: str) -> bool:
+    return raw_value.isdigit() and int(raw_value) >= 0
+
+
 def main() -> int:
     args = build_parser().parse_args()
 
@@ -86,12 +100,20 @@ def main() -> int:
     if not _is_positive_integer(args.finality_max_seconds):
         print("finality-max-seconds must be a positive integer", file=sys.stderr)
         return 1
+    if not _is_positive_integer(args.finality_retry_max_attempts):
+        print("finality-retry-max-attempts must be a positive integer", file=sys.stderr)
+        return 1
+    if not _is_non_negative_integer(args.finality_retry_backoff_seconds):
+        print("finality-retry-backoff-seconds must be a non-negative integer", file=sys.stderr)
+        return 1
     if not args.expected_provider_client_contract.strip():
         print("expected-provider-client-contract must not be empty", file=sys.stderr)
         return 1
 
     max_seconds = int(args.max_seconds)
     finality_max_seconds = int(args.finality_max_seconds)
+    finality_retry_max_attempts = int(args.finality_retry_max_attempts)
+    finality_retry_backoff_seconds = int(args.finality_retry_backoff_seconds)
 
     for path in (RUNNER, CHECKER):
         if not path.is_file() or not path.stat().st_mode & 0o111:
@@ -117,6 +139,16 @@ def main() -> int:
         "request_payload_evidence_marker_missing",
         "finality_evidence_artifact_path_missing",
         "request_finality_evidence_linkage_missing",
+        "finality_retry_contract_version",
+        "finality_retry_max_attempts",
+        "finality_retry_backoff_seconds",
+        "finality_retry_attempts_used",
+        "finality_retry_exhausted",
+        "finality_retry_failure_class",
+        "live_finality_retry_exhausted_timeout",
+        "live_finality_retry_exhausted_failed",
+        "finality_retry_failure_class_mismatch_for_timeout_reason",
+        "finality_retry_attempts_used_mismatch_for_timeout_reason",
         "Regression: #2099",
     )
     for marker in required_doc_markers:
@@ -153,6 +185,10 @@ def main() -> int:
             str(max_seconds),
             "--finality-max-seconds",
             str(finality_max_seconds),
+            "--finality-retry-max-attempts",
+            str(finality_retry_max_attempts),
+            "--finality-retry-backoff-seconds",
+            str(finality_retry_backoff_seconds),
         ],
         cwd=ROOT_DIR,
         check=True,
@@ -204,6 +240,10 @@ def main() -> int:
             "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\\nintegration_kolme_fork_live_node_submit_reaches_endpoint\\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\\n'",
             "--finality-command",
             "printf 'finality=final\\n'",
+            "--finality-retry-max-attempts",
+            str(finality_retry_max_attempts),
+            "--finality-retry-backoff-seconds",
+            str(finality_retry_backoff_seconds),
             "--max-seconds",
             str(max_seconds),
             "--finality-max-seconds",
@@ -284,6 +324,24 @@ def main() -> int:
     if summary_payload.get("request_finality_evidence_linked") is not True:
         print("expected request_finality_evidence_linked=true", file=sys.stderr)
         return 1
+    if summary_payload.get("finality_retry_contract_version") != "v1":
+        print("expected finality_retry_contract_version=v1", file=sys.stderr)
+        return 1
+    if summary_payload.get("finality_retry_max_attempts") != finality_retry_max_attempts:
+        print("expected finality_retry_max_attempts marker in summary", file=sys.stderr)
+        return 1
+    if summary_payload.get("finality_retry_backoff_seconds") != finality_retry_backoff_seconds:
+        print("expected finality_retry_backoff_seconds marker in summary", file=sys.stderr)
+        return 1
+    if summary_payload.get("finality_retry_attempts_used") != 1:
+        print("expected finality_retry_attempts_used=1 marker in summary", file=sys.stderr)
+        return 1
+    if summary_payload.get("finality_retry_exhausted") is not False:
+        print("expected finality_retry_exhausted=false marker in summary", file=sys.stderr)
+        return 1
+    if summary_payload.get("finality_retry_failure_class") != "none":
+        print("expected finality_retry_failure_class=none marker in summary", file=sys.stderr)
+        return 1
     if summary_payload.get("native_payload_pubkey_marker_present") is not True:
         print("expected native_payload_pubkey_marker_present=true", file=sys.stderr)
         return 1
@@ -352,6 +410,57 @@ def main() -> int:
         if "request_payload_evidence_marker_missing" not in linkage_drift_reason_codes:
             print(
                 "expected request_payload_evidence_marker_missing in linkage drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+
+        retry_drift_summary_file = negative_root / "retry_drift_summary.json"
+        retry_drift_policy_file = negative_root / "retry_drift_policy.json"
+        retry_drift_summary = dict(summary_payload)
+        retry_drift_summary["status"] = "fail"
+        retry_drift_summary["reason_code"] = "live_finality_retry_exhausted_timeout"
+        retry_drift_summary["finality_evidence_marker_present"] = False
+        retry_drift_summary["finality_retry_attempts_used"] = finality_retry_max_attempts
+        retry_drift_summary["finality_retry_exhausted"] = True
+        retry_drift_summary["finality_retry_failure_class"] = "failed"
+        retry_drift_summary_file.write_text(
+            json.dumps(retry_drift_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        retry_drift_result = subprocess.run(
+            [
+                "python3",
+                str(CHECKER),
+                "--report-file",
+                str(retry_drift_summary_file),
+                "--expected-final-decision",
+                "NO-GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--expected-provider-client-contract",
+                args.expected_provider_client_contract,
+                "--require-reason-code",
+                "live_finality_retry_exhausted_timeout",
+                "--output-json",
+                str(retry_drift_policy_file),
+            ],
+            cwd=ROOT_DIR,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if retry_drift_result.returncode == 0:
+            print("expected retry drift proof to fail closed", file=sys.stderr)
+            return 1
+        retry_drift_policy = json.loads(retry_drift_policy_file.read_text(encoding="utf-8"))
+        retry_drift_reason_codes = retry_drift_policy.get("reason_codes")
+        if not isinstance(retry_drift_reason_codes, list):
+            print("expected reason_codes list in retry drift policy output", file=sys.stderr)
+            return 1
+        if "finality_retry_failure_class_mismatch_for_timeout_reason" not in retry_drift_reason_codes:
+            print(
+                "expected finality_retry_failure_class_mismatch_for_timeout_reason in retry drift policy output",
                 file=sys.stderr,
             )
             return 1
