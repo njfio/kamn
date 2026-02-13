@@ -3,43 +3,44 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/deploy/run_deployment_slo_rollback_contract_lane.sh"
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+CONTRACT_MODULE="$ROOT_DIR/scripts/deploy/deployment_slo_rollback_contract_lane_contract.sh"
+EXPECTED_MANIFEST="$ROOT_DIR/scripts/framework/manifests/deploy_deployment_slo_rollback_contract_lane.json"
 
 if [ ! -x "$SCRIPT" ]; then
   echo "expected deployment slo/rollback contract lane script to be executable" >&2
   exit 1
 fi
 
-report_file="$TMP_DIR/deployment-slo-rollback-contract-report.json"
-output="$(
-  KAMN_DEPLOYMENT_SLO_ROLLBACK_CONTRACT_MAX_SECONDS=240 \
-  bash "$SCRIPT" --output-file "$report_file"
-)"
-
-if ! printf '%s\n' "$output" | grep -q 'deployment slo/rollback contract lane tests passed.'; then
-  echo "expected success output from deployment slo/rollback contract lane" >&2
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected non-Kolme dispatcher to be executable: $DISPATCHER" >&2
   exit 1
 fi
 
-if [ ! -f "$report_file" ]; then
-  echo "expected deployment slo/rollback contract lane to emit report file" >&2
+if [ ! -x "$CONTRACT_MODULE" ]; then
+  echo "expected shared deployment slo/rollback contract module to be executable: $CONTRACT_MODULE" >&2
   exit 1
 fi
 
-if ! grep -q '"schema_version": "kamn.deploy.slo-rollback-report.v1"' "$report_file"; then
-  echo "expected deployment slo/rollback report schema marker in contract lane output" >&2
+if [ ! -L "$SCRIPT" ]; then
+  echo "expected deployment slo/rollback wrapper to be a symlink: $SCRIPT" >&2
   exit 1
 fi
 
-if ! grep -q '"final_decision": "GO"' "$report_file"; then
-  echo "expected GO final decision in deployment slo/rollback contract lane report" >&2
+manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$SCRIPT")" --resolve-manifest-path)"
+if [ "$manifest_path" != "$EXPECTED_MANIFEST" ]; then
+  echo "expected dispatcher to resolve $EXPECTED_MANIFEST but found $manifest_path" >&2
   exit 1
 fi
 
-if ! grep -q 'check_deployment_slo_rollback_policy.sh' "$SCRIPT"; then
-  echo "expected deployment slo/rollback contract lane to execute policy checker" >&2
+if ! grep -Fq "\"scripts/deploy/$(basename "$CONTRACT_MODULE")\"" "$manifest_path"; then
+  echo "expected manifest to dispatch shared deployment slo/rollback contract module: $manifest_path" >&2
   exit 1
 fi
 
-echo "deployment slo/rollback contract lane script tests passed."
+if ! grep -q 'check_deployment_slo_rollback_policy.sh' "$CONTRACT_MODULE"; then
+  echo "expected deployment slo/rollback contract module to execute policy checker" >&2
+  exit 1
+fi
+
+echo "deployment slo/rollback contract lane wrapper tests passed."

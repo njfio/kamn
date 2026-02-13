@@ -3,30 +3,39 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/did/run_service_endpoint_canonicalization_contract_lane.sh"
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+CONTRACT_MODULE="$ROOT_DIR/scripts/did/service_endpoint_canonicalization_contract_lane_contract.sh"
+EXPECTED_MANIFEST="$ROOT_DIR/scripts/framework/manifests/did_service_endpoint_canonicalization_contract_lane.json"
 
 if [ ! -x "$SCRIPT" ]; then
   echo "expected service endpoint canonicalization contract lane script to be executable" >&2
   exit 1
 fi
 
-bundle_file="$TMP_DIR/did-service-endpoint-canonicalization-contract-bundle.json"
-lane_output="$(bash "$SCRIPT" --skip-tests --output-file "$bundle_file")"
-
-if ! printf '%s\n' "$lane_output" | grep -q "service endpoint canonicalization contract lane tests passed."; then
-  echo "expected service endpoint canonicalization contract lane success marker" >&2
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected non-Kolme dispatcher to be executable: $DISPATCHER" >&2
   exit 1
 fi
 
-if [ ! -f "$bundle_file" ]; then
-  echo "expected service endpoint canonicalization contract lane to emit evidence bundle" >&2
+if [ ! -x "$CONTRACT_MODULE" ]; then
+  echo "expected shared service endpoint canonicalization contract module to be executable: $CONTRACT_MODULE" >&2
   exit 1
 fi
 
-if ! grep -q '"schema_version": "kamn.did.service-endpoint-canonicalization-report.v1"' "$bundle_file"; then
-  echo "expected service endpoint canonicalization evidence schema marker" >&2
+if [ ! -L "$SCRIPT" ]; then
+  echo "expected service endpoint canonicalization wrapper to be a symlink: $SCRIPT" >&2
   exit 1
 fi
 
-echo "service endpoint canonicalization contract lane script tests passed."
+manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$SCRIPT")" --resolve-manifest-path)"
+if [ "$manifest_path" != "$EXPECTED_MANIFEST" ]; then
+  echo "expected dispatcher to resolve $EXPECTED_MANIFEST but found $manifest_path" >&2
+  exit 1
+fi
+
+if ! grep -Fq "\"scripts/did/$(basename "$CONTRACT_MODULE")\"" "$manifest_path"; then
+  echo "expected manifest to dispatch shared service endpoint canonicalization contract module: $manifest_path" >&2
+  exit 1
+fi
+
+echo "service endpoint canonicalization contract lane wrapper tests passed."

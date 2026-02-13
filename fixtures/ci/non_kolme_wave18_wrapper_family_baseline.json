@@ -1,0 +1,40 @@
+{
+  "lanes": [
+    {
+      "lane_id": "non_kolme.deploy.deployment_slo_rollback",
+      "manifest_file": "scripts/framework/manifests/deploy_deployment_slo_rollback_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/deploy/run_deployment_slo_rollback_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.did.service_endpoint_canonicalization",
+      "manifest_file": "scripts/framework/manifests/did_service_endpoint_canonicalization_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/did/run_service_endpoint_canonicalization_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.sdk.localhost_signed_demo",
+      "manifest_file": "scripts/framework/manifests/sdk_localhost_signed_demo_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/sdk/run_localhost_signed_demo_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    }
+  ],
+  "regular_file_wrapper_count": 0,
+  "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
+  "source_matrix_file": "fixtures/ci/non_kolme_wave18_wrapper_family_matrix.json",
+  "symlink_wrapper_count": 3,
+  "total_shell_loc": 3,
+  "wrapper_count": 3
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "did.service_endpoint_canonicalization.contract",
+  "evidence_key": "did_service_endpoint_canonicalization_contract_lane:v1",
+  "reason_key": "did_service_endpoint_canonicalization_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "bash",
+      "scripts/did/service_endpoint_canonicalization_contract_lane_contract.sh"
+    ]
+  }
+}

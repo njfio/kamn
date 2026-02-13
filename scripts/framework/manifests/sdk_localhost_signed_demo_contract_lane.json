@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "sdk.localhost_signed_demo.contract",
+  "evidence_key": "localhost_signed_demo_contract_lane:v1",
+  "reason_key": "localhost_signed_demo_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "bash",
+      "scripts/sdk/localhost_signed_demo_contract_lane_contract.sh"
+    ]
+  }
+}
