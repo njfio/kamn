@@ -1,0 +1,40 @@
+{
+  "lanes": [
+    {
+      "lane_id": "non_kolme.compliance.classification_redaction",
+      "manifest_file": "scripts/framework/manifests/compliance_classification_redaction_contract_lane.json",
+      "priority": "P1",
+      "shell_loc": 1,
+      "source_entry": "scripts/compliance/run_classification_redaction_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.compliance.dsar_legal_hold",
+      "manifest_file": "scripts/framework/manifests/compliance_dsar_legal_hold_contract_lane.json",
+      "priority": "P1",
+      "shell_loc": 1,
+      "source_entry": "scripts/compliance/run_dsar_legal_hold_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.compliance.soc2_control_evidence",
+      "manifest_file": "scripts/framework/manifests/compliance_soc2_control_evidence_contract_lane.json",
+      "priority": "P1",
+      "shell_loc": 1,
+      "source_entry": "scripts/compliance/run_soc2_control_evidence_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    }
+  ],
+  "regular_file_wrapper_count": 0,
+  "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
+  "source_matrix_file": "fixtures/ci/non_kolme_wave3_wrapper_family_matrix.json",
+  "symlink_wrapper_count": 3,
+  "total_shell_loc": 3,
+  "wrapper_count": 3
+}
