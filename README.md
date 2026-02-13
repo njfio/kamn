@@ -862,6 +862,39 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # Regression: #2327
 ```
 
+### Managed Signer Backend SLO Telemetry Bundle
+
+```bash
+# generate managed-signer backend SLO telemetry bundle (deterministic schema)
+bash scripts/kolme/generate_managed_signer_backend_slo_telemetry_bundle.sh \
+  --output-file /tmp/managed-signer-backend-slo.json \
+  --window-start-utc 2026-02-13T00:00:00Z \
+  --window-end-utc 2026-02-13T00:15:00Z \
+  --backend-name kolme-managed-signer-primary \
+  --signer-profile ops-primary \
+  --signer-key-source managed-external \
+  --sample-count 100 \
+  --timeout-events 0 \
+  --unavailable-events 0 \
+  --error-events 1 \
+  --max-timeout-rate-bps 100 \
+  --max-unavailable-rate-bps 100 \
+  --max-error-rate-bps 200 \
+  --ci-fast-gate PASS
+
+# managed-signer backend SLO telemetry contract lane
+bash scripts/kolme/run_managed_signer_backend_slo_telemetry_contract_lane.sh --output-json /tmp/managed-signer-backend-slo-contract-report.json
+
+# schema: kamn.kolme.managed-signer-backend-slo-telemetry.v1
+# signer_key_source=managed-external
+# contracts.required_signer_key_source=managed-external
+# fail-closed threshold breach markers
+# managed_signer_backend_timeout_rate_threshold_exceeded
+# managed_signer_backend_unavailable_rate_threshold_exceeded
+# managed_signer_backend_error_rate_threshold_exceeded
+# managed_signer_backend_ci_fast_gate_failed
+```
+
 Live Provider Operator Runbook (Issue #2114): `docs/planning/kolme-devnet-ops.md`
 
 ### Run Local Live-Node Validation Bundle Lane

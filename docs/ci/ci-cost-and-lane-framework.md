@@ -82,6 +82,27 @@ Coverage split for cost control:
 - contract lane: `run_local_kolme_live_deployment_preflight_contract_lane.sh` for docs/policy parity
 - local-heavy/deep integration remains outside fast gate and opt-in only
 
+## Managed-Signer Backend SLO Telemetry Artifact
+Managed-signer backend SLO telemetry is emitted through:
+
+- `scripts/kolme/generate_managed_signer_backend_slo_telemetry_bundle.sh`
+- `scripts/kolme/run_managed_signer_backend_slo_telemetry_contract_lane.sh`
+
+Deterministic contract markers:
+
+- `kamn.kolme.managed-signer-backend-slo-telemetry.v1`
+- `signer_key_source=managed-external`
+- `contracts.required_signer_key_source=managed-external`
+- `managed_signer_backend_timeout_rate_threshold_exceeded`
+- `managed_signer_backend_unavailable_rate_threshold_exceeded`
+- `managed_signer_backend_error_rate_threshold_exceeded`
+- `managed_signer_backend_ci_fast_gate_failed`
+
+Cost boundary:
+
+- generation + contract-lane checks are offline, bounded, and PR fast-gate friendly.
+- no local-heavy selector or external metrics backend calls are required.
+
 ## Script-Surface Budget Policy
 `scripts/ci/check_script_duplication_budget.py` computes deterministic metrics over non-test shell command surface under `scripts/**/*.sh`:
 

@@ -776,6 +776,24 @@ JSON`
   - runtime/deployment shared signer-attestation schema + reason-code parity remains fail-closed (`Regression: #2326`).
   - replay/tamper/stale-signer attestation regression matrix remains fail-closed (`Regression: #2327`).
 
+## Managed Signer Backend SLO Telemetry Lane (Issue #2436)
+
+- Managed-signer backend SLO telemetry generator:
+  - `bash scripts/kolme/generate_managed_signer_backend_slo_telemetry_bundle.sh --output-file /tmp/managed-signer-backend-slo.json --window-start-utc 2026-02-13T00:00:00Z --window-end-utc 2026-02-13T00:15:00Z --backend-name kolme-managed-signer-primary --signer-profile ops-primary --signer-key-source managed-external --sample-count 100 --timeout-events 0 --unavailable-events 0 --error-events 1 --max-timeout-rate-bps 100 --max-unavailable-rate-bps 100 --max-error-rate-bps 200 --ci-fast-gate PASS`
+- Managed-signer backend SLO contract lane:
+  - `bash scripts/kolme/run_managed_signer_backend_slo_telemetry_contract_lane.sh --output-json /tmp/managed-signer-backend-slo-contract-report.json`
+- Required schema/reason markers:
+  - `kamn.kolme.managed-signer-backend-slo-telemetry.v1`
+  - `signer_key_source=managed-external`
+  - `contracts.required_signer_key_source=managed-external`
+  - `managed_signer_backend_timeout_rate_threshold_exceeded`
+  - `managed_signer_backend_unavailable_rate_threshold_exceeded`
+  - `managed_signer_backend_error_rate_threshold_exceeded`
+  - `managed_signer_backend_ci_fast_gate_failed`
+- Cost policy:
+  - lane remains lightweight and CI-fast-gate eligible.
+  - artifacts are generated offline with deterministic thresholds and no external metrics backend dependency.
+
 ## Staging Soak Telemetry Lane (Issue #2422)
 
 - Fast lane command:
