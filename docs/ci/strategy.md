@@ -419,6 +419,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_commit_non_synthetic_submit_probe_missing`
       - `runtime_commit_real_signing_profile_marker_missing`
       - `runtime_commit_signer_profile_marker_missing`
+      - `runtime_commit_signer_profile_split_brain_detected`
       - `runtime_commit_in_memory_provider_reference_detected`
       - `runtime_commit_policy_check_in_memory_provider_reference_detected`
     - strict profile non-synthetic submit probe marker:

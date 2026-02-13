@@ -503,6 +503,52 @@ def main() -> int:
             print("expected no reason codes in forced failover scenario matrix policy output", file=sys.stderr)
             return 1
 
+        split_brain_summary_file = negative_path / "split_brain_negative_summary.json"
+        split_brain_policy_file = negative_path / "split_brain_negative_policy.json"
+        split_brain_summary = dict(forced_failover_go_summary)
+        forced_failover_command = split_brain_summary.get("runtime_commit_command")
+        if not isinstance(forced_failover_command, str):
+            print(
+                "expected runtime_commit_command marker in split-brain negative summary fixture",
+                file=sys.stderr,
+            )
+            return 1
+        split_brain_summary["runtime_commit_command"] = forced_failover_command.replace(
+            f"KAMN_KOLME_LIVE_SIGNER_PROFILE={alternate_signer_profile}",
+            (
+                f"KAMN_KOLME_LIVE_SIGNER_PROFILE={alternate_signer_profile} "
+                f"KAMN_KOLME_LIVE_SIGNER_PROFILE={expected_signer_profile}"
+            ),
+            1,
+        )
+        split_brain_summary_file.write_text(
+            json.dumps(split_brain_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        split_brain_result = run_real_node_policy_check(
+            report_file=split_brain_summary_file,
+            output_json=split_brain_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if split_brain_result.returncode == 0:
+            print("expected split-brain signer-profile negative proof to fail closed", file=sys.stderr)
+            return 1
+        split_brain_policy = json.loads(split_brain_policy_file.read_text(encoding="utf-8"))
+        split_brain_reason_codes = split_brain_policy.get("reason_codes")
+        if not isinstance(split_brain_reason_codes, list):
+            print("expected reason_codes list in split-brain policy output", file=sys.stderr)
+            return 1
+        if "runtime_commit_signer_profile_split_brain_detected" not in split_brain_reason_codes:
+            print(
+                "expected runtime_commit_signer_profile_split_brain_detected in split-brain policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if split_brain_policy.get("final_decision") != "NO-GO":
+            print("expected NO-GO final decision for split-brain policy output", file=sys.stderr)
+            return 1
+
         failover_stale_summary_file = negative_path / "failover_stale_summary.json"
         failover_stale_policy_file = negative_path / "failover_stale_policy.json"
         failover_stale_summary = dict(summary)
@@ -1369,6 +1415,7 @@ def main() -> int:
         "runtime_signer_attestation_schema_invalid",
         "runtime_signer_attestation_approved_signers_not_unique",
         "runtime_signer_attestation_quorum_shortfall",
+        "runtime_commit_signer_profile_split_brain_detected",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
@@ -1410,6 +1457,7 @@ def main() -> int:
         "runtime_signer_attestation_schema_invalid",
         "runtime_signer_attestation_approved_signers_not_unique",
         "runtime_signer_attestation_quorum_shortfall",
+        "runtime_commit_signer_profile_split_brain_detected",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
@@ -1451,6 +1499,7 @@ def main() -> int:
         "runtime_signer_attestation_schema_invalid",
         "runtime_signer_attestation_approved_signers_not_unique",
         "runtime_signer_attestation_quorum_shortfall",
+        "runtime_commit_signer_profile_split_brain_detected",
         "runtime_signer_failover_profile_unchanged",
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",

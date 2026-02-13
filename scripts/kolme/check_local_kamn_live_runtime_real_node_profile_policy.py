@@ -15,6 +15,9 @@ REAL_SIGNING_PROFILE_PATTERN = re.compile(rf"{REAL_SIGNING_PROFILE_ENV}=([^\s\"'
 REAL_SIGNER_PROFILE_SELECTOR_ENV = "KAMN_KOLME_LIVE_SIGNER_PROFILE"
 REAL_SIGNER_PROFILE_PRIMARY = "ops-primary"
 REAL_SIGNER_PROFILE_SECONDARY = "ops-secondary"
+REAL_SIGNER_PROFILE_SELECTOR_PATTERN = re.compile(
+    rf"{REAL_SIGNER_PROFILE_SELECTOR_ENV}=([^\s\"']+)"
+)
 REAL_SIGNER_PRIVATE_KEY_ENV_PRIMARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
 REAL_SIGNER_PRIVATE_KEY_ENV_SECONDARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
 REAL_SIGNER_KEY_REF_ENV_PRIMARY = "KAMN_KOLME_LIVE_SIGNER_KEY_REF"
@@ -306,6 +309,10 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             observed_value.rstrip("\\")
             for observed_value in REAL_SIGNING_PROFILE_PATTERN.findall(runtime_commit_command)
         ]
+        observed_signer_profile_values = [
+            observed_value.rstrip("\\")
+            for observed_value in REAL_SIGNER_PROFILE_SELECTOR_PATTERN.findall(runtime_commit_command)
+        ]
         if "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" not in runtime_commit_command:
             reason_codes.append("runtime_commit_contract_lane_missing")
         if "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider" not in runtime_commit_command:
@@ -346,6 +353,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             and expected_profile_command_marker not in runtime_commit_command
         ):
             reason_codes.append("runtime_commit_signer_profile_marker_missing")
+        if runtime_commit_command_profile == "real-node-non-synthetic-v1":
+            observed_allowed_signer_profiles = {
+                observed_profile
+                for observed_profile in observed_signer_profile_values
+                if observed_profile in ALLOWED_SIGNER_PROFILES
+            }
+            if len(observed_allowed_signer_profiles) > 1:
+                reason_codes.append("runtime_commit_signer_profile_split_brain_detected")
         expected_key_source_command_marker = ""
         if expected_signer_key_source:
             expected_key_source_command_marker = (

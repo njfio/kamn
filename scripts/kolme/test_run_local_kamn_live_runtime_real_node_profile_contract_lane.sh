@@ -98,12 +98,14 @@ required_coverage_markers=(
   "runtime_commit_managed_external_signer_key_reference_marker_missing"
   "runtime_commit_managed_external_private_key_command_marker_detected"
   "runtime_commit_command_profile_mismatch"
+  "runtime_commit_signer_profile_split_brain_detected"
   "runtime_signer_failover_profile_unchanged"
   "runtime_signer_rotation_epoch_stale"
   "runtime_commit_signer_profile_marker_missing"
   "runtime_commit_non_synthetic_submit_probe_missing"
   "runtime_commit_in_memory_provider_reference_detected"
   "forced_failover_go_summary"
+  "split_brain_negative_summary"
   "Regression: #2302"
   "Regression: #2337"
   "Regression: #2325"
@@ -201,6 +203,10 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "runtime_signer_attestation_quorum_shortfall" "$docs_file"; then
     echo "expected docs parity to include runtime signer attestation quorum-shortfall reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_commit_signer_profile_split_brain_detected" "$docs_file"; then
+    echo "expected docs parity to include split-brain signer profile reason marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "runtime_signer_attestation_schema_invalid" "$docs_file"; then
