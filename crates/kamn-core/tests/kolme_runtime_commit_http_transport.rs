@@ -1271,8 +1271,14 @@ fn regression_kolme_fork_direct_signed_payload_requires_core_transaction_keys() 
 }
 
 #[test]
-#[ignore = "requires reachable local Kolme node and explicit local opt-in lane"]
 fn integration_kolme_fork_live_node_submit_reaches_endpoint() {
+    if env::var("KAMN_KOLME_LOCAL_HEAVY").ok().as_deref() != Some("1") {
+        eprintln!(
+            "skipping live-node smoke; set KAMN_KOLME_LOCAL_HEAVY=1 to run local-heavy live probe"
+        );
+        return;
+    }
+
     let base_url = env::var("KAMN_KOLME_LIVE_BASE_URL")
         .expect("KAMN_KOLME_LIVE_BASE_URL must be set for live node smoke");
     let provider_hint =
@@ -1376,5 +1382,36 @@ fn regression_live_node_smoke_signature_payload_must_not_use_synthetic_literal()
     assert!(
         !SOURCE.contains("\\\"signature\\\":\\\"sig-live-smoke-"),
         "live-node smoke payload must use real secp256k1 signature generation"
+    );
+}
+
+#[test]
+fn regression_live_node_submit_probe_must_not_be_ignored() {
+    const SOURCE: &str = include_str!("kolme_runtime_commit_http_transport.rs");
+    let lines: Vec<&str> = SOURCE.lines().collect();
+    let fn_line = lines
+        .iter()
+        .position(|line| {
+            line.trim() == "fn integration_kolme_fork_live_node_submit_reaches_endpoint() {"
+        })
+        .expect("live-node submit probe function must exist");
+    let mut attributes = Vec::new();
+    let mut cursor = fn_line;
+    while cursor > 0 {
+        cursor -= 1;
+        let trimmed = lines[cursor].trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed.starts_with("#[") {
+            attributes.push(trimmed);
+            continue;
+        }
+        break;
+    }
+
+    assert!(
+        attributes.iter().all(|line| !line.contains("ignore")),
+        "live-node submit probe must stay active; local-heavy gating belongs in runtime preflight, not #[ignore]"
     );
 }

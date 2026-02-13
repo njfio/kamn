@@ -1,5 +1,5 @@
 {
-  "ignored_test_count": 15,
+  "ignored_test_count": 14,
   "ignored_tests": [
     {
       "source_file": "crates/kamn-core/src/channel_models.rs",
@@ -36,10 +36,6 @@
     {
       "source_file": "crates/kamn-core/tests/input_mutation_coverage_guided.rs",
       "test_name": "performance_input_mutation_coverage_guided_deep_lane_stress"
-    },
-    {
-      "source_file": "crates/kamn-core/tests/kolme_runtime_commit_http_transport.rs",
-      "test_name": "integration_kolme_fork_live_node_submit_reaches_endpoint"
     },
     {
       "source_file": "crates/kamn-core/tests/signer_backend.rs",

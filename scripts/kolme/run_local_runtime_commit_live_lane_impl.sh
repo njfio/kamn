@@ -33,7 +33,7 @@ default_live_command() {
   if [ -n "$AUTHORIZATION_HEADER" ]; then
     command="${command} KAMN_KOLME_LIVE_AUTHORIZATION=$(shell_escape "$AUTHORIZATION_HEADER")"
   fi
-  command="${command} cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint"
+  command="${command} cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --exact integration_kolme_fork_live_node_submit_reaches_endpoint"
   printf '%s' "$command"
 }
 
