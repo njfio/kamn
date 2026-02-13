@@ -17,6 +17,8 @@ generator_output="$(
     --rollback-status PASS \
     --rollback-target-hash "state-hash-contract" \
     --post-rollback-hash "state-hash-contract" \
+    --recovery-time-seconds 420 \
+    --max-allowed-recovery-time-seconds 900 \
     --evidence-complete true \
     --ci-fast-gate PASS
 )"
@@ -29,6 +31,10 @@ fi
 policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$STAGING_REHEARSAL_REPORT")"
 if ! printf '%s\n' "$policy_output" | grep -q "^final_decision=GO$"; then
   echo "expected rehearsal contract lane policy check decision to be GO" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q "^mttr_within_bound=true$"; then
+  echo "expected rehearsal contract lane policy check to confirm bounded MTTR evidence" >&2
   exit 1
 fi
 

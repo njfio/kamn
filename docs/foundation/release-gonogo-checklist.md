@@ -73,7 +73,7 @@ Go/no-go decisions are captured as machine-readable JSON so release policy check
 Staging rehearsal automation must verify deploy and rollback outcomes before release decisions are accepted.
 
 - Rehearsal bundle generator:
-  - `bash scripts/deploy/generate_staging_rehearsal_bundle.sh --output-file /tmp/staging-rehearsal.json --release-candidate v1.1.0-rc.1 --deploy-status PASS --rollback-status PASS --rollback-target-hash state-hash-expected --post-rollback-hash state-hash-expected --evidence-complete true --ci-fast-gate PASS`
+  - `bash scripts/deploy/generate_staging_rehearsal_bundle.sh --output-file /tmp/staging-rehearsal.json --release-candidate v1.1.0-rc.1 --deploy-status PASS --rollback-status PASS --rollback-target-hash state-hash-expected --post-rollback-hash state-hash-expected --recovery-time-seconds 420 --max-allowed-recovery-time-seconds 900 --evidence-complete true --ci-fast-gate PASS`
 - Rehearsal policy checker:
   - `bash scripts/deploy/check_staging_rehearsal_policy.sh --bundle-file /tmp/staging-rehearsal.json`
 - Fast contract lane:
@@ -87,6 +87,8 @@ Staging rehearsal automation must verify deploy and rollback outcomes before rel
   - `bash scripts/deploy/run_staging_rehearsal_deep_lane.sh`
 - Regression policy:
   - rollback target hash mismatch and incomplete rehearsal evidence force `NO-GO` (`Regression: #623`).
+  - MTTR evidence drift and out-of-bound recovery time force `NO-GO` (`Regression: #2337`).
+  - bounded MTTR policy emits deterministic markers: `recovery_time_seconds`, `max_allowed_recovery_time_seconds`, `mttr_within_bound`, and reason code `mttr-threshold-exceeded`.
 
 ## Durable Guard Migration + Recovery Matrix Evidence (Issue #691)
 Durable guard schema evolution and restart invariants must be proven before a release is approved.

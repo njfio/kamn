@@ -42,6 +42,8 @@ go_generate_output="$(
     --rollback-status PASS \
     --rollback-target-hash "state-hash-abc" \
     --post-rollback-hash "state-hash-abc" \
+    --recovery-time-seconds 420 \
+    --max-allowed-recovery-time-seconds 900 \
     --evidence-complete true \
     --ci-fast-gate PASS
 )"
@@ -52,6 +54,7 @@ assert_eq "$(extract_value "$go_generate_output" "final_decision")" "GO" "expect
 go_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$go_bundle")"
 assert_eq "$(extract_value "$go_policy_output" "status")" "ok" "expected GO rehearsal policy check to pass"
 assert_eq "$(extract_value "$go_policy_output" "final_decision")" "GO" "expected GO rehearsal policy check decision"
+assert_eq "$(extract_value "$go_policy_output" "mttr_within_bound")" "true" "expected GO rehearsal policy check to report bounded MTTR"
 
 no_go_bundle="$TMP_DIR/rehearsal-no-go.json"
 no_go_generate_output="$(
@@ -62,6 +65,8 @@ no_go_generate_output="$(
     --rollback-status PASS \
     --rollback-target-hash "state-hash-expected" \
     --post-rollback-hash "state-hash-observed" \
+    --recovery-time-seconds 420 \
+    --max-allowed-recovery-time-seconds 900 \
     --evidence-complete true \
     --ci-fast-gate PASS
 )"
@@ -71,6 +76,28 @@ assert_eq "$(extract_value "$no_go_generate_output" "final_decision")" "NO-GO" "
 no_go_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$no_go_bundle")"
 assert_eq "$(extract_value "$no_go_policy_output" "status")" "ok" "expected NO-GO rehearsal policy check to pass"
 assert_eq "$(extract_value "$no_go_policy_output" "final_decision")" "NO-GO" "expected NO-GO rehearsal policy check decision"
+
+mttr_no_go_bundle="$TMP_DIR/rehearsal-no-go-mttr.json"
+mttr_no_go_generate_output="$(
+  bash "$GENERATOR" \
+    --output-file "$mttr_no_go_bundle" \
+    --release-candidate "v1.1.0-rc.3" \
+    --deploy-status PASS \
+    --rollback-status PASS \
+    --rollback-target-hash "state-hash-stable" \
+    --post-rollback-hash "state-hash-stable" \
+    --recovery-time-seconds 1200 \
+    --max-allowed-recovery-time-seconds 900 \
+    --evidence-complete true \
+    --ci-fast-gate PASS
+)"
+
+assert_eq "$(extract_value "$mttr_no_go_generate_output" "final_decision")" "NO-GO" "expected MTTR bound breach to force NO-GO"
+
+mttr_no_go_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$mttr_no_go_bundle")"
+assert_eq "$(extract_value "$mttr_no_go_policy_output" "status")" "ok" "expected MTTR NO-GO rehearsal policy check to pass"
+assert_eq "$(extract_value "$mttr_no_go_policy_output" "final_decision")" "NO-GO" "expected MTTR NO-GO rehearsal policy check decision"
+assert_eq "$(extract_value "$mttr_no_go_policy_output" "mttr_within_bound")" "false" "expected MTTR NO-GO rehearsal policy check to report out-of-bound recovery time"
 
 tampered_bundle="$TMP_DIR/rehearsal-tampered.json"
 cp "$no_go_bundle" "$tampered_bundle"
@@ -103,6 +130,35 @@ fi
 # Regression: #623
 if ! printf '%s\n' "$tampered_output" | grep -q "rollback target hash mismatch"; then
   echo "expected rollback mismatch regression guard to be enforced" >&2
+  exit 1
+fi
+
+tampered_mttr_bundle="$TMP_DIR/rehearsal-tampered-mttr.json"
+cp "$go_bundle" "$tampered_mttr_bundle"
+python3 - "$tampered_mttr_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text())
+payload["rehearsal"]["mttr_within_bound"] = False
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
+PY
+
+set +e
+tampered_mttr_output="$(bash "$POLICY_CHECKER" --bundle-file "$tampered_mttr_bundle" 2>&1)"
+tampered_mttr_code=$?
+set -e
+
+if [ "$tampered_mttr_code" -eq 0 ]; then
+  echo "expected tampered MTTR rehearsal bundle to fail policy validation" >&2
+  exit 1
+fi
+
+# Regression: #2337
+if ! printf '%s\n' "$tampered_mttr_output" | grep -q "mttr bound mismatch"; then
+  echo "expected explicit MTTR bound mismatch regression guard to be enforced" >&2
   exit 1
 fi
 

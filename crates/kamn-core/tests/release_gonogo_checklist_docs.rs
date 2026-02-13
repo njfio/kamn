@@ -45,6 +45,11 @@ fn checklist_contains_staging_rehearsal_contract() {
     assert!(CHECKLIST.contains("check_staging_rehearsal_policy.sh"));
     assert!(CHECKLIST.contains("run_staging_rehearsal_contract_lane.sh"));
     assert!(CHECKLIST.contains("run_staging_rehearsal_deep_lane.sh"));
+    assert!(CHECKLIST.contains("--recovery-time-seconds"));
+    assert!(CHECKLIST.contains("--max-allowed-recovery-time-seconds"));
+    assert!(CHECKLIST.contains("mttr-threshold-exceeded"));
+    assert!(CHECKLIST.contains("mttr_within_bound"));
+    assert!(CHECKLIST.contains("Regression: #2337"));
 }
 
 #[test]

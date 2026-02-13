@@ -18,20 +18,26 @@ generator_output="$(
     --release-candidate "v1.1.0-deep" \
     --deploy-status PASS \
     --rollback-status PASS \
-    --rollback-target-hash "state-hash-expected" \
-    --post-rollback-hash "state-hash-observed" \
+    --rollback-target-hash "state-hash-stable" \
+    --post-rollback-hash "state-hash-stable" \
+    --recovery-time-seconds 1500 \
+    --max-allowed-recovery-time-seconds 900 \
     --evidence-complete true \
     --ci-fast-gate PASS
 )"
 
 if ! printf '%s\n' "$generator_output" | grep -q "^final_decision=NO-GO$"; then
-  echo "expected deep-lane rollback mismatch scenario decision to be NO-GO" >&2
+  echo "expected deep-lane MTTR-bound breach scenario decision to be NO-GO" >&2
   exit 1
 fi
 
 policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$STAGING_REHEARSAL_REPORT")"
 if ! printf '%s\n' "$policy_output" | grep -q "^final_decision=NO-GO$"; then
   echo "expected deep-lane policy check decision to be NO-GO" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$policy_output" | grep -q "^mttr_within_bound=false$"; then
+  echo "expected deep-lane policy check to report out-of-bound MTTR evidence" >&2
   exit 1
 fi
 
