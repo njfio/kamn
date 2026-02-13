@@ -380,6 +380,16 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `run_ci_tool_checks=true`
     - `test_scope=ci-doc-contract`
     - unknown/full fallback remains disabled for this non-Kolme wave-19 path set
+- Non-Kolme wave trend-test LOC soft-budget fixture/checker changes map to CI contract scope:
+  - `fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_baseline.json`
+  - `fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_thresholds.json`
+  - `scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.py`
+  - `scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh`
+  - `scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh`
+  - selector outputs:
+    - `run_ci_tool_checks=true`
+    - `test_scope=ci-doc-contract`
+    - unknown/full fallback remains disabled for this non-Kolme trend-test LOC budget path set
 - Localhost signed integration command changes map to dedicated scope:
   - `run_localhost_signed_integration_contract_lane_tests=true`
   - `test_scope=sdk-live-localhost-integration`
@@ -1087,6 +1097,21 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=total_shell_loc_reduction_target_unmet`
       - `reason_codes=unexpected_new_lanes_in_current_inventory`
     - Regression: #2769
+  - Non-Kolme wave trend-test LOC soft-budget guard stays on PR fast gate:
+    - `bash scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh`
+    - baseline fixture:
+      - `fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_baseline.json`
+    - threshold fixture:
+      - `fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_thresholds.json`
+    - checker command:
+      - `bash scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh --output-json /tmp/non-kolme-wave-trend-test-loc-soft-budget-report.json`
+    - fails closed on trend-test LOC growth and stale baseline script inventory drift.
+    - deterministic reason-code surface is emitted for automation:
+      - `reason_codes=none` (pass)
+      - `reason_codes=script_count_delta_threshold_exceeded`
+      - `reason_codes=total_shell_loc_delta_threshold_exceeded`
+      - `reason_codes=missing_baseline_scripts`
+    - Regression: #2777
   - Non-Kolme governance dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/framework/test_non_kolme_contract_lane_dispatch_wrapper_matrix.sh`
     - shared dispatcher:

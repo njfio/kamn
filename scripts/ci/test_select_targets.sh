@@ -488,6 +488,32 @@ assert_eq "$(extract_output "$non_kolme_wave19_trend_checker_script_output" "run
 assert_eq "$(extract_output "$non_kolme_wave19_trend_checker_script_output" "unknown_risk_changed")" "false" "non-Kolme wave-19 trend checker script changes should be classified"
 assert_eq "$(extract_output "$non_kolme_wave19_trend_checker_script_output" "test_scope")" "ci-doc-contract" "non-Kolme wave-19 trend checker script changes should use ci-doc-contract scope"
 
+non_kolme_wave_trend_loc_baseline_output="$(run_selector $'fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_baseline.json')"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_baseline_output" "run_rust")" "false" "non-Kolme wave trend-test LOC baseline fixture changes should avoid rust full fallback"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_baseline_output" "run_ci_tool_checks")" "true" "non-Kolme wave trend-test LOC baseline fixture changes must run CI tool checks"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_baseline_output" "unknown_risk_changed")" "false" "non-Kolme wave trend-test LOC baseline fixture changes should be classified"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_baseline_output" "test_scope")" "ci-doc-contract" "non-Kolme wave trend-test LOC baseline fixture changes should use ci-doc-contract scope"
+
+non_kolme_wave_trend_loc_threshold_output="$(run_selector $'fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_thresholds.json')"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_threshold_output" "run_rust")" "false" "non-Kolme wave trend-test LOC threshold fixture changes should avoid rust full fallback"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_threshold_output" "run_ci_tool_checks")" "true" "non-Kolme wave trend-test LOC threshold fixture changes must run CI tool checks"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_threshold_output" "unknown_risk_changed")" "false" "non-Kolme wave trend-test LOC threshold fixture changes should be classified"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_threshold_output" "test_scope")" "ci-doc-contract" "non-Kolme wave trend-test LOC threshold fixture changes should use ci-doc-contract scope"
+
+non_kolme_wave_trend_loc_checker_output="$(run_selector $'scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh')"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_output" "run_rust")" "false" "non-Kolme wave trend-test LOC checker changes should avoid rust full fallback"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_output" "run_ci_tool_checks")" "true" "non-Kolme wave trend-test LOC checker changes must run CI tool checks"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_output" "run_script_surface_budget_checks")" "true" "non-Kolme wave trend-test LOC checker changes should run script-surface budget checks"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_output" "unknown_risk_changed")" "false" "non-Kolme wave trend-test LOC checker changes should be classified"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_output" "test_scope")" "ci-doc-contract" "non-Kolme wave trend-test LOC checker changes should use ci-doc-contract scope"
+
+non_kolme_wave_trend_loc_checker_test_output="$(run_selector $'scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh')"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_test_output" "run_rust")" "false" "non-Kolme wave trend-test LOC checker test changes should avoid rust full fallback"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_test_output" "run_ci_tool_checks")" "true" "non-Kolme wave trend-test LOC checker test changes must run CI tool checks"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_test_output" "run_script_surface_budget_checks")" "true" "non-Kolme wave trend-test LOC checker test changes should run script-surface budget checks"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_test_output" "unknown_risk_changed")" "false" "non-Kolme wave trend-test LOC checker test changes should be classified"
+assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_test_output" "test_scope")" "ci-doc-contract" "non-Kolme wave trend-test LOC checker test changes should use ci-doc-contract scope"
+
 non_kolme_dispatcher_script_output="$(run_selector $'scripts/framework/run_non_kolme_contract_lane_dispatch.sh')"
 assert_eq "$(extract_output "$non_kolme_dispatcher_script_output" "run_rust")" "false" "non-Kolme dispatcher script changes should avoid rust full fallback"
 assert_eq "$(extract_output "$non_kolme_dispatcher_script_output" "run_ci_tool_checks")" "true" "non-Kolme dispatcher script changes must run CI tool checks"
