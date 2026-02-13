@@ -36,6 +36,7 @@ lane_wrappers=(
   "run_runtime_commit_adapter_contract_lane.sh"
   "run_runtime_commit_contract_lane.sh"
   "run_runtime_commit_replay_contract_lane.sh"
+  "run_signature_parity_contract_lane.sh"
   "run_snapshot_drift_contract_lane.sh"
   "run_triadic_devnet_smoke_contract_lane.sh"
   "run_version_compatibility_contract_lane.sh"
