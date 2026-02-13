@@ -1,0 +1,40 @@
+{
+  "lanes": [
+    {
+      "lane_id": "non_kolme.reputation.reputation_recovery",
+      "manifest_file": "scripts/framework/manifests/reputation_reputation_recovery_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/reputation/run_reputation_recovery_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.reputation.reputation_signal_quarantine",
+      "manifest_file": "scripts/framework/manifests/reputation_reputation_signal_quarantine_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/reputation/run_reputation_signal_quarantine_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.reputation.weighted_decay",
+      "manifest_file": "scripts/framework/manifests/reputation_weighted_decay_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/reputation/run_weighted_decay_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    }
+  ],
+  "regular_file_wrapper_count": 0,
+  "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
+  "source_matrix_file": "fixtures/ci/non_kolme_wave16_wrapper_family_matrix.json",
+  "symlink_wrapper_count": 3,
+  "total_shell_loc": 3,
+  "wrapper_count": 3
+}

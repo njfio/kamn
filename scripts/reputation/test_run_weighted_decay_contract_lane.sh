@@ -3,35 +3,39 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/reputation/run_weighted_decay_contract_lane.sh"
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+CONTRACT_MODULE="$ROOT_DIR/scripts/reputation/weighted_decay_contract_lane_contract.sh"
+EXPECTED_MANIFEST="$ROOT_DIR/scripts/framework/manifests/reputation_weighted_decay_contract_lane.json"
 
 if [ ! -x "$SCRIPT" ]; then
   echo "expected weighted decay contract lane script to be executable" >&2
   exit 1
 fi
 
-bundle_file="$TMP_DIR/weighted-decay-property-contract-bundle.json"
-output="$(bash "$SCRIPT" --output-file "$bundle_file")"
-
-if ! printf '%s\n' "$output" | grep -q "weighted decay contract lane tests passed."; then
-  echo "expected success output from weighted decay contract lane" >&2
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected non-Kolme dispatcher to be executable: $DISPATCHER" >&2
   exit 1
 fi
 
-if [ ! -f "$bundle_file" ]; then
-  echo "expected weighted decay contract lane to emit evidence bundle" >&2
+if [ ! -x "$CONTRACT_MODULE" ]; then
+  echo "expected shared weighted decay contract module to be executable: $CONTRACT_MODULE" >&2
   exit 1
 fi
 
-if ! grep -q '"schema_version": "kamn.reputation.weighted-decay.property-evidence.v1"' "$bundle_file"; then
-  echo "expected weighted decay property evidence schema marker" >&2
+if [ ! -L "$SCRIPT" ]; then
+  echo "expected weighted decay wrapper to be a symlink: $SCRIPT" >&2
   exit 1
 fi
 
-if ! grep -q "check_weighted_decay_property_policy.sh" "$SCRIPT"; then
-  echo "expected weighted decay contract lane to execute weighted decay policy checker" >&2
+manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$SCRIPT")" --resolve-manifest-path)"
+if [ "$manifest_path" != "$EXPECTED_MANIFEST" ]; then
+  echo "expected dispatcher to resolve $EXPECTED_MANIFEST but found $manifest_path" >&2
   exit 1
 fi
 
-echo "weighted decay contract lane script tests passed."
+if ! grep -Fq "\"scripts/reputation/$(basename "$CONTRACT_MODULE")\"" "$manifest_path"; then
+  echo "expected manifest to dispatch shared weighted decay contract module: $manifest_path" >&2
+  exit 1
+fi
+
+echo "weighted decay contract lane wrapper tests passed."
