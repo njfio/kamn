@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "kolme.local_kolme_api_probe.run",
+  "evidence_key": "kolme_local_kolme_api_probe_lane:v1",
+  "reason_key": "kolme_local_kolme_api_probe_lane_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/kolme/run_local_kolme_api_probe_lane_impl.sh"
+    ]
+  }
+}
