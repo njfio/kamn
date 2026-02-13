@@ -33,6 +33,21 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `kolme.local.kamn.live_runtime_integration`
   - `kolme.local.heavy.validation_matrix`
 
+## Fallback Marker Retirement Matrix (Issue #2526)
+
+- Canonical fallback marker classification fixture:
+  - `fixtures/kolme_compatibility/fallback_signer_marker_matrix.json`
+- Matrix schema version:
+  - `kamn.kolme.fallback-signer-marker-matrix.v1`
+- Fail-closed matrix policy checker:
+  - `python3 scripts/kolme/check_fallback_signer_marker_matrix_policy.py --matrix-file fixtures/kolme_compatibility/fallback_signer_marker_matrix.json`
+- Matrix contract test:
+  - `bash scripts/kolme/test_check_fallback_signer_marker_matrix_policy.sh`
+- Classification contract:
+  - `keep` markers remain active fail-closed controls.
+  - `deprecate` markers remain compatibility-visible while retirement sequencing is active.
+  - `remove-target` markers track surfaces scheduled for removal in later tranches.
+
 ## Shared Wrapper Dispatcher Tranche (Issue #1827)
 
 - Shared Kolme contract-lane dispatcher:

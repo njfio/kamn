@@ -8,6 +8,16 @@ fn plan_contains_triadic_smoke_contract_commands() {
 }
 
 #[test]
+fn plan_contains_fallback_marker_retirement_matrix_contract() {
+    assert!(PLAN.contains("## Fallback Marker Retirement Matrix (Issue #2526)"));
+    assert!(PLAN.contains("fixtures/kolme_compatibility/fallback_signer_marker_matrix.json"));
+    assert!(PLAN.contains("kamn.kolme.fallback-signer-marker-matrix.v1"));
+    assert!(PLAN.contains("check_fallback_signer_marker_matrix_policy.py"));
+    assert!(PLAN.contains("bash scripts/kolme/test_check_fallback_signer_marker_matrix_policy.sh"));
+    assert!(PLAN.contains("remove-target"));
+}
+
+#[test]
 fn plan_contains_failover_sync_drill_lane_policy() {
     assert!(PLAN.contains("## Failover + Sync Drill Lane Policy"));
     assert!(PLAN.contains("select_failover_sync_drill_lane.sh"));
