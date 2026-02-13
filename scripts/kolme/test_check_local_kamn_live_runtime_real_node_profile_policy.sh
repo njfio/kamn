@@ -15,6 +15,7 @@ TMP_REPORT_KEY_SOURCE_MARKER_MISSING="$TMP_DIR/key-source-marker-missing-report.
 TMP_REPORT_MANAGED_KEY_REF_MISSING="$TMP_DIR/managed-key-ref-missing-report.json"
 TMP_REPORT_MANAGED_PRIVATE_KEY_COMMAND="$TMP_DIR/managed-private-key-command-report.json"
 TMP_REPORT_KEY_SOURCE_PAIR_BAD="$TMP_DIR/key-source-pair-bad-report.json"
+TMP_REPORT_SPLIT_BRAIN="$TMP_DIR/split-brain-report.json"
 TMP_REPORT_ATTESTATION_DUPLICATE="$TMP_DIR/attestation-duplicate-report.json"
 TMP_REPORT_ATTESTATION_QUORUM_SHORTFALL="$TMP_DIR/attestation-quorum-shortfall-report.json"
 TMP_REPORT_BAD="$TMP_DIR/bad-report.json"
@@ -444,6 +445,52 @@ fi
 
 if ! grep -q "runtime_signer_key_source_profile_pair_disallowed" "$TMP_ERR"; then
   echo "expected disallowed key-source/profile pair reason for policy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT_OK_SECONDARY" "$TMP_REPORT_SPLIT_BRAIN" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["runtime_signer_failover_active"] = True
+report["runtime_signer_previous_profile"] = "ops-primary"
+report["runtime_signer_rotation_epoch"] = 2
+report["runtime_signer_previous_rotation_epoch"] = 1
+command = str(report.get("runtime_commit_command", ""))
+report["runtime_commit_command"] = command.replace(
+    "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary",
+    "KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary",
+    1,
+)
+attestation_bundle = dict(report.get("runtime_signer_attestation_bundle", {}))
+attestation_bundle["approved_signers"] = ["ops-primary", "ops-secondary"]
+attestation_bundle["signer_profile"] = "ops-secondary"
+report["runtime_signer_attestation_bundle"] = attestation_bundle
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_SPLIT_BRAIN" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+split_brain_exit_code=$?
+set -e
+
+if [ "$split_brain_exit_code" -eq 0 ]; then
+  echo "expected split-brain signer profile proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_signer_profile_split_brain_detected" "$TMP_ERR"; then
+  echo "expected split-brain signer profile reason for policy failure" >&2
   exit 1
 fi
 
