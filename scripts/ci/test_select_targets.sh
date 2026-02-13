@@ -102,6 +102,18 @@ assert_ci_doc_contract_trend_scope() {
   assert_eq "$(extract_output "$output" "run_script_surface_budget_checks")" "true" "$context should run script-surface budget checks"
 }
 
+assert_ci_doc_contract_scope_compact() {
+  local output="$1"
+  local context="$2"
+  assert_ci_doc_contract_scope "$output" "$context"
+}
+
+assert_ci_doc_contract_trend_scope_compact() {
+  local output="$1"
+  local context="$2"
+  assert_ci_doc_contract_trend_scope "$output" "$context"
+}
+
 run_selector_with_bridge_deep() {
   local changed_files="$1"
   local bridge_deep="${2:-false}"
@@ -188,119 +200,57 @@ for wave in $(seq 1 19); do
 done
 
 non_kolme_wave_trend_loc_baseline_output="$(run_selector $'fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_baseline.json')"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_baseline_output" "run_rust")" "false" "non-Kolme wave trend-test LOC baseline fixture changes should avoid rust full fallback"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_baseline_output" "run_ci_tool_checks")" "true" "non-Kolme wave trend-test LOC baseline fixture changes must run CI tool checks"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_baseline_output" "unknown_risk_changed")" "false" "non-Kolme wave trend-test LOC baseline fixture changes should be classified"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_baseline_output" "test_scope")" "ci-doc-contract" "non-Kolme wave trend-test LOC baseline fixture changes should use ci-doc-contract scope"
+assert_ci_doc_contract_scope_compact "$non_kolme_wave_trend_loc_baseline_output" "non-Kolme wave trend-test LOC baseline fixture changes"
 
 non_kolme_wave_trend_loc_threshold_output="$(run_selector $'fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_thresholds.json')"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_threshold_output" "run_rust")" "false" "non-Kolme wave trend-test LOC threshold fixture changes should avoid rust full fallback"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_threshold_output" "run_ci_tool_checks")" "true" "non-Kolme wave trend-test LOC threshold fixture changes must run CI tool checks"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_threshold_output" "unknown_risk_changed")" "false" "non-Kolme wave trend-test LOC threshold fixture changes should be classified"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_threshold_output" "test_scope")" "ci-doc-contract" "non-Kolme wave trend-test LOC threshold fixture changes should use ci-doc-contract scope"
+assert_ci_doc_contract_scope_compact "$non_kolme_wave_trend_loc_threshold_output" "non-Kolme wave trend-test LOC threshold fixture changes"
 
 non_kolme_wave_trend_loc_checker_output="$(run_selector $'scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh')"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_output" "run_rust")" "false" "non-Kolme wave trend-test LOC checker changes should avoid rust full fallback"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_output" "run_ci_tool_checks")" "true" "non-Kolme wave trend-test LOC checker changes must run CI tool checks"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_output" "run_script_surface_budget_checks")" "true" "non-Kolme wave trend-test LOC checker changes should run script-surface budget checks"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_output" "unknown_risk_changed")" "false" "non-Kolme wave trend-test LOC checker changes should be classified"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_output" "test_scope")" "ci-doc-contract" "non-Kolme wave trend-test LOC checker changes should use ci-doc-contract scope"
+assert_ci_doc_contract_trend_scope_compact "$non_kolme_wave_trend_loc_checker_output" "non-Kolme wave trend-test LOC checker changes"
 
 non_kolme_wave_trend_loc_checker_test_output="$(run_selector $'scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh')"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_test_output" "run_rust")" "false" "non-Kolme wave trend-test LOC checker test changes should avoid rust full fallback"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_test_output" "run_ci_tool_checks")" "true" "non-Kolme wave trend-test LOC checker test changes must run CI tool checks"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_test_output" "run_script_surface_budget_checks")" "true" "non-Kolme wave trend-test LOC checker test changes should run script-surface budget checks"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_test_output" "unknown_risk_changed")" "false" "non-Kolme wave trend-test LOC checker test changes should be classified"
-assert_eq "$(extract_output "$non_kolme_wave_trend_loc_checker_test_output" "test_scope")" "ci-doc-contract" "non-Kolme wave trend-test LOC checker test changes should use ci-doc-contract scope"
+assert_ci_doc_contract_trend_scope_compact "$non_kolme_wave_trend_loc_checker_test_output" "non-Kolme wave trend-test LOC checker test changes"
 
 non_kolme_dispatcher_script_output="$(run_selector $'scripts/framework/run_non_kolme_contract_lane_dispatch.sh')"
-assert_eq "$(extract_output "$non_kolme_dispatcher_script_output" "run_rust")" "false" "non-Kolme dispatcher script changes should avoid rust full fallback"
-assert_eq "$(extract_output "$non_kolme_dispatcher_script_output" "run_ci_tool_checks")" "true" "non-Kolme dispatcher script changes must run CI tool checks"
-assert_eq "$(extract_output "$non_kolme_dispatcher_script_output" "run_script_surface_budget_checks")" "true" "non-Kolme dispatcher script changes should run script-surface budget checks"
-assert_eq "$(extract_output "$non_kolme_dispatcher_script_output" "unknown_risk_changed")" "false" "non-Kolme dispatcher script changes should be classified"
-assert_eq "$(extract_output "$non_kolme_dispatcher_script_output" "test_scope")" "ci-doc-contract" "non-Kolme dispatcher script changes should use ci-doc-contract scope"
+assert_ci_doc_contract_trend_scope_compact "$non_kolme_dispatcher_script_output" "non-Kolme dispatcher script changes"
 
 non_kolme_compliance_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_compliance_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_eq "$(extract_output "$non_kolme_compliance_dispatch_matrix_test_output" "run_rust")" "false" "non-Kolme compliance dispatcher matrix test changes should avoid rust full fallback"
-assert_eq "$(extract_output "$non_kolme_compliance_dispatch_matrix_test_output" "run_ci_tool_checks")" "true" "non-Kolme compliance dispatcher matrix test changes must run CI tool checks"
-assert_eq "$(extract_output "$non_kolme_compliance_dispatch_matrix_test_output" "run_script_surface_budget_checks")" "true" "non-Kolme compliance dispatcher matrix test changes should run script-surface budget checks"
-assert_eq "$(extract_output "$non_kolme_compliance_dispatch_matrix_test_output" "unknown_risk_changed")" "false" "non-Kolme compliance dispatcher matrix test changes should be classified"
-assert_eq "$(extract_output "$non_kolme_compliance_dispatch_matrix_test_output" "test_scope")" "ci-doc-contract" "non-Kolme compliance dispatcher matrix test changes should use ci-doc-contract scope"
+assert_ci_doc_contract_trend_scope_compact "$non_kolme_compliance_dispatch_matrix_test_output" "non-Kolme compliance dispatcher matrix test changes"
 
 non_kolme_manifest_backed_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_manifest_backed_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_eq "$(extract_output "$non_kolme_manifest_backed_dispatch_matrix_test_output" "run_rust")" "false" "non-Kolme manifest-backed dispatcher matrix test changes should avoid rust full fallback"
-assert_eq "$(extract_output "$non_kolme_manifest_backed_dispatch_matrix_test_output" "run_ci_tool_checks")" "true" "non-Kolme manifest-backed dispatcher matrix test changes must run CI tool checks"
-assert_eq "$(extract_output "$non_kolme_manifest_backed_dispatch_matrix_test_output" "run_script_surface_budget_checks")" "true" "non-Kolme manifest-backed dispatcher matrix test changes should run script-surface budget checks"
-assert_eq "$(extract_output "$non_kolme_manifest_backed_dispatch_matrix_test_output" "unknown_risk_changed")" "false" "non-Kolme manifest-backed dispatcher matrix test changes should be classified"
-assert_eq "$(extract_output "$non_kolme_manifest_backed_dispatch_matrix_test_output" "test_scope")" "ci-doc-contract" "non-Kolme manifest-backed dispatcher matrix test changes should use ci-doc-contract scope"
+assert_ci_doc_contract_trend_scope_compact "$non_kolme_manifest_backed_dispatch_matrix_test_output" "non-Kolme manifest-backed dispatcher matrix test changes"
 
 non_kolme_bridge_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_eq "$(extract_output "$non_kolme_bridge_dispatch_matrix_test_output" "run_rust")" "false" "non-Kolme bridge dispatcher matrix test changes should avoid rust full fallback"
-assert_eq "$(extract_output "$non_kolme_bridge_dispatch_matrix_test_output" "run_ci_tool_checks")" "true" "non-Kolme bridge dispatcher matrix test changes must run CI tool checks"
-assert_eq "$(extract_output "$non_kolme_bridge_dispatch_matrix_test_output" "run_script_surface_budget_checks")" "true" "non-Kolme bridge dispatcher matrix test changes should run script-surface budget checks"
-assert_eq "$(extract_output "$non_kolme_bridge_dispatch_matrix_test_output" "unknown_risk_changed")" "false" "non-Kolme bridge dispatcher matrix test changes should be classified"
-assert_eq "$(extract_output "$non_kolme_bridge_dispatch_matrix_test_output" "test_scope")" "ci-doc-contract" "non-Kolme bridge dispatcher matrix test changes should use ci-doc-contract scope"
+assert_ci_doc_contract_trend_scope_compact "$non_kolme_bridge_dispatch_matrix_test_output" "non-Kolme bridge dispatcher matrix test changes"
 
 non_kolme_sdk_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_eq "$(extract_output "$non_kolme_sdk_dispatch_matrix_test_output" "run_rust")" "false" "non-Kolme sdk dispatcher matrix test changes should avoid rust full fallback"
-assert_eq "$(extract_output "$non_kolme_sdk_dispatch_matrix_test_output" "run_ci_tool_checks")" "true" "non-Kolme sdk dispatcher matrix test changes must run CI tool checks"
-assert_eq "$(extract_output "$non_kolme_sdk_dispatch_matrix_test_output" "run_script_surface_budget_checks")" "true" "non-Kolme sdk dispatcher matrix test changes should run script-surface budget checks"
-assert_eq "$(extract_output "$non_kolme_sdk_dispatch_matrix_test_output" "unknown_risk_changed")" "false" "non-Kolme sdk dispatcher matrix test changes should be classified"
-assert_eq "$(extract_output "$non_kolme_sdk_dispatch_matrix_test_output" "test_scope")" "ci-doc-contract" "non-Kolme sdk dispatcher matrix test changes should use ci-doc-contract scope"
+assert_ci_doc_contract_trend_scope_compact "$non_kolme_sdk_dispatch_matrix_test_output" "non-Kolme sdk dispatcher matrix test changes"
 
 non_kolme_lightweight_dispatch_matrix_test_output="$(run_selector $'scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh')"
-assert_eq "$(extract_output "$non_kolme_lightweight_dispatch_matrix_test_output" "run_rust")" "false" "non-Kolme lightweight dispatcher matrix test changes should avoid rust full fallback"
-assert_eq "$(extract_output "$non_kolme_lightweight_dispatch_matrix_test_output" "run_ci_tool_checks")" "true" "non-Kolme lightweight dispatcher matrix test changes must run CI tool checks"
-assert_eq "$(extract_output "$non_kolme_lightweight_dispatch_matrix_test_output" "run_script_surface_budget_checks")" "true" "non-Kolme lightweight dispatcher matrix test changes should run script-surface budget checks"
-assert_eq "$(extract_output "$non_kolme_lightweight_dispatch_matrix_test_output" "unknown_risk_changed")" "false" "non-Kolme lightweight dispatcher matrix test changes should be classified"
-assert_eq "$(extract_output "$non_kolme_lightweight_dispatch_matrix_test_output" "test_scope")" "ci-doc-contract" "non-Kolme lightweight dispatcher matrix test changes should use ci-doc-contract scope"
+assert_ci_doc_contract_trend_scope_compact "$non_kolme_lightweight_dispatch_matrix_test_output" "non-Kolme lightweight dispatcher matrix test changes"
 
 for lightweight_wave in {10..18}; do
   non_kolme_lightweight_dispatch_matrix_test_output="$(run_selector "scripts/framework/test_non_kolme_wave${lightweight_wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh")"
-  assert_eq "$(extract_output "$non_kolme_lightweight_dispatch_matrix_test_output" "run_rust")" "false" "non-Kolme wave-${lightweight_wave} lightweight dispatcher matrix test changes should avoid rust full fallback"
-  assert_eq "$(extract_output "$non_kolme_lightweight_dispatch_matrix_test_output" "run_ci_tool_checks")" "true" "non-Kolme wave-${lightweight_wave} lightweight dispatcher matrix test changes must run CI tool checks"
-  assert_eq "$(extract_output "$non_kolme_lightweight_dispatch_matrix_test_output" "run_script_surface_budget_checks")" "true" "non-Kolme wave-${lightweight_wave} lightweight dispatcher matrix test changes should run script-surface budget checks"
-  assert_eq "$(extract_output "$non_kolme_lightweight_dispatch_matrix_test_output" "unknown_risk_changed")" "false" "non-Kolme wave-${lightweight_wave} lightweight dispatcher matrix test changes should be classified"
-  assert_eq "$(extract_output "$non_kolme_lightweight_dispatch_matrix_test_output" "test_scope")" "ci-doc-contract" "non-Kolme wave-${lightweight_wave} lightweight dispatcher matrix test changes should use ci-doc-contract scope"
+  assert_ci_doc_contract_trend_scope_compact "$non_kolme_lightweight_dispatch_matrix_test_output" "non-Kolme wave-${lightweight_wave} lightweight dispatcher matrix test changes"
 done
 
 kolme_harness_trend_threshold_output="$(run_selector $'.ci/kolme-test-harness-loc-trend-thresholds.env')"
-assert_eq "$(extract_output "$kolme_harness_trend_threshold_output" "run_rust")" "false" "Kolme harness trend-threshold config changes should avoid rust full fallback"
-assert_eq "$(extract_output "$kolme_harness_trend_threshold_output" "run_ci_tool_checks")" "true" "Kolme harness trend-threshold config changes must run CI tool checks"
-assert_eq "$(extract_output "$kolme_harness_trend_threshold_output" "unknown_risk_changed")" "false" "Kolme harness trend-threshold config changes should be classified"
-assert_eq "$(extract_output "$kolme_harness_trend_threshold_output" "test_scope")" "ci-doc-contract" "Kolme harness trend-threshold config changes should use ci-doc-contract scope"
+assert_ci_doc_contract_scope_compact "$kolme_harness_trend_threshold_output" "Kolme harness trend-threshold config changes"
 
 generic_harness_trend_threshold_output="$(run_selector $'.ci/test-harness-loc-trend-thresholds.env')"
-assert_eq "$(extract_output "$generic_harness_trend_threshold_output" "run_rust")" "false" "generic harness trend-threshold config changes should avoid rust full fallback"
-assert_eq "$(extract_output "$generic_harness_trend_threshold_output" "run_ci_tool_checks")" "true" "generic harness trend-threshold config changes must run CI tool checks"
-assert_eq "$(extract_output "$generic_harness_trend_threshold_output" "unknown_risk_changed")" "false" "generic harness trend-threshold config changes should be classified"
-assert_eq "$(extract_output "$generic_harness_trend_threshold_output" "test_scope")" "ci-doc-contract" "generic harness trend-threshold config changes should use ci-doc-contract scope"
+assert_ci_doc_contract_scope_compact "$generic_harness_trend_threshold_output" "generic harness trend-threshold config changes"
 
 generic_harness_soft_budget_output="$(run_selector $'.ci/test-harness-loc-soft-budget.env')"
-assert_eq "$(extract_output "$generic_harness_soft_budget_output" "run_rust")" "false" "generic harness soft-budget config changes should avoid rust full fallback"
-assert_eq "$(extract_output "$generic_harness_soft_budget_output" "run_ci_tool_checks")" "true" "generic harness soft-budget config changes must run CI tool checks"
-assert_eq "$(extract_output "$generic_harness_soft_budget_output" "unknown_risk_changed")" "false" "generic harness soft-budget config changes should be classified"
-assert_eq "$(extract_output "$generic_harness_soft_budget_output" "test_scope")" "ci-doc-contract" "generic harness soft-budget config changes should use ci-doc-contract scope"
+assert_ci_doc_contract_scope_compact "$generic_harness_soft_budget_output" "generic harness soft-budget config changes"
 
 generic_harness_baseline_output="$(run_selector $'.ci/test-harness-loc-baseline.env')"
-assert_eq "$(extract_output "$generic_harness_baseline_output" "run_rust")" "false" "generic harness baseline config changes should avoid rust full fallback"
-assert_eq "$(extract_output "$generic_harness_baseline_output" "run_ci_tool_checks")" "true" "generic harness baseline config changes must run CI tool checks"
-assert_eq "$(extract_output "$generic_harness_baseline_output" "unknown_risk_changed")" "false" "generic harness baseline config changes should be classified"
-assert_eq "$(extract_output "$generic_harness_baseline_output" "test_scope")" "ci-doc-contract" "generic harness baseline config changes should use ci-doc-contract scope"
+assert_ci_doc_contract_scope_compact "$generic_harness_baseline_output" "generic harness baseline config changes"
 
 kolme_harness_trend_report_script_output="$(run_selector $'scripts/ci/generate_kolme_test_harness_loc_trend_report.sh')"
-assert_eq "$(extract_output "$kolme_harness_trend_report_script_output" "run_rust")" "false" "Kolme harness trend-report script changes should avoid rust full fallback"
-assert_eq "$(extract_output "$kolme_harness_trend_report_script_output" "run_ci_tool_checks")" "true" "Kolme harness trend-report script changes must run CI tool checks"
-assert_eq "$(extract_output "$kolme_harness_trend_report_script_output" "run_script_surface_budget_checks")" "true" "Kolme harness trend-report script changes should run script-surface budget checks"
-assert_eq "$(extract_output "$kolme_harness_trend_report_script_output" "unknown_risk_changed")" "false" "Kolme harness trend-report script changes should be classified"
-assert_eq "$(extract_output "$kolme_harness_trend_report_script_output" "test_scope")" "ci-doc-contract" "Kolme harness trend-report script changes should use ci-doc-contract scope"
+assert_ci_doc_contract_trend_scope_compact "$kolme_harness_trend_report_script_output" "Kolme harness trend-report script changes"
 
 kolme_harness_trend_report_test_script_output="$(run_selector $'scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh')"
-assert_eq "$(extract_output "$kolme_harness_trend_report_test_script_output" "run_rust")" "false" "Kolme harness trend-report test script changes should avoid rust full fallback"
-assert_eq "$(extract_output "$kolme_harness_trend_report_test_script_output" "run_ci_tool_checks")" "true" "Kolme harness trend-report test script changes must run CI tool checks"
-assert_eq "$(extract_output "$kolme_harness_trend_report_test_script_output" "run_script_surface_budget_checks")" "true" "Kolme harness trend-report test script changes should run script-surface budget checks"
-assert_eq "$(extract_output "$kolme_harness_trend_report_test_script_output" "unknown_risk_changed")" "false" "Kolme harness trend-report test script changes should be classified"
-assert_eq "$(extract_output "$kolme_harness_trend_report_test_script_output" "test_scope")" "ci-doc-contract" "Kolme harness trend-report test script changes should use ci-doc-contract scope"
+assert_ci_doc_contract_trend_scope_compact "$kolme_harness_trend_report_test_script_output" "Kolme harness trend-report test script changes"
 
 hardening_docs_output="$(run_selector $'docs/planning/engineering-hardening-wave.md')"
 assert_eq "$(extract_output "$hardening_docs_output" "docs_only")" "true" "engineering hardening docs should remain docs-only"
