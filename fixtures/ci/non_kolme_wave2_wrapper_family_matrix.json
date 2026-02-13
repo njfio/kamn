@@ -1,0 +1,53 @@
+{
+  "schema_version": "kamn.kolme.lane-migration-matrix.v1",
+  "lanes": [
+    {
+      "lane_id": "non_kolme.governance.lifecycle_rollback",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/governance_lifecycle_rollback_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2646"
+    },
+    {
+      "lane_id": "non_kolme.governance.quorum_attestation_replay",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/governance/run_quorum_attestation_replay_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/governance_quorum_attestation_replay_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2646"
+    },
+    {
+      "lane_id": "non_kolme.governance.simulation",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/governance/run_governance_simulation_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/governance_simulation_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2646"
+    },
+    {
+      "lane_id": "non_kolme.governance.stake_slash_risk",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/governance/run_stake_slash_risk_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/governance_stake_slash_risk_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2646"
+    }
+  ]
+}
