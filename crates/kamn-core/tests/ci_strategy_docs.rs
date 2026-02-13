@@ -15,6 +15,12 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("channel_snapshot_journal_corrupt_tail:<line>"));
     assert!(DOC.contains("message_lifecycle_snapshot_journal_corrupt_tail:<line>"));
     assert!(DOC.contains("task_operation_snapshot_journal_corrupt_tail:<line>"));
+    assert!(DOC.contains("## Runtime Backpressure Enforcement Contract"));
+    assert!(DOC.contains("docs/planning/runtime_backpressure_policy.md"));
+    assert!(DOC.contains("cargo test -p kamn-core --lib backpressure"));
+    assert!(DOC.contains("cargo test -p kamn-core --lib network_fault_simulation"));
+    assert!(DOC.contains("runtime_backpressure_reject_new_enqueue"));
+    assert!(DOC.contains("runtime_backpressure_purge_stale_peer_queue"));
     assert!(DOC.contains("layering_marker_missing"));
     assert!(DOC.contains("run_localhost_signed_integration_contract_lane_tests"));
     assert!(DOC.contains("sdk-live-localhost-integration"));
@@ -163,6 +169,7 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("Regression: #1497"));
     assert!(DOC.contains("Regression: #2694"));
     assert!(DOC.contains("Regression: #2690"));
+    assert!(DOC.contains("Regression: #2691"));
     assert!(DOC.contains("Regression: #2093"));
     assert!(DOC.contains("Regression: #2095"));
 }
