@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "sdk.example_fixture_drift.contract",
+  "evidence_key": "sdk_example_fixture_drift_contract_lane:v1",
+  "reason_key": "sdk_example_fixture_drift_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "python3",
+      "scripts/sdk/example_fixture_drift_contract_lane_contract.py"
+    ]
+  }
+}

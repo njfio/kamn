@@ -1,0 +1,70 @@
+{
+  "lanes": [
+    {
+      "lane_id": "non_kolme.sdk.example_fixture_drift",
+      "manifest_file": "scripts/framework/manifests/sdk_example_fixture_drift_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/sdk/run_example_fixture_drift_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.sdk.live_transport_parity",
+      "manifest_file": "scripts/framework/manifests/sdk_live_transport_parity_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/sdk/run_live_transport_parity_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.sdk.live_transport_replay_tamper",
+      "manifest_file": "scripts/framework/manifests/sdk_live_transport_replay_tamper_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/sdk/run_live_transport_replay_tamper_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.sdk.live_transport_smoke_parity",
+      "manifest_file": "scripts/framework/manifests/sdk_live_transport_smoke_parity_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/sdk/run_live_transport_smoke_parity_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.sdk.localhost_signed_integration",
+      "manifest_file": "scripts/framework/manifests/sdk_localhost_signed_integration_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/sdk/run_localhost_signed_integration_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.sdk.schema_compatibility",
+      "manifest_file": "scripts/framework/manifests/sdk_schema_compatibility_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/sdk/run_sdk_schema_compatibility_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    }
+  ],
+  "regular_file_wrapper_count": 0,
+  "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
+  "source_matrix_file": "fixtures/ci/non_kolme_wave8_wrapper_family_matrix.json",
+  "symlink_wrapper_count": 6,
+  "total_shell_loc": 6,
+  "wrapper_count": 6
+}
