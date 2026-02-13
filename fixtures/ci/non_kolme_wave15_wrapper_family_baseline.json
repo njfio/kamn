@@ -1,0 +1,20 @@
+{
+  "lanes": [
+    {
+      "lane_id": "non_kolme.message.processor_proof_artifact",
+      "manifest_file": "scripts/framework/manifests/message_processor_proof_artifact_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/message/run_processor_proof_artifact_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    }
+  ],
+  "regular_file_wrapper_count": 0,
+  "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
+  "source_matrix_file": "fixtures/ci/non_kolme_wave15_wrapper_family_matrix.json",
+  "symlink_wrapper_count": 1,
+  "total_shell_loc": 1,
+  "wrapper_count": 1
+}
