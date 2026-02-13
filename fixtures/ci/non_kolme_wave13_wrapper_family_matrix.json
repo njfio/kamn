@@ -1,0 +1,53 @@
+{
+  "schema_version": "kamn.kolme.lane-migration-matrix.v1",
+  "lanes": [
+    {
+      "lane_id": "non_kolme.did.did_registry",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/did/run_did_registry_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/did_did_registry_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2726"
+    },
+    {
+      "lane_id": "non_kolme.did.federated_did_handshake",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/did/run_federated_did_handshake_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/did_federated_did_handshake_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2726"
+    },
+    {
+      "lane_id": "non_kolme.did.lifecycle_operator_binding",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/did/run_lifecycle_operator_binding_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/did_lifecycle_operator_binding_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2726"
+    },
+    {
+      "lane_id": "non_kolme.did.multikey_algorithm_policy",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/did/run_multikey_algorithm_policy_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/did_multikey_algorithm_policy_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2726"
+    }
+  ]
+}

@@ -109,6 +109,12 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("test_non_kolme_wave12_wrapper_family_baseline_contract.sh"));
     assert!(DOC.contains("test_check_non_kolme_wave12_wrapper_family_budget_trend.sh"));
     assert!(DOC.contains("check_non_kolme_wave12_wrapper_family_budget_trend.sh"));
+    assert!(DOC.contains("non_kolme_wave13_wrapper_family_matrix.json"));
+    assert!(DOC.contains("non_kolme_wave13_wrapper_family_baseline.json"));
+    assert!(DOC.contains("non_kolme_wave13_wrapper_family_trend_thresholds.json"));
+    assert!(DOC.contains("test_non_kolme_wave13_wrapper_family_baseline_contract.sh"));
+    assert!(DOC.contains("test_check_non_kolme_wave13_wrapper_family_budget_trend.sh"));
+    assert!(DOC.contains("check_non_kolme_wave13_wrapper_family_budget_trend.sh"));
     assert!(DOC.contains("Non-Kolme bridge dispatcher wrapper-matrix guard stays on PR fast gate:"));
     assert!(DOC.contains("test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh"));
     assert!(DOC.contains("Non-Kolme sdk dispatcher wrapper-matrix guard stays on PR fast gate:"));
@@ -133,6 +139,12 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     ));
     assert!(
         DOC.contains("test_non_kolme_wave12_lightweight_contract_lane_dispatch_wrapper_matrix.sh")
+    );
+    assert!(DOC.contains(
+        "Non-Kolme wave-13 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:"
+    ));
+    assert!(
+        DOC.contains("test_non_kolme_wave13_lightweight_contract_lane_dispatch_wrapper_matrix.sh")
     );
     assert!(DOC.contains("run_local_fork_sync_metadata_lane.sh --mode run"));
     assert!(DOC.contains("run_local_fork_smoke_evidence_lane.sh --mode run"));
@@ -284,4 +296,5 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("Regression: #2717"));
     assert!(DOC.contains("Regression: #2720"));
     assert!(DOC.contains("Regression: #2723"));
+    assert!(DOC.contains("Regression: #2726"));
 }

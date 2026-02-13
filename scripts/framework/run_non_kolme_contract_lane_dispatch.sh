@@ -63,7 +63,9 @@ resolve_manifest_name() {
     run_backend_session_auth_freshness_contract_lane.sh) echo "dashboard_backend_session_auth_freshness_contract_lane.json" ;;
     run_cross_chain_outbound_intent_contract_lane.sh) echo "bridge_cross_chain_outbound_intent_contract_lane.json" ;;
     run_dashboard_stale_error_budget_contract_lane.sh) echo "dashboard_stale_error_budget_contract_lane.json" ;;
+    run_did_registry_contract_lane.sh) echo "did_did_registry_contract_lane.json" ;;
     run_durable_guard_recovery_contract_lane.sh) echo "guard_durable_guard_recovery_contract_lane.json" ;;
+    run_federated_did_handshake_contract_lane.sh) echo "did_federated_did_handshake_contract_lane.json" ;;
     run_launch_canary_contract_lane.sh) echo "canary_launch_canary_contract_lane.json" ;;
     run_localhost_bridge_demo_evidence_contract_lane.sh) echo "bridge_localhost_bridge_demo_evidence_contract_lane.json" ;;
     run_localhost_bridge_relay_demo_contract_lane.sh) echo "bridge_localhost_bridge_relay_demo_contract_lane.json" ;;
@@ -85,7 +87,9 @@ resolve_manifest_name() {
     run_live_transport_parity_contract_lane.sh) echo "sdk_live_transport_parity_contract_lane.json" ;;
     run_live_transport_replay_tamper_contract_lane.sh) echo "sdk_live_transport_replay_tamper_contract_lane.json" ;;
     run_live_transport_smoke_parity_contract_lane.sh) echo "sdk_live_transport_smoke_parity_contract_lane.json" ;;
+    run_lifecycle_operator_binding_contract_lane.sh) echo "did_lifecycle_operator_binding_contract_lane.json" ;;
     run_localhost_signed_integration_contract_lane.sh) echo "sdk_localhost_signed_integration_contract_lane.json" ;;
+    run_multikey_algorithm_policy_contract_lane.sh) echo "did_multikey_algorithm_policy_contract_lane.json" ;;
     run_sdk_schema_compatibility_contract_lane.sh) echo "sdk_schema_compatibility_contract_lane.json" ;;
     run_signer_emulator_contract_lane.sh) echo "signer_signer_emulator_contract_lane.json" ;;
     run_signer_incident_recovery_contract_lane.sh) echo "signer_signer_incident_recovery_contract_lane.json" ;;
