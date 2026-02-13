@@ -560,6 +560,12 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `fallback signer secret env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK)`
   - real-node profile managed-external boundary rejects raw signer secret env and prints remediation:
     - `managed-external signer raw private key env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF)`
+  - real-node profile managed-external backend adapter command contract:
+    - optional command env marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND`
+    - optional timeout env marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS` (default `5`)
+    - command input env markers: `KAMN_MANAGED_SIGNER_KEY_REFERENCE`, `KAMN_MANAGED_SIGNER_ACTOR_DID`, `KAMN_MANAGED_SIGNER_NONCE`, `KAMN_MANAGED_SIGNER_STATE_ROOT`, `KAMN_MANAGED_SIGNER_CANONICAL_MESSAGE`
+    - command output markers: `signature_hex=<128-hex>` and `recovery_id=<0..3>`
+    - deterministic managed-external backend failure reason codes: `managed_signer_backend_timeout`, `managed_signer_backend_unavailable`, `managed_signer_backend_response_malformed`
   - real-node profile checker fails closed on in-memory provider references in command/policy surfaces:
     - `runtime_commit_in_memory_provider_reference_detected`
     - `runtime_commit_policy_check_in_memory_provider_reference_detected`
