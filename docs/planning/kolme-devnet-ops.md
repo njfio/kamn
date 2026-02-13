@@ -1135,6 +1135,9 @@ Operator checkpoints:
   - `bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-self-test-summary.json`
 - Explicit local-only self-test execution:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_self_test_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --matrix-max-seconds 60 --matrix-cargo-profile portable --output-json /tmp/kolme-local-fork-self-test-summary.json`
+- Wrapper routing stays manifest-backed:
+  - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_self_test_lane.sh --resolve-manifest-path`
+  - `scripts/framework/manifests/kolme_local_kolme_fork_self_test_lane.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_kolme_fork_self_test_policy.py --report-file /tmp/kolme-local-fork-self-test-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-self-test-policy.json`
 - Contract lane command:
