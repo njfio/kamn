@@ -31,6 +31,14 @@ assert_selector_keys_match() {
   done
 }
 
+assert_deploy_scope_triplet() {
+  local output="$1"
+  local context="$2"
+  assert_eq "$(extract_output "$output" "run_rust")" "false" "$context should avoid rust lane"
+  assert_eq "$(extract_output "$output" "run_deploy_preflight_tests")" "true" "$context must run deploy preflight tests"
+  assert_eq "$(extract_output "$output" "test_scope")" "deploy" "$context should set deploy scope"
+}
+
 run_selector_with_bridge_deep() {
   local changed_files="$1"
   local bridge_deep="${2:-false}"
@@ -364,25 +372,17 @@ assert_eq "$(extract_output "$deploy_output" "test_scope")" "deploy" "deploy-onl
 
 rollback_runbook_output="$(run_selector $'docs/foundation/upgrade-rollback-runbook.md')"
 assert_eq "$(extract_output "$rollback_runbook_output" "docs_only")" "true" "upgrade rollback runbook updates should remain docs-only"
-assert_eq "$(extract_output "$rollback_runbook_output" "run_rust")" "false" "upgrade rollback runbook updates should avoid rust lane"
-assert_eq "$(extract_output "$rollback_runbook_output" "run_deploy_preflight_tests")" "true" "upgrade rollback runbook updates must run deploy preflight tests"
 assert_eq "$(extract_output "$rollback_runbook_output" "run_signer_emulator_contract_tests")" "true" "upgrade rollback runbook updates must run signer contract lane"
-assert_eq "$(extract_output "$rollback_runbook_output" "test_scope")" "deploy" "upgrade rollback runbook updates should use deploy scope"
+assert_deploy_scope_triplet "$rollback_runbook_output" "upgrade rollback runbook updates"
 
 deployment_slo_lane_output="$(run_selector $'scripts/deploy/run_deployment_slo_rollback_lane.sh')"
-assert_eq "$(extract_output "$deployment_slo_lane_output" "run_rust")" "false" "deployment slo/rollback lane changes should avoid rust lane"
-assert_eq "$(extract_output "$deployment_slo_lane_output" "run_deploy_preflight_tests")" "true" "deployment slo/rollback lane changes must run deploy preflight tests"
-assert_eq "$(extract_output "$deployment_slo_lane_output" "test_scope")" "deploy" "deployment slo/rollback lane changes should set deploy scope"
+assert_deploy_scope_triplet "$deployment_slo_lane_output" "deployment slo/rollback lane changes"
 
 deployment_slo_policy_output="$(run_selector $'scripts/deploy/check_deployment_slo_rollback_policy.sh')"
-assert_eq "$(extract_output "$deployment_slo_policy_output" "run_rust")" "false" "deployment slo/rollback policy checker changes should avoid rust lane"
-assert_eq "$(extract_output "$deployment_slo_policy_output" "run_deploy_preflight_tests")" "true" "deployment slo/rollback policy checker changes must run deploy preflight tests"
-assert_eq "$(extract_output "$deployment_slo_policy_output" "test_scope")" "deploy" "deployment slo/rollback policy checker changes should set deploy scope"
+assert_deploy_scope_triplet "$deployment_slo_policy_output" "deployment slo/rollback policy checker changes"
 
 deployment_slo_contract_output="$(run_selector $'scripts/deploy/run_deployment_slo_rollback_contract_lane.sh')"
-assert_eq "$(extract_output "$deployment_slo_contract_output" "run_rust")" "false" "deployment slo/rollback contract lane changes should avoid rust lane"
-assert_eq "$(extract_output "$deployment_slo_contract_output" "run_deploy_preflight_tests")" "true" "deployment slo/rollback contract lane changes must run deploy preflight tests"
-assert_eq "$(extract_output "$deployment_slo_contract_output" "test_scope")" "deploy" "deployment slo/rollback contract lane changes should set deploy scope"
+assert_deploy_scope_triplet "$deployment_slo_contract_output" "deployment slo/rollback contract lane changes"
 
 # Regression: #2303
 kolme_local_heavy_default_gate_output="$(run_selector_with_local_heavy_opt_in $'scripts/kolme/run_local_heavy_validation_matrix.sh' 'false')"
@@ -411,29 +411,19 @@ assert_eq "$(extract_output "$kolme_fork_rust_matrix_opt_in_gate_output" "kolme_
 assert_eq "$(extract_output "$kolme_fork_rust_matrix_opt_in_gate_output" "test_scope")" "kolme-local-heavy-contract" "Kolme fork rust matrix opt-in selection should set local-heavy contract scope"
 
 gonogo_shared_contract_output="$(run_selector $'scripts/deploy/gonogo_evidence_contract.py')"
-assert_eq "$(extract_output "$gonogo_shared_contract_output" "run_rust")" "false" "go/no-go shared contract script-only changes should avoid rust lane"
-assert_eq "$(extract_output "$gonogo_shared_contract_output" "run_deploy_preflight_tests")" "true" "go/no-go shared contract changes must run deploy preflight tests"
-assert_eq "$(extract_output "$gonogo_shared_contract_output" "test_scope")" "deploy" "go/no-go shared contract changes should set deploy scope"
+assert_deploy_scope_triplet "$gonogo_shared_contract_output" "go/no-go shared contract changes"
 
 staging_shared_contract_output="$(run_selector $'scripts/deploy/staging_rehearsal_contract.py')"
-assert_eq "$(extract_output "$staging_shared_contract_output" "run_rust")" "false" "staging rehearsal shared contract script-only changes should avoid rust lane"
-assert_eq "$(extract_output "$staging_shared_contract_output" "run_deploy_preflight_tests")" "true" "staging rehearsal shared contract changes must run deploy preflight tests"
-assert_eq "$(extract_output "$staging_shared_contract_output" "test_scope")" "deploy" "staging rehearsal shared contract changes should set deploy scope"
+assert_deploy_scope_triplet "$staging_shared_contract_output" "staging rehearsal shared contract changes"
 
 dr_shared_contract_output="$(run_selector $'scripts/deploy/dr_evidence_contract.py')"
-assert_eq "$(extract_output "$dr_shared_contract_output" "run_rust")" "false" "DR shared contract script-only changes should avoid rust lane"
-assert_eq "$(extract_output "$dr_shared_contract_output" "run_deploy_preflight_tests")" "true" "DR shared contract changes must run deploy preflight tests"
-assert_eq "$(extract_output "$dr_shared_contract_output" "test_scope")" "deploy" "DR shared contract changes should set deploy scope"
+assert_deploy_scope_triplet "$dr_shared_contract_output" "DR shared contract changes"
 
 deployment_policy_shared_contract_output="$(run_selector $'scripts/deploy/deployment_slo_rollback_policy_contract.py')"
-assert_eq "$(extract_output "$deployment_policy_shared_contract_output" "run_rust")" "false" "deployment SLO rollback shared policy contract script-only changes should avoid rust lane"
-assert_eq "$(extract_output "$deployment_policy_shared_contract_output" "run_deploy_preflight_tests")" "true" "deployment SLO rollback shared policy contract changes must run deploy preflight tests"
-assert_eq "$(extract_output "$deployment_policy_shared_contract_output" "test_scope")" "deploy" "deployment SLO rollback shared policy contract changes should set deploy scope"
+assert_deploy_scope_triplet "$deployment_policy_shared_contract_output" "deployment SLO rollback shared policy contract changes"
 
 deployment_lane_shared_contract_output="$(run_selector $'scripts/deploy/deployment_slo_rollback_lane_contract.py')"
-assert_eq "$(extract_output "$deployment_lane_shared_contract_output" "run_rust")" "false" "deployment SLO rollback shared lane contract script-only changes should avoid rust lane"
-assert_eq "$(extract_output "$deployment_lane_shared_contract_output" "run_deploy_preflight_tests")" "true" "deployment SLO rollback shared lane contract changes must run deploy preflight tests"
-assert_eq "$(extract_output "$deployment_lane_shared_contract_output" "test_scope")" "deploy" "deployment SLO rollback shared lane contract changes should set deploy scope"
+assert_deploy_scope_triplet "$deployment_lane_shared_contract_output" "deployment SLO rollback shared lane contract changes"
 
 # Regression: #463
 runner_output_file="$(mktemp)"
