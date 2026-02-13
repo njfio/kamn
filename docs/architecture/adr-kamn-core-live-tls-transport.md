@@ -45,7 +45,7 @@ Deferred. This increases dependency and runtime surface area and would force bro
 
 ### Compile-time feature gate for local-only builds
 
-Accepted as follow-up candidate, not part of this ADR's baseline decision. Track under `#2756`.
+Accepted and implemented as an optional build profile in `kamn-core` (`live-https` default-on). Local-only builds may use `--no-default-features` for low-cost compilation without rustls transport dependencies.
 
 ## Consequences
 
@@ -57,7 +57,7 @@ Positive:
 
 Tradeoffs:
 
-- `kamn-core` is not dependency-minimal; TLS crates remain part of default build profile.
+- `kamn-core` is not dependency-minimal in default profile; TLS crates remain enabled for live transport by default.
 - Additional governance is needed to keep docs/tests aligned with this decision.
 
 ## Validation and Traceability
@@ -66,4 +66,3 @@ Tradeoffs:
 - TLS policy helpers: `crates/kamn-kolme/src/tls_policy.rs`
 - Transport integration tests: `crates/kamn-core/tests/kolme_runtime_commit_http_transport.rs`
 - Transport docs contract: `crates/kamn-core/tests/kolme_runtime_commit_client_docs.rs`
-

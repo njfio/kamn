@@ -130,6 +130,15 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_https_transport_maps_tls_handshake_failures_to_unavailable -- --exact`
 - Certificate/handshake/timeout reason-code mapping remains deterministic and fail-closed for runtime commit submit/finality/block fallback flows.
 
+## Kolme Live HTTPS Feature-Gate Contract
+- `kamn-core` exposes `live-https` as an optional feature and `live-https` feature remains enabled by default.
+- Fast CI keeps default-profile verification only:
+  - `cargo check -p kamn-core --features live-https`
+- Optional low-cost local-only verification (no rustls transport dependencies):
+  - `cargo check -p kamn-core --no-default-features`
+- Local-only profile remains fail-closed for runtime network transport calls; this profile is for deterministic/local build validation only.
+- Regression: #2756
+
 ## Kolme Live Retry Coverage
 - Runtime commit submit/finality retry behavior must remain deterministic and bounded.
 - Fast-gate coverage commands:
