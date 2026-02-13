@@ -51,6 +51,14 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("run_fast_gate_native_api_parity_contract_lane.sh"));
     assert!(DOC.contains("check_fast_gate_native_api_parity_policy.py"));
     assert!(DOC.contains("KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS=120"));
+    assert!(DOC.contains("non_kolme_wave5_wrapper_family_matrix.json"));
+    assert!(DOC.contains("non_kolme_wave5_wrapper_family_baseline.json"));
+    assert!(DOC.contains("non_kolme_wave5_wrapper_family_trend_thresholds.json"));
+    assert!(DOC.contains("test_non_kolme_wave5_wrapper_family_baseline_contract.sh"));
+    assert!(DOC.contains("test_check_non_kolme_wave5_wrapper_family_budget_trend.sh"));
+    assert!(DOC.contains("check_non_kolme_wave5_wrapper_family_budget_trend.sh"));
+    assert!(DOC.contains("Non-Kolme bridge dispatcher wrapper-matrix guard stays on PR fast gate:"));
+    assert!(DOC.contains("test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh"));
     assert!(DOC.contains("run_local_fork_sync_metadata_lane.sh --mode run"));
     assert!(DOC.contains("run_local_fork_smoke_evidence_lane.sh --mode run"));
     assert!(DOC.contains(
@@ -193,4 +201,5 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("Regression: #2693"));
     assert!(DOC.contains("Regression: #2093"));
     assert!(DOC.contains("Regression: #2095"));
+    assert!(DOC.contains("Regression: #2658"));
 }

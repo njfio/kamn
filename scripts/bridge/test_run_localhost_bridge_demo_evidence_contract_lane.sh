@@ -3,9 +3,22 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE_SCRIPT="$ROOT_DIR/scripts/bridge/run_localhost_bridge_demo_evidence_contract_lane.sh"
+LANE_IMPL_SCRIPT="$ROOT_DIR/scripts/bridge/run_localhost_bridge_demo_evidence_contract_lane_impl.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/bridge_localhost_bridge_demo_evidence_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
 if [ ! -x "$LANE_SCRIPT" ]; then
   echo "expected localhost bridge demo evidence contract lane script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$LANE_IMPL_SCRIPT" ]; then
+  echo "expected localhost bridge demo evidence contract lane implementation script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$MANIFEST_FILE" ]; then
+  echo "expected localhost bridge demo evidence contract lane manifest to exist" >&2
   exit 1
 fi
 
@@ -27,23 +40,44 @@ for marker in "${required_markers[@]}"; do
   fi
 done
 
-if ! grep -q "run_localhost_bridge_relay_demo_contract_lane.sh" "$LANE_SCRIPT"; then
-  echo "expected localhost bridge demo evidence lane to execute localhost relay contract baseline" >&2
+if [ ! -L "$LANE_SCRIPT" ]; then
+  echo "expected localhost bridge demo evidence contract lane wrapper to be a dispatcher symlink" >&2
   exit 1
 fi
 
-if ! grep -q "run_bridge_replay_matrix.sh" "$LANE_SCRIPT"; then
-  echo "expected localhost bridge demo evidence lane to execute replay matrix evidence capture" >&2
+if [ "$(readlink "$LANE_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected localhost bridge demo evidence contract lane wrapper to target shared non-Kolme dispatcher" >&2
   exit 1
 fi
 
-if ! grep -q "generate_localhost_bridge_demo_evidence_bundle.sh" "$LANE_SCRIPT"; then
-  echo "expected localhost bridge demo evidence lane to generate evidence bundle" >&2
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$LANE_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected localhost bridge demo evidence wrapper to resolve bridge manifest via dispatcher" >&2
   exit 1
 fi
 
-if ! grep -q "check_localhost_bridge_demo_policy.sh" "$LANE_SCRIPT"; then
-  echo "expected localhost bridge demo evidence lane to enforce policy checker" >&2
+if ! grep -Fq "run_localhost_bridge_demo_evidence_contract_lane_impl.sh" "$MANIFEST_FILE"; then
+  echo "expected localhost bridge demo evidence manifest to dispatch to implementation script" >&2
+  exit 1
+fi
+
+if ! grep -q "run_localhost_bridge_relay_demo_contract_lane.sh" "$LANE_IMPL_SCRIPT"; then
+  echo "expected localhost bridge demo evidence implementation lane to execute localhost relay contract baseline" >&2
+  exit 1
+fi
+
+if ! grep -q "run_bridge_replay_matrix.sh" "$LANE_IMPL_SCRIPT"; then
+  echo "expected localhost bridge demo evidence implementation lane to execute replay matrix evidence capture" >&2
+  exit 1
+fi
+
+if ! grep -q "generate_localhost_bridge_demo_evidence_bundle.sh" "$LANE_IMPL_SCRIPT"; then
+  echo "expected localhost bridge demo evidence implementation lane to generate evidence bundle" >&2
+  exit 1
+fi
+
+if ! grep -q "check_localhost_bridge_demo_policy.sh" "$LANE_IMPL_SCRIPT"; then
+  echo "expected localhost bridge demo evidence implementation lane to enforce policy checker" >&2
   exit 1
 fi
 

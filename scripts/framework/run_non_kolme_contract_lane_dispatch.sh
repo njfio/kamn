@@ -53,10 +53,14 @@ fi
 
 resolve_manifest_name() {
   case "$1" in
+    run_bridge_adapter_conformance_contract_lane.sh) echo "bridge_bridge_adapter_conformance_contract_lane.json" ;;
+    run_bridge_replay_redaction_contract_lane.sh) echo "bridge_bridge_replay_redaction_contract_lane.json" ;;
     run_backend_session_auth_freshness_contract_lane.sh) echo "dashboard_backend_session_auth_freshness_contract_lane.json" ;;
+    run_cross_chain_outbound_intent_contract_lane.sh) echo "bridge_cross_chain_outbound_intent_contract_lane.json" ;;
     run_dashboard_stale_error_budget_contract_lane.sh) echo "dashboard_stale_error_budget_contract_lane.json" ;;
     run_durable_guard_recovery_contract_lane.sh) echo "guard_durable_guard_recovery_contract_lane.json" ;;
     run_launch_canary_contract_lane.sh) echo "canary_launch_canary_contract_lane.json" ;;
+    run_localhost_bridge_demo_evidence_contract_lane.sh) echo "bridge_localhost_bridge_demo_evidence_contract_lane.json" ;;
     run_post_cutover_slo_contract_lane.sh) echo "canary_post_cutover_slo_contract_lane.json" ;;
     run_classification_redaction_contract_lane.sh) echo "compliance_classification_redaction_contract_lane.json" ;;
     run_dsar_legal_hold_contract_lane.sh) echo "compliance_dsar_legal_hold_contract_lane.json" ;;

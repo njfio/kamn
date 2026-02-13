@@ -3,9 +3,12 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_replay_redaction_contract_lane.sh"
+FAST_IMPL_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_replay_redaction_contract_lane_impl.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_replay_redaction_deep_lane.sh"
 REPLAY_SCRIPT="$ROOT_DIR/scripts/bridge/run_bridge_replay_matrix.sh"
 REPLAY_FIXTURE="$ROOT_DIR/fixtures/bridge_replay/replay_validation_cases.json"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/bridge_bridge_replay_redaction_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
   echo "expected bridge replay/redaction contract lane script to be executable" >&2
@@ -14,6 +17,16 @@ fi
 
 if [ ! -x "$DEEP_SCRIPT" ]; then
   echo "expected bridge replay/redaction deep lane script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$FAST_IMPL_SCRIPT" ]; then
+  echo "expected bridge replay/redaction contract lane implementation script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$MANIFEST_FILE" ]; then
+  echo "expected bridge replay/redaction contract lane manifest to exist" >&2
   exit 1
 fi
 
@@ -48,8 +61,29 @@ if ! grep -q '"final_decision": "GO"' "$bundle_file"; then
   exit 1
 fi
 
-if ! grep -q -- "--skip-replay" "$FAST_SCRIPT"; then
-  echo "expected bridge replay/redaction contract lane to support skip-replay mode" >&2
+if [ ! -L "$FAST_SCRIPT" ]; then
+  echo "expected bridge replay/redaction contract lane wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$FAST_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected bridge replay/redaction contract lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$FAST_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected bridge replay/redaction wrapper to resolve bridge manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_bridge_replay_redaction_contract_lane_impl.sh" "$MANIFEST_FILE"; then
+  echo "expected bridge replay/redaction manifest to dispatch to implementation script" >&2
+  exit 1
+fi
+
+if ! grep -q -- "--skip-replay" "$FAST_IMPL_SCRIPT"; then
+  echo "expected bridge replay/redaction implementation lane to support skip-replay mode" >&2
   exit 1
 fi
 
