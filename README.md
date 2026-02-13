@@ -65,6 +65,21 @@ bash scripts/escrow/generate_settlement_reconciliation_evidence_bundle.sh --outp
 bash scripts/escrow/check_settlement_reconciliation_evidence_policy.sh --bundle-file /tmp/settlement-evidence.json
 ```
 
+### Node Structured Logging
+
+`kamn-node` emits structured runtime logs to stderr. Configure logging without code changes using:
+
+- `KAMN_NODE_LOG_LEVEL`: `error`, `warn`, `info`, `debug`, `trace` (default `info`)
+- `KAMN_NODE_LOG_FORMAT`: `text`, `json` (default `text`)
+
+Example:
+
+```bash
+KAMN_NODE_LOG_LEVEL=debug \
+KAMN_NODE_LOG_FORMAT=json \
+cargo run -p kamn-node -- --role processor --runtime-mode bootstrap
+```
+
 ### Kolme Native Parity Command Matrix (Fast Gate vs Local-Only Heavy)
 
 ```bash
