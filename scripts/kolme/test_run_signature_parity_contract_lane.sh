@@ -78,6 +78,8 @@ required_impl_markers=(
   "check_signature_parity_policy.py"
   "fixtures/kolme_commit/signature_parity_vectors.json"
   "parity_signature_mismatch"
+  "parity_recovery_id_mismatch"
+  "parity_pubkey_mismatch"
   "Regression: #2299"
 )
 for marker in "${required_impl_markers[@]}"; do
@@ -129,19 +131,27 @@ if report.get("source_contract") != "njfio/kolme_fork-secp256k1-v1":
 cases = report.get("cases", [])
 if not isinstance(cases, list) or not cases:
     raise SystemExit("expected signature parity cases in matrix report")
-bad_cases = [
-    case
-    for case in cases
-    if isinstance(case, dict)
-    and case.get("vector_id") == "kolme_fork_primary_alpha_bad_signature"
-]
-if len(bad_cases) != 1:
-    raise SystemExit("expected one bad signature vector case in matrix report")
-bad_case = bad_cases[0]
-if bad_case.get("observed_final_decision") != "NO-GO":
-    raise SystemExit("expected bad signature vector observed_final_decision NO-GO")
-if "parity_signature_mismatch" not in bad_case.get("reason_codes", []):
-    raise SystemExit("expected bad signature vector reason_codes to include parity_signature_mismatch")
+expected_negative_vectors = {
+    "kolme_fork_primary_alpha_bad_signature": "parity_signature_mismatch",
+    "kolme_fork_secondary_beta_bad_recovery": "parity_recovery_id_mismatch",
+    "kolme_fork_primary_alpha_bad_pubkey": "parity_pubkey_mismatch",
+}
+for vector_id, required_reason_code in expected_negative_vectors.items():
+    bad_cases = [
+        case
+        for case in cases
+        if isinstance(case, dict)
+        and case.get("vector_id") == vector_id
+    ]
+    if len(bad_cases) != 1:
+        raise SystemExit(f"expected one bad parity vector case in matrix report: {vector_id}")
+    bad_case = bad_cases[0]
+    if bad_case.get("observed_final_decision") != "NO-GO":
+        raise SystemExit(f"expected bad parity vector observed_final_decision NO-GO: {vector_id}")
+    if required_reason_code not in bad_case.get("reason_codes", []):
+        raise SystemExit(
+            f"expected bad parity vector reason_codes to include {required_reason_code}: {vector_id}"
+        )
 if policy.get("schema_version") != "kamn.kolme.signature-parity-policy-report.v1":
     raise SystemExit("unexpected signature parity policy report schema")
 if policy.get("final_decision") != "GO":

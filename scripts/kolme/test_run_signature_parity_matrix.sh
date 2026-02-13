@@ -30,22 +30,27 @@ if report.get("schema_version") != "kamn.kolme.signature-parity-matrix-report.v1
     raise SystemExit("unexpected signature parity matrix report schema")
 if report.get("status") != "pass":
     raise SystemExit("expected signature parity matrix report status pass")
-if report.get("vector_count", 0) < 3:
-    raise SystemExit("expected at least three signature parity vectors")
+if report.get("vector_count", 0) < 5:
+    raise SystemExit("expected at least five signature parity vectors")
 cases = report.get("cases", [])
-bad_cases = [
-    case
-    for case in cases
-    if isinstance(case, dict)
-    and case.get("vector_id") == "kolme_fork_primary_alpha_bad_signature"
-]
-if len(bad_cases) != 1:
-    raise SystemExit("expected exactly one known-bad signature vector case")
-bad_case = bad_cases[0]
-if bad_case.get("observed_final_decision") != "NO-GO":
-    raise SystemExit("expected known-bad signature vector decision NO-GO")
-if "parity_signature_mismatch" not in bad_case.get("reason_codes", []):
-    raise SystemExit("expected known-bad signature vector reason parity_signature_mismatch")
+expected_negative_vectors = {
+    "kolme_fork_primary_alpha_bad_signature": "parity_signature_mismatch",
+    "kolme_fork_secondary_beta_bad_recovery": "parity_recovery_id_mismatch",
+    "kolme_fork_primary_alpha_bad_pubkey": "parity_pubkey_mismatch",
+}
+for vector_id, required_reason_code in expected_negative_vectors.items():
+    matching_cases = [
+        case for case in cases if isinstance(case, dict) and case.get("vector_id") == vector_id
+    ]
+    if len(matching_cases) != 1:
+        raise SystemExit(f"expected exactly one known-bad parity vector case: {vector_id}")
+    bad_case = matching_cases[0]
+    if bad_case.get("observed_final_decision") != "NO-GO":
+        raise SystemExit(f"expected known-bad parity vector decision NO-GO: {vector_id}")
+    if required_reason_code not in bad_case.get("reason_codes", []):
+        raise SystemExit(
+            f"expected known-bad parity vector reason {required_reason_code}: {vector_id}"
+        )
 PY
 
 python3 "$RUNNER" --fixture "$FIXTURE" --max-cases 1 --output-json "$TMP_REPORT" >/dev/null
