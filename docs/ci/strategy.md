@@ -288,6 +288,15 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `run_ci_tool_checks=true`
     - `test_scope=ci-doc-contract`
     - unknown/full fallback remains disabled for this non-Kolme wave-10 path set
+- Non-Kolme wave-11 wrapper-family fixture and trend-checker changes map to CI contract scope:
+  - `fixtures/ci/non_kolme_wave11_wrapper_family_matrix.json`
+  - `fixtures/ci/non_kolme_wave11_wrapper_family_baseline.json`
+  - `fixtures/ci/non_kolme_wave11_wrapper_family_trend_thresholds.json`
+  - `scripts/ci/check_non_kolme_wave11_wrapper_family_budget_trend.sh`
+  - selector outputs:
+    - `run_ci_tool_checks=true`
+    - `test_scope=ci-doc-contract`
+    - unknown/full fallback remains disabled for this non-Kolme wave-11 path set
 - Localhost signed integration command changes map to dedicated scope:
   - `run_localhost_signed_integration_contract_lane_tests=true`
   - `test_scope=sdk-live-localhost-integration`
@@ -551,6 +560,16 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `bash scripts/ci/check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/non_kolme_wave10_wrapper_family_matrix.json --baseline-file fixtures/ci/non_kolme_wave10_wrapper_family_baseline.json --output-json /tmp/non-kolme-wave10-wrapper-family-delta.json`
     - covers task/runtime/sdk/message lightweight wrapper-family migration baseline coverage while preserving fail-closed drift detection.
     - Regression: #2717
+  - Non-Kolme wave-11 wrapper-family baseline guard stays on PR fast gate:
+    - `bash scripts/ci/test_non_kolme_wave11_wrapper_family_baseline_contract.sh`
+    - deterministic non-Kolme wave-11 baseline artifacts:
+      - `fixtures/ci/non_kolme_wave11_wrapper_family_matrix.json`
+      - `fixtures/ci/non_kolme_wave11_wrapper_family_baseline.json`
+    - deterministic generator/check commands:
+      - `bash scripts/ci/generate_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/non_kolme_wave11_wrapper_family_matrix.json --output-json /tmp/non-kolme-wave11-wrapper-family-baseline.json`
+      - `bash scripts/ci/check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/non_kolme_wave11_wrapper_family_matrix.json --baseline-file fixtures/ci/non_kolme_wave11_wrapper_family_baseline.json --output-json /tmp/non-kolme-wave11-wrapper-family-delta.json`
+    - covers signer/cutover/deploy lightweight wrapper-family migration baseline coverage while preserving fail-closed drift detection.
+    - Regression: #2720
   - Kolme wrapper budget-trend guard stays on PR fast gate:
     - `bash scripts/ci/test_check_kolme_wrapper_budget_trend.sh`
     - threshold policy file:
@@ -761,6 +780,22 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=total_shell_loc_reduction_target_unmet`
       - `reason_codes=unexpected_new_lanes_in_current_inventory`
     - Regression: #2717
+  - Non-Kolme wave-11 wrapper-family trend guard stays on PR fast gate:
+    - `bash scripts/ci/test_check_non_kolme_wave11_wrapper_family_budget_trend.sh`
+    - threshold policy file:
+      - `fixtures/ci/non_kolme_wave11_wrapper_family_trend_thresholds.json`
+    - trend-policy command:
+      - `bash scripts/ci/check_non_kolme_wave11_wrapper_family_budget_trend.sh --matrix-file fixtures/ci/non_kolme_wave11_wrapper_family_matrix.json --baseline-file fixtures/ci/non_kolme_wave11_wrapper_family_baseline.json --output-json /tmp/non-kolme-wave11-wrapper-family-trend-report.json`
+    - fails closed on shell-LOC growth and stale lane-inventory drift for non-Kolme wrapper families.
+    - deterministic reason-code surface is emitted for automation:
+      - `reason_codes=none` (pass)
+      - `reason_codes=wrapper_count_delta_threshold_exceeded`
+      - `reason_codes=total_shell_loc_delta_threshold_exceeded`
+      - `reason_codes=lane_source_entry_drift`
+      - `reason_codes=wrapper_count_reduction_target_unmet`
+      - `reason_codes=total_shell_loc_reduction_target_unmet`
+      - `reason_codes=unexpected_new_lanes_in_current_inventory`
+    - Regression: #2720
   - Non-Kolme governance dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/framework/test_non_kolme_contract_lane_dispatch_wrapper_matrix.sh`
     - shared dispatcher:
@@ -848,6 +883,17 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `scripts/message/run_message_lifecycle_contract_lane.sh`
     - validates manifest resolution fail-closed behavior for unknown wrapper keys.
     - Regression: #2717
+  - Non-Kolme wave-11 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:
+    - `bash scripts/framework/test_non_kolme_wave11_lightweight_contract_lane_dispatch_wrapper_matrix.sh`
+    - shared dispatcher:
+      - `scripts/framework/run_non_kolme_contract_lane_dispatch.sh`
+    - wave-11 lightweight wrappers are symlinked to shared dispatcher:
+      - `scripts/signer/run_signer_policy_contract_lane.sh`
+      - `scripts/signer/run_signer_emulator_contract_lane.sh`
+      - `scripts/cutover/run_cutover_rollback_contract_lane.sh`
+      - `scripts/deploy/run_dr_evidence_contract_lane.sh`
+    - validates manifest resolution fail-closed behavior for unknown wrapper keys.
+    - Regression: #2720
   - shared dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh`
     - enforces that all migrated `run_*contract_lane.sh` wrappers dispatch through:
