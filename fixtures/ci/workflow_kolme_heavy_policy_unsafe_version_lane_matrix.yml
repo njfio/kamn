@@ -21,8 +21,8 @@ jobs:
         run: bash scripts/ci/select_targets.sh
       - name: Run Kolme local-heavy contract lane
         if: steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true'
+        run: bash scripts/framework/test_assert_local_heavy_opt_in.sh
+      - name: Run Kolme version compatibility contract lane
+        if: steps.scope.outputs.run_kolme_version_compatibility_contract_tests == 'true'
         run: |
-          bash scripts/framework/test_assert_local_heavy_opt_in.sh
           bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh
-          bash scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh
-          bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh

@@ -140,9 +140,6 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/test_run_runtime_commit_adapter_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_fork_sync_metadata_lane.sh`
     - `bash scripts/kolme/test_run_local_fork_smoke_evidence_lane.sh`
-    - `bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh`
-    - `bash scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh`
-    - `bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_api_probe_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_api_smoke_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_live_api_conformance_contract_lane.sh`
@@ -331,10 +328,15 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json`
     - `python3 scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py --report-file /tmp/kolme-local-fork-rust-test-matrix-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json`
     - `bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json --policy-output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json`
+    - selector-gated local-heavy rust-matrix contract tests (workflow_dispatch opt-in only):
+      - `bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh`
+      - `bash scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh`
+      - `bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh`
     - evidence bundle marker contract: `evidence_bundle_schema_version=kamn.kolme.local-fork-rust-test-matrix-evidence-bundle.v1`
     - evidence bundle payload contract: `evidence_bundle` must include summary linkage and budget/command artifacts for policy parity checks
     - Regression: #1541
     - Regression: #2329
+    - Regression: #2330
   - local Kolme API probe/smoke run-mode commands remain excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 30 --output-json /tmp/kolme-local-api-probe-summary.json`
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_api_smoke_lane.sh --mode run --base-url http://127.0.0.1:3000 --smoke-command "curl --silent --show-error --fail http://127.0.0.1:3000/healthz" --max-seconds 60 --output-json /tmp/kolme-local-api-smoke-summary.json`
