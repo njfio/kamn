@@ -101,7 +101,7 @@ Local Kolme deployment gates require deterministic multi-signer quorum and custo
   - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
 - Quorum/custody/provenance evidence preparation:
   - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`
-  - `printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" > /tmp/kolme-live-signer-provenance.json`
+  - `printf '%s\n' "signer-provenance=ops-primary:source-managed-external:epoch-1" > /tmp/kolme-live-signer-provenance.json`
   - `custody_sha="$(sha256sum /tmp/kolme-live-signer-custody.json | awk '{print $1}')"; cat > /tmp/kolme-live-signer-quorum.json <<JSON
 {
   "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
@@ -112,14 +112,15 @@ Local Kolme deployment gates require deterministic multi-signer quorum and custo
 }
 JSON`
 - Deployment preflight run mode:
-  - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --quorum-evidence-file /tmp/kolme-live-signer-quorum.json --custody-evidence-file /tmp/kolme-live-signer-custody.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source env-local --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+  - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --quorum-evidence-file /tmp/kolme-live-signer-quorum.json --custody-evidence-file /tmp/kolme-live-signer-custody.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source managed-external --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
 - Deployment preflight policy checker:
-  - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+  - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code deployment_preflight_passed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
 - Deployment preflight contract lane:
   - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --output-json /tmp/kolme-local-live-deployment-preflight-summary.json --policy-output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
 - Required schema/reason markers:
   - `kamn.kolme.local-live-deployment-preflight-summary.v1`
   - `kamn.kolme.local-live-deployment-preflight-policy-report.v1`
+  - `kamn.kolme.signer-quorum-evidence.v1`
   - `kamn.kolme.runtime-signer-attestation.v1`
   - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
   - `runtime_signer_attestation_bundle`
@@ -148,7 +149,7 @@ JSON`
 Fallback private-key surfaces are forbidden in deployment preflight and runtime launch paths; checks fail closed with deterministic remediation guidance.
 
 - Deployment preflight fallback guard:
-  - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --quorum-evidence-file /tmp/kolme-live-signer-quorum.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source env-local --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+  - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --quorum-evidence-file /tmp/kolme-live-signer-quorum.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source managed-external --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
 - Runtime integration fallback guard:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --runtime-profile real-node --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --runtime-commit-live-summary /tmp/kolme-local-runtime-commit-live-summary.json --runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json`
 - Runtime integration managed-external raw-key guard:

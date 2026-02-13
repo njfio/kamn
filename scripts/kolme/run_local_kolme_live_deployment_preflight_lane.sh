@@ -12,7 +12,7 @@ QUORUM_EVIDENCE_FILE=""
 CUSTODY_EVIDENCE_FILE=""
 SIGNER_PROVENANCE_FILE=""
 SIGNER_KEY_SOURCE_CONTRACT_VERSION="v1"
-SIGNER_KEY_SOURCE="env-local"
+SIGNER_KEY_SOURCE="managed-external"
 SIGNER_ROTATION_EPOCH=1
 SIGNER_PREVIOUS_ROTATION_EPOCH=1
 SIGNER_ROTATION_FRESHNESS_MAX_DELTA=2
@@ -28,6 +28,7 @@ FALLBACK_SIGNER_SECRET_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 FALLBACK_SIGNER_SECRET_REMEDIATION="unset ${FALLBACK_SIGNER_SECRET_ENV}"
 REQUIRED_SECRET_HEX_LENGTH=64
 SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED="v1"
+REQUIRED_PRODUCTION_SIGNER_KEY_SOURCE="managed-external"
 RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION="kamn.kolme.runtime-signer-attestation.v1"
 RUNTIME_SIGNER_DRIFT_TELEMETRY_SCHEMA_VERSION="kamn.kolme.runtime-signer-drift-telemetry.v1"
 RUNTIME_SIGNER_DRIFT_THRESHOLDS_SCHEMA_VERSION="kamn.kolme.runtime-signer-drift-thresholds.v1"
@@ -712,10 +713,15 @@ PY
                 elif [ "$SIGNER_KEY_SOURCE" != "env-local" ] && [ "$SIGNER_KEY_SOURCE" != "managed-external" ]; then
                   signer_provenance_reason="signer_key_source_invalid"
                   signer_provenance_message="signer key source is unsupported: $SIGNER_KEY_SOURCE"
-                elif [ "$SIGNER_PROFILE" = "$SECONDARY_SIGNER_PROFILE" ] && [ "$SIGNER_KEY_SOURCE" != "env-local" ]; then
-                  signer_provenance_reason="signer_key_source_profile_pair_disallowed"
-                  signer_provenance_message="signer key source/profile pair is not allowed: profile=$SIGNER_PROFILE source=$SIGNER_KEY_SOURCE"
-                else
+                elif (
+                  [ "$SIGNER_PROFILE" = "$PRIMARY_SIGNER_PROFILE" ] ||
+                  [ "$SIGNER_PROFILE" = "$SECONDARY_SIGNER_PROFILE" ]
+                ) && [ "$SIGNER_KEY_SOURCE" != "$REQUIRED_PRODUCTION_SIGNER_KEY_SOURCE" ]; then
+                  signer_provenance_reason="signer_key_source_production_managed_external_required"
+                  signer_provenance_message="production signer profiles require signer key source $REQUIRED_PRODUCTION_SIGNER_KEY_SOURCE: profile=$SIGNER_PROFILE source=$SIGNER_KEY_SOURCE"
+                fi
+
+                if [ -z "$signer_provenance_reason" ]; then
                   if [ -n "$SIGNER_PROVENANCE_FILE" ] && [ -f "$SIGNER_PROVENANCE_FILE" ]; then
                     signer_provenance_present="true"
                     signer_provenance_sha256="$(sha256sum "$SIGNER_PROVENANCE_FILE" | awk '{print $1}')"
@@ -1017,8 +1023,10 @@ summary = {
         "signer_provenance_sha256_required": True,
         "signer_key_source_contract_version": signer_key_source_contract_version_supported,
         "signer_key_source": signer_key_source,
-        "signer_key_source_allowed_for_ops_primary": ["env-local", "managed-external"],
-        "signer_key_source_allowed_for_ops_secondary": ["env-local"],
+        "required_signer_key_source_for_production": "managed-external",
+        "signer_key_source_production_requirement_reason_code": "signer_key_source_production_managed_external_required",
+        "signer_key_source_allowed_for_ops_primary": ["managed-external"],
+        "signer_key_source_allowed_for_ops_secondary": ["managed-external"],
         "signer_rotation_freshness_max_delta": signer_rotation_freshness_max_delta,
         "signer_rotation_stale_rejected": True,
     },
