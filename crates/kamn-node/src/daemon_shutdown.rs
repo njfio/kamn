@@ -1,3 +1,6 @@
+use std::thread;
+use std::time::Duration;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct DaemonCompletion {
     pub(super) executed_ticks: u64,
@@ -56,9 +59,117 @@ pub(super) fn evaluate_daemon_completion(
     }
 }
 
+pub(super) fn evaluate_daemon_completion_with_os_signals(
+    max_ticks: u64,
+    tick_interval_ms: u64,
+    drain_ticks: Option<u64>,
+    timeout_ticks: Option<u64>,
+) -> Result<DaemonCompletion, String> {
+    #[cfg(unix)]
+    {
+        os_signal::install_shutdown_handlers()?;
+        let tick_duration = Duration::from_millis(tick_interval_ms);
+        let mut first_signal_tick: Option<u64> = None;
+        for tick in 1..=max_ticks {
+            if first_signal_tick.is_none() && os_signal::shutdown_signal_observed() {
+                first_signal_tick = Some(tick);
+            }
+            if let Some(signal_tick) = first_signal_tick {
+                let completion = evaluate_daemon_completion(
+                    max_ticks,
+                    &[signal_tick],
+                    drain_ticks,
+                    timeout_ticks,
+                );
+                if tick >= completion.executed_ticks {
+                    return Ok(completion);
+                }
+            }
+            if tick < max_ticks {
+                thread::sleep(tick_duration);
+            }
+        }
+        if let Some(signal_tick) = first_signal_tick {
+            return Ok(evaluate_daemon_completion(
+                max_ticks,
+                &[signal_tick],
+                drain_ticks,
+                timeout_ticks,
+            ));
+        }
+        Ok(DaemonCompletion {
+            executed_ticks: max_ticks,
+            completion_reason: "tick-budget-exhausted".to_owned(),
+        })
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = (max_ticks, tick_interval_ms, drain_ticks, timeout_ticks);
+        Err("daemon os signal shutdown is unsupported on this platform".to_owned())
+    }
+}
+
+#[cfg(unix)]
+mod os_signal {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    static SHUTDOWN_SIGNAL_OBSERVED: AtomicBool = AtomicBool::new(false);
+
+    const SIGINT: i32 = 2;
+    const SIGTERM: i32 = 15;
+    const SIG_ERR: usize = usize::MAX;
+
+    unsafe extern "C" {
+        fn signal(signum: i32, handler: usize) -> usize;
+    }
+
+    #[cfg(test)]
+    unsafe extern "C" {
+        fn raise(sig: i32) -> i32;
+    }
+
+    extern "C" fn shutdown_signal_handler(_signal: i32) {
+        SHUTDOWN_SIGNAL_OBSERVED.store(true, Ordering::SeqCst);
+    }
+
+    pub(super) fn install_shutdown_handlers() -> Result<(), String> {
+        SHUTDOWN_SIGNAL_OBSERVED.store(false, Ordering::SeqCst);
+        let sigint_result = unsafe { signal(SIGINT, shutdown_signal_handler as usize) };
+        if sigint_result == SIG_ERR {
+            return Err("failed to install SIGINT shutdown handler".to_owned());
+        }
+        let sigterm_result = unsafe { signal(SIGTERM, shutdown_signal_handler as usize) };
+        if sigterm_result == SIG_ERR {
+            return Err("failed to install SIGTERM shutdown handler".to_owned());
+        }
+        Ok(())
+    }
+
+    pub(super) fn shutdown_signal_observed() -> bool {
+        SHUTDOWN_SIGNAL_OBSERVED.load(Ordering::SeqCst)
+    }
+
+    #[cfg(test)]
+    pub(super) fn raise_sigterm_for_test() -> Result<(), String> {
+        let result = unsafe { raise(SIGTERM) };
+        if result == 0 {
+            Ok(())
+        } else {
+            Err("failed to raise SIGTERM".to_owned())
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::evaluate_daemon_completion;
+    #[cfg(unix)]
+    use super::os_signal::raise_sigterm_for_test;
+    use super::{evaluate_daemon_completion, evaluate_daemon_completion_with_os_signals};
+    #[cfg(unix)]
+    use std::thread;
+    #[cfg(unix)]
+    use std::time::Duration;
 
     #[test]
     fn unit_daemon_completion_defaults_to_tick_budget_without_shutdown_signal() {
@@ -105,6 +216,41 @@ mod tests {
         assert!(
             completion.executed_ticks <= 9,
             "timeout-bound completion must not exceed max tick budget"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn integration_daemon_completion_with_os_signals_applies_graceful_shutdown() {
+        let trigger = thread::spawn(|| {
+            thread::sleep(Duration::from_millis(5));
+            raise_sigterm_for_test().expect("SIGTERM test signal should be raised");
+        });
+        let completion = evaluate_daemon_completion_with_os_signals(40, 1, Some(2), Some(5))
+            .expect("daemon completion with OS signal handling should succeed");
+        trigger
+            .join()
+            .expect("signal trigger thread should complete");
+        assert!(
+            completion
+                .completion_reason
+                .starts_with("graceful-shutdown:signal@"),
+            "expected graceful shutdown completion reason, got {}",
+            completion.completion_reason
+        );
+        assert!(
+            completion.executed_ticks <= 40,
+            "signal-driven shutdown should remain bounded by max ticks"
+        );
+    }
+
+    #[cfg(not(unix))]
+    #[test]
+    fn integration_daemon_completion_with_os_signals_is_unsupported_on_non_unix() {
+        let result = evaluate_daemon_completion_with_os_signals(5, 1, Some(1), Some(1));
+        assert!(
+            result.is_err(),
+            "non-unix targets should return unsupported error for OS signal handling"
         );
     }
 }

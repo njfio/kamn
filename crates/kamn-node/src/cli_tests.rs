@@ -18,6 +18,7 @@ fn cli_module_parses_required_role_and_defaults() {
     assert_eq!(parsed.sync_mode, SyncMode::Fast);
     assert_eq!(parsed.runtime_mode, RuntimeMode::bootstrap());
     assert!(parsed.daemon_shutdown_signal_ticks.is_empty());
+    assert!(!parsed.daemon_shutdown_os_signals);
     assert_eq!(parsed.daemon_shutdown_drain_ticks, None);
     assert_eq!(parsed.daemon_shutdown_timeout_ticks, None);
     assert_eq!(parsed.output_mode, OutputMode::text());
