@@ -253,6 +253,16 @@ def main() -> int:
     if runtime_signer_drift_telemetry.get("received_approvals") != summary.get("received_approvals"):
         print("expected deployment preflight summary runtime signer drift telemetry received approvals marker", file=sys.stderr)
         return 1
+    if summary.get("runtime_signer_drift_thresholds_schema_version") != "kamn.kolme.runtime-signer-drift-thresholds.v1":
+        print("expected deployment preflight summary runtime signer drift thresholds schema marker", file=sys.stderr)
+        return 1
+    runtime_signer_drift_thresholds_bundle = summary.get("runtime_signer_drift_thresholds_bundle")
+    if not isinstance(runtime_signer_drift_thresholds_bundle, dict):
+        print("expected deployment preflight summary runtime signer drift thresholds bundle", file=sys.stderr)
+        return 1
+    if runtime_signer_drift_thresholds_bundle.get("schema_version") != "kamn.kolme.runtime-signer-drift-thresholds.v1":
+        print("expected deployment preflight summary runtime signer drift thresholds bundle schema marker", file=sys.stderr)
+        return 1
     contracts = summary.get("contracts", {})
     if not isinstance(contracts, dict):
         print("expected contracts object in deployment preflight summary", file=sys.stderr)
@@ -344,6 +354,24 @@ def main() -> int:
     if contracts.get("runtime_signer_drift_telemetry_approval_counts_match_required") is not True:
         print("expected deployment preflight contracts runtime signer drift telemetry approval count match marker", file=sys.stderr)
         return 1
+    if contracts.get("runtime_signer_drift_thresholds_required") is not True:
+        print("expected deployment preflight contracts runtime signer drift thresholds requirement marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_drift_thresholds_schema_version") != "kamn.kolme.runtime-signer-drift-thresholds.v1":
+        print("expected deployment preflight contracts runtime signer drift thresholds schema marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_drift_thresholds_rotation_warn_lte_fail_required") is not True:
+        print("expected deployment preflight contracts runtime signer drift thresholds warn<=fail marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_drift_thresholds_quorum_warn_lte_fail_required") is not True:
+        print("expected deployment preflight contracts runtime signer drift thresholds quorum warn<=fail marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_drift_admission_matrix_required") is not True:
+        print("expected deployment preflight contracts runtime signer drift admission matrix requirement marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_drift_admission_matrix_decision_values") != ["GO", "WARN", "NO-GO"]:
+        print("expected deployment preflight contracts runtime signer drift admission matrix decision-value marker", file=sys.stderr)
+        return 1
     if contracts.get("custody_evidence_required") is not True:
         print("expected deployment preflight contracts custody_evidence_required=true", file=sys.stderr)
         return 1
@@ -370,6 +398,12 @@ def main() -> int:
         return 1
     if policy.get("final_decision") != "GO":
         print("expected deployment preflight contract-lane policy final_decision GO", file=sys.stderr)
+        return 1
+    if policy.get("runtime_signer_drift_admission_matrix_decision") != "GO":
+        print("expected deployment preflight contract-lane policy runtime signer drift matrix decision GO", file=sys.stderr)
+        return 1
+    if policy.get("runtime_signer_drift_admission_matrix_class") != "healthy":
+        print("expected deployment preflight contract-lane policy runtime signer drift matrix class healthy", file=sys.stderr)
         return 1
 
     with tempfile.TemporaryDirectory(prefix="kolme-deployment-preflight-negative-") as temp_dir:
@@ -411,6 +445,151 @@ def main() -> int:
             return 1
         if no_go_policy.get("final_decision") != "NO-GO":
             print("expected deployment preflight negative policy final_decision NO-GO", file=sys.stderr)
+            return 1
+
+        warning_edge_report = temp_path / "runtime_signer_drift_warning_edge_summary.json"
+        warning_edge_policy = temp_path / "runtime_signer_drift_warning_edge_policy.json"
+        warning_edge_summary = dict(summary)
+        warning_edge_summary["mode"] = "run"
+        warning_edge_summary["status"] = "ok"
+        warning_edge_summary["reason_code"] = "deployment_preflight_passed"
+        warning_edge_summary["signer_secret_present"] = True
+        warning_edge_summary["signer_secret_hex_valid"] = True
+        warning_edge_summary["required_approvals"] = 2
+        warning_edge_summary["received_approvals"] = 2
+        warning_edge_summary["quorum_evidence_file"] = "/tmp/quorum-evidence.json"
+        warning_edge_summary["quorum_evidence_present"] = True
+        warning_edge_summary["quorum_evidence_sha256"] = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        warning_edge_summary["quorum_evidence_sha256_valid"] = True
+        warning_edge_summary["quorum_evidence_schema_valid"] = True
+        warning_edge_summary["quorum_evidence_approval_count"] = 2
+        warning_edge_summary["quorum_evidence_signers_unique"] = True
+        warning_edge_summary["quorum_evidence_matches_threshold"] = True
+        warning_edge_summary["quorum_evidence_custody_sha256_match"] = True
+        warning_edge_summary["quorum_evidence_signer_roles_present"] = True
+        warning_edge_summary["quorum_evidence_signer_roles_valid"] = True
+        warning_edge_summary["quorum_evidence_rotation_metadata_present"] = True
+        warning_edge_summary["quorum_evidence_rotation_metadata_valid"] = True
+        warning_edge_summary["custody_evidence_file"] = "/tmp/custody-evidence.json"
+        warning_edge_summary["custody_evidence_present"] = True
+        warning_edge_summary["custody_evidence_sha256"] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        warning_edge_summary["custody_evidence_sha256_valid"] = True
+        warning_edge_summary["signer_provenance_file"] = "/tmp/signer-provenance.json"
+        warning_edge_summary["signer_provenance_present"] = True
+        warning_edge_summary["signer_provenance_sha256"] = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        warning_edge_summary["signer_provenance_sha256_valid"] = True
+        warning_edge_summary["signer_rotation_epoch"] = 3
+        warning_edge_summary["signer_previous_rotation_epoch"] = 1
+        warning_edge_summary["signer_rotation_freshness_max_delta"] = 2
+        warning_edge_summary["signer_rotation_delta_epochs"] = 2
+        warning_edge_summary["signer_rotation_fresh"] = True
+        warning_edge_summary["runtime_signer_drift_telemetry"] = {
+            "schema_version": "kamn.kolme.runtime-signer-drift-telemetry.v1",
+            "signer_rotation_epoch": 3,
+            "signer_previous_rotation_epoch": 1,
+            "signer_rotation_delta_epochs": 2,
+            "signer_rotation_freshness_max_delta": 2,
+            "signer_rotation_stale": False,
+            "required_approvals": 2,
+            "received_approvals": 2,
+            "quorum_shortfall": False,
+        }
+        warning_edge_summary["runtime_signer_drift_thresholds_bundle"] = {
+            "schema_version": "kamn.kolme.runtime-signer-drift-thresholds.v1",
+            "rotation_warn_delta_epochs": 1,
+            "rotation_fail_delta_epochs": 2,
+            "quorum_warn_shortfall_events": 0,
+            "quorum_fail_shortfall_events": 0,
+        }
+        warning_edge_summary["checks"] = [
+            {
+                "id": "runtime_mode_contract",
+                "command": "runtime-mode must equal kolme-live",
+                "status": "pass",
+                "reason_code": "runtime_mode_validated",
+            },
+            {
+                "id": "signer_profile_contract",
+                "command": "signer profile must be ops-primary or ops-secondary",
+                "status": "pass",
+                "reason_code": "signer_profile_validated",
+            },
+            {
+                "id": "signer_secret_contract",
+                "command": "selected signer secret env must exist and be 64-char hex",
+                "status": "pass",
+                "reason_code": "signer_secret_validated",
+            },
+            {
+                "id": "fallback_private_key_contract",
+                "command": "fallback signer secret env must remain unset",
+                "status": "pass",
+                "reason_code": "fallback_signer_secret_absent",
+            },
+            {
+                "id": "signer_quorum_contract",
+                "command": "received approvals must satisfy required approvals threshold",
+                "status": "pass",
+                "reason_code": "signer_quorum_validated",
+            },
+            {
+                "id": "quorum_evidence_contract",
+                "command": "quorum evidence bundle must satisfy schema, signer uniqueness, threshold, and custody digest match",
+                "status": "pass",
+                "reason_code": "quorum_evidence_validated",
+            },
+            {
+                "id": "custody_evidence_contract",
+                "command": "signer custody evidence file and sha256 marker must be present",
+                "status": "pass",
+                "reason_code": "custody_evidence_validated",
+            },
+            {
+                "id": "signer_provenance_contract",
+                "command": "signer provenance evidence file and sha256 marker must be present",
+                "status": "pass",
+                "reason_code": "signer_provenance_validated",
+            },
+            {
+                "id": "signer_rotation_freshness_contract",
+                "command": "signer rotation metadata must satisfy freshness threshold",
+                "status": "pass",
+                "reason_code": "signer_rotation_freshness_validated",
+            },
+        ]
+        warning_edge_report.write_text(
+            json.dumps(warning_edge_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        warning_edge_result = run_policy_check(
+            report_file=warning_edge_report,
+            output_json=warning_edge_policy,
+            expected_final_decision="GO",
+            required_reason_code="deployment_preflight_passed",
+        )
+        if warning_edge_result.returncode != 0:
+            print("expected runtime signer drift warning-edge proof to pass with GO decision", file=sys.stderr)
+            stderr = warning_edge_result.stderr.strip()
+            if stderr:
+                print(stderr, file=sys.stderr)
+            return 1
+        warning_edge_policy_payload = json.loads(warning_edge_policy.read_text(encoding="utf-8"))
+        if warning_edge_policy_payload.get("runtime_signer_drift_admission_matrix_decision") != "WARN":
+            print("expected runtime signer drift warning-edge policy matrix decision WARN", file=sys.stderr)
+            return 1
+        if warning_edge_policy_payload.get("runtime_signer_drift_admission_matrix_class") != "warning-edge":
+            print("expected runtime signer drift warning-edge policy matrix class warning-edge", file=sys.stderr)
+            return 1
+        warning_edge_reason_codes = warning_edge_policy_payload.get("runtime_signer_drift_admission_matrix_reason_codes")
+        if not isinstance(warning_edge_reason_codes, list):
+            print("expected runtime signer drift warning-edge policy matrix reason-code list", file=sys.stderr)
+            return 1
+        if "runtime_signer_drift_rotation_warning_threshold_reached" not in warning_edge_reason_codes:
+            print("expected runtime signer drift warning-edge policy matrix warning reason marker", file=sys.stderr)
+            return 1
+        if warning_edge_policy_payload.get("final_decision") != "GO":
+            print("expected runtime signer drift warning-edge policy final_decision GO", file=sys.stderr)
             return 1
 
         quorum_negative_report = temp_path / "signer_quorum_negative_summary.json"
@@ -957,7 +1136,15 @@ def main() -> int:
         "runtime_signer_drift_telemetry_missing",
         "runtime_signer_drift_telemetry_schema_version_mismatch",
         "runtime_signer_drift_telemetry_rotation_delta_invalid",
+        "runtime_signer_drift_thresholds_schema_version=kamn.kolme.runtime-signer-drift-thresholds.v1",
+        "runtime_signer_drift_thresholds_bundle",
+        "runtime_signer_drift_admission_matrix_decision",
+        "runtime_signer_drift_admission_matrix_class",
+        "runtime_signer_drift_rotation_warning_threshold_reached",
+        "runtime_signer_drift_quorum_fail_threshold_exceeded",
         "contracts.runtime_signer_drift_telemetry_required=true",
+        "contracts.runtime_signer_drift_thresholds_required=true",
+        "contracts.runtime_signer_drift_admission_matrix_required=true",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",
@@ -1013,7 +1200,15 @@ def main() -> int:
         "runtime_signer_drift_telemetry_missing",
         "runtime_signer_drift_telemetry_schema_version_mismatch",
         "runtime_signer_drift_telemetry_rotation_delta_invalid",
+        "runtime_signer_drift_thresholds_schema_version=kamn.kolme.runtime-signer-drift-thresholds.v1",
+        "runtime_signer_drift_thresholds_bundle",
+        "runtime_signer_drift_admission_matrix_decision",
+        "runtime_signer_drift_admission_matrix_class",
+        "runtime_signer_drift_rotation_warning_threshold_reached",
+        "runtime_signer_drift_quorum_fail_threshold_exceeded",
         "contracts.runtime_signer_drift_telemetry_required=true",
+        "contracts.runtime_signer_drift_thresholds_required=true",
+        "contracts.runtime_signer_drift_admission_matrix_required=true",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",
@@ -1069,7 +1264,15 @@ def main() -> int:
         "runtime_signer_drift_telemetry_missing",
         "runtime_signer_drift_telemetry_schema_version_mismatch",
         "runtime_signer_drift_telemetry_rotation_delta_invalid",
+        "runtime_signer_drift_thresholds_schema_version=kamn.kolme.runtime-signer-drift-thresholds.v1",
+        "runtime_signer_drift_thresholds_bundle",
+        "runtime_signer_drift_admission_matrix_decision",
+        "runtime_signer_drift_admission_matrix_class",
+        "runtime_signer_drift_rotation_warning_threshold_reached",
+        "runtime_signer_drift_quorum_fail_threshold_exceeded",
         "contracts.runtime_signer_drift_telemetry_required=true",
+        "contracts.runtime_signer_drift_thresholds_required=true",
+        "contracts.runtime_signer_drift_admission_matrix_required=true",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",

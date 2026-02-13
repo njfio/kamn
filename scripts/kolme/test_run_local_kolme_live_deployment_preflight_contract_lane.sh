@@ -106,7 +106,15 @@ required_coverage_markers=(
   "runtime_signer_drift_telemetry_missing"
   "runtime_signer_drift_telemetry_schema_version_mismatch"
   "runtime_signer_drift_telemetry_rotation_delta_invalid"
+  "runtime_signer_drift_thresholds_schema_version=kamn.kolme.runtime-signer-drift-thresholds.v1"
+  "runtime_signer_drift_thresholds_bundle"
+  "runtime_signer_drift_admission_matrix_decision"
+  "runtime_signer_drift_admission_matrix_class"
+  "runtime_signer_drift_rotation_warning_threshold_reached"
+  "runtime_signer_drift_quorum_fail_threshold_exceeded"
   "contracts.runtime_signer_drift_telemetry_required=true"
+  "contracts.runtime_signer_drift_thresholds_required=true"
+  "contracts.runtime_signer_drift_admission_matrix_required=true"
   "Regression: #2226"
   "Regression: #2337"
   "Regression: #2300"
@@ -172,6 +180,38 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "contracts.runtime_signer_drift_telemetry_required=true" "$docs_file"; then
     echo "expected docs parity to include runtime signer drift telemetry contract requirement marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_drift_thresholds_schema_version=kamn.kolme.runtime-signer-drift-thresholds.v1" "$docs_file"; then
+    echo "expected docs parity to include runtime signer drift thresholds schema marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_drift_thresholds_bundle" "$docs_file"; then
+    echo "expected docs parity to include runtime signer drift thresholds bundle marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_drift_admission_matrix_decision" "$docs_file"; then
+    echo "expected docs parity to include runtime signer drift admission matrix decision marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_drift_admission_matrix_class" "$docs_file"; then
+    echo "expected docs parity to include runtime signer drift admission matrix class marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_drift_rotation_warning_threshold_reached" "$docs_file"; then
+    echo "expected docs parity to include runtime signer drift warning-threshold reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_drift_quorum_fail_threshold_exceeded" "$docs_file"; then
+    echo "expected docs parity to include runtime signer drift quorum fail-threshold reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "contracts.runtime_signer_drift_thresholds_required=true" "$docs_file"; then
+    echo "expected docs parity to include runtime signer drift thresholds contract requirement marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "contracts.runtime_signer_drift_admission_matrix_required=true" "$docs_file"; then
+    echo "expected docs parity to include runtime signer drift admission matrix contract requirement marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "quorum_evidence_signer_roles_missing" "$docs_file"; then
@@ -305,6 +345,13 @@ if runtime_signer_drift_telemetry.get("required_approvals") != summary.get("requ
     raise SystemExit("expected deployment preflight summary runtime signer drift telemetry required approvals marker")
 if runtime_signer_drift_telemetry.get("received_approvals") != summary.get("received_approvals"):
     raise SystemExit("expected deployment preflight summary runtime signer drift telemetry received approvals marker")
+if summary.get("runtime_signer_drift_thresholds_schema_version") != "kamn.kolme.runtime-signer-drift-thresholds.v1":
+    raise SystemExit("expected deployment preflight summary runtime signer drift thresholds schema marker")
+runtime_signer_drift_thresholds_bundle = summary.get("runtime_signer_drift_thresholds_bundle")
+if not isinstance(runtime_signer_drift_thresholds_bundle, dict):
+    raise SystemExit("expected deployment preflight summary runtime signer drift thresholds bundle")
+if runtime_signer_drift_thresholds_bundle.get("schema_version") != "kamn.kolme.runtime-signer-drift-thresholds.v1":
+    raise SystemExit("expected deployment preflight summary runtime signer drift thresholds bundle schema marker")
 contracts = summary.get("contracts", {})
 if contracts.get("ci_fast_gate_scope") != "ci-fast-gate":
     raise SystemExit("expected deployment preflight contracts ci_fast_gate_scope=ci-fast-gate")
@@ -328,10 +375,26 @@ if contracts.get("runtime_signer_drift_telemetry_quorum_flag_match_required") is
     raise SystemExit("expected deployment preflight contracts runtime signer drift telemetry quorum flag match marker")
 if contracts.get("runtime_signer_drift_telemetry_approval_counts_match_required") is not True:
     raise SystemExit("expected deployment preflight contracts runtime signer drift telemetry approval count match marker")
+if contracts.get("runtime_signer_drift_thresholds_required") is not True:
+    raise SystemExit("expected deployment preflight contracts runtime signer drift thresholds requirement marker")
+if contracts.get("runtime_signer_drift_thresholds_schema_version") != "kamn.kolme.runtime-signer-drift-thresholds.v1":
+    raise SystemExit("expected deployment preflight contracts runtime signer drift thresholds schema marker")
+if contracts.get("runtime_signer_drift_thresholds_rotation_warn_lte_fail_required") is not True:
+    raise SystemExit("expected deployment preflight contracts runtime signer drift thresholds warn<=fail marker")
+if contracts.get("runtime_signer_drift_thresholds_quorum_warn_lte_fail_required") is not True:
+    raise SystemExit("expected deployment preflight contracts runtime signer drift thresholds quorum warn<=fail marker")
+if contracts.get("runtime_signer_drift_admission_matrix_required") is not True:
+    raise SystemExit("expected deployment preflight contracts runtime signer drift admission matrix requirement marker")
+if contracts.get("runtime_signer_drift_admission_matrix_decision_values") != ["GO", "WARN", "NO-GO"]:
+    raise SystemExit("expected deployment preflight contracts runtime signer drift admission matrix decision-value marker")
 if policy.get("schema_version") != "kamn.kolme.local-live-deployment-preflight-policy-report.v1":
     raise SystemExit("unexpected deployment preflight contract-lane policy schema")
 if policy.get("final_decision") != "GO":
     raise SystemExit("expected deployment preflight contract-lane policy final_decision GO")
+if policy.get("runtime_signer_drift_admission_matrix_decision") != "GO":
+    raise SystemExit("expected deployment preflight contract-lane policy runtime signer drift matrix decision GO")
+if policy.get("runtime_signer_drift_admission_matrix_class") != "healthy":
+    raise SystemExit("expected deployment preflight contract-lane policy runtime signer drift matrix class healthy")
 PY
 
 python3 - "$TMP_REPORT" "$TMP_NEGATIVE_REPORT" <<'PY'

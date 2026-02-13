@@ -674,6 +674,8 @@ JSON`
     - `runtime_signer_attestation_bundle`
     - `runtime_signer_drift_telemetry_schema_version=kamn.kolme.runtime-signer-drift-telemetry.v1`
     - `runtime_signer_drift_telemetry`
+    - `runtime_signer_drift_thresholds_schema_version=kamn.kolme.runtime-signer-drift-thresholds.v1`
+    - `runtime_signer_drift_thresholds_bundle`
     - `custody_evidence_file`
     - `custody_evidence_present`
     - `custody_evidence_sha256_valid`
@@ -707,6 +709,12 @@ JSON`
     - `contracts.runtime_signer_drift_telemetry_stale_flag_match_required=true`
     - `contracts.runtime_signer_drift_telemetry_quorum_flag_match_required=true`
     - `contracts.runtime_signer_drift_telemetry_approval_counts_match_required=true`
+    - `contracts.runtime_signer_drift_thresholds_required=true`
+    - `contracts.runtime_signer_drift_thresholds_schema_version=kamn.kolme.runtime-signer-drift-thresholds.v1`
+    - `contracts.runtime_signer_drift_thresholds_rotation_warn_lte_fail_required=true`
+    - `contracts.runtime_signer_drift_thresholds_quorum_warn_lte_fail_required=true`
+    - `contracts.runtime_signer_drift_admission_matrix_required=true`
+    - `contracts.runtime_signer_drift_admission_matrix_decision_values=GO,WARN,NO-GO`
     - `contracts.custody_evidence_required=true`
     - `contracts.custody_evidence_sha256_required=true`
     - `contracts.signer_provenance_required=true`
@@ -745,6 +753,10 @@ JSON`
   - `runtime_signer_drift_telemetry_missing`
   - `runtime_signer_drift_telemetry_schema_version_mismatch`
   - `runtime_signer_drift_telemetry_rotation_delta_invalid`
+  - `runtime_signer_drift_admission_matrix_decision`
+  - `runtime_signer_drift_admission_matrix_class`
+  - `runtime_signer_drift_rotation_warning_threshold_reached`
+  - `runtime_signer_drift_quorum_fail_threshold_exceeded`
   - `custody_evidence_missing`
   - `custody_evidence_sha256_invalid`
   - `signer_key_source_contract_version_mismatch`

@@ -123,6 +123,11 @@ JSON`
   - `kamn.kolme.runtime-signer-attestation.v1`
   - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
   - `runtime_signer_attestation_bundle`
+  - `runtime_signer_drift_thresholds_schema_version=kamn.kolme.runtime-signer-drift-thresholds.v1`
+  - `runtime_signer_drift_thresholds_bundle`
+  - `runtime_signer_drift_admission_matrix_decision=GO|WARN|NO-GO`
+  - `runtime_signer_drift_admission_matrix_class=healthy|warning-edge|hard-fail`
+  - `runtime_signer_drift_admission_matrix_reason_codes`
   - `checkpoint_failed_signer_quorum_contract`
   - `checkpoint_failed_quorum_evidence_contract`
   - `checkpoint_failed_custody_evidence_contract`
@@ -130,6 +135,11 @@ JSON`
   - `quorum_evidence_custody_sha256_mismatch`
   - `runtime_signer_attestation_approved_signers_not_unique`
   - `runtime_signer_attestation_quorum_shortfall`
+  - `runtime_signer_drift_quorum_fail_threshold_exceeded`
+  - `runtime_signer_drift_rotation_fail_threshold_exceeded`
+- Drift-breach response:
+  - If matrix class is `warning-edge`, freeze promotion, rotate signer evidence within threshold, and rerun preflight lane/policy before continuing.
+  - If matrix class is `hard-fail` or decision is `NO-GO`, block rollout, execute signer incident rollback flow, and require fresh custody/quorum/provenance artifacts before unfreezing.
 - Regression policy:
   - signer quorum/custody/provenance drift, quorum evidence schema drift, or contract-lane/docs parity drift force `NO-GO` (`Regression: #2301`).
   - runtime/deployment signer-attestation schema and reason-code drift force `NO-GO` (`Regression: #2326`).
