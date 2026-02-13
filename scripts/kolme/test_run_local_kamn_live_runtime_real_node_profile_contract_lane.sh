@@ -572,7 +572,7 @@ inmemory_summary["runtime_commit_command"] = (
     "--require-non-synthetic-run-evidence "
     "--live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 "
     "KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport "
-    "-- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" "
+    "-- --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n'\" "
     "--provider-hint InMemoryKolmeRuntimeCommitClient "
     "--output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json"
 )

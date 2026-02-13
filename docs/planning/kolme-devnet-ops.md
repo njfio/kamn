@@ -1276,7 +1276,7 @@ Operator checkpoints:
 - Bounded localhost live-provider integration proof lane:
   - `bash scripts/kolme/run_local_live_provider_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-live-provider-runtime-integration-contract-report.json`
 - Default live-provider smoke command executed by run mode:
-  - `KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint`
+  - `KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --exact integration_kolme_fork_live_node_submit_reaches_endpoint`
 - Summary schema:
   - `kamn.kolme.local-runtime-commit-live-summary.v1`
   - policy schema: `kamn.kolme.local-runtime-commit-live-policy-report.v1`
