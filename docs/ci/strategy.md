@@ -80,6 +80,21 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane runtime budget remains bounded for PR cost control.
 - Regression: #2692
 
+## Coverage-Guided Parser Fuzz Contract
+- Coverage-guided parser fuzz budget policy is tracked in `docs/planning/fuzz_harness_budget_policy.md`.
+- Bounded contract lane command:
+  - `bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh --output-json /tmp/input-mutation-coverage-guided-contract-report.json`
+- Bounded local target selectors:
+  - `bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh --target envelope --output-json /tmp/input-mutation-coverage-guided-envelope-report.json`
+  - `bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh --target did --output-json /tmp/input-mutation-coverage-guided-did-report.json`
+- Local-only deep lane command:
+  - `bash scripts/runtime/run_input_mutation_coverage_guided_deep_lane.sh`
+- Deep coverage-guided lane routing remains explicit local-only:
+  - `runtime_input_mutation_coverage_guided_deep=skipped_local_only`
+  - `KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_LOCAL_ONLY=true`
+- Deep coverage-guided lane must remain excluded from `ci-fast-gate` while policy checks stay enforced.
+- Regression: #2693
+
 ## Node Runtime Kolme-Live Fast Lane
 - For `kamn-node` live-runtime wiring/doc changes, keep PR validation on deterministic local harness tests:
   - `cargo test -p kamn-node runtime_kolme_live`

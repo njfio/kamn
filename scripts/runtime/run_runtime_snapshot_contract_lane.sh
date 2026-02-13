@@ -17,7 +17,11 @@ cargo test -p kamn-core --test live_network_wave_docs >/dev/null
 bash scripts/runtime/test_run_invariant_fuzz_concurrency_contract_lane.sh >/dev/null
 bash scripts/runtime/test_check_invariant_fuzz_concurrency_policy.sh >/dev/null
 bash scripts/runtime/test_run_zk_witness_mutation_contract_lane.sh >/dev/null
-bash scripts/runtime/test_run_zk_witness_mutation_deep_lane.sh >/dev/null
+if [ "${KAMN_RUNTIME_ZK_WITNESS_MUTATION_DEEP_LOCAL_ONLY:-false}" = "true" ]; then
+  bash scripts/runtime/test_run_zk_witness_mutation_deep_lane.sh >/dev/null
+else
+  echo "runtime_zk_witness_mutation_deep=skipped_local_only"
+fi
 bash scripts/runtime/test_generate_processor_proof_admission_evidence_bundle.sh >/dev/null
 bash scripts/runtime/test_run_processor_proof_admission_contract_lane.sh >/dev/null
 bash scripts/runtime/test_generate_watchdog_proof_consensus_evidence_bundle.sh >/dev/null

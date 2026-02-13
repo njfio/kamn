@@ -33,3 +33,20 @@ fn regression_requires_input_mutation_targeted_smoke_markers() {
     assert!(DOC.contains("input_mutation_envelope_seed:v1"));
     assert!(DOC.contains("input_mutation_did_seed:v1"));
 }
+
+#[test]
+fn regression_requires_coverage_guided_input_mutation_markers() {
+    // Regression: #2693
+    assert!(DOC.contains("run_input_mutation_coverage_guided_contract_lane.sh"));
+    assert!(DOC.contains("run_input_mutation_coverage_guided_contract_lane.sh --target envelope"));
+    assert!(DOC.contains("run_input_mutation_coverage_guided_contract_lane.sh --target did"));
+    assert!(DOC.contains("run_input_mutation_coverage_guided_deep_lane.sh"));
+    assert!(DOC.contains("kamn.runtime.input-mutation-coverage-guided-contract-report.v1"));
+    assert!(DOC.contains("kamn.runtime.input-mutation-coverage-guided-replay-metadata.v1"));
+    assert!(DOC.contains("input_mutation_coverage_guided_replay:v1"));
+    assert!(DOC.contains("minimal_failing_seed_prefix"));
+    assert!(DOC.contains("KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_MAX_SECONDS"));
+    assert!(DOC.contains("KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_MAX_SECONDS"));
+    assert!(DOC.contains("KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_LOCAL_ONLY"));
+    assert!(DOC.contains("excluded from `ci-fast-gate`"));
+}

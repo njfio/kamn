@@ -476,6 +476,16 @@ if grep -Fq "bash scripts/kolme/run_local_native_api_parity_live_proof_lane.sh -
   exit 1
 fi
 
+if grep -Fq "bash scripts/runtime/run_input_mutation_coverage_guided_deep_lane.sh" "$FAST_WORKFLOW"; then
+  echo "expected coverage-guided parser fuzz deep lane to remain excluded from ci-fast-gate.yml" >&2
+  exit 1
+fi
+
+if grep -Fq "KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_LOCAL_ONLY: 'true'" "$FAST_WORKFLOW"; then
+  echo "expected coverage-guided parser fuzz deep lane opt-in env to remain unset in ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if grep -Fq "bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run" "$FAST_WORKFLOW"; then
   echo "expected local fork process lifecycle integration run-mode lane to remain excluded from ci-fast-gate.yml" >&2
   exit 1
