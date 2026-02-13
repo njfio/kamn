@@ -16,6 +16,7 @@ REQUIRED_SECRET_HEX_LENGTH = 64
 SIGNER_KEY_SOURCE_CONTRACT_VERSION = "v1"
 RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION = "kamn.kolme.runtime-signer-attestation.v1"
 RUNTIME_SIGNER_DRIFT_TELEMETRY_SCHEMA_VERSION = "kamn.kolme.runtime-signer-drift-telemetry.v1"
+RUNTIME_SIGNER_DRIFT_THRESHOLDS_SCHEMA_VERSION = "kamn.kolme.runtime-signer-drift-thresholds.v1"
 QUORUM_EVIDENCE_SCHEMA_VERSION = RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION
 ALLOWED_SIGNER_KEY_SOURCES = ("env-local", "managed-external")
 ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE = {
@@ -183,6 +184,142 @@ def evaluate_runtime_signer_drift_telemetry(
     return reason_codes
 
 
+def evaluate_runtime_signer_drift_thresholds_bundle(
+    thresholds_bundle: object,
+) -> tuple[list[str], dict[str, int] | None]:
+    reason_codes: list[str] = []
+    if not isinstance(thresholds_bundle, dict):
+        return ["runtime_signer_drift_thresholds_bundle_missing"], None
+
+    if thresholds_bundle.get("schema_version") != RUNTIME_SIGNER_DRIFT_THRESHOLDS_SCHEMA_VERSION:
+        reason_codes.append("runtime_signer_drift_thresholds_schema_invalid")
+
+    rotation_warn_delta_epochs = thresholds_bundle.get("rotation_warn_delta_epochs")
+    if not isinstance(rotation_warn_delta_epochs, int) or rotation_warn_delta_epochs < 0:
+        reason_codes.append("runtime_signer_drift_thresholds_rotation_warn_invalid")
+
+    rotation_fail_delta_epochs = thresholds_bundle.get("rotation_fail_delta_epochs")
+    if not isinstance(rotation_fail_delta_epochs, int) or rotation_fail_delta_epochs < 0:
+        reason_codes.append("runtime_signer_drift_thresholds_rotation_fail_invalid")
+
+    quorum_warn_shortfall_events = thresholds_bundle.get("quorum_warn_shortfall_events")
+    if not isinstance(quorum_warn_shortfall_events, int) or quorum_warn_shortfall_events < 0:
+        reason_codes.append("runtime_signer_drift_thresholds_quorum_warn_invalid")
+
+    quorum_fail_shortfall_events = thresholds_bundle.get("quorum_fail_shortfall_events")
+    if not isinstance(quorum_fail_shortfall_events, int) or quorum_fail_shortfall_events < 0:
+        reason_codes.append("runtime_signer_drift_thresholds_quorum_fail_invalid")
+
+    if (
+        isinstance(rotation_warn_delta_epochs, int)
+        and rotation_warn_delta_epochs >= 0
+        and isinstance(rotation_fail_delta_epochs, int)
+        and rotation_fail_delta_epochs >= 0
+        and rotation_warn_delta_epochs > rotation_fail_delta_epochs
+    ):
+        reason_codes.append("runtime_signer_drift_thresholds_rotation_warn_gt_fail")
+
+    if (
+        isinstance(quorum_warn_shortfall_events, int)
+        and quorum_warn_shortfall_events >= 0
+        and isinstance(quorum_fail_shortfall_events, int)
+        and quorum_fail_shortfall_events >= 0
+        and quorum_warn_shortfall_events > quorum_fail_shortfall_events
+    ):
+        reason_codes.append("runtime_signer_drift_thresholds_quorum_warn_gt_fail")
+
+    if reason_codes:
+        return reason_codes, None
+
+    return (
+        reason_codes,
+        {
+            "rotation_warn_delta_epochs": int(rotation_warn_delta_epochs),
+            "rotation_fail_delta_epochs": int(rotation_fail_delta_epochs),
+            "quorum_warn_shortfall_events": int(quorum_warn_shortfall_events),
+            "quorum_fail_shortfall_events": int(quorum_fail_shortfall_events),
+        },
+    )
+
+
+def evaluate_runtime_signer_drift_admission_matrix(
+    mode: object,
+    thresholds: dict[str, int] | None,
+    required_approvals: object,
+    received_approvals: object,
+    signer_rotation_delta_epochs: object,
+) -> dict[str, object]:
+    # Dry-run is informational; admission matrix hard-gating applies to run mode.
+    if mode != "run":
+        return {
+            "decision": "GO",
+            "class": "healthy",
+            "reason_codes": [],
+            "observed_rotation_delta_epochs": signer_rotation_delta_epochs if isinstance(signer_rotation_delta_epochs, int) else 0,
+            "observed_quorum_shortfall_events": 0,
+        }
+
+    if (
+        thresholds is None
+        or not isinstance(required_approvals, int)
+        or required_approvals <= 0
+        or not isinstance(received_approvals, int)
+        or received_approvals < 0
+        or not isinstance(signer_rotation_delta_epochs, int)
+        or signer_rotation_delta_epochs < 0
+    ):
+        return {
+            "decision": "NO-GO",
+            "class": "hard-fail",
+            "reason_codes": ["runtime_signer_drift_matrix_inputs_invalid"],
+            "observed_rotation_delta_epochs": signer_rotation_delta_epochs if isinstance(signer_rotation_delta_epochs, int) else 0,
+            "observed_quorum_shortfall_events": 0,
+        }
+
+    observed_quorum_shortfall_events = max(required_approvals - received_approvals, 0)
+    fail_reason_codes: list[str] = []
+    warning_reason_codes: list[str] = []
+
+    if observed_quorum_shortfall_events > thresholds["quorum_fail_shortfall_events"]:
+        fail_reason_codes.append("runtime_signer_drift_quorum_fail_threshold_exceeded")
+    elif observed_quorum_shortfall_events > thresholds["quorum_warn_shortfall_events"]:
+        warning_reason_codes.append("runtime_signer_drift_quorum_warning_threshold_exceeded")
+
+    if signer_rotation_delta_epochs > thresholds["rotation_fail_delta_epochs"]:
+        fail_reason_codes.append("runtime_signer_drift_rotation_fail_threshold_exceeded")
+    elif (
+        thresholds["rotation_warn_delta_epochs"] > 0
+        and signer_rotation_delta_epochs >= thresholds["rotation_warn_delta_epochs"]
+    ):
+        warning_reason_codes.append("runtime_signer_drift_rotation_warning_threshold_reached")
+
+    if fail_reason_codes:
+        return {
+            "decision": "NO-GO",
+            "class": "hard-fail",
+            "reason_codes": fail_reason_codes + warning_reason_codes,
+            "observed_rotation_delta_epochs": signer_rotation_delta_epochs,
+            "observed_quorum_shortfall_events": observed_quorum_shortfall_events,
+        }
+
+    if warning_reason_codes:
+        return {
+            "decision": "WARN",
+            "class": "warning-edge",
+            "reason_codes": warning_reason_codes,
+            "observed_rotation_delta_epochs": signer_rotation_delta_epochs,
+            "observed_quorum_shortfall_events": observed_quorum_shortfall_events,
+        }
+
+    return {
+        "decision": "GO",
+        "class": "healthy",
+        "reason_codes": [],
+        "observed_rotation_delta_epochs": signer_rotation_delta_epochs,
+        "observed_quorum_shortfall_events": observed_quorum_shortfall_events,
+    }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Validate local Kolme live deployment preflight summary policy."
@@ -195,7 +332,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, list[str]]:
+def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, list[str], dict[str, object]]:
     reason_codes: list[str] = []
 
     if report.get("schema_version") != "kamn.kolme.local-live-deployment-preflight-summary.v1":
@@ -482,6 +619,22 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         )
     )
 
+    runtime_signer_drift_thresholds_schema_version = report.get(
+        "runtime_signer_drift_thresholds_schema_version"
+    )
+    if (
+        not isinstance(runtime_signer_drift_thresholds_schema_version, str)
+        or not runtime_signer_drift_thresholds_schema_version.strip()
+    ):
+        reason_codes.append("runtime_signer_drift_thresholds_schema_version_missing")
+    elif runtime_signer_drift_thresholds_schema_version != RUNTIME_SIGNER_DRIFT_THRESHOLDS_SCHEMA_VERSION:
+        reason_codes.append("runtime_signer_drift_thresholds_schema_version_mismatch")
+
+    threshold_reason_codes, parsed_runtime_signer_drift_thresholds = evaluate_runtime_signer_drift_thresholds_bundle(
+        report.get("runtime_signer_drift_thresholds_bundle")
+    )
+    reason_codes.extend(threshold_reason_codes)
+
     custody_evidence_file = report.get("custody_evidence_file")
     if not isinstance(custody_evidence_file, str):
         reason_codes.append("custody_evidence_file_invalid")
@@ -586,6 +739,21 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_signer_drift_telemetry_quorum_flag_match_required_contract_mismatch")
         if contracts.get("runtime_signer_drift_telemetry_approval_counts_match_required") is not True:
             reason_codes.append("runtime_signer_drift_telemetry_approval_counts_match_required_contract_mismatch")
+        if contracts.get("runtime_signer_drift_thresholds_required") is not True:
+            reason_codes.append("runtime_signer_drift_thresholds_required_contract_mismatch")
+        if (
+            contracts.get("runtime_signer_drift_thresholds_schema_version")
+            != RUNTIME_SIGNER_DRIFT_THRESHOLDS_SCHEMA_VERSION
+        ):
+            reason_codes.append("runtime_signer_drift_thresholds_schema_version_contract_mismatch")
+        if contracts.get("runtime_signer_drift_thresholds_rotation_warn_lte_fail_required") is not True:
+            reason_codes.append("runtime_signer_drift_thresholds_rotation_warn_lte_fail_required_contract_mismatch")
+        if contracts.get("runtime_signer_drift_thresholds_quorum_warn_lte_fail_required") is not True:
+            reason_codes.append("runtime_signer_drift_thresholds_quorum_warn_lte_fail_required_contract_mismatch")
+        if contracts.get("runtime_signer_drift_admission_matrix_required") is not True:
+            reason_codes.append("runtime_signer_drift_admission_matrix_required_contract_mismatch")
+        if contracts.get("runtime_signer_drift_admission_matrix_decision_values") != ["GO", "WARN", "NO-GO"]:
+            reason_codes.append("runtime_signer_drift_admission_matrix_decision_values_contract_mismatch")
         if contracts.get("custody_evidence_required") is not True:
             reason_codes.append("custody_evidence_required_contract_mismatch")
         if contracts.get("custody_evidence_sha256_required") is not True:
@@ -722,6 +890,23 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         if signer_rotation_fresh is not True:
             reason_codes.append("signer_rotation_fresh_violation")
 
+    runtime_signer_drift_admission_matrix = evaluate_runtime_signer_drift_admission_matrix(
+        mode=mode,
+        thresholds=parsed_runtime_signer_drift_thresholds,
+        required_approvals=required_approvals,
+        received_approvals=received_approvals,
+        signer_rotation_delta_epochs=signer_rotation_delta_epochs,
+    )
+    matrix_reason_codes = runtime_signer_drift_admission_matrix.get("reason_codes")
+    if isinstance(matrix_reason_codes, list):
+        for matrix_reason_code in matrix_reason_codes:
+            if matrix_reason_code in (
+                "runtime_signer_drift_matrix_inputs_invalid",
+                "runtime_signer_drift_quorum_fail_threshold_exceeded",
+                "runtime_signer_drift_rotation_fail_threshold_exceeded",
+            ):
+                reason_codes.append(matrix_reason_code)
+
     for required_reason_code in args.require_reason_code:
         if reason_code != required_reason_code:
             reason_codes.append(f"required_reason_code_missing:{required_reason_code}")
@@ -730,7 +915,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("observed_final_decision_mismatch")
 
     final_decision = "GO" if not reason_codes else "NO-GO"
-    return final_decision, reason_codes
+    return final_decision, reason_codes, runtime_signer_drift_admission_matrix
 
 
 def main() -> int:
@@ -745,7 +930,7 @@ def main() -> int:
     elif observed_status == "fail":
         observed_final_decision = "NO-GO"
 
-    final_decision, reason_codes = evaluate(report, args)
+    final_decision, reason_codes, runtime_signer_drift_admission_matrix = evaluate(report, args)
     output = {
         "schema_version": "kamn.kolme.local-live-deployment-preflight-policy-report.v1",
         "report_file": str(report_path),
@@ -757,6 +942,15 @@ def main() -> int:
         "observed_reason_code": report.get("reason_code"),
         "reason_codes": reason_codes,
         "final_decision": final_decision,
+        "runtime_signer_drift_admission_matrix_decision": runtime_signer_drift_admission_matrix.get("decision"),
+        "runtime_signer_drift_admission_matrix_class": runtime_signer_drift_admission_matrix.get("class"),
+        "runtime_signer_drift_admission_matrix_reason_codes": runtime_signer_drift_admission_matrix.get("reason_codes"),
+        "runtime_signer_drift_admission_matrix_observed_rotation_delta_epochs": runtime_signer_drift_admission_matrix.get(
+            "observed_rotation_delta_epochs"
+        ),
+        "runtime_signer_drift_admission_matrix_observed_quorum_shortfall_events": runtime_signer_drift_admission_matrix.get(
+            "observed_quorum_shortfall_events"
+        ),
     }
 
     if args.output_json:

@@ -39,6 +39,14 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
   - `runtime_signer_drift_telemetry_missing`
   - `runtime_signer_drift_telemetry_schema_version_mismatch`
   - `runtime_signer_drift_telemetry_rotation_delta_invalid`
+  - `runtime_signer_drift_quorum_fail_threshold_exceeded`
+  - `runtime_signer_drift_rotation_fail_threshold_exceeded`
+- Admission policy decision matrix markers:
+  - `runtime_signer_drift_admission_matrix_decision=GO|WARN|NO-GO`
+  - `runtime_signer_drift_admission_matrix_class=healthy|warning-edge|hard-fail`
+  - `runtime_signer_drift_admission_matrix_reason_codes`
+  - `runtime_signer_drift_thresholds_schema_version=kamn.kolme.runtime-signer-drift-thresholds.v1`
+  - `runtime_signer_drift_thresholds_bundle`
 
 ## Deterministic Dry-Run Workflow
 1. Create release candidate tag.

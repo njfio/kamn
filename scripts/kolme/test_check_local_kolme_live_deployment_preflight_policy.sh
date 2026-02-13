@@ -11,6 +11,8 @@ TMP_DIR="$(mktemp -d)"
 TMP_REPORT_OK="$TMP_DIR/ok-report.json"
 TMP_REPORT_QUORUM_MINIMUM="$TMP_DIR/quorum-minimum-report.json"
 TMP_REPORT_DRIFT_MALFORMED="$TMP_DIR/drift-malformed-report.json"
+TMP_REPORT_MATRIX_WARN="$TMP_DIR/drift-matrix-warn-report.json"
+TMP_REPORT_MATRIX_FAIL="$TMP_DIR/drift-matrix-fail-report.json"
 TMP_REPORT_BAD="$TMP_DIR/bad-report.json"
 TMP_POLICY_OUT="$TMP_DIR/policy-report.json"
 TMP_SUMMARY="$TMP_DIR/summary.json"
@@ -97,6 +99,14 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "received_approvals": 0,
     "quorum_shortfall": true
   },
+  "runtime_signer_drift_thresholds_schema_version": "kamn.kolme.runtime-signer-drift-thresholds.v1",
+  "runtime_signer_drift_thresholds_bundle": {
+    "schema_version": "kamn.kolme.runtime-signer-drift-thresholds.v1",
+    "rotation_warn_delta_epochs": 1,
+    "rotation_fail_delta_epochs": 2,
+    "quorum_warn_shortfall_events": 0,
+    "quorum_fail_shortfall_events": 0
+  },
   "custody_evidence_file": "",
   "custody_evidence_present": false,
   "custody_evidence_sha256": "",
@@ -161,6 +171,16 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "runtime_signer_drift_telemetry_stale_flag_match_required": true,
     "runtime_signer_drift_telemetry_quorum_flag_match_required": true,
     "runtime_signer_drift_telemetry_approval_counts_match_required": true,
+    "runtime_signer_drift_thresholds_required": true,
+    "runtime_signer_drift_thresholds_schema_version": "kamn.kolme.runtime-signer-drift-thresholds.v1",
+    "runtime_signer_drift_thresholds_rotation_warn_lte_fail_required": true,
+    "runtime_signer_drift_thresholds_quorum_warn_lte_fail_required": true,
+    "runtime_signer_drift_admission_matrix_required": true,
+    "runtime_signer_drift_admission_matrix_decision_values": [
+      "GO",
+      "WARN",
+      "NO-GO"
+    ],
     "custody_evidence_required": true,
     "custody_evidence_sha256_required": true,
     "signer_provenance_required": true,
@@ -256,7 +276,177 @@ if report.get("final_decision") != "GO":
     raise SystemExit("expected final_decision GO for valid deployment preflight report")
 if report.get("reason_codes") != []:
     raise SystemExit("expected no reason codes for valid deployment preflight report")
+if report.get("runtime_signer_drift_admission_matrix_decision") not in ("GO", "WARN", "NO-GO"):
+    raise SystemExit("expected runtime signer drift admission matrix decision marker in deployment preflight policy report")
+if report.get("runtime_signer_drift_admission_matrix_class") not in ("healthy", "warning-edge", "hard-fail"):
+    raise SystemExit("expected runtime signer drift admission matrix class marker in deployment preflight policy report")
+matrix_reason_codes = report.get("runtime_signer_drift_admission_matrix_reason_codes")
+if not isinstance(matrix_reason_codes, list):
+    raise SystemExit("expected runtime signer drift admission matrix reason-code list in deployment preflight policy report")
 PY
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_MATRIX_WARN" "$TMP_REPORT_MATRIX_FAIL" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+warn_report = dict(report)
+warn_report["mode"] = "run"
+warn_report["status"] = "ok"
+warn_report["reason_code"] = "deployment_preflight_passed"
+warn_report["signer_secret_present"] = True
+warn_report["signer_secret_hex_valid"] = True
+warn_report["required_approvals"] = 2
+warn_report["received_approvals"] = 2
+warn_report["quorum_evidence_file"] = "/tmp/quorum.json"
+warn_report["quorum_evidence_present"] = True
+warn_report["quorum_evidence_sha256"] = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+warn_report["quorum_evidence_sha256_valid"] = True
+warn_report["quorum_evidence_schema_valid"] = True
+warn_report["quorum_evidence_approval_count"] = 2
+warn_report["quorum_evidence_signers_unique"] = True
+warn_report["quorum_evidence_matches_threshold"] = True
+warn_report["quorum_evidence_custody_sha256_match"] = True
+warn_report["quorum_evidence_signer_roles_present"] = True
+warn_report["quorum_evidence_signer_roles_valid"] = True
+warn_report["quorum_evidence_rotation_metadata_present"] = True
+warn_report["quorum_evidence_rotation_metadata_valid"] = True
+warn_report["runtime_signer_attestation_bundle"] = {
+    "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
+    "required_approvals": 2,
+    "approved_signers": ["ops-primary", "ops-secondary"],
+    "signer_profile": "ops-primary",
+    "signer_key_source": "env-local",
+}
+warn_report["runtime_signer_attestation_profile_approved"] = True
+warn_report["runtime_signer_drift_telemetry"] = {
+    "schema_version": "kamn.kolme.runtime-signer-drift-telemetry.v1",
+    "signer_rotation_epoch": 3,
+    "signer_previous_rotation_epoch": 1,
+    "signer_rotation_delta_epochs": 2,
+    "signer_rotation_freshness_max_delta": 2,
+    "signer_rotation_stale": False,
+    "required_approvals": 2,
+    "received_approvals": 2,
+    "quorum_shortfall": False,
+}
+warn_report["custody_evidence_file"] = "/tmp/custody.json"
+warn_report["custody_evidence_present"] = True
+warn_report["custody_evidence_sha256"] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+warn_report["custody_evidence_sha256_valid"] = True
+warn_report["signer_provenance_file"] = "/tmp/provenance.json"
+warn_report["signer_provenance_present"] = True
+warn_report["signer_provenance_sha256"] = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+warn_report["signer_provenance_sha256_valid"] = True
+warn_report["signer_rotation_epoch"] = 3
+warn_report["signer_previous_rotation_epoch"] = 1
+warn_report["signer_rotation_freshness_max_delta"] = 2
+warn_report["signer_rotation_delta_epochs"] = 2
+warn_report["signer_rotation_fresh"] = True
+warn_report["runtime_signer_drift_thresholds_bundle"] = {
+    "schema_version": "kamn.kolme.runtime-signer-drift-thresholds.v1",
+    "rotation_warn_delta_epochs": 1,
+    "rotation_fail_delta_epochs": 2,
+    "quorum_warn_shortfall_events": 0,
+    "quorum_fail_shortfall_events": 0,
+}
+warn_report["contracts"] = dict(warn_report.get("contracts", {}))
+warn_report["contracts"]["approval_quorum_required"] = 2
+warn_report["contracts"]["runtime_signer_attestation_required_approvals"] = 2
+warn_report["contracts"]["runtime_signer_drift_telemetry_required"] = True
+warn_report["contracts"]["runtime_signer_drift_telemetry_schema_version"] = "kamn.kolme.runtime-signer-drift-telemetry.v1"
+warn_report["contracts"]["runtime_signer_drift_telemetry_rotation_delta_match_required"] = True
+warn_report["contracts"]["runtime_signer_drift_telemetry_stale_flag_match_required"] = True
+warn_report["contracts"]["runtime_signer_drift_telemetry_quorum_flag_match_required"] = True
+warn_report["contracts"]["runtime_signer_drift_telemetry_approval_counts_match_required"] = True
+warn_report["contracts"]["runtime_signer_drift_thresholds_required"] = True
+warn_report["contracts"]["runtime_signer_drift_thresholds_schema_version"] = "kamn.kolme.runtime-signer-drift-thresholds.v1"
+warn_report["contracts"]["runtime_signer_drift_thresholds_rotation_warn_lte_fail_required"] = True
+warn_report["contracts"]["runtime_signer_drift_thresholds_quorum_warn_lte_fail_required"] = True
+warn_report["contracts"]["runtime_signer_drift_admission_matrix_required"] = True
+warn_report["contracts"]["runtime_signer_drift_admission_matrix_decision_values"] = ["GO", "WARN", "NO-GO"]
+warn_report["checks"] = [
+    {"id": "runtime_mode_contract", "command": "runtime-mode must equal kolme-live", "status": "pass", "reason_code": "runtime_mode_validated"},
+    {"id": "signer_profile_contract", "command": "signer profile must be ops-primary or ops-secondary", "status": "pass", "reason_code": "signer_profile_validated"},
+    {"id": "signer_secret_contract", "command": "selected signer secret env must exist and be 64-char hex", "status": "pass", "reason_code": "signer_secret_validated"},
+    {"id": "fallback_private_key_contract", "command": "fallback signer secret env must remain unset", "status": "pass", "reason_code": "fallback_signer_secret_absent"},
+    {"id": "signer_quorum_contract", "command": "received approvals must satisfy required approvals threshold", "status": "pass", "reason_code": "signer_quorum_validated"},
+    {"id": "quorum_evidence_contract", "command": "quorum evidence bundle must satisfy schema, signer uniqueness, threshold, and custody digest match", "status": "pass", "reason_code": "quorum_evidence_validated"},
+    {"id": "custody_evidence_contract", "command": "signer custody evidence file and sha256 marker must be present", "status": "pass", "reason_code": "custody_evidence_validated"},
+    {"id": "signer_provenance_contract", "command": "signer provenance evidence file and sha256 marker must be present", "status": "pass", "reason_code": "signer_provenance_validated"},
+    {"id": "signer_rotation_freshness_contract", "command": "signer rotation metadata must satisfy freshness threshold", "status": "pass", "reason_code": "signer_rotation_freshness_validated"},
+]
+
+fail_report = dict(warn_report)
+fail_report["status"] = "fail"
+fail_report["reason_code"] = "checkpoint_failed_signer_quorum_contract"
+fail_report["received_approvals"] = 1
+fail_report["quorum_evidence_approval_count"] = 1
+fail_report["quorum_evidence_matches_threshold"] = False
+fail_report["runtime_signer_drift_telemetry"] = dict(warn_report["runtime_signer_drift_telemetry"])
+fail_report["runtime_signer_drift_telemetry"]["received_approvals"] = 1
+fail_report["runtime_signer_drift_telemetry"]["quorum_shortfall"] = True
+fail_report["checks"] = [
+    {"id": "runtime_mode_contract", "command": "runtime-mode must equal kolme-live", "status": "pass", "reason_code": "runtime_mode_validated"},
+    {"id": "signer_profile_contract", "command": "signer profile must be ops-primary or ops-secondary", "status": "pass", "reason_code": "signer_profile_validated"},
+    {"id": "signer_secret_contract", "command": "selected signer secret env must exist and be 64-char hex", "status": "pass", "reason_code": "signer_secret_validated"},
+    {"id": "fallback_private_key_contract", "command": "fallback signer secret env must remain unset", "status": "pass", "reason_code": "fallback_signer_secret_absent"},
+    {"id": "signer_quorum_contract", "command": "received approvals must satisfy required approvals threshold", "status": "fail", "reason_code": "signer_quorum_shortfall"},
+    {"id": "quorum_evidence_contract", "command": "quorum evidence bundle must satisfy schema, signer uniqueness, threshold, and custody digest match", "status": "skipped", "reason_code": "signer_quorum_shortfall"},
+    {"id": "custody_evidence_contract", "command": "signer custody evidence file and sha256 marker must be present", "status": "skipped", "reason_code": "signer_quorum_shortfall"},
+    {"id": "signer_provenance_contract", "command": "signer provenance evidence file and sha256 marker must be present", "status": "skipped", "reason_code": "signer_quorum_shortfall"},
+    {"id": "signer_rotation_freshness_contract", "command": "signer rotation metadata must satisfy freshness threshold", "status": "skipped", "reason_code": "signer_quorum_shortfall"},
+]
+
+pathlib.Path(sys.argv[2]).write_text(json.dumps(warn_report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+pathlib.Path(sys.argv[3]).write_text(json.dumps(fail_report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_MATRIX_WARN" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --require-reason-code deployment_preflight_passed \
+  --output-json "$TMP_POLICY_OUT" >/dev/null
+
+python3 - "$TMP_POLICY_OUT" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if report.get("runtime_signer_drift_admission_matrix_decision") != "WARN":
+    raise SystemExit("expected runtime signer drift admission matrix decision WARN for warning-edge deployment report")
+if report.get("runtime_signer_drift_admission_matrix_class") != "warning-edge":
+    raise SystemExit("expected runtime signer drift admission matrix class warning-edge for warning deployment report")
+matrix_reason_codes = report.get("runtime_signer_drift_admission_matrix_reason_codes")
+if not isinstance(matrix_reason_codes, list):
+    raise SystemExit("expected runtime signer drift admission matrix reason-code list for warning deployment report")
+if "runtime_signer_drift_rotation_warning_threshold_reached" not in matrix_reason_codes:
+    raise SystemExit("expected runtime signer drift rotation warning-threshold reason code in warning deployment report")
+if report.get("final_decision") != "GO":
+    raise SystemExit("expected final_decision GO for warning-edge deployment report")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_MATRIX_FAIL" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+matrix_fail_exit_code=$?
+set -e
+
+if [ "$matrix_fail_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight policy checker to fail for hard-fail runtime signer drift matrix report" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_drift_quorum_fail_threshold_exceeded" "$TMP_ERR"; then
+  echo "expected runtime signer drift quorum fail-threshold reason for hard-fail deployment matrix report" >&2
+  exit 1
+fi
 
 python3 - "$TMP_REPORT_OK" "$TMP_REPORT_QUORUM_MINIMUM" <<'PY'
 import json
