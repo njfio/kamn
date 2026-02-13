@@ -120,9 +120,13 @@ fn doc_contains_runtime_kolme_live_rules() {
     assert!(DOC.contains("kolme-fork-secp256k1-v1"));
     assert!(DOC.contains("signer-selection evidence markers"));
     assert!(DOC.contains("KAMN_KOLME_LIVE_SIGNER_PROFILE"));
+    assert!(DOC.contains("KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND"));
+    assert!(DOC.contains("KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED"));
     assert!(DOC.contains("ops-primary"));
     assert!(DOC.contains("ops-secondary"));
     assert!(DOC.contains("env-local"));
+    assert!(DOC.contains("managed_signer_backend_required_missing"));
+    assert!(DOC.contains("managed_signer_backend_required_invalid"));
     assert!(DOC.contains("/runtime-commit/status"));
     assert!(DOC.contains("max-attempt budget `2`"));
     assert!(DOC.contains("finality-polled"));

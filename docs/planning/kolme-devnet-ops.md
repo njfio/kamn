@@ -561,7 +561,10 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - real-node profile managed-external boundary rejects raw signer secret env and prints remediation:
     - `managed-external signer raw private key env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF)`
   - real-node profile managed-external backend adapter command contract:
-    - optional command env marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND`
+    - command env marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND`
+    - strict managed-external signer contracts require command marker presence; missing marker fails closed with `managed_signer_backend_required_missing`
+    - optional requirement override marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED=true|false`
+    - invalid/empty requirement marker values fail closed with `managed_signer_backend_required_invalid`
     - optional timeout env marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS` (default `5`)
     - command input env markers: `KAMN_MANAGED_SIGNER_KEY_REFERENCE`, `KAMN_MANAGED_SIGNER_ACTOR_DID`, `KAMN_MANAGED_SIGNER_NONCE`, `KAMN_MANAGED_SIGNER_STATE_ROOT`, `KAMN_MANAGED_SIGNER_CANONICAL_MESSAGE`
     - command output markers: `signature_hex=<128-hex>` and `recovery_id=<0..3>`
