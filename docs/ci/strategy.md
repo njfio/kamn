@@ -712,6 +712,21 @@ Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
 - `scripts/ci/generate_fast_gate_budget_delta_report.sh` emits baseline/current/variance metrics.
 - `scripts/ci/check_fast_gate_budget_delta_threshold.sh` fails closed on unapproved regressions.
 - `ci-budget-fast-gate-delta-*.json` artifacts are uploaded for auditability.
+- local-heavy-sensitive drift markers are emitted in the delta report:
+  - `test_scope`
+  - `local_heavy_sensitive`
+  - `local_heavy_scope_class`
+  - `local_heavy_sensitive_drift_detected`
+- threshold checker emits deterministic review markers:
+  - `soft_overrun_status=within|exceeded`
+  - `review_required=true|false`
+  - `reason_codes=none|...`
+- threshold/waiver reason code contract:
+  - `delta_threshold_violation_unwaived` (hard fail, merge-blocking)
+  - `delta_threshold_waiver_applied` (pass with mandatory review visibility)
+  - `local_heavy_sensitive_drift_detected` (soft-overrun review marker for local-heavy-sensitive scope drift)
+- reviewer action when `soft_overrun_status=exceeded`:
+  - verify expected local-heavy drift scope and waiver rationale, and require linked follow-up before merge.
 
 Test-harness growth advisory (non-blocking):
 - `scripts/ci/generate_test_harness_loc_report.sh --output-json /tmp/test-harness-loc-report.json`
@@ -735,6 +750,7 @@ Policy:
 - Warning at 90% of configured budget.
 - Failure at 100% of configured budget for `ci-fast-gate` (merge-critical lane).
 - Delta threshold overruns require a time-bounded waiver in `.ci/fast-gate-budget-delta-waiver.json` with tracked follow-up.
+- local-heavy-sensitive drift remains review-visible through deterministic reason codes even when hard thresholds are not exceeded (`Regression: #2337`).
 
 ## Cache and Retry Telemetry
 Telemetry includes:

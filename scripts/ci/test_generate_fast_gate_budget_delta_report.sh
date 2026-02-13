@@ -20,6 +20,7 @@ cat >"$CURRENT_JSON" <<'JSON'
 {
   "lane": "fast-gate",
   "status": "pass",
+  "test_scope": "kolme-local-heavy-contract",
   "elapsed_seconds": 300,
   "runner_minutes": 5
 }
@@ -43,6 +44,10 @@ grep -q '"elapsed_seconds_delta": 60' "$OUTPUT_JSON"
 grep -q '"elapsed_seconds_delta_pct": 25.0' "$OUTPUT_JSON"
 grep -q '"runner_minutes_delta": 1' "$OUTPUT_JSON"
 grep -q '"runner_minutes_delta_pct": 25.0' "$OUTPUT_JSON"
+grep -q '"test_scope": "kolme-local-heavy-contract"' "$OUTPUT_JSON"
+grep -q '"local_heavy_sensitive": true' "$OUTPUT_JSON"
+grep -q '"local_heavy_scope_class": "contract"' "$OUTPUT_JSON"
+grep -q '"local_heavy_sensitive_drift_detected": true' "$OUTPUT_JSON"
 
 cat >"$TMP_DIR/invalid-baseline.env" <<'ENV'
 FAST_GATE_DELTA_BASELINE_ELAPSED_SECONDS=240
