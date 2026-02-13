@@ -70,6 +70,7 @@ resolve_manifest_name() {
     run_local_live_node_validation_bundle_lane.sh) echo "kolme_local_live_node_validation_bundle_lane.json" ;;
     run_local_native_api_parity_live_proof_lane.sh) echo "kolme_local_native_api_parity_live_proof_lane.json" ;;
     run_local_runtime_commit_live_lane.sh) echo "kolme_local_runtime_commit_live_lane.json" ;;
+    run_version_compatibility_replay_deep_lane.sh) echo "kolme_version_compatibility_replay_deep_lane.json" ;;
     *)
       return 1
       ;;
