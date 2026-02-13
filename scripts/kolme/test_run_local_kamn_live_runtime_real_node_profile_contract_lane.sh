@@ -75,6 +75,7 @@ required_coverage_markers=(
   "docs/ci/strategy.md"
   "README.md"
   "runtime_signer_profile=ops-secondary"
+  "runtime_signing_profile"
   "runtime_signer_key_source_contract_version"
   "runtime_signer_key_source"
   "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1"
@@ -128,6 +129,10 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "runtime_signer_profile=ops-secondary" "$docs_file"; then
     echo "expected docs parity to include secondary signer profile marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signing_profile=kolme-fork-secp256k1-v1" "$docs_file"; then
+    echo "expected docs parity to include runtime signing profile marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "runtime_signer_key_source_contract_version" "$docs_file"; then
@@ -188,6 +193,14 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "runtime_signer_private_key_env_mismatch" "$docs_file"; then
     echo "expected docs parity to include signer private key mismatch reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signing_profile_mismatch" "$docs_file"; then
+    echo "expected docs parity to include runtime signing profile mismatch reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signing_profile_contract_mismatch" "$docs_file"; then
+    echo "expected docs parity to include runtime signing profile contract mismatch reason marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "Regression: #2302" "$docs_file"; then
@@ -256,6 +269,8 @@ if summary.get("runtime_signer_key_source_contract_version") != "v1":
     raise SystemExit("expected signer key-source contract version marker in real-node profile contract-lane summary")
 if summary.get("runtime_signer_key_source") != "env-local":
     raise SystemExit("expected signer key-source marker in real-node profile contract-lane summary")
+if summary.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected runtime_signing_profile marker in real-node profile contract-lane summary")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected signer private key env marker in real-node profile contract-lane summary")
 if summary.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF":
@@ -300,6 +315,8 @@ if contracts.get("runtime_signer_key_source_contract_version") != "v1":
     raise SystemExit("expected contracts signer key-source contract version marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_key_source") != "env-local":
     raise SystemExit("expected contracts signer key-source marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected contracts runtime_signing_profile marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected contracts signer private key env marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF":
@@ -349,6 +366,8 @@ if summary.get("runtime_signer_key_source_contract_version") != "v1":
     raise SystemExit("expected secondary signer key-source contract version marker in contract-lane summary")
 if summary.get("runtime_signer_key_source") != "env-local":
     raise SystemExit("expected secondary signer key-source marker in contract-lane summary")
+if summary.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected runtime_signing_profile marker in secondary contract-lane summary")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
     raise SystemExit("expected secondary signer private key env marker in contract-lane summary")
 if summary.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY":
@@ -366,6 +385,8 @@ if contracts.get("runtime_signer_key_source_contract_version") != "v1":
     raise SystemExit("expected contracts secondary signer key-source contract version marker in contract-lane summary")
 if contracts.get("runtime_signer_key_source") != "env-local":
     raise SystemExit("expected contracts secondary signer key-source marker in contract-lane summary")
+if contracts.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected contracts runtime_signing_profile marker in secondary contract-lane summary")
 if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
     raise SystemExit("expected contracts secondary signer private key env marker in contract-lane summary")
 if contracts.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY":

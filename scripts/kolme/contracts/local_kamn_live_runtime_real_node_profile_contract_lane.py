@@ -272,6 +272,9 @@ def main() -> int:
     if summary.get("runtime_signer_key_source") != expected_signer_key_source:
         print("expected signer key-source marker in contract-lane summary", file=sys.stderr)
         return 1
+    if summary.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+        print("expected runtime signing profile marker in contract-lane summary", file=sys.stderr)
+        return 1
     if summary.get("runtime_signer_private_key_env") != expected_signer_private_key_env:
         print("expected signer private key env marker in contract-lane summary", file=sys.stderr)
         return 1
@@ -354,6 +357,9 @@ def main() -> int:
         return 1
     if contracts.get("runtime_signer_key_source") != expected_signer_key_source:
         print("expected contracts signer key-source marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+        print("expected contracts runtime signing profile marker in contract-lane summary", file=sys.stderr)
         return 1
     if contracts.get("runtime_signer_private_key_env") != expected_signer_private_key_env:
         print("expected contracts signer private key env marker in contract-lane summary", file=sys.stderr)
@@ -501,6 +507,90 @@ def main() -> int:
             return 1
         if signer_key_env_drift_policy.get("final_decision") != "NO-GO":
             print("expected NO-GO final decision for signer key env drift policy output", file=sys.stderr)
+            return 1
+
+        signing_profile_drift_summary_file = negative_path / "signing_profile_drift_summary.json"
+        signing_profile_drift_policy_file = negative_path / "signing_profile_drift_policy.json"
+        signing_profile_drift_summary = dict(summary)
+        signing_profile_drift_summary["runtime_signing_profile"] = "simulated-signing-v0"
+        signing_profile_drift_summary_file.write_text(
+            json.dumps(signing_profile_drift_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        signing_profile_drift_result = run_real_node_policy_check(
+            report_file=signing_profile_drift_summary_file,
+            output_json=signing_profile_drift_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if signing_profile_drift_result.returncode == 0:
+            print("expected runtime signing profile drift negative proof to fail closed", file=sys.stderr)
+            return 1
+        signing_profile_drift_policy = json.loads(
+            signing_profile_drift_policy_file.read_text(encoding="utf-8")
+        )
+        signing_profile_drift_reason_codes = signing_profile_drift_policy.get("reason_codes")
+        if not isinstance(signing_profile_drift_reason_codes, list):
+            print("expected reason_codes list in runtime signing profile drift policy output", file=sys.stderr)
+            return 1
+        if "runtime_signing_profile_mismatch" not in signing_profile_drift_reason_codes:
+            print(
+                "expected runtime_signing_profile_mismatch in runtime signing profile drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if signing_profile_drift_policy.get("final_decision") != "NO-GO":
+            print("expected NO-GO final decision for runtime signing profile drift policy output", file=sys.stderr)
+            return 1
+
+        signing_profile_contract_drift_summary_file = negative_path / "signing_profile_contract_drift_summary.json"
+        signing_profile_contract_drift_policy_file = negative_path / "signing_profile_contract_drift_policy.json"
+        signing_profile_contract_drift_summary = dict(summary)
+        signing_profile_contract_drift_contracts = dict(summary.get("contracts", {}))
+        signing_profile_contract_drift_contracts["runtime_signing_profile"] = "simulated-signing-v0"
+        signing_profile_contract_drift_summary["contracts"] = signing_profile_contract_drift_contracts
+        signing_profile_contract_drift_summary_file.write_text(
+            json.dumps(signing_profile_contract_drift_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        signing_profile_contract_drift_result = run_real_node_policy_check(
+            report_file=signing_profile_contract_drift_summary_file,
+            output_json=signing_profile_contract_drift_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if signing_profile_contract_drift_result.returncode == 0:
+            print(
+                "expected runtime signing profile contract drift negative proof to fail closed",
+                file=sys.stderr,
+            )
+            return 1
+        signing_profile_contract_drift_policy = json.loads(
+            signing_profile_contract_drift_policy_file.read_text(encoding="utf-8")
+        )
+        signing_profile_contract_drift_reason_codes = signing_profile_contract_drift_policy.get(
+            "reason_codes"
+        )
+        if not isinstance(signing_profile_contract_drift_reason_codes, list):
+            print(
+                "expected reason_codes list in runtime signing profile contract drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if (
+            "runtime_signing_profile_contract_mismatch"
+            not in signing_profile_contract_drift_reason_codes
+        ):
+            print(
+                "expected runtime_signing_profile_contract_mismatch in runtime signing profile contract drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if signing_profile_contract_drift_policy.get("final_decision") != "NO-GO":
+            print(
+                "expected NO-GO final decision for runtime signing profile contract drift policy output",
+                file=sys.stderr,
+            )
             return 1
 
         # Regression: #2302
@@ -1007,6 +1097,7 @@ def main() -> int:
         "runtime_signer_profile=ops-secondary",
         "runtime_signer_key_source_contract_version",
         "runtime_signer_key_source",
+        "runtime_signing_profile=kolme-fork-secp256k1-v1",
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
         "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF",
@@ -1022,6 +1113,8 @@ def main() -> int:
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
+        "runtime_signing_profile_mismatch",
+        "runtime_signing_profile_contract_mismatch",
         "Regression: #2302",
         "Regression: #2325",
         "Regression: #2327",
@@ -1038,6 +1131,7 @@ def main() -> int:
         "runtime_signer_profile=ops-secondary",
         "runtime_signer_key_source_contract_version",
         "runtime_signer_key_source",
+        "runtime_signing_profile=kolme-fork-secp256k1-v1",
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
         "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF",
@@ -1053,6 +1147,8 @@ def main() -> int:
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
+        "runtime_signing_profile_mismatch",
+        "runtime_signing_profile_contract_mismatch",
         "Regression: #2302",
         "Regression: #2325",
         "Regression: #2327",
@@ -1069,6 +1165,7 @@ def main() -> int:
         "runtime_signer_profile=ops-secondary",
         "runtime_signer_key_source_contract_version",
         "runtime_signer_key_source",
+        "runtime_signing_profile=kolme-fork-secp256k1-v1",
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
         "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF",
@@ -1084,6 +1181,8 @@ def main() -> int:
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
+        "runtime_signing_profile_mismatch",
+        "runtime_signing_profile_contract_mismatch",
         "Regression: #2302",
         "Regression: #2325",
         "Regression: #2327",
