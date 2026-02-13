@@ -7,6 +7,7 @@ FAST_WORKFLOW="$ROOT_DIR/.github/workflows/ci-fast-gate.yml"
 SAFE_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_safe.yml"
 UNSAFE_MISSING_INPUT_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_missing_input.yml"
 UNSAFE_FORCED_TRUE_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_forced_true.yml"
+UNSAFE_VERSION_LANE_MATRIX_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_version_lane_matrix.yml"
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected workflow policy checker to be executable" >&2
@@ -68,5 +69,17 @@ if ! grep -Fq "selector_opt_in_env_forced_true_literal" "$forced_true_log"; then
   exit 1
 fi
 
-rm -f "$safe_report" "$safe_log" "$real_report" "$real_log" "$missing_input_log" "$forced_true_log"
+version_lane_log="$(mktemp)"
+if python3 "$CHECKER" --workflow-file "$UNSAFE_VERSION_LANE_MATRIX_FIXTURE" >"$version_lane_log" 2>&1; then
+  cat "$version_lane_log" >&2
+  echo "expected version-lane matrix fixture to fail policy checker" >&2
+  exit 1
+fi
+if ! grep -Fq "heavy_fork_matrix_commands_in_version_lane" "$version_lane_log"; then
+  cat "$version_lane_log" >&2
+  echo "expected version-lane matrix fixture to report heavy_fork_matrix_commands_in_version_lane" >&2
+  exit 1
+fi
+
+rm -f "$safe_report" "$safe_log" "$real_report" "$real_log" "$missing_input_log" "$forced_true_log" "$version_lane_log"
 echo "workflow Kolme local-heavy exclusion policy checker tests passed."

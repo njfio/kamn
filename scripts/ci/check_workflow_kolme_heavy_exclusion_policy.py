@@ -10,6 +10,12 @@ import sys
 from pathlib import Path
 from typing import List
 
+HEAVY_FORK_MATRIX_COMMANDS = [
+    "bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh",
+    "bash scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh",
+    "bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh",
+]
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -21,6 +27,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--workflow-file", required=True, type=Path)
     parser.add_argument("--output-json", type=Path)
     return parser.parse_args()
+
+
+def extract_step_block(text: str, step_name: str) -> str:
+    step_match = re.search(
+        rf"- name:\s*{re.escape(step_name)}(?P<body>(?:\n\s{{6,}}.*)+)",
+        text,
+    )
+    if not step_match:
+        return ""
+    return step_match.group("body")
 
 
 def main() -> int:
@@ -59,20 +75,27 @@ def main() -> int:
     ):
         failed_checks.append("selector_opt_in_env_forced_true_literal")
 
-    heavy_step_match = re.search(
-        r"- name:\s*Run Kolme local-heavy contract lane(?P<body>(?:\n\s{6,}.*)+)",
-        text,
-    )
-    if not heavy_step_match:
+    heavy_step_block = extract_step_block(text, "Run Kolme local-heavy contract lane")
+    if not heavy_step_block:
         failed_checks.append("local_heavy_lane_step_missing")
     else:
-        heavy_step_block = heavy_step_match.group("body")
         if not re.search(
             r"\n\s+if:\s*steps\.scope\.outputs\.run_kolme_local_heavy_contract_tests == 'true'\s*$",
             heavy_step_block,
             flags=re.MULTILINE,
         ):
             failed_checks.append("local_heavy_lane_not_selector_gated")
+        missing_local_heavy_commands = [
+            command for command in HEAVY_FORK_MATRIX_COMMANDS if command not in heavy_step_block
+        ]
+        if missing_local_heavy_commands:
+            failed_checks.append("heavy_fork_matrix_commands_missing_from_local_heavy_lane")
+
+    version_lane_block = extract_step_block(text, "Run Kolme version compatibility contract lane")
+    if version_lane_block:
+        leaked_commands = [command for command in HEAVY_FORK_MATRIX_COMMANDS if command in version_lane_block]
+        if leaked_commands:
+            failed_checks.append("heavy_fork_matrix_commands_in_version_lane")
 
     if failed_checks:
         status = "fail"
