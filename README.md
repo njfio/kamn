@@ -533,6 +533,8 @@ bash scripts/kolme/run_local_live_provider_runtime_integration_contract_lane.sh 
 # in-memory provider drift fail-closed reason: provider_in_memory_reference_detected
 # unavailable-node deterministic reasons: live_preflight_failed, live_preflight_timeout
 # live-provider marker contracts: provider_contract_enforcement_mode, provider_live_contract_marker, provider_live_contract_marker_present, provider_in_memory_reference_detected
+# real-signing marker contracts: provider_signer_adapter_contract=KolmeForkSecp256k1SignerAdapter, provider_signing_curve_contract=secp256k1, provider_signing_profile_contract_version=v1
+# real-signing drift fail-closed reason: provider_signer_adapter_contract_mismatch
 # summary markers: submit_evidence_marker_present, finality_evidence_marker_present
 # request/finality linkage markers: request_payload_evidence_marker_present, request_payload_evidence_artifact_path, submit_evidence_artifact_path, finality_evidence_artifact_path, request_finality_evidence_contract_version, request_finality_evidence_linked
 # finality retry markers: finality_retry_contract_version, finality_retry_max_attempts, finality_retry_backoff_seconds, finality_retry_attempts_used, finality_retry_exhausted, finality_retry_failure_class

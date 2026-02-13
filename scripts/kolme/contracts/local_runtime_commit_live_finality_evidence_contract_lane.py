@@ -312,6 +312,18 @@ def main() -> int:
     if summary_payload.get("provider_in_memory_reference_detected") is not False:
         print("expected provider_in_memory_reference_detected=false in summary", file=sys.stderr)
         return 1
+    if summary_payload.get("provider_signer_adapter_contract") != "KolmeForkSecp256k1SignerAdapter":
+        print(
+            "expected provider_signer_adapter_contract=KolmeForkSecp256k1SignerAdapter in summary",
+            file=sys.stderr,
+        )
+        return 1
+    if summary_payload.get("provider_signing_curve_contract") != "secp256k1":
+        print("expected provider_signing_curve_contract=secp256k1 in summary", file=sys.stderr)
+        return 1
+    if summary_payload.get("provider_signing_profile_contract_version") != "v1":
+        print("expected provider_signing_profile_contract_version=v1 in summary", file=sys.stderr)
+        return 1
     if summary_payload.get("submit_evidence_marker_present") is not True:
         print("expected submit_evidence_marker_present=true", file=sys.stderr)
         return 1
@@ -469,6 +481,52 @@ def main() -> int:
         if "provider_in_memory_reference_detected" not in provider_drift_reason_codes:
             print(
                 "expected provider_in_memory_reference_detected in provider drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+
+        signer_adapter_drift_summary_file = negative_root / "signer_adapter_drift_summary.json"
+        signer_adapter_drift_policy_file = negative_root / "signer_adapter_drift_policy.json"
+        signer_adapter_drift_summary = dict(summary_payload)
+        signer_adapter_drift_summary["provider_signer_adapter_contract"] = "SimulatedSignerAdapter"
+        signer_adapter_drift_summary_file.write_text(
+            json.dumps(signer_adapter_drift_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        signer_adapter_drift_result = subprocess.run(
+            [
+                "python3",
+                str(CHECKER),
+                "--report-file",
+                str(signer_adapter_drift_summary_file),
+                "--expected-final-decision",
+                "NO-GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--expected-provider-client-contract",
+                args.expected_provider_client_contract,
+                "--output-json",
+                str(signer_adapter_drift_policy_file),
+            ],
+            cwd=ROOT_DIR,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if signer_adapter_drift_result.returncode == 0:
+            print("expected signer adapter drift proof to fail closed", file=sys.stderr)
+            return 1
+        signer_adapter_drift_policy = json.loads(
+            signer_adapter_drift_policy_file.read_text(encoding="utf-8")
+        )
+        signer_adapter_drift_reason_codes = signer_adapter_drift_policy.get("reason_codes")
+        if not isinstance(signer_adapter_drift_reason_codes, list):
+            print("expected reason_codes list in signer adapter drift policy output", file=sys.stderr)
+            return 1
+        if "provider_signer_adapter_contract_mismatch" not in signer_adapter_drift_reason_codes:
+            print(
+                "expected provider_signer_adapter_contract_mismatch in signer adapter drift policy output",
                 file=sys.stderr,
             )
             return 1

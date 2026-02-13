@@ -113,6 +113,13 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif provider_signing_profile_marker_present is False:
         reason_codes.append("provider_signing_profile_marker_missing")
 
+    if report.get("provider_signer_adapter_contract") != "KolmeForkSecp256k1SignerAdapter":
+        reason_codes.append("provider_signer_adapter_contract_mismatch")
+    if report.get("provider_signing_curve_contract") != "secp256k1":
+        reason_codes.append("provider_signing_curve_contract_mismatch")
+    if report.get("provider_signing_profile_contract_version") != "v1":
+        reason_codes.append("provider_signing_profile_contract_version_mismatch")
+
     live_command = report.get("live_command")
     if not isinstance(live_command, str) or not live_command.strip():
         reason_codes.append("live_command_missing")
@@ -411,6 +418,11 @@ def main() -> int:
         ),
         "observed_provider_in_memory_reference_detected": report.get(
             "provider_in_memory_reference_detected"
+        ),
+        "observed_provider_signer_adapter_contract": report.get("provider_signer_adapter_contract"),
+        "observed_provider_signing_curve_contract": report.get("provider_signing_curve_contract"),
+        "observed_provider_signing_profile_contract_version": report.get(
+            "provider_signing_profile_contract_version"
         ),
         "observed_final_decision": observed_final_decision,
         "observed_reason_code": report.get("reason_code"),

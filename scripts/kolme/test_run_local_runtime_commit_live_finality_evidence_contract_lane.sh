@@ -156,6 +156,12 @@ if summary.get("provider_live_contract_marker_present") is not True:
     raise SystemExit("expected provider_live_contract_marker_present=true in runtime-commit live finality evidence summary")
 if summary.get("provider_in_memory_reference_detected") is not False:
     raise SystemExit("expected provider_in_memory_reference_detected=false in runtime-commit live finality evidence summary")
+if summary.get("provider_signer_adapter_contract") != "KolmeForkSecp256k1SignerAdapter":
+    raise SystemExit("expected provider_signer_adapter_contract=KolmeForkSecp256k1SignerAdapter in runtime-commit live finality evidence summary")
+if summary.get("provider_signing_curve_contract") != "secp256k1":
+    raise SystemExit("expected provider_signing_curve_contract=secp256k1 in runtime-commit live finality evidence summary")
+if summary.get("provider_signing_profile_contract_version") != "v1":
+    raise SystemExit("expected provider_signing_profile_contract_version=v1 in runtime-commit live finality evidence summary")
 if summary.get("status") != "ok":
     raise SystemExit("expected runtime-commit live finality evidence summary status ok")
 if summary.get("reason_code") != "live_runtime_commit_and_finality_commands_passed":

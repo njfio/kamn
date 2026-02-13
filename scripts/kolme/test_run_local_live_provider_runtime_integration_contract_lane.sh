@@ -65,6 +65,8 @@ required_doc_markers=(
   "provider_client_contract=KolmeRuntimeCommitLiveProvider"
   "provider_client_contract_mismatch"
   "provider_in_memory_reference_detected"
+  "provider_signer_adapter_contract=KolmeForkSecp256k1SignerAdapter"
+  "provider_signer_adapter_contract_mismatch"
   "live_preflight_failed"
   "live_preflight_timeout"
 )

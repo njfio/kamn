@@ -12,9 +12,10 @@ TMP_TIMEOUT_CLASS_DRIFT_REPORT="$(mktemp)"
 TMP_TIMEOUT_ATTEMPT_DRIFT_REPORT="$(mktemp)"
 TMP_TIMEOUT_FINALITY_FLAG_DRIFT_REPORT="$(mktemp)"
 TMP_PROVIDER_DRIFT_REPORT="$(mktemp)"
+TMP_SIGNER_ADAPTER_DRIFT_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 TMP_ERR="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_TIMEOUT_REPORT" "$TMP_TIMEOUT_CLASS_DRIFT_REPORT" "$TMP_TIMEOUT_ATTEMPT_DRIFT_REPORT" "$TMP_TIMEOUT_FINALITY_FLAG_DRIFT_REPORT" "$TMP_PROVIDER_DRIFT_REPORT" "$TMP_POLICY_REPORT" "$TMP_ERR"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_TIMEOUT_REPORT" "$TMP_TIMEOUT_CLASS_DRIFT_REPORT" "$TMP_TIMEOUT_ATTEMPT_DRIFT_REPORT" "$TMP_TIMEOUT_FINALITY_FLAG_DRIFT_REPORT" "$TMP_PROVIDER_DRIFT_REPORT" "$TMP_SIGNER_ADAPTER_DRIFT_REPORT" "$TMP_POLICY_REPORT" "$TMP_ERR"' EXIT
 
 extract_value() {
   local output="$1"
@@ -72,6 +73,12 @@ if summary.get("provider_live_contract_marker_present") is not True:
     raise SystemExit("expected provider_live_contract_marker_present=true in live runtime summary")
 if summary.get("provider_in_memory_reference_detected") is not False:
     raise SystemExit("expected provider_in_memory_reference_detected=false in live runtime summary")
+if summary.get("provider_signer_adapter_contract") != "KolmeForkSecp256k1SignerAdapter":
+    raise SystemExit("expected provider_signer_adapter_contract=KolmeForkSecp256k1SignerAdapter in live runtime summary")
+if summary.get("provider_signing_curve_contract") != "secp256k1":
+    raise SystemExit("expected provider_signing_curve_contract=secp256k1 in live runtime summary")
+if summary.get("provider_signing_profile_contract_version") != "v1":
+    raise SystemExit("expected provider_signing_profile_contract_version=v1 in live runtime summary")
 PY
 
 python3 - "$TMP_REPORT" "$TMP_TIMEOUT_REPORT" <<'PY'
@@ -103,6 +110,18 @@ import sys
 
 source = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 source["provider_in_memory_reference_detected"] = True
+pathlib.Path(sys.argv[2]).write_text(json.dumps(source, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+python3 - "$TMP_REPORT" "$TMP_SIGNER_ADAPTER_DRIFT_REPORT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+source = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+source["provider_signer_adapter_contract"] = "SimulatedSignerAdapter"
 pathlib.Path(sys.argv[2]).write_text(json.dumps(source, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
@@ -221,6 +240,23 @@ if [ "$provider_drift_code" -eq 0 ]; then
 fi
 if ! grep -q "provider_in_memory_reference_detected" "$TMP_ERR"; then
   echo "expected provider_in_memory_reference_detected reason from checker output" >&2
+  exit 1
+fi
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_SIGNER_ADAPTER_DRIFT_REPORT" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS >"$TMP_ERR" 2>&1
+signer_adapter_drift_code=$?
+set -e
+
+if [ "$signer_adapter_drift_code" -eq 0 ]; then
+  echo "expected checker to fail closed for signer adapter contract drift marker" >&2
+  exit 1
+fi
+if ! grep -q "provider_signer_adapter_contract_mismatch" "$TMP_ERR"; then
+  echo "expected provider_signer_adapter_contract_mismatch reason from checker output" >&2
   exit 1
 fi
 
