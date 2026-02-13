@@ -252,6 +252,8 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
   - linkage drift fails closed with deterministic reason codes: `request_payload_evidence_marker_missing`, `finality_evidence_artifact_path_missing`, `request_finality_evidence_linkage_missing`.
   - native payload markers `native_payload_pubkey_marker_present`, `native_payload_nonce_marker_present`, and `native_payload_messages_marker_present` must pass when strict real-node evidence checks are enabled.
   - default live command composition emits `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1` and policy fails closed when the signing-profile marker is absent.
+  - runner enforces `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1` on custom live-command overrides and rejects simulated signing-profile references.
+  - policy checker fails closed on simulated signing-profile references with `provider_signing_profile_simulated_detected`.
   - provider hint contract remains live-only for this lane (`kolme-fork-local`); in-memory provider references fail closed with:
     - `provider_hint_in_memory_provider_reference_detected`
     - `live_command_in_memory_provider_reference_detected`

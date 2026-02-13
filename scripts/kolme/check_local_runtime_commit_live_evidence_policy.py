@@ -95,6 +95,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("live_command_missing")
     elif in_memory_provider_marker in live_command:
         reason_codes.append("live_command_in_memory_provider_reference_detected")
+    elif "KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated" in live_command:
+        reason_codes.append("provider_signing_profile_simulated_detected")
 
     if report.get("submit_evidence_marker") != "status=submitted":
         reason_codes.append("submit_evidence_marker_mismatch")

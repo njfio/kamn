@@ -209,6 +209,17 @@ if [ -z "$LIVE_COMMAND" ]; then
   LIVE_COMMAND="$(default_live_command)"
 fi
 
+EXPECTED_SIGNING_PROFILE_MARKER="KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1"
+if [[ "$LIVE_COMMAND" != *"$EXPECTED_SIGNING_PROFILE_MARKER"* ]]; then
+  echo "live-command must set KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1" >&2
+  exit 1
+fi
+
+if [[ "$LIVE_COMMAND" == *"KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated"* ]]; then
+  echo "live-command must not reference simulated signing profiles" >&2
+  exit 1
+fi
+
 if [[ "$LIVE_COMMAND" == *"InMemoryKolmeRuntimeCommitClient"* ]]; then
   echo "live-command must not reference InMemoryKolmeRuntimeCommitClient" >&2
   exit 1
@@ -221,7 +232,7 @@ PROVIDER_COMMAND_MARKER_PRESENT="false"
 if [[ "$LIVE_COMMAND" == *"$PROVIDER_COMMAND_MARKER"* ]]; then
   PROVIDER_COMMAND_MARKER_PRESENT="true"
 fi
-PROVIDER_SIGNING_PROFILE_MARKER="KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1"
+PROVIDER_SIGNING_PROFILE_MARKER="$EXPECTED_SIGNING_PROFILE_MARKER"
 PROVIDER_SIGNING_PROFILE_MARKER_PRESENT="false"
 if [[ "$LIVE_COMMAND" == *"$PROVIDER_SIGNING_PROFILE_MARKER"* ]]; then
   PROVIDER_SIGNING_PROFILE_MARKER_PRESENT="true"
