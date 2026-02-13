@@ -68,6 +68,7 @@ patterns = (
     re.compile(r"^\s*(Compiling|Checking|Documenting)\s+.+$"),
     re.compile(r"^\s*Finished `.* target\(s\) in .*s$"),
     re.compile(r"^\s*Running tests/.+\(target/.+\)$"),
+    re.compile(r"^\s*Blocking waiting for file lock on .+$"),
 )
 for raw in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines():
     line = raw.rstrip()

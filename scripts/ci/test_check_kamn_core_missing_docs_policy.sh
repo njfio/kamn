@@ -106,6 +106,9 @@ sed -i '/batch_id: first-three-modules-v1/d' "$GRADUATION_BATCH_REPORT_FIXTURE"
 expect_failure "graduation batch report marker drift should fail"
 
 reset_fixtures
+printf '\nbootstrap\n' >>"$ALLOWLIST_FIXTURE"
+sed -i 's/^pub mod bootstrap;/#[allow(missing_docs)]\npub mod bootstrap;/' "$CORE_LIB_FIXTURE"
+sed -i '/^bootstrap$/d' "$GRADUATED_MODULES_FIXTURE"
 python3 - "$VELOCITY_BASELINE_FIXTURE" <<'PY'
 import json
 import sys
@@ -114,6 +117,8 @@ from pathlib import Path
 path = Path(sys.argv[1])
 payload = json.loads(path.read_text(encoding="utf-8"))
 payload["commit_count"] = 1
+payload["graduated_module_count"] = 61
+payload["allowlisted_module_count"] = 1
 path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 expect_failure "velocity guard stagnation policy drift should fail"

@@ -196,6 +196,7 @@ def evaluate_velocity_policy(
     allowlisted_module_delta = (
         report["allowlisted_module_count"] - baseline["allowlisted_module_count"]
     )
+    allowlist_exhausted = report["allowlisted_module_count"] == 0
 
     if commit_delta == 0:
         observed_window_modules_per_100_commits = 0.0
@@ -204,49 +205,59 @@ def evaluate_velocity_policy(
             (graduated_module_delta * 100.0) / float(commit_delta), 4
         )
 
-    stagnation_window_exceeded = (
-        commit_delta >= thresholds["max_commits_without_graduation"]
-        and graduated_module_delta == 0
-    )
-    window_target_applicable = commit_delta >= thresholds["velocity_window_commits"]
-    window_target_met = (
-        observed_window_modules_per_100_commits >= thresholds["min_modules_per_100_commits"]
-    )
-
-    violations: list[str] = []
-    if stagnation_window_exceeded:
-        violations.append(
-            "stagnation window exceeded: "
-            f"commit_delta={commit_delta} "
-            f"max_commits_without_graduation={thresholds['max_commits_without_graduation']}"
-        )
-    if (
-        thresholds["enforce_window_target"]
-        and window_target_applicable
-        and not window_target_met
-    ):
-        violations.append(
-            "velocity window target under threshold: "
-            f"observed_modules_per_100_commits={observed_window_modules_per_100_commits} "
-            f"min_modules_per_100_commits={thresholds['min_modules_per_100_commits']}"
-        )
-
-    status = "pass" if not violations else "fail"
-    final_decision = "GO" if status == "pass" else "HOLD"
-
-    if status == "pass":
-        if commit_delta == 0:
-            reason_key = "baseline_window_not_elapsed"
-        elif not window_target_applicable:
-            reason_key = "window_not_elapsed"
-        else:
-            reason_key = "velocity_target_met"
-    elif len(violations) == 1 and violations[0].startswith("stagnation window exceeded"):
-        reason_key = "stagnation_window_exceeded"
-    elif len(violations) == 1:
-        reason_key = "velocity_window_under_threshold"
+    if allowlist_exhausted:
+        stagnation_window_exceeded = False
+        window_target_applicable = False
+        window_target_met = True
+        violations: list[str] = []
+        status = "pass"
+        final_decision = "GO"
+        reason_key = "allowlist_fully_graduated"
     else:
-        reason_key = "multiple_policy_violations"
+        stagnation_window_exceeded = (
+            commit_delta >= thresholds["max_commits_without_graduation"]
+            and graduated_module_delta == 0
+        )
+        window_target_applicable = commit_delta >= thresholds["velocity_window_commits"]
+        window_target_met = (
+            observed_window_modules_per_100_commits
+            >= thresholds["min_modules_per_100_commits"]
+        )
+
+        violations = []
+        if stagnation_window_exceeded:
+            violations.append(
+                "stagnation window exceeded: "
+                f"commit_delta={commit_delta} "
+                f"max_commits_without_graduation={thresholds['max_commits_without_graduation']}"
+            )
+        if (
+            thresholds["enforce_window_target"]
+            and window_target_applicable
+            and not window_target_met
+        ):
+            violations.append(
+                "velocity window target under threshold: "
+                f"observed_modules_per_100_commits={observed_window_modules_per_100_commits} "
+                f"min_modules_per_100_commits={thresholds['min_modules_per_100_commits']}"
+            )
+
+        status = "pass" if not violations else "fail"
+        final_decision = "GO" if status == "pass" else "HOLD"
+
+        if status == "pass":
+            if commit_delta == 0:
+                reason_key = "baseline_window_not_elapsed"
+            elif not window_target_applicable:
+                reason_key = "window_not_elapsed"
+            else:
+                reason_key = "velocity_target_met"
+        elif len(violations) == 1 and violations[0].startswith("stagnation window exceeded"):
+            reason_key = "stagnation_window_exceeded"
+        elif len(violations) == 1:
+            reason_key = "velocity_window_under_threshold"
+        else:
+            reason_key = "multiple_policy_violations"
 
     policy = {
         "schema_version": VELOCITY_POLICY_SCHEMA_VERSION,
@@ -266,6 +277,7 @@ def evaluate_velocity_policy(
         "report_allowlisted_module_count": report["allowlisted_module_count"],
         "baseline_allowlisted_module_count": baseline["allowlisted_module_count"],
         "allowlisted_module_delta": allowlisted_module_delta,
+        "allowlist_exhausted": allowlist_exhausted,
         "report_target_modules_per_100_commits": report["target_modules_per_100_commits"],
         "report_observed_modules_per_100_commits": report["observed_modules_per_100_commits"],
         "velocity_window_commits": thresholds["velocity_window_commits"],

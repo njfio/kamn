@@ -131,6 +131,7 @@ bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_cont
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kamn_live_runtime_integration_real_node_profile.sh"
 bash "$ROOT_DIR/scripts/kolme/test_check_local_kamn_live_runtime_real_node_profile_policy.sh"
+bash "$ROOT_DIR/scripts/kolme/test_check_fallback_signer_marker_matrix_policy.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_kolme_live_deployment_preflight_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_check_local_kolme_live_deployment_preflight_policy.sh"
