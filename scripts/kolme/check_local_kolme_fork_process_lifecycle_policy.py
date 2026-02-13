@@ -65,6 +65,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_commit_method_mismatch")
         if contracts.get("integration_runner") != "run_local_kamn_live_runtime_integration_lane.sh":
             reason_codes.append("integration_runner_mismatch")
+        if contracts.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
+            reason_codes.append("runtime_provider_client_contract_contract_mismatch")
         if contracts.get("integration_runtime_commit_live_policy_report_option") != "--runtime-commit-live-policy-report":
             reason_codes.append("integration_runtime_commit_live_policy_report_option_mismatch")
         if contracts.get("rollback_evidence_option") != "--rollback-evidence-file":
@@ -176,6 +178,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 and "--runtime-profile real-node" not in command
             ):
                 reason_codes.append("kamn_live_integration_runtime_profile_marker_missing")
+            if (
+                check_id == "kamn_live_integration"
+                and isinstance(command, str)
+                and "--runtime-provider-client-contract KolmeRuntimeCommitLiveProvider" not in command
+            ):
+                reason_codes.append("kamn_live_integration_runtime_provider_marker_missing")
             if (
                 check_id == "rollback_evidence"
                 and isinstance(command, str)

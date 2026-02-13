@@ -25,6 +25,7 @@ INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND=""
 INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS=15
 INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-live-finality-output.txt"
 INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT="/tmp/kolme-local-runtime-commit-live-policy.json"
+INTEGRATION_RUNTIME_PROVIDER_CLIENT_CONTRACT="KolmeRuntimeCommitLiveProvider"
 ROLLBACK_EVIDENCE_FILE="/tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json"
 RECOVERY_EVIDENCE_FILE="/tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json"
 PROCESS_PID=""
@@ -412,6 +413,7 @@ graceful_teardown() {
 serve_command_planned="${SERVE_COMMAND:-<required-in-run-mode>}"
 readiness_command="curl --silent --show-error --fail ${BASE_URL%/}/healthz && curl --silent --show-error --fail ${BASE_URL%/}/fork-info?chain_version=${FORK_CHAIN_VERSION}"
 integration_command="bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --runtime-profile real-node --checkout-path ${CHECKOUT_PATH} --expected-remote-url ${EXPECTED_REMOTE_URL} --expected-ref ${EXPECTED_REF} --base-url ${BASE_URL} --fork-chain-version ${FORK_CHAIN_VERSION} --max-seconds ${INTEGRATION_MAX_SECONDS} --bootstrap-max-seconds ${INTEGRATION_BOOTSTRAP_MAX_SECONDS} --conformance-max-seconds ${INTEGRATION_CONFORMANCE_MAX_SECONDS} --runtime-commit-max-seconds ${INTEGRATION_RUNTIME_COMMIT_MAX_SECONDS} --output-json ${INTEGRATION_REPORT}"
+integration_command="${integration_command} --runtime-provider-client-contract ${INTEGRATION_RUNTIME_PROVIDER_CLIENT_CONTRACT}"
 integration_command="${integration_command} --runtime-commit-live-policy-report $(shell_escape "${INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT}")"
 if [ -n "$INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND" ]; then
   integration_command="${integration_command} --runtime-commit-finality-command $(shell_escape "${INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND}") --runtime-commit-finality-max-seconds ${INTEGRATION_RUNTIME_COMMIT_FINALITY_MAX_SECONDS} --runtime-commit-finality-output-file $(shell_escape "${INTEGRATION_RUNTIME_COMMIT_FINALITY_OUTPUT_FILE}")"
@@ -517,6 +519,7 @@ if [ "$MODE" = "run" ]; then
           --conformance-max-seconds "$INTEGRATION_CONFORMANCE_MAX_SECONDS"
           --runtime-commit-max-seconds "$INTEGRATION_RUNTIME_COMMIT_MAX_SECONDS"
           --output-json "$INTEGRATION_REPORT"
+          --runtime-provider-client-contract "$INTEGRATION_RUNTIME_PROVIDER_CLIENT_CONTRACT"
           --runtime-commit-live-policy-report "$INTEGRATION_RUNTIME_COMMIT_LIVE_POLICY_REPORT"
         )
         if [ -n "$INTEGRATION_RUNTIME_COMMIT_FINALITY_COMMAND" ]; then
@@ -693,6 +696,7 @@ summary = {
         "runtime_commit_endpoint": "/broadcast/runtime-commit",
         "runtime_commit_method": "POST",
         "integration_runner": "run_local_kamn_live_runtime_integration_lane.sh",
+        "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
         "integration_runtime_commit_live_policy_report_option": "--runtime-commit-live-policy-report",
         "rollback_evidence_option": "--rollback-evidence-file",
         "recovery_evidence_option": "--recovery-evidence-file",
