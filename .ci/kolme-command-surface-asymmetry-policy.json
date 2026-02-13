@@ -44,6 +44,7 @@
     "scripts/kolme/test_run_local_live_node_validation_bundle_contract_lane.sh",
     "scripts/kolme/test_run_local_live_node_validation_bundle_lane.sh",
     "scripts/kolme/test_run_local_live_provider_runtime_integration_contract_lane.sh",
+    "scripts/kolme/test_run_local_native_api_parity_live_proof_lane.sh",
     "scripts/kolme/test_run_local_signed_to_kolme_demo_contract_lane.sh",
     "scripts/kolme/test_run_managed_signer_backend_slo_policy_contract_lane.sh",
     "scripts/kolme/test_run_managed_signer_backend_slo_telemetry_contract_lane.sh",
