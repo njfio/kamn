@@ -57,6 +57,12 @@ required_coverage_markers=(
   "run_local_live_node_validation_bundle_lane.sh"
   "check_local_live_node_validation_bundle_policy.py"
   "run_local_live_node_validation_bundle_contract_lane.sh"
+  "rollback_evidence_file"
+  "recovery_evidence_file"
+  "rollback_evidence_file_missing"
+  "contracts.rollback_recovery_artifact_lineage_required=true"
+  "contracts.process_lifecycle_rollback_evidence_option=--rollback-evidence-file"
+  "contracts.process_lifecycle_recovery_evidence_option=--recovery-evidence-file"
   "docs/planning/kolme-devnet-ops.md"
   "docs/ci/strategy.md"
   "README.md"
@@ -82,6 +88,30 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
     echo "expected docs parity to include bundle contract lane marker in $docs_file" >&2
     exit 1
   fi
+  if ! grep -q "rollback_evidence_file" "$docs_file"; then
+    echo "expected docs parity to include rollback evidence marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "recovery_evidence_file" "$docs_file"; then
+    echo "expected docs parity to include recovery evidence marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "rollback_evidence_file_missing" "$docs_file"; then
+    echo "expected docs parity to include rollback lineage reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "contracts.rollback_recovery_artifact_lineage_required=true" "$docs_file"; then
+    echo "expected docs parity to include rollback/recovery lineage contract marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "contracts.process_lifecycle_rollback_evidence_option=--rollback-evidence-file" "$docs_file"; then
+    echo "expected docs parity to include process lifecycle rollback option contract marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "contracts.process_lifecycle_recovery_evidence_option=--recovery-evidence-file" "$docs_file"; then
+    echo "expected docs parity to include process lifecycle recovery option contract marker in $docs_file" >&2
+    exit 1
+  fi
   if ! grep -q "Regression: #2134" "$docs_file"; then
     echo "expected docs parity to include bundle workflow regression marker in $docs_file" >&2
     exit 1
@@ -105,11 +135,27 @@ if summary.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected dry_run_no_commands_executed reason code in bundle contract-lane summary")
 if summary.get("ci_fast_gate_eligible") is not False:
     raise SystemExit("expected local-only fast-gate exclusion marker in bundle contract-lane summary")
+rollback_evidence_file = summary.get("rollback_evidence_file")
+if not isinstance(rollback_evidence_file, str) or not rollback_evidence_file:
+    raise SystemExit("expected rollback_evidence_file marker in bundle contract-lane summary")
+recovery_evidence_file = summary.get("recovery_evidence_file")
+if not isinstance(recovery_evidence_file, str) or not recovery_evidence_file:
+    raise SystemExit("expected recovery_evidence_file marker in bundle contract-lane summary")
+if rollback_evidence_file not in summary.get("artifact_paths", []):
+    raise SystemExit("expected rollback evidence artifact path marker in bundle contract-lane summary")
+if recovery_evidence_file not in summary.get("artifact_paths", []):
+    raise SystemExit("expected recovery evidence artifact path marker in bundle contract-lane summary")
 contracts = summary.get("contracts", {})
 if contracts.get("ci_fast_gate_scope") != "local-only":
     raise SystemExit("expected local-only fast-gate scope contract marker in bundle contract-lane summary")
 if contracts.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
     raise SystemExit("expected runtime provider contract marker in bundle contract-lane summary")
+if contracts.get("rollback_recovery_artifact_lineage_required") is not True:
+    raise SystemExit("expected rollback/recovery lineage required contract marker in bundle contract-lane summary")
+if contracts.get("process_lifecycle_rollback_evidence_option") != "--rollback-evidence-file":
+    raise SystemExit("expected process lifecycle rollback option contract marker in bundle contract-lane summary")
+if contracts.get("process_lifecycle_recovery_evidence_option") != "--recovery-evidence-file":
+    raise SystemExit("expected process lifecycle recovery option contract marker in bundle contract-lane summary")
 if policy.get("schema_version") != "kamn.kolme.local-live-node-validation-bundle-policy-report.v1":
     raise SystemExit("unexpected local live-node validation bundle contract-lane policy schema")
 if policy.get("final_decision") != "GO":

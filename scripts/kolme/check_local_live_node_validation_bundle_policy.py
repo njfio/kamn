@@ -93,12 +93,32 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("process_lifecycle_runner_missing")
         if "--integration-runtime-commit-live-policy-report" not in process_command:
             reason_codes.append("process_lifecycle_policy_report_marker_missing")
+        if "--rollback-evidence-file" not in process_command:
+            reason_codes.append("process_lifecycle_rollback_marker_missing")
+        if "--recovery-evidence-file" not in process_command:
+            reason_codes.append("process_lifecycle_recovery_marker_missing")
 
     process_policy_command = report.get("process_lifecycle_policy_command")
     if not isinstance(process_policy_command, str) or not process_policy_command.strip():
         reason_codes.append("process_lifecycle_policy_command_missing")
     elif "check_local_kolme_fork_process_lifecycle_policy.py" not in process_policy_command:
         reason_codes.append("process_lifecycle_policy_command_marker_missing")
+
+    rollback_evidence_file = report.get("rollback_evidence_file")
+    if not isinstance(rollback_evidence_file, str) or not rollback_evidence_file.strip():
+        reason_codes.append("rollback_evidence_file_missing")
+        rollback_evidence_file = ""
+
+    recovery_evidence_file = report.get("recovery_evidence_file")
+    if not isinstance(recovery_evidence_file, str) or not recovery_evidence_file.strip():
+        reason_codes.append("recovery_evidence_file_missing")
+        recovery_evidence_file = ""
+
+    if isinstance(process_command, str) and process_command.strip():
+        if rollback_evidence_file and f"--rollback-evidence-file {rollback_evidence_file}" not in process_command:
+            reason_codes.append("process_lifecycle_rollback_marker_path_mismatch")
+        if recovery_evidence_file and f"--recovery-evidence-file {recovery_evidence_file}" not in process_command:
+            reason_codes.append("process_lifecycle_recovery_marker_path_mismatch")
 
     required_report_paths = [
         ("integration_report", report.get("integration_report")),
@@ -122,6 +142,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_provider_client_contract_contract_mismatch")
         if contracts.get("bundle_contract") != "live_node_release_bundle_v1":
             reason_codes.append("bundle_contract_mismatch")
+        if contracts.get("rollback_recovery_artifact_lineage_required") is not True:
+            reason_codes.append("rollback_recovery_artifact_lineage_required_contract_mismatch")
+        if contracts.get("process_lifecycle_rollback_evidence_option") != "--rollback-evidence-file":
+            reason_codes.append("process_lifecycle_rollback_evidence_option_contract_mismatch")
+        if contracts.get("process_lifecycle_recovery_evidence_option") != "--recovery-evidence-file":
+            reason_codes.append("process_lifecycle_recovery_evidence_option_contract_mismatch")
 
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
@@ -170,15 +196,48 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 and "--integration-runtime-commit-live-policy-report" not in command
             ):
                 reason_codes.append("process_lifecycle_bundle_policy_report_marker_missing")
+            if (
+                check_id == "process_lifecycle_bundle"
+                and isinstance(command, str)
+                and "--rollback-evidence-file" not in command
+            ):
+                reason_codes.append("process_lifecycle_bundle_rollback_marker_missing")
+            if (
+                check_id == "process_lifecycle_bundle"
+                and isinstance(command, str)
+                and "--recovery-evidence-file" not in command
+            ):
+                reason_codes.append("process_lifecycle_bundle_recovery_marker_missing")
+            if (
+                check_id == "process_lifecycle_bundle"
+                and isinstance(command, str)
+                and rollback_evidence_file
+                and f"--rollback-evidence-file {rollback_evidence_file}" not in command
+            ):
+                reason_codes.append("process_lifecycle_bundle_rollback_marker_path_mismatch")
+            if (
+                check_id == "process_lifecycle_bundle"
+                and isinstance(command, str)
+                and recovery_evidence_file
+                and f"--recovery-evidence-file {recovery_evidence_file}" not in command
+            ):
+                reason_codes.append("process_lifecycle_bundle_recovery_marker_path_mismatch")
         missing_ids = sorted(expected_ids - observed_ids)
         for missing_id in missing_ids:
             reason_codes.append(f"check_missing:{missing_id}")
 
+    required_artifact_paths = list(required_report_paths)
+    required_artifact_paths.extend(
+        [
+            ("rollback_evidence_file", rollback_evidence_file),
+            ("recovery_evidence_file", recovery_evidence_file),
+        ]
+    )
     artifact_paths = report.get("artifact_paths")
     if not isinstance(artifact_paths, list) or not artifact_paths:
         reason_codes.append("artifact_paths_missing")
     else:
-        for field_name, value in required_report_paths:
+        for field_name, value in required_artifact_paths:
             if isinstance(value, str) and value.strip() and value not in artifact_paths:
                 reason_codes.append(f"{field_name}_artifact_missing")
 

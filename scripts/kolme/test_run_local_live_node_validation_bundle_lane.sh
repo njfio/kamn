@@ -138,6 +138,20 @@ if "run_local_kolme_fork_process_lifecycle_lane.sh" not in process_command:
     raise SystemExit("expected process lifecycle command marker in bundle summary")
 if "--integration-runtime-commit-live-policy-report" not in process_command:
     raise SystemExit("expected integration runtime policy pass-through marker in process lifecycle command")
+if f"--rollback-evidence-file {expected_artifacts[6]}" not in process_command:
+    raise SystemExit("expected rollback evidence pass-through marker in process lifecycle command")
+if f"--recovery-evidence-file {expected_artifacts[7]}" not in process_command:
+    raise SystemExit("expected recovery evidence pass-through marker in process lifecycle command")
+if report.get("rollback_evidence_file") != expected_artifacts[6]:
+    raise SystemExit("expected rollback_evidence_file marker in bundle summary")
+if report.get("recovery_evidence_file") != expected_artifacts[7]:
+    raise SystemExit("expected recovery_evidence_file marker in bundle summary")
+if contracts.get("rollback_recovery_artifact_lineage_required") is not True:
+    raise SystemExit("expected rollback/recovery lineage required contract marker in bundle summary contracts")
+if contracts.get("process_lifecycle_rollback_evidence_option") != "--rollback-evidence-file":
+    raise SystemExit("expected process lifecycle rollback option contract marker in bundle summary contracts")
+if contracts.get("process_lifecycle_recovery_evidence_option") != "--recovery-evidence-file":
+    raise SystemExit("expected process lifecycle recovery option contract marker in bundle summary contracts")
 
 checks = report.get("checks")
 if not isinstance(checks, list) or len(checks) != 4:

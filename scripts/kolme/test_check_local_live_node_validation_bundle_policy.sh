@@ -48,7 +48,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "fork_chain_version": "v0.15.2",
   "integration_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode run --runtime-profile real-node --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json",
   "integration_policy_command": "python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json",
-  "process_lifecycle_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --integration-runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json",
+  "process_lifecycle_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --integration-runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --rollback-evidence-file /tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json --recovery-evidence-file /tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json",
   "process_lifecycle_policy_command": "python3 scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py --report-file /tmp/kolme-local-fork-process-lifecycle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-process-lifecycle-policy.json",
   "integration_report": "/tmp/kolme-local-kamn-live-runtime-integration-summary.json",
   "integration_policy_report": "/tmp/kolme-local-kamn-live-runtime-integration-policy.json",
@@ -56,6 +56,8 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "integration_runtime_commit_live_summary": "/tmp/kolme-local-runtime-commit-live-summary.json",
   "process_lifecycle_report": "/tmp/kolme-local-fork-process-lifecycle-summary.json",
   "process_lifecycle_policy_report": "/tmp/kolme-local-fork-process-lifecycle-policy.json",
+  "rollback_evidence_file": "/tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json",
+  "recovery_evidence_file": "/tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json",
   "checks": [
     {
       "id": "integration_bundle",
@@ -71,7 +73,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     },
     {
       "id": "process_lifecycle_bundle",
-      "command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --integration-runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json",
+      "command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --integration-runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --rollback-evidence-file /tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json --recovery-evidence-file /tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json",
       "status": "planned",
       "reason_code": "not_run"
     },
@@ -95,7 +97,10 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "contracts": {
     "ci_fast_gate_scope": "local-only",
     "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
-    "bundle_contract": "live_node_release_bundle_v1"
+    "bundle_contract": "live_node_release_bundle_v1",
+    "rollback_recovery_artifact_lineage_required": true,
+    "process_lifecycle_rollback_evidence_option": "--rollback-evidence-file",
+    "process_lifecycle_recovery_evidence_option": "--recovery-evidence-file"
   }
 }
 JSON
@@ -202,6 +207,11 @@ fi
 
 if ! grep -q "runtime_provider_client_contract_contract_mismatch" "$TMP_ERR"; then
   echo "expected runtime provider contract mismatch reason for policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "rollback_evidence_file_missing" "$TMP_ERR"; then
+  echo "expected rollback evidence lineage reason for policy failure" >&2
   exit 1
 fi
 
