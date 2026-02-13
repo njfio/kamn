@@ -10,6 +10,7 @@ README_FILE="$ROOT_DIR/README.md"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT_OK="$TMP_DIR/ok-report.json"
 TMP_REPORT_QUORUM_MINIMUM="$TMP_DIR/quorum-minimum-report.json"
+TMP_REPORT_PRODUCTION_KEY_SOURCE="$TMP_DIR/production-key-source-report.json"
 TMP_REPORT_DRIFT_MALFORMED="$TMP_DIR/drift-malformed-report.json"
 TMP_REPORT_MATRIX_WARN="$TMP_DIR/drift-matrix-warn-report.json"
 TMP_REPORT_MATRIX_FAIL="$TMP_DIR/drift-matrix-fail-report.json"
@@ -84,7 +85,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
       "ops-secondary"
     ],
     "signer_profile": "ops-primary",
-    "signer_key_source": "env-local"
+    "signer_key_source": "managed-external"
   },
   "runtime_signer_attestation_profile_approved": true,
   "runtime_signer_drift_telemetry_schema_version": "kamn.kolme.runtime-signer-drift-telemetry.v1",
@@ -116,7 +117,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "signer_provenance_sha256": "",
   "signer_provenance_sha256_valid": false,
   "signer_key_source_contract_version": "v1",
-  "signer_key_source": "env-local",
+  "signer_key_source": "managed-external",
   "signer_rotation_epoch": 1,
   "signer_previous_rotation_epoch": 1,
   "signer_rotation_freshness_max_delta": 2,
@@ -186,13 +187,14 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "signer_provenance_required": true,
     "signer_provenance_sha256_required": true,
     "signer_key_source_contract_version": "v1",
-    "signer_key_source": "env-local",
+    "signer_key_source": "managed-external",
+    "required_signer_key_source_for_production": "managed-external",
+    "signer_key_source_production_requirement_reason_code": "signer_key_source_production_managed_external_required",
     "signer_key_source_allowed_for_ops_primary": [
-      "env-local",
       "managed-external"
     ],
     "signer_key_source_allowed_for_ops_secondary": [
-      "env-local"
+      "managed-external"
     ],
     "signer_rotation_freshness_max_delta": 2,
     "signer_rotation_stale_rejected": true
@@ -317,7 +319,7 @@ warn_report["runtime_signer_attestation_bundle"] = {
     "required_approvals": 2,
     "approved_signers": ["ops-primary", "ops-secondary"],
     "signer_profile": "ops-primary",
-    "signer_key_source": "env-local",
+    "signer_key_source": "managed-external",
 }
 warn_report["runtime_signer_attestation_profile_approved"] = True
 warn_report["runtime_signer_drift_telemetry"] = {
@@ -485,6 +487,44 @@ fi
 
 if ! grep -q "signer_quorum_minimum_not_met" "$TMP_ERR"; then
   echo "expected signer_quorum_minimum_not_met reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_PRODUCTION_KEY_SOURCE" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["signer_key_source"] = "env-local"
+bundle = dict(report.get("runtime_signer_attestation_bundle", {}))
+bundle["signer_key_source"] = "env-local"
+report["runtime_signer_attestation_bundle"] = bundle
+contracts = dict(report.get("contracts", {}))
+contracts["signer_key_source"] = "env-local"
+report["contracts"] = contracts
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_PRODUCTION_KEY_SOURCE" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+production_key_source_exit_code=$?
+set -e
+
+if [ "$production_key_source_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight policy checker to fail when production signer key-source is not managed-external" >&2
+  exit 1
+fi
+
+if ! grep -q "signer_key_source_production_managed_external_required" "$TMP_ERR"; then
+  echo "expected signer_key_source_production_managed_external_required reason for deployment preflight policy failure" >&2
   exit 1
 fi
 

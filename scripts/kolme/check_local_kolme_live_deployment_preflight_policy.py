@@ -21,8 +21,9 @@ QUORUM_EVIDENCE_SCHEMA_VERSION = RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION
 ALLOWED_SIGNER_KEY_SOURCES = ("env-local", "managed-external")
 ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE = {
     PRIMARY_SIGNER_PROFILE: ("env-local", "managed-external"),
-    SECONDARY_SIGNER_PROFILE: ("env-local",),
+    SECONDARY_SIGNER_PROFILE: ("env-local", "managed-external"),
 }
+REQUIRED_PRODUCTION_SIGNER_KEY_SOURCE = "managed-external"
 MIN_PRODUCTION_REQUIRED_APPROVALS = 2
 
 
@@ -430,6 +431,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         and signer_key_source not in ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE[signer_profile]
     ):
         reason_codes.append("signer_key_source_profile_pair_disallowed")
+    elif signer_profile_class == "production" and signer_key_source != REQUIRED_PRODUCTION_SIGNER_KEY_SOURCE:
+        reason_codes.append("signer_key_source_production_managed_external_required")
 
     signer_provenance_file = report.get("signer_provenance_file")
     if not isinstance(signer_provenance_file, str):
@@ -766,9 +769,16 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("signer_key_source_contract_version_contract_mismatch")
         if isinstance(signer_key_source, str) and signer_key_source and contracts.get("signer_key_source") != signer_key_source:
             reason_codes.append("signer_key_source_contract_mismatch")
-        if contracts.get("signer_key_source_allowed_for_ops_primary") != ["env-local", "managed-external"]:
+        if contracts.get("required_signer_key_source_for_production") != REQUIRED_PRODUCTION_SIGNER_KEY_SOURCE:
+            reason_codes.append("required_signer_key_source_for_production_contract_mismatch")
+        if (
+            contracts.get("signer_key_source_production_requirement_reason_code")
+            != "signer_key_source_production_managed_external_required"
+        ):
+            reason_codes.append("signer_key_source_production_requirement_reason_code_contract_mismatch")
+        if contracts.get("signer_key_source_allowed_for_ops_primary") != ["managed-external"]:
             reason_codes.append("signer_key_source_allowed_for_ops_primary_contract_mismatch")
-        if contracts.get("signer_key_source_allowed_for_ops_secondary") != ["env-local"]:
+        if contracts.get("signer_key_source_allowed_for_ops_secondary") != ["managed-external"]:
             reason_codes.append("signer_key_source_allowed_for_ops_secondary_contract_mismatch")
         if (
             isinstance(signer_rotation_freshness_max_delta, int)

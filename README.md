@@ -715,7 +715,7 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-
 # sample signer custody evidence marker for run mode
 printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json
 # sample signer provenance evidence marker for run mode
-printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" > /tmp/kolme-live-signer-provenance.json
+printf '%s\n' "signer-provenance=ops-primary:source-managed-external:epoch-1" > /tmp/kolme-live-signer-provenance.json
 # sample signer quorum evidence bundle for run mode
 custody_sha="$(sha256sum /tmp/kolme-live-signer-custody.json | awk '{print $1}')"; cat > /tmp/kolme-live-signer-quorum.json <<JSON
 {
@@ -731,10 +731,10 @@ JSON
 
 # deployment preflight run mode (fast-gate eligible, no local-heavy gate required)
 KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 \
-bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --quorum-evidence-file /tmp/kolme-live-signer-quorum.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source env-local --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json
+bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --quorum-evidence-file /tmp/kolme-live-signer-quorum.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source managed-external --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json
 
 # deployment preflight policy checker contract
-python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json
+python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code deployment_preflight_passed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json
 
 # deployment preflight contract lane (dry-run summary + policy + docs parity)
 bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --output-json /tmp/kolme-local-live-deployment-preflight-summary.json --policy-output-json /tmp/kolme-local-live-deployment-preflight-policy.json
@@ -744,7 +744,7 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # fallback_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK
 # fallback_signer_secret_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK
 # signer_key_source_contract_version=v1
-# signer_key_source=env-local
+# signer_key_source=managed-external
 # signer_provenance_file
 # signer_provenance_present
 # signer_provenance_sha256_valid
@@ -809,7 +809,9 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # contracts.signer_provenance_required=true
 # contracts.signer_provenance_sha256_required=true
 # contracts.signer_key_source_contract_version=v1
-# contracts.signer_key_source=env-local
+# contracts.signer_key_source=managed-external
+# contracts.required_signer_key_source_for_production=managed-external
+# contracts.signer_key_source_production_requirement_reason_code=signer_key_source_production_managed_external_required
 # contracts.signer_rotation_freshness_max_delta=2
 # contracts.signer_rotation_stale_rejected=true
 
@@ -856,7 +858,7 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # custody_evidence_sha256_invalid
 # signer_key_source_contract_version_mismatch
 # signer_key_source_invalid
-# signer_key_source_profile_pair_disallowed
+# signer_key_source_production_managed_external_required
 # signer_provenance_missing
 # signer_provenance_sha256_invalid
 # signer_rotation_epoch_stale

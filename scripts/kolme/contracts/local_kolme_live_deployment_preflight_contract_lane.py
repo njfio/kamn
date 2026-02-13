@@ -182,8 +182,8 @@ def main() -> int:
     if summary.get("signer_key_source_contract_version") != "v1":
         print("expected deployment preflight summary signer key-source contract version marker", file=sys.stderr)
         return 1
-    if summary.get("signer_key_source") != "env-local":
-        print("expected deployment preflight summary signer key-source marker", file=sys.stderr)
+    if summary.get("signer_key_source") != "managed-external":
+        print("expected deployment preflight summary signer key-source marker managed-external", file=sys.stderr)
         return 1
     if summary.get("signer_rotation_epoch") != 1:
         print("expected deployment preflight summary signer rotation epoch marker", file=sys.stderr)
@@ -384,8 +384,35 @@ def main() -> int:
     if contracts.get("signer_key_source_contract_version") != "v1":
         print("expected deployment preflight contracts signer_key_source_contract_version=v1", file=sys.stderr)
         return 1
-    if contracts.get("signer_key_source") != "env-local":
-        print("expected deployment preflight contracts signer_key_source=env-local", file=sys.stderr)
+    if contracts.get("signer_key_source") != "managed-external":
+        print("expected deployment preflight contracts signer_key_source=managed-external", file=sys.stderr)
+        return 1
+    if contracts.get("required_signer_key_source_for_production") != "managed-external":
+        print(
+            "expected deployment preflight contracts required_signer_key_source_for_production=managed-external",
+            file=sys.stderr,
+        )
+        return 1
+    if (
+        contracts.get("signer_key_source_production_requirement_reason_code")
+        != "signer_key_source_production_managed_external_required"
+    ):
+        print(
+            "expected deployment preflight contracts signer_key_source_production_requirement_reason_code marker",
+            file=sys.stderr,
+        )
+        return 1
+    if contracts.get("signer_key_source_allowed_for_ops_primary") != ["managed-external"]:
+        print(
+            "expected deployment preflight contracts signer_key_source_allowed_for_ops_primary managed-external allowlist",
+            file=sys.stderr,
+        )
+        return 1
+    if contracts.get("signer_key_source_allowed_for_ops_secondary") != ["managed-external"]:
+        print(
+            "expected deployment preflight contracts signer_key_source_allowed_for_ops_secondary managed-external allowlist",
+            file=sys.stderr,
+        )
         return 1
     if contracts.get("signer_rotation_freshness_max_delta") != 2:
         print("expected deployment preflight contracts signer_rotation_freshness_max_delta=2", file=sys.stderr)
@@ -704,7 +731,7 @@ def main() -> int:
             "required_approvals": 2,
             "approved_signers": ["ops-primary"],
             "signer_profile": "ops-primary",
-            "signer_key_source": "env-local",
+            "signer_key_source": "managed-external",
         }
         quorum_evidence_negative_summary["runtime_signer_attestation_profile_approved"] = True
         quorum_evidence_negative_report.write_text(
@@ -827,7 +854,7 @@ def main() -> int:
             "required_approvals": 2,
             "approved_signers": ["ops-primary", "ops-primary"],
             "signer_profile": "ops-primary",
-            "signer_key_source": "env-local",
+            "signer_key_source": "managed-external",
         }
         attestation_duplicate_summary["runtime_signer_attestation_profile_approved"] = True
         attestation_duplicate_report.write_text(
@@ -891,7 +918,7 @@ def main() -> int:
             "required_approvals": 2,
             "approved_signers": ["ops-primary", "ops-secondary"],
             "signer_profile": "ops-primary",
-            "signer_key_source": "env-local",
+            "signer_key_source": "managed-external",
         }
         attestation_schema_invalid_summary["runtime_signer_attestation_profile_approved"] = True
         attestation_schema_invalid_report.write_text(
@@ -1059,7 +1086,7 @@ def main() -> int:
         rotation_negative_summary["signer_provenance_sha256"] = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
         rotation_negative_summary["signer_provenance_sha256_valid"] = True
         rotation_negative_summary["signer_key_source_contract_version"] = "v1"
-        rotation_negative_summary["signer_key_source"] = "env-local"
+        rotation_negative_summary["signer_key_source"] = "managed-external"
         rotation_negative_summary["signer_rotation_epoch"] = 8
         rotation_negative_summary["signer_previous_rotation_epoch"] = 3
         rotation_negative_summary["signer_rotation_freshness_max_delta"] = 2
@@ -1149,6 +1176,9 @@ def main() -> int:
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",
         "signer_key_source",
+        "signer_key_source_production_managed_external_required",
+        "contracts.required_signer_key_source_for_production=managed-external",
+        "contracts.signer_key_source_production_requirement_reason_code=signer_key_source_production_managed_external_required",
         "signer_provenance_file",
         "signer_rotation_epoch_stale",
         "Regression: #2226",
@@ -1213,6 +1243,9 @@ def main() -> int:
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",
         "signer_key_source",
+        "signer_key_source_production_managed_external_required",
+        "contracts.required_signer_key_source_for_production=managed-external",
+        "contracts.signer_key_source_production_requirement_reason_code=signer_key_source_production_managed_external_required",
         "signer_provenance_file",
         "signer_rotation_epoch_stale",
         "Regression: #2226",
@@ -1277,6 +1310,9 @@ def main() -> int:
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",
         "signer_key_source",
+        "signer_key_source_production_managed_external_required",
+        "contracts.required_signer_key_source_for_production=managed-external",
+        "contracts.signer_key_source_production_requirement_reason_code=signer_key_source_production_managed_external_required",
         "signer_provenance_file",
         "signer_rotation_epoch_stale",
         "Regression: #2226",

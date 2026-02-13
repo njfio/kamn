@@ -614,7 +614,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
 - Deployment preflight run mode:
   - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`
-  - `printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" > /tmp/kolme-live-signer-provenance.json`
+  - `printf '%s\n' "signer-provenance=ops-primary:source-managed-external:epoch-1" > /tmp/kolme-live-signer-provenance.json`
   - `custody_sha="$(sha256sum /tmp/kolme-live-signer-custody.json | awk '{print $1}')"; cat > /tmp/kolme-live-signer-quorum.json <<JSON
 {
   "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
@@ -626,9 +626,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   "custody_evidence_sha256": "$custody_sha"
 }
 JSON`
-  - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --quorum-evidence-file /tmp/kolme-live-signer-quorum.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source env-local --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+  - `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111 bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode run --runtime-mode kolme-live --signer-profile ops-primary --required-approvals 2 --received-approvals 2 --custody-evidence-file /tmp/kolme-live-signer-custody.json --quorum-evidence-file /tmp/kolme-live-signer-quorum.json --signer-provenance-file /tmp/kolme-live-signer-provenance.json --signer-key-source managed-external --signer-key-source-contract-version v1 --signer-rotation-epoch 3 --signer-previous-rotation-epoch 1 --signer-rotation-freshness-max-delta 2 --max-seconds 12 --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
 - Deployment preflight policy checker command:
-  - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+  - `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code deployment_preflight_passed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
 - Deployment preflight contract lane command:
   - `bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --output-json /tmp/kolme-local-live-deployment-preflight-summary.json --policy-output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
 - Summary/policy schemas:
@@ -653,7 +653,7 @@ JSON`
     - `fallback_signer_secret_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
     - `fallback_signer_secret_present=false`
     - `signer_key_source_contract_version=v1`
-    - `signer_key_source=env-local`
+    - `signer_key_source=managed-external`
     - `signer_provenance_file`
     - `signer_provenance_present`
     - `signer_provenance_sha256_valid`
@@ -726,7 +726,9 @@ JSON`
     - `contracts.signer_provenance_required=true`
     - `contracts.signer_provenance_sha256_required=true`
     - `contracts.signer_key_source_contract_version=v1`
-    - `contracts.signer_key_source=env-local`
+    - `contracts.signer_key_source=managed-external`
+    - `contracts.required_signer_key_source_for_production=managed-external`
+    - `contracts.signer_key_source_production_requirement_reason_code=signer_key_source_production_managed_external_required`
     - `contracts.signer_rotation_freshness_max_delta=2`
     - `contracts.signer_rotation_stale_rejected=true`
 - Fail-closed reasons include:
@@ -767,7 +769,7 @@ JSON`
   - `custody_evidence_sha256_invalid`
   - `signer_key_source_contract_version_mismatch`
   - `signer_key_source_invalid`
-  - `signer_key_source_profile_pair_disallowed`
+  - `signer_key_source_production_managed_external_required`
   - `signer_provenance_missing`
   - `signer_provenance_sha256_invalid`
   - `signer_rotation_epoch_stale`
@@ -867,7 +869,7 @@ JSON`
   - `export KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=<64-hex-private-key>`
   - `unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
   - `printf '%s\n' "custody-attestation=ops-primary:epoch-1" > /tmp/kolme-live-signer-custody.json`
-  - `printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" > /tmp/kolme-live-signer-provenance.json`
+  - `printf '%s\n' "signer-provenance=ops-primary:source-managed-external:epoch-1" > /tmp/kolme-live-signer-provenance.json`
   - `custody_sha="$(sha256sum /tmp/kolme-live-signer-custody.json | awk '{print $1}')"; cat > /tmp/kolme-live-signer-quorum.json <<JSON
 {
   "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
@@ -933,7 +935,7 @@ Operator checkpoints:
 - `reason_code=checkpoint_failed_custody_evidence_contract`:
   - verify `--custody-evidence-file` exists and its sha256 can be emitted in summary markers.
 - `reason_code=checkpoint_failed_signer_provenance_contract`:
-  - verify `--signer-provenance-file` exists and signer key-source markers remain `--signer-key-source env-local --signer-key-source-contract-version v1`.
+  - verify `--signer-provenance-file` exists and signer key-source markers remain `--signer-key-source managed-external --signer-key-source-contract-version v1`.
 - `reason_code=checkpoint_failed_signer_rotation_freshness_contract`:
   - verify `--signer-rotation-epoch`, `--signer-previous-rotation-epoch`, and `--signer-rotation-freshness-max-delta` satisfy the freshness delta contract.
 - `ci_fast_gate_eligibility_violation` or `ci_fast_gate_scope_mismatch` from policy checker:

@@ -15,7 +15,7 @@ TMP_QUORUM_SINGLE="$(mktemp)"
 trap 'rm -f "$TMP_SUMMARY" "$TMP_ERR" "$TMP_CUSTODY" "$TMP_PROVENANCE" "$TMP_QUORUM" "$TMP_QUORUM_SINGLE"' EXIT
 
 printf '%s\n' "custody-attestation=ops-primary:epoch-1" >"$TMP_CUSTODY"
-printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" >"$TMP_PROVENANCE"
+printf '%s\n' "signer-provenance=ops-primary:source-managed-external:epoch-1" >"$TMP_PROVENANCE"
 TMP_CUSTODY_SHA="$(sha256sum "$TMP_CUSTODY" | awk '{print $1}')"
 cat >"$TMP_QUORUM" <<JSON
 {
@@ -168,7 +168,7 @@ if summary.get("signer_provenance_present") is not False:
     raise SystemExit("expected deployment preflight summary signer provenance marker to be false in dry-run")
 if summary.get("signer_key_source_contract_version") != "v1":
     raise SystemExit("expected deployment preflight summary signer key-source contract version marker")
-if summary.get("signer_key_source") != "env-local":
+if summary.get("signer_key_source") != "managed-external":
     raise SystemExit("expected deployment preflight summary signer key-source marker")
 if summary.get("signer_rotation_epoch") != 1:
     raise SystemExit("expected deployment preflight summary signer rotation epoch marker")
@@ -221,8 +221,16 @@ if contracts.get("signer_provenance_sha256_required") is not True:
     raise SystemExit("expected deployment preflight contracts to require signer provenance sha256 evidence")
 if contracts.get("signer_key_source_contract_version") != "v1":
     raise SystemExit("expected deployment preflight contracts signer key-source contract version marker")
-if contracts.get("signer_key_source") != "env-local":
+if contracts.get("signer_key_source") != "managed-external":
     raise SystemExit("expected deployment preflight contracts signer key-source marker")
+if contracts.get("required_signer_key_source_for_production") != "managed-external":
+    raise SystemExit("expected deployment preflight contracts required production signer key-source marker")
+if contracts.get("signer_key_source_production_requirement_reason_code") != "signer_key_source_production_managed_external_required":
+    raise SystemExit("expected deployment preflight contracts production signer key-source reason-code marker")
+if contracts.get("signer_key_source_allowed_for_ops_primary") != ["managed-external"]:
+    raise SystemExit("expected deployment preflight contracts ops-primary signer key-source allowlist marker")
+if contracts.get("signer_key_source_allowed_for_ops_secondary") != ["managed-external"]:
+    raise SystemExit("expected deployment preflight contracts ops-secondary signer key-source allowlist marker")
 if contracts.get("signer_rotation_freshness_max_delta") != 2:
     raise SystemExit("expected deployment preflight contracts signer rotation freshness max delta marker")
 if contracts.get("signer_rotation_stale_rejected") is not True:
@@ -374,6 +382,30 @@ fi
 
 if ! grep -q "signer provenance evidence file is required for selected profile" "$TMP_ERR"; then
   echo "expected deterministic missing signer provenance evidence message from deployment preflight lane" >&2
+  exit 1
+fi
+
+set +e
+KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX="1111111111111111111111111111111111111111111111111111111111111111" \
+bash "$RUNNER" \
+  --mode run \
+  --required-approvals 2 \
+  --received-approvals 2 \
+  --custody-evidence-file "$TMP_CUSTODY" \
+  --quorum-evidence-file "$TMP_QUORUM" \
+  --signer-provenance-file "$TMP_PROVENANCE" \
+  --signer-key-source env-local \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+production_key_source_exit_code=$?
+set -e
+
+if [ "$production_key_source_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight run mode to fail closed when production signer key-source is not managed-external" >&2
+  exit 1
+fi
+
+if ! grep -q "production signer profiles require signer key source managed-external" "$TMP_ERR"; then
+  echo "expected deterministic production signer key-source requirement message from deployment preflight lane" >&2
   exit 1
 fi
 
