@@ -53,9 +53,12 @@ fi
 
 resolve_manifest_name() {
   case "$1" in
+    run_classification_redaction_contract_lane.sh) echo "compliance_classification_redaction_contract_lane.json" ;;
+    run_dsar_legal_hold_contract_lane.sh) echo "compliance_dsar_legal_hold_contract_lane.json" ;;
     run_governance_lifecycle_rollback_contract_lane.sh) echo "governance_lifecycle_rollback_contract_lane.json" ;;
     run_governance_simulation_contract_lane.sh) echo "governance_simulation_contract_lane.json" ;;
     run_quorum_attestation_replay_contract_lane.sh) echo "governance_quorum_attestation_replay_contract_lane.json" ;;
+    run_soc2_control_evidence_contract_lane.sh) echo "compliance_soc2_control_evidence_contract_lane.json" ;;
     run_stake_slash_risk_contract_lane.sh) echo "governance_stake_slash_risk_contract_lane.json" ;;
     *)
       return 1

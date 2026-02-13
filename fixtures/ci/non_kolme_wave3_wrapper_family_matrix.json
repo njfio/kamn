@@ -1,0 +1,41 @@
+{
+  "schema_version": "kamn.kolme.lane-migration-matrix.v1",
+  "lanes": [
+    {
+      "lane_id": "non_kolme.compliance.classification_redaction",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/compliance/run_classification_redaction_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/compliance_classification_redaction_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2652"
+    },
+    {
+      "lane_id": "non_kolme.compliance.dsar_legal_hold",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/compliance/run_dsar_legal_hold_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/compliance_dsar_legal_hold_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2652"
+    },
+    {
+      "lane_id": "non_kolme.compliance.soc2_control_evidence",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/compliance/run_soc2_control_evidence_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/compliance_soc2_control_evidence_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2652"
+    }
+  ]
+}
