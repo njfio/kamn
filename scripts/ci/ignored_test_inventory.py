@@ -12,8 +12,11 @@ from typing import Any
 
 INVENTORY_SCHEMA_VERSION = "kamn.ci.ignored-test-inventory.v1"
 DRIFT_REPORT_SCHEMA_VERSION = "kamn.ci.ignored-test-inventory-drift-report.v1"
+METADATA_SCHEMA_VERSION = "kamn.ci.ignored-test-inventory-metadata.v1"
 DEFAULT_SCAN_ROOT = "crates"
 DEFAULT_BASELINE_FILE = "fixtures/ci/ignored_test_inventory_baseline.json"
+DEFAULT_METADATA_FILE = "fixtures/ci/ignored_test_inventory_metadata.json"
+ALLOWED_PRIORITY_LEVELS = {"P0", "P1", "P2", "P3"}
 
 IGNORE_ATTRIBUTE_PATTERN = re.compile(r"^\s*#\s*\[\s*ignore(?:\s*=.*)?\s*\]")
 FUNCTION_PATTERN = re.compile(r"^\s*(?:pub\s+)?(?:async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(")
@@ -77,6 +80,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--baseline-file",
         default=DEFAULT_BASELINE_FILE,
         help="Path to ignored-test inventory baseline fixture.",
+    )
+    check_parser.add_argument(
+        "--metadata-file",
+        default=DEFAULT_METADATA_FILE,
+        help="Path to ignored-test metadata fixture.",
     )
     check_parser.add_argument(
         "--output-json",
@@ -206,6 +214,58 @@ def validate_inventory_payload(payload: dict[str, Any], *, label: str) -> list[d
     return normalized
 
 
+def validate_metadata_payload(payload: dict[str, Any], *, label: str) -> dict[tuple[str, str], dict[str, str]]:
+    if payload.get("schema_version") != METADATA_SCHEMA_VERSION:
+        fail(f"{label} schema_version must be {METADATA_SCHEMA_VERSION}")
+
+    metadata_entries = payload.get("ignored_tests")
+    if not isinstance(metadata_entries, list):
+        fail(f"{label} ignored_tests must be an array")
+
+    metadata_by_key: dict[tuple[str, str], dict[str, str]] = {}
+    for index, entry in enumerate(metadata_entries):
+        if not isinstance(entry, dict):
+            fail(f"{label} ignored_tests[{index}] must be an object")
+
+        source_file = entry.get("source_file")
+        test_name = entry.get("test_name")
+        owner = entry.get("owner")
+        reason = entry.get("reason")
+        priority = entry.get("priority")
+        tracking_issue = entry.get("tracking_issue", "")
+
+        if not isinstance(source_file, str) or not source_file.strip():
+            fail(f"{label} ignored_tests[{index}].source_file must be a non-empty string")
+        if not isinstance(test_name, str) or not test_name.strip():
+            fail(f"{label} ignored_tests[{index}].test_name must be a non-empty string")
+        if not isinstance(owner, str) or not owner.strip():
+            fail(f"{label} ignored_tests[{index}].owner must be a non-empty string")
+        if not isinstance(reason, str) or not reason.strip():
+            fail(f"{label} ignored_tests[{index}].reason must be a non-empty string")
+        if not isinstance(priority, str) or priority.strip() not in ALLOWED_PRIORITY_LEVELS:
+            fail(
+                f"{label} ignored_tests[{index}].priority must be one of "
+                f"{sorted(ALLOWED_PRIORITY_LEVELS)}"
+            )
+        if tracking_issue is None:
+            tracking_issue = ""
+        if not isinstance(tracking_issue, str):
+            fail(f"{label} ignored_tests[{index}].tracking_issue must be a string when provided")
+
+        key = (source_file.strip(), test_name.strip())
+        if key in metadata_by_key:
+            fail(f"{label} ignored_tests contains duplicate entry: {key[0]}::{key[1]}")
+
+        metadata_by_key[key] = {
+            "owner": owner.strip(),
+            "reason": reason.strip(),
+            "priority": priority.strip(),
+            "tracking_issue": tracking_issue.strip(),
+        }
+
+    return metadata_by_key
+
+
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -282,9 +342,14 @@ def run_check(args: argparse.Namespace) -> int:
     baseline_path = Path(args.baseline_file)
     if not baseline_path.is_absolute():
         baseline_path = (repo_root / baseline_path).resolve()
+    metadata_path = Path(args.metadata_file)
+    if not metadata_path.is_absolute():
+        metadata_path = (repo_root / metadata_path).resolve()
 
     baseline_payload = load_json_object(baseline_path, label="baseline file")
     baseline_ignored_tests = validate_inventory_payload(baseline_payload, label="baseline")
+    metadata_payload = load_json_object(metadata_path, label="metadata file")
+    metadata_by_key = validate_metadata_payload(metadata_payload, label="metadata")
 
     current_inventory, unresolved_markers = generate_inventory(
         repo_root=repo_root,
@@ -303,6 +368,8 @@ def run_check(args: argparse.Namespace) -> int:
 
     unexpected_entries = sorted(current_set - baseline_set)
     missing_entries = sorted(baseline_set - current_set)
+    missing_metadata_entries = sorted(current_set - set(metadata_by_key.keys()))
+    stale_metadata_entries = sorted(set(metadata_by_key.keys()) - current_set)
 
     reason_codes: list[str] = []
     if unresolved_markers:
@@ -311,6 +378,10 @@ def run_check(args: argparse.Namespace) -> int:
         reason_codes.append("unexpected_ignored_tests_present")
     if missing_entries:
         reason_codes.append("baseline_ignored_tests_missing")
+    if missing_metadata_entries:
+        reason_codes.append("ignored_test_metadata_missing")
+    if stale_metadata_entries:
+        reason_codes.append("ignored_test_metadata_stale_entry")
 
     status = "pass" if not reason_codes else "fail"
     report = {
@@ -318,9 +389,11 @@ def run_check(args: argparse.Namespace) -> int:
         "status": status,
         "repo_root": repo_root.as_posix(),
         "baseline_file": baseline_path.as_posix(),
+        "metadata_file": metadata_path.as_posix(),
         "scan_roots": args.scan_root or [DEFAULT_SCAN_ROOT],
         "ignored_test_count": len(current_ignored_tests),
         "baseline_ignored_test_count": len(baseline_ignored_tests),
+        "metadata_entry_count": len(metadata_by_key),
         "unexpected_entries": [
             {"source_file": source_file, "test_name": test_name}
             for source_file, test_name in unexpected_entries
@@ -329,10 +402,20 @@ def run_check(args: argparse.Namespace) -> int:
             {"source_file": source_file, "test_name": test_name}
             for source_file, test_name in missing_entries
         ],
+        "missing_metadata_entries": [
+            {"source_file": source_file, "test_name": test_name}
+            for source_file, test_name in missing_metadata_entries
+        ],
+        "stale_metadata_entries": [
+            {"source_file": source_file, "test_name": test_name}
+            for source_file, test_name in stale_metadata_entries
+        ],
         "unresolved_markers": unresolved_markers,
         "reason_codes": reason_codes,
         "violation_count": len(unexpected_entries)
         + len(missing_entries)
+        + len(missing_metadata_entries)
+        + len(stale_metadata_entries)
         + (len(unresolved_markers) if unresolved_markers else 0),
     }
 
@@ -344,8 +427,11 @@ def run_check(args: argparse.Namespace) -> int:
     print(f"status={status}")
     print(f"ignored_test_count={len(current_ignored_tests)}")
     print(f"baseline_ignored_test_count={len(baseline_ignored_tests)}")
+    print(f"metadata_entry_count={len(metadata_by_key)}")
     print(f"unexpected_count={len(unexpected_entries)}")
     print(f"missing_count={len(missing_entries)}")
+    print(f"missing_metadata_count={len(missing_metadata_entries)}")
+    print(f"stale_metadata_count={len(stale_metadata_entries)}")
     print(f"unresolved_marker_count={len(unresolved_markers)}")
     print(f"violation_count={report['violation_count']}")
     print(f"reason_codes={'none' if not reason_codes else ','.join(reason_codes)}")
@@ -366,6 +452,18 @@ def run_check(args: argparse.Namespace) -> int:
             )
         for marker in unresolved_markers:
             print(f"unresolved_marker={marker}", file=sys.stderr)
+        for entry in report["missing_metadata_entries"]:
+            print(
+                "missing_ignored_test_metadata="
+                f"{entry['source_file']}::{entry['test_name']}",
+                file=sys.stderr,
+            )
+        for entry in report["stale_metadata_entries"]:
+            print(
+                "stale_ignored_test_metadata="
+                f"{entry['source_file']}::{entry['test_name']}",
+                file=sys.stderr,
+            )
         return 1
 
     return 0
