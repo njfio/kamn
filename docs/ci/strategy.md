@@ -146,6 +146,11 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/kolme/test_run_local_kolme_fork_bootstrap_readiness_contract_lane.sh`
     - `bash scripts/kolme/test_run_local_kolme_fork_process_lifecycle_contract_lane.sh`
     - `bash scripts/kolme/test_run_version_compatibility_contract_lane.sh`
+  - signature parity command-surface tests remain aggregate `ci-tools` only (not fast-gate default):
+    - `bash scripts/kolme/test_run_signature_parity_matrix.sh`
+    - `bash scripts/kolme/test_check_signature_parity_policy.sh`
+    - `bash scripts/kolme/test_run_signature_parity_contract_lane.sh`
+    - Regression: #2348
   - tranche-1 manifest migration guard stays on PR fast gate:
     - `bash scripts/ci/test_kolme_tranche1_manifest_migration_contract.sh`
     - enforces manifest-backed wrappers for:
