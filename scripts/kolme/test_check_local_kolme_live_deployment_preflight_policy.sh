@@ -6,6 +6,7 @@ CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_live_deployment_preflight_pol
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 CI_DOC_FILE="$ROOT_DIR/docs/ci/strategy.md"
+COST_DOC_FILE="$ROOT_DIR/docs/ci/ci-cost-and-lane-framework.md"
 README_FILE="$ROOT_DIR/README.md"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT_OK="$TMP_DIR/ok-report.json"
@@ -32,6 +33,26 @@ fi
 
 if ! grep -q "check_local_kolme_live_deployment_preflight_policy.py" "$CI_DOC_FILE"; then
   echo "expected CI strategy docs to reference deployment preflight policy checker command" >&2
+  exit 1
+fi
+
+if ! grep -q "run_local_kolme_live_deployment_preflight_contract_lane.sh" "$COST_DOC_FILE"; then
+  echo "expected CI cost/lane framework docs to reference deployment preflight contract lane placement" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_drift_admission_matrix_decision=GO|WARN|NO-GO" "$COST_DOC_FILE"; then
+  echo "expected CI cost/lane framework docs to include runtime signer drift admission matrix decision marker" >&2
+  exit 1
+fi
+
+if ! grep -q "signer_key_source_production_managed_external_required" "$COST_DOC_FILE"; then
+  echo "expected CI cost/lane framework docs to include production managed-external signer-source fail-closed reason marker" >&2
+  exit 1
+fi
+
+if ! grep -q "Deterministic response matrix" "$COST_DOC_FILE"; then
+  echo "expected CI cost/lane framework docs to include deterministic response matrix guidance" >&2
   exit 1
 fi
 
