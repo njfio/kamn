@@ -759,6 +759,8 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # quorum_evidence_rotation_metadata_valid
 # runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1
 # runtime_signer_attestation_bundle
+# runtime_signer_drift_telemetry_schema_version=kamn.kolme.runtime-signer-drift-telemetry.v1
+# runtime_signer_drift_telemetry
 # contracts.ci_fast_gate_scope=ci-fast-gate
 # contracts.required_runtime_mode=kolme-live
 # contracts.fallback_private_key_path_allowed=false
@@ -779,6 +781,12 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # contracts.runtime_signer_attestation_threshold_required=true
 # contracts.runtime_signer_attestation_profile_membership_required=true
 # contracts.runtime_signer_attestation_required_approvals=2
+# contracts.runtime_signer_drift_telemetry_required=true
+# contracts.runtime_signer_drift_telemetry_schema_version=kamn.kolme.runtime-signer-drift-telemetry.v1
+# contracts.runtime_signer_drift_telemetry_rotation_delta_match_required=true
+# contracts.runtime_signer_drift_telemetry_stale_flag_match_required=true
+# contracts.runtime_signer_drift_telemetry_quorum_flag_match_required=true
+# contracts.runtime_signer_drift_telemetry_approval_counts_match_required=true
 # contracts.custody_evidence_required=true
 # contracts.signer_provenance_required=true
 # contracts.signer_provenance_sha256_required=true
@@ -819,6 +827,9 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # runtime_signer_attestation_approved_signers_not_unique
 # runtime_signer_attestation_quorum_shortfall
 # runtime_signer_attestation_schema_invalid
+# runtime_signer_drift_telemetry_missing
+# runtime_signer_drift_telemetry_schema_version_mismatch
+# runtime_signer_drift_telemetry_rotation_delta_invalid
 # custody_evidence_missing
 # custody_evidence_sha256_invalid
 # signer_key_source_contract_version_mismatch

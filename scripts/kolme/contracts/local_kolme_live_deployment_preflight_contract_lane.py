@@ -234,6 +234,25 @@ def main() -> int:
     if runtime_signer_attestation_bundle.get("approved_signers") != ["ops-primary", "ops-secondary"]:
         print("expected deployment preflight summary runtime signer attestation approved signers marker", file=sys.stderr)
         return 1
+    if summary.get("runtime_signer_drift_telemetry_schema_version") != "kamn.kolme.runtime-signer-drift-telemetry.v1":
+        print("expected deployment preflight summary runtime signer drift telemetry schema marker", file=sys.stderr)
+        return 1
+    runtime_signer_drift_telemetry = summary.get("runtime_signer_drift_telemetry")
+    if not isinstance(runtime_signer_drift_telemetry, dict):
+        print("expected deployment preflight summary runtime signer drift telemetry bundle", file=sys.stderr)
+        return 1
+    if runtime_signer_drift_telemetry.get("schema_version") != "kamn.kolme.runtime-signer-drift-telemetry.v1":
+        print("expected deployment preflight summary runtime signer drift telemetry bundle schema marker", file=sys.stderr)
+        return 1
+    if runtime_signer_drift_telemetry.get("signer_rotation_delta_epochs") != summary.get("signer_rotation_delta_epochs"):
+        print("expected deployment preflight summary runtime signer drift telemetry rotation delta marker", file=sys.stderr)
+        return 1
+    if runtime_signer_drift_telemetry.get("required_approvals") != summary.get("required_approvals"):
+        print("expected deployment preflight summary runtime signer drift telemetry required approvals marker", file=sys.stderr)
+        return 1
+    if runtime_signer_drift_telemetry.get("received_approvals") != summary.get("received_approvals"):
+        print("expected deployment preflight summary runtime signer drift telemetry received approvals marker", file=sys.stderr)
+        return 1
     contracts = summary.get("contracts", {})
     if not isinstance(contracts, dict):
         print("expected contracts object in deployment preflight summary", file=sys.stderr)
@@ -306,6 +325,24 @@ def main() -> int:
         return 1
     if contracts.get("runtime_signer_attestation_required_approvals") != 2:
         print("expected deployment preflight contracts runtime signer attestation required approvals marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_drift_telemetry_required") is not True:
+        print("expected deployment preflight contracts runtime signer drift telemetry requirement marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_drift_telemetry_schema_version") != "kamn.kolme.runtime-signer-drift-telemetry.v1":
+        print("expected deployment preflight contracts runtime signer drift telemetry schema marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_drift_telemetry_rotation_delta_match_required") is not True:
+        print("expected deployment preflight contracts runtime signer drift telemetry rotation delta match marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_drift_telemetry_stale_flag_match_required") is not True:
+        print("expected deployment preflight contracts runtime signer drift telemetry stale flag match marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_drift_telemetry_quorum_flag_match_required") is not True:
+        print("expected deployment preflight contracts runtime signer drift telemetry quorum flag match marker", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_drift_telemetry_approval_counts_match_required") is not True:
+        print("expected deployment preflight contracts runtime signer drift telemetry approval count match marker", file=sys.stderr)
         return 1
     if contracts.get("custody_evidence_required") is not True:
         print("expected deployment preflight contracts custody_evidence_required=true", file=sys.stderr)
@@ -709,6 +746,67 @@ def main() -> int:
             print("expected schema-invalid signer attestation policy final_decision NO-GO", file=sys.stderr)
             return 1
 
+        drift_telemetry_negative_report = temp_path / "runtime_signer_drift_telemetry_negative_summary.json"
+        drift_telemetry_negative_policy = temp_path / "runtime_signer_drift_telemetry_negative_policy.json"
+        drift_telemetry_negative_summary = dict(summary)
+        drift_telemetry_negative_summary["mode"] = "run"
+        drift_telemetry_negative_summary["status"] = "fail"
+        drift_telemetry_negative_summary["reason_code"] = "checkpoint_failed_signer_rotation_freshness_contract"
+        drift_telemetry_negative_summary["signer_secret_present"] = True
+        drift_telemetry_negative_summary["signer_secret_hex_valid"] = True
+        drift_telemetry_negative_summary["required_approvals"] = 2
+        drift_telemetry_negative_summary["received_approvals"] = 1
+        drift_telemetry_negative_summary["runtime_signer_drift_telemetry_schema_version"] = (
+            "kamn.kolme.runtime-signer-drift-telemetry.v0"
+        )
+        drift_telemetry_negative_summary["runtime_signer_drift_telemetry"] = {
+            "schema_version": "kamn.kolme.runtime-signer-drift-telemetry.v0",
+            "signer_rotation_epoch": 3,
+            "signer_previous_rotation_epoch": 1,
+            "signer_rotation_delta_epochs": "bad",
+            "signer_rotation_freshness_max_delta": -1,
+            "signer_rotation_stale": "bad",
+            "required_approvals": 2,
+            "received_approvals": 1,
+            "quorum_shortfall": "bad",
+        }
+        drift_telemetry_negative_report.write_text(
+            json.dumps(drift_telemetry_negative_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        drift_telemetry_no_go_result = run_policy_check(
+            report_file=drift_telemetry_negative_report,
+            output_json=drift_telemetry_negative_policy,
+            expected_final_decision="NO-GO",
+            required_reason_code="checkpoint_failed_signer_rotation_freshness_contract",
+        )
+        if drift_telemetry_no_go_result.returncode == 0:
+            print("expected runtime signer drift telemetry negative proof to fail closed", file=sys.stderr)
+            return 1
+        drift_telemetry_no_go_policy = json.loads(
+            drift_telemetry_negative_policy.read_text(encoding="utf-8")
+        )
+        drift_telemetry_no_go_reason_codes = drift_telemetry_no_go_policy.get("reason_codes")
+        if not isinstance(drift_telemetry_no_go_reason_codes, list):
+            print("expected reason_codes list in runtime signer drift telemetry negative policy output", file=sys.stderr)
+            return 1
+        if "runtime_signer_drift_telemetry_schema_version_mismatch" not in drift_telemetry_no_go_reason_codes:
+            print(
+                "expected runtime_signer_drift_telemetry_schema_version_mismatch in runtime signer drift telemetry negative policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if "runtime_signer_drift_telemetry_rotation_delta_invalid" not in drift_telemetry_no_go_reason_codes:
+            print(
+                "expected runtime_signer_drift_telemetry_rotation_delta_invalid in runtime signer drift telemetry negative policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if drift_telemetry_no_go_policy.get("final_decision") != "NO-GO":
+            print("expected runtime signer drift telemetry negative policy final_decision NO-GO", file=sys.stderr)
+            return 1
+
         provenance_negative_report = temp_path / "signer_provenance_negative_summary.json"
         provenance_negative_policy = temp_path / "signer_provenance_negative_policy.json"
         provenance_negative_summary = dict(summary)
@@ -854,6 +952,12 @@ def main() -> int:
         "runtime_signer_attestation_schema_invalid",
         "runtime_signer_attestation_approved_signers_not_unique",
         "runtime_signer_attestation_quorum_shortfall",
+        "runtime_signer_drift_telemetry_schema_version=kamn.kolme.runtime-signer-drift-telemetry.v1",
+        "runtime_signer_drift_telemetry",
+        "runtime_signer_drift_telemetry_missing",
+        "runtime_signer_drift_telemetry_schema_version_mismatch",
+        "runtime_signer_drift_telemetry_rotation_delta_invalid",
+        "contracts.runtime_signer_drift_telemetry_required=true",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",
@@ -904,6 +1008,12 @@ def main() -> int:
         "runtime_signer_attestation_schema_invalid",
         "runtime_signer_attestation_approved_signers_not_unique",
         "runtime_signer_attestation_quorum_shortfall",
+        "runtime_signer_drift_telemetry_schema_version=kamn.kolme.runtime-signer-drift-telemetry.v1",
+        "runtime_signer_drift_telemetry",
+        "runtime_signer_drift_telemetry_missing",
+        "runtime_signer_drift_telemetry_schema_version_mismatch",
+        "runtime_signer_drift_telemetry_rotation_delta_invalid",
+        "contracts.runtime_signer_drift_telemetry_required=true",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",
@@ -954,6 +1064,12 @@ def main() -> int:
         "runtime_signer_attestation_schema_invalid",
         "runtime_signer_attestation_approved_signers_not_unique",
         "runtime_signer_attestation_quorum_shortfall",
+        "runtime_signer_drift_telemetry_schema_version=kamn.kolme.runtime-signer-drift-telemetry.v1",
+        "runtime_signer_drift_telemetry",
+        "runtime_signer_drift_telemetry_missing",
+        "runtime_signer_drift_telemetry_schema_version_mismatch",
+        "runtime_signer_drift_telemetry_rotation_delta_invalid",
+        "contracts.runtime_signer_drift_telemetry_required=true",
         "custody_evidence_missing",
         "custody_evidence_sha256_invalid",
         "signer_key_source_contract_version",

@@ -23,7 +23,10 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
 - Required signer-custody markers:
   - `fallback_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
   - `fallback_signer_secret_present=false`
+  - `runtime_signer_drift_telemetry_schema_version=kamn.kolme.runtime-signer-drift-telemetry.v1`
+  - `runtime_signer_drift_telemetry`
   - `contracts.fallback_private_key_path_allowed=false`
+  - `contracts.runtime_signer_drift_telemetry_required=true`
   - `required_approvals=2`
   - `received_approvals=2`
   - `contracts.approval_quorum_required=2`
@@ -33,6 +36,9 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
   - `signer_quorum_shortfall`
   - `custody_evidence_missing`
   - `custody_evidence_sha256_invalid`
+  - `runtime_signer_drift_telemetry_missing`
+  - `runtime_signer_drift_telemetry_schema_version_mismatch`
+  - `runtime_signer_drift_telemetry_rotation_delta_invalid`
 
 ## Deterministic Dry-Run Workflow
 1. Create release candidate tag.

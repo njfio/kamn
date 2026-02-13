@@ -29,6 +29,7 @@ FALLBACK_SIGNER_SECRET_REMEDIATION="unset ${FALLBACK_SIGNER_SECRET_ENV}"
 REQUIRED_SECRET_HEX_LENGTH=64
 SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED="v1"
 RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION="kamn.kolme.runtime-signer-attestation.v1"
+RUNTIME_SIGNER_DRIFT_TELEMETRY_SCHEMA_VERSION="kamn.kolme.runtime-signer-drift-telemetry.v1"
 QUORUM_EVIDENCE_SCHEMA_VERSION="$RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION"
 
 while [ "$#" -gt 0 ]; do
@@ -782,7 +783,7 @@ PY
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$RUNTIME_MODE" "$SIGNER_PROFILE_SELECTOR_ENV" "$SIGNER_PROFILE" "$selected_signer_secret_env" "$FALLBACK_SIGNER_SECRET_ENV" "$signer_secret_present" "$fallback_signer_secret_present" "$signer_secret_hex_valid" "$CHECK_FILE" "$REQUIRED_RUNTIME_MODE" "$PRIMARY_SIGNER_PROFILE" "$SECONDARY_SIGNER_PROFILE" "$PRIMARY_SIGNER_SECRET_ENV" "$SECONDARY_SIGNER_SECRET_ENV" "$REQUIRED_SECRET_HEX_LENGTH" "$REQUIRED_APPROVALS" "$RECEIVED_APPROVALS" "$QUORUM_EVIDENCE_FILE" "$quorum_evidence_present" "$quorum_evidence_sha256" "$quorum_evidence_sha256_valid" "$quorum_evidence_schema_valid" "$quorum_evidence_approval_count" "$quorum_evidence_signers_unique" "$quorum_evidence_matches_threshold" "$quorum_evidence_custody_sha256_match" "$quorum_evidence_signer_roles_present" "$quorum_evidence_signer_roles_valid" "$quorum_evidence_rotation_metadata_present" "$quorum_evidence_rotation_metadata_valid" "$QUORUM_EVIDENCE_SCHEMA_VERSION" "$CUSTODY_EVIDENCE_FILE" "$custody_evidence_present" "$custody_evidence_sha256" "$custody_evidence_sha256_valid" "$SIGNER_PROVENANCE_FILE" "$signer_provenance_present" "$signer_provenance_sha256" "$signer_provenance_sha256_valid" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$SIGNER_KEY_SOURCE" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED" "$SIGNER_ROTATION_EPOCH" "$SIGNER_PREVIOUS_ROTATION_EPOCH" "$SIGNER_ROTATION_FRESHNESS_MAX_DELTA" "$signer_rotation_delta_epochs" "$signer_rotation_fresh" "$RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION" "$runtime_signer_attestation_approved_signers_csv" "$runtime_signer_attestation_profile_approved" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$RUNTIME_MODE" "$SIGNER_PROFILE_SELECTOR_ENV" "$SIGNER_PROFILE" "$selected_signer_secret_env" "$FALLBACK_SIGNER_SECRET_ENV" "$signer_secret_present" "$fallback_signer_secret_present" "$signer_secret_hex_valid" "$CHECK_FILE" "$REQUIRED_RUNTIME_MODE" "$PRIMARY_SIGNER_PROFILE" "$SECONDARY_SIGNER_PROFILE" "$PRIMARY_SIGNER_SECRET_ENV" "$SECONDARY_SIGNER_SECRET_ENV" "$REQUIRED_SECRET_HEX_LENGTH" "$REQUIRED_APPROVALS" "$RECEIVED_APPROVALS" "$QUORUM_EVIDENCE_FILE" "$quorum_evidence_present" "$quorum_evidence_sha256" "$quorum_evidence_sha256_valid" "$quorum_evidence_schema_valid" "$quorum_evidence_approval_count" "$quorum_evidence_signers_unique" "$quorum_evidence_matches_threshold" "$quorum_evidence_custody_sha256_match" "$quorum_evidence_signer_roles_present" "$quorum_evidence_signer_roles_valid" "$quorum_evidence_rotation_metadata_present" "$quorum_evidence_rotation_metadata_valid" "$QUORUM_EVIDENCE_SCHEMA_VERSION" "$CUSTODY_EVIDENCE_FILE" "$custody_evidence_present" "$custody_evidence_sha256" "$custody_evidence_sha256_valid" "$SIGNER_PROVENANCE_FILE" "$signer_provenance_present" "$signer_provenance_sha256" "$signer_provenance_sha256_valid" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$SIGNER_KEY_SOURCE" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED" "$SIGNER_ROTATION_EPOCH" "$SIGNER_PREVIOUS_ROTATION_EPOCH" "$SIGNER_ROTATION_FRESHNESS_MAX_DELTA" "$signer_rotation_delta_epochs" "$signer_rotation_fresh" "$RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION" "$runtime_signer_attestation_approved_signers_csv" "$runtime_signer_attestation_profile_approved" "$RUNTIME_SIGNER_DRIFT_TELEMETRY_SCHEMA_VERSION" <<'PY'
 from __future__ import annotations
 
 import json
@@ -846,6 +847,7 @@ signer_rotation_fresh = sys.argv[54] == "true"
 runtime_signer_attestation_schema_version = sys.argv[55]
 runtime_signer_attestation_approved_signers_csv = sys.argv[56]
 runtime_signer_attestation_profile_approved = sys.argv[57] == "true"
+runtime_signer_drift_telemetry_schema_version = sys.argv[58]
 
 runtime_signer_attestation_approved_signers: list[str] = [
     entry.strip()
@@ -867,6 +869,17 @@ runtime_signer_attestation_bundle = {
     "approved_signers": runtime_signer_attestation_approved_signers,
     "signer_profile": signer_profile,
     "signer_key_source": signer_key_source,
+}
+runtime_signer_drift_telemetry = {
+    "schema_version": runtime_signer_drift_telemetry_schema_version,
+    "signer_rotation_epoch": signer_rotation_epoch,
+    "signer_previous_rotation_epoch": signer_previous_rotation_epoch,
+    "signer_rotation_delta_epochs": signer_rotation_delta_epochs,
+    "signer_rotation_freshness_max_delta": signer_rotation_freshness_max_delta,
+    "signer_rotation_stale": signer_rotation_delta_epochs > signer_rotation_freshness_max_delta,
+    "required_approvals": required_approvals,
+    "received_approvals": received_approvals,
+    "quorum_shortfall": received_approvals < required_approvals,
 }
 
 checks = []
@@ -924,6 +937,8 @@ summary = {
     "runtime_signer_attestation_schema_version": runtime_signer_attestation_schema_version,
     "runtime_signer_attestation_bundle": runtime_signer_attestation_bundle,
     "runtime_signer_attestation_profile_approved": runtime_signer_attestation_profile_approved,
+    "runtime_signer_drift_telemetry_schema_version": runtime_signer_drift_telemetry_schema_version,
+    "runtime_signer_drift_telemetry": runtime_signer_drift_telemetry,
     "custody_evidence_file": custody_evidence_file,
     "custody_evidence_present": custody_evidence_present,
     "custody_evidence_sha256": custody_evidence_sha256,
@@ -973,6 +988,12 @@ summary = {
         "runtime_signer_attestation_threshold_required": True,
         "runtime_signer_attestation_profile_membership_required": True,
         "runtime_signer_attestation_required_approvals": required_approvals,
+        "runtime_signer_drift_telemetry_required": True,
+        "runtime_signer_drift_telemetry_schema_version": runtime_signer_drift_telemetry_schema_version,
+        "runtime_signer_drift_telemetry_rotation_delta_match_required": True,
+        "runtime_signer_drift_telemetry_stale_flag_match_required": True,
+        "runtime_signer_drift_telemetry_quorum_flag_match_required": True,
+        "runtime_signer_drift_telemetry_approval_counts_match_required": True,
         "custody_evidence_required": True,
         "custody_evidence_sha256_required": True,
         "signer_provenance_required": True,
