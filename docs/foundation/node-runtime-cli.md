@@ -179,7 +179,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - `kamn-node --role processor --runtime-mode kolme-live`
   - `kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1`
   - `kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1 --kolme-live-strict-signer-contracts --kolme-live-signer-profile ops-primary --kolme-live-signer-key-source env-local`
-  - `KAMN_KOLME_LIVE_SIGNER_KEY_REF=secure:aws-kms:role-operator/key-live-ops-primary kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1 --kolme-live-strict-signer-contracts --kolme-live-signer-profile ops-primary --kolme-live-signer-key-source managed-external`
+  - `KAMN_KOLME_LIVE_SIGNER_KEY_REF=secure:aws-kms:role-operator/key-live-ops-primary KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND='sh /opt/kamn/signer-backend.sh' kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1 --kolme-live-strict-signer-contracts --kolme-live-signer-profile ops-primary --kolme-live-signer-key-source managed-external`
 
 ## Daemon Runtime Rules
 - Supported runtime modes:
@@ -218,6 +218,11 @@ This document captures node-runtime productionization slices for machine-readabl
     - `ops-primary`: `KAMN_KOLME_LIVE_SIGNER_KEY_REF`
     - `ops-secondary`: `KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY`
   - managed-external mode rejects raw private-key env markers for the selected profile with deterministic reason code `managed_signer_raw_private_key_forbidden`
+  - managed-external strict signer contracts require `KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND`; if absent, runtime fails closed with `managed_signer_backend_required_missing`
+  - managed-external backend requirement marker:
+    - `KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED=true|false`
+    - invalid/empty values fail closed with `managed_signer_backend_required_invalid`
+    - when set to `true`, managed-external signing requires backend command execution even outside strict-signer CLI mode
   - fail-closed error semantics:
     - empty profile/source declarations are rejected
     - unsupported profile/source declarations are rejected
