@@ -263,10 +263,9 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
     - signer adapter contract: `KolmeForkSecp256k1SignerAdapter` owns secp256k1 key decode, recoverable signing, and sign-then-verify compatibility checks against the selected signer key.
     - managed-external backend command contract:
       - command env marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND`.
-      - strict managed-external signer contracts require the command marker; missing marker fails closed with `managed_signer_backend_required_missing`.
-      - optional requirement override marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED=true|false`:
-        - `true`: require backend command execution even when strict signer CLI contracts are not enabled.
-        - invalid/empty values fail closed with `managed_signer_backend_required_invalid`.
+      - managed-external signer mode always requires the command marker; missing marker fails closed with `managed_signer_backend_required_missing`.
+      - compatibility marker `KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED=true|false` is parsed when present; invalid/empty values fail closed with `managed_signer_backend_required_invalid`.
+      - marker presence does not relax mandatory managed-external backend command execution.
       - command input env markers: `KAMN_MANAGED_SIGNER_KEY_REFERENCE`, `KAMN_MANAGED_SIGNER_ACTOR_DID`, `KAMN_MANAGED_SIGNER_NONCE`, `KAMN_MANAGED_SIGNER_STATE_ROOT`, `KAMN_MANAGED_SIGNER_CANONICAL_MESSAGE`.
       - command output contract (stdout, key-value lines): `signature_hex=<128-hex>` and `recovery_id=<0..3>`.
       - timeout override marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS` (default `5`).

@@ -218,11 +218,11 @@ This document captures node-runtime productionization slices for machine-readabl
     - `ops-primary`: `KAMN_KOLME_LIVE_SIGNER_KEY_REF`
     - `ops-secondary`: `KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY`
   - managed-external mode rejects raw private-key env markers for the selected profile with deterministic reason code `managed_signer_raw_private_key_forbidden`
-  - managed-external strict signer contracts require `KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND`; if absent, runtime fails closed with `managed_signer_backend_required_missing`
-  - managed-external backend requirement marker:
+  - managed-external signer mode requires `KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND`; if absent, runtime fails closed with `managed_signer_backend_required_missing`
+  - managed-external compatibility marker parsing:
     - `KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED=true|false`
     - invalid/empty values fail closed with `managed_signer_backend_required_invalid`
-    - when set to `true`, managed-external signing requires backend command execution even outside strict-signer CLI mode
+    - marker presence does not relax mandatory backend command execution for managed-external signing
   - fail-closed error semantics:
     - empty profile/source declarations are rejected
     - unsupported profile/source declarations are rejected
@@ -234,7 +234,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - pending submit receipts poll finality via `/runtime-commit/status` with max-attempt budget `2`
   - malformed finality responses fail closed
   - finality transport timeout/unavailable keeps execution in pending status without falling back to in-memory adapters
-  - managed-external strict signer mode enforces secure-provider handshake routing before payload signing and maps provider failures to deterministic reason codes such as:
+  - managed-external signer mode enforces secure-provider handshake routing before payload signing and maps provider failures to deterministic reason codes such as:
     - `managed_signer_provider_unavailable`
     - `managed_signer_provider_handshake_rejected`
     - `managed_signer_backend_error`

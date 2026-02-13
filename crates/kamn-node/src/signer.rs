@@ -416,7 +416,6 @@ pub(crate) fn sign_kolme_live_managed_external_message(
     nonce: u64,
     canonical_message: &str,
     provider_handshake_matrix: SignerProviderHandshakeMatrix,
-    backend_command_required: bool,
 ) -> Result<(String, u8), ConfigError> {
     let _provider = SecureSignerProvider::from_key_id(key_reference).map_err(|error| {
         ConfigError::RuntimeKolmeLive(format!(
@@ -441,51 +440,37 @@ pub(crate) fn sign_kolme_live_managed_external_message(
         .sign(&signing_request)
         .map_err(map_kolme_live_secure_signer_backend_error)?;
     let signing_key = build_kolme_live_managed_signing_key(key_reference)?;
-    let managed_signer_command = resolve_optional_kolme_live_managed_signer_command()?;
-    if backend_command_required && managed_signer_command.is_none() {
-        return Err(ConfigError::RuntimeKolmeLive(format!(
-            "{KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV} must be set when managed-external signing is required by strict signer contracts or {KOLME_LIVE_MANAGED_SIGNER_REQUIRED_ENV}=true (managed_signer_backend_required_missing)"
-        )));
-    }
-    if let Some(command) = managed_signer_command {
-        let timeout_seconds = resolve_kolme_live_managed_signer_timeout_seconds()?;
-        let backend_signature = execute_kolme_live_managed_signer_backend_command(
-            command.as_str(),
-            timeout_seconds,
-            key_reference,
-            &signing_request,
+    let command = resolve_optional_kolme_live_managed_signer_command()?.ok_or_else(|| {
+        ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV} must be set when managed-external signing is selected (managed_signer_backend_required_missing)"
+        ))
+    })?;
+    let timeout_seconds = resolve_kolme_live_managed_signer_timeout_seconds()?;
+    let backend_signature = execute_kolme_live_managed_signer_backend_command(
+        command.as_str(),
+        timeout_seconds,
+        key_reference,
+        &signing_request,
+        canonical_message,
+    )?;
+    let verifier = KolmeForkSecp256k1SignerAdapter {
+        signing_key,
+        private_key_env: KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV,
+    };
+    verifier
+        .verify_message(
             canonical_message,
-        )?;
-        let verifier = KolmeForkSecp256k1SignerAdapter {
-            signing_key,
-            private_key_env: KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV,
-        };
-        verifier
-            .verify_message(
-                canonical_message,
-                backend_signature.signature_hex.as_str(),
-                backend_signature.recovery_id,
-            )
-            .map_err(|error| {
-                ConfigError::RuntimeKolmeLive(format!(
-                    "managed-external signer backend response failed secp256k1 verification: {error} (managed_signer_backend_response_malformed)"
-                ))
-            })?;
-        return Ok((
-            backend_signature.signature_hex,
+            backend_signature.signature_hex.as_str(),
             backend_signature.recovery_id,
-        ));
-    }
-    let (signature, recovery_id) = signing_key
-        .sign_recoverable(canonical_message.as_bytes())
+        )
         .map_err(|error| {
             ConfigError::RuntimeKolmeLive(format!(
-                "managed-external signer failed to produce secp256k1 payload signature: {error} (managed_signer_signature_failed)"
+                "managed-external signer backend response failed secp256k1 verification: {error} (managed_signer_backend_response_malformed)"
             ))
         })?;
     Ok((
-        encode_kolme_hex_lower(signature.to_bytes().as_ref()),
-        recovery_id.to_byte(),
+        backend_signature.signature_hex,
+        backend_signature.recovery_id,
     ))
 }
 
@@ -637,18 +622,6 @@ fn resolve_kolme_live_signer_selection(
         private_key_env,
         key_reference_env,
     })
-}
-
-fn is_kolme_live_managed_signer_backend_required(
-    strict_signer_profile: Option<&str>,
-    signer_selection: &KolmeLiveSignerSelection,
-) -> Result<bool, ConfigError> {
-    if signer_selection.key_source != KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL {
-        return Ok(false);
-    }
-    let marker_required = resolve_kolme_live_managed_signer_required_marker()?;
-    let strict_required = strict_signer_profile.is_some();
-    Ok(marker_required || strict_required)
 }
 
 trait KolmeLiveSignerSecretProvider {
@@ -867,65 +840,64 @@ pub(crate) fn build_kolme_live_direct_signed_wire_payload(
 ) -> Result<(String, KolmeLiveSignerSelection), ConfigError> {
     let signer_selection =
         resolve_kolme_live_signer_selection(strict_signer_profile, strict_signer_key_source)?;
-    let managed_signer_backend_required =
-        is_kolme_live_managed_signer_backend_required(strict_signer_profile, &signer_selection)?;
-    let (canonical_message, signature_hex, recovery_id) =
-        if signer_selection.key_source == KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL {
-            let provider = EnvKolmeLiveSignerSecretProvider;
-            provider.ensure_no_fallback_private_key_path()?;
-            ensure_kolme_live_managed_external_private_key_env_unset(&signer_selection)?;
-            let key_reference = read_required_kolme_live_key_reference_from_env(&signer_selection)?;
-            let managed_signing_key = build_kolme_live_managed_signing_key(key_reference.as_str())?;
-            let pubkey = encode_kolme_hex_lower(
-                managed_signing_key
-                    .verifying_key()
-                    .to_encoded_point(true)
-                    .as_bytes(),
-            );
-            let nonce = resolve_kolme_live_nonce(base_url, transport, pubkey.as_str())?;
-            let canonical_message =
-                render_kolme_live_native_direct_message(request, pubkey.as_str(), nonce)?;
-            let (signature_hex, recovery_id) = sign_kolme_live_managed_external_message(
-                key_reference.as_str(),
-                request,
-                nonce,
-                canonical_message.as_str(),
-                SignerProviderHandshakeMatrix::with_uniform_availability(true),
-                managed_signer_backend_required,
-            )?;
-            let verifier = KolmeForkSecp256k1SignerAdapter {
-                signing_key: managed_signing_key,
-                private_key_env: signer_selection.key_reference_env,
-            };
-            verifier.verify_message(
-                canonical_message.as_str(),
-                signature_hex.as_str(),
-                recovery_id,
-            )?;
-            (canonical_message, signature_hex, recovery_id)
-        } else {
-            let (signer_adapter, signer_selection_from_adapter) =
-                build_kolme_live_signer_adapter(strict_signer_profile, strict_signer_key_source)?;
-            let pubkey = signer_adapter.public_key_compressed_hex();
-            let nonce = resolve_kolme_live_nonce(base_url, transport, pubkey.as_str())?;
-            let canonical_message =
-                render_kolme_live_native_direct_message(request, pubkey.as_str(), nonce)?;
-            let (signature_hex, recovery_id) =
-                signer_adapter.sign_message(canonical_message.as_str())?;
-            debug_assert_eq!(
-                signer_selection.profile,
-                signer_selection_from_adapter.profile
-            );
-            debug_assert_eq!(
-                signer_selection.key_source,
-                signer_selection_from_adapter.key_source
-            );
-            debug_assert_eq!(
-                signer_selection.private_key_env,
-                signer_selection_from_adapter.private_key_env
-            );
-            (canonical_message, signature_hex, recovery_id)
+    let (canonical_message, signature_hex, recovery_id) = if signer_selection.key_source
+        == KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL
+    {
+        let provider = EnvKolmeLiveSignerSecretProvider;
+        provider.ensure_no_fallback_private_key_path()?;
+        ensure_kolme_live_managed_external_private_key_env_unset(&signer_selection)?;
+        let _managed_signer_required_marker = resolve_kolme_live_managed_signer_required_marker()?;
+        let key_reference = read_required_kolme_live_key_reference_from_env(&signer_selection)?;
+        let managed_signing_key = build_kolme_live_managed_signing_key(key_reference.as_str())?;
+        let pubkey = encode_kolme_hex_lower(
+            managed_signing_key
+                .verifying_key()
+                .to_encoded_point(true)
+                .as_bytes(),
+        );
+        let nonce = resolve_kolme_live_nonce(base_url, transport, pubkey.as_str())?;
+        let canonical_message =
+            render_kolme_live_native_direct_message(request, pubkey.as_str(), nonce)?;
+        let (signature_hex, recovery_id) = sign_kolme_live_managed_external_message(
+            key_reference.as_str(),
+            request,
+            nonce,
+            canonical_message.as_str(),
+            SignerProviderHandshakeMatrix::with_uniform_availability(true),
+        )?;
+        let verifier = KolmeForkSecp256k1SignerAdapter {
+            signing_key: managed_signing_key,
+            private_key_env: signer_selection.key_reference_env,
         };
+        verifier.verify_message(
+            canonical_message.as_str(),
+            signature_hex.as_str(),
+            recovery_id,
+        )?;
+        (canonical_message, signature_hex, recovery_id)
+    } else {
+        let (signer_adapter, signer_selection_from_adapter) =
+            build_kolme_live_signer_adapter(strict_signer_profile, strict_signer_key_source)?;
+        let pubkey = signer_adapter.public_key_compressed_hex();
+        let nonce = resolve_kolme_live_nonce(base_url, transport, pubkey.as_str())?;
+        let canonical_message =
+            render_kolme_live_native_direct_message(request, pubkey.as_str(), nonce)?;
+        let (signature_hex, recovery_id) =
+            signer_adapter.sign_message(canonical_message.as_str())?;
+        debug_assert_eq!(
+            signer_selection.profile,
+            signer_selection_from_adapter.profile
+        );
+        debug_assert_eq!(
+            signer_selection.key_source,
+            signer_selection_from_adapter.key_source
+        );
+        debug_assert_eq!(
+            signer_selection.private_key_env,
+            signer_selection_from_adapter.private_key_env
+        );
+        (canonical_message, signature_hex, recovery_id)
+    };
     let request = KolmeApiBroadcastRequest::new(
         canonical_message.as_str(),
         signature_hex.as_str(),
