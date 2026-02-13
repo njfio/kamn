@@ -22,6 +22,7 @@ RUNTIME_SIGNER_KEY_REF_ENV_BY_PROFILE = {
     RUNTIME_SIGNER_PROFILE_SECONDARY: "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY",
 }
 RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION = "kamn.kolme.runtime-signer-attestation.v1"
+RUNTIME_SIGNER_FAILOVER_ATTESTATION_MIN_REQUIRED_APPROVALS = 2
 RUNTIME_REAL_SIGNING_PROFILE_VALUE = "kolme-fork-secp256k1-v1"
 RUNTIME_REAL_SIGNING_PROFILE_MARKER = (
     f"KAMN_KOLME_LIVE_SIGNING_PROFILE={RUNTIME_REAL_SIGNING_PROFILE_VALUE}"
@@ -221,6 +222,47 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         expected_runtime_signer_private_key_env = RUNTIME_SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[runtime_signer_profile]
         expected_runtime_signer_key_reference_env = RUNTIME_SIGNER_KEY_REF_ENV_BY_PROFILE[runtime_signer_profile]
 
+    runtime_signer_previous_profile = report.get("runtime_signer_previous_profile")
+    if not isinstance(runtime_signer_previous_profile, str) or not runtime_signer_previous_profile.strip():
+        reason_codes.append("runtime_signer_previous_profile_missing")
+    elif runtime_signer_previous_profile not in ALLOWED_RUNTIME_SIGNER_PROFILES:
+        reason_codes.append("runtime_signer_previous_profile_invalid")
+
+    runtime_signer_failover_active = report.get("runtime_signer_failover_active")
+    if not isinstance(runtime_signer_failover_active, bool):
+        reason_codes.append("runtime_signer_failover_active_invalid")
+
+    runtime_signer_rotation_epoch = report.get("runtime_signer_rotation_epoch")
+    if not isinstance(runtime_signer_rotation_epoch, int) or runtime_signer_rotation_epoch <= 0:
+        reason_codes.append("runtime_signer_rotation_epoch_invalid")
+
+    runtime_signer_previous_rotation_epoch = report.get("runtime_signer_previous_rotation_epoch")
+    if (
+        not isinstance(runtime_signer_previous_rotation_epoch, int)
+        or runtime_signer_previous_rotation_epoch <= 0
+    ):
+        reason_codes.append("runtime_signer_previous_rotation_epoch_invalid")
+
+    if (
+        isinstance(runtime_signer_profile, str)
+        and runtime_signer_profile in ALLOWED_RUNTIME_SIGNER_PROFILES
+        and isinstance(runtime_signer_previous_profile, str)
+        and runtime_signer_previous_profile in ALLOWED_RUNTIME_SIGNER_PROFILES
+        and isinstance(runtime_signer_failover_active, bool)
+    ):
+        if runtime_signer_failover_active and runtime_signer_profile == runtime_signer_previous_profile:
+            reason_codes.append("runtime_signer_failover_profile_unchanged")
+        if (not runtime_signer_failover_active) and runtime_signer_profile != runtime_signer_previous_profile:
+            reason_codes.append("runtime_signer_profile_changed_without_failover")
+    if (
+        isinstance(runtime_signer_failover_active, bool)
+        and runtime_signer_failover_active
+        and isinstance(runtime_signer_rotation_epoch, int)
+        and isinstance(runtime_signer_previous_rotation_epoch, int)
+        and runtime_signer_rotation_epoch <= runtime_signer_previous_rotation_epoch
+    ):
+        reason_codes.append("runtime_signer_rotation_epoch_stale")
+
     runtime_signer_key_source = report.get("runtime_signer_key_source")
     normalized_runtime_signer_key_source = ""
     if not isinstance(runtime_signer_key_source, str) or not runtime_signer_key_source.strip():
@@ -268,12 +310,40 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif runtime_signer_attestation_schema_version != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
         reason_codes.append("runtime_signer_attestation_schema_version_mismatch")
 
+    runtime_signer_attestation_bundle = report.get("runtime_signer_attestation_bundle")
     reason_codes.extend(
         evaluate_runtime_signer_attestation_bundle(
-            report.get("runtime_signer_attestation_bundle"),
+            runtime_signer_attestation_bundle,
             runtime_signer_profile,
         )
     )
+
+    runtime_signer_attestation_required_approvals: int | None = None
+    runtime_signer_attestation_approved_signers: list[str] = []
+    if isinstance(runtime_signer_attestation_bundle, dict):
+        required_approvals_value = runtime_signer_attestation_bundle.get("required_approvals")
+        if isinstance(required_approvals_value, int):
+            runtime_signer_attestation_required_approvals = required_approvals_value
+
+        approved_signers_value = runtime_signer_attestation_bundle.get("approved_signers")
+        if isinstance(approved_signers_value, list):
+            for entry in approved_signers_value:
+                if isinstance(entry, str) and entry.strip():
+                    runtime_signer_attestation_approved_signers.append(entry.strip())
+
+    if isinstance(runtime_signer_failover_active, bool) and runtime_signer_failover_active:
+        if (
+            not isinstance(runtime_signer_attestation_required_approvals, int)
+            or runtime_signer_attestation_required_approvals
+            < RUNTIME_SIGNER_FAILOVER_ATTESTATION_MIN_REQUIRED_APPROVALS
+        ):
+            reason_codes.append("runtime_signer_failover_attestation_required_approvals_insufficient")
+        if (
+            isinstance(runtime_signer_previous_profile, str)
+            and runtime_signer_previous_profile.strip()
+            and runtime_signer_previous_profile not in runtime_signer_attestation_approved_signers
+        ):
+            reason_codes.append("runtime_signer_failover_attestation_previous_profile_not_approved")
 
     runtime_commit_live_policy_report = report.get("runtime_commit_live_policy_report")
     if not isinstance(runtime_commit_live_policy_report, str) or not runtime_commit_live_policy_report.strip():
@@ -368,8 +438,34 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_signer_attestation_threshold_required_contract_mismatch")
         if contracts.get("runtime_signer_attestation_profile_membership_required") is not True:
             reason_codes.append("runtime_signer_attestation_profile_membership_required_contract_mismatch")
-        if contracts.get("runtime_signer_attestation_required_approvals") != 1:
+        expected_runtime_signer_attestation_required_approvals = (
+            RUNTIME_SIGNER_FAILOVER_ATTESTATION_MIN_REQUIRED_APPROVALS
+            if runtime_signer_failover_active is True
+            else 1
+        )
+        if (
+            contracts.get("runtime_signer_attestation_required_approvals")
+            != expected_runtime_signer_attestation_required_approvals
+        ):
             reason_codes.append("runtime_signer_attestation_required_approvals_contract_mismatch")
+        if contracts.get("runtime_signer_failover_requires_profile_change") is not True:
+            reason_codes.append("runtime_signer_failover_requires_profile_change_contract_mismatch")
+        if contracts.get("runtime_signer_rotation_epoch_must_increase_on_failover") is not True:
+            reason_codes.append("runtime_signer_rotation_epoch_contract_mismatch")
+        if (
+            contracts.get("runtime_signer_failover_attestation_min_required_approvals")
+            != RUNTIME_SIGNER_FAILOVER_ATTESTATION_MIN_REQUIRED_APPROVALS
+        ):
+            reason_codes.append(
+                "runtime_signer_failover_attestation_min_required_approvals_contract_mismatch"
+            )
+        if (
+            contracts.get("runtime_signer_failover_attestation_previous_profile_membership_required")
+            is not True
+        ):
+            reason_codes.append(
+                "runtime_signer_failover_attestation_previous_profile_membership_contract_mismatch"
+            )
 
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:

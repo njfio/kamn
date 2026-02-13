@@ -16,6 +16,7 @@ SIGNER_KEY_SOURCE="env-local"
 SIGNER_ROTATION_EPOCH=1
 SIGNER_PREVIOUS_ROTATION_EPOCH=1
 SIGNER_ROTATION_FRESHNESS_MAX_DELTA=2
+MIN_PRODUCTION_REQUIRED_APPROVALS=2
 
 REQUIRED_RUNTIME_MODE="kolme-live"
 SIGNER_PROFILE_SELECTOR_ENV="KAMN_KOLME_LIVE_SIGNER_PROFILE"
@@ -380,7 +381,16 @@ if [ "$MODE" = "run" ]; then
           reason_code="checkpoint_failed_signer_secret_contract"
         else
           record_check "signer_secret_contract" "$signer_secret_command" "pass" "signer_secret_validated"
-          if [ "$RECEIVED_APPROVALS" -lt "$REQUIRED_APPROVALS" ]; then
+          if [ "$REQUIRED_APPROVALS" -lt "$MIN_PRODUCTION_REQUIRED_APPROVALS" ]; then
+            echo "required approvals must be at least ${MIN_PRODUCTION_REQUIRED_APPROVALS} for production signer profiles: required=$REQUIRED_APPROVALS" >&2
+            record_check "signer_quorum_contract" "$signer_quorum_command" "fail" "signer_quorum_minimum_not_met"
+            record_check "quorum_evidence_contract" "$quorum_evidence_command" "skipped" "signer_quorum_minimum_not_met"
+            record_check "custody_evidence_contract" "$custody_evidence_command" "skipped" "signer_quorum_minimum_not_met"
+            record_check "signer_provenance_contract" "$signer_provenance_command" "skipped" "signer_quorum_minimum_not_met"
+            record_check "signer_rotation_freshness_contract" "$signer_rotation_freshness_command" "skipped" "signer_quorum_minimum_not_met"
+            overall_status="fail"
+            reason_code="checkpoint_failed_signer_quorum_contract"
+          elif [ "$RECEIVED_APPROVALS" -lt "$REQUIRED_APPROVALS" ]; then
             echo "signer quorum approvals below required threshold: required=$REQUIRED_APPROVALS received=$RECEIVED_APPROVALS" >&2
             record_check "signer_quorum_contract" "$signer_quorum_command" "fail" "signer_quorum_shortfall"
             record_check "quorum_evidence_contract" "$quorum_evidence_command" "skipped" "signer_quorum_shortfall"
@@ -945,6 +955,7 @@ summary = {
         "fallback_private_key_path_allowed": False,
         "required_secret_hex_length": required_secret_hex_length,
         "secret_source": "env",
+        "approval_quorum_minimum": 2,
         "approval_quorum_required": required_approvals,
         "approval_quorum_source": "local-operator-attestations",
         "quorum_evidence_required": True,

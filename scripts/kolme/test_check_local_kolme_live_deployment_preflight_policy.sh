@@ -9,6 +9,7 @@ CI_DOC_FILE="$ROOT_DIR/docs/ci/strategy.md"
 README_FILE="$ROOT_DIR/README.md"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT_OK="$TMP_DIR/ok-report.json"
+TMP_REPORT_QUORUM_MINIMUM="$TMP_DIR/quorum-minimum-report.json"
 TMP_REPORT_BAD="$TMP_DIR/bad-report.json"
 TMP_POLICY_OUT="$TMP_DIR/policy-report.json"
 TMP_SUMMARY="$TMP_DIR/summary.json"
@@ -120,6 +121,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "fallback_private_key_path_allowed": false,
     "required_secret_hex_length": 64,
     "secret_source": "env",
+    "approval_quorum_minimum": 2,
     "approval_quorum_required": 2,
     "approval_quorum_source": "local-operator-attestations",
     "quorum_evidence_required": true,
@@ -236,6 +238,46 @@ if report.get("final_decision") != "GO":
 if report.get("reason_codes") != []:
     raise SystemExit("expected no reason codes for valid deployment preflight report")
 PY
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_QUORUM_MINIMUM" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["required_approvals"] = 1
+report["received_approvals"] = 0
+bundle = dict(report.get("runtime_signer_attestation_bundle", {}))
+bundle["required_approvals"] = 1
+report["runtime_signer_attestation_bundle"] = bundle
+contracts = dict(report.get("contracts", {}))
+contracts["approval_quorum_required"] = 1
+contracts["runtime_signer_attestation_required_approvals"] = 1
+report["contracts"] = contracts
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_QUORUM_MINIMUM" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+quorum_minimum_exit_code=$?
+set -e
+
+if [ "$quorum_minimum_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight policy checker to fail when production required approvals drop below multi-signer minimum" >&2
+  exit 1
+fi
+
+if ! grep -q "signer_quorum_minimum_not_met" "$TMP_ERR"; then
+  echo "expected signer_quorum_minimum_not_met reason for deployment preflight policy failure" >&2
+  exit 1
+fi
 
 cat >"$TMP_REPORT_BAD" <<'JSON'
 {

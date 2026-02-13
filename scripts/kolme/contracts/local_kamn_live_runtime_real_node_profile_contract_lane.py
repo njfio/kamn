@@ -403,6 +403,18 @@ def main() -> int:
     if contracts.get("runtime_signer_attestation_required_approvals") != 1:
         print("expected contracts runtime signer attestation required approvals marker in contract-lane summary", file=sys.stderr)
         return 1
+    if contracts.get("runtime_signer_failover_attestation_min_required_approvals") != 2:
+        print(
+            "expected contracts runtime signer failover attestation minimum approvals marker in contract-lane summary",
+            file=sys.stderr,
+        )
+        return 1
+    if contracts.get("runtime_signer_failover_attestation_previous_profile_membership_required") is not True:
+        print(
+            "expected contracts runtime signer failover previous-profile attestation membership marker in contract-lane summary",
+            file=sys.stderr,
+        )
+        return 1
     if policy.get("schema_version") != "kamn.kolme.local-kamn-live-runtime-real-node-policy-report.v1":
         print("unexpected real-node profile policy schema in contract-lane output", file=sys.stderr)
         return 1
@@ -469,6 +481,7 @@ def main() -> int:
             expected_signer_profile,
             alternate_signer_profile,
         ]
+        forced_failover_go_attestation_bundle["required_approvals"] = 2
         forced_failover_go_attestation_bundle["signer_profile"] = alternate_signer_profile
         forced_failover_go_summary["runtime_signer_attestation_bundle"] = (
             forced_failover_go_attestation_bundle
@@ -481,6 +494,7 @@ def main() -> int:
         forced_failover_go_contracts["runtime_signer_key_reference_env"] = (
             SIGNER_KEY_REF_ENV_BY_PROFILE[alternate_signer_profile]
         )
+        forced_failover_go_contracts["runtime_signer_attestation_required_approvals"] = 2
         forced_failover_go_summary["contracts"] = forced_failover_go_contracts
         forced_failover_go_summary_file.write_text(
             json.dumps(forced_failover_go_summary, sort_keys=True, indent=2) + "\n",

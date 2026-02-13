@@ -664,6 +664,7 @@ JSON`
     - `contracts.fallback_signer_secret_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
     - `contracts.fallback_signer_secret_checkpoint_reason_code=checkpoint_failed_fallback_private_key_contract`
     - `contracts.approval_quorum_required=2`
+    - `contracts.approval_quorum_minimum=2`
     - `contracts.approval_quorum_source=local-operator-attestations`
     - `contracts.quorum_evidence_required=true`
     - `contracts.quorum_evidence_sha256_required=true`
@@ -699,6 +700,7 @@ JSON`
   - `checkpoint_failed_signer_provenance_contract`
   - `checkpoint_failed_signer_rotation_freshness_contract`
   - `signer_quorum_shortfall`
+  - `signer_quorum_minimum_not_met`
   - `quorum_evidence_missing`
   - `quorum_evidence_sha256_invalid`
   - `quorum_evidence_schema_invalid`

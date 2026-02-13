@@ -21,6 +21,7 @@ ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE = {
     PRIMARY_SIGNER_PROFILE: ("env-local", "managed-external"),
     SECONDARY_SIGNER_PROFILE: ("env-local",),
 }
+MIN_PRODUCTION_REQUIRED_APPROVALS = 2
 
 
 def evaluate_runtime_signer_attestation_bundle(
@@ -258,6 +259,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     required_approvals = report.get("required_approvals")
     if not isinstance(required_approvals, int) or required_approvals <= 0:
         reason_codes.append("required_approvals_invalid")
+    elif signer_profile_class == "production" and required_approvals < MIN_PRODUCTION_REQUIRED_APPROVALS:
+        reason_codes.append("signer_quorum_minimum_not_met")
 
     received_approvals = report.get("received_approvals")
     if not isinstance(received_approvals, int) or received_approvals < 0:
@@ -392,6 +395,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("approval_quorum_required_contract_invalid")
         elif isinstance(required_approvals, int) and approval_quorum_required != required_approvals:
             reason_codes.append("approval_quorum_required_contract_mismatch")
+        if contracts.get("approval_quorum_minimum") != MIN_PRODUCTION_REQUIRED_APPROVALS:
+            reason_codes.append("approval_quorum_minimum_contract_mismatch")
         if contracts.get("approval_quorum_source") != "local-operator-attestations":
             reason_codes.append("approval_quorum_source_contract_mismatch")
         if contracts.get("quorum_evidence_required") is not True:

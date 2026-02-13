@@ -262,6 +262,9 @@ def main() -> int:
     if contracts.get("approval_quorum_required") != 2:
         print("expected deployment preflight contracts approval_quorum_required=2", file=sys.stderr)
         return 1
+    if contracts.get("approval_quorum_minimum") != 2:
+        print("expected deployment preflight contracts approval_quorum_minimum=2", file=sys.stderr)
+        return 1
     if contracts.get("quorum_evidence_required") is not True:
         print("expected deployment preflight contracts quorum_evidence_required=true", file=sys.stderr)
         return 1
@@ -414,6 +417,47 @@ def main() -> int:
             return 1
         if quorum_no_go_policy.get("final_decision") != "NO-GO":
             print("expected signer quorum negative policy final_decision NO-GO", file=sys.stderr)
+            return 1
+
+        quorum_minimum_negative_report = temp_path / "signer_quorum_minimum_negative_summary.json"
+        quorum_minimum_negative_policy = temp_path / "signer_quorum_minimum_negative_policy.json"
+        quorum_minimum_negative_summary = dict(summary)
+        quorum_minimum_negative_summary["mode"] = "run"
+        quorum_minimum_negative_summary["status"] = "fail"
+        quorum_minimum_negative_summary["reason_code"] = "checkpoint_failed_signer_quorum_contract"
+        quorum_minimum_negative_summary["signer_secret_present"] = True
+        quorum_minimum_negative_summary["signer_secret_hex_valid"] = True
+        quorum_minimum_negative_summary["required_approvals"] = 1
+        quorum_minimum_negative_summary["received_approvals"] = 1
+        quorum_minimum_negative_summary["contracts"] = dict(contracts)
+        quorum_minimum_negative_summary["contracts"]["approval_quorum_required"] = 1
+        quorum_minimum_negative_summary["contracts"]["runtime_signer_attestation_required_approvals"] = 1
+        quorum_minimum_negative_report.write_text(
+            json.dumps(quorum_minimum_negative_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        quorum_minimum_no_go_result = run_policy_check(
+            report_file=quorum_minimum_negative_report,
+            output_json=quorum_minimum_negative_policy,
+            expected_final_decision="NO-GO",
+            required_reason_code="checkpoint_failed_signer_quorum_contract",
+        )
+        if quorum_minimum_no_go_result.returncode == 0:
+            print("expected signer quorum minimum negative proof to fail closed", file=sys.stderr)
+            return 1
+        quorum_minimum_no_go_policy = json.loads(
+            quorum_minimum_negative_policy.read_text(encoding="utf-8")
+        )
+        quorum_minimum_no_go_reason_codes = quorum_minimum_no_go_policy.get("reason_codes")
+        if not isinstance(quorum_minimum_no_go_reason_codes, list):
+            print("expected reason_codes list in signer quorum minimum negative policy output", file=sys.stderr)
+            return 1
+        if "signer_quorum_minimum_not_met" not in quorum_minimum_no_go_reason_codes:
+            print("expected signer_quorum_minimum_not_met in signer quorum minimum negative policy output", file=sys.stderr)
+            return 1
+        if quorum_minimum_no_go_policy.get("final_decision") != "NO-GO":
+            print("expected signer quorum minimum negative policy final_decision NO-GO", file=sys.stderr)
             return 1
 
         quorum_evidence_negative_report = temp_path / "quorum_evidence_negative_summary.json"
@@ -790,6 +834,7 @@ def main() -> int:
         "checkpoint_failed_signer_provenance_contract",
         "checkpoint_failed_signer_rotation_freshness_contract",
         "signer_quorum_shortfall",
+        "signer_quorum_minimum_not_met",
         "quorum_evidence_missing",
         "quorum_evidence_signer_roles_missing",
         "quorum_evidence_signer_roles_invalid",
@@ -803,6 +848,7 @@ def main() -> int:
         "quorum_evidence_rotation_metadata_valid",
         "contracts.quorum_evidence_signer_roles_required=true",
         "contracts.quorum_evidence_rotation_metadata_required=true",
+        "contracts.approval_quorum_minimum=2",
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
         "runtime_signer_attestation_schema_invalid",
@@ -838,6 +884,7 @@ def main() -> int:
         "checkpoint_failed_signer_provenance_contract",
         "checkpoint_failed_signer_rotation_freshness_contract",
         "signer_quorum_shortfall",
+        "signer_quorum_minimum_not_met",
         "quorum_evidence_missing",
         "quorum_evidence_signer_roles_missing",
         "quorum_evidence_signer_roles_invalid",
@@ -851,6 +898,7 @@ def main() -> int:
         "quorum_evidence_rotation_metadata_valid",
         "contracts.quorum_evidence_signer_roles_required=true",
         "contracts.quorum_evidence_rotation_metadata_required=true",
+        "contracts.approval_quorum_minimum=2",
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
         "runtime_signer_attestation_schema_invalid",
@@ -886,6 +934,7 @@ def main() -> int:
         "checkpoint_failed_signer_provenance_contract",
         "checkpoint_failed_signer_rotation_freshness_contract",
         "signer_quorum_shortfall",
+        "signer_quorum_minimum_not_met",
         "quorum_evidence_missing",
         "quorum_evidence_signer_roles_missing",
         "quorum_evidence_signer_roles_invalid",
@@ -899,6 +948,7 @@ def main() -> int:
         "quorum_evidence_rotation_metadata_valid",
         "contracts.quorum_evidence_signer_roles_required=true",
         "contracts.quorum_evidence_rotation_metadata_required=true",
+        "contracts.approval_quorum_minimum=2",
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
         "runtime_signer_attestation_schema_invalid",
