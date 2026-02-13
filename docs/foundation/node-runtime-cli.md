@@ -259,6 +259,18 @@ This document captures node-runtime productionization slices for machine-readabl
     - `kolme_live_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX|KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY`
   - `kolme_live_execution_status=submitted;commit_id=<deterministic-commit-id>;finality=<pending|final|failed>;resolution=<submit-receipt|finality-polled|finality-timeout|finality-unavailable>`
 
+## Decomposition Guardrails
+- `main.rs` orchestrates only and must not absorb parser/signer/wire/live-runtime implementation details.
+- Canonical module ownership map:
+  - `docs/architecture/kamn-node-module-map.md`
+- Module ownership boundaries:
+  - `src/cli.rs` owns CLI parsing and parser helper validation.
+  - `src/runtime_kolme_live.rs` owns live submit/finality execution.
+  - `src/signer.rs` owns signer policy and signing adapters.
+  - `src/wire_payload.rs` owns deterministic wire payload rendering.
+- Regression marker:
+  - `Regression: #2606`
+
 ## Test Coverage Mapping
 - Unit:
   - default mode behavior and mode parsing checks
@@ -284,6 +296,7 @@ Run targeted checks first:
 ```bash
 cargo test -p kamn-node
 cargo test -p kamn-node --test node_runtime_cli_docs
+cargo test -p kamn-node --test node_module_map_docs
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-core construct_lock
 cargo fmt --check
