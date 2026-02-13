@@ -21,6 +21,8 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_check_kolme_wrapper_budget_trend.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave1_wrapper_family_baseline_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave1_wrapper_family_budget_trend.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave2_wrapper_family_baseline_contract.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave2_wrapper_family_budget_trend.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_lane_migration_matrix_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_generate_fork_compatibility_evidence.sh"'
