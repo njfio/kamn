@@ -974,6 +974,10 @@ bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --c
 KAMN_KOLME_LOCAL_HEAVY=1 \
 bash scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --serve-command "python3 /tmp/mock_kolme_api.py 3000 v0.15.2" --integration-runtime-commit-finality-command "printf 'finality=final\n'" --integration-runtime-commit-finality-max-seconds 15 --integration-runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --integration-runtime-commit-live-policy-report /tmp/kolme-local-runtime-commit-live-policy.json --rollback-evidence-file /tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json --recovery-evidence-file /tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json
 
+# run-wrapper dispatcher resolution
+scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_process_lifecycle_lane.sh --resolve-manifest-path
+# resolved: scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_lane.json
+
 # policy checker contract
 python3 scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py --report-file /tmp/kolme-local-fork-process-lifecycle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-process-lifecycle-policy.json
 

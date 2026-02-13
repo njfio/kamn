@@ -6,6 +6,10 @@ RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_process_lifecycle_contract_
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_kolme_fork_process_lifecycle_contract_lane.py"
+RUN_WRAPPER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh"
+RUN_WRAPPER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_process_lifecycle_lane_impl.sh"
+RUN_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_fork_process_lifecycle_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 README_FILE="$ROOT_DIR/README.md"
 TMP_REPORT="$(mktemp)"
@@ -19,6 +23,61 @@ fi
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected local fork process lifecycle policy checker to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$RUN_WRAPPER_IMPL" ]; then
+  echo "expected local fork process lifecycle implementation runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected local run lane dispatcher to be executable" >&2
+  exit 1
+fi
+
+if [ ! -L "$RUN_WRAPPER" ]; then
+  echo "expected local fork process lifecycle runner to be a symlink to shared runtime lane dispatcher" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$RUN_WRAPPER")" != "run_lane_dispatch.sh" ]; then
+  echo "expected local fork process lifecycle runner symlink target to be run_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+if [ ! -f "$RUN_MANIFEST" ]; then
+  echo "expected local fork process lifecycle run manifest to exist" >&2
+  exit 1
+fi
+
+python3 - "$RUN_MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.contract-lane.manifest.v1":
+    raise SystemExit("expected local fork process lifecycle run manifest schema")
+if payload.get("lane_id") != "kolme.local_kolme_fork_process_lifecycle.run":
+    raise SystemExit("expected local fork process lifecycle run manifest lane_id")
+run_command = payload.get("phases", {}).get("run")
+if run_command != [
+    "bash",
+    "scripts/kolme/run_local_kolme_fork_process_lifecycle_lane_impl.sh",
+]:
+    raise SystemExit("expected local fork process lifecycle run manifest command")
+PY
+
+resolved_run_manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUN_WRAPPER")" --resolve-manifest-path)"
+if [ "$resolved_run_manifest_path" != "$RUN_MANIFEST" ]; then
+  echo "expected local fork process lifecycle wrapper to resolve deterministic run manifest" >&2
+  exit 1
+fi
+
+if bash "$DISPATCHER" --lane-wrapper run_missing_local_kolme_fork_process_lifecycle_lane.sh --resolve-manifest-path >/dev/null 2>&1; then
+  echo "expected local run lane dispatcher to fail closed for unknown local fork process lifecycle wrapper" >&2
   exit 1
 fi
 
@@ -37,7 +96,7 @@ required_integration_finality_markers=(
   "--recovery-evidence-file"
 )
 for marker in "${required_integration_finality_markers[@]}"; do
-  if ! grep -q -- "$marker" "$ROOT_DIR/scripts/kolme/run_local_kolme_fork_process_lifecycle_lane.sh"; then
+  if ! grep -q -- "$marker" "$RUN_WRAPPER_IMPL"; then
     echo "expected local fork process lifecycle runner to expose integration pass-through marker: $marker" >&2
     exit 1
   fi
@@ -89,6 +148,21 @@ if ! grep -q "check_local_kolme_fork_process_lifecycle_policy.py" "$DOC_FILE"; t
   exit 1
 fi
 
+if ! grep -q "run_local_kolme_fork_process_lifecycle_lane.sh" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local fork process lifecycle runner" >&2
+  exit 1
+fi
+
+if ! grep -q "run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_process_lifecycle_lane.sh --resolve-manifest-path" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local fork process lifecycle run-wrapper dispatcher mapping" >&2
+  exit 1
+fi
+
+if ! grep -q "kolme_local_kolme_fork_process_lifecycle_lane.json" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local fork process lifecycle run manifest" >&2
+  exit 1
+fi
+
 if ! grep -q "run_local_kolme_fork_process_lifecycle_contract_lane.sh" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to reference local fork process lifecycle contract lane" >&2
   exit 1
@@ -116,6 +190,21 @@ fi
 
 if ! grep -q "check_local_kolme_fork_process_lifecycle_policy.py" "$README_FILE"; then
   echo "expected README to reference local fork process lifecycle policy checker" >&2
+  exit 1
+fi
+
+if ! grep -q "run_local_kolme_fork_process_lifecycle_lane.sh" "$README_FILE"; then
+  echo "expected README to reference local fork process lifecycle runner" >&2
+  exit 1
+fi
+
+if ! grep -q "run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_process_lifecycle_lane.sh --resolve-manifest-path" "$README_FILE"; then
+  echo "expected README to reference local fork process lifecycle run-wrapper dispatcher mapping" >&2
+  exit 1
+fi
+
+if ! grep -q "kolme_local_kolme_fork_process_lifecycle_lane.json" "$README_FILE"; then
+  echo "expected README to reference local fork process lifecycle run manifest" >&2
   exit 1
 fi
 
