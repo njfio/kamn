@@ -179,7 +179,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - `kamn-node --role processor --runtime-mode kolme-live`
   - `kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1`
   - `kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1 --kolme-live-strict-signer-contracts --kolme-live-signer-profile ops-primary --kolme-live-signer-key-source env-local`
-  - `KAMN_KOLME_LIVE_SIGNER_KEY_REF=secure:aws-kms:role-operator/key-live-ops-primary KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND='sh /opt/kamn/signer-backend.sh' kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1 --kolme-live-strict-signer-contracts --kolme-live-signer-profile ops-primary --kolme-live-signer-key-source managed-external`
+  - `KAMN_KOLME_LIVE_SIGNER_KEY_REF=secure:aws-kms:role-operator/key-live-ops-primary KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX=03af446f76cf36092a4e45864210a1dbf03e872756eec21de61910859f8a607dd2 KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND='sh /opt/kamn/signer-backend.sh' kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1 --kolme-live-strict-signer-contracts --kolme-live-signer-profile ops-primary --kolme-live-signer-key-source managed-external`
 
 ## Daemon Runtime Rules
 - Supported runtime modes:
@@ -217,6 +217,11 @@ This document captures node-runtime productionization slices for machine-readabl
   - managed-external key-reference env markers:
     - `ops-primary`: `KAMN_KOLME_LIVE_SIGNER_KEY_REF`
     - `ops-secondary`: `KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY`
+  - managed-external signer public-key env markers:
+    - `ops-primary`: `KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX`
+    - `ops-secondary`: `KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY`
+    - missing marker fails closed with `managed_signer_public_key_marker_missing`
+    - invalid/empty/non-secp256k1 marker fails closed with `managed_signer_public_key_marker_invalid`
   - managed-external mode rejects raw private-key env markers for the selected profile with deterministic reason code `managed_signer_raw_private_key_forbidden`
   - managed-external signer mode requires `KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND`; if absent, runtime fails closed with `managed_signer_backend_required_missing`
   - managed-external compatibility marker parsing:

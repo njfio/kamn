@@ -567,6 +567,11 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - real-node profile requires runtime command surfaces to include `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1`; checker fails closed with `runtime_commit_real_signing_profile_marker_missing` when omitted.
   - real-node profile requires runtime command surfaces to include `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary`; checker fails closed with `runtime_commit_signer_profile_marker_missing` when omitted.
   - real-node profile requires runtime command surfaces to include `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary` when `runtime_signer_profile=ops-secondary`; checker fails closed with `runtime_commit_signer_profile_marker_missing` when omitted.
+  - real-node profile requires managed-external runtime signer public-key command markers:
+    - `ops-primary`: `KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX=<33-byte-compressed-secp256k1-hex>`
+    - `ops-secondary`: `KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY=<33-byte-compressed-secp256k1-hex>`
+    - missing marker fails closed with `managed_signer_public_key_marker_missing`
+    - invalid/empty/non-secp256k1 marker fails closed with `managed_signer_public_key_marker_invalid`
   - real-node profile command composition rejects in-memory fallback references at runner boundary:
     - `runtime-commit-command must not reference InMemoryKolmeRuntimeCommitClient when runtime-profile=real-node`
   - real-node profile command composition rejects fallback signer private-key command markers at runner boundary:
@@ -580,6 +585,11 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - managed-external signer mode requires command marker presence; missing marker fails closed with `managed_signer_backend_required_missing`
     - optional requirement override marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED=true|false`
     - invalid/empty requirement marker values fail closed with `managed_signer_backend_required_invalid`
+    - runtime signer public-key env marker contracts:
+      - `ops-primary`: `KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX`
+      - `ops-secondary`: `KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY`
+      - missing marker fails closed with `managed_signer_public_key_marker_missing`
+      - invalid/empty/non-secp256k1 marker fails closed with `managed_signer_public_key_marker_invalid`
     - optional timeout env marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS` (default `5`)
     - command input env markers: `KAMN_MANAGED_SIGNER_KEY_REFERENCE`, `KAMN_MANAGED_SIGNER_ACTOR_DID`, `KAMN_MANAGED_SIGNER_NONCE`, `KAMN_MANAGED_SIGNER_STATE_ROOT`, `KAMN_MANAGED_SIGNER_CANONICAL_MESSAGE`
     - command output markers: `signature_hex=<128-hex>`, `recovery_id=<0..3>`, and `signer_public_key_hex=<33-byte-compressed-secp256k1-hex>`

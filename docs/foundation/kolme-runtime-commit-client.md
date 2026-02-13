@@ -266,6 +266,12 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
       - managed-external signer mode always requires the command marker; missing marker fails closed with `managed_signer_backend_required_missing`.
       - compatibility marker `KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED=true|false` is parsed when present; invalid/empty values fail closed with `managed_signer_backend_required_invalid`.
       - marker presence does not relax mandatory managed-external backend command execution.
+      - runtime signer public-key env marker contracts:
+        - `ops-primary`: `KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX`
+        - `ops-secondary`: `KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY`
+        - runtime nonce lookup and canonical payload rendering consume these markers directly.
+        - missing marker fails closed with `managed_signer_public_key_marker_missing`.
+        - invalid/empty/non-secp256k1 marker fails closed with `managed_signer_public_key_marker_invalid`.
       - command input env markers: `KAMN_MANAGED_SIGNER_KEY_REFERENCE`, `KAMN_MANAGED_SIGNER_ACTOR_DID`, `KAMN_MANAGED_SIGNER_NONCE`, `KAMN_MANAGED_SIGNER_STATE_ROOT`, `KAMN_MANAGED_SIGNER_CANONICAL_MESSAGE`.
       - command output contract (stdout, key-value lines): `signature_hex=<128-hex>`, `recovery_id=<0..3>`, and `signer_public_key_hex=<33-byte-compressed-secp256k1-hex>`.
       - missing signer provenance marker fails closed with `managed_signer_backend_response_provenance_missing`.
