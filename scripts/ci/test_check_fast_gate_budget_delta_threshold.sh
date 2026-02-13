@@ -18,6 +18,8 @@ FAIL_REPORT="$TMP_DIR/fail.json"
 WAIVER_JSON="$TMP_DIR/waiver.json"
 EXPIRED_WAIVER_JSON="$TMP_DIR/expired-waiver.json"
 TAMPERED_REPORT="$TMP_DIR/tampered.json"
+LOCAL_HEAVY_SOFT_REPORT="$TMP_DIR/local-heavy-soft.json"
+LOCAL_HEAVY_MARKER_MISSING_REPORT="$TMP_DIR/local-heavy-marker-missing.json"
 
 cat >"$THRESHOLD_ENV" <<'ENV'
 FAST_GATE_DELTA_BASELINE_ELAPSED_SECONDS=230
@@ -30,6 +32,10 @@ cat >"$PASS_REPORT" <<'JSON'
 {
   "schema_version": "kamn.ci.fast-gate-budget-delta-report.v1",
   "lane": "fast-gate",
+  "test_scope": "targeted",
+  "local_heavy_sensitive": false,
+  "local_heavy_scope_class": "none",
+  "local_heavy_sensitive_drift_detected": false,
   "variance": {
     "elapsed_seconds_delta": 10,
     "elapsed_seconds_delta_pct": 4.35,
@@ -43,6 +49,10 @@ cat >"$FAIL_REPORT" <<'JSON'
 {
   "schema_version": "kamn.ci.fast-gate-budget-delta-report.v1",
   "lane": "fast-gate",
+  "test_scope": "kolme-local-heavy-contract",
+  "local_heavy_sensitive": true,
+  "local_heavy_scope_class": "contract",
+  "local_heavy_sensitive_drift_detected": true,
   "variance": {
     "elapsed_seconds_delta": 70,
     "elapsed_seconds_delta_pct": 30.43,
@@ -82,6 +92,37 @@ cat >"$TAMPERED_REPORT" <<'JSON'
 }
 JSON
 
+cat >"$LOCAL_HEAVY_SOFT_REPORT" <<'JSON'
+{
+  "schema_version": "kamn.ci.fast-gate-budget-delta-report.v1",
+  "lane": "fast-gate",
+  "test_scope": "kolme-local-heavy-local-only",
+  "local_heavy_sensitive": true,
+  "local_heavy_scope_class": "local-only",
+  "local_heavy_sensitive_drift_detected": true,
+  "variance": {
+    "elapsed_seconds_delta": 10,
+    "elapsed_seconds_delta_pct": 4.35,
+    "runner_minutes_delta": 0,
+    "runner_minutes_delta_pct": 0.0
+  }
+}
+JSON
+
+cat >"$LOCAL_HEAVY_MARKER_MISSING_REPORT" <<'JSON'
+{
+  "schema_version": "kamn.ci.fast-gate-budget-delta-report.v1",
+  "lane": "fast-gate",
+  "test_scope": "kolme-local-heavy-contract",
+  "variance": {
+    "elapsed_seconds_delta": 10,
+    "elapsed_seconds_delta_pct": 4.35,
+    "runner_minutes_delta": 0,
+    "runner_minutes_delta_pct": 0.0
+  }
+}
+JSON
+
 start_epoch="$(date +%s)"
 bash "$SCRIPT" \
   --report-json "$PASS_REPORT" \
@@ -94,6 +135,11 @@ if [ "$elapsed_seconds" -gt 2 ]; then
 fi
 grep -q '^status=pass$' "$TMP_DIR/pass.out"
 grep -q '^waived=false$' "$TMP_DIR/pass.out"
+grep -q '^review_required=false$' "$TMP_DIR/pass.out"
+grep -q '^soft_overrun_status=within$' "$TMP_DIR/pass.out"
+grep -q '^reason_codes=none$' "$TMP_DIR/pass.out"
+grep -q '^local_heavy_sensitive=false$' "$TMP_DIR/pass.out"
+grep -q '^local_heavy_sensitive_drift_detected=false$' "$TMP_DIR/pass.out"
 
 if bash "$SCRIPT" \
   --report-json "$FAIL_REPORT" \
@@ -104,6 +150,11 @@ if bash "$SCRIPT" \
 fi
 grep -q '^status=fail$' "$TMP_DIR/fail.out"
 grep -q 'violations=elapsed_seconds_delta_pct,runner_minutes_delta_pct' "$TMP_DIR/fail.out"
+grep -q '^review_required=false$' "$TMP_DIR/fail.out"
+grep -q '^soft_overrun_status=within$' "$TMP_DIR/fail.out"
+grep -q '^reason_codes=delta_threshold_violation_unwaived$' "$TMP_DIR/fail.out"
+grep -q '^local_heavy_sensitive=true$' "$TMP_DIR/fail.out"
+grep -q '^local_heavy_sensitive_drift_detected=true$' "$TMP_DIR/fail.out"
 
 bash "$SCRIPT" \
   --report-json "$FAIL_REPORT" \
@@ -111,6 +162,31 @@ bash "$SCRIPT" \
   --waiver-file "$WAIVER_JSON" >"$TMP_DIR/waived.out"
 grep -q '^status=pass$' "$TMP_DIR/waived.out"
 grep -q '^waived=true$' "$TMP_DIR/waived.out"
+grep -q '^review_required=true$' "$TMP_DIR/waived.out"
+grep -q '^soft_overrun_status=exceeded$' "$TMP_DIR/waived.out"
+grep -q '^reason_codes=delta_threshold_waiver_applied,local_heavy_sensitive_drift_detected$' "$TMP_DIR/waived.out"
+grep -q '^local_heavy_sensitive=true$' "$TMP_DIR/waived.out"
+grep -q '^local_heavy_sensitive_drift_detected=true$' "$TMP_DIR/waived.out"
+
+# Regression: #2337
+bash "$SCRIPT" \
+  --report-json "$LOCAL_HEAVY_SOFT_REPORT" \
+  --threshold-file "$THRESHOLD_ENV" \
+  --waiver-file "$WAIVER_JSON" >"$TMP_DIR/local-heavy-soft.out"
+grep -q '^status=pass$' "$TMP_DIR/local-heavy-soft.out"
+grep -q '^waived=false$' "$TMP_DIR/local-heavy-soft.out"
+grep -q '^review_required=true$' "$TMP_DIR/local-heavy-soft.out"
+grep -q '^soft_overrun_status=exceeded$' "$TMP_DIR/local-heavy-soft.out"
+grep -q '^reason_codes=local_heavy_sensitive_drift_detected$' "$TMP_DIR/local-heavy-soft.out"
+
+if bash "$SCRIPT" \
+  --report-json "$LOCAL_HEAVY_MARKER_MISSING_REPORT" \
+  --threshold-file "$THRESHOLD_ENV" \
+  --waiver-file "$WAIVER_JSON" >"$TMP_DIR/local-heavy-marker-missing.out" 2>&1; then
+  echo "expected threshold checker to fail when local-heavy marker contract fields are missing" >&2
+  exit 1
+fi
+grep -q 'local_heavy_sensitive must be boolean' "$TMP_DIR/local-heavy-marker-missing.out"
 
 if bash "$SCRIPT" \
   --report-json "$FAIL_REPORT" \

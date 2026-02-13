@@ -26,6 +26,10 @@ def fail(message: str) -> None:
     raise SystemExit(message)
 
 
+def bool_marker(value: bool) -> str:
+    return "true" if value else "false"
+
+
 def load_json(path: Path) -> dict:
     if not path.is_file():
         fail(f"file not found: {path}")
@@ -105,6 +109,16 @@ def compute_delta(current: int, baseline: int) -> tuple[int, float]:
     return delta, delta_pct
 
 
+def classify_local_heavy_scope(test_scope: str) -> tuple[bool, str]:
+    if test_scope.startswith("kolme-local-heavy-contract"):
+        return True, "contract"
+    if test_scope.startswith("kolme-local-heavy-local-only"):
+        return True, "local-only"
+    if test_scope.startswith("kolme-local-heavy-"):
+        return True, "other"
+    return False, "none"
+
+
 def command_generate(args: argparse.Namespace) -> int:
     current_path = Path(args.current_json)
     output_path = Path(args.output_json)
@@ -118,6 +132,10 @@ def command_generate(args: argparse.Namespace) -> int:
 
     current_elapsed = require_payload_int(current_payload, "elapsed_seconds")
     current_runner_minutes = require_payload_int(current_payload, "runner_minutes")
+    current_test_scope = current_payload.get("test_scope", "unknown")
+    if not isinstance(current_test_scope, str):
+        fail("current budget test_scope must be a string")
+    local_heavy_sensitive, local_heavy_scope_class = classify_local_heavy_scope(current_test_scope)
 
     config = load_delta_config(baseline_path)
     elapsed_delta, elapsed_delta_pct = compute_delta(
@@ -128,6 +146,8 @@ def command_generate(args: argparse.Namespace) -> int:
         current=current_runner_minutes,
         baseline=config.baseline_runner_minutes,
     )
+    positive_drift_detected = elapsed_delta > 0 or runner_delta > 0
+    local_heavy_sensitive_drift_detected = local_heavy_sensitive and positive_drift_detected
 
     report_payload = {
         "schema_version": SCHEMA_VERSION,
@@ -136,6 +156,11 @@ def command_generate(args: argparse.Namespace) -> int:
         "baseline_source": str(baseline_path),
         "current_budget_source": str(current_path),
         "current_budget_status": current_payload.get("status", "unknown"),
+        "test_scope": current_test_scope,
+        "local_heavy_sensitive": local_heavy_sensitive,
+        "local_heavy_scope_class": local_heavy_scope_class,
+        "positive_drift_detected": positive_drift_detected,
+        "local_heavy_sensitive_drift_detected": local_heavy_sensitive_drift_detected,
         "baseline": {
             "elapsed_seconds": config.baseline_elapsed_seconds,
             "runner_minutes": config.baseline_runner_minutes,
@@ -165,6 +190,12 @@ def command_generate(args: argparse.Namespace) -> int:
     print(f"elapsed_seconds_delta_pct={elapsed_delta_pct}")
     print(f"runner_minutes_delta={runner_delta}")
     print(f"runner_minutes_delta_pct={runner_delta_pct}")
+    print(f"local_heavy_sensitive={bool_marker(local_heavy_sensitive)}")
+    print(f"local_heavy_scope_class={local_heavy_scope_class}")
+    print(
+        "local_heavy_sensitive_drift_detected="
+        f"{bool_marker(local_heavy_sensitive_drift_detected)}"
+    )
     return 0
 
 
@@ -215,6 +246,50 @@ def extract_float(section: dict, key: str) -> float:
     return float(value)
 
 
+def extract_string(payload: dict, key: str) -> str:
+    value = payload.get(key)
+    if not isinstance(value, str):
+        fail(f"{key} must be a string")
+    return value
+
+
+def extract_bool(payload: dict, key: str) -> bool:
+    value = payload.get(key)
+    if not isinstance(value, bool):
+        fail(f"{key} must be boolean")
+    return value
+
+
+def emit_check_markers(
+    *,
+    status: str,
+    waived: bool,
+    violations: list[str],
+    review_required: bool,
+    soft_overrun_status: str,
+    reason_codes: list[str],
+    local_heavy_sensitive: bool,
+    local_heavy_sensitive_drift_detected: bool,
+    failure_reason: str = "",
+    waiver_reason: str = "",
+) -> None:
+    print(f"status={status}")
+    print(f"waived={bool_marker(waived)}")
+    print(f"violations={'none' if not violations else ','.join(violations)}")
+    print(f"review_required={bool_marker(review_required)}")
+    print(f"soft_overrun_status={soft_overrun_status}")
+    print(f"reason_codes={'none' if not reason_codes else ','.join(reason_codes)}")
+    print(f"local_heavy_sensitive={bool_marker(local_heavy_sensitive)}")
+    print(
+        "local_heavy_sensitive_drift_detected="
+        f"{bool_marker(local_heavy_sensitive_drift_detected)}"
+    )
+    if waiver_reason:
+        print(f"waiver_reason={waiver_reason}")
+    if failure_reason:
+        print(f"failure_reason={failure_reason}")
+
+
 def command_check(args: argparse.Namespace) -> int:
     report_path = Path(args.report_json)
     threshold_path = Path(args.threshold_file)
@@ -225,6 +300,20 @@ def command_check(args: argparse.Namespace) -> int:
         fail("unexpected schema_version in fast-gate delta report")
     if report.get("lane") != "fast-gate":
         fail("delta report lane must be fast-gate")
+
+    _test_scope = extract_string(report, "test_scope")
+    local_heavy_sensitive = extract_bool(report, "local_heavy_sensitive")
+    local_heavy_scope_class = extract_string(report, "local_heavy_scope_class")
+    local_heavy_sensitive_drift_detected = extract_bool(
+        report, "local_heavy_sensitive_drift_detected"
+    )
+
+    if local_heavy_scope_class not in {"none", "contract", "local-only", "other"}:
+        fail("local_heavy_scope_class must be one of: none, contract, local-only, other")
+    if local_heavy_sensitive_drift_detected and not local_heavy_sensitive:
+        fail(
+            "local_heavy_sensitive_drift_detected requires local_heavy_sensitive=true"
+        )
 
     variance = extract_section(report, "variance")
     elapsed_delta = extract_float(variance, "elapsed_seconds_delta")
@@ -239,24 +328,49 @@ def command_check(args: argparse.Namespace) -> int:
     if runner_delta > 0 and runner_delta_pct > config.max_runner_delta_pct:
         violations.append("runner_minutes_delta_pct")
 
+    review_reason_codes: list[str] = []
+    if local_heavy_sensitive_drift_detected:
+        review_reason_codes.append("local_heavy_sensitive_drift_detected")
+
     if not violations:
-        print("status=pass")
-        print("waived=false")
-        print("violations=none")
+        emit_check_markers(
+            status="pass",
+            waived=False,
+            violations=[],
+            review_required=bool(review_reason_codes),
+            soft_overrun_status="exceeded" if review_reason_codes else "within",
+            reason_codes=review_reason_codes,
+            local_heavy_sensitive=local_heavy_sensitive,
+            local_heavy_sensitive_drift_detected=local_heavy_sensitive_drift_detected,
+        )
         return 0
 
     waiver_applied, waiver_reason = parse_waiver(waiver_path, violations)
     if waiver_applied:
-        print("status=pass")
-        print("waived=true")
-        print(f"violations={','.join(violations)}")
-        print(f"waiver_reason={waiver_reason}")
+        emit_check_markers(
+            status="pass",
+            waived=True,
+            violations=violations,
+            review_required=True,
+            soft_overrun_status="exceeded",
+            reason_codes=["delta_threshold_waiver_applied"] + review_reason_codes,
+            local_heavy_sensitive=local_heavy_sensitive,
+            local_heavy_sensitive_drift_detected=local_heavy_sensitive_drift_detected,
+            waiver_reason=waiver_reason,
+        )
         return 0
 
-    print("status=fail")
-    print("waived=false")
-    print(f"violations={','.join(violations)}")
-    print(f"failure_reason={waiver_reason}")
+    emit_check_markers(
+        status="fail",
+        waived=False,
+        violations=violations,
+        review_required=False,
+        soft_overrun_status="within",
+        reason_codes=["delta_threshold_violation_unwaived"],
+        local_heavy_sensitive=local_heavy_sensitive,
+        local_heavy_sensitive_drift_detected=local_heavy_sensitive_drift_detected,
+        failure_reason=waiver_reason,
+    )
     return 1
 
 
