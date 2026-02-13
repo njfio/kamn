@@ -379,6 +379,12 @@ def main() -> int:
     if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
         print("expected contracts fallback signer private key allowed=false marker in contract-lane summary", file=sys.stderr)
         return 1
+    if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") is not False:
+        print(
+            "expected contracts fallback signer private key command marker allowed=false marker in contract-lane summary",
+            file=sys.stderr,
+        )
+        return 1
     if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
         print("expected contracts managed-external raw private key allowed=false marker in contract-lane summary", file=sys.stderr)
         return 1

@@ -187,6 +187,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_commit_real_signing_profile_marker_missing")
         if "KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated" in runtime_commit_command:
             reason_codes.append("runtime_commit_simulated_signing_profile_detected")
+        if f"{RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV}=" in runtime_commit_command:
+            reason_codes.append("runtime_commit_fallback_private_key_command_marker_detected")
 
     runtime_provider_client_contract = report.get("runtime_provider_client_contract")
     if not isinstance(runtime_provider_client_contract, str) or not runtime_provider_client_contract.strip():
@@ -354,6 +356,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_signer_fallback_private_key_env_contract_mismatch")
         if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
             reason_codes.append("runtime_signer_fallback_private_key_allowed_contract_mismatch")
+        if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") is not False:
+            reason_codes.append("runtime_signer_fallback_private_key_command_marker_allowed_contract_mismatch")
         if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
             reason_codes.append("runtime_signer_managed_external_raw_private_key_allowed_contract_mismatch")
         if contracts.get("runtime_signer_attestation_schema_version") != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:

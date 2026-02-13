@@ -416,6 +416,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_key_source_profile_pair_disallowed`
       - `runtime_signer_private_key_env_mismatch`
       - `runtime_commit_signer_key_source_marker_missing`
+      - `runtime_commit_fallback_private_key_command_marker_detected`
       - `runtime_commit_managed_external_signer_key_reference_marker_missing`
       - `runtime_commit_managed_external_private_key_command_marker_detected`
       - `runtime_signing_profile_mismatch`
@@ -441,6 +442,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary`
     - strict profile fallback-key guard marker:
       - `fallback signer secret env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK)`
+    - strict profile fallback-key command marker guard:
+      - `runtime-commit-command must not include fallback signer private key marker KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK=... when runtime-profile=real-node`
     - strict profile managed-external raw-key guard marker:
       - `managed-external signer raw private key env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF)`
     - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`

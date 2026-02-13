@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"
+RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane_impl.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 CI_DOC_FILE="$ROOT_DIR/docs/ci/strategy.md"
 README_FILE="$ROOT_DIR/README.md"
@@ -33,8 +34,8 @@ if [ ! -x "$RUNNER" ]; then
   exit 1
 fi
 
-if ! grep -q -- "--runtime-profile" "$RUNNER"; then
-  echo "expected local KAMN live runtime integration runner to expose runtime profile option" >&2
+if ! grep -q -- "--runtime-profile" "$RUNNER_IMPL"; then
+  echo "expected local KAMN live runtime integration implementation to expose runtime profile option" >&2
   exit 1
 fi
 
@@ -183,6 +184,28 @@ fi
 
 if ! grep -q "must not reference simulated signing profile marker" "$TMP_ERR"; then
   echo "expected deterministic simulated signing profile rejection message for real-node profile dry-run" >&2
+  exit 1
+fi
+
+set +e
+bash "$RUNNER" \
+  --mode dry-run \
+  --runtime-profile real-node \
+  --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider \
+  --runtime-commit-command "KAMN_KOLME_LOCAL_HEAVY=1 KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=env-local KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK=2222222222222222222222222222222222222222222222222222222222222222 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --live-command \"KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'runtime=real\\n'\" --output-json $TMP_RUNTIME_SUMMARY --policy-output-json $TMP_RUNTIME_POLICY" \
+  --runtime-commit-live-summary "$TMP_RUNTIME_SUMMARY" \
+  --runtime-commit-live-policy-report "$TMP_RUNTIME_POLICY" \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+dry_run_fallback_command_marker_exit_code=$?
+set -e
+
+if [ "$dry_run_fallback_command_marker_exit_code" -eq 0 ]; then
+  echo "expected real-node profile dry-run to fail closed when runtime commit command includes fallback signer private key marker" >&2
+  exit 1
+fi
+
+if ! grep -q "must not include fallback signer private key marker" "$TMP_ERR"; then
+  echo "expected deterministic fallback signer private key command marker rejection message for real-node profile dry-run" >&2
   exit 1
 fi
 

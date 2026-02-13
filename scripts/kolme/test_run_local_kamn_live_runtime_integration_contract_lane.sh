@@ -16,7 +16,8 @@ TMP_REPORT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 TMP_POLICY_ERR="$(mktemp)"
 TMP_SIMULATED_SUMMARY="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY"' EXIT
+TMP_FALLBACK_SUMMARY="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY" "$TMP_FALLBACK_SUMMARY"' EXIT
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local KAMN live runtime integration contract lane runner to be executable" >&2
@@ -401,6 +402,10 @@ if contracts.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_
     raise SystemExit("expected contracts fallback signer private key env marker in contract-lane summary")
 if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
     raise SystemExit("expected contracts fallback signer private key allowed=false marker in contract-lane summary")
+if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") is not False:
+    raise SystemExit(
+        "expected contracts fallback signer private key command marker allowed=false marker in contract-lane summary"
+    )
 if contracts.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF":
     raise SystemExit("expected contracts signer key reference env marker in contract-lane summary")
 if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
@@ -450,11 +455,48 @@ if ! grep -q "runtime_commit_simulated_signing_profile_detected" "$TMP_POLICY_ER
   exit 1
 fi
 
+python3 - "$TMP_REPORT" "$TMP_FALLBACK_SUMMARY" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+summary_path = pathlib.Path(sys.argv[1])
+fallback_path = pathlib.Path(sys.argv[2])
+payload = json.loads(summary_path.read_text(encoding="utf-8"))
+runtime_command = str(payload.get("runtime_commit_command", ""))
+payload["runtime_commit_command"] = (
+    "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK=2222222222222222222222222222222222222222222222222222222222222222 "
+    f"{runtime_command}"
+)
+fallback_path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_FALLBACK_SUMMARY" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_REPORT" >"$TMP_POLICY_ERR" 2>&1
+fallback_marker_policy_code=$?
+set -e
+
+if [ "$fallback_marker_policy_code" -eq 0 ]; then
+  echo "expected runtime integration policy checker to fail when runtime command includes fallback signer private key marker" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_fallback_private_key_command_marker_detected" "$TMP_POLICY_ERR"; then
+  echo "expected runtime_commit_fallback_private_key_command_marker_detected reason for runtime integration policy failure" >&2
+  exit 1
+fi
+
 TMP_DIRECT_SUMMARY="$(mktemp)"
 TMP_DIRECT_RUNTIME_OUTPUT="$(mktemp)"
 TMP_DIRECT_RUNTIME_POLICY="$(mktemp)"
 TMP_DIRECT_RUNTIME_FINALITY_OUTPUT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_RUNTIME_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY" "$TMP_DIRECT_RUNTIME_FINALITY_OUTPUT"' EXIT
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_SIMULATED_SUMMARY" "$TMP_FALLBACK_SUMMARY" "$TMP_DIRECT_SUMMARY" "$TMP_DIRECT_RUNTIME_OUTPUT" "$TMP_DIRECT_RUNTIME_POLICY" "$TMP_DIRECT_RUNTIME_FINALITY_OUTPUT"' EXIT
 
 bash "$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh" \
   --mode dry-run \

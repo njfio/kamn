@@ -213,6 +213,12 @@ def main() -> int:
         if contracts_payload.get("runtime_signer_fallback_private_key_allowed") is not False:
             print("expected contracts fallback signer private key allowed=false marker in summary", file=sys.stderr)
             return 1
+        if contracts_payload.get("runtime_signer_fallback_private_key_command_marker_allowed") is not False:
+            print(
+                "expected contracts fallback signer private key command marker allowed=false marker in summary",
+                file=sys.stderr,
+            )
+            return 1
         if contracts_payload.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF":
             print("expected contracts signer key reference env marker in summary", file=sys.stderr)
             return 1

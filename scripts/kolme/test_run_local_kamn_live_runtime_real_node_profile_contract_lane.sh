@@ -380,6 +380,10 @@ if contracts.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_
     raise SystemExit("expected contracts fallback signer private key env marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
     raise SystemExit("expected contracts fallback signer private key allowed=false marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") is not False:
+    raise SystemExit(
+        "expected contracts fallback signer private key command marker allowed=false marker in real-node profile contract-lane summary"
+    )
 if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
     raise SystemExit("expected contracts managed-external raw private key allowed=false marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
@@ -450,6 +454,10 @@ if contracts.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_
     raise SystemExit("expected contracts secondary signer fallback private key env marker in contract-lane summary")
 if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
     raise SystemExit("expected contracts secondary signer fallback private key allowed=false marker in contract-lane summary")
+if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") is not False:
+    raise SystemExit(
+        "expected contracts secondary signer fallback private key command marker allowed=false marker in contract-lane summary"
+    )
 if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
     raise SystemExit("expected contracts secondary signer managed-external raw private key allowed=false marker in contract-lane summary")
 if policy.get("final_decision") != "GO":
