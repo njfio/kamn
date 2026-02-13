@@ -313,6 +313,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
 - Local fork metadata validation:
   - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
+- Wrapper routing stays manifest-backed:
+  - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_fork_sync_metadata_lane.sh --resolve-manifest-path`
+  - `scripts/framework/manifests/kolme_local_fork_sync_metadata_lane.json`
 - Summary schema:
   - `kamn.kolme.local-fork-sync-metadata-summary.v1`
 - Deterministic checks include:

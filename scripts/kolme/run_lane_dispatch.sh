@@ -55,6 +55,7 @@ resolve_manifest_name() {
   case "$1" in
     run_local_e2e_integration_lane.sh) echo "kolme_local_e2e_integration_lane.json" ;;
     run_local_fork_smoke_evidence_lane.sh) echo "kolme_local_fork_smoke_evidence_lane.json" ;;
+    run_local_fork_sync_metadata_lane.sh) echo "kolme_local_fork_sync_metadata_lane.json" ;;
     run_local_kolme_api_probe_lane.sh) echo "kolme_local_kolme_api_probe_lane.json" ;;
     run_local_kolme_api_smoke_lane.sh) echo "kolme_local_kolme_api_smoke_lane.json" ;;
     run_local_kamn_live_runtime_integration_lane.sh) echo "kolme_local_kamn_live_runtime_integration_lane.json" ;;
