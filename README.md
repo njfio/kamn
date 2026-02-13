@@ -526,6 +526,12 @@ python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --repor
 
 # bounded contract lane (dry-run + run-mode evidence + policy checks)
 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json
+
+# bounded localhost live-provider runtime integration proof lane
+bash scripts/kolme/run_local_live_provider_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-live-provider-runtime-integration-contract-report.json
+# provider mismatch fail-closed reason: provider_client_contract_mismatch
+# in-memory provider drift fail-closed reason: provider_in_memory_reference_detected
+# unavailable-node deterministic reasons: live_preflight_failed, live_preflight_timeout
 # live-provider marker contracts: provider_contract_enforcement_mode, provider_live_contract_marker, provider_live_contract_marker_present, provider_in_memory_reference_detected
 # summary markers: submit_evidence_marker_present, finality_evidence_marker_present
 # request/finality linkage markers: request_payload_evidence_marker_present, request_payload_evidence_artifact_path, submit_evidence_artifact_path, finality_evidence_artifact_path, request_finality_evidence_contract_version, request_finality_evidence_linked

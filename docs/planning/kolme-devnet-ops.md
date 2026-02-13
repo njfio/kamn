@@ -1193,6 +1193,8 @@ Operator checkpoints:
   - `python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/kolme-local-runtime-commit-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-non-synthetic-run-evidence --output-json /tmp/kolme-local-runtime-commit-live-policy.json`
 - Finality evidence contract lane command:
   - `bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json`
+- Bounded localhost live-provider integration proof lane:
+  - `bash scripts/kolme/run_local_live_provider_runtime_integration_contract_lane.sh --output-json /tmp/kolme-local-live-provider-runtime-integration-contract-report.json`
 - Default live-provider smoke command executed by run mode:
   - `KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint`
 - Summary schema:
@@ -1210,6 +1212,8 @@ Operator checkpoints:
   - request/finality linkage markers (`request_payload_evidence_marker_present`, `request_payload_evidence_artifact_path`, `submit_evidence_artifact_path`, `finality_evidence_artifact_path`, `request_finality_evidence_contract_version`, `request_finality_evidence_linked`) remain fail-closed in policy checks
   - finality retry evidence markers (`finality_retry_contract_version`, `finality_retry_max_attempts`, `finality_retry_backoff_seconds`, `finality_retry_attempts_used`, `finality_retry_exhausted`, `finality_retry_failure_class`) remain fail-closed in policy checks
   - live-provider marker contracts (`provider_contract_enforcement_mode`, `provider_live_contract_marker`, `provider_live_contract_marker_present`, `provider_in_memory_reference_detected`) remain fail-closed in policy checks
+  - provider mismatch remains fail-closed with deterministic reason `provider_client_contract_mismatch`.
+  - bounded localhost integration proof lane validates deterministic NO-GO on node-unavailable preflight reasons `live_preflight_failed` or `live_preflight_timeout`.
   - native payload evidence marker fields (`native_payload_pubkey_marker_present`, `native_payload_nonce_marker_present`, `native_payload_messages_marker_present`) remain fail-closed in strict real-node policy checks
   - summary includes `live_command_synthetic`, `finality_command_synthetic`, and `synthetic_evidence_classification_version=v1` for deterministic synthetic-command detection.
   - `--require-non-synthetic-run-evidence` enforces NO-GO on synthetic run-mode command paths (`synthetic_live_command_detected`, `synthetic_finality_command_detected`).
