@@ -78,6 +78,8 @@ FORK_RUST_MATRIX_REPORT="/tmp/kolme-local-fork-rust-test-matrix-summary.json"
 FORK_RUST_MATRIX_POLICY_REPORT="/tmp/kolme-local-fork-rust-test-matrix-policy.json"
 LIVE_API_CONFORMANCE_REPORT="/tmp/kolme-local-live-api-conformance-summary.json"
 LIVE_API_CONFORMANCE_POLICY_REPORT="/tmp/kolme-local-live-api-conformance-policy.json"
+SIGNATURE_PARITY_REPORT="/tmp/kolme-signature-parity-matrix-report.json"
+SIGNATURE_PARITY_POLICY_REPORT="/tmp/kolme-signature-parity-policy-report.json"
 RUNTIME_COMMIT_LIVE_SUMMARY_REPORT="/tmp/kolme-local-runtime-commit-live-summary.json"
 RUNTIME_COMMIT_LIVE_POLICY_REPORT="/tmp/kolme-local-runtime-commit-live-policy.json"
 NATIVE_API_PARITY_SUMMARY_REPORT="/tmp/kolme-local-native-api-parity-live-proof-summary.json"
@@ -85,6 +87,7 @@ NATIVE_API_PARITY_POLICY_REPORT="/tmp/kolme-local-native-api-parity-live-proof-p
 REAL_NODE_RUNTIME_INTEGRATION_REPORT="/tmp/kolme-local-kamn-live-runtime-integration-summary.json"
 REAL_NODE_RUNTIME_INTEGRATION_POLICY_REPORT="/tmp/kolme-local-kamn-live-runtime-real-node-policy.json"
 
+SIGNATURE_PARITY_MAX_SECONDS=120
 RUNTIME_COMMIT_FINALITY_LANE_MAX_SECONDS=120
 RUNTIME_COMMIT_FINALITY_CHECK_MAX_SECONDS=15
 NATIVE_API_PARITY_MAX_SECONDS=180
@@ -97,6 +100,7 @@ declare -a COMMANDS=(
   "bash scripts/kolme/run_version_compatibility_replay_deep_lane.sh --output-json $DEEP_REPORT"
   "bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh --output-json $FORK_RUST_MATRIX_REPORT --policy-output-json $FORK_RUST_MATRIX_POLICY_REPORT"
   "bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json $LIVE_API_CONFORMANCE_REPORT --policy-output-json $LIVE_API_CONFORMANCE_POLICY_REPORT"
+  "KAMN_KOLME_SIGNATURE_PARITY_MAX_SECONDS=$SIGNATURE_PARITY_MAX_SECONDS bash scripts/kolme/run_signature_parity_contract_lane.sh --output-json $SIGNATURE_PARITY_REPORT --policy-output-json $SIGNATURE_PARITY_POLICY_REPORT"
   "bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json $RUNTIME_COMMIT_LIVE_SUMMARY_REPORT --policy-output-json $RUNTIME_COMMIT_LIVE_POLICY_REPORT --max-seconds $RUNTIME_COMMIT_FINALITY_LANE_MAX_SECONDS --finality-max-seconds $RUNTIME_COMMIT_FINALITY_CHECK_MAX_SECONDS --require-non-synthetic-run-evidence --require-native-payload-evidence"
   "bash scripts/kolme/run_local_native_api_parity_live_proof_contract_lane.sh --output-json $NATIVE_API_PARITY_SUMMARY_REPORT --policy-output-json $NATIVE_API_PARITY_POLICY_REPORT --max-seconds $NATIVE_API_PARITY_MAX_SECONDS"
   "bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode $MODE --runtime-profile real-node --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --max-seconds $REAL_NODE_INTEGRATION_MAX_SECONDS --runtime-commit-max-seconds $REAL_NODE_RUNTIME_COMMIT_MAX_SECONDS --runtime-commit-finality-max-seconds $REAL_NODE_RUNTIME_COMMIT_FINALITY_MAX_SECONDS --runtime-commit-live-summary $RUNTIME_COMMIT_LIVE_SUMMARY_REPORT --runtime-commit-live-policy-report $RUNTIME_COMMIT_LIVE_POLICY_REPORT --output-json $REAL_NODE_RUNTIME_INTEGRATION_REPORT"
@@ -110,6 +114,8 @@ declare -a ARTIFACTS=(
   "$FORK_RUST_MATRIX_POLICY_REPORT"
   "$LIVE_API_CONFORMANCE_REPORT"
   "$LIVE_API_CONFORMANCE_POLICY_REPORT"
+  "$SIGNATURE_PARITY_REPORT"
+  "$SIGNATURE_PARITY_POLICY_REPORT"
   "$RUNTIME_COMMIT_LIVE_SUMMARY_REPORT"
   "$RUNTIME_COMMIT_LIVE_POLICY_REPORT"
   "$NATIVE_API_PARITY_SUMMARY_REPORT"
