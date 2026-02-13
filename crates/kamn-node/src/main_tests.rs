@@ -1,12 +1,13 @@
 use super::{
     build_bootstrap_report, build_kolme_live_direct_signed_wire_payload,
     build_kolme_live_managed_signing_key, build_kolme_live_request,
-    build_kolme_live_signer_adapter, encode_kolme_hex_lower, execute, parse_args,
-    render_bootstrap_report, render_kolme_live_native_direct_message,
-    resolve_kolme_live_managed_signer_required_marker, resolve_kolme_live_nonce,
-    resolve_kolme_live_signer_private_key_env_name, sign_kolme_live_managed_external_message,
-    DiagnosticsMode, LocalProfile, NodeBootstrapReport, OutputMode, RuntimeExecutionBundle,
-    RuntimeMode,
+    build_kolme_live_signer_adapter, capture_test_logs, encode_kolme_hex_lower, execute,
+    parse_args, render_bootstrap_report, render_kolme_live_native_direct_message,
+    render_log_event_line, resolve_kolme_live_managed_signer_required_marker,
+    resolve_kolme_live_nonce, resolve_kolme_live_signer_private_key_env_name,
+    resolve_log_config_from_inputs, sign_kolme_live_managed_external_message, DiagnosticsMode,
+    LocalProfile, NodeBootstrapReport, NodeLogConfig, NodeLogFormat, NodeLogLevel, OutputMode,
+    RuntimeExecutionBundle, RuntimeMode,
 };
 use kamn_core::{
     bootstrap, ConfigError, KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitRequest, NodeConfig,
@@ -29,6 +30,11 @@ const TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE_SECONDARY: &str =
     "secure:aws-kms:role-operator/key-live-ops-secondary";
 
 fn signer_env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
+fn log_env_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))
 }
@@ -283,6 +289,184 @@ fn parses_diagnostics_snapshot_flag() {
 
     let parsed = parse_args(args).expect("diagnostics args should parse");
     assert_eq!(parsed.diagnostics_mode, DiagnosticsMode::snapshot());
+}
+
+#[test]
+fn unit_log_config_parses_level_and_format_inputs() {
+    let config = resolve_log_config_from_inputs(Some("debug"), Some("json"))
+        .expect("log config inputs should parse");
+    assert_eq!(
+        config,
+        NodeLogConfig {
+            level: NodeLogLevel::Debug,
+            format: NodeLogFormat::Json,
+        }
+    );
+}
+
+#[test]
+fn unit_log_renderer_renders_json_event_fields() {
+    let line = render_log_event_line(
+        NodeLogConfig {
+            level: NodeLogLevel::Info,
+            format: NodeLogFormat::Json,
+        },
+        NodeLogLevel::Info,
+        "kolme.live.submit.start",
+        &[
+            ("correlation_id", "runtime-commit:abc"),
+            ("provider_hint", "local"),
+        ],
+    );
+    assert!(line.contains("\"level\":\"INFO\""));
+    assert!(line.contains("\"event\":\"kolme.live.submit.start\""));
+    assert!(line.contains("\"correlation_id\":\"runtime-commit:abc\""));
+    assert!(line.contains("\"provider_hint\":\"local\""));
+}
+
+#[test]
+fn integration_bootstrap_runtime_emits_structured_marker() {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+    ])
+    .expect("args should parse");
+    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
+    let report = report_result.expect("bootstrap execution should succeed");
+    assert_eq!(report.runtime_mode, "bootstrap");
+    assert!(
+        captured_logs
+            .iter()
+            .any(|line| line.contains("\"event\":\"node.runtime.bootstrap.plan.ready\"")),
+        "bootstrap runtime should emit structured bootstrap marker"
+    );
+}
+
+#[test]
+fn functional_kolme_live_submit_and_finality_logs_keep_correlation_id() {
+    let _signer_lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _log_lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+    let _env_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+        Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+    );
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let (base_url, _requests) = spawn_kolme_live_mock_server(vec![
+        MockHttpReply::ok(r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#),
+        MockHttpReply::ok(
+            r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"pending"}"#,
+        ),
+        MockHttpReply::ok(
+            r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"final"}"#,
+        ),
+    ]);
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        base_url,
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
+    ])
+    .expect("kolme-live args should parse");
+
+    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
+    let report = report_result.expect("kolme-live execution should succeed");
+    assert_eq!(report.runtime_mode, "kolme-live");
+
+    let required_events = [
+        "kolme.live.submit.start",
+        "kolme.live.submit.outcome",
+        "kolme.live.finality.poll.start",
+        "kolme.live.finality.poll.outcome",
+        "kolme.live.execution.complete",
+    ];
+
+    let mut correlation_id = None;
+    for event_name in required_events {
+        let matching_line = captured_logs
+            .iter()
+            .find(|line| line.contains(format!("\"event\":\"{event_name}\"").as_str()))
+            .expect("required structured event should be present");
+        let observed = extract_json_string_field(matching_line, "correlation_id")
+            .expect("structured event should include correlation id");
+        if let Some(expected) = correlation_id.as_deref() {
+            assert_eq!(observed, expected);
+        } else {
+            assert!(!observed.is_empty(), "correlation id must not be empty");
+            correlation_id = Some(observed);
+        }
+    }
+}
+
+#[test]
+fn regression_invalid_log_level_config_fails_closed() {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("invalid-level"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+    ])
+    .expect("args should parse");
+    let error = execute(parsed).expect_err("invalid log level should fail closed");
+    assert!(
+        matches!(error, ConfigError::InvalidLogConfig(message) if message.contains("KAMN_NODE_LOG_LEVEL")),
+        "invalid log level should produce InvalidLogConfig"
+    );
+}
+
+#[test]
+fn performance_structured_logging_rendering_stays_bounded() {
+    let started = Instant::now();
+    for _ in 0..5_000 {
+        let line = render_log_event_line(
+            NodeLogConfig {
+                level: NodeLogLevel::Info,
+                format: NodeLogFormat::Json,
+            },
+            NodeLogLevel::Info,
+            "kolme.live.submit.outcome",
+            &[
+                ("correlation_id", "runtime-commit:benchmark"),
+                ("commit_id", "kolme-commit:benchmark"),
+                ("finality", "pending"),
+            ],
+        );
+        assert!(
+            line.contains("\"event\":\"kolme.live.submit.outcome\""),
+            "rendered line should contain expected event marker"
+        );
+    }
+    assert!(
+        started.elapsed() < Duration::from_secs(1),
+        "structured log rendering baseline exceeded 1s bound for 5k iterations"
+    );
 }
 
 #[test]

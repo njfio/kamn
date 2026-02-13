@@ -7,6 +7,7 @@ use std::env;
 use std::process::ExitCode;
 
 mod cli;
+mod logging;
 mod report_builder;
 mod report_render;
 mod runtime_kolme_live;
@@ -14,6 +15,12 @@ mod signer;
 mod wire_payload;
 
 use cli::parse_args;
+#[cfg(test)]
+use logging::{
+    capture_test_logs, render_log_event_line, resolve_log_config_from_inputs, NodeLogConfig,
+    NodeLogFormat, NodeLogLevel,
+};
+use logging::{log_error, log_info};
 use report_builder::build_bootstrap_report;
 use report_render::render_bootstrap_report;
 #[cfg(test)]
@@ -375,8 +382,20 @@ fn peer_lifecycle_state_as_str(state: PeerLifecycleState) -> &'static str {
 
 fn run() -> Result<(), ConfigError> {
     let cli = parse_args(env::args())?;
+    let runtime_mode = cli.runtime_mode.as_str();
+    log_info(
+        "node.runtime.execute.start",
+        &[("runtime_mode", runtime_mode)],
+    )?;
     let output_mode = cli.output_mode;
     let report = execute(cli)?;
+    log_info(
+        "node.runtime.execute.complete",
+        &[
+            ("runtime_mode", report.runtime_mode.as_str()),
+            ("role", report.role.as_str()),
+        ],
+    )?;
     println!("{}", render_bootstrap_report(&report, output_mode));
 
     Ok(())
@@ -419,8 +438,21 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
     };
 
     let plan = bootstrap(config)?;
+    log_info(
+        "node.runtime.mode.dispatch",
+        &[("runtime_mode", runtime_mode.as_str())],
+    )?;
     let runtime_execution = match runtime_mode.kind {
-        RuntimeModeKind::Bootstrap => RuntimeExecutionBundle::default(),
+        RuntimeModeKind::Bootstrap => {
+            log_info(
+                "node.runtime.bootstrap.plan.ready",
+                &[
+                    ("chain_id", plan.config.chain_id.as_str()),
+                    ("role", plan.config.role.as_str()),
+                ],
+            )?;
+            RuntimeExecutionBundle::default()
+        }
         RuntimeModeKind::Planning => {
             let expected_state_hash = expected_state_hash
                 .ok_or(ConfigError::MissingArgumentValue("--expected-state-hash"))?;
@@ -567,6 +599,11 @@ fn main() -> ExitCode {
     match run() {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
+            let error_message = error.to_string();
+            let _ = log_error(
+                "node.runtime.execute.failed",
+                &[("error", error_message.as_str())],
+            );
             eprintln!("{error}");
             ExitCode::FAILURE
         }

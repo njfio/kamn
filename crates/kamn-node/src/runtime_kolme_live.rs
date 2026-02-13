@@ -1,5 +1,6 @@
 use super::signer::build_kolme_live_direct_signed_wire_payload;
 use super::{
+    logging::{log_info, log_warn},
     KolmeLiveExecution, KOLME_IN_MEMORY_PROVIDER_MARKER, KOLME_LIVE_FINALITY_MAX_ATTEMPTS,
     KOLME_LIVE_FINALITY_STATUS_PATH, KOLME_LIVE_PROVIDER_CONTRACT, KOLME_LIVE_SIGNER_PROFILE_ENV,
     KOLME_LIVE_SIGNING_PROFILE, KOLME_LIVE_TRANSPORT_TIMEOUT_SECONDS,
@@ -84,6 +85,15 @@ pub(crate) fn execute_kolme_live_runtime(
     let mut transport = KolmeRuntimeCommitHttpTransport::new(KOLME_LIVE_TRANSPORT_TIMEOUT_SECONDS)
         .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
     let request = build_kolme_live_request(plan)?;
+    let correlation_id = request.idempotency_key().to_owned();
+    log_info(
+        "kolme.live.submit.start",
+        &[
+            ("correlation_id", correlation_id.as_str()),
+            ("provider_hint", provider_hint.as_str()),
+            ("base_url", base_url.as_str()),
+        ],
+    )?;
     let (signed_wire_payload, signer_selection) = build_kolme_live_direct_signed_wire_payload(
         base_url.as_str(),
         &mut transport,
@@ -102,9 +112,25 @@ pub(crate) fn execute_kolme_live_runtime(
         .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
     let (submit_status, mut receipt) = map_kolme_live_submit_outcome(submit_outcome)?;
     ensure_kolme_live_provider_marker(provider_hint.as_str(), receipt.provider.as_str())?;
+    log_info(
+        "kolme.live.submit.outcome",
+        &[
+            ("correlation_id", correlation_id.as_str()),
+            ("submit_status", submit_status),
+            ("commit_id", receipt.commit_id.as_str()),
+            ("finality", kolme_live_finality_label(receipt.finality)),
+        ],
+    )?;
     let mut resolution = "submit-receipt".to_owned();
 
     if matches!(receipt.finality, KolmeCommitReceiptFinality::Pending) {
+        log_info(
+            "kolme.live.finality.poll.start",
+            &[
+                ("correlation_id", correlation_id.as_str()),
+                ("commit_id", receipt.commit_id.as_str()),
+            ],
+        )?;
         let mut checker = KolmeRuntimeCommitFinalityChecker::new(
             base_url.as_str(),
             KOLME_LIVE_FINALITY_STATUS_PATH,
@@ -119,12 +145,37 @@ pub(crate) fn execute_kolme_live_runtime(
                 )?;
                 receipt = polled_receipt;
                 resolution = "finality-polled".to_owned();
+                log_info(
+                    "kolme.live.finality.poll.outcome",
+                    &[
+                        ("correlation_id", correlation_id.as_str()),
+                        ("commit_id", receipt.commit_id.as_str()),
+                        ("resolution", resolution.as_str()),
+                        ("finality", kolme_live_finality_label(receipt.finality)),
+                    ],
+                )?;
             }
             Err(KolmeRuntimeCommitProviderError::Timeout) => {
                 resolution = "finality-timeout".to_owned();
+                log_warn(
+                    "kolme.live.finality.poll.outcome",
+                    &[
+                        ("correlation_id", correlation_id.as_str()),
+                        ("commit_id", receipt.commit_id.as_str()),
+                        ("resolution", resolution.as_str()),
+                    ],
+                )?;
             }
             Err(KolmeRuntimeCommitProviderError::Unavailable { .. }) => {
                 resolution = "finality-unavailable".to_owned();
+                log_warn(
+                    "kolme.live.finality.poll.outcome",
+                    &[
+                        ("correlation_id", correlation_id.as_str()),
+                        ("commit_id", receipt.commit_id.as_str()),
+                        ("resolution", resolution.as_str()),
+                    ],
+                )?;
             }
             Err(KolmeRuntimeCommitProviderError::MalformedResponse { reason }) => {
                 return Err(ConfigError::RuntimeKolmeLive(format!(
@@ -135,6 +186,16 @@ pub(crate) fn execute_kolme_live_runtime(
     }
 
     let finality = kolme_live_finality_label(receipt.finality);
+    log_info(
+        "kolme.live.execution.complete",
+        &[
+            ("correlation_id", correlation_id.as_str()),
+            ("submit_status", submit_status),
+            ("commit_id", receipt.commit_id.as_str()),
+            ("finality", finality),
+            ("resolution", resolution.as_str()),
+        ],
+    )?;
     Ok(KolmeLiveExecution {
         provider_client_contract: KOLME_LIVE_PROVIDER_CONTRACT.to_owned(),
         base_url,
