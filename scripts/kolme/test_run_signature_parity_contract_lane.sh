@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_signature_parity_contract_lane.sh"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_contract_lane_dispatch.sh"
 MATRIX_RUNNER="$ROOT_DIR/scripts/kolme/run_signature_parity_matrix.py"
 CHECKER="$ROOT_DIR/scripts/kolme/check_signature_parity_policy.py"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/signature_parity_contract_lane.py"
@@ -16,6 +17,11 @@ trap 'rm -f "$TMP_REPORT" "$TMP_POLICY"' EXIT
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected signature parity contract lane runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected signature parity contract lane dispatcher to be executable" >&2
   exit 1
 fi
 
@@ -44,13 +50,19 @@ if [ ! -f "$FIXTURE" ]; then
   exit 1
 fi
 
-if ! grep -q "run_manifest_lane.sh" "$RUNNER"; then
-  echo "expected signature parity contract lane runner to dispatch through run_manifest_lane.sh" >&2
+if [ ! -L "$RUNNER" ]; then
+  echo "expected signature parity contract lane runner to be a symlink to shared dispatcher" >&2
   exit 1
 fi
 
-if ! grep -q "kolme_signature_parity_contract_lane.json" "$RUNNER"; then
-  echo "expected signature parity contract lane runner to pin deterministic manifest path" >&2
+if [ "$(readlink "$RUNNER")" != "run_contract_lane_dispatch.sh" ]; then
+  echo "expected signature parity contract lane runner symlink target to be run_contract_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUNNER")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST" ]; then
+  echo "expected signature parity contract lane dispatcher to resolve deterministic manifest path" >&2
   exit 1
 fi
 
