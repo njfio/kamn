@@ -37,6 +37,20 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `strategy_snippet_missing`
 - Regression: #2694
 
+## Snapshot + Journal Durability Replay Contract
+- Snapshot+journal durability policy is tracked in `docs/planning/persistence_durability_model.md`.
+- Fast-gate replay contract command:
+  - `cargo test -p kamn-core --lib journal`
+- Module-level bounded durability commands:
+  - `cargo test -p kamn-core --lib channel_models::tests::`
+  - `cargo test -p kamn-core --lib message_lifecycle::tests::`
+  - `cargo test -p kamn-core --lib task_operations::tests::`
+- Journal tail corruption remains fail-closed with deterministic reason codes:
+  - `channel_snapshot_journal_corrupt_tail:<line>`
+  - `message_lifecycle_snapshot_journal_corrupt_tail:<line>`
+  - `task_operation_snapshot_journal_corrupt_tail:<line>`
+- Regression: #2690
+
 ## Node Runtime Kolme-Live Fast Lane
 - For `kamn-node` live-runtime wiring/doc changes, keep PR validation on deterministic local harness tests:
   - `cargo test -p kamn-node runtime_kolme_live`
