@@ -54,6 +54,7 @@ fi
 resolve_manifest_name() {
   case "$1" in
     run_local_kolme_api_probe_lane.sh) echo "kolme_local_kolme_api_probe_lane.json" ;;
+    run_local_kolme_api_smoke_lane.sh) echo "kolme_local_kolme_api_smoke_lane.json" ;;
     run_local_kamn_live_runtime_integration_lane.sh) echo "kolme_local_kamn_live_runtime_integration_lane.json" ;;
     run_local_runtime_commit_live_lane.sh) echo "kolme_local_runtime_commit_live_lane.json" ;;
     *)

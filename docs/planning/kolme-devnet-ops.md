@@ -389,6 +389,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_api_smoke_lane.sh --mode run --base-url http://127.0.0.1:3000 --smoke-command "curl --silent --show-error --fail http://127.0.0.1:3000/healthz" --max-seconds 60 --output-json /tmp/kolme-local-api-smoke-summary.json`
 - Summary schema:
   - `kamn.kolme.local-api-smoke-summary.v1`
+- Wrapper routing stays manifest-backed:
+  - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_api_smoke_lane.sh --resolve-manifest-path`
+  - `scripts/framework/manifests/kolme_local_kolme_api_smoke_lane.json`
 - Deterministic checkpoints include:
   - `run_local_kolme_api_probe_lane.sh` prerequisite run-mode verification.
   - bounded smoke command execution with timeout budget guard.
