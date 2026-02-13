@@ -531,8 +531,17 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_raw_private_key_present=false`
     - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
     - `runtime_signer_attestation_bundle`
+    - `runtime_signer_quorum_linkage_contract_version=v1`
+    - `runtime_signer_quorum_required_approvals`
+    - `runtime_signer_quorum_approved_signers_count`
+    - `runtime_signer_quorum_profile_linked`
+    - `runtime_signer_quorum_satisfied`
+    - `runtime_signer_quorum_linked`
     - `contracts.runtime_signer_failover_requires_profile_change=true`
     - `contracts.runtime_signer_rotation_epoch_must_increase_on_failover=true`
+    - `contracts.runtime_signer_quorum_linked_required=true`
+    - `contracts.runtime_signer_quorum_threshold_required=true`
+    - `contracts.runtime_signer_quorum_profile_membership_required=true`
     - `contracts.runtime_signer_fallback_private_key_allowed=false`
     - `contracts.runtime_signer_managed_external_raw_private_key_allowed=false`
   - real-node profile accepts secondary signer summary/contracts markers for failover drills:
@@ -576,6 +585,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_attestation_approved_signers_not_unique`
     - `runtime_signer_attestation_quorum_shortfall`
     - `runtime_signer_attestation_schema_invalid`
+    - `runtime_signer_quorum_linkage_drift`
+    - `runtime_signer_quorum_linkage_violation`
   - integration summary emits `ci_fast_gate_eligible=false` with `contracts.ci_fast_gate_scope=local-only` for explicit PR-fast-gate exclusion enforcement.
   - explicit runtime-commit submit-profile probe over `PUT /broadcast` with fail-closed reason codes.
   - signed runtime-commit envelope translation enforces `signer_key_id` presence and canonical message/signature binding before broadcast normalization.

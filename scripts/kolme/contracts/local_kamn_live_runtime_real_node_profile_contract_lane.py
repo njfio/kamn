@@ -318,6 +318,24 @@ def main() -> int:
     if runtime_signer_attestation_bundle.get("approved_signers") != expected_attestation_signers:
         print("expected runtime signer attestation approved signers marker in contract-lane summary", file=sys.stderr)
         return 1
+    if summary.get("runtime_signer_quorum_linkage_contract_version") != "v1":
+        print("expected runtime signer quorum linkage contract version marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_signer_quorum_required_approvals") != 1:
+        print("expected runtime signer quorum required approvals marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_signer_quorum_approved_signers_count") != 1:
+        print("expected runtime signer quorum approved signers count marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_signer_quorum_profile_linked") is not True:
+        print("expected runtime signer quorum profile linked marker true in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_signer_quorum_satisfied") is not True:
+        print("expected runtime signer quorum satisfied marker true in contract-lane summary", file=sys.stderr)
+        return 1
+    if summary.get("runtime_signer_quorum_linked") is not True:
+        print("expected runtime signer quorum linked marker true in contract-lane summary", file=sys.stderr)
+        return 1
     checks = summary.get("checks")
     if not isinstance(checks, list):
         print("expected checks list in real-node profile contract-lane summary", file=sys.stderr)
@@ -403,6 +421,24 @@ def main() -> int:
     if contracts.get("runtime_signer_attestation_required_approvals") != 1:
         print("expected contracts runtime signer attestation required approvals marker in contract-lane summary", file=sys.stderr)
         return 1
+    if contracts.get("runtime_signer_quorum_linkage_contract_version") != "v1":
+        print("expected contracts runtime signer quorum linkage contract version marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_quorum_required_approvals") != 1:
+        print("expected contracts runtime signer quorum required approvals marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_quorum_linked_required") is not True:
+        print("expected contracts runtime signer quorum linked-required marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_quorum_threshold_required") is not True:
+        print("expected contracts runtime signer quorum threshold-required marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_quorum_profile_membership_required") is not True:
+        print("expected contracts runtime signer quorum profile-membership marker in contract-lane summary", file=sys.stderr)
+        return 1
+    if contracts.get("runtime_signer_quorum_linked") is not True:
+        print("expected contracts runtime signer quorum linked marker in contract-lane summary", file=sys.stderr)
+        return 1
     if contracts.get("runtime_signer_failover_attestation_min_required_approvals") != 2:
         print(
             "expected contracts runtime signer failover attestation minimum approvals marker in contract-lane summary",
@@ -486,6 +522,11 @@ def main() -> int:
         forced_failover_go_summary["runtime_signer_attestation_bundle"] = (
             forced_failover_go_attestation_bundle
         )
+        forced_failover_go_summary["runtime_signer_quorum_required_approvals"] = 2
+        forced_failover_go_summary["runtime_signer_quorum_approved_signers_count"] = 2
+        forced_failover_go_summary["runtime_signer_quorum_profile_linked"] = True
+        forced_failover_go_summary["runtime_signer_quorum_satisfied"] = True
+        forced_failover_go_summary["runtime_signer_quorum_linked"] = True
         forced_failover_go_contracts = dict(summary.get("contracts", {}))
         forced_failover_go_contracts["runtime_signer_profile"] = alternate_signer_profile
         forced_failover_go_contracts["runtime_signer_private_key_env"] = (
@@ -495,6 +536,8 @@ def main() -> int:
             SIGNER_KEY_REF_ENV_BY_PROFILE[alternate_signer_profile]
         )
         forced_failover_go_contracts["runtime_signer_attestation_required_approvals"] = 2
+        forced_failover_go_contracts["runtime_signer_quorum_required_approvals"] = 2
+        forced_failover_go_contracts["runtime_signer_quorum_linked"] = True
         forced_failover_go_summary["contracts"] = forced_failover_go_contracts
         forced_failover_go_summary_file.write_text(
             json.dumps(forced_failover_go_summary, sort_keys=True, indent=2) + "\n",
@@ -994,6 +1037,19 @@ def main() -> int:
         attestation_quorum_shortfall_summary["runtime_signer_attestation_bundle"] = (
             attestation_quorum_shortfall_bundle
         )
+        attestation_quorum_shortfall_summary["runtime_signer_quorum_required_approvals"] = 2
+        attestation_quorum_shortfall_summary["runtime_signer_quorum_approved_signers_count"] = 1
+        attestation_quorum_shortfall_summary["runtime_signer_quorum_profile_linked"] = True
+        attestation_quorum_shortfall_summary["runtime_signer_quorum_satisfied"] = False
+        attestation_quorum_shortfall_summary["runtime_signer_quorum_linked"] = False
+        attestation_quorum_shortfall_contracts = dict(
+            attestation_quorum_shortfall_summary.get("contracts", {})
+        )
+        attestation_quorum_shortfall_contracts["runtime_signer_quorum_required_approvals"] = 2
+        attestation_quorum_shortfall_contracts["runtime_signer_quorum_linked"] = False
+        attestation_quorum_shortfall_summary["contracts"] = (
+            attestation_quorum_shortfall_contracts
+        )
         attestation_quorum_shortfall_summary_file.write_text(
             json.dumps(attestation_quorum_shortfall_summary, sort_keys=True, indent=2) + "\n",
             encoding="utf-8",
@@ -1022,6 +1078,12 @@ def main() -> int:
         if "runtime_signer_attestation_quorum_shortfall" not in attestation_quorum_shortfall_reason_codes:
             print(
                 "expected runtime_signer_attestation_quorum_shortfall in attestation quorum shortfall policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if "runtime_signer_quorum_linkage_violation" not in attestation_quorum_shortfall_reason_codes:
+            print(
+                "expected runtime_signer_quorum_linkage_violation in attestation quorum shortfall policy output",
                 file=sys.stderr,
             )
             return 1
