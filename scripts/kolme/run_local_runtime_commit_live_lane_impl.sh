@@ -195,6 +195,11 @@ if [ -z "$PROVIDER_HINT" ]; then
   exit 1
 fi
 
+if [[ "$PROVIDER_HINT" == *"InMemoryKolmeRuntimeCommitClient"* ]]; then
+  echo "provider-hint must not reference InMemoryKolmeRuntimeCommitClient" >&2
+  exit 1
+fi
+
 if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   echo "expected shared local-heavy opt-in guard helper to be executable" >&2
   exit 1
@@ -202,6 +207,11 @@ fi
 
 if [ -z "$LIVE_COMMAND" ]; then
   LIVE_COMMAND="$(default_live_command)"
+fi
+
+if [[ "$LIVE_COMMAND" == *"InMemoryKolmeRuntimeCommitClient"* ]]; then
+  echo "live-command must not reference InMemoryKolmeRuntimeCommitClient" >&2
+  exit 1
 fi
 
 PROVIDER_CLIENT_CONTRACT="KolmeRuntimeCommitLiveProvider"

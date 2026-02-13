@@ -252,6 +252,9 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
   - linkage drift fails closed with deterministic reason codes: `request_payload_evidence_marker_missing`, `finality_evidence_artifact_path_missing`, `request_finality_evidence_linkage_missing`.
   - native payload markers `native_payload_pubkey_marker_present`, `native_payload_nonce_marker_present`, and `native_payload_messages_marker_present` must pass when strict real-node evidence checks are enabled.
   - default live command composition emits `KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1` and policy fails closed when the signing-profile marker is absent.
+  - provider hint contract remains live-only for this lane (`kolme-fork-local`); in-memory provider references fail closed with:
+    - `provider_hint_in_memory_provider_reference_detected`
+    - `live_command_in_memory_provider_reference_detected`
   - summary emits synthetic-command classification markers: `live_command_synthetic`, `finality_command_synthetic`, and `synthetic_evidence_classification_version=v1`.
   - use `--require-non-synthetic-run-evidence` in `check_local_runtime_commit_live_evidence_policy.py` when validating real-node run evidence to fail closed on marker-only command paths.
   - use `--require-native-payload-evidence` in `check_local_runtime_commit_live_evidence_policy.py` when validating real-node run evidence to fail closed on missing native payload markers.

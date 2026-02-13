@@ -15,7 +15,8 @@ TMP_FINALITY_OUTPUT="$(mktemp)"
 TMP_POLICY_REPORT="$(mktemp)"
 TMP_POLICY_ERR="$(mktemp)"
 TMP_ERR="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_ERR"' EXIT
+TMP_IN_MEMORY_REPORT="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_ERR" "$TMP_IN_MEMORY_REPORT"' EXIT
 
 extract_value() {
   local output="$1"
@@ -209,6 +210,61 @@ checker_output="$(
     --output-json "$TMP_POLICY_REPORT"
 )"
 assert_eq "$(extract_value "$checker_output" "status")" "ok" "expected live evidence policy checker to pass dry-run report"
+
+set +e
+bash "$RUNNER" \
+  --mode dry-run \
+  --provider-hint InMemoryKolmeRuntimeCommitClient \
+  --output-json "$TMP_REPORT" \
+  --live-output-file "$TMP_OUTPUT" >"$TMP_ERR" 2>&1
+in_memory_hint_code=$?
+set -e
+
+if [ "$in_memory_hint_code" -eq 0 ]; then
+  echo "expected dry-run mode to fail closed when provider-hint references InMemoryKolmeRuntimeCommitClient" >&2
+  exit 1
+fi
+if ! grep -q "provider-hint must not reference InMemoryKolmeRuntimeCommitClient" "$TMP_ERR"; then
+  echo "expected deterministic in-memory provider-hint rejection message" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT" "$TMP_IN_MEMORY_REPORT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+source = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+source["provider_hint"] = "InMemoryKolmeRuntimeCommitClient"
+source["live_command"] = (
+    "KAMN_KOLME_LIVE_PROVIDER_HINT=InMemoryKolmeRuntimeCommitClient "
+    + str(source.get("live_command", ""))
+)
+pathlib.Path(sys.argv[2]).write_text(json.dumps(source, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_IN_MEMORY_REPORT" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS >"$TMP_POLICY_ERR" 2>&1
+in_memory_policy_code=$?
+set -e
+
+if [ "$in_memory_policy_code" -eq 0 ]; then
+  echo "expected evidence policy checker to fail when provider_hint/live_command reference InMemoryKolmeRuntimeCommitClient" >&2
+  exit 1
+fi
+if ! grep -q "provider_hint_in_memory_provider_reference_detected" "$TMP_POLICY_ERR"; then
+  echo "expected provider_hint_in_memory_provider_reference_detected failure reason from evidence policy checker" >&2
+  exit 1
+fi
+if ! grep -q "live_command_in_memory_provider_reference_detected" "$TMP_POLICY_ERR"; then
+  echo "expected live_command_in_memory_provider_reference_detected failure reason from evidence policy checker" >&2
+  exit 1
+fi
 
 set +e
 KAMN_KOLME_LOCAL_HEAVY=1 \

@@ -34,6 +34,7 @@ def parse_args() -> argparse.Namespace:
 
 def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, list[str]]:
     reason_codes: list[str] = []
+    in_memory_provider_marker = "InMemoryKolmeRuntimeCommitClient"
 
     if report.get("schema_version") != "kamn.kolme.local-runtime-commit-live-summary.v1":
         reason_codes.append("schema_version_mismatch")
@@ -55,6 +56,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
 
     if report.get("provider_client_contract") != args.expected_provider_client_contract:
         reason_codes.append("provider_client_contract_mismatch")
+
+    provider_hint = report.get("provider_hint")
+    if not isinstance(provider_hint, str) or not provider_hint.strip():
+        reason_codes.append("provider_hint_missing")
+    elif in_memory_provider_marker in provider_hint:
+        reason_codes.append("provider_hint_in_memory_provider_reference_detected")
 
     if report.get("provider_submit_profile_contract") != "kolme_fork_broadcast_profile":
         reason_codes.append("provider_submit_profile_contract_mismatch")
@@ -82,6 +89,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         reason_codes.append("provider_signing_profile_marker_present_invalid")
     elif provider_signing_profile_marker_present is False:
         reason_codes.append("provider_signing_profile_marker_missing")
+
+    live_command = report.get("live_command")
+    if not isinstance(live_command, str) or not live_command.strip():
+        reason_codes.append("live_command_missing")
+    elif in_memory_provider_marker in live_command:
+        reason_codes.append("live_command_in_memory_provider_reference_detected")
 
     if report.get("submit_evidence_marker") != "status=submitted":
         reason_codes.append("submit_evidence_marker_mismatch")
