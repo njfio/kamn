@@ -19,44 +19,6 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_kolme_tranche1_dispatch_execution_parity_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_kolme_wrapper_inventory_baseline_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_kolme_wrapper_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave1_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave1_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave2_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave2_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave3_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave3_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave4_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave4_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave5_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave5_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave6_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave6_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave7_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave7_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave8_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave8_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave9_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave9_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave10_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave10_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave11_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave11_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave12_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave12_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave13_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave13_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave14_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave14_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave15_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave15_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave16_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave16_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave17_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave17_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave18_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave18_wrapper_family_budget_trend.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave19_wrapper_family_baseline_contract.sh"'
-  'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave19_wrapper_family_budget_trend.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_non_kolme_contract_lane_dispatch_wrapper_matrix.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_non_kolme_compliance_contract_lane_dispatch_wrapper_matrix.sh"'
@@ -124,6 +86,13 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/framework/test_assert_local_heavy_opt_in.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_generate_local_lane_summary.sh"'
 )
+
+for wave in {1..19}; do
+  required_commands+=(
+    "bash \"\$ROOT_DIR/scripts/ci/test_non_kolme_wave${wave}_wrapper_family_baseline_contract.sh\""
+    "bash \"\$ROOT_DIR/scripts/ci/test_check_non_kolme_wave${wave}_wrapper_family_budget_trend.sh\""
+  )
+done
 
 for command in "${required_commands[@]}"; do
   if ! grep -Fq "$command" "$CI_TOOLS_SCRIPT"; then
