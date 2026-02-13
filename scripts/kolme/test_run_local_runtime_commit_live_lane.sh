@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_runtime_commit_live_lane.sh"
+RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_runtime_commit_live_lane_impl.sh"
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_runtime_commit_live_evidence_policy.py"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
@@ -37,6 +38,11 @@ if [ ! -x "$RUNNER" ]; then
   exit 1
 fi
 
+if [ ! -x "$RUNNER_IMPL" ]; then
+  echo "expected local runtime commit live lane implementation to be executable" >&2
+  exit 1
+fi
+
 if [ ! -x "$DISPATCHER" ]; then
   echo "expected local runtime lane dispatcher to be executable" >&2
   exit 1
@@ -52,13 +58,18 @@ if [ ! -x "$CHECKER" ]; then
   exit 1
 fi
 
-if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER"; then
-  echo "expected runtime commit live runner to invoke shared local-heavy opt-in guard helper" >&2
+if [ ! -L "$RUNNER" ]; then
+  echo "expected runtime commit live runner to be a symlink to shared runtime lane dispatcher" >&2
   exit 1
 fi
 
-if ! grep -q "scripts/kolme/run_lane_dispatch.sh" "$RUNNER"; then
-  echo "expected runtime commit live runner to dispatch through shared runtime lane dispatcher" >&2
+if [ "$(readlink "$RUNNER")" != "run_lane_dispatch.sh" ]; then
+  echo "expected runtime commit live runner symlink target to be run_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER_IMPL"; then
+  echo "expected runtime commit live implementation to invoke shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 
@@ -81,8 +92,7 @@ if payload.get("lane_id") != "kolme.local_runtime_commit_live.run":
 run_command = payload.get("phases", {}).get("run")
 if run_command != [
     "bash",
-    "scripts/kolme/run_local_runtime_commit_live_lane.sh",
-    "--manifest-impl",
+    "scripts/kolme/run_local_runtime_commit_live_lane_impl.sh",
 ]:
     raise SystemExit("expected runtime commit live lane manifest run command")
 PY
@@ -95,12 +105,12 @@ if bash "$DISPATCHER" --lane-wrapper run_missing_runtime_lane.sh --resolve-manif
 fi
 
 # Regression: #1969
-if ! grep -q -- "--finality-command" "$RUNNER"; then
+if ! grep -q -- "--finality-command" "$RUNNER_IMPL"; then
   echo "expected runtime commit live runner to expose optional finality command argument" >&2
   exit 1
 fi
 
-if ! grep -q "runtime_commit_live_finality_command" "$RUNNER"; then
+if ! grep -q "runtime_commit_live_finality_command" "$RUNNER_IMPL"; then
   echo "expected runtime commit live runner to emit finality command check markers" >&2
   exit 1
 fi
