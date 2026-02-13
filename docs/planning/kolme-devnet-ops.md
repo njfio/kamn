@@ -739,6 +739,28 @@ JSON`
   - runtime/deployment shared signer-attestation schema + reason-code parity remains fail-closed (`Regression: #2326`).
   - replay/tamper/stale-signer attestation regression matrix remains fail-closed (`Regression: #2327`).
 
+## Staging Soak Telemetry Lane (Issue #2422)
+
+- Fast lane command:
+  - `bash scripts/deploy/run_staging_rehearsal_contract_lane.sh`
+- Deep/manual lane command:
+  - `bash scripts/deploy/run_staging_rehearsal_deep_lane.sh`
+- Direct bundle generation command (explicit telemetry thresholds):
+  - `bash scripts/deploy/generate_staging_rehearsal_bundle.sh --output-file /tmp/staging-rehearsal-soak.json --release-candidate v1.1.0-rc.soak --deploy-status PASS --rollback-status PASS --rollback-target-hash state-hash-stable --post-rollback-hash state-hash-stable --recovery-time-seconds 420 --max-allowed-recovery-time-seconds 900 --evidence-complete true --ci-fast-gate PASS --runtime-submit-success-rate-bps 9950 --min-runtime-submit-success-rate-bps 9900 --runtime-finality-timeout-count 0 --max-runtime-finality-timeout-count 1 --signer-profile-drift-events 0 --max-signer-profile-drift-events 0`
+- Policy checker command:
+  - `bash scripts/deploy/check_staging_rehearsal_policy.sh --bundle-file /tmp/staging-rehearsal-soak.json`
+- Telemetry threshold markers:
+  - `runtime_submit_success_rate_bps` vs `min_runtime_submit_success_rate_bps`
+  - `runtime_finality_timeout_count` vs `max_runtime_finality_timeout_count`
+  - `signer_profile_drift_events` vs `max_signer_profile_drift_events`
+- Deterministic threshold reason codes:
+  - `runtime_submit_success_rate_below_threshold`
+  - `runtime_finality_timeout_threshold_exceeded`
+  - `signer_profile_drift_threshold_exceeded`
+- Interpretation contract:
+  - `final_decision=GO`: rollout soak telemetry remains within configured thresholds.
+  - `final_decision=NO-GO`: at least one runtime telemetry threshold exceeded; capture `reason_codes` from policy output and block promotion until remediated.
+
 ## Live Provider Operator Runbook (Issue #2114)
 
 ### Prerequisites (Local)

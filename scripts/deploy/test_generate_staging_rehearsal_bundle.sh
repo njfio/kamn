@@ -45,7 +45,13 @@ go_generate_output="$(
     --recovery-time-seconds 420 \
     --max-allowed-recovery-time-seconds 900 \
     --evidence-complete true \
-    --ci-fast-gate PASS
+    --ci-fast-gate PASS \
+    --runtime-submit-success-rate-bps 10000 \
+    --min-runtime-submit-success-rate-bps 9900 \
+    --runtime-finality-timeout-count 0 \
+    --max-runtime-finality-timeout-count 1 \
+    --signer-profile-drift-events 0 \
+    --max-signer-profile-drift-events 0
 )"
 
 assert_eq "$(extract_value "$go_generate_output" "status")" "generated" "expected GO rehearsal bundle generation to succeed"
@@ -98,6 +104,47 @@ mttr_no_go_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$mttr_no_go_bu
 assert_eq "$(extract_value "$mttr_no_go_policy_output" "status")" "ok" "expected MTTR NO-GO rehearsal policy check to pass"
 assert_eq "$(extract_value "$mttr_no_go_policy_output" "final_decision")" "NO-GO" "expected MTTR NO-GO rehearsal policy check decision"
 assert_eq "$(extract_value "$mttr_no_go_policy_output" "mttr_within_bound")" "false" "expected MTTR NO-GO rehearsal policy check to report out-of-bound recovery time"
+
+telemetry_no_go_bundle="$TMP_DIR/rehearsal-no-go-telemetry.json"
+telemetry_no_go_generate_output="$(
+  bash "$GENERATOR" \
+    --output-file "$telemetry_no_go_bundle" \
+    --release-candidate "v1.1.0-rc.4" \
+    --deploy-status PASS \
+    --rollback-status PASS \
+    --rollback-target-hash "state-hash-stable" \
+    --post-rollback-hash "state-hash-stable" \
+    --recovery-time-seconds 420 \
+    --max-allowed-recovery-time-seconds 900 \
+    --evidence-complete true \
+    --ci-fast-gate PASS \
+    --runtime-submit-success-rate-bps 9200 \
+    --min-runtime-submit-success-rate-bps 9500 \
+    --runtime-finality-timeout-count 3 \
+    --max-runtime-finality-timeout-count 1 \
+    --signer-profile-drift-events 2 \
+    --max-signer-profile-drift-events 0
+)"
+
+assert_eq "$(extract_value "$telemetry_no_go_generate_output" "final_decision")" "NO-GO" "expected runtime telemetry threshold breach to force NO-GO"
+
+telemetry_no_go_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$telemetry_no_go_bundle")"
+assert_eq "$(extract_value "$telemetry_no_go_policy_output" "status")" "ok" "expected telemetry NO-GO rehearsal policy check to pass"
+assert_eq "$(extract_value "$telemetry_no_go_policy_output" "final_decision")" "NO-GO" "expected telemetry NO-GO rehearsal policy check decision"
+
+telemetry_reason_codes="$(extract_value "$telemetry_no_go_policy_output" "reason_codes")"
+if ! printf '%s\n' "$telemetry_reason_codes" | grep -q "runtime_submit_success_rate_below_threshold"; then
+  echo "expected runtime submit success-rate threshold reason for telemetry NO-GO policy output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$telemetry_reason_codes" | grep -q "runtime_finality_timeout_threshold_exceeded"; then
+  echo "expected runtime finality-timeout threshold reason for telemetry NO-GO policy output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$telemetry_reason_codes" | grep -q "signer_profile_drift_threshold_exceeded"; then
+  echo "expected signer-profile drift threshold reason for telemetry NO-GO policy output" >&2
+  exit 1
+fi
 
 tampered_bundle="$TMP_DIR/rehearsal-tampered.json"
 cp "$no_go_bundle" "$tampered_bundle"
