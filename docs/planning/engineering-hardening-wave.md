@@ -42,6 +42,22 @@ default development loop green while tightening missing-doc policy controls for
   - `cargo test -p kamn-core --test lifecycle_evidence_property_matrix`
 - Deterministic task terminal concurrency mutation lane:
   - `cargo test -p kamn-core --test concurrency_task_terminal_race`
+- Runtime extraction boundary contract lane:
+  - `cargo test -p kamn-core --test runtime_module_extraction_contract`
+
+## Runtime Extraction Phase Status
+
+- First runtime decomposition slice landed in `#2832`:
+  - extracted deterministic runtime backpressure policy/controller types from
+    `crates/kamn-core/src/runtime.rs` into `crates/kamn-core/src/runtime_backpressure.rs`.
+  - kept public API stable via re-export from `runtime.rs`.
+- Extraction guardrails are fail-closed:
+  - `crates/kamn-core/tests/runtime_module_extraction_contract.rs` asserts
+    runtime module declaration, ownership boundaries, and absence of inline
+    backpressure type definitions in `runtime.rs`.
+- Follow-on slices remain tracked under `#2831`:
+  - continue phased extraction while preserving runtime behavior and report
+    contracts.
 
 ## Missing-Docs Policy Contract
 
