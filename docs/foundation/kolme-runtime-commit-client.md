@@ -271,6 +271,13 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
   - provider hint contract remains live-only for this lane (`kolme-fork-local`); in-memory provider references fail closed with:
     - `provider_hint_in_memory_provider_reference_detected`
     - `live_command_in_memory_provider_reference_detected`
+  - live-provider contract markers are emitted in summary and enforced by policy:
+    - `provider_contract_enforcement_mode=live-provider-only-v1`
+    - `provider_live_contract_marker=provider_client_contract=KolmeRuntimeCommitLiveProvider`
+    - `provider_live_contract_marker_present=true`
+    - `provider_in_memory_reference_detected=false`
+  - provider drift fails closed when summary flags in-memory provider usage:
+    - `provider_in_memory_reference_detected`
   - summary emits synthetic-command classification markers: `live_command_synthetic`, `finality_command_synthetic`, and `synthetic_evidence_classification_version=v1`.
   - use `--require-non-synthetic-run-evidence` in `check_local_runtime_commit_live_evidence_policy.py` when validating real-node run evidence to fail closed on marker-only command paths.
   - use `--require-native-payload-evidence` in `check_local_runtime_commit_live_evidence_policy.py` when validating real-node run evidence to fail closed on missing native payload markers.

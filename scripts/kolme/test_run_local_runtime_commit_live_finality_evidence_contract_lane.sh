@@ -148,6 +148,14 @@ policy = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
 
 if summary.get("schema_version") != "kamn.kolme.local-runtime-commit-live-summary.v1":
     raise SystemExit("unexpected runtime-commit live finality evidence summary schema")
+if summary.get("provider_contract_enforcement_mode") != "live-provider-only-v1":
+    raise SystemExit("expected provider_contract_enforcement_mode=live-provider-only-v1 in runtime-commit live finality evidence summary")
+if summary.get("provider_live_contract_marker") != "provider_client_contract=KolmeRuntimeCommitLiveProvider":
+    raise SystemExit("expected provider_live_contract_marker in runtime-commit live finality evidence summary")
+if summary.get("provider_live_contract_marker_present") is not True:
+    raise SystemExit("expected provider_live_contract_marker_present=true in runtime-commit live finality evidence summary")
+if summary.get("provider_in_memory_reference_detected") is not False:
+    raise SystemExit("expected provider_in_memory_reference_detected=false in runtime-commit live finality evidence summary")
 if summary.get("status") != "ok":
     raise SystemExit("expected runtime-commit live finality evidence summary status ok")
 if summary.get("reason_code") != "live_runtime_commit_and_finality_commands_passed":

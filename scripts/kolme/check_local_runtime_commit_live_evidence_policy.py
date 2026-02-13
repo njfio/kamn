@@ -57,6 +57,29 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if report.get("provider_client_contract") != args.expected_provider_client_contract:
         reason_codes.append("provider_client_contract_mismatch")
 
+    provider_contract_enforcement_mode = report.get("provider_contract_enforcement_mode")
+    if provider_contract_enforcement_mode != "live-provider-only-v1":
+        reason_codes.append("provider_contract_enforcement_mode_mismatch")
+
+    expected_provider_live_contract_marker = (
+        f"provider_client_contract={args.expected_provider_client_contract}"
+    )
+    provider_live_contract_marker = report.get("provider_live_contract_marker")
+    if provider_live_contract_marker != expected_provider_live_contract_marker:
+        reason_codes.append("provider_live_contract_marker_mismatch")
+
+    provider_live_contract_marker_present = report.get("provider_live_contract_marker_present")
+    if not isinstance(provider_live_contract_marker_present, bool):
+        reason_codes.append("provider_live_contract_marker_present_invalid")
+    elif provider_live_contract_marker_present is False:
+        reason_codes.append("provider_live_contract_marker_missing")
+
+    provider_in_memory_reference_detected = report.get("provider_in_memory_reference_detected")
+    if not isinstance(provider_in_memory_reference_detected, bool):
+        reason_codes.append("provider_in_memory_reference_detected_invalid")
+    elif provider_in_memory_reference_detected is True:
+        reason_codes.append("provider_in_memory_reference_detected")
+
     provider_hint = report.get("provider_hint")
     if not isinstance(provider_hint, str) or not provider_hint.strip():
         reason_codes.append("provider_hint_missing")
@@ -381,6 +404,14 @@ def main() -> int:
         "require_non_synthetic_run_evidence": args.require_non_synthetic_run_evidence,
         "require_native_payload_evidence": args.require_native_payload_evidence,
         "observed_status": observed_status,
+        "observed_provider_contract_enforcement_mode": report.get("provider_contract_enforcement_mode"),
+        "observed_provider_live_contract_marker": report.get("provider_live_contract_marker"),
+        "observed_provider_live_contract_marker_present": report.get(
+            "provider_live_contract_marker_present"
+        ),
+        "observed_provider_in_memory_reference_detected": report.get(
+            "provider_in_memory_reference_detected"
+        ),
         "observed_final_decision": observed_final_decision,
         "observed_reason_code": report.get("reason_code"),
         "reason_codes": reason_codes,
