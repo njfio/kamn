@@ -372,6 +372,8 @@ fn parses_runtime_mode_kolme_live_with_required_flags() {
         "kolme-fork-local".to_owned(),
         "--kolme-live-signing-profile".to_owned(),
         "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
     ];
 
     let parsed = parse_args(args).expect("kolme-live args should parse");
@@ -390,7 +392,10 @@ fn parses_runtime_mode_kolme_live_with_required_flags() {
     );
     assert!(!parsed.kolme_live_strict_signer_contracts);
     assert_eq!(parsed.kolme_live_signer_profile, None);
-    assert_eq!(parsed.kolme_live_signer_key_source, None);
+    assert_eq!(
+        parsed.kolme_live_signer_key_source,
+        Some("env-local".to_owned())
+    );
 }
 
 #[test]
@@ -718,6 +723,8 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
         "kolme-fork-local".to_owned(),
         "--kolme-live-signing-profile".to_owned(),
         "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
         "--output".to_owned(),
         "json".to_owned(),
     ];
@@ -1057,6 +1064,8 @@ fn integration_runtime_kolme_live_renders_secondary_signer_selection_markers() {
         "kolme-fork-local".to_owned(),
         "--kolme-live-signing-profile".to_owned(),
         "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
         "--output".to_owned(),
         "json".to_owned(),
     ];
@@ -2076,6 +2085,8 @@ fn regression_runtime_kolme_live_rejects_provider_marker_drift() {
         "kolme-fork-local".to_owned(),
         "--kolme-live-signing-profile".to_owned(),
         "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
         "--output".to_owned(),
         "json".to_owned(),
     ];
@@ -2120,6 +2131,8 @@ fn regression_runtime_kolme_live_rejects_missing_signer_private_key_env() {
         "kolme-fork-local".to_owned(),
         "--kolme-live-signing-profile".to_owned(),
         "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
         "--output".to_owned(),
         "json".to_owned(),
     ];
@@ -2329,6 +2342,30 @@ fn rejects_kolme_live_without_signing_profile() {
         parse_args(args),
         Err(ConfigError::MissingArgumentValue(
             "--kolme-live-signing-profile"
+        ))
+    );
+}
+
+#[test]
+fn rejects_kolme_live_without_signer_key_source() {
+    // Regression: #2626
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        "http://127.0.0.1:3000".to_owned(),
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+    ];
+    assert_eq!(
+        parse_args(args),
+        Err(ConfigError::MissingArgumentValue(
+            "--kolme-live-signer-key-source"
         ))
     );
 }
