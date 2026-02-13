@@ -24,6 +24,10 @@ fn main_module_extraction_contract_declares_signer_and_wire_modules() {
         "main.rs should declare report_render module"
     );
     assert!(
+        main_rs.contains("mod report_builder;"),
+        "main.rs should declare report_builder module"
+    );
+    assert!(
         main_rs.contains("mod main_tests;"),
         "main.rs should declare sidecar test module for maintainability"
     );
@@ -52,6 +56,10 @@ fn main_module_extraction_contract_removes_inline_report_rendering_impls() {
         !main_rs.contains("fn json_escape("),
         "main.rs should not keep inline json escape helper"
     );
+    assert!(
+        !main_rs.contains("fn build_bootstrap_report("),
+        "main.rs should not keep inline bootstrap report assembly"
+    );
 }
 
 #[test]
@@ -74,6 +82,7 @@ fn main_module_extraction_contract_removes_inline_signer_payload_impls() {
 #[test]
 fn main_module_extraction_contract_keeps_impls_in_new_modules() {
     let signer_rs = read_repo_file("src/signer.rs");
+    let report_builder_rs = read_repo_file("src/report_builder.rs");
     let report_render_rs = read_repo_file("src/report_render.rs");
     let wire_payload_rs = read_repo_file("src/wire_payload.rs");
     assert!(
@@ -91,5 +100,9 @@ fn main_module_extraction_contract_keeps_impls_in_new_modules() {
     assert!(
         report_render_rs.contains("pub(crate) fn render_bootstrap_report("),
         "report_render module should own bootstrap report rendering"
+    );
+    assert!(
+        report_builder_rs.contains("pub(crate) fn build_bootstrap_report("),
+        "report_builder module should own bootstrap report assembly"
     );
 }
