@@ -644,6 +644,7 @@ JSON`
     - `contracts.required_secret_hex_length=64`
     - `contracts.fallback_private_key_path_allowed=false`
     - `contracts.fallback_signer_secret_rejected_profile_class=production`
+    - `contracts.fallback_signer_secret_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
     - `contracts.fallback_signer_secret_checkpoint_reason_code=checkpoint_failed_fallback_private_key_contract`
     - `contracts.approval_quorum_required=2`
     - `contracts.approval_quorum_source=local-operator-attestations`
@@ -701,6 +702,7 @@ JSON`
   - no local-heavy opt-in is required for deployment preflight checks.
   - docs/command/policy parity for this lane remains fail-closed (`Regression: #2225`).
   - deployment preflight contract lane parity remains fail-closed (`Regression: #2226`).
+  - fallback retirement docs parity remains fail-closed across README/CI/devnet runbooks (`Regression: #2337`).
   - signer provenance + rotation freshness marker parity remains fail-closed (`Regression: #2300`).
   - signer quorum evidence schema + custody digest parity remains fail-closed (`Regression: #2301`).
   - runtime/deployment shared signer-attestation schema + reason-code parity remains fail-closed (`Regression: #2326`).
