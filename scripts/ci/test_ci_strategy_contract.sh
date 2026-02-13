@@ -153,24 +153,6 @@ required_snippets=(
   "test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh"
   "Non-Kolme lightweight dispatcher wrapper-matrix guard stays on PR fast gate:"
   "test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  "Non-Kolme wave-10 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:"
-  "test_non_kolme_wave10_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  "Non-Kolme wave-11 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:"
-  "test_non_kolme_wave11_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  "Non-Kolme wave-12 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:"
-  "test_non_kolme_wave12_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  "Non-Kolme wave-13 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:"
-  "test_non_kolme_wave13_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  "Non-Kolme wave-14 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:"
-  "test_non_kolme_wave14_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  "Non-Kolme wave-15 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:"
-  "test_non_kolme_wave15_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  "Non-Kolme wave-16 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:"
-  "test_non_kolme_wave16_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  "Non-Kolme wave-17 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:"
-  "test_non_kolme_wave17_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  "Non-Kolme wave-18 lightweight dispatcher wrapper-matrix guard stays on PR fast gate:"
-  "test_non_kolme_wave18_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
   "run_non_kolme_contract_lane_dispatch.sh"
   "run_governance_simulation_contract_lane.sh"
   "Regression: #2649"
@@ -402,6 +384,13 @@ for ((wave = wave_start; wave <= wave_end; wave++)); do
     "generate_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/non_kolme_wave${wave}_wrapper_family_matrix.json --output-json /tmp/non-kolme-wave${wave}-wrapper-family-baseline.json"
     "check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/non_kolme_wave${wave}_wrapper_family_matrix.json --baseline-file fixtures/ci/non_kolme_wave${wave}_wrapper_family_baseline.json --output-json /tmp/non-kolme-wave${wave}-wrapper-family-delta.json"
     "check_non_kolme_wave${wave}_wrapper_family_budget_trend.sh --matrix-file fixtures/ci/non_kolme_wave${wave}_wrapper_family_matrix.json --baseline-file fixtures/ci/non_kolme_wave${wave}_wrapper_family_baseline.json --output-json /tmp/non-kolme-wave${wave}-wrapper-family-trend-report.json"
+  )
+done
+
+for lightweight_wave in {10..18}; do
+  required_snippets+=(
+    "Non-Kolme wave-${lightweight_wave} lightweight dispatcher wrapper-matrix guard stays on PR fast gate:"
+    "test_non_kolme_wave${lightweight_wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
   )
 done
 
