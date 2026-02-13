@@ -252,6 +252,17 @@ if [[ "$LIVE_COMMAND" == *"$NATIVE_PAYLOAD_MESSAGES_MARKER"* ]]; then
   NATIVE_PAYLOAD_MESSAGES_MARKER_PRESENT="true"
 fi
 
+REQUEST_PAYLOAD_EVIDENCE_MARKER="native_payload_pubkey_nonce_messages"
+REQUEST_PAYLOAD_EVIDENCE_MARKER_PRESENT="false"
+REQUEST_PAYLOAD_EVIDENCE_ARTIFACT_PATH="$LIVE_OUTPUT_FILE"
+SUBMIT_EVIDENCE_ARTIFACT_PATH="$LIVE_OUTPUT_FILE"
+FINALITY_EVIDENCE_ARTIFACT_PATH=""
+if [ -n "$FINALITY_COMMAND" ]; then
+  FINALITY_EVIDENCE_ARTIFACT_PATH="$FINALITY_OUTPUT_FILE"
+fi
+REQUEST_FINALITY_EVIDENCE_CONTRACT_VERSION="v1"
+REQUEST_FINALITY_EVIDENCE_LINKED="false"
+
 preflight_command="curl --silent --show-error --fail --max-time ${PREFLIGHT_MAX_SECONDS} ${BASE_URL%/}/healthz"
 
 CHECK_FILE="$(mktemp)"
@@ -406,7 +417,25 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$FINALITY_COMMAND" "$FINALITY_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$FINALITY_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" "$PROVIDER_CLIENT_CONTRACT" "$PROVIDER_SUBMIT_PROFILE_CONTRACT" "$PROVIDER_COMMAND_MARKER" "$PROVIDER_COMMAND_MARKER_PRESENT" "$PROVIDER_SIGNING_PROFILE_MARKER" "$PROVIDER_SIGNING_PROFILE_MARKER_PRESENT" "$SUBMIT_EVIDENCE_MARKER" "$SUBMIT_EVIDENCE_MARKER_PRESENT" "$FINALITY_EVIDENCE_MARKER" "$FINALITY_EVIDENCE_MARKER_PRESENT" "$NATIVE_PAYLOAD_PUBKEY_MARKER" "$NATIVE_PAYLOAD_PUBKEY_MARKER_PRESENT" "$NATIVE_PAYLOAD_NONCE_MARKER" "$NATIVE_PAYLOAD_NONCE_MARKER_PRESENT" "$NATIVE_PAYLOAD_MESSAGES_MARKER" "$NATIVE_PAYLOAD_MESSAGES_MARKER_PRESENT" <<'PY'
+if [ "$NATIVE_PAYLOAD_PUBKEY_MARKER_PRESENT" = "true" ] \
+  && [ "$NATIVE_PAYLOAD_NONCE_MARKER_PRESENT" = "true" ] \
+  && [ "$NATIVE_PAYLOAD_MESSAGES_MARKER_PRESENT" = "true" ]; then
+  REQUEST_PAYLOAD_EVIDENCE_MARKER_PRESENT="true"
+else
+  REQUEST_PAYLOAD_EVIDENCE_MARKER_PRESENT="false"
+fi
+
+if [ "$MODE" = "run" ] \
+  && [ -n "$FINALITY_COMMAND" ] \
+  && [ "$REQUEST_PAYLOAD_EVIDENCE_MARKER_PRESENT" = "true" ] \
+  && [ "$SUBMIT_EVIDENCE_MARKER_PRESENT" = "true" ] \
+  && [ "$FINALITY_EVIDENCE_MARKER_PRESENT" = "true" ]; then
+  REQUEST_FINALITY_EVIDENCE_LINKED="true"
+else
+  REQUEST_FINALITY_EVIDENCE_LINKED="false"
+fi
+
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$FINALITY_COMMAND" "$FINALITY_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$FINALITY_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" "$PROVIDER_CLIENT_CONTRACT" "$PROVIDER_SUBMIT_PROFILE_CONTRACT" "$PROVIDER_COMMAND_MARKER" "$PROVIDER_COMMAND_MARKER_PRESENT" "$PROVIDER_SIGNING_PROFILE_MARKER" "$PROVIDER_SIGNING_PROFILE_MARKER_PRESENT" "$SUBMIT_EVIDENCE_MARKER" "$SUBMIT_EVIDENCE_MARKER_PRESENT" "$FINALITY_EVIDENCE_MARKER" "$FINALITY_EVIDENCE_MARKER_PRESENT" "$NATIVE_PAYLOAD_PUBKEY_MARKER" "$NATIVE_PAYLOAD_PUBKEY_MARKER_PRESENT" "$NATIVE_PAYLOAD_NONCE_MARKER" "$NATIVE_PAYLOAD_NONCE_MARKER_PRESENT" "$NATIVE_PAYLOAD_MESSAGES_MARKER" "$NATIVE_PAYLOAD_MESSAGES_MARKER_PRESENT" "$REQUEST_PAYLOAD_EVIDENCE_MARKER" "$REQUEST_PAYLOAD_EVIDENCE_MARKER_PRESENT" "$REQUEST_PAYLOAD_EVIDENCE_ARTIFACT_PATH" "$SUBMIT_EVIDENCE_ARTIFACT_PATH" "$FINALITY_EVIDENCE_ARTIFACT_PATH" "$REQUEST_FINALITY_EVIDENCE_CONTRACT_VERSION" "$REQUEST_FINALITY_EVIDENCE_LINKED" <<'PY'
 from __future__ import annotations
 
 import json
@@ -447,6 +476,13 @@ native_payload_nonce_marker = sys.argv[31]
 native_payload_nonce_marker_present = sys.argv[32] == "true"
 native_payload_messages_marker = sys.argv[33]
 native_payload_messages_marker_present = sys.argv[34] == "true"
+request_payload_evidence_marker = sys.argv[35]
+request_payload_evidence_marker_present = sys.argv[36] == "true"
+request_payload_evidence_artifact_path = sys.argv[37]
+submit_evidence_artifact_path = sys.argv[38]
+finality_evidence_artifact_path = sys.argv[39]
+request_finality_evidence_contract_version = sys.argv[40]
+request_finality_evidence_linked = sys.argv[41] == "true"
 
 def classify_synthetic_command(command: str) -> bool:
     normalized = " ".join(command.strip().split())
@@ -533,6 +569,13 @@ summary = {
     "native_payload_messages_marker": native_payload_messages_marker,
     "native_payload_messages_marker_present": native_payload_messages_marker_present,
     "native_payload_marker_contract_version": "v1",
+    "request_payload_evidence_marker": request_payload_evidence_marker,
+    "request_payload_evidence_marker_present": request_payload_evidence_marker_present,
+    "request_payload_evidence_artifact_path": request_payload_evidence_artifact_path,
+    "submit_evidence_artifact_path": submit_evidence_artifact_path,
+    "finality_evidence_artifact_path": finality_evidence_artifact_path,
+    "request_finality_evidence_contract_version": request_finality_evidence_contract_version,
+    "request_finality_evidence_linked": request_finality_evidence_linked,
     "preflight_enabled": not skip_preflight,
     "preflight_max_seconds": preflight_max_seconds,
     "checks": checks,
