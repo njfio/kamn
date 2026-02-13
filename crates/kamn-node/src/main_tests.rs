@@ -1433,6 +1433,49 @@ fn regression_kolme_live_managed_external_required_marker_forces_backend_command
 }
 
 #[test]
+fn regression_kolme_live_managed_external_requires_backend_command_without_required_marker() {
+    // Regression: #2505
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+    let _key_ref_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
+        Some(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE),
+    );
+    let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
+    let _fallback_key_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+    let _backend_command_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND", None);
+    let _required_marker_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED", None);
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-node-live-2505-command-required",
+        "state:node-live-2505-command-required",
+        "kamn:did:agent:node-live-2505-command-required",
+        1,
+        "payload:node-live-2505-command-required",
+    )
+    .expect("request should build");
+    let (base_url, _requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+        r#"{"next_nonce":44,"account_id":"acct-2505-required"}"#,
+    )]);
+    let mut transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+    let error = build_kolme_live_direct_signed_wire_payload(
+        base_url.as_str(),
+        &mut transport,
+        &request,
+        None,
+        Some("managed-external"),
+    )
+    .expect_err("managed-external signer mode must require backend command marker");
+    assert!(
+        matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("managed_signer_backend_required_missing")),
+        "managed-external signer mode without backend command must fail closed"
+    );
+}
+
+#[test]
 fn integration_kolme_live_managed_external_builds_direct_signed_wire_payload() {
     // Regression: #2323
     let _lock = signer_env_lock()
@@ -1525,7 +1568,6 @@ fn regression_kolme_live_managed_external_maps_provider_unavailable_reason_code(
         1,
         "payload:managed-signature",
         SignerProviderHandshakeMatrix::with_uniform_availability(false),
-        false,
     )
     .expect_err("managed-external provider unavailability must fail closed");
     assert!(
@@ -1558,7 +1600,6 @@ fn regression_kolme_live_managed_external_backend_timeout_maps_reason_code() {
         1,
         "payload:managed-signature",
         SignerProviderHandshakeMatrix::with_uniform_availability(true),
-        false,
     )
     .expect_err("managed-external backend timeout must fail closed");
     assert!(
@@ -1593,7 +1634,6 @@ fn regression_kolme_live_managed_external_backend_malformed_response_maps_reason
         1,
         "payload:managed-signature",
         SignerProviderHandshakeMatrix::with_uniform_availability(true),
-        false,
     )
     .expect_err("managed-external backend malformed response must fail closed");
     assert!(
@@ -1628,7 +1668,6 @@ fn regression_kolme_live_managed_external_backend_unavailable_maps_reason_code()
         1,
         "payload:managed-signature",
         SignerProviderHandshakeMatrix::with_uniform_availability(true),
-        false,
     )
     .expect_err("managed-external backend unavailability must fail closed");
     assert!(
