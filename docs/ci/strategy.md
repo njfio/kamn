@@ -401,6 +401,9 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_rotation_epoch_stale`
       - `runtime_signer_key_source_profile_pair_disallowed`
       - `runtime_signer_private_key_env_mismatch`
+      - `runtime_commit_signer_key_source_marker_missing`
+      - `runtime_commit_managed_external_signer_key_reference_marker_missing`
+      - `runtime_commit_managed_external_private_key_command_marker_detected`
       - `runtime_signing_profile_mismatch`
       - `runtime_signing_profile_contract_mismatch`
       - `runtime_signer_fallback_private_key_present_violation`

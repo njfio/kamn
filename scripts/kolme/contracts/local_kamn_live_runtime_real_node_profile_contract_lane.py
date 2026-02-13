@@ -21,6 +21,10 @@ SIGNER_PRIVATE_KEY_ENV_BY_PROFILE = {
     "ops-primary": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "ops-secondary": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
 }
+SIGNER_KEY_REF_ENV_BY_PROFILE = {
+    "ops-primary": "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
+    "ops-secondary": "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY",
+}
 FALLBACK_SIGNER_PRIVATE_KEY_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 
 
@@ -100,6 +104,7 @@ def main() -> int:
     expected_signer_key_source_contract_version = "v1"
     expected_signer_key_source = "env-local"
     expected_signer_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[expected_signer_profile]
+    expected_signer_key_reference_env = SIGNER_KEY_REF_ENV_BY_PROFILE[expected_signer_profile]
     alternate_signer_profile = "ops-secondary" if expected_signer_profile == "ops-primary" else "ops-primary"
     alternate_signer_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[alternate_signer_profile]
 
@@ -236,6 +241,12 @@ def main() -> int:
     if expected_signer_command_marker not in runtime_commit_command:
         print("expected signer profile marker in contract-lane summary command", file=sys.stderr)
         return 1
+    expected_signer_key_source_command_marker = (
+        f"KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE={expected_signer_key_source}"
+    )
+    if expected_signer_key_source_command_marker not in runtime_commit_command:
+        print("expected signer key-source marker in contract-lane summary command", file=sys.stderr)
+        return 1
     if "InMemoryKolmeRuntimeCommitClient" in runtime_commit_command:
         print("expected live-provider-only runtime command composition in real-node contract-lane summary", file=sys.stderr)
         return 1
@@ -278,11 +289,6 @@ def main() -> int:
     if summary.get("runtime_signer_private_key_env") != expected_signer_private_key_env:
         print("expected signer private key env marker in contract-lane summary", file=sys.stderr)
         return 1
-    expected_signer_key_reference_env = (
-        "KAMN_KOLME_LIVE_SIGNER_KEY_REF"
-        if expected_signer_profile == "ops-primary"
-        else "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY"
-    )
     if summary.get("runtime_signer_key_reference_env") != expected_signer_key_reference_env:
         print("expected signer key reference env marker in contract-lane summary", file=sys.stderr)
         return 1
@@ -994,6 +1000,193 @@ def main() -> int:
             print("expected NO-GO final decision for key-source matrix drift policy output", file=sys.stderr)
             return 1
 
+        key_source_command_marker_drift_summary_file = (
+            negative_path / "key_source_command_marker_drift_summary.json"
+        )
+        key_source_command_marker_drift_policy_file = (
+            negative_path / "key_source_command_marker_drift_policy.json"
+        )
+        key_source_command_marker_drift_summary = dict(summary)
+        key_source_command_marker_drift_summary["runtime_commit_command"] = (
+            runtime_commit_command.replace(
+                f"KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE={expected_signer_key_source}",
+                "",
+                1,
+            )
+        )
+        key_source_command_marker_drift_summary_file.write_text(
+            json.dumps(key_source_command_marker_drift_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        key_source_command_marker_drift_result = run_real_node_policy_check(
+            report_file=key_source_command_marker_drift_summary_file,
+            output_json=key_source_command_marker_drift_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if key_source_command_marker_drift_result.returncode == 0:
+            print("expected signer key-source command marker negative proof to fail closed", file=sys.stderr)
+            return 1
+        key_source_command_marker_drift_policy = json.loads(
+            key_source_command_marker_drift_policy_file.read_text(encoding="utf-8")
+        )
+        key_source_command_marker_drift_reason_codes = key_source_command_marker_drift_policy.get(
+            "reason_codes"
+        )
+        if not isinstance(key_source_command_marker_drift_reason_codes, list):
+            print(
+                "expected reason_codes list in signer key-source command marker negative proof policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if (
+            "runtime_commit_signer_key_source_marker_missing"
+            not in key_source_command_marker_drift_reason_codes
+        ):
+            print(
+                "expected runtime_commit_signer_key_source_marker_missing in signer key-source command marker negative proof policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if key_source_command_marker_drift_policy.get("final_decision") != "NO-GO":
+            print(
+                "expected NO-GO final decision for signer key-source command marker negative proof policy output",
+                file=sys.stderr,
+            )
+            return 1
+
+        managed_external_key_reference_drift_summary_file = (
+            negative_path / "managed_external_key_reference_drift_summary.json"
+        )
+        managed_external_key_reference_drift_policy_file = (
+            negative_path / "managed_external_key_reference_drift_policy.json"
+        )
+        managed_external_key_reference_drift_summary = dict(summary)
+        managed_external_key_reference_drift_summary["runtime_signer_key_source"] = (
+            "managed-external"
+        )
+        managed_external_key_reference_drift_contracts = dict(summary.get("contracts", {}))
+        managed_external_key_reference_drift_contracts["runtime_signer_key_source"] = (
+            "managed-external"
+        )
+        managed_external_key_reference_drift_summary["contracts"] = (
+            managed_external_key_reference_drift_contracts
+        )
+        managed_external_key_reference_drift_summary["runtime_commit_command"] = (
+            runtime_commit_command.replace(
+                f"KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE={expected_signer_key_source}",
+                "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=managed-external",
+                1,
+            )
+        )
+        managed_external_key_reference_drift_summary_file.write_text(
+            json.dumps(managed_external_key_reference_drift_summary, sort_keys=True, indent=2)
+            + "\n",
+            encoding="utf-8",
+        )
+
+        managed_external_key_reference_drift_result = run_real_node_policy_check(
+            report_file=managed_external_key_reference_drift_summary_file,
+            output_json=managed_external_key_reference_drift_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if managed_external_key_reference_drift_result.returncode == 0:
+            print(
+                "expected managed-external signer key-reference marker negative proof to fail closed",
+                file=sys.stderr,
+            )
+            return 1
+        managed_external_key_reference_drift_policy = json.loads(
+            managed_external_key_reference_drift_policy_file.read_text(encoding="utf-8")
+        )
+        managed_external_key_reference_drift_reason_codes = (
+            managed_external_key_reference_drift_policy.get("reason_codes")
+        )
+        if not isinstance(managed_external_key_reference_drift_reason_codes, list):
+            print(
+                "expected reason_codes list in managed-external signer key-reference marker negative proof policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if (
+            "runtime_commit_managed_external_signer_key_reference_marker_missing"
+            not in managed_external_key_reference_drift_reason_codes
+        ):
+            print(
+                "expected runtime_commit_managed_external_signer_key_reference_marker_missing in managed-external signer key-reference marker negative proof policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if managed_external_key_reference_drift_policy.get("final_decision") != "NO-GO":
+            print(
+                "expected NO-GO final decision for managed-external signer key-reference marker negative proof policy output",
+                file=sys.stderr,
+            )
+            return 1
+
+        managed_external_private_key_command_drift_summary_file = (
+            negative_path / "managed_external_private_key_command_drift_summary.json"
+        )
+        managed_external_private_key_command_drift_policy_file = (
+            negative_path / "managed_external_private_key_command_drift_policy.json"
+        )
+        managed_external_private_key_command_drift_summary = dict(
+            managed_external_key_reference_drift_summary
+        )
+        managed_external_private_key_command_drift_summary["runtime_commit_command"] = (
+            managed_external_key_reference_drift_summary["runtime_commit_command"].replace(
+                "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=managed-external",
+                "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=managed-external "
+                f"{expected_signer_key_reference_env}=secure:aws-kms:role-operator/key-live-{expected_signer_profile} "
+                f"{expected_signer_private_key_env}=1111111111111111111111111111111111111111111111111111111111111111",
+                1,
+            )
+        )
+        managed_external_private_key_command_drift_summary_file.write_text(
+            json.dumps(managed_external_private_key_command_drift_summary, sort_keys=True, indent=2)
+            + "\n",
+            encoding="utf-8",
+        )
+
+        managed_external_private_key_command_drift_result = run_real_node_policy_check(
+            report_file=managed_external_private_key_command_drift_summary_file,
+            output_json=managed_external_private_key_command_drift_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if managed_external_private_key_command_drift_result.returncode == 0:
+            print(
+                "expected managed-external private key command marker negative proof to fail closed",
+                file=sys.stderr,
+            )
+            return 1
+        managed_external_private_key_command_drift_policy = json.loads(
+            managed_external_private_key_command_drift_policy_file.read_text(encoding="utf-8")
+        )
+        managed_external_private_key_command_drift_reason_codes = (
+            managed_external_private_key_command_drift_policy.get("reason_codes")
+        )
+        if not isinstance(managed_external_private_key_command_drift_reason_codes, list):
+            print(
+                "expected reason_codes list in managed-external private key command marker negative proof policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if (
+            "runtime_commit_managed_external_private_key_command_marker_detected"
+            not in managed_external_private_key_command_drift_reason_codes
+        ):
+            print(
+                "expected runtime_commit_managed_external_private_key_command_marker_detected in managed-external private key command marker negative proof policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if managed_external_private_key_command_drift_policy.get("final_decision") != "NO-GO":
+            print(
+                "expected NO-GO final decision for managed-external private key command marker negative proof policy output",
+                file=sys.stderr,
+            )
+            return 1
+
         synthetic_regression_summary_file = negative_path / "synthetic_regression_summary.json"
         synthetic_regression_policy_file = negative_path / "synthetic_regression_policy.json"
         synthetic_regression_summary = dict(summary)
@@ -1113,6 +1306,9 @@ def main() -> int:
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
+        "runtime_commit_signer_key_source_marker_missing",
+        "runtime_commit_managed_external_signer_key_reference_marker_missing",
+        "runtime_commit_managed_external_private_key_command_marker_detected",
         "runtime_signing_profile_mismatch",
         "runtime_signing_profile_contract_mismatch",
         "Regression: #2302",
@@ -1147,6 +1343,9 @@ def main() -> int:
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
+        "runtime_commit_signer_key_source_marker_missing",
+        "runtime_commit_managed_external_signer_key_reference_marker_missing",
+        "runtime_commit_managed_external_private_key_command_marker_detected",
         "runtime_signing_profile_mismatch",
         "runtime_signing_profile_contract_mismatch",
         "Regression: #2302",
@@ -1181,6 +1380,9 @@ def main() -> int:
         "runtime_signer_rotation_epoch_stale",
         "runtime_signer_key_source_profile_pair_disallowed",
         "runtime_signer_private_key_env_mismatch",
+        "runtime_commit_signer_key_source_marker_missing",
+        "runtime_commit_managed_external_signer_key_reference_marker_missing",
+        "runtime_commit_managed_external_private_key_command_marker_detected",
         "runtime_signing_profile_mismatch",
         "runtime_signing_profile_contract_mismatch",
         "Regression: #2302",

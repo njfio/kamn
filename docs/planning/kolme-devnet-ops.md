@@ -467,6 +467,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - NO-GO stale-rotation proof must surface `runtime_signer_rotation_epoch_stale` when failover rotation epoch is not strictly increasing.
   - NO-GO key-source/profile matrix proof must surface `runtime_signer_key_source_profile_pair_disallowed` when signer profile/key-source pair is outside the strict allowlist.
   - NO-GO signer-key-env drift proof must surface `runtime_signer_private_key_env_mismatch` when signer key env marker drifts from `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`.
+  - NO-GO signer key-source command marker proof must surface `runtime_commit_signer_key_source_marker_missing` when `runtime_commit_command` omits `KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=<env-local|managed-external>`.
+  - NO-GO managed-external key-reference command marker proof must surface `runtime_commit_managed_external_signer_key_reference_marker_missing` when managed-external command composition omits `KAMN_KOLME_LIVE_SIGNER_KEY_REF=...`.
+  - NO-GO managed-external private key command marker proof must surface `runtime_commit_managed_external_private_key_command_marker_detected` when managed-external command composition includes `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=...`.
   - NO-GO runtime-signing-profile drift proof must surface `runtime_signing_profile_mismatch` when summary runtime signing profile markers drift from `kolme-fork-secp256k1-v1`.
   - NO-GO runtime-signing-profile contract drift proof must surface `runtime_signing_profile_contract_mismatch` when contracts runtime signing profile markers drift from `kolme-fork-secp256k1-v1`.
   - NO-GO fallback signer key proof must surface `runtime_signer_fallback_private_key_present_violation` when `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK` is present.
