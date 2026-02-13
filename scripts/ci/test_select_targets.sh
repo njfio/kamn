@@ -469,6 +469,25 @@ assert_eq "$(extract_output "$non_kolme_wave18_trend_checker_script_output" "run
 assert_eq "$(extract_output "$non_kolme_wave18_trend_checker_script_output" "unknown_risk_changed")" "false" "non-Kolme wave-18 trend checker script changes should be classified"
 assert_eq "$(extract_output "$non_kolme_wave18_trend_checker_script_output" "test_scope")" "ci-doc-contract" "non-Kolme wave-18 trend checker script changes should use ci-doc-contract scope"
 
+non_kolme_wave19_matrix_fixture_output="$(run_selector $'fixtures/ci/non_kolme_wave19_wrapper_family_matrix.json')"
+assert_eq "$(extract_output "$non_kolme_wave19_matrix_fixture_output" "run_rust")" "false" "non-Kolme wave-19 wrapper-family matrix fixture changes should avoid rust full fallback"
+assert_eq "$(extract_output "$non_kolme_wave19_matrix_fixture_output" "run_ci_tool_checks")" "true" "non-Kolme wave-19 wrapper-family matrix fixture changes must run CI tool checks"
+assert_eq "$(extract_output "$non_kolme_wave19_matrix_fixture_output" "unknown_risk_changed")" "false" "non-Kolme wave-19 wrapper-family matrix fixture changes should be classified"
+assert_eq "$(extract_output "$non_kolme_wave19_matrix_fixture_output" "test_scope")" "ci-doc-contract" "non-Kolme wave-19 wrapper-family matrix fixture changes should use ci-doc-contract scope"
+
+non_kolme_wave19_threshold_fixture_output="$(run_selector $'fixtures/ci/non_kolme_wave19_wrapper_family_trend_thresholds.json')"
+assert_eq "$(extract_output "$non_kolme_wave19_threshold_fixture_output" "run_rust")" "false" "non-Kolme wave-19 trend threshold fixture changes should avoid rust full fallback"
+assert_eq "$(extract_output "$non_kolme_wave19_threshold_fixture_output" "run_ci_tool_checks")" "true" "non-Kolme wave-19 trend threshold fixture changes must run CI tool checks"
+assert_eq "$(extract_output "$non_kolme_wave19_threshold_fixture_output" "unknown_risk_changed")" "false" "non-Kolme wave-19 trend threshold fixture changes should be classified"
+assert_eq "$(extract_output "$non_kolme_wave19_threshold_fixture_output" "test_scope")" "ci-doc-contract" "non-Kolme wave-19 trend threshold fixture changes should use ci-doc-contract scope"
+
+non_kolme_wave19_trend_checker_script_output="$(run_selector $'scripts/ci/check_non_kolme_wave19_wrapper_family_budget_trend.sh')"
+assert_eq "$(extract_output "$non_kolme_wave19_trend_checker_script_output" "run_rust")" "false" "non-Kolme wave-19 trend checker script changes should avoid rust full fallback"
+assert_eq "$(extract_output "$non_kolme_wave19_trend_checker_script_output" "run_ci_tool_checks")" "true" "non-Kolme wave-19 trend checker script changes must run CI tool checks"
+assert_eq "$(extract_output "$non_kolme_wave19_trend_checker_script_output" "run_script_surface_budget_checks")" "true" "non-Kolme wave-19 trend checker script changes should run script-surface budget checks"
+assert_eq "$(extract_output "$non_kolme_wave19_trend_checker_script_output" "unknown_risk_changed")" "false" "non-Kolme wave-19 trend checker script changes should be classified"
+assert_eq "$(extract_output "$non_kolme_wave19_trend_checker_script_output" "test_scope")" "ci-doc-contract" "non-Kolme wave-19 trend checker script changes should use ci-doc-contract scope"
+
 non_kolme_dispatcher_script_output="$(run_selector $'scripts/framework/run_non_kolme_contract_lane_dispatch.sh')"
 assert_eq "$(extract_output "$non_kolme_dispatcher_script_output" "run_rust")" "false" "non-Kolme dispatcher script changes should avoid rust full fallback"
 assert_eq "$(extract_output "$non_kolme_dispatcher_script_output" "run_ci_tool_checks")" "true" "non-Kolme dispatcher script changes must run CI tool checks"
