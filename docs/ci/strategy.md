@@ -209,6 +209,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `run_ci_tool_checks=true`
     - `test_scope=ci-doc-contract`
     - unknown/full fallback remains disabled for this wave-10 path set
+- Authoritative non-Kolme wrapper-family wave range marker:
+  - `non_kolme_wrapper_family_wave_range=1-19`
+  - `bash scripts/ci/test_ci_strategy_wave_range_marker_contract.sh`
+  - widened/narrowed marker bounds fail closed if documented non-Kolme wave snippets diverge.
 - Non-Kolme wave-1 wrapper-family fixture and trend-checker changes map to CI contract scope:
   - `fixtures/ci/non_kolme_wave1_wrapper_family_matrix.json`
   - `fixtures/ci/non_kolme_wave1_wrapper_family_baseline.json`

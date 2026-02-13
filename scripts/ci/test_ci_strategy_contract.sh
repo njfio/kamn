@@ -2,10 +2,28 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
+STRATEGY_DOC="${KAMN_CI_STRATEGY_DOC_FILE:-$ROOT_DIR/docs/ci/strategy.md}"
+WAVE_RANGE_MARKER_PATTERN='non_kolme_wrapper_family_wave_range=[0-9]+-[0-9]+'
 
 if [ ! -f "$STRATEGY_DOC" ]; then
   echo "CI strategy contract failed: docs/ci/strategy.md is missing." >&2
+  exit 1
+fi
+
+mapfile -t wave_range_markers < <(grep -Eo "$WAVE_RANGE_MARKER_PATTERN" "$STRATEGY_DOC" | sort -u)
+if [ "${#wave_range_markers[@]}" -ne 1 ]; then
+  echo "CI strategy contract failed: expected exactly one non_kolme_wrapper_family_wave_range marker." >&2
+  exit 1
+fi
+wave_range_marker="${wave_range_markers[0]}"
+if [[ ! "$wave_range_marker" =~ ^non_kolme_wrapper_family_wave_range=([0-9]+)-([0-9]+)$ ]]; then
+  echo "CI strategy contract failed: invalid non_kolme_wrapper_family_wave_range marker '$wave_range_marker'." >&2
+  exit 1
+fi
+wave_start="${BASH_REMATCH[1]}"
+wave_end="${BASH_REMATCH[2]}"
+if (( wave_start < 1 || wave_end < wave_start )); then
+  echo "CI strategy contract failed: unsupported non_kolme_wrapper_family_wave_range marker '$wave_range_marker'." >&2
   exit 1
 fi
 
@@ -51,6 +69,8 @@ required_snippets=(
   "check_non_kolme_wave_trend_test_loc_soft_budget.py"
   "check_non_kolme_wave_trend_test_loc_soft_budget.sh"
   "test_check_non_kolme_wave_trend_test_loc_soft_budget.sh"
+  "test_ci_strategy_wave_range_marker_contract.sh"
+  "non_kolme_wrapper_family_wave_range="
   "changes map to CI contract scope"
   "Wave-10 wrapper-family fixture and trend-checker changes map to CI contract scope:"
   "unknown/full fallback remains disabled for this path"
@@ -371,7 +391,7 @@ required_snippets=(
   "Regression: #1833"
 )
 
-for wave in {1..19}; do
+for ((wave = wave_start; wave <= wave_end; wave++)); do
   required_snippets+=(
     "non_kolme_wave${wave}_wrapper_family_matrix.json"
     "non_kolme_wave${wave}_wrapper_family_baseline.json"
