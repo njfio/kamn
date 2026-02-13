@@ -155,11 +155,11 @@ payload = json.loads(baseline_path.read_text(encoding="utf-8"))
 if not payload.get("lanes"):
     raise SystemExit("expected at least one lane in baseline fixture")
 
-payload["lanes"] = payload["lanes"][:-1]
-payload["wrapper_count"] = len(payload["lanes"])
-payload["regular_file_wrapper_count"] = len(payload["lanes"])
-payload["symlink_wrapper_count"] = sum(1 for lane in payload["lanes"] if lane.get("wrapper_kind") == "symlink")
-payload["total_shell_loc"] = sum(int(lane["shell_loc"]) for lane in payload["lanes"])
+first_lane = payload["lanes"][0]
+lane_id = first_lane.get("lane_id")
+if not isinstance(lane_id, str) or not lane_id.strip():
+    raise SystemExit("expected first baseline lane to include a non-empty lane_id")
+first_lane["lane_id"] = f"{lane_id}__stale_baseline"
 baseline_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 
