@@ -1,0 +1,125 @@
+{
+  "ignored_tests": [
+    {
+      "owner": "team-runtime",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-core/src/channel_models.rs",
+      "test_name": "performance_channel_snapshot_deep_lane_stress",
+      "tracking_issue": "#2843"
+    },
+    {
+      "owner": "team-runtime",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-core/src/message_lifecycle.rs",
+      "test_name": "performance_message_lifecycle_snapshot_deep_lane_stress",
+      "tracking_issue": "#2843"
+    },
+    {
+      "owner": "team-runtime",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-core/src/runtime.rs",
+      "test_name": "performance_file_snapshot_store_recovery_deep_lane_large_payload",
+      "tracking_issue": "#2843"
+    },
+    {
+      "owner": "team-runtime",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-core/src/runtime.rs",
+      "test_name": "performance_network_fault_simulation_chaos_lane_stress",
+      "tracking_issue": "#2843"
+    },
+    {
+      "owner": "team-runtime",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-core/src/task_operations.rs",
+      "test_name": "performance_task_operation_snapshot_store_deep_lane_stress",
+      "tracking_issue": "#2843"
+    },
+    {
+      "owner": "team-runtime",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-core/tests/concurrency_state_mutation.rs",
+      "test_name": "performance_concurrency_state_mutation_deep_lane_stress",
+      "tracking_issue": "#2843"
+    },
+    {
+      "owner": "team-runtime",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-core/tests/durable_guard_recovery_matrix.rs",
+      "test_name": "performance_durable_guard_recovery_matrix_deep_lane",
+      "tracking_issue": "#2843"
+    },
+    {
+      "owner": "team-runtime",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-core/tests/durable_guard_snapshot_store.rs",
+      "test_name": "performance_bundle_store_deep_lane_stress",
+      "tracking_issue": "#2843"
+    },
+    {
+      "owner": "team-runtime",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-core/tests/input_mutation_coverage_guided.rs",
+      "test_name": "performance_input_mutation_coverage_guided_deep_lane_stress",
+      "tracking_issue": "#2843"
+    },
+    {
+      "owner": "team-kolme",
+      "priority": "P1",
+      "reason": "local-heavy-live-node",
+      "source_file": "crates/kamn-core/tests/kolme_runtime_commit_http_transport.rs",
+      "test_name": "integration_kolme_fork_live_node_submit_reaches_endpoint",
+      "tracking_issue": "#2842"
+    },
+    {
+      "owner": "team-signer",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-core/tests/signer_backend.rs",
+      "test_name": "performance_signer_emulator_bulk_signing_deep_lane",
+      "tracking_issue": "#2843"
+    },
+    {
+      "owner": "team-runtime",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-core/tests/zk_witness_fuzz_smoke.rs",
+      "test_name": "performance_zk_witness_mutation_deep_lane_stress",
+      "tracking_issue": "#2843"
+    },
+    {
+      "owner": "team-kolme",
+      "priority": "P1",
+      "reason": "local-heavy-live-node",
+      "source_file": "crates/kamn-node/src/main_tests/signer_tests.rs",
+      "test_name": "integration_kolme_live_signer_vector_probe_contract",
+      "tracking_issue": "#2842"
+    },
+    {
+      "owner": "team-sdk",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-sdk/tests/live_transport_agent.rs",
+      "test_name": "performance_live_transport_multi_client_deep_lane",
+      "tracking_issue": "#2843"
+    },
+    {
+      "owner": "team-sdk",
+      "priority": "P2",
+      "reason": "deep-lane-performance",
+      "source_file": "crates/kamn-sdk/tests/tcp_failover_matrix.rs",
+      "test_name": "performance_tcp_failover_reconnect_matrix_deep_lane",
+      "tracking_issue": "#2843"
+    }
+  ],
+  "schema_version": "kamn.ci.ignored-test-inventory-metadata.v1"
+}

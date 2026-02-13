@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECK_SCRIPT="$ROOT_DIR/scripts/ci/check_ignored_test_inventory_drift.sh"
 GENERATE_SCRIPT="$ROOT_DIR/scripts/ci/generate_ignored_test_inventory_baseline.sh"
 BASELINE_FILE="$ROOT_DIR/fixtures/ci/ignored_test_inventory_baseline.json"
+METADATA_FILE="$ROOT_DIR/fixtures/ci/ignored_test_inventory_metadata.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -20,6 +21,11 @@ fi
 
 if [ ! -f "$BASELINE_FILE" ]; then
   echo "expected ignored-test baseline fixture to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$METADATA_FILE" ]; then
+  echo "expected ignored-test metadata fixture to exist" >&2
   exit 1
 fi
 
@@ -43,6 +49,7 @@ PY
 PASS_REPORT="$TMP_DIR/ignored-test-drift-pass.json"
 bash "$CHECK_SCRIPT" \
   --baseline-file "$BASELINE_FILE" \
+  --metadata-file "$METADATA_FILE" \
   --output-json "$PASS_REPORT" >"$TMP_DIR/check-pass.out"
 
 grep -q '^status=pass$' "$TMP_DIR/check-pass.out"
@@ -66,6 +73,7 @@ PY
 
 if bash "$CHECK_SCRIPT" \
   --baseline-file "$MUTATED_BASELINE" \
+  --metadata-file "$METADATA_FILE" \
   --output-json "$TMP_DIR/check-fail.json" >"$TMP_DIR/check-fail.out" 2>&1; then
   echo "expected ignored-test drift checker to fail on baseline drift" >&2
   exit 1
