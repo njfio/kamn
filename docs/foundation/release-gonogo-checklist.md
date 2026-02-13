@@ -274,6 +274,8 @@ Kolme upgrade approvals require deterministic KAMN/Kolme version compatibility v
   - `python3 scripts/kolme/run_runtime_commit_replay_tamper_matrix.py --fixture fixtures/kolme_commit/runtime_commit_replay_tamper_cases.json --output-json /tmp/kolme-runtime-commit-replay-report.json`
 - Runtime commit adapter replay/finality fast lane:
   - `bash scripts/kolme/run_runtime_commit_adapter_contract_lane.sh`
+  - `cargo test -p kamn-kolme --test runtime_commit_module_boundary_contracts`
+  - `cargo test -p kamn-core --test kolme_runtime_commit_import_boundary`
   - adapter reason-code checks include:
     - `receipt_provider_mismatch`
     - `receipt_not_final`

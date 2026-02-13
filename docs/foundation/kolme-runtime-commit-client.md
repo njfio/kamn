@@ -183,6 +183,9 @@ handling.
   - mapped to `KolmeRuntimeCommitError::ProviderMismatch`
 - Non-final provider receipt:
   - mapped to `KolmeRuntimeCommitError::NonFinalReceipt`
+- Adapter reason-code parity markers:
+  - `receipt_provider_mismatch`
+  - `receipt_not_final`
 
 ## Decomposition Parity Matrix (Task #2124)
 
@@ -232,6 +235,8 @@ cargo test -p kamn-core --test kolme_runtime_commit_http_transport integration_h
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_http_transport_submit_broadcast_request_rejects_malformed_txhash_response -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport functional_https_transport_submit_with_trusted_ca_succeeds -- --exact
 cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_https_transport_maps_certificate_errors_to_unavailable -- --exact
+cargo test -p kamn-kolme --test runtime_commit_module_boundary_contracts
+cargo test -p kamn-core --test kolme_runtime_commit_import_boundary
 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode dry-run --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt
 python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/kolme-local-runtime-commit-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-runtime-commit-live-policy.json
 KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --base-url http://127.0.0.1:3000 --provider-hint kolme-fork-local --max-seconds 90 --preflight-max-seconds 10 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt
