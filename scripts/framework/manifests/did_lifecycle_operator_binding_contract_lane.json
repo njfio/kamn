@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "did.lifecycle_operator_binding.contract",
+  "evidence_key": "lifecycle_operator_binding_contract_lane:v1",
+  "reason_key": "lifecycle_operator_binding_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "bash",
+      "scripts/did/lifecycle_operator_binding_contract_lane_contract.sh"
+    ]
+  }
+}

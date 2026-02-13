@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/did/run_federated_did_handshake_contract_lane.sh"
 DEEP_LANE="$ROOT_DIR/scripts/did/run_federated_did_handshake_deep_lane.sh"
+SHARED_CONTRACT="$ROOT_DIR/scripts/did/federated_did_handshake_contract_lane_contract.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/did_federated_did_handshake_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
 if [ ! -x "$CONTRACT_LANE" ]; then
   echo "expected federated DID handshake contract lane script to be executable" >&2
@@ -12,6 +15,10 @@ fi
 
 if [ ! -x "$DEEP_LANE" ]; then
   echo "expected federated DID handshake deep lane script to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$SHARED_CONTRACT" ]; then
+  echo "expected federated DID handshake shared contract-lane module to be executable" >&2
   exit 1
 fi
 
@@ -31,23 +38,41 @@ if ! grep -q "federated-did-handshake-report.json" "$DEEP_LANE"; then
   exit 1
 fi
 
-if ! grep -Fq -- "--test federated_did_handshake_runtime" "$CONTRACT_LANE"; then
+if ! grep -Fq -- "--test federated_did_handshake_runtime" "$SHARED_CONTRACT"; then
   echo "expected federated DID handshake contract lane to include runtime trust-store handshake tests" >&2
   exit 1
 fi
 
-if ! grep -q "regression_requires_federated_runtime_trust_store_guard_marker" "$CONTRACT_LANE"; then
+if ! grep -q "regression_requires_federated_runtime_trust_store_guard_marker" "$SHARED_CONTRACT"; then
   echo "expected federated DID handshake contract lane to verify runtime trust-store regression doc guards" >&2
   exit 1
 fi
 
-if ! grep -q "test_check_federated_did_handshake_deep_policy.sh" "$CONTRACT_LANE"; then
+if ! grep -q "test_check_federated_did_handshake_deep_policy.sh" "$SHARED_CONTRACT"; then
   echo "expected federated DID handshake contract lane to include deep policy checker tests" >&2
   exit 1
 fi
 
-if ! grep -q "test_run_federated_did_handshake_deep_policy_matrix.sh" "$CONTRACT_LANE"; then
+if ! grep -q "test_run_federated_did_handshake_deep_policy_matrix.sh" "$SHARED_CONTRACT"; then
   echo "expected federated DID handshake contract lane to include deep policy matrix tests" >&2
+  exit 1
+fi
+
+if [ ! -L "$CONTRACT_LANE" ]; then
+  echo "expected federated DID handshake contract lane wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+if [ "$(readlink "$CONTRACT_LANE")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected federated DID handshake contract lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$CONTRACT_LANE")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected federated DID handshake wrapper to resolve did handshake manifest via dispatcher" >&2
+  exit 1
+fi
+if ! grep -Fq "federated_did_handshake_contract_lane_contract.sh" "$MANIFEST_FILE"; then
+  echo "expected federated DID handshake manifest to dispatch shared contract module" >&2
   exit 1
 fi
 

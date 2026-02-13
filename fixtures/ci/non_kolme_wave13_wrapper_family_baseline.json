@@ -1,0 +1,50 @@
+{
+  "lanes": [
+    {
+      "lane_id": "non_kolme.did.did_registry",
+      "manifest_file": "scripts/framework/manifests/did_did_registry_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/did/run_did_registry_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.did.federated_did_handshake",
+      "manifest_file": "scripts/framework/manifests/did_federated_did_handshake_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/did/run_federated_did_handshake_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.did.lifecycle_operator_binding",
+      "manifest_file": "scripts/framework/manifests/did_lifecycle_operator_binding_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/did/run_lifecycle_operator_binding_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.did.multikey_algorithm_policy",
+      "manifest_file": "scripts/framework/manifests/did_multikey_algorithm_policy_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/did/run_multikey_algorithm_policy_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    }
+  ],
+  "regular_file_wrapper_count": 0,
+  "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
+  "source_matrix_file": "fixtures/ci/non_kolme_wave13_wrapper_family_matrix.json",
+  "symlink_wrapper_count": 4,
+  "total_shell_loc": 4,
+  "wrapper_count": 4
+}
