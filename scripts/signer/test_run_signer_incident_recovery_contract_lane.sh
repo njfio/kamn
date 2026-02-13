@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/signer/run_signer_incident_recovery_contract_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/signer/signer_incident_recovery_contract_lane_contract.py"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/signer_signer_incident_recovery_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -43,8 +45,21 @@ if ! grep -q '"final_decision": "GO"' "$report_file"; then
   exit 1
 fi
 
-if ! grep -q 'signer_incident_recovery_contract_lane_contract.py' "$SCRIPT"; then
-  echo "expected signer incident recovery contract lane wrapper to dispatch to shared module" >&2
+if [ ! -L "$SCRIPT" ]; then
+  echo "expected signer incident recovery contract lane wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+if [ "$(readlink "$SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected signer incident recovery contract lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected signer incident recovery wrapper to resolve signer manifest via dispatcher" >&2
+  exit 1
+fi
+if ! grep -Fq "signer_incident_recovery_contract_lane_contract.py" "$MANIFEST_FILE"; then
+  echo "expected signer incident recovery manifest to dispatch to shared module" >&2
   exit 1
 fi
 

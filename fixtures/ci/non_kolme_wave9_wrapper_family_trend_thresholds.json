@@ -1,0 +1,8 @@
+{
+  "schema_version": "kamn.kolme.wrapper-budget-trend-thresholds.v1",
+  "max_wrapper_count_increase": 0,
+  "max_total_shell_loc_increase": 0,
+  "enforce_lane_shell_loc_nonincreasing": true,
+  "min_wrapper_count_reduction": 0,
+  "min_total_shell_loc_reduction": 0
+}

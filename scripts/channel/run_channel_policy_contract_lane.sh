@@ -1,6 +1,1 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-
-exec python3 "$ROOT_DIR/scripts/channel/channel_policy_contract_lane_contract.py" "$@"
+../framework/run_non_kolme_contract_lane_dispatch.sh

@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/channel/run_channel_policy_contract_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/channel/channel_policy_contract_lane_contract.py"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/channel_channel_policy_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
 if [ ! -x "$SCRIPT" ]; then
   echo "expected channel policy contract lane script to be executable" >&2
@@ -24,8 +26,21 @@ if ! grep -q "channel policy contract lane tests passed." "$TMP_OUT"; then
   exit 1
 fi
 
-if ! grep -q "channel_policy_contract_lane_contract.py" "$SCRIPT"; then
-  echo "expected channel policy lane wrapper to dispatch to shared contract module" >&2
+if [ ! -L "$SCRIPT" ]; then
+  echo "expected channel policy contract lane wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+if [ "$(readlink "$SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected channel policy contract lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected channel policy wrapper to resolve channel manifest via dispatcher" >&2
+  exit 1
+fi
+if ! grep -Fq "channel_policy_contract_lane_contract.py" "$MANIFEST_FILE"; then
+  echo "expected channel policy manifest to dispatch to shared contract module" >&2
   exit 1
 fi
 if ! grep -Fq "run_channel_retention_redaction_contract_lane.sh" "$SHARED_CONTRACT"; then

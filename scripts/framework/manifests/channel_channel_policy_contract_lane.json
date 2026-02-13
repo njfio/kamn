@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "channel.policy.contract",
+  "evidence_key": "channel_policy_contract_lane:v1",
+  "reason_key": "channel_policy_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "python3",
+      "scripts/channel/channel_policy_contract_lane_contract.py"
+    ]
+  }
+}
