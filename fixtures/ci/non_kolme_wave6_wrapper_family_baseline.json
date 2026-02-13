@@ -1,0 +1,50 @@
+{
+  "lanes": [
+    {
+      "lane_id": "non_kolme.bridge.credentialed",
+      "manifest_file": "scripts/framework/manifests/bridge_bridge_credentialed_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/bridge/run_bridge_credentialed_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.bridge.ingress_relay",
+      "manifest_file": "scripts/framework/manifests/bridge_bridge_ingress_relay_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/bridge/run_bridge_ingress_relay_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.bridge.localhost_relay_demo",
+      "manifest_file": "scripts/framework/manifests/bridge_localhost_bridge_relay_demo_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/bridge/run_localhost_bridge_relay_demo_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.bridge.outbound_quorum",
+      "manifest_file": "scripts/framework/manifests/bridge_bridge_outbound_quorum_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/bridge/run_bridge_outbound_quorum_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    }
+  ],
+  "regular_file_wrapper_count": 0,
+  "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
+  "source_matrix_file": "fixtures/ci/non_kolme_wave6_wrapper_family_matrix.json",
+  "symlink_wrapper_count": 4,
+  "total_shell_loc": 4,
+  "wrapper_count": 4
+}

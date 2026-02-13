@@ -3,9 +3,22 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_SCRIPT="$ROOT_DIR/scripts/bridge/run_localhost_bridge_relay_demo_contract_lane.sh"
+FAST_IMPL_SCRIPT="$ROOT_DIR/scripts/bridge/run_localhost_bridge_relay_demo_contract_lane_impl.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/bridge_localhost_bridge_relay_demo_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
   echo "expected localhost bridge relay demo contract lane script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$FAST_IMPL_SCRIPT" ]; then
+  echo "expected localhost bridge relay demo contract lane implementation script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$MANIFEST_FILE" ]; then
+  echo "expected localhost bridge relay demo contract lane manifest to exist" >&2
   exit 1
 fi
 
@@ -27,18 +40,39 @@ for marker in "${required_markers[@]}"; do
   fi
 done
 
-if ! grep -q "run_localhost_signed_demo.sh" "$FAST_SCRIPT"; then
-  echo "expected localhost bridge relay demo lane to execute sdk localhost signed demo baseline" >&2
+if [ ! -L "$FAST_SCRIPT" ]; then
+  echo "expected localhost bridge relay demo contract lane wrapper to be a dispatcher symlink" >&2
   exit 1
 fi
 
-if ! grep -q "bridge_ingress_relay_harness" "$FAST_SCRIPT"; then
-  echo "expected localhost bridge relay demo lane to execute ingress relay contracts" >&2
+if [ "$(readlink "$FAST_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected localhost bridge relay demo contract lane wrapper to target shared non-Kolme dispatcher" >&2
   exit 1
 fi
 
-if ! grep -q "bridge_outbound_quorum_execution" "$FAST_SCRIPT"; then
-  echo "expected localhost bridge relay demo lane to execute outbound quorum contracts" >&2
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$FAST_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected localhost bridge relay demo wrapper to resolve bridge manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_localhost_bridge_relay_demo_contract_lane_impl.sh" "$MANIFEST_FILE"; then
+  echo "expected localhost bridge relay demo manifest to dispatch to implementation script" >&2
+  exit 1
+fi
+
+if ! grep -q "run_localhost_signed_demo.sh" "$FAST_IMPL_SCRIPT"; then
+  echo "expected localhost bridge relay demo implementation lane to execute sdk localhost signed demo baseline" >&2
+  exit 1
+fi
+
+if ! grep -q "bridge_ingress_relay_harness" "$FAST_IMPL_SCRIPT"; then
+  echo "expected localhost bridge relay demo implementation lane to execute ingress relay contracts" >&2
+  exit 1
+fi
+
+if ! grep -q "bridge_outbound_quorum_execution" "$FAST_IMPL_SCRIPT"; then
+  echo "expected localhost bridge relay demo implementation lane to execute outbound quorum contracts" >&2
   exit 1
 fi
 
