@@ -12,6 +12,7 @@
   "ci_tools_only": [
     "scripts/kolme/test_check_lane_migration_matrix_policy.sh",
     "scripts/kolme/test_check_nonce_broadcast_parity_policy.sh",
+    "scripts/kolme/test_check_signature_parity_policy.sh",
     "scripts/kolme/test_check_runtime_commit_decomposition_parity_matrix.sh",
     "scripts/kolme/test_check_runtime_commit_replay_policy.sh",
     "scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh",
@@ -41,6 +42,8 @@
     "scripts/kolme/test_run_local_live_node_validation_bundle_contract_lane.sh",
     "scripts/kolme/test_run_local_signed_to_kolme_demo_contract_lane.sh",
     "scripts/kolme/test_run_runtime_commit_contract_lane.sh",
-    "scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh"
+    "scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh",
+    "scripts/kolme/test_run_signature_parity_contract_lane.sh",
+    "scripts/kolme/test_run_signature_parity_matrix.sh"
   ]
 }
