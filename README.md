@@ -519,7 +519,7 @@ bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode dry-run --output
 
 # explicit local-only runtime submit+finality evidence execution
 KAMN_KOLME_LOCAL_HEAVY=1 \
-bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --skip-preflight --live-command "printf 'status=submitted\n'" --finality-command "printf 'finality=final\n'" --max-seconds 90 --finality-max-seconds 15 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt --finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt
+bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --skip-preflight --live-command "printf 'status=submitted\n'" --finality-command "printf 'finality=final\n'" --max-seconds 90 --finality-max-seconds 15 --finality-retry-max-attempts 2 --finality-retry-backoff-seconds 0 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt --finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt
 
 # fail-closed policy checker
 python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/kolme-local-runtime-commit-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-runtime-commit-live-policy.json
@@ -528,7 +528,10 @@ python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --repor
 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json
 # summary markers: submit_evidence_marker_present, finality_evidence_marker_present
 # request/finality linkage markers: request_payload_evidence_marker_present, request_payload_evidence_artifact_path, submit_evidence_artifact_path, finality_evidence_artifact_path, request_finality_evidence_contract_version, request_finality_evidence_linked
+# finality retry markers: finality_retry_contract_version, finality_retry_max_attempts, finality_retry_backoff_seconds, finality_retry_attempts_used, finality_retry_exhausted, finality_retry_failure_class
 # request/finality linkage drift reasons: request_payload_evidence_marker_missing, finality_evidence_artifact_path_missing, request_finality_evidence_linkage_missing
+# finality retry drift reasons: finality_retry_failure_class_mismatch_for_timeout_reason, finality_retry_attempts_used_mismatch_for_timeout_reason
+# finality retry exhaustion reasons: live_finality_retry_exhausted_timeout, live_finality_retry_exhausted_failed
 # strict marker mode: add --require-native-payload-evidence to enforce pubkey/nonce/messages evidence markers
 ```
 

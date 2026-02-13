@@ -15,6 +15,8 @@ PROVIDER_HINT="kolme-fork-local"
 AUTHORIZATION_HEADER=""
 PREFLIGHT_MAX_SECONDS=10
 FINALITY_MAX_SECONDS=15
+FINALITY_RETRY_MAX_ATTEMPTS=1
+FINALITY_RETRY_BACKOFF_SECONDS=1
 SKIP_PREFLIGHT=0
 FINALITY_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-live-finality-output.txt"
 
@@ -93,6 +95,22 @@ while [ "$#" -gt 0 ]; do
       FINALITY_MAX_SECONDS="$2"
       shift 2
       ;;
+    --finality-retry-max-attempts)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --finality-retry-max-attempts" >&2
+        exit 1
+      fi
+      FINALITY_RETRY_MAX_ATTEMPTS="$2"
+      shift 2
+      ;;
+    --finality-retry-backoff-seconds)
+      if [ "$#" -lt 2 ]; then
+        echo "missing value for --finality-retry-backoff-seconds" >&2
+        exit 1
+      fi
+      FINALITY_RETRY_BACKOFF_SECONDS="$2"
+      shift 2
+      ;;
     --finality-output-file)
       if [ "$#" -lt 2 ]; then
         echo "missing value for --finality-output-file" >&2
@@ -149,6 +167,10 @@ Options:
   --finality-command <command>  Optional post-submit finality command for run mode.
   --finality-output-file <path> Captured stdout/stderr for finality command.
   --finality-max-seconds <n>    Max runtime budget in seconds for finality command.
+  --finality-retry-max-attempts <n>
+                                Max bounded retry attempts for finality command in run mode.
+  --finality-retry-backoff-seconds <n>
+                                Backoff wait in seconds between finality retry attempts.
   --max-seconds <n>             Max runtime budget in seconds for run mode.
   --base-url <url>              Live Kolme base URL used by default smoke command.
   --provider-hint <value>       Provider hint used by default live smoke command.
@@ -182,6 +204,16 @@ fi
 
 if ! [[ "$FINALITY_MAX_SECONDS" =~ ^[0-9]+$ ]] || [ "$FINALITY_MAX_SECONDS" -le 0 ]; then
   echo "finality-max-seconds must be a positive integer" >&2
+  exit 1
+fi
+
+if ! [[ "$FINALITY_RETRY_MAX_ATTEMPTS" =~ ^[0-9]+$ ]] || [ "$FINALITY_RETRY_MAX_ATTEMPTS" -le 0 ]; then
+  echo "finality-retry-max-attempts must be a positive integer" >&2
+  exit 1
+fi
+
+if ! [[ "$FINALITY_RETRY_BACKOFF_SECONDS" =~ ^[0-9]+$ ]]; then
+  echo "finality-retry-backoff-seconds must be a non-negative integer" >&2
   exit 1
 fi
 
@@ -278,6 +310,10 @@ if [ -n "$FINALITY_COMMAND" ]; then
 fi
 REQUEST_FINALITY_EVIDENCE_CONTRACT_VERSION="v1"
 REQUEST_FINALITY_EVIDENCE_LINKED="false"
+FINALITY_RETRY_CONTRACT_VERSION="v1"
+FINALITY_RETRY_ATTEMPTS_USED=0
+FINALITY_RETRY_EXHAUSTED="false"
+FINALITY_RETRY_FAILURE_CLASS="none"
 
 preflight_command="curl --silent --show-error --fail --max-time ${PREFLIGHT_MAX_SECONDS} ${BASE_URL%/}/healthz"
 
@@ -365,32 +401,62 @@ if [ "$MODE" = "run" ]; then
   if [ "$overall_status" = "ok" ]; then
     if [ -n "$FINALITY_COMMAND" ]; then
       mkdir -p "$(dirname "$FINALITY_OUTPUT_FILE")"
-      finality_exit_code=0
-      set +e
-      timeout "${FINALITY_MAX_SECONDS}" bash -lc "$FINALITY_COMMAND" >"$FINALITY_OUTPUT_FILE" 2>&1
-      finality_exit_code=$?
-      set -e
+      finality_succeeded=0
+      finality_attempt=0
+      finality_check_status="fail"
+      while [ "$finality_attempt" -lt "$FINALITY_RETRY_MAX_ATTEMPTS" ]; do
+        finality_attempt=$((finality_attempt + 1))
+        set +e
+        timeout "${FINALITY_MAX_SECONDS}" bash -lc "$FINALITY_COMMAND" >"$FINALITY_OUTPUT_FILE" 2>&1
+        finality_exit_code=$?
+        set -e
 
-      if [ "$finality_exit_code" -eq 0 ]; then
-        record_check "runtime_commit_live_finality_command" "$FINALITY_COMMAND" "pass"
-        reason_code="live_runtime_commit_and_finality_commands_passed"
-      elif [ "$finality_exit_code" -eq 124 ]; then
-        record_check "runtime_commit_live_finality_command" "$FINALITY_COMMAND" "fail"
-        overall_status="fail"
-        reason_code="live_finality_command_timeout"
+        FINALITY_RETRY_ATTEMPTS_USED="$finality_attempt"
+        if [ "$finality_exit_code" -eq 0 ]; then
+          finality_succeeded=1
+          finality_check_status="pass"
+          FINALITY_RETRY_EXHAUSTED="false"
+          FINALITY_RETRY_FAILURE_CLASS="none"
+          record_check "runtime_commit_live_finality_command_attempt_${finality_attempt}" "$FINALITY_COMMAND" "pass"
+          reason_code="live_runtime_commit_and_finality_commands_passed"
+          break
+        fi
+
+        if [ "$finality_exit_code" -eq 124 ]; then
+          FINALITY_RETRY_FAILURE_CLASS="timeout"
+        else
+          FINALITY_RETRY_FAILURE_CLASS="failed"
+        fi
+        record_check "runtime_commit_live_finality_command_attempt_${finality_attempt}" "$FINALITY_COMMAND" "fail"
+
+        if [ "$finality_attempt" -lt "$FINALITY_RETRY_MAX_ATTEMPTS" ] && [ "$FINALITY_RETRY_BACKOFF_SECONDS" -gt 0 ]; then
+          sleep "$FINALITY_RETRY_BACKOFF_SECONDS"
+        fi
+      done
+
+      if [ "$finality_succeeded" -eq 1 ]; then
+        record_check "runtime_commit_live_finality_command" "$FINALITY_COMMAND" "$finality_check_status"
       else
         record_check "runtime_commit_live_finality_command" "$FINALITY_COMMAND" "fail"
+        FINALITY_RETRY_EXHAUSTED="true"
         overall_status="fail"
-        reason_code="live_finality_command_failed"
+        if [ "$FINALITY_RETRY_FAILURE_CLASS" = "timeout" ]; then
+          reason_code="live_finality_retry_exhausted_timeout"
+        else
+          reason_code="live_finality_retry_exhausted_failed"
+        fi
       fi
     else
       record_check "runtime_commit_live_finality_command" "$planned_finality_command" "skipped"
+      FINALITY_RETRY_ATTEMPTS_USED=0
+      FINALITY_RETRY_EXHAUSTED="false"
+      FINALITY_RETRY_FAILURE_CLASS="none"
     fi
   fi
 
   end_epoch="$(date +%s)"
   elapsed_seconds="$(( end_epoch - start_epoch ))"
-  if [ "$elapsed_seconds" -le "$MAX_SECONDS" ] && [ "$reason_code" != "live_runtime_commit_command_timeout" ] && [ "$reason_code" != "live_finality_command_timeout" ]; then
+  if [ "$elapsed_seconds" -le "$MAX_SECONDS" ] && [ "$reason_code" != "live_runtime_commit_command_timeout" ] && [ "$reason_code" != "live_finality_retry_exhausted_timeout" ]; then
     budget_status="within_budget"
   else
     budget_status="exceeded_budget"
@@ -451,7 +517,7 @@ else
   REQUEST_FINALITY_EVIDENCE_LINKED="false"
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$FINALITY_COMMAND" "$FINALITY_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$FINALITY_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" "$PROVIDER_CLIENT_CONTRACT" "$PROVIDER_SUBMIT_PROFILE_CONTRACT" "$PROVIDER_COMMAND_MARKER" "$PROVIDER_COMMAND_MARKER_PRESENT" "$PROVIDER_SIGNING_PROFILE_MARKER" "$PROVIDER_SIGNING_PROFILE_MARKER_PRESENT" "$SUBMIT_EVIDENCE_MARKER" "$SUBMIT_EVIDENCE_MARKER_PRESENT" "$FINALITY_EVIDENCE_MARKER" "$FINALITY_EVIDENCE_MARKER_PRESENT" "$NATIVE_PAYLOAD_PUBKEY_MARKER" "$NATIVE_PAYLOAD_PUBKEY_MARKER_PRESENT" "$NATIVE_PAYLOAD_NONCE_MARKER" "$NATIVE_PAYLOAD_NONCE_MARKER_PRESENT" "$NATIVE_PAYLOAD_MESSAGES_MARKER" "$NATIVE_PAYLOAD_MESSAGES_MARKER_PRESENT" "$REQUEST_PAYLOAD_EVIDENCE_MARKER" "$REQUEST_PAYLOAD_EVIDENCE_MARKER_PRESENT" "$REQUEST_PAYLOAD_EVIDENCE_ARTIFACT_PATH" "$SUBMIT_EVIDENCE_ARTIFACT_PATH" "$FINALITY_EVIDENCE_ARTIFACT_PATH" "$REQUEST_FINALITY_EVIDENCE_CONTRACT_VERSION" "$REQUEST_FINALITY_EVIDENCE_LINKED" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$local_only_enforced" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$LIVE_COMMAND" "$LIVE_OUTPUT_FILE" "$FINALITY_COMMAND" "$FINALITY_OUTPUT_FILE" "$BASE_URL" "$PROVIDER_HINT" "$PREFLIGHT_MAX_SECONDS" "$FINALITY_MAX_SECONDS" "$SKIP_PREFLIGHT" "$CHECK_FILE" "$PROVIDER_CLIENT_CONTRACT" "$PROVIDER_SUBMIT_PROFILE_CONTRACT" "$PROVIDER_COMMAND_MARKER" "$PROVIDER_COMMAND_MARKER_PRESENT" "$PROVIDER_SIGNING_PROFILE_MARKER" "$PROVIDER_SIGNING_PROFILE_MARKER_PRESENT" "$SUBMIT_EVIDENCE_MARKER" "$SUBMIT_EVIDENCE_MARKER_PRESENT" "$FINALITY_EVIDENCE_MARKER" "$FINALITY_EVIDENCE_MARKER_PRESENT" "$NATIVE_PAYLOAD_PUBKEY_MARKER" "$NATIVE_PAYLOAD_PUBKEY_MARKER_PRESENT" "$NATIVE_PAYLOAD_NONCE_MARKER" "$NATIVE_PAYLOAD_NONCE_MARKER_PRESENT" "$NATIVE_PAYLOAD_MESSAGES_MARKER" "$NATIVE_PAYLOAD_MESSAGES_MARKER_PRESENT" "$REQUEST_PAYLOAD_EVIDENCE_MARKER" "$REQUEST_PAYLOAD_EVIDENCE_MARKER_PRESENT" "$REQUEST_PAYLOAD_EVIDENCE_ARTIFACT_PATH" "$SUBMIT_EVIDENCE_ARTIFACT_PATH" "$FINALITY_EVIDENCE_ARTIFACT_PATH" "$REQUEST_FINALITY_EVIDENCE_CONTRACT_VERSION" "$REQUEST_FINALITY_EVIDENCE_LINKED" "$FINALITY_RETRY_CONTRACT_VERSION" "$FINALITY_RETRY_MAX_ATTEMPTS" "$FINALITY_RETRY_BACKOFF_SECONDS" "$FINALITY_RETRY_ATTEMPTS_USED" "$FINALITY_RETRY_EXHAUSTED" "$FINALITY_RETRY_FAILURE_CLASS" <<'PY'
 from __future__ import annotations
 
 import json
@@ -499,6 +565,12 @@ submit_evidence_artifact_path = sys.argv[38]
 finality_evidence_artifact_path = sys.argv[39]
 request_finality_evidence_contract_version = sys.argv[40]
 request_finality_evidence_linked = sys.argv[41] == "true"
+finality_retry_contract_version = sys.argv[42]
+finality_retry_max_attempts = int(sys.argv[43])
+finality_retry_backoff_seconds = int(sys.argv[44])
+finality_retry_attempts_used = int(sys.argv[45])
+finality_retry_exhausted = sys.argv[46] == "true"
+finality_retry_failure_class = sys.argv[47]
 
 def classify_synthetic_command(command: str) -> bool:
     normalized = " ".join(command.strip().split())
@@ -565,6 +637,12 @@ summary = {
     "finality_output_file": finality_output_file,
     "finality_enabled": finality_enabled,
     "finality_max_seconds": finality_max_seconds,
+    "finality_retry_contract_version": finality_retry_contract_version,
+    "finality_retry_max_attempts": finality_retry_max_attempts,
+    "finality_retry_backoff_seconds": finality_retry_backoff_seconds,
+    "finality_retry_attempts_used": finality_retry_attempts_used,
+    "finality_retry_exhausted": finality_retry_exhausted,
+    "finality_retry_failure_class": finality_retry_failure_class,
     "synthetic_evidence_classification_version": "v1",
     "base_url": base_url,
     "provider_hint": provider_hint,

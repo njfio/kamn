@@ -283,7 +283,7 @@ def main() -> int:
         failure_payload["budget_status"] = "within_budget"
         failure_payload["runtime_commit_reason_code"] = "runtime_commit_endpoint_failed"
         failure_payload["runtime_commit_policy_reason_code"] = "runtime_commit_endpoint_failed"
-        failure_payload["runtime_commit_nested_reason_code"] = "live_finality_command_timeout"
+        failure_payload["runtime_commit_nested_reason_code"] = "live_finality_retry_exhausted_timeout"
         failure_payload["runtime_commit_failure_taxonomy"] = "finality.timeout"
         failure_payload["runtime_commit_failure_diagnostic_hint"] = (
             "Inspect runtime finality command output and verify notifications/block fallback endpoint contracts."

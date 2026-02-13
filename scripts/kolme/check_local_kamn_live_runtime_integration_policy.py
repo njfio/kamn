@@ -48,6 +48,8 @@ NESTED_RUNTIME_REASON_TO_TAXONOMY = {
     "live_preflight_failed": "transport.preflight.failed",
     "live_runtime_commit_command_timeout": "transport.submit.timeout",
     "live_runtime_commit_command_failed": "transport.submit.failed",
+    "live_finality_retry_exhausted_timeout": "finality.timeout",
+    "live_finality_retry_exhausted_failed": "finality.failed",
     "live_finality_command_timeout": "finality.timeout",
     "live_finality_command_failed": "finality.failed",
     "live_runtime_commit_budget_exceeded": "budget.exceeded",

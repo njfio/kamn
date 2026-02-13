@@ -112,6 +112,16 @@ if ! grep -q -- "--finality-command" "$RUNNER_IMPL"; then
   exit 1
 fi
 
+if ! grep -q -- "--finality-retry-max-attempts" "$RUNNER_IMPL"; then
+  echo "expected runtime commit live runner to expose finality retry max-attempts argument" >&2
+  exit 1
+fi
+
+if ! grep -q -- "--finality-retry-backoff-seconds" "$RUNNER_IMPL"; then
+  echo "expected runtime commit live runner to expose finality retry backoff argument" >&2
+  exit 1
+fi
+
 if ! grep -q "runtime_commit_live_finality_command" "$RUNNER_IMPL"; then
   echo "expected runtime commit live runner to emit finality command check markers" >&2
   exit 1
@@ -168,6 +178,18 @@ if report.get("finality_evidence_marker") != "finality=final":
     raise SystemExit("expected deterministic finality evidence marker")
 if report.get("finality_evidence_marker_present") is not False:
     raise SystemExit("expected finality evidence marker to be absent in dry-run default command profile")
+if report.get("finality_retry_contract_version") != "v1":
+    raise SystemExit("expected finality retry contract version marker")
+if report.get("finality_retry_max_attempts") != 1:
+    raise SystemExit("expected finality_retry_max_attempts=1 by default")
+if report.get("finality_retry_backoff_seconds") != 1:
+    raise SystemExit("expected finality_retry_backoff_seconds=1 by default")
+if report.get("finality_retry_attempts_used") != 0:
+    raise SystemExit("expected finality_retry_attempts_used=0 in dry-run mode")
+if report.get("finality_retry_exhausted") is not False:
+    raise SystemExit("expected finality_retry_exhausted=false in dry-run mode")
+if report.get("finality_retry_failure_class") != "none":
+    raise SystemExit("expected finality_retry_failure_class=none in dry-run mode")
 if report.get("native_payload_pubkey_marker") != '"pubkey"':
     raise SystemExit("expected deterministic native payload pubkey marker")
 if report.get("native_payload_nonce_marker") != '"nonce"':
@@ -435,6 +457,8 @@ run_with_finality_output="$(
       --skip-preflight \
       --live-command "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\nintegration_kolme_fork_live_node_submit_reaches_endpoint\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\n'" \
       --finality-command "printf 'finality=final\n'" \
+      --finality-retry-max-attempts 2 \
+      --finality-retry-backoff-seconds 0 \
       --finality-max-seconds 3 \
       --max-seconds 5 \
       --output-json "$TMP_REPORT" \
@@ -474,6 +498,18 @@ if report.get("native_payload_nonce_marker_present") is not True:
     raise SystemExit("expected native payload nonce marker evidence for finality-enabled run summary")
 if report.get("native_payload_messages_marker_present") is not True:
     raise SystemExit("expected native payload messages marker evidence for finality-enabled run summary")
+if report.get("finality_retry_contract_version") != "v1":
+    raise SystemExit("expected finality retry contract version in finality-enabled run summary")
+if report.get("finality_retry_max_attempts") != 2:
+    raise SystemExit("expected finality_retry_max_attempts=2 in finality-enabled run summary")
+if report.get("finality_retry_backoff_seconds") != 0:
+    raise SystemExit("expected finality_retry_backoff_seconds=0 in finality-enabled run summary")
+if report.get("finality_retry_attempts_used") != 1:
+    raise SystemExit("expected finality_retry_attempts_used=1 in finality-enabled run summary")
+if report.get("finality_retry_exhausted") is not False:
+    raise SystemExit("expected finality_retry_exhausted=false in finality-enabled run summary")
+if report.get("finality_retry_failure_class") != "none":
+    raise SystemExit("expected finality_retry_failure_class=none in finality-enabled run summary")
 PY
 
 checker_native_payload_output="$(
@@ -586,6 +622,8 @@ KAMN_KOLME_LOCAL_HEAVY=1 \
     --skip-preflight \
     --live-command "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\n'" \
     --finality-command "sleep 2" \
+    --finality-retry-max-attempts 2 \
+    --finality-retry-backoff-seconds 0 \
     --finality-max-seconds 1 \
     --max-seconds 5 \
     --output-json "$TMP_REPORT" \
@@ -599,9 +637,80 @@ if [ "$finality_timeout_code" -eq 0 ]; then
   exit 1
 fi
 
-if ! grep -q "reason_code=live_finality_command_timeout" "$TMP_ERR"; then
-  echo "expected finality timeout reason marker" >&2
+if ! grep -q "reason_code=live_finality_retry_exhausted_timeout" "$TMP_ERR"; then
+  echo "expected finality retry exhaustion timeout reason marker" >&2
   exit 1
 fi
+
+python3 - "$TMP_REPORT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if report.get("status") != "fail":
+    raise SystemExit("expected finality timeout retry exhaustion summary status=fail")
+if report.get("reason_code") != "live_finality_retry_exhausted_timeout":
+    raise SystemExit("expected finality timeout retry exhaustion reason code")
+if report.get("finality_retry_max_attempts") != 2:
+    raise SystemExit("expected finality timeout retry exhaustion max attempts marker")
+if report.get("finality_retry_attempts_used") != 2:
+    raise SystemExit("expected finality timeout retry exhaustion attempts used marker")
+if report.get("finality_retry_exhausted") is not True:
+    raise SystemExit("expected finality timeout retry exhaustion marker")
+if report.get("finality_retry_failure_class") != "timeout":
+    raise SystemExit("expected finality timeout retry failure class marker")
+PY
+
+set +e
+KAMN_KOLME_LOCAL_HEAVY=1 \
+  bash "$RUNNER" \
+    --mode run \
+    --skip-preflight \
+    --live-command "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\n'" \
+    --finality-command "bash -lc 'exit 7'" \
+    --finality-retry-max-attempts 3 \
+    --finality-retry-backoff-seconds 0 \
+    --finality-max-seconds 1 \
+    --max-seconds 5 \
+    --output-json "$TMP_REPORT" \
+    --live-output-file "$TMP_OUTPUT" \
+    --finality-output-file "$TMP_FINALITY_OUTPUT" >"$TMP_ERR" 2>&1
+finality_failed_retry_exhausted_code=$?
+set -e
+
+if [ "$finality_failed_retry_exhausted_code" -eq 0 ]; then
+  echo "expected finality command non-timeout retry exhaustion to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "reason_code=live_finality_retry_exhausted_failed" "$TMP_ERR"; then
+  echo "expected finality retry exhaustion failed reason marker" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if report.get("status") != "fail":
+    raise SystemExit("expected finality failed retry exhaustion summary status=fail")
+if report.get("reason_code") != "live_finality_retry_exhausted_failed":
+    raise SystemExit("expected finality failed retry exhaustion reason code")
+if report.get("finality_retry_max_attempts") != 3:
+    raise SystemExit("expected finality failed retry exhaustion max attempts marker")
+if report.get("finality_retry_attempts_used") != 3:
+    raise SystemExit("expected finality failed retry exhaustion attempts used marker")
+if report.get("finality_retry_exhausted") is not True:
+    raise SystemExit("expected finality failed retry exhaustion marker")
+if report.get("finality_retry_failure_class") != "failed":
+    raise SystemExit("expected finality failed retry failure class marker")
+PY
 
 echo "local runtime commit live lane tests passed."
