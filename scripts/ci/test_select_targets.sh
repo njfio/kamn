@@ -114,6 +114,15 @@ assert_ci_doc_contract_trend_scope_compact() {
   assert_ci_doc_contract_trend_scope "$output" "$context"
 }
 
+assert_qa_doc_contract_scope_compact() {
+  local output="$1"
+  local context="$2"
+  assert_eq "$(extract_output "$output" "docs_only")" "true" "$context should remain docs-only"
+  assert_eq "$(extract_output "$output" "run_rust")" "false" "$context should avoid rust lane"
+  assert_eq "$(extract_output "$output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "$context must run missing-docs policy checks"
+  assert_eq "$(extract_output "$output" "test_scope")" "qa-doc-contract" "$context should set qa-doc-contract scope"
+}
+
 run_selector_with_bridge_deep() {
   local changed_files="$1"
   local bridge_deep="${2:-false}"
@@ -253,34 +262,19 @@ kolme_harness_trend_report_test_script_output="$(run_selector $'scripts/ci/test_
 assert_ci_doc_contract_trend_scope_compact "$kolme_harness_trend_report_test_script_output" "Kolme harness trend-report test script changes"
 
 hardening_docs_output="$(run_selector $'docs/planning/engineering-hardening-wave.md')"
-assert_eq "$(extract_output "$hardening_docs_output" "docs_only")" "true" "engineering hardening docs should remain docs-only"
-assert_eq "$(extract_output "$hardening_docs_output" "run_rust")" "false" "engineering hardening docs should avoid rust lane"
-assert_eq "$(extract_output "$hardening_docs_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "engineering hardening docs must run kamn-core missing-docs policy checks"
-assert_eq "$(extract_output "$hardening_docs_output" "test_scope")" "qa-doc-contract" "engineering hardening docs should set qa-doc-contract scope"
+assert_qa_doc_contract_scope_compact "$hardening_docs_output" "engineering hardening docs"
 
 velocity_cadence_docs_output="$(run_selector $'docs/planning/issues/missing-docs-velocity-cadence.md')"
-assert_eq "$(extract_output "$velocity_cadence_docs_output" "docs_only")" "true" "missing-docs velocity cadence docs should remain docs-only"
-assert_eq "$(extract_output "$velocity_cadence_docs_output" "run_rust")" "false" "missing-docs velocity cadence docs should avoid rust lane"
-assert_eq "$(extract_output "$velocity_cadence_docs_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "missing-docs velocity cadence docs must run missing-docs policy checks"
-assert_eq "$(extract_output "$velocity_cadence_docs_output" "test_scope")" "qa-doc-contract" "missing-docs velocity cadence docs should set qa-doc-contract scope"
+assert_qa_doc_contract_scope_compact "$velocity_cadence_docs_output" "missing-docs velocity cadence docs"
 
 graduation_batch_docs_output="$(run_selector $'docs/planning/issues/missing-docs-first-batch-graduation-report.md')"
-assert_eq "$(extract_output "$graduation_batch_docs_output" "docs_only")" "true" "missing-docs graduation batch docs should remain docs-only"
-assert_eq "$(extract_output "$graduation_batch_docs_output" "run_rust")" "false" "missing-docs graduation batch docs should avoid rust lane"
-assert_eq "$(extract_output "$graduation_batch_docs_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "missing-docs graduation batch docs must run missing-docs policy checks"
-assert_eq "$(extract_output "$graduation_batch_docs_output" "test_scope")" "qa-doc-contract" "missing-docs graduation batch docs should set qa-doc-contract scope"
+assert_qa_doc_contract_scope_compact "$graduation_batch_docs_output" "missing-docs graduation batch docs"
 
 module_map_docs_output="$(run_selector $'docs/architecture/kamn-core-module-map.md')"
-assert_eq "$(extract_output "$module_map_docs_output" "docs_only")" "true" "kamn-core module map docs should remain docs-only"
-assert_eq "$(extract_output "$module_map_docs_output" "run_rust")" "false" "kamn-core module map docs should avoid rust lane"
-assert_eq "$(extract_output "$module_map_docs_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "kamn-core module map docs must run missing-docs policy checks"
-assert_eq "$(extract_output "$module_map_docs_output" "test_scope")" "qa-doc-contract" "kamn-core module map docs should set qa-doc-contract scope"
+assert_qa_doc_contract_scope_compact "$module_map_docs_output" "kamn-core module map docs"
 
 rustdoc_docs_output="$(run_selector $'docs/developer/rustdoc-publishing.md')"
-assert_eq "$(extract_output "$rustdoc_docs_output" "docs_only")" "true" "rustdoc publishing docs should remain docs-only"
-assert_eq "$(extract_output "$rustdoc_docs_output" "run_rust")" "false" "rustdoc publishing docs should avoid rust lane"
-assert_eq "$(extract_output "$rustdoc_docs_output" "run_kamn_core_missing_docs_policy_contract_tests")" "true" "rustdoc publishing docs must run missing-docs policy checks"
-assert_eq "$(extract_output "$rustdoc_docs_output" "test_scope")" "qa-doc-contract" "rustdoc publishing docs should set qa-doc-contract scope"
+assert_qa_doc_contract_scope_compact "$rustdoc_docs_output" "rustdoc publishing docs"
 
 rustdoc_lane_script_output="$(run_selector $'scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh')"
 assert_eq "$(extract_output "$rustdoc_lane_script_output" "run_rust")" "true" "rustdoc artifact lane script changes should run rust tooling setup"
