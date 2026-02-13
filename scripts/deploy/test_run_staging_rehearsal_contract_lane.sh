@@ -34,4 +34,24 @@ if ! grep -q "staging-rehearsal-report.json" "$DEEP_SCRIPT"; then
   exit 1
 fi
 
+if ! grep -Fq -- "--recovery-time-seconds" "$FAST_SCRIPT"; then
+  echo "expected staging rehearsal fast-lane runner to pass deterministic MTTR evidence markers" >&2
+  exit 1
+fi
+
+if ! grep -Fq -- "--max-allowed-recovery-time-seconds" "$FAST_SCRIPT"; then
+  echo "expected staging rehearsal fast-lane runner to pass bounded MTTR contract markers" >&2
+  exit 1
+fi
+
+if ! grep -Fq -- "--recovery-time-seconds" "$DEEP_SCRIPT"; then
+  echo "expected staging rehearsal deep-lane runner to pass deterministic MTTR evidence markers" >&2
+  exit 1
+fi
+
+if ! grep -Fq -- "--max-allowed-recovery-time-seconds" "$DEEP_SCRIPT"; then
+  echo "expected staging rehearsal deep-lane runner to pass bounded MTTR contract markers" >&2
+  exit 1
+fi
+
 echo "staging rehearsal contract lane script tests passed."

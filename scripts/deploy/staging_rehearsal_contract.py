@@ -39,11 +39,29 @@ def _parse_bool(field_name: str, raw_value: str) -> bool:
     fail(f"{field_name} must be true or false")
 
 
+def _parse_non_negative_int(field_name: str, raw_value: str) -> int:
+    try:
+        parsed = int(raw_value)
+    except (TypeError, ValueError):
+        fail(f"{field_name} must be an integer")
+    if parsed < 0:
+        fail(f"{field_name} must be >= 0")
+    return parsed
+
+
+def _parse_positive_int(field_name: str, raw_value: str) -> int:
+    parsed = _parse_non_negative_int(field_name, raw_value)
+    if parsed == 0:
+        fail(f"{field_name} must be > 0")
+    return parsed
+
+
 def _compute_decision_reasons(
     *,
     deploy_status: str,
     rollback_status: str,
     rollback_hash_match: bool,
+    mttr_within_bound: bool,
     evidence_complete: bool,
     ci_fast_gate: str,
 ) -> list[str]:
@@ -54,6 +72,8 @@ def _compute_decision_reasons(
         decision_reasons.append("rollback-failed")
     if not rollback_hash_match:
         decision_reasons.append("rollback target hash mismatch")
+    if not mttr_within_bound:
+        decision_reasons.append("mttr-threshold-exceeded")
     if not evidence_complete:
         decision_reasons.append("incomplete evidence")
     if ci_fast_gate != "PASS":
@@ -69,6 +89,8 @@ def generate_bundle(args: argparse.Namespace) -> int:
         args.rollback_status,
         args.rollback_target_hash,
         args.post_rollback_hash,
+        args.recovery_time_seconds,
+        args.max_allowed_recovery_time_seconds,
         args.evidence_complete,
         args.ci_fast_gate,
     )
@@ -78,13 +100,21 @@ def generate_bundle(args: argparse.Namespace) -> int:
     deploy_status = _parse_pass_fail("deploy-status", args.deploy_status)
     rollback_status = _parse_pass_fail("rollback-status", args.rollback_status)
     ci_fast_gate = _parse_pass_fail("ci-fast-gate", args.ci_fast_gate)
+    recovery_time_seconds = _parse_non_negative_int(
+        "recovery-time-seconds", args.recovery_time_seconds
+    )
+    max_allowed_recovery_time_seconds = _parse_positive_int(
+        "max-allowed-recovery-time-seconds", args.max_allowed_recovery_time_seconds
+    )
     evidence_complete = _parse_bool("evidence-complete", args.evidence_complete)
     rollback_hash_match = args.rollback_target_hash == args.post_rollback_hash
+    mttr_within_bound = recovery_time_seconds <= max_allowed_recovery_time_seconds
 
     decision_reasons = _compute_decision_reasons(
         deploy_status=deploy_status,
         rollback_status=rollback_status,
         rollback_hash_match=rollback_hash_match,
+        mttr_within_bound=mttr_within_bound,
         evidence_complete=evidence_complete,
         ci_fast_gate=ci_fast_gate,
     )
@@ -103,6 +133,9 @@ def generate_bundle(args: argparse.Namespace) -> int:
             "rollback_target_hash": args.rollback_target_hash,
             "post_rollback_hash": args.post_rollback_hash,
             "rollback_hash_match": rollback_hash_match,
+            "recovery_time_seconds": recovery_time_seconds,
+            "max_allowed_recovery_time_seconds": max_allowed_recovery_time_seconds,
+            "mttr_within_bound": mttr_within_bound,
             "evidence_complete": evidence_complete,
             "ci_fast_gate": ci_fast_gate,
         },
@@ -171,6 +204,26 @@ def check_bundle(args: argparse.Namespace) -> int:
     if not isinstance(rollback_hash_match, bool):
         fail("rehearsal.rollback_hash_match must be a boolean")
 
+    recovery_time_seconds = _require_rehearsal_field(rehearsal, "recovery_time_seconds")
+    if not isinstance(recovery_time_seconds, int) or isinstance(recovery_time_seconds, bool):
+        fail("rehearsal.recovery_time_seconds must be an integer")
+    if recovery_time_seconds < 0:
+        fail("rehearsal.recovery_time_seconds must be >= 0")
+
+    max_allowed_recovery_time_seconds = _require_rehearsal_field(
+        rehearsal, "max_allowed_recovery_time_seconds"
+    )
+    if not isinstance(max_allowed_recovery_time_seconds, int) or isinstance(
+        max_allowed_recovery_time_seconds, bool
+    ):
+        fail("rehearsal.max_allowed_recovery_time_seconds must be an integer")
+    if max_allowed_recovery_time_seconds <= 0:
+        fail("rehearsal.max_allowed_recovery_time_seconds must be > 0")
+
+    mttr_within_bound = _require_rehearsal_field(rehearsal, "mttr_within_bound")
+    if not isinstance(mttr_within_bound, bool):
+        fail("rehearsal.mttr_within_bound must be a boolean")
+
     evidence_complete = _require_rehearsal_field(rehearsal, "evidence_complete")
     if not isinstance(evidence_complete, bool):
         fail("rehearsal.evidence_complete must be a boolean")
@@ -186,10 +239,21 @@ def check_bundle(args: argparse.Namespace) -> int:
             f"but hashes compare as {derived_hash_match}"
         )
 
+    derived_mttr_within_bound = recovery_time_seconds <= max_allowed_recovery_time_seconds
+    if mttr_within_bound != derived_mttr_within_bound:
+        fail(
+            "mttr bound mismatch: "
+            f"declared mttr_within_bound={mttr_within_bound} "
+            f"but recovery_time_seconds={recovery_time_seconds} "
+            f"and max_allowed_recovery_time_seconds={max_allowed_recovery_time_seconds} "
+            f"compare as {derived_mttr_within_bound}"
+        )
+
     decision_reasons = _compute_decision_reasons(
         deploy_status=deploy_status,
         rollback_status=rollback_status,
         rollback_hash_match=rollback_hash_match,
+        mttr_within_bound=mttr_within_bound,
         evidence_complete=evidence_complete,
         ci_fast_gate=ci_fast_gate,
     )
@@ -209,6 +273,9 @@ def check_bundle(args: argparse.Namespace) -> int:
     print(f"bundle_file={bundle_path}")
     print(f"final_decision={actual_decision}")
     print(f"rollback_hash_match={str(rollback_hash_match).lower()}")
+    print(f"recovery_time_seconds={recovery_time_seconds}")
+    print(f"max_allowed_recovery_time_seconds={max_allowed_recovery_time_seconds}")
+    print(f"mttr_within_bound={str(mttr_within_bound).lower()}")
     print(f"evidence_complete={str(evidence_complete).lower()}")
     return 0
 
@@ -226,6 +293,8 @@ def build_parser() -> argparse.ArgumentParser:
     generate.add_argument("--rollback-status")
     generate.add_argument("--rollback-target-hash")
     generate.add_argument("--post-rollback-hash")
+    generate.add_argument("--recovery-time-seconds")
+    generate.add_argument("--max-allowed-recovery-time-seconds")
     generate.add_argument("--evidence-complete")
     generate.add_argument("--ci-fast-gate")
     generate.set_defaults(handler=generate_bundle)
