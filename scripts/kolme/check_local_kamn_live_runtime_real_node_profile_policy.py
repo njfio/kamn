@@ -346,6 +346,35 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             and expected_profile_command_marker not in runtime_commit_command
         ):
             reason_codes.append("runtime_commit_signer_profile_marker_missing")
+        expected_key_source_command_marker = ""
+        if expected_signer_key_source:
+            expected_key_source_command_marker = (
+                f"KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE={expected_signer_key_source}"
+            )
+        if (
+            runtime_commit_command_profile == "real-node-non-synthetic-v1"
+            and expected_key_source_command_marker
+            and expected_key_source_command_marker not in runtime_commit_command
+        ):
+            reason_codes.append("runtime_commit_signer_key_source_marker_missing")
+        if (
+            runtime_commit_command_profile == "real-node-non-synthetic-v1"
+            and expected_signer_key_source == "managed-external"
+            and expected_signer_key_reference_env
+            and f"{expected_signer_key_reference_env}=" not in runtime_commit_command
+        ):
+            reason_codes.append(
+                "runtime_commit_managed_external_signer_key_reference_marker_missing"
+            )
+        if (
+            runtime_commit_command_profile == "real-node-non-synthetic-v1"
+            and expected_signer_key_source == "managed-external"
+            and expected_signer_private_key_env
+            and f"{expected_signer_private_key_env}=" in runtime_commit_command
+        ):
+            reason_codes.append(
+                "runtime_commit_managed_external_private_key_command_marker_detected"
+            )
         if (
             runtime_commit_command_profile == "real-node-non-synthetic-v1"
             and NATIVE_PAYLOAD_PUBKEY_MARKER not in runtime_commit_command

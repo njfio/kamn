@@ -479,6 +479,26 @@ if [ "$RUNTIME_PROFILE" = "real-node" ] && [[ "$RUNTIME_COMMIT_COMMAND" == *"KAM
   exit 1
 fi
 
+if [ "$RUNTIME_PROFILE" = "real-node" ] && [ -n "$RUNTIME_SIGNER_KEY_SOURCE" ]; then
+  expected_runtime_signer_key_source_marker="KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=${RUNTIME_SIGNER_KEY_SOURCE}"
+  if [[ "$RUNTIME_COMMIT_COMMAND" != *"$expected_runtime_signer_key_source_marker"* ]]; then
+    echo "runtime-commit-command must include signer key-source marker ${expected_runtime_signer_key_source_marker} when runtime-profile=real-node" >&2
+    exit 1
+  fi
+fi
+
+if [ "$RUNTIME_PROFILE" = "real-node" ] && [ "$RUNTIME_SIGNER_KEY_SOURCE" = "managed-external" ]; then
+  expected_runtime_signer_key_reference_marker_prefix="${RUNTIME_SIGNER_KEY_REF_ENV}="
+  if [[ "$RUNTIME_COMMIT_COMMAND" != *"$expected_runtime_signer_key_reference_marker_prefix"* ]]; then
+    echo "runtime-commit-command must include managed signer key-reference marker ${RUNTIME_SIGNER_KEY_REF_ENV}=... when runtime-signer-key-source=managed-external" >&2
+    exit 1
+  fi
+  if [ -n "$RUNTIME_SIGNER_PRIVATE_KEY_ENV" ] && [[ "$RUNTIME_COMMIT_COMMAND" == *"${RUNTIME_SIGNER_PRIVATE_KEY_ENV}="* ]]; then
+    echo "runtime-commit-command must not include raw signer private key marker ${RUNTIME_SIGNER_PRIVATE_KEY_ENV}=... when runtime-signer-key-source=managed-external" >&2
+    exit 1
+  fi
+fi
+
 CHECK_FILE="$(mktemp)"
 trap 'rm -f "$CHECK_FILE"' EXIT
 

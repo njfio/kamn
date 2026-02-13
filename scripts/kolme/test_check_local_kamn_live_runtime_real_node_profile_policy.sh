@@ -11,6 +11,9 @@ TMP_DIR="$(mktemp -d)"
 TMP_REPORT_OK="$TMP_DIR/ok-report.json"
 TMP_REPORT_OK_SECONDARY="$TMP_DIR/ok-report-secondary.json"
 TMP_REPORT_OK_MANAGED="$TMP_DIR/ok-report-managed.json"
+TMP_REPORT_KEY_SOURCE_MARKER_MISSING="$TMP_DIR/key-source-marker-missing-report.json"
+TMP_REPORT_MANAGED_KEY_REF_MISSING="$TMP_DIR/managed-key-ref-missing-report.json"
+TMP_REPORT_MANAGED_PRIVATE_KEY_COMMAND="$TMP_DIR/managed-private-key-command-report.json"
 TMP_REPORT_KEY_SOURCE_PAIR_BAD="$TMP_DIR/key-source-pair-bad-report.json"
 TMP_REPORT_ATTESTATION_DUPLICATE="$TMP_DIR/attestation-duplicate-report.json"
 TMP_REPORT_ATTESTATION_QUORUM_SHORTFALL="$TMP_DIR/attestation-quorum-shortfall-report.json"
@@ -94,7 +97,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_command_profile_version": "v1",
-  "runtime_commit_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --require-native-payload-evidence --live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n{\\\"pubkey\\\":\\\"proof\\\",\\\"nonce\\\":1,\\\"messages\\\":[]}\\\\n'\" --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
+  "runtime_commit_command": "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --require-non-synthetic-run-evidence --require-native-payload-evidence --live-command \"KAMN_KOLME_LIVE_BASE_URL=http://127.0.0.1:3000 KAMN_KOLME_LIVE_PROVIDER_HINT=kolme-fork-local KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-primary KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=env-local KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\\\n{\\\"pubkey\\\":\\\"proof\\\",\\\"nonce\\\":1,\\\"messages\\\":[]}\\\\n'\" --output-json /tmp/runtime-summary.json --policy-output-json /tmp/runtime-policy.json",
   "runtime_commit_live_policy_report": "/tmp/runtime-policy.json",
   "runtime_commit_finality_command": "",
   "runtime_commit_finality_output_file": "",
@@ -273,6 +276,13 @@ import sys
 
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 report["runtime_signer_key_source"] = "managed-external"
+runtime_commit_command = str(report.get("runtime_commit_command", ""))
+runtime_commit_command = runtime_commit_command.replace(
+    "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=env-local",
+    "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=managed-external KAMN_KOLME_LIVE_SIGNER_KEY_REF=secure:aws-kms:role-operator/key-live-ops-primary",
+    1,
+)
+report["runtime_commit_command"] = runtime_commit_command
 contracts = report.get("contracts", {})
 if isinstance(contracts, dict):
     contracts["runtime_signer_key_source"] = "managed-external"
@@ -289,6 +299,117 @@ python3 "$CHECKER" \
   --require-reason-code dry_run_no_commands_executed \
   --require-non-synthetic-run-evidence \
   --output-json "$TMP_POLICY_OUT" >/dev/null
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_KEY_SOURCE_MARKER_MISSING" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["runtime_commit_command"] = str(report.get("runtime_commit_command", "")).replace(
+    "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=env-local ",
+    "",
+    1,
+)
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_KEY_SOURCE_MARKER_MISSING" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+key_source_marker_missing_exit_code=$?
+set -e
+
+if [ "$key_source_marker_missing_exit_code" -eq 0 ]; then
+  echo "expected signer key-source command marker negative proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_signer_key_source_marker_missing" "$TMP_ERR"; then
+  echo "expected signer key-source command marker missing reason for policy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT_OK_MANAGED" "$TMP_REPORT_MANAGED_KEY_REF_MISSING" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["runtime_commit_command"] = str(report.get("runtime_commit_command", "")).replace(
+    " KAMN_KOLME_LIVE_SIGNER_KEY_REF=secure:aws-kms:role-operator/key-live-ops-primary",
+    "",
+    1,
+)
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_MANAGED_KEY_REF_MISSING" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+managed_key_ref_missing_exit_code=$?
+set -e
+
+if [ "$managed_key_ref_missing_exit_code" -eq 0 ]; then
+  echo "expected managed-external signer key-reference marker negative proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_managed_external_signer_key_reference_marker_missing" "$TMP_ERR"; then
+  echo "expected managed-external signer key-reference marker missing reason for policy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT_OK_MANAGED" "$TMP_REPORT_MANAGED_PRIVATE_KEY_COMMAND" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["runtime_commit_command"] = str(report.get("runtime_commit_command", "")).replace(
+    "KAMN_KOLME_LIVE_SIGNER_KEY_REF=secure:aws-kms:role-operator/key-live-ops-primary",
+    "KAMN_KOLME_LIVE_SIGNER_KEY_REF=secure:aws-kms:role-operator/key-live-ops-primary KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=1111111111111111111111111111111111111111111111111111111111111111",
+    1,
+)
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_MANAGED_PRIVATE_KEY_COMMAND" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+managed_private_key_command_exit_code=$?
+set -e
+
+if [ "$managed_private_key_command_exit_code" -eq 0 ]; then
+  echo "expected managed-external private key command marker negative proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_managed_external_private_key_command_marker_detected" "$TMP_ERR"; then
+  echo "expected managed-external private key command marker detected reason for policy failure" >&2
+  exit 1
+fi
 
 python3 - "$TMP_REPORT_OK_SECONDARY" "$TMP_REPORT_KEY_SOURCE_PAIR_BAD" <<'PY'
 import json
