@@ -81,6 +81,10 @@ Coverage split for cost control:
   `check_local_kolme_live_deployment_preflight_policy.py` (ci-fast-gate eligible)
 - contract lane: `run_local_kolme_live_deployment_preflight_contract_lane.sh` for docs/policy parity
 - local-heavy/deep integration remains outside fast gate and opt-in only
+  - workflow boundary requires dual selector gating:
+    - `steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true'`
+    - `steps.scope.outputs.kolme_local_heavy_selector_opt_in == 'true'`
+  - fail-closed policy reason for missing dual gate: `local_heavy_lane_not_opt_in_selector_gated`
 
 ## Managed-Signer Backend SLO Telemetry Artifact
 Managed-signer backend SLO telemetry is emitted through:

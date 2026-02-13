@@ -191,7 +191,7 @@ jobs:
           bash scripts/kolme/test_run_snapshot_drift_contract_lane.sh
 
       - name: Run Kolme local-heavy contract lane
-        if: steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true'
+        if: steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true' && steps.scope.outputs.kolme_local_heavy_selector_opt_in == 'true'
         run: |
           bash scripts/framework/test_assert_local_heavy_opt_in.sh
           bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh

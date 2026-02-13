@@ -105,12 +105,10 @@ def main() -> int:
     if not heavy_step_block:
         failed_checks.append("local_heavy_lane_step_missing")
     else:
-        if not re.search(
-            r"\n\s+if:\s*steps\.scope\.outputs\.run_kolme_local_heavy_contract_tests == 'true'\s*$",
-            heavy_step_block,
-            flags=re.MULTILINE,
-        ):
+        if "steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true'" not in heavy_step_block:
             failed_checks.append("local_heavy_lane_not_selector_gated")
+        if "steps.scope.outputs.kolme_local_heavy_selector_opt_in == 'true'" not in heavy_step_block:
+            failed_checks.append("local_heavy_lane_not_opt_in_selector_gated")
         missing_local_heavy_commands = [
             command for command in LOCAL_HEAVY_LANE_COMMANDS if command not in heavy_step_block
         ]

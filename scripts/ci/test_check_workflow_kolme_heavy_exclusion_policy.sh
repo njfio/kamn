@@ -8,6 +8,7 @@ SELECTOR_FILE="$ROOT_DIR/scripts/ci/select_targets.sh"
 SAFE_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_safe.yml"
 UNSAFE_MISSING_INPUT_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_missing_input.yml"
 UNSAFE_FORCED_TRUE_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_forced_true.yml"
+UNSAFE_MISSING_OPT_IN_SELECTOR_GUARD_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_missing_opt_in_selector_guard.yml"
 UNSAFE_VERSION_LANE_MATRIX_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_version_lane_matrix.yml"
 UNSAFE_MISSING_LOCAL_HEAVY_COMMAND_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_missing_local_heavy_command.yml"
 UNSAFE_SELECTOR_MISSING_LOCAL_HEAVY_COMMAND_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_selector_unsafe_missing_local_heavy_command.sh"
@@ -82,6 +83,18 @@ if ! grep -Fq "selector_opt_in_env_forced_true_literal" "$forced_true_log"; then
   exit 1
 fi
 
+missing_opt_in_guard_log="$(mktemp)"
+if python3 "$CHECKER" --workflow-file "$UNSAFE_MISSING_OPT_IN_SELECTOR_GUARD_FIXTURE" >"$missing_opt_in_guard_log" 2>&1; then
+  cat "$missing_opt_in_guard_log" >&2
+  echo "expected missing-opt-in-selector-guard fixture to fail policy checker" >&2
+  exit 1
+fi
+if ! grep -Fq "local_heavy_lane_not_opt_in_selector_gated" "$missing_opt_in_guard_log"; then
+  cat "$missing_opt_in_guard_log" >&2
+  echo "expected missing-opt-in-selector-guard fixture to report local_heavy_lane_not_opt_in_selector_gated" >&2
+  exit 1
+fi
+
 missing_local_heavy_command_log="$(mktemp)"
 if python3 "$CHECKER" --workflow-file "$UNSAFE_MISSING_LOCAL_HEAVY_COMMAND_FIXTURE" >"$missing_local_heavy_command_log" 2>&1; then
   cat "$missing_local_heavy_command_log" >&2
@@ -106,7 +119,7 @@ if ! grep -Fq "local_heavy_lane_commands_in_version_lane" "$version_lane_log"; t
   exit 1
 fi
 
-rm -f "$safe_report" "$safe_log" "$real_report" "$real_log" "$missing_input_log" "$forced_true_log" "$missing_local_heavy_command_log" "$version_lane_log"
+rm -f "$safe_report" "$safe_log" "$real_report" "$real_log" "$missing_input_log" "$forced_true_log" "$missing_opt_in_guard_log" "$missing_local_heavy_command_log" "$version_lane_log"
 
 selector_missing_local_heavy_command_log="$(mktemp)"
 # Regression: #2388

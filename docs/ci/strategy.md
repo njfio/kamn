@@ -105,6 +105,9 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - workflow-level guardrail in `ci-fast-gate`:
     - `workflow_dispatch` input `run_kolme_local_heavy_contract_tests` defaults to `'false'`
     - selector env pass-through: `CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_kolme_local_heavy_contract_tests || 'false' }}`
+    - local-heavy lane execution is dual-gated in workflow policy:
+      - `if: steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true' && steps.scope.outputs.kolme_local_heavy_selector_opt_in == 'true'`
+      - fail-closed reason code for missing dual gate: `local_heavy_lane_not_opt_in_selector_gated`
   - default selector outputs:
     - `run_kolme_local_heavy_contract_tests=false`
     - `kolme_local_heavy_selector_opt_in=false`
@@ -662,6 +665,8 @@ JSON`
       - opt-in: `run_kolme_local_heavy_contract_tests=true`
       - opt-in: `kolme_local_heavy_selector_opt_in=true`
       - opt-in: `test_scope=kolme-local-heavy-contract`
+      - workflow run-step gate: `run_kolme_local_heavy_contract_tests == 'true' && kolme_local_heavy_selector_opt_in == 'true'`
+      - missing dual-gate condition fails policy with `local_heavy_lane_not_opt_in_selector_gated`
     - wrapper routing stays manifest-backed:
       - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_runtime_commit_live_lane.sh --resolve-manifest-path`
       - `scripts/framework/manifests/kolme_local_runtime_commit_live_lane.json`

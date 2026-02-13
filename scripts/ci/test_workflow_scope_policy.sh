@@ -25,7 +25,7 @@ if ! grep -Fq "github.event.inputs.run_kolme_local_heavy_contract_tests" "$FAST_
   exit 1
 fi
 
-if ! grep -Fq "if: steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true'" "$FAST_WORKFLOW"; then
+if ! grep -Fq "if: steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true' && steps.scope.outputs.kolme_local_heavy_selector_opt_in == 'true'" "$FAST_WORKFLOW"; then
   echo "expected Kolme local-heavy lane to remain gated by selector output in ci-fast-gate.yml" >&2
   exit 1
 fi
