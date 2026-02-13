@@ -36,8 +36,10 @@ pub(super) fn build_kolme_live_observability_telemetry(
         || execution_status.contains("resolution=finality-timeout")
     {
         (180_u64, 440_u64, 700_u64, 350_u64, 9_600_u64)
-    } else if execution_status.contains("submit_retry_attempts=")
-        || execution_status.contains("finality_retry_attempts=")
+    } else if execution_status.contains("submit_retry_reason=")
+        && !execution_status.contains("submit_retry_reason=none")
+        || execution_status.contains("finality_retry_reason=")
+            && !execution_status.contains("finality_retry_reason=none")
     {
         (110_u64, 240_u64, 1_500_u64, 120_u64, 9_920_u64)
     } else {

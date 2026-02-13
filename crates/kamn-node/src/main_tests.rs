@@ -35,8 +35,8 @@ fn signer_env_lock() -> &'static Mutex<()> {
 }
 
 fn log_env_lock() -> &'static Mutex<()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
+    // Log-config and signer tests both mutate process-wide env; share one lock to avoid races.
+    signer_env_lock()
 }
 
 fn managed_signer_public_key_hex(key_reference: &str) -> String {
@@ -357,9 +357,6 @@ fn functional_kolme_live_submit_and_finality_logs_keep_correlation_id() {
     let _signer_lock = signer_env_lock()
         .lock()
         .expect("signer env lock should guard test mutation");
-    let _log_lock = log_env_lock()
-        .lock()
-        .expect("log env lock should guard test mutation");
     let _profile_env_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
     let _env_guard = EnvVarGuard::set(
