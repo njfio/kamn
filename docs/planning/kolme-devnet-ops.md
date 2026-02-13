@@ -329,6 +329,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `bash scripts/kolme/run_local_fork_smoke_evidence_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --output-json /tmp/kolme-local-fork-smoke-evidence-summary.json`
 - Explicit local-only smoke execution:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_fork_smoke_evidence_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --smoke-command "cargo test -p merkle-map --test version -- --exact load_from_zero_example" --max-seconds 120 --output-json /tmp/kolme-local-fork-smoke-evidence-summary.json`
+- Wrapper routing stays manifest-backed:
+  - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_fork_smoke_evidence_lane.sh --resolve-manifest-path`
+  - `scripts/framework/manifests/kolme_local_fork_smoke_evidence_lane.json`
 - Summary schema:
   - `kamn.kolme.local-fork-smoke-evidence-summary.v1`
 - Deterministic checkpoints include:
