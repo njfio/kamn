@@ -482,6 +482,11 @@ if [ "$RUNTIME_PROFILE" = "real-node" ] && [ -n "$RUNTIME_SIGNER_KEY_SOURCE" ]; 
   fi
 fi
 
+if [ "$RUNTIME_PROFILE" = "real-node" ] && [[ "$RUNTIME_COMMIT_COMMAND" == *"${RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV}="* ]]; then
+  echo "runtime-commit-command must not include fallback signer private key marker ${RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV}=... when runtime-profile=real-node" >&2
+  exit 1
+fi
+
 if [ "$RUNTIME_PROFILE" = "real-node" ] && [ "$RUNTIME_SIGNER_KEY_SOURCE" = "managed-external" ]; then
   expected_runtime_signer_key_reference_marker_prefix="${RUNTIME_SIGNER_KEY_REF_ENV}="
   if [[ "$RUNTIME_COMMIT_COMMAND" != *"$expected_runtime_signer_key_reference_marker_prefix"* ]]; then
@@ -1063,6 +1068,7 @@ summary = {
         "runtime_signer_key_reference_env": runtime_signer_key_reference_env,
         "runtime_signer_fallback_private_key_env": runtime_signer_fallback_private_key_env,
         "runtime_signer_fallback_private_key_allowed": False,
+        "runtime_signer_fallback_private_key_command_marker_allowed": False,
         "runtime_signer_managed_external_raw_private_key_allowed": False,
         "runtime_signer_attestation_schema_version": runtime_signer_attestation_schema_version,
         "runtime_signer_attestation_signer_uniqueness_required": True,

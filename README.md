@@ -633,6 +633,7 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_signer_key_source_profile_pair_disallowed
 # runtime_signer_private_key_env_mismatch
 # runtime_commit_signer_key_source_marker_missing
+# runtime_commit_fallback_private_key_command_marker_detected
 # runtime_commit_managed_external_signer_key_reference_marker_missing
 # runtime_commit_managed_external_private_key_command_marker_detected
 # runtime_signing_profile_mismatch
@@ -674,6 +675,8 @@ bash scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh --ou
 # local-only CI boundary marker: ci_fast_gate_eligible=false (contracts.ci_fast_gate_scope=local-only)
 # fallback signer runtime guard marker:
 # fallback signer secret env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK)
+# fallback signer command marker guard:
+# runtime-commit-command must not include fallback signer private key marker KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK=... when runtime-profile=real-node
 # managed-external signer runtime guard marker:
 # managed-external signer raw private key env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF)
 # Regression: #2302

@@ -469,6 +469,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - NO-GO key-source/profile matrix proof must surface `runtime_signer_key_source_profile_pair_disallowed` when signer profile/key-source pair is outside the strict allowlist.
   - NO-GO signer-key-env drift proof must surface `runtime_signer_private_key_env_mismatch` when signer key env marker drifts from `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`.
   - NO-GO signer key-source command marker proof must surface `runtime_commit_signer_key_source_marker_missing` when `runtime_commit_command` omits `KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=<env-local|managed-external>`.
+  - NO-GO fallback signer key command marker proof must surface `runtime_commit_fallback_private_key_command_marker_detected` when `runtime_commit_command` includes `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK=...`.
   - NO-GO managed-external key-reference command marker proof must surface `runtime_commit_managed_external_signer_key_reference_marker_missing` when managed-external command composition omits `KAMN_KOLME_LIVE_SIGNER_KEY_REF=...`.
   - NO-GO managed-external private key command marker proof must surface `runtime_commit_managed_external_private_key_command_marker_detected` when managed-external command composition includes `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX=...`.
   - NO-GO runtime-signing-profile drift proof must surface `runtime_signing_profile_mismatch` when summary runtime signing profile markers drift from `kolme-fork-secp256k1-v1`.
@@ -553,6 +554,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - real-node profile requires runtime command surfaces to include `KAMN_KOLME_LIVE_SIGNER_PROFILE=ops-secondary` when `runtime_signer_profile=ops-secondary`; checker fails closed with `runtime_commit_signer_profile_marker_missing` when omitted.
   - real-node profile command composition rejects in-memory fallback references at runner boundary:
     - `runtime-commit-command must not reference InMemoryKolmeRuntimeCommitClient when runtime-profile=real-node`
+  - real-node profile command composition rejects fallback signer private-key command markers at runner boundary:
+    - `runtime-commit-command must not include fallback signer private key marker KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK=... when runtime-profile=real-node`
   - real-node profile run-mode boundary rejects fallback signer secret env and prints remediation:
     - `fallback signer secret env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK)`
   - real-node profile managed-external boundary rejects raw signer secret env and prints remediation:

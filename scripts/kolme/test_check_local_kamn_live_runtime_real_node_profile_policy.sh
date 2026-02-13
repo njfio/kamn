@@ -12,6 +12,7 @@ TMP_REPORT_OK="$TMP_DIR/ok-report.json"
 TMP_REPORT_OK_SECONDARY="$TMP_DIR/ok-report-secondary.json"
 TMP_REPORT_OK_MANAGED="$TMP_DIR/ok-report-managed.json"
 TMP_REPORT_KEY_SOURCE_MARKER_MISSING="$TMP_DIR/key-source-marker-missing-report.json"
+TMP_REPORT_FALLBACK_COMMAND_MARKER="$TMP_DIR/fallback-command-marker-report.json"
 TMP_REPORT_MANAGED_KEY_REF_MISSING="$TMP_DIR/managed-key-ref-missing-report.json"
 TMP_REPORT_MANAGED_PRIVATE_KEY_COMMAND="$TMP_DIR/managed-private-key-command-report.json"
 TMP_REPORT_KEY_SOURCE_PAIR_BAD="$TMP_DIR/key-source-pair-bad-report.json"
@@ -124,6 +125,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "runtime_signer_key_reference_env": "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
     "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
     "runtime_signer_fallback_private_key_allowed": false,
+    "runtime_signer_fallback_private_key_command_marker_allowed": false,
     "runtime_signer_managed_external_raw_private_key_allowed": false,
     "runtime_signer_attestation_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
     "runtime_signer_attestation_signer_uniqueness_required": true,
@@ -335,6 +337,43 @@ fi
 
 if ! grep -q "runtime_commit_signer_key_source_marker_missing" "$TMP_ERR"; then
   echo "expected signer key-source command marker missing reason for policy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_FALLBACK_COMMAND_MARKER" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["runtime_commit_command"] = str(report.get("runtime_commit_command", "")).replace(
+    "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=env-local ",
+    "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=env-local KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK=2222222222222222222222222222222222222222222222222222222222222222 ",
+    1,
+)
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_FALLBACK_COMMAND_MARKER" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+fallback_command_marker_exit_code=$?
+set -e
+
+if [ "$fallback_command_marker_exit_code" -eq 0 ]; then
+  echo "expected fallback signer private key command marker negative proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_fallback_private_key_command_marker_detected" "$TMP_ERR"; then
+  echo "expected fallback signer private key command marker detected reason for policy failure" >&2
   exit 1
 fi
 
@@ -731,6 +770,7 @@ cat >"$TMP_REPORT_SYNTHETIC" <<'JSON'
     "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
     "runtime_signer_fallback_private_key_allowed": false,
+    "runtime_signer_fallback_private_key_command_marker_allowed": false,
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
     "runtime_commit_finality_primary_endpoint": "/notifications",
@@ -896,6 +936,7 @@ cat >"$TMP_REPORT_INMEMORY" <<'JSON'
     "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
     "runtime_signer_fallback_private_key_allowed": false,
+    "runtime_signer_fallback_private_key_command_marker_allowed": false,
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
     "runtime_commit_method": "POST",
     "runtime_commit_finality_primary_endpoint": "/notifications",
@@ -1126,6 +1167,10 @@ if contracts.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_
     raise SystemExit("expected contracts fallback signer private key env marker in secondary runner-generated summary")
 if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
     raise SystemExit("expected contracts fallback signer private key allowed=false marker in secondary runner-generated summary")
+if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") is not False:
+    raise SystemExit(
+        "expected contracts fallback signer private key command marker allowed=false marker in secondary runner-generated summary"
+    )
 PY
 
 python3 - "$TMP_INTEGRATION_POLICY_OUT" <<'PY'

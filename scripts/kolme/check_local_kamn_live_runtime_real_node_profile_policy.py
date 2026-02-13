@@ -392,6 +392,11 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             )
         if (
             runtime_commit_command_profile == "real-node-non-synthetic-v1"
+            and f"{REAL_SIGNER_FALLBACK_PRIVATE_KEY_ENV}=" in runtime_commit_command
+        ):
+            reason_codes.append("runtime_commit_fallback_private_key_command_marker_detected")
+        if (
+            runtime_commit_command_profile == "real-node-non-synthetic-v1"
             and NATIVE_PAYLOAD_PUBKEY_MARKER not in runtime_commit_command
         ):
             reason_codes.append("runtime_commit_native_payload_pubkey_marker_missing")
@@ -448,6 +453,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_signer_fallback_private_key_env_contract_mismatch")
         if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
             reason_codes.append("runtime_signer_fallback_private_key_allowed_contract_mismatch")
+        if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") is not False:
+            reason_codes.append("runtime_signer_fallback_private_key_command_marker_allowed_contract_mismatch")
         if contracts.get("runtime_signer_managed_external_raw_private_key_allowed") is not False:
             reason_codes.append("runtime_signer_managed_external_raw_private_key_allowed_contract_mismatch")
         if contracts.get("runtime_signer_attestation_schema_version") != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
