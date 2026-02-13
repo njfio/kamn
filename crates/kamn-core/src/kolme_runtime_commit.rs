@@ -1,6 +1,7 @@
 //! Deterministic runtime-commit request/receipt contracts for Kolme integration.
 
 use crate::AgentDid;
+#[cfg_attr(not(feature = "live-https"), allow(unused_imports))]
 use kamn_kolme::{
     are_runtime_commit_request_fields_single_line as are_kolme_runtime_commit_request_fields_single_line_contract,
     build_kolme_fork_broadcast_live_provider_config as build_kamn_kolme_fork_broadcast_live_provider_config,
@@ -108,7 +109,10 @@ mod block_fallback_reconciler;
 mod errors;
 mod finality_checker;
 mod fork_finality_resolver;
+#[cfg(feature = "live-https")]
 mod http_transport;
+#[cfg(not(feature = "live-https"))]
+mod http_transport_disabled;
 mod in_memory_client;
 mod interfaces;
 mod live_provider;
@@ -133,7 +137,10 @@ pub use block_fallback_reconciler::KolmeRuntimeCommitBlockFallbackReconciler;
 pub use errors::KolmeRuntimeCommitError;
 pub use finality_checker::KolmeRuntimeCommitFinalityChecker;
 pub use fork_finality_resolver::KolmeRuntimeCommitForkFinalityResolver;
+#[cfg(feature = "live-https")]
 pub use http_transport::KolmeRuntimeCommitHttpTransport;
+#[cfg(not(feature = "live-https"))]
+pub use http_transport_disabled::KolmeRuntimeCommitHttpTransport;
 pub use in_memory_client::InMemoryKolmeRuntimeCommitClient;
 pub use interfaces::{KolmeRuntimeCommitClient, KolmeRuntimeCommitProvider};
 pub use kamn_kolme::{

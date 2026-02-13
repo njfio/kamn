@@ -11,7 +11,8 @@ fn adr_documents_live_tls_dependency_decision_and_tradeoffs() {
     assert!(ADR.contains("webpki-roots"));
     assert!(ADR.contains("Subprocess TLS paths (`curl`, `openssl s_client`) are not allowed"));
     assert!(ADR.contains("Compile-time feature gate for local-only builds"));
-    assert!(ADR.contains("`#2756`"));
+    assert!(ADR.contains("`live-https` default-on"));
+    assert!(ADR.contains("--no-default-features"));
     assert!(ADR.contains("crates/kamn-core/src/kolme_runtime_commit/http_transport.rs"));
     assert!(ADR.contains("crates/kamn-kolme/src/tls_policy.rs"));
     assert!(ADR.contains("crates/kamn-core/tests/kolme_runtime_commit_http_transport.rs"));
