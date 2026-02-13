@@ -48,6 +48,17 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - deterministic tick-budget simulation with bounded loop-free assertions
   - timeout behavior and observability telemetry validated through direct state transitions instead of wall-clock waits
 
+## Kolme HTTPS Native Transport Contract
+- Runtime-commit HTTPS transport uses an in-process native TLS client path.
+- `openssl s_client` subprocess execution is prohibited in transport code paths (`Regression: #2671`).
+- Fast-gate regression command:
+  - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_https_transport_does_not_use_openssl_subprocess -- --exact`
+- HTTPS parity command coverage:
+  - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport functional_https_transport_submit_with_trusted_ca_succeeds -- --exact`
+  - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_https_transport_maps_certificate_errors_to_unavailable -- --exact`
+  - `cargo test -p kamn-core --test kolme_runtime_commit_http_transport regression_https_transport_maps_tls_handshake_failures_to_unavailable -- --exact`
+- Certificate/handshake/timeout reason-code mapping remains deterministic and fail-closed for runtime commit submit/finality/block fallback flows.
+
 ## kamn-core Missing-Docs Velocity Guard
 - Fast-gate missing-docs velocity regression command:
   - `bash scripts/ci/test_missing_docs_velocity_guard_contract.sh`

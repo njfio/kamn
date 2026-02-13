@@ -9,6 +9,9 @@ path = "src/lib.rs"
 
 [dependencies]
 kamn-kolme = { path = "../kamn-kolme" }
+rustls = { version = "0.23.36", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-pemfile = "2.2.0"
+webpki-roots = "1.0.3"
 
 [dev-dependencies]
 k256 = { version = "0.13.4", features = ["ecdsa"] }
