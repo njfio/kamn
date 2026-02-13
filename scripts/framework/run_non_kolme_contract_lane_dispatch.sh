@@ -58,6 +58,8 @@ resolve_manifest_name() {
     run_bridge_ingress_relay_contract_lane.sh) echo "bridge_bridge_ingress_relay_contract_lane.json" ;;
     run_bridge_outbound_quorum_contract_lane.sh) echo "bridge_bridge_outbound_quorum_contract_lane.json" ;;
     run_bridge_replay_redaction_contract_lane.sh) echo "bridge_bridge_replay_redaction_contract_lane.json" ;;
+    run_cutover_rollback_contract_lane.sh) echo "cutover_cutover_rollback_contract_lane.json" ;;
+    run_dr_evidence_contract_lane.sh) echo "deploy_dr_evidence_contract_lane.json" ;;
     run_backend_session_auth_freshness_contract_lane.sh) echo "dashboard_backend_session_auth_freshness_contract_lane.json" ;;
     run_cross_chain_outbound_intent_contract_lane.sh) echo "bridge_cross_chain_outbound_intent_contract_lane.json" ;;
     run_dashboard_stale_error_budget_contract_lane.sh) echo "dashboard_stale_error_budget_contract_lane.json" ;;
@@ -83,7 +85,9 @@ resolve_manifest_name() {
     run_live_transport_smoke_parity_contract_lane.sh) echo "sdk_live_transport_smoke_parity_contract_lane.json" ;;
     run_localhost_signed_integration_contract_lane.sh) echo "sdk_localhost_signed_integration_contract_lane.json" ;;
     run_sdk_schema_compatibility_contract_lane.sh) echo "sdk_schema_compatibility_contract_lane.json" ;;
+    run_signer_emulator_contract_lane.sh) echo "signer_signer_emulator_contract_lane.json" ;;
     run_signer_incident_recovery_contract_lane.sh) echo "signer_signer_incident_recovery_contract_lane.json" ;;
+    run_signer_policy_contract_lane.sh) echo "signer_signer_policy_contract_lane.json" ;;
     run_task_operation_snapshot_contract_lane.sh) echo "task_task_operation_snapshot_contract_lane.json" ;;
     run_zk_witness_mutation_contract_lane.sh) echo "runtime_zk_witness_mutation_contract_lane.json" ;;
     run_soc2_control_evidence_contract_lane.sh) echo "compliance_soc2_control_evidence_contract_lane.json" ;;

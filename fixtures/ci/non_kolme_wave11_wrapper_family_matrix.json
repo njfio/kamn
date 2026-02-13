@@ -1,0 +1,53 @@
+{
+  "schema_version": "kamn.kolme.lane-migration-matrix.v1",
+  "lanes": [
+    {
+      "lane_id": "non_kolme.signer.signer_policy",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/signer/run_signer_policy_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/signer_signer_policy_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2720"
+    },
+    {
+      "lane_id": "non_kolme.signer.signer_emulator",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/signer/run_signer_emulator_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/signer_signer_emulator_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2720"
+    },
+    {
+      "lane_id": "non_kolme.cutover.cutover_rollback",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/cutover/run_cutover_rollback_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/cutover_cutover_rollback_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2720"
+    },
+    {
+      "lane_id": "non_kolme.deploy.dr_evidence",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/deploy/run_dr_evidence_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/deploy_dr_evidence_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2720"
+    }
+  ]
+}
