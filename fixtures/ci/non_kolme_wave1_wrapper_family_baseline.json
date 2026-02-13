@@ -1,0 +1,30 @@
+{
+  "lanes": [
+    {
+      "lane_id": "non_kolme.canary.launch",
+      "manifest_file": "scripts/framework/manifests/canary_launch_canary_contract_lane.json",
+      "priority": "P1",
+      "shell_loc": 11,
+      "source_entry": "scripts/canary/run_launch_canary_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "regular_file"
+    },
+    {
+      "lane_id": "non_kolme.canary.post_cutover_slo",
+      "manifest_file": "scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json",
+      "priority": "P1",
+      "shell_loc": 11,
+      "source_entry": "scripts/canary/run_post_cutover_slo_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "regular_file"
+    }
+  ],
+  "regular_file_wrapper_count": 2,
+  "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
+  "source_matrix_file": "fixtures/ci/non_kolme_wave1_wrapper_family_matrix.json",
+  "symlink_wrapper_count": 0,
+  "total_shell_loc": 22,
+  "wrapper_count": 2
+}
