@@ -822,7 +822,7 @@ Operator checkpoints:
 - Deterministic local validation bundle plan:
   - `bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json`
 - Explicit local-only validation bundle execution:
-  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json`
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --rollback-evidence-file /tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json --recovery-evidence-file /tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json`
 - Policy checker command:
   - `python3 scripts/kolme/check_local_live_node_validation_bundle_policy.py --report-file /tmp/kolme-local-live-node-validation-bundle-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-node-validation-bundle-policy.json`
 - Contract lane command:
@@ -836,6 +836,13 @@ Operator checkpoints:
   - `integration_policy`: local KAMN live runtime integration policy decision checkpoint.
   - `process_lifecycle_bundle`: local fork process lifecycle lane command composition with rollback/recovery linkage.
   - `process_lifecycle_policy`: local fork process lifecycle policy decision checkpoint.
+  - rollback/recovery lineage markers:
+    - `rollback_evidence_file`
+    - `recovery_evidence_file`
+    - `rollback_evidence_file_missing`
+    - `contracts.rollback_recovery_artifact_lineage_required=true`
+    - `contracts.process_lifecycle_rollback_evidence_option=--rollback-evidence-file`
+    - `contracts.process_lifecycle_recovery_evidence_option=--recovery-evidence-file`
 - Decision contract:
   - policy returns GO only when schema, checkpoint markers, artifact lineage, and local-only boundary markers stay aligned with summary contracts.
   - policy fails closed to NO-GO on schema/evidence drift, missing checkpoints, provider marker drift, or `ci_fast_gate_scope` mismatch.
