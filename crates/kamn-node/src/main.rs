@@ -1274,7 +1274,9 @@ fn resolve_kolme_live_signer_env_name_set(
             KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY_ENV,
             KOLME_LIVE_SIGNER_KEY_REF_SECONDARY_ENV,
         )),
-        _ => unreachable!("profile value is normalized before key env mapping"),
+        _ => Err(ConfigError::RuntimeKolmeLive(format!(
+            "internal signer profile normalization invariant violated: {profile_value}"
+        ))),
     }
 }
 
