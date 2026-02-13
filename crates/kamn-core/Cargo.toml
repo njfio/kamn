@@ -9,6 +9,7 @@ path = "src/lib.rs"
 
 [dependencies]
 kamn-kolme = { path = "../kamn-kolme" }
+# Live HTTPS runtime-commit transport uses rustls directly (no subprocess curl path).
 rustls = { version = "0.23.36", default-features = false, features = ["ring", "std", "tls12"] }
 rustls-pemfile = "2.2.0"
 webpki-roots = "1.0.3"

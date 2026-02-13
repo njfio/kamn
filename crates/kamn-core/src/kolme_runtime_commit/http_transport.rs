@@ -1,4 +1,4 @@
-//! Dependency-free HTTP transport implementation for runtime commit submit/finality calls.
+//! Deterministic HTTP/TLS transport implementation for runtime commit submit/finality calls.
 
 use super::{
     classify_kolme_tls_failure_reason, classify_kolme_transport_io_error,
@@ -34,7 +34,7 @@ type ParsedHttpEndpoint = KamnKolmeParsedHttpEndpoint;
 
 type HttpScheme = KamnKolmeHttpScheme;
 
-/// Dependency-free HTTP transport implementation for runtime commit submit/finality calls.
+/// Deterministic HTTP/TLS transport implementation for runtime commit submit/finality calls.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KolmeRuntimeCommitHttpTransport {
     timeout_seconds: u64,
