@@ -855,6 +855,8 @@ Kolme harness trend policy (warning-to-fail escalation contract):
   - `bash scripts/ci/check_kolme_test_harness_loc_soft_budget.sh --report-file /tmp/kolme-test-harness-loc-report.json --output-json /tmp/kolme-test-harness-loc-soft-budget-report.json`
 - trend report generator:
   - `bash scripts/ci/generate_kolme_test_harness_loc_trend_report.sh --output-json /tmp/kolme-test-harness-loc-trend-report.json`
+- contract lane wrapper:
+  - `bash scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/kolme-test-harness-loc-soft-budget-contract-report.json`
 - policy emits deterministic escalation markers:
   - `trend_status=within|warn|fail`
   - `policy_decision=GO|WARN|NO-GO`
@@ -899,12 +901,15 @@ Fast-mode CI tooling regression coverage includes:
 - Kolme harness trend-report generator (`test_generate_kolme_test_harness_loc_trend_report.sh`)
 - Test-harness LOC soft-budget checker (`test_check_test_harness_loc_soft_budget.sh`)
 - Kolme test-harness LOC soft-budget checker (`test_check_kolme_test_harness_loc_soft_budget.sh`)
+- Kolme test-harness LOC soft-budget contract lane (`test_run_kolme_test_harness_loc_soft_budget_contract_lane.sh`)
   - report command:
     - `bash scripts/ci/generate_kolme_test_harness_loc_report.sh --output-json /tmp/kolme-test-harness-loc-report.json`
   - policy command:
     - `bash scripts/ci/check_kolme_test_harness_loc_soft_budget.sh --report-file /tmp/kolme-test-harness-loc-report.json --output-json /tmp/kolme-test-harness-loc-soft-budget-report.json`
   - trend report command:
     - `bash scripts/ci/generate_kolme_test_harness_loc_trend_report.sh --output-json /tmp/kolme-test-harness-loc-trend-report.json`
+  - contract lane command:
+    - `bash scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/kolme-test-harness-loc-soft-budget-contract-report.json`
   - deterministic reason-code surface:
     - `reason_codes=none`
     - `reason_codes=harness_script_count_soft_max_exceeded`
