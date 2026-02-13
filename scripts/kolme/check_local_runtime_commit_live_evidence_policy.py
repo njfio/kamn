@@ -119,6 +119,34 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(native_payload_messages_marker_present, bool):
         reason_codes.append("native_payload_messages_marker_present_invalid")
 
+    if report.get("request_payload_evidence_marker") != "native_payload_pubkey_nonce_messages":
+        reason_codes.append("request_payload_evidence_marker_mismatch")
+    request_payload_evidence_marker_present = report.get("request_payload_evidence_marker_present")
+    if not isinstance(request_payload_evidence_marker_present, bool):
+        reason_codes.append("request_payload_evidence_marker_present_invalid")
+
+    request_payload_evidence_artifact_path = report.get("request_payload_evidence_artifact_path")
+    if (
+        not isinstance(request_payload_evidence_artifact_path, str)
+        or not request_payload_evidence_artifact_path.strip()
+    ):
+        reason_codes.append("request_payload_evidence_artifact_path_invalid")
+
+    submit_evidence_artifact_path = report.get("submit_evidence_artifact_path")
+    if not isinstance(submit_evidence_artifact_path, str) or not submit_evidence_artifact_path.strip():
+        reason_codes.append("submit_evidence_artifact_path_invalid")
+
+    finality_evidence_artifact_path = report.get("finality_evidence_artifact_path")
+    if not isinstance(finality_evidence_artifact_path, str):
+        reason_codes.append("finality_evidence_artifact_path_invalid")
+
+    if report.get("request_finality_evidence_contract_version") != "v1":
+        reason_codes.append("request_finality_evidence_contract_version_mismatch")
+
+    request_finality_evidence_linked = report.get("request_finality_evidence_linked")
+    if not isinstance(request_finality_evidence_linked, bool):
+        reason_codes.append("request_finality_evidence_linked_invalid")
+
     if report.get("native_payload_marker_contract_version") != "v1":
         reason_codes.append("native_payload_marker_contract_version_mismatch")
 
@@ -136,6 +164,12 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
         reason_codes.append("checks_missing")
+
+    artifact_paths = report.get("artifact_paths")
+    if not isinstance(artifact_paths, list) or not all(
+        isinstance(path, str) and path.strip() for path in artifact_paths
+    ):
+        reason_codes.append("artifact_paths_invalid")
 
     budget_status = report.get("budget_status")
     if budget_status not in ("not_run", "within_budget", "exceeded_budget"):
@@ -156,8 +190,36 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("run_reason_code_mismatch")
         if mode == "run" and submit_evidence_marker_present is not True:
             reason_codes.append("submit_evidence_marker_missing")
+        if mode == "run" and request_payload_evidence_marker_present is not True:
+            reason_codes.append("request_payload_evidence_marker_missing")
         if mode == "run" and finality_enabled is True and finality_evidence_marker_present is not True:
             reason_codes.append("finality_evidence_marker_missing")
+        if (
+            mode == "run"
+            and isinstance(artifact_paths, list)
+            and isinstance(request_payload_evidence_artifact_path, str)
+            and request_payload_evidence_artifact_path.strip()
+            and request_payload_evidence_artifact_path not in artifact_paths
+        ):
+            reason_codes.append("request_payload_evidence_artifact_path_missing")
+        if (
+            mode == "run"
+            and isinstance(artifact_paths, list)
+            and isinstance(submit_evidence_artifact_path, str)
+            and submit_evidence_artifact_path.strip()
+            and submit_evidence_artifact_path not in artifact_paths
+        ):
+            reason_codes.append("submit_evidence_artifact_path_missing")
+        if mode == "run" and finality_enabled is True:
+            if (
+                isinstance(artifact_paths, list)
+                and isinstance(finality_evidence_artifact_path, str)
+                and finality_evidence_artifact_path.strip()
+                and finality_evidence_artifact_path not in artifact_paths
+            ):
+                reason_codes.append("finality_evidence_artifact_path_missing")
+            if request_finality_evidence_linked is not True:
+                reason_codes.append("request_finality_evidence_linkage_missing")
         if mode == "run" and args.require_non_synthetic_run_evidence:
             if live_command_synthetic is True:
                 reason_codes.append("synthetic_live_command_detected")

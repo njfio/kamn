@@ -521,6 +521,8 @@ python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --repor
 # bounded contract lane (dry-run + run-mode evidence + policy checks)
 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json
 # summary markers: submit_evidence_marker_present, finality_evidence_marker_present
+# request/finality linkage markers: request_payload_evidence_marker_present, request_payload_evidence_artifact_path, submit_evidence_artifact_path, finality_evidence_artifact_path, request_finality_evidence_contract_version, request_finality_evidence_linked
+# request/finality linkage drift reasons: request_payload_evidence_marker_missing, finality_evidence_artifact_path_missing, request_finality_evidence_linkage_missing
 # strict marker mode: add --require-native-payload-evidence to enforce pubkey/nonce/messages evidence markers
 ```
 

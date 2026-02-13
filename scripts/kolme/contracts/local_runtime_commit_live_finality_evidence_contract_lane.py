@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -106,6 +108,15 @@ def main() -> int:
         "check_local_runtime_commit_live_evidence_policy.py",
         "submit_evidence_marker_present",
         "finality_evidence_marker_present",
+        "request_payload_evidence_marker_present",
+        "request_payload_evidence_artifact_path",
+        "submit_evidence_artifact_path",
+        "finality_evidence_artifact_path",
+        "request_finality_evidence_contract_version",
+        "request_finality_evidence_linked",
+        "request_payload_evidence_marker_missing",
+        "finality_evidence_artifact_path_missing",
+        "request_finality_evidence_linkage_missing",
         "Regression: #2099",
     )
     for marker in required_doc_markers:
@@ -252,6 +263,27 @@ def main() -> int:
     if summary_payload.get("finality_evidence_marker_present") is not True:
         print("expected finality_evidence_marker_present=true", file=sys.stderr)
         return 1
+    if summary_payload.get("request_payload_evidence_marker") != "native_payload_pubkey_nonce_messages":
+        print("expected request_payload_evidence_marker", file=sys.stderr)
+        return 1
+    if summary_payload.get("request_payload_evidence_marker_present") is not True:
+        print("expected request_payload_evidence_marker_present=true", file=sys.stderr)
+        return 1
+    if summary_payload.get("request_payload_evidence_artifact_path") != summary_payload.get("live_output_file"):
+        print("expected request_payload_evidence_artifact_path to match live_output_file", file=sys.stderr)
+        return 1
+    if summary_payload.get("submit_evidence_artifact_path") != summary_payload.get("live_output_file"):
+        print("expected submit_evidence_artifact_path to match live_output_file", file=sys.stderr)
+        return 1
+    if summary_payload.get("finality_evidence_artifact_path") != summary_payload.get("finality_output_file"):
+        print("expected finality_evidence_artifact_path to match finality_output_file", file=sys.stderr)
+        return 1
+    if summary_payload.get("request_finality_evidence_contract_version") != "v1":
+        print("expected request_finality_evidence_contract_version=v1", file=sys.stderr)
+        return 1
+    if summary_payload.get("request_finality_evidence_linked") is not True:
+        print("expected request_finality_evidence_linked=true", file=sys.stderr)
+        return 1
     if summary_payload.get("native_payload_pubkey_marker_present") is not True:
         print("expected native_payload_pubkey_marker_present=true", file=sys.stderr)
         return 1
@@ -261,6 +293,68 @@ def main() -> int:
     if summary_payload.get("native_payload_messages_marker_present") is not True:
         print("expected native_payload_messages_marker_present=true", file=sys.stderr)
         return 1
+
+    with tempfile.TemporaryDirectory(prefix="runtime-commit-finality-negative-") as temp_dir:
+        negative_root = Path(temp_dir)
+        linkage_drift_summary_file = negative_root / "linkage_drift_summary.json"
+        linkage_drift_policy_file = negative_root / "linkage_drift_policy.json"
+
+        linkage_drift_summary = dict(summary_payload)
+        linkage_drift_summary["request_finality_evidence_linked"] = False
+        linkage_drift_summary["finality_evidence_artifact_path"] = "/tmp/missing-runtime-finality-artifact.txt"
+        linkage_drift_summary["request_payload_evidence_marker_present"] = False
+        linkage_drift_summary_file.write_text(
+            json.dumps(linkage_drift_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        linkage_drift_result = subprocess.run(
+            [
+                "python3",
+                str(CHECKER),
+                "--report-file",
+                str(linkage_drift_summary_file),
+                "--expected-final-decision",
+                "NO-GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--expected-provider-client-contract",
+                args.expected_provider_client_contract,
+                "--require-native-payload-evidence",
+                "--output-json",
+                str(linkage_drift_policy_file),
+            ],
+            cwd=ROOT_DIR,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if linkage_drift_result.returncode == 0:
+            print("expected request/finality linkage drift proof to fail closed", file=sys.stderr)
+            return 1
+        linkage_drift_policy = json.loads(linkage_drift_policy_file.read_text(encoding="utf-8"))
+        linkage_drift_reason_codes = linkage_drift_policy.get("reason_codes")
+        if not isinstance(linkage_drift_reason_codes, list):
+            print("expected reason_codes list in linkage drift policy output", file=sys.stderr)
+            return 1
+        if "request_finality_evidence_linkage_missing" not in linkage_drift_reason_codes:
+            print(
+                "expected request_finality_evidence_linkage_missing in linkage drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if "finality_evidence_artifact_path_missing" not in linkage_drift_reason_codes:
+            print(
+                "expected finality_evidence_artifact_path_missing in linkage drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if "request_payload_evidence_marker_missing" not in linkage_drift_reason_codes:
+            print(
+                "expected request_payload_evidence_marker_missing in linkage drift policy output",
+                file=sys.stderr,
+            )
+            return 1
 
     elapsed_seconds = int(time.monotonic() - start_epoch)
     if elapsed_seconds > max_seconds:
@@ -275,8 +369,6 @@ def main() -> int:
 
 
 def json_load(path: Path) -> dict[str, object]:
-    import json
-
     return json.loads(path.read_text(encoding="utf-8"))
 
 

@@ -59,6 +59,15 @@ required_markers=(
   "check_local_runtime_commit_live_evidence_policy.py"
   "submit_evidence_marker_present"
   "finality_evidence_marker_present"
+  "request_payload_evidence_marker_present"
+  "request_payload_evidence_artifact_path"
+  "submit_evidence_artifact_path"
+  "finality_evidence_artifact_path"
+  "request_finality_evidence_contract_version"
+  "request_finality_evidence_linked"
+  "request_payload_evidence_marker_missing"
+  "finality_evidence_artifact_path_missing"
+  "request_finality_evidence_linkage_missing"
   "native_payload_pubkey_marker_present"
   "native_payload_nonce_marker_present"
   "native_payload_messages_marker_present"
@@ -76,6 +85,15 @@ required_doc_markers=(
   "check_local_runtime_commit_live_evidence_policy.py"
   "submit_evidence_marker_present"
   "finality_evidence_marker_present"
+  "request_payload_evidence_marker_present"
+  "request_payload_evidence_artifact_path"
+  "submit_evidence_artifact_path"
+  "finality_evidence_artifact_path"
+  "request_finality_evidence_contract_version"
+  "request_finality_evidence_linked"
+  "request_payload_evidence_marker_missing"
+  "finality_evidence_artifact_path_missing"
+  "request_finality_evidence_linkage_missing"
   "native_payload_pubkey_marker_present"
   "native_payload_nonce_marker_present"
   "native_payload_messages_marker_present"
@@ -122,6 +140,20 @@ if summary.get("submit_evidence_marker_present") is not True:
     raise SystemExit("expected submit_evidence_marker_present=true in runtime-commit live finality evidence summary")
 if summary.get("finality_evidence_marker_present") is not True:
     raise SystemExit("expected finality_evidence_marker_present=true in runtime-commit live finality evidence summary")
+if summary.get("request_payload_evidence_marker") != "native_payload_pubkey_nonce_messages":
+    raise SystemExit("expected request_payload_evidence_marker in runtime-commit live finality evidence summary")
+if summary.get("request_payload_evidence_marker_present") is not True:
+    raise SystemExit("expected request_payload_evidence_marker_present=true in runtime-commit live finality evidence summary")
+if summary.get("request_payload_evidence_artifact_path") != summary.get("live_output_file"):
+    raise SystemExit("expected request_payload_evidence_artifact_path to match live_output_file in runtime-commit live finality evidence summary")
+if summary.get("submit_evidence_artifact_path") != summary.get("live_output_file"):
+    raise SystemExit("expected submit_evidence_artifact_path to match live_output_file in runtime-commit live finality evidence summary")
+if summary.get("finality_evidence_artifact_path") != summary.get("finality_output_file"):
+    raise SystemExit("expected finality_evidence_artifact_path to match finality_output_file in runtime-commit live finality evidence summary")
+if summary.get("request_finality_evidence_contract_version") != "v1":
+    raise SystemExit("expected request_finality_evidence_contract_version=v1 in runtime-commit live finality evidence summary")
+if summary.get("request_finality_evidence_linked") is not True:
+    raise SystemExit("expected request_finality_evidence_linked=true in runtime-commit live finality evidence summary")
 if summary.get("native_payload_pubkey_marker_present") is not True:
     raise SystemExit("expected native_payload_pubkey_marker_present=true in runtime-commit live finality evidence summary")
 if summary.get("native_payload_nonce_marker_present") is not True:
@@ -134,5 +166,56 @@ if policy.get("schema_version") != "kamn.kolme.local-runtime-commit-live-policy-
 if policy.get("final_decision") != "GO":
     raise SystemExit("expected runtime-commit live finality evidence policy final_decision GO")
 PY
+
+TMP_LINKAGE_DRIFT_REPORT="$(mktemp)"
+TMP_NEGATIVE_POLICY="$(mktemp)"
+TMP_NEGATIVE_ERR="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY_REPORT" "$TMP_LINKAGE_DRIFT_REPORT" "$TMP_NEGATIVE_POLICY" "$TMP_NEGATIVE_ERR"' EXIT
+
+python3 - "$TMP_REPORT" "$TMP_LINKAGE_DRIFT_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+base_summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+drift_summary = dict(base_summary)
+drift_summary["request_finality_evidence_linked"] = False
+drift_summary["finality_evidence_artifact_path"] = "/tmp/missing-runtime-finality-artifact.txt"
+drift_summary["request_payload_evidence_marker_present"] = False
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(drift_summary, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_LINKAGE_DRIFT_REPORT" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-native-payload-evidence \
+  --output-json "$TMP_NEGATIVE_POLICY" >"$TMP_NEGATIVE_ERR" 2>&1
+negative_exit_code=$?
+set -e
+
+if [ "$negative_exit_code" -eq 0 ]; then
+  echo "expected request/finality linkage drift negative proof to fail closed" >&2
+  exit 1
+fi
+
+if ! grep -q "request_finality_evidence_linkage_missing" "$TMP_NEGATIVE_ERR"; then
+  echo "expected request_finality_evidence_linkage_missing reason in negative proof output" >&2
+  exit 1
+fi
+
+if ! grep -q "finality_evidence_artifact_path_missing" "$TMP_NEGATIVE_ERR"; then
+  echo "expected finality_evidence_artifact_path_missing reason in negative proof output" >&2
+  exit 1
+fi
+
+if ! grep -q "request_payload_evidence_marker_missing" "$TMP_NEGATIVE_ERR"; then
+  echo "expected request_payload_evidence_marker_missing reason in negative proof output" >&2
+  exit 1
+fi
 
 echo "local runtime-commit live finality evidence contract lane tests passed."
