@@ -1,0 +1,53 @@
+{
+  "schema_version": "kamn.kolme.lane-migration-matrix.v1",
+  "lanes": [
+    {
+      "lane_id": "non_kolme.signer.secure_provider_key_lifecycle",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/signer/run_secure_provider_key_lifecycle_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/signer_secure_provider_key_lifecycle_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2723"
+    },
+    {
+      "lane_id": "non_kolme.cutover.mainnet_cutover",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/cutover/run_mainnet_cutover_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/cutover_mainnet_cutover_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2723"
+    },
+    {
+      "lane_id": "non_kolme.deploy.gonogo_evidence",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/deploy/run_gonogo_evidence_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2723"
+    },
+    {
+      "lane_id": "non_kolme.deploy.staging_rehearsal",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/deploy/run_staging_rehearsal_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2723"
+    }
+  ]
+}

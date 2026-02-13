@@ -1,0 +1,50 @@
+{
+  "lanes": [
+    {
+      "lane_id": "non_kolme.cutover.mainnet_cutover",
+      "manifest_file": "scripts/framework/manifests/cutover_mainnet_cutover_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/cutover/run_mainnet_cutover_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.deploy.gonogo_evidence",
+      "manifest_file": "scripts/framework/manifests/deploy_gonogo_evidence_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/deploy/run_gonogo_evidence_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.deploy.staging_rehearsal",
+      "manifest_file": "scripts/framework/manifests/deploy_staging_rehearsal_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/deploy/run_staging_rehearsal_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.signer.secure_provider_key_lifecycle",
+      "manifest_file": "scripts/framework/manifests/signer_secure_provider_key_lifecycle_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/signer/run_secure_provider_key_lifecycle_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    }
+  ],
+  "regular_file_wrapper_count": 0,
+  "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
+  "source_matrix_file": "fixtures/ci/non_kolme_wave12_wrapper_family_matrix.json",
+  "symlink_wrapper_count": 4,
+  "total_shell_loc": 4,
+  "wrapper_count": 4
+}

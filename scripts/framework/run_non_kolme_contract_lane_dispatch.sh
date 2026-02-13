@@ -78,6 +78,8 @@ resolve_manifest_name() {
     run_rust_live_transport_contract_lane.sh) echo "sdk_rust_live_transport_contract_lane.json" ;;
     run_governance_lifecycle_rollback_contract_lane.sh) echo "governance_lifecycle_rollback_contract_lane.json" ;;
     run_governance_simulation_contract_lane.sh) echo "governance_simulation_contract_lane.json" ;;
+    run_gonogo_evidence_contract_lane.sh) echo "deploy_gonogo_evidence_contract_lane.json" ;;
+    run_mainnet_cutover_contract_lane.sh) echo "cutover_mainnet_cutover_contract_lane.json" ;;
     run_quorum_attestation_replay_contract_lane.sh) echo "governance_quorum_attestation_replay_contract_lane.json" ;;
     run_example_fixture_drift_contract_lane.sh) echo "sdk_example_fixture_drift_contract_lane.json" ;;
     run_live_transport_parity_contract_lane.sh) echo "sdk_live_transport_parity_contract_lane.json" ;;
@@ -88,6 +90,8 @@ resolve_manifest_name() {
     run_signer_emulator_contract_lane.sh) echo "signer_signer_emulator_contract_lane.json" ;;
     run_signer_incident_recovery_contract_lane.sh) echo "signer_signer_incident_recovery_contract_lane.json" ;;
     run_signer_policy_contract_lane.sh) echo "signer_signer_policy_contract_lane.json" ;;
+    run_secure_provider_key_lifecycle_contract_lane.sh) echo "signer_secure_provider_key_lifecycle_contract_lane.json" ;;
+    run_staging_rehearsal_contract_lane.sh) echo "deploy_staging_rehearsal_contract_lane.json" ;;
     run_task_operation_snapshot_contract_lane.sh) echo "task_task_operation_snapshot_contract_lane.json" ;;
     run_zk_witness_mutation_contract_lane.sh) echo "runtime_zk_witness_mutation_contract_lane.json" ;;
     run_soc2_control_evidence_contract_lane.sh) echo "compliance_soc2_control_evidence_contract_lane.json" ;;

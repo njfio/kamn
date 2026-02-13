@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "signer.secure_provider_key_lifecycle.contract",
+  "evidence_key": "secure_provider_key_lifecycle_contract_lane:v1",
+  "reason_key": "secure_provider_key_lifecycle_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "bash",
+      "scripts/signer/secure_provider_key_lifecycle_contract_lane_contract.sh"
+    ]
+  }
+}
