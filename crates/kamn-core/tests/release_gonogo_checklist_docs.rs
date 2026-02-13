@@ -149,6 +149,11 @@ fn checklist_contains_kolme_version_compatibility_replay_evidence_contract() {
     assert!(CHECKLIST.contains("check_runtime_commit_replay_policy.py"));
     assert!(CHECKLIST.contains("run_runtime_commit_replay_tamper_matrix.py"));
     assert!(CHECKLIST.contains("run_runtime_commit_adapter_contract_lane.sh"));
+    assert!(CHECKLIST
+        .contains("cargo test -p kamn-kolme --test runtime_commit_module_boundary_contracts"));
+    assert!(
+        CHECKLIST.contains("cargo test -p kamn-core --test kolme_runtime_commit_import_boundary")
+    );
     assert!(CHECKLIST.contains("receipt_provider_mismatch"));
     assert!(CHECKLIST.contains("receipt_not_final"));
     assert!(CHECKLIST.contains("run_version_compatibility_contract_lane.sh"));

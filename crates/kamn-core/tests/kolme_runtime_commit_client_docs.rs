@@ -8,6 +8,8 @@ fn doc_contains_adapter_types_and_validation_commands() {
     assert!(DOC.contains("KolmeRuntimeCommitProviderReceipt"));
     assert!(DOC.contains("KolmeRuntimeCommitProviderError"));
     assert!(DOC.contains("KolmeRuntimeCommitForkFinalityResolver"));
+    assert!(DOC.contains("## Module Ownership Map"));
+    assert!(DOC.contains("crates/kamn-kolme/src/runtime_transport_contracts.rs"));
     assert!(DOC.contains("runtime_lifecycle_policy"));
     assert!(DOC.contains("commit_finality_from_receipt_finality"));
     assert!(DOC.contains("parse_commit_receipt_finality"));
@@ -39,6 +41,10 @@ fn doc_contains_adapter_types_and_validation_commands() {
     assert!(DOC.contains(
         "cargo test -p kamn-core --test kolme_runtime_commit_http_transport functional_https_transport_submit_with_trusted_ca_succeeds -- --exact"
     ));
+    assert!(
+        DOC.contains("cargo test -p kamn-kolme --test runtime_commit_module_boundary_contracts")
+    );
+    assert!(DOC.contains("cargo test -p kamn-core --test kolme_runtime_commit_import_boundary"));
     assert!(DOC.contains("check_local_runtime_commit_live_evidence_policy.py"));
     assert!(DOC.contains("run_local_runtime_commit_live_finality_evidence_contract_lane.sh"));
     assert!(DOC.contains("submit_evidence_marker_present"));
@@ -56,6 +62,8 @@ fn doc_contains_adapter_types_and_validation_commands() {
     assert!(DOC.contains("test_check_runtime_commit_decomposition_parity_matrix.sh"));
     assert!(DOC.contains("submit_http_round_trip"));
     assert!(DOC.contains("finality_block_fallback_resolution"));
+    assert!(DOC.contains("receipt_provider_mismatch"));
+    assert!(DOC.contains("receipt_not_final"));
 }
 
 #[test]
