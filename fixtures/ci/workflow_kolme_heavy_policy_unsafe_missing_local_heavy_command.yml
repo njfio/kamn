@@ -30,7 +30,6 @@ jobs:
           bash scripts/kolme/test_run_local_e2e_integration_lane.sh
           bash scripts/kolme/test_run_local_heavy_validation_matrix.sh
           bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh
-          bash scripts/kolme/test_run_local_runtime_commit_live_finality_evidence_contract_lane.sh
           bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh
           bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh
           bash scripts/kolme/test_check_local_kamn_live_runtime_real_node_profile_policy.sh

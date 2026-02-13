@@ -8,6 +8,7 @@ SAFE_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_safe.yml"
 UNSAFE_MISSING_INPUT_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_missing_input.yml"
 UNSAFE_FORCED_TRUE_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_forced_true.yml"
 UNSAFE_VERSION_LANE_MATRIX_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_version_lane_matrix.yml"
+UNSAFE_MISSING_LOCAL_HEAVY_COMMAND_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_missing_local_heavy_command.yml"
 
 if [ ! -x "$CHECKER" ]; then
   echo "expected workflow policy checker to be executable" >&2
@@ -69,17 +70,29 @@ if ! grep -Fq "selector_opt_in_env_forced_true_literal" "$forced_true_log"; then
   exit 1
 fi
 
+missing_local_heavy_command_log="$(mktemp)"
+if python3 "$CHECKER" --workflow-file "$UNSAFE_MISSING_LOCAL_HEAVY_COMMAND_FIXTURE" >"$missing_local_heavy_command_log" 2>&1; then
+  cat "$missing_local_heavy_command_log" >&2
+  echo "expected missing-local-heavy-command fixture to fail policy checker" >&2
+  exit 1
+fi
+if ! grep -Fq "local_heavy_lane_commands_missing" "$missing_local_heavy_command_log"; then
+  cat "$missing_local_heavy_command_log" >&2
+  echo "expected missing-local-heavy-command fixture to report local_heavy_lane_commands_missing" >&2
+  exit 1
+fi
+
 version_lane_log="$(mktemp)"
 if python3 "$CHECKER" --workflow-file "$UNSAFE_VERSION_LANE_MATRIX_FIXTURE" >"$version_lane_log" 2>&1; then
   cat "$version_lane_log" >&2
   echo "expected version-lane matrix fixture to fail policy checker" >&2
   exit 1
 fi
-if ! grep -Fq "heavy_fork_matrix_commands_in_version_lane" "$version_lane_log"; then
+if ! grep -Fq "local_heavy_lane_commands_in_version_lane" "$version_lane_log"; then
   cat "$version_lane_log" >&2
-  echo "expected version-lane matrix fixture to report heavy_fork_matrix_commands_in_version_lane" >&2
+  echo "expected version-lane matrix fixture to report local_heavy_lane_commands_in_version_lane" >&2
   exit 1
 fi
 
-rm -f "$safe_report" "$safe_log" "$real_report" "$real_log" "$missing_input_log" "$forced_true_log" "$version_lane_log"
+rm -f "$safe_report" "$safe_log" "$real_report" "$real_log" "$missing_input_log" "$forced_true_log" "$missing_local_heavy_command_log" "$version_lane_log"
 echo "workflow Kolme local-heavy exclusion policy checker tests passed."
