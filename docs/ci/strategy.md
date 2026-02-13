@@ -363,6 +363,9 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_fork_smoke_evidence_lane.sh --resolve-manifest-path`
       - `scripts/framework/manifests/kolme_local_fork_smoke_evidence_lane.json`
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --max-seconds 120 --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json`
+    - wrapper routing stays manifest-backed:
+      - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_rust_test_matrix_lane.sh --resolve-manifest-path`
+      - `scripts/framework/manifests/kolme_local_kolme_fork_rust_test_matrix_lane.json`
     - `python3 scripts/kolme/check_local_kolme_fork_rust_test_matrix_policy.py --report-file /tmp/kolme-local-fork-rust-test-matrix-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json`
     - `bash scripts/kolme/run_local_kolme_fork_rust_test_matrix_contract_lane.sh --output-json /tmp/kolme-local-fork-rust-test-matrix-summary.json --policy-output-json /tmp/kolme-local-fork-rust-test-matrix-policy.json`
     - selector-gated local-heavy rust-matrix contract tests (workflow_dispatch opt-in only):
