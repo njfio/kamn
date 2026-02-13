@@ -18,6 +18,7 @@ KAMN (Kolme AI Agent Messaging Network) is a privacy-first, auditable coordinati
   - `rustls-pemfile`
   - `webpki-roots`
 - These are used by the Kolme live runtime HTTP transport path; local deterministic flows still run without network/TLS requirements.
+- Decision record: `docs/architecture/adr-kamn-core-live-tls-transport.md`.
 
 ## Quickstart
 

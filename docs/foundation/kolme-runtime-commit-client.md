@@ -69,9 +69,10 @@ handling.
   - `KolmeRuntimeCommitHttpTransport::new_with_authorization(...)`
   - emits `Authorization: <value>` header on submit/finality requests.
 - HTTPS/TLS behavior:
-  - `https://` requests execute through TLS-backed `openssl s_client` command wiring.
+  - `https://` requests execute through in-process `rustls` transport wiring.
   - `crates/kamn-kolme/src/tls_policy.rs` owns TLS CA-file env parsing and deterministic stderr failure classification contracts.
   - optional custom CA trust file is read from `KAMN_KOLME_TLS_CA_FILE`.
+  - dependency-governance ADR: `docs/architecture/adr-kamn-core-live-tls-transport.md`.
   - deterministic TLS failure mapping:
     - certificate verification failures => `Unavailable("tls certificate verification failed")`
     - handshake/protocol failures => `Unavailable("tls handshake failed")`
