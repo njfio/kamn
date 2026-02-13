@@ -252,14 +252,19 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `bash scripts/ci/test_check_kolme_wrapper_budget_trend.sh`
     - threshold policy file:
       - `.ci/kolme-wrapper-budget-trend-thresholds.json`
+      - includes reduction-target controls:
+        - `min_wrapper_count_reduction`
+        - `min_total_shell_loc_reduction`
     - trend-policy command:
       - `bash scripts/ci/check_kolme_wrapper_budget_trend.sh --matrix-file fixtures/kolme_compatibility/lane_migration_matrix.json --baseline-file fixtures/kolme_compatibility/wrapper_inventory_baseline.json --output-json /tmp/kolme-wrapper-budget-trend-report.json`
-    - trend mode allows shell-surface reductions and fails only on growth beyond configured thresholds.
+    - trend mode allows shell-surface reductions, fails on growth beyond configured thresholds, and can fail closed when configured reduction targets are not met.
     - deterministic reason-code surface is emitted for automation:
       - `reason_codes=none` (pass)
       - `reason_codes=wrapper_count_delta_threshold_exceeded`
       - `reason_codes=total_shell_loc_delta_threshold_exceeded`
       - `reason_codes=lane_shell_loc_increase_violation`
+      - `reason_codes=wrapper_count_reduction_target_unmet`
+      - `reason_codes=total_shell_loc_reduction_target_unmet`
     - Regression: #2119
   - Kolme wave-8 wrapper-family trend guard stays on PR fast gate:
     - `bash scripts/ci/test_check_kolme_wave8_wrapper_family_budget_trend.sh`
@@ -273,6 +278,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=wrapper_count_delta_threshold_exceeded`
       - `reason_codes=total_shell_loc_delta_threshold_exceeded`
       - `reason_codes=lane_shell_loc_increase_violation`
+      - `reason_codes=wrapper_count_reduction_target_unmet`
+      - `reason_codes=total_shell_loc_reduction_target_unmet`
       - `reason_codes=unexpected_new_lanes_in_current_inventory`
     - Regression: #2217
   - Kolme wave-10 wrapper-family trend guard stays on PR fast gate:
@@ -287,6 +294,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=wrapper_count_delta_threshold_exceeded`
       - `reason_codes=total_shell_loc_delta_threshold_exceeded`
       - `reason_codes=lane_shell_loc_increase_violation`
+      - `reason_codes=wrapper_count_reduction_target_unmet`
+      - `reason_codes=total_shell_loc_reduction_target_unmet`
       - `reason_codes=unexpected_new_lanes_in_current_inventory`
     - Regression: #2281
   - shared dispatcher wrapper-matrix guard stays on PR fast gate:

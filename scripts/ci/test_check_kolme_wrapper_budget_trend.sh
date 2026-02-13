@@ -105,7 +105,9 @@ cat >"$RELAXED_THRESHOLD" <<'JSON'
   "schema_version": "kamn.kolme.wrapper-budget-trend-thresholds.v1",
   "max_wrapper_count_increase": 1,
   "max_total_shell_loc_increase": 10,
-  "enforce_lane_shell_loc_nonincreasing": false
+  "enforce_lane_shell_loc_nonincreasing": false,
+  "min_wrapper_count_reduction": 0,
+  "min_total_shell_loc_reduction": 0
 }
 JSON
 
@@ -118,6 +120,32 @@ python3 "$PYTHON_CHECKER" check \
 grep -q '^status=pass$' "$TMP_DIR/relaxed.out"
 grep -q '^mode=trend$' "$TMP_DIR/relaxed.out"
 grep -q '^reason_codes=none$' "$TMP_DIR/relaxed.out"
+
+REDUCTION_TARGET_THRESHOLD="$TMP_DIR/reduction-target-threshold.json"
+cat >"$REDUCTION_TARGET_THRESHOLD" <<'JSON'
+{
+  "schema_version": "kamn.kolme.wrapper-budget-trend-thresholds.v1",
+  "max_wrapper_count_increase": 0,
+  "max_total_shell_loc_increase": 0,
+  "enforce_lane_shell_loc_nonincreasing": true,
+  "min_wrapper_count_reduction": 1,
+  "min_total_shell_loc_reduction": 1
+}
+JSON
+
+if python3 "$PYTHON_CHECKER" check \
+  --trend-mode \
+  --threshold-file "$REDUCTION_TARGET_THRESHOLD" \
+  --matrix-file "$MATRIX_FIXTURE" \
+  --baseline-file "$BASELINE_FIXTURE" >"$TMP_DIR/reduction-target-fail.out" 2>&1; then
+  echo "expected trend checker to fail when configured reduction targets are unmet" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/reduction-target-fail.out"
+grep -q '^mode=trend$' "$TMP_DIR/reduction-target-fail.out"
+grep -q 'wrapper_count_reduction_target_unmet' "$TMP_DIR/reduction-target-fail.out"
+grep -q 'total_shell_loc_reduction_target_unmet' "$TMP_DIR/reduction-target-fail.out"
 
 WAVE10_PASS_REPORT="$TMP_DIR/wave10-pass-report.json"
 bash "$WAVE10_TREND_CHECKER" \
