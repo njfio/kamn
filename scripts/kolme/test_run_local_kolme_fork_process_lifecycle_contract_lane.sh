@@ -221,6 +221,10 @@ if len(integration_commands) != 1:
 integration_command = integration_commands[0]
 if "--runtime-profile real-node" not in integration_command:
     raise SystemExit("expected nested integration command to include explicit real-node runtime profile marker")
+if "--runtime-provider-client-contract KolmeRuntimeCommitLiveProvider" not in integration_command:
+    raise SystemExit(
+        "expected nested integration command to include explicit live runtime provider contract marker"
+    )
 if "--runtime-commit-finality-command" not in integration_command:
     raise SystemExit("expected nested integration command to include runtime finality command pass-through")
 if "--runtime-commit-finality-max-seconds 11" not in integration_command:
@@ -237,6 +241,13 @@ if summary.get("integration_runtime_commit_live_policy_report") != str(runtime_p
     raise SystemExit("expected summary to expose runtime policy report path")
 if str(runtime_policy_report_path) not in summary.get("artifact_paths", []):
     raise SystemExit("expected process lifecycle summary artifact paths to include runtime policy report path")
+contracts = summary.get("contracts")
+if not isinstance(contracts, dict):
+    raise SystemExit("expected process lifecycle summary contracts object")
+if contracts.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
+    raise SystemExit(
+        "expected process lifecycle summary contracts to include live runtime provider contract marker"
+    )
 rollback_evidence_path = pathlib.Path(sys.argv[4]).resolve()
 recovery_evidence_path = pathlib.Path(sys.argv[5]).resolve()
 if summary.get("rollback_evidence_file") != str(rollback_evidence_path):
