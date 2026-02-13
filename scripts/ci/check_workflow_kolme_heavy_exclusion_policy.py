@@ -35,6 +35,11 @@ def parse_args() -> argparse.Namespace:
         )
     )
     parser.add_argument("--workflow-file", required=True, type=Path)
+    parser.add_argument(
+        "--selector-file",
+        type=Path,
+        help="Path to selector script for heavy-lane parity validation.",
+    )
     parser.add_argument("--output-json", type=Path)
     return parser.parse_args()
 
@@ -47,6 +52,17 @@ def extract_step_block(text: str, step_name: str) -> str:
     if not step_match:
         return ""
     return step_match.group("body")
+
+
+def unique_preserving_order(values: List[str]) -> List[str]:
+    seen = set()
+    ordered: List[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        ordered.append(value)
+    return ordered
 
 
 def main() -> int:
@@ -107,6 +123,38 @@ def main() -> int:
         if leaked_commands:
             failed_checks.append("local_heavy_lane_commands_in_version_lane")
 
+    selector_file = args.selector_file
+    if selector_file:
+        if not selector_file.exists():
+            failed_checks.append("selector_file_missing")
+        else:
+            selector_text = selector_file.read_text(encoding="utf-8")
+
+            if 'case "${CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS:-false}" in' not in selector_text:
+                failed_checks.append("selector_opt_in_case_missing")
+            if "KOLME_LOCAL_HEAVY_SELECTOR_OPT_IN=true" not in selector_text:
+                failed_checks.append("selector_opt_in_assignment_missing")
+
+            if (
+                'write_output "run_kolme_local_heavy_contract_tests" '
+                '"$RUN_KOLME_LOCAL_HEAVY_CONTRACT_TESTS"'
+            ) not in selector_text:
+                failed_checks.append("selector_output_run_flag_missing")
+
+            if (
+                'write_output "kolme_local_heavy_selector_opt_in" '
+                '"$KOLME_LOCAL_HEAVY_SELECTOR_OPT_IN"'
+            ) not in selector_text:
+                failed_checks.append("selector_output_opt_in_flag_missing")
+
+            missing_selector_commands = []
+            for command in LOCAL_HEAVY_LANE_COMMANDS:
+                command_path = command.replace("bash ", "", 1)
+                if command_path not in selector_text:
+                    missing_selector_commands.append(command_path)
+            if missing_selector_commands:
+                failed_checks.append("selector_local_heavy_commands_missing")
+
     if failed_checks:
         status = "fail"
         final_decision = "NO-GO"
@@ -114,12 +162,16 @@ def main() -> int:
         status = "pass"
         final_decision = "GO"
 
+    reason_codes = unique_preserving_order(failed_checks)
+
     report = {
         "schema_version": "kamn.ci.workflow-kolme-heavy-exclusion-policy-report.v1",
         "workflow_file": str(args.workflow_file),
+        "selector_file": str(selector_file) if selector_file else None,
         "status": status,
         "final_decision": final_decision,
         "failed_checks": failed_checks,
+        "reason_codes": reason_codes,
     }
 
     if args.output_json:
@@ -127,6 +179,7 @@ def main() -> int:
 
     print(f"status={status}")
     print(f"final_decision={final_decision}")
+    print(f"reason_codes={'none' if not reason_codes else ','.join(reason_codes)}")
     if failed_checks:
         print(f"failed_checks={','.join(failed_checks)}")
         return 1

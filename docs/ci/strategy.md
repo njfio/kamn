@@ -327,6 +327,12 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS=120`
   - local-only heavy Kolme run-mode commands remain excluded from ci-fast-gate.
   - workflow heavy-exclusion policy checker fails closed when local-heavy command coverage drifts (`local_heavy_lane_commands_missing`) or leaks into version compatibility lane (`local_heavy_lane_commands_in_version_lane`).
+  - workflow/selector parity contract remains enforced with deterministic reason codes:
+    - `python3 scripts/ci/check_workflow_kolme_heavy_exclusion_policy.py --workflow-file .github/workflows/ci-fast-gate.yml --selector-file scripts/ci/select_targets.sh`
+    - selector parity reason codes include:
+      - `selector_local_heavy_commands_missing`
+      - `selector_output_run_flag_missing`
+      - `selector_output_opt_in_flag_missing`
   - local-only fork sync/smoke run-mode commands remain excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
     - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --expected-commit <40-hex-pinned-sha> --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
