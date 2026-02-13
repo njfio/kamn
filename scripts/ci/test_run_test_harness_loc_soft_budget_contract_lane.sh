@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE_SCRIPT="$ROOT_DIR/scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh"
+SHARED_IMPL="$ROOT_DIR/scripts/ci/test_harness_loc_soft_budget_contract_lane_impl.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/ci_test_harness_loc_soft_budget_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 COST_DOC="$ROOT_DIR/docs/ci/ci-cost-and-lane-framework.md"
 
@@ -11,6 +14,11 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [ ! -x "$LANE_SCRIPT" ]; then
   echo "expected generic soft-budget contract lane script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$SHARED_IMPL" ]; then
+  echo "expected generic soft-budget shared impl script to be executable" >&2
   exit 1
 fi
 
@@ -84,6 +92,27 @@ fi
 
 if ! grep -Fq 'run_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/test-harness-loc-soft-budget-contract-report.json' "$COST_DOC"; then
   echo "expected CI cost/lane framework doc to include generic soft-budget contract lane command marker" >&2
+  exit 1
+fi
+
+if [ ! -L "$LANE_SCRIPT" ]; then
+  echo "expected generic soft-budget wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$LANE_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected generic soft-budget wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$LANE_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected generic soft-budget wrapper to resolve CI manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -Fq "test_harness_loc_soft_budget_contract_lane_impl.sh" "$MANIFEST_FILE"; then
+  echo "expected generic soft-budget manifest to dispatch shared impl script" >&2
   exit 1
 fi
 

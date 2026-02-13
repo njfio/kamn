@@ -2,39 +2,39 @@
   "lanes": [
     {
       "lane_id": "non_kolme.ci.kamn_core_rustdoc_artifact",
-      "manifest_file": "scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/ci_kamn_core_rustdoc_artifact_contract_lane.json",
       "priority": "P0",
-      "shell_loc": 102,
+      "shell_loc": 1,
       "source_entry": "scripts/ci/run_kamn_core_rustdoc_artifact_contract_lane.sh",
       "status": "planned",
-      "target_runner": "ci_contract_lane",
-      "wrapper_kind": "regular_file"
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
     },
     {
       "lane_id": "non_kolme.ci.kolme_test_harness_loc_soft_budget",
-      "manifest_file": "scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/ci_kolme_test_harness_loc_soft_budget_contract_lane.json",
       "priority": "P0",
-      "shell_loc": 305,
+      "shell_loc": 1,
       "source_entry": "scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh",
       "status": "planned",
-      "target_runner": "ci_contract_lane",
-      "wrapper_kind": "regular_file"
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
     },
     {
       "lane_id": "non_kolme.ci.test_harness_loc_soft_budget",
-      "manifest_file": "scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/ci_test_harness_loc_soft_budget_contract_lane.json",
       "priority": "P0",
-      "shell_loc": 328,
+      "shell_loc": 1,
       "source_entry": "scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh",
       "status": "planned",
-      "target_runner": "ci_contract_lane",
-      "wrapper_kind": "regular_file"
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
     }
   ],
-  "regular_file_wrapper_count": 3,
+  "regular_file_wrapper_count": 0,
   "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
   "source_matrix_file": "fixtures/ci/non_kolme_wave19_wrapper_family_matrix.json",
-  "symlink_wrapper_count": 0,
-  "total_shell_loc": 735,
+  "symlink_wrapper_count": 3,
+  "total_shell_loc": 3,
   "wrapper_count": 3
 }
