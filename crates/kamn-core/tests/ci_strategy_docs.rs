@@ -5,6 +5,11 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("make check"));
     assert!(DOC.contains("make test"));
     assert!(DOC.contains("make demo"));
+    assert!(DOC.contains("## Test Layering Policy Contract"));
+    assert!(DOC.contains("scripts/ci/check_test_layering_policy.py"));
+    assert!(DOC.contains("scripts/ci/test_check_test_layering_policy.sh"));
+    assert!(DOC.contains("docs/planning/test_layering_policy.md"));
+    assert!(DOC.contains("layering_marker_missing"));
     assert!(DOC.contains("run_localhost_signed_integration_contract_lane_tests"));
     assert!(DOC.contains("sdk-live-localhost-integration"));
     assert!(DOC.contains("KAMN_CI_TOOLS_FAST_MODE=true"));
@@ -150,6 +155,7 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("Regression: #1462"));
     assert!(DOC.contains("Regression: #1466"));
     assert!(DOC.contains("Regression: #1497"));
+    assert!(DOC.contains("Regression: #2694"));
     assert!(DOC.contains("Regression: #2093"));
     assert!(DOC.contains("Regression: #2095"));
 }

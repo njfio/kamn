@@ -26,6 +26,17 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Invariant-related changes (`invariants.rs`, `transaction.rs`, smoke/invariant harness tests, or harness scripts): run deterministic invariant harness in `fast` mode (single seed) after Rust tests.
 - Runtime evaluator tests use direct unit-struct construction to avoid strict-clippy baseline noise (`Regression: #490`).
 
+## Test Layering Policy Contract
+- Test-layering policy is fail-closed and tracked in `docs/planning/test_layering_policy.md`.
+- Deterministic policy checker command:
+  - `python3 scripts/ci/check_test_layering_policy.py --policy-doc docs/planning/test_layering_policy.md --strategy-doc docs/ci/strategy.md --output-json /tmp/test-layering-policy-report.json`
+- Contract test command:
+  - `bash scripts/ci/test_check_test_layering_policy.sh`
+- Drift failures emit deterministic reason codes, including:
+  - `layering_marker_missing`
+  - `strategy_snippet_missing`
+- Regression: #2694
+
 ## Node Runtime Kolme-Live Fast Lane
 - For `kamn-node` live-runtime wiring/doc changes, keep PR validation on deterministic local harness tests:
   - `cargo test -p kamn-node runtime_kolme_live`
