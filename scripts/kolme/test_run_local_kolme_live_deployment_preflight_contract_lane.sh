@@ -5,6 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py"
 LANE_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh"
+LANE_RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kolme_live_deployment_preflight_lane_impl.sh"
+RUN_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_live_deployment_preflight_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_live_deployment_preflight_contract_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_kolme_live_deployment_preflight_contract_lane.py"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
@@ -29,6 +32,61 @@ fi
 
 if [ ! -x "$LANE_RUNNER" ]; then
   echo "expected local Kolme live deployment preflight lane runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$LANE_RUNNER_IMPL" ]; then
+  echo "expected local Kolme live deployment preflight implementation runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected local run lane dispatcher to be executable" >&2
+  exit 1
+fi
+
+if [ ! -L "$LANE_RUNNER" ]; then
+  echo "expected local Kolme live deployment preflight lane runner to be a symlink to shared runtime lane dispatcher" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$LANE_RUNNER")" != "run_lane_dispatch.sh" ]; then
+  echo "expected local Kolme live deployment preflight lane runner symlink target to be run_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+if [ ! -f "$RUN_MANIFEST" ]; then
+  echo "expected local Kolme live deployment preflight run manifest to exist" >&2
+  exit 1
+fi
+
+python3 - "$RUN_MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.contract-lane.manifest.v1":
+    raise SystemExit("expected local Kolme live deployment preflight run manifest schema")
+if payload.get("lane_id") != "kolme.local_kolme_live_deployment_preflight.run":
+    raise SystemExit("expected local Kolme live deployment preflight run manifest lane_id")
+run_command = payload.get("phases", {}).get("run")
+if run_command != [
+    "bash",
+    "scripts/kolme/run_local_kolme_live_deployment_preflight_lane_impl.sh",
+]:
+    raise SystemExit("expected local Kolme live deployment preflight run manifest command")
+PY
+
+resolved_run_manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$LANE_RUNNER")" --resolve-manifest-path)"
+if [ "$resolved_run_manifest_path" != "$RUN_MANIFEST" ]; then
+  echo "expected local Kolme live deployment preflight wrapper to resolve deterministic run manifest" >&2
+  exit 1
+fi
+
+if bash "$DISPATCHER" --lane-wrapper run_missing_local_kolme_live_deployment_preflight_lane.sh --resolve-manifest-path >/dev/null 2>&1; then
+  echo "expected local run lane dispatcher to fail closed for unknown local Kolme live deployment preflight wrapper" >&2
   exit 1
 fi
 
@@ -132,6 +190,14 @@ done
 for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   if ! grep -q "run_local_kolme_live_deployment_preflight_lane.sh" "$docs_file"; then
     echo "expected docs parity to include deployment preflight lane marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "run_lane_dispatch.sh --lane-wrapper run_local_kolme_live_deployment_preflight_lane.sh --resolve-manifest-path" "$docs_file"; then
+    echo "expected docs parity to include deployment preflight run-wrapper dispatcher mapping in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "kolme_local_kolme_live_deployment_preflight_lane.json" "$docs_file"; then
+    echo "expected docs parity to include deployment preflight run manifest marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "check_local_kolme_live_deployment_preflight_policy.py" "$docs_file"; then
