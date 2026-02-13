@@ -11,6 +11,7 @@ use kamn_core::{
     SecureSignerBackend, SecureSignerProvider, SignerBackend, SignerBackendError, SignerKeyRole,
     SignerProviderHandshakeMatrix, SigningRequest,
 };
+use zeroize::Zeroize;
 
 use super::wire_payload::render_kolme_live_native_direct_message;
 use super::{
@@ -100,18 +101,26 @@ fn decode_kolme_hex_bytes(value: &str, env_name: &str) -> Result<Vec<u8>, Config
     }
     let mut decoded = Vec::with_capacity(trimmed.len() / 2);
     for pair in trimmed.as_bytes().chunks_exact(2) {
-        let high = decode_kolme_hex_nibble(pair[0]).ok_or_else(|| {
-            ConfigError::RuntimeKolmeLive(format!(
-                "{env_name} contains invalid hex character '{}'",
-                pair[0] as char
-            ))
-        })?;
-        let low = decode_kolme_hex_nibble(pair[1]).ok_or_else(|| {
-            ConfigError::RuntimeKolmeLive(format!(
-                "{env_name} contains invalid hex character '{}'",
-                pair[1] as char
-            ))
-        })?;
+        let high = match decode_kolme_hex_nibble(pair[0]) {
+            Some(value) => value,
+            None => {
+                decoded.zeroize();
+                return Err(ConfigError::RuntimeKolmeLive(format!(
+                    "{env_name} contains invalid hex character '{}'",
+                    pair[0] as char
+                )));
+            }
+        };
+        let low = match decode_kolme_hex_nibble(pair[1]) {
+            Some(value) => value,
+            None => {
+                decoded.zeroize();
+                return Err(ConfigError::RuntimeKolmeLive(format!(
+                    "{env_name} contains invalid hex character '{}'",
+                    pair[1] as char
+                )));
+            }
+        };
         decoded.push((high << 4) | low);
     }
     Ok(decoded)
@@ -886,21 +895,40 @@ fn read_kolme_live_signer_private_key_hex(
 }
 
 impl KolmeForkSecp256k1SignerAdapter {
-    pub(crate) fn from_private_key_hex(
-        private_key_hex: &str,
+    fn from_private_key_hex_in_place(
+        private_key_hex: &mut String,
         private_key_env: &'static str,
     ) -> Result<Self, ConfigError> {
-        let private_key_bytes = decode_kolme_hex_bytes(private_key_hex, private_key_env)?;
-        let signing_key =
+        let decode_result = decode_kolme_hex_bytes(private_key_hex.as_str(), private_key_env);
+        let mut private_key_bytes = match decode_result {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                private_key_hex.zeroize();
+                return Err(error);
+            }
+        };
+        let signing_key_result =
             SigningKey::from_slice(private_key_bytes.as_slice()).map_err(|error| {
                 ConfigError::RuntimeKolmeLive(format!(
                     "{private_key_env} is not a valid secp256k1 private key: {error}",
                 ))
-            })?;
+            });
+        private_key_bytes.zeroize();
+        private_key_hex.zeroize();
+        let signing_key = signing_key_result?;
         Ok(Self {
             signing_key,
             private_key_env,
         })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn from_private_key_hex(
+        private_key_hex: &str,
+        private_key_env: &'static str,
+    ) -> Result<Self, ConfigError> {
+        let mut private_key_hex = private_key_hex.to_owned();
+        Self::from_private_key_hex_in_place(&mut private_key_hex, private_key_env)
     }
 
     pub(crate) fn public_key_compressed_hex(&self) -> String {
@@ -970,13 +998,83 @@ pub(crate) fn build_kolme_live_signer_adapter(
     strict_signer_profile: Option<&str>,
     strict_signer_key_source: Option<&str>,
 ) -> Result<(KolmeForkSecp256k1SignerAdapter, KolmeLiveSignerSelection), ConfigError> {
-    let (private_key_hex, selection) =
+    let (mut private_key_hex, selection) =
         read_kolme_live_signer_private_key_hex(strict_signer_profile, strict_signer_key_source)?;
-    let signer_adapter = KolmeForkSecp256k1SignerAdapter::from_private_key_hex(
-        private_key_hex.as_str(),
+    let signer_adapter_result = KolmeForkSecp256k1SignerAdapter::from_private_key_hex_in_place(
+        &mut private_key_hex,
         selection.private_key_env,
-    )?;
+    );
+    let signer_adapter = signer_adapter_result?;
     Ok((signer_adapter, selection))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::KolmeForkSecp256k1SignerAdapter;
+    use super::{ConfigError, Duration, Instant};
+
+    const TEST_PRIVATE_KEY_HEX: &str =
+        "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+    const TEST_PRIVATE_KEY_ENV: &str = "TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX";
+
+    fn is_zeroized_hex_buffer(value: &str) -> bool {
+        value.as_bytes().iter().all(|byte| *byte == 0)
+    }
+
+    #[test]
+    fn unit_signer_private_key_parse_zeroizes_hex_buffer_on_success() {
+        let mut private_key_hex = TEST_PRIVATE_KEY_HEX.to_owned();
+        let signer = KolmeForkSecp256k1SignerAdapter::from_private_key_hex_in_place(
+            &mut private_key_hex,
+            TEST_PRIVATE_KEY_ENV,
+        )
+        .expect("valid private key should parse");
+        assert!(
+            is_zeroized_hex_buffer(private_key_hex.as_str()),
+            "private key hex buffer must be scrubbed after successful signer construction"
+        );
+        assert_eq!(signer.private_key_env, TEST_PRIVATE_KEY_ENV);
+    }
+
+    #[test]
+    fn regression_signer_private_key_parse_zeroizes_hex_buffer_on_failure() {
+        // Regression: #2672
+        let mut private_key_hex = "zz".to_owned();
+        let error = KolmeForkSecp256k1SignerAdapter::from_private_key_hex_in_place(
+            &mut private_key_hex,
+            TEST_PRIVATE_KEY_ENV,
+        )
+        .expect_err("invalid private key hex must fail closed");
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("invalid hex character")),
+            "invalid hex decode must fail with deterministic validation error"
+        );
+        assert!(
+            is_zeroized_hex_buffer(private_key_hex.as_str()),
+            "private key hex buffer must be scrubbed after parse failure"
+        );
+    }
+
+    #[test]
+    fn performance_signer_private_key_parse_zeroization_stays_bounded() {
+        let started = Instant::now();
+        for _ in 0..2_000 {
+            let mut private_key_hex = TEST_PRIVATE_KEY_HEX.to_owned();
+            let _signer = KolmeForkSecp256k1SignerAdapter::from_private_key_hex_in_place(
+                &mut private_key_hex,
+                TEST_PRIVATE_KEY_ENV,
+            )
+            .expect("valid private key should parse");
+            assert!(
+                is_zeroized_hex_buffer(private_key_hex.as_str()),
+                "private key buffer should remain scrubbed during parse loop"
+            );
+        }
+        assert!(
+            started.elapsed() < Duration::from_secs(2),
+            "private key parse + zeroization loop exceeded 2s for 2k iterations"
+        );
+    }
 }
 
 pub(crate) fn resolve_kolme_live_nonce(
