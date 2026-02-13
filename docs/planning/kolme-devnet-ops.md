@@ -1364,6 +1364,9 @@ Operator checkpoints:
 - Summary schema:
   - `kamn.kolme.local-e2e-integration-summary.v1`
   - policy schema: `kamn.kolme.local-e2e-integration-policy-report.v1`
+- Wrapper routing stays manifest-backed:
+  - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_e2e_integration_lane.sh --resolve-manifest-path`
+  - `scripts/framework/manifests/kolme_local_e2e_integration_lane.json`
 - Deterministic checkpoints include:
   - `run_local_bootstrap_health_checks.sh`
   - `run_local_kolme_fork_checkout_bootstrap_contract_lane.sh`
