@@ -22,6 +22,8 @@ REAL_SIGNER_PRIVATE_KEY_ENV_PRIMARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
 REAL_SIGNER_PRIVATE_KEY_ENV_SECONDARY = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
 REAL_SIGNER_KEY_REF_ENV_PRIMARY = "KAMN_KOLME_LIVE_SIGNER_KEY_REF"
 REAL_SIGNER_KEY_REF_ENV_SECONDARY = "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY"
+REAL_SIGNER_PUBLIC_KEY_ENV_PRIMARY = "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX"
+REAL_SIGNER_PUBLIC_KEY_ENV_SECONDARY = "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY"
 REAL_SIGNER_FALLBACK_PRIVATE_KEY_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 REAL_SIGNER_FALLBACK_PRIVATE_KEY_REMEDIATION = (
     f"unset {REAL_SIGNER_FALLBACK_PRIVATE_KEY_ENV}"
@@ -43,6 +45,10 @@ SIGNER_PRIVATE_KEY_ENV_BY_PROFILE = {
 SIGNER_KEY_REF_ENV_BY_PROFILE = {
     REAL_SIGNER_PROFILE_PRIMARY: REAL_SIGNER_KEY_REF_ENV_PRIMARY,
     REAL_SIGNER_PROFILE_SECONDARY: REAL_SIGNER_KEY_REF_ENV_SECONDARY,
+}
+SIGNER_PUBLIC_KEY_ENV_BY_PROFILE = {
+    REAL_SIGNER_PROFILE_PRIMARY: REAL_SIGNER_PUBLIC_KEY_ENV_PRIMARY,
+    REAL_SIGNER_PROFILE_SECONDARY: REAL_SIGNER_PUBLIC_KEY_ENV_SECONDARY,
 }
 NATIVE_PAYLOAD_PUBKEY_MARKER = "pubkey"
 NATIVE_PAYLOAD_NONCE_MARKER = "nonce"
@@ -172,6 +178,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     runtime_signer_profile = report.get("runtime_signer_profile")
     expected_signer_private_key_env = ""
     expected_signer_key_reference_env = ""
+    expected_signer_public_key_env = ""
     if not isinstance(runtime_signer_profile, str) or not runtime_signer_profile.strip():
         reason_codes.append("runtime_signer_profile_missing")
     elif runtime_signer_profile not in ALLOWED_SIGNER_PROFILES:
@@ -179,6 +186,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     else:
         expected_signer_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[runtime_signer_profile]
         expected_signer_key_reference_env = SIGNER_KEY_REF_ENV_BY_PROFILE[runtime_signer_profile]
+        expected_signer_public_key_env = SIGNER_PUBLIC_KEY_ENV_BY_PROFILE[runtime_signer_profile]
 
     runtime_signer_previous_profile = report.get("runtime_signer_previous_profile")
     if not isinstance(runtime_signer_previous_profile, str) or not runtime_signer_previous_profile.strip():
@@ -528,6 +536,15 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         ):
             reason_codes.append(
                 "runtime_commit_managed_external_signer_key_reference_marker_missing"
+            )
+        if (
+            runtime_commit_command_profile == "real-node-non-synthetic-v1"
+            and expected_signer_key_source == "managed-external"
+            and expected_signer_public_key_env
+            and f"{expected_signer_public_key_env}=" not in runtime_commit_command
+        ):
+            reason_codes.append(
+                "runtime_commit_managed_external_signer_public_key_marker_missing"
             )
         if (
             runtime_commit_command_profile == "real-node-non-synthetic-v1"

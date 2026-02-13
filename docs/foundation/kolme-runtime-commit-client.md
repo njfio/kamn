@@ -270,6 +270,7 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
         - `ops-primary`: `KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX`
         - `ops-secondary`: `KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY`
         - runtime nonce lookup and canonical payload rendering consume these markers directly.
+        - local KAMN real-node policy checker fails closed with `runtime_commit_managed_external_signer_public_key_marker_missing` when command surfaces omit the profile-specific marker.
         - missing marker fails closed with `managed_signer_public_key_marker_missing`.
         - invalid/empty/non-secp256k1 marker fails closed with `managed_signer_public_key_marker_invalid`.
       - command input env markers: `KAMN_MANAGED_SIGNER_KEY_REFERENCE`, `KAMN_MANAGED_SIGNER_ACTOR_DID`, `KAMN_MANAGED_SIGNER_NONCE`, `KAMN_MANAGED_SIGNER_STATE_ROOT`, `KAMN_MANAGED_SIGNER_CANONICAL_MESSAGE`.
