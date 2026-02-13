@@ -274,10 +274,28 @@ def load_trend_thresholds(path: Path) -> dict[str, Any]:
             "must be a boolean"
         )
 
+    min_wrapper_count_reduction = require_int(
+        payload,
+        "min_wrapper_count_reduction",
+        label="wrapper budget trend thresholds",
+    )
+    if min_wrapper_count_reduction < 0:
+        fail("wrapper budget trend min_wrapper_count_reduction must be >= 0")
+
+    min_total_shell_loc_reduction = require_int(
+        payload,
+        "min_total_shell_loc_reduction",
+        label="wrapper budget trend thresholds",
+    )
+    if min_total_shell_loc_reduction < 0:
+        fail("wrapper budget trend min_total_shell_loc_reduction must be >= 0")
+
     return {
         "max_wrapper_count_increase": max_wrapper_count_increase,
         "max_total_shell_loc_increase": max_total_shell_loc_increase,
         "enforce_lane_shell_loc_nonincreasing": enforce_lane_shell_loc_nonincreasing,
+        "min_wrapper_count_reduction": min_wrapper_count_reduction,
+        "min_total_shell_loc_reduction": min_total_shell_loc_reduction,
     }
 
 
@@ -319,12 +337,18 @@ def command_check(args: argparse.Namespace) -> int:
     trend_mode = bool(args.trend_mode)
     max_wrapper_count_increase = int(args.max_wrapper_count_increase)
     max_total_shell_loc_increase = int(args.max_total_shell_loc_increase)
+    min_wrapper_count_reduction = int(args.min_wrapper_count_reduction)
+    min_total_shell_loc_reduction = int(args.min_total_shell_loc_reduction)
     enforce_lane_shell_loc_nonincreasing = True
 
     if max_wrapper_count_increase < 0:
         fail("--max-wrapper-count-increase must be >= 0")
     if max_total_shell_loc_increase < 0:
         fail("--max-total-shell-loc-increase must be >= 0")
+    if min_wrapper_count_reduction < 0:
+        fail("--min-wrapper-count-reduction must be >= 0")
+    if min_total_shell_loc_reduction < 0:
+        fail("--min-total-shell-loc-reduction must be >= 0")
     if args.threshold_file and not trend_mode:
         fail("--threshold-file requires --trend-mode")
 
@@ -336,6 +360,8 @@ def command_check(args: argparse.Namespace) -> int:
         enforce_lane_shell_loc_nonincreasing = bool(
             thresholds["enforce_lane_shell_loc_nonincreasing"]
         )
+        min_wrapper_count_reduction = int(thresholds["min_wrapper_count_reduction"])
+        min_total_shell_loc_reduction = int(thresholds["min_total_shell_loc_reduction"])
 
     baseline = load_json_object(baseline_file, label="wrapper inventory baseline")
     validate_baseline_payload(baseline)
@@ -425,6 +451,26 @@ def command_check(args: argparse.Namespace) -> int:
                 f"threshold={max_total_shell_loc_increase}"
             )
             reason_codes.add("total_shell_loc_delta_threshold_exceeded")
+        if (
+            min_wrapper_count_reduction > 0
+            and totals_delta["wrapper_count_delta"] > -min_wrapper_count_reduction
+        ):
+            violations.append(
+                "wrapper_count reduction target unmet: "
+                f"delta={totals_delta['wrapper_count_delta']} "
+                f"target_reduction={min_wrapper_count_reduction}"
+            )
+            reason_codes.add("wrapper_count_reduction_target_unmet")
+        if (
+            min_total_shell_loc_reduction > 0
+            and totals_delta["total_shell_loc_delta"] > -min_total_shell_loc_reduction
+        ):
+            violations.append(
+                "total_shell_loc reduction target unmet: "
+                f"delta={totals_delta['total_shell_loc_delta']} "
+                f"target_reduction={min_total_shell_loc_reduction}"
+            )
+            reason_codes.add("total_shell_loc_reduction_target_unmet")
 
     sorted_reason_codes = sorted(reason_codes)
 
@@ -449,6 +495,8 @@ def command_check(args: argparse.Namespace) -> int:
             "mode": "trend" if trend_mode else "strict",
             "max_wrapper_count_increase": max_wrapper_count_increase,
             "max_total_shell_loc_increase": max_total_shell_loc_increase,
+            "min_wrapper_count_reduction": min_wrapper_count_reduction,
+            "min_total_shell_loc_reduction": min_total_shell_loc_reduction,
             "enforce_lane_shell_loc_nonincreasing": enforce_lane_shell_loc_nonincreasing,
         },
         "lane_deltas": lane_deltas,
@@ -514,6 +562,18 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=0,
         help="Allowed positive total_shell_loc_delta in trend mode.",
+    )
+    check_parser.add_argument(
+        "--min-wrapper-count-reduction",
+        type=int,
+        default=0,
+        help="Required minimum wrapper-count reduction in trend mode.",
+    )
+    check_parser.add_argument(
+        "--min-total-shell-loc-reduction",
+        type=int,
+        default=0,
+        help="Required minimum total shell LOC reduction in trend mode.",
     )
     check_parser.add_argument(
         "--output-json",
