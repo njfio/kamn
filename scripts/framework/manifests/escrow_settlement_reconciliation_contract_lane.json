@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "escrow.settlement_reconciliation.contract",
+  "evidence_key": "settlement_reconciliation_contract_lane:v1",
+  "reason_key": "settlement_reconciliation_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "bash",
+      "scripts/escrow/settlement_reconciliation_contract_lane_contract.sh"
+    ]
+  }
+}

@@ -85,6 +85,9 @@ resolve_manifest_name() {
     run_reputation_recovery_contract_lane.sh) echo "reputation_reputation_recovery_contract_lane.json" ;;
     run_reputation_signal_quarantine_contract_lane.sh) echo "reputation_reputation_signal_quarantine_contract_lane.json" ;;
     run_weighted_decay_contract_lane.sh) echo "reputation_weighted_decay_contract_lane.json" ;;
+    run_channel_retention_redaction_contract_lane.sh) echo "channel_channel_retention_redaction_contract_lane.json" ;;
+    run_settlement_reconciliation_contract_lane.sh) echo "escrow_settlement_reconciliation_contract_lane.json" ;;
+    run_federated_delegation_settlement_contract_lane.sh) echo "task_federated_delegation_settlement_contract_lane.json" ;;
     run_rust_live_transport_contract_lane.sh) echo "sdk_rust_live_transport_contract_lane.json" ;;
     run_governance_lifecycle_rollback_contract_lane.sh) echo "governance_lifecycle_rollback_contract_lane.json" ;;
     run_governance_simulation_contract_lane.sh) echo "governance_simulation_contract_lane.json" ;;

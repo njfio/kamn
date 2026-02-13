@@ -1,0 +1,41 @@
+{
+  "schema_version": "kamn.kolme.lane-migration-matrix.v1",
+  "lanes": [
+    {
+      "lane_id": "non_kolme.channel.channel_retention_redaction",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/channel/run_channel_retention_redaction_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/channel_channel_retention_redaction_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2738"
+    },
+    {
+      "lane_id": "non_kolme.escrow.settlement_reconciliation",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/escrow/run_settlement_reconciliation_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/escrow_settlement_reconciliation_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2738"
+    },
+    {
+      "lane_id": "non_kolme.task.federated_delegation_settlement",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/task/run_federated_delegation_settlement_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/task_federated_delegation_settlement_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2738"
+    }
+  ]
+}

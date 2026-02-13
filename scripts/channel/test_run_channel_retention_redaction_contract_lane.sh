@@ -3,30 +3,39 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/channel/run_channel_retention_redaction_contract_lane.sh"
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+CONTRACT_MODULE="$ROOT_DIR/scripts/channel/channel_retention_redaction_contract_lane_contract.sh"
+EXPECTED_MANIFEST="$ROOT_DIR/scripts/framework/manifests/channel_channel_retention_redaction_contract_lane.json"
 
 if [ ! -x "$SCRIPT" ]; then
   echo "expected channel retention/redaction contract lane script to be executable" >&2
   exit 1
 fi
 
-bundle_file="$TMP_DIR/channel-retention-redaction-bundle.json"
-lane_output="$(bash "$SCRIPT" --output-file "$bundle_file")"
-
-if ! printf '%s\n' "$lane_output" | grep -q "channel retention/redaction contract lane tests passed."; then
-  echo "expected channel retention/redaction contract lane success marker" >&2
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected non-Kolme dispatcher to be executable: $DISPATCHER" >&2
   exit 1
 fi
 
-if [ ! -f "$bundle_file" ]; then
-  echo "expected channel retention/redaction contract lane to emit evidence bundle" >&2
+if [ ! -x "$CONTRACT_MODULE" ]; then
+  echo "expected shared channel retention/redaction contract module to be executable: $CONTRACT_MODULE" >&2
   exit 1
 fi
 
-if ! grep -q '"schema_version": "kamn.channel.retention-redaction-evidence.v1"' "$bundle_file"; then
-  echo "expected channel retention/redaction evidence schema marker" >&2
+if [ ! -L "$SCRIPT" ]; then
+  echo "expected channel retention/redaction wrapper to be a symlink: $SCRIPT" >&2
   exit 1
 fi
 
-echo "channel retention/redaction contract lane script tests passed."
+manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$SCRIPT")" --resolve-manifest-path)"
+if [ "$manifest_path" != "$EXPECTED_MANIFEST" ]; then
+  echo "expected dispatcher to resolve $EXPECTED_MANIFEST but found $manifest_path" >&2
+  exit 1
+fi
+
+if ! grep -Fq "\"scripts/channel/$(basename "$CONTRACT_MODULE")\"" "$manifest_path"; then
+  echo "expected manifest to dispatch shared channel retention/redaction contract module: $manifest_path" >&2
+  exit 1
+fi
+
+echo "channel retention/redaction contract lane wrapper tests passed."
