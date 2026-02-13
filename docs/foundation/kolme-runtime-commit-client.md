@@ -35,6 +35,19 @@ handling.
   - `crates/kamn-core/tests/kolme_runtime_commit_client.rs`
   - `crates/kamn-core/tests/kolme_runtime_commit_http_transport.rs`
 
+## Module Ownership Map
+
+- Canonical extraction ownership in `kamn-kolme`:
+  - codec module: `crates/kamn-kolme/src/codec.rs`
+  - API codec module: `crates/kamn-kolme/src/api_codec.rs`
+  - finality module: `crates/kamn-kolme/src/finality.rs`
+  - runtime pipeline module: `crates/kamn-kolme/src/pipeline.rs`
+  - runtime transport contract module: `crates/kamn-kolme/src/runtime_transport_contracts.rs`
+- Compatibility facade ownership in `kamn-core`:
+  - runtime commit adapter boundary: `crates/kamn-core/src/kolme_runtime_commit.rs`
+  - adapter-backed client: `crates/kamn-core/src/kolme_runtime_commit/adapter_backed_client.rs`
+  - live-provider facade: `crates/kamn-core/src/kolme_runtime_commit/live_provider.rs`
+
 ## Concrete HTTP Transport
 
 - `KolmeRuntimeCommitHttpTransport` provides deterministic `http://` and `https://` transport paths for:
