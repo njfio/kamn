@@ -10,10 +10,20 @@ import sys
 from pathlib import Path
 from typing import List
 
-HEAVY_FORK_MATRIX_COMMANDS = [
+LOCAL_HEAVY_LANE_COMMANDS = [
+    "bash scripts/framework/test_assert_local_heavy_opt_in.sh",
     "bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_lane.sh",
     "bash scripts/kolme/test_check_local_kolme_fork_rust_test_matrix_policy.sh",
     "bash scripts/kolme/test_run_local_kolme_fork_rust_test_matrix_contract_lane.sh",
+    "bash scripts/kolme/test_run_local_bootstrap_health_checks.sh",
+    "bash scripts/kolme/test_run_local_e2e_integration_lane.sh",
+    "bash scripts/kolme/test_run_local_heavy_validation_matrix.sh",
+    "bash scripts/kolme/test_run_local_runtime_commit_live_lane.sh",
+    "bash scripts/kolme/test_run_local_runtime_commit_live_finality_evidence_contract_lane.sh",
+    "bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh",
+    "bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh",
+    "bash scripts/kolme/test_check_local_kamn_live_runtime_real_node_profile_policy.sh",
+    "bash scripts/kolme/test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh",
 ]
 
 
@@ -86,16 +96,16 @@ def main() -> int:
         ):
             failed_checks.append("local_heavy_lane_not_selector_gated")
         missing_local_heavy_commands = [
-            command for command in HEAVY_FORK_MATRIX_COMMANDS if command not in heavy_step_block
+            command for command in LOCAL_HEAVY_LANE_COMMANDS if command not in heavy_step_block
         ]
         if missing_local_heavy_commands:
-            failed_checks.append("heavy_fork_matrix_commands_missing_from_local_heavy_lane")
+            failed_checks.append("local_heavy_lane_commands_missing")
 
     version_lane_block = extract_step_block(text, "Run Kolme version compatibility contract lane")
     if version_lane_block:
-        leaked_commands = [command for command in HEAVY_FORK_MATRIX_COMMANDS if command in version_lane_block]
+        leaked_commands = [command for command in LOCAL_HEAVY_LANE_COMMANDS if command in version_lane_block]
         if leaked_commands:
-            failed_checks.append("heavy_fork_matrix_commands_in_version_lane")
+            failed_checks.append("local_heavy_lane_commands_in_version_lane")
 
     if failed_checks:
         status = "fail"

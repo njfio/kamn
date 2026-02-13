@@ -109,6 +109,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `run_kolme_local_heavy_contract_tests=false`
     - `kolme_local_heavy_selector_opt_in=false`
     - `test_scope=kolme-local-heavy-local-only`
+    - `scripts/kolme/test_run_local_kamn_live_runtime_integration_real_node_profile.sh` is selector-gated into local-heavy scope (default-off) to prevent fast-gate leakage.
   - explicit selector opt-in for CI execution:
     - `CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS=true`
     - `run_kolme_local_heavy_contract_tests=true`
@@ -316,6 +317,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `python3 scripts/kolme/check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-fast-gate-native-api-parity-policy.json`
     - `KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS=120`
   - local-only heavy Kolme run-mode commands remain excluded from ci-fast-gate.
+  - workflow heavy-exclusion policy checker fails closed when local-heavy command coverage drifts (`local_heavy_lane_commands_missing`) or leaks into version compatibility lane (`local_heavy_lane_commands_in_version_lane`).
   - local-only fork sync/smoke run-mode commands remain excluded from ci-fast-gate.
     - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
     - `bash scripts/kolme/run_local_fork_sync_metadata_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --expected-commit <40-hex-pinned-sha> --output-json /tmp/kolme-local-fork-sync-metadata-summary.json`
@@ -648,6 +650,7 @@ Regression policy:
 - governance quorum attestation selector/docs parity remains fail-closed (`Regression: #911`).
 - local-only heavy Kolme selector/workflow/docs parity remains fail-closed (`Regression: #1419`).
 - local-only heavy Kolme selector default-off and explicit CI opt-in semantics remain fail-closed (`Regression: #2303`).
+- local-heavy selector/workflow guard expansion for additional real-node integration surfaces remains fail-closed (`Regression: #2337`).
 - Kolme harness soft-budget trend escalation states and threshold-driven policy decisions remain fail-closed (`Regression: #2304`).
 - aggregate CI-tools fork Rust matrix command-surface coverage remains fail-closed (`Regression: #1549`).
 - local-only fork sync/smoke run-mode exclusion parity remains fail-closed (`Regression: #1431`).

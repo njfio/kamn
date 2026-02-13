@@ -1393,6 +1393,22 @@ assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract_lane_test_script_output" "run_kolme_triadic_devnet_smoke_contract_tests")" "false" "Kolme local KAMN live runtime integration contract lane test script changes should skip triadic devnet smoke contract lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_contract_lane_test_script_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local KAMN live runtime integration contract lane test script changes should set kolme-local-heavy-contract scope"
 
+# Regression: #2337
+kolme_local_kamn_live_runtime_integration_real_node_profile_default_output="$(run_selector_with_local_heavy_opt_in $'scripts/kolme/test_run_local_kamn_live_runtime_integration_real_node_profile.sh' 'false')"
+assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_default_output" "run_rust")" "false" "Kolme local KAMN real-node integration profile test script changes should avoid rust lane by default"
+assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_default_output" "run_kolme_local_heavy_contract_tests")" "false" "Kolme local KAMN real-node integration profile test script changes should keep local-heavy lane default-off"
+assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_default_output" "kolme_local_heavy_selector_opt_in")" "false" "Kolme local KAMN real-node integration profile default selection should expose non-opt-in state"
+assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_default_output" "run_kolme_version_compatibility_contract_tests")" "false" "Kolme local KAMN real-node integration profile test script changes should not leak into version compatibility lane by default"
+assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_default_output" "test_scope")" "kolme-local-heavy-local-only" "Kolme local KAMN real-node integration profile default selection should set local-only scope"
+
+# Regression: #2337
+kolme_local_kamn_live_runtime_integration_real_node_profile_opt_in_output="$(run_selector_with_local_heavy_opt_in $'scripts/kolme/test_run_local_kamn_live_runtime_integration_real_node_profile.sh' 'true')"
+assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_opt_in_output" "run_rust")" "false" "Kolme local KAMN real-node integration profile test script changes should avoid rust lane when local-heavy opt-in is enabled"
+assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_opt_in_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local KAMN real-node integration profile test script changes should run dedicated local-heavy lane with explicit opt-in"
+assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_opt_in_output" "kolme_local_heavy_selector_opt_in")" "true" "Kolme local KAMN real-node integration profile opt-in selection should expose opt-in state"
+assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_opt_in_output" "run_kolme_version_compatibility_contract_tests")" "false" "Kolme local KAMN real-node integration profile test script changes should not leak into version compatibility lane when local-heavy opt-in is enabled"
+assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_integration_real_node_profile_opt_in_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local KAMN real-node integration profile opt-in selection should set local-heavy contract scope"
+
 kolme_local_kamn_live_runtime_real_node_profile_policy_script_output="$(run_selector $'scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py')"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_policy_script_output" "run_rust")" "false" "Kolme local KAMN real-node profile policy script changes should avoid rust lane"
 assert_eq "$(extract_output "$kolme_local_kamn_live_runtime_real_node_profile_policy_script_output" "run_kolme_snapshot_drift_contract_tests")" "false" "Kolme local KAMN real-node profile policy script changes should skip Kolme snapshot drift contract lane"
