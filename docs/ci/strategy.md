@@ -1903,19 +1903,22 @@ Kolme harness trend policy (warning-to-fail escalation contract):
 Ignored-test inventory drift policy (fail-closed):
 - baseline fixture: `fixtures/ci/ignored_test_inventory_baseline.json`
 - metadata fixture: `fixtures/ci/ignored_test_inventory_metadata.json`
+- promotion criteria fixture: `fixtures/ci/ignored_test_promotion_criteria.json`
 - baseline generator:
   - `bash scripts/ci/generate_ignored_test_inventory_baseline.sh --output-json /tmp/ignored-test-inventory-baseline.json`
 - drift checker:
-  - `bash scripts/ci/check_ignored_test_inventory_drift.sh --baseline-file fixtures/ci/ignored_test_inventory_baseline.json --metadata-file fixtures/ci/ignored_test_inventory_metadata.json --output-json /tmp/ignored-test-inventory-drift-report.json`
+  - `bash scripts/ci/check_ignored_test_inventory_drift.sh --baseline-file fixtures/ci/ignored_test_inventory_baseline.json --metadata-file fixtures/ci/ignored_test_inventory_metadata.json --promotion-criteria-file fixtures/ci/ignored_test_promotion_criteria.json --output-json /tmp/ignored-test-inventory-drift-report.json`
 - metadata policy checker test:
   - `bash scripts/ci/test_check_ignored_test_inventory_metadata_policy.sh`
 - policy emits deterministic drift markers:
   - `status=pass|fail`
-  - `reason_codes=none|unexpected_ignored_tests_present|baseline_ignored_tests_missing|ignored_test_marker_without_function|ignored_test_metadata_missing|ignored_test_metadata_stale_entry|high_priority_tracking_issue_missing`
+  - `reason_codes=none|unexpected_ignored_tests_present|baseline_ignored_tests_missing|ignored_test_marker_without_function|ignored_test_metadata_missing|ignored_test_metadata_stale_entry|high_priority_tracking_issue_missing|ignored_test_promotion_criteria_missing`
   - `violation_count=<n>`
 - high-priority linkage requirement:
   - `priority in {P0,P1}` requires `tracking_issue` in `#<issue-number>` format.
-- drift policy remains fail-closed on unapproved ignored-test inventory/metadata changes (`Regression: #2836`, `Regression: #2841`, `Regression: #2842`).
+- promotion criteria requirement:
+  - each metadata `reason` must map to a category in `ignored_test_promotion_criteria.json` with non-empty criteria list.
+- drift policy remains fail-closed on unapproved ignored-test inventory/metadata changes (`Regression: #2836`, `Regression: #2841`, `Regression: #2842`, `Regression: #2843`).
 
 Policy:
 - Warning at 90% of configured budget.
@@ -1955,7 +1958,7 @@ Fast-mode CI tooling regression coverage includes:
   - generator command:
     - `bash scripts/ci/generate_ignored_test_inventory_baseline.sh --output-json /tmp/ignored-test-inventory-baseline.json`
   - checker command:
-    - `bash scripts/ci/check_ignored_test_inventory_drift.sh --baseline-file fixtures/ci/ignored_test_inventory_baseline.json --metadata-file fixtures/ci/ignored_test_inventory_metadata.json --output-json /tmp/ignored-test-inventory-drift-report.json`
+    - `bash scripts/ci/check_ignored_test_inventory_drift.sh --baseline-file fixtures/ci/ignored_test_inventory_baseline.json --metadata-file fixtures/ci/ignored_test_inventory_metadata.json --promotion-criteria-file fixtures/ci/ignored_test_promotion_criteria.json --output-json /tmp/ignored-test-inventory-drift-report.json`
   - metadata policy test command:
     - `bash scripts/ci/test_check_ignored_test_inventory_metadata_policy.sh`
   - deterministic reason-code surface:
@@ -1966,6 +1969,7 @@ Fast-mode CI tooling regression coverage includes:
     - `reason_codes=ignored_test_metadata_missing`
     - `reason_codes=ignored_test_metadata_stale_entry`
     - `reason_codes=high_priority_tracking_issue_missing`
+    - `reason_codes=ignored_test_promotion_criteria_missing`
 - Generic test-harness LOC soft-budget contract lane (`test_run_test_harness_loc_soft_budget_contract_lane.sh`)
   - contract lane command:
     - `bash scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/test-harness-loc-soft-budget-contract-report.json`
