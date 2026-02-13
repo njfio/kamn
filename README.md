@@ -103,6 +103,9 @@ bash scripts/kolme/test_check_runtime_commit_decomposition_parity_matrix.sh
 
 Architecture/module-boundary ownership and parity scenario details are documented
 in `docs/foundation/kolme-runtime-commit-client.md`.
+Canonical runtime integration flow and module ownership mapping are documented in
+`docs/foundation/kolme-runtime-architecture.md#runtime-flow-diagram` and
+`docs/foundation/kolme-runtime-architecture.md#ownership-map`.
 
 ### Fast Make Lanes
 
