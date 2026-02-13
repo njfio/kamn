@@ -15,6 +15,7 @@ FALLBACK_SIGNER_SECRET_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 REQUIRED_SECRET_HEX_LENGTH = 64
 SIGNER_KEY_SOURCE_CONTRACT_VERSION = "v1"
 RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION = "kamn.kolme.runtime-signer-attestation.v1"
+RUNTIME_SIGNER_DRIFT_TELEMETRY_SCHEMA_VERSION = "kamn.kolme.runtime-signer-drift-telemetry.v1"
 QUORUM_EVIDENCE_SCHEMA_VERSION = RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION
 ALLOWED_SIGNER_KEY_SOURCES = ("env-local", "managed-external")
 ALLOWED_SIGNER_KEY_SOURCES_BY_PROFILE = {
@@ -58,6 +59,126 @@ def evaluate_runtime_signer_attestation_bundle(
             and runtime_signer_profile not in normalized_signers
         ):
             reason_codes.append("runtime_signer_attestation_profile_not_approved")
+
+    return reason_codes
+
+
+def evaluate_runtime_signer_drift_telemetry(
+    telemetry_bundle: object,
+    expected_required_approvals: object,
+    expected_received_approvals: object,
+    expected_rotation_delta_epochs: object,
+    expected_rotation_freshness_max_delta: object,
+) -> list[str]:
+    reason_codes: list[str] = []
+    if not isinstance(telemetry_bundle, dict):
+        return ["runtime_signer_drift_telemetry_missing"]
+
+    if telemetry_bundle.get("schema_version") != RUNTIME_SIGNER_DRIFT_TELEMETRY_SCHEMA_VERSION:
+        reason_codes.append("runtime_signer_drift_telemetry_schema_invalid")
+
+    signer_rotation_epoch = telemetry_bundle.get("signer_rotation_epoch")
+    if not isinstance(signer_rotation_epoch, int) or signer_rotation_epoch <= 0:
+        reason_codes.append("runtime_signer_drift_telemetry_rotation_epoch_invalid")
+
+    signer_previous_rotation_epoch = telemetry_bundle.get("signer_previous_rotation_epoch")
+    if not isinstance(signer_previous_rotation_epoch, int) or signer_previous_rotation_epoch <= 0:
+        reason_codes.append("runtime_signer_drift_telemetry_previous_rotation_epoch_invalid")
+
+    signer_rotation_delta_epochs = telemetry_bundle.get("signer_rotation_delta_epochs")
+    if not isinstance(signer_rotation_delta_epochs, int) or signer_rotation_delta_epochs < 0:
+        reason_codes.append("runtime_signer_drift_telemetry_rotation_delta_invalid")
+
+    signer_rotation_freshness_max_delta = telemetry_bundle.get("signer_rotation_freshness_max_delta")
+    if (
+        not isinstance(signer_rotation_freshness_max_delta, int)
+        or signer_rotation_freshness_max_delta < 0
+    ):
+        reason_codes.append("runtime_signer_drift_telemetry_freshness_delta_invalid")
+
+    signer_rotation_stale = telemetry_bundle.get("signer_rotation_stale")
+    if not isinstance(signer_rotation_stale, bool):
+        reason_codes.append("runtime_signer_drift_telemetry_stale_flag_invalid")
+
+    required_approvals = telemetry_bundle.get("required_approvals")
+    if not isinstance(required_approvals, int) or required_approvals <= 0:
+        reason_codes.append("runtime_signer_drift_telemetry_required_approvals_invalid")
+
+    received_approvals = telemetry_bundle.get("received_approvals")
+    if not isinstance(received_approvals, int) or received_approvals < 0:
+        reason_codes.append("runtime_signer_drift_telemetry_received_approvals_invalid")
+
+    quorum_shortfall = telemetry_bundle.get("quorum_shortfall")
+    if not isinstance(quorum_shortfall, bool):
+        reason_codes.append("runtime_signer_drift_telemetry_quorum_shortfall_flag_invalid")
+
+    if (
+        isinstance(signer_rotation_epoch, int)
+        and signer_rotation_epoch > 0
+        and isinstance(signer_previous_rotation_epoch, int)
+        and signer_previous_rotation_epoch > 0
+        and isinstance(signer_rotation_delta_epochs, int)
+        and signer_rotation_delta_epochs >= 0
+        and signer_rotation_delta_epochs != signer_rotation_epoch - signer_previous_rotation_epoch
+    ):
+        reason_codes.append("runtime_signer_drift_telemetry_rotation_delta_mismatch")
+
+    if (
+        isinstance(signer_rotation_delta_epochs, int)
+        and signer_rotation_delta_epochs >= 0
+        and isinstance(signer_rotation_freshness_max_delta, int)
+        and signer_rotation_freshness_max_delta >= 0
+        and isinstance(signer_rotation_stale, bool)
+        and signer_rotation_stale
+        != (signer_rotation_delta_epochs > signer_rotation_freshness_max_delta)
+    ):
+        reason_codes.append("runtime_signer_drift_telemetry_stale_flag_mismatch")
+
+    if (
+        isinstance(expected_required_approvals, int)
+        and expected_required_approvals > 0
+        and isinstance(required_approvals, int)
+        and required_approvals > 0
+        and required_approvals != expected_required_approvals
+    ):
+        reason_codes.append("runtime_signer_drift_telemetry_required_approvals_mismatch")
+
+    if (
+        isinstance(expected_received_approvals, int)
+        and expected_received_approvals >= 0
+        and isinstance(received_approvals, int)
+        and received_approvals >= 0
+        and received_approvals != expected_received_approvals
+    ):
+        reason_codes.append("runtime_signer_drift_telemetry_received_approvals_mismatch")
+
+    if (
+        isinstance(required_approvals, int)
+        and required_approvals > 0
+        and isinstance(received_approvals, int)
+        and received_approvals >= 0
+        and isinstance(quorum_shortfall, bool)
+        and quorum_shortfall != (received_approvals < required_approvals)
+    ):
+        reason_codes.append("runtime_signer_drift_telemetry_quorum_shortfall_flag_mismatch")
+
+    if (
+        isinstance(expected_rotation_delta_epochs, int)
+        and expected_rotation_delta_epochs >= 0
+        and isinstance(signer_rotation_delta_epochs, int)
+        and signer_rotation_delta_epochs >= 0
+        and signer_rotation_delta_epochs != expected_rotation_delta_epochs
+    ):
+        reason_codes.append("runtime_signer_drift_telemetry_rotation_delta_contract_mismatch")
+
+    if (
+        isinstance(expected_rotation_freshness_max_delta, int)
+        and expected_rotation_freshness_max_delta >= 0
+        and isinstance(signer_rotation_freshness_max_delta, int)
+        and signer_rotation_freshness_max_delta >= 0
+        and signer_rotation_freshness_max_delta != expected_rotation_freshness_max_delta
+    ):
+        reason_codes.append("runtime_signer_drift_telemetry_freshness_delta_contract_mismatch")
 
     return reason_codes
 
@@ -340,6 +461,27 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     elif "runtime_signer_attestation_profile_not_approved" in reason_codes and runtime_signer_attestation_profile_approved:
         reason_codes.append("runtime_signer_attestation_profile_approved_contract_mismatch")
 
+    runtime_signer_drift_telemetry_schema_version = report.get(
+        "runtime_signer_drift_telemetry_schema_version"
+    )
+    if (
+        not isinstance(runtime_signer_drift_telemetry_schema_version, str)
+        or not runtime_signer_drift_telemetry_schema_version.strip()
+    ):
+        reason_codes.append("runtime_signer_drift_telemetry_schema_version_missing")
+    elif runtime_signer_drift_telemetry_schema_version != RUNTIME_SIGNER_DRIFT_TELEMETRY_SCHEMA_VERSION:
+        reason_codes.append("runtime_signer_drift_telemetry_schema_version_mismatch")
+
+    reason_codes.extend(
+        evaluate_runtime_signer_drift_telemetry(
+            report.get("runtime_signer_drift_telemetry"),
+            required_approvals,
+            received_approvals,
+            signer_rotation_delta_epochs,
+            signer_rotation_freshness_max_delta,
+        )
+    )
+
     custody_evidence_file = report.get("custody_evidence_file")
     if not isinstance(custody_evidence_file, str):
         reason_codes.append("custody_evidence_file_invalid")
@@ -429,6 +571,21 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_signer_attestation_profile_membership_required_contract_mismatch")
         if contracts.get("runtime_signer_attestation_required_approvals") != required_approvals:
             reason_codes.append("runtime_signer_attestation_required_approvals_contract_mismatch")
+        if contracts.get("runtime_signer_drift_telemetry_required") is not True:
+            reason_codes.append("runtime_signer_drift_telemetry_required_contract_mismatch")
+        if (
+            contracts.get("runtime_signer_drift_telemetry_schema_version")
+            != RUNTIME_SIGNER_DRIFT_TELEMETRY_SCHEMA_VERSION
+        ):
+            reason_codes.append("runtime_signer_drift_telemetry_schema_version_contract_mismatch")
+        if contracts.get("runtime_signer_drift_telemetry_rotation_delta_match_required") is not True:
+            reason_codes.append("runtime_signer_drift_telemetry_rotation_delta_match_required_contract_mismatch")
+        if contracts.get("runtime_signer_drift_telemetry_stale_flag_match_required") is not True:
+            reason_codes.append("runtime_signer_drift_telemetry_stale_flag_match_required_contract_mismatch")
+        if contracts.get("runtime_signer_drift_telemetry_quorum_flag_match_required") is not True:
+            reason_codes.append("runtime_signer_drift_telemetry_quorum_flag_match_required_contract_mismatch")
+        if contracts.get("runtime_signer_drift_telemetry_approval_counts_match_required") is not True:
+            reason_codes.append("runtime_signer_drift_telemetry_approval_counts_match_required_contract_mismatch")
         if contracts.get("custody_evidence_required") is not True:
             reason_codes.append("custody_evidence_required_contract_mismatch")
         if contracts.get("custody_evidence_sha256_required") is not True:

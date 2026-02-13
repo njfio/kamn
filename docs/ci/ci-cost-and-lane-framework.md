@@ -55,6 +55,27 @@ Escalation path when telemetry thresholds fail:
 2. Re-run `run_staging_rehearsal_contract_lane.sh` after mitigation.
 3. Use `run_staging_rehearsal_deep_lane.sh` for manual drift rehearsal before rollout approval.
 
+## Deployment Preflight Runtime-Signer Drift Telemetry Policy
+Kolme deployment admission preflight emits deterministic runtime signer drift telemetry in
+`kamn.kolme.local-live-deployment-preflight-summary.v1`:
+
+- `runtime_signer_drift_telemetry_schema_version=kamn.kolme.runtime-signer-drift-telemetry.v1`
+- `runtime_signer_drift_telemetry` bundle with rotation and quorum drift fields
+- `contracts.runtime_signer_drift_telemetry_required=true`
+
+Fail-closed reason codes for missing/malformed telemetry:
+
+- `runtime_signer_drift_telemetry_missing`
+- `runtime_signer_drift_telemetry_schema_version_mismatch`
+- `runtime_signer_drift_telemetry_rotation_delta_invalid`
+
+Coverage split for cost control:
+
+- fast lane: `run_local_kolme_live_deployment_preflight_lane.sh` +
+  `check_local_kolme_live_deployment_preflight_policy.py` (ci-fast-gate eligible)
+- contract lane: `run_local_kolme_live_deployment_preflight_contract_lane.sh` for docs/policy parity
+- local-heavy/deep integration remains outside fast gate and opt-in only
+
 ## Script-Surface Budget Policy
 `scripts/ci/check_script_duplication_budget.py` computes deterministic metrics over non-test shell command surface under `scripts/**/*.sh`:
 

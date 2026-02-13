@@ -101,6 +101,12 @@ required_coverage_markers=(
   "runtime_signer_attestation_approved_signers_not_unique"
   "runtime_signer_attestation_quorum_shortfall"
   "runtime_signer_attestation_schema_invalid"
+  "runtime_signer_drift_telemetry_schema_version=kamn.kolme.runtime-signer-drift-telemetry.v1"
+  "runtime_signer_drift_telemetry"
+  "runtime_signer_drift_telemetry_missing"
+  "runtime_signer_drift_telemetry_schema_version_mismatch"
+  "runtime_signer_drift_telemetry_rotation_delta_invalid"
+  "contracts.runtime_signer_drift_telemetry_required=true"
   "Regression: #2226"
   "Regression: #2337"
   "Regression: #2300"
@@ -142,6 +148,30 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "runtime_signer_attestation_quorum_shortfall" "$docs_file"; then
     echo "expected docs parity to include runtime signer attestation quorum shortfall reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_drift_telemetry_schema_version=kamn.kolme.runtime-signer-drift-telemetry.v1" "$docs_file"; then
+    echo "expected docs parity to include runtime signer drift telemetry schema marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_drift_telemetry" "$docs_file"; then
+    echo "expected docs parity to include runtime signer drift telemetry bundle marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_drift_telemetry_missing" "$docs_file"; then
+    echo "expected docs parity to include runtime signer drift telemetry missing reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_drift_telemetry_schema_version_mismatch" "$docs_file"; then
+    echo "expected docs parity to include runtime signer drift telemetry schema-version mismatch reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_drift_telemetry_rotation_delta_invalid" "$docs_file"; then
+    echo "expected docs parity to include runtime signer drift telemetry rotation-delta invalid reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "contracts.runtime_signer_drift_telemetry_required=true" "$docs_file"; then
+    echo "expected docs parity to include runtime signer drift telemetry contract requirement marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "quorum_evidence_signer_roles_missing" "$docs_file"; then
@@ -262,6 +292,19 @@ if attestation_bundle.get("required_approvals") != summary.get("required_approva
     raise SystemExit("expected deployment preflight summary attestation required approvals to mirror quorum threshold")
 if attestation_bundle.get("approved_signers") != ["ops-primary", "ops-secondary"]:
     raise SystemExit("expected deployment preflight summary attestation approved signers marker")
+if summary.get("runtime_signer_drift_telemetry_schema_version") != "kamn.kolme.runtime-signer-drift-telemetry.v1":
+    raise SystemExit("expected deployment preflight summary runtime signer drift telemetry schema marker")
+runtime_signer_drift_telemetry = summary.get("runtime_signer_drift_telemetry")
+if not isinstance(runtime_signer_drift_telemetry, dict):
+    raise SystemExit("expected deployment preflight summary runtime signer drift telemetry bundle")
+if runtime_signer_drift_telemetry.get("schema_version") != "kamn.kolme.runtime-signer-drift-telemetry.v1":
+    raise SystemExit("expected deployment preflight summary runtime signer drift telemetry schema marker in bundle")
+if runtime_signer_drift_telemetry.get("signer_rotation_delta_epochs") != summary.get("signer_rotation_delta_epochs"):
+    raise SystemExit("expected deployment preflight summary runtime signer drift telemetry rotation delta marker")
+if runtime_signer_drift_telemetry.get("required_approvals") != summary.get("required_approvals"):
+    raise SystemExit("expected deployment preflight summary runtime signer drift telemetry required approvals marker")
+if runtime_signer_drift_telemetry.get("received_approvals") != summary.get("received_approvals"):
+    raise SystemExit("expected deployment preflight summary runtime signer drift telemetry received approvals marker")
 contracts = summary.get("contracts", {})
 if contracts.get("ci_fast_gate_scope") != "ci-fast-gate":
     raise SystemExit("expected deployment preflight contracts ci_fast_gate_scope=ci-fast-gate")
@@ -273,6 +316,18 @@ if contracts.get("runtime_signer_attestation_threshold_required") is not True:
     raise SystemExit("expected deployment preflight contracts runtime signer attestation threshold marker")
 if contracts.get("runtime_signer_attestation_profile_membership_required") is not True:
     raise SystemExit("expected deployment preflight contracts runtime signer attestation profile membership marker")
+if contracts.get("runtime_signer_drift_telemetry_required") is not True:
+    raise SystemExit("expected deployment preflight contracts runtime signer drift telemetry requirement marker")
+if contracts.get("runtime_signer_drift_telemetry_schema_version") != "kamn.kolme.runtime-signer-drift-telemetry.v1":
+    raise SystemExit("expected deployment preflight contracts runtime signer drift telemetry schema marker")
+if contracts.get("runtime_signer_drift_telemetry_rotation_delta_match_required") is not True:
+    raise SystemExit("expected deployment preflight contracts runtime signer drift telemetry rotation delta match marker")
+if contracts.get("runtime_signer_drift_telemetry_stale_flag_match_required") is not True:
+    raise SystemExit("expected deployment preflight contracts runtime signer drift telemetry stale flag match marker")
+if contracts.get("runtime_signer_drift_telemetry_quorum_flag_match_required") is not True:
+    raise SystemExit("expected deployment preflight contracts runtime signer drift telemetry quorum flag match marker")
+if contracts.get("runtime_signer_drift_telemetry_approval_counts_match_required") is not True:
+    raise SystemExit("expected deployment preflight contracts runtime signer drift telemetry approval count match marker")
 if policy.get("schema_version") != "kamn.kolme.local-live-deployment-preflight-policy-report.v1":
     raise SystemExit("unexpected deployment preflight contract-lane policy schema")
 if policy.get("final_decision") != "GO":

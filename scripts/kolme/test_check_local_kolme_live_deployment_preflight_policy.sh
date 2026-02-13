@@ -10,6 +10,7 @@ README_FILE="$ROOT_DIR/README.md"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT_OK="$TMP_DIR/ok-report.json"
 TMP_REPORT_QUORUM_MINIMUM="$TMP_DIR/quorum-minimum-report.json"
+TMP_REPORT_DRIFT_MALFORMED="$TMP_DIR/drift-malformed-report.json"
 TMP_REPORT_BAD="$TMP_DIR/bad-report.json"
 TMP_POLICY_OUT="$TMP_DIR/policy-report.json"
 TMP_SUMMARY="$TMP_DIR/summary.json"
@@ -84,6 +85,18 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "signer_key_source": "env-local"
   },
   "runtime_signer_attestation_profile_approved": true,
+  "runtime_signer_drift_telemetry_schema_version": "kamn.kolme.runtime-signer-drift-telemetry.v1",
+  "runtime_signer_drift_telemetry": {
+    "schema_version": "kamn.kolme.runtime-signer-drift-telemetry.v1",
+    "signer_rotation_epoch": 1,
+    "signer_previous_rotation_epoch": 1,
+    "signer_rotation_delta_epochs": 0,
+    "signer_rotation_freshness_max_delta": 2,
+    "signer_rotation_stale": false,
+    "required_approvals": 2,
+    "received_approvals": 0,
+    "quorum_shortfall": true
+  },
   "custody_evidence_file": "",
   "custody_evidence_present": false,
   "custody_evidence_sha256": "",
@@ -142,6 +155,12 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "runtime_signer_attestation_threshold_required": true,
     "runtime_signer_attestation_profile_membership_required": true,
     "runtime_signer_attestation_required_approvals": 2,
+    "runtime_signer_drift_telemetry_required": true,
+    "runtime_signer_drift_telemetry_schema_version": "kamn.kolme.runtime-signer-drift-telemetry.v1",
+    "runtime_signer_drift_telemetry_rotation_delta_match_required": true,
+    "runtime_signer_drift_telemetry_stale_flag_match_required": true,
+    "runtime_signer_drift_telemetry_quorum_flag_match_required": true,
+    "runtime_signer_drift_telemetry_approval_counts_match_required": true,
     "custody_evidence_required": true,
     "custody_evidence_sha256_required": true,
     "signer_provenance_required": true,
@@ -276,6 +295,54 @@ fi
 
 if ! grep -q "signer_quorum_minimum_not_met" "$TMP_ERR"; then
   echo "expected signer_quorum_minimum_not_met reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_DRIFT_MALFORMED" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+report["runtime_signer_drift_telemetry_schema_version"] = "kamn.kolme.runtime-signer-drift-telemetry.v0"
+report["runtime_signer_drift_telemetry"] = {
+    "schema_version": "kamn.kolme.runtime-signer-drift-telemetry.v0",
+    "signer_rotation_epoch": 1,
+    "signer_previous_rotation_epoch": 1,
+    "signer_rotation_delta_epochs": "bad",
+    "signer_rotation_freshness_max_delta": -1,
+    "signer_rotation_stale": "bad",
+    "required_approvals": 2,
+    "received_approvals": 0,
+    "quorum_shortfall": "bad",
+}
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_DRIFT_MALFORMED" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+drift_malformed_exit_code=$?
+set -e
+
+if [ "$drift_malformed_exit_code" -eq 0 ]; then
+  echo "expected deployment preflight policy checker to fail on malformed runtime signer drift telemetry" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_drift_telemetry_schema_version_mismatch" "$TMP_ERR"; then
+  echo "expected runtime signer drift telemetry schema version mismatch reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_drift_telemetry_rotation_delta_invalid" "$TMP_ERR"; then
+  echo "expected runtime signer drift telemetry rotation delta invalid reason for deployment preflight policy failure" >&2
   exit 1
 fi
 
@@ -537,6 +604,11 @@ fi
 
 if ! grep -q "runtime_signer_attestation_profile_not_approved" "$TMP_ERR"; then
   echo "expected runtime signer attestation profile membership reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_drift_telemetry_missing" "$TMP_ERR"; then
+  echo "expected runtime signer drift telemetry missing reason for deployment preflight policy failure" >&2
   exit 1
 fi
 
