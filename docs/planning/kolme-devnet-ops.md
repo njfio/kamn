@@ -767,6 +767,10 @@ Operator checkpoints:
   - re-run bootstrap lane directly and inspect checkout/probe markers.
 - `reason_code=runtime_commit_policy_failed`:
   - inspect `/tmp/kolme-local-runtime-commit-live-policy.json` for provider marker or evidence mismatch.
+- `reason_code=runtime_commit_in_memory_provider_reference_detected`:
+  - treat as rollback condition; execute the process lifecycle lane with explicit `--rollback-evidence-file` and `--recovery-evidence-file` outputs before retrying runtime integration.
+- `reason_code=runtime_commit_policy_check_in_memory_provider_reference_detected`:
+  - treat as rollback condition; execute the process lifecycle lane with explicit `--rollback-evidence-file` and `--recovery-evidence-file` outputs before retrying runtime integration.
 - `reason_code=checkpoint_failed_signer_secret_contract`:
   - verify signer profile and selected signer secret env are set with a valid 64-hex key.
 - `reason_code=checkpoint_failed_signer_quorum_contract`:

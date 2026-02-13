@@ -637,9 +637,14 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_commit_non_synthetic_submit_probe_missing
 # runtime_commit_real_signing_profile_marker_missing
 # runtime_commit_signer_profile_marker_missing
+# runtime_commit_in_memory_provider_reference_detected
+# runtime_commit_policy_check_in_memory_provider_reference_detected
 
 # strict profile non-synthetic submit probe marker
 # integration_kolme_fork_live_node_submit_reaches_endpoint
+
+# strict profile provider checkpoint marker
+# runtime_provider_client_contract=KolmeRuntimeCommitLiveProvider
 
 # strict profile real-signing marker
 # KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1

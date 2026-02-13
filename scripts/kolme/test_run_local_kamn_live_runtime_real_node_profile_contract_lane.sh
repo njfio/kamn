@@ -203,6 +203,19 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
     echo "expected docs parity to include runtime signing profile contract mismatch reason marker in $docs_file" >&2
     exit 1
   fi
+  if ! grep -q "runtime_provider_client_contract=KolmeRuntimeCommitLiveProvider" "$docs_file"; then
+    echo "expected docs parity to include runtime provider contract checkpoint marker in $docs_file" >&2
+    exit 1
+  fi
+  # Regression: #2337
+  if ! grep -q "runtime_commit_in_memory_provider_reference_detected" "$docs_file"; then
+    echo "expected docs parity to include in-memory provider rollback trigger marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_commit_policy_check_in_memory_provider_reference_detected" "$docs_file"; then
+    echo "expected docs parity to include policy in-memory provider rollback trigger marker in $docs_file" >&2
+    exit 1
+  fi
   if ! grep -q "Regression: #2302" "$docs_file"; then
     echo "expected docs parity to include fallback signer runtime regression marker in $docs_file" >&2
     exit 1

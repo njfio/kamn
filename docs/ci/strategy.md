@@ -365,6 +365,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_lane.json`
     - nested runtime step composes through `run_local_runtime_commit_live_finality_evidence_contract_lane.sh` and captures runtime policy artifacts.
     - integration summary must emit `ci_fast_gate_eligible=false` and `contracts.ci_fast_gate_scope=local-only`.
+    - integration summary must emit `runtime_provider_client_contract=KolmeRuntimeCommitLiveProvider`.
     - integration summary contracts must emit `runtime_profile` (`standard|real-node`) for deterministic operator/release evidence interpretation.
     - operator workflow reference: `Live Provider Operator Runbook (Issue #2114)` in `docs/planning/kolme-devnet-ops.md`.
     - `python3 scripts/kolme/check_local_kamn_live_runtime_integration_policy.py --report-file /tmp/kolme-local-kamn-live-runtime-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-kamn-live-runtime-integration-policy.json`
@@ -410,6 +411,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_commit_non_synthetic_submit_probe_missing`
       - `runtime_commit_real_signing_profile_marker_missing`
       - `runtime_commit_signer_profile_marker_missing`
+      - `runtime_commit_in_memory_provider_reference_detected`
+      - `runtime_commit_policy_check_in_memory_provider_reference_detected`
     - strict profile non-synthetic submit probe marker:
       - `integration_kolme_fork_live_node_submit_reaches_endpoint`
     - strict profile real-signing marker:
