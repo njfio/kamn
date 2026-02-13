@@ -133,6 +133,12 @@ assert_eq "$(extract_output "$kolme_harness_trend_threshold_output" "run_ci_tool
 assert_eq "$(extract_output "$kolme_harness_trend_threshold_output" "unknown_risk_changed")" "false" "Kolme harness trend-threshold config changes should be classified"
 assert_eq "$(extract_output "$kolme_harness_trend_threshold_output" "test_scope")" "ci-doc-contract" "Kolme harness trend-threshold config changes should use ci-doc-contract scope"
 
+generic_harness_trend_threshold_output="$(run_selector $'.ci/test-harness-loc-trend-thresholds.env')"
+assert_eq "$(extract_output "$generic_harness_trend_threshold_output" "run_rust")" "false" "generic harness trend-threshold config changes should avoid rust full fallback"
+assert_eq "$(extract_output "$generic_harness_trend_threshold_output" "run_ci_tool_checks")" "true" "generic harness trend-threshold config changes must run CI tool checks"
+assert_eq "$(extract_output "$generic_harness_trend_threshold_output" "unknown_risk_changed")" "false" "generic harness trend-threshold config changes should be classified"
+assert_eq "$(extract_output "$generic_harness_trend_threshold_output" "test_scope")" "ci-doc-contract" "generic harness trend-threshold config changes should use ci-doc-contract scope"
+
 kolme_harness_trend_report_script_output="$(run_selector $'scripts/ci/generate_kolme_test_harness_loc_trend_report.sh')"
 assert_eq "$(extract_output "$kolme_harness_trend_report_script_output" "run_rust")" "false" "Kolme harness trend-report script changes should avoid rust full fallback"
 assert_eq "$(extract_output "$kolme_harness_trend_report_script_output" "run_ci_tool_checks")" "true" "Kolme harness trend-report script changes must run CI tool checks"
