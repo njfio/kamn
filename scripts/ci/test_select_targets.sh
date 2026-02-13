@@ -123,6 +123,18 @@ assert_qa_doc_contract_scope_compact() {
   assert_eq "$(extract_output "$output" "test_scope")" "qa-doc-contract" "$context should set qa-doc-contract scope"
 }
 
+assert_ci_doc_contract_scope_wave() {
+  local output="$1"
+  local context="$2"
+  assert_ci_doc_contract_scope "$output" "$context"
+}
+
+assert_ci_doc_contract_trend_scope_wave() {
+  local output="$1"
+  local context="$2"
+  assert_ci_doc_contract_trend_scope "$output" "$context"
+}
+
 run_selector_with_bridge_deep() {
   local changed_files="$1"
   local bridge_deep="${2:-false}"
@@ -185,23 +197,13 @@ assert_non_kolme_wave_wrapper_family_contract_scope() {
   local matrix_output threshold_output trend_output
 
   matrix_output="$(run_selector $'fixtures/ci/non_kolme_wave'"$wave"$'_wrapper_family_matrix.json')"
-  assert_eq "$(extract_output "$matrix_output" "run_rust")" "false" "non-Kolme wave-${wave} wrapper-family matrix fixture changes should avoid rust full fallback"
-  assert_eq "$(extract_output "$matrix_output" "run_ci_tool_checks")" "true" "non-Kolme wave-${wave} wrapper-family matrix fixture changes must run CI tool checks"
-  assert_eq "$(extract_output "$matrix_output" "unknown_risk_changed")" "false" "non-Kolme wave-${wave} wrapper-family matrix fixture changes should be classified"
-  assert_eq "$(extract_output "$matrix_output" "test_scope")" "ci-doc-contract" "non-Kolme wave-${wave} wrapper-family matrix fixture changes should use ci-doc-contract scope"
+  assert_ci_doc_contract_scope_wave "$matrix_output" "non-Kolme wave-${wave} wrapper-family matrix fixture changes"
 
   threshold_output="$(run_selector $'fixtures/ci/non_kolme_wave'"$wave"$'_wrapper_family_trend_thresholds.json')"
-  assert_eq "$(extract_output "$threshold_output" "run_rust")" "false" "non-Kolme wave-${wave} trend threshold fixture changes should avoid rust full fallback"
-  assert_eq "$(extract_output "$threshold_output" "run_ci_tool_checks")" "true" "non-Kolme wave-${wave} trend threshold fixture changes must run CI tool checks"
-  assert_eq "$(extract_output "$threshold_output" "unknown_risk_changed")" "false" "non-Kolme wave-${wave} trend threshold fixture changes should be classified"
-  assert_eq "$(extract_output "$threshold_output" "test_scope")" "ci-doc-contract" "non-Kolme wave-${wave} trend threshold fixture changes should use ci-doc-contract scope"
+  assert_ci_doc_contract_scope_wave "$threshold_output" "non-Kolme wave-${wave} trend threshold fixture changes"
 
   trend_output="$(run_selector $'scripts/ci/check_non_kolme_wave'"$wave"$'_wrapper_family_budget_trend.sh')"
-  assert_eq "$(extract_output "$trend_output" "run_rust")" "false" "non-Kolme wave-${wave} trend checker script changes should avoid rust full fallback"
-  assert_eq "$(extract_output "$trend_output" "run_ci_tool_checks")" "true" "non-Kolme wave-${wave} trend checker script changes must run CI tool checks"
-  assert_eq "$(extract_output "$trend_output" "run_script_surface_budget_checks")" "true" "non-Kolme wave-${wave} trend checker script changes should run script-surface budget checks"
-  assert_eq "$(extract_output "$trend_output" "unknown_risk_changed")" "false" "non-Kolme wave-${wave} trend checker script changes should be classified"
-  assert_eq "$(extract_output "$trend_output" "test_scope")" "ci-doc-contract" "non-Kolme wave-${wave} trend checker script changes should use ci-doc-contract scope"
+  assert_ci_doc_contract_trend_scope_wave "$trend_output" "non-Kolme wave-${wave} trend checker script changes"
 }
 
 for wave in $(seq 1 19); do
