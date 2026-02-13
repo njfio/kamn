@@ -99,6 +99,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - For `kamn-node` live-runtime wiring/doc changes, keep PR validation on deterministic local harness tests:
   - `cargo test -p kamn-node runtime_kolme_live`
   - `cargo test -p kamn-node integration_runtime_kolme_live_renders_provider_contract_markers`
+  - `cargo test -p kamn-node main_tests::functional_kolme_live_retry_emits_structured_retry_markers -- --exact`
   - `cargo test -p kamn-node --test node_runtime_cli_docs doc_contains_runtime_kolme_live_rules`
   - `cargo test -p kamn-node --test node_runtime_cli_docs regression_requires_runtime_kolme_live_provider_drift_guard_rules`
 - This lane is intentionally bounded and cost-effective:
@@ -111,6 +112,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - For `kamn-node` daemon-shutdown contract changes, keep PR validation on bounded deterministic tests:
   - `cargo test -p kamn-node graceful_shutdown`
   - `cargo test -p kamn-node runtime_daemon`
+  - `cargo test -p kamn-node main_tests::functional_runtime_daemon_emits_structured_transition_markers -- --exact`
   - `cargo test -p kamn-node integration_runtime_daemon_renders_bounded_completion_output`
 - This lane is cost-effective:
   - no external processes or signal orchestration harnesses required
@@ -139,6 +141,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - transient categories (`timeout`, `unavailable`) retry with bounded backoff.
   - malformed/config categories fail fast without retry.
   - execution status includes submit/finality retry metadata markers.
+  - structured retry marker events (`kolme.live.submit.retry`, `kolme.live.finality.retry`) retain deterministic `correlation_id` and `reason` fields.
+  - daemon transition marker events (`node.runtime.daemon.execute.start`, `node.runtime.daemon.execute.complete`) retain deterministic runtime execution fields.
 
 ## kamn-core Missing-Docs Velocity Guard
 - Fast-gate missing-docs velocity regression command:

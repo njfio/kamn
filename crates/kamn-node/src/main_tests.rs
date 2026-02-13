@@ -421,6 +421,140 @@ fn functional_kolme_live_submit_and_finality_logs_keep_correlation_id() {
 }
 
 #[test]
+fn functional_runtime_daemon_emits_structured_transition_markers() {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "3".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+    ])
+    .expect("daemon args should parse");
+
+    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
+    let report = report_result.expect("daemon execution should succeed");
+    assert_eq!(report.runtime_mode, "daemon");
+
+    let start_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"node.runtime.daemon.execute.start\""))
+        .expect("daemon execution should emit structured start marker");
+    assert_eq!(
+        extract_json_string_field(start_line, "runtime_mode").as_deref(),
+        Some("daemon")
+    );
+    assert_eq!(
+        extract_json_string_field(start_line, "max_ticks").as_deref(),
+        Some("3")
+    );
+    assert_eq!(
+        extract_json_string_field(start_line, "tick_interval_ms").as_deref(),
+        Some("25")
+    );
+
+    let complete_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"node.runtime.daemon.execute.complete\""))
+        .expect("daemon execution should emit structured completion marker");
+    assert_eq!(
+        extract_json_string_field(complete_line, "runtime_mode").as_deref(),
+        Some("daemon")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "executed_ticks").as_deref(),
+        Some("3")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "completion_reason").as_deref(),
+        Some("tick-budget-exhausted")
+    );
+}
+
+#[test]
+fn functional_kolme_live_retry_emits_structured_retry_markers() {
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+    let _env_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+        Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+    );
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let (base_url, _requests) = spawn_kolme_live_mock_server(vec![
+        MockHttpReply::ok(r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#),
+        MockHttpReply {
+            status_line: "HTTP/1.1 503 Service Unavailable",
+            body: "{\"error\":\"submit unavailable\"}".to_owned(),
+        },
+        MockHttpReply::ok(
+            r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"pending"}"#,
+        ),
+        MockHttpReply {
+            status_line: "HTTP/1.1 503 Service Unavailable",
+            body: "{\"error\":\"finality unavailable\"}".to_owned(),
+        },
+        MockHttpReply::ok(
+            r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"final"}"#,
+        ),
+    ]);
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        base_url,
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
+    ])
+    .expect("kolme-live args should parse");
+
+    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
+    let report = report_result.expect("runtime should recover from transient provider failures");
+    assert_eq!(report.runtime_mode, "kolme-live");
+
+    let submit_retry_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"kolme.live.submit.retry\""))
+        .expect("kolme-live retry flow should emit submit retry marker");
+    let finality_retry_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"kolme.live.finality.retry\""))
+        .expect("kolme-live retry flow should emit finality retry marker");
+
+    let submit_correlation = extract_json_string_field(submit_retry_line, "correlation_id")
+        .expect("submit retry marker should include correlation id");
+    let finality_correlation = extract_json_string_field(finality_retry_line, "correlation_id")
+        .expect("finality retry marker should include correlation id");
+    assert_eq!(submit_correlation, finality_correlation);
+    assert_eq!(
+        extract_json_string_field(submit_retry_line, "reason").as_deref(),
+        Some("unavailable")
+    );
+    assert_eq!(
+        extract_json_string_field(finality_retry_line, "reason").as_deref(),
+        Some("unavailable")
+    );
+}
+
+#[test]
 fn regression_invalid_log_level_config_fails_closed() {
     let _lock = log_env_lock()
         .lock()

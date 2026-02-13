@@ -548,6 +548,16 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             let tick_interval_ms = daemon_tick_interval_ms.ok_or(
                 ConfigError::MissingArgumentValue("--daemon-tick-interval-ms"),
             )?;
+            let max_ticks_label = max_ticks.to_string();
+            let tick_interval_ms_label = tick_interval_ms.to_string();
+            log_info(
+                "node.runtime.daemon.execute.start",
+                &[
+                    ("runtime_mode", runtime_mode.as_str()),
+                    ("max_ticks", max_ticks_label.as_str()),
+                    ("tick_interval_ms", tick_interval_ms_label.as_str()),
+                ],
+            )?;
             let (peer_id, peer_lifecycle_final_state, peer_lifecycle_applied_events) =
                 match daemon_peer_id {
                     Some(peer_id) => {
@@ -580,6 +590,18 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                 daemon_completion.completion_reason.as_str(),
             )
             .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+            let executed_ticks_label = daemon_completion.executed_ticks.to_string();
+            log_info(
+                "node.runtime.daemon.execute.complete",
+                &[
+                    ("runtime_mode", runtime_mode.as_str()),
+                    ("executed_ticks", executed_ticks_label.as_str()),
+                    (
+                        "completion_reason",
+                        daemon_completion.completion_reason.as_str(),
+                    ),
+                ],
+            )?;
             RuntimeExecutionBundle {
                 daemon: Some(DaemonExecution {
                     max_ticks,
