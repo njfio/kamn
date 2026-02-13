@@ -901,7 +901,8 @@ Operator checkpoints:
 - Deterministic checkpoints include:
   - `run_localhost_signed_demo_contract_lane.sh` run-mode verification before integration.
   - `run_localhost_signed_integration_contract_lane.sh` run-mode verification before Kolme runtime stage.
-  - `run_local_kamn_live_runtime_integration_contract_lane.sh` run-mode verification before final GO decision.
+  - `run_local_kamn_live_runtime_integration_lane.sh` run-mode verification over localhost mock Kolme API before final GO decision.
+  - explicit runtime-commit submit/finality marker contracts: `runtime_commit_submit_evidence_marker_present`, `runtime_commit_finality_evidence_marker_present`.
 - Cost policy:
   - run mode fails closed without explicit local-only opt-in.
   - lane enforces bounded per-stage and total runtime budgets.
@@ -1282,6 +1283,7 @@ Operator checkpoints:
 - local live-node validation bundle contract lane and docs parity markers remain fail-closed across devnet ops, CI strategy, and README command surfaces (`Regression: #2134`).
 - local KAMN live runtime integration lane requires bounded localhost signed integration prerequisite execution before runtime commit submission (`Regression: #1636`).
 - unified local signed-to-Kolme demo lane fails closed for local opt-in, stage prerequisite drift, and runtime budget overruns (`Regression: #1640`).
+- unified local signed-to-Kolme demo policy rejects missing runtime submit/finality evidence markers and broken submit/finality linkage (`Regression: #2388`).
 - local fork process lifecycle integration lane fails closed for process start/readiness/integration/teardown/budget drift and missing local opt-in (`Regression: #1494`).
 - local fork process lifecycle integration lane propagates integration runtime finality pass-through options and artifacts to nested integration command composition (`Regression: #1973`).
 - local fork process lifecycle integration lane propagates runtime policy report linkage to nested integration command composition and summary artifact lineage (`Regression: #2104`).
