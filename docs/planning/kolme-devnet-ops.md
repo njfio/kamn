@@ -372,6 +372,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - `bash scripts/kolme/run_local_kolme_api_probe_lane.sh --mode run --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --max-seconds 30 --output-json /tmp/kolme-local-api-probe-summary.json`
 - Summary schema:
   - `kamn.kolme.local-api-probe-summary.v1`
+- Wrapper routing stays manifest-backed:
+  - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_api_probe_lane.sh --resolve-manifest-path`
+  - `scripts/framework/manifests/kolme_local_kolme_api_probe_lane.json`
 - Deterministic checks include:
   - `GET /healthz` response body matches expected health marker (`Healthy!` by default).
   - `GET /fork-info?chain_version=<version>` returns valid JSON object with integer `first_block` and `last_block`.
