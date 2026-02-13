@@ -184,6 +184,30 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
     echo "expected docs parity to include fallback signer checkpoint reason marker in $docs_file" >&2
     exit 1
   fi
+  if ! grep -q "reason_code=checkpoint_failed_signer_secret_contract" "$docs_file"; then
+    echo "expected docs parity to include explicit go/no-go checkpoint reason marker for signer secret in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "reason_code=checkpoint_failed_signer_quorum_contract" "$docs_file"; then
+    echo "expected docs parity to include explicit go/no-go checkpoint reason marker for signer quorum in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "reason_code=checkpoint_failed_quorum_evidence_contract" "$docs_file"; then
+    echo "expected docs parity to include explicit go/no-go checkpoint reason marker for quorum evidence in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "reason_code=checkpoint_failed_custody_evidence_contract" "$docs_file"; then
+    echo "expected docs parity to include explicit go/no-go checkpoint reason marker for custody evidence in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "reason_code=checkpoint_failed_signer_provenance_contract" "$docs_file"; then
+    echo "expected docs parity to include explicit go/no-go checkpoint reason marker for signer provenance in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "reason_code=checkpoint_failed_signer_rotation_freshness_contract" "$docs_file"; then
+    echo "expected docs parity to include explicit go/no-go checkpoint reason marker for signer rotation freshness in $docs_file" >&2
+    exit 1
+  fi
   if ! grep -q "Regression: #2226" "$docs_file"; then
     echo "expected docs parity to include deployment preflight contract-lane regression marker in $docs_file" >&2
     exit 1

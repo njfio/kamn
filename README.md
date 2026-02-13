@@ -785,6 +785,12 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # checkpoint_failed_custody_evidence_contract
 # checkpoint_failed_signer_provenance_contract
 # checkpoint_failed_signer_rotation_freshness_contract
+# reason_code=checkpoint_failed_signer_secret_contract
+# reason_code=checkpoint_failed_signer_quorum_contract
+# reason_code=checkpoint_failed_quorum_evidence_contract
+# reason_code=checkpoint_failed_custody_evidence_contract
+# reason_code=checkpoint_failed_signer_provenance_contract
+# reason_code=checkpoint_failed_signer_rotation_freshness_contract
 # signer_quorum_shortfall
 # quorum_evidence_missing
 # quorum_evidence_sha256_invalid
