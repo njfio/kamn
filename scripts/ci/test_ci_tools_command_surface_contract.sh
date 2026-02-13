@@ -26,15 +26,6 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/framework/test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh"'
   'bash "$ROOT_DIR/scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh"'
-  'bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave10_lightweight_contract_lane_dispatch_wrapper_matrix.sh"'
-  'bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave11_lightweight_contract_lane_dispatch_wrapper_matrix.sh"'
-  'bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave12_lightweight_contract_lane_dispatch_wrapper_matrix.sh"'
-  'bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave13_lightweight_contract_lane_dispatch_wrapper_matrix.sh"'
-  'bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave14_lightweight_contract_lane_dispatch_wrapper_matrix.sh"'
-  'bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave15_lightweight_contract_lane_dispatch_wrapper_matrix.sh"'
-  'bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave16_lightweight_contract_lane_dispatch_wrapper_matrix.sh"'
-  'bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave17_lightweight_contract_lane_dispatch_wrapper_matrix.sh"'
-  'bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave18_lightweight_contract_lane_dispatch_wrapper_matrix.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_check_lane_migration_matrix_policy.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh"'
   'bash "$ROOT_DIR/scripts/kolme/test_generate_fork_compatibility_evidence.sh"'
@@ -99,6 +90,9 @@ required_wave_loop_snippets=(
   'for wave in {1..19}; do'
   'bash "$ROOT_DIR/scripts/ci/test_non_kolme_wave${wave}_wrapper_family_baseline_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_non_kolme_wave${wave}_wrapper_family_budget_trend.sh"'
+  'run_non_kolme_lightweight_wave_wrapper_matrix_contracts()'
+  'for lightweight_wave in {10..18}; do'
+  'bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave${lightweight_wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh"'
 )
 
 for snippet in "${required_wave_loop_snippets[@]}"; do
@@ -111,6 +105,12 @@ done
 wave_helper_invocation_count="$(grep -Ec '^[[:space:]]*run_non_kolme_wave_wrapper_family_contracts$' "$CI_TOOLS_SCRIPT")"
 if [ "$wave_helper_invocation_count" -ne 2 ]; then
   echo "expected ci tools regression lane to invoke run_non_kolme_wave_wrapper_family_contracts exactly twice; found $wave_helper_invocation_count" >&2
+  exit 1
+fi
+
+lightweight_wave_helper_invocation_count="$(grep -Ec '^[[:space:]]*run_non_kolme_lightweight_wave_wrapper_matrix_contracts$' "$CI_TOOLS_SCRIPT")"
+if [ "$lightweight_wave_helper_invocation_count" -ne 2 ]; then
+  echo "expected ci tools regression lane to invoke run_non_kolme_lightweight_wave_wrapper_matrix_contracts exactly twice; found $lightweight_wave_helper_invocation_count" >&2
   exit 1
 fi
 

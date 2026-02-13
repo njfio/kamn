@@ -10,6 +10,12 @@ run_non_kolme_wave_wrapper_family_contracts() {
   done
 }
 
+run_non_kolme_lightweight_wave_wrapper_matrix_contracts() {
+  for lightweight_wave in {10..18}; do
+    bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave${lightweight_wave}_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
+  done
+}
+
 if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_evaluate_budget.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"
@@ -44,15 +50,7 @@ if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/framework/test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh"
   bash "$ROOT_DIR/scripts/framework/test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh"
   bash "$ROOT_DIR/scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave10_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave11_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave12_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave13_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave14_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave15_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave16_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave17_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-  bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave18_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
+  run_non_kolme_lightweight_wave_wrapper_matrix_contracts
   bash "$ROOT_DIR/scripts/ci/test_check_flaky_registry.sh"
   bash "$ROOT_DIR/scripts/ci/test_summarize_budget_artifacts.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_pr_ci_declaration.sh"
@@ -125,15 +123,7 @@ bash "$ROOT_DIR/scripts/framework/test_non_kolme_manifest_backed_contract_lane_d
 bash "$ROOT_DIR/scripts/framework/test_non_kolme_bridge_contract_lane_dispatch_wrapper_matrix.sh"
 bash "$ROOT_DIR/scripts/framework/test_non_kolme_sdk_contract_lane_dispatch_wrapper_matrix.sh"
 bash "$ROOT_DIR/scripts/framework/test_non_kolme_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave10_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave11_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave12_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave13_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave14_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave15_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave16_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave17_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
-bash "$ROOT_DIR/scripts/framework/test_non_kolme_wave18_lightweight_contract_lane_dispatch_wrapper_matrix.sh"
+run_non_kolme_lightweight_wave_wrapper_matrix_contracts
 bash "$ROOT_DIR/scripts/ci/test_check_flaky_registry.sh"
 bash "$ROOT_DIR/scripts/ci/test_summarize_budget_artifacts.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_pr_ci_declaration.sh"
