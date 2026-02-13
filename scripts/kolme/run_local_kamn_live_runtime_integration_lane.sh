@@ -18,6 +18,7 @@ LOCALHOST_SIGNED_REPORT="/tmp/localhost-signed-integration-contract-report.json"
 RUNTIME_COMMIT_OUTPUT_FILE="/tmp/kolme-local-runtime-commit-endpoint-output.txt"
 RUNTIME_COMMIT_LIVE_SUMMARY="/tmp/kolme-local-runtime-commit-live-summary.json"
 RUNTIME_COMMIT_LIVE_POLICY_REPORT="/tmp/kolme-local-runtime-commit-live-policy.json"
+RUNTIME_SIGNING_PROFILE="kolme-fork-secp256k1-v1"
 RUNTIME_PROVIDER_CLIENT_CONTRACT="KolmeRuntimeCommitLiveProvider"
 RUNTIME_PROFILE="real-node"
 RUNTIME_COMMIT_FINALITY_COMMAND=""
@@ -460,7 +461,7 @@ fi
 if [ "$RUNTIME_SIGNER_KEY_SOURCE" = "managed-external" ] && [ -n "$RUNTIME_SIGNER_KEY_REF_ENV" ] && [ -n "$RUNTIME_SIGNER_PROFILE" ]; then
   default_runtime_commit_live_submit_command_prefix="${default_runtime_commit_live_submit_command_prefix} ${RUNTIME_SIGNER_KEY_REF_ENV}=secure:aws-kms:role-operator/key-live-${RUNTIME_SIGNER_PROFILE}"
 fi
-default_runtime_commit_live_submit_command="${default_runtime_commit_live_submit_command_prefix} KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\\n'"
+default_runtime_commit_live_submit_command="${default_runtime_commit_live_submit_command_prefix} KAMN_KOLME_LIVE_SIGNING_PROFILE=${RUNTIME_SIGNING_PROFILE} cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\\n'"
 
 default_runtime_commit_command="KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_SUMMARY}") --policy-output-json $(shell_escape "${RUNTIME_COMMIT_LIVE_POLICY_REPORT}") --live-output-file $(shell_escape "${RUNTIME_COMMIT_OUTPUT_FILE}") --finality-output-file $(shell_escape "${RUNTIME_COMMIT_FINALITY_OUTPUT_FILE}") --max-seconds ${RUNTIME_COMMIT_MAX_SECONDS} --expected-provider-client-contract $(shell_escape "${RUNTIME_PROVIDER_CLIENT_CONTRACT}")${runtime_commit_non_synthetic_flag}${runtime_commit_native_payload_flag} --live-command $(shell_escape "${default_runtime_commit_live_submit_command}") --finality-command $(shell_escape "${effective_runtime_commit_finality_command}") --finality-max-seconds ${RUNTIME_COMMIT_FINALITY_MAX_SECONDS}"
 if [ -z "$RUNTIME_COMMIT_COMMAND" ]; then
@@ -470,6 +471,11 @@ fi
 
 if [ "$RUNTIME_PROFILE" = "real-node" ] && [[ "$RUNTIME_COMMIT_COMMAND" == *"InMemoryKolmeRuntimeCommitClient"* ]]; then
   echo "runtime-commit-command must not reference InMemoryKolmeRuntimeCommitClient when runtime-profile=real-node" >&2
+  exit 1
+fi
+
+if [ "$RUNTIME_PROFILE" = "real-node" ] && [[ "$RUNTIME_COMMIT_COMMAND" == *"KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated"* ]]; then
+  echo "runtime-commit-command must not reference simulated signing profile marker when runtime-profile=real-node" >&2
   exit 1
 fi
 
@@ -776,7 +782,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" "$runtime_commit_command_profile" "$runtime_commit_policy_command_profile" "$runtime_commit_command_profile_version" "$RUNTIME_SIGNER_PROFILE_SELECTOR_ENV" "$RUNTIME_SIGNER_PROFILE" "$RUNTIME_SIGNER_PREVIOUS_PROFILE" "$RUNTIME_SIGNER_FAILOVER_ACTIVE" "$RUNTIME_SIGNER_ROTATION_EPOCH" "$RUNTIME_SIGNER_PREVIOUS_ROTATION_EPOCH" "$RUNTIME_SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$RUNTIME_SIGNER_KEY_SOURCE" "$RUNTIME_SIGNER_PRIVATE_KEY_ENV" "$RUNTIME_SIGNER_KEY_REF_ENV" "$RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV" "$runtime_signer_fallback_private_key_present" "$runtime_signer_raw_private_key_present" "$RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" "$runtime_commit_command_profile" "$runtime_commit_policy_command_profile" "$runtime_commit_command_profile_version" "$RUNTIME_SIGNER_PROFILE_SELECTOR_ENV" "$RUNTIME_SIGNER_PROFILE" "$RUNTIME_SIGNER_PREVIOUS_PROFILE" "$RUNTIME_SIGNER_FAILOVER_ACTIVE" "$RUNTIME_SIGNER_ROTATION_EPOCH" "$RUNTIME_SIGNER_PREVIOUS_ROTATION_EPOCH" "$RUNTIME_SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$RUNTIME_SIGNER_KEY_SOURCE" "$RUNTIME_SIGNER_PRIVATE_KEY_ENV" "$RUNTIME_SIGNER_KEY_REF_ENV" "$RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV" "$runtime_signer_fallback_private_key_present" "$runtime_signer_raw_private_key_present" "$RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION" "$RUNTIME_SIGNING_PROFILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -830,6 +836,7 @@ runtime_signer_fallback_private_key_env = sys.argv[44]
 runtime_signer_fallback_private_key_present = sys.argv[45] == "true"
 runtime_signer_raw_private_key_present = sys.argv[46] == "true"
 runtime_signer_attestation_schema_version = sys.argv[47]
+runtime_signing_profile = sys.argv[48]
 
 checks = []
 for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
@@ -993,6 +1000,7 @@ summary = {
     "runtime_commit_command": runtime_commit_command,
     "runtime_provider_client_contract": runtime_provider_client_contract,
     "runtime_profile": runtime_profile,
+    "runtime_signing_profile": runtime_signing_profile,
     "runtime_commit_command_profile": runtime_commit_command_profile,
     "runtime_commit_policy_command_profile": runtime_commit_policy_command_profile,
     "runtime_commit_command_profile_version": runtime_commit_command_profile_version,
@@ -1029,6 +1037,7 @@ summary = {
         "ci_fast_gate_scope": "local-only",
         "runtime_provider_client_contract": runtime_provider_client_contract,
         "runtime_profile": runtime_profile,
+        "runtime_signing_profile": runtime_signing_profile,
         "runtime_signer_profile_selector_env": runtime_signer_profile_selector_env,
         "runtime_signer_profile": runtime_signer_profile,
         "runtime_signer_failover_requires_profile_change": True,

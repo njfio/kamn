@@ -110,6 +110,8 @@ if summary.get("runtime_signer_profile") != "ops-primary":
     raise SystemExit("expected signer profile marker for real-node profile")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected signer private key env marker for real-node profile")
+if summary.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected runtime signing profile marker for real-node profile")
 contracts = summary.get("contracts", {})
 if not isinstance(contracts, dict):
     raise SystemExit("expected contracts object in integration summary")
@@ -123,6 +125,8 @@ if contracts.get("runtime_signer_profile") != "ops-primary":
     raise SystemExit("expected contracts signer profile marker in integration summary")
 if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected contracts signer private key env marker in integration summary")
+if contracts.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected contracts runtime signing profile marker in integration summary")
 checks = summary.get("checks", [])
 if not isinstance(checks, list) or not checks:
     raise SystemExit("expected checks list in integration summary")
@@ -157,6 +161,28 @@ fi
 
 if ! grep -q "must not reference InMemoryKolmeRuntimeCommitClient" "$TMP_ERR"; then
   echo "expected deterministic in-memory provider rejection message for real-node profile dry-run" >&2
+  exit 1
+fi
+
+set +e
+bash "$RUNNER" \
+  --mode dry-run \
+  --runtime-profile real-node \
+  --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider \
+  --runtime-commit-command "KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --expected-provider-client-contract KolmeRuntimeCommitLiveProvider --live-command \"KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated-v1 printf 'runtime=simulated\\n'\" --output-json $TMP_RUNTIME_SUMMARY --policy-output-json $TMP_RUNTIME_POLICY" \
+  --runtime-commit-live-summary "$TMP_RUNTIME_SUMMARY" \
+  --runtime-commit-live-policy-report "$TMP_RUNTIME_POLICY" \
+  --output-json "$TMP_SUMMARY" >"$TMP_ERR" 2>&1
+dry_run_simulated_signing_profile_exit_code=$?
+set -e
+
+if [ "$dry_run_simulated_signing_profile_exit_code" -eq 0 ]; then
+  echo "expected real-node profile dry-run to fail closed when runtime commit command references simulated signing profile marker" >&2
+  exit 1
+fi
+
+if ! grep -q "must not reference simulated signing profile marker" "$TMP_ERR"; then
+  echo "expected deterministic simulated signing profile rejection message for real-node profile dry-run" >&2
   exit 1
 fi
 

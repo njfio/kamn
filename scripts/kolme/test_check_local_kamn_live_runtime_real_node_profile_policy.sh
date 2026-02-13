@@ -16,6 +16,7 @@ TMP_REPORT_ATTESTATION_DUPLICATE="$TMP_DIR/attestation-duplicate-report.json"
 TMP_REPORT_ATTESTATION_QUORUM_SHORTFALL="$TMP_DIR/attestation-quorum-shortfall-report.json"
 TMP_REPORT_BAD="$TMP_DIR/bad-report.json"
 TMP_REPORT_SYNTHETIC="$TMP_DIR/synthetic-report.json"
+TMP_REPORT_SIMULATED="$TMP_DIR/simulated-signing-profile-report.json"
 TMP_REPORT_INMEMORY="$TMP_DIR/inmemory-report.json"
 TMP_POLICY_OUT="$TMP_DIR/policy-report.json"
 TMP_POLICY_OUT_SECONDARY="$TMP_DIR/policy-report-secondary.json"
@@ -65,6 +66,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "base_url": "http://127.0.0.1:3000",
   "fork_chain_version": "v0.15.2",
   "runtime_profile": "real-node",
+  "runtime_signing_profile": "kolme-fork-secp256k1-v1",
   "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
   "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
   "runtime_signer_profile": "ops-primary",
@@ -106,6 +108,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "contracts": {
     "ci_fast_gate_scope": "local-only",
     "runtime_profile": "real-node",
+    "runtime_signing_profile": "kolme-fork-secp256k1-v1",
     "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
     "runtime_signer_profile_selector_env": "KAMN_KOLME_LIVE_SIGNER_PROFILE",
     "runtime_signer_profile": "ops-primary",
@@ -644,6 +647,42 @@ if ! grep -q "runtime_commit_signer_profile_marker_missing" "$TMP_ERR"; then
   exit 1
 fi
 
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_SIMULATED" <<'PY'
+import json
+import pathlib
+import sys
+
+report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+command = str(report.get("runtime_commit_command", ""))
+report["runtime_commit_command"] = (
+    f"{command} KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated-v1"
+)
+pathlib.Path(sys.argv[2]).write_text(
+    json.dumps(report, sort_keys=True, indent=2) + "\n",
+    encoding="utf-8",
+)
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_SIMULATED" \
+  --expected-final-decision NO-GO \
+  --ci-fast-gate PASS \
+  --require-non-synthetic-run-evidence \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+simulated_signing_profile_exit_code=$?
+set -e
+
+if [ "$simulated_signing_profile_exit_code" -eq 0 ]; then
+  echo "expected real-node profile policy checker to fail for simulated signing profile marker drift" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_commit_simulated_signing_profile_detected" "$TMP_ERR"; then
+  echo "expected simulated signing profile detection reason for policy failure" >&2
+  exit 1
+fi
+
 cat >"$TMP_REPORT_INMEMORY" <<'JSON'
 {
   "schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
@@ -843,6 +882,8 @@ if summary.get("runtime_signer_key_source_contract_version") != "v1":
     raise SystemExit("expected signer key-source contract version marker in runner-generated summary")
 if summary.get("runtime_signer_key_source") != "env-local":
     raise SystemExit("expected signer key-source marker in runner-generated summary")
+if summary.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected runtime signing profile marker in runner-generated summary")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected signer private key env marker in runner-generated summary")
 if summary.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
@@ -892,6 +933,8 @@ if summary.get("runtime_signer_key_source_contract_version") != "v1":
     raise SystemExit("expected secondary signer key-source contract version marker in secondary runner-generated summary")
 if summary.get("runtime_signer_key_source") != "env-local":
     raise SystemExit("expected secondary signer key-source marker in secondary runner-generated summary")
+if summary.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected runtime signing profile marker in secondary runner-generated summary")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
     raise SystemExit("expected secondary signer private key env marker in secondary runner-generated summary")
 contracts = summary.get("contracts")
@@ -903,6 +946,8 @@ if contracts.get("runtime_signer_key_source_contract_version") != "v1":
     raise SystemExit("expected contracts signer key-source contract version marker in secondary runner-generated summary")
 if contracts.get("runtime_signer_key_source") != "env-local":
     raise SystemExit("expected contracts signer key-source marker in secondary runner-generated summary")
+if contracts.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected contracts runtime signing profile marker in secondary runner-generated summary")
 if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
     raise SystemExit("expected contracts secondary signer private key env marker in secondary runner-generated summary")
 if summary.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
