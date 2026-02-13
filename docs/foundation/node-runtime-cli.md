@@ -89,6 +89,13 @@ This document captures node-runtime productionization slices for machine-readabl
   - `daemon_tick_interval_ms`
   - `daemon_executed_ticks`
   - `daemon_completion_reason`
+  - `daemon_observability_latency_p50_ms`
+  - `daemon_observability_latency_p99_ms`
+  - `daemon_observability_throughput_tps`
+  - `daemon_observability_error_rate_bps`
+  - `daemon_observability_availability_bps`
+  - `daemon_observability_health`
+  - `daemon_observability_alert_count`
   - `daemon_peer_id`
   - `daemon_peer_lifecycle_final_state`
   - `daemon_peer_lifecycle_applied_events`
@@ -211,6 +218,14 @@ This document captures node-runtime productionization slices for machine-readabl
   - graceful completion => `daemon_completion_reason` emits `graceful-shutdown:...`
   - timeout/fail-closed completion => `daemon_completion_reason` emits `graceful-shutdown-timeout:...`
   - repeated/late shutdown signals are counted as `ignored_signals` in completion metadata.
+- Daemon observability telemetry is emitted in deterministic report fields:
+  - `daemon_observability_latency_p50_ms`
+  - `daemon_observability_latency_p99_ms`
+  - `daemon_observability_throughput_tps`
+  - `daemon_observability_error_rate_bps`
+  - `daemon_observability_availability_bps`
+  - `daemon_observability_health`
+  - `daemon_observability_alert_count`
 
 ## Kolme Live Runtime Rules
 - Supported runtime modes:

@@ -485,6 +485,13 @@ fn functional_json_render_is_deterministic() {
         daemon_tick_interval_ms: None,
         daemon_executed_ticks: None,
         daemon_completion_reason: None,
+        daemon_observability_latency_p50_ms: None,
+        daemon_observability_latency_p99_ms: None,
+        daemon_observability_throughput_tps: None,
+        daemon_observability_error_rate_bps: None,
+        daemon_observability_availability_bps: None,
+        daemon_observability_health: None,
+        daemon_observability_alert_count: None,
         daemon_peer_id: None,
         daemon_peer_lifecycle_final_state: None,
         daemon_peer_lifecycle_applied_events: None,
@@ -711,6 +718,13 @@ fn integration_runtime_daemon_renders_bounded_completion_output() {
     assert!(rendered.contains("\"daemon_tick_interval_ms\":25"));
     assert!(rendered.contains("\"daemon_executed_ticks\":3"));
     assert!(rendered.contains("\"daemon_completion_reason\":\"tick-budget-exhausted\""));
+    assert!(rendered.contains("\"daemon_observability_latency_p50_ms\":25"));
+    assert!(rendered.contains("\"daemon_observability_latency_p99_ms\":50"));
+    assert!(rendered.contains("\"daemon_observability_throughput_tps\":2000"));
+    assert!(rendered.contains("\"daemon_observability_error_rate_bps\":50"));
+    assert!(rendered.contains("\"daemon_observability_availability_bps\":9990"));
+    assert!(rendered.contains("\"daemon_observability_health\":\"healthy\""));
+    assert!(rendered.contains("\"daemon_observability_alert_count\":0"));
     assert!(rendered.contains("\"daemon_peer_id\":\"peer-alpha\""));
     assert!(rendered.contains("\"daemon_peer_lifecycle_final_state\":\"active\""));
     assert!(
@@ -749,6 +763,8 @@ fn functional_runtime_daemon_applies_graceful_shutdown_signal() {
     assert!(rendered.contains(
         "\"daemon_completion_reason\":\"graceful-shutdown:signal@3;drain_ticks=2;timeout_ticks=4;ignored_signals=0\""
     ));
+    assert!(rendered.contains("\"daemon_observability_health\":\"healthy\""));
+    assert!(rendered.contains("\"daemon_observability_alert_count\":0"));
 }
 
 #[test]
@@ -780,6 +796,13 @@ fn integration_runtime_daemon_shutdown_timeout_is_fail_closed() {
     assert!(rendered.contains(
         "\"daemon_completion_reason\":\"graceful-shutdown-timeout:signal@7;drain_ticks=4;timeout_ticks=2;ignored_signals=0\""
     ));
+    assert!(rendered.contains("\"daemon_observability_latency_p50_ms\":145"));
+    assert!(rendered.contains("\"daemon_observability_latency_p99_ms\":425"));
+    assert!(rendered.contains("\"daemon_observability_throughput_tps\":900"));
+    assert!(rendered.contains("\"daemon_observability_error_rate_bps\":250"));
+    assert!(rendered.contains("\"daemon_observability_availability_bps\":9800"));
+    assert!(rendered.contains("\"daemon_observability_health\":\"critical\""));
+    assert!(rendered.contains("\"daemon_observability_alert_count\":4"));
 }
 
 #[test]

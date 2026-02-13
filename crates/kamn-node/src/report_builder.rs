@@ -44,6 +44,27 @@ pub(crate) fn build_bootstrap_report(
     let daemon_completion_reason = daemon
         .as_ref()
         .map(|daemon| daemon.completion_reason.clone());
+    let daemon_observability_latency_p50_ms = daemon
+        .as_ref()
+        .map(|daemon| daemon.observability_latency_p50_ms);
+    let daemon_observability_latency_p99_ms = daemon
+        .as_ref()
+        .map(|daemon| daemon.observability_latency_p99_ms);
+    let daemon_observability_throughput_tps = daemon
+        .as_ref()
+        .map(|daemon| daemon.observability_throughput_tps);
+    let daemon_observability_error_rate_bps = daemon
+        .as_ref()
+        .map(|daemon| daemon.observability_error_rate_bps);
+    let daemon_observability_availability_bps = daemon
+        .as_ref()
+        .map(|daemon| daemon.observability_availability_bps);
+    let daemon_observability_health = daemon
+        .as_ref()
+        .map(|daemon| daemon.observability_health.clone());
+    let daemon_observability_alert_count = daemon
+        .as_ref()
+        .map(|daemon| daemon.observability_alert_count);
     let daemon_peer_id = daemon.as_ref().and_then(|daemon| daemon.peer_id.clone());
     let daemon_peer_lifecycle_final_state = daemon
         .as_ref()
@@ -93,6 +114,13 @@ pub(crate) fn build_bootstrap_report(
         daemon_tick_interval_ms,
         daemon_executed_ticks,
         daemon_completion_reason,
+        daemon_observability_latency_p50_ms,
+        daemon_observability_latency_p99_ms,
+        daemon_observability_throughput_tps,
+        daemon_observability_error_rate_bps,
+        daemon_observability_availability_bps,
+        daemon_observability_health,
+        daemon_observability_alert_count,
         daemon_peer_id,
         daemon_peer_lifecycle_final_state,
         daemon_peer_lifecycle_applied_events,
