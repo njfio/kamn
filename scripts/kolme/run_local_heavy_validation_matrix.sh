@@ -67,6 +67,11 @@ if [ "$MODE" = "run" ]; then
   reason_code="local_heavy_validation_passed"
 fi
 
+REAL_NODE_POLICY_REQUIRED_REASON_CODE="dry_run_no_commands_executed"
+if [ "$MODE" = "run" ]; then
+  REAL_NODE_POLICY_REQUIRED_REASON_CODE="live_runtime_integration_passed"
+fi
+
 BOOTSTRAP_REPORT="/tmp/kolme-local-bootstrap-summary.json"
 DEEP_REPORT="/tmp/kolme-version-compatibility-report.json"
 FORK_RUST_MATRIX_REPORT="/tmp/kolme-local-fork-rust-test-matrix-summary.json"
@@ -94,8 +99,8 @@ declare -a COMMANDS=(
   "bash scripts/kolme/run_local_kolme_live_api_conformance_contract_lane.sh --output-json $LIVE_API_CONFORMANCE_REPORT --policy-output-json $LIVE_API_CONFORMANCE_POLICY_REPORT"
   "bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json $RUNTIME_COMMIT_LIVE_SUMMARY_REPORT --policy-output-json $RUNTIME_COMMIT_LIVE_POLICY_REPORT --max-seconds $RUNTIME_COMMIT_FINALITY_LANE_MAX_SECONDS --finality-max-seconds $RUNTIME_COMMIT_FINALITY_CHECK_MAX_SECONDS --require-non-synthetic-run-evidence --require-native-payload-evidence"
   "bash scripts/kolme/run_local_native_api_parity_live_proof_contract_lane.sh --output-json $NATIVE_API_PARITY_SUMMARY_REPORT --policy-output-json $NATIVE_API_PARITY_POLICY_REPORT --max-seconds $NATIVE_API_PARITY_MAX_SECONDS"
-  "bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --max-seconds $REAL_NODE_INTEGRATION_MAX_SECONDS --runtime-commit-max-seconds $REAL_NODE_RUNTIME_COMMIT_MAX_SECONDS --runtime-commit-finality-max-seconds $REAL_NODE_RUNTIME_COMMIT_FINALITY_MAX_SECONDS --runtime-commit-live-summary $RUNTIME_COMMIT_LIVE_SUMMARY_REPORT --runtime-commit-live-policy-report $RUNTIME_COMMIT_LIVE_POLICY_REPORT --output-json $REAL_NODE_RUNTIME_INTEGRATION_REPORT"
-  "python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py --report-file $REAL_NODE_RUNTIME_INTEGRATION_REPORT --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --require-non-synthetic-run-evidence --output-json $REAL_NODE_RUNTIME_INTEGRATION_POLICY_REPORT"
+  "bash scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh --mode $MODE --runtime-profile real-node --runtime-provider-client-contract KolmeRuntimeCommitLiveProvider --max-seconds $REAL_NODE_INTEGRATION_MAX_SECONDS --runtime-commit-max-seconds $REAL_NODE_RUNTIME_COMMIT_MAX_SECONDS --runtime-commit-finality-max-seconds $REAL_NODE_RUNTIME_COMMIT_FINALITY_MAX_SECONDS --runtime-commit-live-summary $RUNTIME_COMMIT_LIVE_SUMMARY_REPORT --runtime-commit-live-policy-report $RUNTIME_COMMIT_LIVE_POLICY_REPORT --output-json $REAL_NODE_RUNTIME_INTEGRATION_REPORT"
+  "python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py --report-file $REAL_NODE_RUNTIME_INTEGRATION_REPORT --expected-final-decision GO --ci-fast-gate PASS --require-reason-code $REAL_NODE_POLICY_REQUIRED_REASON_CODE --require-non-synthetic-run-evidence --output-json $REAL_NODE_RUNTIME_INTEGRATION_POLICY_REPORT"
 )
 
 declare -a ARTIFACTS=(
