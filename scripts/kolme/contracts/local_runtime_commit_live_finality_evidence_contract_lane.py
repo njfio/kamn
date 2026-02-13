@@ -297,6 +297,21 @@ def main() -> int:
     if summary_payload.get("schema_version") != "kamn.kolme.local-runtime-commit-live-summary.v1":
         print("unexpected runtime-commit live summary schema", file=sys.stderr)
         return 1
+    if summary_payload.get("provider_contract_enforcement_mode") != "live-provider-only-v1":
+        print("expected provider_contract_enforcement_mode=live-provider-only-v1", file=sys.stderr)
+        return 1
+    expected_provider_live_contract_marker = (
+        f"provider_client_contract={args.expected_provider_client_contract}"
+    )
+    if summary_payload.get("provider_live_contract_marker") != expected_provider_live_contract_marker:
+        print("expected deterministic provider_live_contract_marker in summary", file=sys.stderr)
+        return 1
+    if summary_payload.get("provider_live_contract_marker_present") is not True:
+        print("expected provider_live_contract_marker_present=true in summary", file=sys.stderr)
+        return 1
+    if summary_payload.get("provider_in_memory_reference_detected") is not False:
+        print("expected provider_in_memory_reference_detected=false in summary", file=sys.stderr)
+        return 1
     if summary_payload.get("submit_evidence_marker_present") is not True:
         print("expected submit_evidence_marker_present=true", file=sys.stderr)
         return 1
@@ -410,6 +425,50 @@ def main() -> int:
         if "request_payload_evidence_marker_missing" not in linkage_drift_reason_codes:
             print(
                 "expected request_payload_evidence_marker_missing in linkage drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+
+        provider_drift_summary_file = negative_root / "provider_drift_summary.json"
+        provider_drift_policy_file = negative_root / "provider_drift_policy.json"
+        provider_drift_summary = dict(summary_payload)
+        provider_drift_summary["provider_in_memory_reference_detected"] = True
+        provider_drift_summary_file.write_text(
+            json.dumps(provider_drift_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        provider_drift_result = subprocess.run(
+            [
+                "python3",
+                str(CHECKER),
+                "--report-file",
+                str(provider_drift_summary_file),
+                "--expected-final-decision",
+                "NO-GO",
+                "--ci-fast-gate",
+                "PASS",
+                "--expected-provider-client-contract",
+                args.expected_provider_client_contract,
+                "--output-json",
+                str(provider_drift_policy_file),
+            ],
+            cwd=ROOT_DIR,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if provider_drift_result.returncode == 0:
+            print("expected in-memory provider drift proof to fail closed", file=sys.stderr)
+            return 1
+        provider_drift_policy = json.loads(provider_drift_policy_file.read_text(encoding="utf-8"))
+        provider_drift_reason_codes = provider_drift_policy.get("reason_codes")
+        if not isinstance(provider_drift_reason_codes, list):
+            print("expected reason_codes list in provider drift policy output", file=sys.stderr)
+            return 1
+        if "provider_in_memory_reference_detected" not in provider_drift_reason_codes:
+            print(
+                "expected provider_in_memory_reference_detected in provider drift policy output",
                 file=sys.stderr,
             )
             return 1

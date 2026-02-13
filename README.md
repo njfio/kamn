@@ -526,9 +526,11 @@ python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --repor
 
 # bounded contract lane (dry-run + run-mode evidence + policy checks)
 bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json
+# live-provider marker contracts: provider_contract_enforcement_mode, provider_live_contract_marker, provider_live_contract_marker_present, provider_in_memory_reference_detected
 # summary markers: submit_evidence_marker_present, finality_evidence_marker_present
 # request/finality linkage markers: request_payload_evidence_marker_present, request_payload_evidence_artifact_path, submit_evidence_artifact_path, finality_evidence_artifact_path, request_finality_evidence_contract_version, request_finality_evidence_linked
 # finality retry markers: finality_retry_contract_version, finality_retry_max_attempts, finality_retry_backoff_seconds, finality_retry_attempts_used, finality_retry_exhausted, finality_retry_failure_class
+# live-provider fail-closed reason: provider_in_memory_reference_detected
 # request/finality linkage drift reasons: request_payload_evidence_marker_missing, finality_evidence_artifact_path_missing, request_finality_evidence_linkage_missing
 # finality retry drift reasons: finality_retry_failure_class_mismatch_for_timeout_reason, finality_retry_attempts_used_mismatch_for_timeout_reason
 # finality retry exhaustion reasons: live_finality_retry_exhausted_timeout, live_finality_retry_exhausted_failed
