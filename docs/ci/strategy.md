@@ -892,8 +892,9 @@ Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
   - verify expected local-heavy drift scope and waiver rationale, and require linked follow-up before merge.
 
 Test-harness growth advisory (non-blocking):
+- trend thresholds file: `.ci/test-harness-loc-trend-thresholds.env`
 - `scripts/ci/generate_test_harness_loc_report.sh --output-json /tmp/test-harness-loc-report.json`
-- `scripts/ci/check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --output-json /tmp/test-harness-loc-soft-budget-report.json`
+- `scripts/ci/check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --trend-threshold-file .ci/test-harness-loc-trend-thresholds.env --output-json /tmp/test-harness-loc-soft-budget-report.json`
 - `scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/test-harness-loc-soft-budget-contract-report.json`
 - Exceeded soft thresholds emit `soft_budget_status=exceeded` with `review_required=true` for reviewer visibility, but do not fail fast-gate by themselves.
 
@@ -958,6 +959,13 @@ Fast-mode CI tooling regression coverage includes:
   - deterministic decision surface:
     - `test_harness_loc_soft_budget_contract_within_decision=GO`
     - `test_harness_loc_soft_budget_contract_exceeded_decision=WARN`
+    - `test_harness_loc_soft_budget_contract_warn_decision=WARN`
+    - `test_harness_loc_soft_budget_contract_fail_decision=NO-GO`
+  - deterministic trend reason-code surface:
+    - `reason_codes=harness_script_count_trend_warn_delta_exceeded`
+    - `reason_codes=harness_shell_line_total_trend_warn_delta_exceeded`
+    - `reason_codes=harness_script_count_trend_fail_delta_exceeded`
+    - `reason_codes=harness_shell_line_total_trend_fail_delta_exceeded`
 - Kolme test-harness LOC soft-budget contract lane (`test_run_kolme_test_harness_loc_soft_budget_contract_lane.sh`)
   - report command:
     - `bash scripts/ci/generate_kolme_test_harness_loc_report.sh --output-json /tmp/kolme-test-harness-loc-report.json`
