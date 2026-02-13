@@ -48,6 +48,18 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - deterministic tick-budget simulation with bounded loop-free assertions
   - timeout behavior and observability telemetry validated through direct state transitions instead of wall-clock waits
 
+## Kolme Live Retry Coverage
+- Runtime commit submit/finality retry behavior must remain deterministic and bounded.
+- Fast-gate coverage commands:
+  - `cargo test -p kamn-node main_tests::functional_runtime_kolme_live_retries_transient_submit_and_finality_unavailable_errors -- --exact`
+  - `cargo test -p kamn-node main_tests::regression_runtime_kolme_live_submit_malformed_response_fails_fast_without_retry -- --exact`
+  - `cargo test -p kamn-node main_tests::performance_runtime_kolme_live_retry_recovery_stays_within_budget -- --exact`
+  - `cargo test -p kamn-node runtime_kolme_live::tests::unit_retry_classifier_marks_transient_provider_errors -- --exact`
+- Retry scope contracts:
+  - transient categories (`timeout`, `unavailable`) retry with bounded backoff.
+  - malformed/config categories fail fast without retry.
+  - execution status includes submit/finality retry metadata markers.
+
 ## kamn-core Missing-Docs Velocity Guard
 - Fast-gate missing-docs velocity regression command:
   - `bash scripts/ci/test_missing_docs_velocity_guard_contract.sh`
