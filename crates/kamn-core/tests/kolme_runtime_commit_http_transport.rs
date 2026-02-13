@@ -53,7 +53,7 @@ impl Drop for EnvVarGuard {
 
 struct HttpsSingleRequestServer {
     base_url: String,
-    cert_path: PathBuf,
+    ca_cert_path: PathBuf,
     child: Child,
     temp_dir: PathBuf,
 }
@@ -162,36 +162,95 @@ fn kolme_fork_sign_message(message: &str) -> (String, u8) {
     )
 }
 
-fn generate_self_signed_certificate(temp_dir: &Path) -> (PathBuf, PathBuf) {
-    let cert_path = temp_dir.join("cert.pem");
-    let key_path = temp_dir.join("key.pem");
+fn generate_test_ca_signed_certificate_chain(temp_dir: &Path) -> (PathBuf, PathBuf, PathBuf) {
+    let ca_cert_path = temp_dir.join("ca-cert.pem");
+    let ca_key_path = temp_dir.join("ca-key.pem");
+    let server_key_path = temp_dir.join("server-key.pem");
+    let server_csr_path = temp_dir.join("server.csr");
+    let server_cert_path = temp_dir.join("server-cert.pem");
+    let server_extensions_path = temp_dir.join("server-ext.cnf");
 
-    let status = Command::new("openssl")
+    let ca_status = Command::new("openssl")
         .arg("req")
         .arg("-x509")
         .arg("-newkey")
         .arg("rsa:2048")
         .arg("-keyout")
-        .arg(key_path.as_os_str())
+        .arg(ca_key_path.as_os_str())
         .arg("-out")
-        .arg(cert_path.as_os_str())
+        .arg(ca_cert_path.as_os_str())
         .arg("-days")
         .arg("1")
         .arg("-nodes")
         .arg("-subj")
-        .arg("/CN=127.0.0.1")
+        .arg("/CN=kamn-test-ca")
         .arg("-addext")
-        .arg("subjectAltName = DNS:localhost,IP:127.0.0.1")
+        .arg("basicConstraints = critical,CA:TRUE")
+        .arg("-addext")
+        .arg("keyUsage = critical,keyCertSign,cRLSign")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()
-        .expect("openssl should run");
+        .expect("openssl should run for CA certificate generation");
     assert!(
-        status.success(),
-        "openssl self-signed certificate generation should succeed"
+        ca_status.success(),
+        "openssl CA certificate generation should succeed"
     );
 
-    (cert_path, key_path)
+    let csr_status = Command::new("openssl")
+        .arg("req")
+        .arg("-new")
+        .arg("-newkey")
+        .arg("rsa:2048")
+        .arg("-keyout")
+        .arg(server_key_path.as_os_str())
+        .arg("-out")
+        .arg(server_csr_path.as_os_str())
+        .arg("-nodes")
+        .arg("-subj")
+        .arg("/CN=127.0.0.1")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .expect("openssl should run for server csr generation");
+    assert!(
+        csr_status.success(),
+        "openssl server csr generation should succeed"
+    );
+
+    fs::write(
+        server_extensions_path.as_path(),
+        "subjectAltName = DNS:localhost,IP:127.0.0.1\nbasicConstraints = critical,CA:FALSE\nkeyUsage = critical,digitalSignature,keyEncipherment\nextendedKeyUsage = serverAuth\n",
+    )
+    .expect("server extension file should be written");
+
+    let sign_status = Command::new("openssl")
+        .arg("x509")
+        .arg("-req")
+        .arg("-in")
+        .arg(server_csr_path.as_os_str())
+        .arg("-CA")
+        .arg(ca_cert_path.as_os_str())
+        .arg("-CAkey")
+        .arg(ca_key_path.as_os_str())
+        .arg("-CAcreateserial")
+        .arg("-out")
+        .arg(server_cert_path.as_os_str())
+        .arg("-days")
+        .arg("1")
+        .arg("-sha256")
+        .arg("-extfile")
+        .arg(server_extensions_path.as_os_str())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .expect("openssl should run for server certificate signing");
+    assert!(
+        sign_status.success(),
+        "openssl server certificate signing should succeed"
+    );
+
+    (ca_cert_path, server_cert_path, server_key_path)
 }
 
 fn spawn_https_single_request_server(
@@ -199,7 +258,8 @@ fn spawn_https_single_request_server(
     response_body: &str,
 ) -> HttpsSingleRequestServer {
     let temp_dir = unique_temp_dir("kolme-https-server");
-    let (cert_path, key_path) = generate_self_signed_certificate(temp_dir.as_path());
+    let (ca_cert_path, server_cert_path, server_key_path) =
+        generate_test_ca_signed_certificate_chain(temp_dir.as_path());
     let server_script = r#"
 import http.server
 import ssl
@@ -243,8 +303,8 @@ httpd.handle_request()
         .arg("-c")
         .arg(server_script)
         .arg("0")
-        .arg(cert_path.as_os_str())
-        .arg(key_path.as_os_str())
+        .arg(server_cert_path.as_os_str())
+        .arg(server_key_path.as_os_str())
         .arg(status_code.to_string())
         .arg(response_body)
         .stdout(Stdio::piped())
@@ -269,7 +329,7 @@ httpd.handle_request()
         .expect("python https test server should emit a valid port");
     HttpsSingleRequestServer {
         base_url: format!("https://127.0.0.1:{port}"),
-        cert_path,
+        ca_cert_path,
         child,
         temp_dir,
     }
@@ -794,12 +854,12 @@ fn functional_https_transport_submit_with_trusted_ca_succeeds() {
         200,
         "status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:https\nfinality=final\n",
     );
-    let cert_path = server
-        .cert_path
+    let ca_cert_path = server
+        .ca_cert_path
         .to_str()
         .expect("temporary cert path should be valid utf-8")
         .to_owned();
-    let _env_guard = EnvVarGuard::set(TLS_CA_FILE_ENV, Some(cert_path.as_str()));
+    let _env_guard = EnvVarGuard::set(TLS_CA_FILE_ENV, Some(ca_cert_path.as_str()));
 
     let transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
     let mut provider = KolmeRuntimeCommitLiveProvider::new(
@@ -881,6 +941,59 @@ fn regression_https_transport_maps_tls_handshake_failures_to_unavailable() {
         Err(KolmeRuntimeCommitProviderError::Unavailable {
             reason: "tls handshake failed".to_owned(),
         })
+    );
+}
+
+#[test]
+fn performance_https_transport_timeout_budget_is_bounded() {
+    let _guard = tls_env_lock()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let _env_guard = EnvVarGuard::set(TLS_CA_FILE_ENV, None);
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
+    let addr = listener.local_addr().expect("local addr should resolve");
+    thread::spawn(move || {
+        let (_stream, _) = listener.accept().expect("connection should be accepted");
+        thread::sleep(Duration::from_secs(3));
+    });
+
+    let transport = KolmeRuntimeCommitHttpTransport::new(1).expect("transport should build");
+    let mut provider = KolmeRuntimeCommitLiveProvider::new(
+        format!("https://{addr}").as_str(),
+        "/broadcast/runtime-commit",
+        transport,
+    )
+    .expect("provider should build");
+
+    let started = Instant::now();
+    let result = provider.submit_runtime_commit("operation_id=op-https\n", "idempotency-key-https");
+    let elapsed = started.elapsed();
+
+    assert!(
+        elapsed <= Duration::from_secs(2),
+        "native HTTPS timeout handling exceeded 2s fast-gate budget window: {elapsed:?}"
+    );
+    assert!(
+        matches!(
+            result,
+            Err(KolmeRuntimeCommitProviderError::Timeout)
+                | Err(KolmeRuntimeCommitProviderError::Unavailable { .. })
+        ),
+        "slow TLS endpoint should fail closed within timeout budget"
+    );
+}
+
+#[test]
+fn regression_https_transport_does_not_use_openssl_subprocess() {
+    // Regression: #2671
+    const TRANSPORT_SOURCE: &str = include_str!("../src/kolme_runtime_commit/http_transport.rs");
+    assert!(
+        !TRANSPORT_SOURCE.contains("Command::new(\"openssl\")"),
+        "HTTPS transport must not spawn openssl subprocesses"
+    );
+    assert!(
+        !TRANSPORT_SOURCE.contains(".arg(\"s_client\")"),
+        "HTTPS transport must not depend on openssl s_client subprocess path"
     );
 }
 
