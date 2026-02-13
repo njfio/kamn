@@ -16,7 +16,8 @@ TMP_POLICY_REPORT="$(mktemp)"
 TMP_POLICY_ERR="$(mktemp)"
 TMP_ERR="$(mktemp)"
 TMP_IN_MEMORY_REPORT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_ERR" "$TMP_IN_MEMORY_REPORT"' EXIT
+TMP_SIMULATED_PROFILE_REPORT="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_OUTPUT" "$TMP_FINALITY_OUTPUT" "$TMP_POLICY_REPORT" "$TMP_POLICY_ERR" "$TMP_ERR" "$TMP_IN_MEMORY_REPORT" "$TMP_SIMULATED_PROFILE_REPORT"' EXIT
 
 extract_value() {
   local output="$1"
@@ -267,10 +268,58 @@ if ! grep -q "live_command_in_memory_provider_reference_detected" "$TMP_POLICY_E
 fi
 
 set +e
+bash "$RUNNER" \
+  --mode dry-run \
+  --live-command "KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated-v1 printf 'status=submitted\n'" \
+  --output-json "$TMP_REPORT" \
+  --live-output-file "$TMP_OUTPUT" >"$TMP_ERR" 2>&1
+simulated_profile_code=$?
+set -e
+
+if [ "$simulated_profile_code" -eq 0 ]; then
+  echo "expected dry-run mode to fail closed when live-command includes simulated signing profile marker" >&2
+  exit 1
+fi
+if ! grep -q "live-command must set KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1" "$TMP_ERR"; then
+  echo "expected deterministic signer profile rejection message for simulated live-command marker" >&2
+  exit 1
+fi
+
+python3 - "$TMP_REPORT" "$TMP_SIMULATED_PROFILE_REPORT" <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+source = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+source["live_command"] = "KAMN_KOLME_LIVE_SIGNING_PROFILE=simulated-v1 printf 'status=submitted\\n'"
+source["provider_signing_profile_marker_present"] = False
+pathlib.Path(sys.argv[2]).write_text(json.dumps(source, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_SIMULATED_PROFILE_REPORT" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS >"$TMP_POLICY_ERR" 2>&1
+simulated_profile_policy_code=$?
+set -e
+
+if [ "$simulated_profile_policy_code" -eq 0 ]; then
+  echo "expected evidence policy checker to fail when live_command includes simulated signing profile marker" >&2
+  exit 1
+fi
+if ! grep -q "provider_signing_profile_simulated_detected" "$TMP_POLICY_ERR"; then
+  echo "expected provider_signing_profile_simulated_detected failure reason from evidence policy checker" >&2
+  exit 1
+fi
+
+set +e
 KAMN_KOLME_LOCAL_HEAVY=1 \
   bash "$RUNNER" \
     --mode run \
-    --live-command "printf 'status=submitted\n'" \
+    --live-command "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\n'" \
     --max-seconds 5 \
     --base-url "http://127.0.0.1:1" \
     --output-json "$TMP_REPORT" \
@@ -311,7 +360,7 @@ run_output="$(
     bash "$RUNNER" \
       --mode run \
       --skip-preflight \
-    --live-command "printf 'status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:1\nfinality=final\n'" \
+    --live-command "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\nprovider=kolme-local\ncommit_id=kolme-commit:1\nfinality=final\n'" \
     --max-seconds 5 \
     --output-json "$TMP_REPORT" \
     --live-output-file "$TMP_OUTPUT"
@@ -464,7 +513,7 @@ KAMN_KOLME_LOCAL_HEAVY=1 \
   bash "$RUNNER" \
     --mode run \
     --skip-preflight \
-    --live-command "sleep 2" \
+    --live-command "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 sleep 2" \
     --max-seconds 1 \
     --output-json "$TMP_REPORT" \
     --live-output-file "$TMP_OUTPUT" >"$TMP_ERR" 2>&1
@@ -503,7 +552,7 @@ run_missing_submit_evidence_output="$(
     bash "$RUNNER" \
       --mode run \
       --skip-preflight \
-      --live-command "printf 'integration_kolme_fork_live_node_submit_reaches_endpoint\n'" \
+      --live-command "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'integration_kolme_fork_live_node_submit_reaches_endpoint\n'" \
       --finality-command "printf 'finality=final\n'" \
       --max-seconds 5 \
       --finality-max-seconds 3 \
@@ -535,7 +584,7 @@ KAMN_KOLME_LOCAL_HEAVY=1 \
   bash "$RUNNER" \
     --mode run \
     --skip-preflight \
-    --live-command "printf 'status=submitted\n'" \
+    --live-command "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\n'" \
     --finality-command "sleep 2" \
     --finality-max-seconds 1 \
     --max-seconds 5 \
