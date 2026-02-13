@@ -7,7 +7,7 @@ use std::fmt;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 /// Canonical lifecycle state for a message tracked by [`MessageLifecycleStore`].
@@ -657,6 +657,7 @@ impl MessageLifecycleSnapshotStore for InMemoryMessageLifecycleSnapshotStore {
 /// File-backed snapshot store for lifecycle state recovery.
 pub struct FileMessageLifecycleSnapshotStore {
     path: PathBuf,
+    journal_path: PathBuf,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -666,6 +667,15 @@ pub struct MessageLifecycleRecoveryResult {
     pub latest: Option<MessageLifecycleSnapshot>,
     /// Whether recovery repaired a malformed on-disk payload.
     pub repaired: bool,
+    /// Deterministic recovery reason code.
+    pub reason_code: &'static str,
+}
+
+impl MessageLifecycleRecoveryResult {
+    /// Returns the deterministic recovery reason code.
+    pub fn reason_code(&self) -> &'static str {
+        self.reason_code
+    }
 }
 
 impl FileMessageLifecycleSnapshotStore {
@@ -676,17 +686,19 @@ impl FileMessageLifecycleSnapshotStore {
                 "snapshot file path cannot be empty".to_owned(),
             ));
         }
-        Ok(Self { path })
+        let journal_path = message_lifecycle_snapshot_journal_path(&path);
+        Ok(Self { path, journal_path })
     }
 
     /// Loads the latest snapshot and repairs malformed payloads by truncating the file.
     pub fn recover_latest_and_repair(
         &mut self,
     ) -> Result<MessageLifecycleRecoveryResult, MessageLifecycleSnapshotStoreError> {
-        if !self.path.exists() {
+        if !self.path.exists() && !self.journal_path.exists() {
             return Ok(MessageLifecycleRecoveryResult {
                 latest: None,
                 repaired: false,
+                reason_code: "message_lifecycle_snapshot_recovery_empty",
             });
         }
 
@@ -694,14 +706,23 @@ impl FileMessageLifecycleSnapshotStore {
             Ok(snapshot) => Ok(MessageLifecycleRecoveryResult {
                 latest: snapshot,
                 repaired: false,
+                reason_code: "message_lifecycle_snapshot_recovery_clean",
             }),
+            Err(MessageLifecycleSnapshotStoreError::InvalidPayload(value))
+                if value.starts_with(MESSAGE_LIFECYCLE_SNAPSHOT_JOURNAL_CORRUPT_TAIL_PREFIX) =>
+            {
+                Err(MessageLifecycleSnapshotStoreError::InvalidPayload(value))
+            }
             Err(MessageLifecycleSnapshotStoreError::InvalidPayload(_))
             | Err(MessageLifecycleSnapshotStoreError::Snapshot(_)) => {
                 fs::write(&self.path, "")
                     .map_err(|error| MessageLifecycleSnapshotStoreError::Io(error.to_string()))?;
+                fs::write(&self.journal_path, "")
+                    .map_err(|error| MessageLifecycleSnapshotStoreError::Io(error.to_string()))?;
                 Ok(MessageLifecycleRecoveryResult {
                     latest: None,
                     repaired: true,
+                    reason_code: "message_lifecycle_snapshot_recovery_repaired_corrupt_payload",
                 })
             }
             Err(error) => Err(error),
@@ -726,27 +747,156 @@ impl MessageLifecycleSnapshotStore for FileMessageLifecycleSnapshotStore {
             .open(&self.path)
             .map_err(|error| MessageLifecycleSnapshotStoreError::Io(error.to_string()))?;
         file.write_all(payload.as_bytes())
-            .map_err(|error| MessageLifecycleSnapshotStoreError::Io(error.to_string()))
+            .map_err(|error| MessageLifecycleSnapshotStoreError::Io(error.to_string()))?;
+        append_message_lifecycle_snapshot_journal_record(&self.journal_path, &payload)
     }
 
     fn read_latest(
         &self,
     ) -> Result<Option<MessageLifecycleSnapshot>, MessageLifecycleSnapshotStoreError> {
-        if !self.path.exists() {
-            return Ok(None);
+        let snapshot_payload = read_message_lifecycle_snapshot_file(&self.path)?;
+        let journal_snapshot = replay_message_lifecycle_snapshot_journal(&self.journal_path)?;
+        Ok(journal_snapshot.or(snapshot_payload))
+    }
+}
+
+const MESSAGE_LIFECYCLE_SNAPSHOT_JOURNAL_CORRUPT_TAIL_PREFIX: &str =
+    "message_lifecycle_snapshot_journal_corrupt_tail";
+
+fn message_lifecycle_snapshot_journal_path(path: &Path) -> PathBuf {
+    let mut journal = path.as_os_str().to_os_string();
+    journal.push(".journal");
+    PathBuf::from(journal)
+}
+
+fn read_message_lifecycle_snapshot_file(
+    path: &Path,
+) -> Result<Option<MessageLifecycleSnapshot>, MessageLifecycleSnapshotStoreError> {
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let payload = fs::read_to_string(path)
+        .map_err(|error| MessageLifecycleSnapshotStoreError::Io(error.to_string()))?;
+    if payload.trim().is_empty() {
+        return Ok(None);
+    }
+    let snapshot = parse_message_lifecycle_snapshot_payload(&payload)?;
+    let mut verifier = MessageLifecycleStore::new();
+    verifier
+        .restore_snapshot(snapshot.clone())
+        .map_err(MessageLifecycleSnapshotStoreError::Snapshot)?;
+    Ok(Some(snapshot))
+}
+
+fn append_message_lifecycle_snapshot_journal_record(
+    journal_path: &Path,
+    payload: &str,
+) -> Result<(), MessageLifecycleSnapshotStoreError> {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(journal_path)
+        .map_err(|error| MessageLifecycleSnapshotStoreError::Io(error.to_string()))?;
+    let record = format!("entry|1|{}\n", encode_journal_hex(payload.as_bytes()));
+    file.write_all(record.as_bytes())
+        .map_err(|error| MessageLifecycleSnapshotStoreError::Io(error.to_string()))
+}
+
+fn replay_message_lifecycle_snapshot_journal(
+    journal_path: &Path,
+) -> Result<Option<MessageLifecycleSnapshot>, MessageLifecycleSnapshotStoreError> {
+    if !journal_path.exists() {
+        return Ok(None);
+    }
+
+    let payload = fs::read_to_string(journal_path)
+        .map_err(|error| MessageLifecycleSnapshotStoreError::Io(error.to_string()))?;
+    let mut latest = None;
+
+    for (index, line) in payload.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
         }
 
-        let payload = fs::read_to_string(&self.path)
-            .map_err(|error| MessageLifecycleSnapshotStoreError::Io(error.to_string()))?;
-        if payload.trim().is_empty() {
-            return Ok(None);
-        }
-        let snapshot = parse_message_lifecycle_snapshot_payload(&payload)?;
+        let payload_hex = parse_message_lifecycle_snapshot_journal_record(trimmed, index + 1)?;
+        let payload_bytes = decode_journal_hex(payload_hex)
+            .ok_or_else(|| message_lifecycle_snapshot_journal_corrupt_tail(index + 1))?;
+        let payload = String::from_utf8(payload_bytes)
+            .map_err(|_| message_lifecycle_snapshot_journal_corrupt_tail(index + 1))?;
+        let snapshot = parse_message_lifecycle_snapshot_payload(&payload)
+            .map_err(|_| message_lifecycle_snapshot_journal_corrupt_tail(index + 1))?;
         let mut verifier = MessageLifecycleStore::new();
         verifier
             .restore_snapshot(snapshot.clone())
-            .map_err(MessageLifecycleSnapshotStoreError::Snapshot)?;
-        Ok(Some(snapshot))
+            .map_err(|_| message_lifecycle_snapshot_journal_corrupt_tail(index + 1))?;
+        latest = Some(snapshot);
+    }
+
+    Ok(latest)
+}
+
+fn parse_message_lifecycle_snapshot_journal_record(
+    line: &str,
+    index: usize,
+) -> Result<&str, MessageLifecycleSnapshotStoreError> {
+    let mut parts = line.split('|');
+    let Some(prefix) = parts.next() else {
+        return Err(message_lifecycle_snapshot_journal_corrupt_tail(index));
+    };
+    let Some(version) = parts.next() else {
+        return Err(message_lifecycle_snapshot_journal_corrupt_tail(index));
+    };
+    let Some(payload_hex) = parts.next() else {
+        return Err(message_lifecycle_snapshot_journal_corrupt_tail(index));
+    };
+    if prefix != "entry" || version != "1" || payload_hex.is_empty() || parts.next().is_some() {
+        return Err(message_lifecycle_snapshot_journal_corrupt_tail(index));
+    }
+    Ok(payload_hex)
+}
+
+fn message_lifecycle_snapshot_journal_corrupt_tail(
+    index: usize,
+) -> MessageLifecycleSnapshotStoreError {
+    MessageLifecycleSnapshotStoreError::InvalidPayload(format!(
+        "{MESSAGE_LIFECYCLE_SNAPSHOT_JOURNAL_CORRUPT_TAIL_PREFIX}:{index}"
+    ))
+}
+
+fn encode_journal_hex(bytes: &[u8]) -> String {
+    let mut encoded = String::with_capacity(bytes.len() * 2);
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    for byte in bytes {
+        encoded.push(HEX[(byte >> 4) as usize] as char);
+        encoded.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    encoded
+}
+
+fn decode_journal_hex(value: &str) -> Option<Vec<u8>> {
+    if !value.len().is_multiple_of(2) {
+        return None;
+    }
+    let bytes = value.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len() / 2);
+    let mut index = 0usize;
+    while index < bytes.len() {
+        let high = decode_journal_nibble(bytes[index])?;
+        let low = decode_journal_nibble(bytes[index + 1])?;
+        decoded.push((high << 4) | low);
+        index += 2;
+    }
+    Some(decoded)
+}
+
+fn decode_journal_nibble(value: u8) -> Option<u8> {
+    match value {
+        b'0'..=b'9' => Some(value - b'0'),
+        b'a'..=b'f' => Some(value - b'a' + 10),
+        b'A'..=b'F' => Some(value - b'A' + 10),
+        _ => None,
     }
 }
 
@@ -1008,13 +1158,15 @@ fn parse_message_lifecycle_snapshot_payload(
 #[cfg(test)]
 mod tests {
     use super::{
-        FileMessageLifecycleSnapshotStore, MessageLifecycleError, MessageLifecycleSnapshot,
-        MessageLifecycleSnapshotError, MessageLifecycleSnapshotStore,
-        MessageLifecycleSnapshotStoreError, MessageLifecycleStore, MessageProofAdmissionError,
-        MessageStatus,
+        serialize_message_lifecycle_snapshot, FileMessageLifecycleSnapshotStore,
+        MessageLifecycleError, MessageLifecycleSnapshot, MessageLifecycleSnapshotError,
+        MessageLifecycleSnapshotStore, MessageLifecycleSnapshotStoreError, MessageLifecycleStore,
+        MessageProofAdmissionError, MessageStatus,
     };
     use crate::{ProcessorProofAdmissionEvaluator, ProcessorProofArtifact, ZkDesignError};
     use std::fs;
+    use std::fs::OpenOptions;
+    use std::io::Write;
     use std::path::PathBuf;
     use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
@@ -1323,7 +1475,9 @@ mod tests {
     #[test]
     fn integration_file_message_lifecycle_snapshot_store_roundtrips_snapshot() {
         let path = temp_message_lifecycle_snapshot_path("roundtrip");
+        let journal_path = temp_message_lifecycle_snapshot_journal_path(&path);
         let _ = fs::remove_file(&path);
+        let _ = fs::remove_file(&journal_path);
 
         let mut store = MessageLifecycleStore::new();
         store
@@ -1346,6 +1500,56 @@ mod tests {
         );
 
         let _ = fs::remove_file(path);
+        let _ = fs::remove_file(journal_path);
+    }
+
+    #[test]
+    fn integration_file_message_lifecycle_snapshot_store_replays_journal_when_snapshot_is_stale() {
+        let path = temp_message_lifecycle_snapshot_path("journal-replay");
+        let journal_path = temp_message_lifecycle_snapshot_journal_path(&path);
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_file(&journal_path);
+
+        let mut store = MessageLifecycleStore::new();
+        store
+            .register(
+                "urn:uuid:msg-journal-1",
+                "kamn:did:agent:sender-1",
+                vec!["kamn:did:agent:recipient-1".to_owned()],
+                "2026-02-07T20:15:30.123Z",
+                "2026-02-07T20:45:30.123Z",
+            )
+            .expect("register should succeed");
+        let first_snapshot = store.export_snapshot();
+        let mut file_store = FileMessageLifecycleSnapshotStore::new(path.clone()).expect("store");
+        file_store
+            .write(first_snapshot.clone())
+            .expect("write should pass");
+
+        store
+            .register(
+                "urn:uuid:msg-journal-2",
+                "kamn:did:agent:sender-2",
+                vec!["kamn:did:agent:recipient-2".to_owned()],
+                "2026-02-07T21:15:30.123Z",
+                "2026-02-07T21:45:30.123Z",
+            )
+            .expect("second register should succeed");
+        let second_snapshot = store.export_snapshot();
+        file_store
+            .write(second_snapshot.clone())
+            .expect("second write should pass");
+
+        let stale_payload = serialize_message_lifecycle_snapshot(&first_snapshot)
+            .expect("first snapshot should serialize");
+        assert!(fs::write(&path, stale_payload).is_ok());
+        assert_eq!(
+            file_store.read_latest().expect("journal replay should win"),
+            Some(second_snapshot)
+        );
+
+        let _ = fs::remove_file(path);
+        let _ = fs::remove_file(journal_path);
     }
 
     #[test]
@@ -1369,7 +1573,9 @@ mod tests {
     #[test]
     fn functional_file_message_lifecycle_snapshot_store_recovery_repairs_corrupt_payload() {
         let path = temp_message_lifecycle_snapshot_path("recover");
+        let journal_path = temp_message_lifecycle_snapshot_journal_path(&path);
         let _ = fs::remove_file(&path);
+        let _ = fs::remove_file(&journal_path);
         assert!(fs::write(&path, "schema|1\nrecord|broken\n").is_ok());
 
         let mut file_store = FileMessageLifecycleSnapshotStore::new(path.clone()).expect("store");
@@ -1384,6 +1590,45 @@ mod tests {
         );
 
         let _ = fs::remove_file(path);
+        let _ = fs::remove_file(journal_path);
+    }
+
+    #[test]
+    fn regression_file_message_lifecycle_snapshot_store_rejects_corrupt_journal_tail() {
+        // Regression: #2690
+        let path = temp_message_lifecycle_snapshot_path("corrupt-journal-tail");
+        let journal_path = temp_message_lifecycle_snapshot_journal_path(&path);
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_file(&journal_path);
+
+        let mut store = MessageLifecycleStore::new();
+        store
+            .register(
+                "urn:uuid:msg-tail",
+                "kamn:did:agent:sender-1",
+                vec!["kamn:did:agent:recipient-1".to_owned()],
+                "2026-02-07T20:15:30.123Z",
+                "2026-02-07T20:45:30.123Z",
+            )
+            .expect("register should succeed");
+        let snapshot = store.export_snapshot();
+        let mut file_store = FileMessageLifecycleSnapshotStore::new(path.clone()).expect("store");
+        file_store.write(snapshot).expect("write should pass");
+
+        let mut journal = OpenOptions::new()
+            .append(true)
+            .open(&journal_path)
+            .expect("journal should exist");
+        assert!(journal.write_all(b"entry|1|deadbeefz\n").is_ok());
+        assert_eq!(
+            file_store.recover_latest_and_repair(),
+            Err(MessageLifecycleSnapshotStoreError::InvalidPayload(
+                "message_lifecycle_snapshot_journal_corrupt_tail:2".to_owned()
+            ))
+        );
+
+        let _ = fs::remove_file(path);
+        let _ = fs::remove_file(journal_path);
     }
 
     #[test]
@@ -1442,5 +1687,11 @@ mod tests {
             .expect("clock should be monotonic")
             .as_nanos();
         std::env::temp_dir().join(format!("kamn-message-lifecycle-snapshot-{tag}-{nonce}.log"))
+    }
+
+    fn temp_message_lifecycle_snapshot_journal_path(path: &std::path::Path) -> PathBuf {
+        let mut journal = path.as_os_str().to_os_string();
+        journal.push(".journal");
+        PathBuf::from(journal)
     }
 }

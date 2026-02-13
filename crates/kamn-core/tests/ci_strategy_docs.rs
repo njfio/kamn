@@ -9,6 +9,12 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("scripts/ci/check_test_layering_policy.py"));
     assert!(DOC.contains("scripts/ci/test_check_test_layering_policy.sh"));
     assert!(DOC.contains("docs/planning/test_layering_policy.md"));
+    assert!(DOC.contains("## Snapshot + Journal Durability Replay Contract"));
+    assert!(DOC.contains("docs/planning/persistence_durability_model.md"));
+    assert!(DOC.contains("cargo test -p kamn-core --lib journal"));
+    assert!(DOC.contains("channel_snapshot_journal_corrupt_tail:<line>"));
+    assert!(DOC.contains("message_lifecycle_snapshot_journal_corrupt_tail:<line>"));
+    assert!(DOC.contains("task_operation_snapshot_journal_corrupt_tail:<line>"));
     assert!(DOC.contains("layering_marker_missing"));
     assert!(DOC.contains("run_localhost_signed_integration_contract_lane_tests"));
     assert!(DOC.contains("sdk-live-localhost-integration"));
@@ -156,6 +162,7 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("Regression: #1466"));
     assert!(DOC.contains("Regression: #1497"));
     assert!(DOC.contains("Regression: #2694"));
+    assert!(DOC.contains("Regression: #2690"));
     assert!(DOC.contains("Regression: #2093"));
     assert!(DOC.contains("Regression: #2095"));
 }

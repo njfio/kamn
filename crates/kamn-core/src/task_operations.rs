@@ -6,7 +6,7 @@ use std::fmt;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Notice kinds emitted for task operation lifecycle activity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -768,6 +768,7 @@ impl TaskOperationSnapshotStore for InMemoryTaskOperationSnapshotStore {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FileTaskOperationSnapshotStore {
     path: PathBuf,
+    journal_path: PathBuf,
 }
 
 /// Recovery outcome for filesystem snapshot repair flow.
@@ -777,6 +778,15 @@ pub struct TaskOperationRecoveryResult {
     pub latest: Option<TaskOperationSnapshot>,
     /// Whether recovery rewrote corrupted payload to repaired baseline.
     pub repaired: bool,
+    /// Deterministic recovery reason code.
+    pub reason_code: &'static str,
+}
+
+impl TaskOperationRecoveryResult {
+    /// Returns the deterministic recovery reason code.
+    pub fn reason_code(&self) -> &'static str {
+        self.reason_code
+    }
 }
 
 impl FileTaskOperationSnapshotStore {
@@ -787,17 +797,19 @@ impl FileTaskOperationSnapshotStore {
                 "snapshot file path cannot be empty".to_owned(),
             ));
         }
-        Ok(Self { path })
+        let journal_path = task_operation_snapshot_journal_path(&path);
+        Ok(Self { path, journal_path })
     }
 
     /// Attempt to read latest snapshot; if corrupt, repair file and return empty state.
     pub fn recover_latest_and_repair(
         &mut self,
     ) -> Result<TaskOperationRecoveryResult, TaskOperationSnapshotStoreError> {
-        if !self.path.exists() {
+        if !self.path.exists() && !self.journal_path.exists() {
             return Ok(TaskOperationRecoveryResult {
                 latest: None,
                 repaired: false,
+                reason_code: "task_operation_snapshot_recovery_empty",
             });
         }
 
@@ -805,14 +817,23 @@ impl FileTaskOperationSnapshotStore {
             Ok(snapshot) => Ok(TaskOperationRecoveryResult {
                 latest: snapshot,
                 repaired: false,
+                reason_code: "task_operation_snapshot_recovery_clean",
             }),
+            Err(TaskOperationSnapshotStoreError::InvalidPayload(value))
+                if value.starts_with(TASK_OPERATION_SNAPSHOT_JOURNAL_CORRUPT_TAIL_PREFIX) =>
+            {
+                Err(TaskOperationSnapshotStoreError::InvalidPayload(value))
+            }
             Err(TaskOperationSnapshotStoreError::InvalidPayload(_))
             | Err(TaskOperationSnapshotStoreError::Snapshot(_)) => {
                 fs::write(&self.path, "")
                     .map_err(|error| TaskOperationSnapshotStoreError::Io(error.to_string()))?;
+                fs::write(&self.journal_path, "")
+                    .map_err(|error| TaskOperationSnapshotStoreError::Io(error.to_string()))?;
                 Ok(TaskOperationRecoveryResult {
                     latest: None,
                     repaired: true,
+                    reason_code: "task_operation_snapshot_recovery_repaired_corrupt_payload",
                 })
             }
             Err(error) => Err(error),
@@ -837,27 +858,154 @@ impl TaskOperationSnapshotStore for FileTaskOperationSnapshotStore {
             .open(&self.path)
             .map_err(|error| TaskOperationSnapshotStoreError::Io(error.to_string()))?;
         file.write_all(payload.as_bytes())
-            .map_err(|error| TaskOperationSnapshotStoreError::Io(error.to_string()))
+            .map_err(|error| TaskOperationSnapshotStoreError::Io(error.to_string()))?;
+        append_task_operation_snapshot_journal_record(&self.journal_path, &payload)
     }
 
     fn read_latest(
         &self,
     ) -> Result<Option<TaskOperationSnapshot>, TaskOperationSnapshotStoreError> {
-        if !self.path.exists() {
-            return Ok(None);
+        let snapshot_payload = read_task_operation_snapshot_file(&self.path)?;
+        let journal_snapshot = replay_task_operation_snapshot_journal(&self.journal_path)?;
+        Ok(journal_snapshot.or(snapshot_payload))
+    }
+}
+
+const TASK_OPERATION_SNAPSHOT_JOURNAL_CORRUPT_TAIL_PREFIX: &str =
+    "task_operation_snapshot_journal_corrupt_tail";
+
+fn task_operation_snapshot_journal_path(path: &Path) -> PathBuf {
+    let mut journal = path.as_os_str().to_os_string();
+    journal.push(".journal");
+    PathBuf::from(journal)
+}
+
+fn read_task_operation_snapshot_file(
+    path: &Path,
+) -> Result<Option<TaskOperationSnapshot>, TaskOperationSnapshotStoreError> {
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let payload = fs::read_to_string(path)
+        .map_err(|error| TaskOperationSnapshotStoreError::Io(error.to_string()))?;
+    if payload.trim().is_empty() {
+        return Ok(None);
+    }
+    let snapshot = parse_task_operation_snapshot_payload(&payload)?;
+    let mut verifier = TaskOperationEngine::new();
+    verifier
+        .restore_snapshot(snapshot.clone())
+        .map_err(TaskOperationSnapshotStoreError::Snapshot)?;
+    Ok(Some(snapshot))
+}
+
+fn append_task_operation_snapshot_journal_record(
+    journal_path: &Path,
+    payload: &str,
+) -> Result<(), TaskOperationSnapshotStoreError> {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(journal_path)
+        .map_err(|error| TaskOperationSnapshotStoreError::Io(error.to_string()))?;
+    let record = format!("entry|1|{}\n", encode_journal_hex(payload.as_bytes()));
+    file.write_all(record.as_bytes())
+        .map_err(|error| TaskOperationSnapshotStoreError::Io(error.to_string()))
+}
+
+fn replay_task_operation_snapshot_journal(
+    journal_path: &Path,
+) -> Result<Option<TaskOperationSnapshot>, TaskOperationSnapshotStoreError> {
+    if !journal_path.exists() {
+        return Ok(None);
+    }
+
+    let payload = fs::read_to_string(journal_path)
+        .map_err(|error| TaskOperationSnapshotStoreError::Io(error.to_string()))?;
+    let mut latest = None;
+
+    for (index, line) in payload.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
         }
 
-        let payload = fs::read_to_string(&self.path)
-            .map_err(|error| TaskOperationSnapshotStoreError::Io(error.to_string()))?;
-        if payload.trim().is_empty() {
-            return Ok(None);
-        }
-        let snapshot = parse_task_operation_snapshot_payload(&payload)?;
+        let payload_hex = parse_task_operation_snapshot_journal_record(trimmed, index + 1)?;
+        let payload_bytes = decode_journal_hex(payload_hex)
+            .ok_or_else(|| task_operation_snapshot_journal_corrupt_tail(index + 1))?;
+        let payload = String::from_utf8(payload_bytes)
+            .map_err(|_| task_operation_snapshot_journal_corrupt_tail(index + 1))?;
+        let snapshot = parse_task_operation_snapshot_payload(&payload)
+            .map_err(|_| task_operation_snapshot_journal_corrupt_tail(index + 1))?;
         let mut verifier = TaskOperationEngine::new();
         verifier
             .restore_snapshot(snapshot.clone())
-            .map_err(TaskOperationSnapshotStoreError::Snapshot)?;
-        Ok(Some(snapshot))
+            .map_err(|_| task_operation_snapshot_journal_corrupt_tail(index + 1))?;
+        latest = Some(snapshot);
+    }
+
+    Ok(latest)
+}
+
+fn parse_task_operation_snapshot_journal_record(
+    line: &str,
+    index: usize,
+) -> Result<&str, TaskOperationSnapshotStoreError> {
+    let mut parts = line.split('|');
+    let Some(prefix) = parts.next() else {
+        return Err(task_operation_snapshot_journal_corrupt_tail(index));
+    };
+    let Some(version) = parts.next() else {
+        return Err(task_operation_snapshot_journal_corrupt_tail(index));
+    };
+    let Some(payload_hex) = parts.next() else {
+        return Err(task_operation_snapshot_journal_corrupt_tail(index));
+    };
+    if prefix != "entry" || version != "1" || payload_hex.is_empty() || parts.next().is_some() {
+        return Err(task_operation_snapshot_journal_corrupt_tail(index));
+    }
+    Ok(payload_hex)
+}
+
+fn task_operation_snapshot_journal_corrupt_tail(index: usize) -> TaskOperationSnapshotStoreError {
+    TaskOperationSnapshotStoreError::InvalidPayload(format!(
+        "{TASK_OPERATION_SNAPSHOT_JOURNAL_CORRUPT_TAIL_PREFIX}:{index}"
+    ))
+}
+
+fn encode_journal_hex(bytes: &[u8]) -> String {
+    let mut encoded = String::with_capacity(bytes.len() * 2);
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    for byte in bytes {
+        encoded.push(HEX[(byte >> 4) as usize] as char);
+        encoded.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    encoded
+}
+
+fn decode_journal_hex(value: &str) -> Option<Vec<u8>> {
+    if !value.len().is_multiple_of(2) {
+        return None;
+    }
+    let bytes = value.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len() / 2);
+    let mut index = 0usize;
+    while index < bytes.len() {
+        let high = decode_journal_nibble(bytes[index])?;
+        let low = decode_journal_nibble(bytes[index + 1])?;
+        decoded.push((high << 4) | low);
+        index += 2;
+    }
+    Some(decoded)
+}
+
+fn decode_journal_nibble(value: u8) -> Option<u8> {
+    match value {
+        b'0'..=b'9' => Some(value - b'0'),
+        b'a'..=b'f' => Some(value - b'a' + 10),
+        b'A'..=b'F' => Some(value - b'A' + 10),
+        _ => None,
     }
 }
 
@@ -1182,11 +1330,14 @@ fn parse_task_operation_snapshot_payload(
 #[cfg(test)]
 mod tests {
     use super::{
-        FileTaskOperationSnapshotStore, SwarmTaskDraft, TaskOperationEngine, TaskOperationError,
-        TaskOperationSnapshotStore, TaskOperationSnapshotStoreError,
+        serialize_task_operation_snapshot, FileTaskOperationSnapshotStore, SwarmTaskDraft,
+        TaskOperationEngine, TaskOperationError, TaskOperationSnapshotStore,
+        TaskOperationSnapshotStoreError,
     };
     use crate::TaskState;
     use std::fs;
+    use std::fs::OpenOptions;
+    use std::io::Write;
     use std::path::PathBuf;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -1277,7 +1428,9 @@ mod tests {
     #[test]
     fn integration_file_task_operation_snapshot_store_roundtrips_snapshot() {
         let path = temp_task_operation_snapshot_path("roundtrip");
+        let journal_path = temp_task_operation_snapshot_journal_path(&path);
         let _ = fs::remove_file(&path);
+        let _ = fs::remove_file(&journal_path);
 
         let mut engine = TaskOperationEngine::new();
         engine
@@ -1302,6 +1455,53 @@ mod tests {
         );
 
         let _ = fs::remove_file(path);
+        let _ = fs::remove_file(journal_path);
+    }
+
+    #[test]
+    fn integration_file_task_operation_snapshot_store_replays_journal_when_snapshot_is_stale() {
+        let path = temp_task_operation_snapshot_path("journal-replay");
+        let journal_path = temp_task_operation_snapshot_journal_path(&path);
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_file(&journal_path);
+
+        let mut engine = TaskOperationEngine::new();
+        engine
+            .submit(
+                "task-journal-1",
+                "kamn:did:agent:requester-1",
+                "first snapshot",
+            )
+            .expect("first submit should pass");
+        let first_snapshot = engine.export_snapshot();
+
+        let mut file_store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
+        file_store
+            .write(first_snapshot.clone())
+            .expect("first write should pass");
+
+        engine
+            .submit(
+                "task-journal-2",
+                "kamn:did:agent:requester-1",
+                "second snapshot",
+            )
+            .expect("second submit should pass");
+        let second_snapshot = engine.export_snapshot();
+        file_store
+            .write(second_snapshot.clone())
+            .expect("second write should pass");
+
+        let stale_payload =
+            serialize_task_operation_snapshot(&first_snapshot).expect("serialize should pass");
+        assert!(fs::write(&path, stale_payload).is_ok());
+        assert_eq!(
+            file_store.read_latest().expect("journal replay should win"),
+            Some(second_snapshot)
+        );
+
+        let _ = fs::remove_file(path);
+        let _ = fs::remove_file(journal_path);
     }
 
     #[test]
@@ -1325,7 +1525,9 @@ mod tests {
     #[test]
     fn functional_file_task_operation_snapshot_store_recovery_repairs_corrupt_payload() {
         let path = temp_task_operation_snapshot_path("recover");
+        let journal_path = temp_task_operation_snapshot_journal_path(&path);
         let _ = fs::remove_file(&path);
+        let _ = fs::remove_file(&journal_path);
         assert!(fs::write(&path, "schema|1\ntask|broken\n").is_ok());
 
         let mut file_store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
@@ -1340,6 +1542,40 @@ mod tests {
         );
 
         let _ = fs::remove_file(path);
+        let _ = fs::remove_file(journal_path);
+    }
+
+    #[test]
+    fn regression_file_task_operation_snapshot_store_rejects_corrupt_journal_tail() {
+        // Regression: #2690
+        let path = temp_task_operation_snapshot_path("corrupt-journal-tail");
+        let journal_path = temp_task_operation_snapshot_journal_path(&path);
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_file(&journal_path);
+
+        let mut engine = TaskOperationEngine::new();
+        engine
+            .submit("task-tail", "kamn:did:agent:requester-1", "tail payload")
+            .expect("submit should pass");
+        let snapshot = engine.export_snapshot();
+
+        let mut file_store = FileTaskOperationSnapshotStore::new(path.clone()).expect("store");
+        file_store.write(snapshot).expect("write should pass");
+
+        let mut journal = OpenOptions::new()
+            .append(true)
+            .open(&journal_path)
+            .expect("journal should exist");
+        assert!(journal.write_all(b"entry|1|deadbeefz\n").is_ok());
+        assert_eq!(
+            file_store.recover_latest_and_repair(),
+            Err(TaskOperationSnapshotStoreError::InvalidPayload(
+                "task_operation_snapshot_journal_corrupt_tail:2".to_owned()
+            ))
+        );
+
+        let _ = fs::remove_file(path);
+        let _ = fs::remove_file(journal_path);
     }
 
     #[test]
@@ -1399,5 +1635,11 @@ mod tests {
             .expect("clock should be monotonic")
             .as_nanos();
         std::env::temp_dir().join(format!("kamn-task-operation-snapshot-{tag}-{nonce}.log"))
+    }
+
+    fn temp_task_operation_snapshot_journal_path(path: &std::path::Path) -> PathBuf {
+        let mut journal = path.as_os_str().to_os_string();
+        journal.push(".journal");
+        PathBuf::from(journal)
     }
 }
