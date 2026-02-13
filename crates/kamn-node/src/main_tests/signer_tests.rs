@@ -157,8 +157,45 @@ fn regression_signer_private_key_parse_path_requires_zeroize_markers() {
 }
 
 #[test]
-#[ignore]
+fn regression_live_signer_vector_probe_must_not_be_ignored() {
+    const SOURCE: &str = include_str!("signer_tests.rs");
+    let lines: Vec<&str> = SOURCE.lines().collect();
+    let fn_line = lines
+        .iter()
+        .position(|line| {
+            line.trim() == "fn integration_kolme_live_signer_vector_probe_contract() {"
+        })
+        .expect("live signer vector probe function must exist");
+    let mut attributes = Vec::new();
+    let mut cursor = fn_line;
+    while cursor > 0 {
+        cursor -= 1;
+        let trimmed = lines[cursor].trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed.starts_with("#[") {
+            attributes.push(trimmed);
+            continue;
+        }
+        break;
+    }
+
+    assert!(
+        attributes.iter().all(|line| !line.contains("ignore")),
+        "live signer vector probe must stay active; local-heavy gating belongs in runtime preflight, not #[ignore]"
+    );
+}
+
+#[test]
 fn integration_kolme_live_signer_vector_probe_contract() {
+    if env::var("KAMN_KOLME_LOCAL_HEAVY").ok().as_deref() != Some("1") {
+        eprintln!(
+            "skipping signer vector probe; set KAMN_KOLME_LOCAL_HEAVY=1 to run local-heavy parity probe"
+        );
+        return;
+    }
+
     let private_key_hex = env::var("KAMN_KOLME_SIGNATURE_VECTOR_PRIVATE_KEY_HEX")
         .expect("KAMN_KOLME_SIGNATURE_VECTOR_PRIVATE_KEY_HEX must be set");
     let message = env::var("KAMN_KOLME_SIGNATURE_VECTOR_MESSAGE")
