@@ -1008,75 +1008,6 @@ pub(crate) fn build_kolme_live_signer_adapter(
     Ok((signer_adapter, selection))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::KolmeForkSecp256k1SignerAdapter;
-    use super::{ConfigError, Duration, Instant};
-
-    const TEST_PRIVATE_KEY_HEX: &str =
-        "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
-    const TEST_PRIVATE_KEY_ENV: &str = "TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX";
-
-    fn is_zeroized_hex_buffer(value: &str) -> bool {
-        value.as_bytes().iter().all(|byte| *byte == 0)
-    }
-
-    #[test]
-    fn unit_signer_private_key_parse_zeroizes_hex_buffer_on_success() {
-        let mut private_key_hex = TEST_PRIVATE_KEY_HEX.to_owned();
-        let signer = KolmeForkSecp256k1SignerAdapter::from_private_key_hex_in_place(
-            &mut private_key_hex,
-            TEST_PRIVATE_KEY_ENV,
-        )
-        .expect("valid private key should parse");
-        assert!(
-            is_zeroized_hex_buffer(private_key_hex.as_str()),
-            "private key hex buffer must be scrubbed after successful signer construction"
-        );
-        assert_eq!(signer.private_key_env, TEST_PRIVATE_KEY_ENV);
-    }
-
-    #[test]
-    fn regression_signer_private_key_parse_zeroizes_hex_buffer_on_failure() {
-        // Regression: #2672
-        let mut private_key_hex = "zz".to_owned();
-        let error = KolmeForkSecp256k1SignerAdapter::from_private_key_hex_in_place(
-            &mut private_key_hex,
-            TEST_PRIVATE_KEY_ENV,
-        )
-        .expect_err("invalid private key hex must fail closed");
-        assert!(
-            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("invalid hex character")),
-            "invalid hex decode must fail with deterministic validation error"
-        );
-        assert!(
-            is_zeroized_hex_buffer(private_key_hex.as_str()),
-            "private key hex buffer must be scrubbed after parse failure"
-        );
-    }
-
-    #[test]
-    fn performance_signer_private_key_parse_zeroization_stays_bounded() {
-        let started = Instant::now();
-        for _ in 0..2_000 {
-            let mut private_key_hex = TEST_PRIVATE_KEY_HEX.to_owned();
-            let _signer = KolmeForkSecp256k1SignerAdapter::from_private_key_hex_in_place(
-                &mut private_key_hex,
-                TEST_PRIVATE_KEY_ENV,
-            )
-            .expect("valid private key should parse");
-            assert!(
-                is_zeroized_hex_buffer(private_key_hex.as_str()),
-                "private key buffer should remain scrubbed during parse loop"
-            );
-        }
-        assert!(
-            started.elapsed() < Duration::from_secs(2),
-            "private key parse + zeroization loop exceeded 2s for 2k iterations"
-        );
-    }
-}
-
 pub(crate) fn resolve_kolme_live_nonce(
     base_url: &str,
     transport: &mut KolmeRuntimeCommitHttpTransport,
@@ -1165,4 +1096,73 @@ pub(crate) fn build_kolme_live_direct_signed_wire_payload(
     )
     .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
     Ok((request.to_json_payload(), signer_selection))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::KolmeForkSecp256k1SignerAdapter;
+    use super::{ConfigError, Duration, Instant};
+
+    const TEST_PRIVATE_KEY_HEX: &str =
+        "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
+    const TEST_PRIVATE_KEY_ENV: &str = "TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX";
+
+    fn is_zeroized_hex_buffer(value: &str) -> bool {
+        value.as_bytes().iter().all(|byte| *byte == 0)
+    }
+
+    #[test]
+    fn unit_signer_private_key_parse_zeroizes_hex_buffer_on_success() {
+        let mut private_key_hex = TEST_PRIVATE_KEY_HEX.to_owned();
+        let signer = KolmeForkSecp256k1SignerAdapter::from_private_key_hex_in_place(
+            &mut private_key_hex,
+            TEST_PRIVATE_KEY_ENV,
+        )
+        .expect("valid private key should parse");
+        assert!(
+            is_zeroized_hex_buffer(private_key_hex.as_str()),
+            "private key hex buffer must be scrubbed after successful signer construction"
+        );
+        assert_eq!(signer.private_key_env, TEST_PRIVATE_KEY_ENV);
+    }
+
+    #[test]
+    fn regression_signer_private_key_parse_zeroizes_hex_buffer_on_failure() {
+        // Regression: #2672
+        let mut private_key_hex = "zz".to_owned();
+        let error = KolmeForkSecp256k1SignerAdapter::from_private_key_hex_in_place(
+            &mut private_key_hex,
+            TEST_PRIVATE_KEY_ENV,
+        )
+        .expect_err("invalid private key hex must fail closed");
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("invalid hex character")),
+            "invalid hex decode must fail with deterministic validation error"
+        );
+        assert!(
+            is_zeroized_hex_buffer(private_key_hex.as_str()),
+            "private key hex buffer must be scrubbed after parse failure"
+        );
+    }
+
+    #[test]
+    fn performance_signer_private_key_parse_zeroization_stays_bounded() {
+        let started = Instant::now();
+        for _ in 0..2_000 {
+            let mut private_key_hex = TEST_PRIVATE_KEY_HEX.to_owned();
+            let _signer = KolmeForkSecp256k1SignerAdapter::from_private_key_hex_in_place(
+                &mut private_key_hex,
+                TEST_PRIVATE_KEY_ENV,
+            )
+            .expect("valid private key should parse");
+            assert!(
+                is_zeroized_hex_buffer(private_key_hex.as_str()),
+                "private key buffer should remain scrubbed during parse loop"
+            );
+        }
+        assert!(
+            started.elapsed() < Duration::from_secs(2),
+            "private key parse + zeroization loop exceeded 2s for 2k iterations"
+        );
+    }
 }
