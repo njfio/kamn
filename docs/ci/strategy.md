@@ -108,6 +108,9 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - local-heavy lane execution is dual-gated in workflow policy:
       - `if: steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true' && steps.scope.outputs.kolme_local_heavy_selector_opt_in == 'true'`
       - fail-closed reason code for missing dual gate: `local_heavy_lane_not_opt_in_selector_gated`
+    - workflow/local-heavy policy checker also validates `scripts/ci/test_ci_tools.sh` fast-mode surface:
+      - local-heavy commands must not appear under `KAMN_CI_TOOLS_FAST_MODE=true`
+      - fail-closed reason code for leakage: `local_heavy_lane_commands_in_ci_tools_fast_mode`
   - default selector outputs:
     - `run_kolme_local_heavy_contract_tests=false`
     - `kolme_local_heavy_selector_opt_in=false`
