@@ -21,6 +21,8 @@ required_snippets=(
   "check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --output-json /tmp/test-harness-loc-soft-budget-report.json"
   "soft_budget_status=exceeded"
   "review_required=true"
+  "run_kolme_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/kolme-test-harness-loc-soft-budget-contract-report.json"
+  "test_run_kolme_test_harness_loc_soft_budget_contract_lane.sh"
   "local_heavy_sensitive_drift_detected"
   "soft_overrun_status=within|exceeded"
   "delta_threshold_waiver_applied"
