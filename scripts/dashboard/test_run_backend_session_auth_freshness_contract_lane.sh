@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/dashboard/backend_session_auth_freshness_contract_lane_contract.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/dashboard_backend_session_auth_freshness_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -47,13 +48,19 @@ if ! grep -q '"final_decision": "GO"' "$report_file"; then
   exit 1
 fi
 
-if ! grep -q 'run_manifest_lane.sh' "$SCRIPT"; then
-  echo "expected dashboard backend session/auth freshness contract lane wrapper to dispatch via manifest runner" >&2
+if [ ! -L "$SCRIPT" ]; then
+  echo "expected dashboard backend session/auth freshness contract lane wrapper to be a dispatcher symlink" >&2
   exit 1
 fi
 
-if ! grep -q 'dashboard_backend_session_auth_freshness_contract_lane.json' "$SCRIPT"; then
-  echo "expected dashboard backend session/auth freshness contract lane wrapper to reference dashboard manifest" >&2
+if [ "$(readlink "$SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected dashboard backend session/auth freshness contract lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST" ]; then
+  echo "expected dashboard backend session/auth freshness wrapper to resolve dashboard manifest via dispatcher" >&2
   exit 1
 fi
 

@@ -6,6 +6,7 @@ FAST_SCRIPT="$ROOT_DIR/scripts/canary/run_launch_canary_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/canary/run_launch_canary_deep_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/canary/launch_canary_contract_lane_contract.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/canary_launch_canary_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
   echo "expected launch canary fast-lane runner to be executable" >&2
@@ -33,12 +34,17 @@ if ! grep -q "launch canary contract lane tests passed." "$tmp_out"; then
   echo "expected launch canary contract lane success marker" >&2
   exit 1
 fi
-if ! grep -q "run_manifest_lane.sh" "$FAST_SCRIPT"; then
-  echo "expected launch canary fast-lane wrapper to delegate via manifest runner" >&2
+if [ ! -L "$FAST_SCRIPT" ]; then
+  echo "expected launch canary fast-lane wrapper to be a dispatcher symlink" >&2
   exit 1
 fi
-if ! grep -q "canary_launch_canary_contract_lane.json" "$FAST_SCRIPT"; then
-  echo "expected launch canary fast-lane wrapper to reference launch canary manifest" >&2
+if [ "$(readlink "$FAST_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected launch canary fast-lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$FAST_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST" ]; then
+  echo "expected launch canary fast-lane wrapper to resolve launch canary manifest via dispatcher" >&2
   exit 1
 fi
 if ! grep -q "launch_canary_contract_lane_contract.py" "$MANIFEST"; then

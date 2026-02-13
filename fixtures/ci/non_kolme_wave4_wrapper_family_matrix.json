@@ -1,0 +1,77 @@
+{
+  "schema_version": "kamn.kolme.lane-migration-matrix.v1",
+  "lanes": [
+    {
+      "lane_id": "non_kolme.dashboard.backend_session_auth_freshness",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/dashboard/run_backend_session_auth_freshness_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/dashboard_backend_session_auth_freshness_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2655"
+    },
+    {
+      "lane_id": "non_kolme.dashboard.stale_error_budget",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/dashboard/run_dashboard_stale_error_budget_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/dashboard_stale_error_budget_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2655"
+    },
+    {
+      "lane_id": "non_kolme.guard.durable_guard_recovery",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/guard/run_durable_guard_recovery_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/guard_durable_guard_recovery_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2655"
+    },
+    {
+      "lane_id": "non_kolme.reputation.dispute",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/reputation/run_reputation_dispute_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/reputation_dispute_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2655"
+    },
+    {
+      "lane_id": "non_kolme.token.launch_handoff",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/token/run_token_launch_handoff_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/token_launch_handoff_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2655"
+    },
+    {
+      "lane_id": "non_kolme.treasury.disbursement",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/treasury/run_treasury_disbursement_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/treasury_disbursement_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2655"
+    }
+  ]
+}

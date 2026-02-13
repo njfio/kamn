@@ -53,13 +53,21 @@ fi
 
 resolve_manifest_name() {
   case "$1" in
+    run_backend_session_auth_freshness_contract_lane.sh) echo "dashboard_backend_session_auth_freshness_contract_lane.json" ;;
+    run_dashboard_stale_error_budget_contract_lane.sh) echo "dashboard_stale_error_budget_contract_lane.json" ;;
+    run_durable_guard_recovery_contract_lane.sh) echo "guard_durable_guard_recovery_contract_lane.json" ;;
+    run_launch_canary_contract_lane.sh) echo "canary_launch_canary_contract_lane.json" ;;
+    run_post_cutover_slo_contract_lane.sh) echo "canary_post_cutover_slo_contract_lane.json" ;;
     run_classification_redaction_contract_lane.sh) echo "compliance_classification_redaction_contract_lane.json" ;;
     run_dsar_legal_hold_contract_lane.sh) echo "compliance_dsar_legal_hold_contract_lane.json" ;;
+    run_reputation_dispute_contract_lane.sh) echo "reputation_dispute_contract_lane.json" ;;
     run_governance_lifecycle_rollback_contract_lane.sh) echo "governance_lifecycle_rollback_contract_lane.json" ;;
     run_governance_simulation_contract_lane.sh) echo "governance_simulation_contract_lane.json" ;;
     run_quorum_attestation_replay_contract_lane.sh) echo "governance_quorum_attestation_replay_contract_lane.json" ;;
     run_soc2_control_evidence_contract_lane.sh) echo "compliance_soc2_control_evidence_contract_lane.json" ;;
     run_stake_slash_risk_contract_lane.sh) echo "governance_stake_slash_risk_contract_lane.json" ;;
+    run_token_launch_handoff_contract_lane.sh) echo "token_launch_handoff_contract_lane.json" ;;
+    run_treasury_disbursement_contract_lane.sh) echo "treasury_disbursement_contract_lane.json" ;;
     *)
       return 1
       ;;

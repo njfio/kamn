@@ -2,17 +2,17 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-TREND_CHECKER="$ROOT_DIR/scripts/ci/check_non_kolme_wave1_wrapper_family_budget_trend.sh"
+TREND_CHECKER="$ROOT_DIR/scripts/ci/check_non_kolme_wave4_wrapper_family_budget_trend.sh"
 PYTHON_CHECKER="$ROOT_DIR/scripts/ci/kolme_wrapper_inventory_baseline.py"
-THRESHOLD_FILE="$ROOT_DIR/fixtures/ci/non_kolme_wave1_wrapper_family_trend_thresholds.json"
-BASELINE_FIXTURE="$ROOT_DIR/fixtures/ci/non_kolme_wave1_wrapper_family_baseline.json"
-MATRIX_FIXTURE="$ROOT_DIR/fixtures/ci/non_kolme_wave1_wrapper_family_matrix.json"
+THRESHOLD_FILE="$ROOT_DIR/fixtures/ci/non_kolme_wave4_wrapper_family_trend_thresholds.json"
+BASELINE_FIXTURE="$ROOT_DIR/fixtures/ci/non_kolme_wave4_wrapper_family_baseline.json"
+MATRIX_FIXTURE="$ROOT_DIR/fixtures/ci/non_kolme_wave4_wrapper_family_matrix.json"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [ ! -x "$TREND_CHECKER" ]; then
-  echo "expected non-Kolme wave-1 trend checker wrapper to be executable" >&2
+  echo "expected non-Kolme wave-4 trend checker wrapper to be executable" >&2
   exit 1
 fi
 
@@ -22,17 +22,17 @@ if [ ! -x "$PYTHON_CHECKER" ]; then
 fi
 
 if [ ! -f "$THRESHOLD_FILE" ]; then
-  echo "expected non-Kolme wave-1 trend threshold fixture to exist" >&2
+  echo "expected non-Kolme wave-4 trend threshold fixture to exist" >&2
   exit 1
 fi
 
 if [ ! -f "$BASELINE_FIXTURE" ]; then
-  echo "expected non-Kolme wave-1 baseline fixture to exist" >&2
+  echo "expected non-Kolme wave-4 baseline fixture to exist" >&2
   exit 1
 fi
 
 if [ ! -f "$MATRIX_FIXTURE" ]; then
-  echo "expected non-Kolme wave-1 matrix fixture to exist" >&2
+  echo "expected non-Kolme wave-4 matrix fixture to exist" >&2
   exit 1
 fi
 
@@ -65,7 +65,7 @@ PY
 if bash "$TREND_CHECKER" \
   --matrix-file "$MATRIX_FIXTURE" \
   --baseline-file "$MUTATED_TOTAL_BASELINE" >"$TMP_DIR/fail-total.out" 2>&1; then
-  echo "expected non-Kolme wave-1 trend checker to fail when total shell LOC delta exceeds threshold" >&2
+  echo "expected non-Kolme wave-4 trend checker to fail when total shell LOC delta exceeds threshold" >&2
   exit 1
 fi
 
@@ -74,14 +74,14 @@ grep -q '^mode=trend$' "$TMP_DIR/fail-total.out"
 grep -q 'total_shell_loc_delta_threshold_exceeded' "$TMP_DIR/fail-total.out"
 
 MUTATED_LANE_MATRIX="$TMP_DIR/mutated-lane-matrix.json"
-MUTATED_LANE_WRAPPER="$TMP_DIR/run_launch_canary_contract_lane.sh"
+MUTATED_LANE_WRAPPER="$TMP_DIR/run_dashboard_stale_error_budget_contract_lane.sh"
 cp "$MATRIX_FIXTURE" "$MUTATED_LANE_MATRIX"
-cat >"$MUTATED_LANE_WRAPPER" <<'EOF'
+cat >"$MUTATED_LANE_WRAPPER" <<'INNER'
 #!/usr/bin/env bash
 set -euo pipefail
 
-printf 'mutated launch canary lane\n'
-EOF
+printf 'mutated dashboard stale error budget lane\n'
+INNER
 
 python3 - "$MUTATED_LANE_MATRIX" "$MUTATED_LANE_WRAPPER" <<'PY'
 import json
@@ -93,7 +93,7 @@ wrapper_path = Path(sys.argv[2]).resolve()
 payload = json.loads(matrix_path.read_text(encoding="utf-8"))
 
 for lane in payload["lanes"]:
-    if lane.get("lane_id") == "non_kolme.canary.launch":
+    if lane.get("lane_id") == "non_kolme.dashboard.stale_error_budget":
         lane["source_entry"] = str(wrapper_path)
         break
 
@@ -103,7 +103,7 @@ PY
 if bash "$TREND_CHECKER" \
   --matrix-file "$MUTATED_LANE_MATRIX" \
   --baseline-file "$BASELINE_FIXTURE" >"$TMP_DIR/fail-lane.out" 2>&1; then
-  echo "expected non-Kolme wave-1 trend checker to fail when lane source_entry drifts from baseline" >&2
+  echo "expected non-Kolme wave-4 trend checker to fail when lane source_entry drifts from baseline" >&2
   exit 1
 fi
 
@@ -131,7 +131,7 @@ PY
 if bash "$TREND_CHECKER" \
   --matrix-file "$MATRIX_FIXTURE" \
   --baseline-file "$MUTATED_STALE_BASELINE" >"$TMP_DIR/fail-stale.out" 2>&1; then
-  echo "expected non-Kolme wave-1 trend checker to fail on stale baseline lane inventory" >&2
+  echo "expected non-Kolme wave-4 trend checker to fail on stale baseline lane inventory" >&2
   exit 1
 fi
 
@@ -139,4 +139,4 @@ grep -q '^status=fail$' "$TMP_DIR/fail-stale.out"
 grep -q '^mode=trend$' "$TMP_DIR/fail-stale.out"
 grep -q 'unexpected_new_lanes_in_current_inventory' "$TMP_DIR/fail-stale.out"
 
-echo "non-Kolme wave-1 wrapper-family budget trend checker tests passed."
+echo "non-Kolme wave-4 wrapper-family budget trend checker tests passed."

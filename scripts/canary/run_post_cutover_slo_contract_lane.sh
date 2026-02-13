@@ -1,11 +1,1 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-MANIFEST="$ROOT_DIR/scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json"
-
-exec bash "$ROOT_DIR/scripts/framework/run_manifest_lane.sh" \
-  --manifest "$MANIFEST" \
-  --phase contract \
-  --cwd "$ROOT_DIR" \
-  -- "$@"
+../framework/run_non_kolme_contract_lane_dispatch.sh

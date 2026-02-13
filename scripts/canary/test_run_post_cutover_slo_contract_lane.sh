@@ -6,6 +6,7 @@ FAST_SCRIPT="$ROOT_DIR/scripts/canary/run_post_cutover_slo_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/canary/run_post_cutover_slo_deep_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/canary/post_cutover_slo_contract_lane_contract.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
   echo "expected post-cutover SLO fast-lane runner to be executable" >&2
@@ -34,12 +35,17 @@ if ! grep -q "post-cutover SLO contract lane tests passed." "$tmp_out"; then
   exit 1
 fi
 
-if ! grep -q "run_manifest_lane.sh" "$FAST_SCRIPT"; then
-  echo "expected post-cutover SLO fast-lane wrapper to delegate via manifest runner" >&2
+if [ ! -L "$FAST_SCRIPT" ]; then
+  echo "expected post-cutover SLO fast-lane wrapper to be a dispatcher symlink" >&2
   exit 1
 fi
-if ! grep -q "canary_post_cutover_slo_contract_lane.json" "$FAST_SCRIPT"; then
-  echo "expected post-cutover SLO fast-lane wrapper to reference post-cutover SLO manifest" >&2
+if [ "$(readlink "$FAST_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected post-cutover SLO fast-lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$FAST_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST" ]; then
+  echo "expected post-cutover SLO fast-lane wrapper to resolve post-cutover manifest via dispatcher" >&2
   exit 1
 fi
 if ! grep -q "post_cutover_slo_contract_lane_contract.py" "$MANIFEST"; then
