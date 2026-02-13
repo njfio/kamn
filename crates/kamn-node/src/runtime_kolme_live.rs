@@ -285,8 +285,11 @@ pub(crate) fn execute_kolme_live_runtime(
 #[cfg(test)]
 mod tests {
     use super::{
-        classify_retry_category, deterministic_retry_backoff_millis, ConfigError,
-        KolmeRuntimeCommitProviderError,
+        classify_retry_category, deterministic_retry_backoff_millis,
+        ensure_kolme_live_provider_marker, kolme_live_finality_label,
+        map_kolme_live_submit_outcome, ConfigError, KolmeCommitReceiptFinality,
+        KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderOutcome,
+        KolmeRuntimeCommitProviderReceipt,
     };
 
     #[test]
@@ -331,6 +334,69 @@ mod tests {
         assert!(
             message.contains("runtime kolme live validation failed"),
             "runtime malformed response errors should remain explicit and fail-fast"
+        );
+    }
+
+    #[test]
+    fn unit_kolme_live_finality_label_maps_all_variants() {
+        assert_eq!(
+            kolme_live_finality_label(KolmeCommitReceiptFinality::Pending),
+            "pending"
+        );
+        assert_eq!(
+            kolme_live_finality_label(KolmeCommitReceiptFinality::Final),
+            "final"
+        );
+        assert_eq!(
+            kolme_live_finality_label(KolmeCommitReceiptFinality::Failed),
+            "failed"
+        );
+    }
+
+    #[test]
+    fn unit_kolme_live_provider_marker_guard_returns_deterministic_error() {
+        let error = ensure_kolme_live_provider_marker("kolme-fork-local", "unexpected-provider")
+            .expect_err("provider marker drift must fail closed");
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("provider marker drift")),
+            "provider marker mismatch should return explicit runtime validation error"
+        );
+    }
+
+    #[test]
+    fn unit_kolme_live_submit_outcome_mapper_keeps_receipt_contract_and_rejection_reason() {
+        let submitted_receipt = KolmeRuntimeCommitProviderReceipt {
+            provider: "kolme-fork-local".to_owned(),
+            commit_id: "kolme-commit:abcd".to_owned(),
+            finality: KolmeCommitReceiptFinality::Pending,
+        };
+        let duplicate_receipt = KolmeRuntimeCommitProviderReceipt {
+            provider: "kolme-fork-local".to_owned(),
+            commit_id: "kolme-commit:ef01".to_owned(),
+            finality: KolmeCommitReceiptFinality::Final,
+        };
+        let (submitted_status, submitted_mapped) = map_kolme_live_submit_outcome(
+            KolmeRuntimeCommitProviderOutcome::Submitted(submitted_receipt.clone()),
+        )
+        .expect("submitted outcome should map");
+        assert_eq!(submitted_status, "submitted");
+        assert_eq!(submitted_mapped, submitted_receipt);
+
+        let (duplicate_status, duplicate_mapped) = map_kolme_live_submit_outcome(
+            KolmeRuntimeCommitProviderOutcome::Duplicate(duplicate_receipt.clone()),
+        )
+        .expect("duplicate outcome should map");
+        assert_eq!(duplicate_status, "duplicate");
+        assert_eq!(duplicate_mapped, duplicate_receipt);
+
+        let rejected_error =
+            map_kolme_live_submit_outcome(KolmeRuntimeCommitProviderOutcome::Rejected {
+                reason: "policy-denied".to_owned(),
+            })
+            .expect_err("rejected outcome must fail closed");
+        assert!(
+            matches!(rejected_error, ConfigError::RuntimeKolmeLive(message) if message.contains("policy-denied")),
+            "rejected outcome must preserve rejection reason for localized debugging"
         );
     }
 }
