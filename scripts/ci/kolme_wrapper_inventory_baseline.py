@@ -63,7 +63,7 @@ def count_shell_loc(path: Path) -> int:
         fail(f"failed to read wrapper for shell LOC accounting {path}: {exc}")
 
 
-def resolve_manifest_file(*, repo_root: Path, source_entry: str) -> str:
+def resolve_manifest_file_from_dispatchers(*, repo_root: Path, source_entry: str) -> str:
     wrapper_name = Path(source_entry).name
     dispatchers = (
         repo_root / "scripts/kolme/run_contract_lane_dispatch.sh",
@@ -178,7 +178,28 @@ def build_inventory(*, matrix_file: Path, repo_root: Path) -> dict[str, Any]:
             fail(f"shell LOC must be >= 1 for lane {lane_id}")
         total_shell_loc += shell_loc
 
-        manifest_file = resolve_manifest_file(repo_root=repo_root, source_entry=source_entry)
+        manifest_file_override = lane.get("manifest_file")
+        if manifest_file_override is None:
+            manifest_file = resolve_manifest_file_from_dispatchers(
+                repo_root=repo_root,
+                source_entry=source_entry,
+            )
+        else:
+            if (
+                not isinstance(manifest_file_override, str)
+                or not manifest_file_override.strip()
+            ):
+                fail(
+                    f"lane[{index}] manifest_file override must be a non-empty string when provided"
+                )
+            manifest_path = Path(manifest_file_override.strip())
+            if not manifest_path.is_absolute():
+                manifest_path = (repo_root / manifest_path).resolve()
+            if not manifest_path.is_file():
+                fail(
+                    f"lane manifest override does not exist for {lane_id}: {manifest_file_override}"
+                )
+            manifest_file = to_repo_relative(manifest_path, repo_root)
 
         inventory_lanes.append(
             {

@@ -1,0 +1,29 @@
+{
+  "schema_version": "kamn.kolme.lane-migration-matrix.v1",
+  "lanes": [
+    {
+      "lane_id": "non_kolme.canary.launch",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/canary/run_launch_canary_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/canary_launch_canary_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2643"
+    },
+    {
+      "lane_id": "non_kolme.canary.post_cutover_slo",
+      "priority": "P1",
+      "status": "planned",
+      "source_entry": "scripts/canary/run_post_cutover_slo_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/canary_post_cutover_slo_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2643"
+    }
+  ]
+}
