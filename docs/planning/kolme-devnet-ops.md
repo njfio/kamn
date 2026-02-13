@@ -1280,6 +1280,9 @@ Operator checkpoints:
 
 - Native API parity live-proof lane runner:
   - `bash scripts/kolme/run_local_native_api_parity_live_proof_lane.sh --mode dry-run --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json`
+- Wrapper routing remains manifest-backed:
+  - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_native_api_parity_live_proof_lane.sh --resolve-manifest-path`
+  - `scripts/framework/manifests/kolme_local_native_api_parity_live_proof_lane.json`
 - Explicit opt-in live proof execution:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_native_api_parity_live_proof_lane.sh --mode run --nonce-command "curl --silent --show-error --fail http://127.0.0.1:3000/get-next-nonce?pubkey=test-key" --broadcast-command "curl --silent --show-error --fail --request PUT --data '{\"message\":\"native-parity\",\"signature\":\"sig\",\"recovery_id\":1}' http://127.0.0.1:3000/broadcast" --finality-command "curl --silent --show-error --fail http://127.0.0.1:3000/block/1" --max-seconds 180 --output-json /tmp/kolme-local-native-api-parity-live-proof-summary.json`
 - Policy checker command:
