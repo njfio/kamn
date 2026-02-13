@@ -602,6 +602,7 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_signer_previous_rotation_epoch=1
 # runtime_signer_key_source_contract_version=v1
 # runtime_signer_key_source=env-local
+# runtime_signing_profile=kolme-fork-secp256k1-v1
 # runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX
 # runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF
 # runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK
@@ -624,6 +625,8 @@ python3 scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py 
 # runtime_signer_rotation_epoch_stale
 # runtime_signer_key_source_profile_pair_disallowed
 # runtime_signer_private_key_env_mismatch
+# runtime_signing_profile_mismatch
+# runtime_signing_profile_contract_mismatch
 # runtime_signer_fallback_private_key_present_violation
 # runtime_signer_managed_external_raw_private_key_present_violation
 # runtime_signer_attestation_approved_signers_not_unique

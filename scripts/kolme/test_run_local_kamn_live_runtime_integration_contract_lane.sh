@@ -442,6 +442,13 @@ if "--expected-provider-client-contract KolmeRuntimeCommitLiveProvider" not in r
     raise SystemExit("expected runtime commit command to include live provider contract pass-through")
 if "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1" not in runtime_command:
     raise SystemExit("expected runtime commit command to include real signing profile marker")
+if summary.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected integration summary to include runtime_signing_profile marker")
+contracts = summary.get("contracts", {})
+if not isinstance(contracts, dict):
+    raise SystemExit("expected integration summary contracts object")
+if contracts.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected integration summary contracts to include runtime_signing_profile marker")
 if str(finality_output_path) not in summary.get("artifact_paths", []):
     raise SystemExit("expected integration summary artifact paths to include runtime finality output file")
 if str(policy_output_path) not in summary.get("artifact_paths", []):

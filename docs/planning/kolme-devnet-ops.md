@@ -451,6 +451,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_previous_rotation_epoch=1`
     - `runtime_signer_key_source_contract_version=v1`
     - `runtime_signer_key_source=env-local`
+    - `runtime_signing_profile=kolme-fork-secp256k1-v1`
     - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
     - `runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF`
     - `runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
@@ -466,6 +467,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - NO-GO stale-rotation proof must surface `runtime_signer_rotation_epoch_stale` when failover rotation epoch is not strictly increasing.
   - NO-GO key-source/profile matrix proof must surface `runtime_signer_key_source_profile_pair_disallowed` when signer profile/key-source pair is outside the strict allowlist.
   - NO-GO signer-key-env drift proof must surface `runtime_signer_private_key_env_mismatch` when signer key env marker drifts from `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`.
+  - NO-GO runtime-signing-profile drift proof must surface `runtime_signing_profile_mismatch` when summary runtime signing profile markers drift from `kolme-fork-secp256k1-v1`.
+  - NO-GO runtime-signing-profile contract drift proof must surface `runtime_signing_profile_contract_mismatch` when contracts runtime signing profile markers drift from `kolme-fork-secp256k1-v1`.
   - NO-GO fallback signer key proof must surface `runtime_signer_fallback_private_key_present_violation` when `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK` is present.
   - NO-GO managed-external raw signer key proof must surface `runtime_signer_managed_external_raw_private_key_present_violation` when `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX` is present while `runtime_signer_key_source=managed-external`.
   - NO-GO synthetic-command regression proof must surface `runtime_commit_non_synthetic_submit_probe_missing` when `runtime_commit_command` omits `integration_kolme_fork_live_node_submit_reaches_endpoint`.
