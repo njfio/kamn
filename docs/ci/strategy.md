@@ -1911,9 +1911,11 @@ Ignored-test inventory drift policy (fail-closed):
   - `bash scripts/ci/test_check_ignored_test_inventory_metadata_policy.sh`
 - policy emits deterministic drift markers:
   - `status=pass|fail`
-  - `reason_codes=none|unexpected_ignored_tests_present|baseline_ignored_tests_missing|ignored_test_marker_without_function|ignored_test_metadata_missing|ignored_test_metadata_stale_entry`
+  - `reason_codes=none|unexpected_ignored_tests_present|baseline_ignored_tests_missing|ignored_test_marker_without_function|ignored_test_metadata_missing|ignored_test_metadata_stale_entry|high_priority_tracking_issue_missing`
   - `violation_count=<n>`
-- drift policy remains fail-closed on unapproved ignored-test inventory/metadata changes (`Regression: #2836`, `Regression: #2841`).
+- high-priority linkage requirement:
+  - `priority in {P0,P1}` requires `tracking_issue` in `#<issue-number>` format.
+- drift policy remains fail-closed on unapproved ignored-test inventory/metadata changes (`Regression: #2836`, `Regression: #2841`, `Regression: #2842`).
 
 Policy:
 - Warning at 90% of configured budget.
@@ -1963,6 +1965,7 @@ Fast-mode CI tooling regression coverage includes:
     - `reason_codes=ignored_test_marker_without_function`
     - `reason_codes=ignored_test_metadata_missing`
     - `reason_codes=ignored_test_metadata_stale_entry`
+    - `reason_codes=high_priority_tracking_issue_missing`
 - Generic test-harness LOC soft-budget contract lane (`test_run_test_harness_loc_soft_budget_contract_lane.sh`)
   - contract lane command:
     - `bash scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/test-harness-loc-soft-budget-contract-report.json`
