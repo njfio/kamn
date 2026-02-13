@@ -160,11 +160,15 @@ Fallback private-key surfaces are forbidden in deployment preflight and runtime 
   - `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
 - Required schema/reason markers:
   - `runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+  - `runtime_signer_fallback_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+  - `runtime_signer_managed_external_raw_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF`
   - `runtime_signer_fallback_private_key_present=false`
   - `runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF`
   - `runtime_signer_raw_private_key_present=false`
   - `runtime_signer_fallback_private_key_present_violation`
   - `runtime_signer_managed_external_raw_private_key_present_violation`
+  - `contracts.runtime_signer_fallback_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+  - `contracts.runtime_signer_managed_external_raw_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF`
   - `contracts.runtime_signer_fallback_private_key_allowed=false`
   - `contracts.runtime_signer_managed_external_raw_private_key_allowed=false`
 - Incident response and remediation:
