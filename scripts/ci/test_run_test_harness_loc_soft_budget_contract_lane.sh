@@ -47,6 +47,16 @@ if ! printf '%s\n' "$lane_output" | grep -q '^test_harness_loc_soft_budget_contr
   exit 1
 fi
 
+if ! printf '%s\n' "$lane_output" | grep -q '^test_harness_loc_soft_budget_contract_warn_decision=WARN$'; then
+  echo "expected trend WARN decision marker from contract lane" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$lane_output" | grep -q '^test_harness_loc_soft_budget_contract_fail_decision=NO-GO$'; then
+  echo "expected trend NO-GO decision marker from contract lane" >&2
+  exit 1
+fi
+
 if [ ! -f "$REPORT_FILE" ]; then
   echo "expected generic soft-budget contract report to be emitted" >&2
   exit 1
@@ -59,6 +69,11 @@ fi
 
 if ! grep -q '"combined_reason_code_contract": "pass"' "$REPORT_FILE"; then
   echo "expected combined reason-code contract to pass" >&2
+  exit 1
+fi
+
+if ! grep -q '"trend_reason_code_contract": "pass"' "$REPORT_FILE"; then
+  echo "expected trend reason-code contract to pass" >&2
   exit 1
 fi
 

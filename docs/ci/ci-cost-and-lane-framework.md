@@ -10,6 +10,7 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 - Script-surface delta baseline: `.ci/script-surface-baseline.env`
 - Test-harness soft budget: `.ci/test-harness-loc-soft-budget.env`
 - Test-harness baseline: `.ci/test-harness-loc-baseline.env`
+- Test-harness trend thresholds: `.ci/test-harness-loc-trend-thresholds.env`
 - Kolme command-surface soft budget: `.ci/kolme-command-surface-soft-budget.env`
 - Kolme command-surface baseline: `.ci/kolme-command-surface-baseline.env`
 - Kolme command-surface trend thresholds: `.ci/kolme-command-surface-trend-thresholds.env`
@@ -208,7 +209,7 @@ Generic test-harness soft-budget contract validation:
 
 ```bash
 bash scripts/ci/generate_test_harness_loc_report.sh --output-json /tmp/test-harness-loc-report.json
-bash scripts/ci/check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --output-json /tmp/test-harness-loc-soft-budget-report.json
+bash scripts/ci/check_test_harness_loc_soft_budget.sh --report-file /tmp/test-harness-loc-report.json --budget-file .ci/test-harness-loc-soft-budget.env --baseline-file .ci/test-harness-loc-baseline.env --trend-threshold-file .ci/test-harness-loc-trend-thresholds.env --output-json /tmp/test-harness-loc-soft-budget-report.json
 bash scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/test-harness-loc-soft-budget-contract-report.json
 ```
 
