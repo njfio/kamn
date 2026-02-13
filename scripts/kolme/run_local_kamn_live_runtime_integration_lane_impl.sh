@@ -42,7 +42,8 @@ RUNTIME_SIGNER_PRIVATE_KEY_ENV=""
 RUNTIME_SIGNER_KEY_REF_ENV=""
 RUNTIME_SIGNER_PUBLIC_KEY_ENV=""
 RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
-RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_REMEDIATION="unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
+RUNTIME_SIGNER_FALLBACK_GUARD_CONTRACT_VERSION="v2"
+RUNTIME_SIGNER_FALLBACK_GUARD_MODE="reject_if_present"
 RUNTIME_SIGNER_MANAGED_EXTERNAL_RAW_PRIVATE_KEY_REMEDIATION=""
 RUNTIME_SIGNER_PROFILE_OVERRIDE=""
 RUNTIME_SIGNER_KEY_SOURCE_OVERRIDE=""
@@ -819,7 +820,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" "$runtime_commit_command_profile" "$runtime_commit_policy_command_profile" "$runtime_commit_command_profile_version" "$RUNTIME_SIGNER_PROFILE_SELECTOR_ENV" "$RUNTIME_SIGNER_PROFILE" "$RUNTIME_SIGNER_PREVIOUS_PROFILE" "$RUNTIME_SIGNER_FAILOVER_ACTIVE" "$RUNTIME_SIGNER_ROTATION_EPOCH" "$RUNTIME_SIGNER_PREVIOUS_ROTATION_EPOCH" "$RUNTIME_SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$RUNTIME_SIGNER_KEY_SOURCE" "$RUNTIME_SIGNER_PRIVATE_KEY_ENV" "$RUNTIME_SIGNER_KEY_REF_ENV" "$RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV" "$runtime_signer_fallback_private_key_present" "$runtime_signer_raw_private_key_present" "$RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION" "$RUNTIME_SIGNING_PROFILE" "$RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_REMEDIATION" "$RUNTIME_SIGNER_MANAGED_EXTERNAL_RAW_PRIVATE_KEY_REMEDIATION" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$CHECKOUT_PATH" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$BASE_URL" "$FORK_CHAIN_VERSION" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$runtime_commit_command" "$RUNTIME_COMMIT_OUTPUT_FILE" "$RUNTIME_COMMIT_LIVE_SUMMARY" "$RUNTIME_COMMIT_LIVE_POLICY_REPORT" "$RUNTIME_COMMIT_FINALITY_COMMAND" "$RUNTIME_COMMIT_FINALITY_OUTPUT_FILE" "$RUNTIME_COMMIT_FINALITY_MAX_SECONDS" "$BOOTSTRAP_REPORT" "$LOCALHOST_SIGNED_REPORT" "$CONFORMANCE_REPORT" "$bootstrap_reason_code" "$localhost_signed_reason_code" "$conformance_reason_code" "$runtime_commit_reason_code" "$runtime_commit_policy_reason_code" "$RUNTIME_PROFILE" "$CHECK_FILE" "$RUNTIME_PROVIDER_CLIENT_CONTRACT" "$runtime_commit_command_profile" "$runtime_commit_policy_command_profile" "$runtime_commit_command_profile_version" "$RUNTIME_SIGNER_PROFILE_SELECTOR_ENV" "$RUNTIME_SIGNER_PROFILE" "$RUNTIME_SIGNER_PREVIOUS_PROFILE" "$RUNTIME_SIGNER_FAILOVER_ACTIVE" "$RUNTIME_SIGNER_ROTATION_EPOCH" "$RUNTIME_SIGNER_PREVIOUS_ROTATION_EPOCH" "$RUNTIME_SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$RUNTIME_SIGNER_KEY_SOURCE" "$RUNTIME_SIGNER_PRIVATE_KEY_ENV" "$RUNTIME_SIGNER_KEY_REF_ENV" "$RUNTIME_SIGNER_FALLBACK_GUARD_CONTRACT_VERSION" "$runtime_signer_fallback_private_key_present" "$runtime_signer_raw_private_key_present" "$RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION" "$RUNTIME_SIGNING_PROFILE" "$RUNTIME_SIGNER_FALLBACK_GUARD_MODE" "$RUNTIME_SIGNER_MANAGED_EXTERNAL_RAW_PRIVATE_KEY_REMEDIATION" <<'PY'
 from __future__ import annotations
 
 import json
@@ -869,12 +870,12 @@ runtime_signer_key_source_contract_version = sys.argv[40]
 runtime_signer_key_source = sys.argv[41]
 runtime_signer_private_key_env = sys.argv[42]
 runtime_signer_key_reference_env = sys.argv[43]
-runtime_signer_fallback_private_key_env = sys.argv[44]
+runtime_signer_fallback_guard_contract_version = sys.argv[44]
 runtime_signer_fallback_private_key_present = sys.argv[45] == "true"
 runtime_signer_raw_private_key_present = sys.argv[46] == "true"
 runtime_signer_attestation_schema_version = sys.argv[47]
 runtime_signing_profile = sys.argv[48]
-runtime_signer_fallback_private_key_remediation = sys.argv[49]
+runtime_signer_fallback_guard_mode = sys.argv[49]
 runtime_signer_managed_external_raw_private_key_remediation = sys.argv[50]
 
 checks = []
@@ -1070,8 +1071,8 @@ summary = {
     "runtime_signer_key_source": runtime_signer_key_source,
     "runtime_signer_private_key_env": runtime_signer_private_key_env,
     "runtime_signer_key_reference_env": runtime_signer_key_reference_env,
-    "runtime_signer_fallback_private_key_env": runtime_signer_fallback_private_key_env,
-    "runtime_signer_fallback_private_key_remediation": runtime_signer_fallback_private_key_remediation,
+    "runtime_signer_fallback_guard_contract_version": runtime_signer_fallback_guard_contract_version,
+    "runtime_signer_fallback_guard_mode": runtime_signer_fallback_guard_mode,
     "runtime_signer_managed_external_raw_private_key_remediation": runtime_signer_managed_external_raw_private_key_remediation,
     "runtime_signer_fallback_private_key_present": runtime_signer_fallback_private_key_present,
     "runtime_signer_raw_private_key_present": runtime_signer_raw_private_key_present,
@@ -1112,8 +1113,8 @@ summary = {
         "runtime_signer_key_source": runtime_signer_key_source,
         "runtime_signer_private_key_env": runtime_signer_private_key_env,
         "runtime_signer_key_reference_env": runtime_signer_key_reference_env,
-        "runtime_signer_fallback_private_key_env": runtime_signer_fallback_private_key_env,
-        "runtime_signer_fallback_private_key_remediation": runtime_signer_fallback_private_key_remediation,
+        "runtime_signer_fallback_guard_contract_version": runtime_signer_fallback_guard_contract_version,
+        "runtime_signer_fallback_guard_mode": runtime_signer_fallback_guard_mode,
         "runtime_signer_managed_external_raw_private_key_remediation": runtime_signer_managed_external_raw_private_key_remediation,
         "runtime_signer_fallback_private_key_allowed": False,
         "runtime_signer_fallback_private_key_command_marker_allowed": False,

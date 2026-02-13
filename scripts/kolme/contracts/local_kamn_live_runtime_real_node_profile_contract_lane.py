@@ -25,7 +25,8 @@ SIGNER_KEY_REF_ENV_BY_PROFILE = {
     "ops-primary": "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
     "ops-secondary": "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY",
 }
-FALLBACK_SIGNER_PRIVATE_KEY_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
+FALLBACK_SIGNER_GUARD_CONTRACT_VERSION = "v2"
+FALLBACK_SIGNER_GUARD_MODE = "reject_if_present"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -105,9 +106,6 @@ def main() -> int:
     expected_signer_key_source = "env-local"
     expected_signer_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[expected_signer_profile]
     expected_signer_key_reference_env = SIGNER_KEY_REF_ENV_BY_PROFILE[expected_signer_profile]
-    expected_fallback_signer_private_key_remediation = (
-        f"unset {FALLBACK_SIGNER_PRIVATE_KEY_ENV}"
-    )
     expected_managed_external_raw_private_key_remediation = (
         f"unset {expected_signer_private_key_env}; set {expected_signer_key_reference_env}"
     )
@@ -298,17 +296,17 @@ def main() -> int:
     if summary.get("runtime_signer_key_reference_env") != expected_signer_key_reference_env:
         print("expected signer key reference env marker in contract-lane summary", file=sys.stderr)
         return 1
-    if summary.get("runtime_signer_fallback_private_key_env") != FALLBACK_SIGNER_PRIVATE_KEY_ENV:
-        print("expected fallback signer private key env marker in contract-lane summary", file=sys.stderr)
-        return 1
     if (
-        summary.get("runtime_signer_fallback_private_key_remediation")
-        != expected_fallback_signer_private_key_remediation
+        summary.get("runtime_signer_fallback_guard_contract_version")
+        != FALLBACK_SIGNER_GUARD_CONTRACT_VERSION
     ):
         print(
-            "expected fallback signer private key remediation marker in contract-lane summary",
+            "expected fallback signer guard contract version marker in contract-lane summary",
             file=sys.stderr,
         )
+        return 1
+    if summary.get("runtime_signer_fallback_guard_mode") != FALLBACK_SIGNER_GUARD_MODE:
+        print("expected fallback signer guard mode marker in contract-lane summary", file=sys.stderr)
         return 1
     if (
         summary.get("runtime_signer_managed_external_raw_private_key_remediation")
@@ -415,17 +413,17 @@ def main() -> int:
     if contracts.get("runtime_signer_key_reference_env") != expected_signer_key_reference_env:
         print("expected contracts signer key reference env marker in contract-lane summary", file=sys.stderr)
         return 1
-    if contracts.get("runtime_signer_fallback_private_key_env") != FALLBACK_SIGNER_PRIVATE_KEY_ENV:
-        print("expected contracts fallback signer private key env marker in contract-lane summary", file=sys.stderr)
-        return 1
     if (
-        contracts.get("runtime_signer_fallback_private_key_remediation")
-        != expected_fallback_signer_private_key_remediation
+        contracts.get("runtime_signer_fallback_guard_contract_version")
+        != FALLBACK_SIGNER_GUARD_CONTRACT_VERSION
     ):
         print(
-            "expected contracts fallback signer private key remediation marker in contract-lane summary",
+            "expected contracts fallback signer guard contract version marker in contract-lane summary",
             file=sys.stderr,
         )
+        return 1
+    if contracts.get("runtime_signer_fallback_guard_mode") != FALLBACK_SIGNER_GUARD_MODE:
+        print("expected contracts fallback signer guard mode marker in contract-lane summary", file=sys.stderr)
         return 1
     if (
         contracts.get("runtime_signer_managed_external_raw_private_key_remediation")
@@ -1543,7 +1541,8 @@ def main() -> int:
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
         "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF",
-        "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+        "runtime_signer_fallback_guard_contract_version=v2",
+        "runtime_signer_fallback_guard_mode=reject_if_present",
         "runtime_signer_fallback_private_key_present=false",
         "runtime_signer_raw_private_key_present=false",
         "runtime_signer_fallback_private_key_present_violation",
@@ -1585,7 +1584,8 @@ def main() -> int:
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
         "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF",
-        "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+        "runtime_signer_fallback_guard_contract_version=v2",
+        "runtime_signer_fallback_guard_mode=reject_if_present",
         "runtime_signer_fallback_private_key_present=false",
         "runtime_signer_raw_private_key_present=false",
         "runtime_signer_fallback_private_key_present_violation",
@@ -1627,7 +1627,8 @@ def main() -> int:
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
         "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF",
-        "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+        "runtime_signer_fallback_guard_contract_version=v2",
+        "runtime_signer_fallback_guard_mode=reject_if_present",
         "runtime_signer_fallback_private_key_present=false",
         "runtime_signer_raw_private_key_present=false",
         "runtime_signer_fallback_private_key_present_violation",

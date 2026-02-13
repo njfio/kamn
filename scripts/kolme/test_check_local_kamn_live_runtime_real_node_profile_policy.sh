@@ -90,8 +90,8 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "runtime_signer_key_source": "env-local",
   "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
   "runtime_signer_key_reference_env": "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
-  "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
-  "runtime_signer_fallback_private_key_remediation": "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+  "runtime_signer_fallback_guard_contract_version": "v2",
+  "runtime_signer_fallback_guard_mode": "reject_if_present",
   "runtime_signer_managed_external_raw_private_key_remediation": "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF",
   "runtime_signer_fallback_private_key_present": false,
   "runtime_signer_raw_private_key_present": false,
@@ -140,8 +140,8 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "runtime_signer_key_source": "env-local",
     "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
     "runtime_signer_key_reference_env": "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
-    "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
-    "runtime_signer_fallback_private_key_remediation": "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+    "runtime_signer_fallback_guard_contract_version": "v2",
+    "runtime_signer_fallback_guard_mode": "reject_if_present",
     "runtime_signer_managed_external_raw_private_key_remediation": "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF",
     "runtime_signer_fallback_private_key_allowed": false,
     "runtime_signer_fallback_private_key_command_marker_allowed": false,
@@ -423,10 +423,10 @@ import pathlib
 import sys
 
 report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-report["runtime_signer_fallback_private_key_remediation"] = "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
+report["runtime_signer_fallback_guard_mode"] = "allow_if_present"
 contracts = report.get("contracts", {})
 if isinstance(contracts, dict):
-    contracts["runtime_signer_fallback_private_key_remediation"] = "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
+    contracts["runtime_signer_fallback_guard_mode"] = "allow_if_present"
 pathlib.Path(sys.argv[2]).write_text(
     json.dumps(report, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
@@ -444,17 +444,17 @@ fallback_remediation_drift_exit_code=$?
 set -e
 
 if [ "$fallback_remediation_drift_exit_code" -eq 0 ]; then
-  echo "expected fallback signer remediation marker drift proof to fail closed" >&2
+  echo "expected fallback signer guard-mode marker drift proof to fail closed" >&2
   exit 1
 fi
 
-if ! grep -q "runtime_signer_fallback_private_key_remediation_mismatch" "$TMP_ERR"; then
-  echo "expected fallback signer remediation marker mismatch reason for policy failure" >&2
+if ! grep -q "runtime_signer_fallback_guard_mode_mismatch" "$TMP_ERR"; then
+  echo "expected fallback signer guard-mode marker mismatch reason for policy failure" >&2
   exit 1
 fi
 
-if ! grep -q "runtime_signer_fallback_private_key_remediation_contract_mismatch" "$TMP_ERR"; then
-  echo "expected fallback signer remediation contract marker mismatch reason for policy failure" >&2
+if ! grep -q "runtime_signer_fallback_guard_mode_contract_mismatch" "$TMP_ERR"; then
+  echo "expected fallback signer guard-mode contract marker mismatch reason for policy failure" >&2
   exit 1
 fi
 
@@ -1020,7 +1020,8 @@ cat >"$TMP_REPORT_SYNTHETIC" <<'JSON'
   "runtime_signer_key_source_contract_version": "v1",
   "runtime_signer_key_source": "env-local",
   "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
-  "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+  "runtime_signer_fallback_guard_contract_version": "v2",
+  "runtime_signer_fallback_guard_mode": "reject_if_present",
   "runtime_signer_fallback_private_key_present": false,
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
@@ -1045,7 +1046,8 @@ cat >"$TMP_REPORT_SYNTHETIC" <<'JSON'
     "runtime_signer_key_source_contract_version": "v1",
     "runtime_signer_key_source": "env-local",
     "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
-    "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+    "runtime_signer_fallback_guard_contract_version": "v2",
+    "runtime_signer_fallback_guard_mode": "reject_if_present",
     "runtime_signer_fallback_private_key_allowed": false,
     "runtime_signer_fallback_private_key_command_marker_allowed": false,
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
@@ -1186,7 +1188,8 @@ cat >"$TMP_REPORT_INMEMORY" <<'JSON'
   "runtime_signer_key_source_contract_version": "v1",
   "runtime_signer_key_source": "env-local",
   "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
-  "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+  "runtime_signer_fallback_guard_contract_version": "v2",
+  "runtime_signer_fallback_guard_mode": "reject_if_present",
   "runtime_signer_fallback_private_key_present": false,
   "runtime_commit_command_profile": "real-node-non-synthetic-v1",
   "runtime_commit_policy_command_profile": "real-node-non-synthetic-v1",
@@ -1211,7 +1214,8 @@ cat >"$TMP_REPORT_INMEMORY" <<'JSON'
     "runtime_signer_key_source_contract_version": "v1",
     "runtime_signer_key_source": "env-local",
     "runtime_signer_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
-    "runtime_signer_fallback_private_key_env": "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+    "runtime_signer_fallback_guard_contract_version": "v2",
+    "runtime_signer_fallback_guard_mode": "reject_if_present",
     "runtime_signer_fallback_private_key_allowed": false,
     "runtime_signer_fallback_private_key_command_marker_allowed": false,
     "runtime_commit_endpoint": "/broadcast/runtime-commit",
@@ -1395,10 +1399,10 @@ if summary.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
     raise SystemExit("expected runtime signing profile marker in runner-generated summary")
 if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected signer private key env marker in runner-generated summary")
-if summary.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
-    raise SystemExit("expected fallback signer private key env marker in runner-generated summary")
-if summary.get("runtime_signer_fallback_private_key_remediation") != "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
-    raise SystemExit("expected fallback signer private key remediation marker in runner-generated summary")
+if summary.get("runtime_signer_fallback_guard_contract_version") != "v2":
+    raise SystemExit("expected fallback signer guard contract version marker in runner-generated summary")
+if summary.get("runtime_signer_fallback_guard_mode") != "reject_if_present":
+    raise SystemExit("expected fallback signer guard mode marker in runner-generated summary")
 if summary.get("runtime_signer_managed_external_raw_private_key_remediation") != "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF":
     raise SystemExit("expected managed-external signer raw private key remediation marker in runner-generated summary")
 if summary.get("runtime_signer_fallback_private_key_present") is not False:
@@ -1463,18 +1467,18 @@ if contracts.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
     raise SystemExit("expected contracts runtime signing profile marker in secondary runner-generated summary")
 if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY":
     raise SystemExit("expected contracts secondary signer private key env marker in secondary runner-generated summary")
-if summary.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
-    raise SystemExit("expected fallback signer private key env marker in secondary runner-generated summary")
-if summary.get("runtime_signer_fallback_private_key_remediation") != "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
-    raise SystemExit("expected fallback signer private key remediation marker in secondary runner-generated summary")
+if summary.get("runtime_signer_fallback_guard_contract_version") != "v2":
+    raise SystemExit("expected fallback signer guard contract version marker in secondary runner-generated summary")
+if summary.get("runtime_signer_fallback_guard_mode") != "reject_if_present":
+    raise SystemExit("expected fallback signer guard mode marker in secondary runner-generated summary")
 if summary.get("runtime_signer_managed_external_raw_private_key_remediation") != "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY; set KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY":
     raise SystemExit("expected managed-external signer raw private key remediation marker in secondary runner-generated summary")
 if summary.get("runtime_signer_fallback_private_key_present") is not False:
     raise SystemExit("expected fallback signer private key presence marker false in secondary runner-generated summary")
-if contracts.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
-    raise SystemExit("expected contracts fallback signer private key env marker in secondary runner-generated summary")
-if contracts.get("runtime_signer_fallback_private_key_remediation") != "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
-    raise SystemExit("expected contracts fallback signer private key remediation marker in secondary runner-generated summary")
+if contracts.get("runtime_signer_fallback_guard_contract_version") != "v2":
+    raise SystemExit("expected contracts fallback signer guard contract version marker in secondary runner-generated summary")
+if contracts.get("runtime_signer_fallback_guard_mode") != "reject_if_present":
+    raise SystemExit("expected contracts fallback signer guard mode marker in secondary runner-generated summary")
 if contracts.get("runtime_signer_managed_external_raw_private_key_remediation") != "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY; set KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY":
     raise SystemExit("expected contracts managed-external signer raw private key remediation marker in secondary runner-generated summary")
 if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:

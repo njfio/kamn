@@ -16,7 +16,8 @@ RUNNER = ROOT_DIR / "scripts/kolme/run_local_kamn_live_runtime_integration_lane.
 CHECKER = ROOT_DIR / "scripts/kolme/check_local_kamn_live_runtime_integration_policy.py"
 DOC_FILE = ROOT_DIR / "docs/planning/kolme-devnet-ops.md"
 README_FILE = ROOT_DIR / "README.md"
-FALLBACK_SIGNER_PRIVATE_KEY_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
+FALLBACK_SIGNER_GUARD_CONTRACT_VERSION = "v2"
+FALLBACK_SIGNER_GUARD_MODE = "reject_if_present"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -175,8 +176,17 @@ def main() -> int:
         if not isinstance(diagnostic_hint, str) or not diagnostic_hint.strip():
             print("expected runtime commit failure diagnostic hint marker in summary", file=sys.stderr)
             return 1
-        if summary_payload.get("runtime_signer_fallback_private_key_env") != FALLBACK_SIGNER_PRIVATE_KEY_ENV:
-            print("expected fallback signer private key env marker in summary", file=sys.stderr)
+        if (
+            summary_payload.get("runtime_signer_fallback_guard_contract_version")
+            != FALLBACK_SIGNER_GUARD_CONTRACT_VERSION
+        ):
+            print(
+                "expected fallback signer guard contract version marker in summary",
+                file=sys.stderr,
+            )
+            return 1
+        if summary_payload.get("runtime_signer_fallback_guard_mode") != FALLBACK_SIGNER_GUARD_MODE:
+            print("expected fallback signer guard mode marker in summary", file=sys.stderr)
             return 1
         if summary_payload.get("runtime_signer_fallback_private_key_present") is not False:
             print("expected fallback signer private key presence marker false in dry-run summary", file=sys.stderr)
@@ -225,8 +235,17 @@ def main() -> int:
         if not isinstance(contracts_payload, dict):
             print("expected contracts object in dry-run summary", file=sys.stderr)
             return 1
-        if contracts_payload.get("runtime_signer_fallback_private_key_env") != FALLBACK_SIGNER_PRIVATE_KEY_ENV:
-            print("expected contracts fallback signer private key env marker in summary", file=sys.stderr)
+        if (
+            contracts_payload.get("runtime_signer_fallback_guard_contract_version")
+            != FALLBACK_SIGNER_GUARD_CONTRACT_VERSION
+        ):
+            print(
+                "expected contracts fallback signer guard contract version marker in summary",
+                file=sys.stderr,
+            )
+            return 1
+        if contracts_payload.get("runtime_signer_fallback_guard_mode") != FALLBACK_SIGNER_GUARD_MODE:
+            print("expected contracts fallback signer guard mode marker in summary", file=sys.stderr)
             return 1
         if contracts_payload.get("runtime_signer_fallback_private_key_allowed") is not False:
             print("expected contracts fallback signer private key allowed=false marker in summary", file=sys.stderr)
@@ -809,8 +828,14 @@ def main() -> int:
         print("expected Kolme devnet ops doc to include runtime finality contract composition regression marker", file=sys.stderr)
         return 1
     # Regression: #2302
-    if "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK" not in doc_text:
-        print("expected Kolme devnet ops doc to include fallback signer private key env marker", file=sys.stderr)
+    if "runtime_signer_fallback_guard_contract_version=v2" not in doc_text:
+        print(
+            "expected Kolme devnet ops doc to include fallback signer guard contract version marker",
+            file=sys.stderr,
+        )
+        return 1
+    if "runtime_signer_fallback_guard_mode=reject_if_present" not in doc_text:
+        print("expected Kolme devnet ops doc to include fallback signer guard mode marker", file=sys.stderr)
         return 1
     if "runtime_signer_fallback_private_key_present=false" not in doc_text:
         print("expected Kolme devnet ops doc to include fallback signer private key presence marker", file=sys.stderr)
@@ -884,8 +909,11 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    if "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK" not in readme_text:
-        print("expected README to include fallback signer private key env marker", file=sys.stderr)
+    if "runtime_signer_fallback_guard_contract_version=v2" not in readme_text:
+        print("expected README to include fallback signer guard contract version marker", file=sys.stderr)
+        return 1
+    if "runtime_signer_fallback_guard_mode=reject_if_present" not in readme_text:
+        print("expected README to include fallback signer guard mode marker", file=sys.stderr)
         return 1
     if "runtime_signer_fallback_private_key_present=false" not in readme_text:
         print("expected README to include fallback signer private key presence marker", file=sys.stderr)

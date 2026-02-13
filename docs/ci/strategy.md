@@ -406,7 +406,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signing_profile=kolme-fork-secp256k1-v1`
       - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
       - `runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF`
-      - `runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+      - `runtime_signer_fallback_guard_contract_version=v2`
+      - `runtime_signer_fallback_guard_mode=reject_if_present`
       - `runtime_signer_fallback_private_key_present=false`
       - `runtime_signer_raw_private_key_present=false`
       - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`

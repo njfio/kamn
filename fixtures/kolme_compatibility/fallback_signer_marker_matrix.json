@@ -8,7 +8,7 @@
       "parent_issue": "#2524",
       "source_entry": "scripts/kolme/run_local_kamn_live_runtime_integration_lane_impl.sh",
       "surface": "runner_guard",
-      "target_issue": "#2526"
+      "target_issue": "#2530"
     },
     {
       "classification": "keep",
@@ -18,7 +18,27 @@
       "parent_issue": "#2524",
       "source_entry": "scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py",
       "surface": "policy_reason_code",
-      "target_issue": "#2526"
+      "target_issue": "#2530"
+    },
+    {
+      "classification": "keep",
+      "marker_id": "runtime_signer_fallback_guard_contract_version",
+      "marker_value": "runtime_signer_fallback_guard_contract_version",
+      "owner": "devops",
+      "parent_issue": "#2524",
+      "source_entry": "scripts/kolme/run_local_kamn_live_runtime_integration_lane_impl.sh",
+      "surface": "contracts_field",
+      "target_issue": "#2530"
+    },
+    {
+      "classification": "keep",
+      "marker_id": "runtime_signer_fallback_guard_mode",
+      "marker_value": "runtime_signer_fallback_guard_mode",
+      "owner": "devops",
+      "parent_issue": "#2524",
+      "source_entry": "scripts/kolme/run_local_kamn_live_runtime_integration_lane_impl.sh",
+      "surface": "summary_field",
+      "target_issue": "#2530"
     },
     {
       "classification": "keep",
@@ -28,7 +48,7 @@
       "parent_issue": "#2524",
       "source_entry": "scripts/kolme/run_local_kamn_live_runtime_integration_lane_impl.sh",
       "surface": "summary_field",
-      "target_issue": "#2526"
+      "target_issue": "#2530"
     },
     {
       "classification": "deprecate",
@@ -38,27 +58,7 @@
       "parent_issue": "#2524",
       "source_entry": "scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py",
       "surface": "contracts_field",
-      "target_issue": "#2526"
-    },
-    {
-      "classification": "deprecate",
-      "marker_id": "runtime_signer_fallback_private_key_env",
-      "marker_value": "runtime_signer_fallback_private_key_env",
-      "owner": "devops",
-      "parent_issue": "#2524",
-      "source_entry": "scripts/kolme/run_local_kamn_live_runtime_integration_lane_impl.sh",
-      "surface": "summary_field",
-      "target_issue": "#2526"
-    },
-    {
-      "classification": "deprecate",
-      "marker_id": "runtime_signer_fallback_private_key_remediation",
-      "marker_value": "runtime_signer_fallback_private_key_remediation",
-      "owner": "devops",
-      "parent_issue": "#2524",
-      "source_entry": "scripts/kolme/run_local_kamn_live_runtime_integration_lane_impl.sh",
-      "surface": "summary_field",
-      "target_issue": "#2526"
+      "target_issue": "#2530"
     },
     {
       "classification": "remove-target",
@@ -68,7 +68,7 @@
       "parent_issue": "#2524",
       "source_entry": "docs/planning/kolme-devnet-ops.md",
       "surface": "docs_marker",
-      "target_issue": "#2526"
+      "target_issue": "#2530"
     },
     {
       "classification": "remove-target",
@@ -78,7 +78,7 @@
       "parent_issue": "#2524",
       "source_entry": "scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py",
       "surface": "contracts_field",
-      "target_issue": "#2526"
+      "target_issue": "#2530"
     }
   ],
   "schema_version": "kamn.kolme.fallback-signer-marker-matrix.v1"
