@@ -97,6 +97,14 @@ fn main_module_extraction_contract_removes_inline_signer_payload_impls() {
         !main_rs.contains("fn render_kolme_live_native_direct_message("),
         "main.rs should not keep inline native direct message renderer"
     );
+    assert!(
+        !main_rs.contains("fn normalize_kolme_live_signer_profile_selector("),
+        "main.rs should not keep inline signer profile normalization helper"
+    );
+    assert!(
+        !main_rs.contains("fn normalize_kolme_live_signer_key_source("),
+        "main.rs should not keep inline signer key-source normalization helper"
+    );
 }
 
 #[test]
@@ -136,6 +144,14 @@ fn main_module_extraction_contract_keeps_impls_in_new_modules() {
     assert!(
         signer_rs.contains("pub(crate) fn resolve_kolme_live_nonce("),
         "signer module should own nonce resolver"
+    );
+    assert!(
+        signer_rs.contains("pub(crate) fn normalize_kolme_live_signer_profile_selector("),
+        "signer module should own signer profile normalization helper"
+    );
+    assert!(
+        signer_rs.contains("pub(crate) fn normalize_kolme_live_signer_key_source("),
+        "signer module should own signer key-source normalization helper"
     );
     assert!(
         wire_payload_rs.contains("pub(crate) fn render_kolme_live_native_direct_message("),

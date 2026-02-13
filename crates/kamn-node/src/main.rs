@@ -25,6 +25,9 @@ use signer::{
     resolve_kolme_live_signer_private_key_env_name, sign_kolme_live_managed_external_message,
     KolmeForkSecp256k1SignerAdapter,
 };
+use signer::{
+    normalize_kolme_live_signer_key_source, normalize_kolme_live_signer_profile_selector,
+};
 #[cfg(test)]
 use wire_payload::render_kolme_live_native_direct_message;
 
@@ -656,40 +659,6 @@ where
         output_mode,
         diagnostics_mode,
     })
-}
-
-fn normalize_kolme_live_signer_profile_selector(value: &str) -> Result<&'static str, ConfigError> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        return Err(ConfigError::RuntimeKolmeLive(
-            "--kolme-live-signer-profile must not be empty".to_owned(),
-        ));
-    }
-    match trimmed {
-        KOLME_LIVE_SIGNER_PROFILE_PRIMARY => Ok(KOLME_LIVE_SIGNER_PROFILE_PRIMARY),
-        KOLME_LIVE_SIGNER_PROFILE_SECONDARY => Ok(KOLME_LIVE_SIGNER_PROFILE_SECONDARY),
-        _ => Err(ConfigError::RuntimeKolmeLive(format!(
-            "--kolme-live-signer-profile has unsupported profile: {trimmed}"
-        ))),
-    }
-}
-
-fn normalize_kolme_live_signer_key_source(value: &str) -> Result<&'static str, ConfigError> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        return Err(ConfigError::RuntimeKolmeLive(
-            "--kolme-live-signer-key-source must not be empty".to_owned(),
-        ));
-    }
-    match trimmed {
-        KOLME_LIVE_SIGNER_KEY_SOURCE_ENV_LOCAL => Ok(KOLME_LIVE_SIGNER_KEY_SOURCE_ENV_LOCAL),
-        KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL => {
-            Ok(KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL)
-        }
-        _ => Err(ConfigError::RuntimeKolmeLive(format!(
-            "--kolme-live-signer-key-source has unsupported key source: {trimmed}"
-        ))),
-    }
 }
 
 fn parse_state_version_arg(value: &str) -> Result<u64, ConfigError> {
