@@ -86,6 +86,22 @@ assert_docs_only_invariants() {
     "live_transport_parity_languages"
 }
 
+assert_ci_doc_contract_scope() {
+  local output="$1"
+  local context="$2"
+  assert_eq "$(extract_output "$output" "run_rust")" "false" "$context should avoid rust full fallback"
+  assert_eq "$(extract_output "$output" "run_ci_tool_checks")" "true" "$context must run CI tool checks"
+  assert_eq "$(extract_output "$output" "unknown_risk_changed")" "false" "$context should be classified"
+  assert_eq "$(extract_output "$output" "test_scope")" "ci-doc-contract" "$context should use ci-doc-contract scope"
+}
+
+assert_ci_doc_contract_trend_scope() {
+  local output="$1"
+  local context="$2"
+  assert_ci_doc_contract_scope "$output" "$context"
+  assert_eq "$(extract_output "$output" "run_script_surface_budget_checks")" "true" "$context should run script-surface budget checks"
+}
+
 run_selector_with_bridge_deep() {
   local changed_files="$1"
   local bridge_deep="${2:-false}"
@@ -135,23 +151,13 @@ assert_eq "$(extract_output "$ci_strategy_docs_output" "run_ci_tool_checks")" "t
 assert_eq "$(extract_output "$ci_strategy_docs_output" "test_scope")" "ci-doc-contract" "ci strategy docs should set ci-doc-contract scope"
 
 wave10_matrix_fixture_output="$(run_selector $'fixtures/ci/kolme_wave10_wrapper_family_matrix.json')"
-assert_eq "$(extract_output "$wave10_matrix_fixture_output" "run_rust")" "false" "wave-10 wrapper-family matrix fixture changes should avoid rust full fallback"
-assert_eq "$(extract_output "$wave10_matrix_fixture_output" "run_ci_tool_checks")" "true" "wave-10 wrapper-family matrix fixture changes must run CI tool checks"
-assert_eq "$(extract_output "$wave10_matrix_fixture_output" "unknown_risk_changed")" "false" "wave-10 wrapper-family matrix fixture changes should be classified"
-assert_eq "$(extract_output "$wave10_matrix_fixture_output" "test_scope")" "ci-doc-contract" "wave-10 wrapper-family matrix fixture changes should use ci-doc-contract scope"
+assert_ci_doc_contract_scope "$wave10_matrix_fixture_output" "wave-10 wrapper-family matrix fixture changes"
 
 wave10_threshold_fixture_output="$(run_selector $'fixtures/ci/kolme_wave10_wrapper_family_trend_thresholds.json')"
-assert_eq "$(extract_output "$wave10_threshold_fixture_output" "run_rust")" "false" "wave-10 trend threshold fixture changes should avoid rust full fallback"
-assert_eq "$(extract_output "$wave10_threshold_fixture_output" "run_ci_tool_checks")" "true" "wave-10 trend threshold fixture changes must run CI tool checks"
-assert_eq "$(extract_output "$wave10_threshold_fixture_output" "unknown_risk_changed")" "false" "wave-10 trend threshold fixture changes should be classified"
-assert_eq "$(extract_output "$wave10_threshold_fixture_output" "test_scope")" "ci-doc-contract" "wave-10 trend threshold fixture changes should use ci-doc-contract scope"
+assert_ci_doc_contract_scope "$wave10_threshold_fixture_output" "wave-10 trend threshold fixture changes"
 
 wave10_trend_checker_script_output="$(run_selector $'scripts/ci/check_kolme_wave10_wrapper_family_budget_trend.sh')"
-assert_eq "$(extract_output "$wave10_trend_checker_script_output" "run_rust")" "false" "wave-10 trend checker script changes should avoid rust full fallback"
-assert_eq "$(extract_output "$wave10_trend_checker_script_output" "run_ci_tool_checks")" "true" "wave-10 trend checker script changes must run CI tool checks"
-assert_eq "$(extract_output "$wave10_trend_checker_script_output" "run_script_surface_budget_checks")" "true" "wave-10 trend checker script changes should run script-surface budget checks"
-assert_eq "$(extract_output "$wave10_trend_checker_script_output" "unknown_risk_changed")" "false" "wave-10 trend checker script changes should be classified"
-assert_eq "$(extract_output "$wave10_trend_checker_script_output" "test_scope")" "ci-doc-contract" "wave-10 trend checker script changes should use ci-doc-contract scope"
+assert_ci_doc_contract_trend_scope "$wave10_trend_checker_script_output" "wave-10 trend checker script changes"
 
 assert_non_kolme_wave_wrapper_family_contract_scope() {
   local wave="$1"
