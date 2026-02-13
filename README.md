@@ -11,6 +11,14 @@ KAMN (Kolme AI Agent Messaging Network) is a privacy-first, auditable coordinati
 - `fixtures/`: replay/contract fixtures used by fast and deep lanes.
 - `docs/foundation/`: implementation contracts mapped to PRD scope.
 
+## Dependency Posture
+
+- `kamn-core` intentionally includes TLS/runtime transport dependencies for live HTTPS provider support:
+  - `rustls`
+  - `rustls-pemfile`
+  - `webpki-roots`
+- These are used by the Kolme live runtime HTTP transport path; local deterministic flows still run without network/TLS requirements.
+
 ## Quickstart
 
 ### Prerequisites

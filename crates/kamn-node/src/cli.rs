@@ -296,17 +296,23 @@ where
                 "--kolme-live-signing-profile",
             ));
         }
-        let provider_hint = kolme_live_provider_hint
-            .as_ref()
-            .expect("provider hint is required for kolme-live mode");
+        let provider_hint =
+            kolme_live_provider_hint
+                .as_deref()
+                .ok_or(ConfigError::MissingArgumentValue(
+                    "--kolme-live-provider-hint",
+                ))?;
         if provider_hint.contains(KOLME_IN_MEMORY_PROVIDER_MARKER) {
             return Err(ConfigError::InvalidKolmeLiveProviderHint(
                 provider_hint.to_owned(),
             ));
         }
-        let signing_profile = kolme_live_signing_profile
-            .as_ref()
-            .expect("signing profile is required for kolme-live mode");
+        let signing_profile =
+            kolme_live_signing_profile
+                .as_deref()
+                .ok_or(ConfigError::MissingArgumentValue(
+                    "--kolme-live-signing-profile",
+                ))?;
         if signing_profile != KOLME_LIVE_SIGNING_PROFILE {
             return Err(ConfigError::InvalidKolmeLiveSigningProfile(
                 signing_profile.to_owned(),
