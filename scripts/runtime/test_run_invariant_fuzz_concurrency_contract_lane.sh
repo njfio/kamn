@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE_SCRIPT="$ROOT_DIR/scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh"
+SHARED_CONTRACT="$ROOT_DIR/scripts/runtime/invariant_fuzz_concurrency_contract_lane_contract.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_invariant_fuzz_concurrency_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_invariant_fuzz_concurrency_policy.sh"
 TESTING_STRATEGY_DOC="$ROOT_DIR/docs/testing/invariant-and-fuzz-strategy.md"
 TMP_DIR="$(mktemp -d)"
@@ -15,6 +18,11 @@ fi
 
 if [ ! -x "$POLICY_CHECKER" ]; then
   echo "expected invariant/fuzz/concurrency policy checker script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$SHARED_CONTRACT" ]; then
+  echo "expected invariant/fuzz/concurrency shared contract module to be executable" >&2
   exit 1
 fi
 
@@ -63,17 +71,37 @@ assert report["fuzz_replay_test_count"] >= 10
 assert report["concurrency_replay_schema_version"] == "kamn.runtime.concurrency-mutation-contract-report.v1"
 assert report["concurrency_replay_artifact_key"] == "concurrency_mutation_replay:v1"
 assert report["concurrency_replay_test_count"] >= 12
-# Regression: #897
 assert report["reason_codes"] == ["none"]
 PY
 
-if ! grep -Fq "check_invariant_fuzz_concurrency_policy.sh" "$LANE_SCRIPT"; then
+if ! grep -Fq "check_invariant_fuzz_concurrency_policy.sh" "$SHARED_CONTRACT"; then
   echo "expected invariant/fuzz/concurrency lane to enforce policy checker" >&2
   exit 1
 fi
 
-if ! grep -Fq "docs/testing/invariant-and-fuzz-strategy.md" "$LANE_SCRIPT"; then
+if ! grep -Fq "docs/testing/invariant-and-fuzz-strategy.md" "$SHARED_CONTRACT"; then
   echo "expected invariant/fuzz/concurrency lane to enforce testing strategy doc contract" >&2
+  exit 1
+fi
+
+if [ ! -L "$LANE_SCRIPT" ]; then
+  echo "expected invariant/fuzz/concurrency wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$LANE_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected invariant/fuzz/concurrency wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$LANE_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected invariant/fuzz/concurrency wrapper to resolve runtime manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -Fq "invariant_fuzz_concurrency_contract_lane_contract.sh" "$MANIFEST_FILE"; then
+  echo "expected invariant/fuzz/concurrency manifest to dispatch shared contract module" >&2
   exit 1
 fi
 

@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/runtime/run_live_network_partition_reconnect_contract_lane.sh"
+SHARED_CONTRACT="$ROOT_DIR/scripts/runtime/live_network_partition_reconnect_contract_lane_contract.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_live_network_partition_reconnect_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
@@ -11,12 +14,17 @@ if [ ! -x "$CONTRACT_LANE" ]; then
   exit 1
 fi
 
-if ! grep -q "select_live_network_partition_reconnect_lane.sh" "$CONTRACT_LANE"; then
+if [ ! -x "$SHARED_CONTRACT" ]; then
+  echo "expected partition/reconnect shared contract module to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "select_live_network_partition_reconnect_lane.sh" "$SHARED_CONTRACT"; then
   echo "expected partition/reconnect contract lane to use lane selector" >&2
   exit 1
 fi
 
-if ! grep -q "check_live_network_partition_reconnect_policy.sh" "$CONTRACT_LANE"; then
+if ! grep -q "check_live_network_partition_reconnect_policy.sh" "$SHARED_CONTRACT"; then
   echo "expected partition/reconnect contract lane to enforce policy checker" >&2
   exit 1
 fi
@@ -74,5 +82,26 @@ if payload.get("cadence") != "scheduled":
 if payload.get("status") != "pass":
     raise SystemExit("expected deep lane report status=pass")
 PY
+
+if [ ! -L "$CONTRACT_LANE" ]; then
+  echo "expected partition/reconnect wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$CONTRACT_LANE")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected partition/reconnect wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$CONTRACT_LANE")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected partition/reconnect wrapper to resolve runtime manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -Fq "live_network_partition_reconnect_contract_lane_contract.sh" "$MANIFEST_FILE"; then
+  echo "expected partition/reconnect manifest to dispatch shared contract module" >&2
+  exit 1
+fi
 
 echo "partition/reconnect contract lane script tests passed."

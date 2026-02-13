@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "runtime.live_network_partition_reconnect.contract",
+  "evidence_key": "runtime_live_network_partition_reconnect_contract_lane:v1",
+  "reason_key": "runtime_live_network_partition_reconnect_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "bash",
+      "scripts/runtime/live_network_partition_reconnect_contract_lane_contract.sh"
+    ]
+  }
+}

@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/runtime/run_input_mutation_contract_lane.sh"
+SHARED_CONTRACT="$ROOT_DIR/scripts/runtime/input_mutation_contract_lane_contract.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_input_mutation_contract_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -11,47 +14,52 @@ if [ ! -x "$CONTRACT_LANE" ]; then
   exit 1
 fi
 
-if ! grep -q "functional_envelope_mutation_suite_covers_malformed_truncated_and_tampered_classes" "$CONTRACT_LANE"; then
+if [ ! -x "$SHARED_CONTRACT" ]; then
+  echo "expected runtime input mutation shared contract module to be executable" >&2
+  exit 1
+fi
+
+if ! grep -q "functional_envelope_mutation_suite_covers_malformed_truncated_and_tampered_classes" "$SHARED_CONTRACT"; then
   echo "expected mutation lane to include malformed/truncated/tampered envelope coverage" >&2
   exit 1
 fi
 
-if ! grep -q "functional_did_mutation_suite_covers_normalization_encoding_and_method_mismatch_classes" "$CONTRACT_LANE"; then
+if ! grep -q "functional_did_mutation_suite_covers_normalization_encoding_and_method_mismatch_classes" "$SHARED_CONTRACT"; then
   echo "expected mutation lane to include normalization/encoding/method mismatch DID coverage" >&2
   exit 1
 fi
 
-if ! grep -q "regression_envelope_mutation_reason_signatures_remain_stable" "$CONTRACT_LANE"; then
+if ! grep -q "regression_envelope_mutation_reason_signatures_remain_stable" "$SHARED_CONTRACT"; then
   echo "expected mutation lane to include envelope fail-closed regression coverage" >&2
   exit 1
 fi
 
-if ! grep -q "regression_did_mutation_reason_signatures_remain_stable" "$CONTRACT_LANE"; then
+if ! grep -q "regression_did_mutation_reason_signatures_remain_stable" "$SHARED_CONTRACT"; then
   echo "expected mutation lane to include DID fail-closed regression coverage" >&2
   exit 1
 fi
 
-if ! grep -q "run_zk_witness_mutation_contract_lane.sh" "$CONTRACT_LANE"; then
+if ! grep -q "run_zk_witness_mutation_contract_lane.sh" "$SHARED_CONTRACT"; then
   echo "expected mutation lane to include ZK witness mutation contract lane coverage" >&2
   exit 1
 fi
 
-if ! grep -q "KAMN_RUNTIME_ZK_WITNESS_MUTATION_DEEP" "$CONTRACT_LANE"; then
+if ! grep -q "KAMN_RUNTIME_ZK_WITNESS_MUTATION_DEEP" "$SHARED_CONTRACT"; then
   echo "expected mutation lane to support fast/deep ZK witness mutation routing" >&2
   exit 1
 fi
 
-if ! grep -q "run_input_mutation_coverage_guided_contract_lane.sh" "$CONTRACT_LANE"; then
+if ! grep -q "run_input_mutation_coverage_guided_contract_lane.sh" "$SHARED_CONTRACT"; then
   echo "expected mutation lane to include bounded coverage-guided target lane coverage" >&2
   exit 1
 fi
 
-if ! grep -q "KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_LOCAL_ONLY" "$CONTRACT_LANE"; then
+if ! grep -q "KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_LOCAL_ONLY" "$SHARED_CONTRACT"; then
   echo "expected mutation lane to keep coverage-guided deep lane local-only by default" >&2
   exit 1
 fi
 
-if ! grep -q -- "--target" "$CONTRACT_LANE"; then
+if ! grep -q -- "--target" "$SHARED_CONTRACT"; then
   echo "expected mutation lane to expose --target selector for bounded local envelope/did smoke runs" >&2
   exit 1
 fi
@@ -120,5 +128,26 @@ assert report["zk_witness_lane_mode"] == "not-run"
 assert report["coverage_guided_lane_mode"] == "not-run"
 assert report["coverage_guided_deep_mode"] == "not-run"
 PY
+
+if [ ! -L "$CONTRACT_LANE" ]; then
+  echo "expected runtime input mutation contract lane wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$CONTRACT_LANE")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected runtime input mutation wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$CONTRACT_LANE")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected runtime input mutation wrapper to resolve runtime manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -Fq "input_mutation_contract_lane_contract.sh" "$MANIFEST_FILE"; then
+  echo "expected runtime input mutation manifest to dispatch shared contract module" >&2
+  exit 1
+fi
 
 echo "runtime input mutation contract lane script tests passed."
