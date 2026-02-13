@@ -174,6 +174,7 @@ fn map_kolme_live_secure_signer_backend_error(error: SignerBackendError) -> Conf
 struct ManagedExternalBackendSignature {
     signature_hex: String,
     recovery_id: u8,
+    signer_public_key_hex: String,
 }
 
 fn resolve_optional_kolme_live_managed_signer_command() -> Result<Option<String>, ConfigError> {
@@ -251,6 +252,7 @@ fn parse_kolme_live_managed_signer_command_output(
 ) -> Result<ManagedExternalBackendSignature, ConfigError> {
     let mut signature_hex = None;
     let mut recovery_id = None;
+    let mut signer_public_key_hex = None;
     for line in stdout.lines() {
         let trimmed = line.trim();
         if trimmed.is_empty() {
@@ -283,6 +285,15 @@ fn parse_kolme_live_managed_signer_command_output(
                         "managed-external signer backend response recovery_id must be an integer, found '{value}' (managed_signer_backend_response_malformed)"
                     ))
                 })?);
+            }
+            "signer_public_key_hex" => {
+                let value = value.trim();
+                if value.is_empty() {
+                    return Err(ConfigError::RuntimeKolmeLive(
+                        "managed-external signer backend response missing signer_public_key_hex value (managed_signer_backend_response_provenance_missing)".to_owned(),
+                    ));
+                }
+                signer_public_key_hex = Some(value.to_owned());
             }
             _ => {}
         }
@@ -319,10 +330,116 @@ fn parse_kolme_live_managed_signer_command_output(
             "managed-external signer backend response recovery_id must be within secp256k1 range [0,3], found {recovery_id} (managed_signer_backend_response_malformed)"
         )));
     }
+    let signer_public_key_hex = signer_public_key_hex.ok_or_else(|| {
+        ConfigError::RuntimeKolmeLive(
+            "managed-external signer backend response missing signer_public_key_hex key (managed_signer_backend_response_provenance_missing)"
+                .to_owned(),
+        )
+    })?;
+    let signer_public_key_bytes = decode_kolme_hex_bytes(
+        signer_public_key_hex.as_str(),
+        "managed_external_signer_backend_signer_public_key_hex",
+    )
+    .map_err(|error| {
+        ConfigError::RuntimeKolmeLive(format!(
+            "managed-external signer backend response signer_public_key_hex is invalid: {error} (managed_signer_backend_response_provenance_malformed)"
+        ))
+    })?;
+    if signer_public_key_bytes.len() != 33 {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "managed-external signer backend response signer_public_key_hex must decode to 33 bytes compressed secp256k1 key material, found {} (managed_signer_backend_response_provenance_malformed)",
+            signer_public_key_bytes.len()
+        )));
+    }
+    let signer_verifying_key =
+        VerifyingKey::from_sec1_bytes(signer_public_key_bytes.as_slice()).map_err(|error| {
+            ConfigError::RuntimeKolmeLive(format!(
+                "managed-external signer backend response signer_public_key_hex is not valid secp256k1 key material: {error} (managed_signer_backend_response_provenance_malformed)"
+            ))
+        })?;
     Ok(ManagedExternalBackendSignature {
         signature_hex,
         recovery_id,
+        signer_public_key_hex: encode_kolme_hex_lower(
+            signer_verifying_key.to_encoded_point(true).as_bytes(),
+        ),
     })
+}
+
+fn verify_kolme_live_managed_signer_backend_signature_provenance(
+    canonical_message: &str,
+    expected_signer_public_key_hex: &str,
+    backend_signature: &ManagedExternalBackendSignature,
+) -> Result<(), ConfigError> {
+    let expected_signer_public_key_hex = expected_signer_public_key_hex.trim();
+    if expected_signer_public_key_hex.is_empty() {
+        return Err(ConfigError::RuntimeKolmeLive(
+            "expected managed-external signer public key must not be empty (managed_signer_backend_response_provenance_mismatch)"
+                .to_owned(),
+        ));
+    }
+    if !backend_signature
+        .signer_public_key_hex
+        .eq_ignore_ascii_case(expected_signer_public_key_hex)
+    {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "managed-external signer backend response signer_public_key_hex does not match expected runtime signer key material (expected={}, found={}) (managed_signer_backend_response_provenance_mismatch)",
+            expected_signer_public_key_hex,
+            backend_signature.signer_public_key_hex,
+        )));
+    }
+
+    let signature_bytes = decode_kolme_hex_bytes(
+        backend_signature.signature_hex.as_str(),
+        "managed_external_signer_backend_signature_hex",
+    )
+    .map_err(|error| {
+        ConfigError::RuntimeKolmeLive(format!(
+            "managed-external signer backend response signature hex is invalid: {error} (managed_signer_backend_response_malformed)"
+        ))
+    })?;
+    let signature = Signature::from_slice(signature_bytes.as_slice()).map_err(|error| {
+        ConfigError::RuntimeKolmeLive(format!(
+            "managed-external signer backend response signature bytes are invalid secp256k1 material: {error} (managed_signer_backend_response_malformed)"
+        ))
+    })?;
+    let recovery =
+        RecoveryId::from_byte(backend_signature.recovery_id).ok_or_else(|| {
+            ConfigError::RuntimeKolmeLive(format!(
+                "managed-external signer backend response recovery_id must be within secp256k1 range [0,3], found {} (managed_signer_backend_response_malformed)",
+                backend_signature.recovery_id
+            ))
+        })?;
+    let recovered = VerifyingKey::recover_from_msg(canonical_message.as_bytes(), &signature, recovery)
+        .map_err(|error| {
+            ConfigError::RuntimeKolmeLive(format!(
+                "failed to recover secp256k1 public key from managed-external signer backend response: {error} (managed_signer_backend_response_malformed)"
+            ))
+        })?;
+    let expected = VerifyingKey::from_sec1_bytes(
+        decode_kolme_hex_bytes(
+            backend_signature.signer_public_key_hex.as_str(),
+            "managed_external_signer_backend_signer_public_key_hex",
+        )
+        .map_err(|error| {
+            ConfigError::RuntimeKolmeLive(format!(
+                "managed-external signer backend response signer_public_key_hex is invalid: {error} (managed_signer_backend_response_provenance_malformed)"
+            ))
+        })?
+        .as_slice(),
+    )
+    .map_err(|error| {
+        ConfigError::RuntimeKolmeLive(format!(
+            "managed-external signer backend response signer_public_key_hex is not valid secp256k1 key material: {error} (managed_signer_backend_response_provenance_malformed)"
+        ))
+    })?;
+    if recovered != expected {
+        return Err(ConfigError::RuntimeKolmeLive(
+            "managed-external signer backend response signature does not match signer_public_key_hex (managed_signer_backend_response_provenance_mismatch)"
+                .to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 fn execute_kolme_live_managed_signer_backend_command(
@@ -416,6 +533,7 @@ pub(crate) fn sign_kolme_live_managed_external_message(
     nonce: u64,
     canonical_message: &str,
     provider_handshake_matrix: SignerProviderHandshakeMatrix,
+    expected_signer_public_key_hex: &str,
 ) -> Result<(String, u8), ConfigError> {
     let _provider = SecureSignerProvider::from_key_id(key_reference).map_err(|error| {
         ConfigError::RuntimeKolmeLive(format!(
@@ -439,7 +557,6 @@ pub(crate) fn sign_kolme_live_managed_external_message(
     let _backend_signature = secure_backend
         .sign(&signing_request)
         .map_err(map_kolme_live_secure_signer_backend_error)?;
-    let signing_key = build_kolme_live_managed_signing_key(key_reference)?;
     let command = resolve_optional_kolme_live_managed_signer_command()?.ok_or_else(|| {
         ConfigError::RuntimeKolmeLive(format!(
             "{KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV} must be set when managed-external signing is selected (managed_signer_backend_required_missing)"
@@ -453,21 +570,11 @@ pub(crate) fn sign_kolme_live_managed_external_message(
         &signing_request,
         canonical_message,
     )?;
-    let verifier = KolmeForkSecp256k1SignerAdapter {
-        signing_key,
-        private_key_env: KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV,
-    };
-    verifier
-        .verify_message(
-            canonical_message,
-            backend_signature.signature_hex.as_str(),
-            backend_signature.recovery_id,
-        )
-        .map_err(|error| {
-            ConfigError::RuntimeKolmeLive(format!(
-                "managed-external signer backend response failed secp256k1 verification: {error} (managed_signer_backend_response_malformed)"
-            ))
-        })?;
+    verify_kolme_live_managed_signer_backend_signature_provenance(
+        canonical_message,
+        expected_signer_public_key_hex,
+        &backend_signature,
+    )?;
     Ok((
         backend_signature.signature_hex,
         backend_signature.recovery_id,
@@ -864,15 +971,7 @@ pub(crate) fn build_kolme_live_direct_signed_wire_payload(
             nonce,
             canonical_message.as_str(),
             SignerProviderHandshakeMatrix::with_uniform_availability(true),
-        )?;
-        let verifier = KolmeForkSecp256k1SignerAdapter {
-            signing_key: managed_signing_key,
-            private_key_env: signer_selection.key_reference_env,
-        };
-        verifier.verify_message(
-            canonical_message.as_str(),
-            signature_hex.as_str(),
-            recovery_id,
+            pubkey.as_str(),
         )?;
         (canonical_message, signature_hex, recovery_id)
     } else {
