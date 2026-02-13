@@ -9,6 +9,7 @@ use std::process::ExitCode;
 mod cli;
 mod daemon_observability;
 mod daemon_shutdown;
+mod kolme_live_observability;
 mod report_builder;
 mod report_render;
 mod runtime_kolme_live;
@@ -315,6 +316,13 @@ struct KolmeLiveExecution {
     signer_key_source: String,
     signer_private_key_env: String,
     execution_status: String,
+    observability_latency_p50_ms: u64,
+    observability_latency_p99_ms: u64,
+    observability_throughput_tps: u64,
+    observability_error_rate_bps: u64,
+    observability_availability_bps: u64,
+    observability_health: String,
+    observability_alert_count: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -360,6 +368,13 @@ struct NodeBootstrapReport {
     kolme_live_signer_key_source: Option<String>,
     kolme_live_signer_private_key_env: Option<String>,
     kolme_live_execution_status: Option<String>,
+    kolme_live_observability_latency_p50_ms: Option<u64>,
+    kolme_live_observability_latency_p99_ms: Option<u64>,
+    kolme_live_observability_throughput_tps: Option<u64>,
+    kolme_live_observability_error_rate_bps: Option<u64>,
+    kolme_live_observability_availability_bps: Option<u64>,
+    kolme_live_observability_health: Option<String>,
+    kolme_live_observability_alert_count: Option<usize>,
     profile: Option<String>,
     role: String,
     chain_id: String,

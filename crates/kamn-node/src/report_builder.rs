@@ -99,6 +99,27 @@ pub(crate) fn build_bootstrap_report(
     let kolme_live_execution_status = kolme_live
         .as_ref()
         .map(|execution| execution.execution_status.clone());
+    let kolme_live_observability_latency_p50_ms = kolme_live
+        .as_ref()
+        .map(|execution| execution.observability_latency_p50_ms);
+    let kolme_live_observability_latency_p99_ms = kolme_live
+        .as_ref()
+        .map(|execution| execution.observability_latency_p99_ms);
+    let kolme_live_observability_throughput_tps = kolme_live
+        .as_ref()
+        .map(|execution| execution.observability_throughput_tps);
+    let kolme_live_observability_error_rate_bps = kolme_live
+        .as_ref()
+        .map(|execution| execution.observability_error_rate_bps);
+    let kolme_live_observability_availability_bps = kolme_live
+        .as_ref()
+        .map(|execution| execution.observability_availability_bps);
+    let kolme_live_observability_health = kolme_live
+        .as_ref()
+        .map(|execution| execution.observability_health.clone());
+    let kolme_live_observability_alert_count = kolme_live
+        .as_ref()
+        .map(|execution| execution.observability_alert_count);
     NodeBootstrapReport {
         runtime_mode: runtime_mode.as_str().to_owned(),
         diagnostics_mode: diagnostics_mode.as_str().to_owned(),
@@ -133,6 +154,13 @@ pub(crate) fn build_bootstrap_report(
         kolme_live_signer_key_source,
         kolme_live_signer_private_key_env,
         kolme_live_execution_status,
+        kolme_live_observability_latency_p50_ms,
+        kolme_live_observability_latency_p99_ms,
+        kolme_live_observability_throughput_tps,
+        kolme_live_observability_error_rate_bps,
+        kolme_live_observability_availability_bps,
+        kolme_live_observability_health,
+        kolme_live_observability_alert_count,
         profile: profile.map(LocalProfile::as_str).map(str::to_owned),
         role: plan.config.role.as_str().to_owned(),
         chain_id: plan.config.chain_id.clone(),

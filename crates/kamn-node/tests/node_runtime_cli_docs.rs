@@ -59,6 +59,13 @@ fn doc_contains_deterministic_json_fields() {
     assert!(DOC.contains("kolme_live_signer_key_source"));
     assert!(DOC.contains("kolme_live_signer_private_key_env"));
     assert!(DOC.contains("kolme_live_execution_status"));
+    assert!(DOC.contains("kolme_live_observability_latency_p50_ms"));
+    assert!(DOC.contains("kolme_live_observability_latency_p99_ms"));
+    assert!(DOC.contains("kolme_live_observability_throughput_tps"));
+    assert!(DOC.contains("kolme_live_observability_error_rate_bps"));
+    assert!(DOC.contains("kolme_live_observability_availability_bps"));
+    assert!(DOC.contains("kolme_live_observability_health"));
+    assert!(DOC.contains("kolme_live_observability_alert_count"));
     assert!(DOC.contains("sync_mode"));
     assert!(DOC.contains("components"));
 }
@@ -148,6 +155,8 @@ fn doc_contains_runtime_kolme_live_rules() {
     assert!(DOC.contains("max-attempt budget `2`"));
     assert!(DOC.contains("finality-polled"));
     assert!(DOC.contains("finality-unavailable"));
+    assert!(DOC.contains("kolme_live_observability_latency_p50_ms"));
+    assert!(DOC.contains("kolme_live_observability_health"));
 }
 
 #[test]

@@ -1,3 +1,4 @@
+use super::kolme_live_observability::build_kolme_live_observability_telemetry;
 use super::signer::build_kolme_live_direct_signed_wire_payload;
 use super::{
     KolmeLiveExecution, KOLME_IN_MEMORY_PROVIDER_MARKER, KOLME_LIVE_FINALITY_MAX_ATTEMPTS,
@@ -135,6 +136,12 @@ pub(crate) fn execute_kolme_live_runtime(
     }
 
     let finality = kolme_live_finality_label(receipt.finality);
+    let execution_status = format!(
+        "{submit_status};commit_id={};finality={finality};resolution={resolution}",
+        receipt.commit_id
+    );
+    let observability = build_kolme_live_observability_telemetry(execution_status.as_str())
+        .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
     Ok(KolmeLiveExecution {
         provider_client_contract: KOLME_LIVE_PROVIDER_CONTRACT.to_owned(),
         base_url,
@@ -144,9 +151,13 @@ pub(crate) fn execute_kolme_live_runtime(
         signer_profile: signer_selection.profile.to_owned(),
         signer_key_source: signer_selection.key_source.to_owned(),
         signer_private_key_env: signer_selection.private_key_env.to_owned(),
-        execution_status: format!(
-            "{submit_status};commit_id={};finality={finality};resolution={resolution}",
-            receipt.commit_id
-        ),
+        execution_status,
+        observability_latency_p50_ms: observability.latency_p50_ms,
+        observability_latency_p99_ms: observability.latency_p99_ms,
+        observability_throughput_tps: observability.throughput_tps,
+        observability_error_rate_bps: observability.error_rate_bps,
+        observability_availability_bps: observability.availability_bps,
+        observability_health: observability.health,
+        observability_alert_count: observability.alert_count,
     })
 }
