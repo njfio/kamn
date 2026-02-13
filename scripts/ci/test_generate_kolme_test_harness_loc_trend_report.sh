@@ -35,14 +35,42 @@ cat >"$within_input" <<'EOF_REPORT'
 }
 EOF_REPORT
 
+command_surface_within_report="$TMP_DIR/kolme-command-surface-within-report.json"
+cat >"$command_surface_within_report" <<'EOF_REPORT'
+{
+  "schema_version": "kamn.ci.script-surface-budget-report.v1",
+  "status": "pass",
+  "metrics": {
+    "script_count": 56,
+    "shell_line_total": 12958,
+    "duplicate_basename": 0,
+    "duplicate_content": 0
+  },
+  "deltas": {
+    "script_count": 0,
+    "shell_line_total": 0,
+    "duplicate_basename": 0,
+    "duplicate_content": 0
+  }
+}
+EOF_REPORT
+
 within_report="$TMP_DIR/kolme-trend-within.json"
-within_output="$(bash "$SCRIPT" --report-file "$within_input" --output-json "$within_report")"
+within_output="$(bash "$SCRIPT" --report-file "$within_input" --command-surface-report-file "$command_surface_within_report" --output-json "$within_report")"
 if ! printf '%s\n' "$within_output" | grep -q '^trend_status=within$'; then
   echo "expected trend_status=within for deterministic within-threshold trend report path" >&2
   exit 1
 fi
 if ! printf '%s\n' "$within_output" | grep -q '^policy_decision=GO$'; then
   echo "expected policy_decision=GO for deterministic within-threshold trend report path" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$within_output" | grep -q '^command_surface_trend_status=within$'; then
+  echo "expected command_surface_trend_status=within for deterministic within-threshold trend report path" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$within_output" | grep -q '^command_surface_policy_decision=GO$'; then
+  echo "expected command_surface_policy_decision=GO for deterministic within-threshold trend report path" >&2
   exit 1
 fi
 
@@ -56,13 +84,106 @@ cat >"$fail_input" <<'EOF_REPORT'
 EOF_REPORT
 
 fail_report="$TMP_DIR/kolme-trend-fail.json"
-fail_output="$(bash "$SCRIPT" --report-file "$fail_input" --output-json "$fail_report")"
+fail_output="$(bash "$SCRIPT" --report-file "$fail_input" --command-surface-report-file "$command_surface_within_report" --output-json "$fail_report")"
 if ! printf '%s\n' "$fail_output" | grep -q '^trend_status=fail$'; then
   echo "expected trend_status=fail for deterministic fail-threshold trend report path" >&2
   exit 1
 fi
 if ! printf '%s\n' "$fail_output" | grep -q '^policy_decision=NO-GO$'; then
   echo "expected policy_decision=NO-GO for deterministic fail-threshold trend report path" >&2
+  exit 1
+fi
+
+command_surface_warn_report="$TMP_DIR/kolme-command-surface-warn-report.json"
+cat >"$command_surface_warn_report" <<'EOF_REPORT'
+{
+  "schema_version": "kamn.ci.script-surface-budget-report.v1",
+  "status": "pass",
+  "metrics": {
+    "script_count": 60,
+    "shell_line_total": 14458,
+    "duplicate_basename": 0,
+    "duplicate_content": 0
+  },
+  "deltas": {
+    "script_count": 4,
+    "shell_line_total": 1500,
+    "duplicate_basename": 0,
+    "duplicate_content": 0
+  }
+}
+EOF_REPORT
+
+command_surface_warn_output="$(
+  bash "$SCRIPT" \
+    --report-file "$within_input" \
+    --command-surface-report-file "$command_surface_warn_report" \
+    --output-json "$TMP_DIR/kolme-command-surface-warn-trend.json"
+)"
+if ! printf '%s\n' "$command_surface_warn_output" | grep -q '^command_surface_trend_status=warn$'; then
+  echo "expected command_surface_trend_status=warn for deterministic warn command-surface trend path" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$command_surface_warn_output" | grep -q '^command_surface_policy_decision=WARN$'; then
+  echo "expected command_surface_policy_decision=WARN for deterministic warn command-surface trend path" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$command_surface_warn_output" | grep -q '^policy_decision=WARN$'; then
+  echo "expected combined policy_decision=WARN for deterministic warn command-surface trend path" >&2
+  exit 1
+fi
+
+command_surface_fail_report="$TMP_DIR/kolme-command-surface-fail-report.json"
+cat >"$command_surface_fail_report" <<'EOF_REPORT'
+{
+  "schema_version": "kamn.ci.script-surface-budget-report.v1",
+  "status": "pass",
+  "metrics": {
+    "script_count": 66,
+    "shell_line_total": 15358,
+    "duplicate_basename": 0,
+    "duplicate_content": 0
+  },
+  "deltas": {
+    "script_count": 10,
+    "shell_line_total": 2400,
+    "duplicate_basename": 0,
+    "duplicate_content": 0
+  }
+}
+EOF_REPORT
+
+command_surface_fail_output="$(
+  bash "$SCRIPT" \
+    --report-file "$within_input" \
+    --command-surface-report-file "$command_surface_fail_report" \
+    --output-json "$TMP_DIR/kolme-command-surface-fail-trend.json"
+)"
+if ! printf '%s\n' "$command_surface_fail_output" | grep -q '^command_surface_trend_status=fail$'; then
+  echo "expected command_surface_trend_status=fail for deterministic fail command-surface trend path" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$command_surface_fail_output" | grep -q '^command_surface_policy_decision=NO-GO$'; then
+  echo "expected command_surface_policy_decision=NO-GO for deterministic fail command-surface trend path" >&2
+  exit 1
+fi
+
+set +e
+command_surface_enforced_fail_output="$(
+  bash "$SCRIPT" \
+    --report-file "$within_input" \
+    --command-surface-report-file "$command_surface_fail_report" \
+    --enforce-command-surface-fail \
+    --output-json "$TMP_DIR/kolme-command-surface-fail-enforced-trend.json" 2>&1
+)"
+command_surface_enforced_fail_code=$?
+set -e
+if [ "$command_surface_enforced_fail_code" -eq 0 ]; then
+  echo "expected enforce-command-surface-fail to return non-zero for command-surface fail trend status" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$command_surface_enforced_fail_output" | grep -q '^status=fail$'; then
+  echo "expected status=fail marker for enforce-command-surface-fail path" >&2
   exit 1
 fi
 
@@ -79,6 +200,10 @@ for path in sys.argv[1:]:
         raise SystemExit("missing trend_status in Kolme trend report")
     if "policy_decision" not in payload:
         raise SystemExit("missing policy_decision in Kolme trend report")
+    if "command_surface_trend_status" not in payload:
+        raise SystemExit("missing command_surface_trend_status in Kolme trend report")
+    if "command_surface_policy_decision" not in payload:
+        raise SystemExit("missing command_surface_policy_decision in Kolme trend report")
 PY
 
 echo "Kolme test harness trend report generator tests passed."
