@@ -33,6 +33,17 @@ fn signer_env_lock() -> &'static Mutex<()> {
     LOCK.get_or_init(|| Mutex::new(()))
 }
 
+fn managed_signer_public_key_hex(key_reference: &str) -> String {
+    let signing_key = build_kolme_live_managed_signing_key(key_reference)
+        .expect("managed signing key should derive");
+    encode_kolme_hex_lower(
+        signing_key
+            .verifying_key()
+            .to_encoded_point(true)
+            .as_bytes(),
+    )
+}
+
 struct EnvVarGuard {
     key: &'static str,
     previous: Option<String>,
@@ -1095,6 +1106,10 @@ fn integration_runtime_kolme_live_renders_managed_external_signer_selection_mark
             .to_encoded_point(true)
             .as_bytes(),
     );
+    let _managed_signer_public_key_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX",
+        Some(managed_pubkey.as_str()),
+    );
     let canonical_message =
         render_kolme_live_native_direct_message(&request, managed_pubkey.as_str(), 43)
             .expect("canonical message should render");
@@ -1342,6 +1357,10 @@ fn regression_kolme_live_managed_external_strict_contracts_require_backend_comma
     let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
     let _fallback_key_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+    let _signer_public_key_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX",
+        Some(managed_signer_public_key_hex(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE).as_str()),
+    );
     let _backend_command_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND", None);
     let request = KolmeRuntimeCommitRequest::deterministic(
         "op-node-live-2432-missing-backend-command",
@@ -1405,6 +1424,10 @@ fn regression_kolme_live_managed_external_required_marker_forces_backend_command
     let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
     let _fallback_key_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+    let _signer_public_key_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX",
+        Some(managed_signer_public_key_hex(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE).as_str()),
+    );
     let _backend_command_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND", None);
     let _required_marker_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED", Some("true"));
@@ -1450,6 +1473,10 @@ fn regression_kolme_live_managed_external_requires_backend_command_without_requi
     let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
     let _fallback_key_guard =
         EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+    let _signer_public_key_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX",
+        Some(managed_signer_public_key_hex(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE).as_str()),
+    );
     let _backend_command_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND", None);
     let _required_marker_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED", None);
     let request = KolmeRuntimeCommitRequest::deterministic(
@@ -1508,6 +1535,10 @@ fn integration_kolme_live_managed_external_builds_direct_signed_wire_payload() {
             .verifying_key()
             .to_encoded_point(true)
             .as_bytes(),
+    );
+    let _managed_signer_public_key_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX",
+        Some(managed_pubkey.as_str()),
     );
     let canonical_message =
         render_kolme_live_native_direct_message(&request, managed_pubkey.as_str(), 41)
@@ -1586,6 +1617,10 @@ fn regression_kolme_live_managed_external_backend_response_requires_signer_publi
             .to_encoded_point(true)
             .as_bytes(),
     );
+    let _managed_signer_public_key_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX",
+        Some(managed_pubkey.as_str()),
+    );
     let canonical_message =
         render_kolme_live_native_direct_message(&request, managed_pubkey.as_str(), 45)
             .expect("canonical message should render");
@@ -1620,6 +1655,142 @@ fn regression_kolme_live_managed_external_backend_response_requires_signer_publi
 }
 
 #[test]
+fn regression_kolme_live_managed_external_requires_runtime_signer_public_key_marker() {
+    // Regression: #2512
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+    let _key_ref_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
+        Some(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE),
+    );
+    let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
+    let _fallback_key_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+    let _signer_pubkey_marker_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX", None);
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-node-live-2512-pubkey-marker-missing",
+        "state:node-live-2512-pubkey-marker-missing",
+        "kamn:did:agent:node-live-2512-pubkey-marker-missing",
+        1,
+        "payload:node-live-2512-pubkey-marker-missing",
+    )
+    .expect("request should build");
+    let signing_key = build_kolme_live_managed_signing_key(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE)
+        .expect("managed signing key should derive");
+    let managed_pubkey = encode_kolme_hex_lower(
+        signing_key
+            .verifying_key()
+            .to_encoded_point(true)
+            .as_bytes(),
+    );
+    let canonical_message =
+        render_kolme_live_native_direct_message(&request, managed_pubkey.as_str(), 47)
+            .expect("canonical message should render");
+    let (backend_signature, backend_recovery_id) = signing_key
+        .sign_recoverable(canonical_message.as_bytes())
+        .expect("managed signing key should sign canonical message");
+    let backend_command = format!(
+        "printf 'signature_hex={}\\nrecovery_id={}\\nsigner_public_key_hex={}\\n'",
+        encode_kolme_hex_lower(backend_signature.to_bytes().as_ref()),
+        backend_recovery_id.to_byte(),
+        managed_pubkey,
+    );
+    let _backend_command_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND",
+        Some(backend_command.as_str()),
+    );
+    let (base_url, _requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+        r#"{"next_nonce":47,"account_id":"acct-2512-pubkey-marker-missing"}"#,
+    )]);
+    let mut transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+    let error = build_kolme_live_direct_signed_wire_payload(
+        base_url.as_str(),
+        &mut transport,
+        &request,
+        None,
+        Some("managed-external"),
+    )
+    .expect_err("managed-external runtime path must require signer public key marker");
+    assert!(
+        matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("managed_signer_public_key_marker_missing")),
+        "missing managed-external signer public key marker must fail closed"
+    );
+}
+
+#[test]
+fn regression_kolme_live_managed_external_rejects_invalid_runtime_signer_public_key_marker() {
+    // Regression: #2512
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+    let _key_ref_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
+        Some(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE),
+    );
+    let _primary_key_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX", None);
+    let _fallback_key_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK", None);
+    let _signer_pubkey_marker_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX",
+        Some("invalid-pubkey-marker"),
+    );
+    let request = KolmeRuntimeCommitRequest::deterministic(
+        "op-node-live-2512-pubkey-marker-invalid",
+        "state:node-live-2512-pubkey-marker-invalid",
+        "kamn:did:agent:node-live-2512-pubkey-marker-invalid",
+        1,
+        "payload:node-live-2512-pubkey-marker-invalid",
+    )
+    .expect("request should build");
+    let signing_key = build_kolme_live_managed_signing_key(TEST_KOLME_LIVE_MANAGED_KEY_REFERENCE)
+        .expect("managed signing key should derive");
+    let managed_pubkey = encode_kolme_hex_lower(
+        signing_key
+            .verifying_key()
+            .to_encoded_point(true)
+            .as_bytes(),
+    );
+    let canonical_message =
+        render_kolme_live_native_direct_message(&request, managed_pubkey.as_str(), 48)
+            .expect("canonical message should render");
+    let (backend_signature, backend_recovery_id) = signing_key
+        .sign_recoverable(canonical_message.as_bytes())
+        .expect("managed signing key should sign canonical message");
+    let backend_command = format!(
+        "printf 'signature_hex={}\\nrecovery_id={}\\nsigner_public_key_hex={}\\n'",
+        encode_kolme_hex_lower(backend_signature.to_bytes().as_ref()),
+        backend_recovery_id.to_byte(),
+        managed_pubkey,
+    );
+    let _backend_command_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND",
+        Some(backend_command.as_str()),
+    );
+    let (base_url, _requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+        r#"{"next_nonce":48,"account_id":"acct-2512-pubkey-marker-invalid"}"#,
+    )]);
+    let mut transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+    let error = build_kolme_live_direct_signed_wire_payload(
+        base_url.as_str(),
+        &mut transport,
+        &request,
+        None,
+        Some("managed-external"),
+    )
+    .expect_err("invalid managed-external signer public key marker must fail closed");
+    assert!(
+        matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("managed_signer_public_key_marker_invalid")),
+        "invalid managed-external signer public key marker must fail closed with deterministic reason code"
+    );
+}
+
+#[test]
 fn regression_kolme_live_managed_external_backend_response_rejects_signer_public_key_mismatch() {
     // Regression: #2509
     let _lock = signer_env_lock()
@@ -1649,6 +1820,10 @@ fn regression_kolme_live_managed_external_backend_response_rejects_signer_public
             .verifying_key()
             .to_encoded_point(true)
             .as_bytes(),
+    );
+    let _managed_signer_public_key_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX",
+        Some(managed_pubkey.as_str()),
     );
     let canonical_message =
         render_kolme_live_native_direct_message(&request, managed_pubkey.as_str(), 46)
