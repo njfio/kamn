@@ -19,7 +19,7 @@ mod wire_payload;
 
 use cli::parse_args;
 use daemon_observability::build_daemon_observability_telemetry;
-use daemon_shutdown::evaluate_daemon_completion;
+use daemon_shutdown::{evaluate_daemon_completion, evaluate_daemon_completion_with_os_signals};
 #[cfg(test)]
 use logging::{
     capture_test_logs, render_log_event_line, resolve_log_config_from_inputs, NodeLogConfig,
@@ -265,6 +265,7 @@ struct NodeCli {
     daemon_max_ticks: Option<u64>,
     daemon_tick_interval_ms: Option<u64>,
     daemon_shutdown_signal_ticks: Vec<u64>,
+    daemon_shutdown_os_signals: bool,
     daemon_shutdown_drain_ticks: Option<u64>,
     daemon_shutdown_timeout_ticks: Option<u64>,
     daemon_peer_id: Option<String>,
@@ -454,6 +455,7 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
         daemon_max_ticks,
         daemon_tick_interval_ms,
         daemon_shutdown_signal_ticks,
+        daemon_shutdown_os_signals,
         daemon_shutdown_drain_ticks,
         daemon_shutdown_timeout_ticks,
         daemon_peer_id,
@@ -579,12 +581,23 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                     }
                     None => (None, None, None),
                 };
-            let daemon_completion = evaluate_daemon_completion(
-                max_ticks,
-                daemon_shutdown_signal_ticks.as_slice(),
-                daemon_shutdown_drain_ticks,
-                daemon_shutdown_timeout_ticks,
-            );
+            let daemon_completion =
+                if daemon_shutdown_os_signals && daemon_shutdown_signal_ticks.is_empty() {
+                    evaluate_daemon_completion_with_os_signals(
+                        max_ticks,
+                        tick_interval_ms,
+                        daemon_shutdown_drain_ticks,
+                        daemon_shutdown_timeout_ticks,
+                    )
+                    .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?
+                } else {
+                    evaluate_daemon_completion(
+                        max_ticks,
+                        daemon_shutdown_signal_ticks.as_slice(),
+                        daemon_shutdown_drain_ticks,
+                        daemon_shutdown_timeout_ticks,
+                    )
+                };
             let daemon_observability = build_daemon_observability_telemetry(
                 tick_interval_ms,
                 daemon_completion.completion_reason.as_str(),

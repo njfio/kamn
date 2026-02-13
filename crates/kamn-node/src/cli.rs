@@ -24,6 +24,7 @@ where
     let mut daemon_max_ticks: Option<u64> = None;
     let mut daemon_tick_interval_ms: Option<u64> = None;
     let mut daemon_shutdown_signal_ticks: Vec<u64> = Vec::new();
+    let mut daemon_shutdown_os_signals = false;
     let mut daemon_shutdown_drain_ticks: Option<u64> = None;
     let mut daemon_shutdown_timeout_ticks: Option<u64> = None;
     let mut daemon_peer_id: Option<String> = None;
@@ -137,6 +138,9 @@ where
                     "--daemon-shutdown-signal-tick",
                 ))?;
                 daemon_shutdown_signal_ticks.push(parse_daemon_control_arg(&value)?);
+            }
+            "--daemon-shutdown-os-signals" => {
+                daemon_shutdown_os_signals = true;
             }
             "--daemon-shutdown-drain-ticks" => {
                 let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
@@ -276,7 +280,9 @@ where
                     "--daemon-shutdown-timeout-ticks",
                 ));
             }
-        } else if daemon_shutdown_drain_ticks.is_some() || daemon_shutdown_timeout_ticks.is_some() {
+        } else if (daemon_shutdown_drain_ticks.is_some() || daemon_shutdown_timeout_ticks.is_some())
+            && !daemon_shutdown_os_signals
+        {
             return Err(ConfigError::MissingArgumentValue(
                 "--daemon-shutdown-signal-tick",
             ));
@@ -352,6 +358,7 @@ where
         daemon_max_ticks,
         daemon_tick_interval_ms,
         daemon_shutdown_signal_ticks,
+        daemon_shutdown_os_signals,
         daemon_shutdown_drain_ticks,
         daemon_shutdown_timeout_ticks,
         daemon_peer_id,

@@ -1,5 +1,13 @@
 use super::*;
 
+#[cfg(unix)]
+const SIGTERM: i32 = 15;
+
+#[cfg(unix)]
+unsafe extern "C" {
+    fn raise(sig: i32) -> i32;
+}
+
 #[test]
 fn parses_required_role_and_defaults() {
     let args = vec![
@@ -24,6 +32,7 @@ fn parses_required_role_and_defaults() {
     assert_eq!(parsed.daemon_max_ticks, None);
     assert_eq!(parsed.daemon_tick_interval_ms, None);
     assert!(parsed.daemon_shutdown_signal_ticks.is_empty());
+    assert!(!parsed.daemon_shutdown_os_signals);
     assert_eq!(parsed.daemon_shutdown_drain_ticks, None);
     assert_eq!(parsed.daemon_shutdown_timeout_ticks, None);
     assert_eq!(parsed.daemon_peer_id, None);
@@ -470,6 +479,7 @@ fn parses_runtime_mode_daemon_with_bounded_controls() {
     assert_eq!(parsed.runtime_mode, RuntimeMode::daemon());
     assert_eq!(parsed.daemon_max_ticks, Some(3));
     assert_eq!(parsed.daemon_tick_interval_ms, Some(25));
+    assert!(!parsed.daemon_shutdown_os_signals);
     assert_eq!(parsed.daemon_peer_id, Some("peer-alpha".to_owned()));
     assert_eq!(parsed.daemon_lifecycle_events.len(), 2);
 }
@@ -496,6 +506,33 @@ fn parses_runtime_mode_daemon_with_shutdown_controls() {
 
     let parsed = parse_args(args).expect("daemon args with shutdown controls should parse");
     assert_eq!(parsed.daemon_shutdown_signal_ticks, vec![3]);
+    assert!(!parsed.daemon_shutdown_os_signals);
+    assert_eq!(parsed.daemon_shutdown_drain_ticks, Some(2));
+    assert_eq!(parsed.daemon_shutdown_timeout_ticks, Some(4));
+}
+
+#[test]
+fn parses_runtime_mode_daemon_with_os_signal_shutdown_controls() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "12".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "5".to_owned(),
+        "--daemon-shutdown-os-signals".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "4".to_owned(),
+    ];
+
+    let parsed = parse_args(args).expect("daemon args with os signal controls should parse");
+    assert_eq!(parsed.daemon_shutdown_signal_ticks, Vec::<u64>::new());
+    assert!(parsed.daemon_shutdown_os_signals);
     assert_eq!(parsed.daemon_shutdown_drain_ticks, Some(2));
     assert_eq!(parsed.daemon_shutdown_timeout_ticks, Some(4));
 }
@@ -923,6 +960,42 @@ fn integration_runtime_daemon_shutdown_timeout_is_fail_closed() {
     assert!(rendered.contains("\"daemon_observability_availability_bps\":9800"));
     assert!(rendered.contains("\"daemon_observability_health\":\"critical\""));
     assert!(rendered.contains("\"daemon_observability_alert_count\":4"));
+}
+
+#[cfg(unix)]
+#[test]
+fn integration_runtime_daemon_applies_graceful_shutdown_on_os_signal() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "100".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "1".to_owned(),
+        "--daemon-shutdown-os-signals".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "5".to_owned(),
+        "--output".to_owned(),
+        "json".to_owned(),
+    ];
+
+    let parsed = parse_args(args).expect("daemon os-signal args should parse");
+    let trigger = std::thread::spawn(|| {
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        let result = unsafe { raise(SIGTERM) };
+        assert_eq!(result, 0, "test SIGTERM raise should succeed");
+    });
+    let report = execute(parsed).expect("daemon os-signal execution should succeed");
+    trigger
+        .join()
+        .expect("os-signal trigger thread should complete");
+    let rendered = render_bootstrap_report(&report, OutputMode::json());
+    assert!(rendered.contains("\"daemon_completion_reason\":\"graceful-shutdown:signal@"));
 }
 
 #[test]
