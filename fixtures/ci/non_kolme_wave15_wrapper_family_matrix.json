@@ -1,0 +1,17 @@
+{
+  "schema_version": "kamn.kolme.lane-migration-matrix.v1",
+  "lanes": [
+    {
+      "lane_id": "non_kolme.message.processor_proof_artifact",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/message/run_processor_proof_artifact_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/message_processor_proof_artifact_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2732"
+    }
+  ]
+}
