@@ -5,9 +5,9 @@ use super::{
     build_kamn_kolme_runtime_commit_live_provider_config,
     submit_kamn_kolme_runtime_commit_live_provider_request,
     KamnKolmeRuntimeCommitLiveProviderConfig, KamnKolmeRuntimeCommitLiveProviderConfigError,
-    KolmeRuntimeCommitError, KolmeRuntimeCommitProvider, KolmeRuntimeCommitProviderError,
-    KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderTransport,
+    KolmeRuntimeCommitError, KolmeRuntimeCommitProvider, KolmeRuntimeCommitProviderOutcome,
 };
+use kamn_kolme::{KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderTransport};
 
 /// Provider implementation that bridges runtime commit requests through a live transport.
 #[derive(Debug, Clone, PartialEq, Eq)]

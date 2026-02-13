@@ -11,8 +11,11 @@ use super::{
     project_kolme_failed_block_txhash_receipt_contract,
     project_kolme_finalized_block_txhash_receipt_contract, validate_kolme_block_identity,
     validate_kolme_block_path_template, validate_kolme_lookup_txhash_contract,
-    validate_kolme_lookup_window, BlockScanPolicyError, KolmeRuntimeCommitBlockFallbackTransport,
-    KolmeRuntimeCommitError, KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderReceipt,
+    validate_kolme_lookup_window, BlockScanPolicyError, KolmeRuntimeCommitError,
+    KolmeRuntimeCommitProviderReceipt,
+};
+use kamn_kolme::{
+    KolmeRuntimeCommitBlockFallbackTransport, KolmeRuntimeCommitProviderError,
     KolmeRuntimeCommitTransportErrorKind,
 };
 

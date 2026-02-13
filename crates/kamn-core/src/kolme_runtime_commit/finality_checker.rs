@@ -5,9 +5,9 @@ use super::{
     is_kolme_valid_finality_status_path_input_contract,
     is_kolme_valid_poll_attempt_budget_contract, is_kolme_valid_runtime_commit_id_request_contract,
     normalize_kolme_finality_endpoint_inputs_contract, parse_kolme_provider_finality_receipt,
-    KolmeRuntimeCommitError, KolmeRuntimeCommitFinalityTransport, KolmeRuntimeCommitProviderError,
-    KolmeRuntimeCommitProviderReceipt,
+    KolmeRuntimeCommitError, KolmeRuntimeCommitProviderReceipt,
 };
+use kamn_kolme::{KolmeRuntimeCommitFinalityTransport, KolmeRuntimeCommitProviderError};
 
 /// Deterministic finality checker for live backend runtime commit receipts.
 #[derive(Debug, Clone, PartialEq, Eq)]

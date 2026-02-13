@@ -5,6 +5,8 @@ use super::{
     is_kolme_valid_websocket_timeout_seconds_contract, parse_kolme_websocket_endpoint,
     try_take_kolme_websocket_frame, validate_kolme_websocket_handshake_response,
     KamnKolmeWebsocketFrame, KamnKolmeWebsocketPolicyError, KolmeRuntimeCommitError,
+};
+use kamn_kolme::{
     KolmeRuntimeCommitNotificationsConnection, KolmeRuntimeCommitNotificationsConnector,
     KolmeRuntimeCommitProviderError,
 };

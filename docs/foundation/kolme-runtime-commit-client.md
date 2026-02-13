@@ -19,6 +19,9 @@ handling.
   - `KolmeRuntimeCommitNotificationsConnection`
   - `KolmeRuntimeCommitNotificationsConnector`
   - `KolmeRuntimeCommitHttpTransport`
+- Internal `kamn-core` runtime-commit modules now import transport/provider
+  contracts directly from `kamn-kolme` to reduce compatibility re-export
+  indirection, while preserving public re-exports for downstream callers.
 - Added adapter-backed runtime commit client in `kamn-core`:
   - `AdapterBackedKolmeRuntimeCommitClient<P>`
 - Added typed transport error classification (canonical in `kamn-kolme`,

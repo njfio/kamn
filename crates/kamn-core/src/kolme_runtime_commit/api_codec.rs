@@ -3,8 +3,8 @@
 use super::{
     KamnKolmeApiBroadcastRequest, KamnKolmeApiBroadcastResponse, KamnKolmeApiCodecError,
     KamnKolmeApiNextNonceRequest, KamnKolmeApiNextNonceResponse, KolmeRuntimeCommitError,
-    KolmeRuntimeCommitProviderError,
 };
+use kamn_kolme::KolmeRuntimeCommitProviderError;
 
 /// Typed nonce lookup request for Kolme `/get-next-nonce`.
 #[derive(Debug, Clone, PartialEq, Eq)]

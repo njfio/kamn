@@ -7,9 +7,11 @@ use super::{
     is_kolme_valid_notifications_reconnect_budget_contract,
     normalize_kolme_notifications_provider_input_contract, parse_kolme_notification_event_contract,
     KolmeRuntimeCommitError, KolmeRuntimeCommitNotificationEvent,
+    KolmeRuntimeCommitProviderReceipt,
+};
+use kamn_kolme::{
     KolmeRuntimeCommitNotificationsConnection, KolmeRuntimeCommitNotificationsConnector,
-    KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderReceipt,
-    KolmeRuntimeCommitTransportErrorKind,
+    KolmeRuntimeCommitProviderError, KolmeRuntimeCommitTransportErrorKind,
 };
 
 /// Deterministic notifications consumer for Kolme websocket events with bounded reconnect policy.

@@ -1,9 +1,10 @@
 //! Runtime-commit interface and transport trait ownership.
 
 use super::{
-    KolmeRuntimeCommitError, KolmeRuntimeCommitOutcome, KolmeRuntimeCommitProviderError,
-    KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitRequest,
+    KolmeRuntimeCommitError, KolmeRuntimeCommitOutcome, KolmeRuntimeCommitProviderOutcome,
+    KolmeRuntimeCommitRequest,
 };
+use kamn_kolme::KolmeRuntimeCommitProviderError;
 
 /// Abstract client interface for Kolme runtime commit submission.
 pub trait KolmeRuntimeCommitClient {
