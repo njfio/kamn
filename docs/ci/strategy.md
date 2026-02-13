@@ -670,6 +670,9 @@ JSON`
       - `contracts.process_lifecycle_recovery_evidence_option=--recovery-evidence-file`
   - local fork profile preflight run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_profile_preflight_lane.sh --mode run --checkout-path /tmp/kolme_fork --max-seconds 45 --output-json /tmp/kolme-local-fork-profile-preflight-summary.json`
+    - wrapper routing stays manifest-backed:
+      - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_kolme_fork_profile_preflight_lane.sh --resolve-manifest-path`
+      - `scripts/framework/manifests/kolme_local_kolme_fork_profile_preflight_lane.json`
     - `python3 scripts/kolme/check_local_kolme_fork_profile_preflight_policy.py --report-file /tmp/kolme-local-fork-profile-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code profile_preflight_passed --output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
     - `bash scripts/kolme/run_local_kolme_fork_profile_preflight_contract_lane.sh --output-json /tmp/kolme-local-fork-profile-preflight-summary.json --policy-output-json /tmp/kolme-local-fork-profile-preflight-policy.json`
   - local fork self-test run-mode commands remain excluded from ci-fast-gate.
