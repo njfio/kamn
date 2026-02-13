@@ -60,6 +60,7 @@ resolve_manifest_name() {
     run_local_heavy_validation_matrix_contract_lane.sh) echo "kolme_local_heavy_validation_matrix_contract_lane.json" ;;
     run_local_kamn_live_runtime_integration_contract_lane.sh) echo "kolme_local_kamn_live_runtime_integration_contract_lane.json" ;;
     run_local_kamn_live_runtime_real_node_profile_contract_lane.sh) echo "kolme_local_kamn_live_runtime_real_node_profile_contract_lane.json" ;;
+    run_local_live_provider_runtime_integration_contract_lane.sh) echo "kolme_local_live_provider_runtime_integration_contract_lane.json" ;;
     run_local_kolme_live_deployment_preflight_contract_lane.sh) echo "kolme_local_kolme_live_deployment_preflight_contract_lane.json" ;;
     run_local_live_node_validation_bundle_contract_lane.sh) echo "kolme_local_live_node_validation_bundle_contract_lane.json" ;;
     run_local_kolme_fork_bootstrap_readiness_contract_lane.sh) echo "kolme_local_kolme_fork_bootstrap_readiness_contract_lane.json" ;;
