@@ -41,10 +41,11 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - For `kamn-node` daemon-shutdown contract changes, keep PR validation on bounded deterministic tests:
   - `cargo test -p kamn-node graceful_shutdown`
   - `cargo test -p kamn-node runtime_daemon`
+  - `cargo test -p kamn-node integration_runtime_daemon_renders_bounded_completion_output`
 - This lane is cost-effective:
   - no external processes or signal orchestration harnesses required
   - deterministic tick-budget simulation with bounded loop-free assertions
-  - timeout behavior validated through direct state transitions instead of wall-clock waits
+  - timeout behavior and observability telemetry validated through direct state transitions instead of wall-clock waits
 
 ## kamn-core Missing-Docs Velocity Guard
 - Fast-gate missing-docs velocity regression command:

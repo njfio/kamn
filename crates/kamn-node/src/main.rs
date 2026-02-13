@@ -7,6 +7,7 @@ use std::env;
 use std::process::ExitCode;
 
 mod cli;
+mod daemon_observability;
 mod daemon_shutdown;
 mod report_builder;
 mod report_render;
@@ -15,6 +16,7 @@ mod signer;
 mod wire_payload;
 
 use cli::parse_args;
+use daemon_observability::build_daemon_observability_telemetry;
 use daemon_shutdown::evaluate_daemon_completion;
 use report_builder::build_bootstrap_report;
 use report_render::render_bootstrap_report;
@@ -290,6 +292,13 @@ struct DaemonExecution {
     tick_interval_ms: u64,
     executed_ticks: u64,
     completion_reason: String,
+    observability_latency_p50_ms: u64,
+    observability_latency_p99_ms: u64,
+    observability_throughput_tps: u64,
+    observability_error_rate_bps: u64,
+    observability_availability_bps: u64,
+    observability_health: String,
+    observability_alert_count: usize,
     peer_id: Option<String>,
     peer_lifecycle_final_state: Option<String>,
     peer_lifecycle_applied_events: Option<Vec<String>>,
@@ -332,6 +341,13 @@ struct NodeBootstrapReport {
     daemon_tick_interval_ms: Option<u64>,
     daemon_executed_ticks: Option<u64>,
     daemon_completion_reason: Option<String>,
+    daemon_observability_latency_p50_ms: Option<u64>,
+    daemon_observability_latency_p99_ms: Option<u64>,
+    daemon_observability_throughput_tps: Option<u64>,
+    daemon_observability_error_rate_bps: Option<u64>,
+    daemon_observability_availability_bps: Option<u64>,
+    daemon_observability_health: Option<String>,
+    daemon_observability_alert_count: Option<usize>,
     daemon_peer_id: Option<String>,
     daemon_peer_lifecycle_final_state: Option<String>,
     daemon_peer_lifecycle_applied_events: Option<Vec<String>>,
@@ -512,12 +528,24 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                 daemon_shutdown_drain_ticks,
                 daemon_shutdown_timeout_ticks,
             );
+            let daemon_observability = build_daemon_observability_telemetry(
+                tick_interval_ms,
+                daemon_completion.completion_reason.as_str(),
+            )
+            .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
             RuntimeExecutionBundle {
                 daemon: Some(DaemonExecution {
                     max_ticks,
                     tick_interval_ms,
                     executed_ticks: daemon_completion.executed_ticks,
                     completion_reason: daemon_completion.completion_reason,
+                    observability_latency_p50_ms: daemon_observability.latency_p50_ms,
+                    observability_latency_p99_ms: daemon_observability.latency_p99_ms,
+                    observability_throughput_tps: daemon_observability.throughput_tps,
+                    observability_error_rate_bps: daemon_observability.error_rate_bps,
+                    observability_availability_bps: daemon_observability.availability_bps,
+                    observability_health: daemon_observability.health,
+                    observability_alert_count: daemon_observability.alert_count,
                     peer_id,
                     peer_lifecycle_final_state,
                     peer_lifecycle_applied_events,

@@ -41,6 +41,13 @@ fn doc_contains_deterministic_json_fields() {
     assert!(DOC.contains("daemon_max_ticks"));
     assert!(DOC.contains("daemon_executed_ticks"));
     assert!(DOC.contains("daemon_completion_reason"));
+    assert!(DOC.contains("daemon_observability_latency_p50_ms"));
+    assert!(DOC.contains("daemon_observability_latency_p99_ms"));
+    assert!(DOC.contains("daemon_observability_throughput_tps"));
+    assert!(DOC.contains("daemon_observability_error_rate_bps"));
+    assert!(DOC.contains("daemon_observability_availability_bps"));
+    assert!(DOC.contains("daemon_observability_health"));
+    assert!(DOC.contains("daemon_observability_alert_count"));
     assert!(DOC.contains("daemon_peer_lifecycle_final_state"));
     assert!(DOC.contains("daemon_peer_lifecycle_applied_events"));
     assert!(DOC.contains("kolme_live_provider_client_contract"));
