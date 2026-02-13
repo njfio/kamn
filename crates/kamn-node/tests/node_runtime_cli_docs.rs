@@ -138,6 +138,18 @@ fn doc_contains_runtime_kolme_live_rules() {
 }
 
 #[test]
+fn doc_contains_decomposition_guardrails() {
+    assert!(DOC.contains("## Decomposition Guardrails"));
+    assert!(DOC.contains("main.rs` orchestrates only"));
+    assert!(DOC.contains("docs/architecture/kamn-node-module-map.md"));
+    assert!(DOC.contains("src/cli.rs"));
+    assert!(DOC.contains("src/runtime_kolme_live.rs"));
+    assert!(DOC.contains("src/signer.rs"));
+    assert!(DOC.contains("src/wire_payload.rs"));
+    assert!(DOC.contains("Regression: #2606"));
+}
+
+#[test]
 fn doc_contains_fast_and_cost_effective_validation_lane() {
     assert!(DOC.contains("## Fast and Cost-Effective Validation"));
     assert!(DOC.contains("cargo test -p kamn-node"));
@@ -148,6 +160,7 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
 #[test]
 fn doc_contains_docs_fast_lane_command_checks() {
     assert!(DOC.contains("cargo test -p kamn-node --test node_runtime_cli_docs"));
+    assert!(DOC.contains("cargo test -p kamn-node --test node_module_map_docs"));
     assert!(DOC.contains("cargo test -p kamn-core --test runtime_network_docs"));
 }
 
