@@ -590,6 +590,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   "required_approvals": 2,
   "received_approvals": 2,
   "approved_signers": ["ops-primary", "ops-secondary"],
+  "signer_roles": {"ops-primary": "primary", "ops-secondary": "secondary"},
+  "signer_rotation_epochs": {"ops-primary": 3, "ops-secondary": 2},
   "custody_evidence_sha256": "$custody_sha"
 }
 JSON`
@@ -639,6 +641,10 @@ JSON`
     - `quorum_evidence_signers_unique`
     - `quorum_evidence_matches_threshold`
     - `quorum_evidence_custody_sha256_match`
+    - `quorum_evidence_signer_roles_present`
+    - `quorum_evidence_signer_roles_valid`
+    - `quorum_evidence_rotation_metadata_present`
+    - `quorum_evidence_rotation_metadata_valid`
     - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
     - `runtime_signer_attestation_bundle`
     - `custody_evidence_file`
@@ -659,6 +665,8 @@ JSON`
     - `contracts.quorum_evidence_schema_version=kamn.kolme.runtime-signer-attestation.v1`
     - `contracts.quorum_evidence_signer_uniqueness_required=true`
     - `contracts.quorum_evidence_custody_sha256_match_required=true`
+    - `contracts.quorum_evidence_signer_roles_required=true`
+    - `contracts.quorum_evidence_rotation_metadata_required=true`
     - `contracts.quorum_evidence_source=operator-attestation-bundle`
     - `contracts.runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
     - `contracts.runtime_signer_attestation_signer_uniqueness_required=true`
@@ -690,6 +698,10 @@ JSON`
   - `quorum_evidence_sha256_invalid`
   - `quorum_evidence_schema_invalid`
   - `quorum_evidence_signers_not_unique`
+  - `quorum_evidence_signer_roles_missing`
+  - `quorum_evidence_signer_roles_invalid`
+  - `quorum_evidence_rotation_metadata_missing`
+  - `quorum_evidence_rotation_metadata_invalid`
   - `quorum_evidence_approvals_mismatch`
   - `quorum_evidence_custody_sha256_mismatch`
   - `runtime_signer_attestation_approved_signers_not_unique`
@@ -738,6 +750,8 @@ JSON`
   "required_approvals": 2,
   "received_approvals": 2,
   "approved_signers": ["ops-primary", "ops-secondary"],
+  "signer_roles": {"ops-primary": "primary", "ops-secondary": "secondary"},
+  "signer_rotation_epochs": {"ops-primary": 3, "ops-secondary": 2},
   "custody_evidence_sha256": "$custody_sha"
 }
 JSON`

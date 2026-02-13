@@ -299,6 +299,22 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(quorum_evidence_custody_sha256_match, bool):
         reason_codes.append("quorum_evidence_custody_sha256_match_invalid")
 
+    quorum_evidence_signer_roles_present = report.get("quorum_evidence_signer_roles_present")
+    if not isinstance(quorum_evidence_signer_roles_present, bool):
+        reason_codes.append("quorum_evidence_signer_roles_present_invalid")
+
+    quorum_evidence_signer_roles_valid = report.get("quorum_evidence_signer_roles_valid")
+    if not isinstance(quorum_evidence_signer_roles_valid, bool):
+        reason_codes.append("quorum_evidence_signer_roles_valid_invalid")
+
+    quorum_evidence_rotation_metadata_present = report.get("quorum_evidence_rotation_metadata_present")
+    if not isinstance(quorum_evidence_rotation_metadata_present, bool):
+        reason_codes.append("quorum_evidence_rotation_metadata_present_invalid")
+
+    quorum_evidence_rotation_metadata_valid = report.get("quorum_evidence_rotation_metadata_valid")
+    if not isinstance(quorum_evidence_rotation_metadata_valid, bool):
+        reason_codes.append("quorum_evidence_rotation_metadata_valid_invalid")
+
     runtime_signer_attestation_schema_version = report.get("runtime_signer_attestation_schema_version")
     if (
         not isinstance(runtime_signer_attestation_schema_version, str)
@@ -388,6 +404,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("quorum_evidence_signer_uniqueness_required_contract_mismatch")
         if contracts.get("quorum_evidence_custody_sha256_match_required") is not True:
             reason_codes.append("quorum_evidence_custody_sha256_match_required_contract_mismatch")
+        if contracts.get("quorum_evidence_signer_roles_required") is not True:
+            reason_codes.append("quorum_evidence_signer_roles_required_contract_mismatch")
+        if contracts.get("quorum_evidence_signer_roles_allowed") != ["primary", "secondary"]:
+            reason_codes.append("quorum_evidence_signer_roles_allowed_contract_mismatch")
+        if contracts.get("quorum_evidence_rotation_metadata_required") is not True:
+            reason_codes.append("quorum_evidence_rotation_metadata_required_contract_mismatch")
+        if contracts.get("quorum_evidence_rotation_metadata_positive_epochs_required") is not True:
+            reason_codes.append("quorum_evidence_rotation_metadata_positive_epochs_required_contract_mismatch")
         if contracts.get("quorum_evidence_source") != "operator-attestation-bundle":
             reason_codes.append("quorum_evidence_source_contract_mismatch")
         if contracts.get("runtime_signer_attestation_schema_version") != RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION:
@@ -499,6 +523,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("quorum_evidence_approvals_mismatch")
         if quorum_evidence_custody_sha256_match is not True:
             reason_codes.append("quorum_evidence_custody_sha256_mismatch")
+        if quorum_evidence_signer_roles_present is not True:
+            reason_codes.append("quorum_evidence_signer_roles_missing")
+        if quorum_evidence_signer_roles_valid is not True:
+            reason_codes.append("quorum_evidence_signer_roles_invalid")
+        if quorum_evidence_rotation_metadata_present is not True:
+            reason_codes.append("quorum_evidence_rotation_metadata_missing")
+        if quorum_evidence_rotation_metadata_valid is not True:
+            reason_codes.append("quorum_evidence_rotation_metadata_invalid")
         if isinstance(quorum_evidence_file, str) and quorum_evidence_present is True and not quorum_evidence_file.strip():
             reason_codes.append("quorum_evidence_file_missing")
         if (

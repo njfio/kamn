@@ -206,6 +206,18 @@ def main() -> int:
     if summary.get("quorum_evidence_matches_threshold") is not False:
         print("expected deployment preflight summary quorum threshold marker false in dry-run", file=sys.stderr)
         return 1
+    if summary.get("quorum_evidence_signer_roles_present") is not False:
+        print("expected deployment preflight summary quorum signer-role metadata marker false in dry-run", file=sys.stderr)
+        return 1
+    if summary.get("quorum_evidence_signer_roles_valid") is not False:
+        print("expected deployment preflight summary quorum signer-role metadata validity marker false in dry-run", file=sys.stderr)
+        return 1
+    if summary.get("quorum_evidence_rotation_metadata_present") is not False:
+        print("expected deployment preflight summary quorum rotation metadata marker false in dry-run", file=sys.stderr)
+        return 1
+    if summary.get("quorum_evidence_rotation_metadata_valid") is not False:
+        print("expected deployment preflight summary quorum rotation metadata validity marker false in dry-run", file=sys.stderr)
+        return 1
     if summary.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
         print("expected deployment preflight summary runtime signer attestation schema marker", file=sys.stderr)
         return 1
@@ -264,6 +276,18 @@ def main() -> int:
         return 1
     if contracts.get("quorum_evidence_custody_sha256_match_required") is not True:
         print("expected deployment preflight contracts quorum_evidence_custody_sha256_match_required=true", file=sys.stderr)
+        return 1
+    if contracts.get("quorum_evidence_signer_roles_required") is not True:
+        print("expected deployment preflight contracts quorum signer-role metadata requirement marker", file=sys.stderr)
+        return 1
+    if contracts.get("quorum_evidence_signer_roles_allowed") != ["primary", "secondary"]:
+        print("expected deployment preflight contracts quorum signer-role allowlist marker", file=sys.stderr)
+        return 1
+    if contracts.get("quorum_evidence_rotation_metadata_required") is not True:
+        print("expected deployment preflight contracts quorum rotation metadata requirement marker", file=sys.stderr)
+        return 1
+    if contracts.get("quorum_evidence_rotation_metadata_positive_epochs_required") is not True:
+        print("expected deployment preflight contracts quorum rotation positive-epoch requirement marker", file=sys.stderr)
         return 1
     if contracts.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
         print("expected deployment preflight contracts runtime signer attestation schema marker", file=sys.stderr)
@@ -456,6 +480,63 @@ def main() -> int:
             return 1
         if quorum_evidence_no_go_policy.get("final_decision") != "NO-GO":
             print("expected quorum evidence negative policy final_decision NO-GO", file=sys.stderr)
+            return 1
+
+        quorum_metadata_negative_report = temp_path / "quorum_metadata_negative_summary.json"
+        quorum_metadata_negative_policy = temp_path / "quorum_metadata_negative_policy.json"
+        quorum_metadata_negative_summary = dict(summary)
+        quorum_metadata_negative_summary["mode"] = "run"
+        quorum_metadata_negative_summary["status"] = "fail"
+        quorum_metadata_negative_summary["reason_code"] = "checkpoint_failed_quorum_evidence_contract"
+        quorum_metadata_negative_summary["signer_secret_present"] = True
+        quorum_metadata_negative_summary["signer_secret_hex_valid"] = True
+        quorum_metadata_negative_summary["required_approvals"] = 2
+        quorum_metadata_negative_summary["received_approvals"] = 2
+        quorum_metadata_negative_summary["quorum_evidence_present"] = True
+        quorum_metadata_negative_summary["quorum_evidence_sha256_valid"] = True
+        quorum_metadata_negative_summary["quorum_evidence_schema_valid"] = True
+        quorum_metadata_negative_summary["quorum_evidence_approval_count"] = 2
+        quorum_metadata_negative_summary["quorum_evidence_signers_unique"] = True
+        quorum_metadata_negative_summary["quorum_evidence_matches_threshold"] = True
+        quorum_metadata_negative_summary["quorum_evidence_custody_sha256_match"] = True
+        quorum_metadata_negative_summary["quorum_evidence_signer_roles_present"] = False
+        quorum_metadata_negative_summary["quorum_evidence_signer_roles_valid"] = False
+        quorum_metadata_negative_summary["quorum_evidence_rotation_metadata_present"] = False
+        quorum_metadata_negative_summary["quorum_evidence_rotation_metadata_valid"] = False
+        quorum_metadata_negative_summary["custody_evidence_present"] = True
+        quorum_metadata_negative_summary["custody_evidence_sha256_valid"] = True
+        quorum_metadata_negative_summary["signer_provenance_present"] = True
+        quorum_metadata_negative_summary["signer_provenance_sha256_valid"] = True
+        quorum_metadata_negative_summary["signer_rotation_fresh"] = True
+        quorum_metadata_negative_report.write_text(
+            json.dumps(quorum_metadata_negative_summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        quorum_metadata_no_go_result = run_policy_check(
+            report_file=quorum_metadata_negative_report,
+            output_json=quorum_metadata_negative_policy,
+            expected_final_decision="NO-GO",
+            required_reason_code="checkpoint_failed_quorum_evidence_contract",
+        )
+        if quorum_metadata_no_go_result.returncode == 0:
+            print("expected quorum metadata negative proof to fail closed", file=sys.stderr)
+            return 1
+        quorum_metadata_no_go_policy = json.loads(
+            quorum_metadata_negative_policy.read_text(encoding="utf-8")
+        )
+        quorum_metadata_no_go_reason_codes = quorum_metadata_no_go_policy.get("reason_codes")
+        if not isinstance(quorum_metadata_no_go_reason_codes, list):
+            print("expected reason_codes list in quorum metadata negative policy output", file=sys.stderr)
+            return 1
+        if "quorum_evidence_signer_roles_missing" not in quorum_metadata_no_go_reason_codes:
+            print("expected quorum_evidence_signer_roles_missing in quorum metadata negative policy output", file=sys.stderr)
+            return 1
+        if "quorum_evidence_rotation_metadata_missing" not in quorum_metadata_no_go_reason_codes:
+            print("expected quorum_evidence_rotation_metadata_missing in quorum metadata negative policy output", file=sys.stderr)
+            return 1
+        if quorum_metadata_no_go_policy.get("final_decision") != "NO-GO":
+            print("expected quorum metadata negative policy final_decision NO-GO", file=sys.stderr)
             return 1
 
         attestation_duplicate_report = temp_path / "attestation_duplicate_summary.json"
@@ -710,8 +791,18 @@ def main() -> int:
         "checkpoint_failed_signer_rotation_freshness_contract",
         "signer_quorum_shortfall",
         "quorum_evidence_missing",
+        "quorum_evidence_signer_roles_missing",
+        "quorum_evidence_signer_roles_invalid",
+        "quorum_evidence_rotation_metadata_missing",
+        "quorum_evidence_rotation_metadata_invalid",
         "quorum_evidence_approvals_mismatch",
         "quorum_evidence_custody_sha256_mismatch",
+        "quorum_evidence_signer_roles_present",
+        "quorum_evidence_signer_roles_valid",
+        "quorum_evidence_rotation_metadata_present",
+        "quorum_evidence_rotation_metadata_valid",
+        "contracts.quorum_evidence_signer_roles_required=true",
+        "contracts.quorum_evidence_rotation_metadata_required=true",
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
         "runtime_signer_attestation_schema_invalid",
@@ -724,6 +815,7 @@ def main() -> int:
         "signer_provenance_file",
         "signer_rotation_epoch_stale",
         "Regression: #2226",
+        "Regression: #2337",
         "Regression: #2300",
         "Regression: #2301",
         "Regression: #2326",
@@ -747,8 +839,18 @@ def main() -> int:
         "checkpoint_failed_signer_rotation_freshness_contract",
         "signer_quorum_shortfall",
         "quorum_evidence_missing",
+        "quorum_evidence_signer_roles_missing",
+        "quorum_evidence_signer_roles_invalid",
+        "quorum_evidence_rotation_metadata_missing",
+        "quorum_evidence_rotation_metadata_invalid",
         "quorum_evidence_approvals_mismatch",
         "quorum_evidence_custody_sha256_mismatch",
+        "quorum_evidence_signer_roles_present",
+        "quorum_evidence_signer_roles_valid",
+        "quorum_evidence_rotation_metadata_present",
+        "quorum_evidence_rotation_metadata_valid",
+        "contracts.quorum_evidence_signer_roles_required=true",
+        "contracts.quorum_evidence_rotation_metadata_required=true",
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
         "runtime_signer_attestation_schema_invalid",
@@ -761,6 +863,7 @@ def main() -> int:
         "signer_provenance_file",
         "signer_rotation_epoch_stale",
         "Regression: #2226",
+        "Regression: #2337",
         "Regression: #2300",
         "Regression: #2301",
         "Regression: #2326",
@@ -784,8 +887,18 @@ def main() -> int:
         "checkpoint_failed_signer_rotation_freshness_contract",
         "signer_quorum_shortfall",
         "quorum_evidence_missing",
+        "quorum_evidence_signer_roles_missing",
+        "quorum_evidence_signer_roles_invalid",
+        "quorum_evidence_rotation_metadata_missing",
+        "quorum_evidence_rotation_metadata_invalid",
         "quorum_evidence_approvals_mismatch",
         "quorum_evidence_custody_sha256_mismatch",
+        "quorum_evidence_signer_roles_present",
+        "quorum_evidence_signer_roles_valid",
+        "quorum_evidence_rotation_metadata_present",
+        "quorum_evidence_rotation_metadata_valid",
+        "contracts.quorum_evidence_signer_roles_required=true",
+        "contracts.quorum_evidence_rotation_metadata_required=true",
         "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1",
         "runtime_signer_attestation_bundle",
         "runtime_signer_attestation_schema_invalid",
@@ -798,6 +911,7 @@ def main() -> int:
         "signer_provenance_file",
         "signer_rotation_epoch_stale",
         "Regression: #2226",
+        "Regression: #2337",
         "Regression: #2300",
         "Regression: #2301",
         "Regression: #2326",

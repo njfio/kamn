@@ -67,6 +67,10 @@ cat >"$TMP_REPORT_OK" <<'JSON'
   "quorum_evidence_signers_unique": false,
   "quorum_evidence_matches_threshold": false,
   "quorum_evidence_custody_sha256_match": false,
+  "quorum_evidence_signer_roles_present": false,
+  "quorum_evidence_signer_roles_valid": false,
+  "quorum_evidence_rotation_metadata_present": false,
+  "quorum_evidence_rotation_metadata_valid": false,
   "runtime_signer_attestation_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
   "runtime_signer_attestation_bundle": {
     "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
@@ -123,6 +127,13 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "quorum_evidence_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
     "quorum_evidence_signer_uniqueness_required": true,
     "quorum_evidence_custody_sha256_match_required": true,
+    "quorum_evidence_signer_roles_required": true,
+    "quorum_evidence_signer_roles_allowed": [
+      "primary",
+      "secondary"
+    ],
+    "quorum_evidence_rotation_metadata_required": true,
+    "quorum_evidence_rotation_metadata_positive_epochs_required": true,
     "quorum_evidence_source": "operator-attestation-bundle",
     "runtime_signer_attestation_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
     "runtime_signer_attestation_signer_uniqueness_required": true,
@@ -449,6 +460,16 @@ fi
 
 if ! grep -q "quorum_evidence_missing" "$TMP_ERR"; then
   echo "expected quorum evidence missing reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "quorum_evidence_signer_roles_missing" "$TMP_ERR"; then
+  echo "expected quorum evidence signer-roles missing reason for deployment preflight policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "quorum_evidence_rotation_metadata_missing" "$TMP_ERR"; then
+  echo "expected quorum evidence rotation metadata missing reason for deployment preflight policy failure" >&2
   exit 1
 fi
 
