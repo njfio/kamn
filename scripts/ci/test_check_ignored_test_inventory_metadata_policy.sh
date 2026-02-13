@@ -57,4 +57,31 @@ fi
 grep -q '^status=fail$' "$TMP_DIR/check-metadata-fail.out"
 grep -q 'ignored_test_metadata_missing' "$TMP_DIR/check-metadata-fail.out"
 
+MUTATED_PRIORITY_METADATA="$TMP_DIR/mutated-priority-metadata.json"
+cp "$METADATA_FILE" "$MUTATED_PRIORITY_METADATA"
+python3 - "$MUTATED_PRIORITY_METADATA" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+metadata_path = Path(sys.argv[1])
+payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+for entry in payload.get("ignored_tests", []):
+    if entry.get("priority") == "P1":
+        entry["tracking_issue"] = ""
+        break
+metadata_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if bash "$CHECK_SCRIPT" \
+  --baseline-file "$BASELINE_FILE" \
+  --metadata-file "$MUTATED_PRIORITY_METADATA" \
+  --output-json "$TMP_DIR/check-priority-fail.json" >"$TMP_DIR/check-priority-fail.out" 2>&1; then
+  echo "expected ignored-test checker to fail when high-priority tracking linkage is missing" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/check-priority-fail.out"
+grep -q 'high_priority_tracking_issue_missing' "$TMP_DIR/check-priority-fail.out"
+
 echo "Ignored-test metadata policy tests passed."

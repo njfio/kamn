@@ -20,6 +20,7 @@ ALLOWED_PRIORITY_LEVELS = {"P0", "P1", "P2", "P3"}
 
 IGNORE_ATTRIBUTE_PATTERN = re.compile(r"^\s*#\s*\[\s*ignore(?:\s*=.*)?\s*\]")
 FUNCTION_PATTERN = re.compile(r"^\s*(?:pub\s+)?(?:async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+TRACKING_ISSUE_PATTERN = re.compile(r"^#[1-9][0-9]*$")
 
 
 class CheckerError(RuntimeError):
@@ -370,6 +371,15 @@ def run_check(args: argparse.Namespace) -> int:
     missing_entries = sorted(baseline_set - current_set)
     missing_metadata_entries = sorted(current_set - set(metadata_by_key.keys()))
     stale_metadata_entries = sorted(set(metadata_by_key.keys()) - current_set)
+    high_priority_tracking_issue_missing_entries: list[tuple[str, str]] = []
+    for key in sorted(current_set):
+        metadata = metadata_by_key.get(key)
+        if metadata is None:
+            continue
+        if metadata["priority"] in {"P0", "P1"} and not TRACKING_ISSUE_PATTERN.fullmatch(
+            metadata["tracking_issue"]
+        ):
+            high_priority_tracking_issue_missing_entries.append(key)
 
     reason_codes: list[str] = []
     if unresolved_markers:
@@ -382,6 +392,8 @@ def run_check(args: argparse.Namespace) -> int:
         reason_codes.append("ignored_test_metadata_missing")
     if stale_metadata_entries:
         reason_codes.append("ignored_test_metadata_stale_entry")
+    if high_priority_tracking_issue_missing_entries:
+        reason_codes.append("high_priority_tracking_issue_missing")
 
     status = "pass" if not reason_codes else "fail"
     report = {
@@ -410,12 +422,17 @@ def run_check(args: argparse.Namespace) -> int:
             {"source_file": source_file, "test_name": test_name}
             for source_file, test_name in stale_metadata_entries
         ],
+        "high_priority_tracking_issue_missing_entries": [
+            {"source_file": source_file, "test_name": test_name}
+            for source_file, test_name in high_priority_tracking_issue_missing_entries
+        ],
         "unresolved_markers": unresolved_markers,
         "reason_codes": reason_codes,
         "violation_count": len(unexpected_entries)
         + len(missing_entries)
         + len(missing_metadata_entries)
         + len(stale_metadata_entries)
+        + len(high_priority_tracking_issue_missing_entries)
         + (len(unresolved_markers) if unresolved_markers else 0),
     }
 
@@ -432,6 +449,10 @@ def run_check(args: argparse.Namespace) -> int:
     print(f"missing_count={len(missing_entries)}")
     print(f"missing_metadata_count={len(missing_metadata_entries)}")
     print(f"stale_metadata_count={len(stale_metadata_entries)}")
+    print(
+        "high_priority_tracking_issue_missing_count="
+        f"{len(high_priority_tracking_issue_missing_entries)}"
+    )
     print(f"unresolved_marker_count={len(unresolved_markers)}")
     print(f"violation_count={report['violation_count']}")
     print(f"reason_codes={'none' if not reason_codes else ','.join(reason_codes)}")
@@ -461,6 +482,12 @@ def run_check(args: argparse.Namespace) -> int:
         for entry in report["stale_metadata_entries"]:
             print(
                 "stale_ignored_test_metadata="
+                f"{entry['source_file']}::{entry['test_name']}",
+                file=sys.stderr,
+            )
+        for entry in report["high_priority_tracking_issue_missing_entries"]:
+            print(
+                "missing_high_priority_tracking_issue="
                 f"{entry['source_file']}::{entry['test_name']}",
                 file=sys.stderr,
             )

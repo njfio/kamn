@@ -78,7 +78,7 @@
       "reason": "local-heavy-live-node",
       "source_file": "crates/kamn-core/tests/kolme_runtime_commit_http_transport.rs",
       "test_name": "integration_kolme_fork_live_node_submit_reaches_endpoint",
-      "tracking_issue": "#2842"
+      "tracking_issue": "#2845"
     },
     {
       "owner": "team-signer",
@@ -102,7 +102,7 @@
       "reason": "local-heavy-live-node",
       "source_file": "crates/kamn-node/src/main_tests/signer_tests.rs",
       "test_name": "integration_kolme_live_signer_vector_probe_contract",
-      "tracking_issue": "#2842"
+      "tracking_issue": "#2846"
     },
     {
       "owner": "team-sdk",
