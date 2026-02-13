@@ -25,6 +25,8 @@ REQUIRED_VECTOR_IDS = (
     "kolme_fork_primary_alpha",
     "kolme_fork_secondary_beta",
     "kolme_fork_primary_alpha_bad_signature",
+    "kolme_fork_secondary_beta_bad_recovery",
+    "kolme_fork_primary_alpha_bad_pubkey",
 )
 
 
@@ -146,24 +148,33 @@ def main() -> int:
         if not isinstance(cases, list) or len(cases) < 3:
             print("expected at least three signature parity vectors in matrix report", file=sys.stderr)
             return 1
-        bad_vector_cases = [
-            case
-            for case in cases
-            if isinstance(case, dict)
-            and case.get("vector_id") == "kolme_fork_primary_alpha_bad_signature"
-        ]
-        if len(bad_vector_cases) != 1:
-            print("expected one known-bad signature parity vector case in matrix report", file=sys.stderr)
-            return 1
-        # Regression: #2299
-        bad_vector_case = bad_vector_cases[0]
-        if bad_vector_case.get("observed_final_decision") != "NO-GO":
-            print("expected known-bad signature vector to observe NO-GO decision", file=sys.stderr)
-            return 1
-        reason_codes = bad_vector_case.get("reason_codes", [])
-        if not isinstance(reason_codes, list) or "parity_signature_mismatch" not in reason_codes:
-            print("expected known-bad signature vector to emit parity_signature_mismatch reason", file=sys.stderr)
-            return 1
+        expected_negative_vectors = {
+            "kolme_fork_primary_alpha_bad_signature": "parity_signature_mismatch",
+            "kolme_fork_secondary_beta_bad_recovery": "parity_recovery_id_mismatch",
+            "kolme_fork_primary_alpha_bad_pubkey": "parity_pubkey_mismatch",
+        }
+        for vector_id, required_reason_code in expected_negative_vectors.items():
+            bad_vector_cases = [
+                case
+                for case in cases
+                if isinstance(case, dict)
+                and case.get("vector_id") == vector_id
+            ]
+            if len(bad_vector_cases) != 1:
+                print(f"expected one known-bad signature parity vector case in matrix report: {vector_id}", file=sys.stderr)
+                return 1
+            # Regression: #2299
+            bad_vector_case = bad_vector_cases[0]
+            if bad_vector_case.get("observed_final_decision") != "NO-GO":
+                print(f"expected known-bad signature vector to observe NO-GO decision: {vector_id}", file=sys.stderr)
+                return 1
+            reason_codes = bad_vector_case.get("reason_codes", [])
+            if not isinstance(reason_codes, list) or required_reason_code not in reason_codes:
+                print(
+                    f"expected known-bad signature vector to emit {required_reason_code} reason: {vector_id}",
+                    file=sys.stderr,
+                )
+                return 1
 
         policy_payload = json.loads(policy_report.read_text(encoding="utf-8"))
         if policy_payload.get("schema_version") != "kamn.kolme.signature-parity-policy-report.v1":

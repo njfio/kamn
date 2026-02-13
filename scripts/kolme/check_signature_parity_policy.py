@@ -5,6 +5,15 @@ import argparse
 import json
 from pathlib import Path
 
+ALLOWED_CASE_REASON_CODES = {
+    "parity_signature_mismatch",
+    "parity_recovery_id_mismatch",
+    "parity_pubkey_mismatch",
+    "parity_probe_failed",
+    "vector_payload_invalid",
+    "expected_final_decision_invalid",
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -60,6 +69,30 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             observed_decision = entry.get("observed_final_decision")
             if observed_decision not in ("GO", "NO-GO"):
                 reason_codes.append(f"case_observed_final_decision_invalid:{vector_id}")
+            case_reason_codes = entry.get("reason_codes")
+            normalized_case_reason_codes: list[str] = []
+            if not isinstance(case_reason_codes, list):
+                reason_codes.append(f"case_reason_codes_invalid:{vector_id}")
+            else:
+                for case_reason_code in case_reason_codes:
+                    if not isinstance(case_reason_code, str) or not case_reason_code.strip():
+                        reason_codes.append(f"case_reason_codes_invalid:{vector_id}")
+                        continue
+                    normalized_case_reason_codes.append(case_reason_code)
+                for case_reason_code in normalized_case_reason_codes:
+                    if (
+                        case_reason_code not in ALLOWED_CASE_REASON_CODES
+                        and not case_reason_code.startswith("missing_field:")
+                    ):
+                        reason_codes.append(f"case_reason_code_unrecognized:{vector_id}:{case_reason_code}")
+            if observed_decision == "NO-GO" and not normalized_case_reason_codes:
+                reason_codes.append(f"case_reason_codes_missing:{vector_id}")
+            missing_required_reason_codes = entry.get("missing_required_reason_codes")
+            if isinstance(missing_required_reason_codes, list):
+                if missing_required_reason_codes:
+                    reason_codes.append(f"case_missing_required_reason_codes_present:{vector_id}")
+            elif missing_required_reason_codes is not None:
+                reason_codes.append(f"case_missing_required_reason_codes_invalid:{vector_id}")
 
         for required_vector_id in args.require_vector_id:
             if required_vector_id not in observed_vector_ids:

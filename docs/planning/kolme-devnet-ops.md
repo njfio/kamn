@@ -1089,6 +1089,22 @@ Operator checkpoints:
   - lane default budget is bounded to 120 seconds via `KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS`.
   - local-heavy run-mode parity commands remain excluded from PR fast-gate workflow routing.
 
+## Secp256k1 Signature Parity Fixture Lane (Issue #2345)
+
+- Fixture-backed matrix runner:
+  - `python3 scripts/kolme/run_signature_parity_matrix.py --fixture fixtures/kolme_commit/signature_parity_vectors.json --output-json /tmp/kolme-signature-parity-matrix-report.json`
+- Policy checker:
+  - `python3 scripts/kolme/check_signature_parity_policy.py --report-file /tmp/kolme-signature-parity-matrix-report.json --expected-final-decision GO --ci-fast-gate PASS --require-vector-id kolme_fork_primary_alpha --require-vector-id kolme_fork_secondary_beta --require-vector-id kolme_fork_primary_alpha_bad_signature --require-vector-id kolme_fork_secondary_beta_bad_recovery --require-vector-id kolme_fork_primary_alpha_bad_pubkey --output-json /tmp/kolme-signature-parity-policy-report.json`
+- Contract lane wrapper:
+  - `bash scripts/kolme/run_signature_parity_contract_lane.sh --output-json /tmp/kolme-signature-parity-matrix-report.json --policy-output-json /tmp/kolme-signature-parity-policy-report.json`
+- Deterministic negative-vector checkpoints:
+  - `kolme_fork_primary_alpha_bad_signature` must emit `parity_signature_mismatch`.
+  - `kolme_fork_secondary_beta_bad_recovery` must emit `parity_recovery_id_mismatch`.
+  - `kolme_fork_primary_alpha_bad_pubkey` must emit `parity_pubkey_mismatch`.
+- Policy fail-closed checkpoints:
+  - NO-GO cases must include deterministic `reason_codes`.
+  - unknown/unrecognized case-level reason codes are rejected.
+
 ## Deterministic Local Bootstrap Health Checks (Issues #1417, #1691)
 
 - Bootstrap health-check runner:
