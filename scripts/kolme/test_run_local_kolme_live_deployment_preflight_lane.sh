@@ -25,7 +25,15 @@ cat >"$TMP_QUORUM" <<JSON
     "ops-primary",
     "ops-secondary"
   ],
-  "custody_evidence_sha256": "$TMP_CUSTODY_SHA"
+  "custody_evidence_sha256": "$TMP_CUSTODY_SHA",
+  "signer_roles": {
+    "ops-primary": "primary",
+    "ops-secondary": "secondary"
+  },
+  "signer_rotation_epochs": {
+    "ops-primary": 3,
+    "ops-secondary": 2
+  }
 }
 JSON
 
@@ -127,6 +135,14 @@ if summary.get("quorum_evidence_present") is not False:
     raise SystemExit("expected deployment preflight summary quorum evidence marker to be false in dry-run")
 if summary.get("quorum_evidence_matches_threshold") is not False:
     raise SystemExit("expected deployment preflight summary quorum threshold marker to be false in dry-run")
+if summary.get("quorum_evidence_signer_roles_present") is not False:
+    raise SystemExit("expected deployment preflight summary signer-roles metadata marker to be false in dry-run")
+if summary.get("quorum_evidence_signer_roles_valid") is not False:
+    raise SystemExit("expected deployment preflight summary signer-roles metadata validity marker to be false in dry-run")
+if summary.get("quorum_evidence_rotation_metadata_present") is not False:
+    raise SystemExit("expected deployment preflight summary rotation metadata marker to be false in dry-run")
+if summary.get("quorum_evidence_rotation_metadata_valid") is not False:
+    raise SystemExit("expected deployment preflight summary rotation metadata validity marker to be false in dry-run")
 if summary.get("custody_evidence_present") is not False:
     raise SystemExit("expected deployment preflight summary custody evidence marker to be false in dry-run")
 if summary.get("signer_provenance_present") is not False:
@@ -170,6 +186,14 @@ if contracts.get("quorum_evidence_signer_uniqueness_required") is not True:
     raise SystemExit("expected deployment preflight contracts quorum signer uniqueness requirement marker")
 if contracts.get("quorum_evidence_custody_sha256_match_required") is not True:
     raise SystemExit("expected deployment preflight contracts quorum custody sha256 match requirement marker")
+if contracts.get("quorum_evidence_signer_roles_required") is not True:
+    raise SystemExit("expected deployment preflight contracts quorum signer-role metadata requirement marker")
+if contracts.get("quorum_evidence_signer_roles_allowed") != ["primary", "secondary"]:
+    raise SystemExit("expected deployment preflight contracts quorum signer-role allowlist marker")
+if contracts.get("quorum_evidence_rotation_metadata_required") is not True:
+    raise SystemExit("expected deployment preflight contracts quorum rotation metadata requirement marker")
+if contracts.get("quorum_evidence_rotation_metadata_positive_epochs_required") is not True:
+    raise SystemExit("expected deployment preflight contracts quorum rotation positive epoch requirement marker")
 if contracts.get("signer_provenance_required") is not True:
     raise SystemExit("expected deployment preflight contracts to require signer provenance evidence")
 if contracts.get("signer_provenance_sha256_required") is not True:
@@ -369,6 +393,14 @@ if summary.get("quorum_evidence_matches_threshold") is not True:
     raise SystemExit("expected deployment preflight run summary quorum threshold marker true")
 if summary.get("quorum_evidence_custody_sha256_match") is not True:
     raise SystemExit("expected deployment preflight run summary quorum custody sha256 match marker true")
+if summary.get("quorum_evidence_signer_roles_present") is not True:
+    raise SystemExit("expected deployment preflight run summary signer-roles metadata marker true")
+if summary.get("quorum_evidence_signer_roles_valid") is not True:
+    raise SystemExit("expected deployment preflight run summary signer-roles metadata validity marker true")
+if summary.get("quorum_evidence_rotation_metadata_present") is not True:
+    raise SystemExit("expected deployment preflight run summary rotation metadata marker true")
+if summary.get("quorum_evidence_rotation_metadata_valid") is not True:
+    raise SystemExit("expected deployment preflight run summary rotation metadata validity marker true")
 if summary.get("custody_evidence_present") is not True:
     raise SystemExit("expected deployment preflight run summary custody evidence marker true")
 if summary.get("signer_provenance_present") is not True:

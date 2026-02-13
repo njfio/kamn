@@ -83,8 +83,18 @@ required_coverage_markers=(
   "signer_rotation_epoch_stale"
   "signer_quorum_shortfall"
   "quorum_evidence_missing"
+  "quorum_evidence_signer_roles_missing"
+  "quorum_evidence_signer_roles_invalid"
+  "quorum_evidence_rotation_metadata_missing"
+  "quorum_evidence_rotation_metadata_invalid"
   "quorum_evidence_approvals_mismatch"
   "quorum_evidence_custody_sha256_mismatch"
+  "quorum_evidence_signer_roles_present"
+  "quorum_evidence_signer_roles_valid"
+  "quorum_evidence_rotation_metadata_present"
+  "quorum_evidence_rotation_metadata_valid"
+  "contracts.quorum_evidence_signer_roles_required=true"
+  "contracts.quorum_evidence_rotation_metadata_required=true"
   "custody_evidence_missing"
   "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1"
   "runtime_signer_attestation_bundle"
@@ -92,6 +102,7 @@ required_coverage_markers=(
   "runtime_signer_attestation_quorum_shortfall"
   "runtime_signer_attestation_schema_invalid"
   "Regression: #2226"
+  "Regression: #2337"
   "Regression: #2300"
   "Regression: #2301"
   "Regression: #2326"
@@ -133,6 +144,30 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
     echo "expected docs parity to include runtime signer attestation quorum shortfall reason marker in $docs_file" >&2
     exit 1
   fi
+  if ! grep -q "quorum_evidence_signer_roles_missing" "$docs_file"; then
+    echo "expected docs parity to include quorum signer-role metadata missing reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "quorum_evidence_rotation_metadata_missing" "$docs_file"; then
+    echo "expected docs parity to include quorum rotation metadata missing reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "quorum_evidence_signer_roles_present" "$docs_file"; then
+    echo "expected docs parity to include quorum signer-role metadata presence marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "quorum_evidence_rotation_metadata_present" "$docs_file"; then
+    echo "expected docs parity to include quorum rotation metadata presence marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "contracts.quorum_evidence_signer_roles_required=true" "$docs_file"; then
+    echo "expected docs parity to include quorum signer-role requirement marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "contracts.quorum_evidence_rotation_metadata_required=true" "$docs_file"; then
+    echo "expected docs parity to include quorum rotation metadata requirement marker in $docs_file" >&2
+    exit 1
+  fi
   if ! grep -q "fallback_signer_secret_checkpoint_reason_mismatch" "$docs_file"; then
     echo "expected docs parity to include fallback signer secret checkpoint reason mismatch marker in $docs_file" >&2
     exit 1
@@ -151,6 +186,10 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "Regression: #2226" "$docs_file"; then
     echo "expected docs parity to include deployment preflight contract-lane regression marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "Regression: #2337" "$docs_file"; then
+    echo "expected docs parity to include quorum metadata drift regression marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "Regression: #2300" "$docs_file"; then

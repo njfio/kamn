@@ -272,6 +272,10 @@ quorum_evidence_approval_count=0
 quorum_evidence_signers_unique="false"
 quorum_evidence_matches_threshold="false"
 quorum_evidence_custody_sha256_match="false"
+quorum_evidence_signer_roles_present="false"
+quorum_evidence_signer_roles_valid="false"
+quorum_evidence_rotation_metadata_present="false"
+quorum_evidence_rotation_metadata_valid="false"
 custody_evidence_present="false"
 custody_evidence_sha256=""
 custody_evidence_sha256_valid="false"
@@ -452,6 +456,10 @@ result = {
     "signers_unique": False,
     "matches_threshold": False,
     "custody_sha256_match": False,
+    "signer_roles_present": False,
+    "signer_roles_valid": False,
+    "rotation_metadata_present": False,
+    "rotation_metadata_valid": False,
     "profile_approved": False,
     "approved_signers_csv": "",
     "reason_code": "quorum_evidence_schema_invalid",
@@ -480,6 +488,36 @@ if isinstance(payload, dict):
         and approval_count == received_approvals
         and received_approvals >= required_approvals
     )
+    signer_roles_raw = payload.get("signer_roles")
+    signer_roles_present = False
+    signer_roles_valid = False
+    if isinstance(signer_roles_raw, dict):
+        signer_roles_present = approval_count > 0 and all(
+            signer in signer_roles_raw for signer in normalized_signers
+        )
+        if signer_roles_present:
+            signer_roles_valid = True
+            for signer in normalized_signers:
+                role_value = signer_roles_raw.get(signer)
+                if role_value not in ("primary", "secondary"):
+                    signer_roles_valid = False
+                    break
+
+    signer_rotation_epochs_raw = payload.get("signer_rotation_epochs")
+    rotation_metadata_present = False
+    rotation_metadata_valid = False
+    if isinstance(signer_rotation_epochs_raw, dict):
+        rotation_metadata_present = approval_count > 0 and all(
+            signer in signer_rotation_epochs_raw for signer in normalized_signers
+        )
+        if rotation_metadata_present:
+            rotation_metadata_valid = True
+            for signer in normalized_signers:
+                epoch_value = signer_rotation_epochs_raw.get(signer)
+                if not isinstance(epoch_value, int) or epoch_value <= 0:
+                    rotation_metadata_valid = False
+                    break
+
     custody_field = payload.get("custody_evidence_sha256")
     custody_match = isinstance(custody_field, str) and custody_field == custody_sha256
     profile_approved = runtime_signer_profile in normalized_signers
@@ -489,6 +527,10 @@ if isinstance(payload, dict):
     result["signers_unique"] = signers_unique
     result["matches_threshold"] = matches_threshold
     result["custody_sha256_match"] = custody_match
+    result["signer_roles_present"] = signer_roles_present
+    result["signer_roles_valid"] = signer_roles_valid
+    result["rotation_metadata_present"] = rotation_metadata_present
+    result["rotation_metadata_valid"] = rotation_metadata_valid
     result["profile_approved"] = profile_approved
     result["approved_signers_csv"] = ",".join(normalized_signers)
 
@@ -496,6 +538,14 @@ if isinstance(payload, dict):
         result["reason_code"] = "runtime_signer_attestation_schema_invalid"
     elif not signers_unique:
         result["reason_code"] = "runtime_signer_attestation_approved_signers_not_unique"
+    elif not signer_roles_present:
+        result["reason_code"] = "quorum_evidence_signer_roles_missing"
+    elif not signer_roles_valid:
+        result["reason_code"] = "quorum_evidence_signer_roles_invalid"
+    elif not rotation_metadata_present:
+        result["reason_code"] = "quorum_evidence_rotation_metadata_missing"
+    elif not rotation_metadata_valid:
+        result["reason_code"] = "quorum_evidence_rotation_metadata_invalid"
     elif not matches_threshold:
         result["reason_code"] = "runtime_signer_attestation_quorum_shortfall"
     elif not profile_approved:
@@ -511,6 +561,10 @@ for key in (
     "signers_unique",
     "matches_threshold",
     "custody_sha256_match",
+    "signer_roles_present",
+    "signer_roles_valid",
+    "rotation_metadata_present",
+    "rotation_metadata_valid",
     "profile_approved",
     "approved_signers_csv",
     "reason_code",
@@ -557,6 +611,34 @@ PY
                         quorum_evidence_custody_sha256_match="false"
                       fi
                       ;;
+                    signer_roles_present)
+                      if [ "$value" = "True" ] || [ "$value" = "true" ]; then
+                        quorum_evidence_signer_roles_present="true"
+                      else
+                        quorum_evidence_signer_roles_present="false"
+                      fi
+                      ;;
+                    signer_roles_valid)
+                      if [ "$value" = "True" ] || [ "$value" = "true" ]; then
+                        quorum_evidence_signer_roles_valid="true"
+                      else
+                        quorum_evidence_signer_roles_valid="false"
+                      fi
+                      ;;
+                    rotation_metadata_present)
+                      if [ "$value" = "True" ] || [ "$value" = "true" ]; then
+                        quorum_evidence_rotation_metadata_present="true"
+                      else
+                        quorum_evidence_rotation_metadata_present="false"
+                      fi
+                      ;;
+                    rotation_metadata_valid)
+                      if [ "$value" = "True" ] || [ "$value" = "true" ]; then
+                        quorum_evidence_rotation_metadata_valid="true"
+                      else
+                        quorum_evidence_rotation_metadata_valid="false"
+                      fi
+                      ;;
                     profile_approved)
                       if [ "$value" = "True" ] || [ "$value" = "true" ]; then
                         runtime_signer_attestation_profile_approved="true"
@@ -579,6 +661,14 @@ PY
                     quorum_evidence_message="runtime signer attestation schema is invalid: $QUORUM_EVIDENCE_FILE"
                   elif [ "$parsed_quorum_reason_code" = "runtime_signer_attestation_approved_signers_not_unique" ]; then
                     quorum_evidence_message="runtime signer attestation approved_signers must be unique: $QUORUM_EVIDENCE_FILE"
+                  elif [ "$parsed_quorum_reason_code" = "quorum_evidence_signer_roles_missing" ]; then
+                    quorum_evidence_message="runtime signer attestation signer_roles metadata must include all approved_signers"
+                  elif [ "$parsed_quorum_reason_code" = "quorum_evidence_signer_roles_invalid" ]; then
+                    quorum_evidence_message="runtime signer attestation signer_roles metadata contains invalid role values"
+                  elif [ "$parsed_quorum_reason_code" = "quorum_evidence_rotation_metadata_missing" ]; then
+                    quorum_evidence_message="runtime signer attestation signer_rotation_epochs metadata must include all approved_signers"
+                  elif [ "$parsed_quorum_reason_code" = "quorum_evidence_rotation_metadata_invalid" ]; then
+                    quorum_evidence_message="runtime signer attestation signer_rotation_epochs metadata must contain positive integer epochs"
                   elif [ "$parsed_quorum_reason_code" = "runtime_signer_attestation_quorum_shortfall" ]; then
                     quorum_evidence_message="runtime signer attestation approvals must satisfy required approvals threshold"
                   elif [ "$parsed_quorum_reason_code" = "runtime_signer_attestation_profile_not_approved" ]; then
@@ -682,7 +772,7 @@ PY
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$RUNTIME_MODE" "$SIGNER_PROFILE_SELECTOR_ENV" "$SIGNER_PROFILE" "$selected_signer_secret_env" "$FALLBACK_SIGNER_SECRET_ENV" "$signer_secret_present" "$fallback_signer_secret_present" "$signer_secret_hex_valid" "$CHECK_FILE" "$REQUIRED_RUNTIME_MODE" "$PRIMARY_SIGNER_PROFILE" "$SECONDARY_SIGNER_PROFILE" "$PRIMARY_SIGNER_SECRET_ENV" "$SECONDARY_SIGNER_SECRET_ENV" "$REQUIRED_SECRET_HEX_LENGTH" "$REQUIRED_APPROVALS" "$RECEIVED_APPROVALS" "$QUORUM_EVIDENCE_FILE" "$quorum_evidence_present" "$quorum_evidence_sha256" "$quorum_evidence_sha256_valid" "$quorum_evidence_schema_valid" "$quorum_evidence_approval_count" "$quorum_evidence_signers_unique" "$quorum_evidence_matches_threshold" "$quorum_evidence_custody_sha256_match" "$QUORUM_EVIDENCE_SCHEMA_VERSION" "$CUSTODY_EVIDENCE_FILE" "$custody_evidence_present" "$custody_evidence_sha256" "$custody_evidence_sha256_valid" "$SIGNER_PROVENANCE_FILE" "$signer_provenance_present" "$signer_provenance_sha256" "$signer_provenance_sha256_valid" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$SIGNER_KEY_SOURCE" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED" "$SIGNER_ROTATION_EPOCH" "$SIGNER_PREVIOUS_ROTATION_EPOCH" "$SIGNER_ROTATION_FRESHNESS_MAX_DELTA" "$signer_rotation_delta_epochs" "$signer_rotation_fresh" "$RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION" "$runtime_signer_attestation_approved_signers_csv" "$runtime_signer_attestation_profile_approved" <<'PY'
+python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$RUNTIME_MODE" "$SIGNER_PROFILE_SELECTOR_ENV" "$SIGNER_PROFILE" "$selected_signer_secret_env" "$FALLBACK_SIGNER_SECRET_ENV" "$signer_secret_present" "$fallback_signer_secret_present" "$signer_secret_hex_valid" "$CHECK_FILE" "$REQUIRED_RUNTIME_MODE" "$PRIMARY_SIGNER_PROFILE" "$SECONDARY_SIGNER_PROFILE" "$PRIMARY_SIGNER_SECRET_ENV" "$SECONDARY_SIGNER_SECRET_ENV" "$REQUIRED_SECRET_HEX_LENGTH" "$REQUIRED_APPROVALS" "$RECEIVED_APPROVALS" "$QUORUM_EVIDENCE_FILE" "$quorum_evidence_present" "$quorum_evidence_sha256" "$quorum_evidence_sha256_valid" "$quorum_evidence_schema_valid" "$quorum_evidence_approval_count" "$quorum_evidence_signers_unique" "$quorum_evidence_matches_threshold" "$quorum_evidence_custody_sha256_match" "$quorum_evidence_signer_roles_present" "$quorum_evidence_signer_roles_valid" "$quorum_evidence_rotation_metadata_present" "$quorum_evidence_rotation_metadata_valid" "$QUORUM_EVIDENCE_SCHEMA_VERSION" "$CUSTODY_EVIDENCE_FILE" "$custody_evidence_present" "$custody_evidence_sha256" "$custody_evidence_sha256_valid" "$SIGNER_PROVENANCE_FILE" "$signer_provenance_present" "$signer_provenance_sha256" "$signer_provenance_sha256_valid" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION" "$SIGNER_KEY_SOURCE" "$SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED" "$SIGNER_ROTATION_EPOCH" "$SIGNER_PREVIOUS_ROTATION_EPOCH" "$SIGNER_ROTATION_FRESHNESS_MAX_DELTA" "$signer_rotation_delta_epochs" "$signer_rotation_fresh" "$RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION" "$runtime_signer_attestation_approved_signers_csv" "$runtime_signer_attestation_profile_approved" <<'PY'
 from __future__ import annotations
 
 import json
@@ -722,26 +812,30 @@ quorum_evidence_approval_count = int(sys.argv[30])
 quorum_evidence_signers_unique = sys.argv[31] == "true"
 quorum_evidence_matches_threshold = sys.argv[32] == "true"
 quorum_evidence_custody_sha256_match = sys.argv[33] == "true"
-quorum_evidence_schema_version = sys.argv[34]
-custody_evidence_file = sys.argv[35]
-custody_evidence_present = sys.argv[36] == "true"
-custody_evidence_sha256 = sys.argv[37]
-custody_evidence_sha256_valid = sys.argv[38] == "true"
-signer_provenance_file = sys.argv[39]
-signer_provenance_present = sys.argv[40] == "true"
-signer_provenance_sha256 = sys.argv[41]
-signer_provenance_sha256_valid = sys.argv[42] == "true"
-signer_key_source_contract_version = sys.argv[43]
-signer_key_source = sys.argv[44]
-signer_key_source_contract_version_supported = sys.argv[45]
-signer_rotation_epoch = int(sys.argv[46])
-signer_previous_rotation_epoch = int(sys.argv[47])
-signer_rotation_freshness_max_delta = int(sys.argv[48])
-signer_rotation_delta_epochs = int(sys.argv[49])
-signer_rotation_fresh = sys.argv[50] == "true"
-runtime_signer_attestation_schema_version = sys.argv[51]
-runtime_signer_attestation_approved_signers_csv = sys.argv[52]
-runtime_signer_attestation_profile_approved = sys.argv[53] == "true"
+quorum_evidence_signer_roles_present = sys.argv[34] == "true"
+quorum_evidence_signer_roles_valid = sys.argv[35] == "true"
+quorum_evidence_rotation_metadata_present = sys.argv[36] == "true"
+quorum_evidence_rotation_metadata_valid = sys.argv[37] == "true"
+quorum_evidence_schema_version = sys.argv[38]
+custody_evidence_file = sys.argv[39]
+custody_evidence_present = sys.argv[40] == "true"
+custody_evidence_sha256 = sys.argv[41]
+custody_evidence_sha256_valid = sys.argv[42] == "true"
+signer_provenance_file = sys.argv[43]
+signer_provenance_present = sys.argv[44] == "true"
+signer_provenance_sha256 = sys.argv[45]
+signer_provenance_sha256_valid = sys.argv[46] == "true"
+signer_key_source_contract_version = sys.argv[47]
+signer_key_source = sys.argv[48]
+signer_key_source_contract_version_supported = sys.argv[49]
+signer_rotation_epoch = int(sys.argv[50])
+signer_previous_rotation_epoch = int(sys.argv[51])
+signer_rotation_freshness_max_delta = int(sys.argv[52])
+signer_rotation_delta_epochs = int(sys.argv[53])
+signer_rotation_fresh = sys.argv[54] == "true"
+runtime_signer_attestation_schema_version = sys.argv[55]
+runtime_signer_attestation_approved_signers_csv = sys.argv[56]
+runtime_signer_attestation_profile_approved = sys.argv[57] == "true"
 
 runtime_signer_attestation_approved_signers: list[str] = [
     entry.strip()
@@ -813,6 +907,10 @@ summary = {
     "quorum_evidence_signers_unique": quorum_evidence_signers_unique,
     "quorum_evidence_matches_threshold": quorum_evidence_matches_threshold,
     "quorum_evidence_custody_sha256_match": quorum_evidence_custody_sha256_match,
+    "quorum_evidence_signer_roles_present": quorum_evidence_signer_roles_present,
+    "quorum_evidence_signer_roles_valid": quorum_evidence_signer_roles_valid,
+    "quorum_evidence_rotation_metadata_present": quorum_evidence_rotation_metadata_present,
+    "quorum_evidence_rotation_metadata_valid": quorum_evidence_rotation_metadata_valid,
     "runtime_signer_attestation_schema_version": runtime_signer_attestation_schema_version,
     "runtime_signer_attestation_bundle": runtime_signer_attestation_bundle,
     "runtime_signer_attestation_profile_approved": runtime_signer_attestation_profile_approved,
@@ -854,6 +952,10 @@ summary = {
         "quorum_evidence_schema_version": quorum_evidence_schema_version,
         "quorum_evidence_signer_uniqueness_required": True,
         "quorum_evidence_custody_sha256_match_required": True,
+        "quorum_evidence_signer_roles_required": True,
+        "quorum_evidence_signer_roles_allowed": ["primary", "secondary"],
+        "quorum_evidence_rotation_metadata_required": True,
+        "quorum_evidence_rotation_metadata_positive_epochs_required": True,
         "quorum_evidence_source": "operator-attestation-bundle",
         "runtime_signer_attestation_schema_version": runtime_signer_attestation_schema_version,
         "runtime_signer_attestation_signer_uniqueness_required": True,
