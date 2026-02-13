@@ -4,47 +4,47 @@
       "lane_id": "non_kolme.governance.lifecycle_rollback",
       "manifest_file": "scripts/framework/manifests/governance_lifecycle_rollback_contract_lane.json",
       "priority": "P1",
-      "shell_loc": 11,
+      "shell_loc": 1,
       "source_entry": "scripts/governance/run_governance_lifecycle_rollback_contract_lane.sh",
       "status": "planned",
       "target_runner": "framework_manifest_lane",
-      "wrapper_kind": "regular_file"
+      "wrapper_kind": "symlink"
     },
     {
       "lane_id": "non_kolme.governance.quorum_attestation_replay",
       "manifest_file": "scripts/framework/manifests/governance_quorum_attestation_replay_contract_lane.json",
       "priority": "P1",
-      "shell_loc": 11,
+      "shell_loc": 1,
       "source_entry": "scripts/governance/run_quorum_attestation_replay_contract_lane.sh",
       "status": "planned",
       "target_runner": "framework_manifest_lane",
-      "wrapper_kind": "regular_file"
+      "wrapper_kind": "symlink"
     },
     {
       "lane_id": "non_kolme.governance.simulation",
       "manifest_file": "scripts/framework/manifests/governance_simulation_contract_lane.json",
       "priority": "P1",
-      "shell_loc": 11,
+      "shell_loc": 1,
       "source_entry": "scripts/governance/run_governance_simulation_contract_lane.sh",
       "status": "planned",
       "target_runner": "framework_manifest_lane",
-      "wrapper_kind": "regular_file"
+      "wrapper_kind": "symlink"
     },
     {
       "lane_id": "non_kolme.governance.stake_slash_risk",
       "manifest_file": "scripts/framework/manifests/governance_stake_slash_risk_contract_lane.json",
       "priority": "P1",
-      "shell_loc": 11,
+      "shell_loc": 1,
       "source_entry": "scripts/governance/run_stake_slash_risk_contract_lane.sh",
       "status": "planned",
       "target_runner": "framework_manifest_lane",
-      "wrapper_kind": "regular_file"
+      "wrapper_kind": "symlink"
     }
   ],
-  "regular_file_wrapper_count": 4,
+  "regular_file_wrapper_count": 0,
   "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
   "source_matrix_file": "fixtures/ci/non_kolme_wave2_wrapper_family_matrix.json",
-  "symlink_wrapper_count": 0,
-  "total_shell_loc": 44,
+  "symlink_wrapper_count": 4,
+  "total_shell_loc": 4,
   "wrapper_count": 4
 }
