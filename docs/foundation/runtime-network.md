@@ -140,6 +140,10 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh`
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh --target envelope --output-json /tmp/input-mutation-envelope-smoke-report.json`
   - `bash scripts/runtime/run_input_mutation_contract_lane.sh --target did --output-json /tmp/input-mutation-did-smoke-report.json`
+- Coverage-guided parser fuzz command:
+  - `bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh --output-json /tmp/input-mutation-coverage-guided-contract-report.json`
+  - `bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh --target envelope --output-json /tmp/input-mutation-coverage-guided-envelope-report.json`
+  - `bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh --target did --output-json /tmp/input-mutation-coverage-guided-did-report.json`
 - Processor proof admission guard lane command:
   - `bash scripts/runtime/run_processor_proof_admission_contract_lane.sh`
 - Processor proof admission fail-closed rules:
@@ -152,6 +156,16 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Input mutation seed corpus keys:
   - `input_mutation_envelope_seed:v1`
   - `input_mutation_did_seed:v1`
+- Coverage-guided input mutation replay metadata schema:
+  - `kamn.runtime.input-mutation-coverage-guided-replay-metadata.v1`
+- Coverage-guided input mutation replay artifact key:
+  - `input_mutation_coverage_guided_replay:v1`
+- Coverage-guided minimizer marker:
+  - `minimal_failing_seed_prefix`
+- Deep coverage-guided parser fuzz command remains local-only by default:
+  - `bash scripts/runtime/run_input_mutation_coverage_guided_deep_lane.sh`
+- local-only deep routing marker:
+  - `runtime_input_mutation_coverage_guided_deep=skipped_local_only`
 
 ## Deterministic Concurrency Harness Rules
 - Shared-state mutation harness in `crates/kamn-core/tests/concurrency_state_mutation.rs` must enforce:
@@ -485,7 +499,8 @@ This document captures the initial runtime-network foundation slice for peer lif
   - snapshot stale metadata rejection (`Regression: #617`)
   - snapshot restore cursor mismatch rejection (`Regression: #617`)
   - concurrent accept races never allow multiple winners (`Regression: #844`)
-  - deterministic envelope/DID mutation fail-closed reasons remain stable (`Regression: #843`)
+- deterministic envelope/DID mutation fail-closed reasons remain stable (`Regression: #843`)
+- deep coverage-guided parser fuzz remains local-only and excluded from `ci-fast-gate` (`Regression: #2693`)
   - processor proof admission message/commitment/replay/format guards remain fail-closed (`Regression: #995`)
   - task/escrow/peer lifecycle generated invariant lanes remain deterministic (`Regression: #842`)
   - invariant/fuzz/concurrency combined lane reason-code policy remains fail-closed (`Regression: #897`)

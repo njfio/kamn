@@ -26,6 +26,20 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("cargo test -p kamn-core --test lifecycle_property_shrinking"));
     assert!(DOC.contains("cargo test -p kamn-core --test lifecycle_evidence_property_matrix"));
     assert!(DOC.contains("minimal failing prefix"));
+    assert!(DOC.contains("## Coverage-Guided Parser Fuzz Contract"));
+    assert!(DOC.contains("docs/planning/fuzz_harness_budget_policy.md"));
+    assert!(DOC.contains(
+        "run_input_mutation_coverage_guided_contract_lane.sh --output-json /tmp/input-mutation-coverage-guided-contract-report.json"
+    ));
+    assert!(DOC.contains(
+        "run_input_mutation_coverage_guided_contract_lane.sh --target envelope --output-json /tmp/input-mutation-coverage-guided-envelope-report.json"
+    ));
+    assert!(DOC.contains(
+        "run_input_mutation_coverage_guided_contract_lane.sh --target did --output-json /tmp/input-mutation-coverage-guided-did-report.json"
+    ));
+    assert!(DOC.contains("run_input_mutation_coverage_guided_deep_lane.sh"));
+    assert!(DOC.contains("runtime_input_mutation_coverage_guided_deep=skipped_local_only"));
+    assert!(DOC.contains("KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_LOCAL_ONLY=true"));
     assert!(DOC.contains("layering_marker_missing"));
     assert!(DOC.contains("run_localhost_signed_integration_contract_lane_tests"));
     assert!(DOC.contains("sdk-live-localhost-integration"));
@@ -176,6 +190,7 @@ fn regression_requires_make_and_selector_demo_contract_marker() {
     assert!(DOC.contains("Regression: #2690"));
     assert!(DOC.contains("Regression: #2691"));
     assert!(DOC.contains("Regression: #2692"));
+    assert!(DOC.contains("Regression: #2693"));
     assert!(DOC.contains("Regression: #2093"));
     assert!(DOC.contains("Regression: #2095"));
 }

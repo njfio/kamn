@@ -21,6 +21,14 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
     - `bash scripts/runtime/run_input_mutation_contract_lane.sh --target envelope --output-json /tmp/input-mutation-envelope-smoke-report.json`
   - local DID-only bounded run:
     - `bash scripts/runtime/run_input_mutation_contract_lane.sh --target did --output-json /tmp/input-mutation-did-smoke-report.json`
+- Coverage-guided parser fuzz lane:
+  - `bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh --output-json /tmp/input-mutation-coverage-guided-contract-report.json`
+  - local envelope-only bounded run:
+    - `bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh --target envelope --output-json /tmp/input-mutation-coverage-guided-envelope-report.json`
+  - local DID-only bounded run:
+    - `bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh --target did --output-json /tmp/input-mutation-coverage-guided-did-report.json`
+  - local-only deep lane:
+    - `bash scripts/runtime/run_input_mutation_coverage_guided_deep_lane.sh`
 - Concurrency race lane:
   - `bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh`
   - `bash scripts/runtime/run_concurrency_state_mutation_contract_lane.sh --output-json /tmp/concurrency-mutation-contract-report.json`
@@ -45,6 +53,9 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
 - Mutation/fuzz smoke lanes use fixed malformed/tampered classes with stable
   fail-closed reason signatures and emit replay metadata artifact key
   `input_mutation_replay:v1`.
+- Coverage-guided parser fuzz lane uses deterministic seed-frontier discovery
+  with bounded replay-prefix minimization and emits replay metadata artifact key
+  `input_mutation_coverage_guided_replay:v1`.
 - Concurrency lanes use replay fixtures and deterministic round-based checks to
   guard winner exclusivity and terminal-state safety, and emit replay metadata
   artifact key `concurrency_mutation_replay:v1`.
@@ -71,6 +82,17 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
   - seed corpus keys:
     - `input_mutation_envelope_seed:v1`
     - `input_mutation_did_seed:v1`
+- Coverage-guided input mutation report schema:
+  - `kamn.runtime.input-mutation-coverage-guided-contract-report.v1`
+- Coverage-guided replay metadata schema:
+  - `kamn.runtime.input-mutation-coverage-guided-replay-metadata.v1`
+- Coverage-guided replay artifact key:
+  - `input_mutation_coverage_guided_replay:v1`
+  - seed corpus keys:
+    - `input_mutation_coverage_guided_envelope_seed:v1`
+    - `input_mutation_coverage_guided_did_seed:v1`
+  - minimizer marker:
+    - `minimal_failing_seed_prefix`
 - Concurrency mutation report schema:
   - `kamn.runtime.concurrency-mutation-contract-report.v1`
 - Concurrency mutation replay artifact key:
@@ -111,6 +133,10 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
   - `KAMN_RUNTIME_LIFECYCLE_PROPERTY_MAX_SECONDS` (default `120`)
 - Input mutation lane runtime budget env:
   - `KAMN_RUNTIME_INPUT_MUTATION_MAX_SECONDS` (default `120`)
+- Coverage-guided input mutation lane runtime budget env:
+  - `KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_MAX_SECONDS` (default `120`)
+  - `KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_MAX_SECONDS` (default `180`)
+  - `KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_LOCAL_ONLY` (`false` by default)
 - Concurrency mutation lane runtime budget env:
   - `KAMN_RUNTIME_CONCURRENCY_MUTATION_MAX_SECONDS` (default `120`)
 - Combined lane runtime budget env:
@@ -124,3 +150,5 @@ invariants, mutation/fuzz smoke checks, and concurrency race contracts.
   runtime contract scope so lane/policy contracts are revalidated.
 - `scripts/ci/test_select_targets.sh` guards that routing to keep docs changes
   fail-closed without escalating to full-suite runs.
+- Deep coverage-guided parser fuzz runs remain local-only and are explicitly
+  excluded from `ci-fast-gate` (`Regression: #2693`).

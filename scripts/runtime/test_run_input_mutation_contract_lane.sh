@@ -41,6 +41,16 @@ if ! grep -q "KAMN_RUNTIME_ZK_WITNESS_MUTATION_DEEP" "$CONTRACT_LANE"; then
   exit 1
 fi
 
+if ! grep -q "run_input_mutation_coverage_guided_contract_lane.sh" "$CONTRACT_LANE"; then
+  echo "expected mutation lane to include bounded coverage-guided target lane coverage" >&2
+  exit 1
+fi
+
+if ! grep -q "KAMN_RUNTIME_INPUT_MUTATION_COVERAGE_GUIDED_DEEP_LOCAL_ONLY" "$CONTRACT_LANE"; then
+  echo "expected mutation lane to keep coverage-guided deep lane local-only by default" >&2
+  exit 1
+fi
+
 if ! grep -q -- "--target" "$CONTRACT_LANE"; then
   echo "expected mutation lane to expose --target selector for bounded local envelope/did smoke runs" >&2
   exit 1
@@ -75,6 +85,8 @@ assert report["did_test_count"] >= 5
 assert report["seed_corpus_keys"]["envelope"] == "input_mutation_envelope_seed:v1"
 assert report["seed_corpus_keys"]["did"] == "input_mutation_did_seed:v1"
 assert report["zk_witness_lane_mode"] in {"fast", "deep"}
+assert report["coverage_guided_lane_mode"] == "fast"
+assert report["coverage_guided_deep_mode"] == "skipped_local_only"
 PY
 
 envelope_report_file="$TMP_DIR/input-mutation-envelope-smoke-report.json"
@@ -89,6 +101,8 @@ assert report["target"] == "envelope"
 assert report["envelope_test_count"] >= 5
 assert report["did_test_count"] == 0
 assert report["zk_witness_lane_mode"] == "not-run"
+assert report["coverage_guided_lane_mode"] == "not-run"
+assert report["coverage_guided_deep_mode"] == "not-run"
 PY
 
 did_report_file="$TMP_DIR/input-mutation-did-smoke-report.json"
@@ -103,6 +117,8 @@ assert report["target"] == "did"
 assert report["envelope_test_count"] == 0
 assert report["did_test_count"] >= 5
 assert report["zk_witness_lane_mode"] == "not-run"
+assert report["coverage_guided_lane_mode"] == "not-run"
+assert report["coverage_guided_deep_mode"] == "not-run"
 PY
 
 echo "runtime input mutation contract lane script tests passed."

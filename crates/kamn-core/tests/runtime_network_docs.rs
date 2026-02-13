@@ -55,6 +55,9 @@ fn doc_contains_peer_lifecycle_and_queue_rules() {
     assert!(DOC.contains("encoding/character drift cases"));
     assert!(DOC.contains("method mismatch prefix cases"));
     assert!(DOC.contains("run_input_mutation_contract_lane.sh"));
+    assert!(DOC.contains("run_input_mutation_coverage_guided_contract_lane.sh"));
+    assert!(DOC.contains("run_input_mutation_coverage_guided_deep_lane.sh"));
+    assert!(DOC.contains("runtime_input_mutation_coverage_guided_deep=skipped_local_only"));
     assert!(DOC.contains("run_processor_proof_admission_contract_lane.sh"));
     assert!(DOC.contains("single-winner task accept races"));
     assert!(DOC.contains("deterministic peer lifecycle phase summaries"));
@@ -104,6 +107,9 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
         "cargo test -p kamn-core --test did_fuzz_smoke functional_did_mutation_suite_covers_normalization_encoding_and_method_mismatch_classes -- --exact"
     ));
     assert!(DOC.contains("bash scripts/runtime/run_input_mutation_contract_lane.sh"));
+    assert!(DOC.contains(
+        "bash scripts/runtime/run_input_mutation_coverage_guided_contract_lane.sh --output-json /tmp/input-mutation-coverage-guided-contract-report.json"
+    ));
     assert!(DOC.contains("bash scripts/runtime/run_processor_proof_admission_contract_lane.sh"));
     assert!(DOC.contains(
         "cargo test -p kamn-core --test concurrency_state_mutation functional_task_accept_concurrency_replay_fixture_preserves_invariants -- --exact"
@@ -174,6 +180,9 @@ fn regression_requires_rejoin_and_overflow_rejection_rules() {
         "deterministic envelope/DID mutation fail-closed reasons remain stable (`Regression: #843`)"
     ));
     assert!(DOC.contains(
+        "deep coverage-guided parser fuzz remains local-only and excluded from `ci-fast-gate` (`Regression: #2693`)"
+    ));
+    assert!(DOC.contains(
         "task/escrow/peer lifecycle generated invariant lanes remain deterministic (`Regression: #842`)"
     ));
     assert!(DOC.contains(
@@ -199,6 +208,9 @@ fn doc_contains_mutation_fail_closed_contract_rules() {
     assert!(DOC.contains("kamn.runtime.input-mutation-replay-metadata.v1"));
     assert!(DOC.contains("input_mutation_envelope_seed:v1"));
     assert!(DOC.contains("input_mutation_did_seed:v1"));
+    assert!(DOC.contains("kamn.runtime.input-mutation-coverage-guided-replay-metadata.v1"));
+    assert!(DOC.contains("input_mutation_coverage_guided_replay:v1"));
+    assert!(DOC.contains("minimal_failing_seed_prefix"));
     assert!(DOC.contains("Regression: #843"));
 }
 
