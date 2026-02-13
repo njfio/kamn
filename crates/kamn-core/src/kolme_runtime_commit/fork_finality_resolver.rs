@@ -3,9 +3,12 @@
 use super::{
     require_kolme_commit_id_matches_expected_txhash_contract, resolve_kolme_lookup_upper_bound,
     txhash_from_kolme_commit_id, KolmeRuntimeCommitBlockFallbackReconciler,
-    KolmeRuntimeCommitBlockFallbackTransport, KolmeRuntimeCommitNotificationEvent,
-    KolmeRuntimeCommitNotificationsConnector, KolmeRuntimeCommitNotificationsConsumer,
-    KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderReceipt,
+    KolmeRuntimeCommitNotificationEvent, KolmeRuntimeCommitNotificationsConsumer,
+    KolmeRuntimeCommitProviderReceipt,
+};
+use kamn_kolme::{
+    KolmeRuntimeCommitBlockFallbackTransport, KolmeRuntimeCommitNotificationsConnector,
+    KolmeRuntimeCommitProviderError,
 };
 
 /// Fork-profile finality resolver that composes notifications and block fallback lookups.

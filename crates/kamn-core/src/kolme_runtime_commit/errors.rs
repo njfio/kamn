@@ -1,9 +1,7 @@
 //! Runtime-commit error ownership.
 
-use super::{
-    commit_finality_label_contract, KolmeCommitReceiptFinality,
-    KolmeRuntimeCommitTransportErrorKind,
-};
+use super::{commit_finality_label_contract, KolmeCommitReceiptFinality};
+use kamn_kolme::KolmeRuntimeCommitTransportErrorKind;
 use std::fmt;
 
 /// Error returned by runtime commit request validation or submission.

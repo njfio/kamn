@@ -4,10 +4,10 @@ use super::{
     is_kolme_valid_expected_provider_input_contract, require_kolme_final_receipt_finality_contract,
     validate_kolme_provider_receipt_identity_contract, KamnKolmeProviderReceiptIdentityError,
     KamnKolmeRuntimeLifecyclePolicyError, KolmeRuntimeCommitClient, KolmeRuntimeCommitError,
-    KolmeRuntimeCommitOutcome, KolmeRuntimeCommitProvider, KolmeRuntimeCommitProviderError,
-    KolmeRuntimeCommitProviderOutcome, KolmeRuntimeCommitProviderReceipt,
-    KolmeRuntimeCommitReceipt, KolmeRuntimeCommitRequest, KolmeRuntimeCommitTransportErrorKind,
+    KolmeRuntimeCommitOutcome, KolmeRuntimeCommitProvider, KolmeRuntimeCommitProviderOutcome,
+    KolmeRuntimeCommitProviderReceipt, KolmeRuntimeCommitReceipt, KolmeRuntimeCommitRequest,
 };
+use kamn_kolme::{KolmeRuntimeCommitProviderError, KolmeRuntimeCommitTransportErrorKind};
 
 /// Adapter-backed runtime commit client that enforces provider and finality policies.
 #[derive(Debug, Clone, PartialEq, Eq)]
