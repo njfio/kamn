@@ -91,6 +91,10 @@ fn plan_contains_local_kamn_live_runtime_integration_lane() {
     assert!(PLAN.contains("run_local_kamn_live_runtime_integration_contract_lane.sh"));
     assert!(PLAN.contains("run_local_runtime_commit_live_finality_evidence_contract_lane.sh"));
     assert!(PLAN.contains("--runtime-commit-live-policy-report"));
+    assert!(PLAN.contains("KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX"));
+    assert!(PLAN.contains("KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY"));
+    assert!(PLAN.contains("managed_signer_public_key_marker_missing"));
+    assert!(PLAN.contains("managed_signer_public_key_marker_invalid"));
     assert!(PLAN.contains("run_localhost_signed_integration_contract_lane.sh"));
     assert!(PLAN.contains("kamn.kolme.local-kamn-live-runtime-integration-summary.v1"));
     assert!(PLAN.contains(
