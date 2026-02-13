@@ -164,6 +164,35 @@ pub enum RuntimeQueueError {
         /// Attempted len.
         attempted_len: usize,
     },
+    /// Backpressure input validation failed.
+    BackpressureInput(RuntimeBackpressureError),
+    /// Backpressure rejected enqueue for saturation.
+    BackpressureRejected {
+        /// Deterministic reason code for operational telemetry.
+        reason_code: &'static str,
+        /// Queue utilization at decision time.
+        queue_utilization_per_mille: u16,
+    },
+    /// Backpressure purged stale disconnected queue.
+    BackpressurePurgedStalePeerQueue {
+        /// Deterministic reason code for operational telemetry.
+        reason_code: &'static str,
+        /// Number of queued items purged.
+        purged_entries: usize,
+    },
+}
+
+impl RuntimeQueueError {
+    /// Returns deterministic queue/backpressure reason codes.
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::InvalidCapacity { .. } => "runtime_queue_invalid_capacity",
+            Self::Overflow { .. } => "runtime_queue_overflow",
+            Self::BackpressureInput(error) => error.reason_code(),
+            Self::BackpressureRejected { reason_code, .. } => reason_code,
+            Self::BackpressurePurgedStalePeerQueue { reason_code, .. } => reason_code,
+        }
+    }
 }
 
 impl Display for RuntimeQueueError {
@@ -181,6 +210,18 @@ impl Display for RuntimeQueueError {
             } => write!(
                 f,
                 "runtime queue overflow: capacity {capacity}, attempted length {attempted_len}"
+            ),
+            Self::BackpressureInput(error) => write!(f, "{error}"),
+            Self::BackpressureRejected {
+                queue_utilization_per_mille,
+                ..
+            } => write!(
+                f,
+                "runtime queue enqueue rejected by backpressure at {queue_utilization_per_mille} per mille utilization"
+            ),
+            Self::BackpressurePurgedStalePeerQueue { purged_entries, .. } => write!(
+                f,
+                "runtime queue stale peer purge triggered by backpressure; purged {purged_entries} queued entries"
             ),
         }
     }
@@ -234,6 +275,47 @@ impl<T> BoundedRuntimeQueue<T> {
         Ok(())
     }
 
+    /// Evaluates deterministic backpressure and applies action before queue mutation.
+    pub fn enqueue_with_backpressure(
+        &mut self,
+        item: T,
+        controller: &DeterministicBackpressureController,
+        peer_id: &str,
+        lifecycle_state: PeerLifecycleState,
+    ) -> Result<RuntimeBackpressureDecision, RuntimeQueueError> {
+        let input = RuntimeBackpressureInput::new(
+            peer_id,
+            self.entries.len(),
+            self.capacity,
+            lifecycle_state,
+        )
+        .map_err(RuntimeQueueError::BackpressureInput)?;
+        let decision = controller
+            .evaluate(input)
+            .map_err(RuntimeQueueError::BackpressureInput)?;
+
+        match decision.action {
+            RuntimeBackpressureAction::Accept | RuntimeBackpressureAction::SlowProducer => {
+                self.enqueue(item)?;
+                Ok(decision)
+            }
+            RuntimeBackpressureAction::RejectNewEnqueue => {
+                Err(RuntimeQueueError::BackpressureRejected {
+                    reason_code: decision.reason_code(),
+                    queue_utilization_per_mille: decision.queue_utilization_per_mille,
+                })
+            }
+            RuntimeBackpressureAction::PurgeStalePeerQueue => {
+                let purged_entries = self.entries.len();
+                self.entries.clear();
+                Err(RuntimeQueueError::BackpressurePurgedStalePeerQueue {
+                    reason_code: decision.reason_code(),
+                    purged_entries,
+                })
+            }
+        }
+    }
+
     /// Handles dequeue.
     pub fn dequeue(&mut self) -> Option<T> {
         self.entries.pop_front()
@@ -262,6 +344,22 @@ pub struct RuntimeBackpressureDecision {
     pub queue_utilization_per_mille: u16,
     /// Stale peer queue.
     pub stale_peer_queue: bool,
+}
+
+impl RuntimeBackpressureDecision {
+    /// Returns deterministic action reason code for telemetry and audits.
+    pub fn reason_code(&self) -> &'static str {
+        match self.action {
+            RuntimeBackpressureAction::Accept => "runtime_backpressure_accept",
+            RuntimeBackpressureAction::SlowProducer => "runtime_backpressure_slow_producer",
+            RuntimeBackpressureAction::RejectNewEnqueue => {
+                "runtime_backpressure_reject_new_enqueue"
+            }
+            RuntimeBackpressureAction::PurgeStalePeerQueue => {
+                "runtime_backpressure_purge_stale_peer_queue"
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -413,6 +511,21 @@ pub enum RuntimeBackpressureError {
         /// Capacity.
         capacity: usize,
     },
+}
+
+impl RuntimeBackpressureError {
+    /// Returns deterministic reason code for validation and policy output.
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::InvalidThresholdRange { .. } => "runtime_backpressure_threshold_range_invalid",
+            Self::InvalidThresholdOrder { .. } => "runtime_backpressure_threshold_order_invalid",
+            Self::InvalidPeerId => "runtime_backpressure_peer_id_invalid",
+            Self::InvalidQueueCapacity { .. } => "runtime_backpressure_queue_capacity_invalid",
+            Self::QueueDepthExceedsCapacity { .. } => {
+                "runtime_backpressure_queue_depth_exceeds_capacity"
+            }
+        }
+    }
 }
 
 impl Display for RuntimeBackpressureError {
@@ -2924,6 +3037,16 @@ pub struct NetworkFaultSimulationReport {
     pub queued_events: usize,
     /// Queue overflow attempts.
     pub queue_overflow_attempts: usize,
+    /// Backpressure action observed most recently during queue mutation.
+    pub backpressure_last_action: RuntimeBackpressureAction,
+    /// Backpressure reason marker observed most recently during queue mutation.
+    pub backpressure_last_reason_code: &'static str,
+    /// Number of queue enqueue attempts rejected by deterministic backpressure.
+    pub backpressure_rejected_events: usize,
+    /// Number of queued entries purged due to stale disconnected peer policy.
+    pub backpressure_purged_events: usize,
+    /// Number of queue enqueue attempts accepted in slow-producer mode.
+    pub backpressure_slow_events: usize,
     /// Watchdog kind.
     pub watchdog_kind: WatchdogAnomalyKind,
     /// Watchdog severity.
@@ -2948,6 +3071,8 @@ pub enum NetworkFaultSimulationError {
     },
     /// Lifecycle.
     Lifecycle(RuntimeLifecycleError),
+    /// Backpressure.
+    Backpressure(RuntimeBackpressureError),
     /// Watchdog.
     Watchdog(WatchdogAnomalyError),
 }
@@ -2964,6 +3089,7 @@ impl Display for NetworkFaultSimulationError {
                 "network fault simulation queue capacity must be positive, found {capacity}"
             ),
             Self::Lifecycle(error) => write!(f, "{error}"),
+            Self::Backpressure(error) => write!(f, "{error}"),
             Self::Watchdog(error) => write!(f, "{error}"),
         }
     }
@@ -2996,6 +3122,20 @@ impl DeterministicNetworkFaultSimulator {
                 .transition(PeerLifecycleEvent::HeartbeatMissed)
                 .map_err(NetworkFaultSimulationError::Lifecycle)?;
         }
+        if input.active_peers > 0 && input.healthy_peers == 0 {
+            lifecycle
+                .transition(PeerLifecycleEvent::Disconnect)
+                .map_err(NetworkFaultSimulationError::Lifecycle)?;
+        }
+
+        let backpressure_policy = RuntimeBackpressurePolicy::new(700, 900, true)
+            .map_err(NetworkFaultSimulationError::Backpressure)?;
+        let backpressure_controller = DeterministicBackpressureController::new(backpressure_policy);
+        let backpressure_peer_id = if is_valid_kamn_did(&input.peer_id) {
+            input.peer_id.clone()
+        } else {
+            format!("kamn:did:agent:{}", input.peer_id)
+        };
 
         let mut queue = BoundedRuntimeQueue::new(input.queue_capacity).map_err(|_| {
             NetworkFaultSimulationError::InvalidQueueCapacity {
@@ -3003,9 +3143,51 @@ impl DeterministicNetworkFaultSimulator {
             }
         })?;
         let mut queue_overflow_attempts = 0usize;
+        let mut backpressure_last_action = RuntimeBackpressureAction::Accept;
+        let mut backpressure_last_reason_code = "runtime_backpressure_accept";
+        let mut backpressure_rejected_events = 0usize;
+        let mut backpressure_purged_events = 0usize;
+        let mut backpressure_slow_events = 0usize;
         for event_index in 0..input.queued_events {
-            if queue.enqueue(format!("fault-event-{event_index}")).is_err() {
-                queue_overflow_attempts += 1;
+            match queue.enqueue_with_backpressure(
+                format!("fault-event-{event_index}"),
+                &backpressure_controller,
+                &backpressure_peer_id,
+                lifecycle.state(),
+            ) {
+                Ok(decision) => {
+                    if decision.action == RuntimeBackpressureAction::SlowProducer {
+                        backpressure_slow_events += 1;
+                    }
+                    backpressure_last_action = decision.action;
+                    backpressure_last_reason_code = decision.reason_code();
+                }
+                Err(RuntimeQueueError::BackpressureRejected { reason_code, .. }) => {
+                    queue_overflow_attempts += 1;
+                    backpressure_rejected_events += 1;
+                    backpressure_last_action = RuntimeBackpressureAction::RejectNewEnqueue;
+                    backpressure_last_reason_code = reason_code;
+                }
+                Err(RuntimeQueueError::BackpressurePurgedStalePeerQueue {
+                    reason_code,
+                    purged_entries,
+                }) => {
+                    queue_overflow_attempts += 1;
+                    backpressure_purged_events += purged_entries;
+                    backpressure_last_action = RuntimeBackpressureAction::PurgeStalePeerQueue;
+                    backpressure_last_reason_code = reason_code;
+                }
+                Err(RuntimeQueueError::BackpressureInput(error)) => {
+                    return Err(NetworkFaultSimulationError::Backpressure(error));
+                }
+                Err(RuntimeQueueError::Overflow { .. }) => {
+                    queue_overflow_attempts += 1;
+                    backpressure_last_action = RuntimeBackpressureAction::RejectNewEnqueue;
+                    backpressure_last_reason_code = "runtime_queue_overflow";
+                }
+                Err(RuntimeQueueError::InvalidCapacity { capacity }) => {
+                    return Err(NetworkFaultSimulationError::InvalidQueueCapacity { capacity });
+                }
             }
         }
 
@@ -3030,6 +3212,11 @@ impl DeterministicNetworkFaultSimulator {
             queue_capacity: input.queue_capacity,
             queued_events: input.queued_events,
             queue_overflow_attempts,
+            backpressure_last_action,
+            backpressure_last_reason_code,
+            backpressure_rejected_events,
+            backpressure_purged_events,
+            backpressure_slow_events,
             watchdog_kind: watchdog_report.kind,
             watchdog_severity: watchdog_report.severity,
             watchdog_delivery_ratio_per_mille: watchdog_report.delivery_ratio_per_mille,
@@ -3237,13 +3424,13 @@ mod tests {
         NetworkFaultSimulationError, NetworkFaultSimulationInput, PeerFrameAuthenticator,
         PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate,
         ProposalPlannerError, RecoveryGuardError, RecoveryRejoinGuard, RecoveryStatus,
-        RejoinAttempt, RuntimeBackpressureAction, RuntimeBackpressureError,
-        RuntimeBackpressureInput, RuntimeBackpressurePolicy, RuntimeLifecycleError,
-        RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore, SnapshotRestoreError,
-        SnapshotRestoreGuard, SnapshotStoreError, StateDivergenceError, StateDivergenceEvaluator,
-        StateDivergenceSeverity, StateDivergenceStatus, StateDivergenceWatchInput,
-        WatchdogAnomalyError, WatchdogAnomalyEvaluator, WatchdogAnomalyKind,
-        WatchdogAnomalySeverity, WatchdogAnomalyWatchInput,
+        RejoinAttempt, RuntimeBackpressureAction, RuntimeBackpressureDecision,
+        RuntimeBackpressureError, RuntimeBackpressureInput, RuntimeBackpressurePolicy,
+        RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore,
+        SnapshotRestoreError, SnapshotRestoreGuard, SnapshotStoreError, StateDivergenceError,
+        StateDivergenceEvaluator, StateDivergenceSeverity, StateDivergenceStatus,
+        StateDivergenceWatchInput, WatchdogAnomalyError, WatchdogAnomalyEvaluator,
+        WatchdogAnomalyKind, WatchdogAnomalySeverity, WatchdogAnomalyWatchInput,
     };
     use crate::config::{NodeConfig, NodeRole, SyncMode};
     use std::fs;
@@ -3428,6 +3615,126 @@ mod tests {
         assert_eq!(
             decision.action,
             RuntimeBackpressureAction::PurgeStalePeerQueue
+        );
+        assert_eq!(
+            decision.reason_code(),
+            "runtime_backpressure_purge_stale_peer_queue"
+        );
+    }
+
+    #[test]
+    fn functional_runtime_queue_enforces_reject_action_on_enqueue() {
+        let policy = RuntimeBackpressurePolicy::new(700, 900, true).expect("valid policy");
+        let controller = DeterministicBackpressureController::new(policy);
+        let mut queue = BoundedRuntimeQueue::new(10).expect("queue should build");
+        for index in 0..9 {
+            queue
+                .enqueue(format!("evt-{index}"))
+                .expect("preload should stay in bounds");
+        }
+
+        let error = queue
+            .enqueue_with_backpressure(
+                "evt-reject".to_owned(),
+                &controller,
+                "kamn:did:agent:peer-bp",
+                PeerLifecycleState::Active,
+            )
+            .expect_err("enqueue should be rejected at saturation threshold");
+        assert_eq!(
+            error,
+            RuntimeQueueError::BackpressureRejected {
+                reason_code: "runtime_backpressure_reject_new_enqueue",
+                queue_utilization_per_mille: 900,
+            }
+        );
+        assert_eq!(
+            error.reason_code(),
+            "runtime_backpressure_reject_new_enqueue"
+        );
+        assert_eq!(queue.len(), 9);
+    }
+
+    #[test]
+    fn integration_runtime_queue_enforces_stale_peer_purge_action() {
+        let policy = RuntimeBackpressurePolicy::new(700, 900, true).expect("valid policy");
+        let controller = DeterministicBackpressureController::new(policy);
+        let mut queue = BoundedRuntimeQueue::new(8).expect("queue should build");
+        queue
+            .enqueue("evt-1".to_owned())
+            .expect("preload should succeed");
+        queue
+            .enqueue("evt-2".to_owned())
+            .expect("preload should succeed");
+
+        let error = queue
+            .enqueue_with_backpressure(
+                "evt-disconnected".to_owned(),
+                &controller,
+                "kamn:did:agent:peer-stale",
+                PeerLifecycleState::Disconnected,
+            )
+            .expect_err("disconnected stale queue should be purged");
+        assert_eq!(
+            error,
+            RuntimeQueueError::BackpressurePurgedStalePeerQueue {
+                reason_code: "runtime_backpressure_purge_stale_peer_queue",
+                purged_entries: 2,
+            }
+        );
+        assert_eq!(queue.len(), 0);
+    }
+
+    #[test]
+    fn regression_runtime_queue_backpressure_reason_markers_remain_stable() {
+        // Regression: #2691
+        let decision = RuntimeBackpressureDecision {
+            action: RuntimeBackpressureAction::SlowProducer,
+            queue_utilization_per_mille: 750,
+            stale_peer_queue: false,
+        };
+        assert_eq!(decision.reason_code(), "runtime_backpressure_slow_producer");
+
+        let queue_error = RuntimeQueueError::BackpressureRejected {
+            reason_code: "runtime_backpressure_reject_new_enqueue",
+            queue_utilization_per_mille: 950,
+        };
+        assert_eq!(
+            queue_error.reason_code(),
+            "runtime_backpressure_reject_new_enqueue"
+        );
+    }
+
+    #[test]
+    fn performance_runtime_queue_backpressure_enforcement_stays_within_ci_budget() {
+        let policy = RuntimeBackpressurePolicy::new(700, 900, true).expect("valid policy");
+        let controller = DeterministicBackpressureController::new(policy);
+        let started = Instant::now();
+        for sample_index in 0..2000 {
+            let mut queue = BoundedRuntimeQueue::new(16).expect("queue should build");
+            let preload = sample_index % 16;
+            for event_index in 0..preload {
+                queue
+                    .enqueue(format!("evt-preload-{event_index}"))
+                    .expect("preload should stay bounded");
+            }
+            let lifecycle_state = if sample_index % 13 == 0 {
+                PeerLifecycleState::Disconnected
+            } else {
+                PeerLifecycleState::Active
+            };
+            let _ = queue.enqueue_with_backpressure(
+                "evt-runtime".to_owned(),
+                &controller,
+                "kamn:did:agent:peer-perf-runtime",
+                lifecycle_state,
+            );
+        }
+
+        let elapsed_millis = started.elapsed().as_millis();
+        assert!(
+            elapsed_millis < 250,
+            "runtime queue backpressure enforcement exceeded CI budget: {elapsed_millis}ms"
         );
     }
 
@@ -4445,6 +4752,14 @@ mod tests {
         assert_eq!(report.watchdog_severity, WatchdogAnomalySeverity::Critical);
         assert_eq!(report.final_lifecycle_state, PeerLifecycleState::Active);
         assert_eq!(report.queue_overflow_attempts, 0);
+        assert_eq!(
+            report.backpressure_last_action,
+            RuntimeBackpressureAction::SlowProducer
+        );
+        assert_eq!(
+            report.backpressure_last_reason_code,
+            "runtime_backpressure_slow_producer"
+        );
     }
 
     #[test]
@@ -4469,9 +4784,53 @@ mod tests {
         assert_eq!(report.final_lifecycle_state, PeerLifecycleState::Degraded);
         assert_eq!(report.queue_overflow_attempts, 3);
         assert_eq!(
+            report.backpressure_last_action,
+            RuntimeBackpressureAction::RejectNewEnqueue
+        );
+        assert_eq!(
+            report.backpressure_last_reason_code,
+            "runtime_backpressure_reject_new_enqueue"
+        );
+        assert_eq!(report.backpressure_rejected_events, 3);
+        assert_eq!(report.backpressure_purged_events, 0);
+        assert_eq!(
             report.watchdog_kind,
             WatchdogAnomalyKind::LivenessDegradation
         );
+    }
+
+    #[test]
+    fn integration_network_fault_simulation_purges_stale_disconnected_peer_queue() {
+        let simulator = DeterministicNetworkFaultSimulator::default();
+        let input = NetworkFaultSimulationInput::new(
+            "fault-sample-stale-peer",
+            "peer-sim-stale",
+            120,
+            118,
+            6,
+            0,
+            30,
+            1,
+            4,
+            4,
+        )
+        .expect("valid simulation input");
+        let report = super::simulate_daemon_network_fault(&simulator, input)
+            .expect("simulation should pass");
+
+        assert_eq!(
+            report.final_lifecycle_state,
+            PeerLifecycleState::Disconnected
+        );
+        assert_eq!(
+            report.backpressure_last_action,
+            RuntimeBackpressureAction::PurgeStalePeerQueue
+        );
+        assert_eq!(
+            report.backpressure_last_reason_code,
+            "runtime_backpressure_purge_stale_peer_queue"
+        );
+        assert!(report.backpressure_purged_events > 0);
     }
 
     #[test]

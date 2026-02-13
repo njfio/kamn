@@ -51,6 +51,21 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `task_operation_snapshot_journal_corrupt_tail:<line>`
 - Regression: #2690
 
+## Runtime Backpressure Enforcement Contract
+- Runtime backpressure enforcement policy is tracked in `docs/planning/runtime_backpressure_policy.md`.
+- Fast-gate backpressure contract command:
+  - `cargo test -p kamn-core --lib backpressure`
+- Runtime queue mutation enforcement command:
+  - `cargo test -p kamn-core --lib runtime::tests::`
+- Runtime fault simulation backpressure integration command:
+  - `cargo test -p kamn-core --lib network_fault_simulation`
+- Deterministic enforcement reason markers remain stable:
+  - `runtime_backpressure_accept`
+  - `runtime_backpressure_slow_producer`
+  - `runtime_backpressure_reject_new_enqueue`
+  - `runtime_backpressure_purge_stale_peer_queue`
+- Regression: #2691
+
 ## Node Runtime Kolme-Live Fast Lane
 - For `kamn-node` live-runtime wiring/doc changes, keep PR validation on deterministic local harness tests:
   - `cargo test -p kamn-node runtime_kolme_live`
