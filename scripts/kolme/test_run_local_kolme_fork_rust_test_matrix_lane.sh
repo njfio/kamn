@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh"
+RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane_impl.sh"
+RUN_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_fork_rust_test_matrix_lane.json"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 README_FILE="$ROOT_DIR/README.md"
@@ -34,12 +37,67 @@ if [ ! -x "$RUNNER" ]; then
   exit 1
 fi
 
+if [ ! -x "$RUNNER_IMPL" ]; then
+  echo "expected local fork rust test matrix implementation runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected local run lane dispatcher to be executable" >&2
+  exit 1
+fi
+
+if [ ! -L "$RUNNER" ]; then
+  echo "expected local fork rust test matrix runner to be a symlink to shared runtime lane dispatcher" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$RUNNER")" != "run_lane_dispatch.sh" ]; then
+  echo "expected local fork rust test matrix runner symlink target to be run_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+if [ ! -f "$RUN_MANIFEST" ]; then
+  echo "expected local fork rust test matrix run manifest to exist" >&2
+  exit 1
+fi
+
+python3 - "$RUN_MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.contract-lane.manifest.v1":
+    raise SystemExit("unexpected local fork rust test matrix run manifest schema")
+if payload.get("lane_id") != "kolme.local_kolme_fork_rust_test_matrix.run":
+    raise SystemExit("unexpected local fork rust test matrix run manifest lane_id")
+run_command = payload.get("phases", {}).get("run")
+if run_command != [
+    "bash",
+    "scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane_impl.sh",
+]:
+    raise SystemExit("unexpected local fork rust test matrix run manifest command")
+PY
+
+resolved_run_manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUNNER")" --resolve-manifest-path)"
+if [ "$resolved_run_manifest_path" != "$RUN_MANIFEST" ]; then
+  echo "expected local fork rust test matrix wrapper to resolve deterministic run manifest" >&2
+  exit 1
+fi
+
+if bash "$DISPATCHER" --lane-wrapper run_missing_local_kolme_fork_rust_test_matrix_lane.sh --resolve-manifest-path >/dev/null 2>&1; then
+  echo "expected local run lane dispatcher to fail closed for unknown local fork rust test matrix wrapper" >&2
+  exit 1
+fi
+
 if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   echo "expected shared local-heavy opt-in guard helper to be executable" >&2
   exit 1
 fi
 
-if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER"; then
+if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER_IMPL"; then
   echo "expected local fork rust test matrix runner to invoke shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
