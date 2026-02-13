@@ -738,6 +738,7 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # contracts.required_runtime_mode=kolme-live
 # contracts.fallback_private_key_path_allowed=false
 # contracts.fallback_signer_secret_rejected_profile_class=production
+# contracts.fallback_signer_secret_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK
 # contracts.fallback_signer_secret_checkpoint_reason_code=checkpoint_failed_fallback_private_key_contract
 # contracts.approval_quorum_required=2
 # contracts.quorum_evidence_required=true
@@ -792,6 +793,7 @@ bash scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh --
 # schema: kamn.kolme.local-live-deployment-preflight-policy-report.v1
 # Regression: #2225
 # Regression: #2226
+# Regression: #2337
 # Regression: #2300
 # Regression: #2301
 # Regression: #2326

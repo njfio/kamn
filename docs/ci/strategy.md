@@ -481,6 +481,7 @@ JSON`
       - `contracts.required_runtime_mode=kolme-live`
       - `contracts.fallback_private_key_path_allowed=false`
       - `contracts.fallback_signer_secret_rejected_profile_class=production`
+      - `contracts.fallback_signer_secret_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
       - `contracts.fallback_signer_secret_checkpoint_reason_code=checkpoint_failed_fallback_private_key_contract`
       - `contracts.approval_quorum_required=2`
       - `contracts.quorum_evidence_required=true`
@@ -530,6 +531,7 @@ JSON`
       - `signer_provenance_sha256_invalid`
       - `signer_rotation_epoch_stale`
     - deployment preflight contract lane parity remains fail-closed (`Regression: #2226`).
+    - fallback retirement docs parity remains fail-closed across README/CI/devnet runbooks (`Regression: #2337`).
     - deployment preflight signer provenance + rotation freshness parity remains fail-closed (`Regression: #2300`).
     - deployment preflight signer quorum evidence parity remains fail-closed (`Regression: #2301`).
     - runtime/deployment shared signer-attestation schema + reason-code parity remains fail-closed (`Regression: #2326`).
