@@ -1,0 +1,50 @@
+{
+  "lanes": [
+    {
+      "lane_id": "non_kolme.message.message_lifecycle",
+      "manifest_file": "scripts/framework/manifests/message_message_lifecycle_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/message/run_message_lifecycle_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.runtime.zk_witness_mutation",
+      "manifest_file": "scripts/framework/manifests/runtime_zk_witness_mutation_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/runtime/run_zk_witness_mutation_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.sdk.rust_live_transport",
+      "manifest_file": "scripts/framework/manifests/sdk_rust_live_transport_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/sdk/run_rust_live_transport_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "non_kolme.task.task_operation_snapshot",
+      "manifest_file": "scripts/framework/manifests/task_task_operation_snapshot_contract_lane.json",
+      "priority": "P0",
+      "shell_loc": 1,
+      "source_entry": "scripts/task/run_task_operation_snapshot_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    }
+  ],
+  "regular_file_wrapper_count": 0,
+  "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
+  "source_matrix_file": "fixtures/ci/non_kolme_wave10_wrapper_family_matrix.json",
+  "symlink_wrapper_count": 4,
+  "total_shell_loc": 4,
+  "wrapper_count": 4
+}

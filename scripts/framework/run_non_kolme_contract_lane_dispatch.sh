@@ -71,7 +71,9 @@ resolve_manifest_name() {
     run_channel_lifecycle_contract_lane.sh) echo "channel_channel_lifecycle_contract_lane.json" ;;
     run_channel_policy_contract_lane.sh) echo "channel_channel_policy_contract_lane.json" ;;
     run_dashboard_shell_determinism_matrix_contract_lane.sh) echo "frontend_dashboard_shell_determinism_matrix_contract_lane.json" ;;
+    run_message_lifecycle_contract_lane.sh) echo "message_message_lifecycle_contract_lane.json" ;;
     run_reputation_dispute_contract_lane.sh) echo "reputation_dispute_contract_lane.json" ;;
+    run_rust_live_transport_contract_lane.sh) echo "sdk_rust_live_transport_contract_lane.json" ;;
     run_governance_lifecycle_rollback_contract_lane.sh) echo "governance_lifecycle_rollback_contract_lane.json" ;;
     run_governance_simulation_contract_lane.sh) echo "governance_simulation_contract_lane.json" ;;
     run_quorum_attestation_replay_contract_lane.sh) echo "governance_quorum_attestation_replay_contract_lane.json" ;;
@@ -82,6 +84,8 @@ resolve_manifest_name() {
     run_localhost_signed_integration_contract_lane.sh) echo "sdk_localhost_signed_integration_contract_lane.json" ;;
     run_sdk_schema_compatibility_contract_lane.sh) echo "sdk_schema_compatibility_contract_lane.json" ;;
     run_signer_incident_recovery_contract_lane.sh) echo "signer_signer_incident_recovery_contract_lane.json" ;;
+    run_task_operation_snapshot_contract_lane.sh) echo "task_task_operation_snapshot_contract_lane.json" ;;
+    run_zk_witness_mutation_contract_lane.sh) echo "runtime_zk_witness_mutation_contract_lane.json" ;;
     run_soc2_control_evidence_contract_lane.sh) echo "compliance_soc2_control_evidence_contract_lane.json" ;;
     run_stake_slash_risk_contract_lane.sh) echo "governance_stake_slash_risk_contract_lane.json" ;;
     run_telegram_ingress_contract_lane.sh) echo "bridge_telegram_ingress_contract_lane.json" ;;
