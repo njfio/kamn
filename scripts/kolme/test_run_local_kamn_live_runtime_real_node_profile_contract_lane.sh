@@ -84,7 +84,8 @@ required_coverage_markers=(
   "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1"
   "runtime_signer_attestation_bundle"
   "runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF"
-  "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
+  "runtime_signer_fallback_guard_contract_version=v2"
+  "runtime_signer_fallback_guard_mode=reject_if_present"
   "runtime_signer_fallback_private_key_present=false"
   "runtime_signer_raw_private_key_present=false"
   "runtime_signer_fallback_private_key_present_violation"
@@ -177,8 +178,12 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
     echo "expected docs parity to include signer key reference env marker in $docs_file" >&2
     exit 1
   fi
-  if ! grep -q "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK" "$docs_file"; then
-    echo "expected docs parity to include fallback signer private key env marker in $docs_file" >&2
+  if ! grep -q "runtime_signer_fallback_guard_contract_version=v2" "$docs_file"; then
+    echo "expected docs parity to include fallback signer guard contract version marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_fallback_guard_mode=reject_if_present" "$docs_file"; then
+    echo "expected docs parity to include fallback signer guard mode marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "runtime_signer_fallback_private_key_present=false" "$docs_file"; then
@@ -330,8 +335,10 @@ if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIV
     raise SystemExit("expected signer private key env marker in real-node profile contract-lane summary")
 if summary.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF":
     raise SystemExit("expected signer key reference env marker in real-node profile contract-lane summary")
-if summary.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
-    raise SystemExit("expected fallback signer private key env marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_fallback_guard_contract_version") != "v2":
+    raise SystemExit("expected fallback signer guard contract version marker in real-node profile contract-lane summary")
+if summary.get("runtime_signer_fallback_guard_mode") != "reject_if_present":
+    raise SystemExit("expected fallback signer guard mode marker in real-node profile contract-lane summary")
 if summary.get("runtime_signer_fallback_private_key_present") is not False:
     raise SystemExit("expected fallback signer private key presence marker false in real-node profile contract-lane summary")
 if summary.get("runtime_signer_raw_private_key_present") is not False:
@@ -388,8 +395,10 @@ if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PR
     raise SystemExit("expected contracts signer private key env marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF":
     raise SystemExit("expected contracts signer key reference env marker in real-node profile contract-lane summary")
-if contracts.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
-    raise SystemExit("expected contracts fallback signer private key env marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_fallback_guard_contract_version") != "v2":
+    raise SystemExit("expected contracts fallback signer guard contract version marker in real-node profile contract-lane summary")
+if contracts.get("runtime_signer_fallback_guard_mode") != "reject_if_present":
+    raise SystemExit("expected contracts fallback signer guard mode marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
     raise SystemExit("expected contracts fallback signer private key allowed=false marker in real-node profile contract-lane summary")
 if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") is not False:
@@ -455,8 +464,10 @@ if summary.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIV
     raise SystemExit("expected secondary signer private key env marker in contract-lane summary")
 if summary.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY":
     raise SystemExit("expected secondary signer key reference env marker in contract-lane summary")
-if summary.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
-    raise SystemExit("expected secondary signer fallback private key env marker in contract-lane summary")
+if summary.get("runtime_signer_fallback_guard_contract_version") != "v2":
+    raise SystemExit("expected secondary signer fallback guard contract version marker in contract-lane summary")
+if summary.get("runtime_signer_fallback_guard_mode") != "reject_if_present":
+    raise SystemExit("expected secondary signer fallback guard mode marker in contract-lane summary")
 if summary.get("runtime_signer_fallback_private_key_present") is not False:
     raise SystemExit("expected secondary signer fallback private key presence marker false in contract-lane summary")
 if summary.get("runtime_signer_raw_private_key_present") is not False:
@@ -486,8 +497,10 @@ if contracts.get("runtime_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PR
     raise SystemExit("expected contracts secondary signer private key env marker in contract-lane summary")
 if contracts.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY":
     raise SystemExit("expected contracts secondary signer key reference env marker in contract-lane summary")
-if contracts.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
-    raise SystemExit("expected contracts secondary signer fallback private key env marker in contract-lane summary")
+if contracts.get("runtime_signer_fallback_guard_contract_version") != "v2":
+    raise SystemExit("expected contracts secondary signer fallback guard contract version marker in contract-lane summary")
+if contracts.get("runtime_signer_fallback_guard_mode") != "reject_if_present":
+    raise SystemExit("expected contracts secondary signer fallback guard mode marker in contract-lane summary")
 if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
     raise SystemExit("expected contracts secondary signer fallback private key allowed=false marker in contract-lane summary")
 if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") is not False:

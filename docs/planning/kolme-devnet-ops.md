@@ -469,8 +469,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signing_profile=kolme-fork-secp256k1-v1`
     - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
     - `runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF`
-    - `runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
-    - `runtime_signer_fallback_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+    - `runtime_signer_fallback_guard_contract_version=v2`
+    - `runtime_signer_fallback_guard_mode=reject_if_present`
     - `runtime_signer_managed_external_raw_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF`
     - `runtime_signer_fallback_private_key_present=false`
     - `runtime_signer_raw_private_key_present=false`
@@ -529,7 +529,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_key_source`
     - `runtime_signer_private_key_env`
     - `runtime_signer_key_reference_env`
-    - `runtime_signer_fallback_private_key_env`
+    - `runtime_signer_fallback_guard_contract_version`
+    - `runtime_signer_fallback_guard_mode`
     - `runtime_signer_fallback_private_key_present`
     - `runtime_signer_raw_private_key_present`
   - real-node profile requires `runtime_commit_command_profile=real-node-non-synthetic-v1`, `runtime_commit_policy_command_profile=real-node-non-synthetic-v1`, and `runtime_commit_command_profile_version=v1`; real-node checker fails closed on marker drift.
@@ -544,7 +545,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_key_source=env-local`
     - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX`
     - `runtime_signer_key_reference_env=KAMN_KOLME_LIVE_SIGNER_KEY_REF`
-    - `runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+    - `runtime_signer_fallback_guard_contract_version=v2`
+    - `runtime_signer_fallback_guard_mode=reject_if_present`
     - `runtime_signer_fallback_private_key_present=false`
     - `runtime_signer_raw_private_key_present=false`
     - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
@@ -560,7 +562,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `contracts.runtime_signer_quorum_linked_required=true`
     - `contracts.runtime_signer_quorum_threshold_required=true`
     - `contracts.runtime_signer_quorum_profile_membership_required=true`
-    - `contracts.runtime_signer_fallback_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+    - `contracts.runtime_signer_fallback_guard_contract_version=v2`
+    - `contracts.runtime_signer_fallback_guard_mode=reject_if_present`
     - `contracts.runtime_signer_managed_external_raw_private_key_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF`
     - `contracts.runtime_signer_fallback_private_key_allowed=false`
     - `contracts.runtime_signer_managed_external_raw_private_key_allowed=false`

@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 
 RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV = "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
+RUNTIME_SIGNER_FALLBACK_GUARD_CONTRACT_VERSION = "v2"
+RUNTIME_SIGNER_FALLBACK_GUARD_MODE = "reject_if_present"
 RUNTIME_SIGNER_PROFILE_PRIMARY = "ops-primary"
 RUNTIME_SIGNER_PROFILE_SECONDARY = "ops-secondary"
 ALLOWED_RUNTIME_SIGNER_PROFILES = (
@@ -461,11 +463,28 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(runtime_commit_failure_diagnostic_hint, str) or not runtime_commit_failure_diagnostic_hint.strip():
         reason_codes.append("runtime_commit_failure_diagnostic_hint_missing")
 
-    runtime_signer_fallback_private_key_env = report.get("runtime_signer_fallback_private_key_env")
-    if not isinstance(runtime_signer_fallback_private_key_env, str) or not runtime_signer_fallback_private_key_env.strip():
-        reason_codes.append("runtime_signer_fallback_private_key_env_missing")
-    elif runtime_signer_fallback_private_key_env != RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV:
-        reason_codes.append("runtime_signer_fallback_private_key_env_mismatch")
+    runtime_signer_fallback_guard_contract_version = report.get(
+        "runtime_signer_fallback_guard_contract_version"
+    )
+    if (
+        not isinstance(runtime_signer_fallback_guard_contract_version, str)
+        or not runtime_signer_fallback_guard_contract_version.strip()
+    ):
+        reason_codes.append("runtime_signer_fallback_guard_contract_version_missing")
+    elif (
+        runtime_signer_fallback_guard_contract_version
+        != RUNTIME_SIGNER_FALLBACK_GUARD_CONTRACT_VERSION
+    ):
+        reason_codes.append("runtime_signer_fallback_guard_contract_version_mismatch")
+
+    runtime_signer_fallback_guard_mode = report.get("runtime_signer_fallback_guard_mode")
+    if (
+        not isinstance(runtime_signer_fallback_guard_mode, str)
+        or not runtime_signer_fallback_guard_mode.strip()
+    ):
+        reason_codes.append("runtime_signer_fallback_guard_mode_missing")
+    elif runtime_signer_fallback_guard_mode != RUNTIME_SIGNER_FALLBACK_GUARD_MODE:
+        reason_codes.append("runtime_signer_fallback_guard_mode_mismatch")
 
     runtime_signer_fallback_private_key_present = report.get("runtime_signer_fallback_private_key_present")
     if not isinstance(runtime_signer_fallback_private_key_present, bool):
@@ -508,8 +527,15 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_commit_finality_fallback_endpoint_mismatch")
         if contracts.get("runtime_commit_failure_taxonomy_version") != "v1":
             reason_codes.append("runtime_commit_failure_taxonomy_contract_version_mismatch")
-        if contracts.get("runtime_signer_fallback_private_key_env") != RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV:
-            reason_codes.append("runtime_signer_fallback_private_key_env_contract_mismatch")
+        if (
+            contracts.get("runtime_signer_fallback_guard_contract_version")
+            != RUNTIME_SIGNER_FALLBACK_GUARD_CONTRACT_VERSION
+        ):
+            reason_codes.append(
+                "runtime_signer_fallback_guard_contract_version_contract_mismatch"
+            )
+        if contracts.get("runtime_signer_fallback_guard_mode") != RUNTIME_SIGNER_FALLBACK_GUARD_MODE:
+            reason_codes.append("runtime_signer_fallback_guard_mode_contract_mismatch")
         if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
             reason_codes.append("runtime_signer_fallback_private_key_allowed_contract_mismatch")
         if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") is not False:

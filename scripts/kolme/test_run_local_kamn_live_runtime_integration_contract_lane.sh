@@ -149,7 +149,8 @@ required_coverage_markers=(
   "runtime_signer_raw_private_key_present=false"
   "runtime_commit_failure_taxonomy_mismatch:finality.timeout"
   "runtime_profile_run_mode_mismatch"
-  "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
+  "runtime_signer_fallback_guard_contract_version=v2"
+  "runtime_signer_fallback_guard_mode=reject_if_present"
   "runtime_signer_fallback_private_key_present=false"
   "Regression: #1489"
   "Regression: #1971"
@@ -213,8 +214,13 @@ if ! grep -q "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" 
   exit 1
 fi
 
-if ! grep -q "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK" "$DOC_FILE"; then
-  echo "expected Kolme devnet ops doc to include fallback signer private key env marker" >&2
+if ! grep -q "runtime_signer_fallback_guard_contract_version=v2" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include fallback signer guard contract version marker" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_fallback_guard_mode=reject_if_present" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to include fallback signer guard mode marker" >&2
   exit 1
 fi
 
@@ -288,8 +294,13 @@ if ! grep -q "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" 
   exit 1
 fi
 
-if ! grep -q "runtime_signer_fallback_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK" "$README_FILE"; then
-  echo "expected README to include fallback signer private key env marker" >&2
+if ! grep -q "runtime_signer_fallback_guard_contract_version=v2" "$README_FILE"; then
+  echo "expected README to include fallback signer guard contract version marker" >&2
+  exit 1
+fi
+
+if ! grep -q "runtime_signer_fallback_guard_mode=reject_if_present" "$README_FILE"; then
+  echo "expected README to include fallback signer guard mode marker" >&2
   exit 1
 fi
 
@@ -351,8 +362,10 @@ if summary.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected dry_run_no_commands_executed reason code in contract-lane summary")
 if summary.get("runtime_profile") != "real-node":
     raise SystemExit("expected runtime_profile=real-node in contract-lane summary")
-if summary.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
-    raise SystemExit("expected fallback signer private key env marker in contract-lane summary")
+if summary.get("runtime_signer_fallback_guard_contract_version") != "v2":
+    raise SystemExit("expected fallback signer guard contract version marker in contract-lane summary")
+if summary.get("runtime_signer_fallback_guard_mode") != "reject_if_present":
+    raise SystemExit("expected fallback signer guard mode marker in contract-lane summary")
 if summary.get("runtime_signer_fallback_private_key_present") is not False:
     raise SystemExit("expected fallback signer private key presence marker false in contract-lane summary")
 if summary.get("runtime_signer_key_reference_env") != "KAMN_KOLME_LIVE_SIGNER_KEY_REF":
@@ -398,8 +411,10 @@ if summary.get("ci_fast_gate_eligible") is not False:
 contracts = summary.get("contracts", {})
 if contracts.get("ci_fast_gate_scope") != "local-only":
     raise SystemExit("expected local-only fast-gate scope contract marker in contract-lane summary")
-if contracts.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
-    raise SystemExit("expected contracts fallback signer private key env marker in contract-lane summary")
+if contracts.get("runtime_signer_fallback_guard_contract_version") != "v2":
+    raise SystemExit("expected contracts fallback signer guard contract version marker in contract-lane summary")
+if contracts.get("runtime_signer_fallback_guard_mode") != "reject_if_present":
+    raise SystemExit("expected contracts fallback signer guard mode marker in contract-lane summary")
 if contracts.get("runtime_signer_fallback_private_key_allowed") is not False:
     raise SystemExit("expected contracts fallback signer private key allowed=false marker in contract-lane summary")
 if contracts.get("runtime_signer_fallback_private_key_command_marker_allowed") is not False:

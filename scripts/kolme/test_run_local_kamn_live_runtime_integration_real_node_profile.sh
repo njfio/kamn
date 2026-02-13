@@ -263,8 +263,10 @@ import sys
 summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 if summary.get("reason_code") != "runtime_signer_fallback_private_key_present_violation":
     raise SystemExit("expected fallback signer private key violation reason code in real-node profile run summary")
-if summary.get("runtime_signer_fallback_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
-    raise SystemExit("expected fallback signer private key env marker in real-node profile run summary")
+if summary.get("runtime_signer_fallback_guard_contract_version") != "v2":
+    raise SystemExit("expected fallback signer guard contract version marker in real-node profile run summary")
+if summary.get("runtime_signer_fallback_guard_mode") != "reject_if_present":
+    raise SystemExit("expected fallback signer guard mode marker in real-node profile run summary")
 if summary.get("runtime_signer_fallback_private_key_present") is not True:
     raise SystemExit("expected fallback signer private key presence marker true in real-node profile run summary")
 checks = summary.get("checks")
