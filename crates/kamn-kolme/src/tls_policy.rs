@@ -66,6 +66,10 @@ pub fn classify_tls_failure_reason(stderr: &str) -> String {
         || normalized.contains("wrong version number")
         || normalized.contains("tlsv")
         || normalized.contains("ssl routines")
+        || normalized.contains("received corrupt message")
+        || normalized.contains("invalidcontenttype")
+        || normalized.contains("invalidmessage")
+        || normalized.contains("peer sent")
     {
         return "tls handshake failed".to_owned();
     }
@@ -105,6 +109,10 @@ mod tests {
     fn functional_classify_tls_failure_reason_detects_handshake_pattern() {
         assert_eq!(
             classify_tls_failure_reason("ssl routines:ssl3_get_record:wrong version number"),
+            "tls handshake failed"
+        );
+        assert_eq!(
+            classify_tls_failure_reason("received corrupt message of type InvalidContentType"),
             "tls handshake failed"
         );
     }

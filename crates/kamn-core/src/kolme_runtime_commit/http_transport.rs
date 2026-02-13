@@ -21,11 +21,14 @@ use kamn_kolme::{
     KolmeRuntimeCommitBlockFallbackTransport, KolmeRuntimeCommitFinalityTransport,
     KolmeRuntimeCommitProviderError, KolmeRuntimeCommitProviderTransport,
 };
-use std::io::{Read, Write};
+use rustls::pki_types::ServerName;
+use rustls::{ClientConfig, ClientConnection, RootCertStore, StreamOwned};
+use std::fs;
+use std::io::{Cursor, Read, Write};
+use std::net::IpAddr;
 use std::net::TcpStream;
-use std::process::{Command, Stdio};
-use std::thread;
-use std::time::{Duration, Instant};
+use std::sync::Arc;
+use std::time::Duration;
 
 type ParsedHttpEndpoint = KamnKolmeParsedHttpEndpoint;
 
@@ -197,20 +200,60 @@ impl KolmeRuntimeCommitHttpTransport {
         endpoint: ParsedHttpEndpoint,
         request: &[u8],
     ) -> Result<Vec<u8>, KolmeRuntimeCommitProviderError> {
-        let connect_target = format!("{}:{}", endpoint.host, endpoint.port);
-        let mut command = Command::new("openssl");
-        command
-            .arg("s_client")
-            .arg("-quiet")
-            .arg("-verify_return_error")
-            .arg("-servername")
-            .arg(endpoint.host.as_str())
-            .arg("-connect")
-            .arg(connect_target.as_str())
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+        let stream =
+            TcpStream::connect((endpoint.host.as_str(), endpoint.port)).map_err(|error| {
+                KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
+            })?;
+        let timeout = Duration::from_secs(self.timeout_seconds);
+        stream.set_read_timeout(Some(timeout)).map_err(|error| {
+            KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
+        })?;
+        stream.set_write_timeout(Some(timeout)).map_err(|error| {
+            KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
+        })?;
 
+        let tls_config = self.resolve_tls_client_config()?;
+        let server_name = Self::resolve_tls_server_name(endpoint.host.as_str())?;
+        let connection = ClientConnection::new(tls_config, server_name).map_err(|error| {
+            KolmeRuntimeCommitProviderError::Unavailable {
+                reason: Self::classify_rustls_handshake_error(&error),
+            }
+        })?;
+        let mut tls_stream = StreamOwned::new(connection, stream);
+        tls_stream
+            .write_all(request)
+            .map_err(|error| Self::map_tls_io_error(&error))?;
+        tls_stream
+            .flush()
+            .map_err(|error| Self::map_tls_io_error(&error))?;
+
+        let mut response_bytes = Vec::new();
+        let mut read_buffer = [0_u8; 4096];
+        loop {
+            match tls_stream.read(&mut read_buffer) {
+                Ok(0) => break,
+                Ok(read_count) => response_bytes.extend_from_slice(&read_buffer[..read_count]),
+                Err(error) => {
+                    if matches!(error.kind(), std::io::ErrorKind::UnexpectedEof)
+                        && !response_bytes.is_empty()
+                    {
+                        break;
+                    }
+                    return Err(Self::map_tls_io_error(&error));
+                }
+            }
+        }
+        if !is_kolme_valid_http_response_bytes_input_contract(response_bytes.as_slice()) {
+            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "tls response body is empty".to_owned(),
+            });
+        }
+        Ok(response_bytes)
+    }
+
+    fn resolve_tls_client_config(
+        &self,
+    ) -> Result<Arc<ClientConfig>, KolmeRuntimeCommitProviderError> {
         let configured_ca_file =
             resolve_kolme_tls_ca_file_env_result_contract(std::env::var("KAMN_KOLME_TLS_CA_FILE"))
                 .map_err(|error| match error {
@@ -218,68 +261,82 @@ impl KolmeRuntimeCommitHttpTransport {
                         KolmeRuntimeCommitProviderError::Unavailable { reason }
                     }
                 })?;
-        if let Some(ca_file) = configured_ca_file {
-            command.arg("-CAfile").arg(ca_file);
-        }
-
-        let mut child =
-            command
-                .spawn()
-                .map_err(|error| KolmeRuntimeCommitProviderError::Unavailable {
-                    reason: format!("tls command spawn failed: {error}"),
-                })?;
-        {
-            let mut stdin =
-                child
-                    .stdin
-                    .take()
-                    .ok_or_else(|| KolmeRuntimeCommitProviderError::Unavailable {
-                        reason: "tls command stdin unavailable".to_owned(),
-                    })?;
-            stdin.write_all(request).map_err(|error| {
-                KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
-            })?;
-        }
-
-        let timeout = Duration::from_secs(self.timeout_seconds);
-        let started = Instant::now();
-        loop {
-            match child.try_wait() {
-                Ok(Some(_)) => break,
-                Ok(None) => {
-                    if started.elapsed() >= timeout {
-                        let _ = child.kill();
-                        let _ = child.wait();
-                        return Err(KolmeRuntimeCommitProviderError::Timeout);
+        let mut root_store = RootCertStore::empty();
+        match configured_ca_file {
+            Some(ca_file) => {
+                let cert_bytes = fs::read(ca_file.as_str()).map_err(|error| {
+                    KolmeRuntimeCommitProviderError::Unavailable {
+                        reason: format!("tls ca file read failed: {error}"),
                     }
-                    thread::sleep(Duration::from_millis(10));
-                }
-                Err(error) => {
+                })?;
+                let mut cert_reader = Cursor::new(cert_bytes.as_slice());
+                let certs = rustls_pemfile::certs(&mut cert_reader)
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|error| KolmeRuntimeCommitProviderError::Unavailable {
+                        reason: format!("tls ca file parse failed: {error}"),
+                    })?;
+                let (added, _) = root_store.add_parsable_certificates(certs);
+                if added == 0 {
                     return Err(KolmeRuntimeCommitProviderError::Unavailable {
-                        reason: format!("tls command wait failed: {error}"),
+                        reason: "tls ca file does not contain valid certificates".to_owned(),
                     });
                 }
             }
+            None => {
+                root_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+            }
         }
+        let config = ClientConfig::builder()
+            .with_root_certificates(root_store)
+            .with_no_client_auth();
+        Ok(Arc::new(config))
+    }
 
-        let output = child.wait_with_output().map_err(|error| {
-            KolmeRuntimeCommitProviderError::from(classify_kolme_transport_io_error(&error))
-        })?;
-        let looks_like_http_response = output.stdout.starts_with(b"HTTP/1.")
-            && output.stdout.windows(4).any(|window| window == b"\r\n\r\n");
-        if !output.status.success() && !looks_like_http_response {
-            return Err(KolmeRuntimeCommitProviderError::Unavailable {
-                reason: classify_kolme_tls_failure_reason(
-                    String::from_utf8_lossy(&output.stderr).as_ref(),
-                ),
-            });
+    fn resolve_tls_server_name(
+        host: &str,
+    ) -> Result<ServerName<'static>, KolmeRuntimeCommitProviderError> {
+        if let Ok(ip_addr) = host.parse::<IpAddr>() {
+            return Ok(ServerName::IpAddress(ip_addr.into()));
         }
-        if !is_kolme_valid_http_response_bytes_input_contract(output.stdout.as_slice()) {
-            return Err(KolmeRuntimeCommitProviderError::MalformedResponse {
-                reason: "tls response body is empty".to_owned(),
-            });
+        ServerName::try_from(host.to_owned()).map_err(|_| {
+            KolmeRuntimeCommitProviderError::Unavailable {
+                reason: "tls handshake failed".to_owned(),
+            }
+        })
+    }
+
+    fn map_tls_io_error(error: &std::io::Error) -> KolmeRuntimeCommitProviderError {
+        if let Some(rustls_error) = error
+            .get_ref()
+            .and_then(|source| source.downcast_ref::<rustls::Error>())
+        {
+            return KolmeRuntimeCommitProviderError::Unavailable {
+                reason: Self::classify_rustls_handshake_error(rustls_error),
+            };
         }
-        Ok(output.stdout)
+        match classify_kolme_transport_io_error(error) {
+            kamn_kolme::KolmeTransportIoClassification::Timeout => {
+                KolmeRuntimeCommitProviderError::Timeout
+            }
+            kamn_kolme::KolmeTransportIoClassification::Unavailable { reason } => {
+                let classified = classify_kolme_tls_failure_reason(error.to_string().as_str());
+                if classified == "tls certificate verification failed"
+                    || classified == "tls handshake failed"
+                {
+                    return KolmeRuntimeCommitProviderError::Unavailable { reason: classified };
+                }
+                KolmeRuntimeCommitProviderError::Unavailable { reason }
+            }
+        }
+    }
+
+    fn classify_rustls_handshake_error(error: &rustls::Error) -> String {
+        match error {
+            rustls::Error::InvalidCertificate(_) => {
+                "tls certificate verification failed".to_owned()
+            }
+            _ => "tls handshake failed".to_owned(),
+        }
     }
 }
 
