@@ -136,6 +136,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `cargo check -p kamn-core --features live-https`
 - Optional low-cost local-only verification (no rustls transport dependencies):
   - `cargo check -p kamn-core --no-default-features`
+- Dependency posture checker command:
+  - `bash scripts/ci/check_kamn_core_live_https_dependency_posture.sh --output-json /tmp/kamn-core-live-https-dependency-posture-report.json`
 - Local-only profile remains fail-closed for runtime network transport calls; this profile is for deterministic/local build validation only.
 - Regression: #2756
 
@@ -1914,6 +1916,7 @@ Fast-mode CI tooling regression coverage includes:
 - Workflow guard contracts (`test_workflow_retry_policy.sh`, `test_workflow_cache_policy.sh`, `test_workflow_scope_policy.sh`, `test_workflow_performance_policy.sh`)
 - Rustdoc artifact lane contract (`test_run_kamn_core_rustdoc_artifact_contract_lane.sh`)
 - Rustdoc artifact policy checker (`test_check_kamn_core_rustdoc_artifact_policy.sh`)
+- Live-HTTPS dependency posture checker (`test_check_kamn_core_live_https_dependency_posture.sh`)
 - Makefile execution contract checker (`test_makefile_execution_contract.sh`)
 - Local fork portability preflight lane/policy/contract checks (`test_run_local_kolme_fork_portability_preflight_lane.sh`, `test_check_local_kolme_fork_portability_preflight_policy.sh`, `test_run_local_kolme_fork_portability_preflight_contract_lane.sh`)
 

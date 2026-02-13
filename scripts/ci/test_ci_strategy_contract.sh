@@ -396,6 +396,8 @@ required_snippets=(
   "run_quorum_attestation_replay_contract_lane.sh"
   "test_run_kamn_core_rustdoc_artifact_contract_lane.sh"
   "test_check_kamn_core_rustdoc_artifact_policy.sh"
+  "check_kamn_core_live_https_dependency_posture.sh --output-json /tmp/kamn-core-live-https-dependency-posture-report.json"
+  "test_check_kamn_core_live_https_dependency_posture.sh"
   "test_missing_docs_velocity_guard_contract.sh"
   "missing_docs_velocity_guard.py check --report-file /tmp/kamn-core-missing-docs-throughput-report.json"
   ".ci/kamn-core-missing-docs-velocity-thresholds.json"
