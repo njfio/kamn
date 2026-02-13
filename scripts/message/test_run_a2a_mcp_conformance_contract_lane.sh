@@ -3,39 +3,39 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/message/run_a2a_mcp_conformance_contract_lane.sh"
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+CONTRACT_MODULE="$ROOT_DIR/scripts/message/a2a_mcp_conformance_contract_lane_contract.sh"
+EXPECTED_MANIFEST="$ROOT_DIR/scripts/framework/manifests/message_a2a_mcp_conformance_contract_lane.json"
 
 if [ ! -x "$SCRIPT" ]; then
   echo "expected A2A/MCP conformance contract lane script to be executable" >&2
   exit 1
 fi
 
-report_file="$TMP_DIR/a2a-mcp-conformance-contract-report.json"
-output="$(
-  bash "$SCRIPT" \
-    --output-json "$report_file" \
-    --skip-tests
-)"
-
-if ! printf '%s\n' "$output" | grep -q "A2A/MCP conformance contract lane tests passed."; then
-  echo "expected success output from A2A/MCP conformance contract lane" >&2
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected non-Kolme dispatcher to be executable: $DISPATCHER" >&2
   exit 1
 fi
 
-if [ ! -f "$report_file" ]; then
-  echo "expected A2A/MCP conformance contract lane to emit report" >&2
+if [ ! -x "$CONTRACT_MODULE" ]; then
+  echo "expected shared A2A/MCP conformance contract module to be executable: $CONTRACT_MODULE" >&2
   exit 1
 fi
 
-if ! grep -q '"schema_version": "kamn.a2a_mcp.conformance-report.v1"' "$report_file"; then
-  echo "expected A2A/MCP conformance report schema marker" >&2
+if [ ! -L "$SCRIPT" ]; then
+  echo "expected A2A/MCP conformance contract lane wrapper to be a symlink: $SCRIPT" >&2
   exit 1
 fi
 
-if ! grep -q '"reason_key": "a2a_mcp_conformance_reason_codes:GO:v1"' "$report_file"; then
-  echo "expected A2A/MCP conformance reason key marker in report" >&2
+manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$SCRIPT")" --resolve-manifest-path)"
+if [ "$manifest_path" != "$EXPECTED_MANIFEST" ]; then
+  echo "expected dispatcher to resolve $EXPECTED_MANIFEST but found $manifest_path" >&2
   exit 1
 fi
 
-echo "A2A/MCP conformance contract lane script tests passed."
+if ! grep -Fq "\"scripts/message/$(basename "$CONTRACT_MODULE")\"" "$manifest_path"; then
+  echo "expected manifest to dispatch shared A2A/MCP conformance contract module: $manifest_path" >&2
+  exit 1
+fi
+
+echo "A2A/MCP conformance contract lane wrapper tests passed."

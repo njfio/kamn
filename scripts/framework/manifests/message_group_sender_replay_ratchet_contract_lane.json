@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "message.group_sender_replay_ratchet.contract",
+  "evidence_key": "group_sender_replay_ratchet_contract_lane:v1",
+  "reason_key": "group_sender_replay_ratchet_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "bash",
+      "scripts/message/group_sender_replay_ratchet_contract_lane_contract.sh"
+    ]
+  }
+}
