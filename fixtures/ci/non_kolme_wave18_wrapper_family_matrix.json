@@ -1,0 +1,41 @@
+{
+  "schema_version": "kamn.kolme.lane-migration-matrix.v1",
+  "lanes": [
+    {
+      "lane_id": "non_kolme.deploy.deployment_slo_rollback",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/deploy/run_deployment_slo_rollback_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/deploy_deployment_slo_rollback_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2741"
+    },
+    {
+      "lane_id": "non_kolme.did.service_endpoint_canonicalization",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/did/run_service_endpoint_canonicalization_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/did_service_endpoint_canonicalization_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2741"
+    },
+    {
+      "lane_id": "non_kolme.sdk.localhost_signed_demo",
+      "priority": "P0",
+      "status": "planned",
+      "source_entry": "scripts/sdk/run_localhost_signed_demo_contract_lane.sh",
+      "manifest_file": "scripts/framework/manifests/sdk_localhost_signed_demo_contract_lane.json",
+      "target_runner": "framework_manifest_lane",
+      "current_runner": "hybrid_shell_python",
+      "owner": "devops",
+      "parent_issue": "#2644",
+      "target_issue": "#2741"
+    }
+  ]
+}

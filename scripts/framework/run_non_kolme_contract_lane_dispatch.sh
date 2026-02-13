@@ -88,6 +88,9 @@ resolve_manifest_name() {
     run_channel_retention_redaction_contract_lane.sh) echo "channel_channel_retention_redaction_contract_lane.json" ;;
     run_settlement_reconciliation_contract_lane.sh) echo "escrow_settlement_reconciliation_contract_lane.json" ;;
     run_federated_delegation_settlement_contract_lane.sh) echo "task_federated_delegation_settlement_contract_lane.json" ;;
+    run_deployment_slo_rollback_contract_lane.sh) echo "deploy_deployment_slo_rollback_contract_lane.json" ;;
+    run_service_endpoint_canonicalization_contract_lane.sh) echo "did_service_endpoint_canonicalization_contract_lane.json" ;;
+    run_localhost_signed_demo_contract_lane.sh) echo "sdk_localhost_signed_demo_contract_lane.json" ;;
     run_rust_live_transport_contract_lane.sh) echo "sdk_rust_live_transport_contract_lane.json" ;;
     run_governance_lifecycle_rollback_contract_lane.sh) echo "governance_lifecycle_rollback_contract_lane.json" ;;
     run_governance_simulation_contract_lane.sh) echo "governance_simulation_contract_lane.json" ;;
