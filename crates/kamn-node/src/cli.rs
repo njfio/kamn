@@ -275,6 +275,13 @@ where
                 signing_profile.to_owned(),
             ));
         }
+        let key_source =
+            kolme_live_signer_key_source
+                .as_deref()
+                .ok_or(ConfigError::MissingArgumentValue(
+                    "--kolme-live-signer-key-source",
+                ))?;
+        normalize_kolme_live_signer_key_source(key_source)?;
         if kolme_live_strict_signer_contracts {
             let signer_profile =
                 kolme_live_signer_profile
@@ -283,10 +290,6 @@ where
                         "--kolme-live-signer-profile",
                     ))?;
             normalize_kolme_live_signer_profile_selector(signer_profile)?;
-            let key_source = kolme_live_signer_key_source.as_deref().ok_or(
-                ConfigError::MissingArgumentValue("--kolme-live-signer-key-source"),
-            )?;
-            normalize_kolme_live_signer_key_source(key_source)?;
         }
     }
 
