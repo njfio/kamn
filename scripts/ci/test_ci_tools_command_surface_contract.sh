@@ -61,6 +61,7 @@ required_commands=(
   'bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_test_harness_loc_soft_budget.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_check_kolme_test_harness_loc_soft_budget.sh"'
+  'bash "$ROOT_DIR/scripts/ci/test_run_test_harness_loc_soft_budget_contract_lane.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_run_kolme_test_harness_loc_soft_budget_contract_lane.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_missing_docs_velocity_guard_contract.sh"'
   'bash "$ROOT_DIR/scripts/ci/test_missing_docs_graduation_batch_report_contract.sh"'
