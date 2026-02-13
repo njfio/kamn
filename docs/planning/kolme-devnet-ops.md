@@ -538,6 +538,11 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `runtime_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY`
     - `contracts.runtime_signer_failover_requires_profile_change=true`
     - `contracts.runtime_signer_rotation_epoch_must_increase_on_failover=true`
+  - forced failover scenario matrix markers:
+    - `runtime_signer_failover_active=true`
+    - `runtime_signer_previous_profile=ops-primary`
+    - `runtime_signer_rotation_epoch=2`
+    - `runtime_signer_previous_rotation_epoch=1`
   - key-source/profile allowlist matrix contracts:
     - `ops-primary`: `env-local`, `managed-external`
     - `ops-secondary`: `env-local` only
@@ -566,6 +571,7 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
   - lane default budget is bounded to 210 seconds with per-stage budget caps.
   - local KAMN live runtime integration run-mode execution remains excluded from PR fast-gate workflow routing.
   - fallback signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2302`).
+  - forced failover scenario matrix contracts remain fail-closed (`Regression: #2337`).
   - managed-external raw signer key path remains fail-closed across runtime launch + wrapper/manifest entry points (`Regression: #2324`).
   - runtime signer-attestation schema + quorum/uniqueness policy checks remain fail-closed across runtime launch + policy/contract lanes (`Regression: #2325`).
   - replay/tamper/stale-signer attestation regression matrix remains fail-closed (`Regression: #2327`).

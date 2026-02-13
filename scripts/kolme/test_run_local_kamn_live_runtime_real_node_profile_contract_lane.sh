@@ -75,6 +75,9 @@ required_coverage_markers=(
   "docs/ci/strategy.md"
   "README.md"
   "runtime_signer_profile=ops-secondary"
+  "runtime_signer_failover_active=true"
+  "runtime_signer_previous_profile=ops-primary"
+  "runtime_signer_rotation_epoch=2"
   "runtime_signing_profile"
   "runtime_signer_key_source_contract_version"
   "runtime_signer_key_source"
@@ -100,7 +103,9 @@ required_coverage_markers=(
   "runtime_commit_signer_profile_marker_missing"
   "runtime_commit_non_synthetic_submit_probe_missing"
   "runtime_commit_in_memory_provider_reference_detected"
+  "forced_failover_go_summary"
   "Regression: #2302"
+  "Regression: #2337"
   "Regression: #2325"
   "Regression: #2327"
   "Regression: #2324"
@@ -132,6 +137,18 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "runtime_signer_profile=ops-secondary" "$docs_file"; then
     echo "expected docs parity to include secondary signer profile marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_failover_active=true" "$docs_file"; then
+    echo "expected docs parity to include forced failover-active marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_previous_profile=ops-primary" "$docs_file"; then
+    echo "expected docs parity to include forced failover previous signer marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_signer_rotation_epoch=2" "$docs_file"; then
+    echo "expected docs parity to include forced failover rotation epoch marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "runtime_signing_profile=kolme-fork-secp256k1-v1" "$docs_file"; then
@@ -233,6 +250,10 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "Regression: #2302" "$docs_file"; then
     echo "expected docs parity to include fallback signer runtime regression marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "Regression: #2337" "$docs_file"; then
+    echo "expected docs parity to include failover scenario matrix regression marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "Regression: #2325" "$docs_file"; then
