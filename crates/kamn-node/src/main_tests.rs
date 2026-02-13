@@ -1380,7 +1380,7 @@ fn regression_kolme_live_managed_external_strict_contracts_require_backend_comma
     )
     .expect("request should build");
 
-    let (base_url, _requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+    let (base_url, requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
         r#"{"next_nonce":42,"account_id":"acct-2432"}"#,
     )]);
     let mut transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
@@ -1395,6 +1395,12 @@ fn regression_kolme_live_managed_external_strict_contracts_require_backend_comma
     assert!(
         matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("managed_signer_backend_required_missing")),
         "strict managed-external runtime path must fail closed with deterministic missing backend reason code"
+    );
+    let recorded_requests = requests.lock().expect("request mutex should lock");
+    assert_eq!(
+        recorded_requests.len(),
+        0,
+        "managed-external missing backend command must fail before nonce lookup"
     );
 }
 
@@ -1449,7 +1455,7 @@ fn regression_kolme_live_managed_external_required_marker_forces_backend_command
     )
     .expect("request should build");
 
-    let (base_url, _requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+    let (base_url, requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
         r#"{"next_nonce":43,"account_id":"acct-2432-required"}"#,
     )]);
     let mut transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
@@ -1464,6 +1470,12 @@ fn regression_kolme_live_managed_external_required_marker_forces_backend_command
     assert!(
         matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("managed_signer_backend_required_missing")),
         "required marker should fail closed when backend command is absent"
+    );
+    let recorded_requests = requests.lock().expect("request mutex should lock");
+    assert_eq!(
+        recorded_requests.len(),
+        0,
+        "required-marker managed-external path must fail before nonce lookup"
     );
 }
 
