@@ -8,12 +8,16 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 - Fast-gate delta baseline/thresholds: `.ci/fast-gate-budget-delta.env`
 - Script-surface budgets: `.ci/script-surface-budget.env`
 - Script-surface delta baseline: `.ci/script-surface-baseline.env`
+- Kolme command-surface soft budget: `.ci/kolme-command-surface-soft-budget.env`
+- Kolme command-surface baseline: `.ci/kolme-command-surface-baseline.env`
+- Kolme command-surface trend thresholds: `.ci/kolme-command-surface-trend-thresholds.env`
 
 ## Enforcers
 - Runtime budget gate: `scripts/ci/evaluate_budget.sh`
 - Fast-gate delta report generator: `scripts/ci/generate_fast_gate_budget_delta_report.sh`
 - Fast-gate delta threshold gate: `scripts/ci/check_fast_gate_budget_delta_threshold.sh`
 - Script surface gate: `scripts/ci/check_script_duplication_budget.sh`
+- Kolme harness+command-surface trend report: `scripts/ci/generate_kolme_test_harness_loc_trend_report.sh`
 - CI helper regression suite: `scripts/ci/test_ci_tools.sh`
 
 ## Fast-Gate Delta Policy
@@ -84,6 +88,26 @@ bash scripts/ci/test_generate_fast_gate_budget_delta_report.sh
 bash scripts/ci/test_check_fast_gate_budget_delta_threshold.sh
 bash scripts/ci/test_ci_tools.sh
 ```
+
+Kolme harness + command-surface trend validation:
+
+```bash
+bash scripts/ci/generate_kolme_test_harness_loc_report.sh --output-json /tmp/kolme-test-harness-loc-report.json
+bash scripts/ci/check_kolme_test_harness_loc_soft_budget.sh --report-file /tmp/kolme-test-harness-loc-report.json --output-json /tmp/kolme-test-harness-loc-soft-budget-report.json
+bash scripts/ci/generate_kolme_test_harness_loc_trend_report.sh --output-json /tmp/kolme-test-harness-loc-trend-report.json
+```
+
+Deterministic command-surface drift markers in trend artifacts:
+- `command_surface_trend_status=within|warn|fail|invalid`
+- `command_surface_policy_decision=GO|WARN|NO-GO`
+- `command_surface_script_count_trend_warn_delta_exceeded`
+- `command_surface_script_count_trend_fail_delta_exceeded`
+- `command_surface_shell_line_total_trend_warn_delta_exceeded`
+- `command_surface_shell_line_total_trend_fail_delta_exceeded`
+- `command_surface_budget_status_fail`
+
+Optional hard-fail mode for command-surface drift:
+- `bash scripts/ci/generate_kolme_test_harness_loc_trend_report.sh --enforce-command-surface-fail --output-json /tmp/kolme-test-harness-loc-trend-report.json`
 
 ## Artifact Contract
 `check_script_duplication_budget.py` supports `--output-json` and writes:

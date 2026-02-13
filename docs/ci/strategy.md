@@ -801,6 +801,9 @@ Test-harness growth advisory (non-blocking):
 
 Kolme harness trend policy (warning-to-fail escalation contract):
 - trend thresholds file: `.ci/kolme-test-harness-loc-trend-thresholds.env`
+- command-surface soft budget file: `.ci/kolme-command-surface-soft-budget.env`
+- command-surface baseline file: `.ci/kolme-command-surface-baseline.env`
+- command-surface trend thresholds file: `.ci/kolme-command-surface-trend-thresholds.env`
 - policy wrapper:
   - `bash scripts/ci/check_kolme_test_harness_loc_soft_budget.sh --report-file /tmp/kolme-test-harness-loc-report.json --output-json /tmp/kolme-test-harness-loc-soft-budget-report.json`
 - trend report generator:
@@ -808,9 +811,12 @@ Kolme harness trend policy (warning-to-fail escalation contract):
 - policy emits deterministic escalation markers:
   - `trend_status=within|warn|fail`
   - `policy_decision=GO|WARN|NO-GO`
+  - `command_surface_trend_status=within|warn|fail|invalid`
+  - `command_surface_policy_decision=GO|WARN|NO-GO`
   - `reason_codes=...` (soft-budget and/or trend threshold reason markers)
 - optional enforcement mode for hard-fail gating:
   - `--enforce-trend-fail` exits non-zero when `trend_status=fail`.
+  - `--enforce-command-surface-fail` exits non-zero when `command_surface_policy_decision=NO-GO`.
 
 Policy:
 - Warning at 90% of configured budget.
@@ -860,6 +866,11 @@ Fast-mode CI tooling regression coverage includes:
     - `reason_codes=harness_shell_line_total_trend_warn_delta_exceeded`
     - `reason_codes=harness_script_count_trend_fail_delta_exceeded`
     - `reason_codes=harness_shell_line_total_trend_fail_delta_exceeded`
+    - `reason_codes=command_surface_script_count_trend_warn_delta_exceeded`
+    - `reason_codes=command_surface_shell_line_total_trend_warn_delta_exceeded`
+    - `reason_codes=command_surface_script_count_trend_fail_delta_exceeded`
+    - `reason_codes=command_surface_shell_line_total_trend_fail_delta_exceeded`
+    - `reason_codes=command_surface_budget_status_fail`
 - Retry helper (`test_run_with_retry.sh`)
 - Invariant harness runner (`test_run_invariant_harness.sh`)
 - Selector matrix runner with output-env isolation (`test_select_targets.sh`, `Regression: #463`)
