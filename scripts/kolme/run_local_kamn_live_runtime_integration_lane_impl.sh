@@ -40,6 +40,7 @@ RUNTIME_SIGNER_KEY_SOURCE_CONTRACT_VERSION=""
 RUNTIME_SIGNER_KEY_SOURCE=""
 RUNTIME_SIGNER_PRIVATE_KEY_ENV=""
 RUNTIME_SIGNER_KEY_REF_ENV=""
+RUNTIME_SIGNER_PUBLIC_KEY_ENV=""
 RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 RUNTIME_SIGNER_FALLBACK_PRIVATE_KEY_REMEDIATION="unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
 RUNTIME_SIGNER_MANAGED_EXTERNAL_RAW_PRIVATE_KEY_REMEDIATION=""
@@ -50,6 +51,9 @@ RUNTIME_SIGNER_PRIVATE_KEY_ENV_PRIMARY="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
 RUNTIME_SIGNER_PRIVATE_KEY_ENV_SECONDARY="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
 RUNTIME_SIGNER_KEY_REF_ENV_PRIMARY="KAMN_KOLME_LIVE_SIGNER_KEY_REF"
 RUNTIME_SIGNER_KEY_REF_ENV_SECONDARY="KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY"
+RUNTIME_SIGNER_PUBLIC_KEY_ENV_PRIMARY="KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX"
+RUNTIME_SIGNER_PUBLIC_KEY_ENV_SECONDARY="KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY"
+RUNTIME_SIGNER_PUBLIC_KEY_MARKER_PLACEHOLDER="0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
 RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION="kamn.kolme.runtime-signer-attestation.v1"
 
 
@@ -435,9 +439,11 @@ if [ "$RUNTIME_PROFILE" = "real-node" ]; then
   if [ "$RUNTIME_SIGNER_PROFILE" = "ops-secondary" ]; then
     RUNTIME_SIGNER_PRIVATE_KEY_ENV="$RUNTIME_SIGNER_PRIVATE_KEY_ENV_SECONDARY"
     RUNTIME_SIGNER_KEY_REF_ENV="$RUNTIME_SIGNER_KEY_REF_ENV_SECONDARY"
+    RUNTIME_SIGNER_PUBLIC_KEY_ENV="$RUNTIME_SIGNER_PUBLIC_KEY_ENV_SECONDARY"
   else
     RUNTIME_SIGNER_PRIVATE_KEY_ENV="$RUNTIME_SIGNER_PRIVATE_KEY_ENV_PRIMARY"
     RUNTIME_SIGNER_KEY_REF_ENV="$RUNTIME_SIGNER_KEY_REF_ENV_PRIMARY"
+    RUNTIME_SIGNER_PUBLIC_KEY_ENV="$RUNTIME_SIGNER_PUBLIC_KEY_ENV_PRIMARY"
   fi
   if [ -n "$RUNTIME_SIGNER_KEY_SOURCE_OVERRIDE" ]; then
     RUNTIME_SIGNER_KEY_SOURCE="$RUNTIME_SIGNER_KEY_SOURCE_OVERRIDE"
@@ -458,6 +464,9 @@ if [ -n "$RUNTIME_SIGNER_KEY_SOURCE" ]; then
 fi
 if [ "$RUNTIME_SIGNER_KEY_SOURCE" = "managed-external" ] && [ -n "$RUNTIME_SIGNER_KEY_REF_ENV" ] && [ -n "$RUNTIME_SIGNER_PROFILE" ]; then
   default_runtime_commit_live_submit_command_prefix="${default_runtime_commit_live_submit_command_prefix} ${RUNTIME_SIGNER_KEY_REF_ENV}=secure:aws-kms:role-operator/key-live-${RUNTIME_SIGNER_PROFILE}"
+fi
+if [ "$RUNTIME_SIGNER_KEY_SOURCE" = "managed-external" ] && [ -n "$RUNTIME_SIGNER_PUBLIC_KEY_ENV" ] && [ -n "$RUNTIME_SIGNER_PROFILE" ]; then
+  default_runtime_commit_live_submit_command_prefix="${default_runtime_commit_live_submit_command_prefix} ${RUNTIME_SIGNER_PUBLIC_KEY_ENV}=${RUNTIME_SIGNER_PUBLIC_KEY_MARKER_PLACEHOLDER}"
 fi
 default_runtime_commit_live_submit_command="${default_runtime_commit_live_submit_command_prefix} KAMN_KOLME_LIVE_SIGNING_PROFILE=${RUNTIME_SIGNING_PROFILE} cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --ignored --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'status=submitted\\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\\n'"
 
@@ -494,6 +503,11 @@ if [ "$RUNTIME_PROFILE" = "real-node" ] && [ "$RUNTIME_SIGNER_KEY_SOURCE" = "man
   expected_runtime_signer_key_reference_marker_prefix="${RUNTIME_SIGNER_KEY_REF_ENV}="
   if [[ "$RUNTIME_COMMIT_COMMAND" != *"$expected_runtime_signer_key_reference_marker_prefix"* ]]; then
     echo "runtime-commit-command must include managed signer key-reference marker ${RUNTIME_SIGNER_KEY_REF_ENV}=... when runtime-signer-key-source=managed-external" >&2
+    exit 1
+  fi
+  expected_runtime_signer_public_key_marker_prefix="${RUNTIME_SIGNER_PUBLIC_KEY_ENV}="
+  if [[ "$RUNTIME_COMMIT_COMMAND" != *"$expected_runtime_signer_public_key_marker_prefix"* ]]; then
+    echo "runtime-commit-command must include managed signer public-key marker ${RUNTIME_SIGNER_PUBLIC_KEY_ENV}=... when runtime-signer-key-source=managed-external" >&2
     exit 1
   fi
   if [ -n "$RUNTIME_SIGNER_PRIVATE_KEY_ENV" ] && [[ "$RUNTIME_COMMIT_COMMAND" == *"${RUNTIME_SIGNER_PRIVATE_KEY_ENV}="* ]]; then

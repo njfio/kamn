@@ -51,6 +51,7 @@ fn doc_contains_adapter_types_and_validation_commands() {
     assert!(DOC.contains("finality_evidence_marker_present"));
     assert!(DOC.contains("KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX"));
     assert!(DOC.contains("KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY"));
+    assert!(DOC.contains("runtime_commit_managed_external_signer_public_key_marker_missing"));
     assert!(DOC.contains("managed_signer_public_key_marker_missing"));
     assert!(DOC.contains("managed_signer_public_key_marker_invalid"));
     assert!(DOC.contains("scripts/kolme/run_runtime_commit_contract_lane.sh"));
