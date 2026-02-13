@@ -1,9 +1,7 @@
 use kamn_core::{
-    bootstrap, ConfigError, DeterministicProposalPlanner, KolmeCommitReceiptFinality,
-    KolmeRuntimeCommitFinalityChecker, KolmeRuntimeCommitHttpTransport,
-    KolmeRuntimeCommitLiveProvider, KolmeRuntimeCommitProvider, KolmeRuntimeCommitProviderError,
-    NodeConfig, NodeRole, PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate,
-    RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, SyncMode,
+    bootstrap, ConfigError, DeterministicProposalPlanner, NodeConfig, NodeRole, PeerLifecycle,
+    PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, RecoveryRejoinGuard, RecoveryStatus,
+    RejoinAttempt, SyncMode,
 };
 use std::env;
 use std::process::ExitCode;
@@ -16,14 +14,13 @@ mod wire_payload;
 
 use report_builder::build_bootstrap_report;
 use report_render::render_bootstrap_report;
-use runtime_kolme_live::{
-    build_kolme_live_request, ensure_kolme_live_provider_marker, kolme_live_finality_label,
-    map_kolme_live_submit_outcome,
-};
-use signer::build_kolme_live_direct_signed_wire_payload;
+#[cfg(test)]
+use runtime_kolme_live::build_kolme_live_request;
+use runtime_kolme_live::execute_kolme_live_runtime;
 #[cfg(test)]
 use signer::{
-    build_kolme_live_managed_signing_key, build_kolme_live_signer_adapter, encode_kolme_hex_lower,
+    build_kolme_live_direct_signed_wire_payload, build_kolme_live_managed_signing_key,
+    build_kolme_live_signer_adapter, encode_kolme_hex_lower,
     resolve_kolme_live_managed_signer_required_marker, resolve_kolme_live_nonce,
     resolve_kolme_live_signer_private_key_env_name, sign_kolme_live_managed_external_message,
     KolmeForkSecp256k1SignerAdapter,
@@ -918,12 +915,6 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             let signing_profile = kolme_live_signing_profile.ok_or(
                 ConfigError::MissingArgumentValue("--kolme-live-signing-profile"),
             )?;
-            if provider_hint.contains(KOLME_IN_MEMORY_PROVIDER_MARKER) {
-                return Err(ConfigError::InvalidKolmeLiveProviderHint(provider_hint));
-            }
-            if signing_profile != KOLME_LIVE_SIGNING_PROFILE {
-                return Err(ConfigError::InvalidKolmeLiveSigningProfile(signing_profile));
-            }
             let strict_signer_profile = if kolme_live_strict_signer_contracts {
                 Some(normalize_kolme_live_signer_profile_selector(
                     kolme_live_signer_profile.as_deref().ok_or(
@@ -942,77 +933,16 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             } else {
                 None
             };
-            let mut transport =
-                KolmeRuntimeCommitHttpTransport::new(KOLME_LIVE_TRANSPORT_TIMEOUT_SECONDS)
-                    .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
-            let request = build_kolme_live_request(&plan)?;
-            let (signed_wire_payload, signer_selection) =
-                build_kolme_live_direct_signed_wire_payload(
-                    base_url.as_str(),
-                    &mut transport,
-                    &request,
-                    strict_signer_profile,
-                    strict_signer_key_source,
-                )?;
-            let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
-                base_url.as_str(),
-                provider_hint.as_str(),
-                transport.clone(),
-            )
-            .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
-            let submit_outcome = provider
-                .submit_runtime_commit(signed_wire_payload.as_str(), request.idempotency_key())
-                .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
-            let (submit_status, mut receipt) = map_kolme_live_submit_outcome(submit_outcome)?;
-            ensure_kolme_live_provider_marker(provider_hint.as_str(), receipt.provider.as_str())?;
-            let mut resolution = "submit-receipt".to_owned();
-            if matches!(receipt.finality, KolmeCommitReceiptFinality::Pending) {
-                let mut checker = KolmeRuntimeCommitFinalityChecker::new(
-                    base_url.as_str(),
-                    KOLME_LIVE_FINALITY_STATUS_PATH,
-                    transport,
-                )
-                .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
-                match checker
-                    .poll_finality(receipt.commit_id.as_str(), KOLME_LIVE_FINALITY_MAX_ATTEMPTS)
-                {
-                    Ok(polled_receipt) => {
-                        ensure_kolme_live_provider_marker(
-                            provider_hint.as_str(),
-                            polled_receipt.provider.as_str(),
-                        )?;
-                        receipt = polled_receipt;
-                        resolution = "finality-polled".to_owned();
-                    }
-                    Err(KolmeRuntimeCommitProviderError::Timeout) => {
-                        resolution = "finality-timeout".to_owned();
-                    }
-                    Err(KolmeRuntimeCommitProviderError::Unavailable { .. }) => {
-                        resolution = "finality-unavailable".to_owned();
-                    }
-                    Err(KolmeRuntimeCommitProviderError::MalformedResponse { reason }) => {
-                        return Err(ConfigError::RuntimeKolmeLive(format!(
-                            "finality response malformed: {reason}"
-                        )));
-                    }
-                }
-            }
-            let finality = kolme_live_finality_label(receipt.finality);
+            let kolme_live_execution = execute_kolme_live_runtime(
+                &plan,
+                base_url,
+                provider_hint,
+                signing_profile,
+                strict_signer_profile,
+                strict_signer_key_source,
+            )?;
             RuntimeExecutionBundle {
-                kolme_live: Some(KolmeLiveExecution {
-                    provider_client_contract: KOLME_LIVE_PROVIDER_CONTRACT.to_owned(),
-                    base_url,
-                    provider_hint,
-                    signing_profile,
-                    signer_profile_selector_env: KOLME_LIVE_SIGNER_PROFILE_ENV.to_owned(),
-                    signer_profile: signer_selection.profile.to_owned(),
-                    signer_key_source: signer_selection.key_source.to_owned(),
-                    signer_private_key_env: signer_selection.private_key_env.to_owned(),
-                    execution_status: format!(
-                        "{submit_status};commit_id={};finality={finality};resolution={resolution}",
-                        receipt.commit_id
-                    ),
-                }),
+                kolme_live: Some(kolme_live_execution),
                 ..RuntimeExecutionBundle::default()
             }
         }
