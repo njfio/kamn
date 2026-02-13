@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "frontend.dashboard_shell_determinism_matrix.contract",
+  "evidence_key": "frontend_dashboard_shell_determinism_matrix_contract_lane:v1",
+  "reason_key": "frontend_dashboard_shell_determinism_matrix_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "python3",
+      "scripts/frontend/dashboard_shell_determinism_matrix_contract_lane_contract.py"
+    ]
+  }
+}
