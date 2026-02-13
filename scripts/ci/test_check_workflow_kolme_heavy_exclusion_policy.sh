@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECKER="$ROOT_DIR/scripts/ci/check_workflow_kolme_heavy_exclusion_policy.py"
 FAST_WORKFLOW="$ROOT_DIR/.github/workflows/ci-fast-gate.yml"
 SELECTOR_FILE="$ROOT_DIR/scripts/ci/select_targets.sh"
+CI_TOOLS_SCRIPT="$ROOT_DIR/scripts/ci/test_ci_tools.sh"
 SAFE_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_safe.yml"
 UNSAFE_MISSING_INPUT_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_missing_input.yml"
 UNSAFE_FORCED_TRUE_FIXTURE="$ROOT_DIR/fixtures/ci/workflow_kolme_heavy_policy_unsafe_forced_true.yml"
@@ -20,7 +21,7 @@ fi
 
 safe_report="$(mktemp)"
 safe_log="$(mktemp)"
-if ! python3 "$CHECKER" --workflow-file "$SAFE_FIXTURE" --selector-file "$SELECTOR_FILE" --output-json "$safe_report" >"$safe_log" 2>&1; then
+if ! python3 "$CHECKER" --workflow-file "$SAFE_FIXTURE" --selector-file "$SELECTOR_FILE" --ci-tools-file "$CI_TOOLS_SCRIPT" --output-json "$safe_report" >"$safe_log" 2>&1; then
   cat "$safe_log" >&2
   echo "expected safe workflow fixture to pass policy checker" >&2
   exit 1
@@ -43,7 +44,7 @@ fi
 
 real_report="$(mktemp)"
 real_log="$(mktemp)"
-if ! python3 "$CHECKER" --workflow-file "$FAST_WORKFLOW" --selector-file "$SELECTOR_FILE" --output-json "$real_report" >"$real_log" 2>&1; then
+if ! python3 "$CHECKER" --workflow-file "$FAST_WORKFLOW" --selector-file "$SELECTOR_FILE" --ci-tools-file "$CI_TOOLS_SCRIPT" --output-json "$real_report" >"$real_log" 2>&1; then
   cat "$real_log" >&2
   echo "expected ci-fast-gate workflow to satisfy local-heavy exclusion policy" >&2
   exit 1
@@ -123,7 +124,7 @@ rm -f "$safe_report" "$safe_log" "$real_report" "$real_log" "$missing_input_log"
 
 selector_missing_local_heavy_command_log="$(mktemp)"
 # Regression: #2388
-if python3 "$CHECKER" --workflow-file "$SAFE_FIXTURE" --selector-file "$UNSAFE_SELECTOR_MISSING_LOCAL_HEAVY_COMMAND_FIXTURE" >"$selector_missing_local_heavy_command_log" 2>&1; then
+if python3 "$CHECKER" --workflow-file "$SAFE_FIXTURE" --selector-file "$UNSAFE_SELECTOR_MISSING_LOCAL_HEAVY_COMMAND_FIXTURE" --ci-tools-file "$CI_TOOLS_SCRIPT" >"$selector_missing_local_heavy_command_log" 2>&1; then
   cat "$selector_missing_local_heavy_command_log" >&2
   echo "expected selector fixture missing local-heavy command to fail policy checker" >&2
   exit 1
@@ -140,4 +141,35 @@ if ! grep -Fq "reason_codes=selector_local_heavy_commands_missing" "$selector_mi
 fi
 
 rm -f "$selector_missing_local_heavy_command_log"
+
+unsafe_ci_tools_file="$(mktemp)"
+awk '
+  BEGIN { inserted = 0 }
+  {
+    if (!inserted && $0 ~ /echo "Fast-mode CI tool regression tests passed\."/ ) {
+      print "  bash \"$ROOT_DIR/scripts/kolme/test_run_local_heavy_validation_matrix.sh\""
+      inserted = 1
+    }
+    print $0
+  }
+' "$CI_TOOLS_SCRIPT" >"$unsafe_ci_tools_file"
+
+ci_tools_local_heavy_log="$(mktemp)"
+if python3 "$CHECKER" --workflow-file "$SAFE_FIXTURE" --selector-file "$SELECTOR_FILE" --ci-tools-file "$unsafe_ci_tools_file" >"$ci_tools_local_heavy_log" 2>&1; then
+  cat "$ci_tools_local_heavy_log" >&2
+  echo "expected ci-tools fast-mode local-heavy leak fixture to fail policy checker" >&2
+  exit 1
+fi
+if ! grep -Fq "local_heavy_lane_commands_in_ci_tools_fast_mode" "$ci_tools_local_heavy_log"; then
+  cat "$ci_tools_local_heavy_log" >&2
+  echo "expected ci-tools local-heavy leak fixture to report local_heavy_lane_commands_in_ci_tools_fast_mode" >&2
+  exit 1
+fi
+if ! grep -Fq "reason_codes=local_heavy_lane_commands_in_ci_tools_fast_mode" "$ci_tools_local_heavy_log"; then
+  cat "$ci_tools_local_heavy_log" >&2
+  echo "expected ci-tools local-heavy leak fixture to emit deterministic reason code marker" >&2
+  exit 1
+fi
+
+rm -f "$unsafe_ci_tools_file" "$ci_tools_local_heavy_log"
 echo "workflow Kolme local-heavy exclusion policy checker tests passed."

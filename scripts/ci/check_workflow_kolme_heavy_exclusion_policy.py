@@ -40,6 +40,11 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="Path to selector script for heavy-lane parity validation.",
     )
+    parser.add_argument(
+        "--ci-tools-file",
+        type=Path,
+        help="Path to ci-tools regression script for fast-mode local-heavy leakage checks.",
+    )
     parser.add_argument("--output-json", type=Path)
     return parser.parse_args()
 
@@ -52,6 +57,17 @@ def extract_step_block(text: str, step_name: str) -> str:
     if not step_match:
         return ""
     return step_match.group("body")
+
+
+def extract_ci_tools_fast_mode_block(text: str) -> str:
+    fast_mode_match = re.search(
+        r'if \[ "\$\{KAMN_CI_TOOLS_FAST_MODE:-false\}" = "true" \]; then(?P<body>.*?)\n\s*exit 0\nfi',
+        text,
+        flags=re.DOTALL,
+    )
+    if not fast_mode_match:
+        return ""
+    return fast_mode_match.group("body")
 
 
 def unique_preserving_order(values: List[str]) -> List[str]:
@@ -153,6 +169,24 @@ def main() -> int:
             if missing_selector_commands:
                 failed_checks.append("selector_local_heavy_commands_missing")
 
+    ci_tools_file = args.ci_tools_file
+    if ci_tools_file:
+        if not ci_tools_file.exists():
+            failed_checks.append("ci_tools_file_missing")
+        else:
+            ci_tools_text = ci_tools_file.read_text(encoding="utf-8")
+            ci_tools_fast_mode_block = extract_ci_tools_fast_mode_block(ci_tools_text)
+            if not ci_tools_fast_mode_block:
+                failed_checks.append("ci_tools_fast_mode_block_missing")
+            else:
+                leaked_ci_tools_local_heavy_commands = []
+                for command in LOCAL_HEAVY_LANE_COMMANDS:
+                    command_path = command.replace("bash ", "", 1)
+                    if command_path in ci_tools_fast_mode_block:
+                        leaked_ci_tools_local_heavy_commands.append(command_path)
+                if leaked_ci_tools_local_heavy_commands:
+                    failed_checks.append("local_heavy_lane_commands_in_ci_tools_fast_mode")
+
     if failed_checks:
         status = "fail"
         final_decision = "NO-GO"
@@ -166,6 +200,7 @@ def main() -> int:
         "schema_version": "kamn.ci.workflow-kolme-heavy-exclusion-policy-report.v1",
         "workflow_file": str(args.workflow_file),
         "selector_file": str(selector_file) if selector_file else None,
+        "ci_tools_file": str(ci_tools_file) if ci_tools_file else None,
         "status": status,
         "final_decision": final_decision,
         "failed_checks": failed_checks,

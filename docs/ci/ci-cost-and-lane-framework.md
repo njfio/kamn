@@ -96,6 +96,8 @@ Coverage split for cost control:
     - `steps.scope.outputs.run_kolme_local_heavy_contract_tests == 'true'`
     - `steps.scope.outputs.kolme_local_heavy_selector_opt_in == 'true'`
   - fail-closed policy reason for missing dual gate: `local_heavy_lane_not_opt_in_selector_gated`
+  - fail-closed policy reason when local-heavy commands leak into ci-tools fast mode:
+    - `local_heavy_lane_commands_in_ci_tools_fast_mode`
 
 ## Managed-Signer Backend SLO Telemetry Artifact
 Managed-signer backend SLO telemetry is emitted through:
