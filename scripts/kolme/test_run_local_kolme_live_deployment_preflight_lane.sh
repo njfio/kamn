@@ -18,7 +18,7 @@ printf '%s\n' "signer-provenance=ops-primary:source-env-local:epoch-1" >"$TMP_PR
 TMP_CUSTODY_SHA="$(sha256sum "$TMP_CUSTODY" | awk '{print $1}')"
 cat >"$TMP_QUORUM" <<JSON
 {
-  "schema_version": "kamn.kolme.signer-quorum-evidence.v1",
+  "schema_version": "kamn.kolme.runtime-signer-attestation.v1",
   "required_approvals": 2,
   "received_approvals": 2,
   "approved_signers": [
@@ -107,10 +107,14 @@ if summary.get("signer_profile_selector_env") != "KAMN_KOLME_LIVE_SIGNER_PROFILE
     raise SystemExit("expected signer profile selector env marker in deployment preflight summary")
 if summary.get("signer_profile") != "ops-primary":
     raise SystemExit("expected signer profile marker in deployment preflight summary")
+if summary.get("signer_profile_class") != "production":
+    raise SystemExit("expected signer profile class marker in deployment preflight summary")
 if summary.get("signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX":
     raise SystemExit("expected signer private key env marker in deployment preflight summary")
 if summary.get("fallback_signer_private_key_env") != "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
     raise SystemExit("expected fallback signer private key env marker in deployment preflight summary")
+if summary.get("fallback_signer_secret_remediation") != "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
+    raise SystemExit("expected fallback signer remediation marker in deployment preflight summary")
 if summary.get("fallback_signer_secret_present") is not False:
     raise SystemExit("expected fallback signer secret presence marker to be false in deployment preflight summary")
 if summary.get("ci_fast_gate_eligible") is not True:
@@ -142,6 +146,16 @@ if contracts.get("ci_fast_gate_scope") != "ci-fast-gate":
     raise SystemExit("expected deployment preflight contracts to set ci-fast-gate scope")
 if contracts.get("fallback_private_key_path_allowed") is not False:
     raise SystemExit("expected deployment preflight contracts to prohibit fallback private key paths")
+if contracts.get("fallback_signer_secret_rejected_profile_class") != "production":
+    raise SystemExit("expected deployment preflight contracts to scope fallback signer secret rejection to production profiles")
+if contracts.get("fallback_signer_secret_rejected_profiles") != ["ops-primary", "ops-secondary"]:
+    raise SystemExit("expected deployment preflight contracts to define fallback signer secret rejected profiles")
+if contracts.get("fallback_signer_secret_remediation") != "unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK":
+    raise SystemExit("expected deployment preflight contracts fallback signer remediation marker")
+if contracts.get("fallback_signer_secret_rejection_reason_code") != "fallback_signer_secret_present_violation":
+    raise SystemExit("expected deployment preflight contracts fallback signer rejection reason marker")
+if contracts.get("fallback_signer_secret_checkpoint_reason_code") != "checkpoint_failed_fallback_private_key_contract":
+    raise SystemExit("expected deployment preflight contracts fallback signer checkpoint reason marker")
 if contracts.get("custody_evidence_required") is not True:
     raise SystemExit("expected deployment preflight contracts to require signer custody evidence")
 if contracts.get("approval_quorum_required") != 2:
@@ -150,7 +164,7 @@ if contracts.get("quorum_evidence_required") is not True:
     raise SystemExit("expected deployment preflight contracts to require quorum evidence")
 if contracts.get("quorum_evidence_sha256_required") is not True:
     raise SystemExit("expected deployment preflight contracts to require quorum evidence sha256")
-if contracts.get("quorum_evidence_schema_version") != "kamn.kolme.signer-quorum-evidence.v1":
+if contracts.get("quorum_evidence_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
     raise SystemExit("expected deployment preflight contracts quorum evidence schema marker")
 if contracts.get("quorum_evidence_signer_uniqueness_required") is not True:
     raise SystemExit("expected deployment preflight contracts quorum signer uniqueness requirement marker")
@@ -224,6 +238,11 @@ fi
 
 if ! grep -q "fallback signer secret env must not be set" "$TMP_ERR"; then
   echo "expected deterministic fallback signer secret rejection message from deployment preflight lane" >&2
+  exit 1
+fi
+
+if ! grep -q "remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK" "$TMP_ERR"; then
+  echo "expected deterministic fallback signer remediation marker from deployment preflight lane" >&2
   exit 1
 fi
 

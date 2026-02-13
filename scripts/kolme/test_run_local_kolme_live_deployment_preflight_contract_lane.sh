@@ -69,6 +69,10 @@ required_coverage_markers=(
   "runtime_mode_mismatch"
   "checkpoint_failed_signer_secret_contract"
   "checkpoint_failed_signer_quorum_contract"
+  "fallback_signer_secret_checkpoint_reason_mismatch"
+  "fallback_signer_secret_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
+  "contracts.fallback_signer_secret_rejected_profile_class=production"
+  "contracts.fallback_signer_secret_checkpoint_reason_code=checkpoint_failed_fallback_private_key_contract"
   "checkpoint_failed_quorum_evidence_contract"
   "checkpoint_failed_custody_evidence_contract"
   "checkpoint_failed_signer_provenance_contract"
@@ -127,6 +131,22 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "runtime_signer_attestation_quorum_shortfall" "$docs_file"; then
     echo "expected docs parity to include runtime signer attestation quorum shortfall reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "fallback_signer_secret_checkpoint_reason_mismatch" "$docs_file"; then
+    echo "expected docs parity to include fallback signer secret checkpoint reason mismatch marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "fallback_signer_secret_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK" "$docs_file"; then
+    echo "expected docs parity to include fallback signer secret remediation marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "contracts.fallback_signer_secret_rejected_profile_class=production" "$docs_file"; then
+    echo "expected docs parity to include fallback signer rejected profile class marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "contracts.fallback_signer_secret_checkpoint_reason_code=checkpoint_failed_fallback_private_key_contract" "$docs_file"; then
+    echo "expected docs parity to include fallback signer checkpoint reason marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "Regression: #2226" "$docs_file"; then

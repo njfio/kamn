@@ -611,6 +611,7 @@ JSON`
     - `signer_profile`
     - `signer_private_key_env`
     - `fallback_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
+    - `fallback_signer_secret_remediation=unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`
     - `fallback_signer_secret_present=false`
     - `signer_key_source_contract_version=v1`
     - `signer_key_source=env-local`
@@ -642,6 +643,8 @@ JSON`
     - `contracts.required_runtime_mode=kolme-live`
     - `contracts.required_secret_hex_length=64`
     - `contracts.fallback_private_key_path_allowed=false`
+    - `contracts.fallback_signer_secret_rejected_profile_class=production`
+    - `contracts.fallback_signer_secret_checkpoint_reason_code=checkpoint_failed_fallback_private_key_contract`
     - `contracts.approval_quorum_required=2`
     - `contracts.approval_quorum_source=local-operator-attestations`
     - `contracts.quorum_evidence_required=true`
@@ -668,6 +671,7 @@ JSON`
   - `signer_profile_mismatch`
   - `signer_private_key_env_mismatch`
   - `fallback_signer_secret_present_violation`
+  - `fallback_signer_secret_checkpoint_reason_mismatch`
   - `checkpoint_failed_signer_secret_contract`
   - `checkpoint_failed_signer_quorum_contract`
   - `checkpoint_failed_quorum_evidence_contract`

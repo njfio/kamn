@@ -24,6 +24,7 @@ SECONDARY_SIGNER_PROFILE="ops-secondary"
 PRIMARY_SIGNER_SECRET_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX"
 SECONDARY_SIGNER_SECRET_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY"
 FALLBACK_SIGNER_SECRET_ENV="KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK"
+FALLBACK_SIGNER_SECRET_REMEDIATION="unset ${FALLBACK_SIGNER_SECRET_ENV}"
 REQUIRED_SECRET_HEX_LENGTH=64
 SIGNER_KEY_SOURCE_CONTRACT_VERSION_SUPPORTED="v1"
 RUNTIME_SIGNER_ATTESTATION_SCHEMA_VERSION="kamn.kolme.runtime-signer-attestation.v1"
@@ -249,7 +250,7 @@ record_check() {
 runtime_mode_command="runtime-mode must equal ${REQUIRED_RUNTIME_MODE}"
 signer_profile_command="signer profile must be ${PRIMARY_SIGNER_PROFILE} or ${SECONDARY_SIGNER_PROFILE}"
 signer_secret_command="selected signer secret env must exist and be ${REQUIRED_SECRET_HEX_LENGTH}-char hex"
-fallback_private_key_command="fallback signer secret env must remain unset"
+fallback_private_key_command="fallback signer secret env must remain unset for production signer profiles (remediation: ${FALLBACK_SIGNER_SECRET_REMEDIATION})"
 signer_quorum_command="received approvals must satisfy required approvals threshold"
 quorum_evidence_command="quorum evidence bundle must satisfy schema, signer uniqueness, threshold, and custody digest match"
 custody_evidence_command="signer custody evidence file and sha256 marker must be present"
@@ -332,7 +333,7 @@ if [ "$MODE" = "run" ]; then
       fi
 
       if [ "$fallback_signer_secret_present" = "true" ]; then
-        echo "fallback signer secret env must not be set: $FALLBACK_SIGNER_SECRET_ENV" >&2
+        echo "fallback signer secret env must not be set: $FALLBACK_SIGNER_SECRET_ENV (remediation: $FALLBACK_SIGNER_SECRET_REMEDIATION)" >&2
         record_check "fallback_private_key_contract" "$fallback_private_key_command" "fail" "fallback_signer_secret_present_violation"
         record_check "signer_secret_contract" "$signer_secret_command" "skipped" "fallback_signer_secret_present_violation"
         record_check "signer_quorum_contract" "$signer_quorum_command" "skipped" "fallback_signer_secret_present_violation"
@@ -753,6 +754,8 @@ if mode == "dry-run" and not runtime_signer_attestation_approved_signers:
 runtime_signer_attestation_profile_approved = (
     isinstance(signer_profile, str) and signer_profile in runtime_signer_attestation_approved_signers
 )
+signer_profile_class = "production" if signer_profile in (primary_signer_profile, secondary_signer_profile) else "unknown"
+fallback_signer_secret_remediation = f"unset {fallback_signer_private_key_env}"
 
 runtime_signer_attestation_bundle = {
     "schema_version": runtime_signer_attestation_schema_version,
@@ -792,8 +795,10 @@ summary = {
     "runtime_mode": runtime_mode,
     "signer_profile_selector_env": signer_profile_selector_env,
     "signer_profile": signer_profile,
+    "signer_profile_class": signer_profile_class,
     "signer_private_key_env": signer_private_key_env,
     "fallback_signer_private_key_env": fallback_signer_private_key_env,
+    "fallback_signer_secret_remediation": fallback_signer_secret_remediation,
     "signer_secret_present": signer_secret_present,
     "fallback_signer_secret_present": fallback_signer_secret_present,
     "signer_secret_hex_valid": signer_secret_hex_valid,
@@ -834,6 +839,11 @@ summary = {
         "primary_signer_secret_env": primary_signer_secret_env,
         "secondary_signer_secret_env": secondary_signer_secret_env,
         "fallback_signer_secret_env": fallback_signer_private_key_env,
+        "fallback_signer_secret_rejected_profile_class": "production",
+        "fallback_signer_secret_rejected_profiles": [primary_signer_profile, secondary_signer_profile],
+        "fallback_signer_secret_remediation": fallback_signer_secret_remediation,
+        "fallback_signer_secret_rejection_reason_code": "fallback_signer_secret_present_violation",
+        "fallback_signer_secret_checkpoint_reason_code": "checkpoint_failed_fallback_private_key_contract",
         "fallback_private_key_path_allowed": False,
         "required_secret_hex_length": required_secret_hex_length,
         "secret_source": "env",
