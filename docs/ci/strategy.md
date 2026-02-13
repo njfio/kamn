@@ -640,6 +640,9 @@ JSON`
     - `python3 scripts/kolme/check_local_kolme_fork_process_lifecycle_policy.py --report-file /tmp/kolme-local-fork-process-lifecycle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-fork-process-lifecycle-policy.json`
     - `bash scripts/kolme/run_local_kolme_fork_process_lifecycle_contract_lane.sh --output-json /tmp/kolme-local-fork-process-lifecycle-summary.json --policy-output-json /tmp/kolme-local-fork-process-lifecycle-policy.json`
   - local live-node validation bundle run-mode commands remain excluded from ci-fast-gate.
+    - wrapper routing stays manifest-backed:
+      - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_local_live_node_validation_bundle_lane.sh --resolve-manifest-path`
+      - `scripts/framework/manifests/kolme_local_live_node_validation_bundle_lane.json`
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --rollback-evidence-file /tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json --recovery-evidence-file /tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json`
     - `python3 scripts/kolme/check_local_live_node_validation_bundle_policy.py --report-file /tmp/kolme-local-live-node-validation-bundle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-local-live-node-validation-bundle-policy.json`
     - `bash scripts/kolme/run_local_live_node_validation_bundle_contract_lane.sh --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json --policy-output-json /tmp/kolme-local-live-node-validation-bundle-policy.json`

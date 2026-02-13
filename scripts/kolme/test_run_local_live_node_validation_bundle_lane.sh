@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_live_node_validation_bundle_lane.sh"
+RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_live_node_validation_bundle_lane_impl.sh"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_live_node_validation_bundle_lane.json"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 README_FILE="$ROOT_DIR/README.md"
 TMP_SUMMARY="$(mktemp)"
@@ -38,28 +41,79 @@ if [ ! -x "$RUNNER" ]; then
   exit 1
 fi
 
+if [ ! -x "$RUNNER_IMPL" ]; then
+  echo "expected local live-node validation bundle implementation runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected local run lane dispatcher to be executable" >&2
+  exit 1
+fi
+
+if [ ! -L "$RUNNER" ]; then
+  echo "expected local live-node validation bundle runner to be a symlink to shared runtime lane dispatcher" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$RUNNER")" != "run_lane_dispatch.sh" ]; then
+  echo "expected local live-node validation bundle runner symlink target to be run_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected local live-node validation bundle lane manifest to exist" >&2
+  exit 1
+fi
+
+python3 - "$MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.contract-lane.manifest.v1":
+    raise SystemExit("expected local live-node validation bundle lane manifest schema")
+if payload.get("lane_id") != "kolme.local_live_node_validation_bundle.run":
+    raise SystemExit("expected local live-node validation bundle lane manifest lane_id")
+run_command = payload.get("phases", {}).get("run")
+if run_command != [
+    "bash",
+    "scripts/kolme/run_local_live_node_validation_bundle_lane_impl.sh",
+]:
+    raise SystemExit("expected local live-node validation bundle lane manifest run command")
+PY
+
+manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUNNER")" --resolve-manifest-path)"
+assert_eq "$manifest_path" "$MANIFEST" "expected local live-node validation bundle wrapper to resolve deterministic manifest"
+if bash "$DISPATCHER" --lane-wrapper run_missing_live_node_validation_bundle_lane.sh --resolve-manifest-path >/dev/null 2>&1; then
+  echo "expected local run lane dispatcher to fail closed for unknown bundle wrapper" >&2
+  exit 1
+fi
+
 # Regression: #2132
-if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER"; then
+if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER_IMPL"; then
   echo "expected local live-node validation bundle runner to use shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 
-if ! grep -q "run_local_kamn_live_runtime_integration_lane.sh" "$RUNNER"; then
+if ! grep -q "run_local_kamn_live_runtime_integration_lane.sh" "$RUNNER_IMPL"; then
   echo "expected bundle runner to compose local KAMN live runtime integration lane command" >&2
   exit 1
 fi
 
-if ! grep -q "run_local_kolme_fork_process_lifecycle_lane.sh" "$RUNNER"; then
+if ! grep -q "run_local_kolme_fork_process_lifecycle_lane.sh" "$RUNNER_IMPL"; then
   echo "expected bundle runner to compose local fork process lifecycle lane command" >&2
   exit 1
 fi
 
-if ! grep -q -- "--runtime-provider-client-contract KolmeRuntimeCommitLiveProvider" "$RUNNER"; then
+if ! grep -q -- "--runtime-provider-client-contract KolmeRuntimeCommitLiveProvider" "$RUNNER_IMPL"; then
   echo "expected bundle runner integration command to include explicit runtime provider contract marker" >&2
   exit 1
 fi
 
-if ! grep -q -- "--runtime-profile real-node" "$RUNNER"; then
+if ! grep -q -- "--runtime-profile real-node" "$RUNNER_IMPL"; then
   echo "expected bundle runner integration command to pin real-node runtime profile marker" >&2
   exit 1
 fi
