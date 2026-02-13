@@ -87,20 +87,30 @@ Managed-signer backend SLO telemetry is emitted through:
 
 - `scripts/kolme/generate_managed_signer_backend_slo_telemetry_bundle.sh`
 - `scripts/kolme/run_managed_signer_backend_slo_telemetry_contract_lane.sh`
+- `scripts/kolme/check_managed_signer_backend_slo_policy.py`
+- `scripts/kolme/run_managed_signer_backend_slo_policy_contract_lane.sh`
 
 Deterministic contract markers:
 
 - `kamn.kolme.managed-signer-backend-slo-telemetry.v1`
+- `kamn.kolme.managed-signer-backend-slo-policy-report.v1`
+- `kamn.kolme.managed-signer-backend-slo-policy-contract-report.v1`
 - `signer_key_source=managed-external`
 - `contracts.required_signer_key_source=managed-external`
+- `managed_signer_backend_slo_within_threshold`
+- `managed_signer_backend_no_action_required`
 - `managed_signer_backend_timeout_rate_threshold_exceeded`
 - `managed_signer_backend_unavailable_rate_threshold_exceeded`
 - `managed_signer_backend_error_rate_threshold_exceeded`
 - `managed_signer_backend_ci_fast_gate_failed`
+- `managed_signer_backend_reduce_timeout_burst`
+- `managed_signer_backend_failover_endpoint`
+- `managed_signer_backend_enable_circuit_breaker`
+- `managed_signer_backend_replay_ci_fast_gate`
 
 Cost boundary:
 
-- generation + contract-lane checks are offline, bounded, and PR fast-gate friendly.
+- generation + policy + contract-lane checks are offline, bounded, and PR fast-gate friendly.
 - no local-heavy selector or external metrics backend calls are required.
 
 ## Script-Surface Budget Policy

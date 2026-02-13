@@ -794,6 +794,34 @@ JSON`
   - lane remains lightweight and CI-fast-gate eligible.
   - artifacts are generated offline with deterministic thresholds and no external metrics backend dependency.
 
+## Managed Signer Backend SLO Policy Lane (Issue #2437)
+
+- Managed-signer backend SLO policy checker:
+  - `python3 scripts/kolme/check_managed_signer_backend_slo_policy.py --telemetry-bundle /tmp/managed-signer-backend-slo.json --output-json /tmp/managed-signer-backend-slo-policy-report.json`
+- Managed-signer backend SLO policy contract lane:
+  - `bash scripts/kolme/run_managed_signer_backend_slo_policy_contract_lane.sh --output-json /tmp/managed-signer-backend-slo-policy-contract-report.json`
+- Required schema/reason/remediation markers:
+  - `kamn.kolme.managed-signer-backend-slo-policy-report.v1`
+  - `kamn.kolme.managed-signer-backend-slo-policy-contract-report.v1`
+  - `managed_signer_backend_slo_within_threshold`
+  - `managed_signer_backend_no_action_required`
+  - `managed_signer_backend_timeout_rate_threshold_exceeded`
+  - `managed_signer_backend_unavailable_rate_threshold_exceeded`
+  - `managed_signer_backend_error_rate_threshold_exceeded`
+  - `managed_signer_backend_ci_fast_gate_failed`
+  - `managed_signer_backend_reduce_timeout_burst`
+  - `managed_signer_backend_failover_endpoint`
+  - `managed_signer_backend_enable_circuit_breaker`
+  - `managed_signer_backend_replay_ci_fast_gate`
+- Operator remediation guidance:
+  - timeout bursts: gate promotion and reduce submit burst rate before rerun.
+  - unavailable drift: fail over endpoint/profile before rerun.
+  - error-rate drift: enable circuit breaker and hold promotion.
+  - ci-fast-gate failure: rerun lane only after fast-gate blockers are resolved.
+- Cost policy:
+  - checker and contract lane remain local-fast and bounded.
+  - no local-heavy selector or external metrics backend call is required.
+
 ## Staging Soak Telemetry Lane (Issue #2422)
 
 - Fast lane command:
