@@ -577,12 +577,15 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - `managed-external signer raw private key env must not be set: KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX (remediation: unset KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX; set KAMN_KOLME_LIVE_SIGNER_KEY_REF)`
   - real-node profile managed-external backend adapter command contract:
     - command env marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND`
-    - strict managed-external signer contracts require command marker presence; missing marker fails closed with `managed_signer_backend_required_missing`
+    - managed-external signer mode requires command marker presence; missing marker fails closed with `managed_signer_backend_required_missing`
     - optional requirement override marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED=true|false`
     - invalid/empty requirement marker values fail closed with `managed_signer_backend_required_invalid`
     - optional timeout env marker: `KAMN_KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS` (default `5`)
     - command input env markers: `KAMN_MANAGED_SIGNER_KEY_REFERENCE`, `KAMN_MANAGED_SIGNER_ACTOR_DID`, `KAMN_MANAGED_SIGNER_NONCE`, `KAMN_MANAGED_SIGNER_STATE_ROOT`, `KAMN_MANAGED_SIGNER_CANONICAL_MESSAGE`
-    - command output markers: `signature_hex=<128-hex>` and `recovery_id=<0..3>`
+    - command output markers: `signature_hex=<128-hex>`, `recovery_id=<0..3>`, and `signer_public_key_hex=<33-byte-compressed-secp256k1-hex>`
+    - missing provenance marker fails closed with `managed_signer_backend_response_provenance_missing`
+    - malformed provenance marker fails closed with `managed_signer_backend_response_provenance_malformed`
+    - signer provenance mismatch fails closed with `managed_signer_backend_response_provenance_mismatch`
     - deterministic managed-external backend failure reason codes: `managed_signer_backend_timeout`, `managed_signer_backend_unavailable`, `managed_signer_backend_response_malformed`
   - real-node profile checker fails closed on in-memory provider references in command/policy surfaces:
     - `runtime_commit_in_memory_provider_reference_detected`

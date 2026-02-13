@@ -223,6 +223,13 @@ This document captures node-runtime productionization slices for machine-readabl
     - `KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED=true|false`
     - invalid/empty values fail closed with `managed_signer_backend_required_invalid`
     - marker presence does not relax mandatory backend command execution for managed-external signing
+  - managed-external backend command output contract:
+    - `signature_hex=<128-hex>`
+    - `recovery_id=<0..3>`
+    - `signer_public_key_hex=<33-byte-compressed-secp256k1-hex>`
+    - missing signer provenance marker fails closed with `managed_signer_backend_response_provenance_missing`
+    - malformed signer provenance marker fails closed with `managed_signer_backend_response_provenance_malformed`
+    - signer provenance mismatch fails closed with `managed_signer_backend_response_provenance_mismatch`
   - fail-closed error semantics:
     - empty profile/source declarations are rejected
     - unsupported profile/source declarations are rejected
