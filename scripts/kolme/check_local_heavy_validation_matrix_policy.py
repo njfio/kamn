@@ -10,6 +10,7 @@ EXPECTED_COMMAND_SNIPPETS = [
     "run_version_compatibility_replay_deep_lane.sh",
     "run_local_kolme_fork_rust_test_matrix_contract_lane.sh",
     "run_local_kolme_live_api_conformance_contract_lane.sh",
+    "run_signature_parity_contract_lane.sh",
     "run_local_runtime_commit_live_finality_evidence_contract_lane.sh",
     "run_local_native_api_parity_live_proof_contract_lane.sh",
     "run_local_kamn_live_runtime_integration_lane.sh --mode dry-run --runtime-profile real-node",
@@ -23,6 +24,8 @@ EXPECTED_ARTIFACT_SNIPPETS = [
     "/tmp/kolme-local-fork-rust-test-matrix-policy.json",
     "/tmp/kolme-local-live-api-conformance-summary.json",
     "/tmp/kolme-local-live-api-conformance-policy.json",
+    "/tmp/kolme-signature-parity-matrix-report.json",
+    "/tmp/kolme-signature-parity-policy-report.json",
     "/tmp/kolme-local-runtime-commit-live-summary.json",
     "/tmp/kolme-local-runtime-commit-live-policy.json",
     "/tmp/kolme-local-native-api-parity-live-proof-summary.json",
@@ -78,6 +81,18 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         for expected_snippet in EXPECTED_COMMAND_SNIPPETS:
             if not any(expected_snippet in command for command in commands if isinstance(command, str)):
                 reason_codes.append(f"command_missing:{expected_snippet}")
+        if not any(
+            all(
+                marker in command
+                for marker in (
+                    "run_signature_parity_contract_lane.sh",
+                    "KAMN_KOLME_SIGNATURE_PARITY_MAX_SECONDS=120",
+                )
+            )
+            for command in commands
+            if isinstance(command, str)
+        ):
+            reason_codes.append("signature_parity_budget_marker_missing")
         if not any(
             all(
                 marker in command

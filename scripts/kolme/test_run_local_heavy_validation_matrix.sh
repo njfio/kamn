@@ -93,7 +93,7 @@ if report.get("local_only_enforced") is not True:
 if report.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected dry-run reason code marker in local heavy matrix summary")
 commands = report.get("commands")
-if not isinstance(commands, list) or len(commands) < 8:
+if not isinstance(commands, list) or len(commands) < 9:
     raise SystemExit("expected local heavy matrix summary to contain command entries")
 if not any("run_local_bootstrap_health_checks.sh" in cmd for cmd in commands):
     raise SystemExit("expected bootstrap health-check command marker in local heavy matrix summary")
@@ -103,6 +103,15 @@ if not any("run_local_kolme_fork_rust_test_matrix_contract_lane.sh" in cmd for c
     raise SystemExit("expected local fork rust matrix contract-lane command marker in local heavy matrix summary")
 if not any("run_local_kolme_live_api_conformance_contract_lane.sh" in cmd for cmd in commands):
     raise SystemExit("expected local live API conformance contract-lane command marker in local heavy matrix summary")
+# Regression: #2629
+if not any("run_signature_parity_contract_lane.sh" in cmd for cmd in commands):
+    raise SystemExit("expected signature parity contract-lane command marker in local heavy matrix summary")
+if not any(
+    "run_signature_parity_contract_lane.sh" in cmd
+    and "KAMN_KOLME_SIGNATURE_PARITY_MAX_SECONDS=120" in cmd
+    for cmd in commands
+):
+    raise SystemExit("expected signature parity budget marker in local heavy matrix summary")
 if not any("run_local_runtime_commit_live_finality_evidence_contract_lane.sh" in cmd for cmd in commands):
     raise SystemExit("expected local runtime commit finality contract-lane command marker in local heavy matrix summary")
 if not any(
@@ -133,6 +142,11 @@ if not any(
     for cmd in commands
 ):
     raise SystemExit("expected strict real-node profile policy check marker in local heavy matrix summary")
+artifacts = report.get("artifact_paths")
+if not isinstance(artifacts, list) or not any(
+    "/tmp/kolme-signature-parity-policy-report.json" in artifact for artifact in artifacts
+):
+    raise SystemExit("expected signature parity policy artifact marker in local heavy matrix summary")
 PY
 
 # Regression: #1405

@@ -17,6 +17,7 @@ fn matrix_contains_core_threat_entries() {
     assert!(CONTROL_MATRIX.contains("TM-006"));
     assert!(CONTROL_MATRIX.contains("TM-007"));
     assert!(CONTROL_MATRIX.contains("TM-008"));
+    assert!(CONTROL_MATRIX.contains("TM-009"));
 }
 
 #[test]
@@ -43,6 +44,12 @@ fn matrix_maps_controls_to_tests() {
     assert!(CONTROL_MATRIX.contains("check_watchdog_proof_consensus_policy.sh"));
     assert!(CONTROL_MATRIX.contains("watchdog_proof_consensus_reason_codes:GO:v1"));
     assert!(CONTROL_MATRIX.contains("watchdog_proof_consensus_reason_codes:NO-GO:v1"));
+    assert!(CONTROL_MATRIX.contains("run_signature_parity_contract_lane.sh"));
+    assert!(CONTROL_MATRIX.contains("run_signature_parity_matrix.py"));
+    assert!(CONTROL_MATRIX.contains("check_signature_parity_policy.py"));
+    assert!(CONTROL_MATRIX.contains("parity_signature_mismatch"));
+    assert!(CONTROL_MATRIX.contains("parity_recovery_id_mismatch"));
+    assert!(CONTROL_MATRIX.contains("parity_pubkey_mismatch"));
 }
 
 #[test]
@@ -65,4 +72,11 @@ fn matrix_contains_watchdog_proof_consensus_entry_details() {
         "Validator/watchdog proof-consensus anomaly evidence missing or cadence/budget guard bypass"
     ));
     assert!(CONTROL_MATRIX.contains("`Regression: #996`"));
+}
+
+#[test]
+fn matrix_contains_signature_parity_entry_details() {
+    assert!(CONTROL_MATRIX
+        .contains("Kolme live signature conformance drift or malformed parity evidence"));
+    assert!(CONTROL_MATRIX.contains("`Regression: #2299`"));
 }
