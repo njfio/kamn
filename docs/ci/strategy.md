@@ -63,8 +63,22 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `runtime_backpressure_accept`
   - `runtime_backpressure_slow_producer`
   - `runtime_backpressure_reject_new_enqueue`
-  - `runtime_backpressure_purge_stale_peer_queue`
+- `runtime_backpressure_purge_stale_peer_queue`
 - Regression: #2691
+
+## Lifecycle Property Shrinking Contract
+- Lifecycle property invariant matrix is tracked in `docs/planning/property_invariant_matrix.md`.
+- Fast-gate bounded property lane command:
+  - `cargo test -p kamn-core --test lifecycle_property_shrinking`
+- Complementary lifecycle evidence matrix command:
+  - `cargo test -p kamn-core --test lifecycle_evidence_property_matrix`
+- Runtime lifecycle integration command:
+  - `cargo test -p kamn-core --lib runtime::tests::`
+- Deterministic property lane contracts:
+  - seed model must stay deterministic (`xorshift64` seed expansion).
+  - shrinker output must remain minimal failing prefix for actionable counterexamples.
+  - lane runtime budget remains bounded for PR cost control.
+- Regression: #2692
 
 ## Node Runtime Kolme-Live Fast Lane
 - For `kamn-node` live-runtime wiring/doc changes, keep PR validation on deterministic local harness tests:
