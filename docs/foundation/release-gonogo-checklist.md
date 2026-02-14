@@ -83,6 +83,26 @@ Go/no-go decisions are captured as machine-readable JSON so release policy check
 - Scheduled deep lane entrypoint:
   - `bash scripts/deploy/run_gonogo_evidence_deep_lane.sh`
 
+## Milestone Review Aggregate Lineage Gate (Issue #3247)
+Milestone go/no-go review must aggregate linked preflight/live/gate artifacts into a deterministic bundle surface before final approval.
+
+- Aggregate evidence generator:
+  - `bash scripts/deploy/generate_gonogo_evidence_bundle.sh --output-file /tmp/gonogo-milestone.json --release-candidate v1.0.0-rc.5 --schema-target-version 1.0.0 --runtime-image-digest sha256:abc123 --ci-fast-gate PASS --ci-deep-lane PASS --rollback-precheck PASS --rollback-trigger-status CLEAR --required-approvals 2 --received-approvals 2 --deployment-preflight-summary-file /tmp/kolme-local-live-deployment-preflight-summary.json --deployment-preflight-policy-file /tmp/kolme-local-live-deployment-preflight-policy.json --live-node-validation-summary-file /tmp/kolme-local-live-node-validation-bundle-summary.json --live-node-validation-policy-file /tmp/kolme-local-live-node-validation-bundle-policy.json --go-no-go-gate-report-file /tmp/go-no-go-gate-report.json`
+- Aggregate policy checker:
+  - `bash scripts/deploy/check_gonogo_evidence_policy.sh --bundle-file /tmp/gonogo-milestone.json`
+- Required aggregate marker surface:
+  - `milestone_review_bundle`
+  - `schema_version=kamn.release.milestone-review-bundle.v1`
+  - `lineage_status=verified|fail-closed`
+  - `milestone_review_go_no_go_gate_report_missing`
+  - `milestone_review_live_node_validation_runtime_provider_mismatch`
+  - `contracts.linked_artifact_lineage_required=true`
+  - `contracts.live_bundle_runtime_provider_client_required=KolmeRuntimeCommitLiveProvider`
+  - `contracts.go_no_go_gate_final_decision_required=GO`
+- Decision contract:
+  - aggregate lineage drift or missing linked artifacts force `NO-GO` through deterministic milestone reason codes.
+  - policy checker fails closed on tampered milestone lineage payloads (`milestone review bundle lineage mismatch`).
+
 ## Staging Deploy + Rollback Rehearsal Contract (Issue #658)
 Staging rehearsal automation must verify deploy and rollback outcomes before release decisions are accepted.
 
