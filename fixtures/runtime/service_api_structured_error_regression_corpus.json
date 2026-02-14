@@ -1,0 +1,33 @@
+{
+  "schema_version": "kamn.runtime.service-api-structured-error-regression-corpus.v1",
+  "scenarios": [
+    {
+      "id": "auth_missing_sender_did_header",
+      "class": "auth",
+      "reason_code": "service_api_auth_sender_did_header_missing",
+      "test_selector": "main_tests::service_api_endpoint_tests::integration_service_api_endpoint_rejects_missing_request_auth_headers",
+      "regression_issue": "3297"
+    },
+    {
+      "id": "validation_invalid_websocket_version_header",
+      "class": "validation",
+      "reason_code": "service_api_ws_version_header_invalid",
+      "test_selector": "main_tests::service_api_endpoint_tests::regression_service_api_endpoint_websocket_rejects_invalid_version_header",
+      "regression_issue": "3297"
+    },
+    {
+      "id": "replay_nonce_rejected",
+      "class": "replay",
+      "reason_code": "service_api_auth_replay_nonce_detected",
+      "test_selector": "main_tests::service_api_endpoint_tests::regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender",
+      "regression_issue": "3297"
+    },
+    {
+      "id": "transport_payload_json_syntax_invalid",
+      "class": "transport",
+      "reason_code": "service_api_payload_json_syntax_invalid",
+      "test_selector": "main_tests::service_api_endpoint_tests::regression_service_api_payload_parse_reason_codes_fail_closed",
+      "regression_issue": "3297"
+    }
+  ]
+}

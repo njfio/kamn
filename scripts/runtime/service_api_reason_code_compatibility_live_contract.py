@@ -34,6 +34,9 @@ REQUIRED_REPORT_FIELDS = [
     "error_envelope_field_status",
     "rust_sdk_reason_code_status",
     "python_sdk_reason_code_status",
+    "regression_corpus_status",
+    "regression_drift_diagnostics_status",
+    "regression_corpus_scenario_count",
     "route_error_mapping_status",
     "replay_error_mapping_status",
     "websocket_error_mapping_status",
@@ -48,6 +51,8 @@ REQUIRED_VERIFIED_FIELDS = [
     "error_envelope_field_status",
     "rust_sdk_reason_code_status",
     "python_sdk_reason_code_status",
+    "regression_corpus_status",
+    "regression_drift_diagnostics_status",
     "route_error_mapping_status",
     "replay_error_mapping_status",
     "websocket_error_mapping_status",
@@ -58,6 +63,10 @@ REQUIRED_VERIFIED_FIELDS = [
 
 def _is_non_negative_int(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def _is_positive_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
 
 
 def _check_policy(args: argparse.Namespace) -> int:
@@ -111,6 +120,10 @@ def _check_policy(args: argparse.Namespace) -> int:
     decision.reject_if(
         not _is_non_negative_int(report.get("elapsed_seconds")),
         "service_api_reason_code_policy_elapsed_seconds_invalid",
+    )
+    decision.reject_if(
+        not _is_positive_int(report.get("regression_corpus_scenario_count")),
+        "service_api_reason_code_policy_regression_corpus_scenario_count_invalid",
     )
     decision.reject_if(ci_fast_gate != "PASS", "ci_fast_gate_failed")
 

@@ -100,6 +100,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^python_sdk_reason_code_statu
   echo "expected service api reason-code compatibility python sdk marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^regression_corpus_status=verified$'; then
+  echo "expected service api reason-code compatibility regression corpus marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^regression_drift_diagnostics_status=verified$'; then
+  echo "expected service api reason-code compatibility regression drift diagnostics marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -Eq '^regression_corpus_scenario_count=[1-9][0-9]*$'; then
+  echo "expected service api reason-code compatibility regression corpus scenario count marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^route_error_mapping_status=verified$'; then
   echo "expected service api reason-code compatibility route mapping marker" >&2
   exit 1
@@ -233,6 +245,13 @@ lane_report = {
     "error_envelope_field_status": summary_report.get("error_envelope_field_status"),
     "rust_sdk_reason_code_status": summary_report.get("rust_sdk_reason_code_status"),
     "python_sdk_reason_code_status": summary_report.get("python_sdk_reason_code_status"),
+    "regression_corpus_status": summary_report.get("regression_corpus_status"),
+    "regression_drift_diagnostics_status": summary_report.get(
+        "regression_drift_diagnostics_status"
+    ),
+    "regression_corpus_scenario_count": summary_report.get(
+        "regression_corpus_scenario_count"
+    ),
     "service_api_reason_code_policy_status": policy_report.get(
         "service_api_reason_code_policy_status"
     ),
@@ -259,6 +278,17 @@ echo "service_api_reason_code_contract_status=verified"
 echo "error_envelope_field_status=verified"
 echo "rust_sdk_reason_code_status=verified"
 echo "python_sdk_reason_code_status=verified"
+echo "regression_corpus_status=verified"
+echo "regression_drift_diagnostics_status=verified"
+echo "regression_corpus_scenario_count=$(python3 - "$summary_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload.get("regression_corpus_scenario_count", 0))
+PY
+)"
 echo "service_api_reason_code_policy_status=verified"
 echo "docs_contract_status=verified"
 echo "fail_closed_status=verified"
