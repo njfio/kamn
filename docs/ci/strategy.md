@@ -170,6 +170,35 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - no external network or remote process orchestration dependency.
   - lifecycle teardown is automatic on exception via harness context management.
 
+## Runtime Full I/O Scenario Matrix Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_full_io_scenario_matrix_live.sh --mode dry-run --output-json /tmp/full-io-scenario-matrix-summary.json`
+  - `KAMN_LOCAL_FULL_IO_SCENARIO_MATRIX_OPT_IN=1 bash scripts/runtime/validate_full_io_scenario_matrix_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/full-io-scenario-matrix-summary.json`
+  - `bash scripts/runtime/check_full_io_scenario_matrix_live_policy.sh --report-file /tmp/full-io-scenario-matrix-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/full-io-scenario-matrix-policy.json`
+  - `bash scripts/runtime/validate_full_io_scenario_matrix_live_contract_lane.sh --output-json /tmp/full-io-scenario-matrix-contract-lane-report.json --policy-output-json /tmp/full-io-scenario-matrix-policy.json`
+  - `bash scripts/runtime/test_validate_full_io_scenario_matrix_live.sh`
+  - `bash scripts/runtime/test_check_full_io_scenario_matrix_live_policy.sh`
+  - `bash scripts/runtime/test_validate_full_io_scenario_matrix_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Scenario inventory:
+  - API route matrix (`validate_service_api_live.sh`)
+  - Auth failure/replay matrix (`validate_service_api_request_auth_live.sh`)
+  - WebSocket upgrade/fail-closed matrix (`validate_service_api_websocket_live.sh`)
+  - Multi-node propagation matrix (`validate_local_compose_multinode_live.sh`)
+- Evidence artifacts:
+  - summary schema: `kamn.runtime.full-io-scenario-matrix-live-report.v1`
+  - policy schema: `kamn.runtime.full-io-scenario-matrix-live-policy-report.v1`
+  - contract lane schema: `kamn.runtime.full-io-scenario-matrix-live-contract-lane-report.v1`
+- Cost controls:
+  - dry-run mode executes no nested matrix commands and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_LOCAL_FULL_IO_SCENARIO_MATRIX_OPT_IN=1`.
+  - run mode reuses existing bounded lane scripts for API/auth/websocket/multinode coverage.
+  - full I/O scenario matrix run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `full_io_scenario_matrix_policy_multinode_propagation_mismatch`
+
 ## Deploy Compose Topology Contract Lane
 - Entry commands:
   - `bash scripts/deploy/validate_compose_topology_contract_lane.sh --output-json /tmp/compose-topology-contract-summary.json --ci-fast-gate PASS`
