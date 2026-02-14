@@ -13,6 +13,7 @@ use kamn_core::{
 };
 use zeroize::Zeroize;
 
+use super::logging::log_warn;
 use super::wire_payload::render_kolme_live_native_direct_message;
 use super::{
     KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV, KOLME_LIVE_MANAGED_SIGNER_POLL_INTERVAL_MILLIS,
@@ -25,6 +26,10 @@ use super::{
     KOLME_LIVE_SIGNER_PROFILE_PRIMARY, KOLME_LIVE_SIGNER_PROFILE_SECONDARY,
     KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_ENV, KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY_ENV,
 };
+
+const KOLME_LIVE_NONCE_RETRY_MAX_ATTEMPTS: u32 = 3;
+const KOLME_LIVE_NONCE_RETRY_BASE_BACKOFF_MILLIS: u64 = 10;
+const KOLME_LIVE_NONCE_RETRY_MAX_BACKOFF_MILLIS: u64 = 40;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct KolmeLiveSignerSelection {
@@ -1015,20 +1020,67 @@ pub(crate) fn resolve_kolme_live_nonce(
 ) -> Result<u64, ConfigError> {
     let request = KolmeApiNextNonceRequest::new(pubkey)
         .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
-    let response = transport
-        .fetch_next_nonce(base_url, KOLME_LIVE_NONCE_PATH, &request)
-        .map_err(|error| match error {
-            KolmeRuntimeCommitProviderError::Timeout => {
-                ConfigError::RuntimeKolmeLive("nonce request timed out".to_owned())
+    let mut attempt = 0_u32;
+    loop {
+        attempt += 1;
+        match transport.fetch_next_nonce(base_url, KOLME_LIVE_NONCE_PATH, &request) {
+            Ok(response) => return Ok(response.next_nonce),
+            Err(error) => {
+                if let Some(reason_code) = classify_nonce_retry_category(&error) {
+                    if attempt < KOLME_LIVE_NONCE_RETRY_MAX_ATTEMPTS {
+                        let attempt_label = attempt.to_string();
+                        let max_attempts_label = KOLME_LIVE_NONCE_RETRY_MAX_ATTEMPTS.to_string();
+                        log_warn(
+                            "kolme.live.nonce.retry",
+                            &[
+                                ("pubkey", pubkey),
+                                ("attempt", attempt_label.as_str()),
+                                ("max_attempts", max_attempts_label.as_str()),
+                                ("reason", reason_code),
+                            ],
+                        )?;
+                        maybe_sleep_nonce_retry_backoff(attempt);
+                        continue;
+                    }
+                }
+                return Err(map_nonce_provider_error(error));
             }
-            KolmeRuntimeCommitProviderError::Unavailable { reason } => {
-                ConfigError::RuntimeKolmeLive(format!("nonce request unavailable: {reason}"))
-            }
-            KolmeRuntimeCommitProviderError::MalformedResponse { reason } => {
-                ConfigError::RuntimeKolmeLive(format!("nonce response malformed: {reason}"))
-            }
-        })?;
-    Ok(response.next_nonce)
+        }
+    }
+}
+
+fn classify_nonce_retry_category(error: &KolmeRuntimeCommitProviderError) -> Option<&'static str> {
+    match error {
+        KolmeRuntimeCommitProviderError::Timeout => Some("timeout"),
+        KolmeRuntimeCommitProviderError::Unavailable { .. } => Some("unavailable"),
+        KolmeRuntimeCommitProviderError::MalformedResponse { .. } => None,
+    }
+}
+
+fn map_nonce_provider_error(error: KolmeRuntimeCommitProviderError) -> ConfigError {
+    match error {
+        KolmeRuntimeCommitProviderError::Timeout => {
+            ConfigError::RuntimeKolmeLive("nonce request timed out".to_owned())
+        }
+        KolmeRuntimeCommitProviderError::Unavailable { reason } => {
+            ConfigError::RuntimeKolmeLive(format!("nonce request unavailable: {reason}"))
+        }
+        KolmeRuntimeCommitProviderError::MalformedResponse { reason } => {
+            ConfigError::RuntimeKolmeLive(format!("nonce response malformed: {reason}"))
+        }
+    }
+}
+
+fn deterministic_nonce_retry_backoff_millis(attempt: u32) -> u64 {
+    let exponent = attempt.saturating_sub(1).min(4);
+    let multiplier = 1_u64 << exponent;
+    (KOLME_LIVE_NONCE_RETRY_BASE_BACKOFF_MILLIS * multiplier)
+        .min(KOLME_LIVE_NONCE_RETRY_MAX_BACKOFF_MILLIS)
+}
+
+fn maybe_sleep_nonce_retry_backoff(attempt: u32) {
+    let backoff = deterministic_nonce_retry_backoff_millis(attempt);
+    thread::sleep(Duration::from_millis(backoff));
 }
 
 pub(crate) fn build_kolme_live_direct_signed_wire_payload(
@@ -1101,7 +1153,10 @@ pub(crate) fn build_kolme_live_direct_signed_wire_payload(
 #[cfg(test)]
 mod tests {
     use super::KolmeForkSecp256k1SignerAdapter;
-    use super::{ConfigError, Duration, Instant};
+    use super::{
+        classify_nonce_retry_category, deterministic_nonce_retry_backoff_millis, ConfigError,
+        Duration, Instant, KolmeRuntimeCommitProviderError,
+    };
 
     const TEST_PRIVATE_KEY_HEX: &str =
         "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
@@ -1143,6 +1198,34 @@ mod tests {
             is_zeroized_hex_buffer(private_key_hex.as_str()),
             "private key hex buffer must be scrubbed after parse failure"
         );
+    }
+
+    #[test]
+    fn unit_nonce_retry_classifier_marks_transient_provider_errors() {
+        assert_eq!(
+            classify_nonce_retry_category(&KolmeRuntimeCommitProviderError::Timeout),
+            Some("timeout")
+        );
+        assert_eq!(
+            classify_nonce_retry_category(&KolmeRuntimeCommitProviderError::Unavailable {
+                reason: "network unavailable".to_owned(),
+            }),
+            Some("unavailable")
+        );
+        assert_eq!(
+            classify_nonce_retry_category(&KolmeRuntimeCommitProviderError::MalformedResponse {
+                reason: "missing next_nonce".to_owned(),
+            }),
+            None
+        );
+    }
+
+    #[test]
+    fn unit_nonce_retry_backoff_policy_is_deterministic_and_bounded() {
+        assert_eq!(deterministic_nonce_retry_backoff_millis(1), 10);
+        assert_eq!(deterministic_nonce_retry_backoff_millis(2), 20);
+        assert_eq!(deterministic_nonce_retry_backoff_millis(3), 40);
+        assert_eq!(deterministic_nonce_retry_backoff_millis(8), 40);
     }
 
     #[test]
