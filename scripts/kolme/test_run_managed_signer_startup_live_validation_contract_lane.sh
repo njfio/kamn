@@ -11,6 +11,7 @@ PREFLIGHT_CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_live_deployment_pre
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 CI_COST_DOC="$ROOT_DIR/docs/ci/ci-cost-and-lane-framework.md"
 ROADMAP_DOC="$ROOT_DIR/docs/plans/2026-02-08-production-service-roadmap.md"
+RUNBOOK_DOC="$ROOT_DIR/docs/foundation/upgrade-rollback-runbook.md"
 README_FILE="$ROOT_DIR/README.md"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
@@ -102,6 +103,23 @@ for docs_file in "$DOC_FILE" "$CI_COST_DOC" "$ROADMAP_DOC" "$README_FILE"; do
   done
 done
 
+profile_matrix_markers=(
+  "signer_key_source_profile_matrix_status=verified"
+  "signer_key_source_production_reject_status=verified"
+  "signer_key_source_local_override_allow_status=verified"
+  "production_signer_key_source_env_local_forbidden"
+  "KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING=true"
+)
+
+for docs_file in "$ROADMAP_DOC" "$RUNBOOK_DOC"; do
+  for marker in "${profile_matrix_markers[@]}"; do
+    if ! grep -q -- "$marker" "$docs_file"; then
+      echo "expected profile matrix docs marker '$marker' in $docs_file" >&2
+      exit 1
+    fi
+  done
+done
+
 run_output="$(bash "$RUNNER" --output-json "$TMP_REPORT")"
 for marker in \
   "status=pass" \
@@ -111,6 +129,10 @@ for marker in \
   "managed_signer_invalid_profile_fail_closed_status=verified" \
   "managed_signer_stale_rotation_fail_closed_status=verified" \
   "managed_signer_reason_code_status=verified" \
+  "signer_key_source_profile_matrix_status=verified" \
+  "signer_key_source_production_reject_status=verified" \
+  "signer_key_source_local_override_allow_status=verified" \
+  "signer_key_source_managed_external_allow_status=verified" \
   "execution_scope=local-scheduled" \
   "performance_budget_status=verified"; do
   if ! printf '%s\n' "$run_output" | grep -q "^${marker}$"; then
@@ -143,6 +165,14 @@ if payload.get("managed_signer_stale_rotation_fail_closed_status") != "verified"
     raise SystemExit("expected managed_signer_stale_rotation_fail_closed_status=verified")
 if payload.get("managed_signer_reason_code_status") != "verified":
     raise SystemExit("expected managed_signer_reason_code_status=verified")
+if payload.get("signer_key_source_profile_matrix_status") != "verified":
+    raise SystemExit("expected signer_key_source_profile_matrix_status=verified")
+if payload.get("signer_key_source_production_reject_status") != "verified":
+    raise SystemExit("expected signer_key_source_production_reject_status=verified")
+if payload.get("signer_key_source_local_override_allow_status") != "verified":
+    raise SystemExit("expected signer_key_source_local_override_allow_status=verified")
+if payload.get("signer_key_source_managed_external_allow_status") != "verified":
+    raise SystemExit("expected signer_key_source_managed_external_allow_status=verified")
 if payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
 scenario_reports = payload.get("scenario_reports")
@@ -165,6 +195,28 @@ for entry in scenario_reports:
         raise SystemExit(f"unexpected final decision for {scenario_id}")
     if entry.get("expected_reason_code") != reason_code:
         raise SystemExit(f"unexpected expected_reason_code for {scenario_id}")
+
+matrix_reports = payload.get("signer_key_source_matrix_reports")
+if not isinstance(matrix_reports, list) or len(matrix_reports) != 3:
+    raise SystemExit("expected three signer key-source matrix reports")
+expected_matrix = {
+    "production_strict_env_local_rejected": ("NO-GO", "production_signer_key_source_env_local_forbidden"),
+    "local_override_env_local_allowed": ("GO", "local_override_enabled"),
+    "production_strict_managed_external_allowed": ("GO", "managed_external_required"),
+}
+for entry in matrix_reports:
+    if not isinstance(entry, dict):
+        raise SystemExit("matrix report entry must be an object")
+    scenario_id = entry.get("scenario_id")
+    if scenario_id not in expected_matrix:
+        raise SystemExit(f"unexpected matrix scenario id: {scenario_id}")
+    expected_outcome, expected_reason = expected_matrix[scenario_id]
+    if entry.get("expected_policy_outcome") != expected_outcome:
+        raise SystemExit(f"unexpected expected policy outcome for {scenario_id}")
+    if entry.get("expected_reason_code") != expected_reason:
+        raise SystemExit(f"unexpected expected reason code for {scenario_id}")
+    if entry.get("status") != "pass":
+        raise SystemExit(f"expected matrix scenario status pass for {scenario_id}")
 PY
 
 set +e
