@@ -35,6 +35,19 @@ Implemented route contract for local deterministic ingress:
 
 Response behavior is deterministic and intentionally lightweight for this phase.
 
+`GET /metrics` now includes deterministic runtime telemetry gauges/labels:
+
+- `kamn_service_api_observability_latency_p50_ms`
+- `kamn_service_api_observability_latency_p99_ms`
+- `kamn_service_api_observability_throughput_tps`
+- `kamn_service_api_observability_error_rate_bps`
+- `kamn_service_api_observability_availability_bps`
+- `kamn_service_api_observability_alert_count`
+- `kamn_service_api_observability_source{source="<daemon|kolme-live|unknown>"}`
+- `kamn_service_api_observability_health{health="<healthy|degraded|critical|unknown>"}`
+
+`GET /healthz` now also includes `observability_source` and `observability_health` fields.
+
 ## Request Auth
 
 Protected routes require deterministic request-envelope headers:
@@ -60,6 +73,7 @@ Signature profile:
 Low-cost local validation commands:
 
 - `cargo test -p kamn-node service_api_endpoint -- --nocapture`
+- `cargo test -p kamn-node unit_service_api_endpoint_metrics_use_runtime_observability_when_present -- --nocapture`
 - `cargo test -p kamn-node`
 - `cargo fmt --check`
 - `cargo clippy -p kamn-node -- -D warnings`

@@ -204,6 +204,18 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
 
     let metrics_response = render_service_api_endpoint_response(&snapshot, "GET", "/metrics", "");
     assert_eq!(metrics_response.status_code, 200);
+    assert!(metrics_response
+        .body
+        .contains("kamn_service_api_observability_source{source=\"unknown\"} 1"));
+    assert!(metrics_response
+        .body
+        .contains("kamn_service_api_observability_health{health=\"unknown\"} 0"));
+    assert!(
+        metrics_response
+            .body
+            .contains("kamn_service_api_observability_latency_p50_ms 0"),
+        "metrics payload should publish runtime telemetry gauges even before daemon/kolme telemetry is available"
+    );
 
     let ws_response = render_service_api_endpoint_response(&snapshot, "GET", "/v1/events/ws", "");
     assert_eq!(ws_response.status_code, 400);
@@ -265,12 +277,44 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
     assert!(send_response.contains("\"message_id\":\"msg-local-"));
     assert!(health_response.contains("HTTP/1.1 200 OK"));
     assert!(metrics_response.contains("HTTP/1.1 200 OK"));
+    assert!(
+        metrics_response.contains("kamn_service_api_observability_source{source=\"unknown\"} 1")
+    );
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after configured request budget"
     );
+}
+
+#[test]
+fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "3".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+    ])
+    .expect("daemon args should parse");
+    let report = execute(parsed).expect("daemon execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    assert_eq!(snapshot.observability_source, "daemon");
+    assert_eq!(snapshot.observability_health, "healthy");
+    let metrics_response = render_service_api_endpoint_response(&snapshot, "GET", "/metrics", "");
+    assert_eq!(metrics_response.status_code, 200);
+    assert!(metrics_response
+        .body
+        .contains("kamn_service_api_observability_source{source=\"daemon\"} 1"));
+    assert!(metrics_response
+        .body
+        .contains("kamn_service_api_observability_health{health=\"healthy\"} 1"));
 }
 
 #[test]
