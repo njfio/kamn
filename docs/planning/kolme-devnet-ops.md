@@ -884,6 +884,35 @@ JSON`
   - checker and contract lane remain local-fast and bounded.
   - no local-heavy selector or external metrics backend call is required.
 
+## Managed Signer Startup Live Validation Contract Lane (Issue #3067)
+
+- Managed-signer startup live validation contract lane:
+  - `bash scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh --output-json /tmp/managed-signer-startup-live-validation-contract-report.json`
+- Required schema/decision markers:
+  - `kamn.kolme.managed-signer-startup-live-validation-contract-report.v1`
+  - `status=pass`
+  - `final_decision=GO`
+  - `managed_signer_profile_status=verified`
+  - `managed_signer_missing_key_source_fail_closed_status=verified`
+  - `managed_signer_invalid_profile_fail_closed_status=verified`
+  - `managed_signer_stale_rotation_fail_closed_status=verified`
+  - `managed_signer_reason_code_status=verified`
+  - `execution_scope=local-scheduled`
+- Fault-injection matrix and deterministic fail-closed reason codes:
+  - missing managed-external key source:
+    - checkpoint: `checkpoint_failed_signer_provenance_contract`
+    - policy reason: `signer_key_source_production_managed_external_required`
+  - invalid signer profile:
+    - checkpoint: `checkpoint_failed_signer_profile_contract`
+    - policy reason: `signer_profile_mismatch`
+  - stale signer rotation metadata:
+    - checkpoint: `checkpoint_failed_signer_rotation_freshness_contract`
+    - policy reason: `signer_rotation_epoch_stale`
+- Cost policy:
+  - lane runtime is bounded via `--max-seconds`.
+  - lane is local/scheduled by default (`ci_fast_gate_eligible=false`).
+  - lane composes existing deployment preflight runner/policy checker and does not call external infrastructure.
+
 ## Staging Soak Telemetry Lane (Issue #2422)
 
 - Fast lane command:

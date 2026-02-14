@@ -1,0 +1,186 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+RUNNER="$ROOT_DIR/scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_contract_lane_dispatch.sh"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_managed_signer_startup_live_validation_contract_lane.json"
+CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/managed_signer_startup_live_validation_contract_lane.py"
+PREFLIGHT_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh"
+PREFLIGHT_CHECKER="$ROOT_DIR/scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py"
+DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
+CI_COST_DOC="$ROOT_DIR/docs/ci/ci-cost-and-lane-framework.md"
+ROADMAP_DOC="$ROOT_DIR/docs/plans/2026-02-08-production-service-roadmap.md"
+README_FILE="$ROOT_DIR/README.md"
+TMP_REPORT="$(mktemp)"
+trap 'rm -f "$TMP_REPORT"' EXIT
+
+if [ ! -x "$RUNNER" ]; then
+  echo "expected managed-signer startup live validation contract lane runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected managed-signer startup live validation dispatcher to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected managed-signer startup live validation manifest to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$CONTRACT_IMPL" ]; then
+  echo "expected managed-signer startup live validation contract implementation to exist" >&2
+  exit 1
+fi
+
+if [ ! -x "$PREFLIGHT_RUNNER" ]; then
+  echo "expected deployment preflight runner dependency to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$PREFLIGHT_CHECKER" ]; then
+  echo "expected deployment preflight policy checker dependency to be executable" >&2
+  exit 1
+fi
+
+if [ ! -L "$RUNNER" ]; then
+  echo "expected managed-signer startup live validation runner to be a symlink to shared dispatcher" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$RUNNER")" != "run_contract_lane_dispatch.sh" ]; then
+  echo "expected managed-signer startup live validation runner symlink target to be run_contract_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUNNER")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST" ]; then
+  echo "expected managed-signer startup live validation dispatcher to resolve deterministic manifest path" >&2
+  exit 1
+fi
+
+python3 - "$MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.contract-lane.manifest.v1":
+    raise SystemExit("unexpected managed-signer startup live validation manifest schema")
+if payload.get("lane_id") != "kolme.managed_signer_startup_live_validation.contract":
+    raise SystemExit("unexpected managed-signer startup live validation manifest lane_id")
+contract_command = payload.get("phases", {}).get("contract")
+if contract_command != [
+    "python3",
+    "scripts/kolme/contracts/managed_signer_startup_live_validation_contract_lane.py",
+]:
+    raise SystemExit("unexpected managed-signer startup live validation manifest contract command")
+PY
+
+required_markers=(
+  "run_managed_signer_startup_live_validation_contract_lane.sh"
+  "kamn.kolme.managed-signer-startup-live-validation-contract-report.v1"
+  "deployment_preflight_passed"
+  "checkpoint_failed_signer_profile_contract"
+  "checkpoint_failed_signer_provenance_contract"
+  "checkpoint_failed_signer_rotation_freshness_contract"
+  "signer_key_source_production_managed_external_required"
+  "signer_profile_mismatch"
+  "signer_rotation_epoch_stale"
+  "execution_scope=local-scheduled"
+)
+
+for docs_file in "$DOC_FILE" "$CI_COST_DOC" "$ROADMAP_DOC" "$README_FILE"; do
+  for marker in "${required_markers[@]}"; do
+    if ! grep -q -- "$marker" "$docs_file"; then
+      echo "expected docs parity marker '$marker' in $docs_file" >&2
+      exit 1
+    fi
+  done
+done
+
+run_output="$(bash "$RUNNER" --output-json "$TMP_REPORT")"
+for marker in \
+  "status=pass" \
+  "final_decision=GO" \
+  "managed_signer_profile_status=verified" \
+  "managed_signer_missing_key_source_fail_closed_status=verified" \
+  "managed_signer_invalid_profile_fail_closed_status=verified" \
+  "managed_signer_stale_rotation_fail_closed_status=verified" \
+  "managed_signer_reason_code_status=verified" \
+  "execution_scope=local-scheduled" \
+  "performance_budget_status=verified"; do
+  if ! printf '%s\n' "$run_output" | grep -q "^${marker}$"; then
+    echo "expected managed-signer startup live validation output marker: $marker" >&2
+    exit 1
+  fi
+done
+
+python3 - "$TMP_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.kolme.managed-signer-startup-live-validation-contract-report.v1":
+    raise SystemExit("unexpected managed-signer startup live validation contract report schema")
+if payload.get("final_decision") != "GO":
+    raise SystemExit("expected managed-signer startup live validation final decision GO")
+if payload.get("execution_scope") != "local-scheduled":
+    raise SystemExit("expected execution_scope=local-scheduled")
+if payload.get("ci_fast_gate_eligible") is not False:
+    raise SystemExit("expected ci_fast_gate_eligible=false")
+if payload.get("managed_signer_profile_status") != "verified":
+    raise SystemExit("expected managed_signer_profile_status=verified")
+if payload.get("managed_signer_missing_key_source_fail_closed_status") != "verified":
+    raise SystemExit("expected managed_signer_missing_key_source_fail_closed_status=verified")
+if payload.get("managed_signer_invalid_profile_fail_closed_status") != "verified":
+    raise SystemExit("expected managed_signer_invalid_profile_fail_closed_status=verified")
+if payload.get("managed_signer_stale_rotation_fail_closed_status") != "verified":
+    raise SystemExit("expected managed_signer_stale_rotation_fail_closed_status=verified")
+if payload.get("managed_signer_reason_code_status") != "verified":
+    raise SystemExit("expected managed_signer_reason_code_status=verified")
+if payload.get("performance_budget_status") != "verified":
+    raise SystemExit("expected performance_budget_status=verified")
+scenario_reports = payload.get("scenario_reports")
+if not isinstance(scenario_reports, list) or len(scenario_reports) != 4:
+    raise SystemExit("expected four scenario reports")
+expected = {
+    "go_baseline": ("GO", "deployment_preflight_passed"),
+    "no_go_missing_key_source": ("NO-GO", "checkpoint_failed_signer_provenance_contract"),
+    "no_go_invalid_signer_profile": ("NO-GO", "checkpoint_failed_signer_profile_contract"),
+    "no_go_stale_rotation_metadata": ("NO-GO", "checkpoint_failed_signer_rotation_freshness_contract"),
+}
+for entry in scenario_reports:
+    if not isinstance(entry, dict):
+        raise SystemExit("scenario report entry must be an object")
+    scenario_id = entry.get("scenario_id")
+    if scenario_id not in expected:
+        raise SystemExit(f"unexpected scenario id: {scenario_id}")
+    final_decision, reason_code = expected[scenario_id]
+    if entry.get("final_decision") != final_decision:
+        raise SystemExit(f"unexpected final decision for {scenario_id}")
+    if entry.get("expected_reason_code") != reason_code:
+        raise SystemExit(f"unexpected expected_reason_code for {scenario_id}")
+PY
+
+set +e
+invalid_budget_output="$(
+  bash "$RUNNER" \
+    --max-seconds invalid 2>&1
+)"
+invalid_budget_code=$?
+set -e
+if [ "$invalid_budget_code" -eq 0 ]; then
+  echo "expected managed-signer startup live validation runner to reject invalid max-seconds" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$invalid_budget_output" | grep -q "invalid int value"; then
+  echo "expected deterministic invalid max-seconds marker" >&2
+  exit 1
+fi
+
+echo "managed-signer startup live validation contract lane tests passed."

@@ -31,6 +31,7 @@ lane_wrappers=(
   "run_local_kolme_live_api_conformance_contract_lane.sh"
   "run_managed_signer_backend_slo_policy_contract_lane.sh"
   "run_managed_signer_backend_slo_telemetry_contract_lane.sh"
+  "run_managed_signer_startup_live_validation_contract_lane.sh"
   "run_local_runtime_commit_live_finality_evidence_contract_lane.sh"
   "run_local_native_api_parity_live_proof_contract_lane.sh"
   "run_local_signed_to_kolme_demo_contract_lane.sh"

@@ -41,6 +41,15 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
 - Post-roadmap hardening wave 2 runtime decomposition tranche 3 delivered:
   - Extracted watchdog/transport-coordination simulation orchestration from `crates/kamn-core/src/runtime.rs` into dedicated module `crates/kamn-core/src/runtime_transport_coordination.rs` with unchanged external behavior (Task #3050, Subtask #3059).
   - Module-ownership contract documented in `docs/foundation/runtime-network.md` and enforced by `crates/kamn-core/tests/runtime_network_docs.rs` and `crates/kamn-core/tests/runtime_module_extraction_contract.rs`.
+- Post-roadmap hardening wave 3 managed-signer startup live validation delivered:
+  - Contract lane: `scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh` and `scripts/kolme/test_run_managed_signer_startup_live_validation_contract_lane.sh` (Subtask #3067).
+  - Contract report schema: `kamn.kolme.managed-signer-startup-live-validation-contract-report.v1`.
+  - Baseline startup pass marker: `deployment_preflight_passed`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `managed_signer_profile_status=verified`, `managed_signer_reason_code_status=verified`, `execution_scope=local-scheduled`, `performance_budget_status=verified`.
+  - Fail-closed validation confirmed for startup fault-injection matrix:
+    - missing managed-external key-source contract: `checkpoint_failed_signer_provenance_contract` + `signer_key_source_production_managed_external_required`
+    - invalid signer profile: `checkpoint_failed_signer_profile_contract` + `signer_profile_mismatch`
+    - stale signer rotation metadata: `checkpoint_failed_signer_rotation_freshness_contract` + `signer_rotation_epoch_stale`
 - Phase 2.1 initial slice delivered: deterministic `runtime-mode api` ingress server with required messaging/channel/task/profile/health/metrics route contracts (Task #2906).
 - Phase 2.1 live validation delivered:
   - Runtime lane: `scripts/runtime/validate_service_api_live.sh` and `scripts/runtime/test_validate_service_api_live.sh` (Task #2908, Subtask #2909).
