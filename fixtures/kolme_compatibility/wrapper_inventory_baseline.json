@@ -26,7 +26,7 @@
       "priority": "P2",
       "shell_loc": 1,
       "source_entry": "scripts/kolme/run_local_heavy_validation_matrix_contract_lane.sh",
-      "status": "planned",
+      "status": "migrated",
       "target_runner": "framework_manifest_lane",
       "wrapper_kind": "symlink"
     },
