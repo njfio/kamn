@@ -6,6 +6,7 @@ DOCKERFILE="${DOCKERFILE_PATH:-$ROOT_DIR/Dockerfile}"
 COMPOSE_FILE="${COMPOSE_FILE_PATH:-$ROOT_DIR/deploy/docker-compose.yml}"
 K8S_MANIFEST="${K8S_MANIFEST_PATH:-$ROOT_DIR/deploy/k8s/kamn-node.yaml}"
 DEPLOY_DOC="${DEPLOY_DOC_PATH:-$ROOT_DIR/docs/ops/deployment.md}"
+DOCKER_DEPLOY_DOC="${DOCKER_DEPLOY_DOC_PATH:-$ROOT_DIR/docs/deployment/docker.md}"
 DOCKERIGNORE_FILE="${DOCKERIGNORE_PATH:-$ROOT_DIR/.dockerignore}"
 
 if [ ! -f "$DOCKERFILE" ]; then
@@ -22,6 +23,10 @@ if [ ! -f "$K8S_MANIFEST" ]; then
 fi
 if [ ! -f "$DEPLOY_DOC" ]; then
   echo "expected deployment operations document" >&2
+  exit 1
+fi
+if [ ! -f "$DOCKER_DEPLOY_DOC" ]; then
+  echo "expected docker deployment topology document" >&2
   exit 1
 fi
 if [ ! -f "$DOCKERIGNORE_FILE" ]; then
@@ -65,6 +70,42 @@ if ! grep -q -- '--runtime-mode' "$COMPOSE_FILE"; then
   echo "expected docker-compose runtime mode command marker" >&2
   exit 1
 fi
+full_mode_marker_count="$(grep -c '^[[:space:]]*-[[:space:]]*full$' "$COMPOSE_FILE" || true)"
+if [ "$full_mode_marker_count" -lt 3 ]; then
+  echo "expected docker-compose triad services to run in runtime-mode full" >&2
+  exit 1
+fi
+api_bind_marker_count="$(grep -c -- '--api-bind' "$COMPOSE_FILE" || true)"
+if [ "$api_bind_marker_count" -lt 3 ]; then
+  echo "expected docker-compose triad services to declare --api-bind endpoints" >&2
+  exit 1
+fi
+for required_port in '19081:19081' '19082:19082' '19083:19083'; do
+  if ! grep -q "$required_port" "$COMPOSE_FILE"; then
+    echo "expected docker-compose port mapping marker ${required_port}" >&2
+    exit 1
+  fi
+done
+for required_volume in 'processor_data:/data/processor' 'listener_data:/data/listener' 'approver_data:/data/approver'; do
+  if ! grep -q "$required_volume" "$COMPOSE_FILE"; then
+    echo "expected docker-compose named volume marker ${required_volume}" >&2
+    exit 1
+  fi
+done
+for required_volume_declaration in 'processor_data:' 'listener_data:' 'approver_data:'; do
+  if ! grep -q "^[[:space:]]*${required_volume_declaration}" "$COMPOSE_FILE"; then
+    echo "expected docker-compose volume declaration marker ${required_volume_declaration}" >&2
+    exit 1
+  fi
+done
+if ! grep -q '^networks:' "$COMPOSE_FILE"; then
+  echo "expected docker-compose network declaration marker" >&2
+  exit 1
+fi
+if ! grep -q '^  kamn_mesh:' "$COMPOSE_FILE"; then
+  echo "expected docker-compose named network marker kamn_mesh" >&2
+  exit 1
+fi
 
 restart_marker_count="$(grep -c 'restart: unless-stopped' "$COMPOSE_FILE" || true)"
 if [ "$restart_marker_count" -lt 3 ]; then
@@ -101,6 +142,18 @@ if ! grep -q 'docker compose -f deploy/docker-compose.yml up' "$DEPLOY_DOC"; the
   echo "expected deployment doc compose command marker" >&2
   exit 1
 fi
+if ! grep -q 'runtime-mode full' "$DEPLOY_DOC"; then
+  echo "expected deployment doc runtime-mode full marker" >&2
+  exit 1
+fi
+if ! grep -q '19081:19081' "$DEPLOY_DOC"; then
+  echo "expected deployment doc processor api port marker" >&2
+  exit 1
+fi
+if ! grep -q 'kamn_mesh' "$DEPLOY_DOC"; then
+  echo "expected deployment doc named network marker" >&2
+  exit 1
+fi
 if ! grep -q 'kubectl apply -f deploy/k8s/kamn-node.yaml' "$DEPLOY_DOC"; then
   echo "expected deployment doc kubectl apply marker" >&2
   exit 1
@@ -117,5 +170,20 @@ if ! grep -q 'KAMN_NODE_DAEMON_TICK_INTERVAL_MS' "$DEPLOY_DOC"; then
   echo "expected deployment doc daemon tick-interval env marker" >&2
   exit 1
 fi
+for required_marker in \
+  'deploy/docker-compose.yml' \
+  'runtime-mode full' \
+  '19081:19081' \
+  '19082:19082' \
+  '19083:19083' \
+  'processor_data' \
+  'listener_data' \
+  'approver_data' \
+  'kamn_mesh'; do
+  if ! grep -q "$required_marker" "$DOCKER_DEPLOY_DOC"; then
+    echo "expected docker deployment doc marker ${required_marker}" >&2
+    exit 1
+  fi
+done
 
 echo "deployment asset contract tests passed."
