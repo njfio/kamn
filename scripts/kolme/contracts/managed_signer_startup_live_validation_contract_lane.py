@@ -45,6 +45,7 @@ PROFILE_MATRIX_DOC_MARKERS = [
     "signer_key_source_profile_matrix_status=verified",
     "signer_key_source_production_reject_status=verified",
     "signer_key_source_local_override_allow_status=verified",
+    "signer_fallback_private_key_reject_status=verified",
     "production_signer_key_source_env_local_forbidden",
     "KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING=true",
 ]
@@ -396,6 +397,12 @@ def main() -> int:
                     expected_reason_code="production_signer_key_source_env_local_forbidden",
                 ),
                 run_key_source_policy_matrix_test(
+                    scenario_id="fallback_private_key_env_rejected",
+                    test_name="main_tests::signer_tests::regression_issue_2279_kolme_live_signer_rejects_fallback_private_key_env_path",
+                    expected_policy_outcome="NO-GO",
+                    expected_reason_code="fallback_signer_secret_present_violation",
+                ),
+                run_key_source_policy_matrix_test(
                     scenario_id="local_override_env_local_allowed",
                     test_name="main_tests::core_behavior_tests::functional_kolme_live_strict_env_local_key_source_allows_with_local_override",
                     expected_policy_outcome="GO",
@@ -432,6 +439,7 @@ def main() -> int:
                 "signer_key_source_profile_matrix_status": "verified",
                 "signer_key_source_production_reject_status": "verified",
                 "signer_key_source_local_override_allow_status": "verified",
+                "signer_fallback_private_key_reject_status": "verified",
                 "signer_key_source_managed_external_allow_status": "verified",
                 "performance_budget_status": "verified",
                 "scenario_reports": scenario_reports,
@@ -458,6 +466,7 @@ def main() -> int:
     print("signer_key_source_profile_matrix_status=verified")
     print("signer_key_source_production_reject_status=verified")
     print("signer_key_source_local_override_allow_status=verified")
+    print("signer_fallback_private_key_reject_status=verified")
     print("signer_key_source_managed_external_allow_status=verified")
     print("execution_scope=local-scheduled")
     print("performance_budget_status=verified")

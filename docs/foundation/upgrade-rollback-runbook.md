@@ -181,8 +181,11 @@ Fallback private-key surfaces are forbidden in deployment preflight and runtime 
     - `signer_key_source_profile_matrix_status=verified`
     - `signer_key_source_production_reject_status=verified`
     - `signer_key_source_local_override_allow_status=verified`
+    - `signer_fallback_private_key_reject_status=verified`
   - production strict env-local fail-closed marker:
     - `production_signer_key_source_env_local_forbidden`
+  - fallback private-key env fail-closed marker:
+    - `fallback_signer_secret_present_violation`
   - explicit local override marker for controlled local testing:
     - `KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING=true`
 - Required schema/reason markers:
