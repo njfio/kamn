@@ -199,6 +199,8 @@ pub enum ConfigError {
     InvalidOutputMode(String),
     /// Unknown or invalid node profile string.
     InvalidNodeProfile(String),
+    /// Invalid node configuration file or layered override declaration.
+    InvalidNodeConfig(String),
     /// Unknown or invalid diagnostics mode string.
     InvalidDiagnosticsMode(String),
     /// Unknown or invalid node log configuration.
@@ -245,6 +247,7 @@ impl fmt::Display for ConfigError {
             Self::InvalidSyncMode(value) => write!(f, "invalid sync mode: {value}"),
             Self::InvalidOutputMode(value) => write!(f, "invalid output mode: {value}"),
             Self::InvalidNodeProfile(value) => write!(f, "invalid node profile: {value}"),
+            Self::InvalidNodeConfig(value) => write!(f, "invalid node config: {value}"),
             Self::InvalidDiagnosticsMode(value) => {
                 write!(f, "invalid diagnostics mode: {value}")
             }
