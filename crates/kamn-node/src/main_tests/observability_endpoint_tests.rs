@@ -1,4 +1,5 @@
 use super::*;
+use crate::observability_endpoint::RuntimeObservabilitySnapshot;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
@@ -48,6 +49,90 @@ fn wait_for_endpoint_ready(addr: &str) {
         thread::sleep(Duration::from_millis(10));
     }
     panic!("endpoint did not become ready within timeout");
+}
+
+fn sample_observability_snapshot() -> RuntimeObservabilitySnapshot {
+    RuntimeObservabilitySnapshot {
+        source: "daemon".to_owned(),
+        runtime_mode: "daemon".to_owned(),
+        latency_p50_ms: 25,
+        latency_p99_ms: 50,
+        throughput_tps: 2_000,
+        error_rate_bps: 50,
+        availability_bps: 9_990,
+        health: "healthy".to_owned(),
+        alert_count: 0,
+    }
+}
+
+#[test]
+fn unit_observability_endpoint_rejects_metrics_path_without_leading_slash() {
+    let config = ObservabilityEndpointConfig {
+        bind_addr: "127.0.0.1:0".to_owned(),
+        metrics_path: "metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 1,
+        idle_timeout_ms: 1_000,
+    };
+    let snapshot = sample_observability_snapshot();
+
+    let error = serve_observability_endpoint(&config, &snapshot)
+        .expect_err("metrics path without leading slash must fail");
+    assert_eq!(error, "observability metrics path must start with '/'");
+}
+
+#[test]
+fn unit_observability_endpoint_rejects_health_path_without_leading_slash() {
+    let config = ObservabilityEndpointConfig {
+        bind_addr: "127.0.0.1:0".to_owned(),
+        metrics_path: "/metrics".to_owned(),
+        health_path: "healthz".to_owned(),
+        max_requests: 1,
+        idle_timeout_ms: 1_000,
+    };
+    let snapshot = sample_observability_snapshot();
+
+    let error = serve_observability_endpoint(&config, &snapshot)
+        .expect_err("health path without leading slash must fail");
+    assert_eq!(error, "observability health path must start with '/'");
+}
+
+#[test]
+fn unit_observability_endpoint_rejects_zero_request_budget() {
+    let config = ObservabilityEndpointConfig {
+        bind_addr: "127.0.0.1:0".to_owned(),
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 0,
+        idle_timeout_ms: 1_000,
+    };
+    let snapshot = sample_observability_snapshot();
+
+    let error = serve_observability_endpoint(&config, &snapshot)
+        .expect_err("zero request budget must fail");
+    assert_eq!(
+        error,
+        "observability endpoint max requests must be greater than zero"
+    );
+}
+
+#[test]
+fn unit_observability_endpoint_rejects_zero_idle_timeout_budget() {
+    let config = ObservabilityEndpointConfig {
+        bind_addr: "127.0.0.1:0".to_owned(),
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 1,
+        idle_timeout_ms: 0,
+    };
+    let snapshot = sample_observability_snapshot();
+
+    let error =
+        serve_observability_endpoint(&config, &snapshot).expect_err("zero idle timeout must fail");
+    assert_eq!(
+        error,
+        "observability endpoint idle timeout must be greater than zero"
+    );
 }
 
 #[test]
