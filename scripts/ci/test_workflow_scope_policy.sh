@@ -476,6 +476,11 @@ if grep -Fq "bash scripts/kolme/run_local_native_api_parity_live_proof_lane.sh -
   exit 1
 fi
 
+if grep -Fq "bash scripts/runtime/validate_local_retry_diagnostics_live.sh --mode run" "$FAST_WORKFLOW"; then
+  echo "expected local retry/diagnostics run-mode lane to remain excluded from ci-fast-gate.yml" >&2
+  exit 1
+fi
+
 if grep -Fq "bash scripts/runtime/run_input_mutation_coverage_guided_deep_lane.sh" "$FAST_WORKFLOW"; then
   echo "expected coverage-guided parser fuzz deep lane to remain excluded from ci-fast-gate.yml" >&2
   exit 1
