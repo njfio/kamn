@@ -20,6 +20,27 @@ fi
 python3 "$SCRIPT" \
   --matrix-file "$MATRIX_FIXTURE"
 
+python3 - "$MATRIX_FIXTURE" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+lanes = payload.get("lanes", [])
+heavy_lane = None
+for lane in lanes:
+    if isinstance(lane, dict) and lane.get("lane_id") == "kolme.local.heavy.validation_matrix":
+        heavy_lane = lane
+        break
+
+if heavy_lane is None:
+    raise SystemExit("expected lane migration matrix to include kolme.local.heavy.validation_matrix")
+if heavy_lane.get("status") != "migrated":
+    raise SystemExit("expected heavy validation matrix lane status migrated")
+if heavy_lane.get("current_runner") != "framework_manifest_lane":
+    raise SystemExit("expected heavy validation matrix lane current_runner framework_manifest_lane")
+PY
+
 MUTATED_MATRIX="$TMP_DIR/mutated-missing-lane.json"
 cp "$MATRIX_FIXTURE" "$MUTATED_MATRIX"
 python3 - "$MUTATED_MATRIX" <<'PY'
