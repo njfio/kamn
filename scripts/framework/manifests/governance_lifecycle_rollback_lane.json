@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "governance.lifecycle_rollback.run",
+  "evidence_key": "governance_lifecycle_rollback_lane:v1",
+  "reason_key": "governance_lifecycle_rollback_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/governance/run_governance_lifecycle_rollback_lane_impl.sh"
+    ]
+  }
+}
