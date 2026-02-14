@@ -61,6 +61,10 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
   - wrapper: `scripts/governance/run_quorum_attestation_replay_guard_lane.sh`
   - implementation: `scripts/governance/run_quorum_attestation_replay_guard_lane_impl.sh`
   - manifest: `scripts/framework/manifests/governance_quorum_attestation_replay_guard_lane.json`
+- `#2870` migrates sdk live-transport smoke parity run-lane wrapper to shared non-Kolme dispatcher + manifest wiring:
+  - wrapper: `scripts/sdk/run_live_transport_smoke_parity_lane.sh`
+  - implementation: `scripts/sdk/run_live_transport_smoke_parity_lane_impl.sh`
+  - manifest: `scripts/framework/manifests/sdk_live_transport_smoke_parity_lane.json`
 - Contract coverage for this migration slice:
   - `scripts/signer/test_run_signer_provider_deep_lane.sh`
   - `scripts/signer/test_run_signer_incident_recovery_deep_lane.sh`
@@ -72,6 +76,7 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
   - `scripts/frontend/test_run_dashboard_shell_determinism_matrix_lane.sh`
   - `scripts/governance/test_run_governance_lifecycle_rollback_lane.sh`
   - `scripts/governance/test_run_quorum_attestation_replay_guard_lane.sh`
+  - `scripts/sdk/test_run_live_transport_smoke_parity_lane.sh`
 
 ## Fast-Gate Delta Policy
 `scripts/ci/generate_fast_gate_budget_delta_report.sh` compares current fast-gate telemetry against a versioned baseline and emits:

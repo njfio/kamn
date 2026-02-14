@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "sdk.live_transport_smoke_parity.run",
+  "evidence_key": "sdk_live_transport_smoke_parity_lane:v1",
+  "reason_key": "sdk_live_transport_smoke_parity_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/sdk/run_live_transport_smoke_parity_lane_impl.sh"
+    ]
+  }
+}

@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SMOKE_SCRIPT="$ROOT_DIR/scripts/sdk/run_live_transport_smoke_parity_lane.sh"
+SMOKE_IMPL_SCRIPT="$ROOT_DIR/scripts/sdk/run_live_transport_smoke_parity_lane_impl.sh"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/sdk_live_transport_smoke_parity_lane.json"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
@@ -11,8 +14,34 @@ if [ ! -x "$SMOKE_SCRIPT" ]; then
   exit 1
 fi
 
-if ! grep -q 'live_transport_smoke_parity_lane_contract.py' "$SMOKE_SCRIPT"; then
-  echo "expected sdk smoke parity lane runner to delegate to shared lane contract implementation" >&2
+if [ ! -x "$SMOKE_IMPL_SCRIPT" ]; then
+  echo "expected sdk live transport smoke parity lane implementation to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected shared non-Kolme dispatcher to be executable" >&2
+  exit 1
+fi
+
+if [ ! -L "$SMOKE_SCRIPT" ]; then
+  echo "expected sdk smoke parity lane runner to be a dispatcher symlink" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$SMOKE_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected sdk smoke parity lane runner to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$SMOKE_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected sdk smoke parity lane runner to resolve sdk manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -q 'run_live_transport_smoke_parity_lane_impl.sh' "$MANIFEST_FILE"; then
+  echo "expected sdk smoke parity lane manifest to dispatch implementation module" >&2
   exit 1
 fi
 
