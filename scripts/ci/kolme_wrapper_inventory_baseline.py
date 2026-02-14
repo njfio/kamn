@@ -16,19 +16,53 @@ MATRIX_SCHEMA_VERSION = "kamn.kolme.lane-migration-matrix.v1"
 TREND_THRESHOLD_SCHEMA_VERSION = "kamn.kolme.wrapper-budget-trend-thresholds.v1"
 
 
+class PolicyValidationError(Exception):
+    """Structured policy-validation failure carrying a deterministic reason code."""
+
+    def __init__(self, reason_code: str, message: str) -> None:
+        super().__init__(message)
+        self.reason_code = reason_code
+        self.message = message
+
+
 def fail(message: str) -> None:
-    raise SystemExit(message)
+    raise PolicyValidationError("policy_validation_failed", message)
+
+
+def fail_with_reason(reason_code: str, message: str) -> None:
+    raise PolicyValidationError(reason_code, message)
 
 
 def load_json_object(path: Path, *, label: str) -> dict[str, Any]:
     if not path.is_file():
-        fail(f"{label} not found: {path}")
+        reason_code = "input_file_not_found"
+        if label == "wrapper inventory baseline":
+            reason_code = "baseline_file_not_found"
+        elif label == "wrapper budget trend thresholds":
+            reason_code = "trend_threshold_file_not_found"
+        elif label == "lane migration matrix":
+            reason_code = "lane_matrix_file_not_found"
+        fail_with_reason(reason_code, f"{label} not found: {path}")
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        fail(f"invalid JSON in {label} {path}: {exc}")
+        reason_code = "input_json_invalid"
+        if label == "wrapper inventory baseline":
+            reason_code = "baseline_json_invalid"
+        elif label == "wrapper budget trend thresholds":
+            reason_code = "trend_threshold_json_invalid"
+        elif label == "lane migration matrix":
+            reason_code = "lane_matrix_json_invalid"
+        fail_with_reason(reason_code, f"invalid JSON in {label} {path}: {exc}")
     if not isinstance(payload, dict):
-        fail(f"expected JSON object for {label}: {path}")
+        reason_code = "input_payload_not_object"
+        if label == "wrapper inventory baseline":
+            reason_code = "baseline_payload_not_object"
+        elif label == "wrapper budget trend thresholds":
+            reason_code = "trend_threshold_payload_not_object"
+        elif label == "lane migration matrix":
+            reason_code = "lane_matrix_payload_not_object"
+        fail_with_reason(reason_code, f"expected JSON object for {label}: {path}")
     return payload
 
 
@@ -227,29 +261,33 @@ def build_inventory(*, matrix_file: Path, repo_root: Path) -> dict[str, Any]:
 
 def validate_baseline_payload(payload: dict[str, Any]) -> None:
     if payload.get("schema_version") != BASELINE_SCHEMA_VERSION:
-        fail(
+        fail_with_reason(
+            "baseline_schema_mismatch",
             "baseline schema_version must be "
             f"{BASELINE_SCHEMA_VERSION}"
         )
 
     lanes = payload.get("lanes")
     if not isinstance(lanes, list) or not lanes:
-        fail("baseline lanes must be a non-empty array")
+        fail_with_reason("baseline_lanes_invalid", "baseline lanes must be a non-empty array")
 
     lane_ids_seen: set[str] = set()
     for index, lane in enumerate(lanes):
         if not isinstance(lane, dict):
-            fail(f"baseline lane[{index}] must be an object")
+            fail_with_reason("baseline_lane_object_invalid", f"baseline lane[{index}] must be an object")
         lane_id = require_non_empty_string(lane, "lane_id", label=f"baseline lane[{index}]")
         if lane_id in lane_ids_seen:
-            fail(f"baseline lane_id must be unique, found duplicate: {lane_id}")
+            fail_with_reason(
+                "baseline_lane_id_duplicate",
+                f"baseline lane_id must be unique, found duplicate: {lane_id}",
+            )
         lane_ids_seen.add(lane_id)
         require_non_empty_string(lane, "source_entry", label=f"baseline lane[{index}]")
         require_non_empty_string(lane, "manifest_file", label=f"baseline lane[{index}]")
         require_non_empty_string(lane, "wrapper_kind", label=f"baseline lane[{index}]")
         shell_loc = require_int(lane, "shell_loc", label=f"baseline lane[{index}]")
         if shell_loc < 1:
-            fail(f"baseline lane[{index}] shell_loc must be >= 1")
+            fail_with_reason("baseline_lane_shell_loc_invalid", f"baseline lane[{index}] shell_loc must be >= 1")
 
     for key in (
         "wrapper_count",
@@ -257,59 +295,104 @@ def validate_baseline_payload(payload: dict[str, Any]) -> None:
         "regular_file_wrapper_count",
         "total_shell_loc",
     ):
-        value = require_int(payload, key, label="baseline")
+        try:
+            value = require_int(payload, key, label="baseline")
+        except PolicyValidationError as error:
+            if key == "wrapper_count":
+                fail_with_reason("baseline_wrapper_count_invalid", error.message)
+            if key == "symlink_wrapper_count":
+                fail_with_reason("baseline_symlink_wrapper_count_invalid", error.message)
+            if key == "regular_file_wrapper_count":
+                fail_with_reason("baseline_regular_file_wrapper_count_invalid", error.message)
+            if key == "total_shell_loc":
+                fail_with_reason("baseline_total_shell_loc_invalid", error.message)
+            raise
         if value < 0:
-            fail(f"baseline {key} must be >= 0")
+            if key == "wrapper_count":
+                fail_with_reason("baseline_wrapper_count_invalid", f"baseline {key} must be >= 0")
+            if key == "symlink_wrapper_count":
+                fail_with_reason("baseline_symlink_wrapper_count_invalid", f"baseline {key} must be >= 0")
+            if key == "regular_file_wrapper_count":
+                fail_with_reason("baseline_regular_file_wrapper_count_invalid", f"baseline {key} must be >= 0")
+            if key == "total_shell_loc":
+                fail_with_reason("baseline_total_shell_loc_invalid", f"baseline {key} must be >= 0")
+            fail_with_reason("baseline_totals_invalid", f"baseline {key} must be >= 0")
 
 
 def load_trend_thresholds(path: Path) -> dict[str, Any]:
     payload = load_json_object(path, label="wrapper budget trend thresholds")
     if payload.get("schema_version") != TREND_THRESHOLD_SCHEMA_VERSION:
-        fail(
+        fail_with_reason(
+            "trend_threshold_schema_mismatch",
             "wrapper budget trend threshold schema_version must be "
             f"{TREND_THRESHOLD_SCHEMA_VERSION}"
         )
 
-    max_wrapper_count_increase = require_int(
-        payload,
-        "max_wrapper_count_increase",
-        label="wrapper budget trend thresholds",
-    )
+    try:
+        max_wrapper_count_increase = require_int(
+            payload,
+            "max_wrapper_count_increase",
+            label="wrapper budget trend thresholds",
+        )
+    except PolicyValidationError as error:
+        fail_with_reason("trend_threshold_wrapper_count_invalid", error.message)
     if max_wrapper_count_increase < 0:
-        fail("wrapper budget trend max_wrapper_count_increase must be >= 0")
+        fail_with_reason(
+            "trend_threshold_wrapper_count_invalid",
+            "wrapper budget trend max_wrapper_count_increase must be >= 0",
+        )
 
-    max_total_shell_loc_increase = require_int(
-        payload,
-        "max_total_shell_loc_increase",
-        label="wrapper budget trend thresholds",
-    )
+    try:
+        max_total_shell_loc_increase = require_int(
+            payload,
+            "max_total_shell_loc_increase",
+            label="wrapper budget trend thresholds",
+        )
+    except PolicyValidationError as error:
+        fail_with_reason("trend_threshold_total_shell_loc_invalid", error.message)
     if max_total_shell_loc_increase < 0:
-        fail("wrapper budget trend max_total_shell_loc_increase must be >= 0")
+        fail_with_reason(
+            "trend_threshold_total_shell_loc_invalid",
+            "wrapper budget trend max_total_shell_loc_increase must be >= 0",
+        )
 
     enforce_lane_shell_loc_nonincreasing = payload.get(
         "enforce_lane_shell_loc_nonincreasing"
     )
     if not isinstance(enforce_lane_shell_loc_nonincreasing, bool):
-        fail(
+        fail_with_reason(
+            "trend_threshold_lane_nonincreasing_invalid",
             "wrapper budget trend thresholds enforce_lane_shell_loc_nonincreasing "
             "must be a boolean"
         )
 
-    min_wrapper_count_reduction = require_int(
-        payload,
-        "min_wrapper_count_reduction",
-        label="wrapper budget trend thresholds",
-    )
+    try:
+        min_wrapper_count_reduction = require_int(
+            payload,
+            "min_wrapper_count_reduction",
+            label="wrapper budget trend thresholds",
+        )
+    except PolicyValidationError as error:
+        fail_with_reason("trend_threshold_min_wrapper_reduction_invalid", error.message)
     if min_wrapper_count_reduction < 0:
-        fail("wrapper budget trend min_wrapper_count_reduction must be >= 0")
+        fail_with_reason(
+            "trend_threshold_min_wrapper_reduction_invalid",
+            "wrapper budget trend min_wrapper_count_reduction must be >= 0",
+        )
 
-    min_total_shell_loc_reduction = require_int(
-        payload,
-        "min_total_shell_loc_reduction",
-        label="wrapper budget trend thresholds",
-    )
+    try:
+        min_total_shell_loc_reduction = require_int(
+            payload,
+            "min_total_shell_loc_reduction",
+            label="wrapper budget trend thresholds",
+        )
+    except PolicyValidationError as error:
+        fail_with_reason("trend_threshold_min_total_shell_loc_reduction_invalid", error.message)
     if min_total_shell_loc_reduction < 0:
-        fail("wrapper budget trend min_total_shell_loc_reduction must be >= 0")
+        fail_with_reason(
+            "trend_threshold_min_total_shell_loc_reduction_invalid",
+            "wrapper budget trend min_total_shell_loc_reduction must be >= 0",
+        )
 
     return {
         "max_wrapper_count_increase": max_wrapper_count_increase,
@@ -362,32 +445,54 @@ def command_check(args: argparse.Namespace) -> int:
     min_total_shell_loc_reduction = int(args.min_total_shell_loc_reduction)
     enforce_lane_shell_loc_nonincreasing = True
 
-    if max_wrapper_count_increase < 0:
-        fail("--max-wrapper-count-increase must be >= 0")
-    if max_total_shell_loc_increase < 0:
-        fail("--max-total-shell-loc-increase must be >= 0")
-    if min_wrapper_count_reduction < 0:
-        fail("--min-wrapper-count-reduction must be >= 0")
-    if min_total_shell_loc_reduction < 0:
-        fail("--min-total-shell-loc-reduction must be >= 0")
-    if args.threshold_file and not trend_mode:
-        fail("--threshold-file requires --trend-mode")
+    try:
+        if max_wrapper_count_increase < 0:
+            fail_with_reason("trend_threshold_wrapper_count_invalid", "--max-wrapper-count-increase must be >= 0")
+        if max_total_shell_loc_increase < 0:
+            fail_with_reason(
+                "trend_threshold_total_shell_loc_invalid",
+                "--max-total-shell-loc-increase must be >= 0",
+            )
+        if min_wrapper_count_reduction < 0:
+            fail_with_reason(
+                "trend_threshold_min_wrapper_reduction_invalid",
+                "--min-wrapper-count-reduction must be >= 0",
+            )
+        if min_total_shell_loc_reduction < 0:
+            fail_with_reason(
+                "trend_threshold_min_total_shell_loc_reduction_invalid",
+                "--min-total-shell-loc-reduction must be >= 0",
+            )
+        if args.threshold_file and not trend_mode:
+            fail_with_reason(
+                "trend_mode_required_for_threshold_file",
+                "--threshold-file requires --trend-mode",
+            )
 
-    if args.threshold_file:
-        threshold_file = Path(args.threshold_file).resolve()
-        thresholds = load_trend_thresholds(threshold_file)
-        max_wrapper_count_increase = int(thresholds["max_wrapper_count_increase"])
-        max_total_shell_loc_increase = int(thresholds["max_total_shell_loc_increase"])
-        enforce_lane_shell_loc_nonincreasing = bool(
-            thresholds["enforce_lane_shell_loc_nonincreasing"]
-        )
-        min_wrapper_count_reduction = int(thresholds["min_wrapper_count_reduction"])
-        min_total_shell_loc_reduction = int(thresholds["min_total_shell_loc_reduction"])
+        if args.threshold_file:
+            threshold_file = Path(args.threshold_file).resolve()
+            thresholds = load_trend_thresholds(threshold_file)
+            max_wrapper_count_increase = int(thresholds["max_wrapper_count_increase"])
+            max_total_shell_loc_increase = int(thresholds["max_total_shell_loc_increase"])
+            enforce_lane_shell_loc_nonincreasing = bool(
+                thresholds["enforce_lane_shell_loc_nonincreasing"]
+            )
+            min_wrapper_count_reduction = int(thresholds["min_wrapper_count_reduction"])
+            min_total_shell_loc_reduction = int(thresholds["min_total_shell_loc_reduction"])
 
-    baseline = load_json_object(baseline_file, label="wrapper inventory baseline")
-    validate_baseline_payload(baseline)
+        baseline = load_json_object(baseline_file, label="wrapper inventory baseline")
+        validate_baseline_payload(baseline)
 
-    current = build_inventory(matrix_file=matrix_file, repo_root=repo_root)
+        current = build_inventory(matrix_file=matrix_file, repo_root=repo_root)
+    except PolicyValidationError as error:
+        print("status=fail")
+        print(f"mode={'trend' if trend_mode else 'strict'}")
+        print("wrapper_count_delta=0")
+        print("total_shell_loc_delta=0")
+        print("violation_count=1")
+        print(f"reason_codes={error.reason_code}")
+        print(f"error={error.message}")
+        return 1
 
     baseline_lanes = index_lanes(baseline, label="baseline")
     current_lanes = index_lanes(current, label="current")
@@ -613,7 +718,7 @@ def main() -> int:
     if args.command == "check":
         return command_check(args)
 
-    fail(f"unsupported command: {args.command}")
+    fail_with_reason("unsupported_command", f"unsupported command: {args.command}")
     return 1
 
 

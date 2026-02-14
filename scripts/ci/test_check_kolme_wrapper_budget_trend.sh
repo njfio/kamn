@@ -99,6 +99,83 @@ grep -q '^mode=trend$' "$TMP_DIR/fail.out"
 grep -q '^reason_codes=total_shell_loc_delta_threshold_exceeded$' "$TMP_DIR/fail.out"
 grep -q 'total_shell_loc_delta exceeded trend threshold' "$TMP_DIR/fail.out"
 
+MUTATED_WRAPPER_COUNT_BASELINE="$TMP_DIR/mutated-wrapper-count-baseline.json"
+cp "$BASELINE_FIXTURE" "$MUTATED_WRAPPER_COUNT_BASELINE"
+python3 - "$MUTATED_WRAPPER_COUNT_BASELINE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+baseline_path = Path(sys.argv[1])
+payload = json.loads(baseline_path.read_text(encoding="utf-8"))
+payload["wrapper_count"] = 0
+baseline_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if bash "$TREND_CHECKER" \
+  --matrix-file "$MATRIX_FIXTURE" \
+  --baseline-file "$MUTATED_WRAPPER_COUNT_BASELINE" >"$TMP_DIR/fail-wrapper-count.out" 2>&1; then
+  echo "expected trend checker to fail when wrapper_count delta exceeds configured threshold" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/fail-wrapper-count.out"
+grep -q '^mode=trend$' "$TMP_DIR/fail-wrapper-count.out"
+grep -q '^reason_codes=wrapper_count_delta_threshold_exceeded$' "$TMP_DIR/fail-wrapper-count.out"
+grep -q 'wrapper_count_delta exceeded trend threshold' "$TMP_DIR/fail-wrapper-count.out"
+
+MUTATED_MISSING_BASELINE_METADATA="$TMP_DIR/mutated-missing-baseline-metadata.json"
+cp "$BASELINE_FIXTURE" "$MUTATED_MISSING_BASELINE_METADATA"
+python3 - "$MUTATED_MISSING_BASELINE_METADATA" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+baseline_path = Path(sys.argv[1])
+payload = json.loads(baseline_path.read_text(encoding="utf-8"))
+payload.pop("wrapper_count", None)
+baseline_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if bash "$TREND_CHECKER" \
+  --matrix-file "$MATRIX_FIXTURE" \
+  --baseline-file "$MUTATED_MISSING_BASELINE_METADATA" >"$TMP_DIR/fail-missing-baseline-metadata.out" 2>&1; then
+  echo "expected trend checker to fail with deterministic reason code when baseline metadata is missing" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/fail-missing-baseline-metadata.out"
+grep -q '^mode=trend$' "$TMP_DIR/fail-missing-baseline-metadata.out"
+grep -q '^reason_codes=baseline_wrapper_count_invalid$' "$TMP_DIR/fail-missing-baseline-metadata.out"
+grep -q 'baseline wrapper_count must be an integer' "$TMP_DIR/fail-missing-baseline-metadata.out"
+
+MUTATED_MISSING_THRESHOLD_METADATA="$TMP_DIR/mutated-missing-threshold-metadata.json"
+cp "$THRESHOLD_FILE" "$MUTATED_MISSING_THRESHOLD_METADATA"
+python3 - "$MUTATED_MISSING_THRESHOLD_METADATA" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+threshold_path = Path(sys.argv[1])
+payload = json.loads(threshold_path.read_text(encoding="utf-8"))
+payload.pop("max_total_shell_loc_increase", None)
+threshold_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if python3 "$PYTHON_CHECKER" check \
+  --trend-mode \
+  --threshold-file "$MUTATED_MISSING_THRESHOLD_METADATA" \
+  --matrix-file "$MATRIX_FIXTURE" \
+  --baseline-file "$BASELINE_FIXTURE" >"$TMP_DIR/fail-missing-threshold-metadata.out" 2>&1; then
+  echo "expected trend checker to fail with deterministic reason code when threshold metadata is missing" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/fail-missing-threshold-metadata.out"
+grep -q '^mode=trend$' "$TMP_DIR/fail-missing-threshold-metadata.out"
+grep -q '^reason_codes=trend_threshold_total_shell_loc_invalid$' "$TMP_DIR/fail-missing-threshold-metadata.out"
+grep -q 'max_total_shell_loc_increase' "$TMP_DIR/fail-missing-threshold-metadata.out"
+
 RELAXED_THRESHOLD="$TMP_DIR/relaxed-threshold.json"
 cat >"$RELAXED_THRESHOLD" <<'JSON'
 {
