@@ -3126,7 +3126,13 @@ impl RuntimeWiring {
 
 /// Handles build runtime wiring.
 pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
-    let common_components = vec!["state-store", "message-router", "audit-log", "api-surface"];
+    let mut common_components = vec!["state-store", "message-router", "audit-log", "api-surface"];
+    if config.enable_gossip {
+        common_components.push("p2p-discovery");
+        common_components.push("p2p-gossip-transport");
+    } else {
+        common_components.push("gossip-transport-disabled");
+    }
 
     let role_components = match config.role {
         NodeRole::Processor => vec!["mempool", "executor", "block-producer"],
