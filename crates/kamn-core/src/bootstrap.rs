@@ -1,14 +1,24 @@
 //! Bootstrap planning for validated config, schema migrations, and runtime wiring.
 
+use crate::channel_models::{
+    ChannelSnapshotError, ChannelSnapshotStore, ChannelSnapshotStoreError, FileChannelSnapshotStore,
+};
 use crate::config::{ConfigError, NodeConfig};
 use crate::content_storage::{ContentStorageError, FileContentAdapter};
 use crate::did_registry::{DidRegistryError, FileDidRegistrationChainAdapter};
 use crate::durable_guard_store::{
     DurableGuardBundleSnapshotStore, DurableGuardSnapshotStoreError, FileDurableGuardSnapshotStore,
 };
+use crate::message_lifecycle::{
+    FileMessageLifecycleSnapshotStore, MessageLifecycleSnapshotError,
+    MessageLifecycleSnapshotStore, MessageLifecycleSnapshotStoreError,
+};
 use crate::migrations::{MigrationPlan, MigrationRegistry};
 use crate::namespaces::StateNamespaces;
-use crate::runtime::{build_runtime_wiring, RuntimeWiring};
+use crate::runtime::{
+    build_runtime_wiring, FileRuntimeSnapshotStore, RuntimeSnapshotStore, RuntimeWiring,
+    SnapshotStoreError,
+};
 use crate::state::{AppStateSchema, StateVersion, APP_STATE_VERSION};
 use crate::task_operations::{
     FileTaskOperationSnapshotStore, TaskOperationError, TaskOperationSnapshotStore,
@@ -22,11 +32,18 @@ const CONTENT_STORE_FILE_NAME: &str = "content-store.snapshot";
 const DID_REGISTRY_STORE_FILE_NAME: &str = "did-chain-adapter.snapshot";
 const TASK_OPERATION_STORE_FILE_NAME: &str = "task-operation.snapshot";
 const DURABLE_GUARD_STORE_FILE_NAME: &str = "durable-guard.snapshot";
+const CHANNEL_SNAPSHOT_STORE_FILE_NAME: &str = "channel.snapshot";
+const MESSAGE_LIFECYCLE_SNAPSHOT_STORE_FILE_NAME: &str = "message-lifecycle.snapshot";
+const RUNTIME_SNAPSHOT_STORE_FILE_NAME: &str = "runtime.snapshot";
 
 const CONTENT_STORE_COMPONENT: &str = "content-storage:file-default";
 const DID_REGISTRY_STORE_COMPONENT: &str = "did-registry:file-default";
 const TASK_OPERATION_STORE_COMPONENT: &str = "task-operation-snapshot-store:file-default";
 const DURABLE_GUARD_STORE_COMPONENT: &str = "durable-guard-snapshot-store:file-default";
+const CHANNEL_SNAPSHOT_STORE_COMPONENT: &str = "channel-snapshot-store:file-default";
+const MESSAGE_LIFECYCLE_SNAPSHOT_STORE_COMPONENT: &str =
+    "message-lifecycle-snapshot-store:file-default";
+const RUNTIME_SNAPSHOT_STORE_COMPONENT: &str = "runtime-snapshot-store:file-default";
 const DID_REGISTRY_BOOTSTRAP_PROVIDER: &str = "bootstrap-runtime-compatibility";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,6 +53,9 @@ struct RuntimePersistenceLayout {
     did_registry_store_path: PathBuf,
     task_operation_store_path: PathBuf,
     durable_guard_store_path: PathBuf,
+    channel_snapshot_store_path: PathBuf,
+    message_lifecycle_snapshot_store_path: PathBuf,
+    runtime_snapshot_store_path: PathBuf,
 }
 
 /// Deterministic bootstrap artifact bundling validated config, schema, and wiring.
@@ -107,16 +127,23 @@ fn resolve_runtime_persistence_layout(storage_dir: &str) -> RuntimePersistenceLa
         did_registry_store_path: storage_root.join(DID_REGISTRY_STORE_FILE_NAME),
         task_operation_store_path: storage_root.join(TASK_OPERATION_STORE_FILE_NAME),
         durable_guard_store_path: storage_root.join(DURABLE_GUARD_STORE_FILE_NAME),
+        channel_snapshot_store_path: storage_root.join(CHANNEL_SNAPSHOT_STORE_FILE_NAME),
+        message_lifecycle_snapshot_store_path: storage_root
+            .join(MESSAGE_LIFECYCLE_SNAPSHOT_STORE_FILE_NAME),
+        runtime_snapshot_store_path: storage_root.join(RUNTIME_SNAPSHOT_STORE_FILE_NAME),
         storage_root,
     }
 }
 
-fn prioritized_runtime_store_components() -> [&'static str; 4] {
+fn prioritized_runtime_store_components() -> [&'static str; 7] {
     [
         CONTENT_STORE_COMPONENT,
         DID_REGISTRY_STORE_COMPONENT,
         TASK_OPERATION_STORE_COMPONENT,
         DURABLE_GUARD_STORE_COMPONENT,
+        CHANNEL_SNAPSHOT_STORE_COMPONENT,
+        MESSAGE_LIFECYCLE_SNAPSHOT_STORE_COMPONENT,
+        RUNTIME_SNAPSHOT_STORE_COMPONENT,
     ]
 }
 
@@ -134,6 +161,9 @@ fn validate_runtime_persistence_layout(
     validate_did_registry_store_path(&layout.did_registry_store_path)?;
     validate_task_operation_store_path(&layout.task_operation_store_path)?;
     validate_durable_guard_store_path(&layout.durable_guard_store_path)?;
+    validate_channel_snapshot_store_path(&layout.channel_snapshot_store_path)?;
+    validate_message_lifecycle_snapshot_store_path(&layout.message_lifecycle_snapshot_store_path)?;
+    validate_runtime_snapshot_store_path(&layout.runtime_snapshot_store_path)?;
     Ok(())
 }
 
@@ -165,6 +195,33 @@ fn validate_durable_guard_store_path(path: &Path) -> Result<(), ConfigError> {
         .load_bundle()
         .map(|_| ())
         .map_err(map_durable_guard_store_validation_error)
+}
+
+fn validate_channel_snapshot_store_path(path: &Path) -> Result<(), ConfigError> {
+    let store = FileChannelSnapshotStore::new(path.to_path_buf())
+        .map_err(map_channel_store_validation_error)?;
+    store
+        .read_latest()
+        .map(|_| ())
+        .map_err(map_channel_store_validation_error)
+}
+
+fn validate_message_lifecycle_snapshot_store_path(path: &Path) -> Result<(), ConfigError> {
+    let store = FileMessageLifecycleSnapshotStore::new(path.to_path_buf())
+        .map_err(map_message_lifecycle_store_validation_error)?;
+    store
+        .read_latest()
+        .map(|_| ())
+        .map_err(map_message_lifecycle_store_validation_error)
+}
+
+fn validate_runtime_snapshot_store_path(path: &Path) -> Result<(), ConfigError> {
+    let store = FileRuntimeSnapshotStore::new(path.to_path_buf())
+        .map_err(map_runtime_snapshot_store_error)?;
+    store
+        .read_latest()
+        .map(|_| ())
+        .map_err(map_runtime_snapshot_store_error)
 }
 
 fn map_content_store_validation_error(error: ContentStorageError) -> ConfigError {
@@ -282,6 +339,112 @@ fn map_durable_guard_store_validation_error(error: DurableGuardSnapshotStoreErro
     }
 }
 
+fn map_channel_store_validation_error(error: ChannelSnapshotStoreError) -> ConfigError {
+    match error {
+        ChannelSnapshotStoreError::InvalidPayload(detail) => {
+            ConfigError::RuntimeStoreCorruptPayload {
+                store: "channel-snapshot-store",
+                reason_code: "channel_snapshot_corrupt_payload_rejected",
+                detail,
+            }
+        }
+        ChannelSnapshotStoreError::Io(detail) => ConfigError::RuntimeStoreCompatibility {
+            store: "channel-snapshot-store",
+            reason_code: "channel_snapshot_io_error",
+            detail,
+        },
+        ChannelSnapshotStoreError::Snapshot(ChannelSnapshotError::SnapshotVersionMismatch {
+            expected,
+            found,
+        }) => ConfigError::RuntimeStoreSchemaIncompatible {
+            store: "channel-snapshot-store",
+            reason_code: "channel_snapshot_schema_mismatch_rejected",
+            expected: expected.to_string(),
+            found: found.to_string(),
+        },
+        ChannelSnapshotStoreError::Snapshot(other) => ConfigError::RuntimeStoreCompatibility {
+            store: "channel-snapshot-store",
+            reason_code: "channel_snapshot_restore_validation_failed",
+            detail: other.to_string(),
+        },
+    }
+}
+
+fn map_message_lifecycle_store_validation_error(
+    error: MessageLifecycleSnapshotStoreError,
+) -> ConfigError {
+    match error {
+        MessageLifecycleSnapshotStoreError::InvalidPayload(detail) => {
+            ConfigError::RuntimeStoreCorruptPayload {
+                store: "message-lifecycle-snapshot-store",
+                reason_code: "message_lifecycle_snapshot_corrupt_payload_rejected",
+                detail,
+            }
+        }
+        MessageLifecycleSnapshotStoreError::Io(detail) => ConfigError::RuntimeStoreCompatibility {
+            store: "message-lifecycle-snapshot-store",
+            reason_code: "message_lifecycle_snapshot_io_error",
+            detail,
+        },
+        MessageLifecycleSnapshotStoreError::Snapshot(
+            MessageLifecycleSnapshotError::SnapshotVersionMismatch { expected, found },
+        ) => ConfigError::RuntimeStoreSchemaIncompatible {
+            store: "message-lifecycle-snapshot-store",
+            reason_code: "message_lifecycle_snapshot_schema_mismatch_rejected",
+            expected: expected.to_string(),
+            found: found.to_string(),
+        },
+        MessageLifecycleSnapshotStoreError::Snapshot(other) => {
+            ConfigError::RuntimeStoreCompatibility {
+                store: "message-lifecycle-snapshot-store",
+                reason_code: "message_lifecycle_snapshot_restore_validation_failed",
+                detail: other.to_string(),
+            }
+        }
+    }
+}
+
+fn map_runtime_snapshot_store_error(error: SnapshotStoreError) -> ConfigError {
+    match error {
+        SnapshotStoreError::InvalidPayload(detail) => ConfigError::RuntimeStoreCorruptPayload {
+            store: "runtime-snapshot-store",
+            reason_code: "runtime_snapshot_corrupt_payload_rejected",
+            detail,
+        },
+        SnapshotStoreError::Io(detail) => ConfigError::RuntimeStoreCompatibility {
+            store: "runtime-snapshot-store",
+            reason_code: "runtime_snapshot_io_error",
+            detail,
+        },
+        SnapshotStoreError::StateVersionRegression { previous, found } => {
+            ConfigError::RuntimeStoreSchemaIncompatible {
+                store: "runtime-snapshot-store",
+                reason_code: "runtime_snapshot_state_version_regression_rejected",
+                expected: format!(">{previous}"),
+                found: found.to_string(),
+            }
+        }
+        SnapshotStoreError::CursorRegression { previous, found } => {
+            ConfigError::RuntimeStoreSchemaIncompatible {
+                store: "runtime-snapshot-store",
+                reason_code: "runtime_snapshot_cursor_regression_rejected",
+                expected: format!(">{previous}"),
+                found: found.to_string(),
+            }
+        }
+        SnapshotStoreError::StaleStateHash {
+            state_hash,
+            previous_version,
+            found_version,
+        } => ConfigError::RuntimeStoreSchemaIncompatible {
+            store: "runtime-snapshot-store",
+            reason_code: "runtime_snapshot_stale_hash_regression_rejected",
+            expected: format!("{state_hash}@>{previous_version}"),
+            found: format!("{state_hash}@{found_version}"),
+        },
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{bootstrap, bootstrap_from_state_version};
@@ -297,6 +460,9 @@ mod tests {
 
     const CONTENT_STORE_FIXTURE: &str = "content-store.snapshot";
     const TASK_OPERATION_STORE_FIXTURE: &str = "task-operation.snapshot";
+    const CHANNEL_STORE_FIXTURE: &str = "channel.snapshot";
+    const MESSAGE_LIFECYCLE_STORE_FIXTURE: &str = "message-lifecycle.snapshot";
+    const RUNTIME_SNAPSHOT_STORE_FIXTURE: &str = "runtime.snapshot";
 
     #[test]
     fn bootstrap_plan_builds_for_valid_config() {
@@ -366,6 +532,9 @@ mod tests {
         assert!(components.contains(&"did-registry:file-default"));
         assert!(components.contains(&"task-operation-snapshot-store:file-default"));
         assert!(components.contains(&"durable-guard-snapshot-store:file-default"));
+        assert!(components.contains(&"channel-snapshot-store:file-default"));
+        assert!(components.contains(&"message-lifecycle-snapshot-store:file-default"));
+        assert!(components.contains(&"runtime-snapshot-store:file-default"));
     }
 
     #[test]
@@ -439,6 +608,216 @@ mod tests {
                     && found == "99"
             ),
             "incompatible task snapshot schema must fail closed with deterministic reason code"
+        );
+    }
+
+    #[test]
+    fn regression_bootstrap_fails_closed_when_channel_snapshot_payload_is_corrupt() {
+        let storage_dir = temp_storage_dir("corrupt-channel-snapshot");
+        fs::create_dir_all(&storage_dir).expect("fixture directory should build");
+        fs::write(
+            storage_dir.join(CHANNEL_STORE_FIXTURE),
+            "schema|1\nbroken\n",
+        )
+        .expect("fixture should write");
+
+        let config = NodeConfig {
+            chain_id: "kamn-devnet".to_owned(),
+            chain_version: "v0.1.0".to_owned(),
+            role: NodeRole::Processor,
+            storage_dir: storage_dir.to_string_lossy().into_owned(),
+            enable_gossip: true,
+            sync_mode: SyncMode::Fast,
+        };
+
+        let result = bootstrap(config);
+        assert!(
+            matches!(
+                result,
+                Err(ConfigError::RuntimeStoreCorruptPayload {
+                    store,
+                    reason_code,
+                    ..
+                }) if store == "channel-snapshot-store"
+                    && reason_code == "channel_snapshot_corrupt_payload_rejected"
+            ),
+            "corrupt channel snapshot payload must fail closed with deterministic reason code"
+        );
+    }
+
+    #[test]
+    fn regression_bootstrap_fails_closed_when_channel_snapshot_schema_is_incompatible() {
+        let storage_dir = temp_storage_dir("incompatible-channel-snapshot");
+        fs::create_dir_all(&storage_dir).expect("fixture directory should build");
+        fs::write(storage_dir.join(CHANNEL_STORE_FIXTURE), "schema|99\n")
+            .expect("fixture should write");
+
+        let config = NodeConfig {
+            chain_id: "kamn-devnet".to_owned(),
+            chain_version: "v0.1.0".to_owned(),
+            role: NodeRole::Processor,
+            storage_dir: storage_dir.to_string_lossy().into_owned(),
+            enable_gossip: true,
+            sync_mode: SyncMode::Fast,
+        };
+
+        let result = bootstrap(config);
+        assert!(
+            matches!(
+                result,
+                Err(ConfigError::RuntimeStoreSchemaIncompatible {
+                    store,
+                    reason_code,
+                    expected,
+                    found,
+                }) if store == "channel-snapshot-store"
+                    && reason_code == "channel_snapshot_schema_mismatch_rejected"
+                    && expected == "1"
+                    && found == "99"
+            ),
+            "incompatible channel snapshot schema must fail closed with deterministic reason code"
+        );
+    }
+
+    #[test]
+    fn regression_bootstrap_fails_closed_when_message_snapshot_payload_is_corrupt() {
+        let storage_dir = temp_storage_dir("corrupt-message-snapshot");
+        fs::create_dir_all(&storage_dir).expect("fixture directory should build");
+        fs::write(
+            storage_dir.join(MESSAGE_LIFECYCLE_STORE_FIXTURE),
+            "schema|1\nbroken\n",
+        )
+        .expect("fixture should write");
+
+        let config = NodeConfig {
+            chain_id: "kamn-devnet".to_owned(),
+            chain_version: "v0.1.0".to_owned(),
+            role: NodeRole::Processor,
+            storage_dir: storage_dir.to_string_lossy().into_owned(),
+            enable_gossip: true,
+            sync_mode: SyncMode::Fast,
+        };
+
+        let result = bootstrap(config);
+        assert!(
+            matches!(
+                result,
+                Err(ConfigError::RuntimeStoreCorruptPayload {
+                    store,
+                    reason_code,
+                    ..
+                }) if store == "message-lifecycle-snapshot-store"
+                    && reason_code == "message_lifecycle_snapshot_corrupt_payload_rejected"
+            ),
+            "corrupt message snapshot payload must fail closed with deterministic reason code"
+        );
+    }
+
+    #[test]
+    fn regression_bootstrap_fails_closed_when_message_snapshot_schema_is_incompatible() {
+        let storage_dir = temp_storage_dir("incompatible-message-snapshot");
+        fs::create_dir_all(&storage_dir).expect("fixture directory should build");
+        fs::write(
+            storage_dir.join(MESSAGE_LIFECYCLE_STORE_FIXTURE),
+            "schema|99\n",
+        )
+        .expect("fixture should write");
+
+        let config = NodeConfig {
+            chain_id: "kamn-devnet".to_owned(),
+            chain_version: "v0.1.0".to_owned(),
+            role: NodeRole::Processor,
+            storage_dir: storage_dir.to_string_lossy().into_owned(),
+            enable_gossip: true,
+            sync_mode: SyncMode::Fast,
+        };
+
+        let result = bootstrap(config);
+        assert!(
+            matches!(
+                result,
+                Err(ConfigError::RuntimeStoreSchemaIncompatible {
+                    store,
+                    reason_code,
+                    expected,
+                    found,
+                }) if store == "message-lifecycle-snapshot-store"
+                    && reason_code == "message_lifecycle_snapshot_schema_mismatch_rejected"
+                    && expected == "1"
+                    && found == "99"
+            ),
+            "incompatible message snapshot schema must fail closed with deterministic reason code"
+        );
+    }
+
+    #[test]
+    fn regression_bootstrap_fails_closed_when_runtime_snapshot_payload_is_corrupt() {
+        let storage_dir = temp_storage_dir("corrupt-runtime-snapshot");
+        fs::create_dir_all(&storage_dir).expect("fixture directory should build");
+        fs::write(
+            storage_dir.join(RUNTIME_SNAPSHOT_STORE_FIXTURE),
+            "not-a-valid-snapshot-line\n",
+        )
+        .expect("fixture should write");
+
+        let config = NodeConfig {
+            chain_id: "kamn-devnet".to_owned(),
+            chain_version: "v0.1.0".to_owned(),
+            role: NodeRole::Processor,
+            storage_dir: storage_dir.to_string_lossy().into_owned(),
+            enable_gossip: true,
+            sync_mode: SyncMode::Fast,
+        };
+
+        let result = bootstrap(config);
+        assert!(
+            matches!(
+                result,
+                Err(ConfigError::RuntimeStoreCorruptPayload {
+                    store,
+                    reason_code,
+                    ..
+                }) if store == "runtime-snapshot-store"
+                    && reason_code == "runtime_snapshot_corrupt_payload_rejected"
+            ),
+            "corrupt runtime snapshot payload must fail closed with deterministic reason code"
+        );
+    }
+
+    #[test]
+    fn regression_bootstrap_fails_closed_when_runtime_snapshot_state_version_regresses() {
+        let storage_dir = temp_storage_dir("incompatible-runtime-snapshot");
+        fs::create_dir_all(&storage_dir).expect("fixture directory should build");
+        fs::write(
+            storage_dir.join(RUNTIME_SNAPSHOT_STORE_FIXTURE),
+            "10|statehash_a|10\n9|statehash_b|11\n",
+        )
+        .expect("fixture should write");
+
+        let config = NodeConfig {
+            chain_id: "kamn-devnet".to_owned(),
+            chain_version: "v0.1.0".to_owned(),
+            role: NodeRole::Processor,
+            storage_dir: storage_dir.to_string_lossy().into_owned(),
+            enable_gossip: true,
+            sync_mode: SyncMode::Fast,
+        };
+
+        let result = bootstrap(config);
+        assert!(
+            matches!(
+                result,
+                Err(ConfigError::RuntimeStoreSchemaIncompatible {
+                    store,
+                    reason_code,
+                    expected,
+                    found,
+                }) if store == "runtime-snapshot-store"
+                    && reason_code == "runtime_snapshot_state_version_regression_rejected"
+                    && expected == ">10"
+                    && found == "9"
+            ),
+            "runtime snapshot state version regression must fail closed with deterministic reason code"
         );
     }
 

@@ -18,7 +18,7 @@ Current execution slices are Task #2901 (core implementation) and Task #2903 (li
 | Content objects | `InMemoryContentAdapter` | `FileContentAdapter` | Deterministic file payload with CID/integrity verification |
 | DID chain submission idempotency | `InMemoryDidRegistrationChainAdapter` | `FileDidRegistrationChainAdapter` | Durable duplicate/reject state across restarts |
 
-## Bootstrap Wiring and Startup Compatibility (Task #3068)
+## Bootstrap Wiring and Startup Compatibility (Task #3068, Task #3078)
 
 Bootstrap now validates prioritized runtime stores against durable file adapters before emitting a runtime plan:
 
@@ -26,6 +26,9 @@ Bootstrap now validates prioritized runtime stores against durable file adapters
 - `did-registry:file-default` -> `did-chain-adapter.snapshot`
 - `task-operation-snapshot-store:file-default` -> `task-operation.snapshot`
 - `durable-guard-snapshot-store:file-default` -> `durable-guard.snapshot`
+- `channel-snapshot-store:file-default` -> `channel.snapshot`
+- `message-lifecycle-snapshot-store:file-default` -> `message-lifecycle.snapshot`
+- `runtime-snapshot-store:file-default` -> `runtime.snapshot`
 
 Bootstrap fail-closed compatibility error taxonomy:
 
@@ -39,6 +42,12 @@ Deterministic reason codes enforced for prioritized corruption/schema checks:
 - `did_registry_corrupt_payload_rejected`
 - `task_operation_snapshot_schema_mismatch_rejected`
 - `durable_guard_snapshot_schema_mismatch_rejected`
+- `channel_snapshot_corrupt_payload_rejected`
+- `channel_snapshot_schema_mismatch_rejected`
+- `message_lifecycle_snapshot_corrupt_payload_rejected`
+- `message_lifecycle_snapshot_schema_mismatch_rejected`
+- `runtime_snapshot_corrupt_payload_rejected`
+- `runtime_snapshot_state_version_regression_rejected`
 
 ## New File-Backed Formats
 
@@ -79,7 +88,7 @@ Live validation lane (local realistic dependency path):
   - `evidence_bundle_status=verified`
   - `execution_scope=local-scheduled`
   - `performance_budget_status=verified`
-  - `fail_closed_reason_codes=content_storage_corrupt_payload_rejected,did_registry_corrupt_payload_rejected,task_operation_snapshot_schema_mismatch_rejected,durable_guard_snapshot_schema_mismatch_rejected`
+  - `fail_closed_reason_codes=content_storage_corrupt_payload_rejected,did_registry_corrupt_payload_rejected,task_operation_snapshot_schema_mismatch_rejected,durable_guard_snapshot_schema_mismatch_rejected,channel_snapshot_corrupt_payload_rejected,channel_snapshot_schema_mismatch_rejected,message_lifecycle_snapshot_corrupt_payload_rejected,message_lifecycle_snapshot_schema_mismatch_rejected,runtime_snapshot_corrupt_payload_rejected,runtime_snapshot_state_version_regression_rejected`
 
 Low-cost lane (PR-safe):
 
@@ -93,6 +102,12 @@ Low-cost lane (PR-safe):
 - `cargo test -p kamn-core bootstrap_wiring_includes_durable_store_components`
 - `cargo test -p kamn-core regression_bootstrap_fails_closed_when_content_store_payload_is_corrupt`
 - `cargo test -p kamn-core regression_bootstrap_fails_closed_when_task_snapshot_schema_is_incompatible`
+- `cargo test -p kamn-core regression_bootstrap_fails_closed_when_channel_snapshot_payload_is_corrupt`
+- `cargo test -p kamn-core regression_bootstrap_fails_closed_when_channel_snapshot_schema_is_incompatible`
+- `cargo test -p kamn-core regression_bootstrap_fails_closed_when_message_snapshot_payload_is_corrupt`
+- `cargo test -p kamn-core regression_bootstrap_fails_closed_when_message_snapshot_schema_is_incompatible`
+- `cargo test -p kamn-core regression_bootstrap_fails_closed_when_runtime_snapshot_payload_is_corrupt`
+- `cargo test -p kamn-core regression_bootstrap_fails_closed_when_runtime_snapshot_state_version_regresses`
 - `cargo fmt --check`
 - `cargo clippy -p kamn-core -- -D warnings`
 
