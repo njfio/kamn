@@ -173,6 +173,24 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `fallback_signer_secret_present_violation`
 
+## Runtime Service API Axum Ingress Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_service_api_axum_ingress_live.sh --output-json /tmp/service-api-axum-ingress-live-summary.json`
+  - `bash scripts/runtime/check_service_api_axum_ingress_live_policy.sh --report-file /tmp/service-api-axum-ingress-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-axum-ingress-policy.json`
+  - `bash scripts/runtime/validate_service_api_axum_ingress_live_contract_lane.sh --output-json /tmp/service-api-axum-ingress-contract-lane-report.json --policy-output-json /tmp/service-api-axum-ingress-policy.json`
+  - `bash scripts/runtime/test_validate_service_api_axum_ingress_live_contract_lane.sh`
+  - `bash scripts/runtime/test_check_service_api_axum_ingress_live_policy.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - uses only localhost process-level probes against `runtime-mode api`.
+  - no external Kolme node, remote service, or internet dependency.
+  - runtime budget is bounded via `KAMN_SERVICE_API_AXUM_INGRESS_CONTRACT_MAX_SECONDS`.
+  - service api axum ingress run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `service_api_axum_policy_marker_missing:concurrency_status`
+
 ## Kolme HTTPS Native Transport Contract
 - Runtime-commit HTTPS transport uses an in-process native TLS client path.
 - `openssl s_client` subprocess execution is prohibited in transport code paths (`Regression: #2671`).

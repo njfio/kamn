@@ -489,3 +489,26 @@ fn doc_contains_runtime_local_signal_secret_hygiene_contract_lane_ci_mode_marker
     ));
     assert!(DOC.contains("fallback_signer_secret_present_violation"));
 }
+
+#[test]
+fn doc_contains_runtime_service_api_axum_ingress_contract_lane_ci_mode_markers() {
+    assert!(DOC.contains("## Runtime Service API Axum Ingress Contract Lane"));
+    assert!(DOC.contains(
+        "validate_service_api_axum_ingress_live.sh --output-json /tmp/service-api-axum-ingress-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "check_service_api_axum_ingress_live_policy.sh --report-file /tmp/service-api-axum-ingress-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-axum-ingress-policy.json"
+    ));
+    assert!(DOC.contains(
+        "validate_service_api_axum_ingress_live_contract_lane.sh --output-json /tmp/service-api-axum-ingress-contract-lane-report.json --policy-output-json /tmp/service-api-axum-ingress-policy.json"
+    ));
+    assert!(DOC.contains("test_validate_service_api_axum_ingress_live_contract_lane.sh"));
+    assert!(DOC.contains("test_check_service_api_axum_ingress_live_policy.sh"));
+    assert!(DOC.contains("ci-fast-gate mode: fast"));
+    assert!(DOC.contains("local-dev mode: local"));
+    assert!(DOC.contains("manual-hardened mode: manual"));
+    assert!(DOC.contains(
+        "service api axum ingress run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
+    ));
+    assert!(DOC.contains("service_api_axum_policy_marker_missing:concurrency_status"));
+}
