@@ -46,6 +46,28 @@ Live lane compatibility:
 
 - `bash scripts/runtime/test_validate_service_api_live.sh`
 - `bash scripts/runtime/validate_service_api_live.sh`
+- `bash scripts/runtime/test_validate_service_api_request_auth_live.sh`
+- `bash scripts/runtime/validate_service_api_request_auth_live.sh`
+
+## Live Validation Evidence
+
+Task and subtask evidence:
+
+- Task: #2913
+- Subtask: #2914
+
+Deterministic success markers from `validate_service_api_request_auth_live.sh`:
+
+- `status=pass`
+- `final_decision=GO`
+- `unauthorized_guard_status=verified`
+- `replay_guard_status=verified`
+- `probe_status=verified`
+
+Deterministic fail-closed marker example:
+
+- `bash scripts/runtime/validate_service_api_request_auth_live.sh --max-seconds nope`
+- stderr marker: `max-seconds must be an integer`
 
 ## TDD Evidence
 

@@ -22,6 +22,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `route_contract_status=verified`, `failure_case_status=verified`.
   - Fail-closed validation confirmed for invalid runtime budget argument: `max-seconds must be an integer`.
 - Phase 2.2 initial slice delivered: request signature auth and per-sender nonce replay middleware enforcement on service API ingress (Task #2911, Subtask #2912).
+- Phase 2.2 live validation delivered:
+  - Runtime lane: `scripts/runtime/validate_service_api_request_auth_live.sh` and `scripts/runtime/test_validate_service_api_request_auth_live.sh` (Task #2913, Subtask #2914).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `unauthorized_guard_status=verified`, `replay_guard_status=verified`, `probe_status=verified`.
+  - Fail-closed validation confirmed for invalid runtime budget argument: `max-seconds must be an integer`.
 
 ---
 
