@@ -62,6 +62,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/sdk/validate_python_sdk_packaging_live.sh` and `scripts/sdk/test_validate_python_sdk_packaging_live.sh` (Task #2953, Subtask #2954).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `packaging_contract_status=verified`, `evidence_bundle_status=verified`, `fail_closed_status=verified`.
   - Fail-closed validation confirmed for missing metadata drill: `expected python sdk packaging metadata file: pyproject.toml`.
+- Phase 5 Rust SDK service-client implementation delivered:
+  - Added synchronous service API client primitives in `kamn-sdk`: `ServiceApiClient`, `ServiceRequestAuth`, `service_signature_for_fields`, and typed route/event response models (Task #2946).
+  - Added deterministic unit/functional/integration/regression coverage in `crates/kamn-sdk/tests/service_api_client.rs`.
+  - Added operator/developer reference documentation: `docs/sdk/rust-sdk.md`.
 - Phase 6.3 initial slice delivered: deployment artifacts now include a multi-stage `Dockerfile`, `deploy/docker-compose.yml` role topology, and `deploy/k8s/kamn-node.yaml` baseline manifests (Task #2971, Subtask #2972).
 - Phase 6.3 live validation delivered:
   - Runtime lane: `scripts/deploy/validate_deployment_assets_live.sh` and `scripts/deploy/test_validate_deployment_assets_live.sh` (Task #2973, Subtask #2974).
