@@ -491,6 +491,32 @@ fn doc_contains_runtime_local_signal_secret_hygiene_contract_lane_ci_mode_marker
 }
 
 #[test]
+fn doc_contains_runtime_local_metrics_scrape_contract_lane_ci_mode_markers() {
+    assert!(DOC.contains("## Runtime Local Metrics Scrape Contract Lane"));
+    assert!(DOC.contains(
+        "validate_local_metrics_scrape_live.sh --mode dry-run --output-json /tmp/local-metrics-scrape-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "KAMN_LOCAL_METRICS_SCRAPE_OPT_IN=1 bash scripts/runtime/validate_local_metrics_scrape_live.sh --mode run --output-json /tmp/local-metrics-scrape-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "check_local_metrics_scrape_live_policy.sh --report-file /tmp/local-metrics-scrape-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-metrics-scrape-live-policy.json"
+    ));
+    assert!(DOC.contains(
+        "validate_local_metrics_scrape_live_contract_lane.sh --output-json /tmp/local-metrics-scrape-live-contract-lane-report.json --policy-output-json /tmp/local-metrics-scrape-live-policy.json"
+    ));
+    assert!(DOC.contains("test_validate_local_metrics_scrape_live_contract_lane.sh"));
+    assert!(DOC.contains("test_check_local_metrics_scrape_live_policy.sh"));
+    assert!(DOC.contains("ci-fast-gate mode: fast"));
+    assert!(DOC.contains("local-dev mode: local"));
+    assert!(DOC.contains("manual-hardened mode: manual"));
+    assert!(DOC.contains(
+        "local metrics scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
+    ));
+    assert!(DOC.contains("local_metrics_scrape_policy_marker_missing:local_scrape_probe_status"));
+}
+
+#[test]
 fn doc_contains_runtime_service_api_axum_ingress_contract_lane_ci_mode_markers() {
     assert!(DOC.contains("## Runtime Service API Axum Ingress Contract Lane"));
     assert!(DOC.contains(
