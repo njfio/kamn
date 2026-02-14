@@ -25,10 +25,13 @@ use std::sync::{
 };
 use std::time::{Duration, Instant};
 use tokio::runtime::Builder;
-use tokio::sync::{Mutex, Notify};
+use tokio::sync::{Mutex, Notify, Semaphore};
 
 pub(crate) const DEFAULT_SERVICE_API_MAX_REQUESTS: u64 = 1;
 pub(crate) const DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS: u64 = 5_000;
+pub(crate) const DEFAULT_SERVICE_API_BODY_LIMIT_BYTES: u64 = 64 * 1024;
+pub(crate) const DEFAULT_SERVICE_API_CONCURRENCY_LIMIT: u64 = 32;
+pub(crate) const DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND: u64 = 120;
 
 const ROUTE_MESSAGES_SEND: &str = "/v1/messages/send";
 const ROUTE_CHANNELS_CREATE: &str = "/v1/channels/create";
@@ -48,6 +51,11 @@ const REASON_CODE_WEBSOCKET_UPGRADE_REQUIRED: &str = "service_api_websocket_upgr
 const REASON_CODE_METHOD_NOT_ALLOWED: &str = "service_api_method_not_allowed";
 const REASON_CODE_ROUTE_NOT_FOUND: &str = "service_api_route_not_found";
 const REASON_CODE_REQUEST_READ_FAILED: &str = "service_api_request_read_failed";
+const REASON_CODE_INGRESS_BODY_SIZE_LIMIT_EXCEEDED: &str =
+    "service_api_ingress_body_size_limit_exceeded";
+const REASON_CODE_INGRESS_CONCURRENCY_LIMIT_EXCEEDED: &str =
+    "service_api_ingress_concurrency_limit_exceeded";
+const REASON_CODE_INGRESS_RATE_LIMIT_EXCEEDED: &str = "service_api_ingress_rate_limit_exceeded";
 const REASON_CODE_REQUEST_HEADER_UTF8_INVALID: &str = "service_api_request_header_utf8_invalid";
 const REASON_CODE_REQUEST_BODY_UTF8_INVALID: &str = "service_api_request_body_utf8_invalid";
 const REASON_CODE_REQUEST_LOG_EMISSION_FAILED: &str = "service_api_request_log_emission_failed";
@@ -75,6 +83,9 @@ pub(crate) struct ServiceApiEndpointConfig {
     pub(crate) bind_addr: String,
     pub(crate) max_requests: u64,
     pub(crate) idle_timeout_ms: u64,
+    pub(crate) body_limit_bytes: u64,
+    pub(crate) concurrency_limit: u64,
+    pub(crate) rate_limit_per_second: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -229,11 +240,43 @@ impl ServiceApiRequestBudget {
     }
 }
 
+impl ServiceApiIngressRateWindow {
+    fn new(max_requests_per_second: u64) -> Self {
+        Self {
+            window_start: Instant::now(),
+            accepted_requests: 0,
+            max_requests_per_second,
+        }
+    }
+
+    fn try_record_request(&mut self, now: Instant) -> bool {
+        if now.duration_since(self.window_start) >= Duration::from_secs(1) {
+            self.window_start = now;
+            self.accepted_requests = 0;
+        }
+        if self.accepted_requests >= self.max_requests_per_second {
+            return false;
+        }
+        self.accepted_requests += 1;
+        true
+    }
+}
+
 #[derive(Debug)]
 struct ServiceApiRuntimeState {
     snapshot: ServiceApiSnapshot,
     replay_guard: Arc<Mutex<BTreeSet<(String, u64)>>>,
     request_budget: Arc<ServiceApiRequestBudget>,
+    body_limit_bytes: usize,
+    concurrency_limiter: Arc<Semaphore>,
+    ingress_rate_window: Arc<Mutex<ServiceApiIngressRateWindow>>,
+}
+
+#[derive(Debug)]
+struct ServiceApiIngressRateWindow {
+    window_start: Instant,
+    accepted_requests: u64,
+    max_requests_per_second: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -441,6 +484,21 @@ pub(crate) fn serve_service_api_endpoint(
     if config.idle_timeout_ms == 0 {
         return Err("service api idle timeout must be greater than zero".to_owned());
     }
+    if config.body_limit_bytes == 0 {
+        return Err("service api body limit bytes must be greater than zero".to_owned());
+    }
+    if config.concurrency_limit == 0 {
+        return Err("service api concurrency limit must be greater than zero".to_owned());
+    }
+    if config.rate_limit_per_second == 0 {
+        return Err("service api rate limit per second must be greater than zero".to_owned());
+    }
+    if config.body_limit_bytes > usize::MAX as u64 {
+        return Err("service api body limit bytes exceed platform usize range".to_owned());
+    }
+    if config.concurrency_limit > usize::MAX as u64 {
+        return Err("service api concurrency limit exceeds platform usize range".to_owned());
+    }
 
     let runtime = Builder::new_current_thread()
         .enable_io()
@@ -465,6 +523,11 @@ async fn serve_service_api_endpoint_async(
         snapshot,
         replay_guard: Arc::new(Mutex::new(BTreeSet::new())),
         request_budget: Arc::new(ServiceApiRequestBudget::new(config.max_requests)),
+        body_limit_bytes: config.body_limit_bytes as usize,
+        concurrency_limiter: Arc::new(Semaphore::new(config.concurrency_limit as usize)),
+        ingress_rate_window: Arc::new(Mutex::new(ServiceApiIngressRateWindow::new(
+            config.rate_limit_per_second,
+        ))),
     });
     let timeout_reached = Arc::new(AtomicBool::new(false));
     let request_budget = runtime_state.request_budget.clone();
@@ -519,30 +582,61 @@ async fn service_api_auth_middleware(
     let method_label = request.method().to_string();
     let path = request.uri().path().to_owned();
     let is_websocket_route = method_label == "GET" && path == ROUTE_EVENTS_WS;
+    let concurrency_permit = match state.concurrency_limiter.clone().try_acquire_owned() {
+        Ok(permit) => permit,
+        Err(_) => {
+            let correlation_id = format!(
+                "service-api:{}:{}:concurrency-limit",
+                method_label.to_ascii_lowercase(),
+                path
+            );
+            return service_api_middleware_error_response(
+                &state,
+                ServiceApiMiddlewareError {
+                    correlation_id: correlation_id.as_str(),
+                    method: method_label.as_str(),
+                    path: path.as_str(),
+                    status_code: StatusCode::TOO_MANY_REQUESTS,
+                    error_label: "too-many-requests",
+                    reason_code: REASON_CODE_INGRESS_CONCURRENCY_LIMIT_EXCEEDED,
+                    message: "ingress concurrency limit exceeded",
+                    outcome: "concurrency-limit",
+                },
+            );
+        }
+    };
+    // Yield once so queued requests observe bounded in-flight concurrency on the
+    // single-thread runtime and deterministically fail closed when over budget.
+    tokio::task::yield_now().await;
 
-    let (mut request, parsed_request) =
-        match parse_service_api_request(request, is_websocket_route).await {
-            Ok(parsed_request) => parsed_request,
-            Err(error) => {
-                let correlation_id = format!(
-                    "service-api:parse-error:{:016x}",
-                    deterministic_body_tag(error.message.as_bytes())
-                );
-                return service_api_middleware_error_response(
-                    &state,
-                    ServiceApiMiddlewareError {
-                        correlation_id: correlation_id.as_str(),
-                        method: "unknown",
-                        path: "unknown",
-                        status_code: StatusCode::BAD_REQUEST,
-                        error_label: "bad-request",
-                        reason_code: error.reason_code,
-                        message: error.message.as_str(),
-                        outcome: "bad-request",
-                    },
-                );
-            }
-        };
+    let (mut request, parsed_request) = match parse_service_api_request(
+        request,
+        is_websocket_route,
+        state.body_limit_bytes,
+    )
+    .await
+    {
+        Ok(parsed_request) => parsed_request,
+        Err(error) => {
+            let correlation_id = format!(
+                "service-api:parse-error:{:016x}",
+                deterministic_body_tag(error.message.as_bytes())
+            );
+            return service_api_middleware_error_response(
+                &state,
+                ServiceApiMiddlewareError {
+                    correlation_id: correlation_id.as_str(),
+                    method: "unknown",
+                    path: "unknown",
+                    status_code: StatusCode::BAD_REQUEST,
+                    error_label: "bad-request",
+                    reason_code: error.reason_code,
+                    message: error.message.as_str(),
+                    outcome: "bad-request",
+                },
+            );
+        }
+    };
 
     let correlation_id = service_api_request_correlation_id(&parsed_request);
     if let Err(reason) = log_service_api_event_info(
@@ -600,6 +694,25 @@ async fn service_api_auth_middleware(
         }
     }
 
+    if route_requires_auth(parsed_request.method.as_str(), parsed_request.path.as_str()) {
+        let mut ingress_rate_window = state.ingress_rate_window.lock().await;
+        if !ingress_rate_window.try_record_request(Instant::now()) {
+            return service_api_middleware_error_response(
+                &state,
+                ServiceApiMiddlewareError {
+                    correlation_id: correlation_id.as_str(),
+                    method: parsed_request.method.as_str(),
+                    path: parsed_request.path.as_str(),
+                    status_code: StatusCode::TOO_MANY_REQUESTS,
+                    error_label: "too-many-requests",
+                    reason_code: REASON_CODE_INGRESS_RATE_LIMIT_EXCEEDED,
+                    message: "ingress rate limit exceeded",
+                    outcome: "rate-limit",
+                },
+            );
+        }
+    }
+
     if let Err(error) =
         validate_websocket_route_requirements(is_websocket_route, &parsed_request.headers)
     {
@@ -645,12 +758,14 @@ async fn service_api_auth_middleware(
         outcome,
     );
     state.request_budget.record_request();
+    drop(concurrency_permit);
     response
 }
 
 async fn parse_service_api_request(
     request: Request,
     is_websocket_route: bool,
+    body_limit_bytes: usize,
 ) -> Result<(Request, ParsedRequest), ServiceApiReasonedError> {
     let method_label = request.method().to_string();
     let path = request.uri().path().to_owned();
@@ -663,12 +778,20 @@ async fn parse_service_api_request(
     }
 
     let (parts, body) = request.into_parts();
-    let body_limit = 64 * 1024;
+    let body_limit = body_limit_bytes;
     let body = to_bytes(body, body_limit).await.map_err(|error| {
-        ServiceApiReasonedError::new(
-            REASON_CODE_REQUEST_READ_FAILED,
-            format!("request read failed: {error}"),
-        )
+        let message = error.to_string();
+        if message.contains("length limit exceeded") {
+            ServiceApiReasonedError::new(
+                REASON_CODE_INGRESS_BODY_SIZE_LIMIT_EXCEEDED,
+                format!("request body size limit exceeded: {body_limit} bytes"),
+            )
+        } else {
+            ServiceApiReasonedError::new(
+                REASON_CODE_REQUEST_READ_FAILED,
+                format!("request read failed: {error}"),
+            )
+        }
     })?;
     let parsed_request =
         build_parsed_request(method_label.as_str(), path.as_str(), &headers, body.clone())?;

@@ -24,6 +24,9 @@ fn cli_module_parses_required_role_and_defaults() {
     assert_eq!(parsed.api_bind_addr, None);
     assert_eq!(parsed.api_max_requests, 1);
     assert_eq!(parsed.api_idle_timeout_ms, 5_000);
+    assert_eq!(parsed.api_body_limit_bytes, 64 * 1024);
+    assert_eq!(parsed.api_concurrency_limit, 32);
+    assert_eq!(parsed.api_rate_limit_per_second, 120);
     assert_eq!(parsed.observability_endpoint_bind_addr, None);
     assert_eq!(parsed.observability_endpoint_metrics_path, "/metrics");
     assert_eq!(parsed.observability_endpoint_health_path, "/healthz");
@@ -51,6 +54,23 @@ fn cli_module_runtime_mode_api_requires_bind_address() {
 }
 
 #[test]
+fn regression_cli_module_api_limiter_overrides_require_bind_address() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--api-body-limit-bytes".to_owned(),
+        "1024".to_owned(),
+    ];
+
+    let err = cli::parse_args(args).expect_err("api limiter override without bind should fail");
+    assert_eq!(
+        err,
+        kamn_core::ConfigError::MissingArgumentValue("--api-bind")
+    );
+}
+
+#[test]
 fn cli_module_parses_api_runtime_endpoint_controls() {
     let args = vec![
         "kamn-node".to_owned(),
@@ -64,6 +84,12 @@ fn cli_module_parses_api_runtime_endpoint_controls() {
         "4".to_owned(),
         "--api-idle-timeout-ms".to_owned(),
         "2000".to_owned(),
+        "--api-body-limit-bytes".to_owned(),
+        "131072".to_owned(),
+        "--api-concurrency-limit".to_owned(),
+        "16".to_owned(),
+        "--api-rate-limit-per-second".to_owned(),
+        "240".to_owned(),
     ];
 
     let parsed = cli::parse_args(args).expect("api args should parse");
@@ -74,6 +100,9 @@ fn cli_module_parses_api_runtime_endpoint_controls() {
     assert_eq!(parsed.api_bind_addr.as_deref(), Some("127.0.0.1:34051"));
     assert_eq!(parsed.api_max_requests, 4);
     assert_eq!(parsed.api_idle_timeout_ms, 2_000);
+    assert_eq!(parsed.api_body_limit_bytes, 131_072);
+    assert_eq!(parsed.api_concurrency_limit, 16);
+    assert_eq!(parsed.api_rate_limit_per_second, 240);
 }
 
 #[test]

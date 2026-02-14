@@ -12,12 +12,19 @@ Runtime mode: `api`
 - `--api-bind <host:port>`
 - `--api-max-requests <n>` (default: `1`)
 - `--api-idle-timeout-ms <ms>` (default: `5000`)
+- `--api-body-limit-bytes <bytes>` (default: `65536`)
+- `--api-concurrency-limit <n>` (default: `32`)
+- `--api-rate-limit-per-second <n>` (default: `120`)
 - request payload body read limit: `65536` bytes (64 KiB)
 
 Fail-closed behavior:
 
 - `runtime-mode api` without `--api-bind` is rejected.
-- `--api-max-requests` and `--api-idle-timeout-ms` must be positive integers.
+- all API limiter controls must be positive integers.
+- limiter violations return deterministic structured reason codes:
+  - `service_api_ingress_body_size_limit_exceeded`
+  - `service_api_ingress_concurrency_limit_exceeded`
+  - `service_api_ingress_rate_limit_exceeded`
 
 ## Endpoints
 

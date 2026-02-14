@@ -120,6 +120,14 @@ if ! printf '%s\n' "$validation_output" | grep -Eq '^body_size_limit_bytes=[1-9]
   echo "expected service api axum ingress body-size limit marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -Eq '^api_concurrency_limit_default=[1-9][0-9]*$'; then
+  echo "expected service api axum ingress concurrency-limit default marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -Eq '^api_rate_limit_per_second_default=[1-9][0-9]*$'; then
+  echo "expected service api axum ingress rate-limit default marker" >&2
+  exit 1
+fi
 
 policy_output="$(
   bash "$POLICY_CHECKER" \
@@ -248,6 +256,10 @@ lane_report = {
     "api_max_requests_default": summary_report.get("api_max_requests_default"),
     "api_idle_timeout_default_ms": summary_report.get("api_idle_timeout_default_ms"),
     "body_size_limit_bytes": summary_report.get("body_size_limit_bytes"),
+    "api_concurrency_limit_default": summary_report.get("api_concurrency_limit_default"),
+    "api_rate_limit_per_second_default": summary_report.get(
+        "api_rate_limit_per_second_default"
+    ),
     "docs_contract_status": "verified",
     "fail_closed_status": "verified",
     "fail_closed_reason_code": "service_api_axum_policy_marker_missing:concurrency_status",
@@ -296,6 +308,24 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 print(payload.get("body_size_limit_bytes", 0))
+PY
+)"
+echo "api_concurrency_limit_default=$(python3 - "$summary_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload.get("api_concurrency_limit_default", 0))
+PY
+)"
+echo "api_rate_limit_per_second_default=$(python3 - "$summary_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload.get("api_rate_limit_per_second_default", 0))
 PY
 )"
 echo "docs_contract_status=verified"
