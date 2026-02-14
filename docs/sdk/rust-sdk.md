@@ -23,6 +23,23 @@ The client targets deterministic service routes exposed by `kamn-node` runtime m
 - `GET /metrics`
 - `GET /v1/events/ws` (upgrade + single event frame)
 
+## Error Envelope Decoding
+
+Service route failures are decoded from the standardized node error envelope:
+
+- `error`
+- `reason_code`
+- `message`
+
+Non-2xx service responses are surfaced through:
+
+- `SdkError::ServiceApiError { status, error, reason_code, message }`
+
+Compatibility fallback remains fail-closed for legacy payloads:
+
+- legacy shape `{ "error": "...", "reason": "..." }` is still parsed
+- deterministic legacy `reason` mapping is applied to produce a stable `reason_code`
+
 ## Usage
 
 ```rust

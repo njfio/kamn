@@ -14,6 +14,17 @@ pub enum SdkError {
     },
     /// Underlying transport operation failed.
     TransportFailure(&'static str),
+    /// Service API returned structured error envelope.
+    ServiceApiError {
+        /// HTTP status code returned by service route.
+        status: u16,
+        /// Service error class marker.
+        error: String,
+        /// Deterministic machine-readable reason code.
+        reason_code: String,
+        /// Human-readable failure detail.
+        message: String,
+    },
     /// The caller expected one transport mode but the client uses another.
     TransportModeMismatch {
         /// Expected transport mode identifier.
@@ -47,6 +58,15 @@ impl fmt::Display for SdkError {
                 write!(f, "invalid input for {field}: {reason}")
             }
             Self::TransportFailure(reason) => write!(f, "transport failure: {reason}"),
+            Self::ServiceApiError {
+                status,
+                error,
+                reason_code,
+                message,
+            } => write!(
+                f,
+                "service api rejected request: status={status} error={error} reason_code={reason_code} message={message}"
+            ),
             Self::TransportModeMismatch { expected, found } => {
                 write!(
                     f,

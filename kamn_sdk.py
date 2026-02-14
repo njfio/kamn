@@ -71,9 +71,11 @@ class LiveTransportBackendResponseOk(TypedDict):
     value: object
 
 
-class LiveTransportBackendResponseError(TypedDict):
+class LiveTransportBackendResponseError(TypedDict, total=False):
     status: Literal["error"]
     reason: str
+    reason_code: str
+    message: str
 
 
 LiveTransportBackendResponse = (
@@ -88,10 +90,18 @@ class LiveTransportBackendAdapter(Protocol):
 
 
 class LiveTransportBackendAdapterError(SDKError):
-    def __init__(self, operation: LiveTransportOperation, reason: str) -> None:
+    def __init__(
+        self, operation: LiveTransportOperation, reason_code: str, message: str
+    ) -> None:
         self.operation = operation
-        self.reason = reason
-        super().__init__(f"backend adapter operation {operation} failed: {reason}")
+        self.reason_code = reason_code
+        self.message = message
+        # Backward-compat alias retained for existing reason-only call sites.
+        self.reason = reason_code
+        super().__init__(
+            f"backend adapter operation {operation} failed: "
+            f"reason_code={reason_code}; message={message}"
+        )
 
 
 @dataclass
@@ -441,17 +451,48 @@ class LiveKAMNClient:
 
         status = response.get("status")
         if status == "error":
-            reason_raw = response.get("reason")
-            reason = (
-                reason_raw.strip()
-                if isinstance(reason_raw, str) and reason_raw.strip()
-                else "backend adapter returned unknown error"
-            )
-            raise LiveTransportBackendAdapterError(operation, reason)
+            reason_code, message = self._decode_backend_error_envelope(response)
+            raise LiveTransportBackendAdapterError(operation, reason_code, message)
 
         if status != "ok":
             self._raise_invalid_adapter_response(operation, "expected status ok|error")
         return normalize(response.get("value"))
+
+    def _decode_backend_error_envelope(
+        self, response: Dict[str, object]
+    ) -> tuple[str, str]:
+        reason_code_raw = response.get("reason_code")
+        message_raw = response.get("message")
+        if (
+            isinstance(reason_code_raw, str)
+            and reason_code_raw.strip()
+            and isinstance(message_raw, str)
+            and message_raw.strip()
+        ):
+            return reason_code_raw.strip(), message_raw.strip()
+
+        reason_raw = response.get("reason")
+        if isinstance(reason_raw, str) and reason_raw.strip():
+            reason = reason_raw.strip()
+            return self._normalize_legacy_backend_reason_code(reason), reason
+
+        return (
+            "backend_adapter_error_unknown",
+            "backend adapter returned unknown error",
+        )
+
+    def _normalize_legacy_backend_reason_code(self, reason: str) -> str:
+        normalized = reason.strip().lower().replace("-", "_").replace(" ", "_")
+        sanitized = "".join(
+            character if (character.isalnum() or character == "_") else "_"
+            for character in normalized
+        )
+        collapsed = "_".join(
+            segment for segment in sanitized.split("_") if segment
+        ).strip()
+        if collapsed:
+            return collapsed
+        return "backend_adapter_error_legacy_unknown"
 
     def _raise_invalid_adapter_response(
         self, operation: LiveTransportOperation, reason: str

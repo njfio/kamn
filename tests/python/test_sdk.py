@@ -220,7 +220,11 @@ class PythonLiveTransportSDKTests(unittest.TestCase):
                 if operation == "register":
                     return {"status": "ok", "value": 42}
                 if operation == "send":
-                    return {"status": "error", "reason": "backend_timeout"}
+                    return {
+                        "status": "error",
+                        "reason_code": "backend_timeout",
+                        "message": "secure signer backend timed out",
+                    }
                 return {"status": "error", "reason": "policy_denied"}
 
         LiveKAMNClient.register_backend_adapter(endpoint, Adapter())
@@ -237,11 +241,17 @@ class PythonLiveTransportSDKTests(unittest.TestCase):
                 client.send("kamn:did:agent:x", "kamn:did:agent:y", "hello")
             self.assertEqual(timeout_error.exception.operation, "send")
             self.assertEqual(timeout_error.exception.reason, "backend_timeout")
+            self.assertEqual(timeout_error.exception.reason_code, "backend_timeout")
+            self.assertEqual(
+                timeout_error.exception.message, "secure signer backend timed out"
+            )
 
             with self.assertRaises(LiveTransportBackendAdapterError) as policy_error:
                 client.receive("kamn:did:agent:y")
             self.assertEqual(policy_error.exception.operation, "receive")
             self.assertEqual(policy_error.exception.reason, "policy_denied")
+            self.assertEqual(policy_error.exception.reason_code, "policy_denied")
+            self.assertEqual(policy_error.exception.message, "policy_denied")
         finally:
             LiveKAMNClient.clear_backend_adapters()
 

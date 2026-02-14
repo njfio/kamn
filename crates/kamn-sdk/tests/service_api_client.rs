@@ -155,35 +155,84 @@ fn validate_auth(
     body: &str,
     headers: &BTreeMap<String, String>,
     replay_guard: &mut BTreeSet<(String, u64)>,
-) -> Result<(), (u16, &'static str)> {
+) -> Result<(), (u16, &'static str, &'static str, &'static str)> {
     let did = headers
         .get("x-kamn-sender-did")
-        .ok_or((401, "missing required header: x-kamn-sender-did"))?
+        .ok_or((
+            401,
+            "unauthorized",
+            "service_api_auth_sender_did_header_missing",
+            "missing required header: x-kamn-sender-did",
+        ))?
         .to_owned();
-    AgentDid::parse(did.clone()).map_err(|_| (401, "invalid sender did"))?;
+    AgentDid::parse(did.clone()).map_err(|_| {
+        (
+            401,
+            "unauthorized",
+            "service_api_auth_sender_did_invalid",
+            "invalid sender did",
+        )
+    })?;
     let nonce = headers
         .get("x-kamn-request-nonce")
-        .ok_or((401, "missing required header: x-kamn-request-nonce"))?
+        .ok_or((
+            401,
+            "unauthorized",
+            "service_api_auth_nonce_header_missing",
+            "missing required header: x-kamn-request-nonce",
+        ))?
         .parse::<u64>()
-        .map_err(|_| (401, "invalid request nonce header: x-kamn-request-nonce"))?;
+        .map_err(|_| {
+            (
+                401,
+                "unauthorized",
+                "service_api_auth_nonce_invalid",
+                "invalid request nonce header: x-kamn-request-nonce",
+            )
+        })?;
     if nonce == 0 {
-        return Err((401, "request nonce must be positive: x-kamn-request-nonce"));
+        return Err((
+            401,
+            "unauthorized",
+            "service_api_auth_nonce_non_positive",
+            "request nonce must be positive: x-kamn-request-nonce",
+        ));
     }
-    let signature = headers
-        .get("x-kamn-request-signature")
-        .ok_or((401, "missing required header: x-kamn-request-signature"))?;
+    let signature = headers.get("x-kamn-request-signature").ok_or((
+        401,
+        "unauthorized",
+        "service_api_auth_signature_header_missing",
+        "missing required header: x-kamn-request-signature",
+    ))?;
     let expected = service_signature_for_fields(
-        &AgentDid::parse(did.clone()).map_err(|_| (401, "invalid sender did"))?,
+        &AgentDid::parse(did.clone()).map_err(|_| {
+            (
+                401,
+                "unauthorized",
+                "service_api_auth_sender_did_invalid",
+                "invalid sender did",
+            )
+        })?,
         nonce,
         CHAIN_ID,
         CHAIN_VERSION,
         body,
     );
     if &expected != signature {
-        return Err((401, "signature verification failed for request envelope"));
+        return Err((
+            401,
+            "unauthorized",
+            "service_api_auth_signature_verification_failed",
+            "signature verification failed for request envelope",
+        ));
     }
     if !replay_guard.insert((did, nonce)) {
-        return Err((409, "request nonce replay detected for sender"));
+        return Err((
+            409,
+            "replay",
+            "service_api_auth_replay_nonce_detected",
+            "request nonce replay detected for sender",
+        ));
     }
     Ok(())
 }
@@ -228,15 +277,11 @@ fn run_service_contract_server(bind_addr: String, max_requests: u64) -> Result<(
                     continue;
                 }
 
-                if let Err((status, reason)) = validate_auth(&body, &headers, &mut replay_guard) {
+                if let Err((status, error, reason_code, message)) =
+                    validate_auth(&body, &headers, &mut replay_guard)
+                {
                     let payload = format!(
-                        "{{\"error\":\"{}\",\"reason\":\"{}\"}}",
-                        if status == 409 {
-                            "replay"
-                        } else {
-                            "unauthorized"
-                        },
-                        reason
+                        "{{\"error\":\"{error}\",\"reason_code\":\"{reason_code}\",\"message\":\"{message}\"}}",
                     );
                     write_http_response(&mut stream, status, payload.as_str())?;
                     served = served.saturating_add(1);
@@ -262,7 +307,7 @@ fn run_service_contract_server(bind_addr: String, max_requests: u64) -> Result<(
                         write_http_response(
                             &mut stream,
                             400,
-                            r#"{"error":"bad-request","reason":"websocket upgrade required"}"#,
+                            r#"{"error":"bad-request","reason_code":"service_api_websocket_upgrade_required","message":"websocket upgrade required"}"#,
                         )?;
                     } else {
                         write_websocket_upgrade_response(&mut stream)?;
@@ -309,7 +354,11 @@ fn run_service_contract_server(bind_addr: String, max_requests: u64) -> Result<(
                     let payload = format!("{{\"did\":\"{}\",\"reputation_score\":500}}", did);
                     write_http_response(&mut stream, 200, payload.as_str())?;
                 } else {
-                    write_http_response(&mut stream, 404, "not found")?;
+                    write_http_response(
+                        &mut stream,
+                        404,
+                        r#"{"error":"not-found","reason_code":"service_api_route_not_found","message":"not found"}"#,
+                    )?;
                 }
 
                 served = served.saturating_add(1);
@@ -443,7 +492,7 @@ fn regression_service_api_client_rejects_replayed_nonce() {
     // Regression: #2946
     let bind_addr = reserve_loopback_addr();
     let server_addr = bind_addr.clone();
-    let server = thread::spawn(move || run_service_contract_server(server_addr, 2));
+    let server = thread::spawn(move || run_service_contract_server(server_addr, 3));
     wait_for_server_ready(bind_addr.as_str());
 
     let client = ServiceApiClient::connect(format!("http://{bind_addr}").as_str())
@@ -455,11 +504,25 @@ fn regression_service_api_client_rejects_replayed_nonce() {
     client
         .send_message(payload, &replay_auth)
         .expect("first send should pass");
-    assert_eq!(
-        client
-            .send_message(payload, &replay_auth)
-            .expect_err("replayed nonce should fail closed"),
-        SdkError::Conflict("request rejected by service api")
+    let replay_error = client
+        .send_message(payload, &replay_auth)
+        .expect_err("replayed nonce should fail closed");
+    assert!(
+        replay_error
+            .to_string()
+            .contains("reason_code=service_api_auth_replay_nonce_detected"),
+        "replay failure should expose deterministic reason code: {replay_error}"
+    );
+
+    let invalid_auth = auth(&sender, 12, r#"{"message":"mismatch-signature"}"#);
+    let unauthorized_error = client
+        .send_message(payload, &invalid_auth)
+        .expect_err("signature mismatch should fail closed");
+    assert!(
+        unauthorized_error
+            .to_string()
+            .contains("reason_code=service_api_auth_signature_verification_failed"),
+        "unauthorized failure should expose deterministic reason code: {unauthorized_error}"
     );
 
     let server_result = server.join().expect("server thread should join");

@@ -10,6 +10,16 @@ The Python SDK surface is provided by module `kamn_sdk.py` and includes:
 - live transport client (`LiveKAMNClient`)
 - transport error taxonomy and parity contracts
 
+Live transport backend adapter errors use a normalized envelope contract:
+
+- preferred adapter error shape: `{ "status": "error", "reason_code": "...", "message": "..." }`
+- legacy adapter error shape `{ "status": "error", "reason": "..." }` remains supported
+- raised exception: `LiveTransportBackendAdapterError` exposes:
+  - `operation`
+  - `reason_code`
+  - `message`
+  - backward-compatible alias `reason` (mapped to `reason_code`)
+
 Packaging metadata is published through repository-root `pyproject.toml`.
 
 ## Packaging Metadata
