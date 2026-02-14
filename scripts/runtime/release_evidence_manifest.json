@@ -1,0 +1,21 @@
+{
+  "schema_version": "kamn.runtime.release-evidence-manifest.v1",
+  "manifest_id": "runtime_go_no_go_release_evidence_registry",
+  "required_artifacts": [
+    {
+      "artifact_id": "go_no_go_evidence",
+      "expected_lane": "deploy.run_gonogo_evidence_deep_lane",
+      "expected_success_marker": "go/no-go evidence deep lane tests passed."
+    },
+    {
+      "artifact_id": "rollback_readiness",
+      "expected_lane": "deploy.run_deployment_slo_rollback_contract_lane",
+      "expected_success_marker": "final_decision=GO"
+    },
+    {
+      "artifact_id": "dr_readiness",
+      "expected_lane": "deploy.run_dr_evidence_contract_lane",
+      "expected_success_marker": "dr evidence contract lane tests passed."
+    }
+  ]
+}

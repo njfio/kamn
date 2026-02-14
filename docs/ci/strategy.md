@@ -2537,6 +2537,23 @@ Fast-mode CI tooling regression coverage includes:
 - Makefile execution contract checker (`test_makefile_execution_contract.sh`)
 - Local fork portability preflight lane/policy/contract checks (`test_run_local_kolme_fork_portability_preflight_lane.sh`, `test_check_local_kolme_fork_portability_preflight_policy.sh`, `test_run_local_kolme_fork_portability_preflight_contract_lane.sh`)
 
+## Release Evidence Manifest Schema
+The runtime go/no-go gate lane enforces a versioned release evidence manifest:
+- manifest file: `scripts/runtime/release_evidence_manifest.json`
+- schema version: `kamn.runtime.release-evidence-manifest.v1`
+- required artifact IDs:
+  - `go_no_go_evidence`
+  - `rollback_readiness`
+  - `dr_readiness`
+- contract lane command:
+  - `bash scripts/runtime/run_go_no_go_gate_lane.sh --max-seconds 120 --output-json /tmp/go-no-go-gate-report.json`
+- deterministic fail-closed reason-code surface:
+  - `release_manifest_file_missing`
+  - `release_manifest_json_invalid`
+  - `release_manifest_schema_version_invalid`
+  - `release_manifest_missing_required_artifact:<artifact_id>`
+  - `release_manifest_required_marker_missing:<artifact_id>`
+
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
 - Weekly workflow `ci-flaky-report-comment` posts an automated report comment to issue `#70`.
