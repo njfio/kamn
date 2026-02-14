@@ -47,6 +47,12 @@ Run injected decision-fault profile (expected fail-closed):
 bash scripts/runtime/run_go_no_go_gate_lane.sh --fault-profile gate_decision --output-json /tmp/go-no-go-gate-fault.json
 ```
 
+Run waiver path for a missing required manifest artifact (warn/GO with explicit waiver metadata):
+
+```bash
+bash scripts/runtime/run_go_no_go_gate_lane.sh --manifest-file /tmp/release-manifest-missing-dr.json --waiver-file /tmp/go-no-go-waiver.json --output-json /tmp/go-no-go-gate-waiver.json
+```
+
 ## Deterministic Markers
 
 Baseline GO markers:
@@ -76,6 +82,15 @@ Run-mode GO markers:
 Injected fail-closed marker:
 
 - decision fault profile emits `gate_decision_fault_injection_triggered` and returns non-zero.
+- missing required manifest artifact without waiver emits `release_manifest_missing_required_artifact:<artifact_id>` and returns non-zero.
+
+Waiver markers:
+
+- `waiver_status=applied`
+- `waived_reason_codes=release_manifest_missing_required_artifact:<artifact_id>`
+- `reason_codes=release_manifest_required_artifact_waiver_applied`
+- `status=warn`
+- `policy_outcome=WARN`
 
 ## Evidence Schema
 
@@ -87,6 +102,7 @@ Includes:
 - selected fault profile
 - evidence and readiness contract markers
 - reason codes
+- waiver status and waived reason-code lineage
 - runtime budget and elapsed duration
 
 ## Live Validation (Task #2988 / Subtask #2989)

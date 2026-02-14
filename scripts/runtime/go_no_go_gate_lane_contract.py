@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import os
 from pathlib import Path
@@ -28,6 +29,9 @@ RUN_MODE_FAST_GATE_EXCLUSION_REASON = "go_no_go_gate_run_mode_excluded_from_fast
 DRY_RUN_REASON = "dry_run_no_commands_executed"
 RUN_REASON = "release_candidate_artifact_aggregation_executed"
 RUN_MODE_OPT_IN_ENV = "KAMN_GONOGO_GATE_LOCAL_OPT_IN"
+WAIVER_SCHEMA = "kamn.runtime.go-no-go-gate-waiver.v1"
+WAIVER_SCOPE = "runtime_go_no_go_gate_required_artifacts"
+WAIVER_APPLIED_REASON = "release_manifest_required_artifact_waiver_applied"
 REQUIRED_ARTIFACT_IDS = (
     "go_no_go_evidence",
     "rollback_readiness",
@@ -83,6 +87,16 @@ def _resolve_manifest_path(raw: str) -> Path:
     return (ROOT_DIR / path).resolve()
 
 
+def _resolve_optional_path(raw: str) -> Path | None:
+    value = raw.strip()
+    if not value:
+        return None
+    path = Path(value)
+    if path.is_absolute():
+        return path
+    return (ROOT_DIR / path).resolve()
+
+
 def _load_release_manifest(path: Path) -> dict[str, object]:
     if not path.is_file():
         fail("release_manifest_file_missing")
@@ -102,7 +116,71 @@ def _require_non_empty_string(payload: dict[str, object], key: str, reason_code:
     return value.strip()
 
 
-def _validate_release_manifest(payload: dict[str, object]) -> list[dict[str, str]]:
+def _parse_waiver(
+    waiver_file: Path | None,
+    triggered_reason_codes: list[str],
+) -> tuple[str, list[str], list[str], str]:
+    if waiver_file is None:
+        return "none", [], triggered_reason_codes, ""
+    if not waiver_file.is_file():
+        return "none", [], triggered_reason_codes, "waiver_file_not_found"
+
+    try:
+        waiver_payload = json.loads(waiver_file.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return "none", [], triggered_reason_codes, "waiver_file_json_invalid"
+    if not isinstance(waiver_payload, dict):
+        return "none", [], triggered_reason_codes, "waiver_file_root_invalid"
+
+    if waiver_payload.get("schema_version") != WAIVER_SCHEMA:
+        return "none", [], triggered_reason_codes, "waiver_file_schema_mismatch"
+    if waiver_payload.get("scope") != WAIVER_SCOPE:
+        return "none", [], triggered_reason_codes, "waiver_scope_mismatch"
+
+    expires_on = waiver_payload.get("expires_on")
+    if not isinstance(expires_on, str):
+        return "none", [], triggered_reason_codes, "waiver_expiry_invalid"
+    try:
+        expiry_date = dt.date.fromisoformat(expires_on)
+    except ValueError:
+        return "none", [], triggered_reason_codes, "waiver_expiry_invalid"
+    if expiry_date < dt.date.today():
+        return "none", [], triggered_reason_codes, "waiver_expired"
+
+    allowed_reason_codes = waiver_payload.get("allowed_reason_codes", [])
+    if not isinstance(allowed_reason_codes, list) or not all(
+        isinstance(value, str) and value for value in allowed_reason_codes
+    ):
+        return "none", [], triggered_reason_codes, "waiver_allowed_reason_codes_invalid"
+
+    allowed_set = set(allowed_reason_codes)
+    waived_reason_codes = sorted(
+        reason_code for reason_code in triggered_reason_codes if reason_code in allowed_set
+    )
+    unwaived_reason_codes = sorted(
+        reason_code for reason_code in triggered_reason_codes if reason_code not in allowed_set
+    )
+    if unwaived_reason_codes:
+        return "none", waived_reason_codes, unwaived_reason_codes, ""
+    return "applied", waived_reason_codes, [], ""
+
+
+def _extract_missing_manifest_artifact_id(reason_code: str) -> str | None:
+    prefix = "release_manifest_missing_required_artifact:"
+    if not reason_code.startswith(prefix):
+        return None
+    artifact_id = reason_code[len(prefix) :]
+    if artifact_id not in REQUIRED_ARTIFACT_IDS:
+        return None
+    return artifact_id
+
+
+def _validate_release_manifest(
+    payload: dict[str, object],
+    *,
+    waived_artifact_ids: set[str] | None = None,
+) -> list[dict[str, str]]:
+    waived_artifact_ids = waived_artifact_ids or set()
     schema_version = payload.get("schema_version")
     if schema_version != RELEASE_MANIFEST_SCHEMA:
         fail("release_manifest_schema_version_invalid")
@@ -152,6 +230,8 @@ def _validate_release_manifest(payload: dict[str, object]) -> list[dict[str, str
         )
 
     for required_artifact in REQUIRED_ARTIFACT_IDS:
+        if required_artifact in waived_artifact_ids:
+            continue
         if required_artifact not in seen_artifact_ids:
             fail(f"release_manifest_missing_required_artifact:{required_artifact}")
 
@@ -179,6 +259,9 @@ def _evaluate_go_no_go_policy(
         if reason_code == RUNTIME_BUDGET_EXCEEDED_REASON:
             warn_reasons.append(reason_code)
             continue
+        if reason_code == WAIVER_APPLIED_REASON:
+            warn_reasons.append(reason_code)
+            continue
         fail_reasons.append(f"gate_policy_unknown_reason_code:{reason_code}")
 
     fail_reasons = sorted(set(fail_reasons))
@@ -204,8 +287,36 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
     max_seconds = require_non_negative_int("KAMN_GONOGO_GATE_MAX_SECONDS", args.max_seconds)
     start_epoch = int(time.time())
     manifest_path = _resolve_manifest_path(args.manifest_file)
+    waiver_file = _resolve_optional_path(args.waiver_file)
     manifest_payload = _load_release_manifest(manifest_path)
-    required_artifacts = _validate_release_manifest(manifest_payload)
+    waiver_status = "none"
+    waived_reason_codes: list[str] = []
+    waived_artifact_ids: set[str] = set()
+    while True:
+        try:
+            required_artifacts = _validate_release_manifest(
+                manifest_payload,
+                waived_artifact_ids=waived_artifact_ids,
+            )
+            break
+        except ContractError as error:
+            manifest_reason_code = str(error)
+            missing_artifact_id = _extract_missing_manifest_artifact_id(manifest_reason_code)
+            if missing_artifact_id is None or missing_artifact_id in waived_artifact_ids:
+                fail(manifest_reason_code)
+            parsed_waiver = _parse_waiver(waiver_file, [manifest_reason_code])
+            parsed_waiver_status, waiver_hit_reason_codes, unwaived_reason_codes, waiver_error = (
+                parsed_waiver
+            )
+            if waiver_error:
+                fail(waiver_error)
+            if unwaived_reason_codes:
+                fail(unwaived_reason_codes[0])
+            if parsed_waiver_status != "applied":
+                fail(manifest_reason_code)
+            waiver_status = "applied"
+            waived_reason_codes = sorted(set(waived_reason_codes + waiver_hit_reason_codes))
+            waived_artifact_ids.add(missing_artifact_id)
 
     gonogo_generator = ROOT_DIR / "scripts/deploy/generate_gonogo_evidence_bundle.sh"
     gonogo_checker = ROOT_DIR / "scripts/deploy/check_gonogo_evidence_policy.sh"
@@ -214,6 +325,8 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
     _ensure_executable(gonogo_checker, "go/no-go evidence policy checker")
 
     reason_codes: list[str] = []
+    if waiver_status == "applied":
+        reason_codes.append(WAIVER_APPLIED_REASON)
     artifact_inventory: list[dict[str, str]] = []
     run_mode_command_count = 0
 
@@ -339,6 +452,12 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         "policy_evaluator_status": "verified",
         "manifest_schema_version": manifest_payload["schema_version"],
         "manifest_registry_status": "verified",
+        "waiver_status": waiver_status,
+        "waived_reason_codes": waived_reason_codes,
+        "waiver_review_required": waiver_status == "applied",
+        "waiver_schema_version": WAIVER_SCHEMA if waiver_status == "applied" else "",
+        "waiver_scope": WAIVER_SCOPE if waiver_status == "applied" else "",
+        "waiver_file": str(waiver_file) if waiver_file else "",
         "required_artifact_ids": [artifact["artifact_id"] for artifact in required_artifacts],
         "artifact_inventory": artifact_inventory,
         "reason_codes": evaluator_reason_codes,
@@ -376,6 +495,12 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
     print(f"manifest_schema_version={manifest_payload['schema_version']}")
     print(f"reason_taxonomy_version={GO_NO_GO_REASON_TAXONOMY_VERSION}")
     print("manifest_registry_status=verified")
+    print(f"waiver_status={waiver_status}")
+    print(
+        "waived_reason_codes="
+        + ("none" if not waived_reason_codes else ",".join(waived_reason_codes))
+    )
+    print(f"waiver_review_required={'true' if waiver_status == 'applied' else 'false'}")
     print(f"required_artifact_count={len(required_artifacts)}")
     print(f"reason_codes={reason_codes_csv}")
     print(f"observed_reason_codes={observed_reason_codes_csv}")
@@ -414,6 +539,10 @@ def build_parser() -> argparse.ArgumentParser:
             "KAMN_GONOGO_GATE_MANIFEST_FILE",
             str(DEFAULT_RELEASE_MANIFEST_PATH),
         ),
+    )
+    parser.add_argument(
+        "--waiver-file",
+        default=os.environ.get("KAMN_GONOGO_GATE_WAIVER_FILE", ""),
     )
     parser.add_argument(
         "--local-opt-in",

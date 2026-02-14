@@ -2557,12 +2557,29 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
     - `KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/runtime/run_go_no_go_gate_lane.sh --mode run --max-seconds 120 --output-json /tmp/go-no-go-gate-run-report.json`
   - run-mode commands remain excluded from ci-fast-gate:
     - summary/report markers must emit `ci_fast_gate_eligible=false`, `ci_fast_gate_scope=local-only`, and `fast_gate_exclusion_reason_code=go_no_go_gate_run_mode_excluded_from_fast_gate`.
+  - optional waiver path for missing required artifact evidence:
+    - `bash scripts/runtime/run_go_no_go_gate_lane.sh --manifest-file /tmp/release-manifest-missing-dr.json --waiver-file /tmp/go-no-go-waiver.json --max-seconds 120 --output-json /tmp/go-no-go-gate-waiver-report.json`
+    - waiver schema version: `kamn.runtime.go-no-go-gate-waiver.v1`
+    - waiver scope: `runtime_go_no_go_gate_required_artifacts`
+    - required waiver fields: `schema_version`, `scope`, `expires_on`, `allowed_reason_codes`
+    - deterministic waiver outcome markers:
+      - `waiver_status=applied`
+      - `waived_reason_codes=release_manifest_missing_required_artifact:<artifact_id>`
+      - `reason_codes=release_manifest_required_artifact_waiver_applied`
+      - `status=warn` with `final_decision=GO`
 - deterministic fail-closed reason-code surface:
   - `release_manifest_file_missing`
   - `release_manifest_json_invalid`
   - `release_manifest_schema_version_invalid`
   - `release_manifest_missing_required_artifact:<artifact_id>`
   - `release_manifest_required_marker_missing:<artifact_id>`
+  - `waiver_file_not_found`
+  - `waiver_file_json_invalid`
+  - `waiver_file_schema_mismatch`
+  - `waiver_scope_mismatch`
+  - `waiver_expiry_invalid`
+  - `waiver_expired`
+  - `waiver_allowed_reason_codes_invalid`
   - `runtime_budget_exceeded` (warning reason)
   - `gate_decision_fault_injection_triggered` (fail reason)
 
