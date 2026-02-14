@@ -391,6 +391,60 @@ fn rejects_kolme_live_without_signer_key_source() {
 }
 
 #[test]
+fn rejects_kolme_live_continuous_mode_without_tick_interval() {
+    // Regression: #2931
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        "http://127.0.0.1:3000".to_owned(),
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "2".to_owned(),
+    ];
+    assert_eq!(
+        parse_args(args),
+        Err(ConfigError::MissingArgumentValue(
+            "--daemon-tick-interval-ms"
+        ))
+    );
+}
+
+#[test]
+fn rejects_kolme_live_continuous_mode_without_max_ticks() {
+    // Regression: #2931
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        "http://127.0.0.1:3000".to_owned(),
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+    ];
+    assert_eq!(
+        parse_args(args),
+        Err(ConfigError::MissingArgumentValue("--daemon-max-ticks"))
+    );
+}
+
+#[test]
 fn rejects_kolme_live_strict_signer_contracts_without_signer_profile_selector() {
     // Regression: #2246
     let args = vec![

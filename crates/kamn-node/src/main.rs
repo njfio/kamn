@@ -40,7 +40,9 @@ use report_builder::build_bootstrap_report;
 use report_render::render_bootstrap_report;
 #[cfg(test)]
 use runtime_kolme_live::build_kolme_live_request;
-use runtime_kolme_live::execute_kolme_live_runtime;
+use runtime_kolme_live::{
+    execute_kolme_live_runtime, execute_kolme_live_runtime_continuous, KolmeLiveContinuousMode,
+};
 #[cfg(test)]
 pub(crate) use service_api_endpoint::render_service_api_endpoint_response;
 pub(crate) use service_api_endpoint::{
@@ -783,14 +785,35 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             } else {
                 None
             };
-            let kolme_live_execution = execute_kolme_live_runtime(
-                &plan,
-                base_url,
-                provider_hint,
-                signing_profile,
-                strict_signer_profile,
-                strict_signer_key_source,
-            )?;
+            let kolme_live_execution =
+                if daemon_max_ticks.is_some() || daemon_tick_interval_ms.is_some() {
+                    let max_cycles = daemon_max_ticks
+                        .ok_or(ConfigError::MissingArgumentValue("--daemon-max-ticks"))?;
+                    let cycle_interval_ms = daemon_tick_interval_ms.ok_or(
+                        ConfigError::MissingArgumentValue("--daemon-tick-interval-ms"),
+                    )?;
+                    execute_kolme_live_runtime_continuous(
+                        &plan,
+                        base_url,
+                        provider_hint,
+                        signing_profile,
+                        strict_signer_profile,
+                        strict_signer_key_source,
+                        KolmeLiveContinuousMode {
+                            max_cycles,
+                            cycle_interval_ms,
+                        },
+                    )?
+                } else {
+                    execute_kolme_live_runtime(
+                        &plan,
+                        base_url,
+                        provider_hint,
+                        signing_profile,
+                        strict_signer_profile,
+                        strict_signer_key_source,
+                    )?
+                };
             RuntimeExecutionBundle {
                 kolme_live: Some(kolme_live_execution),
                 ..RuntimeExecutionBundle::default()

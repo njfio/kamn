@@ -20,6 +20,11 @@ const KOLME_LIVE_FINALITY_RETRY_MAX_ATTEMPTS: u32 = 3;
 const KOLME_LIVE_RETRY_BASE_BACKOFF_MILLIS: u64 = 10;
 const KOLME_LIVE_RETRY_MAX_BACKOFF_MILLIS: u64 = 40;
 
+pub(crate) struct KolmeLiveContinuousMode {
+    pub(crate) max_cycles: u64,
+    pub(crate) cycle_interval_ms: u64,
+}
+
 pub(crate) fn build_kolme_live_request(
     plan: &BootstrapPlan,
 ) -> Result<KolmeRuntimeCommitRequest, ConfigError> {
@@ -304,6 +309,58 @@ pub(crate) fn execute_kolme_live_runtime(
         observability_health: observability.health,
         observability_alert_count: observability.alert_count,
     })
+}
+
+pub(crate) fn execute_kolme_live_runtime_continuous(
+    plan: &BootstrapPlan,
+    base_url: String,
+    provider_hint: String,
+    signing_profile: String,
+    strict_signer_profile: Option<&'static str>,
+    strict_signer_key_source: Option<&'static str>,
+    mode: KolmeLiveContinuousMode,
+) -> Result<KolmeLiveExecution, ConfigError> {
+    let max_cycles = mode.max_cycles;
+    let cycle_interval_ms = mode.cycle_interval_ms;
+    if max_cycles == 0 {
+        return Err(ConfigError::RuntimeKolmeLive(
+            "kolme-live continuous cycle budget must be greater than zero".to_owned(),
+        ));
+    }
+    if cycle_interval_ms == 0 {
+        return Err(ConfigError::RuntimeKolmeLive(
+            "kolme-live continuous cycle interval must be greater than zero".to_owned(),
+        ));
+    }
+
+    let mut last_execution: Option<KolmeLiveExecution> = None;
+    for cycle in 1..=max_cycles {
+        let mut execution = execute_kolme_live_runtime(
+            plan,
+            base_url.clone(),
+            provider_hint.clone(),
+            signing_profile.clone(),
+            strict_signer_profile,
+            strict_signer_key_source,
+        )?;
+        execution.execution_status = format!(
+            "{};continuous_mode=enabled;continuous_cycle={cycle};continuous_cycle_count={max_cycles};continuous_cycle_interval_ms={cycle_interval_ms}",
+            execution.execution_status
+        );
+        last_execution = Some(execution);
+        if cycle < max_cycles {
+            thread::sleep(Duration::from_millis(cycle_interval_ms));
+        }
+    }
+
+    let mut execution = last_execution.ok_or_else(|| {
+        ConfigError::RuntimeKolmeLive("kolme-live continuous mode executed zero cycles".to_owned())
+    })?;
+    execution.execution_status = format!(
+        "{};continuous_completed_cycles={max_cycles}",
+        execution.execution_status
+    );
+    Ok(execution)
 }
 
 #[cfg(test)]

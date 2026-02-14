@@ -703,6 +703,14 @@ where
                 signing_profile.to_owned(),
             ));
         }
+        if daemon_max_ticks.is_some() && daemon_tick_interval_ms.is_none() {
+            return Err(ConfigError::MissingArgumentValue(
+                "--daemon-tick-interval-ms",
+            ));
+        }
+        if daemon_tick_interval_ms.is_some() && daemon_max_ticks.is_none() {
+            return Err(ConfigError::MissingArgumentValue("--daemon-max-ticks"));
+        }
         let key_source =
             kolme_live_signer_key_source
                 .as_deref()
