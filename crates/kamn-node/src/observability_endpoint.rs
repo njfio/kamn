@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH: &str = "/metrics";
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_HEALTH_PATH: &str = "/healthz";
+pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH: &str = "/metrics.stream";
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_MAX_REQUESTS: u64 = 1;
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_IDLE_TIMEOUT_MS: u64 = 5_000;
 
@@ -114,6 +115,7 @@ pub(crate) fn render_observability_endpoint_response(
         path,
         DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH,
         DEFAULT_OBSERVABILITY_ENDPOINT_HEALTH_PATH,
+        DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH,
     )
 }
 
@@ -157,6 +159,7 @@ pub(crate) fn serve_observability_endpoint(
                     path.as_str(),
                     config.metrics_path.as_str(),
                     config.health_path.as_str(),
+                    DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH,
                 );
                 write_http_response(&mut stream, &response)?;
                 served_requests = served_requests.saturating_add(1);
@@ -177,6 +180,7 @@ fn render_observability_endpoint_response_with_paths(
     path: &str,
     metrics_path: &str,
     health_path: &str,
+    stream_path: &str,
 ) -> ObservabilityEndpointResponse {
     if path == metrics_path {
         return ObservabilityEndpointResponse {
@@ -190,6 +194,13 @@ fn render_observability_endpoint_response_with_paths(
             status_code: 200,
             content_type: "application/json",
             body: render_health_body(snapshot),
+        };
+    }
+    if path == stream_path {
+        return ObservabilityEndpointResponse {
+            status_code: 200,
+            content_type: "application/x-ndjson",
+            body: render_stream_body(snapshot),
         };
     }
     ObservabilityEndpointResponse {
@@ -219,6 +230,21 @@ fn render_metrics_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
 fn render_health_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
     format!(
         "{{\"source\":\"{}\",\"runtime_mode\":\"{}\",\"health\":\"{}\",\"alert_count\":{},\"latency_p50_ms\":{},\"latency_p99_ms\":{},\"throughput_tps\":{},\"error_rate_bps\":{},\"availability_bps\":{}}}",
+        escape_json_string(snapshot.source.as_str()),
+        escape_json_string(snapshot.runtime_mode.as_str()),
+        escape_json_string(snapshot.health.as_str()),
+        snapshot.alert_count,
+        snapshot.latency_p50_ms,
+        snapshot.latency_p99_ms,
+        snapshot.throughput_tps,
+        snapshot.error_rate_bps,
+        snapshot.availability_bps
+    )
+}
+
+fn render_stream_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
+    format!(
+        "{{\"schema_version\":\"kamn.runtime.observability.stream.v1\",\"source\":\"{}\",\"runtime_mode\":\"{}\",\"health\":\"{}\",\"alert_count\":{},\"latency_p50_ms\":{},\"latency_p99_ms\":{},\"throughput_tps\":{},\"error_rate_bps\":{},\"availability_bps\":{}}}\n",
         escape_json_string(snapshot.source.as_str()),
         escape_json_string(snapshot.runtime_mode.as_str()),
         escape_json_string(snapshot.health.as_str()),
