@@ -14,6 +14,9 @@ lane_wrappers=(
   "scripts/runtime/run_runtime_snapshot_deep_lane.sh"
   "scripts/runtime/run_zk_witness_mutation_deep_lane.sh"
   "scripts/runtime/run_live_network_partition_reconnect_deep_lane.sh"
+  "scripts/runtime/run_input_mutation_coverage_guided_deep_lane.sh"
+  "scripts/runtime/run_failover_sync_drill_deep_lane.sh"
+  "scripts/runtime/run_watchdog_proof_consensus_deep_lane.sh"
 )
 
 for wrapper_rel_path in "${lane_wrappers[@]}"; do

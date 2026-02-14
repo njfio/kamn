@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "runtime.watchdog_proof_consensus.deep",
+  "evidence_key": "watchdog_proof_consensus_deep_lane:v1",
+  "reason_key": "runtime_watchdog_proof_consensus_deep_reason_codes:GO:v1",
+  "phases": {
+    "deep": [
+      "bash",
+      "scripts/runtime/run_watchdog_proof_consensus_deep_lane_impl.sh"
+    ]
+  }
+}
