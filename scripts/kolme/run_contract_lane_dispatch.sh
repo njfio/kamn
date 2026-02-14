@@ -83,6 +83,7 @@ resolve_manifest_name() {
     run_local_signed_to_kolme_demo_contract_lane.sh) echo "kolme_local_signed_to_kolme_demo_contract_lane.json" ;;
     run_nonce_broadcast_parity_contract_lane.sh) echo "kolme_nonce_broadcast_parity_contract_lane.json" ;;
     run_notifications_consumer_contract_lane.sh) echo "kolme_notifications_consumer_contract_lane.json" ;;
+    run_onchain_lifecycle_evidence_contract_lane.sh) echo "kolme_onchain_lifecycle_evidence_contract_lane.json" ;;
     run_runtime_commit_adapter_contract_lane.sh) echo "kolme_runtime_commit_adapter_contract_lane.json" ;;
     run_runtime_commit_contract_lane.sh) echo "kolme_runtime_commit_contract_lane.json" ;;
     run_runtime_commit_replay_contract_lane.sh) echo "kolme_runtime_commit_replay_contract_lane.json" ;;

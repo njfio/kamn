@@ -40,6 +40,7 @@ lane_wrappers=(
   "run_local_signed_to_kolme_demo_contract_lane.sh"
   "run_nonce_broadcast_parity_contract_lane.sh"
   "run_notifications_consumer_contract_lane.sh"
+  "run_onchain_lifecycle_evidence_contract_lane.sh"
   "run_runtime_commit_adapter_contract_lane.sh"
   "run_runtime_commit_contract_lane.sh"
   "run_runtime_commit_replay_contract_lane.sh"

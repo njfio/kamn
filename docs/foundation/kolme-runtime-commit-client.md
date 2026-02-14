@@ -392,6 +392,22 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
 - Real-process wrapper lane with lifecycle run intent:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_real_process_contract_lane.sh --mode run --checkout-path /tmp/kolme_fork --lifecycle-mode run --lifecycle-runtime-commit-finality-command "printf 'finality=final\n'" --lifecycle-runtime-commit-finality-max-seconds 15 --lifecycle-runtime-commit-finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt --output-json /tmp/kolme-local-fork-real-process-summary.json`
 
+## On-Chain Lifecycle Aggregate Evidence Bundle (Task #3249)
+
+- Aggregate bundle lane (dry-run default, local-cost bounded):
+  - `bash scripts/kolme/run_onchain_lifecycle_evidence_bundle_lane.sh --mode dry-run --did-report-file /tmp/kolme-did-lifecycle-live-validation-report.json --message-report-file /tmp/kolme-message-proof-live-validation-report.json --runtime-report-file /tmp/kolme-continuous-runtime-live-validation-report.json --output-json /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json`
+- Explicit local-only live composition (run mode):
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_onchain_lifecycle_evidence_bundle_lane.sh --mode run --output-json /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json`
+- Policy checker contract:
+  - `python3 scripts/kolme/check_onchain_lifecycle_evidence_policy.py check --report-file /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-onchain-lifecycle-evidence-policy.json`
+- Contract lane (dry-run policy + tamper drills + docs parity):
+  - `bash scripts/kolme/run_onchain_lifecycle_evidence_contract_lane.sh --output-json /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json --policy-output-json /tmp/kolme-onchain-lifecycle-evidence-policy.json`
+- Deterministic lineage fail-closed markers:
+  - `aggregate_bundle_lineage_mismatch`
+  - `finality_lineage_missing`
+  - `recovery_lineage_missing`
+  - `Regression: #3249`
+
 Then run broader regression:
 
 ```bash

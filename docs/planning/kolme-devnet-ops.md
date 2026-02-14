@@ -1063,6 +1063,29 @@ Operator checkpoints:
   - run-mode execution remains excluded from PR fast-gate workflow routing.
   - contract lane remains dry-run-only and bounded for low-cost docs/command parity enforcement (`Regression: #2134`).
 
+## On-Chain Lifecycle Aggregate Evidence Bundle Lane (Task #3249)
+
+- Deterministic aggregate bundle plan:
+  - `bash scripts/kolme/run_onchain_lifecycle_evidence_bundle_lane.sh --mode dry-run --did-report-file /tmp/kolme-did-lifecycle-live-validation-report.json --message-report-file /tmp/kolme-message-proof-live-validation-report.json --runtime-report-file /tmp/kolme-continuous-runtime-live-validation-report.json --output-json /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json`
+- Wrapper routing remains manifest-backed:
+  - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_onchain_lifecycle_evidence_bundle_lane.sh --resolve-manifest-path`
+  - `scripts/framework/manifests/kolme_onchain_lifecycle_evidence_bundle_lane.json`
+- Explicit local-only aggregate execution:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_onchain_lifecycle_evidence_bundle_lane.sh --mode run --output-json /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json`
+- Policy checker command:
+  - `python3 scripts/kolme/check_onchain_lifecycle_evidence_policy.py check --report-file /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-onchain-lifecycle-evidence-policy.json`
+- Contract lane command:
+  - `bash scripts/kolme/run_onchain_lifecycle_evidence_contract_lane.sh --output-json /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json --policy-output-json /tmp/kolme-onchain-lifecycle-evidence-policy.json`
+- Summary schema:
+  - `kamn.kolme.onchain-lifecycle-evidence-bundle.v1`
+- Policy schema:
+  - `kamn.kolme.onchain-lifecycle-evidence-policy-report.v1`
+- Deterministic lineage fail-closed markers:
+  - `aggregate_bundle_lineage_mismatch`
+  - `finality_lineage_missing`
+  - `recovery_lineage_missing`
+  - `Regression: #3249`
+
 ## Milestone Review Aggregate Evidence Bundle (Issue #3247)
 
 - Build linked release-governance artifacts:

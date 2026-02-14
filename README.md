@@ -1049,6 +1049,29 @@ bash scripts/kolme/run_local_live_node_validation_bundle_contract_lane.sh --outp
 # Regression: #2134
 ```
 
+### Run On-Chain Lifecycle Aggregate Evidence Bundle Lane
+
+```bash
+# deterministic aggregate bundle plan (no command execution)
+bash scripts/kolme/run_onchain_lifecycle_evidence_bundle_lane.sh --mode dry-run --did-report-file /tmp/kolme-did-lifecycle-live-validation-report.json --message-report-file /tmp/kolme-message-proof-live-validation-report.json --runtime-report-file /tmp/kolme-continuous-runtime-live-validation-report.json --output-json /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json
+
+# explicit local-only aggregate execution
+KAMN_KOLME_LOCAL_HEAVY=1 \
+bash scripts/kolme/run_onchain_lifecycle_evidence_bundle_lane.sh --mode run --output-json /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json
+
+# policy checker contract
+python3 scripts/kolme/check_onchain_lifecycle_evidence_policy.py check --report-file /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-onchain-lifecycle-evidence-policy.json
+
+# bounded contract lane (dry-run + tamper drills + docs parity checks)
+bash scripts/kolme/run_onchain_lifecycle_evidence_contract_lane.sh --output-json /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json --policy-output-json /tmp/kolme-onchain-lifecycle-evidence-policy.json
+# schema: kamn.kolme.onchain-lifecycle-evidence-bundle.v1
+# policy schema: kamn.kolme.onchain-lifecycle-evidence-policy-report.v1
+# aggregate_bundle_lineage_mismatch
+# finality_lineage_missing
+# recovery_lineage_missing
+# Regression: #3249
+```
+
 ### Run Local Kolme Fork Process Lifecycle Integration Lane
 
 ```bash

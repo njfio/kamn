@@ -204,6 +204,7 @@ jobs:
           bash scripts/kolme/test_run_local_runtime_commit_live_finality_evidence_contract_lane.sh
           bash scripts/kolme/test_run_local_native_api_parity_live_proof_contract_lane.sh
           bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh
+          bash scripts/kolme/test_run_onchain_lifecycle_evidence_contract_lane.sh
           bash scripts/kolme/test_check_local_kamn_live_runtime_real_node_profile_policy.sh
           bash scripts/kolme/test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh
 

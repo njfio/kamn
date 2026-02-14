@@ -1730,6 +1730,18 @@ JSON`
       - `contracts.rollback_recovery_artifact_lineage_required=true`
       - `contracts.process_lifecycle_rollback_evidence_option=--rollback-evidence-file`
       - `contracts.process_lifecycle_recovery_evidence_option=--recovery-evidence-file`
+  - on-chain lifecycle aggregate bundle run-mode commands remain excluded from ci-fast-gate.
+    - wrapper routing stays manifest-backed:
+      - `scripts/kolme/run_lane_dispatch.sh --lane-wrapper run_onchain_lifecycle_evidence_bundle_lane.sh --resolve-manifest-path`
+      - `scripts/framework/manifests/kolme_onchain_lifecycle_evidence_bundle_lane.json`
+    - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_onchain_lifecycle_evidence_bundle_lane.sh --mode run --output-json /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json`
+    - `python3 scripts/kolme/check_onchain_lifecycle_evidence_policy.py check --report-file /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-onchain-lifecycle-evidence-policy.json`
+    - `bash scripts/kolme/run_onchain_lifecycle_evidence_contract_lane.sh --output-json /tmp/kolme-onchain-lifecycle-evidence-bundle-summary.json --policy-output-json /tmp/kolme-onchain-lifecycle-evidence-policy.json`
+    - aggregate lineage fail-closed markers remain enforced:
+      - `aggregate_bundle_lineage_mismatch`
+      - `finality_lineage_missing`
+      - `recovery_lineage_missing`
+      - `Regression: #3249`
   - local fork profile preflight run-mode commands remain excluded from ci-fast-gate.
     - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_kolme_fork_profile_preflight_lane.sh --mode run --checkout-path /tmp/kolme_fork --max-seconds 45 --output-json /tmp/kolme-local-fork-profile-preflight-summary.json`
     - wrapper routing stays manifest-backed:
