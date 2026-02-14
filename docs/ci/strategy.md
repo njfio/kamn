@@ -207,6 +207,31 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `sqlite_crash_recovery_policy_fast_gate_exclusion_mismatch`
 
+## Runtime Block Reconciliation Partition/Rejoin Live Validation Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_block_reconciliation_partition_rejoin_live.sh --mode dry-run --output-json /tmp/block-reconciliation-partition-rejoin-live-summary.json`
+  - `KAMN_BLOCK_RECONCILIATION_PARTITION_REJOIN_LIVE_OPT_IN=1 bash scripts/runtime/validate_block_reconciliation_partition_rejoin_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/block-reconciliation-partition-rejoin-live-summary.json`
+  - `bash scripts/runtime/check_block_reconciliation_partition_rejoin_live_policy.sh --report-file /tmp/block-reconciliation-partition-rejoin-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/block-reconciliation-partition-rejoin-live-policy.json`
+  - `bash scripts/runtime/validate_block_reconciliation_partition_rejoin_live_contract_lane.sh --output-json /tmp/block-reconciliation-partition-rejoin-live-contract-lane-report.json --policy-output-json /tmp/block-reconciliation-partition-rejoin-live-policy.json`
+  - `bash scripts/runtime/test_validate_block_reconciliation_partition_rejoin_live.sh`
+  - `bash scripts/runtime/test_check_block_reconciliation_partition_rejoin_live_policy.sh`
+  - `bash scripts/runtime/test_validate_block_reconciliation_partition_rejoin_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Partition/rejoin reconciliation evidence contracts:
+  - lane emits deterministic partition marker (`block_reconciliation_partition_status=verified`).
+  - lane emits deterministic rejoin marker (`block_reconciliation_rejoin_status=verified`).
+  - lane emits deterministic canonical convergence marker (`canonical_convergence_status=verified`).
+  - policy checker fails closed on schema/marker drift and decision mismatches.
+- Cost controls:
+  - dry-run mode executes no nested lane commands and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_BLOCK_RECONCILIATION_PARTITION_REJOIN_LIVE_OPT_IN=1`.
+  - run mode executes a single bounded local partition/reconnect contract-lane command for reconciliation evidence.
+  - block reconciliation partition/rejoin run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `block_reconciliation_partition_rejoin_policy_fast_gate_exclusion_mismatch`
+
 ## Process Harness Primitive Contract
 - Entry commands:
   - `python3 scripts/framework/test_process_harness.py`
