@@ -212,6 +212,29 @@ Cost boundary:
 - generation + policy + contract-lane checks are offline, bounded, and PR fast-gate friendly.
 - no local-heavy selector or external metrics backend calls are required.
 
+## Managed-Signer Startup Live Validation Contract Lane
+Managed-signer startup validation for production profile admission and fail-closed reason-code drills is emitted through:
+
+- `scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh`
+- `scripts/kolme/contracts/managed_signer_startup_live_validation_contract_lane.py`
+
+Deterministic contract markers:
+
+- `kamn.kolme.managed-signer-startup-live-validation-contract-report.v1`
+- `deployment_preflight_passed`
+- `checkpoint_failed_signer_provenance_contract`
+- `checkpoint_failed_signer_profile_contract`
+- `checkpoint_failed_signer_rotation_freshness_contract`
+- `signer_key_source_production_managed_external_required`
+- `signer_profile_mismatch`
+- `signer_rotation_epoch_stale`
+- `execution_scope=local-scheduled`
+
+Cost boundary:
+
+- lane runtime is hard-bounded by `--max-seconds`.
+- lane defaults to local/scheduled execution (`ci_fast_gate_eligible=false`) to avoid PR fast-gate runtime cost.
+
 ## Script-Surface Budget Policy
 `scripts/ci/check_script_duplication_budget.py` computes deterministic metrics over non-test shell command surface under `scripts/**/*.sh`:
 

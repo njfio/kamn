@@ -989,6 +989,34 @@ bash scripts/kolme/run_managed_signer_backend_slo_policy_contract_lane.sh --outp
 # managed_signer_backend_replay_ci_fast_gate
 ```
 
+### Managed Signer Startup Live Validation Contract Lane
+
+```bash
+# managed-signer startup live validation contract lane (local/scheduled default)
+bash scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh \
+  --output-json /tmp/managed-signer-startup-live-validation-contract-report.json
+
+# schema: kamn.kolme.managed-signer-startup-live-validation-contract-report.v1
+# status=pass
+# final_decision=GO
+# managed_signer_profile_status=verified
+# managed_signer_missing_key_source_fail_closed_status=verified
+# managed_signer_invalid_profile_fail_closed_status=verified
+# managed_signer_stale_rotation_fail_closed_status=verified
+# managed_signer_reason_code_status=verified
+# execution_scope=local-scheduled
+# baseline pass marker: deployment_preflight_passed
+# missing key-source fail-closed markers
+# checkpoint_failed_signer_provenance_contract
+# signer_key_source_production_managed_external_required
+# invalid signer-profile fail-closed markers
+# checkpoint_failed_signer_profile_contract
+# signer_profile_mismatch
+# stale-rotation fail-closed markers
+# checkpoint_failed_signer_rotation_freshness_contract
+# signer_rotation_epoch_stale
+```
+
 Live Provider Operator Runbook (Issue #2114): `docs/planning/kolme-devnet-ops.md`
 
 ### Run Local Live-Node Validation Bundle Lane

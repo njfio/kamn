@@ -74,6 +74,7 @@ resolve_manifest_name() {
     run_local_kolme_live_api_conformance_contract_lane.sh) echo "kolme_local_kolme_live_api_conformance_contract_lane.json" ;;
     run_managed_signer_backend_slo_policy_contract_lane.sh) echo "kolme_managed_signer_backend_slo_policy_contract_lane.json" ;;
     run_managed_signer_backend_slo_telemetry_contract_lane.sh) echo "kolme_managed_signer_backend_slo_telemetry_contract_lane.json" ;;
+    run_managed_signer_startup_live_validation_contract_lane.sh) echo "kolme_managed_signer_startup_live_validation_contract_lane.json" ;;
     run_local_runtime_commit_live_finality_evidence_contract_lane.sh) echo "kolme_local_runtime_commit_live_finality_evidence_contract_lane.json" ;;
     run_local_native_api_parity_live_proof_contract_lane.sh) echo "kolme_local_native_api_parity_live_proof_contract_lane.json" ;;
     run_local_signed_to_kolme_demo_contract_lane.sh) echo "kolme_local_signed_to_kolme_demo_contract_lane.json" ;;
