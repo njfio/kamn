@@ -4,7 +4,7 @@
 
 What you have is **88K lines of Rust that define the rules** — domain types, state machines, validation guards, contract tests — plus a working HTTP/WebSocket client for Kolme blockchain integration and a localhost TCP demo. What you don't have is anything that runs as a service.
 
-There is **zero async code** in the entire codebase. No tokio, no `async fn`, no `.await`. All networking is synchronous blocking I/O. There is no database. There is no HTTP server. There is no P2P layer. Every store is `InMemory*` with no persistence.
+There is **zero async code** in the entire codebase. No tokio, no `async fn`, no `.await`. All networking is synchronous blocking I/O. There is no database. There is no HTTP server. There is no live libp2p network layer yet; current p2p coverage is deterministic in-memory transport contracts. Every store is `InMemory*` with no persistence.
 
 ---
 
@@ -31,6 +31,11 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/validate_service_api_websocket_live.sh` and `scripts/runtime/test_validate_service_api_websocket_live.sh` (Task #2918, Subtask #2919).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `websocket_upgrade_status=verified`, `fail_closed_status=verified`, `probe_status=verified`.
   - Fail-closed validation confirmed for invalid runtime budget argument: `max-seconds must be an integer`.
+- Phase 3.1 initial slice delivered:
+  - Added deterministic p2p transport contracts in `kamn-core`: `PeerLifecycleTransport`, `InMemoryPeerLifecycleTransport`, `PeerDiscoveryRecord`, `PeerGossipFrame`, and `PeerLifecycleTransportCoordinator` (Task #2921, Subtask #2922).
+  - Added bootstrap/runtime wiring integration so `enable_gossip` toggles explicit `p2p-discovery`/`p2p-gossip-transport` components (or `gossip-transport-disabled` when off).
+  - Added unit/functional/integration/regression coverage in `crates/kamn-core/src/p2p_transport.rs` and `crates/kamn-core/tests/p2p_transport_runtime.rs`.
+  - Architecture documentation added at `docs/architecture/p2p-transport.md`.
 - Phase 4.1 initial slice delivered: `runtime-mode kolme-live` now supports bounded continuous commit/finality execution when paired cycle controls are supplied (`--daemon-max-ticks` and `--daemon-tick-interval-ms`) with fail-closed guardrails for partial declarations (Task #2931, Subtask #2932).
 - Phase 4.1 live validation delivered:
   - Runtime lane: `scripts/kolme/validate_continuous_runtime_commit_live.sh` and `scripts/kolme/test_validate_continuous_runtime_commit_live.sh` (Task #2933, Subtask #2934).

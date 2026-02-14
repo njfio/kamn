@@ -82,6 +82,8 @@ pub mod operator_binding;
 pub mod operator_dashboard_api;
 /// Operator dashboard UI composition contracts and presentation-ready projections.
 pub mod operator_dashboard_ui;
+/// Peer discovery and gossip transport adapter contracts for runtime lifecycle flows.
+pub mod p2p_transport;
 /// Performance target thresholds and benchmark outcome classification contracts.
 pub mod performance_targets;
 /// Redaction request approval, audit-event, and visibility compliance contracts.
@@ -319,6 +321,10 @@ pub use operator_dashboard_ui::{
     OperatorDashboardUi, OperatorDashboardUiError, OperatorDashboardUiModel,
     OperatorEscrowStatusEntry, OperatorMessageTraceEntry, OperatorReputationOverviewEntry,
     OperatorTaskTimelineEntry, ReputationRiskTier,
+};
+pub use p2p_transport::{
+    InMemoryPeerLifecycleTransport, P2pTransportError, PeerDiscoveryRecord, PeerGossipFrame,
+    PeerLifecycleTransport, PeerLifecycleTransportCoordinator,
 };
 pub use performance_targets::{
     evaluate_performance_from_observability, evaluate_performance_run, PerformanceAggregate,
