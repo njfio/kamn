@@ -100,6 +100,7 @@ resolve_manifest_name() {
     run_governance_lifecycle_rollback_contract_lane.sh) echo "governance_lifecycle_rollback_contract_lane.json" ;;
     run_governance_lifecycle_rollback_lane.sh) echo "governance_lifecycle_rollback_lane.json" ;;
     run_governance_simulation_contract_lane.sh) echo "governance_simulation_contract_lane.json" ;;
+    run_quorum_attestation_replay_guard_lane.sh) echo "governance_quorum_attestation_replay_guard_lane.json" ;;
     run_gonogo_evidence_contract_lane.sh) echo "deploy_gonogo_evidence_contract_lane.json" ;;
     run_mainnet_cutover_contract_lane.sh) echo "cutover_mainnet_cutover_contract_lane.json" ;;
     run_quorum_attestation_replay_contract_lane.sh) echo "governance_quorum_attestation_replay_contract_lane.json" ;;
@@ -149,6 +150,7 @@ resolve_manifest_name() {
 
 resolve_phase_name() {
   case "$1" in
+    run_quorum_attestation_replay_guard_lane.sh) echo "run" ;;
     run_governance_lifecycle_rollback_lane.sh) echo "run" ;;
     run_dashboard_shell_determinism_matrix_lane.sh) echo "run" ;;
     run_deployment_slo_rollback_lane.sh) echo "run" ;;
