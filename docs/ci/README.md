@@ -40,3 +40,18 @@ Required metadata fields per ignored test:
 Parser and fixture format contract coverage:
 
 - `scripts/ci/test_ignored_test_inventory_parser_contract.sh`
+
+Fast-gate and selector enforcement:
+
+- `scripts/ci/test_ci_tools.sh` runs ignored-test governance checks in fast and full modes.
+- `scripts/ci/select_targets.sh` routes ignored-test fixture/checker changes through low-cost `ci-doc-contract` scope.
+
+Fail-closed reason-code mapping for stale-ignore/rationale drift includes:
+
+- `unexpected_ignored_tests_present`
+- `baseline_ignored_tests_missing`
+- `ignored_test_metadata_missing`
+- `ignored_test_metadata_stale_entry`
+- `high_priority_tracking_issue_missing`
+- `ignored_test_promotion_criteria_missing`
+- `ignored_test_rationale_stale`
