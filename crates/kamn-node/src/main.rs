@@ -89,6 +89,8 @@ const KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV: &str = "KAMN_KOLME_LIVE_MANAGED_SIG
 const KOLME_LIVE_MANAGED_SIGNER_REQUIRED_ENV: &str = "KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED";
 const KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING_ENV: &str =
     "KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING";
+const KOLME_LIVE_ENV_LOCAL_SIGNER_KEY_SOURCE_FORBIDDEN_REASON_CODE: &str =
+    "production_signer_key_source_env_local_forbidden";
 const KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS_ENV: &str =
     "KAMN_KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS";
 const KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS_DEFAULT: u64 = 5;
@@ -604,6 +606,41 @@ fn enforce_kolme_live_signer_contract_policy(
     )))
 }
 
+fn classify_kolme_live_signer_key_source_policy_violation(
+    strict_signer_contracts_enabled: bool,
+    strict_signer_key_source: Option<&str>,
+    allow_local_signer_testing_override: bool,
+    is_test_build: bool,
+) -> Option<&'static str> {
+    if !strict_signer_contracts_enabled || allow_local_signer_testing_override || is_test_build {
+        return None;
+    }
+    if strict_signer_key_source == Some(KOLME_LIVE_SIGNER_KEY_SOURCE_ENV_LOCAL) {
+        return Some(KOLME_LIVE_ENV_LOCAL_SIGNER_KEY_SOURCE_FORBIDDEN_REASON_CODE);
+    }
+    None
+}
+
+fn enforce_kolme_live_signer_key_source_policy(
+    strict_signer_contracts_enabled: bool,
+    strict_signer_key_source: Option<&str>,
+    allow_local_signer_testing_override: bool,
+    is_test_build: bool,
+) -> Result<(), ConfigError> {
+    let reason_code = classify_kolme_live_signer_key_source_policy_violation(
+        strict_signer_contracts_enabled,
+        strict_signer_key_source,
+        allow_local_signer_testing_override,
+        is_test_build,
+    );
+    if let Some(reason_code) = reason_code {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "--kolme-live-signer-key-source={KOLME_LIVE_SIGNER_KEY_SOURCE_ENV_LOCAL} is not allowed when --kolme-live-strict-signer-contracts is enabled for production-targeted runs; use --kolme-live-signer-key-source={KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL} or set {KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING_ENV}=true for explicit local testing override ({reason_code})"
+        )));
+    }
+    Ok(())
+}
+
 fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
     let NodeCli {
         profile,
@@ -861,6 +898,12 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             } else {
                 None
             };
+            enforce_kolme_live_signer_key_source_policy(
+                kolme_live_strict_signer_contracts,
+                strict_signer_key_source,
+                allow_local_signer_testing_override,
+                cfg!(test),
+            )?;
             let kolme_live_execution =
                 if daemon_max_ticks.is_some() || daemon_tick_interval_ms.is_some() {
                     let max_cycles = daemon_max_ticks

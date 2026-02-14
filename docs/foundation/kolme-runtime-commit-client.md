@@ -279,6 +279,10 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
     - runtime request intent is rendered into native direct-signed Kolme message payload (`pubkey`, `nonce`, `created`, `messages`) before `/broadcast` submission.
     - nonce source contract: `GET /get-next-nonce?pubkey=...` through `KolmeRuntimeCommitHttpTransport`.
     - signer profile selector contract: `KAMN_KOLME_LIVE_SIGNER_PROFILE` with supported values `ops-primary` (default) and `ops-secondary`; unsupported values fail closed.
+    - production key-source policy contract:
+      - when `--kolme-live-strict-signer-contracts` is enabled for production-targeted runs, `--kolme-live-signer-key-source=env-local` is rejected fail-closed with `production_signer_key_source_env_local_forbidden`.
+      - explicit local/debug override remains available via `KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING=true`.
+      - production-targeted strict runs must use `--kolme-live-signer-key-source=managed-external`.
     - private key source contracts: `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX` for `ops-primary`, `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY` for `ops-secondary` (required for selected profile; no fallback private key path).
     - signer adapter contract: `KolmeForkSecp256k1SignerAdapter` owns secp256k1 key decode, recoverable signing, and sign-then-verify compatibility checks against the selected signer key.
     - managed-external backend command contract:
