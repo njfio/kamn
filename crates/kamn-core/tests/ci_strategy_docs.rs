@@ -435,10 +435,15 @@ fn doc_contains_runtime_observability_endpoint_contract_lane_ci_mode_markers() {
     assert!(DOC.contains("## Runtime Observability Endpoint Contract Lane"));
     assert!(DOC.contains("validate_runtime_observability_endpoint_live_contract_lane.sh"));
     assert!(DOC.contains("check_runtime_observability_endpoint_live_policy.sh"));
+    assert!(DOC.contains(
+        "check_observability_endpoint_drift_contract.sh --output-json /tmp/observability-endpoint-drift-report.json"
+    ));
     assert!(DOC.contains("test_validate_runtime_observability_endpoint_live_contract_lane.sh"));
+    assert!(DOC.contains("test_check_observability_endpoint_drift_contract.sh"));
     assert!(DOC.contains("ci-fast-gate mode: fast"));
     assert!(DOC.contains("local-dev mode: local"));
     assert!(DOC.contains("manual-hardened mode: manual"));
+    assert!(DOC.contains("observability_source_marker_missing:legacy_tcp_listener_import"));
 }
 
 #[test]
