@@ -61,8 +61,10 @@ resolve_manifest_name() {
     run_cutover_rollback_contract_lane.sh) echo "cutover_cutover_rollback_contract_lane.json" ;;
     run_dr_evidence_contract_lane.sh) echo "deploy_dr_evidence_contract_lane.json" ;;
     run_backend_session_auth_freshness_contract_lane.sh) echo "dashboard_backend_session_auth_freshness_contract_lane.json" ;;
+    run_backend_session_auth_freshness_lane.sh) echo "dashboard_backend_session_auth_freshness_lane.json" ;;
     run_cross_chain_outbound_intent_contract_lane.sh) echo "bridge_cross_chain_outbound_intent_contract_lane.json" ;;
     run_dashboard_stale_error_budget_contract_lane.sh) echo "dashboard_stale_error_budget_contract_lane.json" ;;
+    run_dashboard_stale_error_budget_lane.sh) echo "dashboard_stale_error_budget_lane.json" ;;
     run_did_registry_contract_lane.sh) echo "did_did_registry_contract_lane.json" ;;
     run_durable_guard_recovery_contract_lane.sh) echo "guard_durable_guard_recovery_contract_lane.json" ;;
     run_federated_did_handshake_contract_lane.sh) echo "did_federated_did_handshake_contract_lane.json" ;;
@@ -143,6 +145,8 @@ resolve_manifest_name() {
 
 resolve_phase_name() {
   case "$1" in
+    run_backend_session_auth_freshness_lane.sh) echo "run" ;;
+    run_dashboard_stale_error_budget_lane.sh) echo "run" ;;
     run_signer_incident_recovery_deep_lane.sh) echo "deep" ;;
     run_signer_provider_deep_lane.sh) echo "deep" ;;
     run_signer_incident_recovery_lane.sh) echo "run" ;;

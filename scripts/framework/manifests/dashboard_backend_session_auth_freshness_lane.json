@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "dashboard.backend_session_auth_freshness.run",
+  "evidence_key": "dashboard_backend_session_auth_freshness_lane:v1",
+  "reason_key": "dashboard_backend_session_auth_freshness_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/dashboard/run_backend_session_auth_freshness_lane_impl.sh"
+    ]
+  }
+}

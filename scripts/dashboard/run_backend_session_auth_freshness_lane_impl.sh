@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+exec python3 "$ROOT_DIR/scripts/dashboard/backend_session_auth_freshness_lane_contract.py" "$@"
