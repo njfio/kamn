@@ -56,4 +56,17 @@ Core delivery validation for Task #2946:
 - `cargo clippy -p kamn-sdk -- -D warnings`
 - `cargo fmt --check`
 
-Live validation lane evidence is tracked separately in Task #2948 / Subtask #2949.
+Live validation lane evidence for Task #2948 / Subtask #2949:
+
+- `bash scripts/sdk/run_rust_sdk_service_client_contract.sh`
+- `bash scripts/sdk/test_run_rust_sdk_service_client_contract.sh`
+- `bash scripts/sdk/validate_rust_sdk_service_client_live.sh`
+- `bash scripts/sdk/test_validate_rust_sdk_service_client_live.sh`
+
+Deterministic live-validation markers:
+
+- `status=pass`
+- `final_decision=GO`
+- `service_client_contract_status=verified`
+- `evidence_bundle_status=verified`
+- `fail_closed_status=verified`
