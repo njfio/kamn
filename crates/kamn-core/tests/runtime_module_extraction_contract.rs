@@ -394,3 +394,59 @@ fn runtime_module_extraction_contract_keeps_snapshot_store_tests_in_new_module()
         );
     }
 }
+
+#[test]
+fn runtime_module_extraction_contract_declares_runtime_network_fault_test_module_routing() {
+    let runtime_tests_rs = read_repo_file("runtime_tests.rs");
+    let declaration = [
+        "#[path = \"runtime_tests_network_fault.rs\"]",
+        "mod runtime_tests_network_fault;",
+    ]
+    .join("\n");
+    assert!(
+        runtime_tests_rs.contains(&declaration),
+        "runtime_tests.rs should route network-fault tests through dedicated module file"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_moves_network_fault_tests_out_of_runtime_tests_rs() {
+    let runtime_tests_rs = read_repo_file("runtime_tests.rs");
+    for legacy_marker in [
+        [
+            "fn unit_network_fault_simulation_",
+            "rejects_zero_queue_capacity()",
+        ]
+        .concat(),
+        [
+            "fn integration_daemon_network_fault_simulation_",
+            "reports_overflow_and_degradation()",
+        ]
+        .concat(),
+        [
+            "fn performance_network_fault_simulation_",
+            "pr_lane_stays_within_budget()",
+        ]
+        .concat(),
+    ] {
+        assert!(
+            !runtime_tests_rs.contains(&legacy_marker),
+            "runtime_tests.rs should not keep inline network-fault test `{legacy_marker}`"
+        );
+    }
+}
+
+#[test]
+fn runtime_module_extraction_contract_keeps_network_fault_tests_in_new_module() {
+    let runtime_tests_network_fault_rs = read_repo_file("runtime_tests_network_fault.rs");
+    for marker in [
+        "fn unit_network_fault_simulation_rejects_zero_queue_capacity()",
+        "fn integration_daemon_network_fault_simulation_reports_overflow_and_degradation()",
+        "fn performance_network_fault_simulation_pr_lane_stays_within_budget()",
+    ] {
+        assert!(
+            runtime_tests_network_fault_rs.contains(marker),
+            "runtime_tests_network_fault.rs should own network-fault test `{marker}`"
+        );
+    }
+}
