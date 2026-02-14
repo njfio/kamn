@@ -93,6 +93,12 @@ if reason_codes != [
     "did_registry_corrupt_payload_rejected",
     "task_operation_snapshot_schema_mismatch_rejected",
     "durable_guard_snapshot_schema_mismatch_rejected",
+    "channel_snapshot_corrupt_payload_rejected",
+    "channel_snapshot_schema_mismatch_rejected",
+    "message_lifecycle_snapshot_corrupt_payload_rejected",
+    "message_lifecycle_snapshot_schema_mismatch_rejected",
+    "runtime_snapshot_corrupt_payload_rejected",
+    "runtime_snapshot_state_version_regression_rejected",
 ]:
     raise SystemExit("expected deterministic fail_closed_reason_codes contract list")
 PY

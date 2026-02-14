@@ -75,6 +75,7 @@ Live validation lane (local realistic dependency path):
 
 - `bash scripts/runtime/validate_persistence_adapters_live.sh --output-json /tmp/persistence-adapters-live.json`
 - `bash scripts/runtime/test_validate_persistence_adapters_live.sh`
+- lane contract now executes bootstrap fail-closed regressions for channel/message/runtime snapshot stores in addition to prior content/DID/task/durable-guard checks.
 - Evidence schema: `kamn.persistence.adapters-live-validation.v1`
 - Required markers:
   - `status=pass`

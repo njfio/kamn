@@ -55,7 +55,13 @@ for marker in \
   "restart_recovery_status=verified" \
   "corruption_fail_closed_status=verified" \
   "incompatible_schema_fail_closed_status=verified" \
-  "execution_scope=local-scheduled"; do
+  "execution_scope=local-scheduled" \
+  "channel_snapshot_corrupt_payload_rejected" \
+  "channel_snapshot_schema_mismatch_rejected" \
+  "message_lifecycle_snapshot_corrupt_payload_rejected" \
+  "message_lifecycle_snapshot_schema_mismatch_rejected" \
+  "runtime_snapshot_corrupt_payload_rejected" \
+  "runtime_snapshot_state_version_regression_rejected"; do
   if ! grep -q -- "$marker" "$PERSISTENCE_DOC"; then
     echo "expected persistence architecture doc marker: $marker" >&2
     exit 1
@@ -64,10 +70,17 @@ done
 
 for marker in \
   "Task #3068, Subtask #3070" \
+  "Task #3078" \
   "scripts/runtime/validate_persistence_adapters_live.sh" \
   "content_storage_corrupt_payload_rejected" \
   "task_operation_snapshot_schema_mismatch_rejected" \
-  "durable_guard_snapshot_schema_mismatch_rejected"; do
+  "durable_guard_snapshot_schema_mismatch_rejected" \
+  "channel_snapshot_corrupt_payload_rejected" \
+  "channel_snapshot_schema_mismatch_rejected" \
+  "message_lifecycle_snapshot_corrupt_payload_rejected" \
+  "message_lifecycle_snapshot_schema_mismatch_rejected" \
+  "runtime_snapshot_corrupt_payload_rejected" \
+  "runtime_snapshot_state_version_regression_rejected"; do
   if ! grep -q -- "$marker" "$ROADMAP_DOC"; then
     echo "expected roadmap marker for persistence live validation: $marker" >&2
     exit 1
@@ -96,6 +109,24 @@ cargo test -p kamn-core --test durable_guard_snapshot_store \
 cargo test -p kamn-core --test task_operation_snapshot \
   task_operation_snapshot_bounded_roundtrip_benchmark_is_fast_for_ci -- --nocapture \
   >"$TMP_DIR/task-snapshot-performance.log" 2>&1
+cargo test -p kamn-core --lib \
+  bootstrap::tests::regression_bootstrap_fails_closed_when_channel_snapshot_payload_is_corrupt -- --nocapture \
+  >"$TMP_DIR/bootstrap-channel-corrupt.log" 2>&1
+cargo test -p kamn-core --lib \
+  bootstrap::tests::regression_bootstrap_fails_closed_when_channel_snapshot_schema_is_incompatible -- --nocapture \
+  >"$TMP_DIR/bootstrap-channel-schema.log" 2>&1
+cargo test -p kamn-core --lib \
+  bootstrap::tests::regression_bootstrap_fails_closed_when_message_snapshot_payload_is_corrupt -- --nocapture \
+  >"$TMP_DIR/bootstrap-message-corrupt.log" 2>&1
+cargo test -p kamn-core --lib \
+  bootstrap::tests::regression_bootstrap_fails_closed_when_message_snapshot_schema_is_incompatible -- --nocapture \
+  >"$TMP_DIR/bootstrap-message-schema.log" 2>&1
+cargo test -p kamn-core --lib \
+  bootstrap::tests::regression_bootstrap_fails_closed_when_runtime_snapshot_payload_is_corrupt -- --nocapture \
+  >"$TMP_DIR/bootstrap-runtime-corrupt.log" 2>&1
+cargo test -p kamn-core --lib \
+  bootstrap::tests::regression_bootstrap_fails_closed_when_runtime_snapshot_state_version_regresses -- --nocapture \
+  >"$TMP_DIR/bootstrap-runtime-version-regression.log" 2>&1
 popd >/dev/null
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
@@ -123,7 +154,13 @@ cat >"$report_json" <<JSON
     "content_storage_corrupt_payload_rejected",
     "did_registry_corrupt_payload_rejected",
     "task_operation_snapshot_schema_mismatch_rejected",
-    "durable_guard_snapshot_schema_mismatch_rejected"
+    "durable_guard_snapshot_schema_mismatch_rejected",
+    "channel_snapshot_corrupt_payload_rejected",
+    "channel_snapshot_schema_mismatch_rejected",
+    "message_lifecycle_snapshot_corrupt_payload_rejected",
+    "message_lifecycle_snapshot_schema_mismatch_rejected",
+    "runtime_snapshot_corrupt_payload_rejected",
+    "runtime_snapshot_state_version_regression_rejected"
   ],
   "elapsed_seconds": $elapsed_seconds
 }
@@ -144,4 +181,4 @@ echo "fail_closed_status=verified"
 echo "evidence_bundle_status=verified"
 echo "execution_scope=local-scheduled"
 echo "performance_budget_status=verified"
-echo "fail_closed_reason_codes=content_storage_corrupt_payload_rejected,did_registry_corrupt_payload_rejected,task_operation_snapshot_schema_mismatch_rejected,durable_guard_snapshot_schema_mismatch_rejected"
+echo "fail_closed_reason_codes=content_storage_corrupt_payload_rejected,did_registry_corrupt_payload_rejected,task_operation_snapshot_schema_mismatch_rejected,durable_guard_snapshot_schema_mismatch_rejected,channel_snapshot_corrupt_payload_rejected,channel_snapshot_schema_mismatch_rejected,message_lifecycle_snapshot_corrupt_payload_rejected,message_lifecycle_snapshot_schema_mismatch_rejected,runtime_snapshot_corrupt_payload_rejected,runtime_snapshot_state_version_regression_rejected"
