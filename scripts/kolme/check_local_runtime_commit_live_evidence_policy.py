@@ -142,6 +142,14 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
     if not isinstance(finality_evidence_marker_present, bool):
         reason_codes.append("finality_evidence_marker_present_invalid")
 
+    if report.get("replay_evidence_marker") != "replay_guard=verified":
+        reason_codes.append("replay_evidence_marker_mismatch")
+    replay_evidence_marker_present = report.get("replay_evidence_marker_present")
+    if not isinstance(replay_evidence_marker_present, bool):
+        reason_codes.append("replay_evidence_marker_present_invalid")
+    if report.get("replay_evidence_contract_version") != "v1":
+        reason_codes.append("replay_evidence_contract_version_mismatch")
+
     finality_enabled = report.get("finality_enabled")
     if not isinstance(finality_enabled, bool):
         reason_codes.append("finality_enabled_invalid")
@@ -278,6 +286,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("run_reason_code_mismatch")
         if mode == "run" and submit_evidence_marker_present is not True:
             reason_codes.append("submit_evidence_marker_missing")
+        if mode == "run" and replay_evidence_marker_present is not True:
+            reason_codes.append("replay_evidence_marker_missing")
         if mode == "run" and request_payload_evidence_marker_present is not True:
             reason_codes.append("request_payload_evidence_marker_missing")
         if mode == "run" and finality_enabled is True and finality_evidence_marker_present is not True:

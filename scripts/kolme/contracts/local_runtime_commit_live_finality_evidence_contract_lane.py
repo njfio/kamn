@@ -130,12 +130,15 @@ def main() -> int:
         "check_local_runtime_commit_live_evidence_policy.py",
         "submit_evidence_marker_present",
         "finality_evidence_marker_present",
+        "replay_evidence_marker_present",
+        "replay_evidence_contract_version",
         "request_payload_evidence_marker_present",
         "request_payload_evidence_artifact_path",
         "submit_evidence_artifact_path",
         "finality_evidence_artifact_path",
         "request_finality_evidence_contract_version",
         "request_finality_evidence_linked",
+        "replay_evidence_marker_missing",
         "request_payload_evidence_marker_missing",
         "finality_evidence_artifact_path_missing",
         "request_finality_evidence_linkage_missing",
@@ -237,7 +240,7 @@ def main() -> int:
             "run",
             "--skip-preflight",
             "--live-command",
-            "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\\nintegration_kolme_fork_live_node_submit_reaches_endpoint\\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\\n'",
+            "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\\nintegration_kolme_fork_live_node_submit_reaches_endpoint\\nreplay_guard=verified\\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\\n'",
             "--finality-command",
             "printf 'finality=final\\n'",
             "--finality-retry-max-attempts",
@@ -330,6 +333,15 @@ def main() -> int:
     if summary_payload.get("finality_evidence_marker_present") is not True:
         print("expected finality_evidence_marker_present=true", file=sys.stderr)
         return 1
+    if summary_payload.get("replay_evidence_marker") != "replay_guard=verified":
+        print("expected replay_evidence_marker", file=sys.stderr)
+        return 1
+    if summary_payload.get("replay_evidence_marker_present") is not True:
+        print("expected replay_evidence_marker_present=true", file=sys.stderr)
+        return 1
+    if summary_payload.get("replay_evidence_contract_version") != "v1":
+        print("expected replay_evidence_contract_version=v1", file=sys.stderr)
+        return 1
     if summary_payload.get("request_payload_evidence_marker") != "native_payload_pubkey_nonce_messages":
         print("expected request_payload_evidence_marker", file=sys.stderr)
         return 1
@@ -387,6 +399,7 @@ def main() -> int:
         linkage_drift_summary = dict(summary_payload)
         linkage_drift_summary["request_finality_evidence_linked"] = False
         linkage_drift_summary["finality_evidence_artifact_path"] = "/tmp/missing-runtime-finality-artifact.txt"
+        linkage_drift_summary["replay_evidence_marker_present"] = False
         linkage_drift_summary["request_payload_evidence_marker_present"] = False
         linkage_drift_summary_file.write_text(
             json.dumps(linkage_drift_summary, sort_keys=True, indent=2) + "\n",
@@ -437,6 +450,12 @@ def main() -> int:
         if "request_payload_evidence_marker_missing" not in linkage_drift_reason_codes:
             print(
                 "expected request_payload_evidence_marker_missing in linkage drift policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if "replay_evidence_marker_missing" not in linkage_drift_reason_codes:
+            print(
+                "expected replay_evidence_marker_missing in linkage drift policy output",
                 file=sys.stderr,
             )
             return 1

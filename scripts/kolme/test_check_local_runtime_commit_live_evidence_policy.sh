@@ -47,7 +47,7 @@ KAMN_KOLME_LOCAL_HEAVY=1 \
   bash "$RUNNER" \
     --mode run \
     --skip-preflight \
-    --live-command "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\nintegration_kolme_fork_live_node_submit_reaches_endpoint\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\n'" \
+    --live-command "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\nintegration_kolme_fork_live_node_submit_reaches_endpoint\nreplay_guard=verified\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\n'" \
     --finality-command "printf 'finality=final\n'" \
     --finality-retry-max-attempts 2 \
     --finality-retry-backoff-seconds 0 \
@@ -79,6 +79,12 @@ if summary.get("provider_signing_curve_contract") != "secp256k1":
     raise SystemExit("expected provider_signing_curve_contract=secp256k1 in live runtime summary")
 if summary.get("provider_signing_profile_contract_version") != "v1":
     raise SystemExit("expected provider_signing_profile_contract_version=v1 in live runtime summary")
+if summary.get("replay_evidence_marker") != "replay_guard=verified":
+    raise SystemExit("expected replay_evidence_marker in live runtime summary")
+if summary.get("replay_evidence_marker_present") is not True:
+    raise SystemExit("expected replay_evidence_marker_present=true in live runtime summary")
+if summary.get("replay_evidence_contract_version") != "v1":
+    raise SystemExit("expected replay_evidence_contract_version=v1 in live runtime summary")
 PY
 
 python3 - "$TMP_REPORT" "$TMP_TIMEOUT_REPORT" <<'PY'

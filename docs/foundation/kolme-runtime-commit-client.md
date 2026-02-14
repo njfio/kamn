@@ -311,9 +311,10 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
 - Runtime live lane (submit + optional finality):
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --base-url http://127.0.0.1:3000 --provider-hint kolme-fork-local --max-seconds 90 --preflight-max-seconds 10 --finality-command "printf 'finality=final\n'" --finality-max-seconds 15 --finality-retry-max-attempts 2 --finality-retry-backoff-seconds 0 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt --finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt`
   - `bash scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh --output-json /tmp/kolme-local-runtime-commit-live-summary.json --policy-output-json /tmp/kolme-local-runtime-commit-live-policy.json`
-  - evidence markers `submit_evidence_marker_present` and `finality_evidence_marker_present` must both pass for GO decisions in run mode.
+  - evidence markers `submit_evidence_marker_present`, `finality_evidence_marker_present`, and `replay_evidence_marker_present` must all pass for GO decisions in run mode.
+  - replay marker contract `replay_evidence_contract_version` must pass for GO decisions in run mode.
   - request/finality linkage markers `request_payload_evidence_marker_present`, `request_payload_evidence_artifact_path`, `submit_evidence_artifact_path`, `finality_evidence_artifact_path`, `request_finality_evidence_contract_version`, and `request_finality_evidence_linked` must pass for GO decisions in run mode.
-  - linkage drift fails closed with deterministic reason codes: `request_payload_evidence_marker_missing`, `finality_evidence_artifact_path_missing`, `request_finality_evidence_linkage_missing`.
+  - linkage drift fails closed with deterministic reason codes: `request_payload_evidence_marker_missing`, `replay_evidence_marker_missing`, `finality_evidence_artifact_path_missing`, `request_finality_evidence_linkage_missing`.
   - bounded finality retry controls: `--finality-retry-max-attempts`, `--finality-retry-backoff-seconds`.
   - finality retry evidence markers: `finality_retry_contract_version`, `finality_retry_max_attempts`, `finality_retry_backoff_seconds`, `finality_retry_attempts_used`, `finality_retry_exhausted`, `finality_retry_failure_class`.
   - retry exhaustion reason codes are deterministic: `live_finality_retry_exhausted_timeout`, `live_finality_retry_exhausted_failed`.
