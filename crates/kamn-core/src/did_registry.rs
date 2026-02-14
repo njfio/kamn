@@ -1,5 +1,9 @@
 //! DID registry lifecycle, idempotent submission, and finality tracking contracts.
 
+use crate::kolme_runtime_commit::{
+    KolmeRuntimeCommitClient, KolmeRuntimeCommitError, KolmeRuntimeCommitOutcome,
+    KolmeRuntimeCommitRequest,
+};
 use crate::{AgentDid, DidDocument};
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
@@ -12,6 +16,7 @@ const DID_CHAIN_ADAPTER_SCHEMA_VERSION: &str = "kamn.did.chain-adapter.v1";
 type SubmissionReceiptIndex = BTreeMap<String, DidChainSubmissionReceipt>;
 type SubmissionRejectIndex = BTreeMap<String, String>;
 type PersistedDidChainAdapterState = (SubmissionReceiptIndex, SubmissionRejectIndex);
+type DidMutationSubmissionKey = (AgentDid, u64);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct DidRegistryRecord {
@@ -162,6 +167,40 @@ pub struct DidChainSubmissionResult {
     pub outcome: DidChainSubmissionOutcome,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Chain adapter request for DID lifecycle mutation submission.
+pub struct DidLifecycleChainSubmissionRequest {
+    /// Target DID for lifecycle submission.
+    pub did: AgentDid,
+    /// Actor DID that initiated the lifecycle mutation.
+    pub actor_did: String,
+    /// Monotonic mutation nonce.
+    pub nonce: u64,
+    /// Lifecycle action label associated with submission.
+    pub action: &'static str,
+    /// Deterministic idempotency key for lifecycle submission.
+    pub idempotency_key: String,
+    /// Deterministic lifecycle payload hash marker.
+    pub payload_hash: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Result envelope for registry + chain adapter lifecycle mutation flow.
+pub struct DidLifecycleChainSubmissionResult {
+    /// DID processed by submission flow.
+    pub did: AgentDid,
+    /// Mutation nonce processed by submission flow.
+    pub nonce: u64,
+    /// Idempotency key used for this flow.
+    pub idempotency_key: String,
+    /// Retry classification returned by registry.
+    pub retry_class: DidSubmissionRetryClass,
+    /// Provider/registry submission outcome.
+    pub outcome: DidChainSubmissionOutcome,
+    /// Lifecycle evidence emitted by mutation state machine.
+    pub evidence: DidLifecycleMutationEvidence,
+}
+
 /// Chain adapter abstraction for DID registration backends.
 pub trait DidRegistrationChainAdapter {
     /// Submits a DID registration request via backing provider.
@@ -169,6 +208,74 @@ pub trait DidRegistrationChainAdapter {
         &mut self,
         request: &DidChainSubmissionRequest,
     ) -> Result<DidChainSubmissionOutcome, DidRegistryError>;
+}
+
+/// Chain adapter abstraction for DID lifecycle mutation backends.
+pub trait DidLifecycleChainAdapter {
+    /// Submits a DID lifecycle mutation request via backing provider.
+    fn submit_lifecycle_mutation(
+        &mut self,
+        request: &DidLifecycleChainSubmissionRequest,
+    ) -> Result<DidChainSubmissionOutcome, DidRegistryError>;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Kolme-backed DID lifecycle chain adapter.
+pub struct KolmeDidLifecycleChainAdapter<C> {
+    client: C,
+    state_root_prefix: String,
+}
+
+impl<C> KolmeDidLifecycleChainAdapter<C> {
+    /// Creates a Kolme-backed lifecycle adapter.
+    pub fn new(client: C, state_root_prefix: &str) -> Result<Self, DidRegistryError> {
+        if state_root_prefix.trim().is_empty() {
+            return Err(DidRegistryError::ChainAdapterSubmitFailed {
+                context: "state_root_prefix",
+                reason: "must not be empty".to_owned(),
+            });
+        }
+        Ok(Self {
+            client,
+            state_root_prefix: state_root_prefix.to_owned(),
+        })
+    }
+
+    fn runtime_request_for_lifecycle(
+        &self,
+        request: &DidLifecycleChainSubmissionRequest,
+    ) -> Result<KolmeRuntimeCommitRequest, DidRegistryError> {
+        let operation_id = format!(
+            "did-lifecycle:{}:{}:{}",
+            request.did.method_specific_id(),
+            request.action,
+            request.nonce
+        );
+        let state_root = format!("{}:{}", self.state_root_prefix, request.nonce);
+        KolmeRuntimeCommitRequest::deterministic(
+            operation_id.as_str(),
+            state_root.as_str(),
+            request.did.as_str(),
+            request.nonce,
+            request.payload_hash.as_str(),
+        )
+        .map_err(Self::map_runtime_commit_error)
+    }
+
+    fn map_runtime_commit_error(error: KolmeRuntimeCommitError) -> DidRegistryError {
+        match error {
+            KolmeRuntimeCommitError::InvalidRequest { field, reason } => {
+                DidRegistryError::ChainAdapterSubmitFailed {
+                    context: field,
+                    reason: reason.to_owned(),
+                }
+            }
+            _ => DidRegistryError::ChainAdapterSubmitFailed {
+                context: "kolme_runtime_commit",
+                reason: error.to_string(),
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -217,6 +324,35 @@ impl DidRegistrationChainAdapter for InMemoryDidRegistrationChainAdapter {
                 "did-tx:{}:{}",
                 request.did.method_specific_id(),
                 request.idempotency_key.len()
+            ),
+        };
+        self.receipts_by_key
+            .insert(request.idempotency_key.clone(), receipt.clone());
+        Ok(DidChainSubmissionOutcome::Submitted(receipt))
+    }
+}
+
+impl DidLifecycleChainAdapter for InMemoryDidRegistrationChainAdapter {
+    fn submit_lifecycle_mutation(
+        &mut self,
+        request: &DidLifecycleChainSubmissionRequest,
+    ) -> Result<DidChainSubmissionOutcome, DidRegistryError> {
+        if let Some(reason) = self.rejected_reasons_by_key.get(&request.idempotency_key) {
+            return Ok(DidChainSubmissionOutcome::Rejected {
+                reason: reason.clone(),
+            });
+        }
+
+        if let Some(existing) = self.receipts_by_key.get(&request.idempotency_key) {
+            return Ok(DidChainSubmissionOutcome::Duplicate(existing.clone()));
+        }
+
+        let receipt = DidChainSubmissionReceipt {
+            provider: self.provider.clone(),
+            transaction_id: format!(
+                "did-lifecycle-tx:{}:{}",
+                request.did.method_specific_id(),
+                request.nonce
             ),
         };
         self.receipts_by_key
@@ -306,12 +442,80 @@ impl DidRegistrationChainAdapter for FileDidRegistrationChainAdapter {
     }
 }
 
+impl DidLifecycleChainAdapter for FileDidRegistrationChainAdapter {
+    fn submit_lifecycle_mutation(
+        &mut self,
+        request: &DidLifecycleChainSubmissionRequest,
+    ) -> Result<DidChainSubmissionOutcome, DidRegistryError> {
+        if let Some(reason) = self.rejected_reasons_by_key.get(&request.idempotency_key) {
+            return Ok(DidChainSubmissionOutcome::Rejected {
+                reason: reason.clone(),
+            });
+        }
+
+        if let Some(existing) = self.receipts_by_key.get(&request.idempotency_key) {
+            return Ok(DidChainSubmissionOutcome::Duplicate(existing.clone()));
+        }
+
+        let receipt = DidChainSubmissionReceipt {
+            provider: self.provider.clone(),
+            transaction_id: format!(
+                "did-lifecycle-tx:{}:{}",
+                request.did.method_specific_id(),
+                request.nonce
+            ),
+        };
+        self.receipts_by_key
+            .insert(request.idempotency_key.clone(), receipt.clone());
+        persist_did_chain_adapter_file(
+            &self.path,
+            &self.receipts_by_key,
+            &self.rejected_reasons_by_key,
+        )?;
+        Ok(DidChainSubmissionOutcome::Submitted(receipt))
+    }
+}
+
+impl<C: KolmeRuntimeCommitClient> DidLifecycleChainAdapter for KolmeDidLifecycleChainAdapter<C> {
+    fn submit_lifecycle_mutation(
+        &mut self,
+        request: &DidLifecycleChainSubmissionRequest,
+    ) -> Result<DidChainSubmissionOutcome, DidRegistryError> {
+        let runtime_request = self.runtime_request_for_lifecycle(request)?;
+        let outcome = self
+            .client
+            .submit_commit(&runtime_request)
+            .map_err(Self::map_runtime_commit_error)?;
+        match outcome {
+            KolmeRuntimeCommitOutcome::Submitted(receipt) => Ok(
+                DidChainSubmissionOutcome::Submitted(DidChainSubmissionReceipt {
+                    provider: receipt.provider,
+                    transaction_id: receipt.commit_id,
+                }),
+            ),
+            KolmeRuntimeCommitOutcome::Duplicate(receipt) => Ok(
+                DidChainSubmissionOutcome::Duplicate(DidChainSubmissionReceipt {
+                    provider: receipt.provider,
+                    transaction_id: receipt.commit_id,
+                }),
+            ),
+            KolmeRuntimeCommitOutcome::Rejected { reason } => {
+                Ok(DidChainSubmissionOutcome::Rejected { reason })
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 /// DID registry state machine and submission/finality index.
 pub struct DidRegistry {
     records: HashMap<AgentDid, DidRegistryRecord>,
     submission_keys_by_did: HashMap<AgentDid, String>,
     finality_by_did: HashMap<AgentDid, DidSubmissionFinalityRecord>,
+    lifecycle_submission_keys_by_did_nonce: HashMap<DidMutationSubmissionKey, String>,
+    lifecycle_finality_by_did_nonce: HashMap<DidMutationSubmissionKey, DidSubmissionFinalityRecord>,
+    lifecycle_evidence_by_did_nonce:
+        HashMap<DidMutationSubmissionKey, DidLifecycleMutationEvidence>,
     last_mutation_nonce_by_did: HashMap<AgentDid, u64>,
 }
 
@@ -499,6 +703,109 @@ impl DidRegistry {
         })
     }
 
+    /// Computes deterministic idempotency key for lifecycle mutation request.
+    pub fn idempotency_key_for_lifecycle_mutation(
+        &self,
+        request: &DidLifecycleMutationRequest,
+    ) -> Result<String, DidRegistryError> {
+        if request.nonce == 0 {
+            return Err(DidRegistryError::InvalidMutationNonce {
+                did: request.did.as_str().to_owned(),
+                nonce: request.nonce,
+            });
+        }
+        let action = request.action.label();
+        let action_fingerprint = Self::lifecycle_action_fingerprint(&request.did, &request.action)?;
+        Ok(format!(
+            "did-lifecycle:{}:{}:{}:{}:{}",
+            request.did.as_str(),
+            request.actor_did,
+            request.nonce,
+            action,
+            action_fingerprint
+        ))
+    }
+
+    /// Submits lifecycle mutation through chain adapter with deterministic retry classification.
+    pub fn submit_lifecycle_mutation_via_chain_adapter<A: DidLifecycleChainAdapter>(
+        &mut self,
+        adapter: &mut A,
+        request: DidLifecycleMutationRequest,
+    ) -> Result<DidLifecycleChainSubmissionResult, DidRegistryError> {
+        let did = request.did.clone();
+        let nonce = request.nonce;
+        let idempotency_key = self.idempotency_key_for_lifecycle_mutation(&request)?;
+        let submission_key = (did.clone(), nonce);
+        let retry_class =
+            self.classify_lifecycle_retry_by_key(&submission_key, idempotency_key.as_str());
+        if retry_class == DidSubmissionRetryClass::ConflictNoRetry {
+            let existing_key = self
+                .lifecycle_submission_keys_by_did_nonce
+                .get(&submission_key)
+                .cloned()
+                .unwrap_or_default();
+            return Err(DidRegistryError::ConflictingSubmissionIdempotencyKey {
+                did: did.as_str().to_owned(),
+                existing_key,
+                provided_key: idempotency_key,
+            });
+        }
+
+        let evidence = match retry_class {
+            DidSubmissionRetryClass::NewSubmission => {
+                let value = self.apply_lifecycle_mutation(request.clone())?;
+                self.lifecycle_submission_keys_by_did_nonce
+                    .insert(submission_key.clone(), idempotency_key.clone());
+                self.lifecycle_evidence_by_did_nonce
+                    .insert(submission_key.clone(), value.clone());
+                value
+            }
+            DidSubmissionRetryClass::RetryableInFlight
+            | DidSubmissionRetryClass::FinalizedNoRetry => self
+                .lifecycle_evidence_by_did_nonce
+                .get(&submission_key)
+                .cloned()
+                .ok_or_else(|| DidRegistryError::UnknownSubmissionIdempotencyKey {
+                    did: did.as_str().to_owned(),
+                    idempotency_key: idempotency_key.clone(),
+                })?,
+            DidSubmissionRetryClass::ConflictNoRetry => {
+                return Err(DidRegistryError::ConflictingSubmissionIdempotencyKey {
+                    did: did.as_str().to_owned(),
+                    existing_key: self
+                        .lifecycle_submission_keys_by_did_nonce
+                        .get(&submission_key)
+                        .cloned()
+                        .unwrap_or_default(),
+                    provided_key: idempotency_key,
+                });
+            }
+        };
+
+        let payload_hash = self.payload_hash_for_lifecycle_mutation(&request)?;
+        let outcome = if retry_class == DidSubmissionRetryClass::FinalizedNoRetry {
+            DidChainSubmissionOutcome::FinalizedNoOp
+        } else {
+            adapter.submit_lifecycle_mutation(&DidLifecycleChainSubmissionRequest {
+                did: did.clone(),
+                actor_did: request.actor_did,
+                nonce,
+                action: request.action.label(),
+                idempotency_key: idempotency_key.clone(),
+                payload_hash,
+            })?
+        };
+
+        Ok(DidLifecycleChainSubmissionResult {
+            did,
+            nonce,
+            idempotency_key,
+            retry_class,
+            outcome,
+            evidence,
+        })
+    }
+
     /// Records finality update for prior register submission.
     pub fn record_register_finality(
         &mut self,
@@ -567,6 +874,86 @@ impl DidRegistry {
     /// Returns most recent finality record for DID, if present.
     pub fn register_finality(&self, did: &AgentDid) -> Option<&DidSubmissionFinalityRecord> {
         self.finality_by_did.get(did)
+    }
+
+    /// Records finality update for prior lifecycle mutation submission.
+    pub fn record_lifecycle_finality(
+        &mut self,
+        did: &AgentDid,
+        nonce: u64,
+        idempotency_key: &str,
+        sequence: u64,
+        status: DidSubmissionFinalityStatus,
+        receipt: &str,
+    ) -> Result<(), DidRegistryError> {
+        let mutation_key = (did.clone(), nonce);
+        let Some(expected_key) = self
+            .lifecycle_submission_keys_by_did_nonce
+            .get(&mutation_key)
+        else {
+            return Err(DidRegistryError::UnknownSubmissionIdempotencyKey {
+                did: did.as_str().to_owned(),
+                idempotency_key: idempotency_key.to_owned(),
+            });
+        };
+        if expected_key != idempotency_key {
+            return Err(DidRegistryError::UnknownSubmissionIdempotencyKey {
+                did: did.as_str().to_owned(),
+                idempotency_key: idempotency_key.to_owned(),
+            });
+        }
+
+        if let Some(current) = self.lifecycle_finality_by_did_nonce.get(&mutation_key) {
+            if sequence < current.sequence {
+                return Err(DidRegistryError::StaleFinalityUpdate {
+                    did: did.as_str().to_owned(),
+                    current_sequence: current.sequence,
+                    attempted_sequence: sequence,
+                });
+            }
+
+            if sequence == current.sequence {
+                if current.idempotency_key == idempotency_key
+                    && current.status == status
+                    && current.receipt == receipt
+                {
+                    return Ok(());
+                }
+
+                return Err(DidRegistryError::ConflictingFinalityUpdate {
+                    did: did.as_str().to_owned(),
+                    sequence,
+                });
+            }
+
+            if current.idempotency_key != idempotency_key {
+                return Err(DidRegistryError::ConflictingFinalityUpdate {
+                    did: did.as_str().to_owned(),
+                    sequence,
+                });
+            }
+        }
+
+        self.lifecycle_finality_by_did_nonce.insert(
+            mutation_key,
+            DidSubmissionFinalityRecord {
+                idempotency_key: idempotency_key.to_owned(),
+                sequence,
+                status,
+                receipt: receipt.to_owned(),
+            },
+        );
+        Ok(())
+    }
+
+    /// Returns most recent lifecycle finality record for DID nonce, if present.
+    pub fn lifecycle_finality(
+        &self,
+        did: &AgentDid,
+        nonce: u64,
+    ) -> Option<&DidSubmissionFinalityRecord> {
+        self.lifecycle_finality_by_did_nonce
+            .get(&(did.clone(), nonce))
     }
 
     /// Applies lifecycle mutation with nonce and actor authorization checks.
@@ -693,6 +1080,26 @@ impl DidRegistry {
         DidSubmissionRetryClass::RetryableInFlight
     }
 
+    fn classify_lifecycle_retry_by_key(
+        &self,
+        key: &DidMutationSubmissionKey,
+        idempotency_key: &str,
+    ) -> DidSubmissionRetryClass {
+        let Some(existing_key) = self.lifecycle_submission_keys_by_did_nonce.get(key) else {
+            return DidSubmissionRetryClass::NewSubmission;
+        };
+
+        if existing_key != idempotency_key {
+            return DidSubmissionRetryClass::ConflictNoRetry;
+        }
+
+        if self.lifecycle_finality_by_did_nonce.contains_key(key) {
+            return DidSubmissionRetryClass::FinalizedNoRetry;
+        }
+
+        DidSubmissionRetryClass::RetryableInFlight
+    }
+
     fn validate_document_did(
         did: &AgentDid,
         document: &DidDocument,
@@ -731,6 +1138,67 @@ impl DidRegistry {
         }
 
         Ok(())
+    }
+
+    fn lifecycle_action_fingerprint(
+        did: &AgentDid,
+        action: &DidLifecycleMutationAction,
+    ) -> Result<String, DidRegistryError> {
+        match action {
+            DidLifecycleMutationAction::Rotate { document }
+            | DidLifecycleMutationAction::Recover { document } => {
+                Self::validate_document_did(did, document)?;
+                let capability_fingerprint = document.metadata.capabilities.join(",");
+                let verification_fingerprint = document
+                    .verification_method
+                    .iter()
+                    .map(|verification| {
+                        format!(
+                            "{}:{}:{}",
+                            verification.id,
+                            verification.type_name,
+                            verification.public_key_multibase
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("|");
+                let service_fingerprint = document
+                    .service
+                    .iter()
+                    .map(|service| {
+                        format!(
+                            "{}:{}:{}",
+                            service.id, service.type_name, service.service_endpoint
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("|");
+                Ok(format!(
+                    "{}:{}:{}:{}:{}",
+                    document.metadata.agent_type,
+                    document.metadata.model_family,
+                    capability_fingerprint,
+                    verification_fingerprint,
+                    service_fingerprint
+                ))
+            }
+            DidLifecycleMutationAction::Revoke => Ok("revoke".to_owned()),
+        }
+    }
+
+    fn payload_hash_for_lifecycle_mutation(
+        &self,
+        request: &DidLifecycleMutationRequest,
+    ) -> Result<String, DidRegistryError> {
+        let fingerprint = Self::lifecycle_action_fingerprint(&request.did, &request.action)?;
+        Ok(format!(
+            "did-lifecycle-payload:{}:{}:{}:{}:{}",
+            request.did.as_str(),
+            request.actor_did,
+            request.nonce,
+            request.action.label(),
+            fingerprint
+        ))
     }
 }
 
@@ -816,6 +1284,13 @@ pub enum DidRegistryError {
         /// Revocation state before action.
         from_revoked: bool,
     },
+    /// Chain adapter submission failed while preparing or submitting payload.
+    ChainAdapterSubmitFailed {
+        /// Failure context field.
+        context: &'static str,
+        /// Failure reason.
+        reason: String,
+    },
     /// Filesystem I/O failed while persisting chain adapter state.
     PersistenceIo(String),
     /// Persisted chain adapter payload was invalid.
@@ -842,6 +1317,7 @@ impl DidRegistryError {
             Self::InvalidLifecycleMutationTransition { .. } => {
                 "did_lifecycle_mutation_invalid_transition"
             }
+            Self::ChainAdapterSubmitFailed { .. } => "did_chain_adapter_submit_failed",
             Self::PersistenceIo(_) => "did_registry_persistence_io",
             Self::PersistenceInvalidPayload(_) => "did_registry_persistence_invalid_payload",
         }
@@ -919,6 +1395,9 @@ impl fmt::Display for DidRegistryError {
                     f,
                     "invalid lifecycle mutation transition for did {did}; action {action}, revoked={from_revoked}"
                 )
+            }
+            Self::ChainAdapterSubmitFailed { context, reason } => {
+                write!(f, "did chain adapter submission failed for {context}: {reason}")
             }
             Self::PersistenceIo(value) => write!(f, "did registry persistence I/O error: {value}"),
             Self::PersistenceInvalidPayload(value) => {

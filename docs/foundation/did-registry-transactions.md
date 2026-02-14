@@ -1,4 +1,4 @@
-# DID Registry Transactions (Issues #110, #685)
+# DID Registry Transactions (Issues #110, #685, #2936)
 
 This document defines the first implementation slice for DID
 register/resolve/update/revoke transaction behavior.
@@ -39,11 +39,27 @@ register/resolve/update/revoke transaction behavior.
 - `DidLifecycleMutationRequest` includes `did`, `actor_did`, `nonce`, and `action`.
 - Successful mutation emits `DidLifecycleMutationEvidence` with
   `reason_code=did_lifecycle_mutation_allowed`.
+- `idempotency_key_for_lifecycle_mutation(request)` derives deterministic lifecycle submission keys.
+- `submit_lifecycle_mutation_via_chain_adapter(adapter, request)` executes lifecycle submission with retry classes:
+  - `NewSubmission`
+  - `RetryableInFlight`
+  - `FinalizedNoRetry`
+  - `ConflictNoRetry`
+- lifecycle chain adapter request contract:
+  - `DidLifecycleChainSubmissionRequest { did, actor_did, nonce, action, idempotency_key, payload_hash }`
+- lifecycle finality tracking:
+  - `record_lifecycle_finality(did, nonce, key, sequence, status, receipt)`
+  - `lifecycle_finality(did, nonce)`
+- Kolme-backed lifecycle integration path:
+  - `KolmeDidLifecycleChainAdapter`
+  - maps lifecycle mutation submissions into deterministic `KolmeRuntimeCommitRequest` payloads
+  - maps provider outcomes back into DID chain submission outcomes
 - Lifecycle mutation reason codes are deterministic:
   - `did_lifecycle_mutation_nonce_invalid`
   - `did_lifecycle_mutation_nonce_replay`
   - `did_lifecycle_mutation_unauthorized_actor`
   - `did_lifecycle_mutation_invalid_transition`
+  - `did_chain_adapter_submit_failed`
 
 ## Validation Rules
 - The DID document `id` must match the target `did`.
@@ -51,6 +67,7 @@ register/resolve/update/revoke transaction behavior.
 - retry classification and finality checks are deterministic across duplicate/stale/conflict outcomes (`Regression: #678`).
 - chain adapter submission contract remains deterministic through `InMemoryDidRegistrationChainAdapter` for low-cost CI verification.
 - Lifecycle mutation nonce replay, unauthorized actor mutation, and invalid revoke/recover transitions fail closed (`Regression: #889`).
+- Lifecycle mutation submission rejects conflicting payloads for same DID+nonce idempotency window (`Regression: #2936`).
 
 ## Local Validation
 Run from repository root:
@@ -67,6 +84,9 @@ cargo test -p kamn-core --test did_registry_transactions -- regression_register_
 cargo test -p kamn-core --test did_registry_transactions -- functional_lifecycle_rotate_mutation_updates_document_and_emits_allowed_reason_code
 cargo test -p kamn-core --test did_registry_transactions -- integration_lifecycle_revoke_then_recover_restores_active_resolution
 cargo test -p kamn-core --test did_registry_transactions -- regression_lifecycle_replayed_or_unauthorized_mutation_fails_closed
+cargo test -p kamn-core --test did_registry_transactions -- functional_lifecycle_chain_submission_through_kolme_adapter_returns_typed_outcome
+cargo test -p kamn-core --test did_registry_transactions -- integration_lifecycle_chain_submission_allows_retry_without_reapplying_mutation
+cargo test -p kamn-core --test did_registry_transactions -- regression_lifecycle_chain_submission_rejects_conflicting_same_nonce_payload
 bash scripts/did/run_did_registry_contract_lane.sh
 cargo test -p kamn-core
 ```
