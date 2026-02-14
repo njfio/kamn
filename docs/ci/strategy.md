@@ -133,6 +133,26 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `full_supervisor_invariant_violation:full_supervisor_bootstrap_component_order_mismatch`
   - `full_supervisor_invariant_violation:full_supervisor_stop_unknown_completion_reason`
 
+## Runtime Local Full-Mode Live Validation Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_local_full_runtime_live.sh --mode dry-run --output-json /tmp/local-full-runtime-live-summary.json`
+  - `KAMN_LOCAL_FULL_RUNTIME_LIVE_OPT_IN=1 bash scripts/runtime/validate_local_full_runtime_live.sh --mode run --output-json /tmp/local-full-runtime-live-summary.json`
+  - `bash scripts/runtime/check_local_full_runtime_live_policy.sh --report-file /tmp/local-full-runtime-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-full-runtime-live-policy.json`
+  - `bash scripts/runtime/validate_local_full_runtime_live_contract_lane.sh --output-json /tmp/local-full-runtime-live-contract-lane-report.json --policy-output-json /tmp/local-full-runtime-live-policy.json`
+  - `bash scripts/runtime/test_validate_local_full_runtime_live.sh`
+  - `bash scripts/runtime/test_check_local_full_runtime_live_policy.sh`
+  - `bash scripts/runtime/test_validate_local_full_runtime_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - dry-run mode executes no nested `cargo test` commands and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_LOCAL_FULL_RUNTIME_LIVE_OPT_IN=1`.
+  - run mode executes only two targeted full-runtime integration tests with bounded per-command budgets.
+  - local full-runtime run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `local_full_runtime_policy_fast_gate_exclusion_mismatch`
+
 ## Runtime Observability Endpoint Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_runtime_observability_endpoint_live_contract_lane.sh --output-json /tmp/runtime-observability-endpoint-contract-lane-report.json --policy-output-json /tmp/runtime-observability-endpoint-policy-report.json`
