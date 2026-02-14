@@ -8,6 +8,22 @@ const REQUEST_AUTH_SENDER_DID_HEADER: &str = "x-kamn-sender-did";
 const REQUEST_AUTH_NONCE_HEADER: &str = "x-kamn-request-nonce";
 const REQUEST_AUTH_SIGNATURE_HEADER: &str = "x-kamn-request-signature";
 const SERVICE_WS_ROUTE: &str = "/v1/events/ws";
+const REASON_CODE_WEBSOCKET_UPGRADE_REQUIRED: &str = "service_api_websocket_upgrade_required";
+const REASON_CODE_METHOD_NOT_ALLOWED: &str = "service_api_method_not_allowed";
+const REASON_CODE_ROUTE_NOT_FOUND: &str = "service_api_route_not_found";
+const REASON_CODE_AUTH_SENDER_DID_HEADER_MISSING: &str =
+    "service_api_auth_sender_did_header_missing";
+const REASON_CODE_AUTH_NONCE_HEADER_MISSING: &str = "service_api_auth_nonce_header_missing";
+const REASON_CODE_AUTH_NONCE_INVALID: &str = "service_api_auth_nonce_invalid";
+const REASON_CODE_AUTH_NONCE_NON_POSITIVE: &str = "service_api_auth_nonce_non_positive";
+const REASON_CODE_AUTH_SIGNATURE_HEADER_MISSING: &str = "service_api_auth_signature_header_missing";
+const REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED: &str =
+    "service_api_auth_signature_verification_failed";
+const REASON_CODE_AUTH_REPLAY_NONCE_DETECTED: &str = "service_api_auth_replay_nonce_detected";
+const REASON_CODE_LEGACY_UNAUTHORIZED: &str = "service_api_legacy_unauthorized";
+const REASON_CODE_LEGACY_CONFLICT: &str = "service_api_legacy_conflict";
+const REASON_CODE_LEGACY_BAD_REQUEST: &str = "service_api_legacy_bad_request";
+const REASON_CODE_LEGACY_UNKNOWN: &str = "service_api_legacy_error_unknown";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ServiceScheme {
@@ -594,7 +610,19 @@ fn status_from_header(header: &str) -> Option<u16> {
     raw_code.parse::<u16>().ok()
 }
 
-fn map_non_success_response<T>(status: Option<u16>, _body: &str) -> Result<T, SdkError> {
+fn map_non_success_response<T>(status: Option<u16>, body: &str) -> Result<T, SdkError> {
+    if let Some(status_code) = status {
+        if let Some((error, reason_code, message)) = parse_service_api_error_envelope(body)
+            .or_else(|| parse_service_api_legacy_error_envelope(status_code, body))
+        {
+            return Err(SdkError::ServiceApiError {
+                status: status_code,
+                error,
+                reason_code,
+                message,
+            });
+        }
+    }
     match status {
         Some(409) => Err(SdkError::Conflict("request rejected by service api")),
         Some(401) => Err(SdkError::TransportFailure(
@@ -610,6 +638,60 @@ fn map_non_success_response<T>(status: Option<u16>, _body: &str) -> Result<T, Sd
         _ => Err(SdkError::TransportFailure(
             "request rejected by service api",
         )),
+    }
+}
+
+fn parse_service_api_error_envelope(body: &str) -> Option<(String, String, String)> {
+    let error = json_optional_string_field(body, "error")?;
+    let reason_code = json_optional_string_field(body, "reason_code")?;
+    let message = json_optional_string_field(body, "message")?;
+    Some((error, reason_code, message))
+}
+
+fn parse_service_api_legacy_error_envelope(
+    status: u16,
+    body: &str,
+) -> Option<(String, String, String)> {
+    let error = json_optional_string_field(body, "error")?;
+    let reason = json_optional_string_field(body, "reason")?;
+    let reason_code =
+        classify_legacy_service_api_reason_code(status, error.as_str(), reason.as_str()).to_owned();
+    Some((error, reason_code, reason))
+}
+
+fn classify_legacy_service_api_reason_code(status: u16, error: &str, reason: &str) -> &'static str {
+    if reason.contains(REQUEST_AUTH_SENDER_DID_HEADER) {
+        return REASON_CODE_AUTH_SENDER_DID_HEADER_MISSING;
+    }
+    if reason.contains(REQUEST_AUTH_NONCE_HEADER) && reason.contains("missing required header") {
+        return REASON_CODE_AUTH_NONCE_HEADER_MISSING;
+    }
+    if reason.contains("invalid request nonce header") {
+        return REASON_CODE_AUTH_NONCE_INVALID;
+    }
+    if reason.contains("request nonce must be positive") {
+        return REASON_CODE_AUTH_NONCE_NON_POSITIVE;
+    }
+    if reason.contains(REQUEST_AUTH_SIGNATURE_HEADER) && reason.contains("missing required header")
+    {
+        return REASON_CODE_AUTH_SIGNATURE_HEADER_MISSING;
+    }
+    if reason.contains("signature verification failed") {
+        return REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED;
+    }
+    if reason.contains("replay") {
+        return REASON_CODE_AUTH_REPLAY_NONCE_DETECTED;
+    }
+    if reason.contains("websocket upgrade required") {
+        return REASON_CODE_WEBSOCKET_UPGRADE_REQUIRED;
+    }
+    match status {
+        404 => REASON_CODE_ROUTE_NOT_FOUND,
+        405 => REASON_CODE_METHOD_NOT_ALLOWED,
+        401 if error == "unauthorized" => REASON_CODE_LEGACY_UNAUTHORIZED,
+        409 => REASON_CODE_LEGACY_CONFLICT,
+        400 => REASON_CODE_LEGACY_BAD_REQUEST,
+        _ => REASON_CODE_LEGACY_UNKNOWN,
     }
 }
 
@@ -660,4 +742,12 @@ fn json_u64_field(payload: &str, key: &str) -> Result<u64, SdkError> {
     rest[..value_end]
         .parse::<u64>()
         .map_err(|_| SdkError::TransportFailure("service response numeric field was malformed"))
+}
+
+fn json_optional_string_field(payload: &str, key: &str) -> Option<String> {
+    let marker = format!("\"{key}\":\"");
+    let start = payload.find(marker.as_str())? + marker.len();
+    let rest = &payload[start..];
+    let end = rest.find('"')?;
+    Some(rest[..end].to_owned())
 }
