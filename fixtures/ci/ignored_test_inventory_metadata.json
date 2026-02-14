@@ -20,7 +20,7 @@
       "owner": "team-runtime",
       "priority": "P2",
       "reason": "deep-lane-performance",
-      "source_file": "crates/kamn-core/src/runtime.rs",
+      "source_file": "crates/kamn-core/src/runtime_tests_snapshot_store.rs",
       "test_name": "performance_file_snapshot_store_recovery_deep_lane_large_payload",
       "tracking_issue": "#2843"
     },
@@ -28,7 +28,7 @@
       "owner": "team-runtime",
       "priority": "P2",
       "reason": "deep-lane-performance",
-      "source_file": "crates/kamn-core/src/runtime.rs",
+      "source_file": "crates/kamn-core/src/runtime_tests_network_fault.rs",
       "test_name": "performance_network_fault_simulation_chaos_lane_stress",
       "tracking_issue": "#2843"
     },
