@@ -48,6 +48,10 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 for reason_code_marker in \
+  "service_api_auth_sender_did_header_missing" \
+  "service_api_auth_replay_nonce_detected" \
+  "service_api_ws_upgrade_header_missing" \
+  "service_api_ws_version_header_invalid" \
   "service_api_payload_json_syntax_invalid" \
   "service_api_payload_structure_invalid" \
   "service_api_payload_io_error"; do
@@ -57,11 +61,21 @@ for reason_code_marker in \
   fi
 done
 
+for envelope_marker in \
+  "pub(crate) reason_code: String" \
+  "pub(crate) message: String"; do
+  if ! grep -Fq "$envelope_marker" "$SOURCE_FILE"; then
+    echo "missing required error-envelope marker in source: $envelope_marker" >&2
+    exit 1
+  fi
+done
+
 for mapping_marker in \
-  "RequestAuthFailure::Unauthorized(reason)" \
-  "RequestAuthFailure::Replay(reason)" \
-  "validate_websocket_upgrade_headers" \
-  "json_error_response(error.status_code, error.error_label, error.reason)"; do
+  "RequestAuthFailure::Unauthorized(reasoned_error)" \
+  "RequestAuthFailure::Replay(reasoned_error)" \
+  "validate_websocket_route_requirements" \
+  "reason_code: error.reason_code" \
+  "message: error.message.as_str()"; do
   if ! grep -Fq "$mapping_marker" "$SOURCE_FILE"; then
     echo "missing required error-mapping marker in source: $mapping_marker" >&2
     exit 1
