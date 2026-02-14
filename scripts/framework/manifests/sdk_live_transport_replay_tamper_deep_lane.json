@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "sdk.live_transport_replay_tamper_deep.run",
+  "evidence_key": "live_transport_replay_tamper_deep_lane:v1",
+  "reason_key": "live_transport_replay_tamper_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/sdk/run_live_transport_replay_tamper_deep_lane_impl.sh"
+    ]
+  }
+}

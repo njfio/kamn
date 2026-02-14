@@ -107,6 +107,7 @@ resolve_manifest_name() {
     run_example_fixture_drift_contract_lane.sh) echo "sdk_example_fixture_drift_contract_lane.json" ;;
     run_live_transport_parity_contract_lane.sh) echo "sdk_live_transport_parity_contract_lane.json" ;;
     run_live_transport_replay_tamper_contract_lane.sh) echo "sdk_live_transport_replay_tamper_contract_lane.json" ;;
+    run_live_transport_replay_tamper_deep_lane.sh) echo "sdk_live_transport_replay_tamper_deep_lane.json" ;;
     run_live_transport_replay_tamper_fast_lane.sh) echo "sdk_live_transport_replay_tamper_fast_lane.json" ;;
     run_live_transport_smoke_parity_contract_lane.sh) echo "sdk_live_transport_smoke_parity_contract_lane.json" ;;
     run_live_transport_smoke_parity_lane.sh) echo "sdk_live_transport_smoke_parity_lane.json" ;;
@@ -153,6 +154,7 @@ resolve_manifest_name() {
 resolve_phase_name() {
   case "$1" in
     run_live_transport_replay_tamper_fast_lane.sh) echo "run" ;;
+    run_live_transport_replay_tamper_deep_lane.sh) echo "run" ;;
     run_live_transport_smoke_parity_lane.sh) echo "run" ;;
     run_quorum_attestation_replay_guard_lane.sh) echo "run" ;;
     run_governance_lifecycle_rollback_lane.sh) echo "run" ;;
