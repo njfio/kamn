@@ -25,6 +25,10 @@ SIGNER_KEY_REF_ENV_BY_PROFILE = {
     "ops-primary": "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
     "ops-secondary": "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY",
 }
+SIGNER_PUBLIC_KEY_ENV_BY_PROFILE = {
+    "ops-primary": "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX",
+    "ops-secondary": "KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY",
+}
 FALLBACK_SIGNER_GUARD_CONTRACT_VERSION = "v2"
 FALLBACK_SIGNER_GUARD_MODE = "reject_if_present"
 
@@ -106,6 +110,7 @@ def main() -> int:
     expected_signer_key_source = "env-local"
     expected_signer_private_key_env = SIGNER_PRIVATE_KEY_ENV_BY_PROFILE[expected_signer_profile]
     expected_signer_key_reference_env = SIGNER_KEY_REF_ENV_BY_PROFILE[expected_signer_profile]
+    expected_signer_public_key_env = SIGNER_PUBLIC_KEY_ENV_BY_PROFILE[expected_signer_profile]
     expected_managed_external_raw_private_key_remediation = (
         f"unset {expected_signer_private_key_env}; set {expected_signer_key_reference_env}"
     )
@@ -1368,6 +1373,68 @@ def main() -> int:
             )
             return 1
 
+        managed_external_public_key_drift_summary_file = (
+            negative_path / "managed_external_public_key_drift_summary.json"
+        )
+        managed_external_public_key_drift_policy_file = (
+            negative_path / "managed_external_public_key_drift_policy.json"
+        )
+        managed_external_public_key_drift_summary = dict(
+            managed_external_key_reference_drift_summary
+        )
+        managed_external_public_key_drift_summary["runtime_commit_command"] = (
+            managed_external_key_reference_drift_summary["runtime_commit_command"].replace(
+                "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=managed-external",
+                "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=managed-external "
+                f"{expected_signer_key_reference_env}=secure:aws-kms:role-operator/key-live-{expected_signer_profile}",
+                1,
+            )
+        )
+        managed_external_public_key_drift_summary_file.write_text(
+            json.dumps(managed_external_public_key_drift_summary, sort_keys=True, indent=2)
+            + "\n",
+            encoding="utf-8",
+        )
+
+        managed_external_public_key_drift_result = run_real_node_policy_check(
+            report_file=managed_external_public_key_drift_summary_file,
+            output_json=managed_external_public_key_drift_policy_file,
+            expected_final_decision="NO-GO",
+        )
+        if managed_external_public_key_drift_result.returncode == 0:
+            print(
+                "expected managed-external signer public-key marker negative proof to fail closed",
+                file=sys.stderr,
+            )
+            return 1
+        managed_external_public_key_drift_policy = json.loads(
+            managed_external_public_key_drift_policy_file.read_text(encoding="utf-8")
+        )
+        managed_external_public_key_drift_reason_codes = (
+            managed_external_public_key_drift_policy.get("reason_codes")
+        )
+        if not isinstance(managed_external_public_key_drift_reason_codes, list):
+            print(
+                "expected reason_codes list in managed-external signer public-key marker negative proof policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if (
+            "runtime_commit_managed_external_signer_public_key_marker_missing"
+            not in managed_external_public_key_drift_reason_codes
+        ):
+            print(
+                "expected runtime_commit_managed_external_signer_public_key_marker_missing in managed-external signer public-key marker negative proof policy output",
+                file=sys.stderr,
+            )
+            return 1
+        if managed_external_public_key_drift_policy.get("final_decision") != "NO-GO":
+            print(
+                "expected NO-GO final decision for managed-external signer public-key marker negative proof policy output",
+                file=sys.stderr,
+            )
+            return 1
+
         managed_external_private_key_command_drift_summary_file = (
             negative_path / "managed_external_private_key_command_drift_summary.json"
         )
@@ -1375,13 +1442,13 @@ def main() -> int:
             negative_path / "managed_external_private_key_command_drift_policy.json"
         )
         managed_external_private_key_command_drift_summary = dict(
-            managed_external_key_reference_drift_summary
+            managed_external_public_key_drift_summary
         )
         managed_external_private_key_command_drift_summary["runtime_commit_command"] = (
-            managed_external_key_reference_drift_summary["runtime_commit_command"].replace(
-                "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=managed-external",
-                "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=managed-external "
+            managed_external_public_key_drift_summary["runtime_commit_command"].replace(
+                f"{expected_signer_key_reference_env}=secure:aws-kms:role-operator/key-live-{expected_signer_profile}",
                 f"{expected_signer_key_reference_env}=secure:aws-kms:role-operator/key-live-{expected_signer_profile} "
+                f"{expected_signer_public_key_env}=0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798 "
                 f"{expected_signer_private_key_env}=1111111111111111111111111111111111111111111111111111111111111111",
                 1,
             )
@@ -1557,6 +1624,7 @@ def main() -> int:
         "runtime_signer_private_key_env_mismatch",
         "runtime_commit_signer_key_source_marker_missing",
         "runtime_commit_managed_external_signer_key_reference_marker_missing",
+        "runtime_commit_managed_external_signer_public_key_marker_missing",
         "runtime_commit_managed_external_private_key_command_marker_detected",
         "runtime_signing_profile_mismatch",
         "runtime_signing_profile_contract_mismatch",
@@ -1600,6 +1668,7 @@ def main() -> int:
         "runtime_signer_private_key_env_mismatch",
         "runtime_commit_signer_key_source_marker_missing",
         "runtime_commit_managed_external_signer_key_reference_marker_missing",
+        "runtime_commit_managed_external_signer_public_key_marker_missing",
         "runtime_commit_managed_external_private_key_command_marker_detected",
         "runtime_signing_profile_mismatch",
         "runtime_signing_profile_contract_mismatch",
@@ -1643,6 +1712,7 @@ def main() -> int:
         "runtime_signer_private_key_env_mismatch",
         "runtime_commit_signer_key_source_marker_missing",
         "runtime_commit_managed_external_signer_key_reference_marker_missing",
+        "runtime_commit_managed_external_signer_public_key_marker_missing",
         "runtime_commit_managed_external_private_key_command_marker_detected",
         "runtime_signing_profile_mismatch",
         "runtime_signing_profile_contract_mismatch",
