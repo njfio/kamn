@@ -34,6 +34,26 @@ Implemented route contract for local deterministic ingress:
 
 Response behavior is deterministic and intentionally lightweight for this phase.
 
+## Request Auth
+
+Protected routes require deterministic request-envelope headers:
+
+- `X-KAMN-Sender-DID`
+- `X-KAMN-Request-Nonce`
+- `X-KAMN-Request-Signature`
+
+Auth policy:
+
+- `GET /healthz` and `GET /metrics` are intentionally unauthenticated for probes/scrapes.
+- Other routes fail closed with `401 Unauthorized` when required headers are missing or signature verification fails.
+- Nonce replay per sender fails closed with `409 Conflict`.
+
+Signature profile:
+
+- Signature contract uses baseline profile matcher (`sig:ed25519:baseline-v1:...`).
+- State hash input is deterministic: `service-api:<chain_id>:<chain_version>`.
+- Replay key is `<sender_did, nonce>`.
+
 ## Validation
 
 Low-cost local validation commands:
@@ -42,6 +62,7 @@ Low-cost local validation commands:
 - `cargo test -p kamn-node`
 - `cargo fmt --check`
 - `cargo clippy -p kamn-node -- -D warnings`
+- `cargo test -p kamn-node service_api_endpoint_rejects_ -- --nocapture`
 - `bash scripts/runtime/test_validate_service_api_live.sh`
 - `bash scripts/runtime/validate_service_api_live.sh`
 

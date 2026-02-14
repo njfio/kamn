@@ -1,4 +1,6 @@
 use crate::NodeBootstrapReport;
+use kamn_core::{signature_matches_supported_profile_for_fields, AgentDid};
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
@@ -17,6 +19,9 @@ const ROUTE_TASKS_PREFIX: &str = "/v1/tasks/";
 const ROUTE_AGENTS_PREFIX: &str = "/v1/agents/";
 const ROUTE_HEALTHZ: &str = "/healthz";
 const ROUTE_METRICS: &str = "/metrics";
+const REQUEST_AUTH_SENDER_DID_HEADER: &str = "x-kamn-sender-did";
+const REQUEST_AUTH_NONCE_HEADER: &str = "x-kamn-request-nonce";
+const REQUEST_AUTH_SIGNATURE_HEADER: &str = "x-kamn-request-signature";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ServiceApiEndpointConfig {
@@ -45,6 +50,13 @@ struct ParsedRequest {
     method: String,
     path: String,
     body: String,
+    headers: BTreeMap<String, String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum RequestAuthFailure {
+    Unauthorized(String),
+    Replay(String),
 }
 
 pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> ServiceApiSnapshot {
@@ -195,6 +207,7 @@ pub(crate) fn serve_service_api_endpoint(
 
     let deadline = Instant::now() + Duration::from_millis(config.idle_timeout_ms);
     let mut served_requests = 0_u64;
+    let mut replay_guard: BTreeSet<(String, u64)> = BTreeSet::new();
     while served_requests < config.max_requests {
         if Instant::now() >= deadline {
             return Err(format!(
@@ -205,12 +218,34 @@ pub(crate) fn serve_service_api_endpoint(
         match listener.accept() {
             Ok((mut stream, _)) => {
                 let response = match read_http_request(&mut stream) {
-                    Ok(request) => render_service_api_endpoint_response(
-                        snapshot,
-                        request.method.as_str(),
-                        request.path.as_str(),
-                        request.body.as_str(),
-                    ),
+                    Ok(request) => {
+                        match authorize_service_api_request(snapshot, &request, &mut replay_guard) {
+                            Ok(()) => render_service_api_endpoint_response(
+                                snapshot,
+                                request.method.as_str(),
+                                request.path.as_str(),
+                                request.body.as_str(),
+                            ),
+                            Err(RequestAuthFailure::Unauthorized(reason)) => {
+                                ServiceApiEndpointResponse {
+                                    status_code: 401,
+                                    content_type: "application/json",
+                                    body: format!(
+                                        "{{\"error\":\"unauthorized\",\"reason\":\"{}\"}}",
+                                        escape_json_string(reason.as_str())
+                                    ),
+                                }
+                            }
+                            Err(RequestAuthFailure::Replay(reason)) => ServiceApiEndpointResponse {
+                                status_code: 409,
+                                content_type: "application/json",
+                                body: format!(
+                                    "{{\"error\":\"replay\",\"reason\":\"{}\"}}",
+                                    escape_json_string(reason.as_str())
+                                ),
+                            },
+                        }
+                    }
                     Err(error) => ServiceApiEndpointResponse {
                         status_code: 400,
                         content_type: "application/json",
@@ -228,6 +263,80 @@ pub(crate) fn serve_service_api_endpoint(
             }
             Err(error) => return Err(format!("service api accept failed: {error}")),
         }
+    }
+    Ok(())
+}
+
+fn route_requires_auth(method: &str, path: &str) -> bool {
+    !(method == "GET" && (path == ROUTE_HEALTHZ || path == ROUTE_METRICS))
+}
+
+fn service_api_signature_state_hash(snapshot: &ServiceApiSnapshot) -> String {
+    format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    )
+}
+
+fn header_value<'a>(headers: &'a BTreeMap<String, String>, name: &str) -> Option<&'a str> {
+    headers.get(name).map(String::as_str)
+}
+
+fn authorize_service_api_request(
+    snapshot: &ServiceApiSnapshot,
+    request: &ParsedRequest,
+    replay_guard: &mut BTreeSet<(String, u64)>,
+) -> Result<(), RequestAuthFailure> {
+    if !route_requires_auth(request.method.as_str(), request.path.as_str()) {
+        return Ok(());
+    }
+    let sender_did =
+        header_value(&request.headers, REQUEST_AUTH_SENDER_DID_HEADER).ok_or_else(|| {
+            RequestAuthFailure::Unauthorized(format!(
+                "missing required header: {REQUEST_AUTH_SENDER_DID_HEADER}"
+            ))
+        })?;
+    AgentDid::parse(sender_did).map_err(|error| {
+        RequestAuthFailure::Unauthorized(format!("invalid sender did: {error}"))
+    })?;
+    let nonce_raw = header_value(&request.headers, REQUEST_AUTH_NONCE_HEADER).ok_or_else(|| {
+        RequestAuthFailure::Unauthorized(format!(
+            "missing required header: {REQUEST_AUTH_NONCE_HEADER}"
+        ))
+    })?;
+    let nonce = nonce_raw.parse::<u64>().map_err(|_| {
+        RequestAuthFailure::Unauthorized(format!(
+            "invalid request nonce header: {REQUEST_AUTH_NONCE_HEADER}"
+        ))
+    })?;
+    if nonce == 0 {
+        return Err(RequestAuthFailure::Unauthorized(format!(
+            "request nonce must be positive: {REQUEST_AUTH_NONCE_HEADER}"
+        )));
+    }
+    let signature =
+        header_value(&request.headers, REQUEST_AUTH_SIGNATURE_HEADER).ok_or_else(|| {
+            RequestAuthFailure::Unauthorized(format!(
+                "missing required header: {REQUEST_AUTH_SIGNATURE_HEADER}"
+            ))
+        })?;
+    let state_hash = service_api_signature_state_hash(snapshot);
+    if !signature_matches_supported_profile_for_fields(
+        signature,
+        sender_did,
+        nonce,
+        state_hash.as_str(),
+        request.body.as_str(),
+    ) {
+        return Err(RequestAuthFailure::Unauthorized(
+            "signature verification failed for request envelope".to_owned(),
+        ));
+    }
+    if !replay_guard.insert((sender_did.to_owned(), nonce)) {
+        return Err(RequestAuthFailure::Replay(
+            "request nonce replay detected for sender".to_owned(),
+        ));
     }
     Ok(())
 }
@@ -331,6 +440,20 @@ fn read_http_request(stream: &mut TcpStream) -> Result<ParsedRequest, String> {
         .lines()
         .next()
         .ok_or_else(|| "request line missing".to_owned())?;
+    let mut headers = BTreeMap::new();
+    for line in request_head.lines().skip(1) {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let (name, value) = line
+            .split_once(':')
+            .ok_or_else(|| "request header line missing ':' separator".to_owned())?;
+        let name = name.trim();
+        if name.is_empty() {
+            return Err("request header name missing".to_owned());
+        }
+        headers.insert(name.to_ascii_lowercase(), value.trim().to_owned());
+    }
     let mut line_parts = request_line.split_whitespace();
     let method = line_parts
         .next()
@@ -342,6 +465,7 @@ fn read_http_request(stream: &mut TcpStream) -> Result<ParsedRequest, String> {
         method: method.to_owned(),
         path: path.to_owned(),
         body: request_body.to_owned(),
+        headers,
     })
 }
 
@@ -370,8 +494,10 @@ fn write_http_response(
         201 => "201 Created",
         202 => "202 Accepted",
         400 => "400 Bad Request",
+        401 => "401 Unauthorized",
         404 => "404 Not Found",
         405 => "405 Method Not Allowed",
+        409 => "409 Conflict",
         _ => "500 Internal Server Error",
     };
     let payload = format!(
