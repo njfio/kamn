@@ -212,6 +212,11 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Policy checker: `scripts/runtime/check_service_api_reason_code_compatibility_live_policy.sh`.
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `reason_registry_status=verified`, `route_error_mapping_status=verified`, `replay_error_mapping_status=verified`, `websocket_error_mapping_status=verified`, `service_api_reason_code_policy_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for tamper and reason-code guard drills: `service_api_reason_code_policy_marker_missing:route_error_mapping_status`, `service_api_payload_structure_invalid`.
+- Phase 2.7 local validation negative-matrix contract-lane policy delivered:
+  - Runtime lane: `scripts/runtime/validate_service_api_validation_negative_matrix_live.sh`, `scripts/runtime/validate_service_api_validation_negative_matrix_live_contract_lane.sh`, and tests `scripts/runtime/test_validate_service_api_validation_negative_matrix_live_contract_lane.sh`, `scripts/runtime/test_check_service_api_validation_negative_matrix_live_policy.sh` (Task #3279).
+  - Policy checker: `scripts/runtime/check_service_api_validation_negative_matrix_live_policy.sh`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `malformed_payload_status=verified`, `missing_auth_status=verified`, `replay_guard_status=verified`, `websocket_upgrade_guard_status=verified`, `service_api_validation_negative_matrix_policy_status=verified`, `performance_budget_status=verified`.
+  - Fail-closed validation confirmed for tamper and matrix guard drills: `service_api_validation_negative_matrix_policy_marker_missing:replay_guard_status`, `service_api_payload_structure_invalid`.
 - Runtime decomposition wave 1 delivered:
   - Extracted network-fault simulation APIs from `crates/kamn-core/src/runtime_transport_coordination.rs` into `crates/kamn-core/src/runtime_network_fault.rs` with stable `runtime.rs` re-export compatibility (Task #3186, Subtask #3187).
   - Added extraction regression contract coverage for module declaration and re-export continuity (`runtime::tests::regression_runtime_source_routes_network_fault_domain_via_dedicated_module`).
