@@ -1,0 +1,7 @@
+{
+  "reason": "Temporary shell line overrun during dispatcher migration tracked by #3323; remove after shell surface reduction lands.",
+  "expires_on": "2026-03-31",
+  "allow_metrics": [
+    "shell_line_total"
+  ]
+}
