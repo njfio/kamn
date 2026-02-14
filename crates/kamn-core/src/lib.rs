@@ -153,9 +153,10 @@ pub use audit_exports::{
 };
 pub use block_pipeline::{
     AcceptAllForkChoiceHook, BlockConsensusRoundInput, BlockPipelineCommitReport,
-    BlockPipelineError, CanonicalCommitRecord, CanonicalCommitStore, ForkChoiceDecision,
-    ForkChoiceHook, InMemoryCanonicalCommitStore, InMemoryTransportMempoolFeed,
-    MempoolBlockPipeline, TransportFedBlockPipeline, TransportMempoolFeed,
+    BlockPipelineError, CanonicalCommitRecord, CanonicalCommitStore,
+    DeterministicCompetingBranchForkChoiceHook, ForkChoiceDecision, ForkChoiceHook,
+    InMemoryCanonicalCommitStore, InMemoryTransportMempoolFeed, MempoolBlockPipeline,
+    TransportFedBlockPipeline, TransportMempoolFeed,
 };
 pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};
 pub use bridge_adapter::{
