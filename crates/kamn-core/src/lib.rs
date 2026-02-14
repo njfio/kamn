@@ -67,6 +67,8 @@ pub mod message_delivery_guards;
 pub mod message_envelope;
 /// Message lifecycle models, snapshot contracts, and proof-admission flow.
 pub mod message_lifecycle;
+/// Message proof anchor submission contracts aligned to lifecycle transitions.
+pub mod message_proof_anchoring;
 /// State schema migration planning and validation contracts.
 pub mod migrations;
 pub mod namespaces;
@@ -284,6 +286,13 @@ pub use message_lifecycle::{
     MessageLifecycleSnapshotError, MessageLifecycleSnapshotStore,
     MessageLifecycleSnapshotStoreError, MessageLifecycleStore, MessageProofAdmissionError,
     MessageRecordSnapshot, MessageStatus, MESSAGE_LIFECYCLE_SNAPSHOT_SCHEMA_VERSION,
+};
+pub use message_proof_anchoring::{
+    InMemoryMessageProofChainAdapter, KolmeMessageProofChainAdapter,
+    MessageProofAnchorFinalityRecord, MessageProofAnchorFinalityStatus, MessageProofAnchorReceipt,
+    MessageProofAnchorRequest, MessageProofAnchorResult, MessageProofAnchorRetryClass,
+    MessageProofAnchorSubmissionOutcome, MessageProofAnchorSubmissionRequest,
+    MessageProofAnchoringError, MessageProofAnchoringService, MessageProofChainAdapter,
 };
 pub use migrations::{MigrationPlan, MigrationRegistry, MigrationStep};
 pub use namespaces::StateNamespaces;
