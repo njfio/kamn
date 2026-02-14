@@ -59,12 +59,15 @@ required_markers=(
   "check_local_runtime_commit_live_evidence_policy.py"
   "submit_evidence_marker_present"
   "finality_evidence_marker_present"
+  "replay_evidence_marker_present"
+  "replay_evidence_contract_version"
   "request_payload_evidence_marker_present"
   "request_payload_evidence_artifact_path"
   "submit_evidence_artifact_path"
   "finality_evidence_artifact_path"
   "request_finality_evidence_contract_version"
   "request_finality_evidence_linked"
+  "replay_evidence_marker_missing"
   "request_payload_evidence_marker_missing"
   "finality_evidence_artifact_path_missing"
   "request_finality_evidence_linkage_missing"
@@ -95,12 +98,15 @@ required_doc_markers=(
   "check_local_runtime_commit_live_evidence_policy.py"
   "submit_evidence_marker_present"
   "finality_evidence_marker_present"
+  "replay_evidence_marker_present"
+  "replay_evidence_contract_version"
   "request_payload_evidence_marker_present"
   "request_payload_evidence_artifact_path"
   "submit_evidence_artifact_path"
   "finality_evidence_artifact_path"
   "request_finality_evidence_contract_version"
   "request_finality_evidence_linked"
+  "replay_evidence_marker_missing"
   "request_payload_evidence_marker_missing"
   "finality_evidence_artifact_path_missing"
   "request_finality_evidence_linkage_missing"
@@ -172,6 +178,12 @@ if summary.get("submit_evidence_marker_present") is not True:
     raise SystemExit("expected submit_evidence_marker_present=true in runtime-commit live finality evidence summary")
 if summary.get("finality_evidence_marker_present") is not True:
     raise SystemExit("expected finality_evidence_marker_present=true in runtime-commit live finality evidence summary")
+if summary.get("replay_evidence_marker") != "replay_guard=verified":
+    raise SystemExit("expected replay_evidence_marker in runtime-commit live finality evidence summary")
+if summary.get("replay_evidence_marker_present") is not True:
+    raise SystemExit("expected replay_evidence_marker_present=true in runtime-commit live finality evidence summary")
+if summary.get("replay_evidence_contract_version") != "v1":
+    raise SystemExit("expected replay_evidence_contract_version=v1 in runtime-commit live finality evidence summary")
 if summary.get("request_payload_evidence_marker") != "native_payload_pubkey_nonce_messages":
     raise SystemExit("expected request_payload_evidence_marker in runtime-commit live finality evidence summary")
 if summary.get("request_payload_evidence_marker_present") is not True:
@@ -225,6 +237,7 @@ base_summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 drift_summary = dict(base_summary)
 drift_summary["request_finality_evidence_linked"] = False
 drift_summary["finality_evidence_artifact_path"] = "/tmp/missing-runtime-finality-artifact.txt"
+drift_summary["replay_evidence_marker_present"] = False
 drift_summary["request_payload_evidence_marker_present"] = False
 pathlib.Path(sys.argv[2]).write_text(
     json.dumps(drift_summary, sort_keys=True, indent=2) + "\n",
@@ -259,6 +272,11 @@ fi
 
 if ! grep -q "request_payload_evidence_marker_missing" "$TMP_NEGATIVE_ERR"; then
   echo "expected request_payload_evidence_marker_missing reason in negative proof output" >&2
+  exit 1
+fi
+
+if ! grep -q "replay_evidence_marker_missing" "$TMP_NEGATIVE_ERR"; then
+  echo "expected replay_evidence_marker_missing reason in negative proof output" >&2
   exit 1
 fi
 

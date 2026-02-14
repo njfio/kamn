@@ -1296,7 +1296,7 @@ Operator checkpoints:
 - Explicit opt-in live execution:
   - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --base-url http://127.0.0.1:3000 --provider-hint kolme-fork-local --max-seconds 90 --preflight-max-seconds 10 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt`
 - Optional post-submit finality follow-up execution:
-  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --skip-preflight --live-command "printf 'status=submitted\\n'" --finality-command "printf 'finality=final\\n'" --finality-max-seconds 15 --finality-retry-max-attempts 2 --finality-retry-backoff-seconds 0 --max-seconds 90 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt --finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt`
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_runtime_commit_live_lane.sh --mode run --skip-preflight --live-command "printf 'status=submitted\\nreplay_guard=verified\\n'" --finality-command "printf 'finality=final\\n'" --finality-max-seconds 15 --finality-retry-max-attempts 2 --finality-retry-backoff-seconds 0 --max-seconds 90 --output-json /tmp/kolme-local-runtime-commit-live-summary.json --live-output-file /tmp/kolme-local-runtime-commit-live-output.txt --finality-output-file /tmp/kolme-local-runtime-commit-live-finality-output.txt`
 - Evidence policy checker command:
   - `python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/kolme-local-runtime-commit-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-runtime-commit-live-policy.json`
   - `python3 scripts/kolme/check_local_runtime_commit_live_evidence_policy.py --report-file /tmp/kolme-local-runtime-commit-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-non-synthetic-run-evidence --output-json /tmp/kolme-local-runtime-commit-live-policy.json`
@@ -1317,7 +1317,8 @@ Operator checkpoints:
   - bounded live command timeout via `--max-seconds`
   - optional finality command timeout bound via `--finality-max-seconds`
   - bounded finality retry controls via `--finality-retry-max-attempts` and `--finality-retry-backoff-seconds`
-  - submit/finality evidence marker fields (`submit_evidence_marker_present`, `finality_evidence_marker_present`) remain fail-closed in policy checks
+  - submit/finality/replay evidence marker fields (`submit_evidence_marker_present`, `finality_evidence_marker_present`, `replay_evidence_marker_present`) remain fail-closed in policy checks
+  - replay marker contract field (`replay_evidence_contract_version`) remains fail-closed in policy checks
   - request/finality linkage markers (`request_payload_evidence_marker_present`, `request_payload_evidence_artifact_path`, `submit_evidence_artifact_path`, `finality_evidence_artifact_path`, `request_finality_evidence_contract_version`, `request_finality_evidence_linked`) remain fail-closed in policy checks
   - finality retry evidence markers (`finality_retry_contract_version`, `finality_retry_max_attempts`, `finality_retry_backoff_seconds`, `finality_retry_attempts_used`, `finality_retry_exhausted`, `finality_retry_failure_class`) remain fail-closed in policy checks
   - live-provider marker contracts (`provider_contract_enforcement_mode`, `provider_live_contract_marker`, `provider_live_contract_marker_present`, `provider_in_memory_reference_detected`) remain fail-closed in policy checks
@@ -1329,7 +1330,7 @@ Operator checkpoints:
   - summary includes `live_command_synthetic`, `finality_command_synthetic`, and `synthetic_evidence_classification_version=v1` for deterministic synthetic-command detection.
   - `--require-non-synthetic-run-evidence` enforces NO-GO on synthetic run-mode command paths (`synthetic_live_command_detected`, `synthetic_finality_command_detected`).
   - `--require-native-payload-evidence` enforces NO-GO when run-mode native payload markers are absent (`native_payload_pubkey_marker_missing`, `native_payload_nonce_marker_missing`, `native_payload_messages_marker_missing`).
-  - request/finality linkage drift fails closed with deterministic reasons (`request_payload_evidence_marker_missing`, `finality_evidence_artifact_path_missing`, `request_finality_evidence_linkage_missing`).
+  - request/finality linkage drift fails closed with deterministic reasons (`request_payload_evidence_marker_missing`, `replay_evidence_marker_missing`, `finality_evidence_artifact_path_missing`, `request_finality_evidence_linkage_missing`).
   - provider drift fails closed when in-memory provider usage is detected in summary marker surfaces (`provider_in_memory_reference_detected`).
   - finality retry exhaustion reasons are deterministic (`live_finality_retry_exhausted_timeout`, `live_finality_retry_exhausted_failed`) and drift fails closed with checker reasons (`finality_retry_failure_class_mismatch_for_timeout_reason`, `finality_retry_attempts_used_mismatch_for_timeout_reason`).
   - machine-readable pass/fail reason codes for missing opt-in, preflight failure/timeout, command failure, and command timeout

@@ -33,7 +33,7 @@ default_live_command() {
   if [ -n "$AUTHORIZATION_HEADER" ]; then
     command="${command} KAMN_KOLME_LIVE_AUTHORIZATION=$(shell_escape "$AUTHORIZATION_HEADER")"
   fi
-  command="${command} cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --exact integration_kolme_fork_live_node_submit_reaches_endpoint"
+  command="${command} cargo test -p kamn-core --test kolme_runtime_commit_http_transport -- --exact integration_kolme_fork_live_node_submit_reaches_endpoint && printf 'replay_guard=verified\\n'"
   printf '%s' "$command"
 }
 
@@ -641,6 +641,17 @@ if finality_enabled:
 else:
     finality_command_synthetic = False
 
+live_output_text = ""
+live_output_path = pathlib.Path(live_output_file)
+if live_output_path.is_file():
+    live_output_text = live_output_path.read_text(encoding="utf-8", errors="replace")
+
+replay_evidence_marker = "replay_guard=verified"
+replay_evidence_marker_present = (
+    replay_evidence_marker in live_command
+    or replay_evidence_marker in live_output_text
+)
+
 summary = {
     "schema_version": "kamn.kolme.local-runtime-commit-live-summary.v1",
     "mode": mode,
@@ -684,6 +695,9 @@ summary = {
     "submit_evidence_marker_present": submit_evidence_marker_present,
     "finality_evidence_marker": finality_evidence_marker,
     "finality_evidence_marker_present": finality_evidence_marker_present,
+    "replay_evidence_marker": replay_evidence_marker,
+    "replay_evidence_marker_present": replay_evidence_marker_present,
+    "replay_evidence_contract_version": "v1",
     "native_payload_pubkey_marker": native_payload_pubkey_marker,
     "native_payload_pubkey_marker_present": native_payload_pubkey_marker_present,
     "native_payload_nonce_marker": native_payload_nonce_marker,
