@@ -65,6 +65,8 @@ Low-cost local validation commands:
 - `cargo test -p kamn-node service_api_endpoint_rejects_ -- --nocapture`
 - `bash scripts/runtime/test_validate_service_api_live.sh`
 - `bash scripts/runtime/validate_service_api_live.sh`
+- `bash scripts/runtime/test_validate_service_api_request_auth_live.sh`
+- `bash scripts/runtime/validate_service_api_request_auth_live.sh`
 
 These checks cover unit, functional, integration, and regression behavior for the API ingress module without requiring external infrastructure.
 
