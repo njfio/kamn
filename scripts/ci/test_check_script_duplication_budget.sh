@@ -75,6 +75,23 @@ if ! printf '%s\n' "$pass_output" | grep -q '^remediation=none$'; then
   exit 1
 fi
 
+missing_waiver_pass_output="$(
+  bash "$SCRIPT" \
+    --scripts-root "$SCRIPTS_ROOT" \
+    --budget-file "$PASS_BUDGET" \
+    --baseline-file "$BASELINE_FILE" \
+    --waiver-file "$TMP_DIR/missing-waiver.json"
+)"
+
+if ! printf '%s\n' "$missing_waiver_pass_output" | grep -q '^status=pass$'; then
+  echo "expected checker pass path to remain green when waiver file is absent" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_waiver_pass_output" | grep -q '^waived=none$'; then
+  echo "expected waived marker to remain none when waiver file is absent and no violations exist" >&2
+  exit 1
+fi
+
 TEST_EXCLUSION_BUDGET="$TMP_DIR/test-exclusion-budget.env"
 cat >"$TEST_EXCLUSION_BUDGET" <<'EOF_BUDGET'
 SCRIPT_COUNT_MAX=3

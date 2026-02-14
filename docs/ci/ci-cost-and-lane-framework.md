@@ -269,7 +269,6 @@ The checker fails closed when any metric exceeds its configured threshold and em
 
 ## Waiver Rules
 Temporary exceptions are allowed through `.ci/script-surface-budget-waiver.json`.
-The repository currently tracks a temporary waiver for `shell_line_total` with expiry `2026-03-31` (`#3323`); keep this waiver short-lived and remove it once script-surface reductions land.
 Required fields:
 
 - `reason` (non-empty string)
