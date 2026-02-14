@@ -29,6 +29,7 @@ Implemented route contract for local deterministic ingress:
 - `POST /v1/tasks/create`
 - `GET /v1/tasks/{id}`
 - `GET /v1/agents/{did}`
+- `GET /v1/events/ws`
 - `GET /healthz`
 - `GET /metrics`
 

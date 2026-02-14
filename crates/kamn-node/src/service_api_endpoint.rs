@@ -17,6 +17,7 @@ const ROUTE_CHANNELS_PREFIX: &str = "/v1/channels/";
 const ROUTE_CHANNELS_MESSAGES_SUFFIX: &str = "/messages";
 const ROUTE_TASKS_PREFIX: &str = "/v1/tasks/";
 const ROUTE_AGENTS_PREFIX: &str = "/v1/agents/";
+const ROUTE_EVENTS_WS: &str = "/v1/events/ws";
 const ROUTE_HEALTHZ: &str = "/healthz";
 const ROUTE_METRICS: &str = "/metrics";
 const REQUEST_AUTH_SENDER_DID_HEADER: &str = "x-kamn-sender-did";
@@ -95,6 +96,14 @@ pub(crate) fn render_service_api_endpoint_response(
             status_code: 200,
             content_type: "text/plain; version=0.0.4",
             body: metrics,
+        };
+    }
+    if method == "GET" && path == ROUTE_EVENTS_WS {
+        return ServiceApiEndpointResponse {
+            status_code: 400,
+            content_type: "application/json",
+            body: "{\"error\":\"bad-request\",\"reason\":\"websocket upgrade required\"}"
+                .to_owned(),
         };
     }
     if method == "POST" && path == ROUTE_MESSAGES_SEND {
@@ -220,12 +229,35 @@ pub(crate) fn serve_service_api_endpoint(
                 let response = match read_http_request(&mut stream) {
                     Ok(request) => {
                         match authorize_service_api_request(snapshot, &request, &mut replay_guard) {
-                            Ok(()) => render_service_api_endpoint_response(
-                                snapshot,
-                                request.method.as_str(),
-                                request.path.as_str(),
-                                request.body.as_str(),
-                            ),
+                            Ok(()) => {
+                                if request.method == "GET" && request.path == ROUTE_EVENTS_WS {
+                                    match write_websocket_upgrade_event_response(
+                                        &mut stream,
+                                        snapshot,
+                                        &request.headers,
+                                    ) {
+                                        Ok(()) => {
+                                            served_requests = served_requests.saturating_add(1);
+                                            continue;
+                                        }
+                                        Err(error) => ServiceApiEndpointResponse {
+                                            status_code: 400,
+                                            content_type: "application/json",
+                                            body: format!(
+                                                "{{\"error\":\"bad-request\",\"reason\":\"{}\"}}",
+                                                escape_json_string(error.as_str())
+                                            ),
+                                        },
+                                    }
+                                } else {
+                                    render_service_api_endpoint_response(
+                                        snapshot,
+                                        request.method.as_str(),
+                                        request.path.as_str(),
+                                        request.body.as_str(),
+                                    )
+                                }
+                            }
                             Err(RequestAuthFailure::Unauthorized(reason)) => {
                                 ServiceApiEndpointResponse {
                                     status_code: 401,
@@ -345,6 +377,7 @@ fn route_exists_for_other_method(path: &str) -> bool {
     path == ROUTE_MESSAGES_SEND
         || path == ROUTE_CHANNELS_CREATE
         || path == ROUTE_TASKS_CREATE
+        || path == ROUTE_EVENTS_WS
         || path == ROUTE_HEALTHZ
         || path == ROUTE_METRICS
         || message_path_id(path).is_some()
@@ -483,6 +516,65 @@ fn parse_content_length(header: &str) -> Result<usize, String> {
     value
         .parse::<usize>()
         .map_err(|_| "invalid content-length header".to_owned())
+}
+
+fn write_websocket_upgrade_event_response(
+    stream: &mut TcpStream,
+    snapshot: &ServiceApiSnapshot,
+    headers: &BTreeMap<String, String>,
+) -> Result<(), String> {
+    let upgrade = header_value(headers, "upgrade")
+        .ok_or_else(|| "missing required websocket upgrade header".to_owned())?;
+    let connection = header_value(headers, "connection")
+        .ok_or_else(|| "missing required websocket connection header".to_owned())?;
+    let websocket_key = header_value(headers, "sec-websocket-key")
+        .ok_or_else(|| "missing required websocket key header".to_owned())?;
+    let websocket_version = header_value(headers, "sec-websocket-version")
+        .ok_or_else(|| "missing required websocket version header".to_owned())?;
+
+    if !upgrade.eq_ignore_ascii_case("websocket") {
+        return Err("invalid websocket upgrade header".to_owned());
+    }
+    if !connection.to_ascii_lowercase().contains("upgrade") {
+        return Err("invalid websocket connection header".to_owned());
+    }
+    if websocket_key.trim().is_empty() {
+        return Err("websocket key header must not be empty".to_owned());
+    }
+    if websocket_version.trim() != "13" {
+        return Err("invalid websocket version header".to_owned());
+    }
+
+    let accept_marker = format!(
+        "kamn-{:016x}",
+        deterministic_body_tag(websocket_key.as_bytes())
+    );
+    let handshake = format!(
+        "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {accept_marker}\r\nX-KAMN-WebSocket-Contract: v1\r\n\r\n"
+    );
+    stream
+        .write_all(handshake.as_bytes())
+        .map_err(|error| format!("service api websocket handshake write failed: {error}"))?;
+
+    let event_payload = format!(
+        "{{\"event\":\"state-transition\",\"runtime_mode\":\"{}\",\"role\":\"{}\",\"sequence\":1}}",
+        escape_json_string(snapshot.runtime_mode.as_str()),
+        escape_json_string(snapshot.role.as_str()),
+    );
+    write_websocket_text_frame(stream, event_payload.as_bytes())
+}
+
+fn write_websocket_text_frame(stream: &mut TcpStream, payload: &[u8]) -> Result<(), String> {
+    if payload.len() > 125 {
+        return Err("websocket payload exceeds small-frame contract".to_owned());
+    }
+    let mut frame = Vec::with_capacity(2 + payload.len());
+    frame.push(0x81);
+    frame.push(payload.len() as u8);
+    frame.extend_from_slice(payload);
+    stream
+        .write_all(frame.as_slice())
+        .map_err(|error| format!("service api websocket frame write failed: {error}"))
 }
 
 fn write_http_response(
