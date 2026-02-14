@@ -49,6 +49,26 @@ fn checklist_contains_live_run_mode_rehearsal_lineage_gate() {
 }
 
 #[test]
+fn checklist_contains_milestone_review_aggregate_lineage_gate() {
+    assert!(CHECKLIST.contains("## Milestone Review Aggregate Lineage Gate (Issue #3247)"));
+    assert!(CHECKLIST.contains("--deployment-preflight-summary-file"));
+    assert!(CHECKLIST.contains("--deployment-preflight-policy-file"));
+    assert!(CHECKLIST.contains("--live-node-validation-summary-file"));
+    assert!(CHECKLIST.contains("--live-node-validation-policy-file"));
+    assert!(CHECKLIST.contains("--go-no-go-gate-report-file"));
+    assert!(CHECKLIST.contains("milestone_review_bundle"));
+    assert!(CHECKLIST.contains("schema_version=kamn.release.milestone-review-bundle.v1"));
+    assert!(CHECKLIST.contains("contracts.linked_artifact_lineage_required=true"));
+    assert!(CHECKLIST.contains(
+        "contracts.live_bundle_runtime_provider_client_required=KolmeRuntimeCommitLiveProvider"
+    ));
+    assert!(CHECKLIST.contains("contracts.go_no_go_gate_final_decision_required=GO"));
+    assert!(CHECKLIST.contains("milestone_review_go_no_go_gate_report_missing"));
+    assert!(CHECKLIST.contains("milestone_review_live_node_validation_runtime_provider_mismatch"));
+    assert!(CHECKLIST.contains("milestone review bundle lineage mismatch"));
+}
+
+#[test]
 fn checklist_contains_staging_rehearsal_contract() {
     assert!(CHECKLIST.contains("## Staging Deploy + Rollback Rehearsal Contract"));
     assert!(CHECKLIST.contains("staging_rehearsal_contract.py"));
