@@ -5,6 +5,7 @@ fn doc_contains_runtime_network_scope_and_models() {
     assert!(DOC.contains("## Scope Delivered"));
     assert!(DOC.contains("crates/kamn-core/src/runtime_phase_coordination.rs"));
     assert!(DOC.contains("crates/kamn-core/src/runtime_transport_coordination.rs"));
+    assert!(DOC.contains("crates/kamn-core/src/runtime_snapshot_store.rs"));
     assert!(DOC.contains("## Node CLI Recovery-Check Mapping"));
     assert!(DOC.contains("## Node CLI Daemon Lifecycle Mapping"));
     assert!(DOC.contains("## Bridge Quorum Runtime Mapping"));
