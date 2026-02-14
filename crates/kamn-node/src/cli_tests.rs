@@ -21,6 +21,9 @@ fn cli_module_parses_required_role_and_defaults() {
     assert!(!parsed.daemon_shutdown_os_signals);
     assert_eq!(parsed.daemon_shutdown_drain_ticks, None);
     assert_eq!(parsed.daemon_shutdown_timeout_ticks, None);
+    assert_eq!(parsed.api_bind_addr, None);
+    assert_eq!(parsed.api_max_requests, 1);
+    assert_eq!(parsed.api_idle_timeout_ms, 5_000);
     assert_eq!(parsed.observability_endpoint_bind_addr, None);
     assert_eq!(parsed.observability_endpoint_metrics_path, "/metrics");
     assert_eq!(parsed.observability_endpoint_health_path, "/healthz");
@@ -28,6 +31,49 @@ fn cli_module_parses_required_role_and_defaults() {
     assert_eq!(parsed.observability_endpoint_idle_timeout_ms, 5_000);
     assert_eq!(parsed.output_mode, OutputMode::text());
     assert_eq!(parsed.diagnostics_mode, DiagnosticsMode::basic());
+}
+
+#[test]
+fn cli_module_runtime_mode_api_requires_bind_address() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+    ];
+
+    let err = cli::parse_args(args).expect_err("api runtime without bind should fail");
+    assert_eq!(
+        err,
+        kamn_core::ConfigError::MissingArgumentValue("--api-bind")
+    );
+}
+
+#[test]
+fn cli_module_parses_api_runtime_endpoint_controls() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34051".to_owned(),
+        "--api-max-requests".to_owned(),
+        "4".to_owned(),
+        "--api-idle-timeout-ms".to_owned(),
+        "2000".to_owned(),
+    ];
+
+    let parsed = cli::parse_args(args).expect("api args should parse");
+    assert_eq!(
+        parsed.runtime_mode,
+        RuntimeMode::parse("api").expect("mode")
+    );
+    assert_eq!(parsed.api_bind_addr.as_deref(), Some("127.0.0.1:34051"));
+    assert_eq!(parsed.api_max_requests, 4);
+    assert_eq!(parsed.api_idle_timeout_ms, 2_000);
 }
 
 #[test]

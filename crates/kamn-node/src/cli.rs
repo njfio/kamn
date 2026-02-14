@@ -4,6 +4,7 @@ use super::{
     ProposalCandidate, RejoinAttempt, RuntimeMode, RuntimeModeKind, SyncMode,
     DEFAULT_OBSERVABILITY_ENDPOINT_HEALTH_PATH, DEFAULT_OBSERVABILITY_ENDPOINT_IDLE_TIMEOUT_MS,
     DEFAULT_OBSERVABILITY_ENDPOINT_MAX_REQUESTS, DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH,
+    DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS, DEFAULT_SERVICE_API_MAX_REQUESTS,
     KOLME_IN_MEMORY_PROVIDER_MARKER, KOLME_LIVE_SIGNING_PROFILE,
 };
 
@@ -37,6 +38,9 @@ where
     let mut kolme_live_strict_signer_contracts = false;
     let mut kolme_live_signer_profile: Option<String> = None;
     let mut kolme_live_signer_key_source: Option<String> = None;
+    let mut api_bind_addr: Option<String> = None;
+    let mut api_max_requests = DEFAULT_SERVICE_API_MAX_REQUESTS;
+    let mut api_idle_timeout_ms = DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS;
     let mut observability_endpoint_bind_addr: Option<String> = None;
     let mut observability_endpoint_metrics_path =
         DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH.to_owned();
@@ -50,6 +54,8 @@ where
     let mut observability_endpoint_health_path_overridden = false;
     let mut observability_endpoint_max_requests_overridden = false;
     let mut observability_endpoint_idle_timeout_ms_overridden = false;
+    let mut api_max_requests_overridden = false;
+    let mut api_idle_timeout_ms_overridden = false;
     let mut role_overridden = false;
     let mut chain_id_overridden = false;
     let mut chain_version_overridden = false;
@@ -208,6 +214,26 @@ where
                     ConfigError::MissingArgumentValue("--kolme-live-signer-key-source"),
                 )?);
             }
+            "--api-bind" => {
+                api_bind_addr = Some(
+                    iter.next()
+                        .ok_or(ConfigError::MissingArgumentValue("--api-bind"))?,
+                );
+            }
+            "--api-max-requests" => {
+                let value = iter
+                    .next()
+                    .ok_or(ConfigError::MissingArgumentValue("--api-max-requests"))?;
+                api_max_requests = parse_daemon_control_arg(&value)?;
+                api_max_requests_overridden = true;
+            }
+            "--api-idle-timeout-ms" => {
+                let value = iter
+                    .next()
+                    .ok_or(ConfigError::MissingArgumentValue("--api-idle-timeout-ms"))?;
+                api_idle_timeout_ms = parse_daemon_control_arg(&value)?;
+                api_idle_timeout_ms_overridden = true;
+            }
             "--observability-endpoint-bind" => {
                 observability_endpoint_bind_addr = Some(iter.next().ok_or(
                     ConfigError::MissingArgumentValue("--observability-endpoint-bind"),
@@ -332,6 +358,9 @@ where
             ));
         }
     }
+    if runtime_mode.kind == RuntimeModeKind::Api && api_bind_addr.is_none() {
+        return Err(ConfigError::MissingArgumentValue("--api-bind"));
+    }
     if runtime_mode.kind == RuntimeModeKind::KolmeLive {
         if kolme_live_base_url.is_none() {
             return Err(ConfigError::MissingArgumentValue("--kolme-live-base-url"));
@@ -385,6 +414,9 @@ where
             normalize_kolme_live_signer_profile_selector(signer_profile)?;
         }
     }
+    if api_bind_addr.is_none() && (api_max_requests_overridden || api_idle_timeout_ms_overridden) {
+        return Err(ConfigError::MissingArgumentValue("--api-bind"));
+    }
     if observability_endpoint_bind_addr.is_none()
         && (observability_endpoint_metrics_path_overridden
             || observability_endpoint_health_path_overridden
@@ -435,6 +467,9 @@ where
         kolme_live_strict_signer_contracts,
         kolme_live_signer_profile,
         kolme_live_signer_key_source,
+        api_bind_addr,
+        api_max_requests,
+        api_idle_timeout_ms,
         observability_endpoint_bind_addr,
         observability_endpoint_metrics_path,
         observability_endpoint_health_path,

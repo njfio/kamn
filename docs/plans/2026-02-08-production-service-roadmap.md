@@ -16,6 +16,7 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Delivered in this slice: `FileContentAdapter` and `FileDidRegistrationChainAdapter` in `kamn-core` (Task #2901).
   - Live validation lane added for persistence adapter restart and fail-closed checks (Task #2903).
   - Remaining: broader persistence backend consolidation and runtime wiring across additional stores.
+- Phase 2.1 initial slice delivered: deterministic `runtime-mode api` ingress server with required messaging/channel/task/profile/health/metrics route contracts (Task #2906).
 
 ---
 

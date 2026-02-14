@@ -1,0 +1,414 @@
+use crate::NodeBootstrapReport;
+use std::io::{ErrorKind, Read, Write};
+use std::net::{TcpListener, TcpStream};
+use std::thread;
+use std::time::{Duration, Instant};
+
+pub(crate) const DEFAULT_SERVICE_API_MAX_REQUESTS: u64 = 1;
+pub(crate) const DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS: u64 = 5_000;
+
+const ROUTE_MESSAGES_SEND: &str = "/v1/messages/send";
+const ROUTE_CHANNELS_CREATE: &str = "/v1/channels/create";
+const ROUTE_TASKS_CREATE: &str = "/v1/tasks/create";
+const ROUTE_MESSAGES_PREFIX: &str = "/v1/messages/";
+const ROUTE_CHANNELS_PREFIX: &str = "/v1/channels/";
+const ROUTE_CHANNELS_MESSAGES_SUFFIX: &str = "/messages";
+const ROUTE_TASKS_PREFIX: &str = "/v1/tasks/";
+const ROUTE_AGENTS_PREFIX: &str = "/v1/agents/";
+const ROUTE_HEALTHZ: &str = "/healthz";
+const ROUTE_METRICS: &str = "/metrics";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ServiceApiEndpointConfig {
+    pub(crate) bind_addr: String,
+    pub(crate) max_requests: u64,
+    pub(crate) idle_timeout_ms: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ServiceApiSnapshot {
+    pub(crate) runtime_mode: String,
+    pub(crate) role: String,
+    pub(crate) chain_id: String,
+    pub(crate) chain_version: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ServiceApiEndpointResponse {
+    pub(crate) status_code: u16,
+    pub(crate) content_type: &'static str,
+    pub(crate) body: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ParsedRequest {
+    method: String,
+    path: String,
+    body: String,
+}
+
+pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> ServiceApiSnapshot {
+    ServiceApiSnapshot {
+        runtime_mode: report.runtime_mode.clone(),
+        role: report.role.clone(),
+        chain_id: report.chain_id.clone(),
+        chain_version: report.chain_version.clone(),
+    }
+}
+
+pub(crate) fn render_service_api_endpoint_response(
+    snapshot: &ServiceApiSnapshot,
+    method: &str,
+    path: &str,
+    body: &str,
+) -> ServiceApiEndpointResponse {
+    if method == "GET" && path == ROUTE_HEALTHZ {
+        return ServiceApiEndpointResponse {
+            status_code: 200,
+            content_type: "application/json",
+            body: format!(
+                "{{\"status\":\"ok\",\"runtime_mode\":\"{}\",\"role\":\"{}\"}}",
+                escape_json_string(snapshot.runtime_mode.as_str()),
+                escape_json_string(snapshot.role.as_str()),
+            ),
+        };
+    }
+    if method == "GET" && path == ROUTE_METRICS {
+        let metrics = format!(
+            "kamn_service_api_health{{runtime_mode=\"{}\"}} 1\nkamn_service_api_role{{role=\"{}\"}} 1\n",
+            escape_metrics_label(snapshot.runtime_mode.as_str()),
+            escape_metrics_label(snapshot.role.as_str())
+        );
+        return ServiceApiEndpointResponse {
+            status_code: 200,
+            content_type: "text/plain; version=0.0.4",
+            body: metrics,
+        };
+    }
+    if method == "POST" && path == ROUTE_MESSAGES_SEND {
+        let message_id = format!("msg-local-{}", deterministic_body_tag(body.as_bytes()));
+        return ServiceApiEndpointResponse {
+            status_code: 202,
+            content_type: "application/json",
+            body: format!(
+                "{{\"message_id\":\"{}\",\"status\":\"created\",\"runtime_mode\":\"{}\"}}",
+                escape_json_string(message_id.as_str()),
+                escape_json_string(snapshot.runtime_mode.as_str())
+            ),
+        };
+    }
+    if method == "POST" && path == ROUTE_CHANNELS_CREATE {
+        let channel_id = format!("channel-local-{}", deterministic_body_tag(body.as_bytes()));
+        return ServiceApiEndpointResponse {
+            status_code: 201,
+            content_type: "application/json",
+            body: format!(
+                "{{\"channel_id\":\"{}\",\"status\":\"created\"}}",
+                escape_json_string(channel_id.as_str()),
+            ),
+        };
+    }
+    if method == "POST" && path == ROUTE_TASKS_CREATE {
+        let task_id = format!("task-local-{}", deterministic_body_tag(body.as_bytes()));
+        return ServiceApiEndpointResponse {
+            status_code: 201,
+            content_type: "application/json",
+            body: format!(
+                "{{\"task_id\":\"{}\",\"state\":\"submitted\"}}",
+                escape_json_string(task_id.as_str()),
+            ),
+        };
+    }
+    if method == "GET" {
+        if let Some(message_id) = message_path_id(path) {
+            return ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: format!(
+                    "{{\"message_id\":\"{}\",\"status\":\"created\"}}",
+                    escape_json_string(message_id)
+                ),
+            };
+        }
+        if let Some(channel_id) = channel_messages_path_id(path) {
+            return ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: format!(
+                    "{{\"channel_id\":\"{}\",\"messages\":[]}}",
+                    escape_json_string(channel_id)
+                ),
+            };
+        }
+        if let Some(task_id) = task_path_id(path) {
+            return ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: format!(
+                    "{{\"task_id\":\"{}\",\"state\":\"submitted\"}}",
+                    escape_json_string(task_id)
+                ),
+            };
+        }
+        if let Some(agent_did) = agent_path_id(path) {
+            return ServiceApiEndpointResponse {
+                status_code: 200,
+                content_type: "application/json",
+                body: format!(
+                    "{{\"did\":\"{}\",\"reputation_score\":500}}",
+                    escape_json_string(agent_did)
+                ),
+            };
+        }
+    }
+
+    if route_exists_for_other_method(path) {
+        return ServiceApiEndpointResponse {
+            status_code: 405,
+            content_type: "text/plain; charset=utf-8",
+            body: "method not allowed\n".to_owned(),
+        };
+    }
+    ServiceApiEndpointResponse {
+        status_code: 404,
+        content_type: "text/plain; charset=utf-8",
+        body: "not found\n".to_owned(),
+    }
+}
+
+pub(crate) fn serve_service_api_endpoint(
+    config: &ServiceApiEndpointConfig,
+    snapshot: &ServiceApiSnapshot,
+) -> Result<(), String> {
+    if config.max_requests == 0 {
+        return Err("service api max requests must be greater than zero".to_owned());
+    }
+    if config.idle_timeout_ms == 0 {
+        return Err("service api idle timeout must be greater than zero".to_owned());
+    }
+
+    let listener = TcpListener::bind(config.bind_addr.as_str())
+        .map_err(|error| format!("service api bind failed: {error}"))?;
+    listener
+        .set_nonblocking(true)
+        .map_err(|error| format!("service api nonblocking mode failed: {error}"))?;
+
+    let deadline = Instant::now() + Duration::from_millis(config.idle_timeout_ms);
+    let mut served_requests = 0_u64;
+    while served_requests < config.max_requests {
+        if Instant::now() >= deadline {
+            return Err(format!(
+                "service api timed out after {} ms waiting for requests",
+                config.idle_timeout_ms
+            ));
+        }
+        match listener.accept() {
+            Ok((mut stream, _)) => {
+                let response = match read_http_request(&mut stream) {
+                    Ok(request) => render_service_api_endpoint_response(
+                        snapshot,
+                        request.method.as_str(),
+                        request.path.as_str(),
+                        request.body.as_str(),
+                    ),
+                    Err(error) => ServiceApiEndpointResponse {
+                        status_code: 400,
+                        content_type: "application/json",
+                        body: format!(
+                            "{{\"error\":\"bad-request\",\"reason\":\"{}\"}}",
+                            escape_json_string(error.as_str())
+                        ),
+                    },
+                };
+                write_http_response(&mut stream, &response)?;
+                served_requests = served_requests.saturating_add(1);
+            }
+            Err(error) if error.kind() == ErrorKind::WouldBlock => {
+                thread::sleep(Duration::from_millis(5));
+            }
+            Err(error) => return Err(format!("service api accept failed: {error}")),
+        }
+    }
+    Ok(())
+}
+
+fn route_exists_for_other_method(path: &str) -> bool {
+    path == ROUTE_MESSAGES_SEND
+        || path == ROUTE_CHANNELS_CREATE
+        || path == ROUTE_TASKS_CREATE
+        || path == ROUTE_HEALTHZ
+        || path == ROUTE_METRICS
+        || message_path_id(path).is_some()
+        || channel_messages_path_id(path).is_some()
+        || task_path_id(path).is_some()
+        || agent_path_id(path).is_some()
+}
+
+fn message_path_id(path: &str) -> Option<&str> {
+    path.strip_prefix(ROUTE_MESSAGES_PREFIX).and_then(|id| {
+        if id.is_empty() || id == "send" || id.contains('/') {
+            return None;
+        }
+        Some(id)
+    })
+}
+
+fn channel_messages_path_id(path: &str) -> Option<&str> {
+    let channel_path = path.strip_prefix(ROUTE_CHANNELS_PREFIX)?;
+    let channel_id = channel_path.strip_suffix(ROUTE_CHANNELS_MESSAGES_SUFFIX)?;
+    if channel_id.is_empty() || channel_id.contains('/') {
+        return None;
+    }
+    Some(channel_id)
+}
+
+fn task_path_id(path: &str) -> Option<&str> {
+    path.strip_prefix(ROUTE_TASKS_PREFIX).and_then(|id| {
+        if id.is_empty() || id == "create" || id.contains('/') {
+            return None;
+        }
+        Some(id)
+    })
+}
+
+fn agent_path_id(path: &str) -> Option<&str> {
+    path.strip_prefix(ROUTE_AGENTS_PREFIX).and_then(|did| {
+        if did.is_empty() || did.contains('/') {
+            return None;
+        }
+        Some(did)
+    })
+}
+
+fn read_http_request(stream: &mut TcpStream) -> Result<ParsedRequest, String> {
+    let mut request = Vec::new();
+    let mut chunk = [0_u8; 1024];
+    stream
+        .set_read_timeout(Some(Duration::from_secs(1)))
+        .map_err(|error| format!("service api read-timeout failed: {error}"))?;
+
+    let mut expected_total_bytes: Option<usize> = None;
+    let mut header_end: Option<usize> = None;
+    loop {
+        match stream.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(read_count) => {
+                request.extend_from_slice(&chunk[..read_count]);
+                if header_end.is_none() {
+                    header_end = request
+                        .windows(4)
+                        .position(|window| window == b"\r\n\r\n")
+                        .map(|index| index + 4);
+                    if let Some(header_end_index) = header_end {
+                        let header = String::from_utf8(request[..header_end_index].to_vec())
+                            .map_err(|_| "request header was not valid utf-8".to_owned())?;
+                        let content_length = parse_content_length(header.as_str())?;
+                        expected_total_bytes = Some(header_end_index + content_length);
+                    }
+                }
+                if let Some(total) = expected_total_bytes {
+                    if request.len() >= total {
+                        break;
+                    }
+                }
+                if request.len() > 64 * 1024 {
+                    return Err("request header too large".to_owned());
+                }
+            }
+            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
+                break;
+            }
+            Err(error) => return Err(format!("request read failed: {error}")),
+        }
+    }
+
+    let request_text =
+        String::from_utf8(request).map_err(|_| "request was not valid utf-8".to_owned())?;
+    let Some((request_head, request_body)) = request_text.split_once("\r\n\r\n") else {
+        return Err("request header terminator missing".to_owned());
+    };
+    let request_line = request_head
+        .lines()
+        .next()
+        .ok_or_else(|| "request line missing".to_owned())?;
+    let mut line_parts = request_line.split_whitespace();
+    let method = line_parts
+        .next()
+        .ok_or_else(|| "request method missing".to_owned())?;
+    let path = line_parts
+        .next()
+        .ok_or_else(|| "request path missing".to_owned())?;
+    Ok(ParsedRequest {
+        method: method.to_owned(),
+        path: path.to_owned(),
+        body: request_body.to_owned(),
+    })
+}
+
+fn parse_content_length(header: &str) -> Result<usize, String> {
+    let value = header
+        .lines()
+        .find_map(|line| {
+            let (name, raw_value) = line.split_once(':')?;
+            if name.eq_ignore_ascii_case("Content-Length") {
+                return Some(raw_value.trim());
+            }
+            None
+        })
+        .unwrap_or("0");
+    value
+        .parse::<usize>()
+        .map_err(|_| "invalid content-length header".to_owned())
+}
+
+fn write_http_response(
+    stream: &mut TcpStream,
+    response: &ServiceApiEndpointResponse,
+) -> Result<(), String> {
+    let status_text = match response.status_code {
+        200 => "200 OK",
+        201 => "201 Created",
+        202 => "202 Accepted",
+        400 => "400 Bad Request",
+        404 => "404 Not Found",
+        405 => "405 Method Not Allowed",
+        _ => "500 Internal Server Error",
+    };
+    let payload = format!(
+        "HTTP/1.1 {status_text}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        response.content_type,
+        response.body.len(),
+        response.body
+    );
+    stream
+        .write_all(payload.as_bytes())
+        .map_err(|error| format!("service api write failed: {error}"))
+}
+
+fn deterministic_body_tag(payload: &[u8]) -> u64 {
+    let mut acc: u64 = 0xcbf29ce484222325;
+    for byte in payload {
+        acc = acc.wrapping_mul(0x00000100000001B3);
+        acc ^= u64::from(*byte);
+    }
+    acc
+}
+
+fn escape_json_string(input: &str) -> String {
+    let mut escaped = String::with_capacity(input.len());
+    for ch in input.chars() {
+        match ch {
+            '"' => escaped.push_str("\\\""),
+            '\\' => escaped.push_str("\\\\"),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
+}
+
+fn escape_metrics_label(input: &str) -> String {
+    input.replace('\\', "\\\\").replace('"', "\\\"")
+}

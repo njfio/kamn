@@ -15,6 +15,7 @@ mod observability_endpoint;
 mod report_builder;
 mod report_render;
 mod runtime_kolme_live;
+mod service_api_endpoint;
 mod signer;
 mod wire_payload;
 
@@ -40,6 +41,12 @@ use report_render::render_bootstrap_report;
 #[cfg(test)]
 use runtime_kolme_live::build_kolme_live_request;
 use runtime_kolme_live::execute_kolme_live_runtime;
+#[cfg(test)]
+pub(crate) use service_api_endpoint::render_service_api_endpoint_response;
+pub(crate) use service_api_endpoint::{
+    build_service_api_snapshot, serve_service_api_endpoint, ServiceApiEndpointConfig,
+    DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS, DEFAULT_SERVICE_API_MAX_REQUESTS,
+};
 #[cfg(test)]
 use signer::{
     build_kolme_live_direct_signed_wire_payload, build_kolme_live_managed_signing_key,
@@ -128,6 +135,7 @@ enum RuntimeModeKind {
     Planning,
     RecoveryCheck,
     Daemon,
+    Api,
     KolmeLive,
 }
 
@@ -156,6 +164,12 @@ impl RuntimeMode {
         }
     }
 
+    fn api() -> Self {
+        Self {
+            kind: RuntimeModeKind::Api,
+        }
+    }
+
     fn kolme_live() -> Self {
         Self {
             kind: RuntimeModeKind::KolmeLive,
@@ -168,6 +182,7 @@ impl RuntimeMode {
             "planning" => Ok(Self::planning()),
             "recovery-check" => Ok(Self::recovery_check()),
             "daemon" => Ok(Self::daemon()),
+            "api" => Ok(Self::api()),
             "kolme-live" => Ok(Self::kolme_live()),
             other => Err(ConfigError::InvalidRuntimeMode(other.to_owned())),
         }
@@ -179,6 +194,7 @@ impl RuntimeMode {
             RuntimeModeKind::Planning => "planning",
             RuntimeModeKind::RecoveryCheck => "recovery-check",
             RuntimeModeKind::Daemon => "daemon",
+            RuntimeModeKind::Api => "api",
             RuntimeModeKind::KolmeLive => "kolme-live",
         }
     }
@@ -285,6 +301,9 @@ struct NodeCli {
     kolme_live_strict_signer_contracts: bool,
     kolme_live_signer_profile: Option<String>,
     kolme_live_signer_key_source: Option<String>,
+    api_bind_addr: Option<String>,
+    api_max_requests: u64,
+    api_idle_timeout_ms: u64,
     observability_endpoint_bind_addr: Option<String>,
     observability_endpoint_metrics_path: String,
     observability_endpoint_health_path: String,
@@ -439,6 +458,14 @@ fn run() -> Result<(), ConfigError> {
         &[("runtime_mode", runtime_mode)],
     )?;
     let output_mode = cli.output_mode;
+    let service_api_endpoint_config =
+        cli.api_bind_addr
+            .as_ref()
+            .map(|bind_addr| ServiceApiEndpointConfig {
+                bind_addr: bind_addr.clone(),
+                max_requests: cli.api_max_requests,
+                idle_timeout_ms: cli.api_idle_timeout_ms,
+            });
     let observability_endpoint_config =
         cli.observability_endpoint_bind_addr
             .as_ref()
@@ -458,6 +485,30 @@ fn run() -> Result<(), ConfigError> {
         ],
     )?;
     println!("{}", render_bootstrap_report(&report, output_mode));
+    if let Some(endpoint_config) = service_api_endpoint_config {
+        if report.runtime_mode != "api" {
+            return Err(ConfigError::RuntimeDaemonLifecycle(
+                "service api endpoint requires runtime-mode api".to_owned(),
+            ));
+        }
+        let snapshot = build_service_api_snapshot(&report);
+        let max_requests_label = endpoint_config.max_requests.to_string();
+        let idle_timeout_ms_label = endpoint_config.idle_timeout_ms.to_string();
+        log_info(
+            "node.runtime.service_api.endpoint.start",
+            &[
+                ("bind_addr", endpoint_config.bind_addr.as_str()),
+                ("max_requests", max_requests_label.as_str()),
+                ("idle_timeout_ms", idle_timeout_ms_label.as_str()),
+            ],
+        )?;
+        serve_service_api_endpoint(&endpoint_config, &snapshot)
+            .map_err(ConfigError::RuntimeDaemonLifecycle)?;
+        log_info(
+            "node.runtime.service_api.endpoint.complete",
+            &[("bind_addr", endpoint_config.bind_addr.as_str())],
+        )?;
+    }
     if let Some(endpoint_config) = observability_endpoint_config {
         let snapshot = build_runtime_observability_snapshot(&report).ok_or_else(|| {
             ConfigError::RuntimeDaemonLifecycle(
@@ -521,6 +572,9 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
         kolme_live_strict_signer_contracts,
         kolme_live_signer_profile,
         kolme_live_signer_key_source,
+        api_bind_addr: _,
+        api_max_requests: _,
+        api_idle_timeout_ms: _,
         observability_endpoint_bind_addr: _,
         observability_endpoint_metrics_path: _,
         observability_endpoint_health_path: _,
@@ -694,6 +748,13 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                 }),
                 ..RuntimeExecutionBundle::default()
             }
+        }
+        RuntimeModeKind::Api => {
+            log_info(
+                "node.runtime.service_api.mode.ready",
+                &[("runtime_mode", runtime_mode.as_str())],
+            )?;
+            RuntimeExecutionBundle::default()
         }
         RuntimeModeKind::KolmeLive => {
             let base_url = kolme_live_base_url
