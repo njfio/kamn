@@ -487,6 +487,12 @@ fn run() -> Result<(), ConfigError> {
     Ok(())
 }
 
+async fn run_async() -> Result<(), ConfigError> {
+    tokio::task::spawn_blocking(run)
+        .await
+        .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?
+}
+
 fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
     let NodeCli {
         profile,
@@ -741,8 +747,9 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
     Ok(report)
 }
 
-fn main() -> ExitCode {
-    match run() {
+#[tokio::main(flavor = "multi_thread")]
+async fn main() -> ExitCode {
+    match run_async().await {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             let error_message = error.to_string();
