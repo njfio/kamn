@@ -5,6 +5,7 @@ This document defines the first production-service deployment asset slice for St
 ## Scope
 
 - Multi-stage container build for `kamn-node`.
+- Build-context hygiene via repository-level `.dockerignore`.
 - Local multi-role topology via Docker Compose.
 - Kubernetes manifest for processor/listener/approver role deployments.
 - Low-cost contract checks for artifact integrity.
@@ -19,6 +20,10 @@ docker build -t kamn-node:local -f Dockerfile .
 
 The image starts `kamn-node` in deterministic daemon mode by default and can be overridden per role at runtime.
 
+Build-context hardening:
+
+- `.dockerignore` excludes non-runtime paths (for example: `.git`, `target`, `.tmp`) to keep local image builds fast and cost-effective.
+
 ## Docker Compose Topology
 
 Compose file: `deploy/docker-compose.yml`
@@ -26,6 +31,7 @@ Compose file: `deploy/docker-compose.yml`
 - `processor`
 - `listener`
 - `approver`
+- each service includes `restart: unless-stopped` for resilient local process restarts.
 
 Run all roles locally:
 
