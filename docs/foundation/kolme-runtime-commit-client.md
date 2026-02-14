@@ -306,6 +306,8 @@ bash scripts/kolme/run_runtime_commit_contract_lane.sh
       - deterministic backend reason-code classes: `managed_signer_backend_timeout`, `managed_signer_backend_unavailable`, `managed_signer_backend_response_malformed`.
     - malformed signature bytes, invalid recovery id, or recovered-key mismatch are rejected fail-closed before runtime submit dispatch.
     - fallback private key marker contract: `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK` must remain unset; policy fails closed with `fallback_signer_secret_present_violation` when present.
+    - managed-external raw private key env path is rejected fail-closed with `managed_signer_raw_private_key_forbidden`.
+    - signer-secret fail-closed violations (`fallback_signer_secret_present_violation`, `managed_signer_raw_private_key_forbidden`) are enforced before nonce/finality network dispatch in runtime execute paths.
     - synthetic fallback signature material (`signature=<idempotency_key>`) is rejected by runtime tests/policies.
   - in-memory fallback markers and non-fork signing profiles are rejected fail-closed by typed node config errors.
 - Runtime live lane (submit + optional finality):
