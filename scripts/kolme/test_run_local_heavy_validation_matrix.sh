@@ -3,9 +3,13 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MATRIX_RUNNER="$ROOT_DIR/scripts/kolme/run_local_heavy_validation_matrix.sh"
+MATRIX_RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_heavy_validation_matrix_lane_impl.sh"
 BOOTSTRAP_RUNNER="$ROOT_DIR/scripts/kolme/run_local_bootstrap_health_checks.sh"
+DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 SUMMARY_HELPER="$ROOT_DIR/scripts/framework/generate_local_lane_summary.py"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_heavy_validation_matrix_lane.json"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
@@ -29,6 +33,36 @@ if [ ! -x "$MATRIX_RUNNER" ]; then
   echo "expected Kolme local heavy validation matrix runner to be executable" >&2
   exit 1
 fi
+if [ ! -x "$MATRIX_RUNNER_IMPL" ]; then
+  echo "expected Kolme local heavy validation matrix run-lane implementation to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected local run lane dispatcher to be executable" >&2
+  exit 1
+fi
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected local heavy validation matrix run-lane manifest to exist" >&2
+  exit 1
+fi
+if [ ! -L "$MATRIX_RUNNER" ]; then
+  echo "expected local heavy validation matrix runner to be a symlink to shared runtime lane dispatcher" >&2
+  exit 1
+fi
+if [ "$(readlink "$MATRIX_RUNNER")" != "run_lane_dispatch.sh" ]; then
+  echo "expected local heavy validation matrix runner symlink target to be run_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper run_local_heavy_validation_matrix.sh --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST" ]; then
+  echo "expected local heavy validation matrix wrapper to resolve deterministic run-lane manifest path" >&2
+  exit 1
+fi
+if ! grep -q "run_lane_dispatch.sh --lane-wrapper run_local_heavy_validation_matrix.sh --resolve-manifest-path" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference local heavy matrix run-wrapper dispatcher mapping" >&2
+  exit 1
+fi
 
 if [ ! -x "$BOOTSTRAP_RUNNER" ]; then
   echo "expected Kolme local bootstrap health-check runner to be executable" >&2
@@ -41,7 +75,7 @@ if [ ! -x "$SUMMARY_HELPER" ]; then
   exit 1
 fi
 
-if ! grep -q "scripts/framework/generate_local_lane_summary.py" "$MATRIX_RUNNER"; then
+if ! grep -q "scripts/framework/generate_local_lane_summary.py" "$MATRIX_RUNNER_IMPL"; then
   echo "expected local heavy matrix runner to use shared local-lane summary helper" >&2
   exit 1
 fi
@@ -52,17 +86,17 @@ if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   exit 1
 fi
 
-if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$MATRIX_RUNNER"; then
+if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$MATRIX_RUNNER_IMPL"; then
   echo "expected local heavy matrix runner to use shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 
-if ! grep -q -- "--mode \$MODE --runtime-profile real-node" "$MATRIX_RUNNER"; then
+if ! grep -q -- "--mode \$MODE --runtime-profile real-node" "$MATRIX_RUNNER_IMPL"; then
   echo "expected real-node integration command to track selected matrix mode" >&2
   exit 1
 fi
 
-if ! grep -q "REAL_NODE_POLICY_REQUIRED_REASON_CODE" "$MATRIX_RUNNER"; then
+if ! grep -q "REAL_NODE_POLICY_REQUIRED_REASON_CODE" "$MATRIX_RUNNER_IMPL"; then
   echo "expected matrix runner to declare dynamic real-node policy reason-code marker" >&2
   exit 1
 fi

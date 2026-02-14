@@ -3,8 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_bootstrap_health_checks.sh"
+RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_bootstrap_health_checks_lane_impl.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_bootstrap_health_checks_lane.json"
 TMP_REPORT="$(mktemp)"
 TMP_ERR="$(mktemp)"
 trap 'rm -f "$TMP_REPORT" "$TMP_ERR"' EXIT
@@ -29,6 +32,32 @@ if [ ! -x "$RUNNER" ]; then
   echo "expected Kolme local bootstrap health-check runner to be executable" >&2
   exit 1
 fi
+if [ ! -x "$RUNNER_IMPL" ]; then
+  echo "expected Kolme local bootstrap health-check run-lane implementation to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected local run lane dispatcher to be executable" >&2
+  exit 1
+fi
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected local bootstrap health-check run-lane manifest to exist" >&2
+  exit 1
+fi
+if [ ! -L "$RUNNER" ]; then
+  echo "expected local bootstrap health-check runner to be a symlink to shared runtime lane dispatcher" >&2
+  exit 1
+fi
+if [ "$(readlink "$RUNNER")" != "run_lane_dispatch.sh" ]; then
+  echo "expected local bootstrap health-check runner symlink target to be run_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper run_local_bootstrap_health_checks.sh --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST" ]; then
+  echo "expected bootstrap health-check wrapper to resolve deterministic run-lane manifest path" >&2
+  exit 1
+fi
 
 # Regression: #1585
 if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
@@ -36,13 +65,17 @@ if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   exit 1
 fi
 
-if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER"; then
+if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER_IMPL"; then
   echo "expected local bootstrap runner to use shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 
 if ! grep -q "run_local_bootstrap_health_checks.sh" "$DOC_FILE"; then
   echo "expected Kolme devnet ops doc to reference local bootstrap health-check runner" >&2
+  exit 1
+fi
+if ! grep -q "run_lane_dispatch.sh --lane-wrapper run_local_bootstrap_health_checks.sh --resolve-manifest-path" "$DOC_FILE"; then
+  echo "expected Kolme devnet ops doc to reference bootstrap run-wrapper dispatcher mapping" >&2
   exit 1
 fi
 

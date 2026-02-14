@@ -111,13 +111,13 @@
       "target_runner": "framework_manifest_lane"
     },
     {
-      "current_runner": "hybrid_shell_python",
+      "current_runner": "framework_manifest_lane",
       "lane_id": "kolme.local.heavy.validation_matrix",
       "owner": "qa",
       "parent_issue": "#1715",
       "priority": "P2",
       "source_entry": "scripts/kolme/run_local_heavy_validation_matrix_contract_lane.sh",
-      "status": "planned",
+      "status": "migrated",
       "target_issue": "#1716",
       "target_runner": "framework_manifest_lane"
     }
