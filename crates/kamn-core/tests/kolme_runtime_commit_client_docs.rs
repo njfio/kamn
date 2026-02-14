@@ -1,4 +1,5 @@
 const DOC: &str = include_str!("../../../docs/foundation/kolme-runtime-commit-client.md");
+const ROADMAP: &str = include_str!("../../../docs/plans/2026-02-08-production-service-roadmap.md");
 
 #[test]
 fn doc_contains_adapter_types_and_validation_commands() {
@@ -90,4 +91,23 @@ fn regression_requires_adapter_provider_mismatch_and_non_final_fail_closed_marke
     assert!(DOC.contains("`Regression: #1781`"));
     assert!(DOC.contains("`Regression: #1783`"));
     assert!(DOC.contains("`Regression: #1979`"));
+}
+
+#[test]
+fn doc_contains_nonce_retry_resilience_contract_and_live_lane_markers() {
+    assert!(DOC.contains("## Nonce Retry Resilience Contract (Task #3042)"));
+    assert!(DOC.contains("kolme.live.nonce.retry"));
+    assert!(DOC.contains("scripts/runtime/validate_nonce_retry_live.sh"));
+    assert!(DOC.contains("scripts/runtime/test_validate_nonce_retry_live.sh"));
+    assert!(DOC.contains("nonce_retry_contract_status=verified"));
+    assert!(DOC.contains("nonce_malformed_fail_closed_status=verified"));
+}
+
+#[test]
+fn roadmap_tracks_post_roadmap_wave1_nonce_retry_live_validation() {
+    assert!(ROADMAP.contains("Task #3042, Subtask #3043"));
+    assert!(ROADMAP.contains("scripts/runtime/validate_nonce_retry_live.sh"));
+    assert!(ROADMAP.contains("scripts/runtime/test_validate_nonce_retry_live.sh"));
+    assert!(ROADMAP.contains("nonce_retry_contract_status=verified"));
+    assert!(ROADMAP.contains("fail_closed_reason_code=nonce_response_malformed"));
 }
