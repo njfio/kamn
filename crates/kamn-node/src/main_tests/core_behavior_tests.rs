@@ -8,6 +8,20 @@ unsafe extern "C" {
     fn raise(sig: i32) -> i32;
 }
 
+fn write_temp_node_config(contents: &str) -> std::path::PathBuf {
+    let mut path = std::env::temp_dir();
+    let unique_suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system time should be after unix epoch")
+        .as_nanos();
+    path.push(format!(
+        "kamn-node-config-layering-{}-{unique_suffix}.conf",
+        std::process::id()
+    ));
+    std::fs::write(&path, contents).expect("temp config file should write");
+    path
+}
+
 #[test]
 fn parses_required_role_and_defaults() {
     let args = vec![
@@ -659,6 +673,131 @@ fn profile_defaults_can_be_overridden_by_explicit_flags() {
     assert_eq!(parsed.storage_dir, "./tmp/custom-listener");
     assert_eq!(parsed.sync_mode, SyncMode::Archive);
     assert!(!parsed.enable_gossip);
+}
+
+#[test]
+fn parses_config_file_layer_for_core_node_fields() {
+    let config_path = write_temp_node_config(
+        "role=listener\nchain_id=kamn-config-file\nchain_version=v0.2.0\nstorage_dir=./tmp/config-listener\nenable_gossip=false\nsync_mode=archive\noutput=json\ndiagnostics=snapshot\n",
+    );
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--config-file".to_owned(),
+        config_path.to_string_lossy().to_string(),
+    ];
+
+    let parsed_result = parse_args(args);
+    std::fs::remove_file(config_path).expect("temp config file should clean up");
+    let parsed = parsed_result.expect("config file args should parse");
+
+    assert_eq!(parsed.role, NodeRole::Listener);
+    assert_eq!(parsed.chain_id, "kamn-config-file");
+    assert_eq!(parsed.chain_version, "v0.2.0");
+    assert_eq!(parsed.storage_dir, "./tmp/config-listener");
+    assert_eq!(parsed.sync_mode, SyncMode::Archive);
+    assert!(!parsed.enable_gossip);
+    assert_eq!(parsed.output_mode, OutputMode::json());
+    assert_eq!(parsed.diagnostics_mode, DiagnosticsMode::snapshot());
+}
+
+#[test]
+fn env_overrides_config_file_chain_id_and_sync_mode() {
+    let _env_lock = signer_env_lock()
+        .lock()
+        .expect("env lock should guard process-level overrides");
+    let _chain_id_guard = EnvVarGuard::set("KAMN_NODE_CHAIN_ID", Some("kamn-env"));
+    let _sync_mode_guard = EnvVarGuard::set("KAMN_NODE_SYNC_MODE", Some("slow"));
+    let config_path = write_temp_node_config(
+        "role=listener\nchain_id=kamn-config-file\nsync_mode=archive\nstorage_dir=./tmp/config-listener\n",
+    );
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--config-file".to_owned(),
+        config_path.to_string_lossy().to_string(),
+    ];
+
+    let parsed_result = parse_args(args);
+    std::fs::remove_file(config_path).expect("temp config file should clean up");
+    let parsed = parsed_result.expect("config + env layered args should parse");
+
+    assert_eq!(parsed.role, NodeRole::Listener);
+    assert_eq!(parsed.chain_id, "kamn-env");
+    assert_eq!(parsed.sync_mode, SyncMode::Slow);
+}
+
+#[test]
+fn cli_values_override_env_and_config_layers() {
+    let _env_lock = signer_env_lock()
+        .lock()
+        .expect("env lock should guard process-level overrides");
+    let _chain_id_guard = EnvVarGuard::set("KAMN_NODE_CHAIN_ID", Some("kamn-env"));
+    let config_path = write_temp_node_config("role=listener\nchain_id=kamn-config-file\n");
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--config-file".to_owned(),
+        config_path.to_string_lossy().to_string(),
+        "--chain-id".to_owned(),
+        "kamn-cli".to_owned(),
+    ];
+
+    let parsed_result = parse_args(args);
+    std::fs::remove_file(config_path).expect("temp config file should clean up");
+    let parsed = parsed_result.expect("config + env + cli layered args should parse");
+
+    assert_eq!(parsed.role, NodeRole::Listener);
+    assert_eq!(parsed.chain_id, "kamn-cli");
+}
+
+#[test]
+fn regression_2967_invalid_env_override_fails_closed() {
+    let _env_lock = signer_env_lock()
+        .lock()
+        .expect("env lock should guard process-level overrides");
+    let _sync_mode_guard = EnvVarGuard::set("KAMN_NODE_SYNC_MODE", Some("turbo"));
+    let config_path = write_temp_node_config("role=processor\n");
+
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--config-file".to_owned(),
+        config_path.to_string_lossy().to_string(),
+    ];
+
+    let parse_result = parse_args(args);
+    std::fs::remove_file(config_path).expect("temp config file should clean up");
+
+    assert!(
+        matches!(
+            parse_result,
+            Err(ConfigError::InvalidSyncMode(value)) if value == "turbo"
+        ),
+        "invalid KAMN_NODE_SYNC_MODE override must fail closed with typed config error"
+    );
+}
+
+#[test]
+fn integration_config_layering_executes_bootstrap_report_with_expected_precedence() {
+    let _env_lock = signer_env_lock()
+        .lock()
+        .expect("env lock should guard process-level overrides");
+    let _chain_id_guard = EnvVarGuard::set("KAMN_NODE_CHAIN_ID", Some("kamn-env"));
+    let config_path = write_temp_node_config("role=listener\nchain_id=kamn-config-file\n");
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--config-file".to_owned(),
+        config_path.to_string_lossy().to_string(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--chain-id".to_owned(),
+        "kamn-cli".to_owned(),
+    ];
+
+    let parsed_result = parse_args(args);
+    std::fs::remove_file(config_path).expect("temp config file should clean up");
+    let parsed = parsed_result.expect("layered args should parse");
+    let report = execute(parsed).expect("bootstrap execution should succeed");
+
+    assert_eq!(report.role, "processor");
+    assert_eq!(report.chain_id, "kamn-cli");
 }
 
 #[test]

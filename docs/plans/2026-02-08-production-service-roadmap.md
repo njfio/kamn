@@ -36,6 +36,11 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/validate_service_api_observability_live.sh` and `scripts/runtime/test_validate_service_api_observability_live.sh` (Task #2963, Subtask #2964).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `metrics_contract_status=verified`, `health_contract_status=verified`, `fail_closed_status=verified`.
   - Fail-closed validation confirmed for invalid runtime budget argument: `max-seconds must be an integer`.
+- Phase 6.2 initial slice delivered:
+  - Added deterministic config layering in `kamn-node` with `--config-file` and `KAMN_NODE_CONFIG_FILE`.
+  - Added validated `KAMN_NODE_*` override projection over config-file values with precedence `config < env < CLI`.
+  - Added fail-closed config/override validation with typed `ConfigError` surfaces and regression coverage for invalid env override values (Story #2965, Task #2966, Subtask #2967).
+  - Operator contracts documented in `docs/ops/configuration.md`.
 - Phase 6.3 initial slice delivered: deployment artifacts now include a multi-stage `Dockerfile`, `deploy/docker-compose.yml` role topology, and `deploy/k8s/kamn-node.yaml` baseline manifests (Task #2971, Subtask #2972).
 - Phase 6.3 live validation delivered:
   - Runtime lane: `scripts/deploy/validate_deployment_assets_live.sh` and `scripts/deploy/test_validate_deployment_assets_live.sh` (Task #2973, Subtask #2974).

@@ -14,6 +14,9 @@ This document captures node-runtime productionization slices for machine-readabl
   - `--profile local-processor`
   - `--profile local-listener`
   - `--profile local-approver`
+- Added config layering command surface:
+  - `--config-file <path>`
+  - `KAMN_NODE_CONFIG_FILE=<path>`
 - Added explicit invalid-profile handling through `ConfigError::InvalidNodeProfile`.
 - Added diagnostics mode command surface:
   - `--diagnostics basic` (default)
@@ -138,6 +141,20 @@ This document captures node-runtime productionization slices for machine-readabl
   - `role`: mapped from selected profile
 - Explicit CLI flags override profile defaults (`--chain-id`, `--storage-dir`, `--sync-mode`, `--disable-gossip`, `--role`).
 - Invalid profiles are rejected with explicit typed error.
+
+## Configuration Layering Rules
+- Config layering is enabled when either `--config-file` or `KAMN_NODE_CONFIG_FILE` is set.
+- Config format is deterministic line-oriented `key=value` with optional `#` comments.
+- Boolean keys use strict `true|false`; invalid values fail closed.
+- Precedence order (low -> high):
+  - built-in defaults
+  - profile defaults
+  - config file values
+  - `KAMN_NODE_*` environment overrides
+  - explicit CLI flags
+- Environment overrides are projected only when config layering is active.
+- Invalid config lines, unknown keys, duplicate `--config-file` declarations, and invalid env marker values are rejected with typed `ConfigError::InvalidNodeConfig` or existing typed parse errors (for example `InvalidSyncMode`).
+- Full operator reference: `docs/ops/configuration.md`.
 
 ## Diagnostics Snapshot Rules
 - Supported diagnostics modes:
