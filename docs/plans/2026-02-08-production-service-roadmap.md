@@ -49,6 +49,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/validate_live_validation_environment_live.sh` and `scripts/runtime/test_validate_live_validation_environment_live.sh` (Task #2978, Subtask #2979).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `lane_contract_status=verified`, `evidence_bundle_status=verified`, `fail_closed_status=verified`.
   - Fail-closed validation confirmed for missing local-only opt-in in run mode: `run mode requires explicit local-only opt-in via KAMN_KOLME_LOCAL_HEAVY=1`.
+- Failure-drills implementation delivered:
+  - Runtime lane: `scripts/runtime/run_network_signer_finality_failure_drills_lane.sh` and `scripts/runtime/test_run_network_signer_finality_failure_drills_lane.sh` (Task #2981, Subtask #2982).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `network_partition_status=verified`, `signer_fault_status=verified`, `finality_fault_status=verified`.
+  - Injected signer fault profile validated as fail-closed: `signer_fault_injection_triggered`.
 
 ---
 
@@ -263,6 +267,14 @@ Estimated scope: ~500 lines of infra config.
 - Publish machine-readable evidence (`status`, `final_decision`, reason markers) for go/no-go consumption.
 
 Estimated scope: ~300–600 lines across lane scripts, manifest wiring, and validation docs.
+
+### 6.5 — Failure drills
+
+- Execute deterministic failure drills for network partition/reconnect, signer incident recovery, and finality evidence contracts.
+- Provide injected fault profile(s) that fail closed with reason-coded outputs.
+- Keep runtime cost bounded by composing existing fast local lanes and budget guards.
+
+Estimated scope: ~300–700 lines across runtime lane composition, regression harnesses, and operator docs.
 
 ---
 

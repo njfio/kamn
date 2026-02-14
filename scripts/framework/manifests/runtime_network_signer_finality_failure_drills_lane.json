@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "runtime.network_signer_finality_failure_drills.run",
+  "evidence_key": "network_signer_finality_failure_drills_lane:v1",
+  "reason_key": "runtime_network_signer_finality_failure_drills_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/runtime/run_network_signer_finality_failure_drills_lane_impl.sh"
+    ]
+  }
+}
