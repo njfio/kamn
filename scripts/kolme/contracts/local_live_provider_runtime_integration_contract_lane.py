@@ -195,7 +195,7 @@ if __name__ == "__main__":
                 "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 "
                 f"curl --silent --show-error --fail {base_url}/healthz >/dev/null && "
                 "printf 'status=submitted\\nintegration_kolme_fork_live_node_submit_reaches_endpoint\\n"
-                "{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\\n'"
+                "replay_guard=verified\\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\\n'"
             )
             go_result = _run(
                 [
