@@ -459,6 +459,7 @@ def run_check(args: argparse.Namespace) -> int:
         reason_codes.append("high_priority_tracking_issue_missing")
     if missing_promotion_criteria_entries:
         reason_codes.append("ignored_test_promotion_criteria_missing")
+        reason_codes.append("ignored_test_rationale_stale")
 
     status = "pass" if not reason_codes else "fail"
     report = {

@@ -222,6 +222,21 @@ assert_ci_doc_contract_trend_scope_compact "$non_kolme_wave_trend_loc_checker_ou
 non_kolme_wave_trend_loc_checker_test_output="$(run_selector $'scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh')"
 assert_ci_doc_contract_trend_scope_compact "$non_kolme_wave_trend_loc_checker_test_output" "non-Kolme wave trend-test LOC checker test changes"
 
+ignored_test_baseline_fixture_output="$(run_selector $'fixtures/ci/ignored_test_inventory_baseline.json')"
+assert_ci_doc_contract_scope_compact "$ignored_test_baseline_fixture_output" "ignored-test baseline fixture changes"
+
+ignored_test_metadata_fixture_output="$(run_selector $'fixtures/ci/ignored_test_inventory_metadata.json')"
+assert_ci_doc_contract_scope_compact "$ignored_test_metadata_fixture_output" "ignored-test metadata fixture changes"
+
+ignored_test_promotion_fixture_output="$(run_selector $'fixtures/ci/ignored_test_promotion_criteria.json')"
+assert_ci_doc_contract_scope_compact "$ignored_test_promotion_fixture_output" "ignored-test promotion-criteria fixture changes"
+
+ignored_test_checker_script_output="$(run_selector $'scripts/ci/check_ignored_test_inventory_drift.sh')"
+assert_ci_doc_contract_trend_scope_compact "$ignored_test_checker_script_output" "ignored-test drift checker script changes"
+
+ignored_test_parser_contract_output="$(run_selector $'scripts/ci/test_ignored_test_inventory_parser_contract.sh')"
+assert_ci_doc_contract_trend_scope_compact "$ignored_test_parser_contract_output" "ignored-test parser contract script changes"
+
 non_kolme_dispatcher_script_output="$(run_selector $'scripts/framework/run_non_kolme_contract_lane_dispatch.sh')"
 assert_ci_doc_contract_trend_scope_compact "$non_kolme_dispatcher_script_output" "non-Kolme dispatcher script changes"
 

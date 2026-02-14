@@ -142,4 +142,31 @@ fi
 grep -q '^status=fail$' "$TMP_DIR/check-promotion-fail.out"
 grep -q 'ignored_test_promotion_criteria_missing' "$TMP_DIR/check-promotion-fail.out"
 
+MUTATED_STALE_RATIONALE_METADATA="$TMP_DIR/mutated-stale-rationale-metadata.json"
+cp "$METADATA_FILE" "$MUTATED_STALE_RATIONALE_METADATA"
+python3 - "$MUTATED_STALE_RATIONALE_METADATA" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+metadata_path = Path(sys.argv[1])
+payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+if not payload.get("ignored_tests"):
+    raise SystemExit("expected ignored-test metadata entries")
+payload["ignored_tests"][0]["reason"] = "stale-rationale-legacy"
+metadata_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if bash "$CHECK_SCRIPT" \
+  --baseline-file "$BASELINE_FILE" \
+  --metadata-file "$MUTATED_STALE_RATIONALE_METADATA" \
+  --promotion-criteria-file "$PROMOTION_CRITERIA_FILE" \
+  --output-json "$TMP_DIR/check-stale-rationale-fail.json" >"$TMP_DIR/check-stale-rationale-fail.out" 2>&1; then
+  echo "expected ignored-test checker to fail when metadata rationale drifts from promotion-criteria categories" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/check-stale-rationale-fail.out"
+grep -q 'ignored_test_rationale_stale' "$TMP_DIR/check-stale-rationale-fail.out"
+
 echo "Ignored-test metadata policy tests passed."
