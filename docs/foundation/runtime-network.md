@@ -60,6 +60,9 @@ This document captures the initial runtime-network foundation slice for peer lif
 - Added dedicated runtime snapshot-store test ownership module:
   - `crates/kamn-core/src/runtime_tests_snapshot_store.rs`
   - routed via path-based test module declaration from `crates/kamn-core/src/runtime_tests.rs`
+- Added dedicated runtime network-fault test ownership module:
+  - `crates/kamn-core/src/runtime_tests_network_fault.rs`
+  - routed via path-based test module declaration from `crates/kamn-core/src/runtime_tests.rs`
 - Added watchdog anomaly and deterministic fault simulation primitives in `crates/kamn-core/src/runtime_transport_coordination.rs`:
   - `WatchdogAnomalyKind`
   - `WatchdogAnomalySeverity`
@@ -76,11 +79,15 @@ This document captures the initial runtime-network foundation slice for peer lif
 
 ## Runtime Test Module Ownership Rules
 - Snapshot-store test cases are owned by `crates/kamn-core/src/runtime_tests_snapshot_store.rs`.
+- Network-fault simulation test cases are owned by `crates/kamn-core/src/runtime_tests_network_fault.rs`.
 - `crates/kamn-core/src/runtime_tests.rs` retains routing via:
   - `#[path = "runtime_tests_snapshot_store.rs"]`
   - `mod runtime_tests_snapshot_store;`
+  - `#[path = "runtime_tests_network_fault.rs"]`
+  - `mod runtime_tests_network_fault;`
 - Regression contract:
   - snapshot-store test definitions are not re-inlined into `runtime_tests.rs` (`Regression: #3207`).
+  - network-fault test definitions are not re-inlined into `runtime_tests.rs` (`Regression: #3212`).
 
 ## Node CLI Recovery-Check Mapping
 - `kamn-node --runtime-mode recovery-check` maps directly to `RecoveryRejoinGuard` evaluation flow.

@@ -196,6 +196,9 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
 - Runtime decomposition wave 3 delivered:
   - Extracted runtime snapshot-store test surface from `crates/kamn-core/src/runtime_tests.rs` into `crates/kamn-core/src/runtime_tests_snapshot_store.rs` with path-based routing through `runtime_tests.rs` (Task #3206, Subtask #3207).
   - Added extraction-routing regression coverage to fail closed if snapshot-store tests drift back inline (`runtime::tests::regression_runtime_tests_source_routes_snapshot_store_domain_via_dedicated_module_file`).
+- Runtime decomposition wave 4 delivered:
+  - Extracted runtime network-fault simulation tests from `crates/kamn-core/src/runtime_tests.rs` into `crates/kamn-core/src/runtime_tests_network_fault.rs` with path-based routing through `runtime_tests.rs` (Task #3211, Subtask #3212).
+  - Added extraction-routing regression coverage to fail closed if network-fault tests drift back inline (`runtime::tests::regression_runtime_tests_source_routes_network_fault_domain_via_dedicated_module_file`).
 - Phase 3.1 initial slice delivered:
   - Added deterministic p2p transport contracts in `kamn-core`: `PeerLifecycleTransport`, `InMemoryPeerLifecycleTransport`, `PeerDiscoveryRecord`, `PeerGossipFrame`, and `PeerLifecycleTransportCoordinator` (Task #2921, Subtask #2922).
   - Added bootstrap/runtime wiring integration so `enable_gossip` toggles explicit `p2p-discovery`/`p2p-gossip-transport` components (or `gossip-transport-disabled` when off).
