@@ -62,3 +62,24 @@ Supporting parity harnesses:
 
 - `bash scripts/sdk/test_run_sdk_parity_matrix.sh`
 - `bash scripts/sdk/test_run_live_transport_parity_contract_lane.sh`
+
+## Live Validation
+
+Live validation lane:
+
+- `bash scripts/sdk/test_validate_cross_language_sdk_parity_matrix_live.sh`
+- `bash scripts/sdk/validate_cross_language_sdk_parity_matrix_live.sh --output-json /tmp/cross-language-sdk-parity-live-report.json`
+
+Deterministic success markers:
+
+- `status=pass`
+- `final_decision=GO`
+- `matrix_contract_status=verified`
+- `evidence_bundle_status=verified`
+- `fail_closed_status=verified`
+- `fail_closed_reason_code=invalid_mode`
+
+Deterministic fail-closed drill:
+
+- injected fault: `--mode invalid`
+- expected failure marker: `mode must be one of: contract,deep`
