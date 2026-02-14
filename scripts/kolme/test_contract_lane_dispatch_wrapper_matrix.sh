@@ -11,6 +11,8 @@ fi
 
 lane_wrappers=(
   "run_block_fallback_reconciliation_contract_lane.sh"
+  "run_continuous_runtime_commit_contract_lane.sh"
+  "run_did_lifecycle_chain_adapter_contract_lane.sh"
   "run_fast_gate_native_api_parity_contract_lane.sh"
   "run_local_bootstrap_health_checks_contract_lane.sh"
   "run_local_e2e_integration_contract_lane.sh"
@@ -32,6 +34,7 @@ lane_wrappers=(
   "run_managed_signer_backend_slo_policy_contract_lane.sh"
   "run_managed_signer_backend_slo_telemetry_contract_lane.sh"
   "run_managed_signer_startup_live_validation_contract_lane.sh"
+  "run_message_proof_anchoring_contract_lane.sh"
   "run_local_runtime_commit_live_finality_evidence_contract_lane.sh"
   "run_local_native_api_parity_live_proof_contract_lane.sh"
   "run_local_signed_to_kolme_demo_contract_lane.sh"

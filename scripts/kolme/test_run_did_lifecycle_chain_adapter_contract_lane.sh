@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_did_lifecycle_chain_adapter_contract_lane.sh"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_contract_lane_dispatch.sh"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_did_lifecycle_chain_adapter_contract_lane.json"
+CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/did_lifecycle_chain_adapter_contract_lane.py"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
@@ -10,6 +13,69 @@ if [ ! -x "$RUNNER" ]; then
   echo "expected did lifecycle chain adapter contract runner to be executable" >&2
   exit 1
 fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected did lifecycle chain adapter contract dispatcher to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected did lifecycle chain adapter contract manifest to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$CONTRACT_IMPL" ]; then
+  echo "expected did lifecycle chain adapter contract implementation to exist" >&2
+  exit 1
+fi
+
+if [ ! -L "$RUNNER" ]; then
+  echo "expected did lifecycle chain adapter contract runner to be a symlink to shared dispatcher" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$RUNNER")" != "run_contract_lane_dispatch.sh" ]; then
+  echo "expected did lifecycle chain adapter contract runner symlink target to be run_contract_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUNNER")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST" ]; then
+  echo "expected did lifecycle chain adapter contract dispatcher to resolve deterministic manifest path" >&2
+  exit 1
+fi
+
+python3 - "$MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.contract-lane.manifest.v1":
+    raise SystemExit("unexpected did lifecycle chain adapter manifest schema")
+if payload.get("lane_id") != "kolme.did_lifecycle_chain_adapter.contract":
+    raise SystemExit("unexpected did lifecycle chain adapter manifest lane_id")
+contract_command = payload.get("phases", {}).get("contract")
+if contract_command != [
+    "python3",
+    "scripts/kolme/contracts/did_lifecycle_chain_adapter_contract_lane.py",
+]:
+    raise SystemExit("unexpected did lifecycle chain adapter manifest contract command")
+PY
+
+required_impl_markers=(
+  "functional_lifecycle_chain_submission_through_kolme_adapter_returns_typed_outcome"
+  "integration_lifecycle_chain_submission_allows_retry_without_reapplying_mutation"
+  "regression_lifecycle_chain_submission_rejects_conflicting_same_nonce_payload"
+  "kamn.kolme.did-lifecycle-chain.contract.v1"
+)
+for marker in "${required_impl_markers[@]}"; do
+  if ! grep -q "$marker" "$CONTRACT_IMPL"; then
+    echo "expected did lifecycle chain adapter implementation marker: $marker" >&2
+    exit 1
+  fi
+done
 
 run_output="$(bash "$RUNNER" --output-json "$TMP_REPORT")"
 if ! printf '%s\n' "$run_output" | grep -q '^status=pass$'; then

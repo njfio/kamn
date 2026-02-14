@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_continuous_runtime_commit_contract_lane.sh"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_contract_lane_dispatch.sh"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_continuous_runtime_commit_contract_lane.json"
+CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/continuous_runtime_commit_contract_lane.py"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
@@ -10,6 +13,69 @@ if [ ! -x "$RUNNER" ]; then
   echo "expected continuous runtime commit contract runner to be executable" >&2
   exit 1
 fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected continuous runtime commit contract dispatcher to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected continuous runtime commit contract manifest to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$CONTRACT_IMPL" ]; then
+  echo "expected continuous runtime commit contract implementation to exist" >&2
+  exit 1
+fi
+
+if [ ! -L "$RUNNER" ]; then
+  echo "expected continuous runtime commit contract runner to be a symlink to shared dispatcher" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$RUNNER")" != "run_contract_lane_dispatch.sh" ]; then
+  echo "expected continuous runtime commit contract runner symlink target to be run_contract_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUNNER")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST" ]; then
+  echo "expected continuous runtime commit contract dispatcher to resolve deterministic manifest path" >&2
+  exit 1
+fi
+
+python3 - "$MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.contract-lane.manifest.v1":
+    raise SystemExit("unexpected continuous runtime commit manifest schema")
+if payload.get("lane_id") != "kolme.continuous_runtime_commit.contract":
+    raise SystemExit("unexpected continuous runtime commit manifest lane_id")
+contract_command = payload.get("phases", {}).get("contract")
+if contract_command != [
+    "python3",
+    "scripts/kolme/contracts/continuous_runtime_commit_contract_lane.py",
+]:
+    raise SystemExit("unexpected continuous runtime commit manifest contract command")
+PY
+
+required_impl_markers=(
+  "rejects_kolme_live_continuous_mode_without_tick_interval"
+  "rejects_kolme_live_continuous_mode_without_max_ticks"
+  "functional_runtime_kolme_live_continuous_mode_executes_multiple_cycles"
+  "kamn.kolme.continuous-runtime-commit.contract.v1"
+)
+for marker in "${required_impl_markers[@]}"; do
+  if ! grep -q "$marker" "$CONTRACT_IMPL"; then
+    echo "expected continuous runtime commit implementation marker: $marker" >&2
+    exit 1
+  fi
+done
 
 run_output="$(bash "$RUNNER" --output-json "$TMP_REPORT")"
 if ! printf '%s\n' "$run_output" | grep -q '^status=pass$'; then

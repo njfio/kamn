@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_message_proof_anchoring_contract_lane.sh"
+DISPATCHER="$ROOT_DIR/scripts/kolme/run_contract_lane_dispatch.sh"
+MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_message_proof_anchoring_contract_lane.json"
+CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/message_proof_anchoring_contract_lane.py"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
@@ -10,6 +13,70 @@ if [ ! -x "$RUNNER" ]; then
   echo "expected message proof anchoring contract runner to be executable" >&2
   exit 1
 fi
+
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected message proof anchoring contract dispatcher to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$MANIFEST" ]; then
+  echo "expected message proof anchoring contract manifest to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$CONTRACT_IMPL" ]; then
+  echo "expected message proof anchoring contract implementation to exist" >&2
+  exit 1
+fi
+
+if [ ! -L "$RUNNER" ]; then
+  echo "expected message proof anchoring contract runner to be a symlink to shared dispatcher" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$RUNNER")" != "run_contract_lane_dispatch.sh" ]; then
+  echo "expected message proof anchoring contract runner symlink target to be run_contract_lane_dispatch.sh" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUNNER")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST" ]; then
+  echo "expected message proof anchoring contract dispatcher to resolve deterministic manifest path" >&2
+  exit 1
+fi
+
+python3 - "$MANIFEST" <<'PY'
+import json
+import pathlib
+import sys
+
+manifest_path = pathlib.Path(sys.argv[1])
+payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.contract-lane.manifest.v1":
+    raise SystemExit("unexpected message proof anchoring manifest schema")
+if payload.get("lane_id") != "kolme.message_proof_anchoring.contract":
+    raise SystemExit("unexpected message proof anchoring manifest lane_id")
+contract_command = payload.get("phases", {}).get("contract")
+if contract_command != [
+    "python3",
+    "scripts/kolme/contracts/message_proof_anchoring_contract_lane.py",
+]:
+    raise SystemExit("unexpected message proof anchoring manifest contract command")
+PY
+
+required_impl_markers=(
+  "functional_anchor_submission_advances_broadcast_to_included_with_typed_outcome"
+  "integration_anchor_retry_is_duplicate_without_reapplying_state_transition"
+  "regression_anchor_conflicting_payload_for_same_message_rejected_fail_closed"
+  "performance_anchor_submission_contract_lane_stays_within_budget"
+  "kamn.kolme.message-proof-anchoring.contract.v1"
+)
+for marker in "${required_impl_markers[@]}"; do
+  if ! grep -q "$marker" "$CONTRACT_IMPL"; then
+    echo "expected message proof anchoring implementation marker: $marker" >&2
+    exit 1
+  fi
+done
 
 run_output="$(bash "$RUNNER" --output-json "$TMP_REPORT")"
 if ! printf '%s\n' "$run_output" | grep -q '^status=pass$'; then
