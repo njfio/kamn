@@ -9,3 +9,12 @@ fn roadmap_tracks_runtime_decomposition_tranche4_snapshot_module_extraction() {
     assert!(ROADMAP.contains("runtime_module_extraction_contract.rs"));
     assert!(ROADMAP.contains("runtime_network_docs.rs"));
 }
+
+#[test]
+fn roadmap_tracks_runtime_decomposition_tranche5_recovery_guard_module_extraction() {
+    assert!(ROADMAP.contains("Task #3129"));
+    assert!(ROADMAP.contains("Subtask #3130"));
+    assert!(ROADMAP.contains("crates/kamn-core/src/runtime_recovery_guard.rs"));
+    assert!(ROADMAP.contains("runtime_module_extraction_contract.rs"));
+    assert!(ROADMAP.contains("runtime_network_docs.rs"));
+}
