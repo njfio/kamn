@@ -502,9 +502,33 @@ fn integration_kolme_live_nonce_resolver_fetches_next_nonce() {
 }
 
 #[test]
+fn integration_kolme_live_nonce_resolver_retries_unavailable_then_succeeds() {
+    let (base_url, requests) = spawn_kolme_live_mock_server(vec![
+        MockHttpReply {
+            status_line: "HTTP/1.1 503 Service Unavailable",
+            body: "{\"error\":\"nonce unavailable\"}".to_owned(),
+        },
+        MockHttpReply::ok(r#"{"next_nonce":29,"account_id":"acct-2207"}"#),
+    ]);
+    let mut transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
+    let pubkey = "03c9e9fd7028a8b17f4fbe0f6f7d38af2ec527f6bb2af04d4d2e2b0eb4f1f01b8a";
+
+    let nonce = resolve_kolme_live_nonce(base_url.as_str(), &mut transport, pubkey)
+        .expect("nonce resolver should recover from transient unavailable response");
+    assert_eq!(nonce, 29);
+
+    let recorded_requests = requests.lock().expect("request mutex should lock");
+    assert_eq!(
+        recorded_requests.len(),
+        2,
+        "nonce resolver should retry once after unavailable response"
+    );
+}
+
+#[test]
 fn regression_kolme_live_nonce_resolver_rejects_malformed_response() {
     // Regression: #2207
-    let (base_url, _requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+    let (base_url, requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
         r#"{"next_nonce":0,"account_id":"acct-2207"}"#,
     )]);
     let mut transport = KolmeRuntimeCommitHttpTransport::new(2).expect("transport should build");
@@ -517,6 +541,12 @@ fn regression_kolme_live_nonce_resolver_rejects_malformed_response() {
     assert!(
         matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("nonce response malformed")),
         "expected fail-closed nonce parser error"
+    );
+    let recorded_requests = requests.lock().expect("request mutex should lock");
+    assert_eq!(
+        recorded_requests.len(),
+        1,
+        "malformed nonce responses must fail fast without retry"
     );
 }
 

@@ -399,6 +399,60 @@ fn functional_kolme_live_retry_emits_structured_retry_markers() {
 }
 
 #[test]
+fn functional_kolme_live_nonce_retry_emits_structured_retry_marker() {
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+    let _env_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+        Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+    );
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let (base_url, _requests) = spawn_kolme_live_mock_server(vec![
+        MockHttpReply {
+            status_line: "HTTP/1.1 503 Service Unavailable",
+            body: "{\"error\":\"nonce unavailable\"}".to_owned(),
+        },
+        MockHttpReply::ok(r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#),
+        MockHttpReply::ok(
+            r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:ab12cd34","finality":"final"}"#,
+        ),
+    ]);
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        base_url,
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
+    ])
+    .expect("kolme-live args should parse");
+
+    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
+    let report = report_result.expect("runtime should recover from transient nonce failure");
+    assert_eq!(report.runtime_mode, "kolme-live");
+
+    let nonce_retry_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"kolme.live.nonce.retry\""))
+        .expect("kolme-live retry flow should emit nonce retry marker");
+    assert_eq!(
+        extract_json_string_field(nonce_retry_line, "reason").as_deref(),
+        Some("unavailable")
+    );
+}
+
+#[test]
 fn regression_invalid_log_level_config_fails_closed() {
     let _lock = log_env_lock()
         .lock()
