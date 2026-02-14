@@ -193,7 +193,7 @@ def _runtime_commit_command(
         "KAMN_KOLME_LIVE_SIGNER_KEY_SOURCE=env-local "
         "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 "
         f"curl --silent --show-error --fail --request PUT --header 'Content-Type: application/json' --data {shlex.quote(broadcast_payload)} {shlex.quote(base_url.rstrip('/') + '/broadcast')} "
-        "&& printf 'status=submitted\\nintegration_kolme_fork_live_node_submit_reaches_endpoint\\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\\n'"
+        "&& printf 'status=submitted\\nintegration_kolme_fork_live_node_submit_reaches_endpoint\\nreplay_guard=verified\\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\\n'"
     )
     finality_command = (
         f"curl --silent --show-error --fail {shlex.quote(base_url.rstrip('/') + '/healthz')} "
