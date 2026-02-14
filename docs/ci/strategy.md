@@ -265,6 +265,25 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_graceful_shutdown_drain_policy_marker_missing:websocket_drain_status`
 
+## Runtime Service API Shutdown Abrupt-Close Regression Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live.sh --mode dry-run --output-json /tmp/service-api-shutdown-abrupt-close-regression-live-summary.json`
+  - `KAMN_LOCAL_SHUTDOWN_ABRUPT_CLOSE_REGRESSION_OPT_IN=1 bash scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live.sh --mode run --output-json /tmp/service-api-shutdown-abrupt-close-regression-live-summary.json`
+  - `bash scripts/runtime/check_service_api_shutdown_abrupt_close_regression_live_policy.sh --report-file /tmp/service-api-shutdown-abrupt-close-regression-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-shutdown-abrupt-close-regression-policy.json`
+  - `bash scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live_contract_lane.sh --output-json /tmp/service-api-shutdown-abrupt-close-regression-contract-lane-report.json --policy-output-json /tmp/service-api-shutdown-abrupt-close-regression-policy.json`
+  - `bash scripts/runtime/test_validate_service_api_shutdown_abrupt_close_regression_live_contract_lane.sh`
+  - `bash scripts/runtime/test_check_service_api_shutdown_abrupt_close_regression_live_policy.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - dry-run mode executes no nested abrupt-close regression commands and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_LOCAL_SHUTDOWN_ABRUPT_CLOSE_REGRESSION_OPT_IN=1`.
+  - bounded to four targeted `kamn-node` abrupt-close regression tests (websocket upgrade guards and shutdown signal timeout/replay guards) when run mode is enabled.
+  - service api shutdown abrupt-close regression contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `service_api_shutdown_abrupt_close_regression_policy_marker_missing:abrupt_close_guard_status`
+
 ## Kolme HTTPS Native Transport Contract
 - Runtime-commit HTTPS transport uses an in-process native TLS client path.
 - `openssl s_client` subprocess execution is prohibited in transport code paths (`Regression: #2671`).
@@ -2285,6 +2304,7 @@ Fast-mode CI tooling regression coverage includes:
 - Service API reason-code compatibility CI exclusion policy checker (`test_service_api_reason_code_compatibility_ci_exclusion_policy.sh`)
 - Service API validation negative-matrix CI exclusion policy checker (`test_service_api_validation_negative_matrix_ci_exclusion_policy.sh`)
 - Service API graceful-shutdown drain CI exclusion policy checker (`test_service_api_graceful_shutdown_drain_ci_exclusion_policy.sh`)
+- Service API shutdown abrupt-close regression CI exclusion policy checker (`test_service_api_shutdown_abrupt_close_regression_ci_exclusion_policy.sh`)
 - Flaky report commenter (`test_post_flaky_report_comment.sh`)
 - Flaky issue syncer (`test_sync_flaky_registry_issues.sh`)
 - Workflow guard contracts (`test_workflow_retry_policy.sh`, `test_workflow_cache_policy.sh`, `test_workflow_scope_policy.sh`, `test_workflow_performance_policy.sh`)

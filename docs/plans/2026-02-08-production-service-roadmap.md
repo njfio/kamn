@@ -222,6 +222,11 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Policy checker: `scripts/runtime/check_service_api_graceful_shutdown_drain_live_policy.sh`.
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `http_drain_status=verified`, `websocket_drain_status=verified`, `shutdown_signal_status=verified`, `shutdown_timeout_guard_status=verified`, `service_api_graceful_shutdown_drain_policy_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for tamper and drain guard drills: `service_api_graceful_shutdown_drain_policy_marker_missing:websocket_drain_status`, `service_api_websocket_upgrade_required`.
+- Phase 2.9 shutdown abrupt-close regression contract-lane policy delivered:
+  - Runtime lane: `scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live.sh`, `scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live_contract_lane.sh`, and tests `scripts/runtime/test_validate_service_api_shutdown_abrupt_close_regression_live_contract_lane.sh`, `scripts/runtime/test_check_service_api_shutdown_abrupt_close_regression_live_policy.sh` (Task #3275).
+  - Policy checker: `scripts/runtime/check_service_api_shutdown_abrupt_close_regression_live_policy.sh`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `abrupt_close_guard_status=verified`, `websocket_rejection_guard_status=verified`, `shutdown_timeout_guard_status=verified`, `replayed_signal_guard_status=verified`, `service_api_shutdown_abrupt_close_regression_policy_status=verified`, `performance_budget_status=verified`.
+  - Fail-closed validation confirmed for tamper and abrupt-close guard drills: `service_api_shutdown_abrupt_close_regression_policy_marker_missing:abrupt_close_guard_status`, `service_api_websocket_upgrade_required`.
 - Runtime decomposition wave 1 delivered:
   - Extracted network-fault simulation APIs from `crates/kamn-core/src/runtime_transport_coordination.rs` into `crates/kamn-core/src/runtime_network_fault.rs` with stable `runtime.rs` re-export compatibility (Task #3186, Subtask #3187).
   - Added extraction regression contract coverage for module declaration and re-export continuity (`runtime::tests::regression_runtime_source_routes_network_fault_domain_via_dedicated_module`).
