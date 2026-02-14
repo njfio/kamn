@@ -232,6 +232,11 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Policy checker: `scripts/runtime/check_service_api_prometheus_metrics_live_policy.sh`.
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `metrics_contract_status=verified`, `health_contract_status=verified`, `prometheus_format_status=verified`, `service_api_prometheus_metrics_policy_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for tamper and metrics guard drills: `service_api_prometheus_metrics_policy_marker_missing:metrics_contract_status`.
+- Phase 2.11 local metrics scrape contract-lane policy delivered:
+  - Runtime lane: `scripts/runtime/validate_local_metrics_scrape_live.sh`, `scripts/runtime/validate_local_metrics_scrape_live_contract_lane.sh`, and tests `scripts/runtime/test_validate_local_metrics_scrape_live_contract_lane.sh`, `scripts/runtime/test_check_local_metrics_scrape_live_policy.sh` (Task #3271).
+  - Policy checker: `scripts/runtime/check_local_metrics_scrape_live_policy.sh`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `local_scrape_probe_status=verified`, `prometheus_payload_status=verified`, `health_endpoint_status=verified`, `local_metrics_scrape_policy_status=verified`, `performance_budget_status=verified`.
+  - Fail-closed validation confirmed for tamper and local scrape guard drills: `local_metrics_scrape_policy_marker_missing:local_scrape_probe_status`.
 - Runtime decomposition wave 1 delivered:
   - Extracted network-fault simulation APIs from `crates/kamn-core/src/runtime_transport_coordination.rs` into `crates/kamn-core/src/runtime_network_fault.rs` with stable `runtime.rs` re-export compatibility (Task #3186, Subtask #3187).
   - Added extraction regression contract coverage for module declaration and re-export continuity (`runtime::tests::regression_runtime_source_routes_network_fault_domain_via_dedicated_module`).
