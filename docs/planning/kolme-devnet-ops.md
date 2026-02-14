@@ -1086,6 +1086,32 @@ Operator checkpoints:
   - `recovery_lineage_missing`
   - `Regression: #3249`
 
+## Milestone Review Aggregate Evidence Bundle (Issue #3247)
+
+- Build linked release-governance artifacts:
+  1. `bash scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-deployment-preflight-summary.json`
+  2. `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
+  3. `bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json`
+  4. `python3 scripts/kolme/check_local_live_node_validation_bundle_policy.py --report-file /tmp/kolme-local-live-node-validation-bundle-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-node-validation-bundle-policy.json`
+  5. `bash scripts/runtime/run_go_no_go_gate_lane.sh --max-seconds 120 --output-json /tmp/go-no-go-gate-report.json`
+- Generate deterministic milestone aggregate review bundle:
+  - `bash scripts/deploy/generate_gonogo_evidence_bundle.sh --output-file /tmp/gonogo-milestone.json --release-candidate v1.0.0-rc.5 --schema-target-version 1.0.0 --runtime-image-digest sha256:abc123 --ci-fast-gate PASS --ci-deep-lane PASS --rollback-precheck PASS --rollback-trigger-status CLEAR --required-approvals 2 --received-approvals 2 --deployment-preflight-summary-file /tmp/kolme-local-live-deployment-preflight-summary.json --deployment-preflight-policy-file /tmp/kolme-local-live-deployment-preflight-policy.json --live-node-validation-summary-file /tmp/kolme-local-live-node-validation-bundle-summary.json --live-node-validation-policy-file /tmp/kolme-local-live-node-validation-bundle-policy.json --go-no-go-gate-report-file /tmp/go-no-go-gate-report.json`
+- Validate aggregate lineage policy:
+  - `bash scripts/deploy/check_gonogo_evidence_policy.sh --bundle-file /tmp/gonogo-milestone.json`
+- Aggregate bundle contracts:
+  - `milestone_review_bundle.schema_version=kamn.release.milestone-review-bundle.v1`
+  - `milestone_review_bundle.contracts.linked_artifact_lineage_required=true`
+  - `milestone_review_bundle.contracts.live_bundle_runtime_provider_client_required=KolmeRuntimeCommitLiveProvider`
+  - `milestone_review_bundle.contracts.go_no_go_gate_final_decision_required=GO`
+  - `milestone_review_bundle.lineage_status=verified|fail-closed`
+- Fail-closed reason markers:
+  - `milestone_review_deployment_preflight_summary_missing`
+  - `milestone_review_live_node_validation_summary_missing`
+  - `milestone_review_go_no_go_gate_report_missing`
+  - `milestone_review_live_node_validation_runtime_provider_mismatch`
+  - `milestone_review_go_no_go_gate_final_decision_mismatch`
+  - `milestone review bundle lineage mismatch`
+
 ## Localhost Two-Process Signed-Message Demo Contract (Issue #1612)
 
 - Makefile demo command:
