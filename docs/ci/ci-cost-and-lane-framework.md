@@ -30,8 +30,13 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
   - wrapper: `scripts/signer/run_signer_provider_deep_lane.sh`
   - implementation: `scripts/signer/run_signer_provider_deep_lane_impl.sh`
   - manifest: `scripts/framework/manifests/signer_signer_provider_deep_lane.json`
+- `#2856` migrates `scripts/signer/run_signer_incident_recovery_deep_lane.sh` to shared non-Kolme dispatcher + manifest wiring:
+  - wrapper: `scripts/signer/run_signer_incident_recovery_deep_lane.sh`
+  - implementation: `scripts/signer/run_signer_incident_recovery_deep_lane_impl.sh`
+  - manifest: `scripts/framework/manifests/signer_signer_incident_recovery_deep_lane.json`
 - Contract coverage for this migration slice:
   - `scripts/signer/test_run_signer_provider_deep_lane.sh`
+  - `scripts/signer/test_run_signer_incident_recovery_deep_lane.sh`
   - `scripts/signer/test_run_signer_emulator_contract_lane.sh`
 
 ## Fast-Gate Delta Policy
