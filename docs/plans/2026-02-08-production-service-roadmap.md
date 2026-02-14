@@ -58,6 +58,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Added publishable packaging metadata at repository root: `pyproject.toml`.
   - Added deterministic packaging contract runner/harness: `scripts/sdk/run_python_sdk_packaging_contract.sh` and `scripts/sdk/test_run_python_sdk_packaging_contract.sh` (Task #2951, Subtask #2952).
   - Added operator/developer packaging contract documentation: `docs/sdk/python-sdk.md`.
+- Phase 5 Python SDK packaging live validation delivered:
+  - Runtime lane: `scripts/sdk/validate_python_sdk_packaging_live.sh` and `scripts/sdk/test_validate_python_sdk_packaging_live.sh` (Task #2953, Subtask #2954).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `packaging_contract_status=verified`, `evidence_bundle_status=verified`, `fail_closed_status=verified`.
+  - Fail-closed validation confirmed for missing metadata drill: `expected python sdk packaging metadata file: pyproject.toml`.
 - Phase 6.3 initial slice delivered: deployment artifacts now include a multi-stage `Dockerfile`, `deploy/docker-compose.yml` role topology, and `deploy/k8s/kamn-node.yaml` baseline manifests (Task #2971, Subtask #2972).
 - Phase 6.3 live validation delivered:
   - Runtime lane: `scripts/deploy/validate_deployment_assets_live.sh` and `scripts/deploy/test_validate_deployment_assets_live.sh` (Task #2973, Subtask #2974).

@@ -52,3 +52,24 @@ Fail-closed guardrails:
 - missing/invalid packaging metadata in `pyproject.toml`
 - SDK import/contract probe drift
 - Python SDK unit suite drift (`python3 -m unittest tests/python/test_sdk.py`)
+
+## Live Validation
+
+Live validation lane:
+
+- `bash scripts/sdk/test_validate_python_sdk_packaging_live.sh`
+- `bash scripts/sdk/validate_python_sdk_packaging_live.sh --output-json /tmp/python-sdk-packaging-live-report.json`
+
+Deterministic success markers:
+
+- `status=pass`
+- `final_decision=GO`
+- `packaging_contract_status=verified`
+- `evidence_bundle_status=verified`
+- `fail_closed_status=verified`
+- `fail_closed_reason_code=missing_pyproject`
+
+Deterministic fail-closed drill:
+
+- injected fault: temporarily remove `pyproject.toml` during runner invocation
+- expected failure marker: `expected python sdk packaging metadata file: pyproject.toml`
