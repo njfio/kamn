@@ -87,6 +87,8 @@ const KOLME_LIVE_SIGNER_KEY_REF_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_KEY_REF";
 const KOLME_LIVE_SIGNER_KEY_REF_SECONDARY_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY";
 const KOLME_LIVE_MANAGED_SIGNER_COMMAND_ENV: &str = "KAMN_KOLME_LIVE_MANAGED_SIGNER_COMMAND";
 const KOLME_LIVE_MANAGED_SIGNER_REQUIRED_ENV: &str = "KAMN_KOLME_LIVE_MANAGED_SIGNER_REQUIRED";
+const KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING_ENV: &str =
+    "KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING";
 const KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS_ENV: &str =
     "KAMN_KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS";
 const KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS_DEFAULT: u64 = 5;
@@ -564,6 +566,44 @@ async fn run_async() -> Result<(), ConfigError> {
         .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?
 }
 
+fn resolve_kolme_live_allow_local_signer_testing_override() -> Result<bool, ConfigError> {
+    match env::var(KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING_ENV) {
+        Ok(value) => {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                return Err(ConfigError::RuntimeKolmeLive(format!(
+                    "{KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING_ENV} must not be empty when present (legacy_local_signer_path_override_invalid)"
+                )));
+            }
+            match trimmed {
+                "true" => Ok(true),
+                "false" => Ok(false),
+                _ => Err(ConfigError::RuntimeKolmeLive(format!(
+                    "{KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING_ENV} must be 'true' or 'false', found '{trimmed}' (legacy_local_signer_path_override_invalid)"
+                ))),
+            }
+        }
+        Err(env::VarError::NotPresent) => Ok(false),
+        Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING_ENV} must be valid utf-8 when present (legacy_local_signer_path_override_invalid)"
+        ))),
+    }
+}
+
+fn enforce_kolme_live_signer_contract_policy(
+    strict_signer_contracts_enabled: bool,
+    allow_local_signer_testing_override: bool,
+    is_test_build: bool,
+) -> Result<(), ConfigError> {
+    if strict_signer_contracts_enabled || allow_local_signer_testing_override || is_test_build {
+        return Ok(());
+    }
+
+    Err(ConfigError::RuntimeKolmeLive(format!(
+        "--kolme-live-strict-signer-contracts is required for runtime-mode kolme-live; set {KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING_ENV}=true only for explicit local testing override (legacy_local_signer_path_forbidden)"
+    )))
+}
+
 fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
     let NodeCli {
         profile,
@@ -795,6 +835,13 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             )?;
             let signing_profile = kolme_live_signing_profile.ok_or(
                 ConfigError::MissingArgumentValue("--kolme-live-signing-profile"),
+            )?;
+            let allow_local_signer_testing_override =
+                resolve_kolme_live_allow_local_signer_testing_override()?;
+            enforce_kolme_live_signer_contract_policy(
+                kolme_live_strict_signer_contracts,
+                allow_local_signer_testing_override,
+                cfg!(test),
             )?;
             let strict_signer_profile = if kolme_live_strict_signer_contracts {
                 Some(normalize_kolme_live_signer_profile_selector(
