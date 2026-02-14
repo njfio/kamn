@@ -199,6 +199,30 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `full_io_scenario_matrix_policy_multinode_propagation_mismatch`
 
+## Runtime Local Full-Stack Integration Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_local_full_stack_integration_live.sh --mode dry-run --output-json /tmp/local-full-stack-integration-summary.json`
+  - `KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1 bash scripts/runtime/validate_local_full_stack_integration_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/local-full-stack-integration-summary.json`
+  - `bash scripts/runtime/check_local_full_stack_integration_live_policy.sh --report-file /tmp/local-full-stack-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-full-stack-integration-policy.json`
+  - `bash scripts/runtime/validate_local_full_stack_integration_live_contract_lane.sh --output-json /tmp/local-full-stack-integration-contract-lane-report.json --policy-output-json /tmp/local-full-stack-integration-policy.json`
+  - `bash scripts/runtime/test_validate_local_full_stack_integration_live.sh`
+  - `bash scripts/runtime/test_check_local_full_stack_integration_live_policy.sh`
+  - `bash scripts/runtime/test_validate_local_full_stack_integration_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Integration composition contract:
+  - composes full I/O scenario matrix lane (`validate_full_io_scenario_matrix_live.sh`) in run mode.
+  - composes full-runtime supervisor lane (`validate_local_full_runtime_live.sh`) in run mode.
+  - emits deterministic evidence bundle schema `kamn.runtime.local-full-stack-integration-evidence-bundle.v1`.
+- Cost controls:
+  - dry-run mode executes no nested local-heavy commands and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1`.
+  - nested run-mode commands propagate local-only opt-in for composed lanes.
+  - local full-stack integration run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `local_full_stack_integration_policy_evidence_bundle_status_mismatch`
+
 ## Deploy Compose Topology Contract Lane
 - Entry commands:
   - `bash scripts/deploy/validate_compose_topology_contract_lane.sh --output-json /tmp/compose-topology-contract-summary.json --ci-fast-gate PASS`
