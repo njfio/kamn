@@ -333,6 +333,10 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains(
         "native parity fast/local command matrix remains synchronized across `README.md` and `docs/planning/kolme-devnet-ops.md`."
     ));
+    assert!(DOC.contains(
+        "baseline script inventory remains authoritative; any new script path must be documented by refreshing the committed baseline fixture in the same change."
+    ));
+    assert!(DOC.contains("reason_codes=unexpected_current_scripts"));
 }
 
 #[test]
