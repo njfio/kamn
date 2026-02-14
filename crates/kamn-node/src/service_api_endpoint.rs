@@ -37,6 +37,14 @@ pub(crate) struct ServiceApiSnapshot {
     pub(crate) role: String,
     pub(crate) chain_id: String,
     pub(crate) chain_version: String,
+    pub(crate) observability_source: String,
+    pub(crate) observability_latency_p50_ms: u64,
+    pub(crate) observability_latency_p99_ms: u64,
+    pub(crate) observability_throughput_tps: u64,
+    pub(crate) observability_error_rate_bps: u64,
+    pub(crate) observability_availability_bps: u64,
+    pub(crate) observability_health: String,
+    pub(crate) observability_alert_count: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -61,11 +69,20 @@ enum RequestAuthFailure {
 }
 
 pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> ServiceApiSnapshot {
+    let observability = resolve_service_api_observability(report);
     ServiceApiSnapshot {
         runtime_mode: report.runtime_mode.clone(),
         role: report.role.clone(),
         chain_id: report.chain_id.clone(),
         chain_version: report.chain_version.clone(),
+        observability_source: observability.source,
+        observability_latency_p50_ms: observability.latency_p50_ms,
+        observability_latency_p99_ms: observability.latency_p99_ms,
+        observability_throughput_tps: observability.throughput_tps,
+        observability_error_rate_bps: observability.error_rate_bps,
+        observability_availability_bps: observability.availability_bps,
+        observability_health: observability.health,
+        observability_alert_count: observability.alert_count,
     }
 }
 
@@ -80,17 +97,35 @@ pub(crate) fn render_service_api_endpoint_response(
             status_code: 200,
             content_type: "application/json",
             body: format!(
-                "{{\"status\":\"ok\",\"runtime_mode\":\"{}\",\"role\":\"{}\"}}",
+                "{{\"status\":\"ok\",\"runtime_mode\":\"{}\",\"role\":\"{}\",\"observability_source\":\"{}\",\"observability_health\":\"{}\"}}",
                 escape_json_string(snapshot.runtime_mode.as_str()),
                 escape_json_string(snapshot.role.as_str()),
+                escape_json_string(snapshot.observability_source.as_str()),
+                escape_json_string(snapshot.observability_health.as_str()),
             ),
         };
     }
     if method == "GET" && path == ROUTE_METRICS {
+        let health_value = if snapshot.observability_health == "healthy" {
+            1
+        } else {
+            0
+        };
         let metrics = format!(
-            "kamn_service_api_health{{runtime_mode=\"{}\"}} 1\nkamn_service_api_role{{role=\"{}\"}} 1\n",
+            "kamn_service_api_health{{runtime_mode=\"{}\"}} 1\nkamn_service_api_role{{role=\"{}\"}} 1\nkamn_service_api_chain_info{{chain_id=\"{}\",chain_version=\"{}\"}} 1\nkamn_service_api_observability_latency_p50_ms {}\nkamn_service_api_observability_latency_p99_ms {}\nkamn_service_api_observability_throughput_tps {}\nkamn_service_api_observability_error_rate_bps {}\nkamn_service_api_observability_availability_bps {}\nkamn_service_api_observability_alert_count {}\nkamn_service_api_observability_source{{source=\"{}\"}} 1\nkamn_service_api_observability_health{{health=\"{}\"}} {}\n",
             escape_metrics_label(snapshot.runtime_mode.as_str()),
-            escape_metrics_label(snapshot.role.as_str())
+            escape_metrics_label(snapshot.role.as_str()),
+            escape_metrics_label(snapshot.chain_id.as_str()),
+            escape_metrics_label(snapshot.chain_version.as_str()),
+            snapshot.observability_latency_p50_ms,
+            snapshot.observability_latency_p99_ms,
+            snapshot.observability_throughput_tps,
+            snapshot.observability_error_rate_bps,
+            snapshot.observability_availability_bps,
+            snapshot.observability_alert_count,
+            escape_metrics_label(snapshot.observability_source.as_str()),
+            escape_metrics_label(snapshot.observability_health.as_str()),
+            health_value,
         );
         return ServiceApiEndpointResponse {
             status_code: 200,
@@ -309,6 +344,91 @@ fn service_api_signature_state_hash(snapshot: &ServiceApiSnapshot) -> String {
         snapshot.chain_id.as_str(),
         snapshot.chain_version.as_str()
     )
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ServiceApiObservabilitySnapshot {
+    source: String,
+    latency_p50_ms: u64,
+    latency_p99_ms: u64,
+    throughput_tps: u64,
+    error_rate_bps: u64,
+    availability_bps: u64,
+    health: String,
+    alert_count: usize,
+}
+
+fn resolve_service_api_observability(
+    report: &NodeBootstrapReport,
+) -> ServiceApiObservabilitySnapshot {
+    if let (
+        Some(latency_p50_ms),
+        Some(latency_p99_ms),
+        Some(throughput_tps),
+        Some(error_rate_bps),
+        Some(availability_bps),
+        Some(health),
+        Some(alert_count),
+    ) = (
+        report.daemon_observability_latency_p50_ms,
+        report.daemon_observability_latency_p99_ms,
+        report.daemon_observability_throughput_tps,
+        report.daemon_observability_error_rate_bps,
+        report.daemon_observability_availability_bps,
+        report.daemon_observability_health.as_deref(),
+        report.daemon_observability_alert_count,
+    ) {
+        return ServiceApiObservabilitySnapshot {
+            source: "daemon".to_owned(),
+            latency_p50_ms,
+            latency_p99_ms,
+            throughput_tps,
+            error_rate_bps,
+            availability_bps,
+            health: health.to_owned(),
+            alert_count,
+        };
+    }
+
+    if let (
+        Some(latency_p50_ms),
+        Some(latency_p99_ms),
+        Some(throughput_tps),
+        Some(error_rate_bps),
+        Some(availability_bps),
+        Some(health),
+        Some(alert_count),
+    ) = (
+        report.kolme_live_observability_latency_p50_ms,
+        report.kolme_live_observability_latency_p99_ms,
+        report.kolme_live_observability_throughput_tps,
+        report.kolme_live_observability_error_rate_bps,
+        report.kolme_live_observability_availability_bps,
+        report.kolme_live_observability_health.as_deref(),
+        report.kolme_live_observability_alert_count,
+    ) {
+        return ServiceApiObservabilitySnapshot {
+            source: "kolme-live".to_owned(),
+            latency_p50_ms,
+            latency_p99_ms,
+            throughput_tps,
+            error_rate_bps,
+            availability_bps,
+            health: health.to_owned(),
+            alert_count,
+        };
+    }
+
+    ServiceApiObservabilitySnapshot {
+        source: "unknown".to_owned(),
+        latency_p50_ms: 0,
+        latency_p99_ms: 0,
+        throughput_tps: 0,
+        error_rate_bps: 0,
+        availability_bps: 0,
+        health: "unknown".to_owned(),
+        alert_count: 0,
+    }
 }
 
 fn header_value<'a>(headers: &'a BTreeMap<String, String>, name: &str) -> Option<&'a str> {
