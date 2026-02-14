@@ -90,6 +90,25 @@ fn runbook_contains_kolme_fallback_signer_runtime_deploy_guard() {
 }
 
 #[test]
+fn runbook_tracks_story_3088_local_live_runtime_profile_matrix_contracts() {
+    assert!(RUNBOOK.contains("Story #3088, Task #3102, Task #3104"));
+    assert!(RUNBOOK.contains("Subtask #3103, Subtask #3105"));
+    assert!(RUNBOOK.contains("run_local_kamn_live_runtime_real_node_profile_contract_lane.sh"));
+    assert!(RUNBOOK
+        .contains("schema_version=kamn.kolme.local-kamn-live-runtime-integration-summary.v1"));
+    assert!(RUNBOOK.contains("runtime_profile=real-node"));
+    assert!(RUNBOOK.contains("runtime_commit_command_profile=real-node-non-synthetic-v1"));
+    assert!(RUNBOOK.contains("runtime_commit_policy_command_profile=real-node-non-synthetic-v1"));
+    assert!(RUNBOOK.contains("runtime_commit_command_profile_mismatch"));
+    assert!(RUNBOOK.contains("runtime_signer_failover_profile_unchanged"));
+    assert!(RUNBOOK.contains("runtime_signer_rotation_epoch_stale"));
+    assert!(RUNBOOK.contains("runtime_signer_key_source_profile_pair_disallowed"));
+    assert!(RUNBOOK.contains("runtime_commit_live_policy_report_missing"));
+    assert!(RUNBOOK.contains("transport.preflight.timeout"));
+    assert!(RUNBOOK.contains("transport.preflight.failed"));
+}
+
+#[test]
 fn runbook_contains_live_network_pilot_rollback_evidence_gate() {
     assert!(RUNBOOK.contains("## Live-Network Pilot Rollback Evidence Gate"));
     assert!(RUNBOOK.contains("run_live_network_pilot_deep_lane.sh"));

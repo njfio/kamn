@@ -113,3 +113,20 @@ fn roadmap_tracks_post_roadmap_wave1_nonce_retry_live_validation() {
     assert!(ROADMAP.contains("nonce_retry_contract_status=verified"));
     assert!(ROADMAP.contains("fail_closed_reason_code=nonce_response_malformed"));
 }
+
+#[test]
+fn roadmap_tracks_post_roadmap_wave4_local_live_runtime_profile_matrix() {
+    assert!(ROADMAP.contains("Story #3088"));
+    assert!(ROADMAP.contains("Task #3102"));
+    assert!(ROADMAP.contains("Subtask #3103"));
+    assert!(ROADMAP.contains("Task #3104"));
+    assert!(ROADMAP.contains("Subtask #3105"));
+    assert!(ROADMAP.contains("run_local_kamn_live_runtime_real_node_profile_contract_lane.sh"));
+    assert!(ROADMAP.contains("test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh"));
+    assert!(ROADMAP.contains("test_check_local_kamn_live_runtime_real_node_profile_policy.sh"));
+    assert!(ROADMAP.contains("runtime_commit_command_profile_mismatch"));
+    assert!(ROADMAP.contains("runtime_signer_rotation_epoch_stale"));
+    assert!(ROADMAP.contains("runtime_signer_key_source_profile_pair_disallowed"));
+    assert!(ROADMAP.contains("transport.preflight.timeout"));
+    assert!(ROADMAP.contains("transport.preflight.failed"));
+}
