@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  processor:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: kamn-node:local
+    command:
+      - --role
+      - processor
+      - --runtime-mode
+      - daemon
+      - --daemon-max-ticks
+      - "10"
+      - --daemon-tick-interval-ms
+      - "25"
+      - --output
+      - json
+      - --storage-dir
+      - /data/processor
+    volumes:
+      - ../data/processor:/data/processor
+
+  listener:
+    image: kamn-node:local
+    command:
+      - --role
+      - listener
+      - --runtime-mode
+      - daemon
+      - --daemon-max-ticks
+      - "10"
+      - --daemon-tick-interval-ms
+      - "25"
+      - --output
+      - json
+      - --storage-dir
+      - /data/listener
+    volumes:
+      - ../data/listener:/data/listener
+    depends_on:
+      - processor
+
+  approver:
+    image: kamn-node:local
+    command:
+      - --role
+      - approver
+      - --runtime-mode
+      - daemon
+      - --daemon-max-ticks
+      - "10"
+      - --daemon-tick-interval-ms
+      - "25"
+      - --output
+      - json
+      - --storage-dir
+      - /data/approver
+    volumes:
+      - ../data/approver:/data/approver
+    depends_on:
+      - processor
