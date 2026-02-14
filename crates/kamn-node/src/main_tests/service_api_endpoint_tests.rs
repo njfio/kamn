@@ -900,6 +900,96 @@ fn functional_service_api_endpoint_rejects_when_rate_limit_is_exceeded() {
 }
 
 #[test]
+fn functional_service_api_endpoint_applies_sender_anti_spam_throttle_and_suspension() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34065".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 6,
+        idle_timeout_ms: 3_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: 1_000,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let message_body = "{\"message\":\"anti-spam-check\"}";
+    let sender_did = "kamn:did:agent:test-client-anti-spam";
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+
+    let mut responses = Vec::new();
+    for nonce in 610_u64..616_u64 {
+        let signature =
+            baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), message_body);
+        let nonce_text = nonce.to_string();
+        responses.push(send_http_request_with_headers(
+            bind_addr.as_str(),
+            "POST",
+            "/v1/messages/send",
+            message_body,
+            &[
+                ("X-KAMN-Sender-DID", sender_did),
+                ("X-KAMN-Request-Nonce", nonce_text.as_str()),
+                ("X-KAMN-Request-Signature", signature.as_str()),
+            ],
+        ));
+    }
+
+    assert!(responses[0].contains("HTTP/1.1 202 Accepted"));
+    assert!(responses[1].contains("HTTP/1.1 202 Accepted"));
+    assert!(responses[2].contains("HTTP/1.1 202 Accepted"));
+
+    assert!(responses[3].contains("HTTP/1.1 429 Too Many Requests"));
+    let fourth_payload = parse_error_envelope_from_http_response(responses[3].as_str());
+    assert_eq!(fourth_payload.error, "too-many-requests");
+    assert_eq!(
+        fourth_payload.reason_code,
+        "service_api_ingress_sender_rate_limit_exceeded"
+    );
+
+    assert!(responses[4].contains("HTTP/1.1 429 Too Many Requests"));
+    let fifth_payload = parse_error_envelope_from_http_response(responses[4].as_str());
+    assert_eq!(fifth_payload.error, "too-many-requests");
+    assert_eq!(
+        fifth_payload.reason_code,
+        "service_api_ingress_sender_rate_limit_exceeded"
+    );
+
+    assert!(responses[5].contains("HTTP/1.1 429 Too Many Requests"));
+    let sixth_payload = parse_error_envelope_from_http_response(responses[5].as_str());
+    assert_eq!(sixth_payload.error, "too-many-requests");
+    assert_eq!(
+        sixth_payload.reason_code,
+        "service_api_ingress_sender_suspended"
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
 fn integration_service_api_endpoint_rejects_when_concurrency_limit_is_exceeded() {
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
@@ -1135,6 +1225,102 @@ fn regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender() {
     assert!(replay_payload
         .message
         .contains("request nonce replay detected"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn integration_service_api_endpoint_replay_rejection_remains_stable_with_anti_spam_enforcement() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34066".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 3,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: 1_000,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let message_body = "{\"message\":\"replay-anti-spam-matrix\"}";
+    let sender_did = "kamn:did:agent:test-client-replay-anti-spam";
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature_nonce_one =
+        baseline_signature_for_fields(sender_did, 701, state_hash.as_str(), message_body);
+    let signature_nonce_two =
+        baseline_signature_for_fields(sender_did, 702, state_hash.as_str(), message_body);
+
+    let first_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        message_body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "701"),
+            ("X-KAMN-Request-Signature", signature_nonce_one.as_str()),
+        ],
+    );
+    let replay_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        message_body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "701"),
+            ("X-KAMN-Request-Signature", signature_nonce_one.as_str()),
+        ],
+    );
+    let fresh_nonce_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        message_body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "702"),
+            ("X-KAMN-Request-Signature", signature_nonce_two.as_str()),
+        ],
+    );
+
+    assert!(first_response.contains("HTTP/1.1 202 Accepted"));
+    assert!(replay_response.contains("HTTP/1.1 409 Conflict"));
+    let replay_payload = parse_error_envelope_from_http_response(replay_response.as_str());
+    assert_eq!(replay_payload.error, "replay");
+    assert_eq!(
+        replay_payload.reason_code,
+        "service_api_auth_replay_nonce_detected"
+    );
+
+    assert!(
+        fresh_nonce_response.contains("HTTP/1.1 202 Accepted"),
+        "replay rejection should not force anti-spam limiter rejection for the next valid nonce"
+    );
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(

@@ -173,9 +173,14 @@ fn doc_contains_service_api_ingress_limiter_matrix_rules() {
     assert!(DOC.contains("--api-body-limit-bytes"));
     assert!(DOC.contains("--api-concurrency-limit"));
     assert!(DOC.contains("--api-rate-limit-per-second"));
+    assert!(DOC.contains("sender window limit: `3` messages over `5` seconds"));
+    assert!(DOC.contains("suspension trigger: `2` consecutive sender rate-limit violations"));
+    assert!(DOC.contains("suspension duration: `60` seconds"));
     assert!(DOC.contains("service_api_ingress_body_size_limit_exceeded"));
     assert!(DOC.contains("service_api_ingress_concurrency_limit_exceeded"));
     assert!(DOC.contains("service_api_ingress_rate_limit_exceeded"));
+    assert!(DOC.contains("service_api_ingress_sender_rate_limit_exceeded"));
+    assert!(DOC.contains("service_api_ingress_sender_suspended"));
 }
 
 #[test]

@@ -14,7 +14,10 @@ use axum::{
     routing::{any, get},
     Extension, Router,
 };
-use kamn_core::{signature_matches_supported_profile_for_fields, AgentDid};
+use kamn_core::{
+    signature_matches_supported_profile_for_fields, AgentDid, AntiSpamConfig, AntiSpamDecision,
+    AntiSpamEngine, AntiSpamRejection,
+};
 #[cfg(test)]
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -23,7 +26,7 @@ use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
     Arc,
 };
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::runtime::Builder;
 use tokio::sync::{Mutex, Notify, Semaphore};
 
@@ -56,6 +59,15 @@ const REASON_CODE_INGRESS_BODY_SIZE_LIMIT_EXCEEDED: &str =
 const REASON_CODE_INGRESS_CONCURRENCY_LIMIT_EXCEEDED: &str =
     "service_api_ingress_concurrency_limit_exceeded";
 const REASON_CODE_INGRESS_RATE_LIMIT_EXCEEDED: &str = "service_api_ingress_rate_limit_exceeded";
+const REASON_CODE_INGRESS_SENDER_RATE_LIMIT_EXCEEDED: &str =
+    "service_api_ingress_sender_rate_limit_exceeded";
+const REASON_CODE_INGRESS_SENDER_SUSPENDED: &str = "service_api_ingress_sender_suspended";
+const REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID: &str =
+    "service_api_ingress_sender_duplicate_message_id";
+const REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT: &str =
+    "service_api_ingress_sender_insufficient_deposit";
+const REASON_CODE_INGRESS_ANTI_SPAM_ENGINE_INVALID: &str =
+    "service_api_ingress_anti_spam_engine_invalid";
 const REASON_CODE_REQUEST_HEADER_UTF8_INVALID: &str = "service_api_request_header_utf8_invalid";
 const REASON_CODE_REQUEST_BODY_UTF8_INVALID: &str = "service_api_request_body_utf8_invalid";
 const REASON_CODE_REQUEST_LOG_EMISSION_FAILED: &str = "service_api_request_log_emission_failed";
@@ -270,6 +282,7 @@ struct ServiceApiRuntimeState {
     body_limit_bytes: usize,
     concurrency_limiter: Arc<Semaphore>,
     ingress_rate_window: Arc<Mutex<ServiceApiIngressRateWindow>>,
+    sender_anti_spam: Arc<Mutex<AntiSpamEngine>>,
 }
 
 #[derive(Debug)]
@@ -518,6 +531,8 @@ async fn serve_service_api_endpoint_async(
     let listener = tokio::net::TcpListener::bind(config.bind_addr.as_str())
         .await
         .map_err(|error| format!("service api bind failed: {error}"))?;
+    let sender_anti_spam = build_service_api_sender_anti_spam_engine()
+        .map_err(|error| format!("service api anti-spam init failed: {error}"))?;
 
     let runtime_state = Arc::new(ServiceApiRuntimeState {
         snapshot,
@@ -528,6 +543,7 @@ async fn serve_service_api_endpoint_async(
         ingress_rate_window: Arc::new(Mutex::new(ServiceApiIngressRateWindow::new(
             config.rate_limit_per_second,
         ))),
+        sender_anti_spam: Arc::new(Mutex::new(sender_anti_spam)),
     });
     let timeout_reached = Arc::new(AtomicBool::new(false));
     let request_budget = runtime_state.request_budget.clone();
@@ -560,6 +576,14 @@ async fn serve_service_api_endpoint_async(
     }
 
     Ok(())
+}
+
+fn build_service_api_sender_anti_spam_engine() -> Result<AntiSpamEngine, String> {
+    let config = AntiSpamConfig {
+        minimum_sybil_deposit: 0,
+        ..AntiSpamConfig::default()
+    };
+    AntiSpamEngine::new(config).map_err(|error| error.to_string())
 }
 
 fn build_service_api_router(state: Arc<ServiceApiRuntimeState>) -> Router {
@@ -692,6 +716,36 @@ async fn service_api_auth_middleware(
                 },
             );
         }
+    }
+
+    if let Err(error) = enforce_sender_anti_spam(&state, &parsed_request).await {
+        let (status_code, error_label, outcome) =
+            if error.reason_code == REASON_CODE_INGRESS_ANTI_SPAM_ENGINE_INVALID {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal",
+                    "anti-spam-error",
+                )
+            } else {
+                (
+                    StatusCode::TOO_MANY_REQUESTS,
+                    "too-many-requests",
+                    "anti-spam",
+                )
+            };
+        return service_api_middleware_error_response(
+            &state,
+            ServiceApiMiddlewareError {
+                correlation_id: correlation_id.as_str(),
+                method: parsed_request.method.as_str(),
+                path: parsed_request.path.as_str(),
+                status_code,
+                error_label,
+                reason_code: error.reason_code,
+                message: error.message.as_str(),
+                outcome,
+            },
+        );
     }
 
     if route_requires_auth(parsed_request.method.as_str(), parsed_request.path.as_str()) {
@@ -1061,6 +1115,94 @@ fn authorize_service_api_request(
     Ok(())
 }
 
+async fn enforce_sender_anti_spam(
+    state: &ServiceApiRuntimeState,
+    request: &ParsedRequest,
+) -> Result<(), ServiceApiReasonedError> {
+    if !route_requires_auth(request.method.as_str(), request.path.as_str()) {
+        return Ok(());
+    }
+
+    let sender_did =
+        header_value(&request.headers, REQUEST_AUTH_SENDER_DID_HEADER).ok_or_else(|| {
+            ServiceApiReasonedError::new(
+                REASON_CODE_AUTH_SENDER_DID_HEADER_MISSING,
+                format!("missing required header: {REQUEST_AUTH_SENDER_DID_HEADER}"),
+            )
+        })?;
+    let nonce_raw = header_value(&request.headers, REQUEST_AUTH_NONCE_HEADER).ok_or_else(|| {
+        ServiceApiReasonedError::new(
+            REASON_CODE_AUTH_NONCE_HEADER_MISSING,
+            format!("missing required header: {REQUEST_AUTH_NONCE_HEADER}"),
+        )
+    })?;
+    let nonce = nonce_raw.parse::<u64>().map_err(|_| {
+        ServiceApiReasonedError::new(
+            REASON_CODE_AUTH_NONCE_INVALID,
+            format!("invalid request nonce header: {REQUEST_AUTH_NONCE_HEADER}"),
+        )
+    })?;
+    let now_unix = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| {
+            ServiceApiReasonedError::new(
+                REASON_CODE_INGRESS_ANTI_SPAM_ENGINE_INVALID,
+                format!("anti-spam clock evaluation failed: {error}"),
+            )
+        })?
+        .as_secs();
+    let message_id = format!("{sender_did}:{nonce}:{}", request.path);
+    let decision = {
+        let mut anti_spam = state.sender_anti_spam.lock().await;
+        anti_spam
+            .evaluate(sender_did, message_id.as_str(), now_unix)
+            .map_err(|error| {
+                ServiceApiReasonedError::new(
+                    REASON_CODE_INGRESS_ANTI_SPAM_ENGINE_INVALID,
+                    format!("anti-spam decision evaluation failed: {error}"),
+                )
+            })?
+    };
+
+    match decision {
+        AntiSpamDecision::Accepted => Ok(()),
+        AntiSpamDecision::Rejected(rejection) => {
+            Err(map_anti_spam_rejection_to_reasoned_error(rejection))
+        }
+    }
+}
+
+fn map_anti_spam_rejection_to_reasoned_error(
+    rejection: AntiSpamRejection,
+) -> ServiceApiReasonedError {
+    match rejection {
+        AntiSpamRejection::InsufficientDeposit { required, provided } => ServiceApiReasonedError::new(
+            REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT,
+            format!(
+                "sender deposit below anti-spam minimum: required={required}, provided={provided}"
+            ),
+        ),
+        AntiSpamRejection::RateLimitExceeded {
+            limit,
+            observed,
+            window_seconds,
+        } => ServiceApiReasonedError::new(
+            REASON_CODE_INGRESS_SENDER_RATE_LIMIT_EXCEEDED,
+            format!(
+                "sender anti-spam rate limit exceeded: observed={observed}, limit={limit}, window_seconds={window_seconds}"
+            ),
+        ),
+        AntiSpamRejection::SenderSuspended { until_unix } => ServiceApiReasonedError::new(
+            REASON_CODE_INGRESS_SENDER_SUSPENDED,
+            format!("sender suspended by anti-spam policy until unix={until_unix}"),
+        ),
+        AntiSpamRejection::DuplicateMessageId(message_id) => ServiceApiReasonedError::new(
+            REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
+            format!("sender anti-spam duplicate message id rejected: {message_id}"),
+        ),
+    }
+}
+
 fn route_exists_for_other_method(path: &str) -> bool {
     path == ROUTE_MESSAGES_SEND
         || path == ROUTE_CHANNELS_CREATE
@@ -1294,6 +1436,67 @@ pub(crate) fn service_api_payload_decode_reason_code(error: &serde_json::Error) 
         Category::Io => "service_api_payload_io_error",
         Category::Syntax | Category::Eof => "service_api_payload_json_syntax_invalid",
         Category::Data => "service_api_payload_structure_invalid",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        map_anti_spam_rejection_to_reasoned_error, AntiSpamRejection,
+        REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID,
+        REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT,
+        REASON_CODE_INGRESS_SENDER_RATE_LIMIT_EXCEEDED, REASON_CODE_INGRESS_SENDER_SUSPENDED,
+    };
+
+    #[test]
+    fn anti_spam_rate_limit_rejection_maps_to_sender_rate_limit_reason_code() {
+        let error =
+            map_anti_spam_rejection_to_reasoned_error(AntiSpamRejection::RateLimitExceeded {
+                limit: 3,
+                observed: 3,
+                window_seconds: 5,
+            });
+        assert_eq!(
+            error.reason_code,
+            REASON_CODE_INGRESS_SENDER_RATE_LIMIT_EXCEEDED
+        );
+        assert!(error.message.contains("observed=3"));
+    }
+
+    #[test]
+    fn anti_spam_sender_suspension_maps_to_sender_suspended_reason_code() {
+        let error = map_anti_spam_rejection_to_reasoned_error(AntiSpamRejection::SenderSuspended {
+            until_unix: 123_456,
+        });
+        assert_eq!(error.reason_code, REASON_CODE_INGRESS_SENDER_SUSPENDED);
+        assert!(error.message.contains("123456"));
+    }
+
+    #[test]
+    fn anti_spam_insufficient_deposit_maps_to_sender_deposit_reason_code() {
+        let error =
+            map_anti_spam_rejection_to_reasoned_error(AntiSpamRejection::InsufficientDeposit {
+                required: 9,
+                provided: 4,
+            });
+        assert_eq!(
+            error.reason_code,
+            REASON_CODE_INGRESS_SENDER_INSUFFICIENT_DEPOSIT
+        );
+        assert!(error.message.contains("required=9"));
+        assert!(error.message.contains("provided=4"));
+    }
+
+    #[test]
+    fn anti_spam_duplicate_message_maps_to_sender_duplicate_reason_code() {
+        let error = map_anti_spam_rejection_to_reasoned_error(
+            AntiSpamRejection::DuplicateMessageId("message-1".to_owned()),
+        );
+        assert_eq!(
+            error.reason_code,
+            REASON_CODE_INGRESS_SENDER_DUPLICATE_MESSAGE_ID
+        );
+        assert!(error.message.contains("message-1"));
     }
 }
 

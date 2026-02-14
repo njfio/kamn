@@ -328,15 +328,18 @@ def run_concurrency_probe() -> None:
     def post_message(index: int) -> None:
         payload = json.dumps({"message": f"concurrency-{index}"}, separators=(",", ":"))
         nonce = 600 + index
+        sender = f"kamn:did:agent:axum-ingress-validator-concurrency-{index}"
         status, body = request(
             "POST",
             "/v1/messages/send",
             payload,
             {
                 "content-type": "application/json",
-                "X-KAMN-Sender-DID": sender_did,
+                "X-KAMN-Sender-DID": sender,
                 "X-KAMN-Request-Nonce": str(nonce),
-                "X-KAMN-Request-Signature": signature(nonce, payload),
+                "X-KAMN-Request-Signature": (
+                    f"sig:ed25519:baseline-v1:{sender}:{nonce}:{state_hash}:{len(payload)}"
+                ),
             },
         )
         if status != 202:
