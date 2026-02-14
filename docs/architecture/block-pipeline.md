@@ -62,3 +62,20 @@ cargo test -p kamn-core block_pipeline
 cargo clippy -p kamn-core -- -D warnings
 cargo fmt --check
 ```
+
+## Live Validation
+
+Use these deterministic lane commands to validate integration evidence:
+
+```bash
+scripts/runtime/validate_block_pipeline_live.sh
+scripts/runtime/test_validate_block_pipeline_live.sh
+```
+
+Expected live markers:
+- `status=pass`
+- `final_decision=GO`
+- `block_pipeline_contract_status=verified`
+- `docs_contract_status=verified`
+- `fail_closed_status=verified`
+- `fail_closed_reason_code=block_pipeline_payload_digest_mismatch`

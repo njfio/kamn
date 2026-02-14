@@ -25,7 +25,24 @@ fn roadmap_references_phase_32_initial_block_pipeline_slice() {
 }
 
 #[test]
+fn docs_reference_phase_32_live_validation_lane_commands() {
+    assert!(DOC.contains("scripts/runtime/validate_block_pipeline_live.sh"));
+    assert!(DOC.contains("scripts/runtime/test_validate_block_pipeline_live.sh"));
+    assert!(ROADMAP.contains("Phase 3.2 live validation delivered"));
+    assert!(ROADMAP.contains("Task #2928, Subtask #2929"));
+}
+
+#[test]
+fn roadmap_tracks_block_pipeline_live_validation_markers() {
+    assert!(ROADMAP.contains("block_pipeline_contract_status=verified"));
+    assert!(ROADMAP.contains("docs_contract_status=verified"));
+    assert!(ROADMAP.contains("fail_closed_status=verified"));
+    assert!(ROADMAP.contains("performance_budget_status=verified"));
+}
+
+#[test]
 fn regression_doc_tracks_digest_mismatch_fail_closed_guard() {
     // Regression: #2927
     assert!(DOC.contains("Regression: #2927"));
+    assert!(DOC.contains("fail_closed_reason_code=block_pipeline_payload_digest_mismatch"));
 }

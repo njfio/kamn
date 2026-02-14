@@ -46,6 +46,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Added processor runtime wiring component projection for `consensus-validator`.
   - Added unit/functional/integration/regression coverage in `crates/kamn-core/src/block_pipeline.rs` and `crates/kamn-core/tests/block_pipeline.rs`.
   - Architecture documentation added at `docs/architecture/block-pipeline.md`.
+- Phase 3.2 live validation delivered:
+  - Runtime lane: `scripts/runtime/validate_block_pipeline_live.sh` and `scripts/runtime/test_validate_block_pipeline_live.sh` (Task #2928, Subtask #2929).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `block_pipeline_contract_status=verified`, `docs_contract_status=verified`, `fail_closed_status=verified`, `performance_budget_status=verified`.
+  - Fail-closed validation confirmed for approver payload digest mismatch guard behavior: `fail_closed_reason_code=block_pipeline_payload_digest_mismatch`.
 - Phase 4.1 initial slice delivered: `runtime-mode kolme-live` now supports bounded continuous commit/finality execution when paired cycle controls are supplied (`--daemon-max-ticks` and `--daemon-tick-interval-ms`) with fail-closed guardrails for partial declarations (Task #2931, Subtask #2932).
 - Phase 4.1 live validation delivered:
   - Runtime lane: `scripts/kolme/validate_continuous_runtime_commit_live.sh` and `scripts/kolme/test_validate_continuous_runtime_commit_live.sh` (Task #2933, Subtask #2934).
