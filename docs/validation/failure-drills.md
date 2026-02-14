@@ -69,4 +69,27 @@ Includes:
 
 ## Live Validation (Task #2983 / Subtask #2984)
 
-Dedicated live-validation drill scripts and evidence markers are tracked in Task #2983 and Subtask #2984.
+Live validation artifacts:
+
+- `scripts/runtime/validate_failure_drills_live.sh`
+- `scripts/runtime/test_validate_failure_drills_live.sh`
+
+Run validation harness:
+
+```bash
+bash scripts/runtime/test_validate_failure_drills_live.sh
+```
+
+Deterministic success markers:
+
+- `status=pass`
+- `final_decision=GO`
+- `baseline_contract_status=verified`
+- `fault_injection_status=verified`
+- `fail_closed_status=verified`
+
+Injected fail-closed drill:
+
+- signer fault profile:
+  - `bash scripts/runtime/run_network_signer_finality_failure_drills_lane.sh --fault-profile signer --max-seconds 180 --partition-max-seconds 60 --signer-max-seconds 60`
+  - deterministic reason marker: `signer_fault_injection_triggered`

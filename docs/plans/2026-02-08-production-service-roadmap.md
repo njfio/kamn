@@ -53,6 +53,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/run_network_signer_finality_failure_drills_lane.sh` and `scripts/runtime/test_run_network_signer_finality_failure_drills_lane.sh` (Task #2981, Subtask #2982).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `network_partition_status=verified`, `signer_fault_status=verified`, `finality_fault_status=verified`.
   - Injected signer fault profile validated as fail-closed: `signer_fault_injection_triggered`.
+- Failure-drills live validation delivered:
+  - Runtime lane: `scripts/runtime/validate_failure_drills_live.sh` and `scripts/runtime/test_validate_failure_drills_live.sh` (Task #2983, Subtask #2984).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `baseline_contract_status=verified`, `fault_injection_status=verified`, `fail_closed_status=verified`.
+  - Fail-closed validation confirmed for signer fault injection: `signer_fault_injection_triggered`.
 
 ---
 
