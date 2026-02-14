@@ -639,7 +639,10 @@ where
             return Err(ConfigError::MissingArgumentValue("--rejoin-attempt"));
         }
     }
-    if runtime_mode.kind == RuntimeModeKind::Daemon {
+    if matches!(
+        runtime_mode.kind,
+        RuntimeModeKind::Daemon | RuntimeModeKind::Full
+    ) {
         if daemon_max_ticks.is_none() {
             return Err(ConfigError::MissingArgumentValue("--daemon-max-ticks"));
         }
@@ -670,7 +673,11 @@ where
             ));
         }
     }
-    if runtime_mode.kind == RuntimeModeKind::Api && api_bind_addr.is_none() {
+    if matches!(
+        runtime_mode.kind,
+        RuntimeModeKind::Api | RuntimeModeKind::Full
+    ) && api_bind_addr.is_none()
+    {
         return Err(ConfigError::MissingArgumentValue("--api-bind"));
     }
     if runtime_mode.kind == RuntimeModeKind::KolmeLive {

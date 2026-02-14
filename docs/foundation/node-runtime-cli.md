@@ -27,6 +27,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - `--runtime-mode planning`
   - `--runtime-mode recovery-check`
   - `--runtime-mode daemon`
+  - `--runtime-mode full`
   - `--runtime-mode kolme-live`
 - Added runtime planning inputs:
   - `--expected-state-hash <state-hash>`
@@ -217,6 +218,9 @@ This document captures node-runtime productionization slices for machine-readabl
   - `kamn-node --role processor --runtime-mode daemon`
   - `kamn-node --role processor --runtime-mode daemon --daemon-max-ticks 3 --daemon-tick-interval-ms 25`
   - `kamn-node --role processor --runtime-mode daemon --daemon-max-ticks 10 --daemon-tick-interval-ms 25 --daemon-shutdown-signal-tick 3 --daemon-shutdown-drain-ticks 2 --daemon-shutdown-timeout-ticks 4`
+- Full mode:
+  - `kamn-node --role processor --runtime-mode full`
+  - `kamn-node --role processor --runtime-mode full --daemon-max-ticks 3 --daemon-tick-interval-ms 25 --api-bind 127.0.0.1:19081`
 - Kolme-live mode:
   - `kamn-node --role processor --runtime-mode kolme-live`
   - `kamn-node --role processor --runtime-mode kolme-live --kolme-live-base-url http://127.0.0.1:3000 --kolme-live-provider-hint kolme-fork-local --kolme-live-signing-profile kolme-fork-secp256k1-v1`
@@ -263,6 +267,23 @@ This document captures node-runtime productionization slices for machine-readabl
   - `daemon_observability_availability_bps`
   - `daemon_observability_health`
   - `daemon_observability_alert_count`
+
+## Full Runtime Rules
+- Supported runtime modes:
+  - `bootstrap` (default)
+  - `full`
+- Full mode requires:
+  - `--daemon-max-ticks`
+  - `--daemon-tick-interval-ms`
+  - `--api-bind`
+- Full mode emits deterministic readiness markers:
+  - `node.runtime.full.bootstrap.start`
+  - `node.runtime.full.bootstrap.component.ready` for ordered components:
+    - `daemon`
+    - `api`
+    - `transport`
+    - `kolme-commit`
+  - `node.runtime.full.bootstrap.ready`
 
 ## Runtime Observability Endpoint Rules
 - Endpoint export is optional and enabled only when `--observability-endpoint-bind` is set.
