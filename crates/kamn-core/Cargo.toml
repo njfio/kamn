@@ -13,6 +13,7 @@ live-https = ["dep:rustls", "dep:rustls-pemfile", "dep:webpki-roots"]
 
 [dependencies]
 kamn-kolme = { path = "../kamn-kolme" }
+rusqlite = { version = "0.31.0", features = ["bundled"] }
 # Live HTTPS runtime-commit transport uses rustls directly (no subprocess curl path).
 rustls = { version = "0.23.36", default-features = false, features = ["ring", "std", "tls12"], optional = true }
 rustls-pemfile = { version = "2.2.0", optional = true }

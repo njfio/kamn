@@ -106,6 +106,8 @@ pub mod signature_profile;
 pub mod signer_backend;
 /// Deterministic triadic runtime smoke simulation contracts.
 pub mod smoke;
+/// Sqlite backend bootstrap/versioning and namespace-key-value persistence contracts.
+pub mod sqlite_store_backend;
 pub mod state;
 /// Task artifact registration, integrity checks, and lookup contracts.
 pub mod task_artifacts;
@@ -382,6 +384,9 @@ pub use signer_backend::{
     SignerProviderHandshakeStatus, SigningRequest,
 };
 pub use smoke::{ProducedBlock, RoleSmokeNetwork, SmokeError};
+pub use sqlite_store_backend::{
+    SqliteStoreBackend, SqliteStoreBackendError, SQLITE_STORE_SCHEMA_VERSION,
+};
 pub use state::{
     canonical_state_key, AppStateSchema, StateKeyError, StateVersion, APP_STATE_VERSION,
 };
