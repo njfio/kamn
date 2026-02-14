@@ -45,6 +45,11 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/validate_config_layering_live.sh` and `scripts/runtime/test_validate_config_layering_live.sh` (Task #2968).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `layering_contract_status=verified`, `precedence_contract_status=verified`, `fail_closed_status=verified`.
   - Fail-closed validation confirmed for invalid override injection: `invalid sync mode: turbo`.
+- Phase 5 parity-matrix implementation delivered:
+  - Added unified SDK parity orchestration runner: `scripts/sdk/run_cross_language_sdk_parity_matrix.sh`.
+  - Runner composes register validation parity and live transport contract parity with bounded runtime and deterministic machine-readable markers.
+  - Added deterministic harness: `scripts/sdk/test_run_cross_language_sdk_parity_matrix.sh` (Task #2956, Subtask #2957).
+  - Added operator/reference documentation: `docs/sdk/parity-matrix.md`.
 - Phase 6.3 initial slice delivered: deployment artifacts now include a multi-stage `Dockerfile`, `deploy/docker-compose.yml` role topology, and `deploy/k8s/kamn-node.yaml` baseline manifests (Task #2971, Subtask #2972).
 - Phase 6.3 live validation delivered:
   - Runtime lane: `scripts/deploy/validate_deployment_assets_live.sh` and `scripts/deploy/test_validate_deployment_assets_live.sh` (Task #2973, Subtask #2974).
