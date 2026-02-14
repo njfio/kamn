@@ -162,7 +162,7 @@ pub use channel_models::{
     ChannelMetadata, ChannelModelError, ChannelRecordSnapshot, ChannelRecoveryResult,
     ChannelSnapshot, ChannelSnapshotError, ChannelSnapshotStore, ChannelSnapshotStoreError,
     ChannelStore, ChannelType, FileChannelSnapshotStore, InMemoryChannelSnapshotStore,
-    CHANNEL_SNAPSHOT_SCHEMA_VERSION,
+    SqliteChannelSnapshotStore, CHANNEL_SNAPSHOT_SCHEMA_VERSION,
 };
 pub use channel_policies::{
     ChannelAction, ChannelPermissionEngine, ChannelPermissions, ChannelPolicyError,
@@ -232,7 +232,8 @@ pub use discord_bridge::{
 pub use durable_guard_store::{
     ChannelPolicySnapshotStore, DeliveryGuardSnapshotStore, DurableGuardBundleSnapshotStore,
     DurableGuardSnapshotBundle, DurableGuardSnapshotStoreError, FileDurableGuardSnapshotStore,
-    InMemoryDurableGuardSnapshotStore, DURABLE_GUARD_BUNDLE_SCHEMA_VERSION,
+    InMemoryDurableGuardSnapshotStore, SqliteDurableGuardSnapshotStore,
+    DURABLE_GUARD_BUNDLE_SCHEMA_VERSION,
 };
 pub use escrow::{
     EscrowLifecycle, EscrowLifecycleError, EscrowReceiptFinality, EscrowSettlementAction,
@@ -294,7 +295,8 @@ pub use message_lifecycle::{
     MessageLifecycleError, MessageLifecycleRecoveryResult, MessageLifecycleSnapshot,
     MessageLifecycleSnapshotError, MessageLifecycleSnapshotStore,
     MessageLifecycleSnapshotStoreError, MessageLifecycleStore, MessageProofAdmissionError,
-    MessageRecordSnapshot, MessageStatus, MESSAGE_LIFECYCLE_SNAPSHOT_SCHEMA_VERSION,
+    MessageRecordSnapshot, MessageStatus, SqliteMessageLifecycleSnapshotStore,
+    MESSAGE_LIFECYCLE_SNAPSHOT_SCHEMA_VERSION,
 };
 pub use message_proof_anchoring::{
     InMemoryMessageProofChainAdapter, KolmeMessageProofChainAdapter,
@@ -358,12 +360,15 @@ pub use retention_engine::{
 pub use runtime::{
     simulate_daemon_network_fault, AuthenticatedPeerFrame, AuthenticatedPeerFrameError,
     BoundedRuntimeQueue, DeterministicBackpressureController, DeterministicNetworkFaultSimulator,
-    DeterministicProposalPlanner, NetworkFaultSimulationError, NetworkFaultSimulationInput,
-    NetworkFaultSimulationReport, PeerFrameAuthenticator, PeerLifecycle, PeerLifecycleEvent,
-    PeerLifecycleState, ProposalCandidate, ProposalPlan, ProposalPlannerError, RecoveryGuardError,
-    RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, RuntimeBackpressureAction,
-    RuntimeBackpressureDecision, RuntimeBackpressureError, RuntimeBackpressureInput,
-    RuntimeBackpressurePolicy, RuntimeLifecycleError, RuntimeQueueError, RuntimeWiring,
+    DeterministicProposalPlanner, FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore,
+    NetworkFaultSimulationError, NetworkFaultSimulationInput, NetworkFaultSimulationReport,
+    PeerFrameAuthenticator, PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState,
+    ProposalCandidate, ProposalPlan, ProposalPlannerError, RecoveryGuardError, RecoveryRejoinGuard,
+    RecoveryStatus, RejoinAttempt, RuntimeBackpressureAction, RuntimeBackpressureDecision,
+    RuntimeBackpressureError, RuntimeBackpressureInput, RuntimeBackpressurePolicy,
+    RuntimeLifecycleError, RuntimeQueueError, RuntimeSnapshot, RuntimeSnapshotStore, RuntimeWiring,
+    SnapshotRecoveryResult, SnapshotRestoreError, SnapshotRestoreGuard, SnapshotStoreError,
+    SqliteRuntimeSnapshotStore,
 };
 pub use service_marketplace::{
     MarketplaceSearchFilter, NegotiationThreadHook, ServiceListing, ServiceMarketplaceEngine,
@@ -397,11 +402,11 @@ pub use task_lifecycle::{
     TaskLifecycle, TaskLifecycleError, TaskState, TaskTransition, TaskTransitionEvidence,
 };
 pub use task_operations::{
-    FileTaskOperationSnapshotStore, InMemoryTaskOperationSnapshotStore, SwarmTaskDraft,
-    TaskOperationEngine, TaskOperationError, TaskOperationNoticeKind, TaskOperationRecord,
-    TaskOperationRecordSnapshot, TaskOperationRecoveryResult, TaskOperationSnapshot,
-    TaskOperationSnapshotStore, TaskOperationSnapshotStoreError,
-    TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION,
+    FileTaskOperationSnapshotStore, InMemoryTaskOperationSnapshotStore,
+    SqliteTaskOperationSnapshotStore, SwarmTaskDraft, TaskOperationEngine, TaskOperationError,
+    TaskOperationNoticeKind, TaskOperationRecord, TaskOperationRecordSnapshot,
+    TaskOperationRecoveryResult, TaskOperationSnapshot, TaskOperationSnapshotStore,
+    TaskOperationSnapshotStoreError, TASK_OPERATION_SNAPSHOT_SCHEMA_VERSION,
 };
 pub use task_payment::{PaymentConfirm, PaymentOffer, TaskPaymentError, TaskPaymentWorkflow};
 pub use telegram_bridge::{

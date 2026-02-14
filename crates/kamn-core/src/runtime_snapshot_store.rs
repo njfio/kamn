@@ -1,3 +1,4 @@
+use crate::{SqliteStoreBackend, SqliteStoreBackendError};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::fs::{self, OpenOptions};
@@ -437,6 +438,96 @@ impl RuntimeSnapshotStore for FileRuntimeSnapshotStore {
         }
 
         Ok(snapshots)
+    }
+}
+
+#[derive(Debug)]
+/// Sqlite runtime snapshot store.
+pub struct SqliteRuntimeSnapshotStore {
+    backend: SqliteStoreBackend,
+}
+
+impl SqliteRuntimeSnapshotStore {
+    /// Handles new.
+    pub fn new(path: PathBuf) -> Result<Self, SnapshotStoreError> {
+        let backend = SqliteStoreBackend::open(path.as_path()).map_err(map_sqlite_store_error)?;
+        Ok(Self { backend })
+    }
+}
+
+impl RuntimeSnapshotStore for SqliteRuntimeSnapshotStore {
+    fn write(&mut self, snapshot: RuntimeSnapshot) -> Result<(), SnapshotStoreError> {
+        if let Some(previous) = self.read_latest()? {
+            validate_snapshot_continuity(Some(&previous), &snapshot)?;
+        }
+        let key = format!("{:020}", snapshot.state_version());
+        let serialized = format!(
+            "{}|{}|{}",
+            snapshot.state_version(),
+            snapshot.state_hash(),
+            snapshot.cursor()
+        );
+        self.backend
+            .put(
+                "runtime_snapshot_store",
+                key.as_str(),
+                serialized.as_bytes(),
+            )
+            .map_err(map_sqlite_store_error)?;
+        Ok(())
+    }
+
+    fn read_latest(&self) -> Result<Option<RuntimeSnapshot>, SnapshotStoreError> {
+        Ok(self.list()?.pop())
+    }
+
+    fn list(&self) -> Result<Vec<RuntimeSnapshot>, SnapshotStoreError> {
+        let keys = self
+            .backend
+            .list_keys("runtime_snapshot_store")
+            .map_err(map_sqlite_store_error)?;
+        let mut snapshots = Vec::new();
+        for key in keys {
+            let Some(payload_bytes) = self
+                .backend
+                .get("runtime_snapshot_store", key.as_str())
+                .map_err(map_sqlite_store_error)?
+            else {
+                continue;
+            };
+            let payload = String::from_utf8(payload_bytes).map_err(|_| {
+                SnapshotStoreError::InvalidPayload(
+                    "runtime snapshot sqlite payload is not utf-8".to_owned(),
+                )
+            })?;
+            if payload.trim().is_empty() {
+                continue;
+            }
+            let snapshot = parse_snapshot_line(payload.as_str())?;
+            validate_snapshot_continuity(snapshots.last(), &snapshot)?;
+            snapshots.push(snapshot);
+        }
+        Ok(snapshots)
+    }
+}
+
+fn map_sqlite_store_error(error: SqliteStoreBackendError) -> SnapshotStoreError {
+    match error {
+        SqliteStoreBackendError::SchemaVersionMissing => {
+            SnapshotStoreError::InvalidPayload("runtime snapshot sqlite schema missing".to_owned())
+        }
+        SqliteStoreBackendError::SchemaVersionInvalid(value) => SnapshotStoreError::InvalidPayload(
+            format!("runtime snapshot sqlite schema invalid: {value}"),
+        ),
+        SqliteStoreBackendError::SchemaVersionMismatch { expected, found } => {
+            SnapshotStoreError::InvalidPayload(format!(
+                "runtime snapshot sqlite schema mismatch: expected {expected}, found {found}"
+            ))
+        }
+        SqliteStoreBackendError::InvalidPath => {
+            SnapshotStoreError::InvalidPayload("snapshot file path cannot be empty".to_owned())
+        }
+        other => SnapshotStoreError::Io(other.to_string()),
     }
 }
 

@@ -1,28 +1,31 @@
 //! Bootstrap planning for validated config, schema migrations, and runtime wiring.
 
 use crate::channel_models::{
-    ChannelSnapshotError, ChannelSnapshotStore, ChannelSnapshotStoreError, FileChannelSnapshotStore,
+    ChannelSnapshotError, ChannelSnapshotStore, ChannelSnapshotStoreError,
+    FileChannelSnapshotStore, SqliteChannelSnapshotStore,
 };
 use crate::config::{ConfigError, NodeConfig};
 use crate::content_storage::{ContentStorageError, FileContentAdapter};
 use crate::did_registry::{DidRegistryError, FileDidRegistrationChainAdapter};
 use crate::durable_guard_store::{
     DurableGuardBundleSnapshotStore, DurableGuardSnapshotStoreError, FileDurableGuardSnapshotStore,
+    SqliteDurableGuardSnapshotStore,
 };
 use crate::message_lifecycle::{
     FileMessageLifecycleSnapshotStore, MessageLifecycleSnapshotError,
     MessageLifecycleSnapshotStore, MessageLifecycleSnapshotStoreError,
+    SqliteMessageLifecycleSnapshotStore,
 };
 use crate::migrations::{MigrationPlan, MigrationRegistry};
 use crate::namespaces::StateNamespaces;
 use crate::runtime::{
     build_runtime_wiring, FileRuntimeSnapshotStore, RuntimeSnapshotStore, RuntimeWiring,
-    SnapshotStoreError,
+    SnapshotStoreError, SqliteRuntimeSnapshotStore,
 };
 use crate::state::{AppStateSchema, StateVersion, APP_STATE_VERSION};
 use crate::task_operations::{
-    FileTaskOperationSnapshotStore, TaskOperationError, TaskOperationSnapshotStore,
-    TaskOperationSnapshotStoreError,
+    FileTaskOperationSnapshotStore, SqliteTaskOperationSnapshotStore, TaskOperationError,
+    TaskOperationSnapshotStore, TaskOperationSnapshotStoreError,
 };
 use crate::token::{default_token_config, TokenConfig};
 use std::fs;
@@ -35,16 +38,29 @@ const DURABLE_GUARD_STORE_FILE_NAME: &str = "durable-guard.snapshot";
 const CHANNEL_SNAPSHOT_STORE_FILE_NAME: &str = "channel.snapshot";
 const MESSAGE_LIFECYCLE_SNAPSHOT_STORE_FILE_NAME: &str = "message-lifecycle.snapshot";
 const RUNTIME_SNAPSHOT_STORE_FILE_NAME: &str = "runtime.snapshot";
+const SQLITE_STORAGE_SELECTOR_PREFIX: &str = "sqlite://";
 
 const CONTENT_STORE_COMPONENT: &str = "content-storage:file-default";
 const DID_REGISTRY_STORE_COMPONENT: &str = "did-registry:file-default";
-const TASK_OPERATION_STORE_COMPONENT: &str = "task-operation-snapshot-store:file-default";
-const DURABLE_GUARD_STORE_COMPONENT: &str = "durable-guard-snapshot-store:file-default";
-const CHANNEL_SNAPSHOT_STORE_COMPONENT: &str = "channel-snapshot-store:file-default";
-const MESSAGE_LIFECYCLE_SNAPSHOT_STORE_COMPONENT: &str =
+const TASK_OPERATION_STORE_COMPONENT_FILE: &str = "task-operation-snapshot-store:file-default";
+const DURABLE_GUARD_STORE_COMPONENT_FILE: &str = "durable-guard-snapshot-store:file-default";
+const CHANNEL_SNAPSHOT_STORE_COMPONENT_FILE: &str = "channel-snapshot-store:file-default";
+const MESSAGE_LIFECYCLE_SNAPSHOT_STORE_COMPONENT_FILE: &str =
     "message-lifecycle-snapshot-store:file-default";
-const RUNTIME_SNAPSHOT_STORE_COMPONENT: &str = "runtime-snapshot-store:file-default";
+const RUNTIME_SNAPSHOT_STORE_COMPONENT_FILE: &str = "runtime-snapshot-store:file-default";
+const TASK_OPERATION_STORE_COMPONENT_SQLITE: &str = "task-operation-snapshot-store:sqlite-default";
+const DURABLE_GUARD_STORE_COMPONENT_SQLITE: &str = "durable-guard-snapshot-store:sqlite-default";
+const CHANNEL_SNAPSHOT_STORE_COMPONENT_SQLITE: &str = "channel-snapshot-store:sqlite-default";
+const MESSAGE_LIFECYCLE_SNAPSHOT_STORE_COMPONENT_SQLITE: &str =
+    "message-lifecycle-snapshot-store:sqlite-default";
+const RUNTIME_SNAPSHOT_STORE_COMPONENT_SQLITE: &str = "runtime-snapshot-store:sqlite-default";
 const DID_REGISTRY_BOOTSTRAP_PROVIDER: &str = "bootstrap-runtime-compatibility";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum RuntimeStoreAdapter {
+    File,
+    Sqlite { database_path: PathBuf },
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct RuntimePersistenceLayout {
@@ -56,6 +72,7 @@ struct RuntimePersistenceLayout {
     channel_snapshot_store_path: PathBuf,
     message_lifecycle_snapshot_store_path: PathBuf,
     runtime_snapshot_store_path: PathBuf,
+    runtime_store_adapter: RuntimeStoreAdapter,
 }
 
 /// Deterministic bootstrap artifact bundling validated config, schema, and wiring.
@@ -100,11 +117,12 @@ pub fn bootstrap_from_state_version(
     token_config
         .validate()
         .map_err(|error| ConfigError::TokenModel(error.to_string()))?;
-    let persistence_layout = resolve_runtime_persistence_layout(config.storage_dir.as_str());
+    let persistence_layout = resolve_runtime_persistence_layout(config.storage_dir.as_str())?;
     validate_runtime_persistence_layout(&persistence_layout)?;
 
     let mut wiring = build_runtime_wiring(&config);
-    for component in prioritized_runtime_store_components() {
+    for component in prioritized_runtime_store_components(&persistence_layout.runtime_store_adapter)
+    {
         if !wiring.common_components.contains(&component) {
             wiring.common_components.push(component);
         }
@@ -120,9 +138,38 @@ pub fn bootstrap_from_state_version(
     })
 }
 
-fn resolve_runtime_persistence_layout(storage_dir: &str) -> RuntimePersistenceLayout {
+fn resolve_runtime_persistence_layout(
+    storage_dir: &str,
+) -> Result<RuntimePersistenceLayout, ConfigError> {
+    if let Some(database_path_raw) = storage_dir.strip_prefix(SQLITE_STORAGE_SELECTOR_PREFIX) {
+        let trimmed = database_path_raw.trim();
+        if trimmed.is_empty() {
+            return Err(ConfigError::RuntimeStoreCompatibility {
+                store: "runtime-storage-root",
+                reason_code: "runtime_storage_root_invalid_sqlite_selector",
+                detail: "sqlite storage_dir selector must include a database path".to_owned(),
+            });
+        }
+        let database_path = PathBuf::from(trimmed);
+        let storage_root = database_path
+            .parent()
+            .map(Path::to_path_buf)
+            .unwrap_or_else(|| PathBuf::from("."));
+        return Ok(RuntimePersistenceLayout {
+            content_store_path: storage_root.join(CONTENT_STORE_FILE_NAME),
+            did_registry_store_path: storage_root.join(DID_REGISTRY_STORE_FILE_NAME),
+            task_operation_store_path: database_path.clone(),
+            durable_guard_store_path: database_path.clone(),
+            channel_snapshot_store_path: database_path.clone(),
+            message_lifecycle_snapshot_store_path: database_path.clone(),
+            runtime_snapshot_store_path: database_path.clone(),
+            storage_root,
+            runtime_store_adapter: RuntimeStoreAdapter::Sqlite { database_path },
+        });
+    }
+
     let storage_root = PathBuf::from(storage_dir);
-    RuntimePersistenceLayout {
+    Ok(RuntimePersistenceLayout {
         content_store_path: storage_root.join(CONTENT_STORE_FILE_NAME),
         did_registry_store_path: storage_root.join(DID_REGISTRY_STORE_FILE_NAME),
         task_operation_store_path: storage_root.join(TASK_OPERATION_STORE_FILE_NAME),
@@ -132,19 +179,31 @@ fn resolve_runtime_persistence_layout(storage_dir: &str) -> RuntimePersistenceLa
             .join(MESSAGE_LIFECYCLE_SNAPSHOT_STORE_FILE_NAME),
         runtime_snapshot_store_path: storage_root.join(RUNTIME_SNAPSHOT_STORE_FILE_NAME),
         storage_root,
-    }
+        runtime_store_adapter: RuntimeStoreAdapter::File,
+    })
 }
 
-fn prioritized_runtime_store_components() -> [&'static str; 7] {
-    [
-        CONTENT_STORE_COMPONENT,
-        DID_REGISTRY_STORE_COMPONENT,
-        TASK_OPERATION_STORE_COMPONENT,
-        DURABLE_GUARD_STORE_COMPONENT,
-        CHANNEL_SNAPSHOT_STORE_COMPONENT,
-        MESSAGE_LIFECYCLE_SNAPSHOT_STORE_COMPONENT,
-        RUNTIME_SNAPSHOT_STORE_COMPONENT,
-    ]
+fn prioritized_runtime_store_components(store_adapter: &RuntimeStoreAdapter) -> [&'static str; 7] {
+    match store_adapter {
+        RuntimeStoreAdapter::File => [
+            CONTENT_STORE_COMPONENT,
+            DID_REGISTRY_STORE_COMPONENT,
+            TASK_OPERATION_STORE_COMPONENT_FILE,
+            DURABLE_GUARD_STORE_COMPONENT_FILE,
+            CHANNEL_SNAPSHOT_STORE_COMPONENT_FILE,
+            MESSAGE_LIFECYCLE_SNAPSHOT_STORE_COMPONENT_FILE,
+            RUNTIME_SNAPSHOT_STORE_COMPONENT_FILE,
+        ],
+        RuntimeStoreAdapter::Sqlite { .. } => [
+            CONTENT_STORE_COMPONENT,
+            DID_REGISTRY_STORE_COMPONENT,
+            TASK_OPERATION_STORE_COMPONENT_SQLITE,
+            DURABLE_GUARD_STORE_COMPONENT_SQLITE,
+            CHANNEL_SNAPSHOT_STORE_COMPONENT_SQLITE,
+            MESSAGE_LIFECYCLE_SNAPSHOT_STORE_COMPONENT_SQLITE,
+            RUNTIME_SNAPSHOT_STORE_COMPONENT_SQLITE,
+        ],
+    }
 }
 
 fn validate_runtime_persistence_layout(
@@ -159,11 +218,24 @@ fn validate_runtime_persistence_layout(
     })?;
     validate_content_store_path(&layout.content_store_path)?;
     validate_did_registry_store_path(&layout.did_registry_store_path)?;
-    validate_task_operation_store_path(&layout.task_operation_store_path)?;
-    validate_durable_guard_store_path(&layout.durable_guard_store_path)?;
-    validate_channel_snapshot_store_path(&layout.channel_snapshot_store_path)?;
-    validate_message_lifecycle_snapshot_store_path(&layout.message_lifecycle_snapshot_store_path)?;
-    validate_runtime_snapshot_store_path(&layout.runtime_snapshot_store_path)?;
+    match &layout.runtime_store_adapter {
+        RuntimeStoreAdapter::File => {
+            validate_task_operation_store_path(&layout.task_operation_store_path)?;
+            validate_durable_guard_store_path(&layout.durable_guard_store_path)?;
+            validate_channel_snapshot_store_path(&layout.channel_snapshot_store_path)?;
+            validate_message_lifecycle_snapshot_store_path(
+                &layout.message_lifecycle_snapshot_store_path,
+            )?;
+            validate_runtime_snapshot_store_path(&layout.runtime_snapshot_store_path)?;
+        }
+        RuntimeStoreAdapter::Sqlite { database_path } => {
+            validate_task_operation_store_sqlite_path(database_path)?;
+            validate_durable_guard_store_sqlite_path(database_path)?;
+            validate_channel_snapshot_store_sqlite_path(database_path)?;
+            validate_message_lifecycle_snapshot_store_sqlite_path(database_path)?;
+            validate_runtime_snapshot_store_sqlite_path(database_path)?;
+        }
+    }
     Ok(())
 }
 
@@ -217,6 +289,51 @@ fn validate_message_lifecycle_snapshot_store_path(path: &Path) -> Result<(), Con
 
 fn validate_runtime_snapshot_store_path(path: &Path) -> Result<(), ConfigError> {
     let store = FileRuntimeSnapshotStore::new(path.to_path_buf())
+        .map_err(map_runtime_snapshot_store_error)?;
+    store
+        .read_latest()
+        .map(|_| ())
+        .map_err(map_runtime_snapshot_store_error)
+}
+
+fn validate_task_operation_store_sqlite_path(path: &Path) -> Result<(), ConfigError> {
+    let store = SqliteTaskOperationSnapshotStore::new(path.to_path_buf())
+        .map_err(map_task_operation_store_validation_error)?;
+    store
+        .read_latest()
+        .map(|_| ())
+        .map_err(map_task_operation_store_validation_error)
+}
+
+fn validate_durable_guard_store_sqlite_path(path: &Path) -> Result<(), ConfigError> {
+    let store = SqliteDurableGuardSnapshotStore::new(path.to_path_buf())
+        .map_err(map_durable_guard_store_validation_error)?;
+    store
+        .load_bundle()
+        .map(|_| ())
+        .map_err(map_durable_guard_store_validation_error)
+}
+
+fn validate_channel_snapshot_store_sqlite_path(path: &Path) -> Result<(), ConfigError> {
+    let store = SqliteChannelSnapshotStore::new(path.to_path_buf())
+        .map_err(map_channel_store_validation_error)?;
+    store
+        .read_latest()
+        .map(|_| ())
+        .map_err(map_channel_store_validation_error)
+}
+
+fn validate_message_lifecycle_snapshot_store_sqlite_path(path: &Path) -> Result<(), ConfigError> {
+    let store = SqliteMessageLifecycleSnapshotStore::new(path.to_path_buf())
+        .map_err(map_message_lifecycle_store_validation_error)?;
+    store
+        .read_latest()
+        .map(|_| ())
+        .map_err(map_message_lifecycle_store_validation_error)
+}
+
+fn validate_runtime_snapshot_store_sqlite_path(path: &Path) -> Result<(), ConfigError> {
+    let store = SqliteRuntimeSnapshotStore::new(path.to_path_buf())
         .map_err(map_runtime_snapshot_store_error)?;
     store
         .read_latest()
