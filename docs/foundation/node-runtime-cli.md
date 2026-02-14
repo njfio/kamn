@@ -158,6 +158,28 @@ This document captures node-runtime productionization slices for machine-readabl
 - Invalid config lines, unknown keys, duplicate `--config-file` declarations, and invalid env marker values are rejected with typed `ConfigError::InvalidNodeConfig` or existing typed parse errors (for example `InvalidSyncMode`).
 - Full operator reference: `docs/ops/configuration.md`.
 
+## SQLite Backend Bootstrap Contracts
+- `SqliteStoreBackend` bootstraps deterministic sqlite metadata for runtime-adjacent stores.
+- Bootstrap creates:
+  - `kamn_store_meta` (schema metadata)
+  - `kamn_store_entries` (namespace/key/value rows)
+- Schema-version contract:
+  - expected version constant: `SQLITE_STORE_SCHEMA_VERSION`
+  - metadata key: `schema_version`
+  - missing version row is bootstrapped to expected value on first open
+  - mismatched version fails closed with typed `SchemaVersionMismatch`
+- Connection setup contracts:
+  - `PRAGMA foreign_keys = ON`
+  - `PRAGMA busy_timeout = 5000`
+- Typed fail-closed error surface:
+  - `Open`
+  - `Pragma`
+  - `Migration`
+  - `SchemaVersionMissing`
+  - `SchemaVersionInvalid`
+  - `SchemaVersionMismatch`
+  - `Query`
+
 ## Diagnostics Snapshot Rules
 - Supported diagnostics modes:
   - `basic` (default)
