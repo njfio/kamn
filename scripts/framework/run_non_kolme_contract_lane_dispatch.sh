@@ -73,6 +73,7 @@ resolve_manifest_name() {
     run_localhost_bridge_relay_demo_contract_lane.sh) echo "bridge_localhost_bridge_relay_demo_contract_lane.json" ;;
     run_post_cutover_slo_contract_lane.sh) echo "canary_post_cutover_slo_contract_lane.json" ;;
     run_classification_redaction_contract_lane.sh) echo "compliance_classification_redaction_contract_lane.json" ;;
+    run_classification_redaction_lane.sh) echo "compliance_classification_redaction_lane.json" ;;
     run_dsar_legal_hold_contract_lane.sh) echo "compliance_dsar_legal_hold_contract_lane.json" ;;
     run_channel_lifecycle_contract_lane.sh) echo "channel_channel_lifecycle_contract_lane.json" ;;
     run_channel_policy_contract_lane.sh) echo "channel_channel_policy_contract_lane.json" ;;
@@ -145,6 +146,7 @@ resolve_manifest_name() {
 
 resolve_phase_name() {
   case "$1" in
+    run_classification_redaction_lane.sh) echo "run" ;;
     run_backend_session_auth_freshness_lane.sh) echo "run" ;;
     run_dashboard_stale_error_budget_lane.sh) echo "run" ;;
     run_signer_incident_recovery_deep_lane.sh) echo "deep" ;;

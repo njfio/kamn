@@ -41,12 +41,17 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
   - wrapper: `scripts/dashboard/run_dashboard_stale_error_budget_lane.sh`
   - implementation: `scripts/dashboard/run_dashboard_stale_error_budget_lane_impl.sh`
   - manifest: `scripts/framework/manifests/dashboard_stale_error_budget_lane.json`
+- `#2860` migrates classification/redaction run-lane wrapper to shared non-Kolme dispatcher + manifest wiring:
+  - wrapper: `scripts/compliance/run_classification_redaction_lane.sh`
+  - implementation: `scripts/compliance/run_classification_redaction_lane_impl.sh`
+  - manifest: `scripts/framework/manifests/compliance_classification_redaction_lane.json`
 - Contract coverage for this migration slice:
   - `scripts/signer/test_run_signer_provider_deep_lane.sh`
   - `scripts/signer/test_run_signer_incident_recovery_deep_lane.sh`
   - `scripts/signer/test_run_signer_emulator_contract_lane.sh`
   - `scripts/dashboard/test_run_backend_session_auth_freshness_lane.sh`
   - `scripts/dashboard/test_run_dashboard_stale_error_budget_lane.sh`
+  - `scripts/compliance/test_run_classification_redaction_lane.sh`
 
 ## Fast-Gate Delta Policy
 `scripts/ci/generate_fast_gate_budget_delta_report.sh` compares current fast-gate telemetry against a versioned baseline and emits:
