@@ -4,10 +4,18 @@ use crate::service_api_endpoint::{
     ServiceApiHealthBody, ServiceApiMessageCreateBody, ServiceApiTaskCreateBody,
 };
 use kamn_core::baseline_signature_for_fields;
+use serde::Deserialize;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 use std::time::{Duration, Instant};
+
+#[derive(Debug, Deserialize)]
+struct ServiceApiErrorEnvelope {
+    error: String,
+    reason_code: String,
+    message: String,
+}
 
 fn reserve_loopback_addr() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener should bind");
@@ -125,6 +133,14 @@ fn extract_http_response_body(response: &str) -> &str {
         .split_once("\r\n\r\n")
         .map(|(_, body)| body)
         .unwrap_or("")
+}
+
+fn parse_error_envelope(body: &str) -> ServiceApiErrorEnvelope {
+    serde_json::from_str(body).expect("error payload should deserialize")
+}
+
+fn parse_error_envelope_from_http_response(response: &str) -> ServiceApiErrorEnvelope {
+    parse_error_envelope(extract_http_response_body(response))
 }
 
 fn read_single_http_response(stream: &mut TcpStream) -> String {
@@ -279,7 +295,13 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
 
     let ws_response = render_service_api_endpoint_response(&snapshot, "GET", "/v1/events/ws", "");
     assert_eq!(ws_response.status_code, 400);
-    assert!(ws_response.body.contains("websocket upgrade required"));
+    let ws_payload = parse_error_envelope(ws_response.body.as_str());
+    assert_eq!(ws_payload.error, "bad-request");
+    assert_eq!(
+        ws_payload.reason_code,
+        "service_api_websocket_upgrade_required"
+    );
+    assert!(ws_payload.message.contains("websocket upgrade required"));
 }
 
 #[test]
@@ -345,6 +367,55 @@ fn unit_service_api_endpoint_serde_payload_roundtrip_contracts() {
         parse_service_api_payload(agent.body.as_str()).expect("agent payload should deserialize");
     assert_eq!(agent_payload.did, "kamn:did:agent:alpha");
     assert_eq!(agent_payload.reputation_score, 500);
+}
+
+#[test]
+fn unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34061".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let websocket_required =
+        render_service_api_endpoint_response(&snapshot, "GET", "/v1/events/ws", "");
+    assert_eq!(websocket_required.status_code, 400);
+    let websocket_required_payload = parse_error_envelope(websocket_required.body.as_str());
+    assert_eq!(websocket_required_payload.error, "bad-request");
+    assert_eq!(
+        websocket_required_payload.reason_code,
+        "service_api_websocket_upgrade_required"
+    );
+    assert!(websocket_required_payload
+        .message
+        .contains("websocket upgrade required"));
+
+    let method_not_allowed =
+        render_service_api_endpoint_response(&snapshot, "DELETE", "/v1/messages/send", "");
+    assert_eq!(method_not_allowed.status_code, 405);
+    let method_not_allowed_payload = parse_error_envelope(method_not_allowed.body.as_str());
+    assert_eq!(method_not_allowed_payload.error, "method-not-allowed");
+    assert_eq!(
+        method_not_allowed_payload.reason_code,
+        "service_api_method_not_allowed"
+    );
+    assert!(method_not_allowed_payload
+        .message
+        .contains("method not allowed"));
+
+    let not_found = render_service_api_endpoint_response(&snapshot, "GET", "/v1/nope", "");
+    assert_eq!(not_found.status_code, 404);
+    let not_found_payload = parse_error_envelope(not_found.body.as_str());
+    assert_eq!(not_found_payload.error, "not-found");
+    assert_eq!(not_found_payload.reason_code, "service_api_route_not_found");
+    assert!(not_found_payload.message.contains("not found"));
 }
 
 #[test]
@@ -712,8 +783,13 @@ fn integration_service_api_endpoint_rejects_missing_request_auth_headers() {
         "{\"message\":\"hello\"}",
     );
     assert!(unauth_response.contains("HTTP/1.1 401 Unauthorized"));
-    assert!(unauth_response.contains("\"error\":\"unauthorized\""));
-    assert!(unauth_response.contains("x-kamn-sender-did"));
+    let unauth_payload = parse_error_envelope_from_http_response(unauth_response.as_str());
+    assert_eq!(unauth_payload.error, "unauthorized");
+    assert_eq!(
+        unauth_payload.reason_code,
+        "service_api_auth_sender_did_header_missing"
+    );
+    assert!(unauth_payload.message.contains("x-kamn-sender-did"));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -780,7 +856,15 @@ fn regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender() {
 
     assert!(first_response.contains("HTTP/1.1 202 Accepted"));
     assert!(replay_response.contains("HTTP/1.1 409 Conflict"));
-    assert!(replay_response.contains("\"error\":\"replay\""));
+    let replay_payload = parse_error_envelope_from_http_response(replay_response.as_str());
+    assert_eq!(replay_payload.error, "replay");
+    assert_eq!(
+        replay_payload.reason_code,
+        "service_api_auth_replay_nonce_detected"
+    );
+    assert!(replay_payload
+        .message
+        .contains("request nonce replay detected"));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -894,7 +978,12 @@ fn regression_service_api_endpoint_websocket_route_rejects_missing_upgrade_heade
         ],
     );
     assert!(response.contains("HTTP/1.1 400 Bad Request"));
-    assert!(response.contains("missing required websocket upgrade header"));
+    let payload = parse_error_envelope_from_http_response(response.as_str());
+    assert_eq!(payload.error, "bad-request");
+    assert_eq!(payload.reason_code, "service_api_ws_upgrade_header_missing");
+    assert!(payload
+        .message
+        .contains("missing required websocket upgrade header"));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
@@ -950,7 +1039,10 @@ fn regression_service_api_endpoint_websocket_rejects_invalid_version_header() {
     let response_text =
         String::from_utf8(response).expect("invalid websocket version response should be utf-8");
     assert!(response_text.contains("HTTP/1.1 400 Bad Request"));
-    assert!(response_text.contains("invalid websocket version header"));
+    let payload = parse_error_envelope_from_http_response(response_text.as_str());
+    assert_eq!(payload.error, "bad-request");
+    assert_eq!(payload.reason_code, "service_api_ws_version_header_invalid");
+    assert!(payload.message.contains("invalid websocket version header"));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(

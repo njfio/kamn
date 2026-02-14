@@ -44,6 +44,31 @@ const ROUTE_METRICS: &str = "/metrics";
 const REQUEST_AUTH_SENDER_DID_HEADER: &str = "x-kamn-sender-did";
 const REQUEST_AUTH_NONCE_HEADER: &str = "x-kamn-request-nonce";
 const REQUEST_AUTH_SIGNATURE_HEADER: &str = "x-kamn-request-signature";
+const REASON_CODE_WEBSOCKET_UPGRADE_REQUIRED: &str = "service_api_websocket_upgrade_required";
+const REASON_CODE_METHOD_NOT_ALLOWED: &str = "service_api_method_not_allowed";
+const REASON_CODE_ROUTE_NOT_FOUND: &str = "service_api_route_not_found";
+const REASON_CODE_REQUEST_READ_FAILED: &str = "service_api_request_read_failed";
+const REASON_CODE_REQUEST_HEADER_UTF8_INVALID: &str = "service_api_request_header_utf8_invalid";
+const REASON_CODE_REQUEST_BODY_UTF8_INVALID: &str = "service_api_request_body_utf8_invalid";
+const REASON_CODE_REQUEST_LOG_EMISSION_FAILED: &str = "service_api_request_log_emission_failed";
+const REASON_CODE_AUTH_SENDER_DID_HEADER_MISSING: &str =
+    "service_api_auth_sender_did_header_missing";
+const REASON_CODE_AUTH_SENDER_DID_INVALID: &str = "service_api_auth_sender_did_invalid";
+const REASON_CODE_AUTH_NONCE_HEADER_MISSING: &str = "service_api_auth_nonce_header_missing";
+const REASON_CODE_AUTH_NONCE_INVALID: &str = "service_api_auth_nonce_invalid";
+const REASON_CODE_AUTH_NONCE_NON_POSITIVE: &str = "service_api_auth_nonce_non_positive";
+const REASON_CODE_AUTH_SIGNATURE_HEADER_MISSING: &str = "service_api_auth_signature_header_missing";
+const REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED: &str =
+    "service_api_auth_signature_verification_failed";
+const REASON_CODE_AUTH_REPLAY_NONCE_DETECTED: &str = "service_api_auth_replay_nonce_detected";
+const REASON_CODE_WS_UPGRADE_HEADER_MISSING: &str = "service_api_ws_upgrade_header_missing";
+const REASON_CODE_WS_CONNECTION_HEADER_MISSING: &str = "service_api_ws_connection_header_missing";
+const REASON_CODE_WS_KEY_HEADER_MISSING: &str = "service_api_ws_key_header_missing";
+const REASON_CODE_WS_VERSION_HEADER_MISSING: &str = "service_api_ws_version_header_missing";
+const REASON_CODE_WS_UPGRADE_HEADER_INVALID: &str = "service_api_ws_upgrade_header_invalid";
+const REASON_CODE_WS_CONNECTION_HEADER_INVALID: &str = "service_api_ws_connection_header_invalid";
+const REASON_CODE_WS_KEY_HEADER_EMPTY: &str = "service_api_ws_key_header_empty";
+const REASON_CODE_WS_VERSION_HEADER_INVALID: &str = "service_api_ws_version_header_invalid";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ServiceApiEndpointConfig {
@@ -78,7 +103,8 @@ pub(crate) struct ServiceApiEndpointResponse {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct ServiceApiErrorBody {
     pub(crate) error: String,
-    pub(crate) reason: String,
+    pub(crate) reason_code: String,
+    pub(crate) message: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -151,8 +177,23 @@ struct ParsedRequest {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum RequestAuthFailure {
-    Unauthorized(String),
-    Replay(String),
+    Unauthorized(ServiceApiReasonedError),
+    Replay(ServiceApiReasonedError),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ServiceApiReasonedError {
+    reason_code: &'static str,
+    message: String,
+}
+
+impl ServiceApiReasonedError {
+    fn new(reason_code: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            reason_code,
+            message: message.into(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -211,7 +252,8 @@ struct ServiceApiMiddlewareError<'a> {
     path: &'a str,
     status_code: StatusCode,
     error_label: &'a str,
-    reason: &'a str,
+    reason_code: &'a str,
+    message: &'a str,
     outcome: &'a str,
 }
 
@@ -282,15 +324,12 @@ pub(crate) fn render_service_api_endpoint_response(
         };
     }
     if method == "GET" && path == ROUTE_EVENTS_WS {
-        let payload = ServiceApiErrorBody {
-            error: "bad-request".to_owned(),
-            reason: "websocket upgrade required".to_owned(),
-        };
-        return ServiceApiEndpointResponse {
-            status_code: 400,
-            content_type: "application/json",
-            body: serialize_service_api_json(&payload),
-        };
+        return json_error_endpoint_response(
+            StatusCode::BAD_REQUEST,
+            "bad-request",
+            REASON_CODE_WEBSOCKET_UPGRADE_REQUIRED,
+            "websocket upgrade required",
+        );
     }
     if method == "POST" && path == ROUTE_MESSAGES_SEND {
         let message_id = format!("msg-local-{}", deterministic_body_tag(body.as_bytes()));
@@ -377,17 +416,19 @@ pub(crate) fn render_service_api_endpoint_response(
     }
 
     if route_exists_for_other_method(path) {
-        return ServiceApiEndpointResponse {
-            status_code: 405,
-            content_type: "text/plain; charset=utf-8",
-            body: "method not allowed\n".to_owned(),
-        };
+        return json_error_endpoint_response(
+            StatusCode::METHOD_NOT_ALLOWED,
+            "method-not-allowed",
+            REASON_CODE_METHOD_NOT_ALLOWED,
+            "method not allowed",
+        );
     }
-    ServiceApiEndpointResponse {
-        status_code: 404,
-        content_type: "text/plain; charset=utf-8",
-        body: "not found\n".to_owned(),
-    }
+    json_error_endpoint_response(
+        StatusCode::NOT_FOUND,
+        "not-found",
+        REASON_CODE_ROUTE_NOT_FOUND,
+        "not found",
+    )
 }
 
 pub(crate) fn serve_service_api_endpoint(
@@ -482,10 +523,10 @@ async fn service_api_auth_middleware(
     let (mut request, parsed_request) =
         match parse_service_api_request(request, is_websocket_route).await {
             Ok(parsed_request) => parsed_request,
-            Err(reason) => {
+            Err(error) => {
                 let correlation_id = format!(
                     "service-api:parse-error:{:016x}",
-                    deterministic_body_tag(reason.as_bytes())
+                    deterministic_body_tag(error.message.as_bytes())
                 );
                 return service_api_middleware_error_response(
                     &state,
@@ -495,7 +536,8 @@ async fn service_api_auth_middleware(
                         path: "unknown",
                         status_code: StatusCode::BAD_REQUEST,
                         error_label: "bad-request",
-                        reason: reason.as_str(),
+                        reason_code: error.reason_code,
+                        message: error.message.as_str(),
                         outcome: "bad-request",
                     },
                 );
@@ -519,7 +561,8 @@ async fn service_api_auth_middleware(
                 path: parsed_request.path.as_str(),
                 status_code: StatusCode::INTERNAL_SERVER_ERROR,
                 error_label: "internal",
-                reason: reason.as_str(),
+                reason_code: REASON_CODE_REQUEST_LOG_EMISSION_FAILED,
+                message: reason.as_str(),
                 outcome: "log-error",
             },
         );
@@ -530,15 +573,15 @@ async fn service_api_auth_middleware(
         if let Err(error) =
             authorize_service_api_request(&state.snapshot, &parsed_request, &mut replay_guard)
         {
-            let (status_code, error_label, reason, outcome) = match error {
-                RequestAuthFailure::Unauthorized(reason) => (
+            let (status_code, error_label, auth_error, outcome) = match error {
+                RequestAuthFailure::Unauthorized(reasoned_error) => (
                     StatusCode::UNAUTHORIZED,
                     "unauthorized",
-                    reason,
+                    reasoned_error,
                     "unauthorized",
                 ),
-                RequestAuthFailure::Replay(reason) => {
-                    (StatusCode::CONFLICT, "replay", reason, "replay")
+                RequestAuthFailure::Replay(reasoned_error) => {
+                    (StatusCode::CONFLICT, "replay", reasoned_error, "replay")
                 }
             };
             return service_api_middleware_error_response(
@@ -549,28 +592,30 @@ async fn service_api_auth_middleware(
                     path: parsed_request.path.as_str(),
                     status_code,
                     error_label,
-                    reason: reason.as_str(),
+                    reason_code: auth_error.reason_code,
+                    message: auth_error.message.as_str(),
                     outcome,
                 },
             );
         }
     }
 
-    if is_websocket_route {
-        if let Err(reason) = validate_websocket_upgrade_headers(&parsed_request.headers) {
-            return service_api_middleware_error_response(
-                &state,
-                ServiceApiMiddlewareError {
-                    correlation_id: correlation_id.as_str(),
-                    method: parsed_request.method.as_str(),
-                    path: parsed_request.path.as_str(),
-                    status_code: StatusCode::BAD_REQUEST,
-                    error_label: "bad-request",
-                    reason: reason.as_str(),
-                    outcome: "websocket-bad-request",
-                },
-            );
-        }
+    if let Err(error) =
+        validate_websocket_route_requirements(is_websocket_route, &parsed_request.headers)
+    {
+        return service_api_middleware_error_response(
+            &state,
+            ServiceApiMiddlewareError {
+                correlation_id: correlation_id.as_str(),
+                method: parsed_request.method.as_str(),
+                path: parsed_request.path.as_str(),
+                status_code: StatusCode::BAD_REQUEST,
+                error_label: "bad-request",
+                reason_code: error.reason_code,
+                message: error.message.as_str(),
+                outcome: "websocket-bad-request",
+            },
+        );
     }
 
     let method_for_outcome = parsed_request.method.clone();
@@ -606,7 +651,7 @@ async fn service_api_auth_middleware(
 async fn parse_service_api_request(
     request: Request,
     is_websocket_route: bool,
-) -> Result<(Request, ParsedRequest), String> {
+) -> Result<(Request, ParsedRequest), ServiceApiReasonedError> {
     let method_label = request.method().to_string();
     let path = request.uri().path().to_owned();
     let headers = request.headers().clone();
@@ -619,9 +664,12 @@ async fn parse_service_api_request(
 
     let (parts, body) = request.into_parts();
     let body_limit = 64 * 1024;
-    let body = to_bytes(body, body_limit)
-        .await
-        .map_err(|error| format!("request read failed: {error}"))?;
+    let body = to_bytes(body, body_limit).await.map_err(|error| {
+        ServiceApiReasonedError::new(
+            REASON_CODE_REQUEST_READ_FAILED,
+            format!("request read failed: {error}"),
+        )
+    })?;
     let parsed_request =
         build_parsed_request(method_label.as_str(), path.as_str(), &headers, body.clone())?;
     let request = Request::from_parts(parts, Body::from(body));
@@ -632,7 +680,12 @@ fn service_api_middleware_error_response(
     state: &ServiceApiRuntimeState,
     error: ServiceApiMiddlewareError<'_>,
 ) -> Response {
-    let response = json_error_response(error.status_code, error.error_label, error.reason);
+    let response = json_error_response(
+        error.status_code,
+        error.error_label,
+        error.reason_code,
+        error.message,
+    );
     let _ = emit_service_api_request_outcome(
         error.correlation_id,
         error.method,
@@ -823,32 +876,42 @@ fn authorize_service_api_request(
     }
     let sender_did =
         header_value(&request.headers, REQUEST_AUTH_SENDER_DID_HEADER).ok_or_else(|| {
-            RequestAuthFailure::Unauthorized(format!(
-                "missing required header: {REQUEST_AUTH_SENDER_DID_HEADER}"
+            RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
+                REASON_CODE_AUTH_SENDER_DID_HEADER_MISSING,
+                format!("missing required header: {REQUEST_AUTH_SENDER_DID_HEADER}"),
             ))
         })?;
     AgentDid::parse(sender_did).map_err(|error| {
-        RequestAuthFailure::Unauthorized(format!("invalid sender did: {error}"))
+        RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
+            REASON_CODE_AUTH_SENDER_DID_INVALID,
+            format!("invalid sender did: {error}"),
+        ))
     })?;
     let nonce_raw = header_value(&request.headers, REQUEST_AUTH_NONCE_HEADER).ok_or_else(|| {
-        RequestAuthFailure::Unauthorized(format!(
-            "missing required header: {REQUEST_AUTH_NONCE_HEADER}"
+        RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
+            REASON_CODE_AUTH_NONCE_HEADER_MISSING,
+            format!("missing required header: {REQUEST_AUTH_NONCE_HEADER}"),
         ))
     })?;
     let nonce = nonce_raw.parse::<u64>().map_err(|_| {
-        RequestAuthFailure::Unauthorized(format!(
-            "invalid request nonce header: {REQUEST_AUTH_NONCE_HEADER}"
+        RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
+            REASON_CODE_AUTH_NONCE_INVALID,
+            format!("invalid request nonce header: {REQUEST_AUTH_NONCE_HEADER}"),
         ))
     })?;
     if nonce == 0 {
-        return Err(RequestAuthFailure::Unauthorized(format!(
-            "request nonce must be positive: {REQUEST_AUTH_NONCE_HEADER}"
-        )));
+        return Err(RequestAuthFailure::Unauthorized(
+            ServiceApiReasonedError::new(
+                REASON_CODE_AUTH_NONCE_NON_POSITIVE,
+                format!("request nonce must be positive: {REQUEST_AUTH_NONCE_HEADER}"),
+            ),
+        ));
     }
     let signature =
         header_value(&request.headers, REQUEST_AUTH_SIGNATURE_HEADER).ok_or_else(|| {
-            RequestAuthFailure::Unauthorized(format!(
-                "missing required header: {REQUEST_AUTH_SIGNATURE_HEADER}"
+            RequestAuthFailure::Unauthorized(ServiceApiReasonedError::new(
+                REASON_CODE_AUTH_SIGNATURE_HEADER_MISSING,
+                format!("missing required header: {REQUEST_AUTH_SIGNATURE_HEADER}"),
             ))
         })?;
     let state_hash = service_api_signature_state_hash(snapshot);
@@ -860,13 +923,17 @@ fn authorize_service_api_request(
         request.body.as_str(),
     ) {
         return Err(RequestAuthFailure::Unauthorized(
-            "signature verification failed for request envelope".to_owned(),
+            ServiceApiReasonedError::new(
+                REASON_CODE_AUTH_SIGNATURE_VERIFICATION_FAILED,
+                "signature verification failed for request envelope",
+            ),
         ));
     }
     if !replay_guard.insert((sender_did.to_owned(), nonce)) {
-        return Err(RequestAuthFailure::Replay(
-            "request nonce replay detected for sender".to_owned(),
-        ));
+        return Err(RequestAuthFailure::Replay(ServiceApiReasonedError::new(
+            REASON_CODE_AUTH_REPLAY_NONCE_DETECTED,
+            "request nonce replay detected for sender",
+        )));
     }
     Ok(())
 }
@@ -925,19 +992,26 @@ fn build_parsed_request(
     path: &str,
     headers: &HeaderMap,
     body: Bytes,
-) -> Result<ParsedRequest, String> {
+) -> Result<ParsedRequest, ServiceApiReasonedError> {
     let mut normalized_headers = BTreeMap::new();
     for (header_name, header_value) in headers {
-        let value = header_value
-            .to_str()
-            .map_err(|_| format!("request header value was not valid utf-8: {header_name}"))?;
+        let value = header_value.to_str().map_err(|_| {
+            ServiceApiReasonedError::new(
+                REASON_CODE_REQUEST_HEADER_UTF8_INVALID,
+                format!("request header value was not valid utf-8: {header_name}"),
+            )
+        })?;
         normalized_headers.insert(
             header_name.as_str().to_ascii_lowercase(),
             value.trim().to_owned(),
         );
     }
-    let body =
-        String::from_utf8(body.to_vec()).map_err(|_| "request was not valid utf-8".to_owned())?;
+    let body = String::from_utf8(body.to_vec()).map_err(|_| {
+        ServiceApiReasonedError::new(
+            REASON_CODE_REQUEST_BODY_UTF8_INVALID,
+            "request was not valid utf-8",
+        )
+    })?;
     Ok(ParsedRequest {
         method: method.to_owned(),
         path: path.to_owned(),
@@ -946,27 +1020,67 @@ fn build_parsed_request(
     })
 }
 
-fn validate_websocket_upgrade_headers(headers: &BTreeMap<String, String>) -> Result<(), String> {
-    let upgrade = header_value(headers, "upgrade")
-        .ok_or_else(|| "missing required websocket upgrade header".to_owned())?;
-    let connection = header_value(headers, "connection")
-        .ok_or_else(|| "missing required websocket connection header".to_owned())?;
-    let websocket_key = header_value(headers, "sec-websocket-key")
-        .ok_or_else(|| "missing required websocket key header".to_owned())?;
-    let websocket_version = header_value(headers, "sec-websocket-version")
-        .ok_or_else(|| "missing required websocket version header".to_owned())?;
+fn validate_websocket_route_requirements(
+    is_websocket_route: bool,
+    headers: &BTreeMap<String, String>,
+) -> Result<(), ServiceApiReasonedError> {
+    if !is_websocket_route {
+        return Ok(());
+    }
+    validate_websocket_upgrade_headers(headers)
+}
+
+fn validate_websocket_upgrade_headers(
+    headers: &BTreeMap<String, String>,
+) -> Result<(), ServiceApiReasonedError> {
+    let upgrade = header_value(headers, "upgrade").ok_or_else(|| {
+        ServiceApiReasonedError::new(
+            REASON_CODE_WS_UPGRADE_HEADER_MISSING,
+            "missing required websocket upgrade header",
+        )
+    })?;
+    let connection = header_value(headers, "connection").ok_or_else(|| {
+        ServiceApiReasonedError::new(
+            REASON_CODE_WS_CONNECTION_HEADER_MISSING,
+            "missing required websocket connection header",
+        )
+    })?;
+    let websocket_key = header_value(headers, "sec-websocket-key").ok_or_else(|| {
+        ServiceApiReasonedError::new(
+            REASON_CODE_WS_KEY_HEADER_MISSING,
+            "missing required websocket key header",
+        )
+    })?;
+    let websocket_version = header_value(headers, "sec-websocket-version").ok_or_else(|| {
+        ServiceApiReasonedError::new(
+            REASON_CODE_WS_VERSION_HEADER_MISSING,
+            "missing required websocket version header",
+        )
+    })?;
 
     if !upgrade.eq_ignore_ascii_case("websocket") {
-        return Err("invalid websocket upgrade header".to_owned());
+        return Err(ServiceApiReasonedError::new(
+            REASON_CODE_WS_UPGRADE_HEADER_INVALID,
+            "invalid websocket upgrade header",
+        ));
     }
     if !connection.to_ascii_lowercase().contains("upgrade") {
-        return Err("invalid websocket connection header".to_owned());
+        return Err(ServiceApiReasonedError::new(
+            REASON_CODE_WS_CONNECTION_HEADER_INVALID,
+            "invalid websocket connection header",
+        ));
     }
     if websocket_key.trim().is_empty() {
-        return Err("websocket key header must not be empty".to_owned());
+        return Err(ServiceApiReasonedError::new(
+            REASON_CODE_WS_KEY_HEADER_EMPTY,
+            "websocket key header must not be empty",
+        ));
     }
     if websocket_version.trim() != "13" {
-        return Err("invalid websocket version header".to_owned());
+        return Err(ServiceApiReasonedError::new(
+            REASON_CODE_WS_VERSION_HEADER_INVALID,
+            "invalid websocket version header",
+        ));
     }
     Ok(())
 }
@@ -1003,10 +1117,33 @@ fn contract_response(response: ServiceApiEndpointResponse) -> Response {
         .into_response()
 }
 
-fn json_error_response(status_code: StatusCode, error: &str, reason: &str) -> Response {
+fn json_error_endpoint_response(
+    status_code: StatusCode,
+    error: &str,
+    reason_code: &str,
+    message: &str,
+) -> ServiceApiEndpointResponse {
+    ServiceApiEndpointResponse {
+        status_code: status_code.as_u16(),
+        content_type: "application/json",
+        body: serialize_service_api_json(&ServiceApiErrorBody {
+            error: error.to_owned(),
+            reason_code: reason_code.to_owned(),
+            message: message.to_owned(),
+        }),
+    }
+}
+
+fn json_error_response(
+    status_code: StatusCode,
+    error: &str,
+    reason_code: &str,
+    message: &str,
+) -> Response {
     let payload = ServiceApiErrorBody {
         error: error.to_owned(),
-        reason: reason.to_owned(),
+        reason_code: reason_code.to_owned(),
+        message: message.to_owned(),
     };
     (
         status_code,
@@ -1040,7 +1177,7 @@ pub(crate) fn service_api_payload_decode_reason_code(error: &serde_json::Error) 
 fn serialize_service_api_json<T: Serialize>(payload: &T) -> String {
     serde_json::to_string(payload).unwrap_or_else(|error| {
         format!(
-            "{{\"error\":\"internal\",\"reason\":\"service api payload serialization failed: {}\"}}",
+            "{{\"error\":\"internal\",\"reason_code\":\"service_api_payload_serialization_failed\",\"message\":\"service api payload serialization failed: {}\"}}",
             escape_json_string(error.to_string().as_str())
         )
     })

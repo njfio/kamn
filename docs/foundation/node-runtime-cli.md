@@ -402,8 +402,17 @@ This document captures node-runtime productionization slices for machine-readabl
   - `ServiceApiTaskCreateBody`
   - `ServiceApiTaskGetBody`
   - `ServiceApiAgentGetBody`
-  - `ServiceApiErrorBody`
+  - `ServiceApiErrorBody` (`error`, `reason_code`, `message`)
   - `ServiceApiWebsocketStateTransitionBody`
+- Error responses are fail-closed and standardized for all route/middleware paths:
+  - `error`: stable top-level class (`bad-request`, `unauthorized`, `replay`, `method-not-allowed`, `not-found`, `internal`)
+  - `reason_code`: deterministic machine key for exact failure branch (examples below)
+  - `message`: human-readable detail for operator debugging
+- Deterministic reason-code mapping examples:
+  - direct route rendering: `service_api_websocket_upgrade_required`, `service_api_method_not_allowed`, `service_api_route_not_found`
+  - auth middleware: `service_api_auth_sender_did_header_missing`, `service_api_auth_signature_verification_failed`, `service_api_auth_replay_nonce_detected`
+  - websocket middleware: `service_api_ws_upgrade_header_missing`, `service_api_ws_version_header_invalid`
+  - request parse/logging guards: `service_api_request_read_failed`, `service_api_request_header_utf8_invalid`, `service_api_request_log_emission_failed`
 - Payload decode failures map to deterministic reason-code prefixes:
   - `service_api_payload_json_syntax_invalid`
   - `service_api_payload_structure_invalid`
