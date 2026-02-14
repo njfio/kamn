@@ -1,6 +1,7 @@
 //! Mempool block production and consensus validation pipeline contracts.
 
 use crate::config::NodeRole;
+use crate::p2p_transport::PeerGossipFrame;
 use crate::runtime::{
     ApproverAttestation, ApproverQuorumDecision, ApproverQuorumError, ApproverQuorumEvaluator,
     ApproverQuorumInput, ListenerAttestation, ListenerQuorumDecision, ListenerQuorumError,
@@ -8,6 +9,7 @@ use crate::runtime::{
 };
 use crate::smoke::{ProducedBlock, RoleSmokeNetwork, SmokeError};
 use crate::transaction::BaselineTransaction;
+use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
@@ -117,6 +119,154 @@ impl Display for BlockPipelineError {
 }
 
 impl Error for BlockPipelineError {}
+
+const TOPIC_MESSAGES_LEGACY: &str = "messages";
+const TOPIC_MESSAGES_V1: &str = "kamn/messages/v1";
+const TOPIC_BLOCKS_LEGACY: &str = "blocks";
+const TOPIC_BLOCKS_V1: &str = "kamn/blocks/v1";
+
+/// Decoded gossip ingress record classified by payload intent.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GossipIngressRecord {
+    /// Transaction payload normalized for mempool ingress.
+    Transaction(BaselineTransaction),
+    /// Canonical block candidate normalized for fork-choice/persistence paths.
+    BlockCandidate(CanonicalCommitRecord),
+}
+
+impl GossipIngressRecord {
+    /// Returns transaction payload when record classification is `Transaction`.
+    pub fn into_transaction(self) -> Option<BaselineTransaction> {
+        match self {
+            Self::Transaction(tx) => Some(tx),
+            Self::BlockCandidate(_) => None,
+        }
+    }
+
+    /// Returns block candidate payload when record classification is `BlockCandidate`.
+    pub fn into_block_candidate(self) -> Option<CanonicalCommitRecord> {
+        match self {
+            Self::Transaction(_) => None,
+            Self::BlockCandidate(record) => Some(record),
+        }
+    }
+}
+
+/// Batch decode output for transaction and canonical block candidate payloads.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct GossipIngressBatch {
+    /// Decoded transaction payloads in input order.
+    pub transactions: Vec<BaselineTransaction>,
+    /// Decoded canonical block candidates in input order.
+    pub canonical_candidates: Vec<CanonicalCommitRecord>,
+}
+
+/// Deterministic decode failure for gossip ingress payload normalization.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GossipIngressError {
+    reason_code: &'static str,
+    detail: String,
+}
+
+impl GossipIngressError {
+    fn new(reason_code: &'static str, detail: impl Into<String>) -> Self {
+        Self {
+            reason_code,
+            detail: detail.into(),
+        }
+    }
+
+    /// Returns deterministic reason code for fail-closed policy checks.
+    pub fn reason_code(&self) -> &'static str {
+        self.reason_code
+    }
+}
+
+impl Display for GossipIngressError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ({})", self.detail, self.reason_code)
+    }
+}
+
+impl Error for GossipIngressError {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GossipIngressTopicKind {
+    Transaction,
+    Block,
+}
+
+/// Deterministic topic+payload ingress adapter for transport-fed pipeline paths.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GossipIngressAdapter;
+
+impl GossipIngressAdapter {
+    /// Decodes one frame into normalized transaction or canonical block candidate record.
+    pub fn decode_frame(
+        frame: &PeerGossipFrame,
+    ) -> Result<GossipIngressRecord, GossipIngressError> {
+        let topic_kind = classify_gossip_topic(frame.topic.as_str())?;
+        let payload_fields = parse_payload_fields(frame.payload.as_str())?;
+
+        match topic_kind {
+            GossipIngressTopicKind::Transaction => decode_transaction_record(&payload_fields),
+            GossipIngressTopicKind::Block => decode_block_candidate_record(&payload_fields),
+        }
+    }
+
+    /// Decodes many frames into transaction and block candidate batches.
+    pub fn decode_frames(
+        frames: &[PeerGossipFrame],
+    ) -> Result<GossipIngressBatch, GossipIngressError> {
+        let mut batch = GossipIngressBatch::default();
+        for frame in frames {
+            match Self::decode_frame(frame)? {
+                GossipIngressRecord::Transaction(tx) => batch.transactions.push(tx),
+                GossipIngressRecord::BlockCandidate(record) => {
+                    batch.canonical_candidates.push(record);
+                }
+            }
+        }
+        Ok(batch)
+    }
+}
+
+/// Transport feed adapter that decodes gossip frames into mempool candidates.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct GossipFrameTransportMempoolFeed {
+    pending_frames: Vec<PeerGossipFrame>,
+    canonical_candidates: Vec<CanonicalCommitRecord>,
+}
+
+impl GossipFrameTransportMempoolFeed {
+    /// Builds feed with pending gossip frames.
+    pub fn new(pending_frames: Vec<PeerGossipFrame>) -> Self {
+        Self {
+            pending_frames,
+            canonical_candidates: Vec::new(),
+        }
+    }
+
+    /// Drains normalized canonical block candidates decoded during last feed drain.
+    pub fn drain_canonical_candidates(&mut self) -> Vec<CanonicalCommitRecord> {
+        std::mem::take(&mut self.canonical_candidates)
+    }
+}
+
+impl TransportMempoolFeed for GossipFrameTransportMempoolFeed {
+    fn drain_pending_transactions(
+        &mut self,
+    ) -> Result<Vec<BaselineTransaction>, BlockPipelineError> {
+        let decoded =
+            GossipIngressAdapter::decode_frames(&self.pending_frames).map_err(|error| {
+                BlockPipelineError::TransportFeed(format!("{}:{}", error.reason_code(), error))
+            })?;
+        self.pending_frames.clear();
+        self.canonical_candidates
+            .extend(decoded.canonical_candidates);
+        Ok(decoded.transactions)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Canonical commit record persisted after fork-choice acceptance.
@@ -397,6 +547,188 @@ fn sort_candidates_for_ingress(candidates: &mut [BaselineTransaction]) {
             .then_with(|| left.id.cmp(&right.id))
             .then_with(|| left.sender.cmp(&right.sender))
     });
+}
+
+fn classify_gossip_topic(topic: &str) -> Result<GossipIngressTopicKind, GossipIngressError> {
+    match topic.trim() {
+        TOPIC_MESSAGES_LEGACY | TOPIC_MESSAGES_V1 => Ok(GossipIngressTopicKind::Transaction),
+        TOPIC_BLOCKS_LEGACY | TOPIC_BLOCKS_V1 => Ok(GossipIngressTopicKind::Block),
+        unsupported => Err(GossipIngressError::new(
+            "p2p_ingress_topic_unsupported",
+            format!("unsupported gossip topic for block pipeline ingress: {unsupported}"),
+        )),
+    }
+}
+
+fn parse_payload_fields(payload: &str) -> Result<BTreeMap<String, String>, GossipIngressError> {
+    if payload.trim().is_empty() {
+        return Err(GossipIngressError::new(
+            "p2p_ingress_payload_empty",
+            "gossip ingress payload cannot be empty",
+        ));
+    }
+
+    let mut fields = BTreeMap::new();
+    for raw_line in payload.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let (raw_key, raw_value) = line.split_once('=').ok_or_else(|| {
+            GossipIngressError::new(
+                "p2p_ingress_payload_line_malformed",
+                format!("malformed key/value line: {line}"),
+            )
+        })?;
+        let key = raw_key.trim();
+        if key.is_empty() {
+            return Err(GossipIngressError::new(
+                "p2p_ingress_payload_line_malformed",
+                format!("payload key cannot be empty: {line}"),
+            ));
+        }
+        if fields.contains_key(key) {
+            return Err(GossipIngressError::new(
+                "p2p_ingress_payload_duplicate_field",
+                format!("duplicate payload field: {key}"),
+            ));
+        }
+        fields.insert(key.to_owned(), raw_value.trim().to_owned());
+    }
+
+    if fields.is_empty() {
+        return Err(GossipIngressError::new(
+            "p2p_ingress_payload_empty",
+            "gossip ingress payload has no key/value fields",
+        ));
+    }
+
+    Ok(fields)
+}
+
+fn required_payload_field<'a>(
+    fields: &'a BTreeMap<String, String>,
+    field: &'static str,
+) -> Result<&'a str, GossipIngressError> {
+    let value = fields.get(field).ok_or_else(|| {
+        GossipIngressError::new(
+            "p2p_ingress_payload_missing_field",
+            format!("missing required payload field: {field}"),
+        )
+    })?;
+    if value.trim().is_empty() {
+        return Err(GossipIngressError::new(
+            "p2p_ingress_payload_missing_field",
+            format!("required payload field is empty: {field}"),
+        ));
+    }
+    Ok(value.as_str())
+}
+
+fn decode_transaction_record(
+    fields: &BTreeMap<String, String>,
+) -> Result<GossipIngressRecord, GossipIngressError> {
+    let id = required_payload_field(fields, "id")?;
+    let sender = required_payload_field(fields, "sender")?;
+    let nonce_raw = required_payload_field(fields, "nonce")?;
+    let state_hash = required_payload_field(fields, "state_hash")?;
+    let payload = required_payload_field(fields, "payload")?;
+    let signature = required_payload_field(fields, "signature")?;
+
+    let nonce = nonce_raw.parse::<u64>().map_err(|_| {
+        GossipIngressError::new(
+            "p2p_ingress_payload_nonce_invalid",
+            format!("nonce field must be positive integer, found: {nonce_raw}"),
+        )
+    })?;
+    if nonce == 0 {
+        return Err(GossipIngressError::new(
+            "p2p_ingress_payload_nonce_invalid",
+            "nonce field must be positive integer, found: 0",
+        ));
+    }
+
+    let tx = BaselineTransaction {
+        id: id.to_owned(),
+        sender: sender.to_owned(),
+        nonce,
+        payload: payload.to_owned(),
+        state_hash: state_hash.to_owned(),
+        signature: signature.to_owned(),
+    };
+    if tx.signature != tx.expected_signature() {
+        return Err(GossipIngressError::new(
+            "p2p_ingress_tx_signature_invalid",
+            format!(
+                "transaction signature failed baseline profile validation for {}",
+                tx.id
+            ),
+        ));
+    }
+
+    Ok(GossipIngressRecord::Transaction(tx))
+}
+
+fn decode_block_candidate_record(
+    fields: &BTreeMap<String, String>,
+) -> Result<GossipIngressRecord, GossipIngressError> {
+    let block_height_raw = required_payload_field(fields, "block_height")?;
+    let block_height = block_height_raw.parse::<u64>().map_err(|_| {
+        GossipIngressError::new(
+            "p2p_ingress_block_height_invalid",
+            format!("block_height field must be positive integer, found: {block_height_raw}"),
+        )
+    })?;
+    if block_height == 0 {
+        return Err(GossipIngressError::new(
+            "p2p_ingress_block_height_invalid",
+            "block_height field must be positive integer, found: 0",
+        ));
+    }
+
+    let producer_role_raw = required_payload_field(fields, "producer_role")?;
+    let producer_role = match producer_role_raw {
+        "processor" => NodeRole::Processor,
+        "listener" => NodeRole::Listener,
+        "approver" => NodeRole::Approver,
+        other => {
+            return Err(GossipIngressError::new(
+                "p2p_ingress_block_role_invalid",
+                format!("unsupported producer_role field value: {other}"),
+            ));
+        }
+    };
+
+    let payload_digest = required_payload_field(fields, "payload_digest")?;
+    let transaction_ids_raw = required_payload_field(fields, "transaction_ids")?;
+
+    let mut seen_ids = BTreeSet::new();
+    let mut transaction_ids = Vec::new();
+    for tx_id in transaction_ids_raw.split(',').map(|value| value.trim()) {
+        if tx_id.is_empty() {
+            continue;
+        }
+        if !seen_ids.insert(tx_id.to_owned()) {
+            return Err(GossipIngressError::new(
+                "p2p_ingress_block_transaction_ids_invalid",
+                format!("duplicate transaction id in block candidate payload: {tx_id}"),
+            ));
+        }
+        transaction_ids.push(tx_id.to_owned());
+    }
+    if transaction_ids.is_empty() {
+        return Err(GossipIngressError::new(
+            "p2p_ingress_block_transaction_ids_invalid",
+            "transaction_ids field must contain at least one identifier",
+        ));
+    }
+
+    Ok(GossipIngressRecord::BlockCandidate(CanonicalCommitRecord {
+        block_height,
+        producer_role,
+        payload_digest: payload_digest.to_owned(),
+        transaction_ids,
+    }))
 }
 
 impl MempoolBlockPipeline {
