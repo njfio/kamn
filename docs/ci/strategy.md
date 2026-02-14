@@ -209,6 +209,15 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `run_ci_tool_checks=true`
     - `test_scope=ci-doc-contract`
     - unknown/full fallback remains disabled for this wave-10 path set
+- Wave-11 wrapper-family fixture and trend-checker changes map to CI contract scope:
+  - `fixtures/ci/kolme_wave11_wrapper_family_matrix.json`
+  - `fixtures/ci/kolme_wave11_wrapper_family_baseline.json`
+  - `fixtures/ci/kolme_wave11_wrapper_family_trend_thresholds.json`
+  - `scripts/ci/check_kolme_wave11_wrapper_family_budget_trend.sh`
+  - selector outputs:
+    - `run_ci_tool_checks=true`
+    - `test_scope=ci-doc-contract`
+    - unknown/full fallback remains disabled for this wave-11 path set
 - Authoritative non-Kolme wrapper-family wave range marker:
   - `non_kolme_wrapper_family_wave_range=1-19`
   - `bash scripts/ci/test_ci_strategy_wave_range_marker_contract.sh`
@@ -548,7 +557,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - captures script-count and shell-LOC baseline drift for migrated runtime run-lane wrappers.
     - Regression: #2216
   - Kolme wave-10 wrapper-family baseline guard stays on PR fast gate:
-    - `bash scripts/ci/test_kolme_wrapper_inventory_baseline_contract.sh`
+    - `bash scripts/ci/test_kolme_wave10_wrapper_family_baseline_contract.sh`
     - deterministic wave-10 baseline artifacts:
       - `fixtures/ci/kolme_wave10_wrapper_family_matrix.json`
       - `fixtures/ci/kolme_wave10_wrapper_family_baseline.json`
@@ -557,6 +566,16 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `bash scripts/ci/check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/kolme_wave10_wrapper_family_matrix.json --baseline-file fixtures/ci/kolme_wave10_wrapper_family_baseline.json --output-json /tmp/kolme-wave10-wrapper-family-delta.json`
     - covers runtime real-node profile and live-deployment preflight contract wrappers.
     - Regression: #2281
+  - Kolme wave-11 wrapper-family baseline guard stays on PR fast gate:
+    - `bash scripts/ci/test_kolme_wave11_wrapper_family_baseline_contract.sh`
+    - deterministic wave-11 baseline artifacts:
+      - `fixtures/ci/kolme_wave11_wrapper_family_matrix.json`
+      - `fixtures/ci/kolme_wave11_wrapper_family_baseline.json`
+    - deterministic generator/check commands:
+      - `bash scripts/ci/generate_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/kolme_wave11_wrapper_family_matrix.json --output-json /tmp/kolme-wave11-wrapper-family-baseline.json`
+      - `bash scripts/ci/check_kolme_wrapper_inventory_baseline.sh --matrix-file fixtures/ci/kolme_wave11_wrapper_family_matrix.json --baseline-file fixtures/ci/kolme_wave11_wrapper_family_baseline.json --output-json /tmp/kolme-wave11-wrapper-family-delta.json`
+    - covers runtime finality-evidence, live-node validation bundle, and live-provider runtime-integration contract wrappers.
+    - Regression: #3120
   - Non-Kolme wave-1 wrapper-family baseline guard stays on PR fast gate:
     - `bash scripts/ci/test_non_kolme_wave1_wrapper_family_baseline_contract.sh`
     - deterministic non-Kolme wave-1 baseline artifacts:
@@ -782,7 +801,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=unexpected_new_lanes_in_current_inventory`
     - Regression: #2217
   - Kolme wave-10 wrapper-family trend guard stays on PR fast gate:
-    - `bash scripts/ci/test_check_kolme_wrapper_budget_trend.sh`
+    - `bash scripts/ci/test_check_kolme_wave10_wrapper_family_budget_trend.sh`
     - threshold policy file:
       - `fixtures/ci/kolme_wave10_wrapper_family_trend_thresholds.json`
     - trend-policy command:
@@ -797,6 +816,22 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=total_shell_loc_reduction_target_unmet`
       - `reason_codes=unexpected_new_lanes_in_current_inventory`
     - Regression: #2281
+  - Kolme wave-11 wrapper-family trend guard stays on PR fast gate:
+    - `bash scripts/ci/test_check_kolme_wave11_wrapper_family_budget_trend.sh`
+    - threshold policy file:
+      - `fixtures/ci/kolme_wave11_wrapper_family_trend_thresholds.json`
+    - trend-policy command:
+      - `bash scripts/ci/check_kolme_wave11_wrapper_family_budget_trend.sh --matrix-file fixtures/ci/kolme_wave11_wrapper_family_matrix.json --baseline-file fixtures/ci/kolme_wave11_wrapper_family_baseline.json --output-json /tmp/kolme-wave11-wrapper-family-trend-report.json`
+    - fails closed on wrapper-count/shell-LOC growth and stale lane-inventory baseline drift.
+    - deterministic reason-code surface is emitted for automation:
+      - `reason_codes=none` (pass)
+      - `reason_codes=wrapper_count_delta_threshold_exceeded`
+      - `reason_codes=total_shell_loc_delta_threshold_exceeded`
+      - `reason_codes=lane_shell_loc_increase_violation`
+      - `reason_codes=wrapper_count_reduction_target_unmet`
+      - `reason_codes=total_shell_loc_reduction_target_unmet`
+      - `reason_codes=unexpected_new_lanes_in_current_inventory`
+    - Regression: #3120
   - Non-Kolme wave-1 wrapper-family trend guard stays on PR fast gate:
     - `bash scripts/ci/test_check_non_kolme_wave1_wrapper_family_budget_trend.sh`
     - threshold policy file:

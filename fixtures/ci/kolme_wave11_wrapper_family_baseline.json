@@ -1,0 +1,40 @@
+{
+  "lanes": [
+    {
+      "lane_id": "kolme.local.live_node_validation_bundle",
+      "manifest_file": "scripts/framework/manifests/kolme_local_live_node_validation_bundle_contract_lane.json",
+      "priority": "P1",
+      "shell_loc": 1,
+      "source_entry": "scripts/kolme/run_local_live_node_validation_bundle_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "kolme.local.live_provider_runtime_integration",
+      "manifest_file": "scripts/framework/manifests/kolme_local_live_provider_runtime_integration_contract_lane.json",
+      "priority": "P1",
+      "shell_loc": 1,
+      "source_entry": "scripts/kolme/run_local_live_provider_runtime_integration_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    },
+    {
+      "lane_id": "kolme.local.runtime_commit_live_finality_evidence",
+      "manifest_file": "scripts/framework/manifests/kolme_local_runtime_commit_live_finality_evidence_contract_lane.json",
+      "priority": "P1",
+      "shell_loc": 1,
+      "source_entry": "scripts/kolme/run_local_runtime_commit_live_finality_evidence_contract_lane.sh",
+      "status": "planned",
+      "target_runner": "framework_manifest_lane",
+      "wrapper_kind": "symlink"
+    }
+  ],
+  "regular_file_wrapper_count": 0,
+  "schema_version": "kamn.kolme.wrapper-inventory-baseline.v1",
+  "source_matrix_file": "fixtures/ci/kolme_wave11_wrapper_family_matrix.json",
+  "symlink_wrapper_count": 3,
+  "total_shell_loc": 3,
+  "wrapper_count": 3
+}
