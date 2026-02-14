@@ -3135,7 +3135,12 @@ pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
     }
 
     let role_components = match config.role {
-        NodeRole::Processor => vec!["mempool", "executor", "block-producer"],
+        NodeRole::Processor => vec![
+            "mempool",
+            "executor",
+            "block-producer",
+            "consensus-validator",
+        ],
         NodeRole::Listener => vec!["external-listener", "event-normalizer"],
         NodeRole::Approver => vec!["quorum-approver", "outbound-authorizer"],
     };
