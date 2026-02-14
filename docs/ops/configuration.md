@@ -90,3 +90,22 @@ Implemented and validated by `kamn-node` tests:
 - precedence `config < env < CLI`
 - invalid env override fail-closed regression
 - integration execution path (`parse_args` -> `execute`) with layered precedence
+
+Live validation lane:
+
+- `bash scripts/runtime/test_validate_config_layering_live.sh`
+- `bash scripts/runtime/validate_config_layering_live.sh --output-json /tmp/config-layering-live-report.json`
+
+Deterministic success markers:
+
+- `status=pass`
+- `final_decision=GO`
+- `layering_contract_status=verified`
+- `precedence_contract_status=verified`
+- `fail_closed_status=verified`
+- `fail_closed_reason_code=invalid_sync_mode_override`
+
+Deterministic fail-closed drill:
+
+- inject invalid override `KAMN_NODE_SYNC_MODE=turbo` while config layering is active
+- expected failure marker: `invalid sync mode: turbo`
