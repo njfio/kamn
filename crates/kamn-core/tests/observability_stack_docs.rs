@@ -1,4 +1,5 @@
 const DOC: &str = include_str!("../../../docs/foundation/observability-slo-dashboards.md");
+const ROADMAP: &str = include_str!("../../../docs/plans/2026-02-08-production-service-roadmap.md");
 
 #[test]
 fn doc_contains_observability_models_and_monitor_outputs() {
@@ -58,6 +59,23 @@ fn doc_contains_moderation_recovery_observability_hooks() {
     assert!(DOC.contains("run_reputation_recovery_contract_lane.sh"));
     assert!(DOC.contains("ingestion_action"));
     assert!(DOC.contains("recovery_action"));
+}
+
+#[test]
+fn doc_contains_structured_logging_live_validation_lane() {
+    assert!(DOC.contains("## Structured Runtime Logging Correlation Contract"));
+    assert!(DOC.contains("validate_structured_logging_live.sh"));
+    assert!(DOC.contains("test_validate_structured_logging_live.sh"));
+    assert!(DOC.contains("structured_logging_contract_status=verified"));
+    assert!(DOC.contains("correlation_contract_status=verified"));
+}
+
+#[test]
+fn roadmap_tracks_post_roadmap_wave1_structured_logging_live_validation() {
+    assert!(ROADMAP.contains("Post-roadmap hardening wave 1 live validation delivered"));
+    assert!(ROADMAP.contains("Task #3035, Subtask #3036"));
+    assert!(ROADMAP.contains("scripts/runtime/validate_structured_logging_live.sh"));
+    assert!(ROADMAP.contains("fail_closed_reason_code=invalid_log_config_level"));
 }
 
 #[test]

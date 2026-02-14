@@ -20,6 +20,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Added deterministic `execution_id` structured logging correlation field for runtime dispatch/start/complete lifecycle events in `kamn-node` (Task #3032, Subtask #3033).
   - Added regression assertions in `crates/kamn-node/src/main_tests/core_behavior_tests.rs` to fail closed when runtime structured events omit `execution_id`.
   - Updated observability documentation contracts in `docs/foundation/observability-slo-dashboards.md`.
+- Post-roadmap hardening wave 1 live validation delivered:
+  - Runtime lane: `scripts/runtime/validate_structured_logging_live.sh` and `scripts/runtime/test_validate_structured_logging_live.sh` (Task #3035, Subtask #3036).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `structured_logging_contract_status=verified`, `correlation_contract_status=verified`, `docs_contract_status=verified`, `fail_closed_status=verified`, `performance_budget_status=verified`.
+  - Fail-closed validation confirmed for invalid log config drill: `fail_closed_reason_code=invalid_log_config_level`.
 - Phase 2.1 initial slice delivered: deterministic `runtime-mode api` ingress server with required messaging/channel/task/profile/health/metrics route contracts (Task #2906).
 - Phase 2.1 live validation delivered:
   - Runtime lane: `scripts/runtime/validate_service_api_live.sh` and `scripts/runtime/test_validate_service_api_live.sh` (Task #2908, Subtask #2909).
