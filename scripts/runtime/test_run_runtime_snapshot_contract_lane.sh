@@ -7,6 +7,8 @@ SHARED_CONTRACT="$ROOT_DIR/scripts/runtime/runtime_snapshot_contract_lane_contra
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_runtime_snapshot_contract_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/runtime/run_runtime_snapshot_deep_lane.sh"
+DEEP_IMPL="$ROOT_DIR/scripts/runtime/run_runtime_snapshot_deep_lane_impl.sh"
+DEEP_MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_runtime_snapshot_deep_lane.json"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
   echo "expected runtime snapshot fast-lane runner to be executable" >&2
@@ -15,6 +17,11 @@ fi
 
 if [ ! -x "$DEEP_SCRIPT" ]; then
   echo "expected runtime snapshot deep-lane runner to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DEEP_IMPL" ]; then
+  echo "expected runtime snapshot deep-lane implementation runner to be executable" >&2
   exit 1
 fi
 
@@ -177,13 +184,34 @@ if ! grep -q "run_live_network_smoke_contract_lane.sh" "$SHARED_CONTRACT"; then
   exit 1
 fi
 
-if ! grep -Fq "run_runtime_snapshot_contract_lane.sh" "$DEEP_SCRIPT"; then
-  echo "expected deep-lane script to execute runtime snapshot fast-lane checks first" >&2
+if [ ! -L "$DEEP_SCRIPT" ]; then
+  echo "expected runtime snapshot deep-lane wrapper to be a dispatcher symlink" >&2
   exit 1
 fi
 
-if ! grep -q "performance_file_snapshot_store_recovery_deep_lane_large_payload -- --ignored" "$DEEP_SCRIPT"; then
-  echo "expected deep-lane script to run ignored snapshot recovery stress test" >&2
+if [ "$(readlink "$DEEP_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected runtime snapshot deep-lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_deep_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$DEEP_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_deep_manifest" != "$DEEP_MANIFEST_FILE" ]; then
+  echo "expected runtime snapshot deep-lane wrapper to resolve runtime deep manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_runtime_snapshot_deep_lane_impl.sh" "$DEEP_MANIFEST_FILE"; then
+  echo "expected runtime snapshot deep-lane manifest to dispatch implementation module" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_runtime_snapshot_contract_lane.sh" "$DEEP_IMPL"; then
+  echo "expected deep-lane implementation to execute runtime snapshot fast-lane checks first" >&2
+  exit 1
+fi
+
+if ! grep -q "performance_file_snapshot_store_recovery_deep_lane_large_payload -- --ignored" "$DEEP_IMPL"; then
+  echo "expected deep-lane implementation to run ignored snapshot recovery stress test" >&2
   exit 1
 fi
 

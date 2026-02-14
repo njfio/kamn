@@ -7,6 +7,8 @@ SHARED_CONTRACT="$ROOT_DIR/scripts/runtime/concurrency_state_mutation_contract_l
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_concurrency_state_mutation_contract_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/runtime/run_concurrency_state_mutation_deep_lane.sh"
+DEEP_IMPL="$ROOT_DIR/scripts/runtime/run_concurrency_state_mutation_deep_lane_impl.sh"
+DEEP_MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_concurrency_state_mutation_deep_lane.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -17,6 +19,11 @@ fi
 
 if [ ! -x "$DEEP_SCRIPT" ]; then
   echo "expected runtime concurrency state mutation deep lane script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$DEEP_IMPL" ]; then
+  echo "expected runtime concurrency state mutation deep lane implementation script to be executable" >&2
   exit 1
 fi
 
@@ -111,13 +118,34 @@ if ! grep -Fq "concurrency_state_mutation_contract_lane_contract.sh" "$MANIFEST_
   exit 1
 fi
 
-if ! grep -Fq "run_concurrency_state_mutation_contract_lane.sh" "$DEEP_SCRIPT"; then
-  echo "expected deep lane to execute concurrency contract lane baseline first" >&2
+if [ ! -L "$DEEP_SCRIPT" ]; then
+  echo "expected runtime concurrency state mutation deep lane wrapper to be a dispatcher symlink" >&2
   exit 1
 fi
 
-if ! grep -q "performance_concurrency_state_mutation_deep_lane_stress -- --ignored" "$DEEP_SCRIPT"; then
-  echo "expected deep lane to execute ignored concurrency stress test" >&2
+if [ "$(readlink "$DEEP_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected runtime concurrency state mutation deep lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_deep_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$DEEP_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_deep_manifest" != "$DEEP_MANIFEST_FILE" ]; then
+  echo "expected runtime concurrency state mutation deep lane wrapper to resolve runtime deep manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_concurrency_state_mutation_deep_lane_impl.sh" "$DEEP_MANIFEST_FILE"; then
+  echo "expected runtime concurrency state mutation deep manifest to dispatch implementation module" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_concurrency_state_mutation_contract_lane.sh" "$DEEP_IMPL"; then
+  echo "expected deep lane implementation to execute concurrency contract lane baseline first" >&2
+  exit 1
+fi
+
+if ! grep -q "performance_concurrency_state_mutation_deep_lane_stress -- --ignored" "$DEEP_IMPL"; then
+  echo "expected deep lane implementation to execute ignored concurrency stress test" >&2
   exit 1
 fi
 

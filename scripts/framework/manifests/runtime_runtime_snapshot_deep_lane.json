@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "runtime.runtime_snapshot.deep",
+  "evidence_key": "runtime_snapshot_deep_lane:v1",
+  "reason_key": "runtime_snapshot_deep_reason_codes:GO:v1",
+  "phases": {
+    "deep": [
+      "bash",
+      "scripts/runtime/run_runtime_snapshot_deep_lane_impl.sh"
+    ]
+  }
+}

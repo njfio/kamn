@@ -3,11 +3,34 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEEP_LANE="$ROOT_DIR/scripts/runtime/run_live_network_partition_reconnect_deep_lane.sh"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_live_network_partition_reconnect_deep_lane.json"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
 if [ ! -x "$DEEP_LANE" ]; then
   echo "expected partition/reconnect deep lane script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -L "$DEEP_LANE" ]; then
+  echo "expected partition/reconnect deep lane wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$DEEP_LANE")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected partition/reconnect deep lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$DEEP_LANE")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected partition/reconnect deep lane wrapper to resolve runtime deep manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -q '"run-deep"' "$MANIFEST_FILE"; then
+  echo "expected partition/reconnect deep manifest to dispatch python deep runner entrypoint" >&2
   exit 1
 fi
 
