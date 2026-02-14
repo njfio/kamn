@@ -1,0 +1,15 @@
+.git
+.github
+target
+.tmp
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+docs
+fixtures
+tests
+packages
+revenue-strategy-draft.md
+blog-post-draft.md
+blog-post-tau-kamn-draft.md

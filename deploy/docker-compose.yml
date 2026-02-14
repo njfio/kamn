@@ -21,6 +21,7 @@ services:
       - /data/processor
     volumes:
       - ../data/processor:/data/processor
+    restart: unless-stopped
 
   listener:
     image: kamn-node:local
@@ -41,6 +42,7 @@ services:
       - ../data/listener:/data/listener
     depends_on:
       - processor
+    restart: unless-stopped
 
   approver:
     image: kamn-node:local
@@ -61,3 +63,4 @@ services:
       - ../data/approver:/data/approver
     depends_on:
       - processor
+    restart: unless-stopped

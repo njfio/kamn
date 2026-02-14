@@ -277,6 +277,9 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/deploy/validate_deployment_assets_live.sh` and `scripts/deploy/test_validate_deployment_assets_live.sh` (Task #2973, Subtask #2974).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `asset_contract_status=verified`, `fail_closed_status=verified`.
   - Fail-closed validation confirmed for invalid runtime budget argument: `max-seconds must be an integer`.
+- Phase 6.3 hardening slice delivered:
+  - Added `.dockerignore` build-context hygiene markers and extended deployment asset contract checks to fail closed on missing exclusions (`.git`, `target`, `.tmp`) (Task #3196, Subtask #3197).
+  - Added compose resiliency markers (`restart: unless-stopped`) for processor/listener/approver services and documented hardening expectations in deployment ops docs.
 - Phase 6.4 implementation delivered:
   - Runtime lane: `scripts/runtime/run_live_validation_environment_lane.sh` and `scripts/runtime/test_run_live_validation_environment_lane.sh` (Task #2976, Subtask #2977).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `topology_contract_status=verified`, `kolme_connectivity_contract_status=verified`, `fail_closed_status=verified`.
