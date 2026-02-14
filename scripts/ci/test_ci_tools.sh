@@ -19,6 +19,7 @@ run_non_kolme_lightweight_wave_wrapper_matrix_contracts() {
 if [ "${KAMN_CI_TOOLS_FAST_MODE:-false}" = "true" ]; then
   bash "$ROOT_DIR/scripts/ci/test_evaluate_budget.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"
+  bash "$ROOT_DIR/scripts/ci/test_check_legacy_ingress_parser_drift.sh"
   bash "$ROOT_DIR/scripts/ci/test_generate_test_harness_loc_report.sh"
   bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"
   bash "$ROOT_DIR/scripts/ci/test_check_test_harness_loc_soft_budget.sh"
@@ -103,6 +104,7 @@ fi
 
 bash "$ROOT_DIR/scripts/ci/test_evaluate_budget.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_script_duplication_budget.sh"
+bash "$ROOT_DIR/scripts/ci/test_check_legacy_ingress_parser_drift.sh"
 bash "$ROOT_DIR/scripts/ci/test_generate_test_harness_loc_report.sh"
 bash "$ROOT_DIR/scripts/ci/test_generate_kolme_test_harness_loc_trend_report.sh"
 bash "$ROOT_DIR/scripts/ci/test_check_test_harness_loc_soft_budget.sh"

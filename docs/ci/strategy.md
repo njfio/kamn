@@ -2111,6 +2111,17 @@ Enforced by `scripts/ci/check_pr_ci_declaration.sh` in fast-gate.
 Fast-mode CI tooling regression coverage includes:
 - Budget evaluator (`test_evaluate_budget.sh`)
 - Script duplication/surface budget checker (`test_check_script_duplication_budget.sh`)
+- Legacy synchronous ingress parser drift checker (`test_check_legacy_ingress_parser_drift.sh`)
+  - baseline fixture:
+    - `fixtures/ci/legacy_ingress_parser_baseline.json`
+  - checker command:
+    - `bash scripts/ci/check_legacy_ingress_parser_drift.sh --source-root crates/kamn-node/src --baseline-file fixtures/ci/legacy_ingress_parser_baseline.json --output-json /tmp/legacy-ingress-parser-drift-report.json`
+  - deterministic reason-code surface:
+    - `reason_codes=none`
+    - `reason_codes=legacy_ingress_parser_marker_count_increased`
+    - `reason_codes=legacy_ingress_parser_marker_new_file`
+    - `reason_codes=legacy_ingress_parser_baseline_missing`
+    - `reason_codes=legacy_ingress_parser_baseline_invalid`
 - Test-harness LOC report generator (`test_generate_test_harness_loc_report.sh`)
 - Kolme harness trend-report generator (`test_generate_kolme_test_harness_loc_trend_report.sh`)
 - Test-harness LOC soft-budget checker (`test_check_test_harness_loc_soft_budget.sh`)

@@ -54,6 +54,14 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("run_localhost_signed_integration_contract_lane_tests"));
     assert!(DOC.contains("sdk-live-localhost-integration"));
     assert!(DOC.contains("KAMN_CI_TOOLS_FAST_MODE=true"));
+    assert!(DOC.contains("test_check_legacy_ingress_parser_drift.sh"));
+    assert!(DOC.contains(
+        "check_legacy_ingress_parser_drift.sh --source-root crates/kamn-node/src --baseline-file fixtures/ci/legacy_ingress_parser_baseline.json --output-json /tmp/legacy-ingress-parser-drift-report.json"
+    ));
+    assert!(DOC.contains("reason_codes=legacy_ingress_parser_marker_count_increased"));
+    assert!(DOC.contains("reason_codes=legacy_ingress_parser_marker_new_file"));
+    assert!(DOC.contains("reason_codes=legacy_ingress_parser_baseline_missing"));
+    assert!(DOC.contains("reason_codes=legacy_ingress_parser_baseline_invalid"));
     assert!(DOC.contains("run_localhost_signed_integration_contract_lane.sh"));
     assert!(DOC.contains("scripts/ci/select_targets.sh"));
     assert!(DOC.contains("run_kolme_version_compatibility_contract_tests=true"));
