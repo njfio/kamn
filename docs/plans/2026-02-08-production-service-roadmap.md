@@ -40,6 +40,12 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/validate_p2p_transport_live.sh` and `scripts/runtime/test_validate_p2p_transport_live.sh` (Task #2923, Subtask #2924).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `p2p_transport_contract_status=verified`, `docs_contract_status=verified`, `fail_closed_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for disconnected broadcast guard behavior: `fail_closed_reason_code=p2p_transport_inactive_lifecycle_state`.
+- Phase 3.2 initial slice delivered:
+  - Added `MempoolBlockPipeline` with explicit listener quorum, approver quorum, and commit orchestration over pending mempool transactions (Task #2926, Subtask #2927).
+  - Added deterministic fail-closed digest mismatch and empty-mempool guards before commit.
+  - Added processor runtime wiring component projection for `consensus-validator`.
+  - Added unit/functional/integration/regression coverage in `crates/kamn-core/src/block_pipeline.rs` and `crates/kamn-core/tests/block_pipeline.rs`.
+  - Architecture documentation added at `docs/architecture/block-pipeline.md`.
 - Phase 4.1 initial slice delivered: `runtime-mode kolme-live` now supports bounded continuous commit/finality execution when paired cycle controls are supplied (`--daemon-max-ticks` and `--daemon-tick-interval-ms`) with fail-closed guardrails for partial declarations (Task #2931, Subtask #2932).
 - Phase 4.1 live validation delivered:
   - Runtime lane: `scripts/kolme/validate_continuous_runtime_commit_live.sh` and `scripts/kolme/test_validate_continuous_runtime_commit_live.sh` (Task #2933, Subtask #2934).

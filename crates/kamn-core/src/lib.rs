@@ -13,6 +13,8 @@ pub mod agent_upgrade_workflow;
 pub mod anti_spam;
 /// Audit export filters, bundles, and governance evidence contracts.
 pub mod audit_exports;
+/// Mempool block production and consensus-validation pipeline contracts.
+pub mod block_pipeline;
 pub mod bootstrap;
 /// Bridge ingress and egress normalization plus policy evaluation contracts.
 pub mod bridge_adapter;
@@ -144,6 +146,9 @@ pub use anti_spam::{
 pub use audit_exports::{
     AuditDomain, AuditEventRecord, AuditExportBundle, AuditExportEngine, AuditExportError,
     AuditExportFilter, AuditExportFormat, AuditExportManifest, AuditExportRequest,
+};
+pub use block_pipeline::{
+    BlockConsensusRoundInput, BlockPipelineCommitReport, BlockPipelineError, MempoolBlockPipeline,
 };
 pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};
 pub use bridge_adapter::{

@@ -98,6 +98,11 @@ impl RoleSmokeNetwork {
         self.guards.expected_state_hash()
     }
 
+    /// Returns a deterministic snapshot of processor mempool transactions.
+    pub fn processor_mempool_snapshot(&self) -> Vec<BaselineTransaction> {
+        self.processor.mempool.clone()
+    }
+
     /// Validates and submits a transaction into processor state.
     pub fn submit_transaction(&mut self, tx: BaselineTransaction) -> Result<(), SmokeError> {
         self.guards.validate_and_record(&tx)?;
