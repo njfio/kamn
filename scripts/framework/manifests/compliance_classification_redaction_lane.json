@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "compliance.classification_redaction.run",
+  "evidence_key": "classification_redaction_lane:v1",
+  "reason_key": "classification_redaction_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/compliance/run_classification_redaction_lane_impl.sh"
+    ]
+  }
+}
