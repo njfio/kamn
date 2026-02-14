@@ -153,6 +153,26 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_retry_diagnostics_policy_marker_missing:correlation_diagnostics_status`
 
+## Runtime Local Signal/Secret Hygiene Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_local_signal_secret_hygiene_live.sh --mode dry-run --output-json /tmp/runtime-local-signal-secret-hygiene-summary.json`
+  - `KAMN_LOCAL_SIGNAL_SECRET_HYGIENE_OPT_IN=1 bash scripts/runtime/validate_local_signal_secret_hygiene_live.sh --mode run --output-json /tmp/runtime-local-signal-secret-hygiene-summary.json`
+  - `bash scripts/runtime/check_local_signal_secret_hygiene_live_policy.sh --report-file /tmp/runtime-local-signal-secret-hygiene-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/runtime-local-signal-secret-hygiene-policy.json`
+  - `bash scripts/runtime/validate_local_signal_secret_hygiene_live_contract_lane.sh --output-json /tmp/runtime-local-signal-secret-hygiene-contract-lane-report.json --policy-output-json /tmp/runtime-local-signal-secret-hygiene-policy.json`
+  - `bash scripts/runtime/test_validate_local_signal_secret_hygiene_live.sh`
+  - `bash scripts/runtime/test_check_local_signal_secret_hygiene_live_policy.sh`
+  - `bash scripts/runtime/test_validate_local_signal_secret_hygiene_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - dry-run mode composes deterministic daemon signal and secret-hygiene checks without external network dependency.
+  - run mode is explicit local-only and requires `KAMN_LOCAL_SIGNAL_SECRET_HYGIENE_OPT_IN=1`.
+  - local signal/secret hygiene run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+  - explicit runtime budget cap via `KAMN_LOCAL_SIGNAL_SECRET_HYGIENE_MAX_SECONDS`.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `fallback_signer_secret_present_violation`
+
 ## Kolme HTTPS Native Transport Contract
 - Runtime-commit HTTPS transport uses an in-process native TLS client path.
 - `openssl s_client` subprocess execution is prohibited in transport code paths (`Regression: #2671`).
