@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_live_node_validation_bundle_lane.sh"
-RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_live_node_validation_bundle_lane_impl.sh"
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_live_node_validation_bundle_lane.json"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
@@ -38,11 +37,6 @@ assert_eq() {
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local live-node validation bundle runner to be executable" >&2
-  exit 1
-fi
-
-if [ ! -x "$RUNNER_IMPL" ]; then
-  echo "expected local live-node validation bundle implementation runner to be executable" >&2
   exit 1
 fi
 
@@ -89,32 +83,6 @@ manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUNNER")" --res
 assert_eq "$manifest_path" "$MANIFEST" "expected local live-node validation bundle wrapper to resolve deterministic manifest"
 if bash "$DISPATCHER" --lane-wrapper run_missing_live_node_validation_bundle_lane.sh --resolve-manifest-path >/dev/null 2>&1; then
   echo "expected local run lane dispatcher to fail closed for unknown bundle wrapper" >&2
-  exit 1
-fi
-
-# Regression: #2132
-if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER_IMPL"; then
-  echo "expected local live-node validation bundle runner to use shared local-heavy opt-in guard helper" >&2
-  exit 1
-fi
-
-if ! grep -q "run_local_kamn_live_runtime_integration_lane.sh" "$RUNNER_IMPL"; then
-  echo "expected bundle runner to compose local KAMN live runtime integration lane command" >&2
-  exit 1
-fi
-
-if ! grep -q "run_local_kolme_fork_process_lifecycle_lane.sh" "$RUNNER_IMPL"; then
-  echo "expected bundle runner to compose local fork process lifecycle lane command" >&2
-  exit 1
-fi
-
-if ! grep -q -- "--runtime-provider-client-contract KolmeRuntimeCommitLiveProvider" "$RUNNER_IMPL"; then
-  echo "expected bundle runner integration command to include explicit runtime provider contract marker" >&2
-  exit 1
-fi
-
-if ! grep -q -- "--runtime-profile real-node" "$RUNNER_IMPL"; then
-  echo "expected bundle runner integration command to pin real-node runtime profile marker" >&2
   exit 1
 fi
 

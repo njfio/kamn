@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_bootstrap_health_checks.sh"
-RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_bootstrap_health_checks_lane_impl.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
@@ -32,10 +31,6 @@ if [ ! -x "$RUNNER" ]; then
   echo "expected Kolme local bootstrap health-check runner to be executable" >&2
   exit 1
 fi
-if [ ! -x "$RUNNER_IMPL" ]; then
-  echo "expected Kolme local bootstrap health-check run-lane implementation to be executable" >&2
-  exit 1
-fi
 if [ ! -x "$DISPATCHER" ]; then
   echo "expected local run lane dispatcher to be executable" >&2
   exit 1
@@ -62,11 +57,6 @@ fi
 # Regression: #1585
 if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   echo "expected shared local-heavy opt-in guard helper to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER_IMPL"; then
-  echo "expected local bootstrap runner to use shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 

@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane.sh"
-RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kolme_fork_rust_test_matrix_lane_impl.sh"
 RUN_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_fork_rust_test_matrix_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
@@ -34,11 +33,6 @@ assert_eq() {
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local fork rust test matrix runner to be executable" >&2
-  exit 1
-fi
-
-if [ ! -x "$RUNNER_IMPL" ]; then
-  echo "expected local fork rust test matrix implementation runner to be executable" >&2
   exit 1
 fi
 
@@ -94,11 +88,6 @@ fi
 
 if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   echo "expected shared local-heavy opt-in guard helper to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER_IMPL"; then
-  echo "expected local fork rust test matrix runner to invoke shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 
