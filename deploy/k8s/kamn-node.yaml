@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kamn-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kamn-node-defaults
+  namespace: kamn-system
+data:
+  chain_id: kamn-devnet
+  chain_version: v0.1.0
+  daemon_max_ticks: "10"
+  daemon_tick_interval_ms: "25"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kamn-processor
+  namespace: kamn-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kamn-node
+      role: processor
+  template:
+    metadata:
+      labels:
+        app: kamn-node
+        role: processor
+    spec:
+      containers:
+        - name: kamn-node
+          image: kamn-node:local
+          imagePullPolicy: IfNotPresent
+          args:
+            - --role
+            - processor
+            - --runtime-mode
+            - daemon
+            - --daemon-max-ticks
+            - "10"
+            - --daemon-tick-interval-ms
+            - "25"
+            - --output
+            - json
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kamn-listener
+  namespace: kamn-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kamn-node
+      role: listener
+  template:
+    metadata:
+      labels:
+        app: kamn-node
+        role: listener
+    spec:
+      containers:
+        - name: kamn-node
+          image: kamn-node:local
+          imagePullPolicy: IfNotPresent
+          args:
+            - --role
+            - listener
+            - --runtime-mode
+            - daemon
+            - --daemon-max-ticks
+            - "10"
+            - --daemon-tick-interval-ms
+            - "25"
+            - --output
+            - json
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kamn-approver
+  namespace: kamn-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kamn-node
+      role: approver
+  template:
+    metadata:
+      labels:
+        app: kamn-node
+        role: approver
+    spec:
+      containers:
+        - name: kamn-node
+          image: kamn-node:local
+          imagePullPolicy: IfNotPresent
+          args:
+            - --role
+            - approver
+            - --runtime-mode
+            - daemon
+            - --daemon-max-ticks
+            - "10"
+            - --daemon-tick-interval-ms
+            - "25"
+            - --output
+            - json
