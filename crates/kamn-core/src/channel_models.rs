@@ -1,6 +1,6 @@
 //! Channel model contracts covering membership, admin policy, and snapshot recovery.
 
-use crate::AgentDid;
+use crate::{AgentDid, SqliteStoreBackend, SqliteStoreBackendError};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::fs;
@@ -861,6 +861,80 @@ impl ChannelSnapshotStore for FileChannelSnapshotStore {
         let snapshot_payload = read_channel_snapshot_file(&self.path)?;
         let journal_snapshot = replay_channel_snapshot_journal(&self.journal_path)?;
         Ok(journal_snapshot.or(snapshot_payload))
+    }
+}
+
+/// Sqlite-backed snapshot store for durable channel-state persistence.
+#[derive(Debug)]
+pub struct SqliteChannelSnapshotStore {
+    backend: SqliteStoreBackend,
+}
+
+impl SqliteChannelSnapshotStore {
+    /// Creates a sqlite-backed channel snapshot store rooted at `path`.
+    pub fn new(path: PathBuf) -> Result<Self, ChannelSnapshotStoreError> {
+        let backend = SqliteStoreBackend::open(path.as_path()).map_err(map_sqlite_store_error)?;
+        Ok(Self { backend })
+    }
+}
+
+impl ChannelSnapshotStore for SqliteChannelSnapshotStore {
+    fn write(&mut self, snapshot: ChannelSnapshot) -> Result<(), ChannelSnapshotStoreError> {
+        let mut verifier = ChannelStore::new();
+        verifier
+            .restore_snapshot(snapshot.clone())
+            .map_err(ChannelSnapshotStoreError::Snapshot)?;
+        let payload = serialize_channel_snapshot(&snapshot)?;
+        self.backend
+            .put("channel_snapshot_store", "latest", payload.as_bytes())
+            .map_err(map_sqlite_store_error)?;
+        Ok(())
+    }
+
+    fn read_latest(&self) -> Result<Option<ChannelSnapshot>, ChannelSnapshotStoreError> {
+        let Some(payload_bytes) = self
+            .backend
+            .get("channel_snapshot_store", "latest")
+            .map_err(map_sqlite_store_error)?
+        else {
+            return Ok(None);
+        };
+        let payload = String::from_utf8(payload_bytes).map_err(|_| {
+            ChannelSnapshotStoreError::InvalidPayload(
+                "channel snapshot sqlite payload is not utf-8".to_owned(),
+            )
+        })?;
+        if payload.trim().is_empty() {
+            return Ok(None);
+        }
+        let snapshot = parse_channel_snapshot_payload(&payload)?;
+        let mut verifier = ChannelStore::new();
+        verifier
+            .restore_snapshot(snapshot.clone())
+            .map_err(ChannelSnapshotStoreError::Snapshot)?;
+        Ok(Some(snapshot))
+    }
+}
+
+fn map_sqlite_store_error(error: SqliteStoreBackendError) -> ChannelSnapshotStoreError {
+    match error {
+        SqliteStoreBackendError::SchemaVersionMissing => ChannelSnapshotStoreError::InvalidPayload(
+            "channel snapshot sqlite schema missing".to_owned(),
+        ),
+        SqliteStoreBackendError::SchemaVersionInvalid(value) => {
+            ChannelSnapshotStoreError::InvalidPayload(format!(
+                "channel snapshot sqlite schema invalid: {value}"
+            ))
+        }
+        SqliteStoreBackendError::SchemaVersionMismatch { expected, found } => {
+            ChannelSnapshotStoreError::InvalidPayload(format!(
+                "channel snapshot sqlite schema mismatch: expected {expected}, found {found}"
+            ))
+        }
+        SqliteStoreBackendError::InvalidPath => ChannelSnapshotStoreError::InvalidPayload(
+            "snapshot file path cannot be empty".to_owned(),
+        ),
+        other => ChannelSnapshotStoreError::Io(other.to_string()),
     }
 }
 

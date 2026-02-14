@@ -160,6 +160,9 @@ This document captures node-runtime productionization slices for machine-readabl
 
 ## SQLite Backend Bootstrap Contracts
 - `SqliteStoreBackend` bootstraps deterministic sqlite metadata for runtime-adjacent stores.
+- `storage_dir` selector controls runtime snapshot adapter mode:
+  - file mode: `storage_dir=<directory>` keeps all stores on file snapshots (`*:file-default`)
+  - sqlite mode: `storage_dir=sqlite://<db-path>` keeps content/DID stores file-backed and routes runtime snapshot stores through sqlite adapters (`*:sqlite-default`)
 - Bootstrap creates:
   - `kamn_store_meta` (schema metadata)
   - `kamn_store_entries` (namespace/key/value rows)

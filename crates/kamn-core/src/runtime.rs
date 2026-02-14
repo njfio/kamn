@@ -44,6 +44,7 @@ pub use runtime_recovery_guard::{
 pub use runtime_snapshot_store::{
     FileRuntimeSnapshotStore, InMemoryRuntimeSnapshotStore, RuntimeSnapshot, RuntimeSnapshotStore,
     SnapshotRecoveryResult, SnapshotRestoreError, SnapshotRestoreGuard, SnapshotStoreError,
+    SqliteRuntimeSnapshotStore,
 };
 pub use runtime_state_divergence::{
     evaluate_daemon_state_divergence, StateDivergenceError, StateDivergenceEvaluator,
