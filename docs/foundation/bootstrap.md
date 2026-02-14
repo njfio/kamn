@@ -20,6 +20,10 @@ This document describes the initial KAMN chain bootstrap scaffold.
 - Migration scaffolding:
   - `MigrationRegistry`, `MigrationStep`, and `MigrationPlan` for deterministic, contiguous state upgrades.
   - `bootstrap_from_state_version(...)` to compute the startup migration plan from persisted state to current schema.
+- Runtime persistence startup checks:
+  - bootstrap validates prioritized durable store adapters under `storage_dir` before plan emission.
+  - default store components include `content-storage:file-default`, `did-registry:file-default`, `task-operation-snapshot-store:file-default`, and `durable-guard-snapshot-store:file-default`.
+  - compatibility failures fail closed with typed `ConfigError` variants for corrupt payloads and schema incompatibility.
 
 ## Local Validation
 Run from repository root:

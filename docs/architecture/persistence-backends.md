@@ -18,6 +18,28 @@ Current execution slices are Task #2901 (core implementation) and Task #2903 (li
 | Content objects | `InMemoryContentAdapter` | `FileContentAdapter` | Deterministic file payload with CID/integrity verification |
 | DID chain submission idempotency | `InMemoryDidRegistrationChainAdapter` | `FileDidRegistrationChainAdapter` | Durable duplicate/reject state across restarts |
 
+## Bootstrap Wiring and Startup Compatibility (Task #3068)
+
+Bootstrap now validates prioritized runtime stores against durable file adapters before emitting a runtime plan:
+
+- `content-storage:file-default` -> `content-store.snapshot`
+- `did-registry:file-default` -> `did-chain-adapter.snapshot`
+- `task-operation-snapshot-store:file-default` -> `task-operation.snapshot`
+- `durable-guard-snapshot-store:file-default` -> `durable-guard.snapshot`
+
+Bootstrap fail-closed compatibility error taxonomy:
+
+- `ConfigError::RuntimeStoreCorruptPayload { store, reason_code, detail }`
+- `ConfigError::RuntimeStoreSchemaIncompatible { store, reason_code, expected, found }`
+- `ConfigError::RuntimeStoreCompatibility { store, reason_code, detail }`
+
+Deterministic reason codes enforced for prioritized corruption/schema checks:
+
+- `content_storage_corrupt_payload_rejected`
+- `did_registry_corrupt_payload_rejected`
+- `task_operation_snapshot_schema_mismatch_rejected`
+- `durable_guard_snapshot_schema_mismatch_rejected`
+
 ## New File-Backed Formats
 
 ### Content Store
@@ -68,6 +90,9 @@ Low-cost lane (PR-safe):
 - `cargo test -p kamn-core --test task_operation_snapshot task_operation_snapshot_rejects_schema_version_mismatch`
 - `cargo test -p kamn-core --test durable_guard_snapshot_store unit_bundle_schema_mismatch_is_rejected`
 - `cargo test -p kamn-core --test task_operation_snapshot task_operation_snapshot_bounded_roundtrip_benchmark_is_fast_for_ci`
+- `cargo test -p kamn-core bootstrap_wiring_includes_durable_store_components`
+- `cargo test -p kamn-core regression_bootstrap_fails_closed_when_content_store_payload_is_corrupt`
+- `cargo test -p kamn-core regression_bootstrap_fails_closed_when_task_snapshot_schema_is_incompatible`
 - `cargo fmt --check`
 - `cargo clippy -p kamn-core -- -D warnings`
 

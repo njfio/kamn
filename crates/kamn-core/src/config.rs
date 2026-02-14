@@ -229,6 +229,35 @@ pub enum ConfigError {
     RuntimeDaemonLifecycle(String),
     /// Runtime Kolme live-provider wiring validation failure.
     RuntimeKolmeLive(String),
+    /// Runtime startup detected corrupt persisted store payload.
+    RuntimeStoreCorruptPayload {
+        /// Logical store identifier that failed validation.
+        store: &'static str,
+        /// Stable reason code for fail-closed policy lanes.
+        reason_code: &'static str,
+        /// Detailed validation failure message.
+        detail: String,
+    },
+    /// Runtime startup detected incompatible persisted store schema/version.
+    RuntimeStoreSchemaIncompatible {
+        /// Logical store identifier that failed validation.
+        store: &'static str,
+        /// Stable reason code for fail-closed policy lanes.
+        reason_code: &'static str,
+        /// Expected schema/version marker.
+        expected: String,
+        /// Observed schema/version marker.
+        found: String,
+    },
+    /// Runtime startup detected a non-corruption compatibility failure.
+    RuntimeStoreCompatibility {
+        /// Logical store identifier that failed validation.
+        store: &'static str,
+        /// Stable reason code for fail-closed policy lanes.
+        reason_code: &'static str,
+        /// Detailed validation failure message.
+        detail: String,
+    },
     /// Unknown command-line/config argument.
     UnknownArgument(String),
     /// Argument flag required a value but none was provided.
@@ -286,6 +315,31 @@ impl fmt::Display for ConfigError {
             Self::RuntimeKolmeLive(message) => {
                 write!(f, "runtime kolme live validation failed: {message}")
             }
+            Self::RuntimeStoreCorruptPayload {
+                store,
+                reason_code,
+                detail,
+            } => write!(
+                f,
+                "runtime store {store} corrupt payload ({reason_code}): {detail}"
+            ),
+            Self::RuntimeStoreSchemaIncompatible {
+                store,
+                reason_code,
+                expected,
+                found,
+            } => write!(
+                f,
+                "runtime store {store} schema incompatible ({reason_code}): expected {expected}, found {found}"
+            ),
+            Self::RuntimeStoreCompatibility {
+                store,
+                reason_code,
+                detail,
+            } => write!(
+                f,
+                "runtime store {store} compatibility failure ({reason_code}): {detail}"
+            ),
             Self::UnknownArgument(value) => write!(f, "unknown argument: {value}"),
             Self::MissingArgumentValue(flag) => {
                 write!(f, "missing value for argument: {flag}")
