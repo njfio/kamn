@@ -171,13 +171,34 @@ fn runtime_module_extraction_contract_keeps_transport_coordination_impls_in_new_
         "runtime_transport_coordination module should own WatchdogAnomalyWatchInput"
     );
     assert!(
-        runtime_transport_coordination_rs
-            .contains("pub struct DeterministicNetworkFaultSimulator {"),
-        "runtime_transport_coordination module should own DeterministicNetworkFaultSimulator"
+        runtime_transport_coordination_rs.contains("pub struct WatchdogAnomalyEvaluator;"),
+        "runtime_transport_coordination module should own WatchdogAnomalyEvaluator"
     );
     assert!(
-        runtime_transport_coordination_rs.contains("pub enum NetworkFaultSimulationError {"),
-        "runtime_transport_coordination module should own NetworkFaultSimulationError"
+        runtime_transport_coordination_rs.contains("pub enum WatchdogAnomalyError {"),
+        "runtime_transport_coordination module should own WatchdogAnomalyError"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_declares_runtime_network_fault_module() {
+    let runtime_rs = read_repo_file("runtime.rs");
+    assert!(
+        runtime_rs.contains("mod runtime_network_fault;"),
+        "runtime.rs should declare extracted runtime_network_fault module"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_keeps_network_fault_impls_in_new_module() {
+    let runtime_network_fault_rs = read_repo_file("runtime_network_fault.rs");
+    assert!(
+        runtime_network_fault_rs.contains("pub struct DeterministicNetworkFaultSimulator {"),
+        "runtime_network_fault module should own DeterministicNetworkFaultSimulator"
+    );
+    assert!(
+        runtime_network_fault_rs.contains("pub enum NetworkFaultSimulationError {"),
+        "runtime_network_fault module should own NetworkFaultSimulationError"
     );
 }
 
@@ -316,4 +337,60 @@ fn runtime_module_extraction_contract_keeps_peer_coordination_types_in_new_modul
         runtime_peer_coordination_rs.contains("pub struct RuntimeWiring {"),
         "runtime_peer_coordination module should own RuntimeWiring"
     );
+}
+
+#[test]
+fn runtime_module_extraction_contract_declares_runtime_snapshot_test_module_routing() {
+    let runtime_tests_rs = read_repo_file("runtime_tests.rs");
+    let declaration = [
+        "#[path = \"runtime_tests_snapshot_store.rs\"]",
+        "mod runtime_tests_snapshot_store;",
+    ]
+    .join("\n");
+    assert!(
+        runtime_tests_rs.contains(&declaration),
+        "runtime_tests.rs should route snapshot-store tests through dedicated module file"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_moves_snapshot_store_tests_out_of_runtime_tests_rs() {
+    let runtime_tests_rs = read_repo_file("runtime_tests.rs");
+    for legacy_marker in [
+        [
+            "fn functional_",
+            "in_memory_snapshot_store_round_trips_snapshots()",
+        ]
+        .concat(),
+        [
+            "fn integration_file_",
+            "snapshot_store_round_trips_snapshots()",
+        ]
+        .concat(),
+        [
+            "fn performance_file_snapshot_store_",
+            "recovery_scan_stays_within_ci_budget()",
+        ]
+        .concat(),
+    ] {
+        assert!(
+            !runtime_tests_rs.contains(&legacy_marker),
+            "runtime_tests.rs should not keep inline snapshot-store test `{legacy_marker}`"
+        );
+    }
+}
+
+#[test]
+fn runtime_module_extraction_contract_keeps_snapshot_store_tests_in_new_module() {
+    let runtime_tests_snapshot_store_rs = read_repo_file("runtime_tests_snapshot_store.rs");
+    for marker in [
+        "fn functional_in_memory_snapshot_store_round_trips_snapshots()",
+        "fn integration_file_snapshot_store_round_trips_snapshots()",
+        "fn performance_file_snapshot_store_recovery_scan_stays_within_ci_budget()",
+    ] {
+        assert!(
+            runtime_tests_snapshot_store_rs.contains(marker),
+            "runtime_tests_snapshot_store.rs should own snapshot-store test `{marker}`"
+        );
+    }
 }
