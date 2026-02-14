@@ -69,6 +69,31 @@ kubectl delete -f deploy/k8s/kamn-node.yaml
 Low-cost local checks:
 
 - `bash scripts/deploy/test_deployment_assets.sh`
+- `bash scripts/deploy/test_validate_deployment_assets_live.sh`
+- `bash scripts/deploy/validate_deployment_assets_live.sh`
 - `cargo fmt --check`
 
 The deployment-assets contract test fails closed when any required artifact or required marker is missing.
+
+## Live Validation Evidence
+
+Task and subtask:
+
+- Task: #2973
+- Subtask: #2974
+
+Deterministic success markers:
+
+- `status=pass`
+- `final_decision=GO`
+- `asset_contract_status=verified`
+- `fail_closed_status=verified`
+
+Fail-closed markers:
+
+- `bash scripts/deploy/validate_deployment_assets_live.sh --max-seconds nope`
+- stderr marker: `max-seconds must be an integer`
+
+- negative drill inside live lane:
+  - invalid Dockerfile missing builder `FROM rust:` marker
+  - deterministic reason marker: `expected Dockerfile multi-stage builder image marker`
