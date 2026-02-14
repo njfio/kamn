@@ -34,13 +34,23 @@ fn regression_doc_marks_stale_duplicate_conflict_guard() {
 fn doc_contains_lifecycle_mutation_transaction_contracts() {
     assert!(DOC.contains("DidLifecycleMutationRequest"));
     assert!(DOC.contains("apply_lifecycle_mutation"));
+    assert!(DOC.contains("submit_lifecycle_mutation_via_chain_adapter"));
+    assert!(DOC.contains("KolmeDidLifecycleChainAdapter"));
+    assert!(DOC.contains("record_lifecycle_finality"));
     assert!(DOC.contains("did_lifecycle_mutation_allowed"));
     assert!(DOC.contains("did_lifecycle_mutation_nonce_replay"));
     assert!(DOC.contains("did_lifecycle_mutation_unauthorized_actor"));
+    assert!(DOC.contains("did_chain_adapter_submit_failed"));
 }
 
 #[test]
 fn regression_doc_marks_lifecycle_mutation_fail_closed_guard() {
     // Regression: #889
     assert!(DOC.contains("Regression: #889"));
+}
+
+#[test]
+fn regression_doc_marks_lifecycle_chain_submission_conflict_guard() {
+    // Regression: #2936
+    assert!(DOC.contains("Regression: #2936"));
 }

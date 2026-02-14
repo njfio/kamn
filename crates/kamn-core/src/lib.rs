@@ -203,10 +203,12 @@ pub use did::{
 };
 pub use did_registry::{
     DidChainSubmissionOutcome, DidChainSubmissionReceipt, DidChainSubmissionRequest,
-    DidChainSubmissionResult, DidLifecycleMutationAction, DidLifecycleMutationEvidence,
+    DidChainSubmissionResult, DidLifecycleChainAdapter, DidLifecycleChainSubmissionRequest,
+    DidLifecycleChainSubmissionResult, DidLifecycleMutationAction, DidLifecycleMutationEvidence,
     DidLifecycleMutationRequest, DidRegistrationChainAdapter, DidRegistry, DidRegistryError,
     DidSubmissionFinalityRecord, DidSubmissionFinalityStatus, DidSubmissionRetryClass,
     FileDidRegistrationChainAdapter, InMemoryDidRegistrationChainAdapter,
+    KolmeDidLifecycleChainAdapter,
 };
 pub use direct_message_crypto::{
     DirectMessageCiphertext, DirectMessageCryptoEngine, DirectMessageCryptoError,

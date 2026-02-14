@@ -36,6 +36,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/kolme/validate_continuous_runtime_commit_live.sh` and `scripts/kolme/test_validate_continuous_runtime_commit_live.sh` (Task #2933, Subtask #2934).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `continuous_runtime_contract_status=verified`, `evidence_bundle_status=verified`, `fail_closed_status=verified`.
   - Fail-closed validation confirmed for partial cycle-control declarations: `--daemon-tick-interval-ms`.
+- Phase 4.2 initial slice delivered:
+  - Added lifecycle chain-submission contracts in `DidRegistry`: deterministic lifecycle idempotency keys, lifecycle retry classification, and nonce-scoped lifecycle finality recording (Task #2936, Subtask #2937).
+  - Added `KolmeDidLifecycleChainAdapter` to project lifecycle mutations into deterministic runtime-commit submissions through `KolmeRuntimeCommitClient`.
+  - Added unit/functional/integration/regression coverage in `crates/kamn-core/tests/did_registry_transactions.rs` for lifecycle submission through Kolme-backed adapters.
 - Phase 6.1 initial slice delivered: service API `/metrics` now exports deterministic runtime telemetry gauges and source/health labels with fail-closed unknown defaults when daemon/kolme telemetry is unavailable (Task #2961, Subtask #2962).
 - Phase 6.1 live validation delivered:
   - Runtime lane: `scripts/runtime/validate_service_api_observability_live.sh` and `scripts/runtime/test_validate_service_api_observability_live.sh` (Task #2963, Subtask #2964).
