@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "runtime.zk_witness_mutation.deep",
+  "evidence_key": "zk_witness_mutation_deep_lane:v1",
+  "reason_key": "runtime_zk_witness_mutation_deep_reason_codes:GO:v1",
+  "phases": {
+    "deep": [
+      "bash",
+      "scripts/runtime/run_zk_witness_mutation_deep_lane_impl.sh"
+    ]
+  }
+}
