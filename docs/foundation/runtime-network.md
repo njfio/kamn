@@ -57,7 +57,13 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `InMemoryRuntimeSnapshotStore`
   - `FileRuntimeSnapshotStore`
   - `SnapshotStoreError`
-- Added deterministic fault simulation primitives in `crates/kamn-core/src/runtime.rs`:
+- Added watchdog anomaly and deterministic fault simulation primitives in `crates/kamn-core/src/runtime_transport_coordination.rs`:
+  - `WatchdogAnomalyKind`
+  - `WatchdogAnomalySeverity`
+  - `WatchdogAnomalyWatchInput`
+  - `WatchdogAnomalyEvaluator`
+  - `WatchdogAnomalyError`
+  - `evaluate_daemon_watchdog_anomaly(...)`
   - `NetworkFaultSimulationInput`
   - `NetworkFaultSimulationReport`
   - `NetworkFaultSimulationError`

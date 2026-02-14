@@ -136,3 +136,47 @@ fn runtime_module_extraction_contract_keeps_phase_coordination_impls_in_new_modu
         "runtime_phase_coordination module should own ApproverQuorumEvaluator"
     );
 }
+
+#[test]
+fn runtime_module_extraction_contract_declares_runtime_transport_coordination_module() {
+    let runtime_rs = read_repo_file("runtime.rs");
+    assert!(
+        runtime_rs.contains("mod runtime_transport_coordination;"),
+        "runtime.rs should declare extracted runtime_transport_coordination module"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_moves_transport_coordination_types_out_of_runtime_rs() {
+    let runtime_rs = read_repo_file("runtime.rs");
+    assert!(
+        !runtime_rs.contains("pub struct WatchdogAnomalyWatchInput {"),
+        "runtime.rs should not keep inline WatchdogAnomalyWatchInput definition"
+    );
+    assert!(
+        !runtime_rs.contains("pub struct DeterministicNetworkFaultSimulator {"),
+        "runtime.rs should not keep inline DeterministicNetworkFaultSimulator definition"
+    );
+    assert!(
+        !runtime_rs.contains("pub enum NetworkFaultSimulationError {"),
+        "runtime.rs should not keep inline NetworkFaultSimulationError definition"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_keeps_transport_coordination_impls_in_new_module() {
+    let runtime_transport_coordination_rs = read_repo_file("runtime_transport_coordination.rs");
+    assert!(
+        runtime_transport_coordination_rs.contains("pub struct WatchdogAnomalyWatchInput {"),
+        "runtime_transport_coordination module should own WatchdogAnomalyWatchInput"
+    );
+    assert!(
+        runtime_transport_coordination_rs
+            .contains("pub struct DeterministicNetworkFaultSimulator {"),
+        "runtime_transport_coordination module should own DeterministicNetworkFaultSimulator"
+    );
+    assert!(
+        runtime_transport_coordination_rs.contains("pub enum NetworkFaultSimulationError {"),
+        "runtime_transport_coordination module should own NetworkFaultSimulationError"
+    );
+}
