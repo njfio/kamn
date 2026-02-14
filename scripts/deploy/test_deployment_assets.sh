@@ -112,6 +112,33 @@ if [ "$restart_marker_count" -lt 3 ]; then
   echo "expected docker-compose triad services to include restart: unless-stopped markers" >&2
   exit 1
 fi
+healthcheck_marker_count="$(grep -c 'healthcheck:' "$COMPOSE_FILE" || true)"
+if [ "$healthcheck_marker_count" -lt 3 ]; then
+  echo "expected docker-compose triad services to include healthcheck blocks" >&2
+  exit 1
+fi
+healthz_probe_marker_count="$(grep -c '/healthz' "$COMPOSE_FILE" || true)"
+if [ "$healthz_probe_marker_count" -lt 3 ]; then
+  echo "expected docker-compose triad services to probe /healthz endpoints" >&2
+  exit 1
+fi
+if ! grep -q 'curl --fail --silent http://127.0.0.1:19081/healthz > /dev/null' "$COMPOSE_FILE"; then
+  echo "expected docker-compose processor healthcheck probe marker" >&2
+  exit 1
+fi
+if ! grep -q 'curl --fail --silent http://127.0.0.1:19082/healthz > /dev/null' "$COMPOSE_FILE"; then
+  echo "expected docker-compose listener healthcheck probe marker" >&2
+  exit 1
+fi
+if ! grep -q 'curl --fail --silent http://127.0.0.1:19083/healthz > /dev/null' "$COMPOSE_FILE"; then
+  echo "expected docker-compose approver healthcheck probe marker" >&2
+  exit 1
+fi
+depends_on_health_marker_count="$(grep -c 'condition: service_healthy' "$COMPOSE_FILE" || true)"
+if [ "$depends_on_health_marker_count" -lt 2 ]; then
+  echo "expected docker-compose listener/approver dependencies to require service_healthy" >&2
+  exit 1
+fi
 
 if ! grep -q 'kind: Deployment' "$K8S_MANIFEST"; then
   echo "expected kubernetes deployment resources" >&2
@@ -144,6 +171,18 @@ if ! grep -q 'docker compose -f deploy/docker-compose.yml up' "$DEPLOY_DOC"; the
 fi
 if ! grep -q 'runtime-mode full' "$DEPLOY_DOC"; then
   echo "expected deployment doc runtime-mode full marker" >&2
+  exit 1
+fi
+if ! grep -q 'healthcheck' "$DEPLOY_DOC"; then
+  echo "expected deployment doc healthcheck marker" >&2
+  exit 1
+fi
+if ! grep -q '/healthz' "$DEPLOY_DOC"; then
+  echo "expected deployment doc /healthz marker" >&2
+  exit 1
+fi
+if ! grep -q 'service_healthy' "$DEPLOY_DOC"; then
+  echo "expected deployment doc service_healthy dependency marker" >&2
   exit 1
 fi
 if ! grep -q '19081:19081' "$DEPLOY_DOC"; then
@@ -179,7 +218,10 @@ for required_marker in \
   'processor_data' \
   'listener_data' \
   'approver_data' \
-  'kamn_mesh'; do
+  'kamn_mesh' \
+  'healthcheck' \
+  '/healthz' \
+  'service_healthy'; do
   if ! grep -q "$required_marker" "$DOCKER_DEPLOY_DOC"; then
     echo "expected docker deployment doc marker ${required_marker}" >&2
     exit 1

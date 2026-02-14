@@ -7,6 +7,10 @@ RUN cargo build --release -p kamn-node
 
 FROM debian:bookworm-slim AS runtime
 
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 RUN useradd --system --create-home --uid 10001 kamn
 
 COPY --from=builder /app/target/release/kamn-node /usr/local/bin/kamn-node
