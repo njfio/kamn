@@ -25,6 +25,9 @@ from framework.contract_framework import (  # noqa: E402
 REPORT_SCHEMA = "kamn.runtime.service-api-axum-ingress-live-validation.v1"
 POLICY_SCHEMA = "kamn.runtime.service-api-axum-ingress-live-policy-report.v1"
 EXPECTED_FAIL_CLOSED_REASON_CODE = "service_api_axum_oversized_body_rejected"
+EXPECTED_BODY_SIZE_LIMIT_BYTES = 64 * 1024
+EXPECTED_API_MAX_REQUESTS_DEFAULT = 1
+EXPECTED_API_IDLE_TIMEOUT_DEFAULT_MS = 5_000
 
 REQUIRED_REPORT_FIELDS = [
     "schema_version",
@@ -34,6 +37,11 @@ REQUIRED_REPORT_FIELDS = [
     "body_size_guard_status",
     "concurrency_status",
     "websocket_status",
+    "ingress_limit_config_status",
+    "docs_ingress_limit_matrix_status",
+    "api_max_requests_default",
+    "api_idle_timeout_default_ms",
+    "body_size_limit_bytes",
     "fail_closed_status",
     "ci_fast_gate_exclusion_status",
     "performance_budget_status",
@@ -46,6 +54,8 @@ REQUIRED_VERIFIED_FIELDS = [
     "body_size_guard_status",
     "concurrency_status",
     "websocket_status",
+    "ingress_limit_config_status",
+    "docs_ingress_limit_matrix_status",
     "fail_closed_status",
     "ci_fast_gate_exclusion_status",
     "performance_budget_status",
@@ -54,6 +64,10 @@ REQUIRED_VERIFIED_FIELDS = [
 
 def _is_non_negative_int(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def _is_positive_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
 
 
 def _check_policy(args: argparse.Namespace) -> int:
@@ -103,6 +117,30 @@ def _check_policy(args: argparse.Namespace) -> int:
     decision.reject_if(
         report.get("fail_closed_reason_code") != EXPECTED_FAIL_CLOSED_REASON_CODE,
         "service_api_axum_policy_fail_closed_reason_code_mismatch",
+    )
+    decision.reject_if(
+        not _is_positive_int(report.get("body_size_limit_bytes")),
+        "service_api_axum_policy_body_size_limit_invalid",
+    )
+    decision.reject_if(
+        report.get("body_size_limit_bytes") != EXPECTED_BODY_SIZE_LIMIT_BYTES,
+        "service_api_axum_policy_body_size_limit_mismatch",
+    )
+    decision.reject_if(
+        not _is_positive_int(report.get("api_max_requests_default")),
+        "service_api_axum_policy_api_max_requests_default_invalid",
+    )
+    decision.reject_if(
+        report.get("api_max_requests_default") != EXPECTED_API_MAX_REQUESTS_DEFAULT,
+        "service_api_axum_policy_api_max_requests_default_mismatch",
+    )
+    decision.reject_if(
+        not _is_positive_int(report.get("api_idle_timeout_default_ms")),
+        "service_api_axum_policy_api_idle_timeout_default_invalid",
+    )
+    decision.reject_if(
+        report.get("api_idle_timeout_default_ms") != EXPECTED_API_IDLE_TIMEOUT_DEFAULT_MS,
+        "service_api_axum_policy_api_idle_timeout_default_mismatch",
     )
     decision.reject_if(
         not _is_non_negative_int(report.get("elapsed_seconds")),

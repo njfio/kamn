@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint.rs"
+API_DOC="$ROOT_DIR/docs/api/service-http-api.md"
 
 output_json=""
 max_seconds=180
@@ -31,6 +33,14 @@ if [ "$max_seconds" -le 0 ]; then
   echo "max-seconds must be greater than zero" >&2
   exit 1
 fi
+if [ ! -f "$SOURCE_FILE" ]; then
+  echo "expected service api source file: $SOURCE_FILE" >&2
+  exit 1
+fi
+if [ ! -f "$API_DOC" ]; then
+  echo "expected service api docs file: $API_DOC" >&2
+  exit 1
+fi
 
 TMP_DIR="$(mktemp -d)"
 node_pid=""
@@ -44,6 +54,68 @@ cleanup() {
 trap cleanup EXIT
 
 start_epoch="$(date +%s)"
+
+config_matrix_report="$TMP_DIR/service-api-axum-ingress-config-matrix.json"
+python3 - "$SOURCE_FILE" "$API_DOC" "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import re
+import sys
+
+source_file = pathlib.Path(sys.argv[1])
+api_doc_file = pathlib.Path(sys.argv[2])
+report_file = pathlib.Path(sys.argv[3])
+
+source_text = source_file.read_text(encoding="utf-8")
+api_doc_text = api_doc_file.read_text(encoding="utf-8")
+
+def parse_u64_const(name: str) -> int:
+    match = re.search(rf"pub\(crate\)\s+const\s+{name}:\s*u64\s*=\s*([0-9_]+);", source_text)
+    if match is None:
+        raise SystemExit(f"missing source constant: {name}")
+    return int(match.group(1).replace("_", ""))
+
+max_requests_default = parse_u64_const("DEFAULT_SERVICE_API_MAX_REQUESTS")
+idle_timeout_default_ms = parse_u64_const("DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS")
+
+body_limit_match = re.search(r"let\s+body_limit\s*=\s*([0-9_]+)\s*\*\s*([0-9_]+);", source_text)
+if body_limit_match is None:
+    raise SystemExit("missing service api request body limit marker")
+body_size_limit_bytes = int(body_limit_match.group(1).replace("_", "")) * int(
+    body_limit_match.group(2).replace("_", "")
+)
+
+if max_requests_default <= 0:
+    raise SystemExit("service api max-requests default must be positive")
+if idle_timeout_default_ms <= 0:
+    raise SystemExit("service api idle-timeout default must be positive")
+if body_size_limit_bytes <= 0:
+    raise SystemExit("service api body-size limit must be positive")
+
+required_doc_markers = [
+    f"--api-max-requests <n>` (default: `{max_requests_default}`)",
+    f"--api-idle-timeout-ms <ms>` (default: `{idle_timeout_default_ms}`)",
+    f"request payload body read limit: `{body_size_limit_bytes}` bytes",
+]
+missing_doc_markers = [
+    marker for marker in required_doc_markers if marker not in api_doc_text
+]
+if missing_doc_markers:
+    raise SystemExit(
+        "service api docs missing ingress-limit config markers: "
+        + ",".join(missing_doc_markers)
+    )
+
+report = {
+    "schema_version": "kamn.runtime.service-api-axum-ingress-config-matrix.v1",
+    "ingress_limit_config_status": "verified",
+    "docs_ingress_limit_matrix_status": "verified",
+    "api_max_requests_default": max_requests_default,
+    "api_idle_timeout_default_ms": idle_timeout_default_ms,
+    "body_size_limit_bytes": body_size_limit_bytes,
+}
+report_file.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
 
 pushd "$ROOT_DIR" >/dev/null
 cargo build --quiet -p kamn-node
@@ -372,6 +444,51 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 print(payload["fail_closed_status"])
 PY
 )"
+ingress_limit_config_status="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["ingress_limit_config_status"])
+PY
+)"
+docs_ingress_limit_matrix_status="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["docs_ingress_limit_matrix_status"])
+PY
+)"
+api_max_requests_default="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["api_max_requests_default"])
+PY
+)"
+api_idle_timeout_default_ms="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["api_idle_timeout_default_ms"])
+PY
+)"
+body_size_limit_bytes="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["body_size_limit_bytes"])
+PY
+)"
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
@@ -389,6 +506,11 @@ cat >"$report_json" <<JSON
   "body_size_guard_status": "${body_size_guard_status}",
   "concurrency_status": "${concurrency_status}",
   "websocket_status": "${websocket_status}",
+  "ingress_limit_config_status": "${ingress_limit_config_status}",
+  "docs_ingress_limit_matrix_status": "${docs_ingress_limit_matrix_status}",
+  "api_max_requests_default": ${api_max_requests_default},
+  "api_idle_timeout_default_ms": ${api_idle_timeout_default_ms},
+  "body_size_limit_bytes": ${body_size_limit_bytes},
   "fail_closed_status": "${fail_closed_status}",
   "ci_fast_gate_exclusion_status": "${ci_fast_gate_exclusion_status}",
   "performance_budget_status": "verified",
@@ -407,6 +529,11 @@ echo "keep_alive_status=${keep_alive_status}"
 echo "body_size_guard_status=${body_size_guard_status}"
 echo "concurrency_status=${concurrency_status}"
 echo "websocket_status=${websocket_status}"
+echo "ingress_limit_config_status=${ingress_limit_config_status}"
+echo "docs_ingress_limit_matrix_status=${docs_ingress_limit_matrix_status}"
+echo "api_max_requests_default=${api_max_requests_default}"
+echo "api_idle_timeout_default_ms=${api_idle_timeout_default_ms}"
+echo "body_size_limit_bytes=${body_size_limit_bytes}"
 echo "fail_closed_status=${fail_closed_status}"
 echo "ci_fast_gate_exclusion_status=${ci_fast_gate_exclusion_status}"
 echo "performance_budget_status=verified"

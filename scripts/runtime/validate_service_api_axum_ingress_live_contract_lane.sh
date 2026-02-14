@@ -100,6 +100,26 @@ if ! printf '%s\n' "$validation_output" | grep -q '^websocket_status=verified$';
   echo "expected service api axum ingress websocket marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^ingress_limit_config_status=verified$'; then
+  echo "expected service api axum ingress config-matrix marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^docs_ingress_limit_matrix_status=verified$'; then
+  echo "expected service api axum ingress docs parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -Eq '^api_max_requests_default=[1-9][0-9]*$'; then
+  echo "expected service api axum ingress max-requests default marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -Eq '^api_idle_timeout_default_ms=[1-9][0-9]*$'; then
+  echo "expected service api axum ingress idle-timeout default marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -Eq '^body_size_limit_bytes=[1-9][0-9]*$'; then
+  echo "expected service api axum ingress body-size limit marker" >&2
+  exit 1
+fi
 
 policy_output="$(
   bash "$POLICY_CHECKER" \
@@ -168,6 +188,10 @@ if ! grep -q "service api axum ingress run-mode commands remain excluded from ci
   echo "expected CI strategy docs to include service api axum ingress run-mode exclusion marker" >&2
   exit 1
 fi
+if ! grep -q "ingress limit config matrix defaults remain parity-checked against source constants and API docs" "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include ingress-limit config matrix parity marker" >&2
+  exit 1
+fi
 
 if ! grep -q "Task #3308" "$ROADMAP_DOC"; then
   echo "expected roadmap marker for Task #3308" >&2
@@ -217,6 +241,13 @@ lane_report = {
     "service_api_axum_ingress_policy_status": policy_report.get(
         "service_api_axum_ingress_policy_status"
     ),
+    "ingress_limit_config_status": summary_report.get("ingress_limit_config_status"),
+    "docs_ingress_limit_matrix_status": summary_report.get(
+        "docs_ingress_limit_matrix_status"
+    ),
+    "api_max_requests_default": summary_report.get("api_max_requests_default"),
+    "api_idle_timeout_default_ms": summary_report.get("api_idle_timeout_default_ms"),
+    "body_size_limit_bytes": summary_report.get("body_size_limit_bytes"),
     "docs_contract_status": "verified",
     "fail_closed_status": "verified",
     "fail_closed_reason_code": "service_api_axum_policy_marker_missing:concurrency_status",
@@ -238,6 +269,35 @@ echo "status=pass"
 echo "final_decision=GO"
 echo "service_api_axum_ingress_contract_status=verified"
 echo "service_api_axum_ingress_policy_status=verified"
+echo "ingress_limit_config_status=verified"
+echo "docs_ingress_limit_matrix_status=verified"
+echo "api_max_requests_default=$(python3 - "$summary_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload.get("api_max_requests_default", 0))
+PY
+)"
+echo "api_idle_timeout_default_ms=$(python3 - "$summary_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload.get("api_idle_timeout_default_ms", 0))
+PY
+)"
+echo "body_size_limit_bytes=$(python3 - "$summary_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload.get("body_size_limit_bytes", 0))
+PY
+)"
 echo "docs_contract_status=verified"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=service_api_axum_policy_marker_missing:concurrency_status"
