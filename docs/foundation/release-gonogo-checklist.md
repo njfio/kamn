@@ -82,6 +82,15 @@ Go/no-go decisions are captured as machine-readable JSON so release policy check
   - `scripts/deploy/gonogo_evidence_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/deploy/run_gonogo_evidence_deep_lane.sh`
+- Required checklist evidence markers (machine-readable bundle):
+  - `ci_fast_gate`
+  - `ci_deep_lane`
+  - `rollback_precheck`
+  - `rollback_trigger_status`
+  - `approval_quorum`
+  - `runtime_image_digest`
+- Fail-closed policy reason:
+  - missing required checklist evidence markers force `NO-GO` (`Regression: #3240`).
 
 ## Staging Deploy + Rollback Rehearsal Contract (Issue #658)
 Staging rehearsal automation must verify deploy and rollback outcomes before release decisions are accepted.

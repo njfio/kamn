@@ -51,6 +51,27 @@ go_generate_output="$(
 assert_eq "$(extract_value "$go_generate_output" "status")" "generated" "expected GO bundle generation to succeed"
 assert_eq "$(extract_value "$go_generate_output" "final_decision")" "GO" "expected generator to derive GO decision"
 
+python3 - "$go_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text())
+required_markers = {
+    "ci_fast_gate",
+    "ci_deep_lane",
+    "rollback_precheck",
+    "rollback_trigger_status",
+    "approval_quorum",
+    "runtime_image_digest",
+}
+markers = payload.get("evidence_markers")
+if not isinstance(markers, list):
+    raise SystemExit("expected go/no-go bundle evidence_markers list")
+if set(markers) != required_markers:
+    raise SystemExit("expected go/no-go bundle evidence_markers to match required checklist markers")
+PY
+
 go_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$go_bundle")"
 assert_eq "$(extract_value "$go_policy_output" "status")" "ok" "expected GO bundle policy check to pass"
 assert_eq "$(extract_value "$go_policy_output" "final_decision")" "GO" "expected policy check to keep GO decision"
@@ -107,6 +128,34 @@ fi
 # Regression: #623
 if ! printf '%s\n' "$tampered_output" | grep -q "policy decision mismatch"; then
   echo "expected regression guard to catch policy decision mismatch" >&2
+  exit 1
+fi
+
+tampered_missing_evidence_bundle="$TMP_DIR/gonogo-missing-evidence-marker.json"
+cp "$go_bundle" "$tampered_missing_evidence_bundle"
+python3 - "$tampered_missing_evidence_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text())
+payload["evidence_markers"] = [marker for marker in payload.get("evidence_markers", []) if marker != "rollback_precheck"]
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
+PY
+
+set +e
+tampered_missing_evidence_output="$(bash "$POLICY_CHECKER" --bundle-file "$tampered_missing_evidence_bundle" 2>&1)"
+tampered_missing_evidence_code=$?
+set -e
+
+if [ "$tampered_missing_evidence_code" -eq 0 ]; then
+  echo "expected missing-evidence-marker bundle to fail policy validation" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$tampered_missing_evidence_output" | grep -q "missing required evidence markers"; then
+  echo "expected explicit missing-required-evidence-markers error from policy checker" >&2
   exit 1
 fi
 
