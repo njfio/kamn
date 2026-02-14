@@ -284,6 +284,8 @@ This document captures node-runtime productionization slices for machine-readabl
     - `transport`
     - `kolme-commit`
   - `node.runtime.full.bootstrap.ready`
+  - `node.runtime.full.supervisor.stop.requested`
+  - `node.runtime.full.supervisor.stop.complete`
 
 ## Runtime Observability Endpoint Rules
 - Endpoint export is optional and enabled only when `--observability-endpoint-bind` is set.

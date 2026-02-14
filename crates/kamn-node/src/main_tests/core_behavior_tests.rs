@@ -1122,6 +1122,58 @@ fn integration_runtime_full_emits_ordered_bootstrap_readiness_markers() {
 }
 
 #[test]
+fn regression_runtime_full_emits_supervisor_stop_markers_with_daemon_reason() {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "10".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:19084".to_owned(),
+    ])
+    .expect("full args should parse");
+
+    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
+    let report = report_result.expect("runtime-mode full execution should succeed");
+    assert_eq!(report.runtime_mode, "full");
+    let stop_requested_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"node.runtime.full.supervisor.stop.requested\""))
+        .expect("full runtime should emit supervisor stop-request marker");
+    let stop_complete_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"node.runtime.full.supervisor.stop.complete\""))
+        .expect("full runtime should emit supervisor stop-complete marker");
+    assert_eq!(
+        extract_json_string_field(stop_requested_line, "stop_reason").as_deref(),
+        Some("daemon-execution-complete")
+    );
+    assert_eq!(
+        extract_json_string_field(stop_complete_line, "stop_reason").as_deref(),
+        Some("daemon-execution-complete")
+    );
+    assert_eq!(
+        extract_json_string_field(stop_complete_line, "daemon_completion_reason").as_deref(),
+        Some("tick-budget-exhausted")
+    );
+    let requested_execution_id = extract_json_string_field(stop_requested_line, "execution_id")
+        .expect("stop-request marker should include execution id");
+    let complete_execution_id = extract_json_string_field(stop_complete_line, "execution_id")
+        .expect("stop-complete marker should include execution id");
+    assert_eq!(requested_execution_id, complete_execution_id);
+}
+
+#[test]
 fn parses_runtime_mode_daemon_with_os_signal_shutdown_controls() {
     let args = vec![
         "kamn-node".to_owned(),
