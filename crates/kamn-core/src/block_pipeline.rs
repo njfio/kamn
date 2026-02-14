@@ -1,5 +1,6 @@
 //! Mempool block production and consensus validation pipeline contracts.
 
+use crate::config::NodeRole;
 use crate::runtime::{
     ApproverAttestation, ApproverQuorumDecision, ApproverQuorumError, ApproverQuorumEvaluator,
     ApproverQuorumInput, ListenerAttestation, ListenerQuorumDecision, ListenerQuorumError,
@@ -56,6 +57,15 @@ pub enum BlockPipelineError {
         /// Found override digest.
         found: String,
     },
+    /// Transport feed returned an error while draining mempool candidates.
+    TransportFeed(String),
+    /// Canonical commit store returned an error while persisting/listing records.
+    CommitStore(String),
+    /// Fork-choice hook rejected canonical candidate block.
+    ForkChoiceRejected {
+        /// Deterministic reason code supplied by fork-choice hook.
+        reason_code: String,
+    },
 }
 
 impl From<ListenerQuorumError> for BlockPipelineError {
@@ -92,11 +102,150 @@ impl Display for BlockPipelineError {
                     "block pipeline payload digest mismatch: expected {expected}, found {found}"
                 )
             }
+            Self::TransportFeed(detail) => {
+                write!(f, "block pipeline transport feed error: {detail}")
+            }
+            Self::CommitStore(detail) => write!(f, "block pipeline commit store error: {detail}"),
+            Self::ForkChoiceRejected { reason_code } => {
+                write!(
+                    f,
+                    "block pipeline fork-choice rejected candidate: {reason_code}"
+                )
+            }
         }
     }
 }
 
 impl Error for BlockPipelineError {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Canonical commit record persisted after fork-choice acceptance.
+pub struct CanonicalCommitRecord {
+    /// Committed block height.
+    pub block_height: u64,
+    /// Producer role for the committed block.
+    pub producer_role: NodeRole,
+    /// Deterministic block payload digest.
+    pub payload_digest: String,
+    /// Ordered committed transaction identifiers.
+    pub transaction_ids: Vec<String>,
+}
+
+impl CanonicalCommitRecord {
+    fn from_commit_report(report: &BlockPipelineCommitReport) -> Self {
+        Self {
+            block_height: report.block.height,
+            producer_role: report.block.producer.clone(),
+            payload_digest: report.payload_digest.clone(),
+            transaction_ids: report
+                .block
+                .transactions
+                .iter()
+                .map(|tx| tx.id.clone())
+                .collect(),
+        }
+    }
+}
+
+/// Transport feed abstraction for draining pending mempool candidates.
+pub trait TransportMempoolFeed {
+    /// Drains pending transport candidates in implementation-defined order.
+    fn drain_pending_transactions(
+        &mut self,
+    ) -> Result<Vec<BaselineTransaction>, BlockPipelineError>;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// In-memory transport feed used for deterministic tests and local contract lanes.
+pub struct InMemoryTransportMempoolFeed {
+    pending: Vec<BaselineTransaction>,
+}
+
+impl InMemoryTransportMempoolFeed {
+    /// Creates in-memory transport feed with deterministic pending queue.
+    pub fn new(pending: Vec<BaselineTransaction>) -> Self {
+        Self { pending }
+    }
+
+    /// Pushes candidate transaction into pending queue.
+    pub fn push(&mut self, tx: BaselineTransaction) {
+        self.pending.push(tx);
+    }
+}
+
+impl TransportMempoolFeed for InMemoryTransportMempoolFeed {
+    fn drain_pending_transactions(
+        &mut self,
+    ) -> Result<Vec<BaselineTransaction>, BlockPipelineError> {
+        Ok(std::mem::take(&mut self.pending))
+    }
+}
+
+/// Canonical commit persistence interface used by transport-fed block pipeline.
+pub trait CanonicalCommitStore {
+    /// Persists canonical commit record after fork-choice acceptance.
+    fn persist_canonical_commit(
+        &mut self,
+        record: CanonicalCommitRecord,
+    ) -> Result<(), BlockPipelineError>;
+
+    /// Lists canonical commit records in persistence order.
+    fn list_canonical_commits(&self) -> Result<Vec<CanonicalCommitRecord>, BlockPipelineError>;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// In-memory canonical commit store for deterministic tests and local runtime probes.
+pub struct InMemoryCanonicalCommitStore {
+    records: Vec<CanonicalCommitRecord>,
+}
+
+impl CanonicalCommitStore for InMemoryCanonicalCommitStore {
+    fn persist_canonical_commit(
+        &mut self,
+        record: CanonicalCommitRecord,
+    ) -> Result<(), BlockPipelineError> {
+        self.records.push(record);
+        Ok(())
+    }
+
+    fn list_canonical_commits(&self) -> Result<Vec<CanonicalCommitRecord>, BlockPipelineError> {
+        Ok(self.records.clone())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Fork-choice decision for canonical candidate commit.
+pub enum ForkChoiceDecision {
+    /// Candidate is accepted as canonical.
+    Accept,
+    /// Candidate is rejected with deterministic reason code.
+    Reject {
+        /// Deterministic rejection reason code.
+        reason_code: String,
+    },
+}
+
+/// Fork-choice evaluation hook for candidate canonical commit records.
+pub trait ForkChoiceHook {
+    /// Evaluates candidate canonical commit and returns deterministic decision.
+    fn evaluate_candidate(
+        &mut self,
+        record: &CanonicalCommitRecord,
+    ) -> Result<ForkChoiceDecision, BlockPipelineError>;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// Fork-choice hook that accepts every candidate.
+pub struct AcceptAllForkChoiceHook;
+
+impl ForkChoiceHook for AcceptAllForkChoiceHook {
+    fn evaluate_candidate(
+        &mut self,
+        _record: &CanonicalCommitRecord,
+    ) -> Result<ForkChoiceDecision, BlockPipelineError> {
+        Ok(ForkChoiceDecision::Accept)
+    }
+}
 
 /// Deterministic mempool->consensus->commit pipeline for processor runtime flows.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -104,6 +253,83 @@ pub struct MempoolBlockPipeline {
     network: RoleSmokeNetwork,
     listener_evaluator: ListenerQuorumEvaluator,
     approver_required_approvals: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// Transport-fed block pipeline that persists canonical commit records.
+pub struct TransportFedBlockPipeline<TFeed, TStore, THook> {
+    pipeline: MempoolBlockPipeline,
+    transport_feed: TFeed,
+    commit_store: TStore,
+    fork_choice_hook: THook,
+}
+
+impl<TFeed, TStore, THook> TransportFedBlockPipeline<TFeed, TStore, THook>
+where
+    TFeed: TransportMempoolFeed,
+    TStore: CanonicalCommitStore,
+    THook: ForkChoiceHook,
+{
+    /// Builds transport-fed block pipeline with supplied transport, persistence, and fork-choice hook.
+    pub fn new(
+        gossip_enabled: bool,
+        listener_required_confirmations: usize,
+        approver_required_approvals: usize,
+        transport_feed: TFeed,
+        commit_store: TStore,
+        fork_choice_hook: THook,
+    ) -> Result<Self, BlockPipelineError> {
+        Ok(Self {
+            pipeline: MempoolBlockPipeline::new(
+                gossip_enabled,
+                listener_required_confirmations,
+                approver_required_approvals,
+            )?,
+            transport_feed,
+            commit_store,
+            fork_choice_hook,
+        })
+    }
+
+    /// Runs one transport-fed consensus round and persists canonical commit record.
+    pub fn run_transport_consensus_round(
+        &mut self,
+        input: BlockConsensusRoundInput,
+    ) -> Result<BlockPipelineCommitReport, BlockPipelineError> {
+        let mut candidates = self.transport_feed.drain_pending_transactions()?;
+        if candidates.is_empty() {
+            return Err(BlockPipelineError::EmptyMempool);
+        }
+        sort_candidates_for_ingress(&mut candidates);
+        for candidate in candidates {
+            self.pipeline.submit_transaction(candidate)?;
+        }
+
+        let report = self.pipeline.run_consensus_round(input)?;
+        let commit_record = CanonicalCommitRecord::from_commit_report(&report);
+        match self.fork_choice_hook.evaluate_candidate(&commit_record)? {
+            ForkChoiceDecision::Accept => {}
+            ForkChoiceDecision::Reject { reason_code } => {
+                return Err(BlockPipelineError::ForkChoiceRejected { reason_code });
+            }
+        }
+        self.commit_store.persist_canonical_commit(commit_record)?;
+        Ok(report)
+    }
+
+    /// Lists canonical commit records from configured persistence backend.
+    pub fn list_canonical_commits(&self) -> Result<Vec<CanonicalCommitRecord>, BlockPipelineError> {
+        self.commit_store.list_canonical_commits()
+    }
+}
+
+fn sort_candidates_for_ingress(candidates: &mut [BaselineTransaction]) {
+    candidates.sort_by(|left, right| {
+        left.nonce
+            .cmp(&right.nonce)
+            .then_with(|| left.id.cmp(&right.id))
+            .then_with(|| left.sender.cmp(&right.sender))
+    });
 }
 
 impl MempoolBlockPipeline {
