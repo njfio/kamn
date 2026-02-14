@@ -2,10 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-DOCKERFILE="$ROOT_DIR/Dockerfile"
-COMPOSE_FILE="$ROOT_DIR/deploy/docker-compose.yml"
-K8S_MANIFEST="$ROOT_DIR/deploy/k8s/kamn-node.yaml"
-DEPLOY_DOC="$ROOT_DIR/docs/ops/deployment.md"
+DOCKERFILE="${DOCKERFILE_PATH:-$ROOT_DIR/Dockerfile}"
+COMPOSE_FILE="${COMPOSE_FILE_PATH:-$ROOT_DIR/deploy/docker-compose.yml}"
+K8S_MANIFEST="${K8S_MANIFEST_PATH:-$ROOT_DIR/deploy/k8s/kamn-node.yaml}"
+DEPLOY_DOC="${DEPLOY_DOC_PATH:-$ROOT_DIR/docs/ops/deployment.md}"
 
 if [ ! -f "$DOCKERFILE" ]; then
   echo "expected Dockerfile for deployment assets story" >&2
