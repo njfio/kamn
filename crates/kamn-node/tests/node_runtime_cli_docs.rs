@@ -130,6 +130,15 @@ fn doc_contains_runtime_daemon_rules() {
 }
 
 #[test]
+fn doc_contains_daemon_shutdown_drain_marker_fields() {
+    assert!(DOC.contains("shutdown_drain_status"));
+    assert!(DOC.contains("shutdown_signal_tick"));
+    assert!(DOC.contains("shutdown_drain_ticks"));
+    assert!(DOC.contains("shutdown_timeout_ticks"));
+    assert!(DOC.contains("shutdown_ignored_signals"));
+}
+
+#[test]
 fn doc_contains_runtime_kolme_live_rules() {
     assert!(DOC.contains("## Kolme Live Runtime Rules"));
     assert!(DOC.contains("`kolme-live`"));

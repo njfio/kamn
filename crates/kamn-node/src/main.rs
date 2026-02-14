@@ -460,6 +460,33 @@ fn build_runtime_execution_id(runtime_mode: RuntimeMode, chain_id: &str, role: &
     format!("node-runtime:{}:{chain_id}:{role}", runtime_mode.as_str())
 }
 
+fn daemon_shutdown_drain_status(completion_reason: &str) -> &'static str {
+    if completion_reason.starts_with("graceful-shutdown:signal@") {
+        "completed"
+    } else if completion_reason.starts_with("graceful-shutdown-timeout:signal@") {
+        "timeout"
+    } else {
+        "not-signaled"
+    }
+}
+
+fn daemon_shutdown_signal_tick(completion_reason: &str) -> Option<&str> {
+    completion_reason
+        .strip_prefix("graceful-shutdown:signal@")
+        .or_else(|| completion_reason.strip_prefix("graceful-shutdown-timeout:signal@"))
+        .map(|value| value.split(';').next().unwrap_or(value))
+}
+
+fn daemon_shutdown_reason_field<'a>(completion_reason: &'a str, key: &str) -> Option<&'a str> {
+    completion_reason.split(';').find_map(|segment| {
+        let (field, value) = segment.split_once('=')?;
+        if field == key {
+            return Some(value);
+        }
+        None
+    })
+}
+
 fn run() -> Result<(), ConfigError> {
     let cli = parse_args(env::args())?;
     let runtime_mode = cli.runtime_mode.as_str();
@@ -821,6 +848,26 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                 daemon_completion.completion_reason.as_str(),
             )
             .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+            let shutdown_drain_status =
+                daemon_shutdown_drain_status(daemon_completion.completion_reason.as_str());
+            let shutdown_signal_tick =
+                daemon_shutdown_signal_tick(daemon_completion.completion_reason.as_str())
+                    .unwrap_or("none");
+            let shutdown_drain_ticks = daemon_shutdown_reason_field(
+                daemon_completion.completion_reason.as_str(),
+                "drain_ticks",
+            )
+            .unwrap_or("0");
+            let shutdown_timeout_ticks = daemon_shutdown_reason_field(
+                daemon_completion.completion_reason.as_str(),
+                "timeout_ticks",
+            )
+            .unwrap_or("0");
+            let shutdown_ignored_signals = daemon_shutdown_reason_field(
+                daemon_completion.completion_reason.as_str(),
+                "ignored_signals",
+            )
+            .unwrap_or("0");
             let executed_ticks_label = daemon_completion.executed_ticks.to_string();
             log_info(
                 "node.runtime.daemon.execute.complete",
@@ -831,6 +878,11 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                         "completion_reason",
                         daemon_completion.completion_reason.as_str(),
                     ),
+                    ("shutdown_drain_status", shutdown_drain_status),
+                    ("shutdown_signal_tick", shutdown_signal_tick),
+                    ("shutdown_drain_ticks", shutdown_drain_ticks),
+                    ("shutdown_timeout_ticks", shutdown_timeout_ticks),
+                    ("shutdown_ignored_signals", shutdown_ignored_signals),
                     ("execution_id", execution_id.as_str()),
                 ],
             )?;

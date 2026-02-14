@@ -248,6 +248,12 @@ This document captures node-runtime productionization slices for machine-readabl
   - graceful completion => `daemon_completion_reason` emits `graceful-shutdown:...`
   - timeout/fail-closed completion => `daemon_completion_reason` emits `graceful-shutdown-timeout:...`
   - repeated/late shutdown signals are counted as `ignored_signals` in completion metadata.
+- Structured daemon completion marker fields:
+  - `shutdown_drain_status=<not-signaled|completed|timeout>`
+  - `shutdown_signal_tick=<u64|none>`
+  - `shutdown_drain_ticks=<u64>`
+  - `shutdown_timeout_ticks=<u64>`
+  - `shutdown_ignored_signals=<u64>`
 - Daemon observability telemetry is emitted in deterministic report fields:
   - `daemon_observability_latency_p50_ms`
   - `daemon_observability_latency_p99_ms`

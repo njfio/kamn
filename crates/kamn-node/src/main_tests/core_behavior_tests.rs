@@ -526,6 +526,26 @@ fn functional_runtime_daemon_emits_structured_transition_markers() {
         extract_json_string_field(complete_line, "completion_reason").as_deref(),
         Some("tick-budget-exhausted")
     );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_drain_status").as_deref(),
+        Some("not-signaled")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_signal_tick").as_deref(),
+        Some("none")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_drain_ticks").as_deref(),
+        Some("0")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_timeout_ticks").as_deref(),
+        Some("0")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_ignored_signals").as_deref(),
+        Some("0")
+    );
     let complete_execution_id = extract_json_string_field(complete_line, "execution_id")
         .expect("daemon completion marker should include execution_id");
     assert_eq!(start_execution_id, complete_execution_id);
@@ -657,6 +677,174 @@ fn functional_kolme_live_nonce_retry_emits_structured_retry_marker() {
     assert_eq!(
         extract_json_string_field(nonce_retry_line, "reason").as_deref(),
         Some("unavailable")
+    );
+}
+
+#[test]
+fn functional_runtime_daemon_graceful_shutdown_emits_structured_drain_markers() {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "10".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "3".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "4".to_owned(),
+    ])
+    .expect("daemon args should parse");
+
+    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
+    let report = report_result.expect("daemon execution should succeed");
+    assert_eq!(report.runtime_mode, "daemon");
+
+    let complete_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"node.runtime.daemon.execute.complete\""))
+        .expect("daemon execution should emit structured completion marker");
+    assert_eq!(
+        extract_json_string_field(complete_line, "completion_reason").as_deref(),
+        Some("graceful-shutdown:signal@3;drain_ticks=2;timeout_ticks=4;ignored_signals=0")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_drain_status").as_deref(),
+        Some("completed")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_signal_tick").as_deref(),
+        Some("3")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_drain_ticks").as_deref(),
+        Some("2")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_timeout_ticks").as_deref(),
+        Some("4")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_ignored_signals").as_deref(),
+        Some("0")
+    );
+}
+
+#[test]
+fn regression_runtime_daemon_shutdown_timeout_emits_structured_timeout_drain_markers() {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "10".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "7".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "4".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "2".to_owned(),
+    ])
+    .expect("daemon timeout args should parse");
+
+    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
+    let report = report_result.expect("daemon timeout execution should succeed");
+    assert_eq!(report.runtime_mode, "daemon");
+
+    let complete_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"node.runtime.daemon.execute.complete\""))
+        .expect("daemon execution should emit structured completion marker");
+    assert_eq!(
+        extract_json_string_field(complete_line, "completion_reason").as_deref(),
+        Some("graceful-shutdown-timeout:signal@7;drain_ticks=4;timeout_ticks=2;ignored_signals=0")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_drain_status").as_deref(),
+        Some("timeout")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_signal_tick").as_deref(),
+        Some("7")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_drain_ticks").as_deref(),
+        Some("4")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_timeout_ticks").as_deref(),
+        Some("2")
+    );
+    assert_eq!(
+        extract_json_string_field(complete_line, "shutdown_ignored_signals").as_deref(),
+        Some("0")
+    );
+}
+
+#[test]
+fn regression_runtime_kolme_live_rejects_fallback_signer_secret_env_with_reason_code() {
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+    let _primary_key_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+        Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+    );
+    let _fallback_key_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK",
+        Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY),
+    );
+    let (base_url, requests) = spawn_kolme_live_mock_server(Vec::new());
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        base_url,
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-strict-signer-contracts".to_owned(),
+        "--kolme-live-signer-profile".to_owned(),
+        "ops-primary".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
+    ])
+    .expect("kolme-live args should parse");
+    let error = execute(parsed).expect_err("fallback signer secret env path must fail closed");
+    assert!(
+        matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("fallback_signer_secret_present_violation")),
+        "fallback signer secret env path must emit deterministic fail-closed reason code"
+    );
+    let recorded_requests = requests.lock().expect("request mutex should lock");
+    assert_eq!(
+        recorded_requests.len(),
+        0,
+        "fallback signer secret env path must fail before nonce/finality network dispatch"
     );
 }
 
