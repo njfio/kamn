@@ -29,10 +29,16 @@ Run core harness:
 bash scripts/runtime/test_run_go_no_go_gate_lane.sh
 ```
 
-Run baseline gate:
+Run baseline dry-run gate (CI-safe schema + policy validation only):
 
 ```bash
-bash scripts/runtime/run_go_no_go_gate_lane.sh --output-json /tmp/go-no-go-gate.json
+bash scripts/runtime/run_go_no_go_gate_lane.sh --mode dry-run --output-json /tmp/go-no-go-gate-dry-run.json
+```
+
+Run local release-candidate aggregation gate (executes artifact lanes, local-only):
+
+```bash
+KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/runtime/run_go_no_go_gate_lane.sh --mode run --output-json /tmp/go-no-go-gate-run.json
 ```
 
 Run injected decision-fault profile (expected fail-closed):
@@ -47,6 +53,22 @@ Baseline GO markers:
 
 - `status=pass`
 - `final_decision=GO`
+- `lane_mode=dry-run`
+- `run_mode_command_status=dry_run_no_commands_executed`
+- `ci_fast_gate_eligible=true`
+- `ci_fast_gate_scope=ci-fast-gate`
+- `fast_gate_exclusion_status=verified`
+- `fast_gate_exclusion_reason_code=go_no_go_gate_run_mode_excluded_from_fast_gate`
+- `go_no_go_evidence_status=dry_run_pending`
+- `rollback_readiness_status=dry_run_pending`
+- `dr_readiness_status=dry_run_pending`
+
+Run-mode GO markers:
+
+- `lane_mode=run`
+- `run_mode_command_status=executed`
+- `ci_fast_gate_eligible=false`
+- `ci_fast_gate_scope=local-only`
 - `go_no_go_evidence_status=verified`
 - `rollback_readiness_status=verified`
 - `dr_readiness_status=verified`

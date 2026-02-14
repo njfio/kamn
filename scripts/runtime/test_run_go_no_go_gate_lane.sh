@@ -11,6 +11,7 @@ TMP_DIR="$(mktemp -d)"
 TMP_REPORT="$TMP_DIR/go-no-go-gate-report.json"
 TMP_FAULT_REPORT="$TMP_DIR/go-no-go-gate-fault-report.json"
 TMP_WARN_REPORT="$TMP_DIR/go-no-go-gate-warn-report.json"
+TMP_RUN_REPORT="$TMP_DIR/go-no-go-gate-run-mode-report.json"
 TMP_MANIFEST_FAIL_REPORT="$TMP_DIR/go-no-go-gate-manifest-fail-report.json"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -56,6 +57,7 @@ fi
 
 lane_output="$(
   bash "$LANE_SCRIPT" \
+    --mode dry-run \
     --max-seconds 120 \
     --output-json "$TMP_REPORT"
 )"
@@ -71,16 +73,16 @@ if ! printf '%s\n' "$lane_output" | grep -q '^final_decision=GO$'; then
   echo "expected go/no-go gate lane GO decision marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$lane_output" | grep -q '^go_no_go_evidence_status=verified$'; then
-  echo "expected go/no-go gate lane evidence status marker" >&2
+if ! printf '%s\n' "$lane_output" | grep -q '^go_no_go_evidence_status=dry_run_pending$'; then
+  echo "expected go/no-go gate lane dry-run evidence status marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$lane_output" | grep -q '^rollback_readiness_status=verified$'; then
-  echo "expected go/no-go gate lane rollback status marker" >&2
+if ! printf '%s\n' "$lane_output" | grep -q '^rollback_readiness_status=dry_run_pending$'; then
+  echo "expected go/no-go gate lane dry-run rollback status marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$lane_output" | grep -q '^dr_readiness_status=verified$'; then
-  echo "expected go/no-go gate lane dr status marker" >&2
+if ! printf '%s\n' "$lane_output" | grep -q '^dr_readiness_status=dry_run_pending$'; then
+  echo "expected go/no-go gate lane dry-run dr status marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^policy_evaluator_status=verified$'; then
@@ -89,6 +91,34 @@ if ! printf '%s\n' "$lane_output" | grep -q '^policy_evaluator_status=verified$'
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^reason_taxonomy_version=kamn.runtime.go-no-go-gate-reason-taxonomy.v1$'; then
   echo "expected go/no-go gate lane reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^lane_mode=dry-run$'; then
+  echo "expected go/no-go gate lane dry-run mode marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^run_mode_command_status=dry_run_no_commands_executed$'; then
+  echo "expected go/no-go gate lane dry-run command status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^run_mode_command_count=0$'; then
+  echo "expected go/no-go gate lane dry-run command count marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^ci_fast_gate_eligible=true$'; then
+  echo "expected go/no-go gate lane dry-run fast-gate eligibility marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^ci_fast_gate_scope=ci-fast-gate$'; then
+  echo "expected go/no-go gate lane dry-run fast-gate scope marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^fast_gate_exclusion_status=verified$'; then
+  echo "expected go/no-go gate lane fast-gate exclusion status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^fast_gate_exclusion_reason_code=go_no_go_gate_run_mode_excluded_from_fast_gate$'; then
+  echo "expected go/no-go gate lane fast-gate exclusion reason marker" >&2
   exit 1
 fi
 
@@ -110,12 +140,12 @@ if payload.get("fault_profile") != "none":
     raise SystemExit("expected go/no-go gate report fault_profile=none")
 if payload.get("reason_taxonomy_version") != "kamn.runtime.go-no-go-gate-reason-taxonomy.v1":
     raise SystemExit("expected go/no-go gate report reason taxonomy version marker")
-if payload.get("go_no_go_evidence_status") != "verified":
-    raise SystemExit("expected go_no_go_evidence_status=verified")
-if payload.get("rollback_readiness_status") != "verified":
-    raise SystemExit("expected rollback_readiness_status=verified")
-if payload.get("dr_readiness_status") != "verified":
-    raise SystemExit("expected dr_readiness_status=verified")
+if payload.get("go_no_go_evidence_status") != "dry_run_pending":
+    raise SystemExit("expected go_no_go_evidence_status=dry_run_pending")
+if payload.get("rollback_readiness_status") != "dry_run_pending":
+    raise SystemExit("expected rollback_readiness_status=dry_run_pending")
+if payload.get("dr_readiness_status") != "dry_run_pending":
+    raise SystemExit("expected dr_readiness_status=dry_run_pending")
 if payload.get("policy_evaluator_status") != "verified":
     raise SystemExit("expected policy_evaluator_status=verified")
 if payload.get("manifest_schema_version") != "kamn.runtime.release-evidence-manifest.v1":
@@ -128,13 +158,117 @@ if not isinstance(inventory, list) or len(inventory) != 3:
 for entry in inventory:
     if not isinstance(entry, dict):
         raise SystemExit("artifact inventory entry must be an object")
-    if entry.get("status") != "verified":
-        raise SystemExit("expected every artifact inventory entry status=verified")
+    if entry.get("status") != "dry_run_pending":
+        raise SystemExit("expected every baseline artifact inventory entry status=dry_run_pending")
 if payload.get("reason_codes") != []:
     raise SystemExit("expected empty reason_codes for baseline go/no-go gate run")
 if payload.get("observed_reason_codes") != []:
     raise SystemExit("expected empty observed_reason_codes for baseline go/no-go gate run")
+if payload.get("lane_mode") != "dry-run":
+    raise SystemExit("expected lane_mode=dry-run in baseline go/no-go gate run")
+if payload.get("run_mode_command_status") != "dry_run_no_commands_executed":
+    raise SystemExit("expected run_mode_command_status=dry_run_no_commands_executed for baseline go/no-go gate run")
+if payload.get("run_mode_command_count") != 0:
+    raise SystemExit("expected run_mode_command_count=0 for baseline go/no-go gate run")
+if payload.get("ci_fast_gate_eligible") is not True:
+    raise SystemExit("expected ci_fast_gate_eligible=true for baseline go/no-go gate run")
+if payload.get("ci_fast_gate_scope") != "ci-fast-gate":
+    raise SystemExit("expected ci_fast_gate_scope=ci-fast-gate for baseline go/no-go gate run")
+if payload.get("fast_gate_exclusion_status") != "verified":
+    raise SystemExit("expected fast_gate_exclusion_status=verified for baseline go/no-go gate run")
+if payload.get("fast_gate_exclusion_reason_code") != "go_no_go_gate_run_mode_excluded_from_fast_gate":
+    raise SystemExit("expected deterministic fast-gate exclusion reason marker for baseline go/no-go gate run")
 PY
+
+run_mode_output="$(
+  KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash "$LANE_SCRIPT" \
+    --mode run \
+    --max-seconds 120 \
+    --output-json "$TMP_RUN_REPORT"
+)"
+if ! printf '%s\n' "$run_mode_output" | grep -q '^lane_mode=run$'; then
+  echo "expected go/no-go gate lane run-mode marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^run_mode_command_status=executed$'; then
+  echo "expected go/no-go gate lane run-mode command status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^go_no_go_evidence_status=verified$'; then
+  echo "expected go/no-go gate lane run-mode evidence status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^rollback_readiness_status=verified$'; then
+  echo "expected go/no-go gate lane run-mode rollback status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^dr_readiness_status=verified$'; then
+  echo "expected go/no-go gate lane run-mode dr status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^ci_fast_gate_eligible=false$'; then
+  echo "expected go/no-go gate lane run-mode fast-gate exclusion marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^ci_fast_gate_scope=local-only$'; then
+  echo "expected go/no-go gate lane run-mode local-only scope marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^fast_gate_exclusion_status=verified$'; then
+  echo "expected go/no-go gate lane run-mode fast-gate exclusion status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^reason_codes=none$'; then
+  echo "expected go/no-go gate lane run-mode reason codes marker" >&2
+  exit 1
+fi
+
+python3 - "$TMP_RUN_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("lane_mode") != "run":
+    raise SystemExit("expected lane_mode=run in run-mode go/no-go gate report")
+if payload.get("run_mode_command_status") != "executed":
+    raise SystemExit("expected run_mode_command_status=executed in run-mode go/no-go gate report")
+if not isinstance(payload.get("run_mode_command_count"), int) or payload.get("run_mode_command_count") <= 0:
+    raise SystemExit("expected positive run_mode_command_count in run-mode go/no-go gate report")
+if payload.get("ci_fast_gate_eligible") is not False:
+    raise SystemExit("expected ci_fast_gate_eligible=false in run-mode go/no-go gate report")
+if payload.get("ci_fast_gate_scope") != "local-only":
+    raise SystemExit("expected ci_fast_gate_scope=local-only in run-mode go/no-go gate report")
+if payload.get("fast_gate_exclusion_status") != "verified":
+    raise SystemExit("expected fast_gate_exclusion_status=verified in run-mode go/no-go gate report")
+if payload.get("fast_gate_exclusion_reason_code") != "go_no_go_gate_run_mode_excluded_from_fast_gate":
+    raise SystemExit("expected deterministic fast-gate exclusion reason marker in run-mode go/no-go gate report")
+if payload.get("reason_codes") != []:
+    raise SystemExit("expected empty reason_codes list for run-mode go/no-go gate report")
+if payload.get("go_no_go_evidence_status") != "verified":
+    raise SystemExit("expected go_no_go_evidence_status=verified in run-mode go/no-go gate report")
+if payload.get("rollback_readiness_status") != "verified":
+    raise SystemExit("expected rollback_readiness_status=verified in run-mode go/no-go gate report")
+if payload.get("dr_readiness_status") != "verified":
+    raise SystemExit("expected dr_readiness_status=verified in run-mode go/no-go gate report")
+PY
+
+set +e
+missing_opt_in_output="$(
+  bash "$LANE_SCRIPT" \
+    --mode run \
+    --max-seconds 120 2>&1
+)"
+missing_opt_in_code=$?
+set -e
+if [ "$missing_opt_in_code" -eq 0 ]; then
+  echo "expected go/no-go gate lane run mode to require explicit local opt-in" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$missing_opt_in_output" | grep -q 'run mode requires KAMN_GONOGO_GATE_LOCAL_OPT_IN=1'; then
+  echo "expected deterministic run-mode local opt-in marker for go/no-go gate lane" >&2
+  exit 1
+fi
 
 set +e
 fault_output="$(

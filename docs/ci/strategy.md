@@ -2551,7 +2551,12 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `rollback_readiness`
   - `dr_readiness`
 - contract lane command:
-  - `bash scripts/runtime/run_go_no_go_gate_lane.sh --max-seconds 120 --output-json /tmp/go-no-go-gate-report.json`
+  - CI-safe dry-run policy path:
+    - `bash scripts/runtime/run_go_no_go_gate_lane.sh --mode dry-run --max-seconds 120 --output-json /tmp/go-no-go-gate-report.json`
+  - Local release-candidate aggregation path (explicit opt-in required):
+    - `KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/runtime/run_go_no_go_gate_lane.sh --mode run --max-seconds 120 --output-json /tmp/go-no-go-gate-run-report.json`
+  - run-mode commands remain excluded from ci-fast-gate:
+    - summary/report markers must emit `ci_fast_gate_eligible=false`, `ci_fast_gate_scope=local-only`, and `fast_gate_exclusion_reason_code=go_no_go_gate_run_mode_excluded_from_fast_gate`.
 - deterministic fail-closed reason-code surface:
   - `release_manifest_file_missing`
   - `release_manifest_json_invalid`

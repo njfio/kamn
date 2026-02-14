@@ -34,7 +34,8 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 start_epoch="$(date +%s)"
 baseline_report="$TMP_DIR/go-no-go-gate-baseline.json"
 baseline_output="$(
-  bash "$ROOT_DIR/scripts/runtime/run_go_no_go_gate_lane.sh" \
+  KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash "$ROOT_DIR/scripts/runtime/run_go_no_go_gate_lane.sh" \
+    --mode run \
     --max-seconds 120 \
     --output-json "$baseline_report"
 )"
@@ -45,6 +46,22 @@ if ! printf '%s\n' "$baseline_output" | grep -q '^status=pass$'; then
 fi
 if ! printf '%s\n' "$baseline_output" | grep -q '^final_decision=GO$'; then
   echo "expected go/no-go gate baseline GO decision marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$baseline_output" | grep -q '^lane_mode=run$'; then
+  echo "expected go/no-go gate baseline run mode marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$baseline_output" | grep -q '^run_mode_command_status=executed$'; then
+  echo "expected go/no-go gate baseline run command status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$baseline_output" | grep -q '^ci_fast_gate_eligible=false$'; then
+  echo "expected go/no-go gate baseline fast-gate exclusion marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$baseline_output" | grep -q '^ci_fast_gate_scope=local-only$'; then
+  echo "expected go/no-go gate baseline local-only scope marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$baseline_output" | grep -q '^go_no_go_evidence_status=verified$'; then
@@ -63,7 +80,8 @@ fi
 fault_report="$TMP_DIR/go-no-go-gate-fault.json"
 set +e
 fault_output="$(
-  bash "$ROOT_DIR/scripts/runtime/run_go_no_go_gate_lane.sh" \
+  KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash "$ROOT_DIR/scripts/runtime/run_go_no_go_gate_lane.sh" \
+    --mode run \
     --fault-profile gate_decision \
     --max-seconds 120 \
     --output-json "$fault_report" 2>&1
@@ -91,6 +109,9 @@ cat >"$report_json" <<JSON
   "schema_version": "kamn.runtime.go-no-go-gate-live-validation.v1",
   "status": "pass",
   "final_decision": "GO",
+  "lane_mode": "run",
+  "run_mode_command_status": "executed",
+  "ci_fast_gate_scope": "local-only",
   "baseline_contract_status": "verified",
   "fault_injection_status": "verified",
   "fail_closed_status": "verified",
@@ -104,6 +125,9 @@ fi
 
 echo "status=pass"
 echo "final_decision=GO"
+echo "lane_mode=run"
+echo "run_mode_command_status=executed"
+echo "ci_fast_gate_scope=local-only"
 echo "baseline_contract_status=verified"
 echo "fault_injection_status=verified"
 echo "fail_closed_status=verified"
