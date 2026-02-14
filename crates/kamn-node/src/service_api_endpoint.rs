@@ -15,6 +15,9 @@ use axum::{
     Extension, Router,
 };
 use kamn_core::{signature_matches_supported_profile_for_fields, AgentDid};
+#[cfg(test)]
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
@@ -70,6 +73,72 @@ pub(crate) struct ServiceApiEndpointResponse {
     pub(crate) status_code: u16,
     pub(crate) content_type: &'static str,
     pub(crate) body: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiErrorBody {
+    pub(crate) error: String,
+    pub(crate) reason: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiHealthBody {
+    pub(crate) status: String,
+    pub(crate) runtime_mode: String,
+    pub(crate) role: String,
+    pub(crate) observability_source: String,
+    pub(crate) observability_health: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiMessageCreateBody {
+    pub(crate) message_id: String,
+    pub(crate) status: String,
+    pub(crate) runtime_mode: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiMessageGetBody {
+    pub(crate) message_id: String,
+    pub(crate) status: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiChannelCreateBody {
+    pub(crate) channel_id: String,
+    pub(crate) status: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiChannelMessagesBody {
+    pub(crate) channel_id: String,
+    pub(crate) messages: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiTaskCreateBody {
+    pub(crate) task_id: String,
+    pub(crate) state: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiTaskGetBody {
+    pub(crate) task_id: String,
+    pub(crate) state: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiAgentGetBody {
+    pub(crate) did: String,
+    pub(crate) reputation_score: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ServiceApiWebsocketStateTransitionBody {
+    pub(crate) event: String,
+    pub(crate) runtime_mode: String,
+    pub(crate) role: String,
+    pub(crate) sequence: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -171,16 +240,17 @@ pub(crate) fn render_service_api_endpoint_response(
     body: &str,
 ) -> ServiceApiEndpointResponse {
     if method == "GET" && path == ROUTE_HEALTHZ {
+        let payload = ServiceApiHealthBody {
+            status: "ok".to_owned(),
+            runtime_mode: snapshot.runtime_mode.clone(),
+            role: snapshot.role.clone(),
+            observability_source: snapshot.observability_source.clone(),
+            observability_health: snapshot.observability_health.clone(),
+        };
         return ServiceApiEndpointResponse {
             status_code: 200,
             content_type: "application/json",
-            body: format!(
-                "{{\"status\":\"ok\",\"runtime_mode\":\"{}\",\"role\":\"{}\",\"observability_source\":\"{}\",\"observability_health\":\"{}\"}}",
-                escape_json_string(snapshot.runtime_mode.as_str()),
-                escape_json_string(snapshot.role.as_str()),
-                escape_json_string(snapshot.observability_source.as_str()),
-                escape_json_string(snapshot.observability_health.as_str()),
-            ),
+            body: serialize_service_api_json(&payload),
         };
     }
     if method == "GET" && path == ROUTE_METRICS {
@@ -212,86 +282,96 @@ pub(crate) fn render_service_api_endpoint_response(
         };
     }
     if method == "GET" && path == ROUTE_EVENTS_WS {
+        let payload = ServiceApiErrorBody {
+            error: "bad-request".to_owned(),
+            reason: "websocket upgrade required".to_owned(),
+        };
         return ServiceApiEndpointResponse {
             status_code: 400,
             content_type: "application/json",
-            body: "{\"error\":\"bad-request\",\"reason\":\"websocket upgrade required\"}"
-                .to_owned(),
+            body: serialize_service_api_json(&payload),
         };
     }
     if method == "POST" && path == ROUTE_MESSAGES_SEND {
         let message_id = format!("msg-local-{}", deterministic_body_tag(body.as_bytes()));
+        let payload = ServiceApiMessageCreateBody {
+            message_id,
+            status: "created".to_owned(),
+            runtime_mode: snapshot.runtime_mode.clone(),
+        };
         return ServiceApiEndpointResponse {
             status_code: 202,
             content_type: "application/json",
-            body: format!(
-                "{{\"message_id\":\"{}\",\"status\":\"created\",\"runtime_mode\":\"{}\"}}",
-                escape_json_string(message_id.as_str()),
-                escape_json_string(snapshot.runtime_mode.as_str())
-            ),
+            body: serialize_service_api_json(&payload),
         };
     }
     if method == "POST" && path == ROUTE_CHANNELS_CREATE {
         let channel_id = format!("channel-local-{}", deterministic_body_tag(body.as_bytes()));
+        let payload = ServiceApiChannelCreateBody {
+            channel_id,
+            status: "created".to_owned(),
+        };
         return ServiceApiEndpointResponse {
             status_code: 201,
             content_type: "application/json",
-            body: format!(
-                "{{\"channel_id\":\"{}\",\"status\":\"created\"}}",
-                escape_json_string(channel_id.as_str()),
-            ),
+            body: serialize_service_api_json(&payload),
         };
     }
     if method == "POST" && path == ROUTE_TASKS_CREATE {
         let task_id = format!("task-local-{}", deterministic_body_tag(body.as_bytes()));
+        let payload = ServiceApiTaskCreateBody {
+            task_id,
+            state: "submitted".to_owned(),
+        };
         return ServiceApiEndpointResponse {
             status_code: 201,
             content_type: "application/json",
-            body: format!(
-                "{{\"task_id\":\"{}\",\"state\":\"submitted\"}}",
-                escape_json_string(task_id.as_str()),
-            ),
+            body: serialize_service_api_json(&payload),
         };
     }
     if method == "GET" {
         if let Some(message_id) = message_path_id(path) {
+            let payload = ServiceApiMessageGetBody {
+                message_id: message_id.to_owned(),
+                status: "created".to_owned(),
+            };
             return ServiceApiEndpointResponse {
                 status_code: 200,
                 content_type: "application/json",
-                body: format!(
-                    "{{\"message_id\":\"{}\",\"status\":\"created\"}}",
-                    escape_json_string(message_id)
-                ),
+                body: serialize_service_api_json(&payload),
             };
         }
         if let Some(channel_id) = channel_messages_path_id(path) {
+            let payload = ServiceApiChannelMessagesBody {
+                channel_id: channel_id.to_owned(),
+                messages: Vec::new(),
+            };
             return ServiceApiEndpointResponse {
                 status_code: 200,
                 content_type: "application/json",
-                body: format!(
-                    "{{\"channel_id\":\"{}\",\"messages\":[]}}",
-                    escape_json_string(channel_id)
-                ),
+                body: serialize_service_api_json(&payload),
             };
         }
         if let Some(task_id) = task_path_id(path) {
+            let payload = ServiceApiTaskGetBody {
+                task_id: task_id.to_owned(),
+                state: "submitted".to_owned(),
+            };
             return ServiceApiEndpointResponse {
                 status_code: 200,
                 content_type: "application/json",
-                body: format!(
-                    "{{\"task_id\":\"{}\",\"state\":\"submitted\"}}",
-                    escape_json_string(task_id)
-                ),
+                body: serialize_service_api_json(&payload),
             };
         }
         if let Some(agent_did) = agent_path_id(path) {
+            let payload = ServiceApiAgentGetBody {
+                did: agent_did.to_owned(),
+                reputation_score: 500,
+            };
             return ServiceApiEndpointResponse {
                 status_code: 200,
                 content_type: "application/json",
-                body: format!(
-                    "{{\"did\":\"{}\",\"reputation_score\":500}}",
-                    escape_json_string(agent_did)
-                ),
+                body: serialize_service_api_json(&payload),
             };
         }
     }
@@ -902,11 +982,13 @@ fn websocket_upgrade_response(upgrade: WebSocketUpgrade, snapshot: ServiceApiSna
 }
 
 async fn stream_websocket_event(mut socket: WebSocket, snapshot: ServiceApiSnapshot) {
-    let event_payload = format!(
-        "{{\"event\":\"state-transition\",\"runtime_mode\":\"{}\",\"role\":\"{}\",\"sequence\":1}}",
-        escape_json_string(snapshot.runtime_mode.as_str()),
-        escape_json_string(snapshot.role.as_str()),
-    );
+    let payload = ServiceApiWebsocketStateTransitionBody {
+        event: "state-transition".to_owned(),
+        runtime_mode: snapshot.runtime_mode,
+        role: snapshot.role,
+        sequence: 1,
+    };
+    let event_payload = serialize_service_api_json(&payload);
     let _ = socket.send(Message::Text(event_payload.into())).await;
 }
 
@@ -922,16 +1004,46 @@ fn contract_response(response: ServiceApiEndpointResponse) -> Response {
 }
 
 fn json_error_response(status_code: StatusCode, error: &str, reason: &str) -> Response {
+    let payload = ServiceApiErrorBody {
+        error: error.to_owned(),
+        reason: reason.to_owned(),
+    };
     (
         status_code,
         [("Content-Type", "application/json")],
-        format!(
-            "{{\"error\":\"{}\",\"reason\":\"{}\"}}",
-            escape_json_string(error),
-            escape_json_string(reason),
-        ),
+        serialize_service_api_json(&payload),
     )
         .into_response()
+}
+
+#[cfg(test)]
+pub(crate) fn parse_service_api_payload<T: DeserializeOwned>(payload: &str) -> Result<T, String> {
+    serde_json::from_str(payload).map_err(|error| {
+        format!(
+            "{}:{}",
+            service_api_payload_decode_reason_code(&error),
+            error
+        )
+    })
+}
+
+#[cfg(test)]
+pub(crate) fn service_api_payload_decode_reason_code(error: &serde_json::Error) -> &'static str {
+    use serde_json::error::Category;
+    match error.classify() {
+        Category::Io => "service_api_payload_io_error",
+        Category::Syntax | Category::Eof => "service_api_payload_json_syntax_invalid",
+        Category::Data => "service_api_payload_structure_invalid",
+    }
+}
+
+fn serialize_service_api_json<T: Serialize>(payload: &T) -> String {
+    serde_json::to_string(payload).unwrap_or_else(|error| {
+        format!(
+            "{{\"error\":\"internal\",\"reason\":\"service api payload serialization failed: {}\"}}",
+            escape_json_string(error.to_string().as_str())
+        )
+    })
 }
 
 fn deterministic_body_tag(payload: &[u8]) -> u64 {

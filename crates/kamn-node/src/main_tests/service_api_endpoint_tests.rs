@@ -1,4 +1,8 @@
 use super::*;
+use crate::service_api_endpoint::{
+    parse_service_api_payload, ServiceApiAgentGetBody, ServiceApiChannelCreateBody,
+    ServiceApiHealthBody, ServiceApiMessageCreateBody, ServiceApiTaskCreateBody,
+};
 use kamn_core::baseline_signature_for_fields;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -114,6 +118,13 @@ fn parse_http_content_length(response_head: &str) -> usize {
         }
     }
     0
+}
+
+fn extract_http_response_body(response: &str) -> &str {
+    response
+        .split_once("\r\n\r\n")
+        .map(|(_, body)| body)
+        .unwrap_or("")
 }
 
 fn read_single_http_response(stream: &mut TcpStream) -> String {
@@ -272,6 +283,91 @@ fn functional_service_api_endpoint_renders_required_route_contracts() {
 }
 
 #[test]
+fn unit_service_api_endpoint_serde_payload_roundtrip_contracts() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34060".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let health = render_service_api_endpoint_response(&snapshot, "GET", "/healthz", "");
+    let health_payload: ServiceApiHealthBody =
+        parse_service_api_payload(health.body.as_str()).expect("health payload should deserialize");
+    assert_eq!(health_payload.status, "ok");
+    assert_eq!(health_payload.runtime_mode, "api");
+
+    let send = render_service_api_endpoint_response(
+        &snapshot,
+        "POST",
+        "/v1/messages/send",
+        "{\"message\":\"serde\"}",
+    );
+    let send_payload: ServiceApiMessageCreateBody =
+        parse_service_api_payload(send.body.as_str()).expect("send payload should deserialize");
+    assert_eq!(send_payload.status, "created");
+    assert!(send_payload.message_id.starts_with("msg-local-"));
+
+    let channel = render_service_api_endpoint_response(
+        &snapshot,
+        "POST",
+        "/v1/channels/create",
+        "{\"name\":\"alpha\"}",
+    );
+    let channel_payload: ServiceApiChannelCreateBody =
+        parse_service_api_payload(channel.body.as_str())
+            .expect("channel payload should deserialize");
+    assert_eq!(channel_payload.status, "created");
+
+    let task = render_service_api_endpoint_response(
+        &snapshot,
+        "POST",
+        "/v1/tasks/create",
+        "{\"task\":\"x\"}",
+    );
+    let task_payload: ServiceApiTaskCreateBody =
+        parse_service_api_payload(task.body.as_str()).expect("task payload should deserialize");
+    assert_eq!(task_payload.state, "submitted");
+
+    let agent = render_service_api_endpoint_response(
+        &snapshot,
+        "GET",
+        "/v1/agents/kamn:did:agent:alpha",
+        "",
+    );
+    let agent_payload: ServiceApiAgentGetBody =
+        parse_service_api_payload(agent.body.as_str()).expect("agent payload should deserialize");
+    assert_eq!(agent_payload.did, "kamn:did:agent:alpha");
+    assert_eq!(agent_payload.reputation_score, 500);
+}
+
+#[test]
+fn regression_service_api_payload_parse_reason_codes_fail_closed() {
+    let syntax_error = parse_service_api_payload::<ServiceApiHealthBody>("{\"status\":\"ok\"");
+    let syntax_reason = syntax_error.expect_err("invalid json syntax should fail closed");
+    assert!(
+        syntax_reason.starts_with("service_api_payload_json_syntax_invalid:"),
+        "unexpected syntax reason marker: {syntax_reason}"
+    );
+
+    let structure_error = parse_service_api_payload::<ServiceApiHealthBody>(
+        "{\"status\":\"ok\",\"runtime_mode\":\"api\"}",
+    );
+    let structure_reason =
+        structure_error.expect_err("invalid payload structure should fail closed");
+    assert!(
+        structure_reason.starts_with("service_api_payload_structure_invalid:"),
+        "unexpected structure reason marker: {structure_reason}"
+    );
+}
+
+#[test]
 fn integration_service_api_endpoint_serves_required_http_routes() {
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
@@ -329,6 +425,77 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
     assert!(
         metrics_response.contains("kamn_service_api_observability_source{source=\"unknown\"} 1")
     );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn integration_service_api_endpoint_http_response_bodies_match_serde_contracts() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34061".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 2,
+        idle_timeout_ms: 2_000,
+    };
+
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let message_body = "{\"message\":\"serde-live\"}";
+    let sender_did = "kamn:did:agent:test-client-serde";
+    let sender_nonce = 31_u64;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature =
+        baseline_signature_for_fields(sender_did, sender_nonce, state_hash.as_str(), message_body);
+    let send_response = send_http_request_with_headers(
+        bind_addr.as_str(),
+        "POST",
+        "/v1/messages/send",
+        message_body,
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "31"),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+        ],
+    );
+    let health_response = send_http_request(bind_addr.as_str(), "GET", "/healthz", "");
+    assert!(send_response.contains("HTTP/1.1 202 Accepted"));
+    assert!(health_response.contains("HTTP/1.1 200 OK"));
+
+    let send_payload: ServiceApiMessageCreateBody =
+        parse_service_api_payload(extract_http_response_body(send_response.as_str()))
+            .expect("send payload should deserialize");
+    assert_eq!(send_payload.status, "created");
+    assert_eq!(send_payload.runtime_mode, "api");
+
+    let health_payload: ServiceApiHealthBody =
+        parse_service_api_payload(extract_http_response_body(health_response.as_str()))
+            .expect("health payload should deserialize");
+    assert_eq!(health_payload.status, "ok");
+    assert_eq!(health_payload.runtime_mode, "api");
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(
