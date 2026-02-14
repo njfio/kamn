@@ -3,11 +3,48 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SMOKE_LANE="$ROOT_DIR/scripts/runtime/run_live_network_partition_reconnect_smoke_lane.sh"
+SMOKE_LANE_IMPL="$ROOT_DIR/scripts/runtime/run_live_network_partition_reconnect_smoke_lane_impl.sh"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_live_network_partition_reconnect_smoke_lane.json"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
 if [ ! -x "$SMOKE_LANE" ]; then
   echo "expected partition/reconnect smoke lane script to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$SMOKE_LANE_IMPL" ]; then
+  echo "expected partition/reconnect smoke lane implementation script to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected shared non-Kolme dispatcher to be executable" >&2
+  exit 1
+fi
+
+if [ ! -L "$SMOKE_LANE" ]; then
+  echo "expected partition/reconnect smoke lane wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$SMOKE_LANE")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected partition/reconnect smoke lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$SMOKE_LANE")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected partition/reconnect smoke lane wrapper to resolve runtime manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -q 'run_live_network_partition_reconnect_smoke_lane_impl.sh' "$MANIFEST_FILE"; then
+  echo "expected partition/reconnect smoke lane manifest to dispatch implementation module" >&2
+  exit 1
+fi
+
+if ! grep -q 'live_network_partition_reconnect_contract.py' "$SMOKE_LANE_IMPL"; then
+  echo "expected partition/reconnect smoke lane implementation to delegate to partition/reconnect contract module" >&2
   exit 1
 fi
 
