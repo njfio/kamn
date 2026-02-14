@@ -3,7 +3,7 @@
 This document captures the initial runtime-network foundation slice for peer lifecycle and bounded queue behavior in `kamn-core`.
 
 ## Scope Delivered
-- Added peer lifecycle state machine primitives in `crates/kamn-core/src/runtime.rs`:
+- Added peer lifecycle state machine primitives in `crates/kamn-core/src/runtime_peer_coordination.rs`:
   - `PeerLifecycleState`
   - `PeerLifecycleEvent`
   - `PeerLifecycle`
@@ -25,21 +25,21 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `ApproverQuorumEvaluator`
   - `ApproverQuorumError`
   - `authorize_daemon_outbound_action(...)`
-- Added authenticated peer transport framing primitives in `crates/kamn-core/src/runtime.rs`:
+- Added authenticated peer transport framing primitives in `crates/kamn-core/src/runtime_peer_coordination.rs`:
   - `AuthenticatedPeerFrame`
   - `AuthenticatedPeerFrameError`
   - `PeerFrameAuthenticator`
-- Added bounded FIFO queue primitives in `crates/kamn-core/src/runtime.rs`:
+- Added bounded FIFO queue primitives in `crates/kamn-core/src/runtime_peer_coordination.rs`:
   - `BoundedRuntimeQueue<T>`
   - `RuntimeQueueError`
-- Added deterministic queue backpressure primitives in `crates/kamn-core/src/runtime.rs`:
+- Added deterministic queue backpressure primitives in `crates/kamn-core/src/runtime_backpressure.rs`:
   - `RuntimeBackpressurePolicy`
   - `RuntimeBackpressureInput`
   - `RuntimeBackpressureDecision`
   - `RuntimeBackpressureAction`
   - `RuntimeBackpressureError`
   - `DeterministicBackpressureController`
-- Added deterministic proposal-planner primitives in `crates/kamn-core/src/runtime.rs`:
+- Added deterministic proposal-planner primitives in `crates/kamn-core/src/runtime_peer_coordination.rs`:
   - `ProposalCandidate`
   - `DeterministicProposalPlanner`
   - `ProposalPlan`

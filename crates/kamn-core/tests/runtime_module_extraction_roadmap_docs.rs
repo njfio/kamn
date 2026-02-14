@@ -18,3 +18,12 @@ fn roadmap_tracks_runtime_decomposition_tranche5_recovery_guard_module_extractio
     assert!(ROADMAP.contains("runtime_module_extraction_contract.rs"));
     assert!(ROADMAP.contains("runtime_network_docs.rs"));
 }
+
+#[test]
+fn roadmap_tracks_runtime_decomposition_tranche6_peer_coordination_module_extraction() {
+    assert!(ROADMAP.contains("Task #3145"));
+    assert!(ROADMAP.contains("Subtask #3155"));
+    assert!(ROADMAP.contains("crates/kamn-core/src/runtime_peer_coordination.rs"));
+    assert!(ROADMAP.contains("runtime_module_extraction_contract.rs"));
+    assert!(ROADMAP.contains("runtime_network_docs.rs"));
+}
