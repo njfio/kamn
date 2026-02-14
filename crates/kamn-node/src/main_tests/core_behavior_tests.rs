@@ -121,6 +121,71 @@ fn parses_diagnostics_snapshot_flag() {
 }
 
 #[test]
+fn unit_kolme_live_local_signer_override_marker_defaults_false() {
+    let _signer_lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _override_guard = EnvVarGuard::set("KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING", None);
+    assert!(!resolve_kolme_live_allow_local_signer_testing_override()
+        .expect("override marker should default false when unset"));
+}
+
+#[test]
+fn unit_kolme_live_local_signer_override_marker_parses_boolean_values() {
+    let _signer_lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+
+    {
+        let _true_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING", Some("true"));
+        assert!(resolve_kolme_live_allow_local_signer_testing_override()
+            .expect("true override marker should parse"));
+    }
+    {
+        let _false_guard =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING", Some("false"));
+        assert!(!resolve_kolme_live_allow_local_signer_testing_override()
+            .expect("false override marker should parse"));
+    }
+}
+
+#[test]
+fn regression_kolme_live_local_signer_override_marker_rejects_invalid_value() {
+    let _signer_lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _override_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING", Some("maybe"));
+    let error = resolve_kolme_live_allow_local_signer_testing_override()
+        .expect_err("invalid override marker value must fail closed");
+    assert!(
+        matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("legacy_local_signer_path_override_invalid")),
+        "invalid local signer override marker must fail with deterministic reason code"
+    );
+}
+
+#[test]
+fn unit_kolme_live_signer_contract_policy_allows_strict_override_or_test_build() {
+    enforce_kolme_live_signer_contract_policy(true, false, false)
+        .expect("strict signer contracts should satisfy policy");
+    enforce_kolme_live_signer_contract_policy(false, true, false)
+        .expect("explicit local testing override should satisfy policy");
+    enforce_kolme_live_signer_contract_policy(false, false, true)
+        .expect("test build should bypass strict signer policy guard");
+}
+
+#[test]
+fn regression_kolme_live_signer_contract_policy_rejects_legacy_local_path_in_production() {
+    let error = enforce_kolme_live_signer_contract_policy(false, false, false)
+        .expect_err("production runtime must reject legacy local signer path");
+    assert!(
+        matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("legacy_local_signer_path_forbidden")),
+        "production policy enforcement must emit deterministic legacy local signer rejection marker"
+    );
+}
+
+#[test]
 fn unit_log_config_parses_level_and_format_inputs() {
     let config = resolve_log_config_from_inputs(Some("debug"), Some("json"))
         .expect("log config inputs should parse");
