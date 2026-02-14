@@ -107,6 +107,7 @@ profile_matrix_markers=(
   "signer_key_source_profile_matrix_status=verified"
   "signer_key_source_production_reject_status=verified"
   "signer_key_source_local_override_allow_status=verified"
+  "signer_fallback_private_key_reject_status=verified"
   "production_signer_key_source_env_local_forbidden"
   "KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING=true"
 )
@@ -132,6 +133,7 @@ for marker in \
   "signer_key_source_profile_matrix_status=verified" \
   "signer_key_source_production_reject_status=verified" \
   "signer_key_source_local_override_allow_status=verified" \
+  "signer_fallback_private_key_reject_status=verified" \
   "signer_key_source_managed_external_allow_status=verified" \
   "execution_scope=local-scheduled" \
   "performance_budget_status=verified"; do
@@ -171,6 +173,8 @@ if payload.get("signer_key_source_production_reject_status") != "verified":
     raise SystemExit("expected signer_key_source_production_reject_status=verified")
 if payload.get("signer_key_source_local_override_allow_status") != "verified":
     raise SystemExit("expected signer_key_source_local_override_allow_status=verified")
+if payload.get("signer_fallback_private_key_reject_status") != "verified":
+    raise SystemExit("expected signer_fallback_private_key_reject_status=verified")
 if payload.get("signer_key_source_managed_external_allow_status") != "verified":
     raise SystemExit("expected signer_key_source_managed_external_allow_status=verified")
 if payload.get("performance_budget_status") != "verified":
@@ -197,10 +201,11 @@ for entry in scenario_reports:
         raise SystemExit(f"unexpected expected_reason_code for {scenario_id}")
 
 matrix_reports = payload.get("signer_key_source_matrix_reports")
-if not isinstance(matrix_reports, list) or len(matrix_reports) != 3:
-    raise SystemExit("expected three signer key-source matrix reports")
+if not isinstance(matrix_reports, list) or len(matrix_reports) != 4:
+    raise SystemExit("expected four signer key-source matrix reports")
 expected_matrix = {
     "production_strict_env_local_rejected": ("NO-GO", "production_signer_key_source_env_local_forbidden"),
+    "fallback_private_key_env_rejected": ("NO-GO", "fallback_signer_secret_present_violation"),
     "local_override_env_local_allowed": ("GO", "local_override_enabled"),
     "production_strict_managed_external_allowed": ("GO", "managed_external_required"),
 }

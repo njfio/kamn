@@ -69,8 +69,9 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Baseline startup pass marker: `deployment_preflight_passed`.
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `managed_signer_profile_status=verified`, `managed_signer_reason_code_status=verified`, `execution_scope=local-scheduled`, `performance_budget_status=verified`.
   - Signer key-source profile matrix validation delivered (Task #3108, Subtask #3109):
-    - matrix markers: `signer_key_source_profile_matrix_status=verified`, `signer_key_source_production_reject_status=verified`, `signer_key_source_local_override_allow_status=verified`.
+    - matrix markers: `signer_key_source_profile_matrix_status=verified`, `signer_key_source_production_reject_status=verified`, `signer_key_source_local_override_allow_status=verified`, `signer_fallback_private_key_reject_status=verified`.
     - production strict env-local fail-closed reason code: `production_signer_key_source_env_local_forbidden`.
+    - fallback private-key env fail-closed reason code: `fallback_signer_secret_present_violation`.
     - explicit local override marker: `KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING=true`.
   - Fail-closed validation confirmed for startup fault-injection matrix:
     - missing managed-external key-source contract: `checkpoint_failed_signer_provenance_contract` + `signer_key_source_production_managed_external_required`
