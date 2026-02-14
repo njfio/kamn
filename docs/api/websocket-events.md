@@ -52,3 +52,25 @@ Low-cost local commands:
 - `cargo test -p kamn-node`
 - `cargo fmt --check`
 - `cargo clippy -p kamn-node -- -D warnings`
+- `bash scripts/runtime/test_validate_service_api_websocket_live.sh`
+- `bash scripts/runtime/validate_service_api_websocket_live.sh`
+
+## Live Validation Evidence
+
+Task and subtask evidence:
+
+- Task: #2918
+- Subtask: #2919
+
+Deterministic success markers from `validate_service_api_websocket_live.sh`:
+
+- `status=pass`
+- `final_decision=GO`
+- `websocket_upgrade_status=verified`
+- `fail_closed_status=verified`
+- `probe_status=verified`
+
+Deterministic fail-closed marker example:
+
+- `bash scripts/runtime/validate_service_api_websocket_live.sh --max-seconds nope`
+- stderr marker: `max-seconds must be an integer`
