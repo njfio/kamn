@@ -21,9 +21,21 @@ from framework.contract_framework import (  # noqa: E402
 )
 
 SCHEMA_VERSION = "kamn.release.staging-rehearsal.v1"
+STAGED_REHEARSAL_SIGNOFF_SCHEMA_VERSION = "kamn.release.staged-rehearsal-signoff.v1"
 GO_DECISION = "GO"
 NO_GO_DECISION = "NO-GO"
 MAX_BPS = 10_000
+SIGNOFF_REQUIRED_ARTIFACTS = (
+    "deploy_status",
+    "rollback_status",
+    "rollback_hash_match",
+    "mttr_within_bound",
+    "runtime_submit_success_rate_within_bound",
+    "runtime_finality_timeouts_within_bound",
+    "signer_profile_drift_within_bound",
+    "evidence_complete",
+    "ci_fast_gate",
+)
 
 
 def _parse_pass_fail(field_name: str, raw_value: str) -> str:
@@ -98,6 +110,51 @@ def _compute_decision_reasons(
     return decision_reasons
 
 
+def _build_staged_rehearsal_signoff_artifact(
+    *,
+    final_decision: str,
+    decision_reasons: list[str],
+    deploy_status: str,
+    rollback_status: str,
+    rollback_hash_match: bool,
+    mttr_within_bound: bool,
+    runtime_submit_success_rate_within_bound: bool,
+    runtime_finality_timeouts_within_bound: bool,
+    signer_profile_drift_within_bound: bool,
+    evidence_complete: bool,
+    ci_fast_gate: str,
+) -> dict[str, Any]:
+    lineage_status = "verified" if final_decision == GO_DECISION else "fail-closed"
+    return {
+        "schema_version": STAGED_REHEARSAL_SIGNOFF_SCHEMA_VERSION,
+        "lineage_status": lineage_status,
+        "final_decision": final_decision,
+        "required_artifacts": list(SIGNOFF_REQUIRED_ARTIFACTS),
+        "observed_artifacts": {
+            "deploy_status": deploy_status,
+            "rollback_status": rollback_status,
+            "rollback_hash_match": rollback_hash_match,
+            "mttr_within_bound": mttr_within_bound,
+            "runtime_submit_success_rate_within_bound": runtime_submit_success_rate_within_bound,
+            "runtime_finality_timeouts_within_bound": runtime_finality_timeouts_within_bound,
+            "signer_profile_drift_within_bound": signer_profile_drift_within_bound,
+            "evidence_complete": evidence_complete,
+            "ci_fast_gate": ci_fast_gate,
+        },
+        "reason_codes": decision_reasons,
+        "contracts": {
+            "go_no_go_readiness_required": True,
+            "rollback_hash_match_required": True,
+            "mttr_within_bound_required": True,
+            "runtime_submit_success_rate_within_bound_required": True,
+            "runtime_finality_timeouts_within_bound_required": True,
+            "signer_profile_drift_within_bound_required": True,
+            "evidence_complete_required": True,
+            "ci_fast_gate_pass_required": True,
+        },
+    }
+
+
 def generate_bundle(args: argparse.Namespace) -> int:
     required_values = (
         args.output_file,
@@ -170,6 +227,20 @@ def generate_bundle(args: argparse.Namespace) -> int:
     if not decision_reasons:
         decision_reasons.append("all rehearsal gates satisfied")
 
+    staged_rehearsal_signoff = _build_staged_rehearsal_signoff_artifact(
+        final_decision=final_decision,
+        decision_reasons=decision_reasons,
+        deploy_status=deploy_status,
+        rollback_status=rollback_status,
+        rollback_hash_match=rollback_hash_match,
+        mttr_within_bound=mttr_within_bound,
+        runtime_submit_success_rate_within_bound=runtime_submit_success_rate_within_bound,
+        runtime_finality_timeouts_within_bound=runtime_finality_timeouts_within_bound,
+        signer_profile_drift_within_bound=signer_profile_drift_within_bound,
+        evidence_complete=evidence_complete,
+        ci_fast_gate=ci_fast_gate,
+    )
+
     payload: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -195,6 +266,7 @@ def generate_bundle(args: argparse.Namespace) -> int:
             "evidence_complete": evidence_complete,
             "ci_fast_gate": ci_fast_gate,
         },
+        "staged_rehearsal_signoff": staged_rehearsal_signoff,
         "decision_reasons": decision_reasons,
         "final_decision": final_decision,
     }
@@ -237,6 +309,7 @@ def check_bundle(args: argparse.Namespace) -> int:
             "generated_at",
             "release_candidate",
             "rehearsal",
+            "staged_rehearsal_signoff",
             "decision_reasons",
             "final_decision",
         ),
@@ -446,6 +519,29 @@ def check_bundle(args: argparse.Namespace) -> int:
         decision_reasons if decision_reasons else ["all rehearsal gates satisfied"]
     )
 
+    expected_signoff_artifact = _build_staged_rehearsal_signoff_artifact(
+        final_decision=expected_decision,
+        decision_reasons=expected_decision_reasons,
+        deploy_status=deploy_status,
+        rollback_status=rollback_status,
+        rollback_hash_match=rollback_hash_match,
+        mttr_within_bound=mttr_within_bound,
+        runtime_submit_success_rate_within_bound=runtime_submit_success_rate_within_bound,
+        runtime_finality_timeouts_within_bound=runtime_finality_timeouts_within_bound,
+        signer_profile_drift_within_bound=signer_profile_drift_within_bound,
+        evidence_complete=evidence_complete,
+        ci_fast_gate=ci_fast_gate,
+    )
+
+    staged_rehearsal_signoff = payload.get("staged_rehearsal_signoff")
+    if not isinstance(staged_rehearsal_signoff, dict):
+        fail("bundle field 'staged_rehearsal_signoff' must be an object")
+    if staged_rehearsal_signoff != expected_signoff_artifact:
+        fail(
+            "staged rehearsal signoff artifact mismatch: "
+            "expected deterministic signoff schema, contracts, and decision surface"
+        )
+
     actual_decision_reasons = payload.get("decision_reasons")
     if not isinstance(actual_decision_reasons, list) or not all(
         isinstance(reason, str) for reason in actual_decision_reasons
@@ -497,6 +593,10 @@ def check_bundle(args: argparse.Namespace) -> int:
     print(
         "signer_profile_drift_within_bound="
         f"{str(signer_profile_drift_within_bound).lower()}"
+    )
+    print(
+        "staged_rehearsal_signoff_status="
+        f"{expected_signoff_artifact['lineage_status']}"
     )
     print(f"reason_codes={','.join(expected_decision_reasons)}")
     print(f"evidence_complete={str(evidence_complete).lower()}")

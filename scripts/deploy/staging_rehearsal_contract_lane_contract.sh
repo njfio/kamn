@@ -37,5 +37,9 @@ if ! printf '%s\n' "$policy_output" | grep -q "^mttr_within_bound=true$"; then
   echo "expected rehearsal contract lane policy check to confirm bounded MTTR evidence" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q "^staged_rehearsal_signoff_status=verified$"; then
+  echo "expected rehearsal contract lane policy check to confirm verified staged rehearsal signoff" >&2
+  exit 1
+fi
 
 echo "staging rehearsal contract lane tests passed."

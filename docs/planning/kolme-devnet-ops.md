@@ -1112,6 +1112,19 @@ Operator checkpoints:
   - `milestone_review_go_no_go_gate_final_decision_mismatch`
   - `milestone review bundle lineage mismatch`
 
+## Staged Rehearsal Signoff Artifact Contract (Issue #3241)
+
+- Rehearsal fast-lane contract command:
+  - `bash scripts/deploy/run_staging_rehearsal_contract_lane.sh`
+- Rehearsal policy checker command:
+  - `bash scripts/deploy/check_staging_rehearsal_policy.sh --bundle-file /tmp/staging-rehearsal-report.json`
+- Signoff schema marker:
+  - `kamn.release.staged-rehearsal-signoff.v1`
+- Policy output marker:
+  - `staged_rehearsal_signoff_status=verified|fail-closed`
+- Fail-closed behavior:
+  - deterministic signoff-schema or contract drift yields `staged rehearsal signoff artifact mismatch`.
+
 ## Localhost Two-Process Signed-Message Demo Contract (Issue #1612)
 
 - Makefile demo command:

@@ -76,6 +76,8 @@ fn checklist_contains_staging_rehearsal_contract() {
     assert!(CHECKLIST.contains("check_staging_rehearsal_policy.sh"));
     assert!(CHECKLIST.contains("run_staging_rehearsal_contract_lane.sh"));
     assert!(CHECKLIST.contains("run_staging_rehearsal_deep_lane.sh"));
+    assert!(CHECKLIST.contains("kamn.release.staged-rehearsal-signoff.v1"));
+    assert!(CHECKLIST.contains("staged_rehearsal_signoff_status=verified|fail-closed"));
     assert!(CHECKLIST.contains("--recovery-time-seconds"));
     assert!(CHECKLIST.contains("--max-allowed-recovery-time-seconds"));
     assert!(CHECKLIST.contains("mttr-threshold-exceeded"));

@@ -85,6 +85,15 @@ fn plan_contains_local_live_api_conformance_harness() {
 }
 
 #[test]
+fn plan_contains_staged_rehearsal_signoff_artifact_contract() {
+    assert!(PLAN.contains("## Staged Rehearsal Signoff Artifact Contract (Issue #3241)"));
+    assert!(PLAN.contains("run_staging_rehearsal_contract_lane.sh"));
+    assert!(PLAN.contains("check_staging_rehearsal_policy.sh"));
+    assert!(PLAN.contains("kamn.release.staged-rehearsal-signoff.v1"));
+    assert!(PLAN.contains("staged_rehearsal_signoff_status=verified|fail-closed"));
+}
+
+#[test]
 fn plan_contains_local_fork_bootstrap_readiness_contract_lane() {
     assert!(PLAN.contains("## Local Kolme Fork Bootstrap/Readiness Contract Lane"));
     assert!(PLAN.contains("run_local_kolme_fork_bootstrap_readiness_lane.sh"));

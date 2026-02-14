@@ -72,6 +72,11 @@ if ! grep -Fq -- "--max-allowed-recovery-time-seconds" "$SHARED_CONTRACT"; then
   exit 1
 fi
 
+if ! grep -Fq "staged_rehearsal_signoff_status=verified" "$SHARED_CONTRACT"; then
+  echo "expected staging rehearsal shared contract module to assert verified staged signoff status" >&2
+  exit 1
+fi
+
 if ! grep -Fq -- "--recovery-time-seconds" "$DEEP_SCRIPT"; then
   echo "expected staging rehearsal deep-lane runner to pass deterministic MTTR evidence markers" >&2
   exit 1
@@ -79,6 +84,11 @@ fi
 
 if ! grep -Fq -- "--max-allowed-recovery-time-seconds" "$DEEP_SCRIPT"; then
   echo "expected staging rehearsal deep-lane runner to pass bounded MTTR contract markers" >&2
+  exit 1
+fi
+
+if ! grep -Fq "staged_rehearsal_signoff_status=fail-closed" "$DEEP_SCRIPT"; then
+  echo "expected staging rehearsal deep-lane runner to assert fail-closed staged signoff status" >&2
   exit 1
 fi
 

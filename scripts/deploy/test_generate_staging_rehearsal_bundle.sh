@@ -57,10 +57,33 @@ go_generate_output="$(
 assert_eq "$(extract_value "$go_generate_output" "status")" "generated" "expected GO rehearsal bundle generation to succeed"
 assert_eq "$(extract_value "$go_generate_output" "final_decision")" "GO" "expected generator to derive GO rehearsal decision"
 
+python3 - "$go_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+signoff = payload.get("staged_rehearsal_signoff")
+if not isinstance(signoff, dict):
+    raise SystemExit("expected staged_rehearsal_signoff object")
+if signoff.get("schema_version") != "kamn.release.staged-rehearsal-signoff.v1":
+    raise SystemExit("expected staged_rehearsal_signoff schema marker")
+if signoff.get("lineage_status") != "verified":
+    raise SystemExit("expected staged_rehearsal_signoff lineage_status=verified for GO rehearsal")
+if signoff.get("final_decision") != "GO":
+    raise SystemExit("expected staged_rehearsal_signoff final_decision=GO for GO rehearsal")
+required_artifacts = signoff.get("required_artifacts")
+if not isinstance(required_artifacts, list) or "rollback_hash_match" not in required_artifacts:
+    raise SystemExit("expected staged_rehearsal_signoff required_artifacts to include rollback_hash_match")
+if "contracts" not in signoff:
+    raise SystemExit("expected staged_rehearsal_signoff contracts object")
+PY
+
 go_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$go_bundle")"
 assert_eq "$(extract_value "$go_policy_output" "status")" "ok" "expected GO rehearsal policy check to pass"
 assert_eq "$(extract_value "$go_policy_output" "final_decision")" "GO" "expected GO rehearsal policy check decision"
 assert_eq "$(extract_value "$go_policy_output" "mttr_within_bound")" "true" "expected GO rehearsal policy check to report bounded MTTR"
+assert_eq "$(extract_value "$go_policy_output" "staged_rehearsal_signoff_status")" "verified" "expected policy checker to report verified staged rehearsal signoff status for GO rehearsal"
 
 no_go_bundle="$TMP_DIR/rehearsal-no-go.json"
 no_go_generate_output="$(
@@ -131,6 +154,7 @@ assert_eq "$(extract_value "$telemetry_no_go_generate_output" "final_decision")"
 telemetry_no_go_policy_output="$(bash "$POLICY_CHECKER" --bundle-file "$telemetry_no_go_bundle")"
 assert_eq "$(extract_value "$telemetry_no_go_policy_output" "status")" "ok" "expected telemetry NO-GO rehearsal policy check to pass"
 assert_eq "$(extract_value "$telemetry_no_go_policy_output" "final_decision")" "NO-GO" "expected telemetry NO-GO rehearsal policy check decision"
+assert_eq "$(extract_value "$telemetry_no_go_policy_output" "staged_rehearsal_signoff_status")" "fail-closed" "expected policy checker to report fail-closed staged rehearsal signoff status for NO-GO rehearsal"
 
 telemetry_reason_codes="$(extract_value "$telemetry_no_go_policy_output" "reason_codes")"
 if ! printf '%s\n' "$telemetry_reason_codes" | grep -q "runtime_submit_success_rate_below_threshold"; then
