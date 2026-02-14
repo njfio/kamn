@@ -28,6 +28,8 @@ EXPECTED_FAIL_CLOSED_REASON_CODE = "service_api_axum_oversized_body_rejected"
 EXPECTED_BODY_SIZE_LIMIT_BYTES = 64 * 1024
 EXPECTED_API_MAX_REQUESTS_DEFAULT = 1
 EXPECTED_API_IDLE_TIMEOUT_DEFAULT_MS = 5_000
+EXPECTED_API_CONCURRENCY_LIMIT_DEFAULT = 32
+EXPECTED_API_RATE_LIMIT_PER_SECOND_DEFAULT = 120
 
 REQUIRED_REPORT_FIELDS = [
     "schema_version",
@@ -42,6 +44,8 @@ REQUIRED_REPORT_FIELDS = [
     "api_max_requests_default",
     "api_idle_timeout_default_ms",
     "body_size_limit_bytes",
+    "api_concurrency_limit_default",
+    "api_rate_limit_per_second_default",
     "fail_closed_status",
     "ci_fast_gate_exclusion_status",
     "performance_budget_status",
@@ -141,6 +145,23 @@ def _check_policy(args: argparse.Namespace) -> int:
     decision.reject_if(
         report.get("api_idle_timeout_default_ms") != EXPECTED_API_IDLE_TIMEOUT_DEFAULT_MS,
         "service_api_axum_policy_api_idle_timeout_default_mismatch",
+    )
+    decision.reject_if(
+        not _is_positive_int(report.get("api_concurrency_limit_default")),
+        "service_api_axum_policy_api_concurrency_limit_default_invalid",
+    )
+    decision.reject_if(
+        report.get("api_concurrency_limit_default") != EXPECTED_API_CONCURRENCY_LIMIT_DEFAULT,
+        "service_api_axum_policy_api_concurrency_limit_default_mismatch",
+    )
+    decision.reject_if(
+        not _is_positive_int(report.get("api_rate_limit_per_second_default")),
+        "service_api_axum_policy_api_rate_limit_per_second_default_invalid",
+    )
+    decision.reject_if(
+        report.get("api_rate_limit_per_second_default")
+        != EXPECTED_API_RATE_LIMIT_PER_SECOND_DEFAULT,
+        "service_api_axum_policy_api_rate_limit_per_second_default_mismatch",
     )
     decision.reject_if(
         not _is_non_negative_int(report.get("elapsed_seconds")),

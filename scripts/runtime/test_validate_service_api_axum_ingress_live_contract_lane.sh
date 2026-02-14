@@ -65,6 +65,14 @@ if ! printf '%s\n' "$lane_output" | grep -Eq '^body_size_limit_bytes=[1-9][0-9]*
   echo "expected service api axum ingress contract lane body-size limit marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -Eq '^api_concurrency_limit_default=[1-9][0-9]*$'; then
+  echo "expected service api axum ingress contract lane concurrency-limit default marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -Eq '^api_rate_limit_per_second_default=[1-9][0-9]*$'; then
+  echo "expected service api axum ingress contract lane rate-limit default marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=service_api_axum_policy_marker_missing:concurrency_status$'; then
   echo "expected service api axum ingress contract lane fail-closed reason marker" >&2
   exit 1
@@ -96,6 +104,10 @@ if lane_payload.get("api_idle_timeout_default_ms") != 5000:
     raise SystemExit("expected api_idle_timeout_default_ms=5000")
 if lane_payload.get("body_size_limit_bytes") != 65536:
     raise SystemExit("expected body_size_limit_bytes=65536")
+if lane_payload.get("api_concurrency_limit_default") != 32:
+    raise SystemExit("expected api_concurrency_limit_default=32")
+if lane_payload.get("api_rate_limit_per_second_default") != 120:
+    raise SystemExit("expected api_rate_limit_per_second_default=120")
 if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":

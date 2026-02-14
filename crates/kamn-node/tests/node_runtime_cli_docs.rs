@@ -169,6 +169,16 @@ fn doc_contains_runtime_kolme_live_rules() {
 }
 
 #[test]
+fn doc_contains_service_api_ingress_limiter_matrix_rules() {
+    assert!(DOC.contains("--api-body-limit-bytes"));
+    assert!(DOC.contains("--api-concurrency-limit"));
+    assert!(DOC.contains("--api-rate-limit-per-second"));
+    assert!(DOC.contains("service_api_ingress_body_size_limit_exceeded"));
+    assert!(DOC.contains("service_api_ingress_concurrency_limit_exceeded"));
+    assert!(DOC.contains("service_api_ingress_rate_limit_exceeded"));
+}
+
+#[test]
 fn doc_contains_decomposition_guardrails() {
     assert!(DOC.contains("## Decomposition Guardrails"));
     assert!(DOC.contains("main.rs` orchestrates only"));

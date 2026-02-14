@@ -26,6 +26,8 @@ cat >"$report_file" <<'JSON'
   "api_max_requests_default": 1,
   "api_idle_timeout_default_ms": 5000,
   "body_size_limit_bytes": 65536,
+  "api_concurrency_limit_default": 32,
+  "api_rate_limit_per_second_default": 120,
   "fail_closed_status": "verified",
   "ci_fast_gate_exclusion_status": "verified",
   "performance_budget_status": "verified",

@@ -70,20 +70,24 @@ source_text = source_file.read_text(encoding="utf-8")
 api_doc_text = api_doc_file.read_text(encoding="utf-8")
 
 def parse_u64_const(name: str) -> int:
-    match = re.search(rf"pub\(crate\)\s+const\s+{name}:\s*u64\s*=\s*([0-9_]+);", source_text)
+    match = re.search(rf"pub\(crate\)\s+const\s+{name}:\s*u64\s*=\s*([^;]+);", source_text)
     if match is None:
         raise SystemExit(f"missing source constant: {name}")
-    return int(match.group(1).replace("_", ""))
+    expr = match.group(1).strip()
+    if re.fullmatch(r"[0-9_]+", expr):
+        return int(expr.replace("_", ""))
+    if re.fullmatch(r"[0-9_]+\s*\*\s*[0-9_]+", expr):
+        left_raw, right_raw = re.split(r"\*", expr, maxsplit=1)
+        left = int(left_raw.strip().replace("_", ""))
+        right = int(right_raw.strip().replace("_", ""))
+        return left * right
+    raise SystemExit(f"unsupported const expression for {name}: {expr}")
 
 max_requests_default = parse_u64_const("DEFAULT_SERVICE_API_MAX_REQUESTS")
 idle_timeout_default_ms = parse_u64_const("DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS")
-
-body_limit_match = re.search(r"let\s+body_limit\s*=\s*([0-9_]+)\s*\*\s*([0-9_]+);", source_text)
-if body_limit_match is None:
-    raise SystemExit("missing service api request body limit marker")
-body_size_limit_bytes = int(body_limit_match.group(1).replace("_", "")) * int(
-    body_limit_match.group(2).replace("_", "")
-)
+body_size_limit_bytes = parse_u64_const("DEFAULT_SERVICE_API_BODY_LIMIT_BYTES")
+concurrency_limit_default = parse_u64_const("DEFAULT_SERVICE_API_CONCURRENCY_LIMIT")
+rate_limit_per_second_default = parse_u64_const("DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND")
 
 if max_requests_default <= 0:
     raise SystemExit("service api max-requests default must be positive")
@@ -91,10 +95,16 @@ if idle_timeout_default_ms <= 0:
     raise SystemExit("service api idle-timeout default must be positive")
 if body_size_limit_bytes <= 0:
     raise SystemExit("service api body-size limit must be positive")
+if concurrency_limit_default <= 0:
+    raise SystemExit("service api concurrency-limit default must be positive")
+if rate_limit_per_second_default <= 0:
+    raise SystemExit("service api rate-limit default must be positive")
 
 required_doc_markers = [
     f"--api-max-requests <n>` (default: `{max_requests_default}`)",
     f"--api-idle-timeout-ms <ms>` (default: `{idle_timeout_default_ms}`)",
+    f"--api-concurrency-limit <n>` (default: `{concurrency_limit_default}`)",
+    f"--api-rate-limit-per-second <n>` (default: `{rate_limit_per_second_default}`)",
     f"request payload body read limit: `{body_size_limit_bytes}` bytes",
 ]
 missing_doc_markers = [
@@ -113,6 +123,8 @@ report = {
     "api_max_requests_default": max_requests_default,
     "api_idle_timeout_default_ms": idle_timeout_default_ms,
     "body_size_limit_bytes": body_size_limit_bytes,
+    "api_concurrency_limit_default": concurrency_limit_default,
+    "api_rate_limit_per_second_default": rate_limit_per_second_default,
 }
 report_file.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
@@ -386,9 +398,14 @@ if ! grep -q '"error":"bad-request"' "$oversized_response_file"; then
   echo "expected oversized service api response bad-request marker" >&2
   exit 1
 fi
-if ! grep -q 'length limit exceeded' "$oversized_response_file"; then
+if ! grep -q '"reason_code":"service_api_ingress_body_size_limit_exceeded"' "$oversized_response_file"; then
   cat "$oversized_response_file" >&2
-  echo "expected oversized service api response reason marker" >&2
+  echo "expected oversized service api response reason-code marker" >&2
+  exit 1
+fi
+if ! grep -q 'request body size limit exceeded' "$oversized_response_file"; then
+  cat "$oversized_response_file" >&2
+  echo "expected oversized service api response message marker" >&2
   exit 1
 fi
 body_size_guard_status="verified"
@@ -489,6 +506,24 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 print(payload["body_size_limit_bytes"])
 PY
 )"
+api_concurrency_limit_default="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["api_concurrency_limit_default"])
+PY
+)"
+api_rate_limit_per_second_default="$(python3 - "$config_matrix_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(payload["api_rate_limit_per_second_default"])
+PY
+)"
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
@@ -511,6 +546,8 @@ cat >"$report_json" <<JSON
   "api_max_requests_default": ${api_max_requests_default},
   "api_idle_timeout_default_ms": ${api_idle_timeout_default_ms},
   "body_size_limit_bytes": ${body_size_limit_bytes},
+  "api_concurrency_limit_default": ${api_concurrency_limit_default},
+  "api_rate_limit_per_second_default": ${api_rate_limit_per_second_default},
   "fail_closed_status": "${fail_closed_status}",
   "ci_fast_gate_exclusion_status": "${ci_fast_gate_exclusion_status}",
   "performance_budget_status": "verified",
@@ -534,6 +571,8 @@ echo "docs_ingress_limit_matrix_status=${docs_ingress_limit_matrix_status}"
 echo "api_max_requests_default=${api_max_requests_default}"
 echo "api_idle_timeout_default_ms=${api_idle_timeout_default_ms}"
 echo "body_size_limit_bytes=${body_size_limit_bytes}"
+echo "api_concurrency_limit_default=${api_concurrency_limit_default}"
+echo "api_rate_limit_per_second_default=${api_rate_limit_per_second_default}"
 echo "fail_closed_status=${fail_closed_status}"
 echo "ci_fast_gate_exclusion_status=${ci_fast_gate_exclusion_status}"
 echo "performance_budget_status=verified"

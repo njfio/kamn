@@ -47,7 +47,9 @@ use runtime_kolme_live::{
 pub(crate) use service_api_endpoint::render_service_api_endpoint_response;
 pub(crate) use service_api_endpoint::{
     build_service_api_snapshot, serve_service_api_endpoint, ServiceApiEndpointConfig,
+    DEFAULT_SERVICE_API_BODY_LIMIT_BYTES, DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
     DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS, DEFAULT_SERVICE_API_MAX_REQUESTS,
+    DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
 };
 #[cfg(test)]
 use signer::{
@@ -321,6 +323,9 @@ struct NodeCli {
     api_bind_addr: Option<String>,
     api_max_requests: u64,
     api_idle_timeout_ms: u64,
+    api_body_limit_bytes: u64,
+    api_concurrency_limit: u64,
+    api_rate_limit_per_second: u64,
     observability_endpoint_bind_addr: Option<String>,
     observability_endpoint_metrics_path: String,
     observability_endpoint_health_path: String,
@@ -753,6 +758,9 @@ fn run() -> Result<(), ConfigError> {
                 bind_addr: bind_addr.clone(),
                 max_requests: cli.api_max_requests,
                 idle_timeout_ms: cli.api_idle_timeout_ms,
+                body_limit_bytes: cli.api_body_limit_bytes,
+                concurrency_limit: cli.api_concurrency_limit,
+                rate_limit_per_second: cli.api_rate_limit_per_second,
             });
     let observability_endpoint_config =
         cli.observability_endpoint_bind_addr
@@ -783,12 +791,21 @@ fn run() -> Result<(), ConfigError> {
         let snapshot = build_service_api_snapshot(&report);
         let max_requests_label = endpoint_config.max_requests.to_string();
         let idle_timeout_ms_label = endpoint_config.idle_timeout_ms.to_string();
+        let body_limit_bytes_label = endpoint_config.body_limit_bytes.to_string();
+        let concurrency_limit_label = endpoint_config.concurrency_limit.to_string();
+        let rate_limit_per_second_label = endpoint_config.rate_limit_per_second.to_string();
         log_info(
             "node.runtime.service_api.endpoint.start",
             &[
                 ("bind_addr", endpoint_config.bind_addr.as_str()),
                 ("max_requests", max_requests_label.as_str()),
                 ("idle_timeout_ms", idle_timeout_ms_label.as_str()),
+                ("body_limit_bytes", body_limit_bytes_label.as_str()),
+                ("concurrency_limit", concurrency_limit_label.as_str()),
+                (
+                    "rate_limit_per_second",
+                    rate_limit_per_second_label.as_str(),
+                ),
                 ("execution_id", execution_id.as_str()),
             ],
         )?;
@@ -945,6 +962,9 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
         api_bind_addr: _,
         api_max_requests: _,
         api_idle_timeout_ms: _,
+        api_body_limit_bytes: _,
+        api_concurrency_limit: _,
+        api_rate_limit_per_second: _,
         observability_endpoint_bind_addr: _,
         observability_endpoint_metrics_path: _,
         observability_endpoint_health_path: _,

@@ -4,8 +4,10 @@ use super::{
     ProposalCandidate, RejoinAttempt, RuntimeMode, RuntimeModeKind, SyncMode,
     DEFAULT_OBSERVABILITY_ENDPOINT_HEALTH_PATH, DEFAULT_OBSERVABILITY_ENDPOINT_IDLE_TIMEOUT_MS,
     DEFAULT_OBSERVABILITY_ENDPOINT_MAX_REQUESTS, DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH,
+    DEFAULT_SERVICE_API_BODY_LIMIT_BYTES, DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
     DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS, DEFAULT_SERVICE_API_MAX_REQUESTS,
-    KOLME_IN_MEMORY_PROVIDER_MARKER, KOLME_LIVE_SIGNING_PROFILE,
+    DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND, KOLME_IN_MEMORY_PROVIDER_MARKER,
+    KOLME_LIVE_SIGNING_PROFILE,
 };
 use std::{env, fs};
 
@@ -113,6 +115,13 @@ fn map_config_entry_to_args(
         "api_bind" => push_key_value_flag(&mut mapped, value, "--api-bind"),
         "api_max_requests" => push_key_value_flag(&mut mapped, value, "--api-max-requests"),
         "api_idle_timeout_ms" => push_key_value_flag(&mut mapped, value, "--api-idle-timeout-ms"),
+        "api_body_limit_bytes" => push_key_value_flag(&mut mapped, value, "--api-body-limit-bytes"),
+        "api_concurrency_limit" => {
+            push_key_value_flag(&mut mapped, value, "--api-concurrency-limit")
+        }
+        "api_rate_limit_per_second" => {
+            push_key_value_flag(&mut mapped, value, "--api-rate-limit-per-second")
+        }
         "observability_endpoint_bind" => {
             push_key_value_flag(&mut mapped, value, "--observability-endpoint-bind")
         }
@@ -213,6 +222,21 @@ fn collect_env_override_args() -> Result<Vec<String>, ConfigError> {
         &mut args,
         "KAMN_NODE_API_IDLE_TIMEOUT_MS",
         "api_idle_timeout_ms",
+    )?;
+    append_env_override(
+        &mut args,
+        "KAMN_NODE_API_BODY_LIMIT_BYTES",
+        "api_body_limit_bytes",
+    )?;
+    append_env_override(
+        &mut args,
+        "KAMN_NODE_API_CONCURRENCY_LIMIT",
+        "api_concurrency_limit",
+    )?;
+    append_env_override(
+        &mut args,
+        "KAMN_NODE_API_RATE_LIMIT_PER_SECOND",
+        "api_rate_limit_per_second",
     )?;
     append_env_override(
         &mut args,
@@ -353,6 +377,9 @@ where
     let mut api_bind_addr: Option<String> = None;
     let mut api_max_requests = DEFAULT_SERVICE_API_MAX_REQUESTS;
     let mut api_idle_timeout_ms = DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS;
+    let mut api_body_limit_bytes = DEFAULT_SERVICE_API_BODY_LIMIT_BYTES;
+    let mut api_concurrency_limit = DEFAULT_SERVICE_API_CONCURRENCY_LIMIT;
+    let mut api_rate_limit_per_second = DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND;
     let mut observability_endpoint_bind_addr: Option<String> = None;
     let mut observability_endpoint_metrics_path =
         DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH.to_owned();
@@ -368,6 +395,9 @@ where
     let mut observability_endpoint_idle_timeout_ms_overridden = false;
     let mut api_max_requests_overridden = false;
     let mut api_idle_timeout_ms_overridden = false;
+    let mut api_body_limit_bytes_overridden = false;
+    let mut api_concurrency_limit_overridden = false;
+    let mut api_rate_limit_per_second_overridden = false;
     let mut role_overridden = false;
     let mut chain_id_overridden = false;
     let mut chain_version_overridden = false;
@@ -545,6 +575,27 @@ where
                     .ok_or(ConfigError::MissingArgumentValue("--api-idle-timeout-ms"))?;
                 api_idle_timeout_ms = parse_daemon_control_arg(&value)?;
                 api_idle_timeout_ms_overridden = true;
+            }
+            "--api-body-limit-bytes" => {
+                let value = iter
+                    .next()
+                    .ok_or(ConfigError::MissingArgumentValue("--api-body-limit-bytes"))?;
+                api_body_limit_bytes = parse_daemon_control_arg(&value)?;
+                api_body_limit_bytes_overridden = true;
+            }
+            "--api-concurrency-limit" => {
+                let value = iter
+                    .next()
+                    .ok_or(ConfigError::MissingArgumentValue("--api-concurrency-limit"))?;
+                api_concurrency_limit = parse_daemon_control_arg(&value)?;
+                api_concurrency_limit_overridden = true;
+            }
+            "--api-rate-limit-per-second" => {
+                let value = iter.next().ok_or(ConfigError::MissingArgumentValue(
+                    "--api-rate-limit-per-second",
+                ))?;
+                api_rate_limit_per_second = parse_daemon_control_arg(&value)?;
+                api_rate_limit_per_second_overridden = true;
             }
             "--observability-endpoint-bind" => {
                 observability_endpoint_bind_addr = Some(iter.next().ok_or(
@@ -741,7 +792,13 @@ where
             normalize_kolme_live_signer_profile_selector(signer_profile)?;
         }
     }
-    if api_bind_addr.is_none() && (api_max_requests_overridden || api_idle_timeout_ms_overridden) {
+    if api_bind_addr.is_none()
+        && (api_max_requests_overridden
+            || api_idle_timeout_ms_overridden
+            || api_body_limit_bytes_overridden
+            || api_concurrency_limit_overridden
+            || api_rate_limit_per_second_overridden)
+    {
         return Err(ConfigError::MissingArgumentValue("--api-bind"));
     }
     if observability_endpoint_bind_addr.is_none()
@@ -797,6 +854,9 @@ where
         api_bind_addr,
         api_max_requests,
         api_idle_timeout_ms,
+        api_body_limit_bytes,
+        api_concurrency_limit,
+        api_rate_limit_per_second,
         observability_endpoint_bind_addr,
         observability_endpoint_metrics_path,
         observability_endpoint_health_path,
