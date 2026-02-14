@@ -601,8 +601,24 @@ fn functional_kolme_live_retry_emits_structured_retry_markers() {
         Some("unavailable")
     );
     assert_eq!(
+        extract_json_string_field(submit_retry_line, "backoff_ms").as_deref(),
+        Some("10")
+    );
+    assert_eq!(
+        extract_json_string_field(submit_retry_line, "max_attempts").as_deref(),
+        Some("3")
+    );
+    assert_eq!(
         extract_json_string_field(finality_retry_line, "reason").as_deref(),
         Some("unavailable")
+    );
+    assert_eq!(
+        extract_json_string_field(finality_retry_line, "backoff_ms").as_deref(),
+        Some("10")
+    );
+    assert_eq!(
+        extract_json_string_field(finality_retry_line, "max_attempts").as_deref(),
+        Some("3")
     );
 }
 
@@ -1578,6 +1594,10 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
     assert!(rendered.contains("submit_retry_reason=none"));
     assert!(rendered.contains("finality_retry_attempts=1"));
     assert!(rendered.contains("finality_retry_reason=none"));
+    assert!(rendered.contains("submit_retry_max_attempts=3"));
+    assert!(rendered.contains("finality_retry_max_attempts=3"));
+    assert!(rendered.contains("retry_backoff_base_ms=10"));
+    assert!(rendered.contains("retry_backoff_cap_ms=40"));
 
     let recorded_requests = requests.lock().expect("request mutex should lock");
     assert_eq!(
@@ -1723,6 +1743,10 @@ fn functional_runtime_kolme_live_retries_transient_submit_and_finality_unavailab
     assert!(rendered.contains("submit_retry_reason=unavailable"));
     assert!(rendered.contains("finality_retry_attempts=2"));
     assert!(rendered.contains("finality_retry_reason=unavailable"));
+    assert!(rendered.contains("submit_retry_max_attempts=3"));
+    assert!(rendered.contains("finality_retry_max_attempts=3"));
+    assert!(rendered.contains("retry_backoff_base_ms=10"));
+    assert!(rendered.contains("retry_backoff_cap_ms=40"));
     assert!(rendered.contains("resolution=finality-polled"));
 
     let recorded_requests = requests.lock().expect("request mutex should lock");

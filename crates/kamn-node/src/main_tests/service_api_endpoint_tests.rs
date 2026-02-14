@@ -289,6 +289,94 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
 }
 
 #[test]
+fn functional_service_api_endpoint_emits_structured_ingress_correlation_markers() {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34058".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+    };
+    let sender_did = "kamn:did:agent:test-client-correlation";
+    let sender_nonce = 41_u64;
+    let message_body = "{\"message\":\"structured-correlation\"}";
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature =
+        baseline_signature_for_fields(sender_did, sender_nonce, state_hash.as_str(), message_body);
+    let client_bind_addr = bind_addr.clone();
+    let client = thread::spawn(move || {
+        thread::sleep(Duration::from_millis(50));
+        send_http_request_with_headers(
+            client_bind_addr.as_str(),
+            "POST",
+            "/v1/messages/send",
+            message_body,
+            &[
+                ("X-KAMN-Sender-DID", sender_did),
+                ("X-KAMN-Request-Nonce", "41"),
+                ("X-KAMN-Request-Signature", signature.as_str()),
+            ],
+        )
+    });
+
+    let (serve_result, captured_logs) =
+        capture_test_logs(|| serve_service_api_endpoint(&endpoint_config, &snapshot));
+    let response = client.join().expect("client request should complete");
+    assert!(
+        serve_result.is_ok(),
+        "service api endpoint should serve one request"
+    );
+    assert!(response.contains("HTTP/1.1 202 Accepted"));
+
+    let ingress_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"service.api.request.received\""))
+        .expect("service api ingress should emit received marker");
+    let outcome_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"service.api.request.outcome\""))
+        .expect("service api ingress should emit outcome marker");
+    let ingress_correlation = extract_json_string_field(ingress_line, "correlation_id")
+        .expect("ingress marker should include correlation id");
+    let outcome_correlation = extract_json_string_field(outcome_line, "correlation_id")
+        .expect("outcome marker should include correlation id");
+    assert_eq!(ingress_correlation, outcome_correlation);
+    assert_eq!(
+        extract_json_string_field(ingress_line, "method").as_deref(),
+        Some("POST")
+    );
+    assert_eq!(
+        extract_json_string_field(ingress_line, "path").as_deref(),
+        Some("/v1/messages/send")
+    );
+    assert_eq!(
+        extract_json_string_field(outcome_line, "status_code").as_deref(),
+        Some("202")
+    );
+}
+
+#[test]
 fn unit_service_api_endpoint_metrics_use_runtime_observability_when_present() {
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),

@@ -94,11 +94,6 @@ fn deterministic_retry_backoff_millis(retry_attempt: u32) -> u64 {
     (KOLME_LIVE_RETRY_BASE_BACKOFF_MILLIS * multiplier).min(KOLME_LIVE_RETRY_MAX_BACKOFF_MILLIS)
 }
 
-fn maybe_sleep_retry_backoff(retry_attempt: u32) {
-    let backoff = deterministic_retry_backoff_millis(retry_attempt);
-    thread::sleep(Duration::from_millis(backoff));
-}
-
 pub(crate) fn execute_kolme_live_runtime(
     plan: &BootstrapPlan,
     base_url: String,
@@ -153,6 +148,8 @@ pub(crate) fn execute_kolme_live_runtime(
                         submit_retry_reason = reason_code;
                         let attempt_label = submit_attempts.to_string();
                         let max_attempts_label = KOLME_LIVE_SUBMIT_RETRY_MAX_ATTEMPTS.to_string();
+                        let backoff_ms = deterministic_retry_backoff_millis(submit_attempts);
+                        let backoff_ms_label = backoff_ms.to_string();
                         log_warn(
                             "kolme.live.submit.retry",
                             &[
@@ -160,9 +157,10 @@ pub(crate) fn execute_kolme_live_runtime(
                                 ("attempt", attempt_label.as_str()),
                                 ("max_attempts", max_attempts_label.as_str()),
                                 ("reason", reason_code),
+                                ("backoff_ms", backoff_ms_label.as_str()),
                             ],
                         )?;
-                        maybe_sleep_retry_backoff(submit_attempts);
+                        thread::sleep(Duration::from_millis(backoff_ms));
                         continue;
                     }
                     return Err(ConfigError::RuntimeKolmeLive(format!(
@@ -223,6 +221,9 @@ pub(crate) fn execute_kolme_live_runtime(
                             let attempt_label = finality_retry_attempts.to_string();
                             let max_attempts_label =
                                 KOLME_LIVE_FINALITY_RETRY_MAX_ATTEMPTS.to_string();
+                            let backoff_ms =
+                                deterministic_retry_backoff_millis(finality_retry_attempts);
+                            let backoff_ms_label = backoff_ms.to_string();
                             log_warn(
                                 "kolme.live.finality.retry",
                                 &[
@@ -231,9 +232,10 @@ pub(crate) fn execute_kolme_live_runtime(
                                     ("attempt", attempt_label.as_str()),
                                     ("max_attempts", max_attempts_label.as_str()),
                                     ("reason", reason_code),
+                                    ("backoff_ms", backoff_ms_label.as_str()),
                                 ],
                             )?;
-                            maybe_sleep_retry_backoff(finality_retry_attempts);
+                            thread::sleep(Duration::from_millis(backoff_ms));
                             continue;
                         }
                         resolution = if reason_code == "timeout" {
@@ -275,8 +277,12 @@ pub(crate) fn execute_kolme_live_runtime(
     }
 
     let finality = kolme_live_finality_label(receipt.finality);
+    let submit_retry_max_attempts = KOLME_LIVE_SUBMIT_RETRY_MAX_ATTEMPTS;
+    let finality_retry_max_attempts = KOLME_LIVE_FINALITY_RETRY_MAX_ATTEMPTS;
+    let retry_backoff_base_ms = KOLME_LIVE_RETRY_BASE_BACKOFF_MILLIS;
+    let retry_backoff_cap_ms = KOLME_LIVE_RETRY_MAX_BACKOFF_MILLIS;
     let execution_status = format!(
-        "{submit_status};commit_id={};finality={finality};resolution={resolution};submit_attempts={submit_attempts};submit_retry_reason={submit_retry_reason};finality_retry_attempts={finality_retry_attempts};finality_retry_reason={finality_retry_reason}",
+        "{submit_status};commit_id={};finality={finality};resolution={resolution};submit_attempts={submit_attempts};submit_retry_reason={submit_retry_reason};submit_retry_max_attempts={submit_retry_max_attempts};finality_retry_attempts={finality_retry_attempts};finality_retry_reason={finality_retry_reason};finality_retry_max_attempts={finality_retry_max_attempts};retry_backoff_base_ms={retry_backoff_base_ms};retry_backoff_cap_ms={retry_backoff_cap_ms}",
         receipt.commit_id
     );
     let observability = build_kolme_live_observability_telemetry(execution_status.as_str())

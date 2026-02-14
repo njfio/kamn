@@ -324,6 +324,10 @@ This document captures node-runtime productionization slices for machine-readabl
   - default mode executes one deterministic runtime-commit request
   - continuous mode executes one runtime-commit/finality sequence per `--daemon-max-ticks` cycle
   - pending submit receipts poll finality via `/runtime-commit/status` with max-attempt budget `2`
+  - submit retries are bounded to max-attempt budget `3`
+  - finality retries are bounded to max-attempt budget `3`
+  - retry backoff is deterministic exponential (`10ms`, `20ms`, capped at `40ms`)
+  - structured retry markers include `attempt`, `max_attempts`, `reason`, `backoff_ms`, and `correlation_id`
   - malformed finality responses fail closed
   - finality transport timeout/unavailable keeps execution in pending status without falling back to in-memory adapters
   - managed-external signer mode enforces secure-provider handshake routing before payload signing and maps provider failures to deterministic reason codes such as:
@@ -337,7 +341,7 @@ This document captures node-runtime productionization slices for machine-readabl
     - `kolme_live_signer_profile=ops-primary|ops-secondary`
     - `kolme_live_signer_key_source=env-local|managed-external`
     - `kolme_live_signer_private_key_env=KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX|KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY`
-  - `kolme_live_execution_status=submitted;commit_id=<deterministic-commit-id>;finality=<pending|final|failed>;resolution=<submit-receipt|finality-polled|finality-timeout|finality-unavailable>`
+  - `kolme_live_execution_status=submitted;commit_id=<deterministic-commit-id>;finality=<pending|final|failed>;resolution=<submit-receipt|finality-polled|finality-timeout|finality-unavailable>;submit_attempts=<u32>;submit_retry_reason=<none|timeout|unavailable>;submit_retry_max_attempts=3;finality_retry_attempts=<u32>;finality_retry_reason=<none|timeout|unavailable>;finality_retry_max_attempts=3;retry_backoff_base_ms=10;retry_backoff_cap_ms=40`
   - `kolme_live_observability_latency_p50_ms=<u64>`
   - `kolme_live_observability_latency_p99_ms=<u64>`
   - `kolme_live_observability_throughput_tps=<u64>`
@@ -345,6 +349,20 @@ This document captures node-runtime productionization slices for machine-readabl
   - `kolme_live_observability_availability_bps=<u64>`
   - `kolme_live_observability_health=<healthy|degraded|critical>`
   - `kolme_live_observability_alert_count=<usize>`
+
+## Service API Ingress Logging Contracts
+- Service API ingress emits structured request markers for deterministic correlation and auditability:
+  - `service.api.request.received`
+  - `service.api.request.outcome`
+- Correlation marker is deterministic per request envelope:
+  - authenticated requests: `service-api:<method-lower>:<path>:<sender-did>:<nonce>`
+  - unauthenticated/parse-error paths: deterministic fallback tag
+- Required marker fields:
+  - `correlation_id`
+  - `method`
+  - `path`
+  - `status_code` (for outcome marker)
+  - `outcome` (for outcome marker)
 
 ## Decomposition Guardrails
 - `main.rs` orchestrates only and must not absorb parser/signer/wire/live-runtime implementation details.
