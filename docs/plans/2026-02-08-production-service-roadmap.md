@@ -57,6 +57,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/validate_failure_drills_live.sh` and `scripts/runtime/test_validate_failure_drills_live.sh` (Task #2983, Subtask #2984).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `baseline_contract_status=verified`, `fault_injection_status=verified`, `fail_closed_status=verified`.
   - Fail-closed validation confirmed for signer fault injection: `signer_fault_injection_triggered`.
+- Go/no-go gate implementation delivered:
+  - Runtime lane: `scripts/runtime/run_go_no_go_gate_lane.sh` and `scripts/runtime/test_run_go_no_go_gate_lane.sh` (Task #2986, Subtask #2987).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `go_no_go_evidence_status=verified`, `rollback_readiness_status=verified`, `dr_readiness_status=verified`.
+  - Injected decision-fault profile validated as fail-closed: `gate_decision_fault_injection_triggered`.
 
 ---
 
@@ -279,6 +283,14 @@ Estimated scope: ~300–600 lines across lane scripts, manifest wiring, and vali
 - Keep runtime cost bounded by composing existing fast local lanes and budget guards.
 
 Estimated scope: ~300–700 lines across runtime lane composition, regression harnesses, and operator docs.
+
+### 6.6 — Go/No-Go Gate
+
+- Enforce a deterministic release gate with evidence bundle checks and rollback readiness contracts.
+- Require explicit NO-GO fail-closed behavior when decision evidence drifts from policy.
+- Keep operational cost low by composing existing deploy contract lanes and bounded budgets.
+
+Estimated scope: ~250–600 lines across runtime lane composition, regression harnesses, and operator docs.
 
 ---
 

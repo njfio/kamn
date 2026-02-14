@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "runtime.go_no_go_gate.run",
+  "evidence_key": "go_no_go_gate_lane:v1",
+  "reason_key": "runtime_go_no_go_gate_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/runtime/run_go_no_go_gate_lane_impl.sh"
+    ]
+  }
+}
