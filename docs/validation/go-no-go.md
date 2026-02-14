@@ -69,4 +69,27 @@ Includes:
 
 ## Live Validation (Task #2988 / Subtask #2989)
 
-Dedicated live-validation drill scripts and evidence markers are tracked in Task #2988 and Subtask #2989.
+Live validation artifacts:
+
+- `scripts/runtime/validate_go_no_go_gate_live.sh`
+- `scripts/runtime/test_validate_go_no_go_gate_live.sh`
+
+Run validation harness:
+
+```bash
+bash scripts/runtime/test_validate_go_no_go_gate_live.sh
+```
+
+Deterministic success markers:
+
+- `status=pass`
+- `final_decision=GO`
+- `baseline_contract_status=verified`
+- `fault_injection_status=verified`
+- `fail_closed_status=verified`
+
+Injected fail-closed drill:
+
+- decision fault profile:
+  - `bash scripts/runtime/run_go_no_go_gate_lane.sh --fault-profile gate_decision --max-seconds 120`
+  - deterministic reason marker: `gate_decision_fault_injection_triggered`

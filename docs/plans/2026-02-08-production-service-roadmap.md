@@ -61,6 +61,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/run_go_no_go_gate_lane.sh` and `scripts/runtime/test_run_go_no_go_gate_lane.sh` (Task #2986, Subtask #2987).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `go_no_go_evidence_status=verified`, `rollback_readiness_status=verified`, `dr_readiness_status=verified`.
   - Injected decision-fault profile validated as fail-closed: `gate_decision_fault_injection_triggered`.
+- Go/no-go gate live validation delivered:
+  - Runtime lane: `scripts/runtime/validate_go_no_go_gate_live.sh` and `scripts/runtime/test_validate_go_no_go_gate_live.sh` (Task #2988, Subtask #2989).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `baseline_contract_status=verified`, `fault_injection_status=verified`, `fail_closed_status=verified`.
+  - Fail-closed validation confirmed for decision fault injection: `gate_decision_fault_injection_triggered`.
 
 ---
 
