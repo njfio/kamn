@@ -93,3 +93,46 @@ fn runtime_module_extraction_contract_keeps_state_divergence_impls_in_new_module
         "runtime_state_divergence module should own StateDivergenceEvaluator"
     );
 }
+
+#[test]
+fn runtime_module_extraction_contract_declares_runtime_phase_coordination_module() {
+    let runtime_rs = read_repo_file("runtime.rs");
+    assert!(
+        runtime_rs.contains("mod runtime_phase_coordination;"),
+        "runtime.rs should declare extracted runtime_phase_coordination module"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_moves_phase_coordination_types_out_of_runtime_rs() {
+    let runtime_rs = read_repo_file("runtime.rs");
+    assert!(
+        !runtime_rs.contains("pub struct ConstructLockGuard {"),
+        "runtime.rs should not keep inline ConstructLockGuard definition"
+    );
+    assert!(
+        !runtime_rs.contains("pub struct ListenerQuorumEvaluator {"),
+        "runtime.rs should not keep inline ListenerQuorumEvaluator definition"
+    );
+    assert!(
+        !runtime_rs.contains("pub struct ApproverQuorumEvaluator {"),
+        "runtime.rs should not keep inline ApproverQuorumEvaluator definition"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_keeps_phase_coordination_impls_in_new_module() {
+    let runtime_phase_coordination_rs = read_repo_file("runtime_phase_coordination.rs");
+    assert!(
+        runtime_phase_coordination_rs.contains("pub struct ConstructLockGuard {"),
+        "runtime_phase_coordination module should own ConstructLockGuard"
+    );
+    assert!(
+        runtime_phase_coordination_rs.contains("pub struct ListenerQuorumEvaluator {"),
+        "runtime_phase_coordination module should own ListenerQuorumEvaluator"
+    );
+    assert!(
+        runtime_phase_coordination_rs.contains("pub struct ApproverQuorumEvaluator {"),
+        "runtime_phase_coordination module should own ApproverQuorumEvaluator"
+    );
+}
