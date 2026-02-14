@@ -1,0 +1,33 @@
+{
+  "schema_version": "kamn.ci.legacy-ingress-parser-baseline.v1",
+  "exclude_path_fragments": [
+    "main_tests/",
+    "main_tests.rs"
+  ],
+  "markers": [
+    {
+      "id": "sync_http_request_reader",
+      "pattern": "fn read_http_request(",
+      "max_occurrences": 1,
+      "allowed_files": [
+        "service_api_endpoint.rs"
+      ]
+    },
+    {
+      "id": "sync_http_request_line_parser",
+      "pattern": "fn parse_http_request_line(",
+      "max_occurrences": 1,
+      "allowed_files": [
+        "service_api_endpoint.rs"
+      ]
+    },
+    {
+      "id": "sync_service_endpoint_server",
+      "pattern": "pub(crate) fn serve_service_api_endpoint(",
+      "max_occurrences": 1,
+      "allowed_files": [
+        "service_api_endpoint.rs"
+      ]
+    }
+  ]
+}
