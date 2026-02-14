@@ -24,6 +24,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/validate_structured_logging_live.sh` and `scripts/runtime/test_validate_structured_logging_live.sh` (Task #3035, Subtask #3036).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `structured_logging_contract_status=verified`, `correlation_contract_status=verified`, `docs_contract_status=verified`, `fail_closed_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for invalid log config drill: `fail_closed_reason_code=invalid_log_config_level`.
+- Post-roadmap hardening wave 1 nonce-retry live validation delivered:
+  - Runtime lane: `scripts/runtime/validate_nonce_retry_live.sh` and `scripts/runtime/test_validate_nonce_retry_live.sh` (Task #3042, Subtask #3043).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `nonce_retry_contract_status=verified`, `nonce_malformed_fail_closed_status=verified`, `docs_contract_status=verified`, `performance_budget_status=verified`.
+  - Fail-closed validation confirmed for malformed nonce response guard behavior: `fail_closed_reason_code=nonce_response_malformed`.
 - Phase 2.1 initial slice delivered: deterministic `runtime-mode api` ingress server with required messaging/channel/task/profile/health/metrics route contracts (Task #2906).
 - Phase 2.1 live validation delivered:
   - Runtime lane: `scripts/runtime/validate_service_api_live.sh` and `scripts/runtime/test_validate_service_api_live.sh` (Task #2908, Subtask #2909).

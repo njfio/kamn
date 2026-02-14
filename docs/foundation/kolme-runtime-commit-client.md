@@ -206,6 +206,24 @@ handling.
   - `scripts/kolme/contracts/runtime_commit_contract_lane.py` runs the parity checker before runtime commit cargo tests.
   - `scripts/kolme/test_check_runtime_commit_decomposition_parity_matrix.sh` enforces fail-closed schema/parity drift checks.
 
+## Nonce Retry Resilience Contract (Task #3042)
+
+- `kamn-node` nonce resolution contract now retries only transient transport errors in deterministic bounded steps:
+  - retry categories: `Timeout`, `Unavailable`
+  - fail-fast category: `MalformedResponse`
+  - bounded retry attempts: `3`
+  - deterministic backoff sequence: `10ms`, `20ms`, `40ms`
+- Retry telemetry marker contract:
+  - event: `kolme.live.nonce.retry`
+  - required fields: `attempt`, `max_attempts`, `reason`, `pubkey`
+- Malformed nonce response contract remains fail-closed:
+  - deterministic marker: `nonce_malformed_fail_closed_status=verified`
+  - deterministic reason marker: `fail_closed_reason_code=nonce_response_malformed`
+- Local live validation lane:
+  - `scripts/runtime/validate_nonce_retry_live.sh`
+  - `scripts/runtime/test_validate_nonce_retry_live.sh`
+  - deterministic lane marker: `nonce_retry_contract_status=verified`
+
 ## Validation Commands
 
 Run targeted checks first:
