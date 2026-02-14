@@ -26,6 +26,19 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Invariant-related changes (`invariants.rs`, `transaction.rs`, smoke/invariant harness tests, or harness scripts): run deterministic invariant harness in `fast` mode (single seed) after Rust tests.
 - Runtime evaluator tests use direct unit-struct construction to avoid strict-clippy baseline noise (`Regression: #490`).
 
+## Heavy Integration CI Scope Contracts
+- Heavy local integration run-mode lanes must remain excluded from fast-gate command surfaces.
+- Selector/workflow regression commands:
+  - `bash scripts/ci/test_full_io_scenario_matrix_ci_exclusion_policy.sh`
+  - `bash scripts/ci/test_local_full_stack_integration_ci_exclusion_policy.sh`
+- Fail-closed CI scope rules:
+  - `validate_full_io_scenario_matrix_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
+  - `validate_local_full_stack_integration_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
+  - regression command surfaces must retain dry-run policy and contract-lane tests for both lanes in `scripts/ci/test_ci_tools.sh`.
+- Deterministic drift markers:
+  - `full_io_scenario_matrix_policy_multinode_propagation_mismatch`
+  - `local_full_stack_integration_policy_evidence_bundle_status_mismatch`
+
 ## Test Layering Policy Contract
 - Test-layering policy is fail-closed and tracked in `docs/planning/test_layering_policy.md`.
 - Deterministic policy checker command:
