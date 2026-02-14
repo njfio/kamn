@@ -10,17 +10,26 @@ services:
       - --role
       - processor
       - --runtime-mode
-      - daemon
+      - full
       - --daemon-max-ticks
-      - "10"
+      - "1000000"
       - --daemon-tick-interval-ms
-      - "25"
+      - "250"
+      - --api-bind
+      - 0.0.0.0:19081
       - --output
       - json
       - --storage-dir
       - /data/processor
+    environment:
+      - KAMN_NODE_CHAIN_ID=kamn-devnet
+      - KAMN_NODE_CHAIN_VERSION=v0.1.0
     volumes:
-      - ../data/processor:/data/processor
+      - processor_data:/data/processor
+    ports:
+      - "19081:19081"
+    networks:
+      - kamn_mesh
     restart: unless-stopped
 
   listener:
@@ -29,19 +38,28 @@ services:
       - --role
       - listener
       - --runtime-mode
-      - daemon
+      - full
       - --daemon-max-ticks
-      - "10"
+      - "1000000"
       - --daemon-tick-interval-ms
-      - "25"
+      - "250"
+      - --api-bind
+      - 0.0.0.0:19082
       - --output
       - json
       - --storage-dir
       - /data/listener
+    environment:
+      - KAMN_NODE_CHAIN_ID=kamn-devnet
+      - KAMN_NODE_CHAIN_VERSION=v0.1.0
     volumes:
-      - ../data/listener:/data/listener
+      - listener_data:/data/listener
+    ports:
+      - "19082:19082"
     depends_on:
       - processor
+    networks:
+      - kamn_mesh
     restart: unless-stopped
 
   approver:
@@ -50,17 +68,35 @@ services:
       - --role
       - approver
       - --runtime-mode
-      - daemon
+      - full
       - --daemon-max-ticks
-      - "10"
+      - "1000000"
       - --daemon-tick-interval-ms
-      - "25"
+      - "250"
+      - --api-bind
+      - 0.0.0.0:19083
       - --output
       - json
       - --storage-dir
       - /data/approver
+    environment:
+      - KAMN_NODE_CHAIN_ID=kamn-devnet
+      - KAMN_NODE_CHAIN_VERSION=v0.1.0
     volumes:
-      - ../data/approver:/data/approver
+      - approver_data:/data/approver
+    ports:
+      - "19083:19083"
     depends_on:
       - processor
+    networks:
+      - kamn_mesh
     restart: unless-stopped
+
+volumes:
+  processor_data:
+  listener_data:
+  approver_data:
+
+networks:
+  kamn_mesh:
+    driver: bridge

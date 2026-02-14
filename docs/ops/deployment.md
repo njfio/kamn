@@ -18,7 +18,7 @@ Build local image:
 docker build -t kamn-node:local -f Dockerfile .
 ```
 
-The image starts `kamn-node` in deterministic daemon mode by default and can be overridden per role at runtime.
+The image starts `kamn-node` in deterministic daemon mode by default and is overridden by compose to run each role in `runtime-mode full`.
 
 Build-context hardening:
 
@@ -31,6 +31,16 @@ Compose file: `deploy/docker-compose.yml`
 - `processor`
 - `listener`
 - `approver`
+- each service runs `runtime-mode full` with bounded long-lived daemon tick budgets.
+- API ports are exposed for local process probing:
+  - processor: `19081:19081`
+  - listener: `19082:19082`
+  - approver: `19083:19083`
+- named volumes preserve per-role state:
+  - `processor_data`
+  - `listener_data`
+  - `approver_data`
+- named bridge network: `kamn_mesh`
 - each service includes `restart: unless-stopped` for resilient local process restarts.
 
 Run all roles locally:
@@ -44,6 +54,8 @@ Stop and cleanup:
 ```bash
 docker compose -f deploy/docker-compose.yml down
 ```
+
+See detailed docker topology contract notes in `docs/deployment/docker.md`.
 
 ## Kubernetes Manifest
 
