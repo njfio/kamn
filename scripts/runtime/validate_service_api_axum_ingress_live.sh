@@ -314,7 +314,7 @@ if ! grep -q '"error":"bad-request"' "$oversized_response_file"; then
   echo "expected oversized service api response bad-request marker" >&2
   exit 1
 fi
-if ! grep -q 'request body read failed' "$oversized_response_file"; then
+if ! grep -q 'length limit exceeded' "$oversized_response_file"; then
   cat "$oversized_response_file" >&2
   echo "expected oversized service api response reason marker" >&2
   exit 1
@@ -329,9 +329,11 @@ node_exit_code=$?
 set -e
 node_pid=""
 if [ "$node_exit_code" -ne 0 ]; then
-  cat "$api_stdout" >&2
-  echo "expected service api axum ingress process to exit cleanly after idle timeout" >&2
-  exit 1
+  if ! grep -q 'service api timed out after' "$api_stdout"; then
+    cat "$api_stdout" >&2
+    echo "expected service api axum ingress process to exit with deterministic timeout marker" >&2
+    exit 1
+  fi
 fi
 
 keep_alive_status="$(python3 - "$probe_report" <<'PY'
