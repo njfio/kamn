@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "dashboard.stale_error_budget.run",
+  "evidence_key": "dashboard_stale_error_budget_lane:v1",
+  "reason_key": "dashboard_stale_error_budget_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/dashboard/run_dashboard_stale_error_budget_lane_impl.sh"
+    ]
+  }
+}

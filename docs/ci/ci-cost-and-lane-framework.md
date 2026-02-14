@@ -34,10 +34,19 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
   - wrapper: `scripts/signer/run_signer_incident_recovery_deep_lane.sh`
   - implementation: `scripts/signer/run_signer_incident_recovery_deep_lane_impl.sh`
   - manifest: `scripts/framework/manifests/signer_signer_incident_recovery_deep_lane.json`
+- `#2858` migrates dashboard run-lane wrappers to shared non-Kolme dispatcher + manifest wiring:
+  - wrapper: `scripts/dashboard/run_backend_session_auth_freshness_lane.sh`
+  - implementation: `scripts/dashboard/run_backend_session_auth_freshness_lane_impl.sh`
+  - manifest: `scripts/framework/manifests/dashboard_backend_session_auth_freshness_lane.json`
+  - wrapper: `scripts/dashboard/run_dashboard_stale_error_budget_lane.sh`
+  - implementation: `scripts/dashboard/run_dashboard_stale_error_budget_lane_impl.sh`
+  - manifest: `scripts/framework/manifests/dashboard_stale_error_budget_lane.json`
 - Contract coverage for this migration slice:
   - `scripts/signer/test_run_signer_provider_deep_lane.sh`
   - `scripts/signer/test_run_signer_incident_recovery_deep_lane.sh`
   - `scripts/signer/test_run_signer_emulator_contract_lane.sh`
+  - `scripts/dashboard/test_run_backend_session_auth_freshness_lane.sh`
+  - `scripts/dashboard/test_run_dashboard_stale_error_budget_lane.sh`
 
 ## Fast-Gate Delta Policy
 `scripts/ci/generate_fast_gate_budget_delta_report.sh` compares current fast-gate telemetry against a versioned baseline and emits:

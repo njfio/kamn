@@ -3,11 +3,39 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT="$ROOT_DIR/scripts/dashboard/run_backend_session_auth_freshness_lane.sh"
+SCRIPT_IMPL="$ROOT_DIR/scripts/dashboard/run_backend_session_auth_freshness_lane_impl.sh"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/dashboard_backend_session_auth_freshness_lane.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [ ! -x "$SCRIPT" ]; then
   echo "expected dashboard backend session/auth freshness lane script to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$SCRIPT_IMPL" ]; then
+  echo "expected dashboard backend session/auth freshness lane implementation to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected shared non-Kolme dispatcher to be executable" >&2
+  exit 1
+fi
+if [ ! -L "$SCRIPT" ]; then
+  echo "expected dashboard backend session/auth freshness lane wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+if [ "$(readlink "$SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected dashboard backend session/auth freshness lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected dashboard backend session/auth freshness lane wrapper to resolve dashboard manifest via dispatcher" >&2
+  exit 1
+fi
+if ! grep -Fq "run_backend_session_auth_freshness_lane_impl.sh" "$MANIFEST_FILE"; then
+  echo "expected dashboard backend session/auth freshness lane manifest to dispatch implementation module" >&2
   exit 1
 fi
 
