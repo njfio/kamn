@@ -120,6 +120,29 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
     - `scripts/kolme/test_run_continuous_runtime_commit_contract_lane.sh`
     - `scripts/kolme/test_run_did_lifecycle_chain_adapter_contract_lane.sh`
     - `scripts/kolme/test_run_message_proof_anchoring_contract_lane.sh`
+- Post-roadmap hardening wave 4 wrapper governance tranche B delivered (Story #3119):
+  - Added generic Kolme wave wrapper-family contract harnesses to consolidate baseline/trend policy checks:
+    - `scripts/ci/test_kolme_wave_wrapper_family_baseline_contract_impl.sh`
+    - `scripts/ci/test_check_kolme_wave_wrapper_family_budget_trend_impl.sh`
+  - Migrated wave-specific Kolme wrapper-family tests to thin wrappers over generic impl:
+    - `scripts/ci/test_kolme_wave8_wrapper_family_baseline_contract.sh`
+    - `scripts/ci/test_check_kolme_wave8_wrapper_family_budget_trend.sh`
+    - `scripts/ci/test_kolme_wave10_wrapper_family_baseline_contract.sh`
+    - `scripts/ci/test_check_kolme_wave10_wrapper_family_budget_trend.sh`
+    - `scripts/ci/test_kolme_wave11_wrapper_family_baseline_contract.sh`
+    - `scripts/ci/test_check_kolme_wave11_wrapper_family_budget_trend.sh`
+  - Added deterministic wave-11 wrapper-family governance fixtures/checker (Task #3120, Subtask #3121):
+    - `fixtures/ci/kolme_wave11_wrapper_family_matrix.json`
+    - `fixtures/ci/kolme_wave11_wrapper_family_baseline.json`
+    - `fixtures/ci/kolme_wave11_wrapper_family_trend_thresholds.json`
+    - `scripts/ci/check_kolme_wave11_wrapper_family_budget_trend.sh`
+  - CI/docs parity and selector scope contracts expanded for Kolme wave-10/11 wrapper-family governance:
+    - `scripts/ci/test_ci_tools.sh`
+    - `scripts/ci/test_ci_tools_command_surface_contract.sh`
+    - `scripts/ci/test_ci_strategy_contract.sh`
+    - `scripts/ci/select_targets.sh`
+    - `docs/ci/strategy.md`
+    - `crates/kamn-core/tests/ci_strategy_docs.rs`
 - Phase 2.1 initial slice delivered: deterministic `runtime-mode api` ingress server with required messaging/channel/task/profile/health/metrics route contracts (Task #2906).
 - Phase 2.1 live validation delivered:
   - Runtime lane: `scripts/runtime/validate_service_api_live.sh` and `scripts/runtime/test_validate_service_api_live.sh` (Task #2908, Subtask #2909).

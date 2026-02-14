@@ -104,6 +104,18 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("test_non_kolme_wave10_wrapper_family_baseline_contract.sh"));
     assert!(DOC.contains("test_check_non_kolme_wave10_wrapper_family_budget_trend.sh"));
     assert!(DOC.contains("check_non_kolme_wave10_wrapper_family_budget_trend.sh"));
+    assert!(DOC.contains("kolme_wave10_wrapper_family_matrix.json"));
+    assert!(DOC.contains("kolme_wave10_wrapper_family_baseline.json"));
+    assert!(DOC.contains("kolme_wave10_wrapper_family_trend_thresholds.json"));
+    assert!(DOC.contains("test_kolme_wave10_wrapper_family_baseline_contract.sh"));
+    assert!(DOC.contains("test_check_kolme_wave10_wrapper_family_budget_trend.sh"));
+    assert!(DOC.contains("check_kolme_wave10_wrapper_family_budget_trend.sh"));
+    assert!(DOC.contains("kolme_wave11_wrapper_family_matrix.json"));
+    assert!(DOC.contains("kolme_wave11_wrapper_family_baseline.json"));
+    assert!(DOC.contains("kolme_wave11_wrapper_family_trend_thresholds.json"));
+    assert!(DOC.contains("test_kolme_wave11_wrapper_family_baseline_contract.sh"));
+    assert!(DOC.contains("test_check_kolme_wave11_wrapper_family_budget_trend.sh"));
+    assert!(DOC.contains("check_kolme_wave11_wrapper_family_budget_trend.sh"));
     assert!(DOC.contains("non_kolme_wave11_wrapper_family_matrix.json"));
     assert!(DOC.contains("non_kolme_wave11_wrapper_family_baseline.json"));
     assert!(DOC.contains("non_kolme_wave11_wrapper_family_trend_thresholds.json"));

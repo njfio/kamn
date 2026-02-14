@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+PYTHON_CHECKER="$ROOT_DIR/scripts/ci/kolme_wrapper_inventory_baseline.py"
+
+usage() {
+  cat >&2 <<'USAGE'
+Usage: test_check_kolme_wave_wrapper_family_budget_trend_impl.sh --wave-id <id>
+USAGE
+}
+
+WAVE_ID=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --wave-id)
+      if [ "$#" -lt 2 ]; then
+        usage
+        exit 1
+      fi
+      WAVE_ID="$2"
+      shift 2
+      ;;
+    *)
+      echo "unknown argument: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if [ -z "$WAVE_ID" ]; then
+  usage
+  exit 1
+fi
+
+if ! [[ "$WAVE_ID" =~ ^[0-9]+$ ]]; then
+  echo "wave id must be numeric: $WAVE_ID" >&2
+  exit 1
+fi
+
+WAVE_LABEL="Kolme wave-${WAVE_ID}"
+TREND_CHECKER="$ROOT_DIR/scripts/ci/check_kolme_wave${WAVE_ID}_wrapper_family_budget_trend.sh"
+THRESHOLD_FILE="$ROOT_DIR/fixtures/ci/kolme_wave${WAVE_ID}_wrapper_family_trend_thresholds.json"
+BASELINE_FIXTURE="$ROOT_DIR/fixtures/ci/kolme_wave${WAVE_ID}_wrapper_family_baseline.json"
+MATRIX_FIXTURE="$ROOT_DIR/fixtures/ci/kolme_wave${WAVE_ID}_wrapper_family_matrix.json"
+
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+if [ ! -x "$TREND_CHECKER" ]; then
+  echo "expected ${WAVE_LABEL} trend checker wrapper to be executable" >&2
+  exit 1
+fi
+
+if [ ! -x "$PYTHON_CHECKER" ]; then
+  echo "expected python baseline checker script to be executable" >&2
+  exit 1
+fi
+
+if [ ! -f "$THRESHOLD_FILE" ]; then
+  echo "expected ${WAVE_LABEL} trend threshold fixture to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$BASELINE_FIXTURE" ]; then
+  echo "expected ${WAVE_LABEL} baseline fixture to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$MATRIX_FIXTURE" ]; then
+  echo "expected ${WAVE_LABEL} matrix fixture to exist" >&2
+  exit 1
+fi
+
+PASS_REPORT="$TMP_DIR/pass-report.json"
+bash "$TREND_CHECKER" \
+  --matrix-file "$MATRIX_FIXTURE" \
+  --baseline-file "$BASELINE_FIXTURE" \
+  --output-json "$PASS_REPORT" >"$TMP_DIR/pass.out"
+
+grep -q '^status=pass$' "$TMP_DIR/pass.out"
+grep -q '^mode=trend$' "$TMP_DIR/pass.out"
+grep -q '^wrapper_count_delta=0$' "$TMP_DIR/pass.out"
+grep -q '^total_shell_loc_delta=0$' "$TMP_DIR/pass.out"
+grep -q '^violation_count=0$' "$TMP_DIR/pass.out"
+grep -q '^reason_codes=none$' "$TMP_DIR/pass.out"
+
+MUTATED_TOTAL_BASELINE="$TMP_DIR/mutated-total-baseline.json"
+cp "$BASELINE_FIXTURE" "$MUTATED_TOTAL_BASELINE"
+python3 - "$MUTATED_TOTAL_BASELINE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+baseline_path = Path(sys.argv[1])
+payload = json.loads(baseline_path.read_text(encoding="utf-8"))
+payload["total_shell_loc"] = 0
+baseline_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if bash "$TREND_CHECKER" \
+  --matrix-file "$MATRIX_FIXTURE" \
+  --baseline-file "$MUTATED_TOTAL_BASELINE" >"$TMP_DIR/fail-total.out" 2>&1; then
+  echo "expected ${WAVE_LABEL} trend checker to fail when total shell LOC delta exceeds threshold" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/fail-total.out"
+grep -q '^mode=trend$' "$TMP_DIR/fail-total.out"
+grep -q 'total_shell_loc_delta_threshold_exceeded' "$TMP_DIR/fail-total.out"
+
+MUTATED_LANE_MATRIX="$TMP_DIR/mutated-lane-matrix.json"
+cp "$MATRIX_FIXTURE" "$MUTATED_LANE_MATRIX"
+ALTERNATE_LANE_WRAPPER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_deployment_preflight_contract_lane.sh"
+if [ ! -x "$ALTERNATE_LANE_WRAPPER" ]; then
+  echo "expected alternate lane wrapper to exist for source-entry drift test: $ALTERNATE_LANE_WRAPPER" >&2
+  exit 1
+fi
+
+python3 - "$MUTATED_LANE_MATRIX" "$ALTERNATE_LANE_WRAPPER" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+matrix_path = Path(sys.argv[1])
+wrapper_path = str(Path(sys.argv[2]).resolve())
+payload = json.loads(matrix_path.read_text(encoding="utf-8"))
+
+if not payload.get("lanes"):
+    raise SystemExit("expected at least one lane in matrix fixture")
+
+payload["lanes"][0]["source_entry"] = wrapper_path
+matrix_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if bash "$TREND_CHECKER" \
+  --matrix-file "$MUTATED_LANE_MATRIX" \
+  --baseline-file "$BASELINE_FIXTURE" >"$TMP_DIR/fail-lane.out" 2>&1; then
+  echo "expected ${WAVE_LABEL} trend checker to fail when lane source_entry drifts from baseline" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/fail-lane.out"
+grep -q '^mode=trend$' "$TMP_DIR/fail-lane.out"
+grep -Eq 'lane_source_entry_drift|policy_validation_failed' "$TMP_DIR/fail-lane.out"
+
+MUTATED_STALE_BASELINE="$TMP_DIR/mutated-stale-baseline.json"
+cp "$BASELINE_FIXTURE" "$MUTATED_STALE_BASELINE"
+python3 - "$MUTATED_STALE_BASELINE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+baseline_path = Path(sys.argv[1])
+payload = json.loads(baseline_path.read_text(encoding="utf-8"))
+
+if not payload.get("lanes"):
+    raise SystemExit("expected at least one lane in baseline fixture")
+
+first_lane = payload["lanes"][0]
+lane_id = first_lane.get("lane_id")
+if not isinstance(lane_id, str) or not lane_id.strip():
+    raise SystemExit("expected first baseline lane to include a non-empty lane_id")
+first_lane["lane_id"] = f"{lane_id}__stale_baseline"
+baseline_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if bash "$TREND_CHECKER" \
+  --matrix-file "$MATRIX_FIXTURE" \
+  --baseline-file "$MUTATED_STALE_BASELINE" >"$TMP_DIR/fail-stale.out" 2>&1; then
+  echo "expected ${WAVE_LABEL} trend checker to fail on stale baseline lane inventory" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/fail-stale.out"
+grep -q '^mode=trend$' "$TMP_DIR/fail-stale.out"
+grep -q 'unexpected_new_lanes_in_current_inventory' "$TMP_DIR/fail-stale.out"
+
+echo "${WAVE_LABEL} wrapper-family budget trend checker tests passed."
