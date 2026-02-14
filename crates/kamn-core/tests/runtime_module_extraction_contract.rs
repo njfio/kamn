@@ -180,3 +180,46 @@ fn runtime_module_extraction_contract_keeps_transport_coordination_impls_in_new_
         "runtime_transport_coordination module should own NetworkFaultSimulationError"
     );
 }
+
+#[test]
+fn runtime_module_extraction_contract_declares_runtime_snapshot_store_module() {
+    let runtime_rs = read_repo_file("runtime.rs");
+    assert!(
+        runtime_rs.contains("mod runtime_snapshot_store;"),
+        "runtime.rs should declare extracted runtime_snapshot_store module"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_moves_runtime_snapshot_types_out_of_runtime_rs() {
+    let runtime_rs = read_repo_file("runtime.rs");
+    assert!(
+        !runtime_rs.contains("pub struct RuntimeSnapshot {"),
+        "runtime.rs should not keep inline RuntimeSnapshot definition"
+    );
+    assert!(
+        !runtime_rs.contains("pub enum SnapshotRestoreError {"),
+        "runtime.rs should not keep inline SnapshotRestoreError definition"
+    );
+    assert!(
+        !runtime_rs.contains("pub struct FileRuntimeSnapshotStore {"),
+        "runtime.rs should not keep inline FileRuntimeSnapshotStore definition"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_keeps_runtime_snapshot_types_in_new_module() {
+    let runtime_snapshot_store_rs = read_repo_file("runtime_snapshot_store.rs");
+    assert!(
+        runtime_snapshot_store_rs.contains("pub struct RuntimeSnapshot {"),
+        "runtime_snapshot_store module should own RuntimeSnapshot"
+    );
+    assert!(
+        runtime_snapshot_store_rs.contains("pub enum SnapshotRestoreError {"),
+        "runtime_snapshot_store module should own SnapshotRestoreError"
+    );
+    assert!(
+        runtime_snapshot_store_rs.contains("pub struct FileRuntimeSnapshotStore {"),
+        "runtime_snapshot_store module should own FileRuntimeSnapshotStore"
+    );
+}

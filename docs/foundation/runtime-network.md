@@ -49,7 +49,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `RecoveryRejoinGuard`
   - `RecoveryStatus`
   - `RecoveryGuardError`
-- Added runtime snapshot persistence/restore guard primitives in `crates/kamn-core/src/runtime.rs`:
+- Added runtime snapshot persistence/restore guard primitives in `crates/kamn-core/src/runtime_snapshot_store.rs`:
   - `RuntimeSnapshot` (version/hash/cursor)
   - `SnapshotRestoreGuard`
   - `SnapshotRestoreError`
