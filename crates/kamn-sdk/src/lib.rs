@@ -9,6 +9,8 @@ pub mod error;
 pub mod live;
 /// In-memory reference client used for deterministic local flows and tests.
 pub mod memory;
+/// Service HTTP and websocket client for runtime API routes.
+pub mod service;
 /// TCP relay transport adapter and deterministic wire envelope models.
 pub mod tcp;
 /// Core data structures used by agent, task, messaging, and escrow APIs.
@@ -22,6 +24,12 @@ pub use error::SdkError;
 pub use live::{LiveTransportConfig, LiveTransportKamnClient};
 /// Re-exported in-memory client.
 pub use memory::InMemoryKamnClient;
+/// Re-exported service API client primitives.
+pub use service::{
+    service_signature_for_fields, ServiceAgentProfile, ServiceApiClient, ServiceChannelReceipt,
+    ServiceHealthStatus, ServiceMessageReceipt, ServiceMessageStatus, ServiceRequestAuth,
+    ServiceRouteEvent, ServiceTaskReceipt, ServiceTaskStatus,
+};
 /// Re-exported TCP relay adapter and envelope helpers.
 pub use tcp::{
     signature_for_fields, TcpReceivedEnvelope, TcpSignedEnvelope, TcpTransportAdapter,
