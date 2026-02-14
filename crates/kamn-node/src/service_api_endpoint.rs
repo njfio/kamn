@@ -1,4 +1,7 @@
-use crate::NodeBootstrapReport;
+use crate::{
+    logging::{log_info, log_warn},
+    NodeBootstrapReport,
+};
 use kamn_core::{signature_matches_supported_profile_for_fields, AgentDid};
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{ErrorKind, Read, Write};
@@ -263,37 +266,63 @@ pub(crate) fn serve_service_api_endpoint(
             Ok((mut stream, _)) => {
                 let response = match read_http_request(&mut stream) {
                     Ok(request) => {
-                        match authorize_service_api_request(snapshot, &request, &mut replay_guard) {
+                        let correlation_id = service_api_request_correlation_id(&request);
+                        log_service_api_event_info(
+                            "service.api.request.received",
+                            &[
+                                ("correlation_id", correlation_id.as_str()),
+                                ("method", request.method.as_str()),
+                                ("path", request.path.as_str()),
+                            ],
+                        )?;
+                        let (response, outcome) = match authorize_service_api_request(
+                            snapshot,
+                            &request,
+                            &mut replay_guard,
+                        ) {
                             Ok(()) => {
                                 if request.method == "GET" && request.path == ROUTE_EVENTS_WS {
                                     match write_websocket_upgrade_event_response(
-                                        &mut stream,
-                                        snapshot,
-                                        &request.headers,
-                                    ) {
-                                        Ok(()) => {
-                                            served_requests = served_requests.saturating_add(1);
-                                            continue;
-                                        }
-                                        Err(error) => ServiceApiEndpointResponse {
-                                            status_code: 400,
-                                            content_type: "application/json",
-                                            body: format!(
-                                                "{{\"error\":\"bad-request\",\"reason\":\"{}\"}}",
-                                                escape_json_string(error.as_str())
+                                            &mut stream,
+                                            snapshot,
+                                            &request.headers,
+                                        ) {
+                                            Ok(()) => {
+                                                emit_service_api_request_outcome(
+                                                    correlation_id.as_str(),
+                                                    request.method.as_str(),
+                                                    request.path.as_str(),
+                                                    101,
+                                                    "websocket-upgrade",
+                                                )?;
+                                                served_requests = served_requests.saturating_add(1);
+                                                continue;
+                                            }
+                                            Err(error) => (
+                                                ServiceApiEndpointResponse {
+                                                    status_code: 400,
+                                                    content_type: "application/json",
+                                                    body: format!(
+                                                        "{{\"error\":\"bad-request\",\"reason\":\"{}\"}}",
+                                                        escape_json_string(error.as_str())
+                                                    ),
+                                                },
+                                                "websocket-bad-request",
                                             ),
-                                        },
-                                    }
+                                        }
                                 } else {
-                                    render_service_api_endpoint_response(
-                                        snapshot,
-                                        request.method.as_str(),
-                                        request.path.as_str(),
-                                        request.body.as_str(),
+                                    (
+                                        render_service_api_endpoint_response(
+                                            snapshot,
+                                            request.method.as_str(),
+                                            request.path.as_str(),
+                                            request.body.as_str(),
+                                        ),
+                                        "handled",
                                     )
                                 }
                             }
-                            Err(RequestAuthFailure::Unauthorized(reason)) => {
+                            Err(RequestAuthFailure::Unauthorized(reason)) => (
                                 ServiceApiEndpointResponse {
                                     status_code: 401,
                                     content_type: "application/json",
@@ -301,26 +330,51 @@ pub(crate) fn serve_service_api_endpoint(
                                         "{{\"error\":\"unauthorized\",\"reason\":\"{}\"}}",
                                         escape_json_string(reason.as_str())
                                     ),
-                                }
-                            }
-                            Err(RequestAuthFailure::Replay(reason)) => ServiceApiEndpointResponse {
-                                status_code: 409,
-                                content_type: "application/json",
-                                body: format!(
-                                    "{{\"error\":\"replay\",\"reason\":\"{}\"}}",
-                                    escape_json_string(reason.as_str())
-                                ),
-                            },
+                                },
+                                "unauthorized",
+                            ),
+                            Err(RequestAuthFailure::Replay(reason)) => (
+                                ServiceApiEndpointResponse {
+                                    status_code: 409,
+                                    content_type: "application/json",
+                                    body: format!(
+                                        "{{\"error\":\"replay\",\"reason\":\"{}\"}}",
+                                        escape_json_string(reason.as_str())
+                                    ),
+                                },
+                                "replay",
+                            ),
+                        };
+                        emit_service_api_request_outcome(
+                            correlation_id.as_str(),
+                            request.method.as_str(),
+                            request.path.as_str(),
+                            response.status_code,
+                            outcome,
+                        )?;
+                        response
+                    }
+                    Err(error) => {
+                        let correlation_id = format!(
+                            "service-api:parse-error:{:016x}",
+                            deterministic_body_tag(error.as_bytes())
+                        );
+                        emit_service_api_request_outcome(
+                            correlation_id.as_str(),
+                            "unknown",
+                            "unknown",
+                            400,
+                            "bad-request",
+                        )?;
+                        ServiceApiEndpointResponse {
+                            status_code: 400,
+                            content_type: "application/json",
+                            body: format!(
+                                "{{\"error\":\"bad-request\",\"reason\":\"{}\"}}",
+                                escape_json_string(error.as_str())
+                            ),
                         }
                     }
-                    Err(error) => ServiceApiEndpointResponse {
-                        status_code: 400,
-                        content_type: "application/json",
-                        body: format!(
-                            "{{\"error\":\"bad-request\",\"reason\":\"{}\"}}",
-                            escape_json_string(error.as_str())
-                        ),
-                    },
                 };
                 write_http_response(&mut stream, &response)?;
                 served_requests = served_requests.saturating_add(1);
@@ -336,6 +390,48 @@ pub(crate) fn serve_service_api_endpoint(
 
 fn route_requires_auth(method: &str, path: &str) -> bool {
     !(method == "GET" && (path == ROUTE_HEALTHZ || path == ROUTE_METRICS))
+}
+
+fn log_service_api_event_info(event: &str, fields: &[(&str, &str)]) -> Result<(), String> {
+    log_info(event, fields).map_err(|error| format!("service api log emission failed: {error}"))
+}
+
+fn log_service_api_event_warn(event: &str, fields: &[(&str, &str)]) -> Result<(), String> {
+    log_warn(event, fields).map_err(|error| format!("service api log emission failed: {error}"))
+}
+
+fn service_api_request_correlation_id(request: &ParsedRequest) -> String {
+    let method = request.method.to_ascii_lowercase();
+    if let (Some(sender_did), Some(nonce)) = (
+        header_value(&request.headers, REQUEST_AUTH_SENDER_DID_HEADER),
+        header_value(&request.headers, REQUEST_AUTH_NONCE_HEADER),
+    ) {
+        return format!("service-api:{method}:{}:{sender_did}:{nonce}", request.path);
+    }
+    let request_tag = deterministic_body_tag(request.body.as_bytes());
+    format!("service-api:{method}:{}:{request_tag:016x}", request.path)
+}
+
+fn emit_service_api_request_outcome(
+    correlation_id: &str,
+    method: &str,
+    path: &str,
+    status_code: u16,
+    outcome: &str,
+) -> Result<(), String> {
+    let status_code_label = status_code.to_string();
+    let fields = [
+        ("correlation_id", correlation_id),
+        ("method", method),
+        ("path", path),
+        ("status_code", status_code_label.as_str()),
+        ("outcome", outcome),
+    ];
+    if status_code >= 400 {
+        log_service_api_event_warn("service.api.request.outcome", &fields)
+    } else {
+        log_service_api_event_info("service.api.request.outcome", &fields)
+    }
 }
 
 fn service_api_signature_state_hash(snapshot: &ServiceApiSnapshot) -> String {
