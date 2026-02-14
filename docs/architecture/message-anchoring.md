@@ -53,4 +53,29 @@ cargo test -p kamn-core --test message_proof_anchoring
 cargo test -p kamn-core --test message_proof_anchoring_docs
 cargo clippy -p kamn-core -- -D warnings
 cargo fmt --check
+bash scripts/kolme/run_message_proof_anchoring_contract_lane.sh
+bash scripts/kolme/validate_message_proof_anchoring_live.sh
 ```
+
+## Live Validation Protocol
+
+- Contract lane:
+  - `scripts/kolme/run_message_proof_anchoring_contract_lane.sh`
+  - deterministic markers:
+    - `status=pass`
+    - `final_decision=GO`
+    - `message_anchor_contract_status=verified`
+    - `lifecycle_alignment_status=verified`
+    - `conflict_fail_closed_status=verified`
+    - `performance_budget_status=verified`
+- Live validation lane:
+  - `scripts/kolme/validate_message_proof_anchoring_live.sh`
+  - deterministic markers:
+    - `status=pass`
+    - `final_decision=GO`
+    - `message_anchor_contract_status=verified`
+    - `evidence_bundle_status=verified`
+    - `docs_contract_status=verified`
+    - `fail_closed_status=verified`
+    - `fail_closed_reason_code=message_proof_anchor_conflicting_key`
+    - `performance_budget_status=verified`
