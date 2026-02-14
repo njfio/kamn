@@ -283,6 +283,11 @@ This document captures node-runtime productionization slices for machine-readabl
   - `--kolme-live-base-url`
   - `--kolme-live-provider-hint`
   - `--kolme-live-signing-profile`
+  - `--kolme-live-signer-key-source`
+- Optional continuous mode controls for kolm-live:
+  - `--daemon-max-ticks <positive-integer>`
+  - `--daemon-tick-interval-ms <positive-integer>`
+  - both controls are fail-closed pair requirements in kolm-live mode
 - Strict signer contracts:
   - when `--kolme-live-strict-signer-contracts` is present, `--kolme-live-signer-profile` and `--kolme-live-signer-key-source` are both required
   - supported signer profiles: `ops-primary`, `ops-secondary`
@@ -315,7 +320,9 @@ This document captures node-runtime productionization slices for machine-readabl
 - Provider wiring is fail-closed:
   - runtime config must reject in-memory provider-hint markers such as `InMemoryKolmeRuntimeCommitClient`
   - signing profile must match `kolme-fork-secp256k1-v1`
-- Runtime path constructs `KolmeRuntimeCommitLiveProvider` with deterministic transport timeout, submits one deterministic runtime-commit request, and emits bounded finality follow-up checks:
+- Runtime path constructs `KolmeRuntimeCommitLiveProvider` with deterministic transport timeout and runs bounded runtime-commit/finality cycles:
+  - default mode executes one deterministic runtime-commit request
+  - continuous mode executes one runtime-commit/finality sequence per `--daemon-max-ticks` cycle
   - pending submit receipts poll finality via `/runtime-commit/status` with max-attempt budget `2`
   - malformed finality responses fail closed
   - finality transport timeout/unavailable keeps execution in pending status without falling back to in-memory adapters

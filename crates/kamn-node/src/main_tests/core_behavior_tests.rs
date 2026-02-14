@@ -1271,6 +1271,72 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
 }
 
 #[test]
+fn functional_runtime_kolme_live_continuous_mode_executes_multiple_cycles() {
+    // Regression: #2931
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+    let _env_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+        Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+    );
+    let (base_url, requests) = spawn_kolme_live_mock_server(vec![
+        MockHttpReply::ok(r#"{"next_nonce":17,"account_id":"acct-live-processor-cycle-1"}"#),
+        MockHttpReply::ok(
+            r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:cycle-1","finality":"pending"}"#,
+        ),
+        MockHttpReply::ok(
+            r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:cycle-1","finality":"final"}"#,
+        ),
+        MockHttpReply::ok(r#"{"next_nonce":18,"account_id":"acct-live-processor-cycle-2"}"#),
+        MockHttpReply::ok(
+            r#"{"status":"submitted","provider":"kolme-fork-local","commit_id":"kolme-commit:cycle-2","finality":"pending"}"#,
+        ),
+        MockHttpReply::ok(
+            r#"{"provider":"kolme-fork-local","commit_id":"kolme-commit:cycle-2","finality":"final"}"#,
+        ),
+    ]);
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        base_url,
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "1".to_owned(),
+        "--output".to_owned(),
+        "json".to_owned(),
+    ];
+    let parsed = parse_args(args).expect("kolme-live continuous args should parse");
+    let report = execute(parsed).expect("kolme-live continuous execution should succeed");
+    let rendered = render_bootstrap_report(&report, OutputMode::json());
+    assert!(rendered.contains("\"runtime_mode\":\"kolme-live\""));
+    assert!(rendered.contains("continuous_mode=enabled"));
+    assert!(rendered.contains("continuous_cycle_count=2"));
+    assert!(rendered.contains("continuous_completed_cycles=2"));
+    assert!(rendered.contains("continuous_cycle_interval_ms=1"));
+
+    let recorded_requests = requests.lock().expect("request mutex should lock");
+    assert_eq!(
+        recorded_requests.len(),
+        6,
+        "continuous mode should execute nonce/submit/finality sequence for each cycle"
+    );
+}
+
+#[test]
 fn functional_runtime_kolme_live_retries_transient_submit_and_finality_unavailable_errors() {
     let _lock = signer_env_lock()
         .lock()
