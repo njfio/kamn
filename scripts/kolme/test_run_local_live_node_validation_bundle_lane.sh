@@ -178,6 +178,8 @@ if contracts.get("ci_fast_gate_scope") != "local-only":
     raise SystemExit("expected ci_fast_gate_scope=local-only in bundle summary contracts")
 if contracts.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
     raise SystemExit("expected runtime provider contract marker in bundle summary contracts")
+if contracts.get("live_run_rehearsal_lineage_required") is not True:
+    raise SystemExit("expected live run-mode rehearsal lineage required contract marker in bundle summary contracts")
 
 integration_command = report.get("integration_command", "")
 if "run_local_kamn_live_runtime_integration_lane.sh" not in integration_command:
@@ -292,6 +294,11 @@ if report.get("reason_code") != "live_node_validation_bundle_passed":
     raise SystemExit("expected success reason code in opt-in bundle summary")
 if report.get("budget_status") not in ("within_budget",):
     raise SystemExit("expected within_budget status in opt-in bundle summary")
+contracts = report.get("contracts")
+if not isinstance(contracts, dict):
+    raise SystemExit("expected contracts object in opt-in bundle summary")
+if contracts.get("live_run_rehearsal_lineage_required") is not True:
+    raise SystemExit("expected live run-mode rehearsal lineage required contract marker in opt-in bundle summary")
 checks = report.get("checks")
 if not isinstance(checks, list) or len(checks) != 4:
     raise SystemExit("expected four checks in opt-in bundle summary")

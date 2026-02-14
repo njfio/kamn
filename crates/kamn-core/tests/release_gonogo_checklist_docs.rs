@@ -38,6 +38,17 @@ fn checklist_contains_machine_readable_bundle_contract() {
 }
 
 #[test]
+fn checklist_contains_live_run_mode_rehearsal_lineage_gate() {
+    assert!(CHECKLIST.contains("## Live Run-Mode Rehearsal Lineage Gate (Issue #3245)"));
+    assert!(CHECKLIST.contains("run_local_live_node_validation_bundle_lane.sh"));
+    assert!(CHECKLIST.contains("check_local_live_node_validation_bundle_policy.py"));
+    assert!(CHECKLIST.contains("run_local_live_node_validation_bundle_contract_lane.sh"));
+    assert!(CHECKLIST.contains("contracts.live_run_rehearsal_lineage_required=true"));
+    assert!(CHECKLIST.contains("run_mode_check_status_mismatch"));
+    assert!(CHECKLIST.contains("Regression: #3245"));
+}
+
+#[test]
 fn checklist_contains_milestone_review_aggregate_lineage_gate() {
     assert!(CHECKLIST.contains("## Milestone Review Aggregate Lineage Gate (Issue #3247)"));
     assert!(CHECKLIST.contains("--deployment-preflight-summary-file"));

@@ -26,6 +26,14 @@ SCHEMA_VERSION = "kamn.release.gonogo.v1"
 MILESTONE_REVIEW_SCHEMA_VERSION = "kamn.release.milestone-review-bundle.v1"
 GO_DECISION = "GO"
 NO_GO_DECISION = "NO-GO"
+REQUIRED_EVIDENCE_MARKERS = (
+    "ci_fast_gate",
+    "ci_deep_lane",
+    "rollback_precheck",
+    "rollback_trigger_status",
+    "approval_quorum",
+    "runtime_image_digest",
+)
 
 PREFLIGHT_SUMMARY_SCHEMA = "kamn.kolme.local-live-deployment-preflight-summary.v1"
 PREFLIGHT_POLICY_SCHEMA = "kamn.kolme.local-live-deployment-preflight-policy-report.v1"
@@ -352,6 +360,7 @@ def generate_bundle(args: argparse.Namespace) -> int:
         "release_candidate": args.release_candidate,
         "schema_target_version": args.schema_target_version,
         "runtime_image_digest": args.runtime_image_digest,
+        "evidence_markers": list(REQUIRED_EVIDENCE_MARKERS),
         "gates": {
             "ci_fast_gate": ci_fast_gate,
             "ci_deep_lane": ci_deep_lane,
@@ -402,6 +411,7 @@ def check_bundle(args: argparse.Namespace) -> int:
             "release_candidate",
             "schema_target_version",
             "runtime_image_digest",
+            "evidence_markers",
             "gates",
             "rollback_trigger_status",
             "approvals",
@@ -422,6 +432,20 @@ def check_bundle(args: argparse.Namespace) -> int:
     rollback_trigger_status = payload["rollback_trigger_status"]
     if rollback_trigger_status not in {"CLEAR", "TRIGGERED"}:
         fail("rollback_trigger_status must be CLEAR or TRIGGERED")
+
+    evidence_markers = payload["evidence_markers"]
+    if not isinstance(evidence_markers, list):
+        fail("bundle field 'evidence_markers' must be an array")
+    if any(not isinstance(marker, str) or marker == "" for marker in evidence_markers):
+        fail("evidence_markers entries must be non-empty strings")
+    missing_required_markers = [
+        marker for marker in REQUIRED_EVIDENCE_MARKERS if marker not in evidence_markers
+    ]
+    if missing_required_markers:
+        fail(
+            "missing required evidence markers: "
+            + ",".join(sorted(set(missing_required_markers)))
+        )
 
     approvals = payload["approvals"]
     if not isinstance(approvals, dict):

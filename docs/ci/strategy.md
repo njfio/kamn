@@ -1378,7 +1378,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `ci-fast-gate mode: fast` (local-heavy run-mode lanes excluded)
     - `local-dev mode: local` (dry-run and local evidence workflows)
     - `manual-hardened mode: manual` (`CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS=true` opt-in)
-  - workflow heavy-exclusion policy checker fails closed when local-heavy command coverage drifts (`local_heavy_lane_commands_missing`) or leaks into version compatibility lane (`local_heavy_lane_commands_in_version_lane`).
+  - workflow heavy-exclusion policy checker fails closed when local-heavy command coverage drifts (`local_heavy_lane_commands_missing`), leaks into non-local-heavy steps (`local_heavy_lane_commands_outside_local_heavy_step`), or leaks into version compatibility lane (`local_heavy_lane_commands_in_version_lane`).
   - workflow/selector parity contract remains enforced with deterministic reason codes:
     - `python3 scripts/ci/check_workflow_kolme_heavy_exclusion_policy.py --workflow-file .github/workflows/ci-fast-gate.yml --selector-file scripts/ci/select_targets.sh`
     - selector parity reason codes include:
@@ -1720,10 +1720,13 @@ JSON`
       - `rollback_evidence_file`
       - `recovery_evidence_file`
       - `rollback_evidence_file_missing`
+      - `contracts.live_run_rehearsal_lineage_required=true`
       - `integration_signing_profile_marker_missing`
       - `integration_simulated_signing_profile_detected`
       - `integration_bundle_signing_profile_marker_missing`
       - `integration_bundle_simulated_signing_profile_detected`
+      - `run_mode_check_status_mismatch:*`
+      - `run_mode_check_reason_code_mismatch:*`
       - `contracts.rollback_recovery_artifact_lineage_required=true`
       - `contracts.process_lifecycle_rollback_evidence_option=--rollback-evidence-file`
       - `contracts.process_lifecycle_recovery_evidence_option=--recovery-evidence-file`

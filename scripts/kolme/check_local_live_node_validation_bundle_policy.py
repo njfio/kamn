@@ -21,6 +21,12 @@ def parse_args() -> argparse.Namespace:
 def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, list[str]]:
     reason_codes: list[str] = []
     required_signing_profile_marker = "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1"
+    expected_run_mode_reason_codes = {
+        "integration_bundle": "integration_bundle_passed",
+        "integration_policy": "integration_policy_passed",
+        "process_lifecycle_bundle": "process_lifecycle_bundle_passed",
+        "process_lifecycle_policy": "process_lifecycle_policy_passed",
+    }
 
     if report.get("schema_version") != "kamn.kolme.local-live-node-validation-bundle-summary.v1":
         reason_codes.append("schema_version_mismatch")
@@ -147,6 +153,8 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
             reason_codes.append("runtime_provider_client_contract_contract_mismatch")
         if contracts.get("bundle_contract") != "live_node_release_bundle_v1":
             reason_codes.append("bundle_contract_mismatch")
+        if contracts.get("live_run_rehearsal_lineage_required") is not True:
+            reason_codes.append("live_run_rehearsal_lineage_required_contract_mismatch")
         if contracts.get("rollback_recovery_artifact_lineage_required") is not True:
             reason_codes.append("rollback_recovery_artifact_lineage_required_contract_mismatch")
         if contracts.get("process_lifecycle_rollback_evidence_option") != "--rollback-evidence-file":
@@ -154,6 +162,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         if contracts.get("process_lifecycle_recovery_evidence_option") != "--recovery-evidence-file":
             reason_codes.append("process_lifecycle_recovery_evidence_option_contract_mismatch")
 
+    check_entries_by_id: dict[str, dict[str, object]] = {}
     checks = report.get("checks")
     if not isinstance(checks, list) or not checks:
         reason_codes.append("checks_missing")
@@ -177,6 +186,7 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
                 reason_codes.append("check_id_invalid")
                 continue
             observed_ids.add(check_id)
+            check_entries_by_id[check_id] = entry
             if not isinstance(command, str) or not command.strip():
                 reason_codes.append(f"check_command_invalid:{check_id}")
             if check_status not in ("planned", "pass", "fail", "skipped"):
@@ -242,6 +252,16 @@ def evaluate(report: dict[str, object], args: argparse.Namespace) -> tuple[str, 
         missing_ids = sorted(expected_ids - observed_ids)
         for missing_id in missing_ids:
             reason_codes.append(f"check_missing:{missing_id}")
+
+    if mode == "run" and status == "ok":
+        for check_id, expected_reason_code in expected_run_mode_reason_codes.items():
+            entry = check_entries_by_id.get(check_id)
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("status") != "pass":
+                reason_codes.append(f"run_mode_check_status_mismatch:{check_id}")
+            if entry.get("reason_code") != expected_reason_code:
+                reason_codes.append(f"run_mode_check_reason_code_mismatch:{check_id}")
 
     required_artifact_paths = list(required_report_paths)
     required_artifact_paths.extend(

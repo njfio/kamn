@@ -51,12 +51,22 @@ def parse_args() -> argparse.Namespace:
 
 def extract_step_block(text: str, step_name: str) -> str:
     step_match = re.search(
-        rf"- name:\s*{re.escape(step_name)}(?P<body>(?:\n\s{{6,}}.*)+)",
+        rf"- name:\s*{re.escape(step_name)}(?P<body>(?:\n\s{{8,}}.*)+)",
         text,
     )
     if not step_match:
         return ""
     return step_match.group("body")
+
+
+def extract_step_section(text: str, step_name: str) -> str:
+    step_match = re.search(
+        rf"(?P<section>-\sname:\s*{re.escape(step_name)}(?:\n\s{{8,}}.*)+)",
+        text,
+    )
+    if not step_match:
+        return ""
+    return step_match.group("section")
 
 
 def extract_ci_tools_fast_mode_block(text: str) -> str:
@@ -130,6 +140,15 @@ def main() -> int:
         ]
         if missing_local_heavy_commands:
             failed_checks.append("local_heavy_lane_commands_missing")
+
+    heavy_step_section = extract_step_section(text, "Run Kolme local-heavy contract lane")
+    if heavy_step_section:
+        workflow_without_heavy_step = text.replace(heavy_step_section, "")
+        leaked_outside_local_heavy_step = [
+            command for command in LOCAL_HEAVY_LANE_COMMANDS if command in workflow_without_heavy_step
+        ]
+        if leaked_outside_local_heavy_step:
+            failed_checks.append("local_heavy_lane_commands_outside_local_heavy_step")
 
     version_lane_block = extract_step_block(text, "Run Kolme version compatibility contract lane")
     if version_lane_block:

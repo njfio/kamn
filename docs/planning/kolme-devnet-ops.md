@@ -1050,12 +1050,13 @@ Operator checkpoints:
     - `rollback_evidence_file`
     - `recovery_evidence_file`
     - `rollback_evidence_file_missing`
+    - `contracts.live_run_rehearsal_lineage_required=true`
     - `contracts.rollback_recovery_artifact_lineage_required=true`
     - `contracts.process_lifecycle_rollback_evidence_option=--rollback-evidence-file`
     - `contracts.process_lifecycle_recovery_evidence_option=--recovery-evidence-file`
 - Decision contract:
   - policy returns GO only when schema, checkpoint markers, artifact lineage, and local-only boundary markers stay aligned with summary contracts.
-  - policy fails closed to NO-GO on schema/evidence drift, missing checkpoints, provider marker drift, or `ci_fast_gate_scope` mismatch.
+  - policy fails closed to NO-GO on schema/evidence drift, missing checkpoints, provider marker drift, missing live run-lineage contracts, run-mode check status/reason-code drift (`run_mode_check_status_mismatch:*`, `run_mode_check_reason_code_mismatch:*`), or `ci_fast_gate_scope` mismatch.
 - Cost policy:
   - bundle lane run mode remains local-only and requires explicit opt-in.
   - summary must emit `ci_fast_gate_eligible=false` and `contracts.ci_fast_gate_scope=local-only`.
