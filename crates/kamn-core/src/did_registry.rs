@@ -1,8 +1,17 @@
 //! DID registry lifecycle, idempotent submission, and finality tracking contracts.
 
 use crate::{AgentDid, DidDocument};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
+use std::fs;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+
+const DID_CHAIN_ADAPTER_SCHEMA_VERSION: &str = "kamn.did.chain-adapter.v1";
+type SubmissionReceiptIndex = BTreeMap<String, DidChainSubmissionReceipt>;
+type SubmissionRejectIndex = BTreeMap<String, String>;
+type PersistedDidChainAdapterState = (SubmissionReceiptIndex, SubmissionRejectIndex);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct DidRegistryRecord {
@@ -212,6 +221,87 @@ impl DidRegistrationChainAdapter for InMemoryDidRegistrationChainAdapter {
         };
         self.receipts_by_key
             .insert(request.idempotency_key.clone(), receipt.clone());
+        Ok(DidChainSubmissionOutcome::Submitted(receipt))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// File-backed chain adapter with deterministic idempotency persistence.
+pub struct FileDidRegistrationChainAdapter {
+    provider: String,
+    path: PathBuf,
+    receipts_by_key: SubmissionReceiptIndex,
+    rejected_reasons_by_key: SubmissionRejectIndex,
+}
+
+impl FileDidRegistrationChainAdapter {
+    /// Creates a file-backed adapter from persisted state.
+    pub fn new(path: PathBuf, provider: &str) -> Result<Self, DidRegistryError> {
+        if path.as_os_str().is_empty() {
+            return Err(DidRegistryError::PersistenceInvalidPayload(
+                "did chain adapter path cannot be empty".to_owned(),
+            ));
+        }
+        if provider.trim().is_empty() {
+            return Err(DidRegistryError::PersistenceInvalidPayload(
+                "did chain adapter provider cannot be empty".to_owned(),
+            ));
+        }
+        let (receipts_by_key, rejected_reasons_by_key) = read_did_chain_adapter_file(&path)?;
+        Ok(Self {
+            provider: provider.to_owned(),
+            path,
+            receipts_by_key,
+            rejected_reasons_by_key,
+        })
+    }
+
+    /// Configures an idempotency key to return a rejected outcome.
+    pub fn reject_idempotency_key(
+        &mut self,
+        idempotency_key: &str,
+        reason: &str,
+    ) -> Result<(), DidRegistryError> {
+        self.rejected_reasons_by_key
+            .insert(idempotency_key.to_owned(), reason.to_owned());
+        persist_did_chain_adapter_file(
+            &self.path,
+            &self.receipts_by_key,
+            &self.rejected_reasons_by_key,
+        )
+    }
+}
+
+impl DidRegistrationChainAdapter for FileDidRegistrationChainAdapter {
+    fn submit_registration(
+        &mut self,
+        request: &DidChainSubmissionRequest,
+    ) -> Result<DidChainSubmissionOutcome, DidRegistryError> {
+        if let Some(reason) = self.rejected_reasons_by_key.get(&request.idempotency_key) {
+            return Ok(DidChainSubmissionOutcome::Rejected {
+                reason: reason.clone(),
+            });
+        }
+
+        if let Some(existing) = self.receipts_by_key.get(&request.idempotency_key) {
+            return Ok(DidChainSubmissionOutcome::Duplicate(existing.clone()));
+        }
+
+        let receipt = DidChainSubmissionReceipt {
+            provider: self.provider.clone(),
+            transaction_id: format!(
+                "did-tx:{}:{}",
+                request.did.method_specific_id(),
+                request.idempotency_key.len()
+            ),
+        };
+        self.receipts_by_key
+            .insert(request.idempotency_key.clone(), receipt.clone());
+        persist_did_chain_adapter_file(
+            &self.path,
+            &self.receipts_by_key,
+            &self.rejected_reasons_by_key,
+        )?;
         Ok(DidChainSubmissionOutcome::Submitted(receipt))
     }
 }
@@ -726,6 +816,10 @@ pub enum DidRegistryError {
         /// Revocation state before action.
         from_revoked: bool,
     },
+    /// Filesystem I/O failed while persisting chain adapter state.
+    PersistenceIo(String),
+    /// Persisted chain adapter payload was invalid.
+    PersistenceInvalidPayload(String),
 }
 
 impl DidRegistryError {
@@ -748,6 +842,8 @@ impl DidRegistryError {
             Self::InvalidLifecycleMutationTransition { .. } => {
                 "did_lifecycle_mutation_invalid_transition"
             }
+            Self::PersistenceIo(_) => "did_registry_persistence_io",
+            Self::PersistenceInvalidPayload(_) => "did_registry_persistence_invalid_payload",
         }
     }
 }
@@ -824,11 +920,191 @@ impl fmt::Display for DidRegistryError {
                     "invalid lifecycle mutation transition for did {did}; action {action}, revoked={from_revoked}"
                 )
             }
+            Self::PersistenceIo(value) => write!(f, "did registry persistence I/O error: {value}"),
+            Self::PersistenceInvalidPayload(value) => {
+                write!(f, "did registry persistence invalid payload: {value}")
+            }
         }
     }
 }
 
 impl std::error::Error for DidRegistryError {}
+
+fn read_did_chain_adapter_file(
+    path: &Path,
+) -> Result<PersistedDidChainAdapterState, DidRegistryError> {
+    if !path.exists() {
+        return Ok((BTreeMap::new(), BTreeMap::new()));
+    }
+
+    let payload = fs::read_to_string(path)
+        .map_err(|error| DidRegistryError::PersistenceIo(error.to_string()))?;
+    if payload.trim().is_empty() {
+        return Ok((BTreeMap::new(), BTreeMap::new()));
+    }
+    parse_did_chain_adapter_payload(&payload)
+}
+
+fn persist_did_chain_adapter_file(
+    path: &Path,
+    receipts_by_key: &SubmissionReceiptIndex,
+    rejected_reasons_by_key: &SubmissionRejectIndex,
+) -> Result<(), DidRegistryError> {
+    let payload = serialize_did_chain_adapter_payload(receipts_by_key, rejected_reasons_by_key);
+    let mut file = OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(path)
+        .map_err(|error| DidRegistryError::PersistenceIo(error.to_string()))?;
+    file.write_all(payload.as_bytes())
+        .map_err(|error| DidRegistryError::PersistenceIo(error.to_string()))
+}
+
+fn serialize_did_chain_adapter_payload(
+    receipts_by_key: &SubmissionReceiptIndex,
+    rejected_reasons_by_key: &SubmissionRejectIndex,
+) -> String {
+    let mut lines = vec![format!("schema|{DID_CHAIN_ADAPTER_SCHEMA_VERSION}")];
+
+    for (idempotency_key, reason) in rejected_reasons_by_key {
+        lines.push(format!(
+            "reject|{}|{}",
+            encode_hex(idempotency_key.as_bytes()),
+            encode_hex(reason.as_bytes())
+        ));
+    }
+    for (idempotency_key, receipt) in receipts_by_key {
+        lines.push(format!(
+            "receipt|{}|{}|{}",
+            encode_hex(idempotency_key.as_bytes()),
+            encode_hex(receipt.provider.as_bytes()),
+            encode_hex(receipt.transaction_id.as_bytes())
+        ));
+    }
+
+    lines.join("\n")
+}
+
+fn parse_did_chain_adapter_payload(
+    payload: &str,
+) -> Result<PersistedDidChainAdapterState, DidRegistryError> {
+    let mut lines = payload.lines().filter(|line| !line.trim().is_empty());
+    let Some(schema_line) = lines.next() else {
+        return Ok((BTreeMap::new(), BTreeMap::new()));
+    };
+    let expected_schema = format!("schema|{DID_CHAIN_ADAPTER_SCHEMA_VERSION}");
+    if schema_line != expected_schema {
+        return Err(DidRegistryError::PersistenceInvalidPayload(
+            schema_line.to_owned(),
+        ));
+    }
+
+    let mut receipts_by_key = SubmissionReceiptIndex::new();
+    let mut rejected_reasons_by_key = SubmissionRejectIndex::new();
+
+    for line in lines {
+        let mut parts = line.split('|');
+        let Some(prefix) = parts.next() else {
+            return Err(DidRegistryError::PersistenceInvalidPayload(line.to_owned()));
+        };
+        match prefix {
+            "reject" => {
+                let Some(key_hex) = parts.next() else {
+                    return Err(DidRegistryError::PersistenceInvalidPayload(line.to_owned()));
+                };
+                let Some(reason_hex) = parts.next() else {
+                    return Err(DidRegistryError::PersistenceInvalidPayload(line.to_owned()));
+                };
+                if parts.next().is_some() {
+                    return Err(DidRegistryError::PersistenceInvalidPayload(line.to_owned()));
+                }
+                let key_bytes = decode_hex(key_hex)
+                    .ok_or_else(|| DidRegistryError::PersistenceInvalidPayload(line.to_owned()))?;
+                let reason_bytes = decode_hex(reason_hex)
+                    .ok_or_else(|| DidRegistryError::PersistenceInvalidPayload(line.to_owned()))?;
+                let key = String::from_utf8(key_bytes)
+                    .map_err(|_| DidRegistryError::PersistenceInvalidPayload(line.to_owned()))?;
+                let reason = String::from_utf8(reason_bytes)
+                    .map_err(|_| DidRegistryError::PersistenceInvalidPayload(line.to_owned()))?;
+                if rejected_reasons_by_key.insert(key, reason).is_some() {
+                    return Err(DidRegistryError::PersistenceInvalidPayload(line.to_owned()));
+                }
+            }
+            "receipt" => {
+                let Some(key_hex) = parts.next() else {
+                    return Err(DidRegistryError::PersistenceInvalidPayload(line.to_owned()));
+                };
+                let Some(provider_hex) = parts.next() else {
+                    return Err(DidRegistryError::PersistenceInvalidPayload(line.to_owned()));
+                };
+                let Some(transaction_hex) = parts.next() else {
+                    return Err(DidRegistryError::PersistenceInvalidPayload(line.to_owned()));
+                };
+                if parts.next().is_some() {
+                    return Err(DidRegistryError::PersistenceInvalidPayload(line.to_owned()));
+                }
+                let key_bytes = decode_hex(key_hex)
+                    .ok_or_else(|| DidRegistryError::PersistenceInvalidPayload(line.to_owned()))?;
+                let provider_bytes = decode_hex(provider_hex)
+                    .ok_or_else(|| DidRegistryError::PersistenceInvalidPayload(line.to_owned()))?;
+                let transaction_bytes = decode_hex(transaction_hex)
+                    .ok_or_else(|| DidRegistryError::PersistenceInvalidPayload(line.to_owned()))?;
+                let key = String::from_utf8(key_bytes)
+                    .map_err(|_| DidRegistryError::PersistenceInvalidPayload(line.to_owned()))?;
+                let provider = String::from_utf8(provider_bytes)
+                    .map_err(|_| DidRegistryError::PersistenceInvalidPayload(line.to_owned()))?;
+                let transaction_id = String::from_utf8(transaction_bytes)
+                    .map_err(|_| DidRegistryError::PersistenceInvalidPayload(line.to_owned()))?;
+                let receipt = DidChainSubmissionReceipt {
+                    provider,
+                    transaction_id,
+                };
+                if receipts_by_key.insert(key, receipt).is_some() {
+                    return Err(DidRegistryError::PersistenceInvalidPayload(line.to_owned()));
+                }
+            }
+            _ => return Err(DidRegistryError::PersistenceInvalidPayload(line.to_owned())),
+        }
+    }
+
+    Ok((receipts_by_key, rejected_reasons_by_key))
+}
+
+fn encode_hex(bytes: &[u8]) -> String {
+    let mut encoded = String::with_capacity(bytes.len() * 2);
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    for byte in bytes {
+        encoded.push(HEX[(byte >> 4) as usize] as char);
+        encoded.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    encoded
+}
+
+fn decode_hex(value: &str) -> Option<Vec<u8>> {
+    if !value.len().is_multiple_of(2) {
+        return None;
+    }
+    let bytes = value.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len() / 2);
+    let mut index = 0usize;
+    while index < bytes.len() {
+        let high = decode_nibble(bytes[index])?;
+        let low = decode_nibble(bytes[index + 1])?;
+        decoded.push((high << 4) | low);
+        index += 2;
+    }
+    Some(decoded)
+}
+
+fn decode_nibble(value: u8) -> Option<u8> {
+    match value {
+        b'0'..=b'9' => Some(value - b'0'),
+        b'a'..=b'f' => Some(value - b'a' + 10),
+        b'A'..=b'F' => Some(value - b'A' + 10),
+        _ => None,
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -5,10 +5,15 @@
 
 use std::collections::BTreeMap;
 use std::fmt;
+use std::fs;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 
 const CID_PREFIX: &str = "kamn:cid:v1:";
 const CONTENT_URI_PREFIX: &str = "kamn:content:v1:";
 const CID_HASH_HEX_LEN: usize = 16;
+const CONTENT_STORE_SCHEMA_VERSION: &str = "kamn.content.file-store.v1";
 
 /// Stored content payload and metadata returned by `get`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -144,6 +149,91 @@ impl ContentStorageAdapter for InMemoryContentAdapter {
     }
 }
 
+/// File-backed implementation of `ContentStorageAdapter`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileContentAdapter {
+    path: PathBuf,
+    objects: BTreeMap<String, StoredObject>,
+}
+
+impl FileContentAdapter {
+    /// Creates a file-backed content adapter from a persistence path.
+    pub fn new(path: PathBuf) -> Result<Self, ContentStorageError> {
+        if path.as_os_str().is_empty() {
+            return Err(ContentStorageError::InvalidPayload(
+                "content store path cannot be empty".to_owned(),
+            ));
+        }
+        let objects = read_content_store_file(&path)?;
+        Ok(Self { path, objects })
+    }
+}
+
+impl ContentStorageAdapter for FileContentAdapter {
+    fn put(
+        &mut self,
+        media_type: &str,
+        payload: &[u8],
+    ) -> Result<ContentHead, ContentStorageError> {
+        if media_type.trim().is_empty() {
+            return Err(ContentStorageError::EmptyField("media_type"));
+        }
+
+        let cid = cid_for_payload(payload);
+        let record = StoredObject {
+            media_type: media_type.to_owned(),
+            payload: payload.to_vec(),
+            integrity_tag: integrity_tag_for_payload(payload),
+        };
+        self.objects.insert(cid.clone(), record.clone());
+        persist_content_store_file(&self.path, &self.objects)?;
+        Ok(content_head_from_stored(&cid, &record))
+    }
+
+    fn get(&self, cid: &str) -> Result<ContentObject, ContentStorageError> {
+        validate_cid(cid)?;
+        let object = self
+            .objects
+            .get(cid)
+            .ok_or_else(|| ContentStorageError::NotFound(cid.to_owned()))?;
+        Ok(ContentObject {
+            cid: cid.to_owned(),
+            media_type: object.media_type.clone(),
+            payload: object.payload.clone(),
+            integrity_tag: object.integrity_tag.clone(),
+        })
+    }
+
+    fn head(&self, cid: &str) -> Result<ContentHead, ContentStorageError> {
+        validate_cid(cid)?;
+        let object = self
+            .objects
+            .get(cid)
+            .ok_or_else(|| ContentStorageError::NotFound(cid.to_owned()))?;
+        Ok(content_head_from_stored(cid, object))
+    }
+
+    fn verify(&self, cid: &str) -> Result<(), ContentStorageError> {
+        validate_cid(cid)?;
+        let object = self
+            .objects
+            .get(cid)
+            .ok_or_else(|| ContentStorageError::NotFound(cid.to_owned()))?;
+
+        let expected_cid = cid_for_payload(&object.payload);
+        let expected_integrity_tag = integrity_tag_for_payload(&object.payload);
+        if expected_cid != cid || expected_integrity_tag != object.integrity_tag {
+            return Err(ContentStorageError::IntegrityMismatch {
+                cid: cid.to_owned(),
+                expected: expected_integrity_tag,
+                found: object.integrity_tag.clone(),
+            });
+        }
+
+        Ok(())
+    }
+}
+
 /// Converts a CID into canonical content URI form.
 pub fn content_uri_for_cid(cid: &str) -> Result<String, ContentStorageError> {
     validate_cid(cid)?;
@@ -164,6 +254,10 @@ pub fn cid_from_content_uri(uri: &str) -> Result<String, ContentStorageError> {
 pub enum ContentStorageError {
     /// Required string field was empty.
     EmptyField(&'static str),
+    /// Filesystem I/O failed for persistence operation.
+    Io(String),
+    /// Persisted payload format was invalid.
+    InvalidPayload(String),
     /// CID string failed validation.
     InvalidCid(String),
     /// Content URI string failed validation.
@@ -185,6 +279,8 @@ impl fmt::Display for ContentStorageError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::EmptyField(field) => write!(f, "field must not be empty: {field}"),
+            Self::Io(value) => write!(f, "content storage I/O error: {value}"),
+            Self::InvalidPayload(value) => write!(f, "content storage invalid payload: {value}"),
             Self::InvalidCid(value) => write!(f, "invalid content identifier: {value}"),
             Self::InvalidContentUri(value) => write!(f, "invalid content uri: {value}"),
             Self::NotFound(value) => write!(f, "content not found: {value}"),
@@ -215,6 +311,150 @@ fn content_head_from_stored(cid: &str, object: &StoredObject) -> ContentHead {
         media_type: object.media_type.clone(),
         size_bytes: object.payload.len() as u64,
         integrity_tag: object.integrity_tag.clone(),
+    }
+}
+
+fn read_content_store_file(
+    path: &Path,
+) -> Result<BTreeMap<String, StoredObject>, ContentStorageError> {
+    if !path.exists() {
+        return Ok(BTreeMap::new());
+    }
+
+    let payload =
+        fs::read_to_string(path).map_err(|error| ContentStorageError::Io(error.to_string()))?;
+    if payload.trim().is_empty() {
+        return Ok(BTreeMap::new());
+    }
+
+    parse_content_store_payload(&payload)
+}
+
+fn persist_content_store_file(
+    path: &Path,
+    objects: &BTreeMap<String, StoredObject>,
+) -> Result<(), ContentStorageError> {
+    let payload = serialize_content_store_payload(objects);
+    let mut file = OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(path)
+        .map_err(|error| ContentStorageError::Io(error.to_string()))?;
+    file.write_all(payload.as_bytes())
+        .map_err(|error| ContentStorageError::Io(error.to_string()))
+}
+
+fn serialize_content_store_payload(objects: &BTreeMap<String, StoredObject>) -> String {
+    let mut lines = Vec::with_capacity(objects.len() + 1);
+    lines.push(format!("schema|{CONTENT_STORE_SCHEMA_VERSION}"));
+    for (cid, object) in objects {
+        let media_type_hex = encode_hex(object.media_type.as_bytes());
+        let payload_hex = encode_hex(&object.payload);
+        lines.push(format!(
+            "object|{cid}|{media_type_hex}|{payload_hex}|{}",
+            object.integrity_tag
+        ));
+    }
+    lines.join("\n")
+}
+
+fn parse_content_store_payload(
+    payload: &str,
+) -> Result<BTreeMap<String, StoredObject>, ContentStorageError> {
+    let mut lines = payload.lines().filter(|line| !line.trim().is_empty());
+    let Some(schema_line) = lines.next() else {
+        return Ok(BTreeMap::new());
+    };
+    let expected_schema = format!("schema|{CONTENT_STORE_SCHEMA_VERSION}");
+    if schema_line != expected_schema {
+        return Err(ContentStorageError::InvalidPayload(schema_line.to_owned()));
+    }
+
+    let mut objects = BTreeMap::new();
+    for line in lines {
+        let mut parts = line.split('|');
+        let Some(prefix) = parts.next() else {
+            return Err(ContentStorageError::InvalidPayload(line.to_owned()));
+        };
+        let Some(cid) = parts.next() else {
+            return Err(ContentStorageError::InvalidPayload(line.to_owned()));
+        };
+        let Some(media_type_hex) = parts.next() else {
+            return Err(ContentStorageError::InvalidPayload(line.to_owned()));
+        };
+        let Some(payload_hex) = parts.next() else {
+            return Err(ContentStorageError::InvalidPayload(line.to_owned()));
+        };
+        let Some(integrity_tag) = parts.next() else {
+            return Err(ContentStorageError::InvalidPayload(line.to_owned()));
+        };
+        if prefix != "object" || parts.next().is_some() {
+            return Err(ContentStorageError::InvalidPayload(line.to_owned()));
+        }
+
+        validate_cid(cid)?;
+        let media_type_bytes = decode_hex(media_type_hex)
+            .ok_or_else(|| ContentStorageError::InvalidPayload(line.to_owned()))?;
+        let media_type = String::from_utf8(media_type_bytes)
+            .map_err(|_| ContentStorageError::InvalidPayload(line.to_owned()))?;
+        if media_type.trim().is_empty() {
+            return Err(ContentStorageError::InvalidPayload(line.to_owned()));
+        }
+        let payload_bytes = decode_hex(payload_hex)
+            .ok_or_else(|| ContentStorageError::InvalidPayload(line.to_owned()))?;
+        let expected_cid = cid_for_payload(&payload_bytes);
+        if expected_cid != cid {
+            return Err(ContentStorageError::InvalidPayload(line.to_owned()));
+        }
+        let expected_integrity_tag = integrity_tag_for_payload(&payload_bytes);
+        if expected_integrity_tag != integrity_tag {
+            return Err(ContentStorageError::InvalidPayload(line.to_owned()));
+        }
+
+        let object = StoredObject {
+            media_type,
+            payload: payload_bytes,
+            integrity_tag: integrity_tag.to_owned(),
+        };
+        objects.insert(cid.to_owned(), object);
+    }
+
+    Ok(objects)
+}
+
+fn encode_hex(bytes: &[u8]) -> String {
+    let mut encoded = String::with_capacity(bytes.len() * 2);
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    for byte in bytes {
+        encoded.push(HEX[(byte >> 4) as usize] as char);
+        encoded.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    encoded
+}
+
+fn decode_hex(value: &str) -> Option<Vec<u8>> {
+    if !value.len().is_multiple_of(2) {
+        return None;
+    }
+    let bytes = value.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len() / 2);
+    let mut index = 0usize;
+    while index < bytes.len() {
+        let high = decode_nibble(bytes[index])?;
+        let low = decode_nibble(bytes[index + 1])?;
+        decoded.push((high << 4) | low);
+        index += 2;
+    }
+    Some(decoded)
+}
+
+fn decode_nibble(value: u8) -> Option<u8> {
+    match value {
+        b'0'..=b'9' => Some(value - b'0'),
+        b'a'..=b'f' => Some(value - b'a' + 10),
+        b'A'..=b'F' => Some(value - b'A' + 10),
+        _ => None,
     }
 }
 

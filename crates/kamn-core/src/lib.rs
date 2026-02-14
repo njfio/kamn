@@ -178,7 +178,7 @@ pub use content_retrieval::{
 };
 pub use content_storage::{
     cid_from_content_uri, content_uri_for_cid, ContentHead, ContentObject, ContentStorageAdapter,
-    ContentStorageError, InMemoryContentAdapter,
+    ContentStorageError, FileContentAdapter, InMemoryContentAdapter,
 };
 pub use cross_chain_bridge::{
     CrossChainBridgeConfig, CrossChainBridgeEngine, CrossChainBridgeError,
@@ -206,7 +206,7 @@ pub use did_registry::{
     DidChainSubmissionResult, DidLifecycleMutationAction, DidLifecycleMutationEvidence,
     DidLifecycleMutationRequest, DidRegistrationChainAdapter, DidRegistry, DidRegistryError,
     DidSubmissionFinalityRecord, DidSubmissionFinalityStatus, DidSubmissionRetryClass,
-    InMemoryDidRegistrationChainAdapter,
+    FileDidRegistrationChainAdapter, InMemoryDidRegistrationChainAdapter,
 };
 pub use direct_message_crypto::{
     DirectMessageCiphertext, DirectMessageCryptoEngine, DirectMessageCryptoError,
