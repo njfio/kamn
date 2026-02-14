@@ -209,6 +209,24 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_serde_payload_policy_marker_missing:route_payload_parity_status`
 
+## Runtime Service API Reason-Code Compatibility Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_service_api_reason_code_compatibility_live.sh --output-json /tmp/service-api-reason-code-compatibility-live-summary.json`
+  - `bash scripts/runtime/check_service_api_reason_code_compatibility_live_policy.sh --report-file /tmp/service-api-reason-code-compatibility-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-reason-code-compatibility-policy.json`
+  - `bash scripts/runtime/validate_service_api_reason_code_compatibility_live_contract_lane.sh --output-json /tmp/service-api-reason-code-compatibility-contract-lane-report.json --policy-output-json /tmp/service-api-reason-code-compatibility-policy.json`
+  - `bash scripts/runtime/test_validate_service_api_reason_code_compatibility_live_contract_lane.sh`
+  - `bash scripts/runtime/test_check_service_api_reason_code_compatibility_live_policy.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - bounded to four targeted `kamn-node` reason-code compatibility tests.
+  - source-marker checks run locally and avoid external network dependencies.
+  - runtime budget is bounded via `KAMN_SERVICE_API_REASON_CODE_CONTRACT_MAX_SECONDS`.
+  - service api reason-code compatibility contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `service_api_reason_code_policy_marker_missing:route_error_mapping_status`
+
 ## Kolme HTTPS Native Transport Contract
 - Runtime-commit HTTPS transport uses an in-process native TLS client path.
 - `openssl s_client` subprocess execution is prohibited in transport code paths (`Regression: #2671`).
@@ -2226,6 +2244,7 @@ Fast-mode CI tooling regression coverage includes:
 - Budget summarizer (`test_summarize_budget_artifacts.sh`)
 - PR CI declaration checker (`test_check_pr_ci_declaration.sh`)
 - Service API serde payload parity CI exclusion policy checker (`test_service_api_serde_payload_parity_ci_exclusion_policy.sh`)
+- Service API reason-code compatibility CI exclusion policy checker (`test_service_api_reason_code_compatibility_ci_exclusion_policy.sh`)
 - Flaky report commenter (`test_post_flaky_report_comment.sh`)
 - Flaky issue syncer (`test_sync_flaky_registry_issues.sh`)
 - Workflow guard contracts (`test_workflow_retry_policy.sh`, `test_workflow_cache_policy.sh`, `test_workflow_scope_policy.sh`, `test_workflow_performance_policy.sh`)
