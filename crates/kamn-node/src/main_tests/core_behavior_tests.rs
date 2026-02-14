@@ -176,6 +176,19 @@ fn integration_bootstrap_runtime_emits_structured_marker() {
             .any(|line| line.contains("\"event\":\"node.runtime.bootstrap.plan.ready\"")),
         "bootstrap runtime should emit structured bootstrap marker"
     );
+    let dispatch_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"node.runtime.mode.dispatch\""))
+        .expect("runtime dispatch marker should be emitted");
+    let ready_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"node.runtime.bootstrap.plan.ready\""))
+        .expect("bootstrap ready marker should be emitted");
+    let dispatch_execution_id = extract_json_string_field(dispatch_line, "execution_id")
+        .expect("runtime dispatch marker should include execution_id");
+    let ready_execution_id = extract_json_string_field(ready_line, "execution_id")
+        .expect("bootstrap ready marker should include execution_id");
+    assert_eq!(dispatch_execution_id, ready_execution_id);
 }
 
 #[test]
@@ -286,6 +299,8 @@ fn functional_runtime_daemon_emits_structured_transition_markers() {
         extract_json_string_field(start_line, "tick_interval_ms").as_deref(),
         Some("25")
     );
+    let start_execution_id = extract_json_string_field(start_line, "execution_id")
+        .expect("daemon start marker should include execution_id");
 
     let complete_line = captured_logs
         .iter()
@@ -303,6 +318,9 @@ fn functional_runtime_daemon_emits_structured_transition_markers() {
         extract_json_string_field(complete_line, "completion_reason").as_deref(),
         Some("tick-budget-exhausted")
     );
+    let complete_execution_id = extract_json_string_field(complete_line, "execution_id")
+        .expect("daemon completion marker should include execution_id");
+    assert_eq!(start_execution_id, complete_execution_id);
 }
 
 #[test]

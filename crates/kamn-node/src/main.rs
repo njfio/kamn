@@ -452,12 +452,21 @@ fn peer_lifecycle_state_as_str(state: PeerLifecycleState) -> &'static str {
     }
 }
 
+fn build_runtime_execution_id(runtime_mode: RuntimeMode, chain_id: &str, role: &str) -> String {
+    format!("node-runtime:{}:{chain_id}:{role}", runtime_mode.as_str())
+}
+
 fn run() -> Result<(), ConfigError> {
     let cli = parse_args(env::args())?;
     let runtime_mode = cli.runtime_mode.as_str();
+    let execution_id =
+        build_runtime_execution_id(cli.runtime_mode, cli.chain_id.as_str(), cli.role.as_str());
     log_info(
         "node.runtime.execute.start",
-        &[("runtime_mode", runtime_mode)],
+        &[
+            ("runtime_mode", runtime_mode),
+            ("execution_id", execution_id.as_str()),
+        ],
     )?;
     let output_mode = cli.output_mode;
     let service_api_endpoint_config =
@@ -484,6 +493,7 @@ fn run() -> Result<(), ConfigError> {
         &[
             ("runtime_mode", report.runtime_mode.as_str()),
             ("role", report.role.as_str()),
+            ("execution_id", execution_id.as_str()),
         ],
     )?;
     println!("{}", render_bootstrap_report(&report, output_mode));
@@ -502,13 +512,17 @@ fn run() -> Result<(), ConfigError> {
                 ("bind_addr", endpoint_config.bind_addr.as_str()),
                 ("max_requests", max_requests_label.as_str()),
                 ("idle_timeout_ms", idle_timeout_ms_label.as_str()),
+                ("execution_id", execution_id.as_str()),
             ],
         )?;
         serve_service_api_endpoint(&endpoint_config, &snapshot)
             .map_err(ConfigError::RuntimeDaemonLifecycle)?;
         log_info(
             "node.runtime.service_api.endpoint.complete",
-            &[("bind_addr", endpoint_config.bind_addr.as_str())],
+            &[
+                ("bind_addr", endpoint_config.bind_addr.as_str()),
+                ("execution_id", execution_id.as_str()),
+            ],
         )?;
     }
     if let Some(endpoint_config) = observability_endpoint_config {
@@ -527,13 +541,17 @@ fn run() -> Result<(), ConfigError> {
                 ("health_path", endpoint_config.health_path.as_str()),
                 ("max_requests", max_requests_label.as_str()),
                 ("idle_timeout_ms", idle_timeout_ms_label.as_str()),
+                ("execution_id", execution_id.as_str()),
             ],
         )?;
         serve_observability_endpoint(&endpoint_config, &snapshot)
             .map_err(ConfigError::RuntimeDaemonLifecycle)?;
         log_info(
             "node.runtime.observability.endpoint.complete",
-            &[("bind_addr", endpoint_config.bind_addr.as_str())],
+            &[
+                ("bind_addr", endpoint_config.bind_addr.as_str()),
+                ("execution_id", execution_id.as_str()),
+            ],
         )?;
     }
 
@@ -585,6 +603,8 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
         output_mode: _,
         diagnostics_mode,
     } = cli;
+    let execution_id = build_runtime_execution_id(runtime_mode, chain_id.as_str(), role.as_str());
+
     let config = NodeConfig {
         chain_id: chain_id.clone(),
         chain_version: chain_version.clone(),
@@ -597,7 +617,10 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
     let plan = bootstrap(config)?;
     log_info(
         "node.runtime.mode.dispatch",
-        &[("runtime_mode", runtime_mode.as_str())],
+        &[
+            ("runtime_mode", runtime_mode.as_str()),
+            ("execution_id", execution_id.as_str()),
+        ],
     )?;
     let runtime_execution = match runtime_mode.kind {
         RuntimeModeKind::Bootstrap => {
@@ -606,6 +629,7 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                 &[
                     ("chain_id", plan.config.chain_id.as_str()),
                     ("role", plan.config.role.as_str()),
+                    ("execution_id", execution_id.as_str()),
                 ],
             )?;
             RuntimeExecutionBundle::default()
@@ -674,6 +698,7 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                     ("runtime_mode", runtime_mode.as_str()),
                     ("max_ticks", max_ticks_label.as_str()),
                     ("tick_interval_ms", tick_interval_ms_label.as_str()),
+                    ("execution_id", execution_id.as_str()),
                 ],
             )?;
             let (peer_id, peer_lifecycle_final_state, peer_lifecycle_applied_events) =
@@ -729,6 +754,7 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                         "completion_reason",
                         daemon_completion.completion_reason.as_str(),
                     ),
+                    ("execution_id", execution_id.as_str()),
                 ],
             )?;
             RuntimeExecutionBundle {
@@ -754,7 +780,10 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
         RuntimeModeKind::Api => {
             log_info(
                 "node.runtime.service_api.mode.ready",
-                &[("runtime_mode", runtime_mode.as_str())],
+                &[
+                    ("runtime_mode", runtime_mode.as_str()),
+                    ("execution_id", execution_id.as_str()),
+                ],
             )?;
             RuntimeExecutionBundle::default()
         }
