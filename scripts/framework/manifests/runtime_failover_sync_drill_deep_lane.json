@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "runtime.failover_sync_drill.deep",
+  "evidence_key": "failover_sync_drill_deep_lane:v1",
+  "reason_key": "runtime_failover_sync_drill_deep_reason_codes:GO:v1",
+  "phases": {
+    "deep": [
+      "bash",
+      "scripts/runtime/run_failover_sync_drill_deep_lane_impl.sh"
+    ]
+  }
+}

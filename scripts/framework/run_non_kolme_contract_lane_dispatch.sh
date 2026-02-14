@@ -131,8 +131,10 @@ resolve_manifest_name() {
     run_concurrency_state_mutation_contract_lane.sh) echo "runtime_concurrency_state_mutation_contract_lane.json" ;;
     run_concurrency_state_mutation_deep_lane.sh) echo "runtime_concurrency_state_mutation_deep_lane.json" ;;
     run_failover_sync_drill_preflight_contract_lane.sh) echo "runtime_failover_sync_drill_preflight_contract_lane.json" ;;
+    run_failover_sync_drill_deep_lane.sh) echo "runtime_failover_sync_drill_deep_lane.json" ;;
     run_input_mutation_contract_lane.sh) echo "runtime_input_mutation_contract_lane.json" ;;
     run_input_mutation_coverage_guided_contract_lane.sh) echo "runtime_input_mutation_coverage_guided_contract_lane.json" ;;
+    run_input_mutation_coverage_guided_deep_lane.sh) echo "runtime_input_mutation_coverage_guided_deep_lane.json" ;;
     run_invariant_fuzz_concurrency_contract_lane.sh) echo "runtime_invariant_fuzz_concurrency_contract_lane.json" ;;
     run_lifecycle_property_contract_lane.sh) echo "runtime_lifecycle_property_contract_lane.json" ;;
     run_live_network_partition_reconnect_smoke_lane.sh) echo "runtime_live_network_partition_reconnect_smoke_lane.json" ;;
@@ -148,6 +150,7 @@ resolve_manifest_name() {
     run_runtime_snapshot_contract_lane.sh) echo "runtime_runtime_snapshot_contract_lane.json" ;;
     run_runtime_snapshot_deep_lane.sh) echo "runtime_runtime_snapshot_deep_lane.json" ;;
     run_watchdog_proof_consensus_contract_lane.sh) echo "runtime_watchdog_proof_consensus_contract_lane.json" ;;
+    run_watchdog_proof_consensus_deep_lane.sh) echo "runtime_watchdog_proof_consensus_deep_lane.json" ;;
     run_zk_witness_mutation_contract_lane.sh) echo "runtime_zk_witness_mutation_contract_lane.json" ;;
     run_zk_witness_mutation_deep_lane.sh) echo "runtime_zk_witness_mutation_deep_lane.json" ;;
     run_soc2_control_evidence_contract_lane.sh) echo "compliance_soc2_control_evidence_contract_lane.json" ;;
@@ -173,6 +176,7 @@ resolve_phase_name() {
     run_live_network_pilot_deep_lane.sh) echo "run" ;;
     run_live_network_partition_reconnect_smoke_lane.sh) echo "run" ;;
     run_live_network_partition_reconnect_deep_lane.sh) echo "deep" ;;
+    run_failover_sync_drill_deep_lane.sh) echo "deep" ;;
     run_quorum_attestation_replay_guard_lane.sh) echo "run" ;;
     run_governance_lifecycle_rollback_lane.sh) echo "run" ;;
     run_dashboard_shell_determinism_matrix_lane.sh) echo "run" ;;
@@ -182,8 +186,10 @@ resolve_phase_name() {
     run_dashboard_stale_error_budget_lane.sh) echo "run" ;;
     run_signer_incident_recovery_deep_lane.sh) echo "deep" ;;
     run_signer_provider_deep_lane.sh) echo "deep" ;;
+    run_input_mutation_coverage_guided_deep_lane.sh) echo "deep" ;;
     run_concurrency_state_mutation_deep_lane.sh) echo "deep" ;;
     run_runtime_snapshot_deep_lane.sh) echo "deep" ;;
+    run_watchdog_proof_consensus_deep_lane.sh) echo "deep" ;;
     run_zk_witness_mutation_deep_lane.sh) echo "deep" ;;
     run_signer_incident_recovery_lane.sh) echo "run" ;;
     *) echo "contract" ;;
