@@ -269,6 +269,36 @@ fn functional_kolme_live_strict_env_local_key_source_rejects_with_reason_code() 
 }
 
 #[test]
+fn functional_kolme_live_strict_env_local_key_source_allows_with_local_override() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        "http://127.0.0.1:3000".to_owned(),
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-strict-signer-contracts".to_owned(),
+        "--kolme-live-signer-profile".to_owned(),
+        "ops-primary".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
+    ])
+    .expect("strict args should parse");
+    enforce_kolme_live_signer_key_source_policy(
+        parsed.kolme_live_strict_signer_contracts,
+        parsed.kolme_live_signer_key_source.as_deref(),
+        true,
+        false,
+    )
+    .expect("explicit local override should allow strict env-local key source");
+}
+
+#[test]
 fn integration_kolme_live_strict_managed_external_key_source_policy_passes() {
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),

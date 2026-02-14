@@ -17,10 +17,12 @@ from typing import Any
 ROOT_DIR = Path(__file__).resolve().parents[3]
 RUNNER = ROOT_DIR / "scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh"
 CHECKER = ROOT_DIR / "scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py"
+UPGRADE_ROLLBACK_RUNBOOK = ROOT_DIR / "docs/foundation/upgrade-rollback-runbook.md"
+ROADMAP_DOC = ROOT_DIR / "docs/plans/2026-02-08-production-service-roadmap.md"
 DOC_FILES = [
     ROOT_DIR / "docs/planning/kolme-devnet-ops.md",
     ROOT_DIR / "docs/ci/ci-cost-and-lane-framework.md",
-    ROOT_DIR / "docs/plans/2026-02-08-production-service-roadmap.md",
+    ROADMAP_DOC,
     ROOT_DIR / "README.md",
 ]
 DOC_MARKERS = [
@@ -34,6 +36,17 @@ DOC_MARKERS = [
     "signer_profile_mismatch",
     "signer_rotation_epoch_stale",
     "execution_scope=local-scheduled",
+]
+PROFILE_MATRIX_DOC_FILES = [
+    ROADMAP_DOC,
+    UPGRADE_ROLLBACK_RUNBOOK,
+]
+PROFILE_MATRIX_DOC_MARKERS = [
+    "signer_key_source_profile_matrix_status=verified",
+    "signer_key_source_production_reject_status=verified",
+    "signer_key_source_local_override_allow_status=verified",
+    "production_signer_key_source_env_local_forbidden",
+    "KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING=true",
 ]
 
 PRIMARY_TEST_PRIVATE_KEY_HEX = "1" * 64
@@ -244,6 +257,37 @@ def run_preflight_scenario(
     }
 
 
+def run_key_source_policy_matrix_test(
+    *,
+    scenario_id: str,
+    test_name: str,
+    expected_policy_outcome: str,
+    expected_reason_code: str,
+) -> dict[str, Any]:
+    command = [
+        "cargo",
+        "test",
+        "-p",
+        "kamn-node",
+        test_name,
+        "--",
+        "--exact",
+    ]
+    result = run_command(command)
+    output = f"{result.stdout}{result.stderr}"
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"signer key-source matrix scenario {scenario_id} failed: {output.strip()}"
+        )
+    return {
+        "scenario_id": scenario_id,
+        "command": " ".join(command),
+        "expected_policy_outcome": expected_policy_outcome,
+        "expected_reason_code": expected_reason_code,
+        "status": "pass",
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run managed-signer startup live validation contract lane."
@@ -275,6 +319,14 @@ def main() -> int:
             ensure_markers_present(
                 doc_file.read_text(encoding="utf-8"),
                 DOC_MARKERS,
+                str(doc_file.relative_to(ROOT_DIR)),
+            )
+        )
+    for doc_file in PROFILE_MATRIX_DOC_FILES:
+        missing_doc_markers.extend(
+            ensure_markers_present(
+                doc_file.read_text(encoding="utf-8"),
+                PROFILE_MATRIX_DOC_MARKERS,
                 str(doc_file.relative_to(ROOT_DIR)),
             )
         )
@@ -336,6 +388,26 @@ def main() -> int:
                     expected_policy_reason_code="signer_rotation_epoch_stale",
                 ),
             ]
+            key_source_matrix_reports = [
+                run_key_source_policy_matrix_test(
+                    scenario_id="production_strict_env_local_rejected",
+                    test_name="main_tests::core_behavior_tests::functional_kolme_live_strict_env_local_key_source_rejects_with_reason_code",
+                    expected_policy_outcome="NO-GO",
+                    expected_reason_code="production_signer_key_source_env_local_forbidden",
+                ),
+                run_key_source_policy_matrix_test(
+                    scenario_id="local_override_env_local_allowed",
+                    test_name="main_tests::core_behavior_tests::functional_kolme_live_strict_env_local_key_source_allows_with_local_override",
+                    expected_policy_outcome="GO",
+                    expected_reason_code="local_override_enabled",
+                ),
+                run_key_source_policy_matrix_test(
+                    scenario_id="production_strict_managed_external_allowed",
+                    test_name="main_tests::core_behavior_tests::integration_kolme_live_strict_managed_external_key_source_policy_passes",
+                    expected_policy_outcome="GO",
+                    expected_reason_code="managed_external_required",
+                ),
+            ]
 
             elapsed_seconds = int(time.time() - start_time)
             if elapsed_seconds > args.max_seconds:
@@ -357,8 +429,13 @@ def main() -> int:
                 "managed_signer_invalid_profile_fail_closed_status": "verified",
                 "managed_signer_stale_rotation_fail_closed_status": "verified",
                 "managed_signer_reason_code_status": "verified",
+                "signer_key_source_profile_matrix_status": "verified",
+                "signer_key_source_production_reject_status": "verified",
+                "signer_key_source_local_override_allow_status": "verified",
+                "signer_key_source_managed_external_allow_status": "verified",
                 "performance_budget_status": "verified",
                 "scenario_reports": scenario_reports,
+                "signer_key_source_matrix_reports": key_source_matrix_reports,
             }
 
             output_path = Path(args.output_json).resolve()
@@ -378,6 +455,10 @@ def main() -> int:
     print("managed_signer_invalid_profile_fail_closed_status=verified")
     print("managed_signer_stale_rotation_fail_closed_status=verified")
     print("managed_signer_reason_code_status=verified")
+    print("signer_key_source_profile_matrix_status=verified")
+    print("signer_key_source_production_reject_status=verified")
+    print("signer_key_source_local_override_allow_status=verified")
+    print("signer_key_source_managed_external_allow_status=verified")
     print("execution_scope=local-scheduled")
     print("performance_budget_status=verified")
     return 0

@@ -159,6 +159,16 @@ Fallback private-key surfaces are forbidden in deployment preflight and runtime 
   - `bash scripts/kolme/test_check_local_kamn_live_runtime_real_node_profile_policy.sh`
   - `bash scripts/kolme/test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh`
   - `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
+- Signer key-source profile matrix validation:
+  - `bash scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh --output-json /tmp/managed-signer-startup-live-validation-contract-report.json`
+  - matrix status markers:
+    - `signer_key_source_profile_matrix_status=verified`
+    - `signer_key_source_production_reject_status=verified`
+    - `signer_key_source_local_override_allow_status=verified`
+  - production strict env-local fail-closed marker:
+    - `production_signer_key_source_env_local_forbidden`
+  - explicit local override marker for controlled local testing:
+    - `KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING=true`
 - Required schema/reason markers:
   - `runtime_signer_fallback_guard_contract_version=v2`
   - `runtime_signer_fallback_guard_mode=reject_if_present`
