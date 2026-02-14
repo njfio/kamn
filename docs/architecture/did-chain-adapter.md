@@ -63,4 +63,28 @@ cargo test -p kamn-core --test did_registry_transactions
 cargo test -p kamn-core --test did_registry_transactions_docs
 cargo clippy -p kamn-core -- -D warnings
 cargo fmt --check
+bash scripts/kolme/run_did_lifecycle_chain_adapter_contract_lane.sh
+bash scripts/kolme/validate_did_lifecycle_chain_adapter_live.sh
 ```
+
+## Live Validation Protocol
+
+- Contract lane:
+  - `scripts/kolme/run_did_lifecycle_chain_adapter_contract_lane.sh`
+  - deterministic markers:
+    - `status=pass`
+    - `final_decision=GO`
+    - `lifecycle_chain_contract_status=verified`
+    - `duplicate_retry_status=verified`
+    - `conflict_fail_closed_status=verified`
+- Live validation lane:
+  - `scripts/kolme/validate_did_lifecycle_chain_adapter_live.sh`
+  - deterministic markers:
+    - `status=pass`
+    - `final_decision=GO`
+    - `did_lifecycle_contract_status=verified`
+    - `evidence_bundle_status=verified`
+    - `docs_contract_status=verified`
+    - `fail_closed_status=verified`
+    - `fail_closed_reason_code=did_registry_submission_key_conflict`
+    - `performance_budget_status=verified`

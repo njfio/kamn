@@ -88,6 +88,8 @@ cargo test -p kamn-core --test did_registry_transactions -- functional_lifecycle
 cargo test -p kamn-core --test did_registry_transactions -- integration_lifecycle_chain_submission_allows_retry_without_reapplying_mutation
 cargo test -p kamn-core --test did_registry_transactions -- regression_lifecycle_chain_submission_rejects_conflicting_same_nonce_payload
 bash scripts/did/run_did_registry_contract_lane.sh
+bash scripts/kolme/run_did_lifecycle_chain_adapter_contract_lane.sh
+bash scripts/kolme/validate_did_lifecycle_chain_adapter_live.sh
 cargo test -p kamn-core
 ```
 
