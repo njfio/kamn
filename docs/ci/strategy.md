@@ -31,13 +31,16 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Selector/workflow regression commands:
   - `bash scripts/ci/test_full_io_scenario_matrix_ci_exclusion_policy.sh`
   - `bash scripts/ci/test_local_full_stack_integration_ci_exclusion_policy.sh`
+  - `bash scripts/ci/test_sqlite_crash_recovery_ci_exclusion_policy.sh`
 - Fail-closed CI scope rules:
   - `validate_full_io_scenario_matrix_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
   - `validate_local_full_stack_integration_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
+  - `validate_sqlite_crash_recovery_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
   - regression command surfaces must retain dry-run policy and contract-lane tests for both lanes in `scripts/ci/test_ci_tools.sh`.
 - Deterministic drift markers:
   - `full_io_scenario_matrix_policy_multinode_propagation_mismatch`
   - `local_full_stack_integration_policy_evidence_bundle_status_mismatch`
+  - `sqlite_crash_recovery_policy_fast_gate_exclusion_mismatch`
 
 ## Test Layering Policy Contract
 - Test-layering policy is fail-closed and tracked in `docs/planning/test_layering_policy.md`.
@@ -179,6 +182,30 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - local full-runtime run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_full_runtime_policy_fast_gate_exclusion_mismatch`
+
+## Runtime Sqlite Crash-Recovery Live Validation Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_sqlite_crash_recovery_live.sh --mode dry-run --output-json /tmp/sqlite-crash-recovery-live-summary.json`
+  - `KAMN_SQLITE_CRASH_RECOVERY_LIVE_OPT_IN=1 bash scripts/runtime/validate_sqlite_crash_recovery_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/sqlite-crash-recovery-live-summary.json`
+  - `bash scripts/runtime/check_sqlite_crash_recovery_live_policy.sh --report-file /tmp/sqlite-crash-recovery-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/sqlite-crash-recovery-live-policy.json`
+  - `bash scripts/runtime/validate_sqlite_crash_recovery_live_contract_lane.sh --output-json /tmp/sqlite-crash-recovery-live-contract-lane-report.json --policy-output-json /tmp/sqlite-crash-recovery-live-policy.json`
+  - `bash scripts/runtime/test_validate_sqlite_crash_recovery_live.sh`
+  - `bash scripts/runtime/test_check_sqlite_crash_recovery_live_policy.sh`
+  - `bash scripts/runtime/test_validate_sqlite_crash_recovery_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Crash-recovery evidence contracts:
+  - lane emits deterministic markers for replay integrity (`sqlite_crash_recovery_state_replay_status=verified`).
+  - lane emits deterministic markers for abrupt-kill recovery coverage (`sqlite_crash_recovery_abrupt_kill_status=verified`).
+  - policy checker fails closed on schema/marker drift and decision mismatches.
+- Cost controls:
+  - dry-run mode executes no nested `cargo test` commands and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_SQLITE_CRASH_RECOVERY_LIVE_OPT_IN=1`.
+  - run mode executes three bounded local commands covering sqlite migration parity and runtime snapshot restart recovery.
+  - sqlite crash-recovery run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `sqlite_crash_recovery_policy_fast_gate_exclusion_mismatch`
 
 ## Process Harness Primitive Contract
 - Entry commands:
