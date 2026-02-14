@@ -1081,6 +1081,53 @@ fn integration_config_layering_executes_bootstrap_report_with_expected_precedenc
 }
 
 #[test]
+fn env_only_daemon_controls_parse_without_config_file() {
+    let _env_lock = signer_env_lock()
+        .lock()
+        .expect("env lock should guard process-level overrides");
+    let _max_ticks_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_MAX_TICKS", Some("12"));
+    let _tick_interval_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_TICK_INTERVAL_MS", Some("25"));
+
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+    ];
+
+    let parsed = parse_args(args).expect("env-only daemon controls should parse");
+    assert_eq!(parsed.daemon_max_ticks, Some(12));
+    assert_eq!(parsed.daemon_tick_interval_ms, Some(25));
+}
+
+#[test]
+fn regression_3202_invalid_daemon_env_override_fails_closed_without_config_file() {
+    let _env_lock = signer_env_lock()
+        .lock()
+        .expect("env lock should guard process-level overrides");
+    let _max_ticks_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_MAX_TICKS", Some("invalid"));
+    let _tick_interval_guard = EnvVarGuard::set("KAMN_NODE_DAEMON_TICK_INTERVAL_MS", Some("25"));
+
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+    ];
+
+    let parse_result = parse_args(args);
+    assert!(
+        matches!(
+            parse_result,
+            Err(ConfigError::InvalidDaemonControlArgument(value)) if value == "invalid"
+        ),
+        "invalid daemon env override must fail closed with typed daemon control error"
+    );
+}
+
+#[test]
 fn functional_json_render_is_deterministic() {
     let report = NodeBootstrapReport {
         runtime_mode: "bootstrap".to_owned(),

@@ -35,15 +35,22 @@ spec:
         - name: kamn-node
           image: kamn-node:local
           imagePullPolicy: IfNotPresent
+          env:
+            - name: KAMN_NODE_DAEMON_MAX_TICKS
+              valueFrom:
+                configMapKeyRef:
+                  name: kamn-node-defaults
+                  key: daemon_max_ticks
+            - name: KAMN_NODE_DAEMON_TICK_INTERVAL_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: kamn-node-defaults
+                  key: daemon_tick_interval_ms
           args:
             - --role
             - processor
             - --runtime-mode
             - daemon
-            - --daemon-max-ticks
-            - "10"
-            - --daemon-tick-interval-ms
-            - "25"
             - --output
             - json
 ---
@@ -68,15 +75,22 @@ spec:
         - name: kamn-node
           image: kamn-node:local
           imagePullPolicy: IfNotPresent
+          env:
+            - name: KAMN_NODE_DAEMON_MAX_TICKS
+              valueFrom:
+                configMapKeyRef:
+                  name: kamn-node-defaults
+                  key: daemon_max_ticks
+            - name: KAMN_NODE_DAEMON_TICK_INTERVAL_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: kamn-node-defaults
+                  key: daemon_tick_interval_ms
           args:
             - --role
             - listener
             - --runtime-mode
             - daemon
-            - --daemon-max-ticks
-            - "10"
-            - --daemon-tick-interval-ms
-            - "25"
             - --output
             - json
 ---
@@ -101,14 +115,21 @@ spec:
         - name: kamn-node
           image: kamn-node:local
           imagePullPolicy: IfNotPresent
+          env:
+            - name: KAMN_NODE_DAEMON_MAX_TICKS
+              valueFrom:
+                configMapKeyRef:
+                  name: kamn-node-defaults
+                  key: daemon_max_ticks
+            - name: KAMN_NODE_DAEMON_TICK_INTERVAL_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: kamn-node-defaults
+                  key: daemon_tick_interval_ms
           args:
             - --role
             - approver
             - --runtime-mode
             - daemon
-            - --daemon-max-ticks
-            - "10"
-            - --daemon-tick-interval-ms
-            - "25"
             - --output
             - json
