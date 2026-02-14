@@ -98,6 +98,7 @@ cat >"$TMP_REPORT_OK" <<'JSON'
     "ci_fast_gate_scope": "local-only",
     "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
     "bundle_contract": "live_node_release_bundle_v1",
+    "live_run_rehearsal_lineage_required": true,
     "rollback_recovery_artifact_lineage_required": true,
     "process_lifecycle_rollback_evidence_option": "--rollback-evidence-file",
     "process_lifecycle_recovery_evidence_option": "--recovery-evidence-file"
@@ -132,6 +133,46 @@ if report.get("final_decision") != "GO":
 if report.get("reason_codes") != []:
     raise SystemExit("expected no reason codes for valid local live-node validation bundle report")
 PY
+
+# Regression: #3245
+python3 - "$TMP_REPORT_OK" "$TMP_REPORT_BAD" <<'PY'
+import json
+import pathlib
+import sys
+
+source = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+source["mode"] = "run"
+source["status"] = "ok"
+source["reason_code"] = "live_node_validation_bundle_passed"
+source["budget_status"] = "within_budget"
+source["contracts"].pop("live_run_rehearsal_lineage_required", None)
+pathlib.Path(sys.argv[2]).write_text(json.dumps(source, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+set +e
+python3 "$CHECKER" \
+  --report-file "$TMP_REPORT_BAD" \
+  --expected-final-decision GO \
+  --ci-fast-gate PASS \
+  --require-reason-code live_node_validation_bundle_passed \
+  --output-json "$TMP_POLICY_OUT" >"$TMP_ERR" 2>&1
+run_lineage_exit_code=$?
+set -e
+
+if [ "$run_lineage_exit_code" -eq 0 ]; then
+  echo "expected policy checker to fail for run-mode lineage tamper summary" >&2
+  exit 1
+fi
+
+if ! grep -q "live_run_rehearsal_lineage_required_contract_mismatch" "$TMP_ERR"; then
+  echo "expected live run-lineage contract marker mismatch reason for policy failure" >&2
+  exit 1
+fi
+
+if ! grep -q "run_mode_check_status_mismatch:integration_bundle" "$TMP_ERR"; then
+  echo "expected run-mode check status mismatch reason for policy failure" >&2
+  exit 1
+fi
 
 cat >"$TMP_REPORT_BAD" <<'JSON'
 {

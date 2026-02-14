@@ -217,6 +217,9 @@ def main() -> int:
     if contracts.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
         print("expected runtime provider contract marker in bundle summary", file=sys.stderr)
         return 1
+    if contracts.get("live_run_rehearsal_lineage_required") is not True:
+        print("expected live run-mode rehearsal lineage required contract marker in bundle summary", file=sys.stderr)
+        return 1
     if contracts.get("rollback_recovery_artifact_lineage_required") is not True:
         print("expected rollback/recovery lineage required contract marker in bundle summary", file=sys.stderr)
         return 1
@@ -288,6 +291,7 @@ def main() -> int:
         "--rollback-evidence-file",
         "--recovery-evidence-file",
         "rollback_evidence_file_missing",
+        "contracts.live_run_rehearsal_lineage_required=true",
         "contracts.rollback_recovery_artifact_lineage_required=true",
         "contracts.process_lifecycle_rollback_evidence_option=--rollback-evidence-file",
         "contracts.process_lifecycle_recovery_evidence_option=--recovery-evidence-file",
@@ -302,6 +306,7 @@ def main() -> int:
         "--rollback-evidence-file",
         "--recovery-evidence-file",
         "rollback_evidence_file_missing",
+        "contracts.live_run_rehearsal_lineage_required=true",
         "contracts.rollback_recovery_artifact_lineage_required=true",
         "contracts.process_lifecycle_rollback_evidence_option=--rollback-evidence-file",
         "contracts.process_lifecycle_recovery_evidence_option=--recovery-evidence-file",
@@ -316,6 +321,7 @@ def main() -> int:
         "--rollback-evidence-file",
         "--recovery-evidence-file",
         "rollback_evidence_file_missing",
+        "contracts.live_run_rehearsal_lineage_required=true",
         "contracts.rollback_recovery_artifact_lineage_required=true",
         "contracts.process_lifecycle_rollback_evidence_option=--rollback-evidence-file",
         "contracts.process_lifecycle_recovery_evidence_option=--recovery-evidence-file",

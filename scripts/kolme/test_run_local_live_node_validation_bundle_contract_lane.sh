@@ -60,6 +60,7 @@ required_coverage_markers=(
   "rollback_evidence_file"
   "recovery_evidence_file"
   "rollback_evidence_file_missing"
+  "contracts.live_run_rehearsal_lineage_required=true"
   "contracts.rollback_recovery_artifact_lineage_required=true"
   "contracts.process_lifecycle_rollback_evidence_option=--rollback-evidence-file"
   "contracts.process_lifecycle_recovery_evidence_option=--recovery-evidence-file"
@@ -98,6 +99,10 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "rollback_evidence_file_missing" "$docs_file"; then
     echo "expected docs parity to include rollback lineage reason marker in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "contracts.live_run_rehearsal_lineage_required=true" "$docs_file"; then
+    echo "expected docs parity to include live run-mode rehearsal lineage contract marker in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "contracts.rollback_recovery_artifact_lineage_required=true" "$docs_file"; then
@@ -150,6 +155,8 @@ if contracts.get("ci_fast_gate_scope") != "local-only":
     raise SystemExit("expected local-only fast-gate scope contract marker in bundle contract-lane summary")
 if contracts.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
     raise SystemExit("expected runtime provider contract marker in bundle contract-lane summary")
+if contracts.get("live_run_rehearsal_lineage_required") is not True:
+    raise SystemExit("expected live run-mode rehearsal lineage required contract marker in bundle contract-lane summary")
 if contracts.get("rollback_recovery_artifact_lineage_required") is not True:
     raise SystemExit("expected rollback/recovery lineage required contract marker in bundle contract-lane summary")
 if contracts.get("process_lifecycle_rollback_evidence_option") != "--rollback-evidence-file":

@@ -582,6 +582,7 @@ summary = {
         "ci_fast_gate_scope": "local-only",
         "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
         "bundle_contract": "live_node_release_bundle_v1",
+        "live_run_rehearsal_lineage_required": True,
         "rollback_recovery_artifact_lineage_required": True,
         "process_lifecycle_rollback_evidence_option": "--rollback-evidence-file",
         "process_lifecycle_recovery_evidence_option": "--recovery-evidence-file",
