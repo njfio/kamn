@@ -37,6 +37,10 @@ bash "$CHECKER" \
   --output-json "$PASS_REPORT" >"$TMP_DIR/pass.out"
 
 grep -q '^status=pass$' "$TMP_DIR/pass.out"
+grep -q '^soft_overrun_status=within$' "$TMP_DIR/pass.out"
+grep -q '^waiver_status=none$' "$TMP_DIR/pass.out"
+grep -q '^review_required=false$' "$TMP_DIR/pass.out"
+grep -q '^waived_reason_codes=none$' "$TMP_DIR/pass.out"
 grep -q '^script_count_delta=0$' "$TMP_DIR/pass.out"
 grep -q '^total_shell_loc_delta=0$' "$TMP_DIR/pass.out"
 grep -q '^violation_count=0$' "$TMP_DIR/pass.out"
@@ -63,7 +67,11 @@ if bash "$CHECKER" \
 fi
 
 grep -q '^status=fail$' "$TMP_DIR/fail-total.out"
+grep -q '^soft_overrun_status=exceeded$' "$TMP_DIR/fail-total.out"
+grep -q '^waiver_status=none$' "$TMP_DIR/fail-total.out"
+grep -q '^review_required=true$' "$TMP_DIR/fail-total.out"
 grep -q 'total_shell_loc_delta_threshold_exceeded' "$TMP_DIR/fail-total.out"
+grep -q 'delta_threshold_violation_unwaived' "$TMP_DIR/fail-total.out"
 
 MUTATED_STALE_BASELINE="$TMP_DIR/mutated-stale-baseline.json"
 cp "$BASELINE_FILE" "$MUTATED_STALE_BASELINE"
@@ -127,5 +135,84 @@ fi
 
 grep -q '^status=fail$' "$TMP_DIR/fail-undocumented-growth.out"
 grep -q 'unexpected_current_scripts' "$TMP_DIR/fail-undocumented-growth.out"
+
+VALID_WAIVER_FILE="$TMP_DIR/valid-waiver.json"
+cat >"$VALID_WAIVER_FILE" <<'JSON'
+{
+  "schema_version": "kamn.ci.non-kolme-wave-trend-test-loc-soft-budget-waiver.v1",
+  "scope": "non_kolme_wave_trend_test_loc_soft_budget",
+  "expires_on": "2099-12-31",
+  "approved_by": "ops",
+  "justification": "temporary shell surface drift while wrapper migration wave is in flight",
+  "allowed_reason_codes": [
+    "total_shell_loc_delta_threshold_exceeded",
+    "script_count_delta_threshold_exceeded"
+  ]
+}
+JSON
+
+WAIVER_PASS_REPORT="$TMP_DIR/waiver-pass-report.json"
+bash "$CHECKER" \
+  --baseline-file "$MUTATED_TOTAL_BASELINE" \
+  --threshold-file "$THRESHOLD_FILE" \
+  --waiver-file "$VALID_WAIVER_FILE" \
+  --output-json "$WAIVER_PASS_REPORT" >"$TMP_DIR/waiver-pass.out"
+
+grep -q '^status=pass$' "$TMP_DIR/waiver-pass.out"
+grep -q '^soft_overrun_status=exceeded$' "$TMP_DIR/waiver-pass.out"
+grep -q '^waiver_status=applied$' "$TMP_DIR/waiver-pass.out"
+grep -q '^review_required=true$' "$TMP_DIR/waiver-pass.out"
+grep -q 'waived_reason_codes=total_shell_loc_delta_threshold_exceeded' "$TMP_DIR/waiver-pass.out"
+grep -q 'delta_threshold_waiver_applied' "$TMP_DIR/waiver-pass.out"
+
+EXPIRED_WAIVER_FILE="$TMP_DIR/expired-waiver.json"
+cat >"$EXPIRED_WAIVER_FILE" <<'JSON'
+{
+  "schema_version": "kamn.ci.non-kolme-wave-trend-test-loc-soft-budget-waiver.v1",
+  "scope": "non_kolme_wave_trend_test_loc_soft_budget",
+  "expires_on": "2000-01-01",
+  "approved_by": "ops",
+  "justification": "expired waiver regression check",
+  "allowed_reason_codes": [
+    "total_shell_loc_delta_threshold_exceeded"
+  ]
+}
+JSON
+
+if bash "$CHECKER" \
+  --baseline-file "$MUTATED_TOTAL_BASELINE" \
+  --threshold-file "$THRESHOLD_FILE" \
+  --waiver-file "$EXPIRED_WAIVER_FILE" >"$TMP_DIR/waiver-expired.out" 2>&1; then
+  echo "expected checker to fail when waiver file is expired" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/waiver-expired.out"
+grep -q '^reason_codes=waiver_expired$' "$TMP_DIR/waiver-expired.out"
+
+SCOPE_MISMATCH_WAIVER_FILE="$TMP_DIR/scope-mismatch-waiver.json"
+cat >"$SCOPE_MISMATCH_WAIVER_FILE" <<'JSON'
+{
+  "schema_version": "kamn.ci.non-kolme-wave-trend-test-loc-soft-budget-waiver.v1",
+  "scope": "non_kolme_wave_other_scope",
+  "expires_on": "2099-12-31",
+  "approved_by": "ops",
+  "justification": "scope mismatch regression check",
+  "allowed_reason_codes": [
+    "total_shell_loc_delta_threshold_exceeded"
+  ]
+}
+JSON
+
+if bash "$CHECKER" \
+  --baseline-file "$MUTATED_TOTAL_BASELINE" \
+  --threshold-file "$THRESHOLD_FILE" \
+  --waiver-file "$SCOPE_MISMATCH_WAIVER_FILE" >"$TMP_DIR/waiver-scope-mismatch.out" 2>&1; then
+  echo "expected checker to fail when waiver scope does not match checker scope" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/waiver-scope-mismatch.out"
+grep -q '^reason_codes=waiver_scope_mismatch$' "$TMP_DIR/waiver-scope-mismatch.out"
 
 echo "non-Kolme wave trend-test LOC soft-budget checker tests passed."

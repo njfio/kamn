@@ -1,0 +1,11 @@
+{
+  "schema_version": "kamn.ci.non-kolme-wave-trend-test-loc-soft-budget-waiver.v1",
+  "scope": "non_kolme_wave_trend_test_loc_soft_budget",
+  "expires_on": "2099-12-31",
+  "approved_by": "unassigned",
+  "justification": "Template waiver file. Pass with --waiver-file only when approved for temporary drift.",
+  "allowed_reason_codes": [
+    "script_count_delta_threshold_exceeded",
+    "total_shell_loc_delta_threshold_exceeded"
+  ]
+}

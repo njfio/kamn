@@ -10,12 +10,12 @@
       "test_name": "performance_message_lifecycle_snapshot_deep_lane_stress"
     },
     {
-      "source_file": "crates/kamn-core/src/runtime.rs",
-      "test_name": "performance_file_snapshot_store_recovery_deep_lane_large_payload"
+      "source_file": "crates/kamn-core/src/runtime_tests_network_fault.rs",
+      "test_name": "performance_network_fault_simulation_chaos_lane_stress"
     },
     {
-      "source_file": "crates/kamn-core/src/runtime.rs",
-      "test_name": "performance_network_fault_simulation_chaos_lane_stress"
+      "source_file": "crates/kamn-core/src/runtime_tests_snapshot_store.rs",
+      "test_name": "performance_file_snapshot_store_recovery_deep_lane_large_payload"
     },
     {
       "source_file": "crates/kamn-core/src/task_operations.rs",

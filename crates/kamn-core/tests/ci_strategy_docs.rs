@@ -346,6 +346,32 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("reason_codes=fast_gate_delta_threshold_file_stale"));
     assert!(DOC.contains("reason_codes=fast_gate_delta_threshold_file_corrupt"));
     assert!(DOC.contains("refresh .ci/fast-gate-budget-delta.env baseline and threshold metadata"));
+    assert!(DOC.contains(
+        "check_non_kolme_wave_trend_test_loc_soft_budget.sh --waiver-file .ci/non_kolme_wave_trend_test_loc_soft_budget_waiver.json --output-json /tmp/non-kolme-wave-trend-test-loc-soft-budget-report.json"
+    ));
+    assert!(DOC.contains("reason_codes=delta_threshold_violation_unwaived"));
+    assert!(DOC.contains("reason_codes=delta_threshold_waiver_applied"));
+    assert!(DOC.contains("reason_codes=waiver_expired"));
+    assert!(DOC.contains("reason_codes=waiver_scope_mismatch"));
+    assert!(DOC.contains("waiver_status=none|applied"));
+    assert!(DOC.contains("waived_reason_codes=none|..."));
+    assert!(DOC.contains("remediation=..."));
+    assert!(DOC.contains("test_check_kamn_node_main_rs_extraction_threshold.sh"));
+    assert!(DOC.contains("fixtures/ci/kamn_node_main_rs_extraction_thresholds.json"));
+    assert!(DOC.contains(
+        "check_kamn_node_main_rs_extraction_threshold.sh --output-json /tmp/kamn-node-main-rs-extraction-threshold-report.json"
+    ));
+    assert!(DOC.contains(
+        "check_kamn_node_main_rs_extraction_threshold.sh --exception-file .ci/kamn_node_main_rs_extraction_threshold_exception.json --output-json /tmp/kamn-node-main-rs-extraction-threshold-report.json"
+    ));
+    assert!(DOC.contains("policy_decision=GO|WARN|NO-GO"));
+    assert!(DOC.contains("exception_status=not-required|not-provided|applied|invalid|cap-exceeded"));
+    assert!(DOC.contains("reason_codes=main_rs_line_count_warn_threshold_exceeded"));
+    assert!(DOC.contains("reason_codes=main_rs_line_count_fail_threshold_exceeded"));
+    assert!(DOC.contains("reason_codes=main_rs_threshold_exception_applied"));
+    assert!(DOC.contains("reason_codes=main_rs_threshold_exception_expired"));
+    assert!(DOC.contains("reason_codes=main_rs_threshold_exception_cap_exceeded"));
+    assert!(DOC.contains("reason_codes=threshold_order_invalid"));
 }
 
 #[test]
