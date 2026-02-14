@@ -49,6 +49,10 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
   - wrapper: `scripts/deploy/run_deployment_slo_rollback_lane.sh`
   - implementation: `scripts/deploy/run_deployment_slo_rollback_lane_impl.sh`
   - manifest: `scripts/framework/manifests/deploy_deployment_slo_rollback_lane.json`
+- `#2864` migrates frontend shell determinism run-lane wrapper to shared non-Kolme dispatcher + manifest wiring:
+  - wrapper: `scripts/frontend/run_dashboard_shell_determinism_matrix_lane.sh`
+  - implementation: `scripts/frontend/run_dashboard_shell_determinism_matrix_lane_impl.sh`
+  - manifest: `scripts/framework/manifests/frontend_dashboard_shell_determinism_matrix_lane.json`
 - Contract coverage for this migration slice:
   - `scripts/signer/test_run_signer_provider_deep_lane.sh`
   - `scripts/signer/test_run_signer_incident_recovery_deep_lane.sh`
@@ -57,6 +61,7 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
   - `scripts/dashboard/test_run_dashboard_stale_error_budget_lane.sh`
   - `scripts/compliance/test_run_classification_redaction_lane.sh`
   - `scripts/deploy/test_run_deployment_slo_rollback_lane.sh`
+  - `scripts/frontend/test_run_dashboard_shell_determinism_matrix_lane.sh`
 
 ## Fast-Gate Delta Policy
 `scripts/ci/generate_fast_gate_budget_delta_report.sh` compares current fast-gate telemetry against a versioned baseline and emits:

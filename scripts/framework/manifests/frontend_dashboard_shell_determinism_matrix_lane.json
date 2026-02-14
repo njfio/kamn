@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "frontend.dashboard_shell_determinism_matrix.run",
+  "evidence_key": "dashboard_shell_determinism_matrix_lane:v1",
+  "reason_key": "dashboard_shell_determinism_matrix_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/frontend/run_dashboard_shell_determinism_matrix_lane_impl.sh"
+    ]
+  }
+}

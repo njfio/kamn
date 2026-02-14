@@ -79,6 +79,7 @@ resolve_manifest_name() {
     run_channel_lifecycle_contract_lane.sh) echo "channel_channel_lifecycle_contract_lane.json" ;;
     run_channel_policy_contract_lane.sh) echo "channel_channel_policy_contract_lane.json" ;;
     run_dashboard_shell_determinism_matrix_contract_lane.sh) echo "frontend_dashboard_shell_determinism_matrix_contract_lane.json" ;;
+    run_dashboard_shell_determinism_matrix_lane.sh) echo "frontend_dashboard_shell_determinism_matrix_lane.json" ;;
     run_a2a_mcp_conformance_contract_lane.sh) echo "message_a2a_mcp_conformance_contract_lane.json" ;;
     run_didcomm_envelope_compatibility_contract_lane.sh) echo "message_didcomm_envelope_compatibility_contract_lane.json" ;;
     run_group_sender_replay_ratchet_contract_lane.sh) echo "message_group_sender_replay_ratchet_contract_lane.json" ;;
@@ -147,6 +148,7 @@ resolve_manifest_name() {
 
 resolve_phase_name() {
   case "$1" in
+    run_dashboard_shell_determinism_matrix_lane.sh) echo "run" ;;
     run_deployment_slo_rollback_lane.sh) echo "run" ;;
     run_classification_redaction_lane.sh) echo "run" ;;
     run_backend_session_auth_freshness_lane.sh) echo "run" ;;
