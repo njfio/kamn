@@ -6,9 +6,11 @@ LANE_SCRIPT="$ROOT_DIR/scripts/runtime/run_go_no_go_gate_lane.sh"
 LANE_IMPL_SCRIPT="$ROOT_DIR/scripts/runtime/run_go_no_go_gate_lane_impl.sh"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_go_no_go_gate_lane.json"
+RELEASE_MANIFEST_FILE="$ROOT_DIR/scripts/runtime/release_evidence_manifest.json"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT="$TMP_DIR/go-no-go-gate-report.json"
 TMP_FAULT_REPORT="$TMP_DIR/go-no-go-gate-fault-report.json"
+TMP_MANIFEST_FAIL_REPORT="$TMP_DIR/go-no-go-gate-manifest-fail-report.json"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [ ! -x "$LANE_SCRIPT" ]; then
@@ -44,6 +46,10 @@ if ! grep -q 'run_go_no_go_gate_lane_impl.sh' "$MANIFEST_FILE"; then
 fi
 if ! grep -q 'go_no_go_gate_lane_contract.py' "$LANE_IMPL_SCRIPT"; then
   echo "expected go/no-go gate lane implementation to delegate to contract module" >&2
+  exit 1
+fi
+if [ ! -f "$RELEASE_MANIFEST_FILE" ]; then
+  echo "expected release evidence manifest file for go/no-go gate lane" >&2
   exit 1
 fi
 
@@ -93,6 +99,18 @@ if payload.get("rollback_readiness_status") != "verified":
     raise SystemExit("expected rollback_readiness_status=verified")
 if payload.get("dr_readiness_status") != "verified":
     raise SystemExit("expected dr_readiness_status=verified")
+if payload.get("manifest_schema_version") != "kamn.runtime.release-evidence-manifest.v1":
+    raise SystemExit("expected manifest_schema_version marker in go/no-go gate report")
+if payload.get("manifest_registry_status") != "verified":
+    raise SystemExit("expected manifest_registry_status=verified")
+inventory = payload.get("artifact_inventory")
+if not isinstance(inventory, list) or len(inventory) != 3:
+    raise SystemExit("expected deterministic artifact inventory list with three required entries")
+for entry in inventory:
+    if not isinstance(entry, dict):
+        raise SystemExit("artifact inventory entry must be an object")
+    if entry.get("status") != "verified":
+        raise SystemExit("expected every artifact inventory entry status=verified")
 if payload.get("reason_codes") != []:
     raise SystemExit("expected empty reason_codes for baseline go/no-go gate run")
 PY
@@ -112,6 +130,41 @@ if [ "$fault_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$fault_output" | grep -q 'gate_decision_fault_injection_triggered'; then
   echo "expected go/no-go gate lane gate_decision fault reason marker" >&2
+  exit 1
+fi
+
+tampered_manifest="$TMP_DIR/release-evidence-manifest.missing-dr.json"
+python3 - "$RELEASE_MANIFEST_FILE" "$tampered_manifest" <<'PY'
+import json
+import pathlib
+import sys
+
+source_path = pathlib.Path(sys.argv[1])
+target_path = pathlib.Path(sys.argv[2])
+payload = json.loads(source_path.read_text(encoding="utf-8"))
+payload["required_artifacts"] = [
+    artifact
+    for artifact in payload.get("required_artifacts", [])
+    if artifact.get("artifact_id") != "dr_readiness"
+]
+target_path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+manifest_fail_output="$(
+  bash "$LANE_SCRIPT" \
+    --manifest-file "$tampered_manifest" \
+    --max-seconds 120 \
+    --output-json "$TMP_MANIFEST_FAIL_REPORT" 2>&1
+)"
+manifest_fail_code=$?
+set -e
+if [ "$manifest_fail_code" -eq 0 ]; then
+  echo "expected go/no-go gate lane to fail closed on tampered release evidence manifest" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$manifest_fail_output" | grep -q 'release_manifest_missing_required_artifact:dr_readiness'; then
+  echo "expected deterministic missing-artifact reason marker for tampered release evidence manifest" >&2
   exit 1
 fi
 
