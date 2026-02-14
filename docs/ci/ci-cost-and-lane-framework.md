@@ -19,6 +19,7 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 - Runtime budget gate: `scripts/ci/evaluate_budget.sh`
 - Fast-gate delta report generator: `scripts/ci/generate_fast_gate_budget_delta_report.sh`
 - Fast-gate delta threshold gate: `scripts/ci/check_fast_gate_budget_delta_threshold.sh`
+- Fast-gate delta contract lane: `scripts/ci/run_fast_gate_budget_delta_contract_lane.sh`
 - Script surface gate: `scripts/ci/check_script_duplication_budget.sh`
 - Test-harness soft-budget contract lane: `scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh`
 - Kolme harness+command-surface trend report: `scripts/ci/generate_kolme_test_harness_loc_trend_report.sh`
@@ -111,6 +112,15 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 - absolute and percentage variance
 
 `scripts/ci/check_fast_gate_budget_delta_threshold.sh` fails closed when positive variance exceeds configured limits without a valid waiver.
+
+Fast-gate threshold metadata contract:
+
+- `FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON` must be present in `.ci/fast-gate-budget-delta.env`.
+- `FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS` must be present in `.ci/fast-gate-budget-delta.env`.
+- stale threshold metadata is fail-closed via `reason_codes=fast_gate_delta_threshold_file_stale`.
+- corrupt threshold metadata is fail-closed via `reason_codes=fast_gate_delta_threshold_file_corrupt`.
+- contract lane command: `bash scripts/ci/run_fast_gate_budget_delta_contract_lane.sh --output-json /tmp/fast-gate-budget-delta-contract-report.json`
+- refresh .ci/fast-gate-budget-delta.env baseline and threshold metadata
 
 ## Staging Soak Telemetry Policy
 Staging soak/rehearsal evidence for rollout readiness is generated and checked with:
@@ -292,6 +302,7 @@ bash scripts/ci/check_script_duplication_budget.sh
 bash scripts/ci/test_check_script_duplication_budget.sh
 bash scripts/ci/test_generate_fast_gate_budget_delta_report.sh
 bash scripts/ci/test_check_fast_gate_budget_delta_threshold.sh
+bash scripts/ci/test_run_fast_gate_budget_delta_contract_lane.sh
 bash scripts/ci/test_ci_tools.sh
 bash scripts/deploy/test_generate_staging_rehearsal_bundle.sh
 bash scripts/deploy/test_run_staging_rehearsal_contract_lane.sh

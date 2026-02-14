@@ -62,6 +62,17 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
     - `scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh`
   - Deterministic reason-code surface expanded with: `unexpected_current_scripts`.
   - Trend-policy interpretation guidance updated in `docs/ci/strategy.md` to require baseline refresh for any new script path.
+- Post-roadmap hardening wave 6 fast-gate runtime/cost trend contract lane delivered:
+  - Added manifest-backed contract lane wrapper + shared implementation for deterministic fast-gate budget-delta path coverage (Task #3154, Subtask #3164):
+    - `scripts/ci/run_fast_gate_budget_delta_contract_lane.sh`
+    - `scripts/ci/fast_gate_budget_delta_contract_lane_impl.sh`
+    - `scripts/framework/manifests/ci_fast_gate_budget_delta_contract_lane.json`
+    - `scripts/ci/test_run_fast_gate_budget_delta_contract_lane.sh`
+  - Fast-gate delta threshold config now validates freshness metadata and fails closed on stale/corrupt threshold files:
+    - required keys in `.ci/fast-gate-budget-delta.env`: `FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON`, `FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS`
+    - stale/corrupt guard reason markers: `fast_gate_delta_threshold_file_stale`, `fast_gate_delta_threshold_file_corrupt`
+  - CI strategy/cost docs and contract markers updated with remediation guidance:
+    - refresh .ci/fast-gate-budget-delta.env baseline and threshold metadata.
 - Post-roadmap hardening wave 2 runtime decomposition initial tranche delivered:
   - Extracted state-divergence orchestration from `crates/kamn-core/src/runtime.rs` into dedicated module `crates/kamn-core/src/runtime_state_divergence.rs` with unchanged external behavior (Task #3050, Subtask #3051).
   - Module-ownership contract documented in `docs/foundation/runtime-watchdog-attestation.md` and enforced by `crates/kamn-core/tests/runtime_watchdog_attestation_docs.rs`.

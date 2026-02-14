@@ -1922,6 +1922,7 @@ Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
 
 - `scripts/ci/generate_fast_gate_budget_delta_report.sh` emits baseline/current/variance metrics.
 - `scripts/ci/check_fast_gate_budget_delta_threshold.sh` fails closed on unapproved regressions.
+- `scripts/ci/run_fast_gate_budget_delta_contract_lane.sh --output-json /tmp/fast-gate-budget-delta-contract-report.json` enforces pass/unwaived/waived plus stale/corrupt threshold guard contracts.
 - `ci-budget-fast-gate-delta-*.json` artifacts are uploaded for auditability.
 - local-heavy-sensitive drift markers are emitted in the delta report:
   - `test_scope`
@@ -1936,8 +1937,14 @@ Both lanes call `scripts/ci/evaluate_budget.sh` at the end of the run to:
   - `delta_threshold_violation_unwaived` (hard fail, merge-blocking)
   - `delta_threshold_waiver_applied` (pass with mandatory review visibility)
   - `local_heavy_sensitive_drift_detected` (soft-overrun review marker for local-heavy-sensitive scope drift)
+  - `fast_gate_delta_threshold_file_stale` (contract lane stale-threshold guard)
+  - `fast_gate_delta_threshold_file_corrupt` (contract lane corrupt-threshold guard)
 - reviewer action when `soft_overrun_status=exceeded`:
   - verify expected local-heavy drift scope and waiver rationale, and require linked follow-up before merge.
+- fast-gate threshold remediation path:
+  - refresh `.ci/fast-gate-budget-delta.env` baseline and threshold metadata, then rerun delta report + checker.
+  - refresh .ci/fast-gate-budget-delta.env baseline and threshold metadata
+  - required guard markers: `reason_codes=fast_gate_delta_threshold_file_stale` and `reason_codes=fast_gate_delta_threshold_file_corrupt`.
 
 Test-harness growth advisory (non-blocking):
 - trend thresholds file: `.ci/test-harness-loc-trend-thresholds.env`
@@ -2072,6 +2079,12 @@ Fast-mode CI tooling regression coverage includes:
     - `reason_codes=command_surface_script_count_trend_fail_delta_exceeded`
     - `reason_codes=command_surface_shell_line_total_trend_fail_delta_exceeded`
     - `reason_codes=command_surface_budget_status_fail`
+- Fast-gate runtime/cost trend contract lane (`test_run_fast_gate_budget_delta_contract_lane.sh`)
+  - contract lane command:
+    - `bash scripts/ci/run_fast_gate_budget_delta_contract_lane.sh --output-json /tmp/fast-gate-budget-delta-contract-report.json`
+  - deterministic threshold-guard reason-code surface:
+    - `reason_codes=fast_gate_delta_threshold_file_stale`
+    - `reason_codes=fast_gate_delta_threshold_file_corrupt`
 - Retry helper (`test_run_with_retry.sh`)
 - Invariant harness runner (`test_run_invariant_harness.sh`)
 - Selector matrix runner with output-env isolation (`test_select_targets.sh`, `Regression: #463`)
