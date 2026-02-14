@@ -25,6 +25,12 @@ Fail-closed behavior:
   - `service_api_ingress_body_size_limit_exceeded`
   - `service_api_ingress_concurrency_limit_exceeded`
   - `service_api_ingress_rate_limit_exceeded`
+  - `service_api_ingress_sender_rate_limit_exceeded`
+  - `service_api_ingress_sender_suspended`
+- authenticated sender traffic is additionally enforced through `kamn-core` anti-spam decisions:
+  - sender window: `3` messages / `5` seconds (default anti-spam profile)
+  - suspension threshold: `2` consecutive sender rate-limit violations
+  - suspension duration: `60` seconds
 
 ## Endpoints
 
@@ -69,6 +75,8 @@ Auth policy:
 - `GET /healthz` and `GET /metrics` are intentionally unauthenticated for probes/scrapes.
 - Other routes fail closed with `401 Unauthorized` when required headers are missing or signature verification fails.
 - Nonce replay per sender fails closed with `409 Conflict`.
+- After auth + replay validation, sender-scoped anti-spam decisions are enforced before request dispatch.
+- Sender anti-spam throttling and suspension failures return `429 Too Many Requests` with deterministic reason codes.
 
 Signature profile:
 

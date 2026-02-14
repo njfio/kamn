@@ -418,10 +418,16 @@ This document captures node-runtime productionization slices for machine-readabl
   - `--api-concurrency-limit <n>` default `32`
   - `--api-rate-limit-per-second <n>` default `120`
   - all limiter controls are fail-closed positive-integer guards and require `--api-bind` when overridden
+  - authenticated sender traffic is additionally subject to anti-spam decision enforcement:
+    - sender window limit: `3` messages over `5` seconds
+    - suspension trigger: `2` consecutive sender rate-limit violations
+    - suspension duration: `60` seconds
   - deterministic limiter rejection reason codes:
     - `service_api_ingress_body_size_limit_exceeded`
     - `service_api_ingress_concurrency_limit_exceeded`
     - `service_api_ingress_rate_limit_exceeded`
+    - `service_api_ingress_sender_rate_limit_exceeded`
+    - `service_api_ingress_sender_suspended`
 - Payload decode failures map to deterministic reason-code prefixes:
   - `service_api_payload_json_syntax_invalid`
   - `service_api_payload_structure_invalid`
