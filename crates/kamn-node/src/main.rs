@@ -96,6 +96,8 @@ const KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS_ENV: &str =
 const KOLME_LIVE_MANAGED_SIGNER_TIMEOUT_SECONDS_DEFAULT: u64 = 5;
 const KOLME_LIVE_MANAGED_SIGNER_POLL_INTERVAL_MILLIS: u64 = 10;
 const KOLME_LIVE_NATIVE_CREATED_AT: &str = "2026-02-12T00:00:00Z";
+const FULL_RUNTIME_BOOTSTRAP_COMPONENT_SEQUENCE: [&str; 4] =
+    ["daemon", "api", "transport", "kolme-commit"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct OutputMode {
@@ -506,6 +508,103 @@ fn daemon_shutdown_reason_field<'a>(completion_reason: &'a str, key: &str) -> Op
         }
         None
     })
+}
+
+fn classify_full_bootstrap_component_contract_violation(
+    components: &[&str],
+) -> Option<&'static str> {
+    if components.len() != FULL_RUNTIME_BOOTSTRAP_COMPONENT_SEQUENCE.len() {
+        return Some("full_supervisor_bootstrap_component_count_mismatch");
+    }
+    for (component, expected_component) in components
+        .iter()
+        .zip(FULL_RUNTIME_BOOTSTRAP_COMPONENT_SEQUENCE.iter())
+    {
+        if component != expected_component {
+            return Some("full_supervisor_bootstrap_component_order_mismatch");
+        }
+    }
+    None
+}
+
+fn validate_full_bootstrap_component_contract(components: &[&str]) -> Result<(), ConfigError> {
+    if let Some(reason) = classify_full_bootstrap_component_contract_violation(components) {
+        return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+            "full_supervisor_invariant_violation:{reason}"
+        )));
+    }
+    Ok(())
+}
+
+fn classify_full_supervisor_stop_contract_violation(
+    completion_reason: &str,
+    shutdown_drain_status: &str,
+) -> Option<&'static str> {
+    if !matches!(
+        shutdown_drain_status,
+        "completed" | "timeout" | "not-signaled"
+    ) {
+        return Some("full_supervisor_stop_invalid_shutdown_drain_status");
+    }
+    if completion_reason == "tick-budget-exhausted"
+        || completion_reason.starts_with("tick-budget-exhausted;ignored_signals=")
+    {
+        if shutdown_drain_status != "not-signaled" {
+            return Some("full_supervisor_stop_not_signaled_status_mismatch");
+        }
+        return None;
+    }
+    if completion_reason.starts_with("graceful-shutdown:signal@") {
+        if daemon_shutdown_signal_tick(completion_reason).is_none() {
+            return Some("full_supervisor_stop_missing_signal_tick");
+        }
+        if daemon_shutdown_reason_field(completion_reason, "drain_ticks").is_none() {
+            return Some("full_supervisor_stop_missing_drain_ticks");
+        }
+        if daemon_shutdown_reason_field(completion_reason, "timeout_ticks").is_none() {
+            return Some("full_supervisor_stop_missing_timeout_ticks");
+        }
+        if daemon_shutdown_reason_field(completion_reason, "ignored_signals").is_none() {
+            return Some("full_supervisor_stop_missing_ignored_signals");
+        }
+        if shutdown_drain_status != "completed" {
+            return Some("full_supervisor_stop_graceful_status_mismatch");
+        }
+        return None;
+    }
+    if completion_reason.starts_with("graceful-shutdown-timeout:signal@") {
+        if daemon_shutdown_signal_tick(completion_reason).is_none() {
+            return Some("full_supervisor_stop_missing_signal_tick");
+        }
+        if daemon_shutdown_reason_field(completion_reason, "drain_ticks").is_none() {
+            return Some("full_supervisor_stop_missing_drain_ticks");
+        }
+        if daemon_shutdown_reason_field(completion_reason, "timeout_ticks").is_none() {
+            return Some("full_supervisor_stop_missing_timeout_ticks");
+        }
+        if daemon_shutdown_reason_field(completion_reason, "ignored_signals").is_none() {
+            return Some("full_supervisor_stop_missing_ignored_signals");
+        }
+        if shutdown_drain_status != "timeout" {
+            return Some("full_supervisor_stop_graceful_timeout_status_mismatch");
+        }
+        return None;
+    }
+    Some("full_supervisor_stop_unknown_completion_reason")
+}
+
+fn validate_full_supervisor_stop_contract(
+    completion_reason: &str,
+    shutdown_drain_status: &str,
+) -> Result<(), ConfigError> {
+    if let Some(reason) =
+        classify_full_supervisor_stop_contract_violation(completion_reason, shutdown_drain_status)
+    {
+        return Err(ConfigError::RuntimeDaemonLifecycle(format!(
+            "full_supervisor_invariant_violation:{reason}"
+        )));
+    }
+    Ok(())
 }
 
 fn execute_daemon_runtime(
@@ -966,11 +1065,14 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             RuntimeExecutionBundle::default()
         }
         RuntimeModeKind::Full => {
+            validate_full_bootstrap_component_contract(
+                FULL_RUNTIME_BOOTSTRAP_COMPONENT_SEQUENCE.as_slice(),
+            )?;
             log_info(
                 "node.runtime.full.bootstrap.start",
                 &[("execution_id", execution_id.as_str())],
             )?;
-            for (stage_index, component) in ["daemon", "api", "transport", "kolme-commit"]
+            for (stage_index, component) in FULL_RUNTIME_BOOTSTRAP_COMPONENT_SEQUENCE
                 .into_iter()
                 .enumerate()
             {
@@ -1005,6 +1107,7 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             let stop_reason = "daemon-execution-complete";
             let completion_reason = daemon_execution.completion_reason.as_str();
             let shutdown_drain_status = daemon_shutdown_drain_status(completion_reason);
+            validate_full_supervisor_stop_contract(completion_reason, shutdown_drain_status)?;
             log_info(
                 "node.runtime.full.supervisor.stop.requested",
                 &[

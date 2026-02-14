@@ -119,6 +119,20 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - deterministic tick-budget simulation with bounded loop-free assertions
   - timeout behavior and observability telemetry validated through direct state transitions instead of wall-clock waits
 
+## Node Runtime Full-Mode Supervisor Invariant Contract Lane
+- For `kamn-node` full runtime supervisor lifecycle contract changes, keep PR validation on bounded deterministic tests:
+  - `cargo test -p kamn-node full_supervisor`
+  - `cargo test -p kamn-node integration_runtime_full_emits_timeout_shutdown_supervisor_reason_codes -- --exact`
+  - `cargo test -p kamn-node integration_runtime_full_emits_ordered_bootstrap_readiness_markers -- --exact`
+  - `cargo test -p kamn-node regression_runtime_full_emits_supervisor_stop_markers_with_daemon_reason -- --exact`
+- This lane is cost-effective:
+  - all tests run in-process with deterministic tick-budget simulation and no external network dependency.
+  - invariant drift uses fail-closed reason-code checks on bootstrap order and supervisor stop contracts.
+  - timeout/cancellation behavior is validated without launching multi-process orchestration.
+- Deterministic fail-closed markers:
+  - `full_supervisor_invariant_violation:full_supervisor_bootstrap_component_order_mismatch`
+  - `full_supervisor_invariant_violation:full_supervisor_stop_unknown_completion_reason`
+
 ## Runtime Observability Endpoint Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_runtime_observability_endpoint_live_contract_lane.sh --output-json /tmp/runtime-observability-endpoint-contract-lane-report.json --policy-output-json /tmp/runtime-observability-endpoint-policy-report.json`

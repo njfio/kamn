@@ -1174,6 +1174,89 @@ fn regression_runtime_full_emits_supervisor_stop_markers_with_daemon_reason() {
 }
 
 #[test]
+fn unit_full_supervisor_bootstrap_component_contract_rejects_order_drift() {
+    let reason = classify_full_bootstrap_component_contract_violation(&[
+        "daemon",
+        "transport",
+        "api",
+        "kolme-commit",
+    ]);
+    assert_eq!(
+        reason,
+        Some("full_supervisor_bootstrap_component_order_mismatch")
+    );
+}
+
+#[test]
+fn regression_full_supervisor_stop_contract_rejects_unknown_completion_reason() {
+    // Regression: #3283
+    let error = validate_full_supervisor_stop_contract("legacy-stop-reason", "not-signaled")
+        .expect_err("unknown supervisor stop completion reason must fail closed");
+    assert!(
+        matches!(error, ConfigError::RuntimeDaemonLifecycle(message) if message.contains("full_supervisor_invariant_violation:full_supervisor_stop_unknown_completion_reason")),
+        "unknown supervisor stop completion reason must emit deterministic fail-closed reason code"
+    );
+}
+
+#[test]
+fn unit_full_supervisor_stop_contract_classifier_rejects_status_mismatch() {
+    let reason = classify_full_supervisor_stop_contract_violation(
+        "graceful-shutdown:signal@2;drain_ticks=1;timeout_ticks=3;ignored_signals=0",
+        "not-signaled",
+    );
+    assert_eq!(
+        reason,
+        Some("full_supervisor_stop_graceful_status_mismatch")
+    );
+}
+
+#[test]
+fn integration_runtime_full_emits_timeout_shutdown_supervisor_reason_codes() {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "4".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "10".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "1".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "5".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "1".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:19085".to_owned(),
+    ])
+    .expect("full args with timeout shutdown controls should parse");
+    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
+    let report = report_result.expect("full runtime with timeout shutdown controls should succeed");
+    assert_eq!(report.runtime_mode, "full");
+    let stop_complete_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"node.runtime.full.supervisor.stop.complete\""))
+        .expect("full runtime should emit supervisor stop-complete marker");
+    assert_eq!(
+        extract_json_string_field(stop_complete_line, "shutdown_drain_status").as_deref(),
+        Some("timeout")
+    );
+    assert!(
+        extract_json_string_field(stop_complete_line, "daemon_completion_reason")
+            .as_deref()
+            .is_some_and(|value| value.starts_with("graceful-shutdown-timeout:signal@")),
+        "timeout shutdown flow must preserve deterministic graceful-shutdown-timeout reason marker"
+    );
+}
+
+#[test]
 fn parses_runtime_mode_daemon_with_os_signal_shutdown_controls() {
     let args = vec![
         "kamn-node".to_owned(),

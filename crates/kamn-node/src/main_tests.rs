@@ -3,6 +3,8 @@ use super::{
     build_kolme_live_managed_signing_key, build_kolme_live_request,
     build_kolme_live_signer_adapter, build_runtime_observability_snapshot,
     build_service_api_snapshot, capture_test_logs,
+    classify_full_bootstrap_component_contract_violation,
+    classify_full_supervisor_stop_contract_violation,
     classify_kolme_live_signer_key_source_policy_violation, encode_kolme_hex_lower,
     enforce_kolme_live_signer_contract_policy, enforce_kolme_live_signer_key_source_policy,
     execute, parse_args, render_bootstrap_report, render_kolme_live_native_direct_message,
@@ -11,10 +13,10 @@ use super::{
     resolve_kolme_live_managed_signer_required_marker, resolve_kolme_live_nonce,
     resolve_kolme_live_signer_private_key_env_name, resolve_log_config_from_inputs,
     serve_observability_endpoint, serve_service_api_endpoint,
-    sign_kolme_live_managed_external_message, DiagnosticsMode, KolmeForkSecp256k1SignerAdapter,
-    LocalProfile, NodeBootstrapReport, NodeLogConfig, NodeLogFormat, NodeLogLevel,
-    ObservabilityEndpointConfig, OutputMode, RuntimeExecutionBundle, RuntimeMode,
-    ServiceApiEndpointConfig,
+    sign_kolme_live_managed_external_message, validate_full_supervisor_stop_contract,
+    DiagnosticsMode, KolmeForkSecp256k1SignerAdapter, LocalProfile, NodeBootstrapReport,
+    NodeLogConfig, NodeLogFormat, NodeLogLevel, ObservabilityEndpointConfig, OutputMode,
+    RuntimeExecutionBundle, RuntimeMode, ServiceApiEndpointConfig,
 };
 use kamn_core::{
     bootstrap, ConfigError, KolmeRuntimeCommitHttpTransport, KolmeRuntimeCommitRequest, NodeConfig,
