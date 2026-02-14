@@ -2,12 +2,26 @@ use crate::{
     logging::{log_info, log_warn},
     NodeBootstrapReport,
 };
+use axum::{
+    body::{to_bytes, Bytes},
+    extract::{
+        ws::{Message, WebSocket, WebSocketUpgrade},
+        FromRequest, Request, State,
+    },
+    http::{HeaderMap, HeaderValue, StatusCode},
+    response::{IntoResponse, Response},
+    routing::any,
+    Router,
+};
 use kamn_core::{signature_matches_supported_profile_for_fields, AgentDid};
 use std::collections::{BTreeMap, BTreeSet};
-use std::io::{ErrorKind, Read, Write};
-use std::net::{TcpListener, TcpStream};
-use std::thread;
+use std::sync::{
+    atomic::{AtomicBool, AtomicU64, Ordering},
+    Arc,
+};
 use std::time::{Duration, Instant};
+use tokio::runtime::Builder;
+use tokio::sync::{Mutex, Notify};
 
 pub(crate) const DEFAULT_SERVICE_API_MAX_REQUESTS: u64 = 1;
 pub(crate) const DEFAULT_SERVICE_API_IDLE_TIMEOUT_MS: u64 = 5_000;
@@ -69,6 +83,46 @@ struct ParsedRequest {
 enum RequestAuthFailure {
     Unauthorized(String),
     Replay(String),
+}
+
+#[derive(Debug)]
+struct ServiceApiRequestBudget {
+    max_requests: u64,
+    served_requests: AtomicU64,
+    completion: Notify,
+}
+
+impl ServiceApiRequestBudget {
+    fn new(max_requests: u64) -> Self {
+        Self {
+            max_requests,
+            served_requests: AtomicU64::new(0),
+            completion: Notify::new(),
+        }
+    }
+
+    fn record_request(&self) {
+        let served = self.served_requests.fetch_add(1, Ordering::SeqCst) + 1;
+        if served >= self.max_requests {
+            self.completion.notify_waiters();
+        }
+    }
+
+    async fn wait_until_complete(&self) {
+        loop {
+            if self.served_requests.load(Ordering::SeqCst) >= self.max_requests {
+                return;
+            }
+            self.completion.notified().await;
+        }
+    }
+}
+
+#[derive(Debug)]
+struct ServiceApiRuntimeState {
+    snapshot: ServiceApiSnapshot,
+    replay_guard: Arc<Mutex<BTreeSet<(String, u64)>>>,
+    request_budget: Arc<ServiceApiRequestBudget>,
 }
 
 pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> ServiceApiSnapshot {
@@ -246,161 +300,292 @@ pub(crate) fn serve_service_api_endpoint(
         return Err("service api idle timeout must be greater than zero".to_owned());
     }
 
-    let listener = TcpListener::bind(config.bind_addr.as_str())
-        .map_err(|error| format!("service api bind failed: {error}"))?;
-    listener
-        .set_nonblocking(true)
-        .map_err(|error| format!("service api nonblocking mode failed: {error}"))?;
+    let runtime = Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
+        .build()
+        .map_err(|error| format!("service api runtime init failed: {error}"))?;
+    runtime.block_on(serve_service_api_endpoint_async(
+        config.clone(),
+        snapshot.clone(),
+    ))
+}
 
+async fn serve_service_api_endpoint_async(
+    config: ServiceApiEndpointConfig,
+    snapshot: ServiceApiSnapshot,
+) -> Result<(), String> {
+    let listener = tokio::net::TcpListener::bind(config.bind_addr.as_str())
+        .await
+        .map_err(|error| format!("service api bind failed: {error}"))?;
+
+    let runtime_state = Arc::new(ServiceApiRuntimeState {
+        snapshot,
+        replay_guard: Arc::new(Mutex::new(BTreeSet::new())),
+        request_budget: Arc::new(ServiceApiRequestBudget::new(config.max_requests)),
+    });
+    let timeout_reached = Arc::new(AtomicBool::new(false));
+    let request_budget = runtime_state.request_budget.clone();
+    let timeout_flag = timeout_reached.clone();
     let deadline = Instant::now() + Duration::from_millis(config.idle_timeout_ms);
-    let mut served_requests = 0_u64;
-    let mut replay_guard: BTreeSet<(String, u64)> = BTreeSet::new();
-    'accept_loop: while served_requests < config.max_requests {
-        if Instant::now() >= deadline {
-            return Err(format!(
-                "service api timed out after {} ms waiting for requests",
-                config.idle_timeout_ms
-            ));
-        }
-        match listener.accept() {
-            Ok((mut stream, _)) => loop {
-                if served_requests >= config.max_requests {
-                    break 'accept_loop;
+
+    let app = build_service_api_router(runtime_state);
+
+    axum::serve(listener, app)
+        .with_graceful_shutdown(async move {
+            let wait_for_budget = request_budget.wait_until_complete();
+            tokio::pin!(wait_for_budget);
+            let idle_timeout = tokio::time::sleep_until(deadline.into());
+            tokio::pin!(idle_timeout);
+            tokio::select! {
+                _ = &mut wait_for_budget => {}
+                _ = &mut idle_timeout => {
+                    timeout_flag.store(true, Ordering::SeqCst);
                 }
-                let request = match read_http_request(&mut stream) {
-                    Ok(request) => request,
-                    Err(error) => {
-                        let correlation_id = format!(
-                            "service-api:parse-error:{:016x}",
-                            deterministic_body_tag(error.as_bytes())
-                        );
-                        emit_service_api_request_outcome(
-                            correlation_id.as_str(),
-                            "unknown",
-                            "unknown",
-                            400,
-                            "bad-request",
-                        )?;
-                        let response = ServiceApiEndpointResponse {
-                            status_code: 400,
-                            content_type: "application/json",
-                            body: format!(
-                                "{{\"error\":\"bad-request\",\"reason\":\"{}\"}}",
-                                escape_json_string(error.as_str())
-                            ),
-                        };
-                        write_http_response(&mut stream, &response, false)?;
-                        served_requests = served_requests.saturating_add(1);
-                        break;
+            }
+        })
+        .await
+        .map_err(|error| format!("service api serve failed: {error}"))?;
+
+    if timeout_reached.load(Ordering::SeqCst) {
+        return Err(format!(
+            "service api timed out after {} ms waiting for requests",
+            config.idle_timeout_ms
+        ));
+    }
+
+    Ok(())
+}
+
+fn build_service_api_router(state: Arc<ServiceApiRuntimeState>) -> Router {
+    Router::new()
+        .route("/", any(handle_service_api_request))
+        .route("/{*path}", any(handle_service_api_request))
+        .with_state(state)
+}
+
+async fn handle_service_api_request(
+    State(state): State<Arc<ServiceApiRuntimeState>>,
+    request: Request,
+) -> Response {
+    let method_label = request.method().to_string();
+    let path = request.uri().path().to_owned();
+    let headers = request.headers().clone();
+    if method_label == "GET" && path == ROUTE_EVENTS_WS {
+        let parsed_request = match build_parsed_request(
+            method_label.as_str(),
+            path.as_str(),
+            &headers,
+            Bytes::new(),
+        ) {
+            Ok(request) => request,
+            Err(reason) => {
+                let correlation_id = format!(
+                    "service-api:parse-error:{:016x}",
+                    deterministic_body_tag(reason.as_bytes())
+                );
+                let status_code = StatusCode::BAD_REQUEST;
+                let outcome = "bad-request";
+                let response = json_error_response(status_code, "bad-request", reason.as_str());
+                let _ = emit_service_api_request_outcome(
+                    correlation_id.as_str(),
+                    "unknown",
+                    "unknown",
+                    status_code.as_u16(),
+                    outcome,
+                );
+                state.request_budget.record_request();
+                return response;
+            }
+        };
+
+        let correlation_id = service_api_request_correlation_id(&parsed_request);
+        if let Err(reason) = log_service_api_event_info(
+            "service.api.request.received",
+            &[
+                ("correlation_id", correlation_id.as_str()),
+                ("method", parsed_request.method.as_str()),
+                ("path", parsed_request.path.as_str()),
+            ],
+        ) {
+            state.request_budget.record_request();
+            return json_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal",
+                reason.as_str(),
+            );
+        }
+        {
+            let mut replay_guard = state.replay_guard.lock().await;
+            if let Err(error) =
+                authorize_service_api_request(&state.snapshot, &parsed_request, &mut replay_guard)
+            {
+                let (status_code, error_label, reason, outcome) = match error {
+                    RequestAuthFailure::Unauthorized(reason) => (
+                        StatusCode::UNAUTHORIZED,
+                        "unauthorized",
+                        reason,
+                        "unauthorized",
+                    ),
+                    RequestAuthFailure::Replay(reason) => {
+                        (StatusCode::CONFLICT, "replay", reason, "replay")
                     }
                 };
-                let keep_alive = request_prefers_keep_alive(&request);
-                let correlation_id = service_api_request_correlation_id(&request);
-                log_service_api_event_info(
-                    "service.api.request.received",
-                    &[
-                        ("correlation_id", correlation_id.as_str()),
-                        ("method", request.method.as_str()),
-                        ("path", request.path.as_str()),
-                    ],
-                )?;
-                let (response, outcome) =
-                    match authorize_service_api_request(snapshot, &request, &mut replay_guard) {
-                        Ok(()) => {
-                            if request.method == "GET" && request.path == ROUTE_EVENTS_WS {
-                                match write_websocket_upgrade_event_response(
-                                    &mut stream,
-                                    snapshot,
-                                    &request.headers,
-                                ) {
-                                    Ok(()) => {
-                                        emit_service_api_request_outcome(
-                                            correlation_id.as_str(),
-                                            request.method.as_str(),
-                                            request.path.as_str(),
-                                            101,
-                                            "websocket-upgrade",
-                                        )?;
-                                        served_requests = served_requests.saturating_add(1);
-                                        break;
-                                    }
-                                    Err(error) => (
-                                        ServiceApiEndpointResponse {
-                                            status_code: 400,
-                                            content_type: "application/json",
-                                            body: format!(
-                                                "{{\"error\":\"bad-request\",\"reason\":\"{}\"}}",
-                                                escape_json_string(error.as_str())
-                                            ),
-                                        },
-                                        "websocket-bad-request",
-                                    ),
-                                }
-                            } else {
-                                (
-                                    render_service_api_endpoint_response(
-                                        snapshot,
-                                        request.method.as_str(),
-                                        request.path.as_str(),
-                                        request.body.as_str(),
-                                    ),
-                                    "handled",
-                                )
-                            }
-                        }
-                        Err(RequestAuthFailure::Unauthorized(reason)) => (
-                            ServiceApiEndpointResponse {
-                                status_code: 401,
-                                content_type: "application/json",
-                                body: format!(
-                                    "{{\"error\":\"unauthorized\",\"reason\":\"{}\"}}",
-                                    escape_json_string(reason.as_str())
-                                ),
-                            },
-                            "unauthorized",
-                        ),
-                        Err(RequestAuthFailure::Replay(reason)) => (
-                            ServiceApiEndpointResponse {
-                                status_code: 409,
-                                content_type: "application/json",
-                                body: format!(
-                                    "{{\"error\":\"replay\",\"reason\":\"{}\"}}",
-                                    escape_json_string(reason.as_str())
-                                ),
-                            },
-                            "replay",
-                        ),
-                    };
-                emit_service_api_request_outcome(
+                let response = json_error_response(status_code, error_label, reason.as_str());
+                let _ = emit_service_api_request_outcome(
                     correlation_id.as_str(),
-                    request.method.as_str(),
-                    request.path.as_str(),
-                    response.status_code,
+                    parsed_request.method.as_str(),
+                    parsed_request.path.as_str(),
+                    status_code.as_u16(),
                     outcome,
-                )?;
-                write_http_response(&mut stream, &response, keep_alive)?;
-                served_requests = served_requests.saturating_add(1);
-                if !keep_alive {
-                    break;
-                }
-            },
-            Err(error) if error.kind() == ErrorKind::WouldBlock => {
-                thread::sleep(Duration::from_millis(5));
+                );
+                state.request_budget.record_request();
+                return response;
             }
-            Err(error) => return Err(format!("service api accept failed: {error}")),
+        }
+        let (response, outcome_label) =
+            match validate_websocket_upgrade_headers(&parsed_request.headers) {
+                Ok(()) => match WebSocketUpgrade::from_request(request, &()).await {
+                    Ok(upgrade) => (
+                        websocket_upgrade_response(upgrade, state.snapshot.clone()),
+                        "websocket-upgrade",
+                    ),
+                    Err(_) => (
+                        json_error_response(
+                            StatusCode::BAD_REQUEST,
+                            "bad-request",
+                            "websocket upgrade required",
+                        ),
+                        "websocket-bad-request",
+                    ),
+                },
+                Err(reason) => (
+                    json_error_response(StatusCode::BAD_REQUEST, "bad-request", reason.as_str()),
+                    "websocket-bad-request",
+                ),
+            };
+        let _ = emit_service_api_request_outcome(
+            correlation_id.as_str(),
+            parsed_request.method.as_str(),
+            parsed_request.path.as_str(),
+            response.status().as_u16(),
+            outcome_label,
+        );
+        state.request_budget.record_request();
+        return response;
+    }
+
+    let body_limit = 64 * 1024;
+    let body = match to_bytes(request.into_body(), body_limit).await {
+        Ok(body) => body,
+        Err(error) => {
+            let reason = format!("request read failed: {error}");
+            let correlation_id = format!(
+                "service-api:parse-error:{:016x}",
+                deterministic_body_tag(reason.as_bytes())
+            );
+            let status_code = StatusCode::BAD_REQUEST;
+            let outcome = "bad-request";
+            let response = json_error_response(status_code, "bad-request", reason.as_str());
+            let _ = emit_service_api_request_outcome(
+                correlation_id.as_str(),
+                "unknown",
+                "unknown",
+                status_code.as_u16(),
+                outcome,
+            );
+            state.request_budget.record_request();
+            return response;
+        }
+    };
+    let parsed_request =
+        match build_parsed_request(method_label.as_str(), path.as_str(), &headers, body) {
+            Ok(request) => request,
+            Err(reason) => {
+                let correlation_id = format!(
+                    "service-api:parse-error:{:016x}",
+                    deterministic_body_tag(reason.as_bytes())
+                );
+                let status_code = StatusCode::BAD_REQUEST;
+                let outcome = "bad-request";
+                let response = json_error_response(status_code, "bad-request", reason.as_str());
+                let _ = emit_service_api_request_outcome(
+                    correlation_id.as_str(),
+                    "unknown",
+                    "unknown",
+                    status_code.as_u16(),
+                    outcome,
+                );
+                state.request_budget.record_request();
+                return response;
+            }
+        };
+    let correlation_id = service_api_request_correlation_id(&parsed_request);
+    if let Err(reason) = log_service_api_event_info(
+        "service.api.request.received",
+        &[
+            ("correlation_id", correlation_id.as_str()),
+            ("method", parsed_request.method.as_str()),
+            ("path", parsed_request.path.as_str()),
+        ],
+    ) {
+        state.request_budget.record_request();
+        return json_error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "internal",
+            reason.as_str(),
+        );
+    }
+
+    {
+        let mut replay_guard = state.replay_guard.lock().await;
+        if let Err(error) =
+            authorize_service_api_request(&state.snapshot, &parsed_request, &mut replay_guard)
+        {
+            let (status_code, error_label, reason, outcome) = match error {
+                RequestAuthFailure::Unauthorized(reason) => (
+                    StatusCode::UNAUTHORIZED,
+                    "unauthorized",
+                    reason,
+                    "unauthorized",
+                ),
+                RequestAuthFailure::Replay(reason) => {
+                    (StatusCode::CONFLICT, "replay", reason, "replay")
+                }
+            };
+            let response = json_error_response(status_code, error_label, reason.as_str());
+            let _ = emit_service_api_request_outcome(
+                correlation_id.as_str(),
+                parsed_request.method.as_str(),
+                parsed_request.path.as_str(),
+                status_code.as_u16(),
+                outcome,
+            );
+            state.request_budget.record_request();
+            return response;
         }
     }
-    Ok(())
+
+    let rendered = render_service_api_endpoint_response(
+        &state.snapshot,
+        parsed_request.method.as_str(),
+        parsed_request.path.as_str(),
+        parsed_request.body.as_str(),
+    );
+    let response = contract_response(rendered);
+    let _ = emit_service_api_request_outcome(
+        correlation_id.as_str(),
+        parsed_request.method.as_str(),
+        parsed_request.path.as_str(),
+        response.status().as_u16(),
+        "handled",
+    );
+    state.request_budget.record_request();
+    response
 }
 
 fn route_requires_auth(method: &str, path: &str) -> bool {
     !(method == "GET" && (path == ROUTE_HEALTHZ || path == ROUTE_METRICS))
-}
-
-fn request_prefers_keep_alive(request: &ParsedRequest) -> bool {
-    header_value(&request.headers, "connection")
-        .map(|value| value.to_ascii_lowercase().contains("keep-alive"))
-        .unwrap_or(false)
 }
 
 fn log_service_api_event_info(event: &str, fields: &[(&str, &str)]) -> Result<(), String> {
@@ -649,111 +834,33 @@ fn agent_path_id(path: &str) -> Option<&str> {
     })
 }
 
-fn read_http_request(stream: &mut TcpStream) -> Result<ParsedRequest, String> {
-    let mut request = Vec::new();
-    let mut chunk = [0_u8; 1024];
-    stream
-        .set_read_timeout(Some(Duration::from_secs(1)))
-        .map_err(|error| format!("service api read-timeout failed: {error}"))?;
-
-    let mut expected_total_bytes: Option<usize> = None;
-    let mut header_end: Option<usize> = None;
-    loop {
-        match stream.read(&mut chunk) {
-            Ok(0) => break,
-            Ok(read_count) => {
-                request.extend_from_slice(&chunk[..read_count]);
-                if header_end.is_none() {
-                    header_end = request
-                        .windows(4)
-                        .position(|window| window == b"\r\n\r\n")
-                        .map(|index| index + 4);
-                    if let Some(header_end_index) = header_end {
-                        let header = String::from_utf8(request[..header_end_index].to_vec())
-                            .map_err(|_| "request header was not valid utf-8".to_owned())?;
-                        let content_length = parse_content_length(header.as_str())?;
-                        expected_total_bytes = Some(header_end_index + content_length);
-                    }
-                }
-                if let Some(total) = expected_total_bytes {
-                    if request.len() >= total {
-                        break;
-                    }
-                }
-                if request.len() > 64 * 1024 {
-                    return Err("request header too large".to_owned());
-                }
-            }
-            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
-                break;
-            }
-            Err(error) => return Err(format!("request read failed: {error}")),
-        }
+fn build_parsed_request(
+    method: &str,
+    path: &str,
+    headers: &HeaderMap,
+    body: Bytes,
+) -> Result<ParsedRequest, String> {
+    let mut normalized_headers = BTreeMap::new();
+    for (header_name, header_value) in headers {
+        let value = header_value
+            .to_str()
+            .map_err(|_| format!("request header value was not valid utf-8: {header_name}"))?;
+        normalized_headers.insert(
+            header_name.as_str().to_ascii_lowercase(),
+            value.trim().to_owned(),
+        );
     }
-
-    if request.is_empty() {
-        return Err("connection closed before request bytes arrived".to_owned());
-    }
-
-    let request_text =
-        String::from_utf8(request).map_err(|_| "request was not valid utf-8".to_owned())?;
-    let Some((request_head, request_body)) = request_text.split_once("\r\n\r\n") else {
-        return Err("request header terminator missing".to_owned());
-    };
-    let request_line = request_head
-        .lines()
-        .next()
-        .ok_or_else(|| "request line missing".to_owned())?;
-    let mut headers = BTreeMap::new();
-    for line in request_head.lines().skip(1) {
-        if line.trim().is_empty() {
-            continue;
-        }
-        let (name, value) = line
-            .split_once(':')
-            .ok_or_else(|| "request header line missing ':' separator".to_owned())?;
-        let name = name.trim();
-        if name.is_empty() {
-            return Err("request header name missing".to_owned());
-        }
-        headers.insert(name.to_ascii_lowercase(), value.trim().to_owned());
-    }
-    let mut line_parts = request_line.split_whitespace();
-    let method = line_parts
-        .next()
-        .ok_or_else(|| "request method missing".to_owned())?;
-    let path = line_parts
-        .next()
-        .ok_or_else(|| "request path missing".to_owned())?;
+    let body =
+        String::from_utf8(body.to_vec()).map_err(|_| "request was not valid utf-8".to_owned())?;
     Ok(ParsedRequest {
         method: method.to_owned(),
         path: path.to_owned(),
-        body: request_body.to_owned(),
-        headers,
+        body,
+        headers: normalized_headers,
     })
 }
 
-fn parse_content_length(header: &str) -> Result<usize, String> {
-    let value = header
-        .lines()
-        .find_map(|line| {
-            let (name, raw_value) = line.split_once(':')?;
-            if name.eq_ignore_ascii_case("Content-Length") {
-                return Some(raw_value.trim());
-            }
-            None
-        })
-        .unwrap_or("0");
-    value
-        .parse::<usize>()
-        .map_err(|_| "invalid content-length header".to_owned())
-}
-
-fn write_websocket_upgrade_event_response(
-    stream: &mut TcpStream,
-    snapshot: &ServiceApiSnapshot,
-    headers: &BTreeMap<String, String>,
-) -> Result<(), String> {
+fn validate_websocket_upgrade_headers(headers: &BTreeMap<String, String>) -> Result<(), String> {
     let upgrade = header_value(headers, "upgrade")
         .ok_or_else(|| "missing required websocket upgrade header".to_owned())?;
     let connection = header_value(headers, "connection")
@@ -775,65 +882,50 @@ fn write_websocket_upgrade_event_response(
     if websocket_version.trim() != "13" {
         return Err("invalid websocket version header".to_owned());
     }
+    Ok(())
+}
 
-    let accept_marker = format!(
-        "kamn-{:016x}",
-        deterministic_body_tag(websocket_key.as_bytes())
-    );
-    let handshake = format!(
-        "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {accept_marker}\r\nX-KAMN-WebSocket-Contract: v1\r\n\r\n"
-    );
-    stream
-        .write_all(handshake.as_bytes())
-        .map_err(|error| format!("service api websocket handshake write failed: {error}"))?;
+fn websocket_upgrade_response(upgrade: WebSocketUpgrade, snapshot: ServiceApiSnapshot) -> Response {
+    let mut response = upgrade
+        .on_upgrade(move |socket| stream_websocket_event(socket, snapshot))
+        .into_response();
+    response
+        .headers_mut()
+        .insert("X-KAMN-WebSocket-Contract", HeaderValue::from_static("v1"));
+    response
+}
 
+async fn stream_websocket_event(mut socket: WebSocket, snapshot: ServiceApiSnapshot) {
     let event_payload = format!(
         "{{\"event\":\"state-transition\",\"runtime_mode\":\"{}\",\"role\":\"{}\",\"sequence\":1}}",
         escape_json_string(snapshot.runtime_mode.as_str()),
         escape_json_string(snapshot.role.as_str()),
     );
-    write_websocket_text_frame(stream, event_payload.as_bytes())
+    let _ = socket.send(Message::Text(event_payload.into())).await;
 }
 
-fn write_websocket_text_frame(stream: &mut TcpStream, payload: &[u8]) -> Result<(), String> {
-    if payload.len() > 125 {
-        return Err("websocket payload exceeds small-frame contract".to_owned());
-    }
-    let mut frame = Vec::with_capacity(2 + payload.len());
-    frame.push(0x81);
-    frame.push(payload.len() as u8);
-    frame.extend_from_slice(payload);
-    stream
-        .write_all(frame.as_slice())
-        .map_err(|error| format!("service api websocket frame write failed: {error}"))
+fn contract_response(response: ServiceApiEndpointResponse) -> Response {
+    let status =
+        StatusCode::from_u16(response.status_code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+    (
+        status,
+        [("Content-Type", response.content_type)],
+        response.body,
+    )
+        .into_response()
 }
 
-fn write_http_response(
-    stream: &mut TcpStream,
-    response: &ServiceApiEndpointResponse,
-    keep_alive: bool,
-) -> Result<(), String> {
-    let status_text = match response.status_code {
-        200 => "200 OK",
-        201 => "201 Created",
-        202 => "202 Accepted",
-        400 => "400 Bad Request",
-        401 => "401 Unauthorized",
-        404 => "404 Not Found",
-        405 => "405 Method Not Allowed",
-        409 => "409 Conflict",
-        _ => "500 Internal Server Error",
-    };
-    let connection_header = if keep_alive { "keep-alive" } else { "close" };
-    let payload = format!(
-        "HTTP/1.1 {status_text}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: {connection_header}\r\n\r\n{}",
-        response.content_type,
-        response.body.len(),
-        response.body
-    );
-    stream
-        .write_all(payload.as_bytes())
-        .map_err(|error| format!("service api write failed: {error}"))
+fn json_error_response(status_code: StatusCode, error: &str, reason: &str) -> Response {
+    (
+        status_code,
+        [("Content-Type", "application/json")],
+        format!(
+            "{{\"error\":\"{}\",\"reason\":\"{}\"}}",
+            escape_json_string(error),
+            escape_json_string(reason),
+        ),
+    )
+        .into_response()
 }
 
 fn deterministic_body_tag(payload: &[u8]) -> u64 {

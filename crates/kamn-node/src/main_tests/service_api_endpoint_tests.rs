@@ -289,7 +289,7 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
     let bind_addr = reserve_loopback_addr();
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.clone(),
-        max_requests: 4,
+        max_requests: 3,
         idle_timeout_ms: 2_000,
     };
 
@@ -355,7 +355,7 @@ fn integration_service_api_endpoint_supports_keep_alive_requests_on_single_conne
     let bind_addr = reserve_loopback_addr();
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.clone(),
-        max_requests: 3,
+        max_requests: 2,
         idle_timeout_ms: 2_000,
     };
     let server_snapshot = snapshot.clone();
@@ -530,7 +530,7 @@ fn integration_service_api_endpoint_rejects_missing_request_auth_headers() {
     let bind_addr = reserve_loopback_addr();
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.clone(),
-        max_requests: 2,
+        max_requests: 1,
         idle_timeout_ms: 2_000,
     };
     let server_snapshot = snapshot.clone();
@@ -573,7 +573,7 @@ fn regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender() {
     let bind_addr = reserve_loopback_addr();
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.clone(),
-        max_requests: 3,
+        max_requests: 2,
         idle_timeout_ms: 2_000,
     };
     let server_snapshot = snapshot.clone();
@@ -640,7 +640,7 @@ fn integration_service_api_endpoint_websocket_upgrade_streams_state_transition_e
     let bind_addr = reserve_loopback_addr();
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.clone(),
-        max_requests: 2,
+        max_requests: 1,
         idle_timeout_ms: 2_000,
     };
     let server_snapshot = snapshot.clone();
@@ -667,8 +667,9 @@ fn integration_service_api_endpoint_websocket_upgrade_streams_state_transition_e
     );
     let (header, payload) = parse_websocket_response(response.as_slice());
     assert!(header.contains("HTTP/1.1 101 Switching Protocols"));
-    assert!(header.contains("Upgrade: websocket"));
-    assert!(header.contains("X-KAMN-WebSocket-Contract: v1"));
+    let normalized_header = header.to_ascii_lowercase();
+    assert!(normalized_header.contains("upgrade: websocket"));
+    assert!(normalized_header.contains("x-kamn-websocket-contract: v1"));
     assert!(payload.contains("\"event\":\"state-transition\""));
     assert!(payload.contains("\"runtime_mode\":\"api\""));
     assert!(payload.contains("\"role\":\"processor\""));
@@ -698,7 +699,7 @@ fn regression_service_api_endpoint_websocket_route_rejects_missing_upgrade_heade
     let bind_addr = reserve_loopback_addr();
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.clone(),
-        max_requests: 2,
+        max_requests: 1,
         idle_timeout_ms: 2_000,
     };
     let server_snapshot = snapshot.clone();
@@ -753,7 +754,7 @@ fn regression_service_api_endpoint_websocket_rejects_invalid_version_header() {
     let bind_addr = reserve_loopback_addr();
     let endpoint_config = ServiceApiEndpointConfig {
         bind_addr: bind_addr.clone(),
-        max_requests: 2,
+        max_requests: 1,
         idle_timeout_ms: 2_000,
     };
     let server_snapshot = snapshot.clone();
