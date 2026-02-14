@@ -1,4 +1,3 @@
-use std::thread;
 use std::time::Duration;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,39 +66,75 @@ pub(super) fn evaluate_daemon_completion_with_os_signals(
 ) -> Result<DaemonCompletion, String> {
     #[cfg(unix)]
     {
-        os_signal::install_shutdown_handlers()?;
-        let tick_duration = Duration::from_millis(tick_interval_ms);
-        let mut first_signal_tick: Option<u64> = None;
-        for tick in 1..=max_ticks {
-            if first_signal_tick.is_none() && os_signal::shutdown_signal_observed() {
-                first_signal_tick = Some(tick);
+        let signal_runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_io()
+            .enable_time()
+            .build()
+            .map_err(|error| format!("failed to build tokio signal runtime: {error}"))?;
+        signal_runtime.block_on(async move {
+            let mut sigint_stream = tokio::signal::unix::signal(
+                tokio::signal::unix::SignalKind::interrupt(),
+            )
+            .map_err(|error| format!("failed to install SIGINT shutdown handler: {error}"))?;
+            let mut sigterm_stream = tokio::signal::unix::signal(
+                tokio::signal::unix::SignalKind::terminate(),
+            )
+            .map_err(|error| format!("failed to install SIGTERM shutdown handler: {error}"))?;
+
+            let tick_duration = Duration::from_millis(tick_interval_ms);
+            let mut first_signal_tick: Option<u64> = None;
+            for tick in 1..=max_ticks {
+                if first_signal_tick.is_none() {
+                    if tick < max_ticks {
+                        tokio::select! {
+                            _ = sigint_stream.recv() => {
+                                first_signal_tick = Some(tick);
+                            }
+                            _ = sigterm_stream.recv() => {
+                                first_signal_tick = Some(tick);
+                            }
+                            _ = tokio::time::sleep(tick_duration) => {}
+                        }
+                    } else {
+                        tokio::select! {
+                            _ = sigint_stream.recv() => {
+                                first_signal_tick = Some(tick);
+                            }
+                            _ = sigterm_stream.recv() => {
+                                first_signal_tick = Some(tick);
+                            }
+                            else => {}
+                        }
+                    }
+                } else if tick < max_ticks {
+                    tokio::time::sleep(tick_duration).await;
+                }
+
+                if let Some(signal_tick) = first_signal_tick {
+                    let completion = evaluate_daemon_completion(
+                        max_ticks,
+                        &[signal_tick],
+                        drain_ticks,
+                        timeout_ticks,
+                    );
+                    if tick >= completion.executed_ticks {
+                        return Ok(completion);
+                    }
+                }
             }
+
             if let Some(signal_tick) = first_signal_tick {
-                let completion = evaluate_daemon_completion(
+                return Ok(evaluate_daemon_completion(
                     max_ticks,
                     &[signal_tick],
                     drain_ticks,
                     timeout_ticks,
-                );
-                if tick >= completion.executed_ticks {
-                    return Ok(completion);
-                }
+                ));
             }
-            if tick < max_ticks {
-                thread::sleep(tick_duration);
-            }
-        }
-        if let Some(signal_tick) = first_signal_tick {
-            return Ok(evaluate_daemon_completion(
-                max_ticks,
-                &[signal_tick],
-                drain_ticks,
-                timeout_ticks,
-            ));
-        }
-        Ok(DaemonCompletion {
-            executed_ticks: max_ticks,
-            completion_reason: "tick-budget-exhausted".to_owned(),
+            Ok(DaemonCompletion {
+                executed_ticks: max_ticks,
+                completion_reason: "tick-budget-exhausted".to_owned(),
+            })
         })
     }
 
@@ -110,48 +145,24 @@ pub(super) fn evaluate_daemon_completion_with_os_signals(
     }
 }
 
-#[cfg(unix)]
-mod os_signal {
-    use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(test)]
+mod tests {
+    use super::{evaluate_daemon_completion, evaluate_daemon_completion_with_os_signals};
+    #[cfg(unix)]
+    use std::thread;
+    #[cfg(unix)]
+    use std::time::Duration;
 
-    static SHUTDOWN_SIGNAL_OBSERVED: AtomicBool = AtomicBool::new(false);
-
-    const SIGINT: i32 = 2;
+    #[cfg(unix)]
     const SIGTERM: i32 = 15;
-    const SIG_ERR: usize = usize::MAX;
 
-    unsafe extern "C" {
-        fn signal(signum: i32, handler: usize) -> usize;
-    }
-
-    #[cfg(test)]
+    #[cfg(unix)]
     unsafe extern "C" {
         fn raise(sig: i32) -> i32;
     }
 
-    extern "C" fn shutdown_signal_handler(_signal: i32) {
-        SHUTDOWN_SIGNAL_OBSERVED.store(true, Ordering::SeqCst);
-    }
-
-    pub(super) fn install_shutdown_handlers() -> Result<(), String> {
-        SHUTDOWN_SIGNAL_OBSERVED.store(false, Ordering::SeqCst);
-        let sigint_result = unsafe { signal(SIGINT, shutdown_signal_handler as usize) };
-        if sigint_result == SIG_ERR {
-            return Err("failed to install SIGINT shutdown handler".to_owned());
-        }
-        let sigterm_result = unsafe { signal(SIGTERM, shutdown_signal_handler as usize) };
-        if sigterm_result == SIG_ERR {
-            return Err("failed to install SIGTERM shutdown handler".to_owned());
-        }
-        Ok(())
-    }
-
-    pub(super) fn shutdown_signal_observed() -> bool {
-        SHUTDOWN_SIGNAL_OBSERVED.load(Ordering::SeqCst)
-    }
-
-    #[cfg(test)]
-    pub(super) fn raise_sigterm_for_test() -> Result<(), String> {
+    #[cfg(unix)]
+    fn raise_sigterm_for_test() -> Result<(), String> {
         let result = unsafe { raise(SIGTERM) };
         if result == 0 {
             Ok(())
@@ -159,17 +170,6 @@ mod os_signal {
             Err("failed to raise SIGTERM".to_owned())
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    #[cfg(unix)]
-    use super::os_signal::raise_sigterm_for_test;
-    use super::{evaluate_daemon_completion, evaluate_daemon_completion_with_os_signals};
-    #[cfg(unix)]
-    use std::thread;
-    #[cfg(unix)]
-    use std::time::Duration;
 
     #[test]
     fn unit_daemon_completion_defaults_to_tick_budget_without_shutdown_signal() {
@@ -241,6 +241,22 @@ mod tests {
         assert!(
             completion.executed_ticks <= 40,
             "signal-driven shutdown should remain bounded by max ticks"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn regression_daemon_completion_with_os_signals_uses_tokio_signal_runtime_path() {
+        // Regression: #2896
+        let source = include_str!("daemon_shutdown.rs");
+        let production_source = source.split("#[cfg(test)]").next().unwrap_or(source);
+        assert!(
+            production_source.contains("tokio::signal::unix::signal("),
+            "expected daemon os signal path to use tokio unix signal streams"
+        );
+        assert!(
+            production_source.contains("tokio::time::sleep("),
+            "expected daemon os signal path to use tokio timer-driven tick cadence"
         );
     }
 
