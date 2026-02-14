@@ -266,3 +266,54 @@ fn runtime_module_extraction_contract_keeps_recovery_guard_types_in_new_module()
         "runtime_recovery_guard module should own RecoveryRejoinGuard"
     );
 }
+
+#[test]
+fn runtime_module_extraction_contract_declares_runtime_peer_coordination_module() {
+    let runtime_rs = read_repo_file("runtime.rs");
+    assert!(
+        runtime_rs.contains("mod runtime_peer_coordination;"),
+        "runtime.rs should declare extracted runtime_peer_coordination module"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_moves_peer_coordination_types_out_of_runtime_rs() {
+    let runtime_rs = read_repo_file("runtime.rs");
+    assert!(
+        !runtime_rs.contains("pub struct PeerLifecycle {"),
+        "runtime.rs should not keep inline PeerLifecycle definition"
+    );
+    assert!(
+        !runtime_rs.contains("pub struct AuthenticatedPeerFrame {"),
+        "runtime.rs should not keep inline AuthenticatedPeerFrame definition"
+    );
+    assert!(
+        !runtime_rs.contains("pub struct DeterministicProposalPlanner {"),
+        "runtime.rs should not keep inline DeterministicProposalPlanner definition"
+    );
+    assert!(
+        !runtime_rs.contains("pub struct RuntimeWiring {"),
+        "runtime.rs should not keep inline RuntimeWiring definition"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_keeps_peer_coordination_types_in_new_module() {
+    let runtime_peer_coordination_rs = read_repo_file("runtime_peer_coordination.rs");
+    assert!(
+        runtime_peer_coordination_rs.contains("pub struct PeerLifecycle {"),
+        "runtime_peer_coordination module should own PeerLifecycle"
+    );
+    assert!(
+        runtime_peer_coordination_rs.contains("pub struct AuthenticatedPeerFrame {"),
+        "runtime_peer_coordination module should own AuthenticatedPeerFrame"
+    );
+    assert!(
+        runtime_peer_coordination_rs.contains("pub struct DeterministicProposalPlanner {"),
+        "runtime_peer_coordination module should own DeterministicProposalPlanner"
+    );
+    assert!(
+        runtime_peer_coordination_rs.contains("pub struct RuntimeWiring {"),
+        "runtime_peer_coordination module should own RuntimeWiring"
+    );
+}

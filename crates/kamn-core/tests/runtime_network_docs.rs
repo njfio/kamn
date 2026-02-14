@@ -3,6 +3,7 @@ const DOC: &str = include_str!("../../../docs/foundation/runtime-network.md");
 #[test]
 fn doc_contains_runtime_network_scope_and_models() {
     assert!(DOC.contains("## Scope Delivered"));
+    assert!(DOC.contains("crates/kamn-core/src/runtime_peer_coordination.rs"));
     assert!(DOC.contains("crates/kamn-core/src/runtime_phase_coordination.rs"));
     assert!(DOC.contains("crates/kamn-core/src/runtime_transport_coordination.rs"));
     assert!(DOC.contains("crates/kamn-core/src/runtime_snapshot_store.rs"));
