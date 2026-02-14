@@ -153,6 +153,23 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_full_runtime_policy_fast_gate_exclusion_mismatch`
 
+## Process Harness Primitive Contract
+- Entry commands:
+  - `python3 scripts/framework/test_process_harness.py`
+  - `bash scripts/kolme/test_run_local_live_provider_runtime_integration_contract_lane.sh`
+- Harness invocation contract:
+  - reserve deterministic localhost ports through `scripts/framework/process_harness.py` before process start.
+  - release reserved labels only at start call sites (`release_port_labels`) so lifecycle sequencing remains deterministic.
+  - start/stop process lifecycle is managed through `ProcessHarness.start_process()` and `ProcessHarness.stop_process()`.
+- Evidence artifact layout:
+  - schema version: `kamn.runtime.process-harness-evidence.v1`
+  - top-level machine-checkable fields: `schema_version`, `status`, `final_decision`, `reason_code`, `ports`, `processes`, `artifacts`
+  - current integration report linkage: `process_harness_evidence_file` in `kamn.kolme.local-live-provider-runtime-integration-contract-report.v1`
+- Cost controls:
+  - uses a local mock API process and bounded readiness probe timeout (10 seconds).
+  - no external network or remote process orchestration dependency.
+  - lifecycle teardown is automatic on exception via harness context management.
+
 ## Deploy Compose Topology Contract Lane
 - Entry commands:
   - `bash scripts/deploy/validate_compose_topology_contract_lane.sh --output-json /tmp/compose-topology-contract-summary.json --ci-fast-gate PASS`
