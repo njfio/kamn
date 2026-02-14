@@ -48,6 +48,31 @@ For semantic versioning policy and compatibility rules, see `docs/foundation/ver
   - `runtime_signer_drift_thresholds_schema_version=kamn.kolme.runtime-signer-drift-thresholds.v1`
   - `runtime_signer_drift_thresholds_bundle`
 
+## Live Run-Mode Rehearsal Lineage Gate (Issue #3245)
+Run-mode promotion requires deterministic local live-node rehearsal lineage evidence before GO decisions are accepted.
+
+- Dry-run rehearsal lane command:
+  - `bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode dry-run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json`
+- Run-mode rehearsal lane command:
+  - `KAMN_KOLME_LOCAL_HEAVY=1 bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode run --checkout-path /tmp/kolme_fork --expected-remote-url https://github.com/njfio/kolme_fork.git --expected-ref refs/heads/main --base-url http://127.0.0.1:3000 --fork-chain-version v0.15.2 --rollback-evidence-file /tmp/kolme-local-fork-process-lifecycle-rollback-evidence.json --recovery-evidence-file /tmp/kolme-local-fork-process-lifecycle-recovery-evidence.json --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json`
+- Policy checker command:
+  - `python3 scripts/kolme/check_local_live_node_validation_bundle_policy.py --report-file /tmp/kolme-local-live-node-validation-bundle-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code live_node_validation_bundle_passed --output-json /tmp/kolme-local-live-node-validation-bundle-policy.json`
+- Contract lane command:
+  - `bash scripts/kolme/run_local_live_node_validation_bundle_contract_lane.sh --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json --policy-output-json /tmp/kolme-local-live-node-validation-bundle-policy.json`
+- Required lineage markers:
+  - `rollback_evidence_file`
+  - `recovery_evidence_file`
+  - `contracts.live_run_rehearsal_lineage_required=true`
+  - `contracts.rollback_recovery_artifact_lineage_required=true`
+- Fail-closed policy reasons:
+  - `run_mode_check_status_mismatch:*`
+  - `run_mode_check_reason_code_mismatch:*`
+  - `live_run_rehearsal_lineage_required_contract_mismatch`
+  - `rollback_evidence_file_missing`
+  - `recovery_evidence_file_missing`
+- Regression policy:
+  - run-mode lineage marker drift or tampered check statuses force `NO-GO` (`Regression: #3245`).
+
 ## Deterministic Dry-Run Workflow
 1. Create release candidate tag.
 2. Rehearse migration on staging snapshot.
@@ -82,6 +107,15 @@ Go/no-go decisions are captured as machine-readable JSON so release policy check
   - `scripts/deploy/gonogo_evidence_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/deploy/run_gonogo_evidence_deep_lane.sh`
+- Required checklist evidence markers (machine-readable bundle):
+  - `ci_fast_gate`
+  - `ci_deep_lane`
+  - `rollback_precheck`
+  - `rollback_trigger_status`
+  - `approval_quorum`
+  - `runtime_image_digest`
+- Fail-closed policy reason:
+  - missing required checklist evidence markers force `NO-GO` (`Regression: #3240`).
 
 ## Staging Deploy + Rollback Rehearsal Contract (Issue #658)
 Staging rehearsal automation must verify deploy and rollback outcomes before release decisions are accepted.

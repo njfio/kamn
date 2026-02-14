@@ -172,4 +172,31 @@ if ! grep -Fq "reason_codes=local_heavy_lane_commands_in_ci_tools_fast_mode" "$c
 fi
 
 rm -f "$unsafe_ci_tools_file" "$ci_tools_local_heavy_log"
+
+unsafe_workflow_file="$(mktemp)"
+cat "$SAFE_FIXTURE" >"$unsafe_workflow_file"
+cat <<'YAML' >>"$unsafe_workflow_file"
+      - name: Unsafe leaked local-heavy command
+        run: |
+          bash scripts/kolme/test_run_local_heavy_validation_matrix.sh
+YAML
+
+outside_local_heavy_step_log="$(mktemp)"
+if python3 "$CHECKER" --workflow-file "$unsafe_workflow_file" --selector-file "$SELECTOR_FILE" --ci-tools-file "$CI_TOOLS_SCRIPT" >"$outside_local_heavy_step_log" 2>&1; then
+  cat "$outside_local_heavy_step_log" >&2
+  echo "expected workflow fixture leaking local-heavy command outside dedicated step to fail policy checker" >&2
+  exit 1
+fi
+if ! grep -Fq "local_heavy_lane_commands_outside_local_heavy_step" "$outside_local_heavy_step_log"; then
+  cat "$outside_local_heavy_step_log" >&2
+  echo "expected workflow fixture leaking local-heavy command outside dedicated step to report local_heavy_lane_commands_outside_local_heavy_step" >&2
+  exit 1
+fi
+if ! grep -Fq "reason_codes=local_heavy_lane_commands_outside_local_heavy_step" "$outside_local_heavy_step_log"; then
+  cat "$outside_local_heavy_step_log" >&2
+  echo "expected workflow fixture leaking local-heavy command outside dedicated step to emit deterministic reason code marker" >&2
+  exit 1
+fi
+
+rm -f "$unsafe_workflow_file" "$outside_local_heavy_step_log"
 echo "workflow Kolme local-heavy exclusion policy checker tests passed."
