@@ -1359,6 +1359,13 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
     let report = execute(parsed).expect("kolme-live execution should succeed");
     let rendered = render_bootstrap_report(&report, OutputMode::json());
     assert!(rendered.contains("\"runtime_mode\":\"kolme-live\""));
+    assert!(rendered.contains("\"content-storage:file-default\""));
+    assert!(rendered.contains("\"did-registry:file-default\""));
+    assert!(rendered.contains("\"task-operation-snapshot-store:file-default\""));
+    assert!(rendered.contains("\"durable-guard-snapshot-store:file-default\""));
+    assert!(rendered.contains("\"channel-snapshot-store:file-default\""));
+    assert!(rendered.contains("\"message-lifecycle-snapshot-store:file-default\""));
+    assert!(rendered.contains("\"runtime-snapshot-store:file-default\""));
     assert!(rendered
         .contains("\"kolme_live_provider_client_contract\":\"KolmeRuntimeCommitLiveProvider\""));
     assert!(rendered.contains("\"kolme_live_signing_profile\":\"kolme-fork-secp256k1-v1\""));

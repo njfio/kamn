@@ -20,6 +20,7 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/validate_persistence_adapters_live.sh` and `scripts/runtime/test_validate_persistence_adapters_live.sh` (Task #3068, Subtask #3070).
   - Follow-on bootstrap coverage expansion delivered (Task #3078) for remaining snapshot stores.
   - Lane reason-code matrix and harness expectations expanded to include new bootstrap snapshot reason codes (Task #3080).
+  - Runtime `kolme-live` report-contract assertions now fail closed if any durable bootstrap component marker is missing (Task #3082).
   - Bootstrap/runtime wiring now defaults prioritized persistence surfaces to durable file adapters in plan components:
     - `content-storage:file-default`
     - `did-registry:file-default`
