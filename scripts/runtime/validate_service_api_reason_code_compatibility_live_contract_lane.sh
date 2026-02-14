@@ -88,6 +88,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^reason_registry_status=verif
   echo "expected service api reason-code compatibility reason registry marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^error_envelope_field_status=verified$'; then
+  echo "expected service api reason-code compatibility envelope field marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^rust_sdk_reason_code_status=verified$'; then
+  echo "expected service api reason-code compatibility rust sdk marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^python_sdk_reason_code_status=verified$'; then
+  echo "expected service api reason-code compatibility python sdk marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^route_error_mapping_status=verified$'; then
   echo "expected service api reason-code compatibility route mapping marker" >&2
   exit 1
@@ -218,6 +230,9 @@ lane_report = {
     "status": "pass",
     "final_decision": "GO",
     "service_api_reason_code_contract_status": "verified",
+    "error_envelope_field_status": summary_report.get("error_envelope_field_status"),
+    "rust_sdk_reason_code_status": summary_report.get("rust_sdk_reason_code_status"),
+    "python_sdk_reason_code_status": summary_report.get("python_sdk_reason_code_status"),
     "service_api_reason_code_policy_status": policy_report.get(
         "service_api_reason_code_policy_status"
     ),
@@ -241,6 +256,9 @@ fi
 echo "status=pass"
 echo "final_decision=GO"
 echo "service_api_reason_code_contract_status=verified"
+echo "error_envelope_field_status=verified"
+echo "rust_sdk_reason_code_status=verified"
+echo "python_sdk_reason_code_status=verified"
 echo "service_api_reason_code_policy_status=verified"
 echo "docs_contract_status=verified"
 echo "fail_closed_status=verified"

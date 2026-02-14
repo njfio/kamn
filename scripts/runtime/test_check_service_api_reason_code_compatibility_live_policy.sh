@@ -18,6 +18,9 @@ cat >"$report_file" <<'JSON'
   "status": "pass",
   "final_decision": "GO",
   "reason_registry_status": "verified",
+  "error_envelope_field_status": "verified",
+  "rust_sdk_reason_code_status": "verified",
+  "python_sdk_reason_code_status": "verified",
   "route_error_mapping_status": "verified",
   "replay_error_mapping_status": "verified",
   "websocket_error_mapping_status": "verified",
@@ -97,6 +100,39 @@ if [ "$tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_output" | grep -q 'service_api_reason_code_policy_marker_missing:route_error_mapping_status'; then
   echo "expected deterministic mismatch reason code for tampered reason-code policy validation" >&2
+  exit 1
+fi
+
+tampered_envelope_report="$TMP_DIR/service-api-reason-code-compatibility-live-summary.envelope.tampered.json"
+cp "$report_file" "$tampered_envelope_report"
+python3 - "$tampered_envelope_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["error_envelope_field_status"] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_envelope_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_envelope_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-reason-code-compatibility-live-policy.envelope.tampered.json" 2>&1
+)"
+tampered_envelope_code=$?
+set -e
+
+if [ "$tampered_envelope_code" -eq 0 ]; then
+  echo "expected tampered envelope field status to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_envelope_output" | grep -q 'service_api_reason_code_policy_marker_missing:error_envelope_field_status'; then
+  echo "expected deterministic mismatch reason code for tampered envelope field parity marker" >&2
   exit 1
 fi
 
