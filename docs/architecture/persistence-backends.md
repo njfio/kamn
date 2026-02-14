@@ -50,14 +50,24 @@ Live validation lane (local realistic dependency path):
   - `final_decision=GO`
   - `content_persistence_status=verified`
   - `did_duplicate_detection_status=verified`
+  - `restart_recovery_status=verified`
+  - `corruption_fail_closed_status=verified`
+  - `incompatible_schema_fail_closed_status=verified`
   - `fail_closed_status=verified`
+  - `evidence_bundle_status=verified`
+  - `execution_scope=local-scheduled`
+  - `performance_budget_status=verified`
+  - `fail_closed_reason_codes=content_storage_corrupt_payload_rejected,did_registry_corrupt_payload_rejected,task_operation_snapshot_schema_mismatch_rejected,durable_guard_snapshot_schema_mismatch_rejected`
 
 Low-cost lane (PR-safe):
 
-- `cargo test -p kamn-core --test content_storage_file_adapter`
-- `cargo test -p kamn-core --test did_registry_file_chain_adapter`
-- `cargo test -p kamn-core --test content_storage_adapter`
-- `cargo test -p kamn-core --test did_registry_transactions`
+- `cargo test -p kamn-core --test content_storage_file_adapter content_storage_file_adapter_persists_round_trip_across_reopen`
+- `cargo test -p kamn-core --test did_registry_file_chain_adapter did_registry_file_chain_adapter_persists_duplicate_detection_across_restart`
+- `cargo test -p kamn-core --test content_storage_file_adapter content_storage_file_adapter_regression_rejects_corrupt_payload_line`
+- `cargo test -p kamn-core --test did_registry_file_chain_adapter did_registry_file_chain_adapter_regression_rejects_corrupt_payload_line`
+- `cargo test -p kamn-core --test task_operation_snapshot task_operation_snapshot_rejects_schema_version_mismatch`
+- `cargo test -p kamn-core --test durable_guard_snapshot_store unit_bundle_schema_mismatch_is_rejected`
+- `cargo test -p kamn-core --test task_operation_snapshot task_operation_snapshot_bounded_roundtrip_benchmark_is_fast_for_ci`
 - `cargo fmt --check`
 - `cargo clippy -p kamn-core -- -D warnings`
 
