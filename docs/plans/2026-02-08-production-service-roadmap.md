@@ -66,6 +66,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Added synchronous service API client primitives in `kamn-sdk`: `ServiceApiClient`, `ServiceRequestAuth`, `service_signature_for_fields`, and typed route/event response models (Task #2946).
   - Added deterministic unit/functional/integration/regression coverage in `crates/kamn-sdk/tests/service_api_client.rs`.
   - Added operator/developer reference documentation: `docs/sdk/rust-sdk.md`.
+- Phase 5 Rust SDK service-client live validation delivered:
+  - Runtime lane: `scripts/sdk/validate_rust_sdk_service_client_live.sh` and `scripts/sdk/test_validate_rust_sdk_service_client_live.sh` (Task #2948, Subtask #2949).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `service_client_contract_status=verified`, `evidence_bundle_status=verified`, `fail_closed_status=verified`.
+  - Fail-closed validation confirmed for invalid runtime budget drill: `max-seconds must be greater than zero`.
 - Phase 6.3 initial slice delivered: deployment artifacts now include a multi-stage `Dockerfile`, `deploy/docker-compose.yml` role topology, and `deploy/k8s/kamn-node.yaml` baseline manifests (Task #2971, Subtask #2972).
 - Phase 6.3 live validation delivered:
   - Runtime lane: `scripts/deploy/validate_deployment_assets_live.sh` and `scripts/deploy/test_validate_deployment_assets_live.sh` (Task #2973, Subtask #2974).
