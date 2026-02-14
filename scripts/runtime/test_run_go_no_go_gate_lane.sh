@@ -10,6 +10,7 @@ RELEASE_MANIFEST_FILE="$ROOT_DIR/scripts/runtime/release_evidence_manifest.json"
 TMP_DIR="$(mktemp -d)"
 TMP_REPORT="$TMP_DIR/go-no-go-gate-report.json"
 TMP_FAULT_REPORT="$TMP_DIR/go-no-go-gate-fault-report.json"
+TMP_WARN_REPORT="$TMP_DIR/go-no-go-gate-warn-report.json"
 TMP_MANIFEST_FAIL_REPORT="$TMP_DIR/go-no-go-gate-manifest-fail-report.json"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -62,6 +63,10 @@ if ! printf '%s\n' "$lane_output" | grep -q '^status=pass$'; then
   echo "expected go/no-go gate lane pass status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^policy_outcome=PASS$'; then
+  echo "expected go/no-go gate lane PASS policy-outcome marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^final_decision=GO$'; then
   echo "expected go/no-go gate lane GO decision marker" >&2
   exit 1
@@ -78,6 +83,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^dr_readiness_status=verified$'; th
   echo "expected go/no-go gate lane dr status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^policy_evaluator_status=verified$'; then
+  echo "expected go/no-go gate lane policy evaluator status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^reason_taxonomy_version=kamn.runtime.go-no-go-gate-reason-taxonomy.v1$'; then
+  echo "expected go/no-go gate lane reason taxonomy marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_REPORT" <<'PY'
 import json
@@ -89,16 +102,22 @@ if payload.get("schema_version") != "kamn.runtime.go-no-go-gate-report.v1":
     raise SystemExit("unexpected go/no-go gate report schema")
 if payload.get("status") != "pass":
     raise SystemExit("expected go/no-go gate report status=pass")
+if payload.get("policy_outcome") != "PASS":
+    raise SystemExit("expected go/no-go gate report policy_outcome=PASS")
 if payload.get("final_decision") != "GO":
     raise SystemExit("expected go/no-go gate report final_decision=GO")
 if payload.get("fault_profile") != "none":
     raise SystemExit("expected go/no-go gate report fault_profile=none")
+if payload.get("reason_taxonomy_version") != "kamn.runtime.go-no-go-gate-reason-taxonomy.v1":
+    raise SystemExit("expected go/no-go gate report reason taxonomy version marker")
 if payload.get("go_no_go_evidence_status") != "verified":
     raise SystemExit("expected go_no_go_evidence_status=verified")
 if payload.get("rollback_readiness_status") != "verified":
     raise SystemExit("expected rollback_readiness_status=verified")
 if payload.get("dr_readiness_status") != "verified":
     raise SystemExit("expected dr_readiness_status=verified")
+if payload.get("policy_evaluator_status") != "verified":
+    raise SystemExit("expected policy_evaluator_status=verified")
 if payload.get("manifest_schema_version") != "kamn.runtime.release-evidence-manifest.v1":
     raise SystemExit("expected manifest_schema_version marker in go/no-go gate report")
 if payload.get("manifest_registry_status") != "verified":
@@ -113,6 +132,8 @@ for entry in inventory:
         raise SystemExit("expected every artifact inventory entry status=verified")
 if payload.get("reason_codes") != []:
     raise SystemExit("expected empty reason_codes for baseline go/no-go gate run")
+if payload.get("observed_reason_codes") != []:
+    raise SystemExit("expected empty observed_reason_codes for baseline go/no-go gate run")
 PY
 
 set +e
@@ -183,6 +204,55 @@ if payload.get("fault_profile") != "gate_decision":
 reason_codes = payload.get("reason_codes", [])
 if "gate_decision_fault_injection_triggered" not in reason_codes:
     raise SystemExit("expected gate decision fault reason code in report")
+if payload.get("policy_outcome") != "FAIL":
+    raise SystemExit("expected gate decision fault report policy_outcome=FAIL")
+if payload.get("policy_evaluator_status") != "verified":
+    raise SystemExit("expected gate decision fault report policy_evaluator_status=verified")
+if payload.get("observed_reason_codes") != ["gate_decision_fault_injection_triggered"]:
+    raise SystemExit("expected observed_reason_codes to include deterministic gate-decision marker")
+PY
+
+warn_output="$(
+  bash "$LANE_SCRIPT" \
+    --fault-profile runtime_budget_warn \
+    --max-seconds 120 \
+    --output-json "$TMP_WARN_REPORT"
+)"
+if ! printf '%s\n' "$warn_output" | grep -q '^status=warn$'; then
+  echo "expected go/no-go gate runtime_budget_warn profile to emit status=warn" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$warn_output" | grep -q '^policy_outcome=WARN$'; then
+  echo "expected go/no-go gate runtime_budget_warn profile to emit policy_outcome=WARN" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$warn_output" | grep -q '^final_decision=GO$'; then
+  echo "expected go/no-go gate runtime_budget_warn profile to keep final_decision=GO" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$warn_output" | grep -q '^reason_codes=runtime_budget_exceeded$'; then
+  echo "expected go/no-go gate runtime_budget_warn profile to emit warning reason code" >&2
+  exit 1
+fi
+
+python3 - "$TMP_WARN_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("status") != "warn":
+    raise SystemExit("expected runtime_budget_warn report status=warn")
+if payload.get("policy_outcome") != "WARN":
+    raise SystemExit("expected runtime_budget_warn report policy_outcome=WARN")
+if payload.get("final_decision") != "GO":
+    raise SystemExit("expected runtime_budget_warn report final_decision=GO")
+if payload.get("policy_evaluator_status") != "verified":
+    raise SystemExit("expected runtime_budget_warn report policy_evaluator_status=verified")
+if payload.get("reason_codes") != ["runtime_budget_exceeded"]:
+    raise SystemExit("expected runtime_budget_warn report reason_codes=['runtime_budget_exceeded']")
+if payload.get("observed_reason_codes") != ["runtime_budget_exceeded"]:
+    raise SystemExit("expected runtime_budget_warn report observed_reason_codes=['runtime_budget_exceeded']")
 PY
 
 set +e

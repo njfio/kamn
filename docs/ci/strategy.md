@@ -2541,6 +2541,11 @@ Fast-mode CI tooling regression coverage includes:
 The runtime go/no-go gate lane enforces a versioned release evidence manifest:
 - manifest file: `scripts/runtime/release_evidence_manifest.json`
 - schema version: `kamn.runtime.release-evidence-manifest.v1`
+- reason taxonomy version: `kamn.runtime.go-no-go-gate-reason-taxonomy.v1`
+- deterministic policy outcomes:
+  - `PASS` => `status=pass`, `final_decision=GO`
+  - `WARN` => `status=warn`, `final_decision=GO`
+  - `FAIL` => `status=fail`, `final_decision=NO-GO`
 - required artifact IDs:
   - `go_no_go_evidence`
   - `rollback_readiness`
@@ -2553,6 +2558,8 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `release_manifest_schema_version_invalid`
   - `release_manifest_missing_required_artifact:<artifact_id>`
   - `release_manifest_required_marker_missing:<artifact_id>`
+  - `runtime_budget_exceeded` (warning reason)
+  - `gate_decision_fault_injection_triggered` (fail reason)
 
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
