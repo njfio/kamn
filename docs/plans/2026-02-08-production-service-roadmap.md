@@ -44,6 +44,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/kolme/validate_did_lifecycle_chain_adapter_live.sh` and `scripts/kolme/test_validate_did_lifecycle_chain_adapter_live.sh` (Task #2938, Subtask #2939).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `did_lifecycle_contract_status=verified`, `evidence_bundle_status=verified`, `docs_contract_status=verified`, `fail_closed_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for conflicting same DID+nonce lifecycle payloads: `fail_closed_reason_code=did_registry_submission_key_conflict`.
+- Phase 4.3 initial slice delivered:
+  - Added `MessageProofAnchoringService` with lifecycle-aligned anchor submission (`Broadcast|Included`), deterministic idempotency/retry classification, and anchor finality tracking (Task #2941, Subtask #2942).
+  - Added `MessageProofChainAdapter` surfaces with `InMemoryMessageProofChainAdapter` and `KolmeMessageProofChainAdapter`.
+  - Added unit/functional/integration/regression/performance coverage in `crates/kamn-core/tests/message_proof_anchoring.rs`.
 - Phase 6.1 initial slice delivered: service API `/metrics` now exports deterministic runtime telemetry gauges and source/health labels with fail-closed unknown defaults when daemon/kolme telemetry is unavailable (Task #2961, Subtask #2962).
 - Phase 6.1 live validation delivered:
   - Runtime lane: `scripts/runtime/validate_service_api_observability_live.sh` and `scripts/runtime/test_validate_service_api_observability_live.sh` (Task #2963, Subtask #2964).
