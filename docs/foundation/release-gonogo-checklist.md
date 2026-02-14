@@ -153,9 +153,13 @@ Staging rehearsal automation must verify deploy and rollback outcomes before rel
   - `scripts/deploy/staging_rehearsal_contract.py`
 - Scheduled deep lane entrypoint:
   - `bash scripts/deploy/run_staging_rehearsal_deep_lane.sh`
+- Staged signoff artifact schema:
+  - `kamn.release.staged-rehearsal-signoff.v1`
+  - policy output marker: `staged_rehearsal_signoff_status=verified|fail-closed`
 - Regression policy:
   - rollback target hash mismatch and incomplete rehearsal evidence force `NO-GO` (`Regression: #623`).
   - MTTR evidence drift and out-of-bound recovery time force `NO-GO` (`Regression: #2337`).
+  - staged signoff artifact drift fails closed (`staged rehearsal signoff artifact mismatch`) (`Regression: #3241`).
   - bounded MTTR policy emits deterministic markers: `recovery_time_seconds`, `max_allowed_recovery_time_seconds`, `mttr_within_bound`, and reason code `mttr-threshold-exceeded`.
 
 ## Durable Guard Migration + Recovery Matrix Evidence (Issue #691)

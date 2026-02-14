@@ -40,5 +40,9 @@ if ! printf '%s\n' "$policy_output" | grep -q "^mttr_within_bound=false$"; then
   echo "expected deep-lane policy check to report out-of-bound MTTR evidence" >&2
   exit 1
 fi
+if ! printf '%s\n' "$policy_output" | grep -q "^staged_rehearsal_signoff_status=fail-closed$"; then
+  echo "expected deep-lane policy check to report fail-closed staged rehearsal signoff status" >&2
+  exit 1
+fi
 
 echo "staging rehearsal deep lane tests passed."
