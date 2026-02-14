@@ -106,6 +106,8 @@ pub mod signature_profile;
 pub mod signer_backend;
 /// Deterministic triadic runtime smoke simulation contracts.
 pub mod smoke;
+/// Legacy file snapshot to sqlite migration parity-check contracts.
+pub mod snapshot_migration;
 /// Sqlite backend bootstrap/versioning and namespace-key-value persistence contracts.
 pub mod sqlite_store_backend;
 pub mod state;
@@ -389,6 +391,9 @@ pub use signer_backend::{
     SignerProviderHandshakeStatus, SigningRequest,
 };
 pub use smoke::{ProducedBlock, RoleSmokeNetwork, SmokeError};
+pub use snapshot_migration::{
+    migrate_file_snapshots_to_sqlite_parity, SnapshotMigrationError, SnapshotMigrationParityReport,
+};
 pub use sqlite_store_backend::{
     SqliteStoreBackend, SqliteStoreBackendError, SQLITE_STORE_SCHEMA_VERSION,
 };
