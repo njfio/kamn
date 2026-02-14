@@ -56,6 +56,19 @@ This document captures the first implementation slice for deterministic observab
   - dispatch and completion/start markers for one execution must retain the same `execution_id`.
   - missing `execution_id` in structured runtime markers fails closed (`Regression: #3033`).
 
+Live validation lane:
+- `scripts/runtime/validate_structured_logging_live.sh`
+- `scripts/runtime/test_validate_structured_logging_live.sh`
+
+Expected markers:
+- `status=pass`
+- `final_decision=GO`
+- `structured_logging_contract_status=verified`
+- `correlation_contract_status=verified`
+- `docs_contract_status=verified`
+- `fail_closed_status=verified`
+- `fail_closed_reason_code=invalid_log_config_level`
+
 ## SLO Evaluation Rules
 - `LatencyP50`: warning when above max threshold.
 - `LatencyP99`: critical when above max threshold.
