@@ -44,7 +44,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `DeterministicProposalPlanner`
   - `ProposalPlan`
   - `ProposalPlannerError`
-- Added recovery/rejoin guard primitives in `crates/kamn-core/src/runtime.rs`:
+- Added recovery/rejoin guard primitives in `crates/kamn-core/src/runtime_recovery_guard.rs`:
   - `RejoinAttempt`
   - `RecoveryRejoinGuard`
   - `RecoveryStatus`

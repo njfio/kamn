@@ -223,3 +223,46 @@ fn runtime_module_extraction_contract_keeps_runtime_snapshot_types_in_new_module
         "runtime_snapshot_store module should own FileRuntimeSnapshotStore"
     );
 }
+
+#[test]
+fn runtime_module_extraction_contract_declares_runtime_recovery_guard_module() {
+    let runtime_rs = read_repo_file("runtime.rs");
+    assert!(
+        runtime_rs.contains("mod runtime_recovery_guard;"),
+        "runtime.rs should declare extracted runtime_recovery_guard module"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_moves_recovery_guard_types_out_of_runtime_rs() {
+    let runtime_rs = read_repo_file("runtime.rs");
+    assert!(
+        !runtime_rs.contains("pub struct RejoinAttempt {"),
+        "runtime.rs should not keep inline RejoinAttempt definition"
+    );
+    assert!(
+        !runtime_rs.contains("pub enum RecoveryGuardError {"),
+        "runtime.rs should not keep inline RecoveryGuardError definition"
+    );
+    assert!(
+        !runtime_rs.contains("pub struct RecoveryRejoinGuard {"),
+        "runtime.rs should not keep inline RecoveryRejoinGuard definition"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_keeps_recovery_guard_types_in_new_module() {
+    let runtime_recovery_guard_rs = read_repo_file("runtime_recovery_guard.rs");
+    assert!(
+        runtime_recovery_guard_rs.contains("pub struct RejoinAttempt {"),
+        "runtime_recovery_guard module should own RejoinAttempt"
+    );
+    assert!(
+        runtime_recovery_guard_rs.contains("pub enum RecoveryGuardError {"),
+        "runtime_recovery_guard module should own RecoveryGuardError"
+    );
+    assert!(
+        runtime_recovery_guard_rs.contains("pub struct RecoveryRejoinGuard {"),
+        "runtime_recovery_guard module should own RecoveryRejoinGuard"
+    );
+}
