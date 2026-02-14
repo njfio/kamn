@@ -247,6 +247,73 @@ impl ForkChoiceHook for AcceptAllForkChoiceHook {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// Deterministic fork-choice hook for competing branch candidates.
+///
+/// Selection rules:
+/// - Higher `block_height` always wins.
+/// - At equal `block_height`, lexicographically lower `payload_digest` wins.
+/// - Identical height+digest is treated as duplicate candidate and rejected.
+pub struct DeterministicCompetingBranchForkChoiceHook {
+    canonical_head: Option<CanonicalCommitRecord>,
+}
+
+impl DeterministicCompetingBranchForkChoiceHook {
+    /// Creates deterministic competing-branch hook with empty head.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Creates deterministic competing-branch hook seeded with existing canonical head.
+    pub fn with_canonical_head(canonical_head: CanonicalCommitRecord) -> Self {
+        Self {
+            canonical_head: Some(canonical_head),
+        }
+    }
+
+    /// Returns currently selected canonical head, if any.
+    pub fn canonical_head(&self) -> Option<&CanonicalCommitRecord> {
+        self.canonical_head.as_ref()
+    }
+}
+
+impl ForkChoiceHook for DeterministicCompetingBranchForkChoiceHook {
+    fn evaluate_candidate(
+        &mut self,
+        record: &CanonicalCommitRecord,
+    ) -> Result<ForkChoiceDecision, BlockPipelineError> {
+        let Some(head) = self.canonical_head.as_ref() else {
+            self.canonical_head = Some(record.clone());
+            return Ok(ForkChoiceDecision::Accept);
+        };
+
+        if record.block_height > head.block_height {
+            self.canonical_head = Some(record.clone());
+            return Ok(ForkChoiceDecision::Accept);
+        }
+        if record.block_height < head.block_height {
+            return Ok(ForkChoiceDecision::Reject {
+                reason_code: "fork_choice_stale_block_height".to_owned(),
+            });
+        }
+
+        if record.payload_digest == head.payload_digest {
+            return Ok(ForkChoiceDecision::Reject {
+                reason_code: "fork_choice_duplicate_candidate".to_owned(),
+            });
+        }
+
+        if record.payload_digest < head.payload_digest {
+            self.canonical_head = Some(record.clone());
+            return Ok(ForkChoiceDecision::Accept);
+        }
+
+        Ok(ForkChoiceDecision::Reject {
+            reason_code: "fork_choice_tie_break_loser".to_owned(),
+        })
+    }
+}
+
 /// Deterministic mempool->consensus->commit pipeline for processor runtime flows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MempoolBlockPipeline {
@@ -457,7 +524,12 @@ fn payload_digest_for_transactions(transactions: &[BaselineTransaction]) -> Stri
 
 #[cfg(test)]
 mod tests {
-    use super::{payload_digest_for_transactions, BlockPipelineError, MempoolBlockPipeline};
+    use super::{
+        payload_digest_for_transactions, BlockPipelineError, CanonicalCommitRecord,
+        DeterministicCompetingBranchForkChoiceHook, ForkChoiceDecision, ForkChoiceHook,
+        MempoolBlockPipeline,
+    };
+    use crate::config::NodeRole;
     use crate::transaction::BaselineTransaction;
 
     #[test]
@@ -497,5 +569,97 @@ mod tests {
         let digest_a = payload_digest_for_transactions(&[tx1.clone(), tx2.clone()]);
         let digest_b = payload_digest_for_transactions(&[tx2, tx1]);
         assert_eq!(digest_a, digest_b);
+    }
+
+    #[test]
+    fn deterministic_competing_branch_hook_rejects_stale_candidate_height() {
+        let seeded_head = CanonicalCommitRecord {
+            block_height: 8,
+            producer_role: NodeRole::Processor,
+            payload_digest: "digest-z".to_owned(),
+            transaction_ids: vec!["tx-z".to_owned()],
+        };
+        let mut hook = DeterministicCompetingBranchForkChoiceHook::with_canonical_head(seeded_head);
+        let stale_candidate = CanonicalCommitRecord {
+            block_height: 7,
+            producer_role: NodeRole::Processor,
+            payload_digest: "digest-a".to_owned(),
+            transaction_ids: vec!["tx-a".to_owned()],
+        };
+
+        let decision = hook
+            .evaluate_candidate(&stale_candidate)
+            .expect("hook should evaluate stale candidate");
+        assert_eq!(
+            decision,
+            ForkChoiceDecision::Reject {
+                reason_code: "fork_choice_stale_block_height".to_owned(),
+            }
+        );
+        assert_eq!(
+            hook.canonical_head()
+                .expect("seeded canonical head should remain set")
+                .payload_digest,
+            "digest-z"
+        );
+    }
+
+    #[test]
+    fn deterministic_competing_branch_hook_prefers_lexicographically_lower_digest_on_tie() {
+        let mut hook = DeterministicCompetingBranchForkChoiceHook::new();
+        let branch_high = CanonicalCommitRecord {
+            block_height: 5,
+            producer_role: NodeRole::Processor,
+            payload_digest: "digest-b".to_owned(),
+            transaction_ids: vec!["tx-b".to_owned()],
+        };
+        let branch_low = CanonicalCommitRecord {
+            block_height: 5,
+            producer_role: NodeRole::Processor,
+            payload_digest: "digest-a".to_owned(),
+            transaction_ids: vec!["tx-a".to_owned()],
+        };
+
+        let first = hook
+            .evaluate_candidate(&branch_high)
+            .expect("first branch should evaluate");
+        let second = hook
+            .evaluate_candidate(&branch_low)
+            .expect("second branch should evaluate");
+
+        assert_eq!(first, ForkChoiceDecision::Accept);
+        assert_eq!(second, ForkChoiceDecision::Accept);
+        assert_eq!(
+            hook.canonical_head()
+                .expect("head should be selected after tie break")
+                .payload_digest,
+            "digest-a"
+        );
+    }
+
+    #[test]
+    fn deterministic_competing_branch_hook_rejects_duplicate_candidate() {
+        let mut hook = DeterministicCompetingBranchForkChoiceHook::new();
+        let candidate = CanonicalCommitRecord {
+            block_height: 11,
+            producer_role: NodeRole::Processor,
+            payload_digest: "digest-11".to_owned(),
+            transaction_ids: vec!["tx-11".to_owned()],
+        };
+
+        let first = hook
+            .evaluate_candidate(&candidate)
+            .expect("first candidate should evaluate");
+        let second = hook
+            .evaluate_candidate(&candidate)
+            .expect("duplicate candidate should evaluate");
+
+        assert_eq!(first, ForkChoiceDecision::Accept);
+        assert_eq!(
+            second,
+            ForkChoiceDecision::Reject {
+                reason_code: "fork_choice_duplicate_candidate".to_owned(),
+            }
+        );
     }
 }
