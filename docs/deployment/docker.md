@@ -41,6 +41,16 @@ These are mounted to `/data/<role>` paths in each container so restarts preserve
 
 All services join the named bridge network `kamn_mesh` for deterministic local service discovery.
 
+## Healthcheck And Restart
+
+Each role service includes a compose `healthcheck` probing `/healthz` over its local API bind:
+
+- processor: `curl --fail --silent http://127.0.0.1:19081/healthz`
+- listener: `curl --fail --silent http://127.0.0.1:19082/healthz`
+- approver: `curl --fail --silent http://127.0.0.1:19083/healthz`
+
+`listener` and `approver` dependencies require `service_healthy` on `processor`, and all roles keep `restart: unless-stopped`.
+
 ## Commands
 
 Start topology:

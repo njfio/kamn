@@ -41,6 +41,8 @@ Compose file: `deploy/docker-compose.yml`
   - `listener_data`
   - `approver_data`
 - named bridge network: `kamn_mesh`
+- each service defines a compose `healthcheck` probing local `/healthz` endpoints.
+- listener/approver service dependencies require `service_healthy` on processor.
 - each service includes `restart: unless-stopped` for resilient local process restarts.
 
 Run all roles locally:

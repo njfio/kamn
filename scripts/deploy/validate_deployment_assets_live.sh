@@ -53,6 +53,26 @@ if ! printf '%s\n' "$negative_output" | grep -q 'expected Dockerfile multi-stage
   exit 1
 fi
 
+bad_compose="$TMP_DIR/docker-compose.healthcheck.bad.yml"
+sed 's|19081/healthz|19081/healthz-drift|g' "$ROOT_DIR/deploy/docker-compose.yml" >"$bad_compose"
+
+set +e
+healthcheck_negative_output="$(
+  COMPOSE_FILE_PATH="$bad_compose" \
+  bash "$ROOT_DIR/scripts/deploy/test_deployment_assets.sh" 2>&1
+)"
+healthcheck_negative_code=$?
+set -e
+if [ "$healthcheck_negative_code" -eq 0 ]; then
+  echo "expected deployment assets checker to fail closed for invalid compose healthcheck marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$healthcheck_negative_output" | grep -q 'expected docker-compose processor healthcheck probe marker'; then
+  printf '%s\n' "$healthcheck_negative_output" >&2
+  echo "expected deterministic fail-closed reason marker for invalid compose healthcheck marker" >&2
+  exit 1
+fi
+
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
 if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
   echo "deployment assets live validation exceeded runtime budget: ${elapsed_seconds}s" >&2

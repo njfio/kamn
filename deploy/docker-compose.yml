@@ -30,6 +30,14 @@ services:
       - "19081:19081"
     networks:
       - kamn_mesh
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl --fail --silent http://127.0.0.1:19081/healthz > /dev/null || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
     restart: unless-stopped
 
   listener:
@@ -57,9 +65,18 @@ services:
     ports:
       - "19082:19082"
     depends_on:
-      - processor
+      processor:
+        condition: service_healthy
     networks:
       - kamn_mesh
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl --fail --silent http://127.0.0.1:19082/healthz > /dev/null || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
     restart: unless-stopped
 
   approver:
@@ -87,9 +104,18 @@ services:
     ports:
       - "19083:19083"
     depends_on:
-      - processor
+      processor:
+        condition: service_healthy
     networks:
       - kamn_mesh
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl --fail --silent http://127.0.0.1:19083/healthz > /dev/null || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
     restart: unless-stopped
 
 volumes:
