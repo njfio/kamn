@@ -1373,6 +1373,11 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
     - `python3 scripts/kolme/check_fast_gate_native_api_parity_policy.py --report-file /tmp/kolme-fast-gate-native-api-parity-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/kolme-fast-gate-native-api-parity-policy.json`
     - `KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS=120`
   - local-only heavy Kolme run-mode commands remain excluded from ci-fast-gate.
+  - selector mode declaration marker:
+    - `kolme_local_heavy_lane_mode=local-only|manual-opt-in|not-applicable`
+    - `ci-fast-gate mode: fast` (local-heavy run-mode lanes excluded)
+    - `local-dev mode: local` (dry-run and local evidence workflows)
+    - `manual-hardened mode: manual` (`CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS=true` opt-in)
   - workflow heavy-exclusion policy checker fails closed when local-heavy command coverage drifts (`local_heavy_lane_commands_missing`) or leaks into version compatibility lane (`local_heavy_lane_commands_in_version_lane`).
   - workflow/selector parity contract remains enforced with deterministic reason codes:
     - `python3 scripts/ci/check_workflow_kolme_heavy_exclusion_policy.py --workflow-file .github/workflows/ci-fast-gate.yml --selector-file scripts/ci/select_targets.sh`

@@ -175,6 +175,7 @@ run_selector_with_federated_did_deep() {
 docs_output="$(run_selector $'docs/foundation/ci-caching-parallelism.md')"
 assert_eq "$(extract_output "$docs_output" "docs_only")" "true" "docs_only selection mismatch"
 assert_docs_only_invariants "$docs_output"
+assert_eq "$(extract_output "$docs_output" "kolme_local_heavy_lane_mode")" "not-applicable" "docs_only should keep local-heavy lane mode marker at not-applicable"
 assert_eq "$(extract_output "$docs_output" "test_scope")" "none" "docs_only should keep none scope"
 
 ci_strategy_docs_output="$(run_selector $'docs/ci/strategy.md')"
@@ -362,12 +363,14 @@ assert_deploy_scope_triplet "$deployment_slo_contract_output" "deployment slo/ro
 kolme_local_heavy_default_gate_output="$(run_selector_with_local_heavy_opt_in $'scripts/kolme/run_local_heavy_validation_matrix.sh' 'false')"
 assert_eq "$(extract_output "$kolme_local_heavy_default_gate_output" "run_kolme_local_heavy_contract_tests")" "false" "Kolme local-heavy script changes should remain local-only by default"
 assert_eq "$(extract_output "$kolme_local_heavy_default_gate_output" "kolme_local_heavy_selector_opt_in")" "false" "Kolme local-heavy selector output must expose default non-opt-in state"
+assert_eq "$(extract_output "$kolme_local_heavy_default_gate_output" "kolme_local_heavy_lane_mode")" "local-only" "Kolme local-heavy selector output must declare local-only lane mode when opt-in is disabled"
 assert_eq "$(extract_output "$kolme_local_heavy_default_gate_output" "test_scope")" "kolme-local-heavy-local-only" "Kolme local-heavy script changes should set local-only selector scope by default"
 
 # Regression: #2303
 kolme_local_heavy_opt_in_gate_output="$(run_selector_with_local_heavy_opt_in $'scripts/kolme/run_local_heavy_validation_matrix.sh' 'true')"
 assert_eq "$(extract_output "$kolme_local_heavy_opt_in_gate_output" "run_kolme_local_heavy_contract_tests")" "true" "Kolme local-heavy script changes should run heavy lane only with explicit opt-in"
 assert_eq "$(extract_output "$kolme_local_heavy_opt_in_gate_output" "kolme_local_heavy_selector_opt_in")" "true" "Kolme local-heavy selector output must expose opt-in state when enabled"
+assert_eq "$(extract_output "$kolme_local_heavy_opt_in_gate_output" "kolme_local_heavy_lane_mode")" "manual-opt-in" "Kolme local-heavy selector output must declare manual-opt-in lane mode when opt-in is enabled"
 assert_eq "$(extract_output "$kolme_local_heavy_opt_in_gate_output" "test_scope")" "kolme-local-heavy-contract" "Kolme local-heavy script changes should set local-heavy contract scope when opt-in is enabled"
 
 # Regression: #2330

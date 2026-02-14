@@ -38,6 +38,7 @@ append_summary() {
     echo "- Run Kolme snapshot drift contract tests: ${RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS}"
     echo "- Run Kolme local-heavy contract tests: ${RUN_KOLME_LOCAL_HEAVY_CONTRACT_TESTS}"
     echo "- Kolme local-heavy selector opt-in: ${KOLME_LOCAL_HEAVY_SELECTOR_OPT_IN}"
+    echo "- Kolme local-heavy lane mode: ${KOLME_LOCAL_HEAVY_LANE_MODE}"
     echo "- Run Kolme version compatibility contract tests: ${RUN_KOLME_VERSION_COMPATIBILITY_CONTRACT_TESTS}"
     echo "- Run Kolme triadic devnet smoke contract tests: ${RUN_KOLME_TRIADIC_DEVNET_SMOKE_CONTRACT_TESTS}"
     echo "- Run federated delegation settlement contract tests: ${RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS}"
@@ -680,6 +681,7 @@ CHANGED_MANIFESTS=""
 RUN_INVARIANT_HARNESS=false
 BRIDGE_REPLAY_SUITES=""
 KOLME_LOCAL_HEAVY_SELECTOR_OPT_IN=false
+KOLME_LOCAL_HEAVY_LANE_MODE="not-applicable"
 
 case "${CI_ENABLE_KOLME_LOCAL_HEAVY_CONTRACT_TESTS:-false}" in
   1|true|TRUE|yes|YES|on|ON)
@@ -824,11 +826,15 @@ fi
 if [ "$KOLME_LOCAL_HEAVY_CONTRACT_CHANGED" = true ]; then
   if [ "$KOLME_LOCAL_HEAVY_SELECTOR_OPT_IN" = true ]; then
     RUN_KOLME_LOCAL_HEAVY_CONTRACT_TESTS=true
+    KOLME_LOCAL_HEAVY_LANE_MODE="manual-opt-in"
     if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
       TEST_SCOPE="kolme-local-heavy-contract"
     fi
-  elif [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
-    TEST_SCOPE="kolme-local-heavy-local-only"
+  else
+    KOLME_LOCAL_HEAVY_LANE_MODE="local-only"
+    if [ "$RUN_RUST" != true ] && [ "$TEST_SCOPE" = "none" ]; then
+      TEST_SCOPE="kolme-local-heavy-local-only"
+    fi
   fi
 fi
 
@@ -1057,6 +1063,7 @@ write_output "run_federated_did_handshake_deep_lane" "$RUN_FEDERATED_DID_HANDSHA
 write_output "run_kolme_snapshot_drift_contract_tests" "$RUN_KOLME_SNAPSHOT_DRIFT_CONTRACT_TESTS"
 write_output "run_kolme_local_heavy_contract_tests" "$RUN_KOLME_LOCAL_HEAVY_CONTRACT_TESTS"
 write_output "kolme_local_heavy_selector_opt_in" "$KOLME_LOCAL_HEAVY_SELECTOR_OPT_IN"
+write_output "kolme_local_heavy_lane_mode" "$KOLME_LOCAL_HEAVY_LANE_MODE"
 write_output "run_kolme_version_compatibility_contract_tests" "$RUN_KOLME_VERSION_COMPATIBILITY_CONTRACT_TESTS"
 write_output "run_kolme_triadic_devnet_smoke_contract_tests" "$RUN_KOLME_TRIADIC_DEVNET_SMOKE_CONTRACT_TESTS"
 write_output "run_federated_delegation_settlement_contract_tests" "$RUN_FEDERATED_DELEGATION_SETTLEMENT_CONTRACT_TESTS"

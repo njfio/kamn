@@ -294,6 +294,8 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(
         DOC.contains("local-only heavy Kolme run-mode commands remain excluded from ci-fast-gate.")
     );
+    assert!(DOC.contains("kolme_local_heavy_lane_mode=local-only|manual-opt-in|not-applicable"));
+    assert!(DOC.contains("manual-hardened mode: manual"));
     assert!(DOC.contains(
         "local-only fork sync/smoke run-mode commands remain excluded from ci-fast-gate."
     ));
