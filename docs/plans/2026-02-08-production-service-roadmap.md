@@ -54,6 +54,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/sdk/validate_cross_language_sdk_parity_matrix_live.sh` and `scripts/sdk/test_validate_cross_language_sdk_parity_matrix_live.sh` (Task #2958, Subtask #2959).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `matrix_contract_status=verified`, `evidence_bundle_status=verified`, `fail_closed_status=verified`.
   - Fail-closed validation confirmed for invalid mode drill: `mode must be one of: contract,deep`.
+- Phase 5 Python SDK packaging implementation delivered:
+  - Added publishable packaging metadata at repository root: `pyproject.toml`.
+  - Added deterministic packaging contract runner/harness: `scripts/sdk/run_python_sdk_packaging_contract.sh` and `scripts/sdk/test_run_python_sdk_packaging_contract.sh` (Task #2951, Subtask #2952).
+  - Added operator/developer packaging contract documentation: `docs/sdk/python-sdk.md`.
 - Phase 6.3 initial slice delivered: deployment artifacts now include a multi-stage `Dockerfile`, `deploy/docker-compose.yml` role topology, and `deploy/k8s/kamn-node.yaml` baseline manifests (Task #2971, Subtask #2972).
 - Phase 6.3 live validation delivered:
   - Runtime lane: `scripts/deploy/validate_deployment_assets_live.sh` and `scripts/deploy/test_validate_deployment_assets_live.sh` (Task #2973, Subtask #2974).

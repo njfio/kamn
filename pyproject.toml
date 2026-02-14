@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kamn-sdk"
+version = "0.1.0"
+description = "Python SDK contracts for KAMN protocol integration"
+readme = "docs/sdk/python-sdk.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "KAMN Maintainers" }
+]
+keywords = ["kamn", "sdk", "python", "agent-network"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Software Development :: Libraries"
+]
+
+[tool.setuptools]
+py-modules = ["kamn_sdk"]
+
+[project.urls]
+Repository = "https://github.com/njfio/kamn"
