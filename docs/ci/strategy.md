@@ -64,6 +64,20 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `task_operation_snapshot_journal_corrupt_tail:<line>`
 - Regression: #2690
 
+## File-to-Sqlite Migration Parity Contract
+- Snapshot migration parity policy is tracked in `docs/plans/2026-02-14-production-service-next-steps.md`.
+- Migration parity corpus commands:
+  - `cargo test -p kamn-core --lib snapshot_migration::tests::`
+  - `cargo test -p kamn-core --test file_to_sqlite_migration_parity`
+- Deterministic migration contracts:
+  - replay compares legacy file snapshots against sqlite roundtrip payloads across channel/message/task/durable/runtime domains.
+  - corrupt legacy fixtures fail closed with typed migration errors and stable reason codes.
+  - successful migration reports `snapshot_migration_parity_pass`.
+- Cost controls:
+  - corpus remains bounded to local synthetic fixtures with deterministic payload size.
+  - performance lane enforces a bounded local replay budget in under 2 seconds for a 64-snapshot runtime corpus.
+- Regression: #3311
+
 ## Runtime Backpressure Enforcement Contract
 - Runtime backpressure enforcement policy is tracked in `docs/planning/runtime_backpressure_policy.md`.
 - Fast-gate backpressure contract command:
