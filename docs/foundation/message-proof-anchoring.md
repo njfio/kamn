@@ -58,4 +58,6 @@ cargo test -p kamn-core --test message_proof_anchoring
 cargo test -p kamn-core --test message_proof_anchoring -- functional_anchor_submission_advances_broadcast_to_included_with_typed_outcome
 cargo test -p kamn-core --test message_proof_anchoring -- integration_anchor_retry_is_duplicate_without_reapplying_state_transition
 cargo test -p kamn-core --test message_proof_anchoring -- regression_anchor_conflicting_payload_for_same_message_rejected_fail_closed
+bash scripts/kolme/run_message_proof_anchoring_contract_lane.sh
+bash scripts/kolme/validate_message_proof_anchoring_live.sh
 ```
