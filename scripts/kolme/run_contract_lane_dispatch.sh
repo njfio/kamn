@@ -54,6 +54,8 @@ fi
 resolve_manifest_name() {
   case "$1" in
     run_block_fallback_reconciliation_contract_lane.sh) echo "kolme_block_fallback_reconciliation_contract_lane.json" ;;
+    run_continuous_runtime_commit_contract_lane.sh) echo "kolme_continuous_runtime_commit_contract_lane.json" ;;
+    run_did_lifecycle_chain_adapter_contract_lane.sh) echo "kolme_did_lifecycle_chain_adapter_contract_lane.json" ;;
     run_fast_gate_native_api_parity_contract_lane.sh) echo "kolme_fast_gate_native_api_parity_contract_lane.json" ;;
     run_local_bootstrap_health_checks_contract_lane.sh) echo "kolme_local_bootstrap_health_checks_contract_lane.json" ;;
     run_local_e2e_integration_contract_lane.sh) echo "kolme_local_e2e_integration_contract_lane.json" ;;
@@ -75,6 +77,7 @@ resolve_manifest_name() {
     run_managed_signer_backend_slo_policy_contract_lane.sh) echo "kolme_managed_signer_backend_slo_policy_contract_lane.json" ;;
     run_managed_signer_backend_slo_telemetry_contract_lane.sh) echo "kolme_managed_signer_backend_slo_telemetry_contract_lane.json" ;;
     run_managed_signer_startup_live_validation_contract_lane.sh) echo "kolme_managed_signer_startup_live_validation_contract_lane.json" ;;
+    run_message_proof_anchoring_contract_lane.sh) echo "kolme_message_proof_anchoring_contract_lane.json" ;;
     run_local_runtime_commit_live_finality_evidence_contract_lane.sh) echo "kolme_local_runtime_commit_live_finality_evidence_contract_lane.json" ;;
     run_local_native_api_parity_live_proof_contract_lane.sh) echo "kolme_local_native_api_parity_live_proof_contract_lane.json" ;;
     run_local_signed_to_kolme_demo_contract_lane.sh) echo "kolme_local_signed_to_kolme_demo_contract_lane.json" ;;

@@ -69,6 +69,25 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
     - missing managed-external key-source contract: `checkpoint_failed_signer_provenance_contract` + `signer_key_source_production_managed_external_required`
     - invalid signer profile: `checkpoint_failed_signer_profile_contract` + `signer_profile_mismatch`
     - stale signer rotation metadata: `checkpoint_failed_signer_rotation_freshness_contract` + `signer_rotation_epoch_stale`
+- Post-roadmap hardening wave 4 wrapper migration tranche A delivered:
+  - Migrated contract wrappers to dispatcher symlink + manifest execution path (Task #3094, Subtask #3095):
+    - `scripts/kolme/run_continuous_runtime_commit_contract_lane.sh`
+    - `scripts/kolme/run_did_lifecycle_chain_adapter_contract_lane.sh`
+    - `scripts/kolme/run_message_proof_anchoring_contract_lane.sh`
+  - Added manifest contracts:
+    - `scripts/framework/manifests/kolme_continuous_runtime_commit_contract_lane.json`
+    - `scripts/framework/manifests/kolme_did_lifecycle_chain_adapter_contract_lane.json`
+    - `scripts/framework/manifests/kolme_message_proof_anchoring_contract_lane.json`
+  - Added Python contract-lane implementations:
+    - `scripts/kolme/contracts/continuous_runtime_commit_contract_lane.py`
+    - `scripts/kolme/contracts/did_lifecycle_chain_adapter_contract_lane.py`
+    - `scripts/kolme/contracts/message_proof_anchoring_contract_lane.py`
+  - Dispatcher lookup and parity harness expanded:
+    - `scripts/kolme/run_contract_lane_dispatch.sh`
+    - `scripts/kolme/test_contract_lane_dispatch_wrapper_matrix.sh`
+    - `scripts/kolme/test_run_continuous_runtime_commit_contract_lane.sh`
+    - `scripts/kolme/test_run_did_lifecycle_chain_adapter_contract_lane.sh`
+    - `scripts/kolme/test_run_message_proof_anchoring_contract_lane.sh`
 - Phase 2.1 initial slice delivered: deterministic `runtime-mode api` ingress server with required messaging/channel/task/profile/health/metrics route contracts (Task #2906).
 - Phase 2.1 live validation delivered:
   - Runtime lane: `scripts/runtime/validate_service_api_live.sh` and `scripts/runtime/test_validate_service_api_live.sh` (Task #2908, Subtask #2909).
