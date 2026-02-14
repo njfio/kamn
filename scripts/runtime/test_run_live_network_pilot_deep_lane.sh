@@ -3,11 +3,48 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEEP_LANE="$ROOT_DIR/scripts/runtime/run_live_network_pilot_deep_lane.sh"
+DEEP_LANE_IMPL="$ROOT_DIR/scripts/runtime/run_live_network_pilot_deep_lane_impl.sh"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_live_network_pilot_deep_lane.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 if [[ ! -x "$DEEP_LANE" ]]; then
   echo "expected live-network pilot deep lane script to be executable" >&2
+  exit 1
+fi
+if [[ ! -x "$DEEP_LANE_IMPL" ]]; then
+  echo "expected live-network pilot deep lane implementation script to be executable" >&2
+  exit 1
+fi
+if [[ ! -x "$DISPATCHER" ]]; then
+  echo "expected shared non-Kolme dispatcher to be executable" >&2
+  exit 1
+fi
+
+if [[ ! -L "$DEEP_LANE" ]]; then
+  echo "expected live-network pilot deep lane wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+
+if [[ "$(readlink "$DEEP_LANE")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]]; then
+  echo "expected live-network pilot deep lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$DEEP_LANE")" --resolve-manifest-path)"
+if [[ "$resolved_manifest" != "$MANIFEST_FILE" ]]; then
+  echo "expected live-network pilot deep lane wrapper to resolve runtime manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -q 'run_live_network_pilot_deep_lane_impl.sh' "$MANIFEST_FILE"; then
+  echo "expected live-network pilot deep lane manifest to dispatch implementation module" >&2
+  exit 1
+fi
+
+if ! grep -q 'live_network_pilot_deep_lane_contract.py' "$DEEP_LANE_IMPL"; then
+  echo "expected live-network pilot deep lane implementation to delegate to pilot deep lane contract module" >&2
   exit 1
 fi
 
