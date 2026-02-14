@@ -70,6 +70,7 @@ resolve_manifest_name() {
     run_local_kolme_fork_self_test_lane.sh) echo "kolme_local_kolme_fork_self_test_lane.json" ;;
     run_local_kamn_live_runtime_integration_lane.sh) echo "kolme_local_kamn_live_runtime_integration_lane.json" ;;
     run_local_live_node_validation_bundle_lane.sh) echo "kolme_local_live_node_validation_bundle_lane.json" ;;
+    run_onchain_lifecycle_evidence_bundle_lane.sh) echo "kolme_onchain_lifecycle_evidence_bundle_lane.json" ;;
     run_local_native_api_parity_live_proof_lane.sh) echo "kolme_local_native_api_parity_live_proof_lane.json" ;;
     run_local_runtime_commit_live_lane.sh) echo "kolme_local_runtime_commit_live_lane.json" ;;
     run_version_compatibility_replay_deep_lane.sh) echo "kolme_version_compatibility_replay_deep_lane.json" ;;

@@ -206,6 +206,7 @@ bash "$ROOT_DIR/scripts/kolme/test_run_managed_signer_startup_live_validation_co
 bash "$ROOT_DIR/scripts/kolme/test_run_local_live_node_validation_bundle_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_check_local_live_node_validation_bundle_policy.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_live_node_validation_bundle_contract_lane.sh"
+bash "$ROOT_DIR/scripts/kolme/test_run_onchain_lifecycle_evidence_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_live_provider_runtime_integration_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_run_local_signed_to_kolme_demo_contract_lane.sh"
 bash "$ROOT_DIR/scripts/kolme/test_check_local_signed_to_kolme_demo_policy.sh"
