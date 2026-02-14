@@ -1205,8 +1205,11 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_baseline.json`
     - threshold fixture:
       - `fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_thresholds.json`
+    - optional waiver fixture:
+      - `.ci/non_kolme_wave_trend_test_loc_soft_budget_waiver.json`
     - checker command:
       - `bash scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh --output-json /tmp/non-kolme-wave-trend-test-loc-soft-budget-report.json`
+      - `bash scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh --waiver-file .ci/non_kolme_wave_trend_test_loc_soft_budget_waiver.json --output-json /tmp/non-kolme-wave-trend-test-loc-soft-budget-report.json`
     - fails closed on trend-test LOC growth, stale baseline script inventory drift, and undocumented current-script growth.
     - deterministic reason-code surface is emitted for automation:
       - `reason_codes=none` (pass)
@@ -1214,6 +1217,16 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=total_shell_loc_delta_threshold_exceeded`
       - `reason_codes=missing_baseline_scripts`
       - `reason_codes=unexpected_current_scripts`
+      - `reason_codes=delta_threshold_violation_unwaived`
+      - `reason_codes=delta_threshold_waiver_applied`
+      - `reason_codes=waiver_scope_mismatch`
+      - `reason_codes=waiver_expired`
+    - deterministic review/remediation markers:
+      - `soft_overrun_status=within|exceeded`
+      - `review_required=true|false`
+      - `waiver_status=none|applied`
+      - `waived_reason_codes=none|...`
+      - `remediation=...`
     - Regression: #2777
   - Non-Kolme governance dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/framework/test_non_kolme_contract_lane_dispatch_wrapper_matrix.sh`
