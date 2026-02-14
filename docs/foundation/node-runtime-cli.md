@@ -369,6 +369,21 @@ This document captures node-runtime productionization slices for machine-readabl
   - `path`
   - `status_code` (for outcome marker)
   - `outcome` (for outcome marker)
+- Service API JSON envelopes are represented by serde-backed DTO contracts in `crates/kamn-node/src/service_api_endpoint.rs`:
+  - `ServiceApiHealthBody`
+  - `ServiceApiMessageCreateBody`
+  - `ServiceApiMessageGetBody`
+  - `ServiceApiChannelCreateBody`
+  - `ServiceApiChannelMessagesBody`
+  - `ServiceApiTaskCreateBody`
+  - `ServiceApiTaskGetBody`
+  - `ServiceApiAgentGetBody`
+  - `ServiceApiErrorBody`
+  - `ServiceApiWebsocketStateTransitionBody`
+- Payload decode failures map to deterministic reason-code prefixes:
+  - `service_api_payload_json_syntax_invalid`
+  - `service_api_payload_structure_invalid`
+  - `service_api_payload_io_error`
 
 ## Decomposition Guardrails
 - `main.rs` orchestrates only and must not absorb parser/signer/wire/live-runtime implementation details.
