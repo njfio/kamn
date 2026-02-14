@@ -255,6 +255,7 @@ required_snippets=(
   "check_local_heavy_validation_matrix_policy.py --report-file /tmp/kolme-local-heavy-validation-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-heavy-validation-policy.json"
   "run_local_heavy_validation_matrix_contract_lane.sh --output-json /tmp/kolme-local-heavy-validation-summary.json --policy-output-json /tmp/kolme-local-heavy-validation-policy.json"
   "KAMN_KOLME_LOCAL_HEAVY=1"
+  "kolme_local_heavy_lane_mode=local-only|manual-opt-in|not-applicable"
   "check_workflow_kolme_heavy_exclusion_policy.py --workflow-file .github/workflows/ci-fast-gate.yml --selector-file scripts/ci/select_targets.sh"
   "selector_local_heavy_commands_missing"
   "selector_output_run_flag_missing"
