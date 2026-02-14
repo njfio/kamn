@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE_SCRIPT="$ROOT_DIR/scripts/governance/run_quorum_attestation_replay_guard_lane.sh"
+LANE_IMPL="$ROOT_DIR/scripts/governance/run_quorum_attestation_replay_guard_lane_impl.sh"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/governance_quorum_attestation_replay_guard_lane.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -14,6 +17,31 @@ extract_value() {
 
 if [ ! -x "$LANE_SCRIPT" ]; then
   echo "expected governance quorum attestation lane script to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$LANE_IMPL" ]; then
+  echo "expected governance quorum attestation lane implementation to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected shared non-Kolme dispatcher to be executable" >&2
+  exit 1
+fi
+if [ ! -L "$LANE_SCRIPT" ]; then
+  echo "expected governance quorum attestation lane wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+if [ "$(readlink "$LANE_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected governance quorum attestation lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$LANE_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected governance quorum attestation lane wrapper to resolve governance manifest via dispatcher" >&2
+  exit 1
+fi
+if ! grep -q 'run_quorum_attestation_replay_guard_lane_impl.sh' "$MANIFEST_FILE"; then
+  echo "expected governance quorum attestation lane manifest to dispatch implementation module" >&2
   exit 1
 fi
 

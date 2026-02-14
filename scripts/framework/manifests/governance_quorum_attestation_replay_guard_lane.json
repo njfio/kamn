@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "governance.quorum_attestation_replay_guard.run",
+  "evidence_key": "governance_quorum_attestation_lane:v1",
+  "reason_key": "governance_quorum_attestation_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/governance/run_quorum_attestation_replay_guard_lane_impl.sh"
+    ]
+  }
+}

@@ -57,6 +57,10 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
   - wrapper: `scripts/governance/run_governance_lifecycle_rollback_lane.sh`
   - implementation: `scripts/governance/run_governance_lifecycle_rollback_lane_impl.sh`
   - manifest: `scripts/framework/manifests/governance_lifecycle_rollback_lane.json`
+- `#2868` migrates governance quorum-attestation replay guard run-lane wrapper to shared non-Kolme dispatcher + manifest wiring:
+  - wrapper: `scripts/governance/run_quorum_attestation_replay_guard_lane.sh`
+  - implementation: `scripts/governance/run_quorum_attestation_replay_guard_lane_impl.sh`
+  - manifest: `scripts/framework/manifests/governance_quorum_attestation_replay_guard_lane.json`
 - Contract coverage for this migration slice:
   - `scripts/signer/test_run_signer_provider_deep_lane.sh`
   - `scripts/signer/test_run_signer_incident_recovery_deep_lane.sh`
@@ -67,6 +71,7 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
   - `scripts/deploy/test_run_deployment_slo_rollback_lane.sh`
   - `scripts/frontend/test_run_dashboard_shell_determinism_matrix_lane.sh`
   - `scripts/governance/test_run_governance_lifecycle_rollback_lane.sh`
+  - `scripts/governance/test_run_quorum_attestation_replay_guard_lane.sh`
 
 ## Fast-Gate Delta Policy
 `scripts/ci/generate_fast_gate_budget_delta_report.sh` compares current fast-gate telemetry against a versioned baseline and emits:
