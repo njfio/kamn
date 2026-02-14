@@ -98,6 +98,7 @@ resolve_manifest_name() {
     run_localhost_signed_demo_contract_lane.sh) echo "sdk_localhost_signed_demo_contract_lane.json" ;;
     run_rust_live_transport_contract_lane.sh) echo "sdk_rust_live_transport_contract_lane.json" ;;
     run_governance_lifecycle_rollback_contract_lane.sh) echo "governance_lifecycle_rollback_contract_lane.json" ;;
+    run_governance_lifecycle_rollback_lane.sh) echo "governance_lifecycle_rollback_lane.json" ;;
     run_governance_simulation_contract_lane.sh) echo "governance_simulation_contract_lane.json" ;;
     run_gonogo_evidence_contract_lane.sh) echo "deploy_gonogo_evidence_contract_lane.json" ;;
     run_mainnet_cutover_contract_lane.sh) echo "cutover_mainnet_cutover_contract_lane.json" ;;
@@ -148,6 +149,7 @@ resolve_manifest_name() {
 
 resolve_phase_name() {
   case "$1" in
+    run_governance_lifecycle_rollback_lane.sh) echo "run" ;;
     run_dashboard_shell_determinism_matrix_lane.sh) echo "run" ;;
     run_deployment_slo_rollback_lane.sh) echo "run" ;;
     run_classification_redaction_lane.sh) echo "run" ;;
