@@ -530,58 +530,12 @@ record_check() {
 
 read_report_reason_code() {
   local report_file="$1"
-  python3 - "$report_file" <<'PY'
-from __future__ import annotations
-
-import json
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-if not path.exists():
-    print("report_missing")
-    raise SystemExit(0)
-
-try:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-except json.JSONDecodeError:
-    print("report_invalid_json")
-    raise SystemExit(0)
-
-value = payload.get("reason_code")
-if isinstance(value, str) and value.strip():
-    print(value)
-else:
-    print("reason_code_missing")
-PY
+  python3 "$ROOT_DIR/scripts/kolme/contracts/read_json_field_or_default.py" "$report_file" "reason_code" "reason_code_missing"
 }
 
 read_policy_final_decision() {
   local report_file="$1"
-  python3 - "$report_file" <<'PY'
-from __future__ import annotations
-
-import json
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-if not path.exists():
-    print("report_missing")
-    raise SystemExit(0)
-
-try:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-except json.JSONDecodeError:
-    print("report_invalid_json")
-    raise SystemExit(0)
-
-value = payload.get("final_decision")
-if isinstance(value, str) and value.strip():
-    print(value)
-else:
-    print("final_decision_missing")
-PY
+  python3 "$ROOT_DIR/scripts/kolme/contracts/read_json_field_or_default.py" "$report_file" "final_decision" "final_decision_missing"
 }
 
 bootstrap_command="bash scripts/kolme/run_local_kolme_fork_bootstrap_readiness_lane.sh --mode run --checkout-path ${CHECKOUT_PATH} --expected-remote-url ${EXPECTED_REMOTE_URL} --expected-ref ${EXPECTED_REF} --base-url ${BASE_URL} --fork-chain-version ${FORK_CHAIN_VERSION} --max-seconds ${BOOTSTRAP_MAX_SECONDS} --probe-max-seconds 20 --output-json ${BOOTSTRAP_REPORT}"

@@ -182,39 +182,7 @@ if [ -n "$FORK_PIN_MANIFEST_FILE" ]; then
     exit 1
   fi
   manifest_values="$(
-    python3 - "$FORK_PIN_MANIFEST_FILE" <<'PY'
-from __future__ import annotations
-
-import json
-import pathlib
-import re
-import sys
-
-manifest_path = pathlib.Path(sys.argv[1])
-payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-schema_version = payload.get("schema_version")
-fork_remote_url = payload.get("fork_remote_url")
-expected_remote_url = payload.get("expected_remote_url")
-expected_ref = payload.get("expected_ref")
-expected_commit = payload.get("expected_commit")
-
-if schema_version != "kamn.kolme.fork-pin-manifest.v1":
-    raise SystemExit("fork pin manifest schema_version must be kamn.kolme.fork-pin-manifest.v1")
-if not isinstance(fork_remote_url, str) or not fork_remote_url.strip():
-    raise SystemExit("fork pin manifest fork_remote_url must be non-empty")
-if not isinstance(expected_remote_url, str) or not expected_remote_url.strip():
-    raise SystemExit("fork pin manifest expected_remote_url must be non-empty")
-if not isinstance(expected_ref, str) or not expected_ref.startswith("refs/heads/"):
-    raise SystemExit("fork pin manifest expected_ref must use refs/heads/* format")
-if not isinstance(expected_commit, str) or not re.fullmatch(r"[0-9a-fA-F]{40}", expected_commit):
-    raise SystemExit("fork pin manifest expected_commit must be a 40-character hex SHA")
-
-print(schema_version)
-print(fork_remote_url.strip())
-print(expected_remote_url.strip())
-print(expected_ref.strip())
-print(expected_commit.strip())
-PY
+    python3 "$ROOT_DIR/scripts/kolme/contracts/local_kolme_fork_pin_manifest_parse.py" "$FORK_PIN_MANIFEST_FILE"
   )" || exit 1
   mapfile -t manifest_lines <<<"$manifest_values"
   if [ "${#manifest_lines[@]}" -ne 5 ]; then
@@ -284,30 +252,7 @@ record_check() {
 
 read_reason_code() {
   local report_file="$1"
-  python3 - "$report_file" <<'PY'
-from __future__ import annotations
-
-import json
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-if not path.exists():
-    print("report_missing")
-    raise SystemExit(0)
-
-try:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-except json.JSONDecodeError:
-    print("report_invalid_json")
-    raise SystemExit(0)
-
-reason_code = payload.get("reason_code")
-if isinstance(reason_code, str) and reason_code.strip():
-    print(reason_code)
-else:
-    print("reason_code_missing")
-PY
+  python3 "$ROOT_DIR/scripts/kolme/contracts/read_json_field_or_default.py" "$report_file" "reason_code" "reason_code_missing"
 }
 
 run_command() {
@@ -539,85 +484,7 @@ if [ "$MODE" = "run" ]; then
   fi
 fi
 
-python3 - "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$CHECKOUT_PATH" "$FORK_REMOTE_URL" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$EXPECTED_COMMIT" "$COMMIT_PIN_ENFORCED" "$FORK_PIN_MANIFEST_FILE" "$FORK_PIN_MANIFEST_SCHEMA_VERSION" "$bootstrap_action" "$SYNC_METADATA_REPORT" "$git_version" "$cargo_version" "$rustc_version" "$CHECK_FILE" <<'PY'
-from __future__ import annotations
-
-import json
-import pathlib
-import sys
-
-output_path = pathlib.Path(sys.argv[1]).resolve()
-mode = sys.argv[2]
-status = sys.argv[3]
-reason_code = sys.argv[4]
-elapsed_seconds = int(sys.argv[5])
-max_seconds = int(sys.argv[6])
-budget_status = sys.argv[7]
-checkout_path = sys.argv[8]
-fork_remote_url = sys.argv[9]
-expected_remote_url = sys.argv[10]
-expected_ref = sys.argv[11]
-expected_commit = sys.argv[12]
-commit_pin_enforced = sys.argv[13] == "true"
-fork_pin_manifest_file = sys.argv[14]
-fork_pin_manifest_schema_version = sys.argv[15]
-bootstrap_action = sys.argv[16]
-sync_metadata_report = sys.argv[17]
-git_version = sys.argv[18]
-cargo_version = sys.argv[19]
-rustc_version = sys.argv[20]
-checks_path = pathlib.Path(sys.argv[21])
-
-checks = []
-for raw_line in checks_path.read_text(encoding="utf-8").splitlines():
-    if not raw_line.strip():
-        continue
-    parts = raw_line.split("\t")
-    if len(parts) != 4:
-        continue
-    check_id, command, check_status, check_reason = parts
-    checks.append(
-        {
-            "id": check_id,
-            "command": command,
-            "status": check_status,
-            "reason_code": check_reason,
-        }
-    )
-
-summary = {
-    "schema_version": "kamn.kolme.local-fork-checkout-bootstrap-summary.v1",
-    "mode": mode,
-    "status": status,
-    "reason_code": reason_code,
-    "local_only_enforced": True,
-    "elapsed_seconds": elapsed_seconds,
-    "max_seconds": max_seconds,
-    "budget_status": budget_status,
-    "checkout_path": checkout_path,
-    "fork_remote_url": fork_remote_url,
-    "expected_remote_url": expected_remote_url,
-    "expected_ref": expected_ref,
-    "expected_commit": expected_commit,
-    "commit_pin_enforced": commit_pin_enforced,
-    "fork_pin_manifest_file": fork_pin_manifest_file,
-    "fork_pin_manifest_schema_version": fork_pin_manifest_schema_version,
-    "bootstrap_action": bootstrap_action,
-    "sync_metadata_report": sync_metadata_report,
-    "diagnostics": {
-        "git_version": git_version,
-        "cargo_version": cargo_version,
-        "rustc_version": rustc_version,
-    },
-    "checks": checks,
-    "artifact_paths": [
-        sync_metadata_report,
-    ],
-}
-
-output_path.parent.mkdir(parents=True, exist_ok=True)
-output_path.write_text(json.dumps(summary, sort_keys=True, indent=2) + "\n", encoding="utf-8")
-PY
+python3 "$ROOT_DIR/scripts/kolme/contracts/local_kolme_fork_checkout_bootstrap_summary.py" "$OUTPUT_JSON" "$MODE" "$overall_status" "$reason_code" "$elapsed_seconds" "$MAX_SECONDS" "$budget_status" "$CHECKOUT_PATH" "$FORK_REMOTE_URL" "$EXPECTED_REMOTE_URL" "$EXPECTED_REF" "$EXPECTED_COMMIT" "$COMMIT_PIN_ENFORCED" "$FORK_PIN_MANIFEST_FILE" "$FORK_PIN_MANIFEST_SCHEMA_VERSION" "$bootstrap_action" "$SYNC_METADATA_REPORT" "$git_version" "$cargo_version" "$rustc_version" "$CHECK_FILE"
 
 echo "status=$overall_status"
 echo "bootstrap_mode=$MODE"
