@@ -49,6 +49,28 @@ Low-cost local checks:
 - `cargo fmt --check`
 - `cargo clippy -p kamn-node -- -D warnings`
 - `bash scripts/runtime/validate_service_api_live.sh`
+- `bash scripts/runtime/test_validate_service_api_observability_live.sh`
+- `bash scripts/runtime/validate_service_api_observability_live.sh`
 
 These checks validate metrics export behavior without introducing external metrics backends or
 long-running CI load.
+
+## Live Validation Evidence
+
+Task and subtask:
+
+- Task: #2963
+- Subtask: #2964
+
+Deterministic success markers from `validate_service_api_observability_live.sh`:
+
+- `status=pass`
+- `final_decision=GO`
+- `metrics_contract_status=verified`
+- `health_contract_status=verified`
+- `fail_closed_status=verified`
+
+Fail-closed marker:
+
+- `bash scripts/runtime/validate_service_api_observability_live.sh --max-seconds nope`
+- stderr marker: `max-seconds must be an integer`
