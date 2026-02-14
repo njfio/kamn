@@ -26,6 +26,7 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/validate_service_api_request_auth_live.sh` and `scripts/runtime/test_validate_service_api_request_auth_live.sh` (Task #2913, Subtask #2914).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `unauthorized_guard_status=verified`, `replay_guard_status=verified`, `probe_status=verified`.
   - Fail-closed validation confirmed for invalid runtime budget argument: `max-seconds must be an integer`.
+- Phase 2.3 initial slice delivered: realtime websocket event route with deterministic upgrade/frame contract and fail-closed upgrade/auth/replay guards (Task #2916, Subtask #2917).
 
 ---
 
