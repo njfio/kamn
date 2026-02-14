@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "runtime.live_validation_environment.run",
+  "evidence_key": "live_validation_environment_lane:v1",
+  "reason_key": "runtime_live_validation_environment_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/runtime/run_live_validation_environment_lane_impl.sh"
+    ]
+  }
+}

@@ -41,6 +41,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/deploy/validate_deployment_assets_live.sh` and `scripts/deploy/test_validate_deployment_assets_live.sh` (Task #2973, Subtask #2974).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `asset_contract_status=verified`, `fail_closed_status=verified`.
   - Fail-closed validation confirmed for invalid runtime budget argument: `max-seconds must be an integer`.
+- Phase 6.4 implementation delivered:
+  - Runtime lane: `scripts/runtime/run_live_validation_environment_lane.sh` and `scripts/runtime/test_run_live_validation_environment_lane.sh` (Task #2976, Subtask #2977).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `topology_contract_status=verified`, `kolme_connectivity_contract_status=verified`, `fail_closed_status=verified`.
+  - Local-only run safety gate validated: run mode requires explicit opt-in via `KAMN_KOLME_LOCAL_HEAVY=1`.
 
 ---
 
@@ -246,6 +250,15 @@ Estimated scope: ~300–500 lines.
 - The `upgrade-rollback-runbook.md` exists but needs real deployment tooling
 
 Estimated scope: ~500 lines of infra config.
+
+### 6.4 — Live validation environment
+
+- Stand up deterministic live-environment lane for multi-process topology checks.
+- Compose the Kolme local live-node validation bundle as the connectivity contract path.
+- Keep CI cost bounded by defaulting to `dry-run` and requiring explicit local-only opt-in for `run`.
+- Publish machine-readable evidence (`status`, `final_decision`, reason markers) for go/no-go consumption.
+
+Estimated scope: ~300–600 lines across lane scripts, manifest wiring, and validation docs.
 
 ---
 
