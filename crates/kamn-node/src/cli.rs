@@ -191,6 +191,12 @@ fn collect_env_override_args() -> Result<Vec<String>, ConfigError> {
     append_env_override(&mut args, "KAMN_NODE_ENABLE_GOSSIP", "enable_gossip")?;
     append_env_override(&mut args, "KAMN_NODE_SYNC_MODE", "sync_mode")?;
     append_env_override(&mut args, "KAMN_NODE_RUNTIME_MODE", "runtime_mode")?;
+    append_env_override(&mut args, "KAMN_NODE_DAEMON_MAX_TICKS", "daemon_max_ticks")?;
+    append_env_override(
+        &mut args,
+        "KAMN_NODE_DAEMON_TICK_INTERVAL_MS",
+        "daemon_tick_interval_ms",
+    )?;
     append_env_override(
         &mut args,
         "KAMN_NODE_EXPECTED_STATE_VERSION",
@@ -307,8 +313,8 @@ fn build_layered_cli_args(raw_args: Vec<String>) -> Result<Vec<String>, ConfigEr
     let config_file_path = config_file_from_cli.or(config_file_from_env);
     if let Some(path) = config_file_path.as_deref() {
         layered_args.extend(parse_config_file_args(path)?);
-        layered_args.extend(collect_env_override_args()?);
     }
+    layered_args.extend(collect_env_override_args()?);
     layered_args.extend(args_without_config.into_iter().skip(1));
     Ok(layered_args)
 }

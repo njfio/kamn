@@ -88,6 +88,14 @@ if ! grep -q 'name: kamn-approver' "$K8S_MANIFEST"; then
   echo "expected kubernetes approver deployment marker" >&2
   exit 1
 fi
+if ! grep -q 'KAMN_NODE_DAEMON_MAX_TICKS' "$K8S_MANIFEST"; then
+  echo "expected kubernetes manifest daemon max-ticks env marker" >&2
+  exit 1
+fi
+if ! grep -q 'KAMN_NODE_DAEMON_TICK_INTERVAL_MS' "$K8S_MANIFEST"; then
+  echo "expected kubernetes manifest daemon tick-interval env marker" >&2
+  exit 1
+fi
 
 if ! grep -q 'docker compose -f deploy/docker-compose.yml up' "$DEPLOY_DOC"; then
   echo "expected deployment doc compose command marker" >&2
@@ -99,6 +107,14 @@ if ! grep -q 'kubectl apply -f deploy/k8s/kamn-node.yaml' "$DEPLOY_DOC"; then
 fi
 if ! grep -q '\.dockerignore' "$DEPLOY_DOC"; then
   echo "expected deployment doc to mention .dockerignore build-context hygiene" >&2
+  exit 1
+fi
+if ! grep -q 'KAMN_NODE_DAEMON_MAX_TICKS' "$DEPLOY_DOC"; then
+  echo "expected deployment doc daemon max-ticks env marker" >&2
+  exit 1
+fi
+if ! grep -q 'KAMN_NODE_DAEMON_TICK_INTERVAL_MS' "$DEPLOY_DOC"; then
+  echo "expected deployment doc daemon tick-interval env marker" >&2
   exit 1
 fi
 

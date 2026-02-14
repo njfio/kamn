@@ -12,15 +12,13 @@ Phase 6.2 implementation adds:
 
 ## Precedence
 
-When `--config-file` or `KAMN_NODE_CONFIG_FILE` is set, `kamn-node` resolves settings in this order (low to high):
+`kamn-node` resolves settings in this order (low to high):
 
 1. Built-in defaults
 2. Profile defaults (`--profile`)
-3. Config-file entries
+3. Config-file entries (when `--config-file` or `KAMN_NODE_CONFIG_FILE` is set)
 4. `KAMN_NODE_*` environment overrides
 5. Explicit CLI flags
-
-If no config file is declared, environment overrides are not applied by this layer.
 
 ## Config File Format
 
@@ -69,12 +67,14 @@ Kolme-live keys:
 
 ## Environment Override Contracts
 
-Environment override names map to the same key contracts when a config file is active.
+Environment override names map to the same key contracts regardless of config-file usage.
 
 Examples:
 
 - `KAMN_NODE_CHAIN_ID` -> `chain_id`
 - `KAMN_NODE_SYNC_MODE` -> `sync_mode`
+- `KAMN_NODE_DAEMON_MAX_TICKS` -> `daemon_max_ticks`
+- `KAMN_NODE_DAEMON_TICK_INTERVAL_MS` -> `daemon_tick_interval_ms`
 - `KAMN_NODE_ENABLE_GOSSIP` -> `enable_gossip`
 - `KAMN_NODE_API_BIND` -> `api_bind`
 - `KAMN_NODE_KOLME_LIVE_BASE_URL` -> `kolme_live_base_url`

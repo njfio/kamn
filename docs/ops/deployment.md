@@ -53,6 +53,7 @@ Includes:
 
 - `Namespace` (`kamn-system`)
 - `ConfigMap` for chain/runtime defaults
+- env-driven daemon controls via `KAMN_NODE_DAEMON_MAX_TICKS` and `KAMN_NODE_DAEMON_TICK_INTERVAL_MS`
 - `Deployment` resources:
   - `kamn-processor`
   - `kamn-listener`
