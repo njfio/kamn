@@ -529,6 +529,8 @@ fn write_websocket_upgrade_event_response(
         .ok_or_else(|| "missing required websocket connection header".to_owned())?;
     let websocket_key = header_value(headers, "sec-websocket-key")
         .ok_or_else(|| "missing required websocket key header".to_owned())?;
+    let websocket_version = header_value(headers, "sec-websocket-version")
+        .ok_or_else(|| "missing required websocket version header".to_owned())?;
 
     if !upgrade.eq_ignore_ascii_case("websocket") {
         return Err("invalid websocket upgrade header".to_owned());
@@ -538,6 +540,9 @@ fn write_websocket_upgrade_event_response(
     }
     if websocket_key.trim().is_empty() {
         return Err("websocket key header must not be empty".to_owned());
+    }
+    if websocket_version.trim() != "13" {
+        return Err("invalid websocket version header".to_owned());
     }
 
     let accept_marker = format!(

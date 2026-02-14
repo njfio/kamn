@@ -63,6 +63,15 @@ fn send_http_request_with_headers(
 }
 
 fn send_websocket_upgrade_request(addr: &str, path: &str, headers: &[(&str, &str)]) -> Vec<u8> {
+    send_websocket_upgrade_request_with_version(addr, path, "13", headers)
+}
+
+fn send_websocket_upgrade_request_with_version(
+    addr: &str,
+    path: &str,
+    websocket_version: &str,
+    headers: &[(&str, &str)],
+) -> Vec<u8> {
     let mut stream = TcpStream::connect(addr).expect("endpoint should accept websocket connection");
     stream
         .set_read_timeout(Some(Duration::from_secs(2)))
@@ -75,7 +84,7 @@ fn send_websocket_upgrade_request(addr: &str, path: &str, headers: &[(&str, &str
         header_lines.push_str("\r\n");
     }
     let request = format!(
-        "GET {path} HTTP/1.1\r\nHost: {addr}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Key: test-kamn-key\r\nSec-WebSocket-Version: 13\r\n{}Content-Length: 0\r\n\r\n",
+        "GET {path} HTTP/1.1\r\nHost: {addr}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Key: test-kamn-key\r\nSec-WebSocket-Version: {websocket_version}\r\n{}Content-Length: 0\r\n\r\n",
         header_lines
     );
     stream
@@ -484,5 +493,61 @@ fn regression_service_api_endpoint_websocket_route_rejects_missing_upgrade_heade
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after websocket rejection budget"
+    );
+}
+
+#[test]
+fn regression_service_api_endpoint_websocket_rejects_invalid_version_header() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34057".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 2,
+        idle_timeout_ms: 2_000,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let sender_did = "kamn:did:agent:ws-client-3";
+    let nonce = 29_u64;
+    let state_hash = format!(
+        "service-api:{}:{}",
+        snapshot.chain_id.as_str(),
+        snapshot.chain_version.as_str()
+    );
+    let signature = baseline_signature_for_fields(sender_did, nonce, state_hash.as_str(), "");
+    let response = send_websocket_upgrade_request_with_version(
+        bind_addr.as_str(),
+        "/v1/events/ws",
+        "12",
+        &[
+            ("X-KAMN-Sender-DID", sender_did),
+            ("X-KAMN-Request-Nonce", "29"),
+            ("X-KAMN-Request-Signature", signature.as_str()),
+        ],
+    );
+    let response_text =
+        String::from_utf8(response).expect("invalid websocket version response should be utf-8");
+    assert!(response_text.contains("HTTP/1.1 400 Bad Request"));
+    assert!(response_text.contains("invalid websocket version header"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after websocket version rejection"
     );
 }
