@@ -418,6 +418,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - bounded to seven targeted local-only checks (five `kamn-node` contract tests + one Rust SDK regression + one Python SDK regression).
   - source-marker checks run locally and avoid external network dependencies.
   - includes SDK parity marker checks for structured envelope decoding in `crates/kamn-sdk/src/service.rs` and `kamn_sdk.py`.
+  - structured-error regression corpus is sourced from `fixtures/runtime/service_api_structured_error_regression_corpus.json` and must preserve representative classes: `auth`, `validation`, `replay`, and `transport`.
   - runtime budget is bounded via `KAMN_SERVICE_API_REASON_CODE_CONTRACT_MAX_SECONDS`.
   - service api reason-code compatibility contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:

@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint.rs"
 TEST_FILE="$ROOT_DIR/crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs"
+CORPUS_FILE="$ROOT_DIR/fixtures/runtime/service_api_structured_error_regression_corpus.json"
 RUST_SDK_SOURCE="$ROOT_DIR/crates/kamn-sdk/src/service.rs"
 RUST_SDK_TEST_FILE="$ROOT_DIR/crates/kamn-sdk/tests/service_api_client.rs"
 PYTHON_SDK_SOURCE="$ROOT_DIR/kamn_sdk.py"
@@ -44,6 +45,10 @@ if [ ! -f "$SOURCE_FILE" ]; then
 fi
 if [ ! -f "$TEST_FILE" ]; then
   echo "expected service api endpoint test file: $TEST_FILE" >&2
+  exit 1
+fi
+if [ ! -f "$CORPUS_FILE" ]; then
+  echo "expected structured error regression corpus file: $CORPUS_FILE" >&2
   exit 1
 fi
 if [ ! -f "$RUST_SDK_SOURCE" ]; then
@@ -150,17 +155,135 @@ for python_sdk_test_marker in \
   fi
 done
 
+corpus_selectors_file="$TMP_DIR/service-api-structured-error-regression-selectors.txt"
+corpus_metadata_file="$TMP_DIR/service-api-structured-error-regression-metadata.json"
+python3 - "$CORPUS_FILE" "$SOURCE_FILE" "$TEST_FILE" "$corpus_selectors_file" "$corpus_metadata_file" <<'PY'
+import json
+import pathlib
+import sys
+
+corpus_file = pathlib.Path(sys.argv[1])
+source_file = pathlib.Path(sys.argv[2])
+test_file = pathlib.Path(sys.argv[3])
+selectors_file = pathlib.Path(sys.argv[4])
+metadata_file = pathlib.Path(sys.argv[5])
+
+payload = json.loads(corpus_file.read_text(encoding="utf-8"))
+if payload.get("schema_version") != "kamn.runtime.service-api-structured-error-regression-corpus.v1":
+    raise SystemExit("unexpected structured error regression corpus schema_version")
+
+scenarios = payload.get("scenarios")
+if not isinstance(scenarios, list) or not scenarios:
+    raise SystemExit("structured error regression corpus must include non-empty scenarios list")
+
+required_classes = {"auth", "validation", "replay", "transport"}
+seen_classes = set()
+seen_ids = set()
+selectors = []
+
+source_text = source_file.read_text(encoding="utf-8")
+test_text = test_file.read_text(encoding="utf-8")
+
+for scenario in scenarios:
+    if not isinstance(scenario, dict):
+        raise SystemExit("structured error regression corpus scenarios must be objects")
+    scenario_id = scenario.get("id")
+    scenario_class = scenario.get("class")
+    reason_code = scenario.get("reason_code")
+    test_selector = scenario.get("test_selector")
+    if not isinstance(scenario_id, str) or not scenario_id.strip():
+        raise SystemExit("structured error regression scenario id must be non-empty string")
+    if scenario_id in seen_ids:
+        raise SystemExit(f"structured error regression scenario id duplicated: {scenario_id}")
+    seen_ids.add(scenario_id)
+    if not isinstance(scenario_class, str) or scenario_class not in required_classes:
+        raise SystemExit(f"structured error regression scenario class invalid: {scenario_class}")
+    seen_classes.add(scenario_class)
+    if not isinstance(reason_code, str) or not reason_code.strip():
+        raise SystemExit(f"structured error regression scenario reason_code missing: {scenario_id}")
+    if reason_code not in source_text:
+        raise SystemExit(
+            "structured error regression corpus reason_code missing from source: "
+            f"{reason_code}"
+        )
+    if not isinstance(test_selector, str) or not test_selector.strip():
+        raise SystemExit(f"structured error regression scenario test_selector missing: {scenario_id}")
+    if not test_selector.startswith("main_tests::service_api_endpoint_tests::"):
+        raise SystemExit(
+            "structured error regression scenario test_selector must target service_api_endpoint_tests: "
+            f"{test_selector}"
+        )
+    selector_parts = test_selector.split("::")
+    if len(selector_parts) < 2:
+        raise SystemExit(
+            "structured error regression scenario test_selector must include module path: "
+            f"{test_selector}"
+        )
+    test_fn_name = selector_parts[-1]
+    if not test_fn_name:
+        raise SystemExit(
+            "structured error regression scenario test_selector function marker missing: "
+            f"{test_selector}"
+        )
+    if test_fn_name not in test_text:
+        raise SystemExit(
+            "structured error regression corpus test selector missing from tests: "
+            f"{test_selector}"
+        )
+    selectors.append(test_selector)
+
+missing_classes = sorted(required_classes - seen_classes)
+if missing_classes:
+    raise SystemExit(
+        "structured error regression corpus missing required classes: "
+        + ",".join(missing_classes)
+    )
+
+selectors_file.write_text("\n".join(selectors) + "\n", encoding="utf-8")
+metadata_file.write_text(
+    json.dumps(
+        {
+            "schema_version": "kamn.runtime.service-api-structured-error-regression-corpus-metadata.v1",
+            "scenario_count": len(scenarios),
+            "classes": sorted(seen_classes),
+        },
+        sort_keys=True,
+        indent=2,
+    )
+    + "\n",
+    encoding="utf-8",
+)
+PY
+
+regression_corpus_scenario_count="$(python3 - "$corpus_metadata_file" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+scenario_count = payload.get("scenario_count")
+if not isinstance(scenario_count, int) or scenario_count <= 0:
+    raise SystemExit("structured error regression corpus scenario_count must be positive integer")
+print(scenario_count)
+PY
+)"
+
 pushd "$ROOT_DIR" >/dev/null
 cargo test -p kamn-node main_tests::unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts -- --exact \
   >"$TMP_DIR/service-api-envelope-unit.log" 2>&1
-cargo test -p kamn-node main_tests::regression_service_api_payload_parse_reason_codes_fail_closed -- --exact \
-  >"$TMP_DIR/service-api-reason-code-regression.log" 2>&1
-cargo test -p kamn-node main_tests::integration_service_api_endpoint_rejects_missing_request_auth_headers -- --exact \
-  >"$TMP_DIR/service-api-reason-code-auth.log" 2>&1
-cargo test -p kamn-node main_tests::regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender -- --exact \
-  >"$TMP_DIR/service-api-reason-code-replay.log" 2>&1
-cargo test -p kamn-node main_tests::regression_service_api_endpoint_websocket_rejects_invalid_version_header -- --exact \
-  >"$TMP_DIR/service-api-reason-code-websocket.log" 2>&1
+selector_index=0
+while IFS= read -r selector; do
+  if [[ -z "$selector" ]]; then
+    continue
+  fi
+  selector_index=$((selector_index + 1))
+  cargo test -p kamn-node "$selector" -- --exact \
+    >"$TMP_DIR/service-api-reason-code-corpus-${selector_index}.log" 2>&1
+done < "$corpus_selectors_file"
+if [ "$selector_index" -le 0 ]; then
+  echo "structured error regression corpus selector list was empty after parsing" >&2
+  exit 1
+fi
 cargo test -p kamn-sdk --test service_api_client regression_service_api_client_rejects_replayed_nonce -- --exact \
   >"$TMP_DIR/service-api-reason-code-rust-sdk.log" 2>&1
 python3 -m unittest tests.python.test_sdk.PythonLiveTransportSDKTests.test_regression_backend_adapter_errors_and_invalid_payloads_fail_closed \
@@ -174,7 +297,7 @@ if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
 fi
 
 summary_report="$TMP_DIR/service-api-reason-code-compatibility-live-summary.json"
-python3 - "$summary_report" "$elapsed_seconds" "$max_seconds" <<'PY'
+python3 - "$summary_report" "$elapsed_seconds" "$max_seconds" "$regression_corpus_scenario_count" <<'PY'
 import json
 import pathlib
 import sys
@@ -182,6 +305,7 @@ import sys
 summary_report = pathlib.Path(sys.argv[1])
 elapsed_seconds = int(sys.argv[2])
 max_seconds = int(sys.argv[3])
+regression_corpus_scenario_count = int(sys.argv[4])
 
 payload = {
     "schema_version": "kamn.runtime.service-api-reason-code-compatibility-live-validation.v1",
@@ -191,6 +315,9 @@ payload = {
     "error_envelope_field_status": "verified",
     "rust_sdk_reason_code_status": "verified",
     "python_sdk_reason_code_status": "verified",
+    "regression_corpus_status": "verified",
+    "regression_drift_diagnostics_status": "verified",
+    "regression_corpus_scenario_count": regression_corpus_scenario_count,
     "route_error_mapping_status": "verified",
     "replay_error_mapping_status": "verified",
     "websocket_error_mapping_status": "verified",
@@ -213,6 +340,9 @@ echo "reason_registry_status=verified"
 echo "error_envelope_field_status=verified"
 echo "rust_sdk_reason_code_status=verified"
 echo "python_sdk_reason_code_status=verified"
+echo "regression_corpus_status=verified"
+echo "regression_drift_diagnostics_status=verified"
+echo "regression_corpus_scenario_count=${regression_corpus_scenario_count}"
 echo "route_error_mapping_status=verified"
 echo "replay_error_mapping_status=verified"
 echo "websocket_error_mapping_status=verified"

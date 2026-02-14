@@ -57,6 +57,18 @@ if ! printf '%s\n' "$lane_output" | grep -q '^python_sdk_reason_code_status=veri
   echo "expected service api reason-code compatibility contract lane python sdk marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^regression_corpus_status=verified$'; then
+  echo "expected service api reason-code compatibility contract lane regression corpus marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^regression_drift_diagnostics_status=verified$'; then
+  echo "expected service api reason-code compatibility contract lane regression drift marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -Eq '^regression_corpus_scenario_count=[1-9][0-9]*$'; then
+  echo "expected service api reason-code compatibility contract lane regression corpus count marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=service_api_reason_code_policy_marker_missing:route_error_mapping_status$'; then
   echo "expected service api reason-code compatibility contract lane fail-closed reason marker" >&2
   exit 1
@@ -84,6 +96,13 @@ if lane_payload.get("rust_sdk_reason_code_status") != "verified":
     raise SystemExit("expected rust_sdk_reason_code_status=verified")
 if lane_payload.get("python_sdk_reason_code_status") != "verified":
     raise SystemExit("expected python_sdk_reason_code_status=verified")
+if lane_payload.get("regression_corpus_status") != "verified":
+    raise SystemExit("expected regression_corpus_status=verified")
+if lane_payload.get("regression_drift_diagnostics_status") != "verified":
+    raise SystemExit("expected regression_drift_diagnostics_status=verified")
+scenario_count = lane_payload.get("regression_corpus_scenario_count")
+if not isinstance(scenario_count, int) or scenario_count <= 0:
+    raise SystemExit("expected regression_corpus_scenario_count to be positive integer")
 if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":

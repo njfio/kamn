@@ -21,6 +21,9 @@ cat >"$report_file" <<'JSON'
   "error_envelope_field_status": "verified",
   "rust_sdk_reason_code_status": "verified",
   "python_sdk_reason_code_status": "verified",
+  "regression_corpus_status": "verified",
+  "regression_drift_diagnostics_status": "verified",
+  "regression_corpus_scenario_count": 4,
   "route_error_mapping_status": "verified",
   "replay_error_mapping_status": "verified",
   "websocket_error_mapping_status": "verified",
@@ -133,6 +136,39 @@ if [ "$tampered_envelope_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_envelope_output" | grep -q 'service_api_reason_code_policy_marker_missing:error_envelope_field_status'; then
   echo "expected deterministic mismatch reason code for tampered envelope field parity marker" >&2
+  exit 1
+fi
+
+tampered_corpus_report="$TMP_DIR/service-api-reason-code-compatibility-live-summary.corpus.tampered.json"
+cp "$report_file" "$tampered_corpus_report"
+python3 - "$tampered_corpus_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["regression_corpus_status"] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_corpus_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_corpus_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/service-api-reason-code-compatibility-live-policy.corpus.tampered.json" 2>&1
+)"
+tampered_corpus_code=$?
+set -e
+
+if [ "$tampered_corpus_code" -eq 0 ]; then
+  echo "expected tampered regression corpus status to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_corpus_output" | grep -q 'service_api_reason_code_policy_marker_missing:regression_corpus_status'; then
+  echo "expected deterministic mismatch reason code for tampered regression corpus marker" >&2
   exit 1
 fi
 
