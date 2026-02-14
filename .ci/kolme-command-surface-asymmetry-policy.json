@@ -28,6 +28,8 @@
     "scripts/kolme/test_check_signature_parity_policy.sh",
     "scripts/kolme/test_generate_managed_signer_backend_slo_telemetry_bundle.sh",
     "scripts/kolme/test_run_block_fallback_reconciliation_contract_lane.sh",
+    "scripts/kolme/test_run_continuous_runtime_commit_contract_lane.sh",
+    "scripts/kolme/test_run_did_lifecycle_chain_adapter_contract_lane.sh",
     "scripts/kolme/test_run_local_bootstrap_health_checks_contract_lane.sh",
     "scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_contract_lane.sh",
     "scripts/kolme/test_run_local_kolme_fork_checkout_bootstrap_lane.sh",
@@ -48,11 +50,16 @@
     "scripts/kolme/test_run_local_signed_to_kolme_demo_contract_lane.sh",
     "scripts/kolme/test_run_managed_signer_backend_slo_policy_contract_lane.sh",
     "scripts/kolme/test_run_managed_signer_backend_slo_telemetry_contract_lane.sh",
+    "scripts/kolme/test_run_managed_signer_startup_live_validation_contract_lane.sh",
+    "scripts/kolme/test_run_message_proof_anchoring_contract_lane.sh",
     "scripts/kolme/test_run_nonce_broadcast_parity_contract_lane.sh",
     "scripts/kolme/test_run_notifications_consumer_contract_lane.sh",
     "scripts/kolme/test_run_runtime_commit_contract_lane.sh",
     "scripts/kolme/test_run_runtime_commit_replay_contract_lane.sh",
     "scripts/kolme/test_run_signature_parity_contract_lane.sh",
-    "scripts/kolme/test_run_signature_parity_matrix.sh"
+    "scripts/kolme/test_run_signature_parity_matrix.sh",
+    "scripts/kolme/test_validate_continuous_runtime_commit_live.sh",
+    "scripts/kolme/test_validate_did_lifecycle_chain_adapter_live.sh",
+    "scripts/kolme/test_validate_message_proof_anchoring_live.sh"
   ]
 }

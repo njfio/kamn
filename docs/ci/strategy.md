@@ -190,6 +190,14 @@ Fast-gate command contract coverage is intentionally split:
 - dry-run execution parity (`scripts/ci/test_makefile_execution_contract.sh`) via `make -n` target resolution for bounded `check/test/demo` targets
 - Kolme missing-both coverage (`scripts/ci/test_kolme_command_surface_coverage_contract.sh`) ensures every `scripts/kolme/test_*.sh` appears in at least one CI command surface (`ci-fast-gate` or aggregate `scripts/ci/test_ci_tools.sh`).
 - Kolme asymmetry split coverage (`scripts/ci/test_kolme_command_surface_asymmetry_contract.sh`) enforces the approved `fast_only` and `ci_tools_only` script sets from `.ci/kolme-command-surface-asymmetry-policy.json`.
+- Aggregate-only Kolme lane declarations (kept out of `ci-fast-gate` for cost) remain explicitly covered in `scripts/ci/test_ci_tools.sh`:
+  - `scripts/kolme/test_run_continuous_runtime_commit_contract_lane.sh`
+  - `scripts/kolme/test_run_did_lifecycle_chain_adapter_contract_lane.sh`
+  - `scripts/kolme/test_run_message_proof_anchoring_contract_lane.sh`
+  - `scripts/kolme/test_run_managed_signer_startup_live_validation_contract_lane.sh`
+  - `scripts/kolme/test_validate_continuous_runtime_commit_live.sh`
+  - `scripts/kolme/test_validate_did_lifecycle_chain_adapter_live.sh`
+  - `scripts/kolme/test_validate_message_proof_anchoring_live.sh`
 
 Selector routing remains bounded through `scripts/ci/select_targets.sh`:
 

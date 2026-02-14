@@ -61,6 +61,13 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("run_fast_gate_native_api_parity_contract_lane.sh"));
     assert!(DOC.contains("check_fast_gate_native_api_parity_policy.py"));
     assert!(DOC.contains("KAMN_KOLME_FAST_GATE_NATIVE_PARITY_MAX_SECONDS=120"));
+    assert!(DOC.contains("test_run_continuous_runtime_commit_contract_lane.sh"));
+    assert!(DOC.contains("test_run_did_lifecycle_chain_adapter_contract_lane.sh"));
+    assert!(DOC.contains("test_run_message_proof_anchoring_contract_lane.sh"));
+    assert!(DOC.contains("test_run_managed_signer_startup_live_validation_contract_lane.sh"));
+    assert!(DOC.contains("test_validate_continuous_runtime_commit_live.sh"));
+    assert!(DOC.contains("test_validate_did_lifecycle_chain_adapter_live.sh"));
+    assert!(DOC.contains("test_validate_message_proof_anchoring_live.sh"));
     assert!(DOC.contains("non_kolme_wave5_wrapper_family_matrix.json"));
     assert!(DOC.contains("non_kolme_wave5_wrapper_family_baseline.json"));
     assert!(DOC.contains("non_kolme_wave5_wrapper_family_trend_thresholds.json"));
