@@ -73,6 +73,10 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
   - wrapper: `scripts/sdk/run_live_transport_replay_tamper_deep_lane.sh`
   - implementation: `scripts/sdk/run_live_transport_replay_tamper_deep_lane_impl.sh`
   - manifest: `scripts/framework/manifests/sdk_live_transport_replay_tamper_deep_lane.json`
+- `#2876` migrates runtime live-network smoke run-lane wrapper to shared non-Kolme dispatcher + manifest wiring:
+  - wrapper: `scripts/runtime/run_live_network_smoke_lane.sh`
+  - implementation: `scripts/runtime/run_live_network_smoke_lane_impl.sh`
+  - manifest: `scripts/framework/manifests/runtime_live_network_smoke_lane.json`
 - Contract coverage for this migration slice:
   - `scripts/signer/test_run_signer_provider_deep_lane.sh`
   - `scripts/signer/test_run_signer_incident_recovery_deep_lane.sh`
@@ -87,6 +91,7 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
   - `scripts/sdk/test_run_live_transport_smoke_parity_lane.sh`
   - `scripts/sdk/test_run_live_transport_replay_tamper_fast_lane.sh`
   - `scripts/sdk/test_run_live_transport_replay_tamper_deep_lane.sh`
+  - `scripts/runtime/test_run_live_network_smoke_lane.sh`
 
 ## Fast-Gate Delta Policy
 `scripts/ci/generate_fast_gate_budget_delta_report.sh` compares current fast-gate telemetry against a versioned baseline and emits:

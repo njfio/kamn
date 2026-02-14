@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "runtime.live_network_smoke.run",
+  "evidence_key": "live_network_smoke_lane:v1",
+  "reason_key": "runtime_live_network_smoke_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/runtime/run_live_network_smoke_lane_impl.sh"
+    ]
+  }
+}

@@ -3,11 +3,48 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SMOKE_SCRIPT="$ROOT_DIR/scripts/runtime/run_live_network_smoke_lane.sh"
+SMOKE_SCRIPT_IMPL="$ROOT_DIR/scripts/runtime/run_live_network_smoke_lane_impl.sh"
+DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
+MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/runtime_live_network_smoke_lane.json"
 TMP_REPORT="$(mktemp)"
 trap 'rm -f "$TMP_REPORT"' EXIT
 
 if [ ! -x "$SMOKE_SCRIPT" ]; then
   echo "expected live-network smoke lane runner to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$SMOKE_SCRIPT_IMPL" ]; then
+  echo "expected live-network smoke lane implementation runner to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected shared non-Kolme dispatcher to be executable" >&2
+  exit 1
+fi
+
+if [ ! -L "$SMOKE_SCRIPT" ]; then
+  echo "expected live-network smoke lane wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+
+if [ "$(readlink "$SMOKE_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected live-network smoke lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$SMOKE_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_manifest" != "$MANIFEST_FILE" ]; then
+  echo "expected live-network smoke lane wrapper to resolve runtime manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -q 'run_live_network_smoke_lane_impl.sh' "$MANIFEST_FILE"; then
+  echo "expected live-network smoke lane manifest to dispatch implementation module" >&2
+  exit 1
+fi
+
+if ! grep -q 'live_network_smoke_lane_contract.py' "$SMOKE_SCRIPT_IMPL"; then
+  echo "expected live-network smoke lane implementation to delegate to smoke lane contract module" >&2
   exit 1
 fi
 
