@@ -12,6 +12,7 @@ TMP_REPORT="$TMP_DIR/go-no-go-gate-report.json"
 TMP_FAULT_REPORT="$TMP_DIR/go-no-go-gate-fault-report.json"
 TMP_WARN_REPORT="$TMP_DIR/go-no-go-gate-warn-report.json"
 TMP_RUN_REPORT="$TMP_DIR/go-no-go-gate-run-mode-report.json"
+TMP_WAIVER_REPORT="$TMP_DIR/go-no-go-gate-waiver-report.json"
 TMP_MANIFEST_FAIL_REPORT="$TMP_DIR/go-no-go-gate-manifest-fail-report.json"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -121,6 +122,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^fast_gate_exclusion_reason_code=go
   echo "expected go/no-go gate lane fast-gate exclusion reason marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^waiver_status=none$'; then
+  echo "expected go/no-go gate lane baseline waiver status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^waived_reason_codes=none$'; then
+  echo "expected go/no-go gate lane baseline waived reason marker" >&2
+  exit 1
+fi
 
 python3 - "$TMP_REPORT" <<'PY'
 import json
@@ -178,6 +187,10 @@ if payload.get("fast_gate_exclusion_status") != "verified":
     raise SystemExit("expected fast_gate_exclusion_status=verified for baseline go/no-go gate run")
 if payload.get("fast_gate_exclusion_reason_code") != "go_no_go_gate_run_mode_excluded_from_fast_gate":
     raise SystemExit("expected deterministic fast-gate exclusion reason marker for baseline go/no-go gate run")
+if payload.get("waiver_status") != "none":
+    raise SystemExit("expected waiver_status=none for baseline go/no-go gate run")
+if payload.get("waived_reason_codes") != []:
+    raise SystemExit("expected empty waived_reason_codes for baseline go/no-go gate run")
 PY
 
 run_mode_output="$(
@@ -320,6 +333,133 @@ if [ "$manifest_fail_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$manifest_fail_output" | grep -q 'release_manifest_missing_required_artifact:dr_readiness'; then
   echo "expected deterministic missing-artifact reason marker for tampered release evidence manifest" >&2
+  exit 1
+fi
+
+valid_waiver="$TMP_DIR/go-no-go-waiver.valid.json"
+cat >"$valid_waiver" <<'JSON'
+{
+  "schema_version": "kamn.runtime.go-no-go-gate-waiver.v1",
+  "scope": "runtime_go_no_go_gate_required_artifacts",
+  "expires_on": "2099-12-31",
+  "allowed_reason_codes": [
+    "release_manifest_missing_required_artifact:dr_readiness"
+  ]
+}
+JSON
+
+waiver_output="$(
+  bash "$LANE_SCRIPT" \
+    --manifest-file "$tampered_manifest" \
+    --waiver-file "$valid_waiver" \
+    --max-seconds 120 \
+    --output-json "$TMP_WAIVER_REPORT"
+)"
+if ! printf '%s\n' "$waiver_output" | grep -q '^status=warn$'; then
+  echo "expected go/no-go gate waiver path status marker to be warn" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$waiver_output" | grep -q '^policy_outcome=WARN$'; then
+  echo "expected go/no-go gate waiver path policy_outcome marker to be WARN" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$waiver_output" | grep -q '^final_decision=GO$'; then
+  echo "expected go/no-go gate waiver path final decision marker to stay GO" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$waiver_output" | grep -q '^waiver_status=applied$'; then
+  echo "expected go/no-go gate waiver path waiver_status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$waiver_output" | grep -q '^reason_codes=release_manifest_required_artifact_waiver_applied$'; then
+  echo "expected go/no-go gate waiver path reason code marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$waiver_output" | grep -q '^waived_reason_codes=release_manifest_missing_required_artifact:dr_readiness$'; then
+  echo "expected go/no-go gate waiver path waived reason marker" >&2
+  exit 1
+fi
+
+python3 - "$TMP_WAIVER_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("status") != "warn":
+    raise SystemExit("expected waiver report status=warn")
+if payload.get("policy_outcome") != "WARN":
+    raise SystemExit("expected waiver report policy_outcome=WARN")
+if payload.get("final_decision") != "GO":
+    raise SystemExit("expected waiver report final_decision=GO")
+if payload.get("waiver_status") != "applied":
+    raise SystemExit("expected waiver_status=applied in waiver report")
+if payload.get("reason_codes") != ["release_manifest_required_artifact_waiver_applied"]:
+    raise SystemExit("expected waiver-applied reason code in waiver report")
+if payload.get("waived_reason_codes") != ["release_manifest_missing_required_artifact:dr_readiness"]:
+    raise SystemExit("expected waived reason code list in waiver report")
+required_ids = payload.get("required_artifact_ids")
+if not isinstance(required_ids, list) or "dr_readiness" in required_ids:
+    raise SystemExit("expected waived missing artifact id to be absent from required_artifact_ids")
+PY
+
+expired_waiver="$TMP_DIR/go-no-go-waiver.expired.json"
+cat >"$expired_waiver" <<'JSON'
+{
+  "schema_version": "kamn.runtime.go-no-go-gate-waiver.v1",
+  "scope": "runtime_go_no_go_gate_required_artifacts",
+  "expires_on": "2000-01-01",
+  "allowed_reason_codes": [
+    "release_manifest_missing_required_artifact:dr_readiness"
+  ]
+}
+JSON
+
+set +e
+expired_waiver_output="$(
+  bash "$LANE_SCRIPT" \
+    --manifest-file "$tampered_manifest" \
+    --waiver-file "$expired_waiver" \
+    --max-seconds 120 2>&1
+)"
+expired_waiver_code=$?
+set -e
+if [ "$expired_waiver_code" -eq 0 ]; then
+  echo "expected go/no-go gate lane to fail closed for expired waiver metadata" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$expired_waiver_output" | grep -q 'waiver_expired'; then
+  echo "expected deterministic waiver_expired marker for go/no-go gate lane waiver validation" >&2
+  exit 1
+fi
+
+scope_mismatch_waiver="$TMP_DIR/go-no-go-waiver.scope-mismatch.json"
+cat >"$scope_mismatch_waiver" <<'JSON'
+{
+  "schema_version": "kamn.runtime.go-no-go-gate-waiver.v1",
+  "scope": "runtime_go_no_go_gate_wrong_scope",
+  "expires_on": "2099-12-31",
+  "allowed_reason_codes": [
+    "release_manifest_missing_required_artifact:dr_readiness"
+  ]
+}
+JSON
+
+set +e
+scope_mismatch_waiver_output="$(
+  bash "$LANE_SCRIPT" \
+    --manifest-file "$tampered_manifest" \
+    --waiver-file "$scope_mismatch_waiver" \
+    --max-seconds 120 2>&1
+)"
+scope_mismatch_waiver_code=$?
+set -e
+if [ "$scope_mismatch_waiver_code" -eq 0 ]; then
+  echo "expected go/no-go gate lane to fail closed for waiver scope mismatch" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$scope_mismatch_waiver_output" | grep -q 'waiver_scope_mismatch'; then
+  echo "expected deterministic waiver_scope_mismatch marker for go/no-go gate lane waiver validation" >&2
   exit 1
 fi
 
