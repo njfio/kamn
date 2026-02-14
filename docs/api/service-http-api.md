@@ -42,5 +42,26 @@ Low-cost local validation commands:
 - `cargo test -p kamn-node`
 - `cargo fmt --check`
 - `cargo clippy -p kamn-node -- -D warnings`
+- `bash scripts/runtime/test_validate_service_api_live.sh`
+- `bash scripts/runtime/validate_service_api_live.sh`
 
 These checks cover unit, functional, integration, and regression behavior for the API ingress module without requiring external infrastructure.
+
+## Live Validation Evidence
+
+Task and subtask evidence:
+
+- Task: #2908
+- Subtask: #2909
+
+Deterministic success markers from `validate_service_api_live.sh`:
+
+- `status=pass`
+- `final_decision=GO`
+- `route_contract_status=verified`
+- `failure_case_status=verified`
+
+Deterministic fail-closed marker example:
+
+- `bash scripts/runtime/validate_service_api_live.sh --max-seconds nope`
+- stderr marker: `max-seconds must be an integer`

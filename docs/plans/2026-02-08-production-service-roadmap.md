@@ -17,6 +17,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Live validation lane added for persistence adapter restart and fail-closed checks (Task #2903).
   - Remaining: broader persistence backend consolidation and runtime wiring across additional stores.
 - Phase 2.1 initial slice delivered: deterministic `runtime-mode api` ingress server with required messaging/channel/task/profile/health/metrics route contracts (Task #2906).
+- Phase 2.1 live validation delivered:
+  - Runtime lane: `scripts/runtime/validate_service_api_live.sh` and `scripts/runtime/test_validate_service_api_live.sh` (Task #2908, Subtask #2909).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `route_contract_status=verified`, `failure_case_status=verified`.
+  - Fail-closed validation confirmed for invalid runtime budget argument: `max-seconds must be an integer`.
 
 ---
 
