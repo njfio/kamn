@@ -98,6 +98,24 @@ fn roadmap_tracks_wave2_runtime_observability_stream_live_validation() {
 }
 
 #[test]
+fn doc_contains_runtime_observability_stream_contract_lane_and_policy() {
+    assert!(DOC.contains("validate_runtime_observability_endpoint_live_contract_lane.sh"));
+    assert!(DOC.contains("check_runtime_observability_endpoint_live_policy.sh"));
+    assert!(DOC.contains("test_validate_runtime_observability_endpoint_live_contract_lane.sh"));
+    assert!(DOC.contains("runtime_observability_policy_status=verified"));
+    assert!(DOC.contains("runtime_observability_contract_lane_status=verified"));
+}
+
+#[test]
+fn roadmap_tracks_wave2_runtime_observability_stream_contract_lane_and_policy() {
+    assert!(ROADMAP.contains("Task #3150, Subtask #3160"));
+    assert!(ROADMAP
+        .contains("scripts/runtime/validate_runtime_observability_endpoint_live_contract_lane.sh"));
+    assert!(ROADMAP.contains("scripts/runtime/check_runtime_observability_endpoint_live_policy.sh"));
+    assert!(ROADMAP.contains("runtime_observability_policy_status=verified"));
+}
+
+#[test]
 fn regression_requires_availability_critical_rule() {
     // Regression: #206
     assert!(DOC.contains("`Availability`: critical when below minimum threshold."));

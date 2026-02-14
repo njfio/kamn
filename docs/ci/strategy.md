@@ -119,6 +119,21 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - deterministic tick-budget simulation with bounded loop-free assertions
   - timeout behavior and observability telemetry validated through direct state transitions instead of wall-clock waits
 
+## Runtime Observability Endpoint Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_runtime_observability_endpoint_live_contract_lane.sh --output-json /tmp/runtime-observability-endpoint-contract-lane-report.json --policy-output-json /tmp/runtime-observability-endpoint-policy-report.json`
+  - `bash scripts/runtime/check_runtime_observability_endpoint_live_policy.sh --report-file /tmp/runtime-observability-endpoint-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/runtime-observability-endpoint-policy-report.json`
+  - `bash scripts/runtime/test_validate_runtime_observability_endpoint_live_contract_lane.sh`
+  - `bash scripts/runtime/test_check_runtime_observability_endpoint_live_policy.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - reuses bounded local cargo integration tests from `validate_runtime_observability_endpoint_live.sh`
+  - no external network dependency or remote runtime process orchestration
+  - explicit runtime budget cap via `KAMN_RUNTIME_OBSERVABILITY_ENDPOINT_CONTRACT_MAX_SECONDS`
+  - deterministic fail-closed policy tamper drill executed in-process
+
 ## Kolme HTTPS Native Transport Contract
 - Runtime-commit HTTPS transport uses an in-process native TLS client path.
 - `openssl s_client` subprocess execution is prohibited in transport code paths (`Regression: #2671`).

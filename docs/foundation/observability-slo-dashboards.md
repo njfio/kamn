@@ -69,15 +69,22 @@ This document captures the first implementation slice for deterministic observab
 
 Live validation lane:
 - `scripts/runtime/validate_runtime_observability_endpoint_live.sh`
+- `scripts/runtime/check_runtime_observability_endpoint_live_policy.sh`
+- `scripts/runtime/validate_runtime_observability_endpoint_live_contract_lane.sh`
 - `scripts/runtime/test_validate_runtime_observability_endpoint_live.sh`
+- `scripts/runtime/test_check_runtime_observability_endpoint_live_policy.sh`
+- `scripts/runtime/test_validate_runtime_observability_endpoint_live_contract_lane.sh`
 
 Expected markers:
 - `status=pass`
 - `final_decision=GO`
 - `runtime_observability_stream_contract_status=verified`
+- `runtime_observability_policy_status=verified`
+- `runtime_observability_contract_lane_status=verified`
 - `fail_closed_status=verified`
 - `docs_contract_status=verified`
 - `fail_closed_reason_code=observability_endpoint_not_found`
+- `fail_closed_reason_code=runtime_observability_policy_final_decision_mismatch`
 - `performance_budget_status=verified`
 
 ## Structured Runtime Logging Correlation Contract (Issue #3032)
@@ -231,6 +238,8 @@ bash scripts/reputation/test_run_reputation_recovery_contract_lane.sh
 bash scripts/canary/test_generate_post_cutover_slo_evidence_bundle.sh
 bash scripts/canary/test_run_post_cutover_slo_contract_lane.sh
 bash scripts/runtime/test_validate_runtime_observability_endpoint_live.sh
+bash scripts/runtime/test_check_runtime_observability_endpoint_live_policy.sh
+bash scripts/runtime/test_validate_runtime_observability_endpoint_live_contract_lane.sh
 cargo test -p kamn-core --test observability_stack
 npm --prefix packages/kamn-dashboard test
 cargo fmt --check

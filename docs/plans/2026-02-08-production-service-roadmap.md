@@ -51,6 +51,11 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/validate_runtime_observability_endpoint_live.sh` and `scripts/runtime/test_validate_runtime_observability_endpoint_live.sh` (Task #3047, Subtask #3048).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `runtime_observability_stream_contract_status=verified`, `fail_closed_status=verified`, `docs_contract_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for unknown-path guard behavior: `fail_closed_reason_code=observability_endpoint_not_found`.
+- Post-roadmap hardening wave 6 runtime observability endpoint contract-lane policy delivered:
+  - Runtime lane: `scripts/runtime/validate_runtime_observability_endpoint_live_contract_lane.sh` and `scripts/runtime/test_validate_runtime_observability_endpoint_live_contract_lane.sh` (Task #3150, Subtask #3160).
+  - Policy checker: `scripts/runtime/check_runtime_observability_endpoint_live_policy.sh` and `scripts/runtime/test_check_runtime_observability_endpoint_live_policy.sh`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `runtime_observability_stream_contract_status=verified`, `runtime_observability_policy_status=verified`, `runtime_observability_contract_lane_status=verified`, `docs_contract_status=verified`, `performance_budget_status=verified`.
+  - Fail-closed validation confirmed for policy tamper drill behavior: `fail_closed_reason_code=runtime_observability_policy_final_decision_mismatch`.
 - Post-roadmap hardening wave 2 runtime decomposition initial tranche delivered:
   - Extracted state-divergence orchestration from `crates/kamn-core/src/runtime.rs` into dedicated module `crates/kamn-core/src/runtime_state_divergence.rs` with unchanged external behavior (Task #3050, Subtask #3051).
   - Module-ownership contract documented in `docs/foundation/runtime-watchdog-attestation.md` and enforced by `crates/kamn-core/tests/runtime_watchdog_attestation_docs.rs`.
