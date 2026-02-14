@@ -255,7 +255,7 @@ pub(crate) fn serve_service_api_endpoint(
     let deadline = Instant::now() + Duration::from_millis(config.idle_timeout_ms);
     let mut served_requests = 0_u64;
     let mut replay_guard: BTreeSet<(String, u64)> = BTreeSet::new();
-    while served_requests < config.max_requests {
+    'accept_loop: while served_requests < config.max_requests {
         if Instant::now() >= deadline {
             return Err(format!(
                 "service api timed out after {} ms waiting for requests",
@@ -263,97 +263,12 @@ pub(crate) fn serve_service_api_endpoint(
             ));
         }
         match listener.accept() {
-            Ok((mut stream, _)) => {
-                let response = match read_http_request(&mut stream) {
-                    Ok(request) => {
-                        let correlation_id = service_api_request_correlation_id(&request);
-                        log_service_api_event_info(
-                            "service.api.request.received",
-                            &[
-                                ("correlation_id", correlation_id.as_str()),
-                                ("method", request.method.as_str()),
-                                ("path", request.path.as_str()),
-                            ],
-                        )?;
-                        let (response, outcome) = match authorize_service_api_request(
-                            snapshot,
-                            &request,
-                            &mut replay_guard,
-                        ) {
-                            Ok(()) => {
-                                if request.method == "GET" && request.path == ROUTE_EVENTS_WS {
-                                    match write_websocket_upgrade_event_response(
-                                            &mut stream,
-                                            snapshot,
-                                            &request.headers,
-                                        ) {
-                                            Ok(()) => {
-                                                emit_service_api_request_outcome(
-                                                    correlation_id.as_str(),
-                                                    request.method.as_str(),
-                                                    request.path.as_str(),
-                                                    101,
-                                                    "websocket-upgrade",
-                                                )?;
-                                                served_requests = served_requests.saturating_add(1);
-                                                continue;
-                                            }
-                                            Err(error) => (
-                                                ServiceApiEndpointResponse {
-                                                    status_code: 400,
-                                                    content_type: "application/json",
-                                                    body: format!(
-                                                        "{{\"error\":\"bad-request\",\"reason\":\"{}\"}}",
-                                                        escape_json_string(error.as_str())
-                                                    ),
-                                                },
-                                                "websocket-bad-request",
-                                            ),
-                                        }
-                                } else {
-                                    (
-                                        render_service_api_endpoint_response(
-                                            snapshot,
-                                            request.method.as_str(),
-                                            request.path.as_str(),
-                                            request.body.as_str(),
-                                        ),
-                                        "handled",
-                                    )
-                                }
-                            }
-                            Err(RequestAuthFailure::Unauthorized(reason)) => (
-                                ServiceApiEndpointResponse {
-                                    status_code: 401,
-                                    content_type: "application/json",
-                                    body: format!(
-                                        "{{\"error\":\"unauthorized\",\"reason\":\"{}\"}}",
-                                        escape_json_string(reason.as_str())
-                                    ),
-                                },
-                                "unauthorized",
-                            ),
-                            Err(RequestAuthFailure::Replay(reason)) => (
-                                ServiceApiEndpointResponse {
-                                    status_code: 409,
-                                    content_type: "application/json",
-                                    body: format!(
-                                        "{{\"error\":\"replay\",\"reason\":\"{}\"}}",
-                                        escape_json_string(reason.as_str())
-                                    ),
-                                },
-                                "replay",
-                            ),
-                        };
-                        emit_service_api_request_outcome(
-                            correlation_id.as_str(),
-                            request.method.as_str(),
-                            request.path.as_str(),
-                            response.status_code,
-                            outcome,
-                        )?;
-                        response
-                    }
+            Ok((mut stream, _)) => loop {
+                if served_requests >= config.max_requests {
+                    break 'accept_loop;
+                }
+                let request = match read_http_request(&mut stream) {
+                    Ok(request) => request,
                     Err(error) => {
                         let correlation_id = format!(
                             "service-api:parse-error:{:016x}",
@@ -366,19 +281,109 @@ pub(crate) fn serve_service_api_endpoint(
                             400,
                             "bad-request",
                         )?;
-                        ServiceApiEndpointResponse {
+                        let response = ServiceApiEndpointResponse {
                             status_code: 400,
                             content_type: "application/json",
                             body: format!(
                                 "{{\"error\":\"bad-request\",\"reason\":\"{}\"}}",
                                 escape_json_string(error.as_str())
                             ),
-                        }
+                        };
+                        write_http_response(&mut stream, &response, false)?;
+                        served_requests = served_requests.saturating_add(1);
+                        break;
                     }
                 };
-                write_http_response(&mut stream, &response)?;
+                let keep_alive = request_prefers_keep_alive(&request);
+                let correlation_id = service_api_request_correlation_id(&request);
+                log_service_api_event_info(
+                    "service.api.request.received",
+                    &[
+                        ("correlation_id", correlation_id.as_str()),
+                        ("method", request.method.as_str()),
+                        ("path", request.path.as_str()),
+                    ],
+                )?;
+                let (response, outcome) =
+                    match authorize_service_api_request(snapshot, &request, &mut replay_guard) {
+                        Ok(()) => {
+                            if request.method == "GET" && request.path == ROUTE_EVENTS_WS {
+                                match write_websocket_upgrade_event_response(
+                                    &mut stream,
+                                    snapshot,
+                                    &request.headers,
+                                ) {
+                                    Ok(()) => {
+                                        emit_service_api_request_outcome(
+                                            correlation_id.as_str(),
+                                            request.method.as_str(),
+                                            request.path.as_str(),
+                                            101,
+                                            "websocket-upgrade",
+                                        )?;
+                                        served_requests = served_requests.saturating_add(1);
+                                        break;
+                                    }
+                                    Err(error) => (
+                                        ServiceApiEndpointResponse {
+                                            status_code: 400,
+                                            content_type: "application/json",
+                                            body: format!(
+                                                "{{\"error\":\"bad-request\",\"reason\":\"{}\"}}",
+                                                escape_json_string(error.as_str())
+                                            ),
+                                        },
+                                        "websocket-bad-request",
+                                    ),
+                                }
+                            } else {
+                                (
+                                    render_service_api_endpoint_response(
+                                        snapshot,
+                                        request.method.as_str(),
+                                        request.path.as_str(),
+                                        request.body.as_str(),
+                                    ),
+                                    "handled",
+                                )
+                            }
+                        }
+                        Err(RequestAuthFailure::Unauthorized(reason)) => (
+                            ServiceApiEndpointResponse {
+                                status_code: 401,
+                                content_type: "application/json",
+                                body: format!(
+                                    "{{\"error\":\"unauthorized\",\"reason\":\"{}\"}}",
+                                    escape_json_string(reason.as_str())
+                                ),
+                            },
+                            "unauthorized",
+                        ),
+                        Err(RequestAuthFailure::Replay(reason)) => (
+                            ServiceApiEndpointResponse {
+                                status_code: 409,
+                                content_type: "application/json",
+                                body: format!(
+                                    "{{\"error\":\"replay\",\"reason\":\"{}\"}}",
+                                    escape_json_string(reason.as_str())
+                                ),
+                            },
+                            "replay",
+                        ),
+                    };
+                emit_service_api_request_outcome(
+                    correlation_id.as_str(),
+                    request.method.as_str(),
+                    request.path.as_str(),
+                    response.status_code,
+                    outcome,
+                )?;
+                write_http_response(&mut stream, &response, keep_alive)?;
                 served_requests = served_requests.saturating_add(1);
-            }
+                if !keep_alive {
+                    break;
+                }
+            },
             Err(error) if error.kind() == ErrorKind::WouldBlock => {
                 thread::sleep(Duration::from_millis(5));
             }
@@ -390,6 +395,12 @@ pub(crate) fn serve_service_api_endpoint(
 
 fn route_requires_auth(method: &str, path: &str) -> bool {
     !(method == "GET" && (path == ROUTE_HEALTHZ || path == ROUTE_METRICS))
+}
+
+fn request_prefers_keep_alive(request: &ParsedRequest) -> bool {
+    header_value(&request.headers, "connection")
+        .map(|value| value.to_ascii_lowercase().contains("keep-alive"))
+        .unwrap_or(false)
 }
 
 fn log_service_api_event_info(event: &str, fields: &[(&str, &str)]) -> Result<(), String> {
@@ -680,6 +691,10 @@ fn read_http_request(stream: &mut TcpStream) -> Result<ParsedRequest, String> {
         }
     }
 
+    if request.is_empty() {
+        return Err("connection closed before request bytes arrived".to_owned());
+    }
+
     let request_text =
         String::from_utf8(request).map_err(|_| "request was not valid utf-8".to_owned())?;
     let Some((request_head, request_body)) = request_text.split_once("\r\n\r\n") else {
@@ -796,6 +811,7 @@ fn write_websocket_text_frame(stream: &mut TcpStream, payload: &[u8]) -> Result<
 fn write_http_response(
     stream: &mut TcpStream,
     response: &ServiceApiEndpointResponse,
+    keep_alive: bool,
 ) -> Result<(), String> {
     let status_text = match response.status_code {
         200 => "200 OK",
@@ -808,8 +824,9 @@ fn write_http_response(
         409 => "409 Conflict",
         _ => "500 Internal Server Error",
     };
+    let connection_header = if keep_alive { "keep-alive" } else { "close" };
     let payload = format!(
-        "HTTP/1.1 {status_text}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        "HTTP/1.1 {status_text}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: {connection_header}\r\n\r\n{}",
         response.content_type,
         response.body.len(),
         response.body

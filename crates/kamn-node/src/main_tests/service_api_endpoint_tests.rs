@@ -105,6 +105,55 @@ fn send_websocket_upgrade_request_with_version(
     response
 }
 
+fn parse_http_content_length(response_head: &str) -> usize {
+    for line in response_head.lines() {
+        if let Some((name, value)) = line.split_once(':') {
+            if name.eq_ignore_ascii_case("Content-Length") {
+                return value.trim().parse::<usize>().unwrap_or(0);
+            }
+        }
+    }
+    0
+}
+
+fn read_single_http_response(stream: &mut TcpStream) -> String {
+    let mut response = Vec::new();
+    let mut chunk = [0_u8; 1024];
+    let mut header_end: Option<usize> = None;
+    let mut expected_len: Option<usize> = None;
+
+    loop {
+        match stream.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(read_count) => {
+                response.extend_from_slice(&chunk[..read_count]);
+                if header_end.is_none() {
+                    header_end = response
+                        .windows(4)
+                        .position(|window| window == b"\r\n\r\n")
+                        .map(|index| index + 4);
+                    if let Some(header_end_index) = header_end {
+                        let head = String::from_utf8_lossy(&response[..header_end_index]);
+                        let content_len = parse_http_content_length(head.as_ref());
+                        expected_len = Some(header_end_index + content_len);
+                    }
+                }
+                if let Some(total) = expected_len {
+                    if response.len() >= total {
+                        break;
+                    }
+                }
+            }
+            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
+                break;
+            }
+            Err(error) => panic!("response should be readable: {error}"),
+        }
+    }
+
+    String::from_utf8(response).expect("http response should be utf-8")
+}
+
 fn parse_websocket_response(response: &[u8]) -> (String, String) {
     let header_end = response
         .windows(4)
@@ -285,6 +334,64 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
     assert!(
         server_result.is_ok(),
         "service api endpoint should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
+fn integration_service_api_endpoint_supports_keep_alive_requests_on_single_connection() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34059".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 3,
+        idle_timeout_ms: 2_000,
+    };
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let mut stream = TcpStream::connect(bind_addr.as_str()).expect("endpoint should accept");
+    stream
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .expect("read timeout should be configurable");
+
+    let request_one = format!(
+        "GET /healthz HTTP/1.1\r\nHost: {bind_addr}\r\nConnection: keep-alive\r\nContent-Length: 0\r\n\r\n"
+    );
+    stream
+        .write_all(request_one.as_bytes())
+        .expect("first request should write");
+    let first_response = read_single_http_response(&mut stream);
+    assert!(first_response.contains("HTTP/1.1 200 OK"));
+    assert!(first_response.contains("\"status\":\"ok\""));
+
+    let request_two = format!(
+        "GET /metrics HTTP/1.1\r\nHost: {bind_addr}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
+    );
+    stream
+        .write_all(request_two.as_bytes())
+        .expect("second request should write over keep-alive connection");
+    let second_response = read_single_http_response(&mut stream);
+    assert!(second_response.contains("HTTP/1.1 200 OK"));
+    assert!(second_response.contains("kamn_service_api_observability_source{source=\"unknown\"} 1"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint should stop cleanly after keep-alive request budget"
     );
 }
 
