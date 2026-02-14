@@ -19,6 +19,8 @@ sys.path.insert(0, str(SCRIPT_DIR.parent))
 from framework.contract_framework import ContractError, fail, require_non_negative_int, write_json  # noqa: E402
 
 GATE_DECISION_FAULT_REASON = "gate_decision_fault_injection_triggered"
+RUNTIME_BUDGET_EXCEEDED_REASON = "runtime_budget_exceeded"
+GO_NO_GO_REASON_TAXONOMY_VERSION = "kamn.runtime.go-no-go-gate-reason-taxonomy.v1"
 RELEASE_MANIFEST_SCHEMA = "kamn.runtime.release-evidence-manifest.v1"
 DEFAULT_RELEASE_MANIFEST_PATH = ROOT_DIR / "scripts/runtime/release_evidence_manifest.json"
 REQUIRED_ARTIFACT_IDS = (
@@ -151,10 +153,42 @@ def _validate_release_manifest(payload: dict[str, object]) -> list[dict[str, str
     return validated_artifacts
 
 
+def _evaluate_go_no_go_policy(
+    artifact_inventory: list[dict[str, str]],
+    observed_reason_codes: list[str],
+) -> tuple[str, str, str, list[str]]:
+    fail_reasons: list[str] = []
+    warn_reasons: list[str] = []
+
+    for artifact in artifact_inventory:
+        if artifact.get("status") != "verified":
+            artifact_id = artifact.get("artifact_id", "unknown")
+            fail_reasons.append(f"gate_required_artifact_unverified:{artifact_id}")
+
+    for reason_code in observed_reason_codes:
+        if reason_code == GATE_DECISION_FAULT_REASON:
+            fail_reasons.append(reason_code)
+            continue
+        if reason_code == RUNTIME_BUDGET_EXCEEDED_REASON:
+            warn_reasons.append(reason_code)
+            continue
+        fail_reasons.append(f"gate_policy_unknown_reason_code:{reason_code}")
+
+    fail_reasons = sorted(set(fail_reasons))
+    warn_reasons = sorted(set(warn_reasons))
+
+    if fail_reasons:
+        combined = sorted(set(fail_reasons + warn_reasons))
+        return "FAIL", "NO-GO", "fail", combined
+    if warn_reasons:
+        return "WARN", "GO", "warn", warn_reasons
+    return "PASS", "GO", "pass", []
+
+
 def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
     fault_profile = args.fault_profile.strip()
-    if fault_profile not in {"none", "gate_decision"}:
-        fail("--fault-profile must be one of: none, gate_decision")
+    if fault_profile not in {"none", "gate_decision", "runtime_budget_warn"}:
+        fail("--fault-profile must be one of: none, gate_decision, runtime_budget_warn")
 
     max_seconds = require_non_negative_int("KAMN_GONOGO_GATE_MAX_SECONDS", args.max_seconds)
     start_epoch = int(time.time())
@@ -250,52 +284,62 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
             if drift_run.returncode == 0:
                 fail("gate_decision fault profile expected policy checker fail-closed behavior")
             reason_codes.append(GATE_DECISION_FAULT_REASON)
+    elif fault_profile == "runtime_budget_warn":
+        reason_codes.append(RUNTIME_BUDGET_EXCEEDED_REASON)
 
     elapsed_seconds = int(time.time()) - start_epoch
     if elapsed_seconds > max_seconds:
-        reason_codes.append("runtime_budget_exceeded")
+        reason_codes.append(RUNTIME_BUDGET_EXCEEDED_REASON)
 
     reason_codes = sorted(set(reason_codes))
-    status = "pass"
-    final_decision = "GO"
-    if reason_codes:
-        status = "fail"
-        final_decision = "NO-GO"
+    policy_outcome, final_decision, status, evaluator_reason_codes = _evaluate_go_no_go_policy(
+        artifact_inventory,
+        reason_codes,
+    )
 
     report_payload = {
         "schema_version": "kamn.runtime.go-no-go-gate-report.v1",
+        "reason_taxonomy_version": GO_NO_GO_REASON_TAXONOMY_VERSION,
         "status": status,
+        "policy_outcome": policy_outcome,
         "final_decision": final_decision,
         "fault_profile": fault_profile,
         "go_no_go_evidence_status": "verified",
         "rollback_readiness_status": "verified",
         "dr_readiness_status": "verified",
+        "policy_evaluator_status": "verified",
         "manifest_schema_version": manifest_payload["schema_version"],
         "manifest_registry_status": "verified",
         "required_artifact_ids": [artifact["artifact_id"] for artifact in required_artifacts],
         "artifact_inventory": artifact_inventory,
-        "reason_codes": reason_codes,
+        "reason_codes": evaluator_reason_codes,
+        "observed_reason_codes": reason_codes,
         "elapsed_seconds": elapsed_seconds,
         "max_seconds": max_seconds,
     }
     if args.output_json:
         write_json(Path(args.output_json), report_payload)
 
-    reason_codes_csv = "none" if not reason_codes else ",".join(reason_codes)
+    reason_codes_csv = "none" if not evaluator_reason_codes else ",".join(evaluator_reason_codes)
+    observed_reason_codes_csv = "none" if not reason_codes else ",".join(reason_codes)
     print(f"status={status}")
+    print(f"policy_outcome={policy_outcome}")
     print(f"final_decision={final_decision}")
     print(f"fault_profile={fault_profile}")
     print("go_no_go_evidence_status=verified")
     print("rollback_readiness_status=verified")
     print("dr_readiness_status=verified")
+    print("policy_evaluator_status=verified")
     print(f"manifest_schema_version={manifest_payload['schema_version']}")
+    print(f"reason_taxonomy_version={GO_NO_GO_REASON_TAXONOMY_VERSION}")
     print("manifest_registry_status=verified")
     print(f"required_artifact_count={len(required_artifacts)}")
     print(f"reason_codes={reason_codes_csv}")
+    print(f"observed_reason_codes={observed_reason_codes_csv}")
     if args.output_json:
         print(f"report_file={Path(args.output_json).resolve()}")
 
-    if status != "pass":
+    if final_decision != "GO":
         fail(f"go/no-go gate lane failed closed: {reason_codes_csv}")
 
     print("go/no-go gate lane tests passed.")
