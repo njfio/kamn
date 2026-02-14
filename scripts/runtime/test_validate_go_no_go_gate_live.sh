@@ -20,6 +20,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^final_decision=GO$'; then
   echo "expected go/no-go gate live validation GO decision marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^lane_mode=run$'; then
+  echo "expected go/no-go gate live validation run-mode marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^run_mode_command_status=executed$'; then
+  echo "expected go/no-go gate live validation run command status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^ci_fast_gate_scope=local-only$'; then
+  echo "expected go/no-go gate live validation local-only scope marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^baseline_contract_status=verified$'; then
   echo "expected go/no-go gate live validation baseline marker" >&2
   exit 1
@@ -45,6 +57,12 @@ if payload.get("status") != "pass":
     raise SystemExit("expected go/no-go gate live validation status=pass")
 if payload.get("final_decision") != "GO":
     raise SystemExit("expected go/no-go gate live validation final_decision=GO")
+if payload.get("lane_mode") != "run":
+    raise SystemExit("expected go/no-go gate live validation lane_mode=run")
+if payload.get("run_mode_command_status") != "executed":
+    raise SystemExit("expected go/no-go gate live validation run_mode_command_status=executed")
+if payload.get("ci_fast_gate_scope") != "local-only":
+    raise SystemExit("expected go/no-go gate live validation ci_fast_gate_scope=local-only")
 if payload.get("baseline_contract_status") != "verified":
     raise SystemExit("expected baseline_contract_status=verified")
 if payload.get("fault_injection_status") != "verified":

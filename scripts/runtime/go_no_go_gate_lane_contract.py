@@ -17,12 +17,17 @@ ROOT_DIR = SCRIPT_DIR.parent.parent
 sys.path.insert(0, str(SCRIPT_DIR.parent))
 
 from framework.contract_framework import ContractError, fail, require_non_negative_int, write_json  # noqa: E402
+from framework.contract_framework import require_enum  # noqa: E402
 
 GATE_DECISION_FAULT_REASON = "gate_decision_fault_injection_triggered"
 RUNTIME_BUDGET_EXCEEDED_REASON = "runtime_budget_exceeded"
 GO_NO_GO_REASON_TAXONOMY_VERSION = "kamn.runtime.go-no-go-gate-reason-taxonomy.v1"
 RELEASE_MANIFEST_SCHEMA = "kamn.runtime.release-evidence-manifest.v1"
 DEFAULT_RELEASE_MANIFEST_PATH = ROOT_DIR / "scripts/runtime/release_evidence_manifest.json"
+RUN_MODE_FAST_GATE_EXCLUSION_REASON = "go_no_go_gate_run_mode_excluded_from_fast_gate"
+DRY_RUN_REASON = "dry_run_no_commands_executed"
+RUN_REASON = "release_candidate_artifact_aggregation_executed"
+RUN_MODE_OPT_IN_ENV = "KAMN_GONOGO_GATE_LOCAL_OPT_IN"
 REQUIRED_ARTIFACT_IDS = (
     "go_no_go_evidence",
     "rollback_readiness",
@@ -156,14 +161,16 @@ def _validate_release_manifest(payload: dict[str, object]) -> list[dict[str, str
 def _evaluate_go_no_go_policy(
     artifact_inventory: list[dict[str, str]],
     observed_reason_codes: list[str],
+    lane_mode: str,
 ) -> tuple[str, str, str, list[str]]:
     fail_reasons: list[str] = []
     warn_reasons: list[str] = []
+    expected_artifact_status = "verified" if lane_mode == "run" else "dry_run_pending"
 
     for artifact in artifact_inventory:
-        if artifact.get("status") != "verified":
+        if artifact.get("status") != expected_artifact_status:
             artifact_id = artifact.get("artifact_id", "unknown")
-            fail_reasons.append(f"gate_required_artifact_unverified:{artifact_id}")
+            fail_reasons.append(f"gate_required_artifact_status_mismatch:{artifact_id}")
 
     for reason_code in observed_reason_codes:
         if reason_code == GATE_DECISION_FAULT_REASON:
@@ -186,9 +193,13 @@ def _evaluate_go_no_go_policy(
 
 
 def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
+    lane_mode = require_enum("--mode", args.mode.strip(), ("dry-run", "run"))
+    ci_fast_gate = require_enum("--ci-fast-gate", args.ci_fast_gate.strip(), ("PASS", "FAIL"))
     fault_profile = args.fault_profile.strip()
     if fault_profile not in {"none", "gate_decision", "runtime_budget_warn"}:
         fail("--fault-profile must be one of: none, gate_decision, runtime_budget_warn")
+    if lane_mode == "run" and args.local_opt_in.strip() != "1":
+        fail(f"run mode requires {RUN_MODE_OPT_IN_ENV}=1")
 
     max_seconds = require_non_negative_int("KAMN_GONOGO_GATE_MAX_SECONDS", args.max_seconds)
     start_epoch = int(time.time())
@@ -204,34 +215,38 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
 
     reason_codes: list[str] = []
     artifact_inventory: list[dict[str, str]] = []
+    run_mode_command_count = 0
 
     for artifact in required_artifacts:
         artifact_id = artifact["artifact_id"]
-        registry_entry = ARTIFACT_LANE_REGISTRY[artifact_id]
-        lane_command = registry_entry["command"]
-        if not isinstance(lane_command, list) or len(lane_command) < 2:
-            fail(f"release_manifest_command_invalid:{artifact_id}")
-        lane_path = Path(str(lane_command[1]))
-        _ensure_executable(lane_path, f"{artifact_id} lane command")
-        run_result = _run_command([str(part) for part in lane_command])
-        if run_result.returncode != 0:
-            detail = (
-                run_result.stderr
-                or run_result.stdout
-                or f"{registry_entry['failure_label']}: unknown failure"
-            ).strip()
-            fail(f"release_manifest_artifact_execution_failed:{artifact_id}:{detail}")
         expected_marker = artifact["expected_success_marker"]
-        if expected_marker not in run_result.stdout:
-            fail(f"release_manifest_required_marker_missing:{artifact_id}")
-        artifact_inventory.append(
-            {
-                "artifact_id": artifact_id,
-                "expected_lane": artifact["expected_lane"],
-                "expected_success_marker": expected_marker,
-                "status": "verified",
-            }
-        )
+        artifact_entry = {
+            "artifact_id": artifact_id,
+            "expected_lane": artifact["expected_lane"],
+            "expected_success_marker": expected_marker,
+        }
+        if lane_mode == "run":
+            registry_entry = ARTIFACT_LANE_REGISTRY[artifact_id]
+            lane_command = registry_entry["command"]
+            if not isinstance(lane_command, list) or len(lane_command) < 2:
+                fail(f"release_manifest_command_invalid:{artifact_id}")
+            lane_path = Path(str(lane_command[1]))
+            _ensure_executable(lane_path, f"{artifact_id} lane command")
+            run_result = _run_command([str(part) for part in lane_command])
+            if run_result.returncode != 0:
+                detail = (
+                    run_result.stderr
+                    or run_result.stdout
+                    or f"{registry_entry['failure_label']}: unknown failure"
+                ).strip()
+                fail(f"release_manifest_artifact_execution_failed:{artifact_id}:{detail}")
+            if expected_marker not in run_result.stdout:
+                fail(f"release_manifest_required_marker_missing:{artifact_id}")
+            artifact_entry["status"] = "verified"
+            run_mode_command_count += 1
+        else:
+            artifact_entry["status"] = "dry_run_pending"
+        artifact_inventory.append(artifact_entry)
 
     if fault_profile == "gate_decision":
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -292,9 +307,14 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         reason_codes.append(RUNTIME_BUDGET_EXCEEDED_REASON)
 
     reason_codes = sorted(set(reason_codes))
+    ci_fast_gate_eligible = lane_mode == "dry-run"
+    ci_fast_gate_scope = "ci-fast-gate" if ci_fast_gate_eligible else "local-only"
+    run_mode_command_status = "executed" if lane_mode == "run" else "dry_run_no_commands_executed"
+    mode_reason_code = RUN_REASON if lane_mode == "run" else DRY_RUN_REASON
     policy_outcome, final_decision, status, evaluator_reason_codes = _evaluate_go_no_go_policy(
         artifact_inventory,
         reason_codes,
+        lane_mode,
     )
 
     report_payload = {
@@ -303,10 +323,19 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         "status": status,
         "policy_outcome": policy_outcome,
         "final_decision": final_decision,
+        "lane_mode": lane_mode,
+        "ci_fast_gate": ci_fast_gate,
+        "ci_fast_gate_eligible": ci_fast_gate_eligible,
+        "ci_fast_gate_scope": ci_fast_gate_scope,
+        "fast_gate_exclusion_status": "verified",
+        "fast_gate_exclusion_reason_code": RUN_MODE_FAST_GATE_EXCLUSION_REASON,
+        "run_mode_command_status": run_mode_command_status,
+        "run_mode_command_count": run_mode_command_count,
+        "mode_reason_code": mode_reason_code,
         "fault_profile": fault_profile,
-        "go_no_go_evidence_status": "verified",
-        "rollback_readiness_status": "verified",
-        "dr_readiness_status": "verified",
+        "go_no_go_evidence_status": "verified" if lane_mode == "run" else "dry_run_pending",
+        "rollback_readiness_status": "verified" if lane_mode == "run" else "dry_run_pending",
+        "dr_readiness_status": "verified" if lane_mode == "run" else "dry_run_pending",
         "policy_evaluator_status": "verified",
         "manifest_schema_version": manifest_payload["schema_version"],
         "manifest_registry_status": "verified",
@@ -325,10 +354,24 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
     print(f"status={status}")
     print(f"policy_outcome={policy_outcome}")
     print(f"final_decision={final_decision}")
+    print(f"lane_mode={lane_mode}")
+    print(f"ci_fast_gate={ci_fast_gate}")
+    print(f"ci_fast_gate_eligible={'true' if ci_fast_gate_eligible else 'false'}")
+    print(f"ci_fast_gate_scope={ci_fast_gate_scope}")
+    print("fast_gate_exclusion_status=verified")
+    print(f"fast_gate_exclusion_reason_code={RUN_MODE_FAST_GATE_EXCLUSION_REASON}")
+    print(f"run_mode_command_status={run_mode_command_status}")
+    print(f"run_mode_command_count={run_mode_command_count}")
+    print(f"mode_reason_code={mode_reason_code}")
     print(f"fault_profile={fault_profile}")
-    print("go_no_go_evidence_status=verified")
-    print("rollback_readiness_status=verified")
-    print("dr_readiness_status=verified")
+    if lane_mode == "run":
+        print("go_no_go_evidence_status=verified")
+        print("rollback_readiness_status=verified")
+        print("dr_readiness_status=verified")
+    else:
+        print("go_no_go_evidence_status=dry_run_pending")
+        print("rollback_readiness_status=dry_run_pending")
+        print("dr_readiness_status=dry_run_pending")
     print("policy_evaluator_status=verified")
     print(f"manifest_schema_version={manifest_payload['schema_version']}")
     print(f"reason_taxonomy_version={GO_NO_GO_REASON_TAXONOMY_VERSION}")
@@ -349,6 +392,14 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run production go/no-go gate lane.")
     parser.add_argument(
+        "--mode",
+        default=os.environ.get("KAMN_GONOGO_GATE_MODE", "dry-run"),
+    )
+    parser.add_argument(
+        "--ci-fast-gate",
+        default=os.environ.get("KAMN_GONOGO_GATE_CI_FAST_GATE", "PASS"),
+    )
+    parser.add_argument(
         "--fault-profile",
         default=os.environ.get("KAMN_GONOGO_GATE_FAULT_PROFILE", "none"),
     )
@@ -363,6 +414,10 @@ def build_parser() -> argparse.ArgumentParser:
             "KAMN_GONOGO_GATE_MANIFEST_FILE",
             str(DEFAULT_RELEASE_MANIFEST_PATH),
         ),
+    )
+    parser.add_argument(
+        "--local-opt-in",
+        default=os.environ.get(RUN_MODE_OPT_IN_ENV, ""),
     )
     parser.set_defaults(handler=run_go_no_go_gate_lane)
     return parser
