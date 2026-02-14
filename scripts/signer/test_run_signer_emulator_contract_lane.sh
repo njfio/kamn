@@ -4,12 +4,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FAST_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_emulator_contract_lane.sh"
 DEEP_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_provider_deep_lane.sh"
+DEEP_IMPL_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_provider_deep_lane_impl.sh"
 POLICY_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_policy_contract_lane.sh"
 LIFECYCLE_SCRIPT="$ROOT_DIR/scripts/signer/run_secure_provider_key_lifecycle_contract_lane.sh"
 INCIDENT_CONTRACT_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_incident_recovery_contract_lane.sh"
 INCIDENT_DEEP_SCRIPT="$ROOT_DIR/scripts/signer/run_signer_incident_recovery_deep_lane.sh"
 SHARED_CONTRACT="$ROOT_DIR/scripts/signer/signer_emulator_contract_lane_contract.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/signer_signer_emulator_contract_lane.json"
+DEEP_MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/signer_signer_provider_deep_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
 if [ ! -x "$FAST_SCRIPT" ]; then
@@ -19,6 +21,10 @@ fi
 
 if [ ! -x "$DEEP_SCRIPT" ]; then
   echo "expected signer provider deep-lane runner to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$DEEP_IMPL_SCRIPT" ]; then
+  echo "expected signer provider deep-lane implementation to be executable" >&2
   exit 1
 fi
 
@@ -76,6 +82,24 @@ if ! grep -Fq "signer_emulator_contract_lane_contract.sh" "$MANIFEST_FILE"; then
   exit 1
 fi
 
+if [ ! -L "$DEEP_SCRIPT" ]; then
+  echo "expected signer provider deep-lane wrapper to be a dispatcher symlink" >&2
+  exit 1
+fi
+if [ "$(readlink "$DEEP_SCRIPT")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected signer provider deep-lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+resolved_deep_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$DEEP_SCRIPT")" --resolve-manifest-path)"
+if [ "$resolved_deep_manifest" != "$DEEP_MANIFEST_FILE" ]; then
+  echo "expected signer provider deep-lane wrapper to resolve signer provider deep manifest via dispatcher" >&2
+  exit 1
+fi
+if ! grep -Fq "run_signer_provider_deep_lane_impl.sh" "$DEEP_MANIFEST_FILE"; then
+  echo "expected signer provider deep-lane manifest to dispatch implementation module" >&2
+  exit 1
+fi
+
 if ! grep -q "functional_provider_handshake_matrix_routes_operator_fallback_for_unavailable_provider" "$SHARED_CONTRACT"; then
   echo "expected signer emulator shared contract module to include provider handshake fallback functional coverage" >&2
   exit 1
@@ -116,17 +140,17 @@ if ! grep -q "run_signer_incident_recovery_contract_lane.sh" "$SHARED_CONTRACT";
   exit 1
 fi
 
-if ! grep -Fq "performance_signer_emulator_bulk_signing_deep_lane -- --ignored" "$DEEP_SCRIPT"; then
+if ! grep -Fq "performance_signer_emulator_bulk_signing_deep_lane -- --ignored" "$DEEP_IMPL_SCRIPT"; then
   echo "expected deep-lane script to execute ignored signer provider stress test" >&2
   exit 1
 fi
 
-if ! grep -Fq "run_signer_incident_recovery_deep_lane.sh" "$DEEP_SCRIPT"; then
+if ! grep -Fq "run_signer_incident_recovery_deep_lane.sh" "$DEEP_IMPL_SCRIPT"; then
   echo "expected signer provider deep lane script to execute signer incident recovery deep lane" >&2
   exit 1
 fi
 
-if ! grep -Fq "KAMN_SIGNER_INCIDENT_RECOVERY_DEEP_CADENCE=scheduled" "$DEEP_SCRIPT"; then
+if ! grep -Fq "KAMN_SIGNER_INCIDENT_RECOVERY_DEEP_CADENCE=scheduled" "$DEEP_IMPL_SCRIPT"; then
   echo "expected signer provider deep lane script to set scheduled cadence guard for incident recovery deep lane" >&2
   exit 1
 fi

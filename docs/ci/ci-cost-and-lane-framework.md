@@ -25,6 +25,15 @@ Keep merge-critical CI fast and cost-bounded while preventing silent growth in s
 - Kolme harness+command-surface budget contract lane: `scripts/ci/run_kolme_test_harness_loc_soft_budget_contract_lane.sh`
 - CI helper regression suite: `scripts/ci/test_ci_tools.sh`
 
+## Dispatcher Migration Log
+- `#2854` migrates `scripts/signer/run_signer_provider_deep_lane.sh` to shared non-Kolme dispatcher + manifest wiring:
+  - wrapper: `scripts/signer/run_signer_provider_deep_lane.sh`
+  - implementation: `scripts/signer/run_signer_provider_deep_lane_impl.sh`
+  - manifest: `scripts/framework/manifests/signer_signer_provider_deep_lane.json`
+- Contract coverage for this migration slice:
+  - `scripts/signer/test_run_signer_provider_deep_lane.sh`
+  - `scripts/signer/test_run_signer_emulator_contract_lane.sh`
+
 ## Fast-Gate Delta Policy
 `scripts/ci/generate_fast_gate_budget_delta_report.sh` compares current fast-gate telemetry against a versioned baseline and emits:
 

@@ -108,6 +108,7 @@ resolve_manifest_name() {
     run_signer_emulator_contract_lane.sh) echo "signer_signer_emulator_contract_lane.json" ;;
     run_signer_incident_recovery_contract_lane.sh) echo "signer_signer_incident_recovery_contract_lane.json" ;;
     run_signer_incident_recovery_lane.sh) echo "signer_signer_incident_recovery_lane.json" ;;
+    run_signer_provider_deep_lane.sh) echo "signer_signer_provider_deep_lane.json" ;;
     run_signer_policy_contract_lane.sh) echo "signer_signer_policy_contract_lane.json" ;;
     run_kamn_core_rustdoc_artifact_contract_lane.sh) echo "ci_kamn_core_rustdoc_artifact_contract_lane.json" ;;
     run_test_harness_loc_soft_budget_contract_lane.sh) echo "ci_test_harness_loc_soft_budget_contract_lane.json" ;;
@@ -141,6 +142,7 @@ resolve_manifest_name() {
 
 resolve_phase_name() {
   case "$1" in
+    run_signer_provider_deep_lane.sh) echo "deep" ;;
     run_signer_incident_recovery_lane.sh) echo "run" ;;
     *) echo "contract" ;;
   esac
