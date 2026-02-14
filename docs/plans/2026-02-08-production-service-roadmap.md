@@ -202,6 +202,11 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Policy checker: `scripts/runtime/check_service_api_axum_ingress_live_policy.sh`.
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `keep_alive_status=verified`, `body_size_guard_status=verified`, `concurrency_status=verified`, `websocket_status=verified`, `service_api_axum_ingress_policy_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for tamper and guard drills: `service_api_axum_policy_marker_missing:concurrency_status`, `service_api_axum_oversized_body_rejected`.
+- Phase 2.5 serde payload parity contract-lane policy delivered:
+  - Runtime lane: `scripts/runtime/validate_service_api_serde_payload_parity_live.sh`, `scripts/runtime/validate_service_api_serde_payload_parity_live_contract_lane.sh`, and tests `scripts/runtime/test_validate_service_api_serde_payload_parity_live_contract_lane.sh`, `scripts/runtime/test_check_service_api_serde_payload_parity_live_policy.sh` (Task #3267).
+  - Policy checker: `scripts/runtime/check_service_api_serde_payload_parity_live_policy.sh`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `serde_dto_status=verified`, `serde_serializer_status=verified`, `serde_parser_status=verified`, `route_payload_parity_status=verified`, `service_api_serde_payload_policy_status=verified`, `performance_budget_status=verified`.
+  - Fail-closed validation confirmed for tamper and decode guard drills: `service_api_serde_payload_policy_marker_missing:route_payload_parity_status`, `service_api_payload_structure_invalid`.
 - Runtime decomposition wave 1 delivered:
   - Extracted network-fault simulation APIs from `crates/kamn-core/src/runtime_transport_coordination.rs` into `crates/kamn-core/src/runtime_network_fault.rs` with stable `runtime.rs` re-export compatibility (Task #3186, Subtask #3187).
   - Added extraction regression contract coverage for module declaration and re-export continuity (`runtime::tests::regression_runtime_source_routes_network_fault_domain_via_dedicated_module`).
