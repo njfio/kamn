@@ -988,6 +988,29 @@ fn parses_runtime_mode_daemon_with_bounded_controls() {
 }
 
 #[test]
+fn parses_runtime_mode_full_with_required_controls() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "3".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:19081".to_owned(),
+    ];
+
+    let parsed = parse_args(args).expect("full args should parse");
+    assert_eq!(parsed.runtime_mode.as_str(), "full");
+    assert_eq!(parsed.daemon_max_ticks, Some(3));
+    assert_eq!(parsed.daemon_tick_interval_ms, Some(25));
+    assert_eq!(parsed.api_bind_addr, Some("127.0.0.1:19081".to_owned()));
+}
+
+#[test]
 fn parses_runtime_mode_daemon_with_shutdown_controls() {
     let args = vec![
         "kamn-node".to_owned(),
@@ -1012,6 +1035,90 @@ fn parses_runtime_mode_daemon_with_shutdown_controls() {
     assert!(!parsed.daemon_shutdown_os_signals);
     assert_eq!(parsed.daemon_shutdown_drain_ticks, Some(2));
     assert_eq!(parsed.daemon_shutdown_timeout_ticks, Some(4));
+}
+
+#[test]
+fn integration_runtime_full_emits_ordered_bootstrap_readiness_markers() {
+    let _lock = log_env_lock()
+        .lock()
+        .expect("log env lock should guard test mutation");
+    let _level_guard = EnvVarGuard::set("KAMN_NODE_LOG_LEVEL", Some("info"));
+    let _format_guard = EnvVarGuard::set("KAMN_NODE_LOG_FORMAT", Some("json"));
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "2".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "10".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:19082".to_owned(),
+    ])
+    .expect("full args should parse");
+    let (report_result, captured_logs) = capture_test_logs(|| execute(parsed));
+    let report = report_result.expect("runtime-mode full execution should succeed");
+    assert_eq!(report.runtime_mode, "full");
+    assert_eq!(report.daemon_max_ticks, Some(2));
+    let start_idx = captured_logs
+        .iter()
+        .position(|line| line.contains("\"event\":\"node.runtime.full.bootstrap.start\""))
+        .expect("full bootstrap start marker should be emitted");
+    let daemon_idx = captured_logs
+        .iter()
+        .position(|line| {
+            line.contains("\"event\":\"node.runtime.full.bootstrap.component.ready\"")
+                && line.contains("\"component\":\"daemon\"")
+        })
+        .expect("daemon readiness marker should be emitted");
+    let api_idx = captured_logs
+        .iter()
+        .position(|line| {
+            line.contains("\"event\":\"node.runtime.full.bootstrap.component.ready\"")
+                && line.contains("\"component\":\"api\"")
+        })
+        .expect("api readiness marker should be emitted");
+    let transport_idx = captured_logs
+        .iter()
+        .position(|line| {
+            line.contains("\"event\":\"node.runtime.full.bootstrap.component.ready\"")
+                && line.contains("\"component\":\"transport\"")
+        })
+        .expect("transport readiness marker should be emitted");
+    let commit_idx = captured_logs
+        .iter()
+        .position(|line| {
+            line.contains("\"event\":\"node.runtime.full.bootstrap.component.ready\"")
+                && line.contains("\"component\":\"kolme-commit\"")
+        })
+        .expect("kolme commit readiness marker should be emitted");
+    let ready_idx = captured_logs
+        .iter()
+        .position(|line| line.contains("\"event\":\"node.runtime.full.bootstrap.ready\""))
+        .expect("full bootstrap ready marker should be emitted");
+    assert!(
+        start_idx < daemon_idx
+            && daemon_idx < api_idx
+            && api_idx < transport_idx
+            && transport_idx < commit_idx
+            && commit_idx < ready_idx,
+        "full-mode readiness markers must preserve deterministic ordering"
+    );
+    let dispatch_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"node.runtime.mode.dispatch\""))
+        .expect("runtime dispatch marker should be emitted");
+    let ready_line = captured_logs
+        .iter()
+        .find(|line| line.contains("\"event\":\"node.runtime.full.bootstrap.ready\""))
+        .expect("full runtime ready marker should be emitted");
+    let dispatch_execution_id = extract_json_string_field(dispatch_line, "execution_id")
+        .expect("dispatch marker should include execution id");
+    let ready_execution_id = extract_json_string_field(ready_line, "execution_id")
+        .expect("full ready marker should include execution id");
+    assert_eq!(dispatch_execution_id, ready_execution_id);
 }
 
 #[test]

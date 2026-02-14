@@ -231,6 +231,44 @@ fn rejects_daemon_without_tick_interval() {
 }
 
 #[test]
+fn rejects_full_without_max_ticks() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:19083".to_owned(),
+    ];
+    assert_eq!(
+        parse_args(args),
+        Err(ConfigError::MissingArgumentValue("--daemon-max-ticks"))
+    );
+}
+
+#[test]
+fn rejects_full_without_api_bind() {
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "3".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+    ];
+    assert_eq!(
+        parse_args(args),
+        Err(ConfigError::MissingArgumentValue("--api-bind"))
+    );
+}
+
+#[test]
 fn rejects_daemon_shutdown_signal_without_drain_ticks() {
     let args = vec![
         "kamn-node".to_owned(),

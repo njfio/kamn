@@ -142,6 +142,7 @@ enum RuntimeModeKind {
     RecoveryCheck,
     Daemon,
     Api,
+    Full,
     KolmeLive,
 }
 
@@ -176,6 +177,12 @@ impl RuntimeMode {
         }
     }
 
+    fn full() -> Self {
+        Self {
+            kind: RuntimeModeKind::Full,
+        }
+    }
+
     fn kolme_live() -> Self {
         Self {
             kind: RuntimeModeKind::KolmeLive,
@@ -189,6 +196,7 @@ impl RuntimeMode {
             "recovery-check" => Ok(Self::recovery_check()),
             "daemon" => Ok(Self::daemon()),
             "api" => Ok(Self::api()),
+            "full" => Ok(Self::full()),
             "kolme-live" => Ok(Self::kolme_live()),
             other => Err(ConfigError::InvalidRuntimeMode(other.to_owned())),
         }
@@ -201,6 +209,7 @@ impl RuntimeMode {
             RuntimeModeKind::RecoveryCheck => "recovery-check",
             RuntimeModeKind::Daemon => "daemon",
             RuntimeModeKind::Api => "api",
+            RuntimeModeKind::Full => "full",
             RuntimeModeKind::KolmeLive => "kolme-live",
         }
     }
@@ -353,6 +362,18 @@ struct DaemonExecution {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+struct DaemonRuntimeOptions {
+    daemon_max_ticks: Option<u64>,
+    daemon_tick_interval_ms: Option<u64>,
+    daemon_shutdown_signal_ticks: Vec<u64>,
+    daemon_shutdown_os_signals: bool,
+    daemon_shutdown_drain_ticks: Option<u64>,
+    daemon_shutdown_timeout_ticks: Option<u64>,
+    daemon_peer_id: Option<String>,
+    daemon_lifecycle_events: Vec<PeerLifecycleEvent>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct KolmeLiveExecution {
     provider_client_contract: String,
     base_url: String,
@@ -487,6 +508,132 @@ fn daemon_shutdown_reason_field<'a>(completion_reason: &'a str, key: &str) -> Op
     })
 }
 
+fn execute_daemon_runtime(
+    runtime_mode: RuntimeMode,
+    execution_id: &str,
+    options: DaemonRuntimeOptions,
+) -> Result<DaemonExecution, ConfigError> {
+    let DaemonRuntimeOptions {
+        daemon_max_ticks,
+        daemon_tick_interval_ms,
+        daemon_shutdown_signal_ticks,
+        daemon_shutdown_os_signals,
+        daemon_shutdown_drain_ticks,
+        daemon_shutdown_timeout_ticks,
+        daemon_peer_id,
+        daemon_lifecycle_events,
+    } = options;
+    let max_ticks =
+        daemon_max_ticks.ok_or(ConfigError::MissingArgumentValue("--daemon-max-ticks"))?;
+    let tick_interval_ms = daemon_tick_interval_ms.ok_or(ConfigError::MissingArgumentValue(
+        "--daemon-tick-interval-ms",
+    ))?;
+    let max_ticks_label = max_ticks.to_string();
+    let tick_interval_ms_label = tick_interval_ms.to_string();
+    log_info(
+        "node.runtime.daemon.execute.start",
+        &[
+            ("runtime_mode", runtime_mode.as_str()),
+            ("max_ticks", max_ticks_label.as_str()),
+            ("tick_interval_ms", tick_interval_ms_label.as_str()),
+            ("execution_id", execution_id),
+        ],
+    )?;
+    let (peer_id, peer_lifecycle_final_state, peer_lifecycle_applied_events) = match daemon_peer_id
+    {
+        Some(peer_id) => {
+            let mut lifecycle = PeerLifecycle::new(&peer_id)
+                .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+            let mut applied_events = Vec::with_capacity(daemon_lifecycle_events.len());
+            for event in daemon_lifecycle_events {
+                lifecycle
+                    .transition(event)
+                    .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+                applied_events.push(daemon_lifecycle_event_as_str(event).to_owned());
+            }
+            (
+                Some(peer_id),
+                Some(peer_lifecycle_state_as_str(lifecycle.state()).to_owned()),
+                Some(applied_events),
+            )
+        }
+        None => (None, None, None),
+    };
+    let daemon_completion = if daemon_shutdown_os_signals && daemon_shutdown_signal_ticks.is_empty()
+    {
+        evaluate_daemon_completion_with_os_signals(
+            max_ticks,
+            tick_interval_ms,
+            daemon_shutdown_drain_ticks,
+            daemon_shutdown_timeout_ticks,
+        )
+        .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?
+    } else {
+        evaluate_daemon_completion(
+            max_ticks,
+            daemon_shutdown_signal_ticks.as_slice(),
+            daemon_shutdown_drain_ticks,
+            daemon_shutdown_timeout_ticks,
+        )
+    };
+    let daemon_observability = build_daemon_observability_telemetry(
+        tick_interval_ms,
+        daemon_completion.completion_reason.as_str(),
+    )
+    .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
+    let shutdown_drain_status =
+        daemon_shutdown_drain_status(daemon_completion.completion_reason.as_str());
+    let shutdown_signal_tick =
+        daemon_shutdown_signal_tick(daemon_completion.completion_reason.as_str()).unwrap_or("none");
+    let shutdown_drain_ticks =
+        daemon_shutdown_reason_field(daemon_completion.completion_reason.as_str(), "drain_ticks")
+            .unwrap_or("0");
+    let shutdown_timeout_ticks = daemon_shutdown_reason_field(
+        daemon_completion.completion_reason.as_str(),
+        "timeout_ticks",
+    )
+    .unwrap_or("0");
+    let shutdown_ignored_signals = daemon_shutdown_reason_field(
+        daemon_completion.completion_reason.as_str(),
+        "ignored_signals",
+    )
+    .unwrap_or("0");
+    let executed_ticks_label = daemon_completion.executed_ticks.to_string();
+    log_info(
+        "node.runtime.daemon.execute.complete",
+        &[
+            ("runtime_mode", runtime_mode.as_str()),
+            ("executed_ticks", executed_ticks_label.as_str()),
+            (
+                "completion_reason",
+                daemon_completion.completion_reason.as_str(),
+            ),
+            ("shutdown_drain_status", shutdown_drain_status),
+            ("shutdown_signal_tick", shutdown_signal_tick),
+            ("shutdown_drain_ticks", shutdown_drain_ticks),
+            ("shutdown_timeout_ticks", shutdown_timeout_ticks),
+            ("shutdown_ignored_signals", shutdown_ignored_signals),
+            ("execution_id", execution_id),
+        ],
+    )?;
+    Ok(DaemonExecution {
+        max_ticks,
+        tick_interval_ms,
+        executed_ticks: daemon_completion.executed_ticks,
+        completion_reason: daemon_completion.completion_reason,
+        observability_latency_p50_ms: daemon_observability.latency_p50_ms,
+        observability_latency_p99_ms: daemon_observability.latency_p99_ms,
+        observability_throughput_tps: daemon_observability.throughput_tps,
+        observability_error_rate_bps: daemon_observability.error_rate_bps,
+        observability_availability_bps: daemon_observability.availability_bps,
+        observability_health: daemon_observability.health,
+        observability_alert_count: daemon_observability.alert_count,
+        peer_id,
+        peer_lifecycle_final_state,
+        peer_lifecycle_applied_events,
+    })
+}
+
 fn run() -> Result<(), ConfigError> {
     let cli = parse_args(env::args())?;
     let runtime_mode = cli.runtime_mode.as_str();
@@ -529,9 +676,9 @@ fn run() -> Result<(), ConfigError> {
     )?;
     println!("{}", render_bootstrap_report(&report, output_mode));
     if let Some(endpoint_config) = service_api_endpoint_config {
-        if report.runtime_mode != "api" {
+        if report.runtime_mode != "api" && report.runtime_mode != "full" {
             return Err(ConfigError::RuntimeDaemonLifecycle(
-                "service api endpoint requires runtime-mode api".to_owned(),
+                "service api endpoint requires runtime-mode api or full".to_owned(),
             ));
         }
         let snapshot = build_service_api_snapshot(&report);
@@ -789,120 +936,22 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
             }
         }
         RuntimeModeKind::Daemon => {
-            let max_ticks =
-                daemon_max_ticks.ok_or(ConfigError::MissingArgumentValue("--daemon-max-ticks"))?;
-            let tick_interval_ms = daemon_tick_interval_ms.ok_or(
-                ConfigError::MissingArgumentValue("--daemon-tick-interval-ms"),
-            )?;
-            let max_ticks_label = max_ticks.to_string();
-            let tick_interval_ms_label = tick_interval_ms.to_string();
-            log_info(
-                "node.runtime.daemon.execute.start",
-                &[
-                    ("runtime_mode", runtime_mode.as_str()),
-                    ("max_ticks", max_ticks_label.as_str()),
-                    ("tick_interval_ms", tick_interval_ms_label.as_str()),
-                    ("execution_id", execution_id.as_str()),
-                ],
-            )?;
-            let (peer_id, peer_lifecycle_final_state, peer_lifecycle_applied_events) =
-                match daemon_peer_id {
-                    Some(peer_id) => {
-                        let mut lifecycle = PeerLifecycle::new(&peer_id).map_err(|error| {
-                            ConfigError::RuntimeDaemonLifecycle(error.to_string())
-                        })?;
-                        let mut applied_events = Vec::with_capacity(daemon_lifecycle_events.len());
-                        for event in daemon_lifecycle_events {
-                            lifecycle.transition(event).map_err(|error| {
-                                ConfigError::RuntimeDaemonLifecycle(error.to_string())
-                            })?;
-                            applied_events.push(daemon_lifecycle_event_as_str(event).to_owned());
-                        }
-                        (
-                            Some(peer_id),
-                            Some(peer_lifecycle_state_as_str(lifecycle.state()).to_owned()),
-                            Some(applied_events),
-                        )
-                    }
-                    None => (None, None, None),
-                };
-            let daemon_completion =
-                if daemon_shutdown_os_signals && daemon_shutdown_signal_ticks.is_empty() {
-                    evaluate_daemon_completion_with_os_signals(
-                        max_ticks,
-                        tick_interval_ms,
-                        daemon_shutdown_drain_ticks,
-                        daemon_shutdown_timeout_ticks,
-                    )
-                    .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?
-                } else {
-                    evaluate_daemon_completion(
-                        max_ticks,
-                        daemon_shutdown_signal_ticks.as_slice(),
-                        daemon_shutdown_drain_ticks,
-                        daemon_shutdown_timeout_ticks,
-                    )
-                };
-            let daemon_observability = build_daemon_observability_telemetry(
-                tick_interval_ms,
-                daemon_completion.completion_reason.as_str(),
-            )
-            .map_err(|error| ConfigError::RuntimeDaemonLifecycle(error.to_string()))?;
-            let shutdown_drain_status =
-                daemon_shutdown_drain_status(daemon_completion.completion_reason.as_str());
-            let shutdown_signal_tick =
-                daemon_shutdown_signal_tick(daemon_completion.completion_reason.as_str())
-                    .unwrap_or("none");
-            let shutdown_drain_ticks = daemon_shutdown_reason_field(
-                daemon_completion.completion_reason.as_str(),
-                "drain_ticks",
-            )
-            .unwrap_or("0");
-            let shutdown_timeout_ticks = daemon_shutdown_reason_field(
-                daemon_completion.completion_reason.as_str(),
-                "timeout_ticks",
-            )
-            .unwrap_or("0");
-            let shutdown_ignored_signals = daemon_shutdown_reason_field(
-                daemon_completion.completion_reason.as_str(),
-                "ignored_signals",
-            )
-            .unwrap_or("0");
-            let executed_ticks_label = daemon_completion.executed_ticks.to_string();
-            log_info(
-                "node.runtime.daemon.execute.complete",
-                &[
-                    ("runtime_mode", runtime_mode.as_str()),
-                    ("executed_ticks", executed_ticks_label.as_str()),
-                    (
-                        "completion_reason",
-                        daemon_completion.completion_reason.as_str(),
-                    ),
-                    ("shutdown_drain_status", shutdown_drain_status),
-                    ("shutdown_signal_tick", shutdown_signal_tick),
-                    ("shutdown_drain_ticks", shutdown_drain_ticks),
-                    ("shutdown_timeout_ticks", shutdown_timeout_ticks),
-                    ("shutdown_ignored_signals", shutdown_ignored_signals),
-                    ("execution_id", execution_id.as_str()),
-                ],
+            let daemon_execution = execute_daemon_runtime(
+                runtime_mode,
+                execution_id.as_str(),
+                DaemonRuntimeOptions {
+                    daemon_max_ticks,
+                    daemon_tick_interval_ms,
+                    daemon_shutdown_signal_ticks,
+                    daemon_shutdown_os_signals,
+                    daemon_shutdown_drain_ticks,
+                    daemon_shutdown_timeout_ticks,
+                    daemon_peer_id,
+                    daemon_lifecycle_events,
+                },
             )?;
             RuntimeExecutionBundle {
-                daemon: Some(DaemonExecution {
-                    max_ticks,
-                    tick_interval_ms,
-                    executed_ticks: daemon_completion.executed_ticks,
-                    completion_reason: daemon_completion.completion_reason,
-                    observability_latency_p50_ms: daemon_observability.latency_p50_ms,
-                    observability_latency_p99_ms: daemon_observability.latency_p99_ms,
-                    observability_throughput_tps: daemon_observability.throughput_tps,
-                    observability_error_rate_bps: daemon_observability.error_rate_bps,
-                    observability_availability_bps: daemon_observability.availability_bps,
-                    observability_health: daemon_observability.health,
-                    observability_alert_count: daemon_observability.alert_count,
-                    peer_id,
-                    peer_lifecycle_final_state,
-                    peer_lifecycle_applied_events,
-                }),
+                daemon: Some(daemon_execution),
                 ..RuntimeExecutionBundle::default()
             }
         }
@@ -915,6 +964,48 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                 ],
             )?;
             RuntimeExecutionBundle::default()
+        }
+        RuntimeModeKind::Full => {
+            log_info(
+                "node.runtime.full.bootstrap.start",
+                &[("execution_id", execution_id.as_str())],
+            )?;
+            for (stage_index, component) in ["daemon", "api", "transport", "kolme-commit"]
+                .into_iter()
+                .enumerate()
+            {
+                let stage_index_label = (stage_index + 1).to_string();
+                log_info(
+                    "node.runtime.full.bootstrap.component.ready",
+                    &[
+                        ("component", component),
+                        ("stage_index", stage_index_label.as_str()),
+                        ("execution_id", execution_id.as_str()),
+                    ],
+                )?;
+            }
+            let daemon_execution = execute_daemon_runtime(
+                runtime_mode,
+                execution_id.as_str(),
+                DaemonRuntimeOptions {
+                    daemon_max_ticks,
+                    daemon_tick_interval_ms,
+                    daemon_shutdown_signal_ticks,
+                    daemon_shutdown_os_signals,
+                    daemon_shutdown_drain_ticks,
+                    daemon_shutdown_timeout_ticks,
+                    daemon_peer_id,
+                    daemon_lifecycle_events,
+                },
+            )?;
+            log_info(
+                "node.runtime.full.bootstrap.ready",
+                &[("execution_id", execution_id.as_str())],
+            )?;
+            RuntimeExecutionBundle {
+                daemon: Some(daemon_execution),
+                ..RuntimeExecutionBundle::default()
+            }
         }
         RuntimeModeKind::KolmeLive => {
             let base_url = kolme_live_base_url
