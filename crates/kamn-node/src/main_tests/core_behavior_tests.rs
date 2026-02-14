@@ -186,6 +186,119 @@ fn regression_kolme_live_signer_contract_policy_rejects_legacy_local_path_in_pro
 }
 
 #[test]
+fn unit_kolme_live_signer_key_source_policy_classifier_matrix() {
+    assert_eq!(
+        classify_kolme_live_signer_key_source_policy_violation(
+            false,
+            Some("env-local"),
+            false,
+            false,
+        ),
+        None
+    );
+    assert_eq!(
+        classify_kolme_live_signer_key_source_policy_violation(
+            true,
+            Some("managed-external"),
+            false,
+            false,
+        ),
+        None
+    );
+    assert_eq!(
+        classify_kolme_live_signer_key_source_policy_violation(
+            true,
+            Some("env-local"),
+            false,
+            false,
+        ),
+        Some("production_signer_key_source_env_local_forbidden")
+    );
+    assert_eq!(
+        classify_kolme_live_signer_key_source_policy_violation(
+            true,
+            Some("env-local"),
+            true,
+            false,
+        ),
+        None
+    );
+    assert_eq!(
+        classify_kolme_live_signer_key_source_policy_violation(
+            true,
+            Some("env-local"),
+            false,
+            true,
+        ),
+        None
+    );
+}
+
+#[test]
+fn functional_kolme_live_strict_env_local_key_source_rejects_with_reason_code() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        "http://127.0.0.1:3000".to_owned(),
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-strict-signer-contracts".to_owned(),
+        "--kolme-live-signer-profile".to_owned(),
+        "ops-primary".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
+    ])
+    .expect("strict args should parse");
+    let error = enforce_kolme_live_signer_key_source_policy(
+        parsed.kolme_live_strict_signer_contracts,
+        parsed.kolme_live_signer_key_source.as_deref(),
+        false,
+        false,
+    )
+    .expect_err("strict env-local key source must fail closed for production-targeted runs");
+    assert!(
+        matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("production_signer_key_source_env_local_forbidden")),
+        "strict env-local key source policy must emit deterministic reason code"
+    );
+}
+
+#[test]
+fn integration_kolme_live_strict_managed_external_key_source_policy_passes() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        "http://127.0.0.1:3000".to_owned(),
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-strict-signer-contracts".to_owned(),
+        "--kolme-live-signer-profile".to_owned(),
+        "ops-primary".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "managed-external".to_owned(),
+    ])
+    .expect("strict managed-external args should parse");
+    enforce_kolme_live_signer_key_source_policy(
+        parsed.kolme_live_strict_signer_contracts,
+        parsed.kolme_live_signer_key_source.as_deref(),
+        false,
+        false,
+    )
+    .expect("strict managed-external key source should satisfy production policy");
+}
+
+#[test]
 fn unit_log_config_parses_level_and_format_inputs() {
     let config = resolve_log_config_from_inputs(Some("debug"), Some("json"))
         .expect("log config inputs should parse");

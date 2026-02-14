@@ -52,6 +52,8 @@ fn doc_contains_adapter_types_and_validation_commands() {
     assert!(DOC.contains("finality_evidence_marker_present"));
     assert!(DOC.contains("KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX"));
     assert!(DOC.contains("KAMN_KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_SECONDARY"));
+    assert!(DOC.contains("KAMN_KOLME_LIVE_ALLOW_LOCAL_SIGNER_TESTING=true"));
+    assert!(DOC.contains("production_signer_key_source_env_local_forbidden"));
     assert!(DOC.contains("runtime_commit_managed_external_signer_public_key_marker_missing"));
     assert!(DOC.contains("managed_signer_public_key_marker_missing"));
     assert!(DOC.contains("managed_signer_public_key_marker_invalid"));
