@@ -97,6 +97,7 @@ required_coverage_markers=(
   "runtime_signer_private_key_env_mismatch"
   "runtime_commit_signer_key_source_marker_missing"
   "runtime_commit_managed_external_signer_key_reference_marker_missing"
+  "runtime_commit_managed_external_signer_public_key_marker_missing"
   "runtime_commit_managed_external_private_key_command_marker_detected"
   "runtime_commit_command_profile_mismatch"
   "runtime_commit_signer_profile_split_brain_detected"
@@ -232,6 +233,10 @@ for docs_file in "$DOC_FILE" "$CI_DOC_FILE" "$README_FILE"; do
   fi
   if ! grep -q "runtime_commit_managed_external_signer_key_reference_marker_missing" "$docs_file"; then
     echo "expected docs parity to include managed-external key-reference command marker missing reason in $docs_file" >&2
+    exit 1
+  fi
+  if ! grep -q "runtime_commit_managed_external_signer_public_key_marker_missing" "$docs_file"; then
+    echo "expected docs parity to include managed-external public-key command marker missing reason in $docs_file" >&2
     exit 1
   fi
   if ! grep -q "runtime_commit_managed_external_private_key_command_marker_detected" "$docs_file"; then

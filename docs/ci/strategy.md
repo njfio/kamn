@@ -1482,6 +1482,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_commit_signer_key_source_marker_missing`
       - `runtime_commit_fallback_private_key_command_marker_detected`
       - `runtime_commit_managed_external_signer_key_reference_marker_missing`
+      - `runtime_commit_managed_external_signer_public_key_marker_missing`
       - `runtime_commit_managed_external_private_key_command_marker_detected`
       - `runtime_signing_profile_mismatch`
       - `runtime_signing_profile_contract_mismatch`
