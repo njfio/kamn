@@ -20,12 +20,16 @@ EXPIRED_WAIVER_JSON="$TMP_DIR/expired-waiver.json"
 TAMPERED_REPORT="$TMP_DIR/tampered.json"
 LOCAL_HEAVY_SOFT_REPORT="$TMP_DIR/local-heavy-soft.json"
 LOCAL_HEAVY_MARKER_MISSING_REPORT="$TMP_DIR/local-heavy-marker-missing.json"
+STALE_THRESHOLD_ENV="$TMP_DIR/stale-threshold.env"
+CORRUPT_THRESHOLD_ENV="$TMP_DIR/corrupt-threshold.env"
 
 cat >"$THRESHOLD_ENV" <<'ENV'
 FAST_GATE_DELTA_BASELINE_ELAPSED_SECONDS=230
 FAST_GATE_DELTA_BASELINE_RUNNER_MINUTES=4
 FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT=20
 FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT=20
+FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON=2026-01-01
+FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS=36500
 ENV
 
 cat >"$PASS_REPORT" <<'JSON'
@@ -123,6 +127,24 @@ cat >"$LOCAL_HEAVY_MARKER_MISSING_REPORT" <<'JSON'
 }
 JSON
 
+cat >"$STALE_THRESHOLD_ENV" <<'ENV'
+FAST_GATE_DELTA_BASELINE_ELAPSED_SECONDS=230
+FAST_GATE_DELTA_BASELINE_RUNNER_MINUTES=4
+FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT=20
+FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT=20
+FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON=2000-01-01
+FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS=30
+ENV
+
+cat >"$CORRUPT_THRESHOLD_ENV" <<'ENV'
+FAST_GATE_DELTA_BASELINE_ELAPSED_SECONDS=230
+FAST_GATE_DELTA_BASELINE_RUNNER_MINUTES=4
+FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT=invalid
+FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT=20
+FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON=2026-01-01
+FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS=36500
+ENV
+
 start_epoch="$(date +%s)"
 bash "$SCRIPT" \
   --report-json "$PASS_REPORT" \
@@ -187,6 +209,24 @@ if bash "$SCRIPT" \
   exit 1
 fi
 grep -q 'local_heavy_sensitive must be boolean' "$TMP_DIR/local-heavy-marker-missing.out"
+
+if bash "$SCRIPT" \
+  --report-json "$PASS_REPORT" \
+  --threshold-file "$STALE_THRESHOLD_ENV" \
+  --waiver-file "$WAIVER_JSON" >"$TMP_DIR/stale-threshold.out" 2>&1; then
+  echo "expected threshold checker to fail for stale threshold metadata" >&2
+  exit 1
+fi
+grep -q 'threshold file stale' "$TMP_DIR/stale-threshold.out"
+
+if bash "$SCRIPT" \
+  --report-json "$PASS_REPORT" \
+  --threshold-file "$CORRUPT_THRESHOLD_ENV" \
+  --waiver-file "$WAIVER_JSON" >"$TMP_DIR/corrupt-threshold.out" 2>&1; then
+  echo "expected threshold checker to fail for corrupt threshold config" >&2
+  exit 1
+fi
+grep -q 'FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT must be a numeric value' "$TMP_DIR/corrupt-threshold.out"
 
 if bash "$SCRIPT" \
   --report-json "$FAIL_REPORT" \

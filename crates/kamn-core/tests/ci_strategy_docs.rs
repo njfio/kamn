@@ -339,6 +339,13 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
         "baseline script inventory remains authoritative; any new script path must be documented by refreshing the committed baseline fixture in the same change."
     ));
     assert!(DOC.contains("reason_codes=unexpected_current_scripts"));
+    assert!(DOC.contains(
+        "run_fast_gate_budget_delta_contract_lane.sh --output-json /tmp/fast-gate-budget-delta-contract-report.json"
+    ));
+    assert!(DOC.contains("test_run_fast_gate_budget_delta_contract_lane.sh"));
+    assert!(DOC.contains("reason_codes=fast_gate_delta_threshold_file_stale"));
+    assert!(DOC.contains("reason_codes=fast_gate_delta_threshold_file_corrupt"));
+    assert!(DOC.contains("refresh .ci/fast-gate-budget-delta.env baseline and threshold metadata"));
 }
 
 #[test]

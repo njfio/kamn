@@ -20,6 +20,8 @@ class DeltaConfig:
     baseline_runner_minutes: int
     max_elapsed_delta_pct: float
     max_runner_delta_pct: float
+    threshold_refreshed_on: date
+    threshold_max_age_days: int
 
 
 def fail(message: str) -> None:
@@ -84,14 +86,45 @@ def require_float(values: dict[str, str], key: str) -> float:
     return value
 
 
+def require_date(values: dict[str, str], key: str) -> date:
+    raw = values.get(key)
+    if raw is None:
+        fail(f"{key} is required")
+    try:
+        value = date.fromisoformat(raw)
+    except ValueError:
+        fail(f"{key} must be in YYYY-MM-DD format")
+    return value
+
+
+def validate_threshold_freshness(refreshed_on: date, max_age_days: int) -> None:
+    today = date.today()
+    if refreshed_on > today:
+        fail("FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON cannot be in the future")
+    age_days = (today - refreshed_on).days
+    if age_days > max_age_days:
+        fail(
+            "threshold file stale: "
+            f"FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON={refreshed_on.isoformat()} "
+            f"age_days={age_days} max_age_days={max_age_days}"
+        )
+
+
 def load_delta_config(path: Path) -> DeltaConfig:
     values = load_env(path)
-    return DeltaConfig(
+    config = DeltaConfig(
         baseline_elapsed_seconds=require_int(values, "FAST_GATE_DELTA_BASELINE_ELAPSED_SECONDS"),
         baseline_runner_minutes=require_int(values, "FAST_GATE_DELTA_BASELINE_RUNNER_MINUTES"),
         max_elapsed_delta_pct=require_float(values, "FAST_GATE_DELTA_MAX_ELAPSED_DELTA_PCT"),
         max_runner_delta_pct=require_float(values, "FAST_GATE_DELTA_MAX_RUNNER_MINUTES_DELTA_PCT"),
+        threshold_refreshed_on=require_date(values, "FAST_GATE_DELTA_THRESHOLD_REFRESHED_ON"),
+        threshold_max_age_days=require_int(values, "FAST_GATE_DELTA_THRESHOLD_MAX_AGE_DAYS"),
     )
+    validate_threshold_freshness(
+        refreshed_on=config.threshold_refreshed_on,
+        max_age_days=config.threshold_max_age_days,
+    )
+    return config
 
 
 def require_payload_int(payload: dict, key: str) -> int:
@@ -178,6 +211,8 @@ def command_generate(args: argparse.Namespace) -> int:
         "thresholds": {
             "max_elapsed_delta_pct": config.max_elapsed_delta_pct,
             "max_runner_minutes_delta_pct": config.max_runner_delta_pct,
+            "threshold_refreshed_on": config.threshold_refreshed_on.isoformat(),
+            "threshold_max_age_days": config.threshold_max_age_days,
         },
     }
 
