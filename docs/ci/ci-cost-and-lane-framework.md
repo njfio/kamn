@@ -249,7 +249,8 @@ Cost boundary:
 `scripts/ci/check_script_duplication_budget.py` computes deterministic metrics over non-test shell command surface under `scripts/**/*.sh`:
 
 - files named `test_*.sh` are excluded from metric totals
-- symlink wrappers remain counted for `script_count`/`shell_line_total`
+- symlink wrappers remain counted for `script_count`
+- symlink wrappers contribute a fixed `1` line each to `shell_line_total` (prevents target-body double counting)
 - symlink wrappers are excluded from `duplicate_content`
 
 - `script_count`
