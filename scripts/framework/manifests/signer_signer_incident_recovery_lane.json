@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "signer.signer_incident_recovery.run",
+  "evidence_key": "signer_incident_recovery_lane:v1",
+  "reason_key": "signer_incident_recovery_lane_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "python3",
+      "scripts/signer/signer_incident_recovery_lane.py"
+    ]
+  }
+}
