@@ -187,6 +187,9 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/validate_service_api_websocket_live.sh` and `scripts/runtime/test_validate_service_api_websocket_live.sh` (Task #2918, Subtask #2919).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `websocket_upgrade_status=verified`, `fail_closed_status=verified`, `probe_status=verified`.
   - Fail-closed validation confirmed for invalid runtime budget argument: `max-seconds must be an integer`.
+- Runtime decomposition wave 1 delivered:
+  - Extracted network-fault simulation APIs from `crates/kamn-core/src/runtime_transport_coordination.rs` into `crates/kamn-core/src/runtime_network_fault.rs` with stable `runtime.rs` re-export compatibility (Task #3186, Subtask #3187).
+  - Added extraction regression contract coverage for module declaration and re-export continuity (`runtime::tests::regression_runtime_source_routes_network_fault_domain_via_dedicated_module`).
 - Phase 3.1 initial slice delivered:
   - Added deterministic p2p transport contracts in `kamn-core`: `PeerLifecycleTransport`, `InMemoryPeerLifecycleTransport`, `PeerDiscoveryRecord`, `PeerGossipFrame`, and `PeerLifecycleTransportCoordinator` (Task #2921, Subtask #2922).
   - Added bootstrap/runtime wiring integration so `enable_gossip` toggles explicit `p2p-discovery`/`p2p-gossip-transport` components (or `gossip-transport-disabled` when off).

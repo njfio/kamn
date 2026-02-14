@@ -2,6 +2,8 @@ use runtime_recovery_guard::{is_valid_kamn_did, is_valid_listener_did};
 
 #[path = "runtime_backpressure.rs"]
 mod runtime_backpressure;
+#[path = "runtime_network_fault.rs"]
+mod runtime_network_fault;
 #[path = "runtime_peer_coordination.rs"]
 mod runtime_peer_coordination;
 #[path = "runtime_phase_coordination.rs"]
@@ -18,6 +20,10 @@ mod runtime_transport_coordination;
 pub use runtime_backpressure::{
     DeterministicBackpressureController, RuntimeBackpressureAction, RuntimeBackpressureDecision,
     RuntimeBackpressureError, RuntimeBackpressureInput, RuntimeBackpressurePolicy,
+};
+pub use runtime_network_fault::{
+    simulate_daemon_network_fault, DeterministicNetworkFaultSimulator, NetworkFaultSimulationError,
+    NetworkFaultSimulationInput, NetworkFaultSimulationReport,
 };
 pub use runtime_peer_coordination::{
     build_runtime_wiring, AuthenticatedPeerFrame, AuthenticatedPeerFrameError, BoundedRuntimeQueue,
@@ -45,9 +51,7 @@ pub use runtime_state_divergence::{
     StateDivergenceWatchInput,
 };
 pub use runtime_transport_coordination::{
-    evaluate_daemon_watchdog_anomaly, simulate_daemon_network_fault,
-    DeterministicNetworkFaultSimulator, NetworkFaultSimulationError, NetworkFaultSimulationInput,
-    NetworkFaultSimulationReport, WatchdogAnomalyError, WatchdogAnomalyEvaluator,
+    evaluate_daemon_watchdog_anomaly, WatchdogAnomalyError, WatchdogAnomalyEvaluator,
     WatchdogAnomalyKind, WatchdogAnomalyReport, WatchdogAnomalySeverity, WatchdogAnomalyWatchInput,
 };
 
@@ -104,6 +108,41 @@ mod tests {
     fn approver_wiring_contains_quorum_approver() {
         let wiring = build_runtime_wiring(&sample_config(NodeRole::Approver));
         assert!(wiring.role_components.contains(&"quorum-approver"));
+    }
+
+    #[test]
+    fn regression_runtime_source_routes_network_fault_domain_via_dedicated_module() {
+        // Regression: #3187
+        let runtime_source = include_str!("runtime.rs");
+        let declaration = [
+            "#[path = \"runtime_network_fault.rs\"]",
+            "mod runtime_network_fault;",
+        ]
+        .join("\n");
+        assert!(
+            runtime_source.contains(&declaration),
+            "expected runtime module declaration for network fault extraction"
+        );
+        assert!(
+            runtime_source.contains("pub use runtime_network_fault::{"),
+            "expected runtime re-export surface for extracted network fault APIs"
+        );
+        for symbol in [
+            "simulate_daemon_network_fault",
+            "DeterministicNetworkFaultSimulator",
+            "NetworkFaultSimulationError",
+            "NetworkFaultSimulationInput",
+            "NetworkFaultSimulationReport",
+        ] {
+            assert!(
+                runtime_source.contains(symbol),
+                "expected runtime network fault re-export to include `{symbol}`"
+            );
+        }
+        assert!(
+            runtime_source.contains("};"),
+            "expected re-export block terminator to remain present"
+        );
     }
 
     #[test]
