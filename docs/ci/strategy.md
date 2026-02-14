@@ -2380,6 +2380,7 @@ Regression policy:
 - script-surface budget waiver schema/scope/expiry validation remains fail-closed when waiver files are present (`Regression: #1497`).
 - script-surface duplicate-content policy excludes symlink dispatch wrappers and remains fail-closed for duplicated regular files (`Regression: #2090`).
 - script-surface script-count/LOC metrics exclude `test_*.sh` harness scripts and remain fail-closed for non-test shell surfaces (`Regression: #2093`).
+- script-surface script-count/LOC metrics exclude symlink dispatch wrappers and defer wrapper-growth governance to wrapper-family trend budgets (`Regression: #3411`).
 - Kolme command-surface missing-both coverage drift remains fail-closed (`Regression: #1561`).
 - Kolme command-surface asymmetry split drift remains fail-closed (`Regression: #1565`).
 - Kolme command-surface asymmetry policy-file schema drift remains fail-closed (`Regression: #1569`).
