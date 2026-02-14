@@ -512,3 +512,28 @@ fn doc_contains_runtime_service_api_axum_ingress_contract_lane_ci_mode_markers()
     ));
     assert!(DOC.contains("service_api_axum_policy_marker_missing:concurrency_status"));
 }
+
+#[test]
+fn doc_contains_runtime_service_api_serde_payload_parity_contract_lane_ci_mode_markers() {
+    assert!(DOC.contains("## Runtime Service API Serde Payload Parity Contract Lane"));
+    assert!(DOC.contains(
+        "validate_service_api_serde_payload_parity_live.sh --output-json /tmp/service-api-serde-payload-parity-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "check_service_api_serde_payload_parity_live_policy.sh --report-file /tmp/service-api-serde-payload-parity-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-serde-payload-parity-policy.json"
+    ));
+    assert!(DOC.contains(
+        "validate_service_api_serde_payload_parity_live_contract_lane.sh --output-json /tmp/service-api-serde-payload-parity-contract-lane-report.json --policy-output-json /tmp/service-api-serde-payload-parity-policy.json"
+    ));
+    assert!(DOC.contains("test_validate_service_api_serde_payload_parity_live_contract_lane.sh"));
+    assert!(DOC.contains("test_check_service_api_serde_payload_parity_live_policy.sh"));
+    assert!(DOC.contains("ci-fast-gate mode: fast"));
+    assert!(DOC.contains("local-dev mode: local"));
+    assert!(DOC.contains("manual-hardened mode: manual"));
+    assert!(DOC.contains(
+        "service api serde payload parity contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode."
+    ));
+    assert!(
+        DOC.contains("service_api_serde_payload_policy_marker_missing:route_payload_parity_status")
+    );
+}
