@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "signer.signer_provider.deep",
+  "evidence_key": "signer_provider_deep_lane:v1",
+  "reason_key": "signer_provider_deep_lane_reason_codes:GO:v1",
+  "phases": {
+    "deep": [
+      "bash",
+      "scripts/signer/run_signer_provider_deep_lane_impl.sh"
+    ]
+  }
+}
