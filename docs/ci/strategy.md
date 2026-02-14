@@ -415,12 +415,14 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - local-dev mode: local
 - manual-hardened mode: manual
 - Cost controls:
-  - bounded to four targeted `kamn-node` reason-code compatibility tests.
+  - bounded to seven targeted local-only checks (five `kamn-node` contract tests + one Rust SDK regression + one Python SDK regression).
   - source-marker checks run locally and avoid external network dependencies.
+  - includes SDK parity marker checks for structured envelope decoding in `crates/kamn-sdk/src/service.rs` and `kamn_sdk.py`.
   - runtime budget is bounded via `KAMN_SERVICE_API_REASON_CODE_CONTRACT_MAX_SECONDS`.
   - service api reason-code compatibility contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_reason_code_policy_marker_missing:route_error_mapping_status`
+  - `service_api_reason_code_policy_marker_missing:error_envelope_field_status`
 
 ## Runtime Service API Validation Negative-Matrix Contract Lane
 - Entry commands:

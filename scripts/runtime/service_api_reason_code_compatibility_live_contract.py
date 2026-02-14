@@ -31,6 +31,9 @@ REQUIRED_REPORT_FIELDS = [
     "status",
     "final_decision",
     "reason_registry_status",
+    "error_envelope_field_status",
+    "rust_sdk_reason_code_status",
+    "python_sdk_reason_code_status",
     "route_error_mapping_status",
     "replay_error_mapping_status",
     "websocket_error_mapping_status",
@@ -42,6 +45,9 @@ REQUIRED_REPORT_FIELDS = [
 
 REQUIRED_VERIFIED_FIELDS = [
     "reason_registry_status",
+    "error_envelope_field_status",
+    "rust_sdk_reason_code_status",
+    "python_sdk_reason_code_status",
     "route_error_mapping_status",
     "replay_error_mapping_status",
     "websocket_error_mapping_status",

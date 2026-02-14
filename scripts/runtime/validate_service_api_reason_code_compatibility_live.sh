@@ -4,6 +4,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SOURCE_FILE="$ROOT_DIR/crates/kamn-node/src/service_api_endpoint.rs"
 TEST_FILE="$ROOT_DIR/crates/kamn-node/src/main_tests/service_api_endpoint_tests.rs"
+RUST_SDK_SOURCE="$ROOT_DIR/crates/kamn-sdk/src/service.rs"
+RUST_SDK_TEST_FILE="$ROOT_DIR/crates/kamn-sdk/tests/service_api_client.rs"
+PYTHON_SDK_SOURCE="$ROOT_DIR/kamn_sdk.py"
+PYTHON_SDK_TEST_FILE="$ROOT_DIR/tests/python/test_sdk.py"
 
 output_json=""
 max_seconds=240
@@ -42,6 +46,22 @@ if [ ! -f "$TEST_FILE" ]; then
   echo "expected service api endpoint test file: $TEST_FILE" >&2
   exit 1
 fi
+if [ ! -f "$RUST_SDK_SOURCE" ]; then
+  echo "expected rust sdk source file: $RUST_SDK_SOURCE" >&2
+  exit 1
+fi
+if [ ! -f "$RUST_SDK_TEST_FILE" ]; then
+  echo "expected rust sdk test file: $RUST_SDK_TEST_FILE" >&2
+  exit 1
+fi
+if [ ! -f "$PYTHON_SDK_SOURCE" ]; then
+  echo "expected python sdk source file: $PYTHON_SDK_SOURCE" >&2
+  exit 1
+fi
+if [ ! -f "$PYTHON_SDK_TEST_FILE" ]; then
+  echo "expected python sdk test file: $PYTHON_SDK_TEST_FILE" >&2
+  exit 1
+fi
 
 start_epoch="$(date +%s)"
 TMP_DIR="$(mktemp -d)"
@@ -70,6 +90,26 @@ for envelope_marker in \
   fi
 done
 
+for rust_sdk_marker in \
+  "SdkError::ServiceApiError" \
+  "parse_service_api_error_envelope" \
+  "parse_service_api_legacy_error_envelope"; do
+  if ! grep -Fq "$rust_sdk_marker" "$RUST_SDK_SOURCE"; then
+    echo "missing required rust sdk reason-code parity marker: $rust_sdk_marker" >&2
+    exit 1
+  fi
+done
+
+for python_sdk_marker in \
+  "def _decode_backend_error_envelope" \
+  "def _normalize_legacy_backend_reason_code" \
+  "reason_code"; do
+  if ! grep -Fq "$python_sdk_marker" "$PYTHON_SDK_SOURCE"; then
+    echo "missing required python sdk reason-code parity marker: $python_sdk_marker" >&2
+    exit 1
+  fi
+done
+
 for mapping_marker in \
   "RequestAuthFailure::Unauthorized(reasoned_error)" \
   "RequestAuthFailure::Replay(reasoned_error)" \
@@ -83,6 +123,7 @@ for mapping_marker in \
 done
 
 for test_marker in \
+  "unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts" \
   "regression_service_api_payload_parse_reason_codes_fail_closed" \
   "integration_service_api_endpoint_rejects_missing_request_auth_headers" \
   "regression_service_api_endpoint_rejects_replayed_request_nonce_for_sender" \
@@ -93,7 +134,25 @@ for test_marker in \
   fi
 done
 
+for rust_sdk_test_marker in \
+  "regression_service_api_client_rejects_replayed_nonce"; do
+  if ! grep -Fq "$rust_sdk_test_marker" "$RUST_SDK_TEST_FILE"; then
+    echo "missing required rust sdk parity test marker: $rust_sdk_test_marker" >&2
+    exit 1
+  fi
+done
+
+for python_sdk_test_marker in \
+  "test_regression_backend_adapter_errors_and_invalid_payloads_fail_closed"; do
+  if ! grep -Fq "$python_sdk_test_marker" "$PYTHON_SDK_TEST_FILE"; then
+    echo "missing required python sdk parity test marker: $python_sdk_test_marker" >&2
+    exit 1
+  fi
+done
+
 pushd "$ROOT_DIR" >/dev/null
+cargo test -p kamn-node main_tests::unit_service_api_endpoint_error_envelopes_use_reason_code_and_message_contracts -- --exact \
+  >"$TMP_DIR/service-api-envelope-unit.log" 2>&1
 cargo test -p kamn-node main_tests::regression_service_api_payload_parse_reason_codes_fail_closed -- --exact \
   >"$TMP_DIR/service-api-reason-code-regression.log" 2>&1
 cargo test -p kamn-node main_tests::integration_service_api_endpoint_rejects_missing_request_auth_headers -- --exact \
@@ -102,6 +161,10 @@ cargo test -p kamn-node main_tests::regression_service_api_endpoint_rejects_repl
   >"$TMP_DIR/service-api-reason-code-replay.log" 2>&1
 cargo test -p kamn-node main_tests::regression_service_api_endpoint_websocket_rejects_invalid_version_header -- --exact \
   >"$TMP_DIR/service-api-reason-code-websocket.log" 2>&1
+cargo test -p kamn-sdk --test service_api_client regression_service_api_client_rejects_replayed_nonce -- --exact \
+  >"$TMP_DIR/service-api-reason-code-rust-sdk.log" 2>&1
+python3 -m unittest tests.python.test_sdk.PythonLiveTransportSDKTests.test_regression_backend_adapter_errors_and_invalid_payloads_fail_closed \
+  >"$TMP_DIR/service-api-reason-code-python-sdk.log" 2>&1
 popd >/dev/null
 
 elapsed_seconds="$(( $(date +%s) - start_epoch ))"
@@ -125,6 +188,9 @@ payload = {
     "status": "pass",
     "final_decision": "GO",
     "reason_registry_status": "verified",
+    "error_envelope_field_status": "verified",
+    "rust_sdk_reason_code_status": "verified",
+    "python_sdk_reason_code_status": "verified",
     "route_error_mapping_status": "verified",
     "replay_error_mapping_status": "verified",
     "websocket_error_mapping_status": "verified",
@@ -144,6 +210,9 @@ fi
 echo "status=pass"
 echo "final_decision=GO"
 echo "reason_registry_status=verified"
+echo "error_envelope_field_status=verified"
+echo "rust_sdk_reason_code_status=verified"
+echo "python_sdk_reason_code_status=verified"
 echo "route_error_mapping_status=verified"
 echo "replay_error_mapping_status=verified"
 echo "websocket_error_mapping_status=verified"

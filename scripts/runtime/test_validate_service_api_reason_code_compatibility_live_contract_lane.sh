@@ -45,6 +45,18 @@ if ! printf '%s\n' "$lane_output" | grep -q '^service_api_reason_code_policy_sta
   echo "expected service api reason-code compatibility contract lane policy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^error_envelope_field_status=verified$'; then
+  echo "expected service api reason-code compatibility contract lane envelope marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^rust_sdk_reason_code_status=verified$'; then
+  echo "expected service api reason-code compatibility contract lane rust sdk marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^python_sdk_reason_code_status=verified$'; then
+  echo "expected service api reason-code compatibility contract lane python sdk marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=service_api_reason_code_policy_marker_missing:route_error_mapping_status$'; then
   echo "expected service api reason-code compatibility contract lane fail-closed reason marker" >&2
   exit 1
@@ -66,6 +78,12 @@ if lane_payload.get("service_api_reason_code_contract_status") != "verified":
     raise SystemExit("expected service_api_reason_code_contract_status=verified")
 if lane_payload.get("service_api_reason_code_policy_status") != "verified":
     raise SystemExit("expected service_api_reason_code_policy_status=verified")
+if lane_payload.get("error_envelope_field_status") != "verified":
+    raise SystemExit("expected error_envelope_field_status=verified")
+if lane_payload.get("rust_sdk_reason_code_status") != "verified":
+    raise SystemExit("expected rust_sdk_reason_code_status=verified")
+if lane_payload.get("python_sdk_reason_code_status") != "verified":
+    raise SystemExit("expected python_sdk_reason_code_status=verified")
 if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":
