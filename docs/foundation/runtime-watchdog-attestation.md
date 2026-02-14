@@ -27,6 +27,7 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
   - Durable audit artifact persisted after triage.
   - Contains attestation + operator action metadata + closure summary.
 - Runtime divergence evaluator references:
+  - Module ownership: `crates/kamn-core/src/runtime_state_divergence.rs`
   - `StateDivergenceWatchInput`
   - `StateDivergenceEvaluator`
   - `StateDivergenceReport`
