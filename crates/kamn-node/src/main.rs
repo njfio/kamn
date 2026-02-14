@@ -1002,6 +1002,26 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                 "node.runtime.full.bootstrap.ready",
                 &[("execution_id", execution_id.as_str())],
             )?;
+            let stop_reason = "daemon-execution-complete";
+            let completion_reason = daemon_execution.completion_reason.as_str();
+            let shutdown_drain_status = daemon_shutdown_drain_status(completion_reason);
+            log_info(
+                "node.runtime.full.supervisor.stop.requested",
+                &[
+                    ("stop_reason", stop_reason),
+                    ("daemon_completion_reason", completion_reason),
+                    ("execution_id", execution_id.as_str()),
+                ],
+            )?;
+            log_info(
+                "node.runtime.full.supervisor.stop.complete",
+                &[
+                    ("stop_reason", stop_reason),
+                    ("daemon_completion_reason", completion_reason),
+                    ("shutdown_drain_status", shutdown_drain_status),
+                    ("execution_id", execution_id.as_str()),
+                ],
+            )?;
             RuntimeExecutionBundle {
                 daemon: Some(daemon_execution),
                 ..RuntimeExecutionBundle::default()
