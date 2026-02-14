@@ -192,6 +192,25 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_metrics_scrape_policy_marker_missing:local_scrape_probe_status`
 
+## Runtime Local Observability Scrape Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_local_observability_scrape_live.sh --mode dry-run --output-json /tmp/local-observability-scrape-live-summary.json`
+  - `KAMN_LOCAL_OBSERVABILITY_SCRAPE_OPT_IN=1 bash scripts/runtime/validate_local_observability_scrape_live.sh --mode run --output-json /tmp/local-observability-scrape-live-summary.json`
+  - `bash scripts/runtime/check_local_observability_scrape_live_policy.sh --report-file /tmp/local-observability-scrape-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-observability-scrape-live-policy.json`
+  - `bash scripts/runtime/validate_local_observability_scrape_live_contract_lane.sh --output-json /tmp/local-observability-scrape-live-contract-lane-report.json --policy-output-json /tmp/local-observability-scrape-live-policy.json`
+  - `bash scripts/runtime/test_validate_local_observability_scrape_live_contract_lane.sh`
+  - `bash scripts/runtime/test_check_local_observability_scrape_live_policy.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - dry-run mode executes no nested local observability scrape commands and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_LOCAL_OBSERVABILITY_SCRAPE_OPT_IN=1`.
+  - bounded to three targeted `kamn-node` observability endpoint scrape/content-type/stream tests when run mode is enabled.
+  - local observability scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `local_observability_scrape_policy_marker_missing:scrape_probe_status`
+
 ## Runtime Service API Axum Ingress Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_service_api_axum_ingress_live.sh --output-json /tmp/service-api-axum-ingress-live-summary.json`
@@ -2345,6 +2364,7 @@ Fast-mode CI tooling regression coverage includes:
 - Service API shutdown abrupt-close regression CI exclusion policy checker (`test_service_api_shutdown_abrupt_close_regression_ci_exclusion_policy.sh`)
 - Service API Prometheus metrics CI exclusion policy checker (`test_service_api_prometheus_metrics_ci_exclusion_policy.sh`)
 - Local metrics scrape CI exclusion policy checker (`test_local_metrics_scrape_ci_exclusion_policy.sh`)
+- Local observability scrape CI exclusion policy checker (`test_local_observability_scrape_ci_exclusion_policy.sh`)
 - Flaky report commenter (`test_post_flaky_report_comment.sh`)
 - Flaky issue syncer (`test_sync_flaky_registry_issues.sh`)
 - Workflow guard contracts (`test_workflow_retry_policy.sh`, `test_workflow_cache_policy.sh`, `test_workflow_scope_policy.sh`, `test_workflow_performance_policy.sh`)
