@@ -60,6 +60,9 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
 - Post-roadmap hardening wave 2 runtime decomposition tranche 3 delivered:
   - Extracted watchdog/transport-coordination simulation orchestration from `crates/kamn-core/src/runtime.rs` into dedicated module `crates/kamn-core/src/runtime_transport_coordination.rs` with unchanged external behavior (Task #3050, Subtask #3059).
   - Module-ownership contract documented in `docs/foundation/runtime-network.md` and enforced by `crates/kamn-core/tests/runtime_network_docs.rs` and `crates/kamn-core/tests/runtime_module_extraction_contract.rs`.
+- Post-roadmap hardening wave 4 runtime decomposition tranche 4 delivered:
+  - Extracted runtime snapshot persistence/restore/store orchestration from `crates/kamn-core/src/runtime.rs` into dedicated module `crates/kamn-core/src/runtime_snapshot_store.rs` with unchanged external behavior (Task #3090, Subtask #3091).
+  - Module-ownership and docs-contract markers enforced by `crates/kamn-core/tests/runtime_module_extraction_contract.rs` and `crates/kamn-core/tests/runtime_network_docs.rs` (Task #3092, Subtask #3093).
 - Post-roadmap hardening wave 3 managed-signer startup live validation delivered:
   - Contract lane: `scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh` and `scripts/kolme/test_run_managed_signer_startup_live_validation_contract_lane.sh` (Subtask #3067).
   - Contract report schema: `kamn.kolme.managed-signer-startup-live-validation-contract-report.v1`.
