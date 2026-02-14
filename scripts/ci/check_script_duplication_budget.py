@@ -110,10 +110,14 @@ def compute_metrics(scripts_root: Path) -> ScriptMetrics:
         path for path in scripts_root.rglob("*.sh") if include_in_budget(path)
     )
     script_count = len(scripts)
-    shell_line_total = sum(
-        sum(1 for _ in path.open("r", encoding="utf-8", errors="ignore"))
-        for path in scripts
-    )
+    def shell_lines_for_budget(path: Path) -> int:
+        # Symlink wrappers represent command-surface entries, not full copies
+        # of the target implementation body.
+        if path.is_symlink():
+            return 1
+        return sum(1 for _ in path.open("r", encoding="utf-8", errors="ignore"))
+
+    shell_line_total = sum(shell_lines_for_budget(path) for path in scripts)
 
     basename_counts = Counter(path.name for path in scripts)
     duplicate_basename = sum(

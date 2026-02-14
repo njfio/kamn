@@ -62,6 +62,10 @@ if ! printf '%s\n' "$pass_output" | grep -q '^delta_script_count=2$'; then
   echo "expected deterministic script_count delta output on pass path" >&2
   exit 1
 fi
+if ! printf '%s\n' "$pass_output" | grep -q '^shell_line_total=5$'; then
+  echo "expected symlink wrappers to contribute one line each in shell_line_total metric" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$pass_output" | grep -q '^duplicate_content=0$'; then
   echo "expected symlink wrappers to be excluded from duplicate_content metric" >&2
   exit 1
