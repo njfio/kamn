@@ -12,6 +12,7 @@ Runtime mode: `api`
 - `--api-bind <host:port>`
 - `--api-max-requests <n>` (default: `1`)
 - `--api-idle-timeout-ms <ms>` (default: `5000`)
+- request payload body read limit: `65536` bytes (64 KiB)
 
 Fail-closed behavior:
 

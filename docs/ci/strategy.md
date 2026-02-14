@@ -381,10 +381,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Cost controls:
   - uses only localhost process-level probes against `runtime-mode api`.
   - no external Kolme node, remote service, or internet dependency.
+  - ingress limit config matrix defaults remain parity-checked against source constants and API docs (`api_max_requests_default=1`, `api_idle_timeout_default_ms=5000`, `body_size_limit_bytes=65536`).
   - runtime budget is bounded via `KAMN_SERVICE_API_AXUM_INGRESS_CONTRACT_MAX_SECONDS`.
   - service api axum ingress run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_axum_policy_marker_missing:concurrency_status`
+  - `service_api_axum_policy_body_size_limit_mismatch`
 
 ## Runtime Service API Serde Payload Parity Contract Lane
 - Entry commands:

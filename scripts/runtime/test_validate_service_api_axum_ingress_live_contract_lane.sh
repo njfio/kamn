@@ -45,6 +45,26 @@ if ! printf '%s\n' "$lane_output" | grep -q '^service_api_axum_ingress_policy_st
   echo "expected service api axum ingress contract lane policy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^ingress_limit_config_status=verified$'; then
+  echo "expected service api axum ingress contract lane config matrix marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^docs_ingress_limit_matrix_status=verified$'; then
+  echo "expected service api axum ingress contract lane docs parity marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -Eq '^api_max_requests_default=[1-9][0-9]*$'; then
+  echo "expected service api axum ingress contract lane max-requests default marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -Eq '^api_idle_timeout_default_ms=[1-9][0-9]*$'; then
+  echo "expected service api axum ingress contract lane idle-timeout default marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -Eq '^body_size_limit_bytes=[1-9][0-9]*$'; then
+  echo "expected service api axum ingress contract lane body-size limit marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=service_api_axum_policy_marker_missing:concurrency_status$'; then
   echo "expected service api axum ingress contract lane fail-closed reason marker" >&2
   exit 1
@@ -66,6 +86,16 @@ if lane_payload.get("service_api_axum_ingress_contract_status") != "verified":
     raise SystemExit("expected service_api_axum_ingress_contract_status=verified")
 if lane_payload.get("service_api_axum_ingress_policy_status") != "verified":
     raise SystemExit("expected service_api_axum_ingress_policy_status=verified")
+if lane_payload.get("ingress_limit_config_status") != "verified":
+    raise SystemExit("expected ingress_limit_config_status=verified")
+if lane_payload.get("docs_ingress_limit_matrix_status") != "verified":
+    raise SystemExit("expected docs_ingress_limit_matrix_status=verified")
+if lane_payload.get("api_max_requests_default") != 1:
+    raise SystemExit("expected api_max_requests_default=1")
+if lane_payload.get("api_idle_timeout_default_ms") != 5000:
+    raise SystemExit("expected api_idle_timeout_default_ms=5000")
+if lane_payload.get("body_size_limit_bytes") != 65536:
+    raise SystemExit("expected body_size_limit_bytes=65536")
 if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":
