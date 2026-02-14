@@ -653,3 +653,30 @@ fn doc_contains_runtime_service_api_shutdown_abrupt_close_regression_contract_la
         "service_api_shutdown_abrupt_close_regression_policy_marker_missing:abrupt_close_guard_status"
     ));
 }
+
+#[test]
+fn doc_contains_runtime_service_api_prometheus_metrics_contract_lane_ci_mode_markers() {
+    assert!(DOC.contains("## Runtime Service API Prometheus Metrics Contract Lane"));
+    assert!(DOC.contains(
+        "validate_service_api_prometheus_metrics_live.sh --mode dry-run --output-json /tmp/service-api-prometheus-metrics-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "KAMN_LOCAL_PROMETHEUS_METRICS_OPT_IN=1 bash scripts/runtime/validate_service_api_prometheus_metrics_live.sh --mode run --output-json /tmp/service-api-prometheus-metrics-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "check_service_api_prometheus_metrics_live_policy.sh --report-file /tmp/service-api-prometheus-metrics-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-prometheus-metrics-policy.json"
+    ));
+    assert!(DOC.contains(
+        "validate_service_api_prometheus_metrics_live_contract_lane.sh --output-json /tmp/service-api-prometheus-metrics-contract-lane-report.json --policy-output-json /tmp/service-api-prometheus-metrics-policy.json"
+    ));
+    assert!(DOC.contains("test_validate_service_api_prometheus_metrics_live_contract_lane.sh"));
+    assert!(DOC.contains("test_check_service_api_prometheus_metrics_live_policy.sh"));
+    assert!(DOC.contains("ci-fast-gate mode: fast"));
+    assert!(DOC.contains("local-dev mode: local"));
+    assert!(DOC.contains("manual-hardened mode: manual"));
+    assert!(DOC.contains(
+        "service api prometheus metrics contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode."
+    ));
+    assert!(DOC
+        .contains("service_api_prometheus_metrics_policy_marker_missing:metrics_contract_status"));
+}
