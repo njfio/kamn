@@ -169,6 +169,26 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `compose_topology_policy_docs_marker_mismatch`
 
+## Deploy Local Compose Multinode Live Validation Contract Lane
+- Entry commands:
+  - `bash scripts/deploy/validate_local_compose_multinode_live.sh --mode dry-run --ci-fast-gate PASS --output-json /tmp/local-compose-multinode-live-summary.json`
+  - `KAMN_LOCAL_COMPOSE_MULTINODE_OPT_IN=1 bash scripts/deploy/validate_local_compose_multinode_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/local-compose-multinode-live-summary.json`
+  - `bash scripts/deploy/check_local_compose_multinode_live_policy.sh --report-file /tmp/local-compose-multinode-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-compose-multinode-live-policy.json`
+  - `bash scripts/deploy/validate_local_compose_multinode_live_contract_lane.sh --output-json /tmp/local-compose-multinode-live-contract-lane-report.json --policy-output-json /tmp/local-compose-multinode-live-policy.json`
+  - `bash scripts/deploy/test_validate_local_compose_multinode_live.sh`
+  - `bash scripts/deploy/test_check_local_compose_multinode_live_policy.sh`
+  - `bash scripts/deploy/test_validate_local_compose_multinode_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - dry-run mode executes no nested local-heavy command paths and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_LOCAL_COMPOSE_MULTINODE_OPT_IN=1`.
+  - run mode command set is bounded and reuses deterministic deploy contract lanes.
+  - local compose multinode run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `local_compose_multinode_policy_health_status_mismatch`
+
 ## Runtime Observability Endpoint Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_runtime_observability_endpoint_live_contract_lane.sh --output-json /tmp/runtime-observability-endpoint-contract-lane-report.json --policy-output-json /tmp/runtime-observability-endpoint-policy-report.json`
