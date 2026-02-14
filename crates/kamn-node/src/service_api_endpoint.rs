@@ -3,15 +3,16 @@ use crate::{
     NodeBootstrapReport,
 };
 use axum::{
-    body::{to_bytes, Bytes},
+    body::{to_bytes, Body, Bytes},
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        FromRequest, Request, State,
+        Request, State,
     },
     http::{HeaderMap, HeaderValue, StatusCode},
+    middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::any,
-    Router,
+    routing::{any, get},
+    Extension, Router,
 };
 use kamn_core::{signature_matches_supported_profile_for_fields, AgentDid};
 use std::collections::{BTreeMap, BTreeSet};
@@ -123,6 +124,26 @@ struct ServiceApiRuntimeState {
     snapshot: ServiceApiSnapshot,
     replay_guard: Arc<Mutex<BTreeSet<(String, u64)>>>,
     request_budget: Arc<ServiceApiRequestBudget>,
+}
+
+#[derive(Debug, Clone)]
+struct ServiceApiRequestContext {
+    parsed_request: ParsedRequest,
+    correlation_id: String,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ServiceApiRequestOutcome(&'static str);
+
+#[derive(Debug, Clone)]
+struct ServiceApiMiddlewareError<'a> {
+    correlation_id: &'a str,
+    method: &'a str,
+    path: &'a str,
+    status_code: StatusCode,
+    error_label: &'a str,
+    reason: &'a str,
+    outcome: &'a str,
 }
 
 pub(crate) fn build_service_api_snapshot(report: &NodeBootstrapReport) -> ServiceApiSnapshot {
@@ -359,167 +380,48 @@ async fn serve_service_api_endpoint_async(
 
 fn build_service_api_router(state: Arc<ServiceApiRuntimeState>) -> Router {
     Router::new()
-        .route("/", any(handle_service_api_request))
-        .route("/{*path}", any(handle_service_api_request))
+        .route(ROUTE_EVENTS_WS, get(handle_service_api_websocket_route))
+        .route("/", any(handle_service_api_http_route))
+        .route("/{*path}", any(handle_service_api_http_route))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            service_api_auth_middleware,
+        ))
         .with_state(state)
 }
 
-async fn handle_service_api_request(
+async fn service_api_auth_middleware(
     State(state): State<Arc<ServiceApiRuntimeState>>,
     request: Request,
+    next: Next,
 ) -> Response {
     let method_label = request.method().to_string();
     let path = request.uri().path().to_owned();
-    let headers = request.headers().clone();
-    if method_label == "GET" && path == ROUTE_EVENTS_WS {
-        let parsed_request = match build_parsed_request(
-            method_label.as_str(),
-            path.as_str(),
-            &headers,
-            Bytes::new(),
-        ) {
-            Ok(request) => request,
+    let is_websocket_route = method_label == "GET" && path == ROUTE_EVENTS_WS;
+
+    let (mut request, parsed_request) =
+        match parse_service_api_request(request, is_websocket_route).await {
+            Ok(parsed_request) => parsed_request,
             Err(reason) => {
                 let correlation_id = format!(
                     "service-api:parse-error:{:016x}",
                     deterministic_body_tag(reason.as_bytes())
                 );
-                let status_code = StatusCode::BAD_REQUEST;
-                let outcome = "bad-request";
-                let response = json_error_response(status_code, "bad-request", reason.as_str());
-                let _ = emit_service_api_request_outcome(
-                    correlation_id.as_str(),
-                    "unknown",
-                    "unknown",
-                    status_code.as_u16(),
-                    outcome,
+                return service_api_middleware_error_response(
+                    &state,
+                    ServiceApiMiddlewareError {
+                        correlation_id: correlation_id.as_str(),
+                        method: "unknown",
+                        path: "unknown",
+                        status_code: StatusCode::BAD_REQUEST,
+                        error_label: "bad-request",
+                        reason: reason.as_str(),
+                        outcome: "bad-request",
+                    },
                 );
-                state.request_budget.record_request();
-                return response;
             }
         };
 
-        let correlation_id = service_api_request_correlation_id(&parsed_request);
-        if let Err(reason) = log_service_api_event_info(
-            "service.api.request.received",
-            &[
-                ("correlation_id", correlation_id.as_str()),
-                ("method", parsed_request.method.as_str()),
-                ("path", parsed_request.path.as_str()),
-            ],
-        ) {
-            state.request_budget.record_request();
-            return json_error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "internal",
-                reason.as_str(),
-            );
-        }
-        {
-            let mut replay_guard = state.replay_guard.lock().await;
-            if let Err(error) =
-                authorize_service_api_request(&state.snapshot, &parsed_request, &mut replay_guard)
-            {
-                let (status_code, error_label, reason, outcome) = match error {
-                    RequestAuthFailure::Unauthorized(reason) => (
-                        StatusCode::UNAUTHORIZED,
-                        "unauthorized",
-                        reason,
-                        "unauthorized",
-                    ),
-                    RequestAuthFailure::Replay(reason) => {
-                        (StatusCode::CONFLICT, "replay", reason, "replay")
-                    }
-                };
-                let response = json_error_response(status_code, error_label, reason.as_str());
-                let _ = emit_service_api_request_outcome(
-                    correlation_id.as_str(),
-                    parsed_request.method.as_str(),
-                    parsed_request.path.as_str(),
-                    status_code.as_u16(),
-                    outcome,
-                );
-                state.request_budget.record_request();
-                return response;
-            }
-        }
-        let (response, outcome_label) =
-            match validate_websocket_upgrade_headers(&parsed_request.headers) {
-                Ok(()) => match WebSocketUpgrade::from_request(request, &()).await {
-                    Ok(upgrade) => (
-                        websocket_upgrade_response(upgrade, state.snapshot.clone()),
-                        "websocket-upgrade",
-                    ),
-                    Err(_) => (
-                        json_error_response(
-                            StatusCode::BAD_REQUEST,
-                            "bad-request",
-                            "websocket upgrade required",
-                        ),
-                        "websocket-bad-request",
-                    ),
-                },
-                Err(reason) => (
-                    json_error_response(StatusCode::BAD_REQUEST, "bad-request", reason.as_str()),
-                    "websocket-bad-request",
-                ),
-            };
-        let _ = emit_service_api_request_outcome(
-            correlation_id.as_str(),
-            parsed_request.method.as_str(),
-            parsed_request.path.as_str(),
-            response.status().as_u16(),
-            outcome_label,
-        );
-        state.request_budget.record_request();
-        return response;
-    }
-
-    let body_limit = 64 * 1024;
-    let body = match to_bytes(request.into_body(), body_limit).await {
-        Ok(body) => body,
-        Err(error) => {
-            let reason = format!("request read failed: {error}");
-            let correlation_id = format!(
-                "service-api:parse-error:{:016x}",
-                deterministic_body_tag(reason.as_bytes())
-            );
-            let status_code = StatusCode::BAD_REQUEST;
-            let outcome = "bad-request";
-            let response = json_error_response(status_code, "bad-request", reason.as_str());
-            let _ = emit_service_api_request_outcome(
-                correlation_id.as_str(),
-                "unknown",
-                "unknown",
-                status_code.as_u16(),
-                outcome,
-            );
-            state.request_budget.record_request();
-            return response;
-        }
-    };
-    let parsed_request =
-        match build_parsed_request(method_label.as_str(), path.as_str(), &headers, body) {
-            Ok(request) => request,
-            Err(reason) => {
-                let correlation_id = format!(
-                    "service-api:parse-error:{:016x}",
-                    deterministic_body_tag(reason.as_bytes())
-                );
-                let status_code = StatusCode::BAD_REQUEST;
-                let outcome = "bad-request";
-                let response = json_error_response(status_code, "bad-request", reason.as_str());
-                let _ = emit_service_api_request_outcome(
-                    correlation_id.as_str(),
-                    "unknown",
-                    "unknown",
-                    status_code.as_u16(),
-                    outcome,
-                );
-                state.request_budget.record_request();
-                return response;
-            }
-        };
     let correlation_id = service_api_request_correlation_id(&parsed_request);
     if let Err(reason) = log_service_api_event_info(
         "service.api.request.received",
@@ -529,11 +431,17 @@ async fn handle_service_api_request(
             ("path", parsed_request.path.as_str()),
         ],
     ) {
-        state.request_budget.record_request();
-        return json_error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "internal",
-            reason.as_str(),
+        return service_api_middleware_error_response(
+            &state,
+            ServiceApiMiddlewareError {
+                correlation_id: correlation_id.as_str(),
+                method: parsed_request.method.as_str(),
+                path: parsed_request.path.as_str(),
+                status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                error_label: "internal",
+                reason: reason.as_str(),
+                outcome: "log-error",
+            },
         );
     }
 
@@ -553,37 +461,135 @@ async fn handle_service_api_request(
                     (StatusCode::CONFLICT, "replay", reason, "replay")
                 }
             };
-            let response = json_error_response(status_code, error_label, reason.as_str());
-            let _ = emit_service_api_request_outcome(
-                correlation_id.as_str(),
-                parsed_request.method.as_str(),
-                parsed_request.path.as_str(),
-                status_code.as_u16(),
-                outcome,
+            return service_api_middleware_error_response(
+                &state,
+                ServiceApiMiddlewareError {
+                    correlation_id: correlation_id.as_str(),
+                    method: parsed_request.method.as_str(),
+                    path: parsed_request.path.as_str(),
+                    status_code,
+                    error_label,
+                    reason: reason.as_str(),
+                    outcome,
+                },
             );
-            state.request_budget.record_request();
-            return response;
         }
     }
 
-    let rendered = render_service_api_endpoint_response(
-        &state.snapshot,
-        parsed_request.method.as_str(),
-        parsed_request.path.as_str(),
-        parsed_request.body.as_str(),
-    );
-    let response = contract_response(rendered);
+    if is_websocket_route {
+        if let Err(reason) = validate_websocket_upgrade_headers(&parsed_request.headers) {
+            return service_api_middleware_error_response(
+                &state,
+                ServiceApiMiddlewareError {
+                    correlation_id: correlation_id.as_str(),
+                    method: parsed_request.method.as_str(),
+                    path: parsed_request.path.as_str(),
+                    status_code: StatusCode::BAD_REQUEST,
+                    error_label: "bad-request",
+                    reason: reason.as_str(),
+                    outcome: "websocket-bad-request",
+                },
+            );
+        }
+    }
+
+    let method_for_outcome = parsed_request.method.clone();
+    let path_for_outcome = parsed_request.path.clone();
+    request.extensions_mut().insert(ServiceApiRequestContext {
+        parsed_request,
+        correlation_id: correlation_id.clone(),
+    });
+
+    let response = next.run(request).await;
+    let outcome = response
+        .extensions()
+        .get::<ServiceApiRequestOutcome>()
+        .map(|outcome| outcome.0)
+        .unwrap_or_else(|| {
+            if is_websocket_route && response.status().is_client_error() {
+                "websocket-bad-request"
+            } else {
+                "handled"
+            }
+        });
     let _ = emit_service_api_request_outcome(
         correlation_id.as_str(),
-        parsed_request.method.as_str(),
-        parsed_request.path.as_str(),
+        method_for_outcome.as_str(),
+        path_for_outcome.as_str(),
         response.status().as_u16(),
-        "handled",
+        outcome,
     );
     state.request_budget.record_request();
     response
 }
 
+async fn parse_service_api_request(
+    request: Request,
+    is_websocket_route: bool,
+) -> Result<(Request, ParsedRequest), String> {
+    let method_label = request.method().to_string();
+    let path = request.uri().path().to_owned();
+    let headers = request.headers().clone();
+
+    if is_websocket_route {
+        let parsed_request =
+            build_parsed_request(method_label.as_str(), path.as_str(), &headers, Bytes::new())?;
+        return Ok((request, parsed_request));
+    }
+
+    let (parts, body) = request.into_parts();
+    let body_limit = 64 * 1024;
+    let body = to_bytes(body, body_limit)
+        .await
+        .map_err(|error| format!("request read failed: {error}"))?;
+    let parsed_request =
+        build_parsed_request(method_label.as_str(), path.as_str(), &headers, body.clone())?;
+    let request = Request::from_parts(parts, Body::from(body));
+    Ok((request, parsed_request))
+}
+
+fn service_api_middleware_error_response(
+    state: &ServiceApiRuntimeState,
+    error: ServiceApiMiddlewareError<'_>,
+) -> Response {
+    let response = json_error_response(error.status_code, error.error_label, error.reason);
+    let _ = emit_service_api_request_outcome(
+        error.correlation_id,
+        error.method,
+        error.path,
+        error.status_code.as_u16(),
+        error.outcome,
+    );
+    state.request_budget.record_request();
+    response
+}
+
+async fn handle_service_api_http_route(
+    State(state): State<Arc<ServiceApiRuntimeState>>,
+    Extension(context): Extension<ServiceApiRequestContext>,
+) -> Response {
+    let _ = context.correlation_id.as_str();
+    let rendered = render_service_api_endpoint_response(
+        &state.snapshot,
+        context.parsed_request.method.as_str(),
+        context.parsed_request.path.as_str(),
+        context.parsed_request.body.as_str(),
+    );
+    contract_response(rendered)
+}
+
+async fn handle_service_api_websocket_route(
+    State(state): State<Arc<ServiceApiRuntimeState>>,
+    Extension(context): Extension<ServiceApiRequestContext>,
+    upgrade: WebSocketUpgrade,
+) -> Response {
+    let _ = context.correlation_id.as_str();
+    let mut response = websocket_upgrade_response(upgrade, state.snapshot.clone());
+    response
+        .extensions_mut()
+        .insert(ServiceApiRequestOutcome("websocket-upgrade"));
+    response
+}
 fn route_requires_auth(method: &str, path: &str) -> bool {
     !(method == "GET" && (path == ROUTE_HEALTHZ || path == ROUTE_METRICS))
 }
