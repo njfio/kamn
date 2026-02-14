@@ -45,6 +45,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/run_live_validation_environment_lane.sh` and `scripts/runtime/test_run_live_validation_environment_lane.sh` (Task #2976, Subtask #2977).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `topology_contract_status=verified`, `kolme_connectivity_contract_status=verified`, `fail_closed_status=verified`.
   - Local-only run safety gate validated: run mode requires explicit opt-in via `KAMN_KOLME_LOCAL_HEAVY=1`.
+- Phase 6.4 live validation delivered:
+  - Runtime lane: `scripts/runtime/validate_live_validation_environment_live.sh` and `scripts/runtime/test_validate_live_validation_environment_live.sh` (Task #2978, Subtask #2979).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `lane_contract_status=verified`, `evidence_bundle_status=verified`, `fail_closed_status=verified`.
+  - Fail-closed validation confirmed for missing local-only opt-in in run mode: `run mode requires explicit local-only opt-in via KAMN_KOLME_LOCAL_HEAVY=1`.
 
 ---
 

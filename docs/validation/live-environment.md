@@ -79,3 +79,35 @@ Includes:
 - total runtime budget and elapsed time
 - contract statuses
 - executed command list
+
+## Live Validation Evidence
+
+Task and subtask:
+
+- Task: #2978
+- Subtask: #2979
+
+Validation lane:
+
+- `scripts/runtime/validate_live_validation_environment_live.sh`
+- `scripts/runtime/test_validate_live_validation_environment_live.sh`
+
+Run validation harness:
+
+```bash
+bash scripts/runtime/test_validate_live_validation_environment_live.sh
+```
+
+Deterministic success markers:
+
+- `status=pass`
+- `final_decision=GO`
+- `lane_contract_status=verified`
+- `evidence_bundle_status=verified`
+- `fail_closed_status=verified`
+
+Live fail-closed drill:
+
+- Run-mode without local opt-in:
+  - `bash scripts/runtime/run_live_validation_environment_lane.sh --mode run --max-seconds 120 --topology-max-seconds 60 --kolme-max-seconds 120`
+  - deterministic reason marker: `run mode requires explicit local-only opt-in via KAMN_KOLME_LOCAL_HEAVY=1`
