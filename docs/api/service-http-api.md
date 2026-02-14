@@ -84,6 +84,8 @@ Low-cost local validation commands:
 - `bash scripts/runtime/validate_service_api_request_auth_live.sh`
 - `bash scripts/runtime/test_validate_service_api_websocket_live.sh`
 - `bash scripts/runtime/validate_service_api_websocket_live.sh`
+- `bash scripts/runtime/test_validate_service_api_observability_live.sh`
+- `bash scripts/runtime/validate_service_api_observability_live.sh`
 
 These checks cover unit, functional, integration, and regression behavior for the API ingress module without requiring external infrastructure.
 
