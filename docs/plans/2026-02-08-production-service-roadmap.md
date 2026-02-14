@@ -32,6 +32,9 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Runtime lane: `scripts/runtime/validate_runtime_observability_endpoint_live.sh` and `scripts/runtime/test_validate_runtime_observability_endpoint_live.sh` (Task #3047, Subtask #3048).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `runtime_observability_stream_contract_status=verified`, `fail_closed_status=verified`, `docs_contract_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for unknown-path guard behavior: `fail_closed_reason_code=observability_endpoint_not_found`.
+- Post-roadmap hardening wave 2 runtime decomposition initial tranche delivered:
+  - Extracted state-divergence orchestration from `crates/kamn-core/src/runtime.rs` into dedicated module `crates/kamn-core/src/runtime_state_divergence.rs` with unchanged external behavior (Task #3050, Subtask #3051).
+  - Module-ownership contract documented in `docs/foundation/runtime-watchdog-attestation.md` and enforced by `crates/kamn-core/tests/runtime_watchdog_attestation_docs.rs`.
 - Phase 2.1 initial slice delivered: deterministic `runtime-mode api` ingress server with required messaging/channel/task/profile/health/metrics route contracts (Task #2906).
 - Phase 2.1 live validation delivered:
   - Runtime lane: `scripts/runtime/validate_service_api_live.sh` and `scripts/runtime/test_validate_service_api_live.sh` (Task #2908, Subtask #2909).

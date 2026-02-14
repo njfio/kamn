@@ -4,6 +4,7 @@ const DOC: &str = include_str!("../../../docs/foundation/runtime-watchdog-attest
 fn doc_contains_watchdog_attestation_scope_and_models() {
     assert!(DOC.contains("## Scope Delivered"));
     assert!(DOC.contains("## Runtime Watchdog Attestation Models"));
+    assert!(DOC.contains("crates/kamn-core/src/runtime_state_divergence.rs"));
     assert!(DOC.contains("RuntimeWatchdogAttestation"));
     assert!(DOC.contains("WatchdogSeverity"));
     assert!(DOC.contains("WatchdogIncidentEvidence"));

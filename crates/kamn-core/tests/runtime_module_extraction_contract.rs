@@ -50,3 +50,46 @@ fn runtime_module_extraction_contract_keeps_backpressure_impls_in_new_module() {
         "runtime_backpressure module should own DeterministicBackpressureController"
     );
 }
+
+#[test]
+fn runtime_module_extraction_contract_declares_runtime_state_divergence_module() {
+    let runtime_rs = read_repo_file("runtime.rs");
+    assert!(
+        runtime_rs.contains("mod runtime_state_divergence;"),
+        "runtime.rs should declare extracted runtime_state_divergence module"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_moves_state_divergence_types_out_of_runtime_rs() {
+    let runtime_rs = read_repo_file("runtime.rs");
+    assert!(
+        !runtime_rs.contains("pub enum StateDivergenceStatus {"),
+        "runtime.rs should not keep inline StateDivergenceStatus definition"
+    );
+    assert!(
+        !runtime_rs.contains("pub enum StateDivergenceError {"),
+        "runtime.rs should not keep inline StateDivergenceError definition"
+    );
+    assert!(
+        !runtime_rs.contains("pub struct StateDivergenceEvaluator;"),
+        "runtime.rs should not keep inline StateDivergenceEvaluator definition"
+    );
+}
+
+#[test]
+fn runtime_module_extraction_contract_keeps_state_divergence_impls_in_new_module() {
+    let runtime_state_divergence_rs = read_repo_file("runtime_state_divergence.rs");
+    assert!(
+        runtime_state_divergence_rs.contains("pub enum StateDivergenceStatus {"),
+        "runtime_state_divergence module should own StateDivergenceStatus"
+    );
+    assert!(
+        runtime_state_divergence_rs.contains("pub enum StateDivergenceError {"),
+        "runtime_state_divergence module should own StateDivergenceError"
+    );
+    assert!(
+        runtime_state_divergence_rs.contains("pub struct StateDivergenceEvaluator;"),
+        "runtime_state_divergence module should own StateDivergenceEvaluator"
+    );
+}
