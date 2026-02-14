@@ -134,6 +134,7 @@ resolve_manifest_name() {
     run_invariant_fuzz_concurrency_contract_lane.sh) echo "runtime_invariant_fuzz_concurrency_contract_lane.json" ;;
     run_lifecycle_property_contract_lane.sh) echo "runtime_lifecycle_property_contract_lane.json" ;;
     run_live_network_partition_reconnect_smoke_lane.sh) echo "runtime_live_network_partition_reconnect_smoke_lane.json" ;;
+    run_network_signer_finality_failure_drills_lane.sh) echo "runtime_network_signer_finality_failure_drills_lane.json" ;;
     run_live_network_partition_reconnect_contract_lane.sh) echo "runtime_live_network_partition_reconnect_contract_lane.json" ;;
     run_live_network_pilot_deep_lane.sh) echo "runtime_live_network_pilot_deep_lane.json" ;;
     run_live_network_pilot_deep_contract_lane.sh) echo "runtime_live_network_pilot_deep_contract_lane.json" ;;
@@ -162,6 +163,7 @@ resolve_phase_name() {
     run_live_transport_smoke_parity_lane.sh) echo "run" ;;
     run_live_network_smoke_lane.sh) echo "run" ;;
     run_live_validation_environment_lane.sh) echo "run" ;;
+    run_network_signer_finality_failure_drills_lane.sh) echo "run" ;;
     run_live_network_pilot_deep_lane.sh) echo "run" ;;
     run_live_network_partition_reconnect_smoke_lane.sh) echo "run" ;;
     run_quorum_attestation_replay_guard_lane.sh) echo "run" ;;
