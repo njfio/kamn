@@ -1040,9 +1040,12 @@ bash scripts/kolme/run_local_live_node_validation_bundle_contract_lane.sh --outp
 # rollback_evidence_file
 # recovery_evidence_file
 # rollback_evidence_file_missing
+# contracts.live_run_rehearsal_lineage_required=true
 # contracts.rollback_recovery_artifact_lineage_required=true
 # contracts.process_lifecycle_rollback_evidence_option=--rollback-evidence-file
 # contracts.process_lifecycle_recovery_evidence_option=--recovery-evidence-file
+# run_mode_check_status_mismatch:*
+# run_mode_check_reason_code_mismatch:*
 # Regression: #2134
 ```
 

@@ -1720,10 +1720,13 @@ JSON`
       - `rollback_evidence_file`
       - `recovery_evidence_file`
       - `rollback_evidence_file_missing`
+      - `contracts.live_run_rehearsal_lineage_required=true`
       - `integration_signing_profile_marker_missing`
       - `integration_simulated_signing_profile_detected`
       - `integration_bundle_signing_profile_marker_missing`
       - `integration_bundle_simulated_signing_profile_detected`
+      - `run_mode_check_status_mismatch:*`
+      - `run_mode_check_reason_code_mismatch:*`
       - `contracts.rollback_recovery_artifact_lineage_required=true`
       - `contracts.process_lifecycle_rollback_evidence_option=--rollback-evidence-file`
       - `contracts.process_lifecycle_recovery_evidence_option=--recovery-evidence-file`
