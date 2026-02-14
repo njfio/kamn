@@ -235,6 +235,7 @@ impl GossipIngressAdapter {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct GossipFrameTransportMempoolFeed {
     pending_frames: Vec<PeerGossipFrame>,
+    pending_transactions: Vec<BaselineTransaction>,
     canonical_candidates: Vec<CanonicalCommitRecord>,
 }
 
@@ -243,6 +244,7 @@ impl GossipFrameTransportMempoolFeed {
     pub fn new(pending_frames: Vec<PeerGossipFrame>) -> Self {
         Self {
             pending_frames,
+            pending_transactions: Vec::new(),
             canonical_candidates: Vec::new(),
         }
     }
@@ -251,20 +253,38 @@ impl GossipFrameTransportMempoolFeed {
     pub fn drain_canonical_candidates(&mut self) -> Vec<CanonicalCommitRecord> {
         std::mem::take(&mut self.canonical_candidates)
     }
+
+    fn decode_pending_frames_if_needed(&mut self) -> Result<(), BlockPipelineError> {
+        if self.pending_frames.is_empty() {
+            return Ok(());
+        }
+        let decoded =
+            GossipIngressAdapter::decode_frames(&self.pending_frames).map_err(|error| {
+                BlockPipelineError::TransportFeed(format!("{}:{}", error.reason_code(), error))
+            })?;
+        self.pending_frames.clear();
+        self.pending_transactions.extend(decoded.transactions);
+        self.canonical_candidates
+            .extend(decoded.canonical_candidates);
+        Ok(())
+    }
 }
 
 impl TransportMempoolFeed for GossipFrameTransportMempoolFeed {
     fn drain_pending_transactions(
         &mut self,
     ) -> Result<Vec<BaselineTransaction>, BlockPipelineError> {
-        let decoded =
-            GossipIngressAdapter::decode_frames(&self.pending_frames).map_err(|error| {
-                BlockPipelineError::TransportFeed(format!("{}:{}", error.reason_code(), error))
-            })?;
-        self.pending_frames.clear();
-        self.canonical_candidates
-            .extend(decoded.canonical_candidates);
-        Ok(decoded.transactions)
+        self.decode_pending_frames_if_needed()?;
+        Ok(std::mem::take(&mut self.pending_transactions))
+    }
+}
+
+impl TransportCanonicalCandidateFeed for GossipFrameTransportMempoolFeed {
+    fn drain_canonical_candidates(
+        &mut self,
+    ) -> Result<Vec<CanonicalCommitRecord>, BlockPipelineError> {
+        self.decode_pending_frames_if_needed()?;
+        Ok(std::mem::take(&mut self.canonical_candidates))
     }
 }
 
@@ -297,12 +317,43 @@ impl CanonicalCommitRecord {
     }
 }
 
+/// Deterministic decision outcome for one transport candidate reconciliation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CanonicalCandidateDecision {
+    /// Candidate was selected as canonical and persisted.
+    Accepted,
+    /// Candidate was rejected by fork-choice with deterministic reason code.
+    Rejected {
+        /// Deterministic fork-choice rejection reason code.
+        reason_code: String,
+    },
+}
+
+/// Reconciliation report for one transport-provided canonical candidate.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CanonicalCandidateOutcome {
+    /// Candidate block height.
+    pub block_height: u64,
+    /// Candidate payload digest.
+    pub payload_digest: String,
+    /// Deterministic reconciliation decision.
+    pub decision: CanonicalCandidateDecision,
+}
+
 /// Transport feed abstraction for draining pending mempool candidates.
 pub trait TransportMempoolFeed {
     /// Drains pending transport candidates in implementation-defined order.
     fn drain_pending_transactions(
         &mut self,
     ) -> Result<Vec<BaselineTransaction>, BlockPipelineError>;
+}
+
+/// Transport feed abstraction for draining received canonical block candidates.
+pub trait TransportCanonicalCandidateFeed {
+    /// Drains canonical block candidates discovered via transport gossip.
+    fn drain_canonical_candidates(
+        &mut self,
+    ) -> Result<Vec<CanonicalCommitRecord>, BlockPipelineError>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -328,6 +379,14 @@ impl TransportMempoolFeed for InMemoryTransportMempoolFeed {
         &mut self,
     ) -> Result<Vec<BaselineTransaction>, BlockPipelineError> {
         Ok(std::mem::take(&mut self.pending))
+    }
+}
+
+impl TransportCanonicalCandidateFeed for InMemoryTransportMempoolFeed {
+    fn drain_canonical_candidates(
+        &mut self,
+    ) -> Result<Vec<CanonicalCommitRecord>, BlockPipelineError> {
+        Ok(Vec::new())
     }
 }
 
@@ -483,7 +542,7 @@ pub struct TransportFedBlockPipeline<TFeed, TStore, THook> {
 
 impl<TFeed, TStore, THook> TransportFedBlockPipeline<TFeed, TStore, THook>
 where
-    TFeed: TransportMempoolFeed,
+    TFeed: TransportMempoolFeed + TransportCanonicalCandidateFeed,
     TStore: CanonicalCommitStore,
     THook: ForkChoiceHook,
 {
@@ -508,11 +567,44 @@ where
         })
     }
 
+    /// Reconciles transport-received canonical block candidates through fork-choice.
+    pub fn reconcile_transport_candidates(
+        &mut self,
+    ) -> Result<Vec<CanonicalCandidateOutcome>, BlockPipelineError> {
+        let mut candidates = self.transport_feed.drain_canonical_candidates()?;
+        sort_canonical_candidates_for_reconciliation(&mut candidates);
+
+        let mut outcomes = Vec::with_capacity(candidates.len());
+        for candidate in candidates {
+            let block_height = candidate.block_height;
+            let payload_digest = candidate.payload_digest.clone();
+            match self.fork_choice_hook.evaluate_candidate(&candidate)? {
+                ForkChoiceDecision::Accept => {
+                    self.commit_store.persist_canonical_commit(candidate)?;
+                    outcomes.push(CanonicalCandidateOutcome {
+                        block_height,
+                        payload_digest,
+                        decision: CanonicalCandidateDecision::Accepted,
+                    });
+                }
+                ForkChoiceDecision::Reject { reason_code } => {
+                    outcomes.push(CanonicalCandidateOutcome {
+                        block_height,
+                        payload_digest,
+                        decision: CanonicalCandidateDecision::Rejected { reason_code },
+                    });
+                }
+            }
+        }
+        Ok(outcomes)
+    }
+
     /// Runs one transport-fed consensus round and persists canonical commit record.
     pub fn run_transport_consensus_round(
         &mut self,
         input: BlockConsensusRoundInput,
     ) -> Result<BlockPipelineCommitReport, BlockPipelineError> {
+        let _candidate_outcomes = self.reconcile_transport_candidates()?;
         let mut candidates = self.transport_feed.drain_pending_transactions()?;
         if candidates.is_empty() {
             return Err(BlockPipelineError::EmptyMempool);
@@ -546,6 +638,20 @@ fn sort_candidates_for_ingress(candidates: &mut [BaselineTransaction]) {
             .cmp(&right.nonce)
             .then_with(|| left.id.cmp(&right.id))
             .then_with(|| left.sender.cmp(&right.sender))
+    });
+}
+
+fn sort_canonical_candidates_for_reconciliation(candidates: &mut [CanonicalCommitRecord]) {
+    candidates.sort_by(|left, right| {
+        left.block_height
+            .cmp(&right.block_height)
+            .then_with(|| left.payload_digest.cmp(&right.payload_digest))
+            .then_with(|| {
+                left.producer_role
+                    .as_str()
+                    .cmp(right.producer_role.as_str())
+            })
+            .then_with(|| left.transaction_ids.cmp(&right.transaction_ids))
     });
 }
 
