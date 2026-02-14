@@ -19,6 +19,9 @@ This document captures the first implementation slice for deterministic observab
   - `--observability-endpoint-metrics-path </path>` (default `/metrics`)
   - `--observability-endpoint-health-path </path>` (default `/healthz`)
   - bounded request/timeout controls for fast and cost-effective scrape loops.
+- Added deterministic runtime stream payload projection (`Issue #3047`):
+  - fixed stream path: `/metrics.stream`
+  - newline-delimited JSON snapshot contract with stable schema marker.
 
 ## Runtime Endpoint Contract (Issue #2830)
 - Endpoint paths:
@@ -41,7 +44,41 @@ This document captures the first implementation slice for deterministic observab
 - Export characteristics:
   - deterministic payloads derived from runtime report telemetry fields.
   - bounded endpoint lifetime controlled by `--observability-endpoint-max-requests` and `--observability-endpoint-idle-timeout-ms`.
-  - no report-rendering mutation: text/json report contracts remain unchanged (`Regression: #2830`).
+- no report-rendering mutation: text/json report contracts remain unchanged (`Regression: #2830`).
+
+## Runtime Endpoint Stream Contract (Issue #3047)
+- Stream path:
+  - `/metrics.stream` (NDJSON)
+- Stream payload contract:
+  - content-type: `application/x-ndjson`
+  - one deterministic JSON snapshot per request with schema marker:
+    - `schema_version="kamn.runtime.observability.stream.v1"`
+  - includes deterministic fields:
+    - `source`
+    - `runtime_mode`
+    - `health`
+    - `alert_count`
+    - `latency_p50_ms`
+    - `latency_p99_ms`
+    - `throughput_tps`
+    - `error_rate_bps`
+    - `availability_bps`
+- Fail-closed behavior:
+  - unknown endpoint paths return `404 not found`.
+  - request budget and idle timeout controls remain bounded and deterministic.
+
+Live validation lane:
+- `scripts/runtime/validate_runtime_observability_endpoint_live.sh`
+- `scripts/runtime/test_validate_runtime_observability_endpoint_live.sh`
+
+Expected markers:
+- `status=pass`
+- `final_decision=GO`
+- `runtime_observability_stream_contract_status=verified`
+- `fail_closed_status=verified`
+- `docs_contract_status=verified`
+- `fail_closed_reason_code=observability_endpoint_not_found`
+- `performance_budget_status=verified`
 
 ## Structured Runtime Logging Correlation Contract (Issue #3032)
 - Runtime structured log events now include deterministic `execution_id` correlation fields for runtime-dispatch/start/complete lifecycle markers.
@@ -193,6 +230,7 @@ bash scripts/reputation/test_run_reputation_signal_quarantine_contract_lane.sh
 bash scripts/reputation/test_run_reputation_recovery_contract_lane.sh
 bash scripts/canary/test_generate_post_cutover_slo_evidence_bundle.sh
 bash scripts/canary/test_run_post_cutover_slo_contract_lane.sh
+bash scripts/runtime/test_validate_runtime_observability_endpoint_live.sh
 cargo test -p kamn-core --test observability_stack
 npm --prefix packages/kamn-dashboard test
 cargo fmt --check
