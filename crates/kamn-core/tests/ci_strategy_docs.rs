@@ -406,3 +406,28 @@ fn doc_contains_runtime_observability_endpoint_contract_lane_ci_mode_markers() {
     assert!(DOC.contains("local-dev mode: local"));
     assert!(DOC.contains("manual-hardened mode: manual"));
 }
+
+#[test]
+fn doc_contains_runtime_local_retry_diagnostics_contract_lane_ci_mode_markers() {
+    assert!(DOC.contains("## Runtime Local Retry/Diagnostics Contract Lane"));
+    assert!(DOC.contains(
+        "validate_local_retry_diagnostics_live.sh --mode dry-run --output-json /tmp/runtime-local-retry-diagnostics-summary.json"
+    ));
+    assert!(DOC.contains(
+        "KAMN_LOCAL_RETRY_DIAGNOSTICS_OPT_IN=1 bash scripts/runtime/validate_local_retry_diagnostics_live.sh --mode run --output-json /tmp/runtime-local-retry-diagnostics-summary.json"
+    ));
+    assert!(DOC.contains(
+        "check_local_retry_diagnostics_live_policy.sh --report-file /tmp/runtime-local-retry-diagnostics-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/runtime-local-retry-diagnostics-policy.json"
+    ));
+    assert!(DOC.contains(
+        "validate_local_retry_diagnostics_live_contract_lane.sh --output-json /tmp/runtime-local-retry-diagnostics-contract-lane-report.json --policy-output-json /tmp/runtime-local-retry-diagnostics-policy.json"
+    ));
+    assert!(DOC.contains("test_validate_local_retry_diagnostics_live.sh"));
+    assert!(DOC.contains("test_check_local_retry_diagnostics_live_policy.sh"));
+    assert!(DOC.contains("test_validate_local_retry_diagnostics_live_contract_lane.sh"));
+    assert!(DOC.contains(
+        "local retry/diagnostics run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
+    ));
+    assert!(DOC
+        .contains("local_retry_diagnostics_policy_marker_missing:correlation_diagnostics_status"));
+}

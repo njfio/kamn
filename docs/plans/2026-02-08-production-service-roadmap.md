@@ -56,6 +56,11 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Policy checker: `scripts/runtime/check_runtime_observability_endpoint_live_policy.sh` and `scripts/runtime/test_check_runtime_observability_endpoint_live_policy.sh`.
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `runtime_observability_stream_contract_status=verified`, `runtime_observability_policy_status=verified`, `runtime_observability_contract_lane_status=verified`, `docs_contract_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for policy tamper drill behavior: `fail_closed_reason_code=runtime_observability_policy_final_decision_mismatch`.
+- Post-roadmap hardening wave 6 local retry/diagnostics contract-lane policy delivered:
+  - Runtime lane: `scripts/runtime/validate_local_retry_diagnostics_live.sh`, `scripts/runtime/validate_local_retry_diagnostics_live_contract_lane.sh`, and tests `scripts/runtime/test_validate_local_retry_diagnostics_live.sh`, `scripts/runtime/test_validate_local_retry_diagnostics_live_contract_lane.sh` (Task #3216, Subtask #3217).
+  - Policy checker: `scripts/runtime/check_local_retry_diagnostics_live_policy.sh` and `scripts/runtime/test_check_local_retry_diagnostics_live_policy.sh`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `local_retry_diagnostics_contract_status=verified`, `local_retry_diagnostics_policy_status=verified`, `docs_contract_status=verified`, `performance_budget_status=verified`.
+  - Fail-closed validation confirmed for policy tamper drill behavior: `fail_closed_reason_code=local_retry_diagnostics_policy_marker_missing:correlation_diagnostics_status`.
 - Post-roadmap hardening wave 6 shell-surface trend-guard tranche-3 delivered:
   - CI checker now fails closed on undocumented current-script growth for non-Kolme wave trend-test LOC soft-budget governance (Task #3152, Subtask #3162):
     - `scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.py`

@@ -134,6 +134,25 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - explicit runtime budget cap via `KAMN_RUNTIME_OBSERVABILITY_ENDPOINT_CONTRACT_MAX_SECONDS`
   - deterministic fail-closed policy tamper drill executed in-process
 
+## Runtime Local Retry/Diagnostics Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_local_retry_diagnostics_live.sh --mode dry-run --output-json /tmp/runtime-local-retry-diagnostics-summary.json`
+  - `KAMN_LOCAL_RETRY_DIAGNOSTICS_OPT_IN=1 bash scripts/runtime/validate_local_retry_diagnostics_live.sh --mode run --output-json /tmp/runtime-local-retry-diagnostics-summary.json`
+  - `bash scripts/runtime/check_local_retry_diagnostics_live_policy.sh --report-file /tmp/runtime-local-retry-diagnostics-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/runtime-local-retry-diagnostics-policy.json`
+  - `bash scripts/runtime/validate_local_retry_diagnostics_live_contract_lane.sh --output-json /tmp/runtime-local-retry-diagnostics-contract-lane-report.json --policy-output-json /tmp/runtime-local-retry-diagnostics-policy.json`
+  - `bash scripts/runtime/test_validate_local_retry_diagnostics_live.sh`
+  - `bash scripts/runtime/test_check_local_retry_diagnostics_live_policy.sh`
+  - `bash scripts/runtime/test_validate_local_retry_diagnostics_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - dry-run mode executes no nested retry/diagnostics lane commands and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_LOCAL_RETRY_DIAGNOSTICS_OPT_IN=1`.
+  - local retry/diagnostics run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `local_retry_diagnostics_policy_marker_missing:correlation_diagnostics_status`
+
 ## Kolme HTTPS Native Transport Contract
 - Runtime-commit HTTPS transport uses an in-process native TLS client path.
 - `openssl s_client` subprocess execution is prohibited in transport code paths (`Regression: #2671`).
