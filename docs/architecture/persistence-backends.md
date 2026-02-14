@@ -4,7 +4,7 @@
 
 This document tracks durable persistence backends used by `kamn-core` and the validation strategy for low-cost CI.
 
-Current execution slice is Task #2901 under Story #2900.
+Current execution slices are Task #2901 (core implementation) and Task #2903 (live validation) under Story #2900.
 
 ## Backends
 
@@ -39,6 +39,18 @@ Current execution slice is Task #2901 under Story #2900.
   - Restarted adapters preserve duplicate-detection behavior for idempotency keys.
 
 ## Validation Matrix
+
+Live validation lane (local realistic dependency path):
+
+- `bash scripts/runtime/validate_persistence_adapters_live.sh --output-json /tmp/persistence-adapters-live.json`
+- `bash scripts/runtime/test_validate_persistence_adapters_live.sh`
+- Evidence schema: `kamn.persistence.adapters-live-validation.v1`
+- Required markers:
+  - `status=pass`
+  - `final_decision=GO`
+  - `content_persistence_status=verified`
+  - `did_duplicate_detection_status=verified`
+  - `fail_closed_status=verified`
 
 Low-cost lane (PR-safe):
 

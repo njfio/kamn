@@ -14,6 +14,7 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
 - Phase 1.2 delivered: daemon shutdown now handles real OS signals on tokio signal streams (Story #2895).
 - Phase 1.3 in progress:
   - Delivered in this slice: `FileContentAdapter` and `FileDidRegistrationChainAdapter` in `kamn-core` (Task #2901).
+  - Live validation lane added for persistence adapter restart and fail-closed checks (Task #2903).
   - Remaining: broader persistence backend consolidation and runtime wiring across additional stores.
 
 ---
