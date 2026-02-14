@@ -18,6 +18,8 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     assert!(DOC.contains("P2pTransportError::InvalidPeerId"));
     assert!(DOC.contains("P2pTransportError::InvalidTopic"));
     assert!(DOC.contains("P2pTransportError::InactivePeerLifecycleState"));
+    assert!(DOC.contains("validate_p2p_transport_live.sh"));
+    assert!(DOC.contains("test_validate_p2p_transport_live.sh"));
 }
 
 #[test]
@@ -25,6 +27,9 @@ fn roadmap_references_phase_31_initial_p2p_slice() {
     assert!(ROADMAP.contains("Phase 3.1 initial slice delivered"));
     assert!(ROADMAP.contains("Task #2921, Subtask #2922"));
     assert!(ROADMAP.contains("docs/architecture/p2p-transport.md"));
+    assert!(ROADMAP.contains("Phase 3.1 live validation delivered"));
+    assert!(ROADMAP.contains("scripts/runtime/validate_p2p_transport_live.sh"));
+    assert!(ROADMAP.contains("fail_closed_reason_code=p2p_transport_inactive_lifecycle_state"));
 }
 
 #[test]

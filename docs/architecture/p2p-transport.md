@@ -81,3 +81,10 @@ Expected live-validation outcomes:
 - deterministic `status=pass` / `final_decision=GO` markers
 - explicit fail-closed injected fault markers
 - bounded runtime budget reporting for low-cost local execution
+
+Live validation lane commands:
+
+```bash
+bash scripts/runtime/validate_p2p_transport_live.sh --output-json /tmp/p2p-transport-live-validation-report.json
+bash scripts/runtime/test_validate_p2p_transport_live.sh
+```
