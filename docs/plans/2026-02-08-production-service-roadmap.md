@@ -16,6 +16,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Delivered in this slice: `FileContentAdapter` and `FileDidRegistrationChainAdapter` in `kamn-core` (Task #2901).
   - Live validation lane added for persistence adapter restart and fail-closed checks (Task #2903).
   - Remaining: broader persistence backend consolidation and runtime wiring across additional stores.
+- Post-roadmap hardening wave 3 persistence live-validation expansion delivered:
+  - Runtime lane: `scripts/runtime/validate_persistence_adapters_live.sh` and `scripts/runtime/test_validate_persistence_adapters_live.sh` (Task #3068, Subtask #3070).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `restart_recovery_status=verified`, `corruption_fail_closed_status=verified`, `incompatible_schema_fail_closed_status=verified`, `execution_scope=local-scheduled`, `performance_budget_status=verified`.
+  - Fail-closed reason-code matrix validated: `content_storage_corrupt_payload_rejected`, `did_registry_corrupt_payload_rejected`, `task_operation_snapshot_schema_mismatch_rejected`, `durable_guard_snapshot_schema_mismatch_rejected`.
 - Post-roadmap hardening wave 1 initial slice delivered:
   - Added deterministic `execution_id` structured logging correlation field for runtime dispatch/start/complete lifecycle events in `kamn-node` (Task #3032, Subtask #3033).
   - Added regression assertions in `crates/kamn-node/src/main_tests/core_behavior_tests.rs` to fail closed when runtime structured events omit `execution_id`.

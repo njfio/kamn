@@ -28,8 +28,32 @@ if ! printf '%s\n' "$validation_output" | grep -q '^did_duplicate_detection_stat
   echo "expected persistence adapter live validation did marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^restart_recovery_status=verified$'; then
+  echo "expected persistence adapter live validation restart marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^corruption_fail_closed_status=verified$'; then
+  echo "expected persistence adapter live validation corruption marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^incompatible_schema_fail_closed_status=verified$'; then
+  echo "expected persistence adapter live validation incompatible-schema marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^fail_closed_status=verified$'; then
   echo "expected persistence adapter live validation fail-closed marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^evidence_bundle_status=verified$'; then
+  echo "expected persistence adapter live validation evidence marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^execution_scope=local-scheduled$'; then
+  echo "expected persistence adapter live validation execution scope marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^performance_budget_status=verified$'; then
+  echo "expected persistence adapter live validation performance marker" >&2
   exit 1
 fi
 
@@ -49,8 +73,60 @@ if payload.get("content_persistence_status") != "verified":
     raise SystemExit("expected content_persistence_status=verified")
 if payload.get("did_duplicate_detection_status") != "verified":
     raise SystemExit("expected did_duplicate_detection_status=verified")
+if payload.get("restart_recovery_status") != "verified":
+    raise SystemExit("expected restart_recovery_status=verified")
+if payload.get("corruption_fail_closed_status") != "verified":
+    raise SystemExit("expected corruption_fail_closed_status=verified")
+if payload.get("incompatible_schema_fail_closed_status") != "verified":
+    raise SystemExit("expected incompatible_schema_fail_closed_status=verified")
 if payload.get("fail_closed_status") != "verified":
     raise SystemExit("expected fail_closed_status=verified")
+if payload.get("evidence_bundle_status") != "verified":
+    raise SystemExit("expected evidence_bundle_status=verified")
+if payload.get("execution_scope") != "local-scheduled":
+    raise SystemExit("expected execution_scope=local-scheduled")
+if payload.get("performance_budget_status") != "verified":
+    raise SystemExit("expected performance_budget_status=verified")
+reason_codes = payload.get("fail_closed_reason_codes")
+if reason_codes != [
+    "content_storage_corrupt_payload_rejected",
+    "did_registry_corrupt_payload_rejected",
+    "task_operation_snapshot_schema_mismatch_rejected",
+    "durable_guard_snapshot_schema_mismatch_rejected",
+]:
+    raise SystemExit("expected deterministic fail_closed_reason_codes contract list")
 PY
+
+set +e
+invalid_budget_output="$(
+  bash "$VALIDATION_SCRIPT" \
+    --max-seconds invalid 2>&1
+)"
+invalid_budget_code=$?
+set -e
+if [ "$invalid_budget_code" -eq 0 ]; then
+  echo "expected persistence adapter live validation script to reject invalid max-seconds" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$invalid_budget_output" | grep -q "max-seconds must be an integer"; then
+  echo "expected deterministic invalid max-seconds marker" >&2
+  exit 1
+fi
+
+set +e
+zero_budget_output="$(
+  bash "$VALIDATION_SCRIPT" \
+    --max-seconds 0 2>&1
+)"
+zero_budget_code=$?
+set -e
+if [ "$zero_budget_code" -eq 0 ]; then
+  echo "expected persistence adapter live validation script to reject zero max-seconds" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$zero_budget_output" | grep -q "max-seconds must be greater than zero"; then
+  echo "expected deterministic zero max-seconds marker" >&2
+  exit 1
+fi
 
 echo "persistence adapter live validation tests passed."
