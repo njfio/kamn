@@ -152,7 +152,10 @@ pub use audit_exports::{
     AuditExportFilter, AuditExportFormat, AuditExportManifest, AuditExportRequest,
 };
 pub use block_pipeline::{
-    BlockConsensusRoundInput, BlockPipelineCommitReport, BlockPipelineError, MempoolBlockPipeline,
+    AcceptAllForkChoiceHook, BlockConsensusRoundInput, BlockPipelineCommitReport,
+    BlockPipelineError, CanonicalCommitRecord, CanonicalCommitStore, ForkChoiceDecision,
+    ForkChoiceHook, InMemoryCanonicalCommitStore, InMemoryTransportMempoolFeed,
+    MempoolBlockPipeline, TransportFedBlockPipeline, TransportMempoolFeed,
 };
 pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};
 pub use bridge_adapter::{

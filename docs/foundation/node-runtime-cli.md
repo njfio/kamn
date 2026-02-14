@@ -183,6 +183,17 @@ This document captures node-runtime productionization slices for machine-readabl
   - `SchemaVersionMismatch`
   - `Query`
 
+## Transport-Fed Block Pipeline Contracts
+- `TransportFedBlockPipeline` consumes transaction candidates from `TransportMempoolFeed` rather than synthetic-only mempool input.
+- Canonical commits persist through `CanonicalCommitStore` after fork-choice acceptance.
+- Fork-choice integration points are deterministic:
+  - `ForkChoiceHook::evaluate_candidate(...)` drives `Accept` vs `Reject` decisions
+  - reject path fails closed via `BlockPipelineError::ForkChoiceRejected`
+- Canonical commit payload includes:
+  - block height and producer role
+  - deterministic payload digest
+  - ordered committed transaction IDs
+
 ## Diagnostics Snapshot Rules
 - Supported diagnostics modes:
   - `basic` (default)
