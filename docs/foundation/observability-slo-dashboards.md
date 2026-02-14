@@ -43,6 +43,19 @@ This document captures the first implementation slice for deterministic observab
   - bounded endpoint lifetime controlled by `--observability-endpoint-max-requests` and `--observability-endpoint-idle-timeout-ms`.
   - no report-rendering mutation: text/json report contracts remain unchanged (`Regression: #2830`).
 
+## Structured Runtime Logging Correlation Contract (Issue #3032)
+- Runtime structured log events now include deterministic `execution_id` correlation fields for runtime-dispatch/start/complete lifecycle markers.
+- Contract markers include:
+  - `node.runtime.mode.dispatch`
+  - `node.runtime.bootstrap.plan.ready`
+  - `node.runtime.daemon.execute.start`
+  - `node.runtime.daemon.execute.complete`
+- `execution_id` format baseline:
+  - `node-runtime:<runtime_mode>:<chain_id>:<role>`
+- Regression policy:
+  - dispatch and completion/start markers for one execution must retain the same `execution_id`.
+  - missing `execution_id` in structured runtime markers fails closed (`Regression: #3033`).
+
 ## SLO Evaluation Rules
 - `LatencyP50`: warning when above max threshold.
 - `LatencyP99`: critical when above max threshold.
