@@ -76,6 +76,31 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
     - missing managed-external key-source contract: `checkpoint_failed_signer_provenance_contract` + `signer_key_source_production_managed_external_required`
     - invalid signer profile: `checkpoint_failed_signer_profile_contract` + `signer_profile_mismatch`
     - stale signer rotation metadata: `checkpoint_failed_signer_rotation_freshness_contract` + `signer_rotation_epoch_stale`
+- Post-roadmap hardening wave 4 local-live managed-signer runtime+finality validation delivered (Story #3088):
+  - Local-live composition lane delivered and validated (Task #3102, Task #3104):
+    - `scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh`
+    - `scripts/kolme/test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh`
+    - `scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
+    - `scripts/kolme/test_run_local_kamn_live_runtime_integration_real_node_profile.sh`
+    - `scripts/kolme/test_check_local_kamn_live_runtime_real_node_profile_policy.sh`
+  - Runtime submit/finality checks are composed through:
+    - `scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh`
+    - `scripts/kolme/check_local_kamn_live_runtime_real_node_profile_policy.py`
+  - Local-only heavy execution gate remains enforced for run mode via `KAMN_KOLME_LOCAL_HEAVY=1`.
+  - Deterministic marker/schema contracts validated:
+    - `schema_version=kamn.kolme.local-kamn-live-runtime-integration-summary.v1`
+    - `runtime_profile=real-node`
+    - `runtime_commit_command_profile=real-node-non-synthetic-v1`
+    - `runtime_commit_policy_command_profile=real-node-non-synthetic-v1`
+  - Fail-closed reason-code matrix validated (Subtask #3103, Subtask #3105):
+    - `runtime_commit_command_profile_mismatch`
+    - `runtime_signer_failover_profile_unchanged`
+    - `runtime_signer_rotation_epoch_stale`
+    - `runtime_signer_key_source_profile_pair_disallowed`
+    - `runtime_commit_live_policy_report_missing`
+  - Runtime endpoint failure taxonomy remains deterministic for preflight/connectivity classes:
+    - `transport.preflight.timeout`
+    - `transport.preflight.failed`
 - Post-roadmap hardening wave 4 wrapper migration tranche A delivered:
   - Migrated contract wrappers to dispatcher symlink + manifest execution path (Task #3094, Subtask #3095):
     - `scripts/kolme/run_continuous_runtime_commit_contract_lane.sh`

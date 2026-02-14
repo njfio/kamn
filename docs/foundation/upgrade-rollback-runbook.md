@@ -159,6 +159,22 @@ Fallback private-key surfaces are forbidden in deployment preflight and runtime 
   - `bash scripts/kolme/test_check_local_kamn_live_runtime_real_node_profile_policy.sh`
   - `bash scripts/kolme/test_run_local_kamn_live_runtime_real_node_profile_contract_lane.sh`
   - `bash scripts/kolme/test_run_local_kamn_live_runtime_integration_contract_lane.sh`
+- Local-live managed-signer runtime/finality composition (Story #3088, Task #3102, Task #3104):
+  - `bash scripts/kolme/run_local_kamn_live_runtime_real_node_profile_contract_lane.sh --output-json /tmp/kolme-local-kamn-live-runtime-integration-summary.json --policy-output-json /tmp/kolme-local-kamn-live-runtime-real-node-policy.json`
+  - required deterministic markers:
+    - `schema_version=kamn.kolme.local-kamn-live-runtime-integration-summary.v1`
+    - `runtime_profile=real-node`
+    - `runtime_commit_command_profile=real-node-non-synthetic-v1`
+    - `runtime_commit_policy_command_profile=real-node-non-synthetic-v1`
+  - fail-closed reason-code matrix checkpoints (Subtask #3103, Subtask #3105):
+    - `runtime_commit_command_profile_mismatch`
+    - `runtime_signer_failover_profile_unchanged`
+    - `runtime_signer_rotation_epoch_stale`
+    - `runtime_signer_key_source_profile_pair_disallowed`
+    - `runtime_commit_live_policy_report_missing`
+  - runtime endpoint failure taxonomy checkpoints:
+    - `transport.preflight.timeout`
+    - `transport.preflight.failed`
 - Signer key-source profile matrix validation:
   - `bash scripts/kolme/run_managed_signer_startup_live_validation_contract_lane.sh --output-json /tmp/managed-signer-startup-live-validation-contract-report.json`
   - matrix status markers:
