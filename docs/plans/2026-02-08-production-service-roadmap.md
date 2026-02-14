@@ -56,6 +56,12 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Policy checker: `scripts/runtime/check_runtime_observability_endpoint_live_policy.sh` and `scripts/runtime/test_check_runtime_observability_endpoint_live_policy.sh`.
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `runtime_observability_stream_contract_status=verified`, `runtime_observability_policy_status=verified`, `runtime_observability_contract_lane_status=verified`, `docs_contract_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for policy tamper drill behavior: `fail_closed_reason_code=runtime_observability_policy_final_decision_mismatch`.
+- Post-roadmap hardening wave 6 shell-surface trend-guard tranche-3 delivered:
+  - CI checker now fails closed on undocumented current-script growth for non-Kolme wave trend-test LOC soft-budget governance (Task #3152, Subtask #3162):
+    - `scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.py`
+    - `scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh`
+  - Deterministic reason-code surface expanded with: `unexpected_current_scripts`.
+  - Trend-policy interpretation guidance updated in `docs/ci/strategy.md` to require baseline refresh for any new script path.
 - Post-roadmap hardening wave 2 runtime decomposition initial tranche delivered:
   - Extracted state-divergence orchestration from `crates/kamn-core/src/runtime.rs` into dedicated module `crates/kamn-core/src/runtime_state_divergence.rs` with unchanged external behavior (Task #3050, Subtask #3051).
   - Module-ownership contract documented in `docs/foundation/runtime-watchdog-attestation.md` and enforced by `crates/kamn-core/tests/runtime_watchdog_attestation_docs.rs`.

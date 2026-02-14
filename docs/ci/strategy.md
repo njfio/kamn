@@ -422,6 +422,7 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - `scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.py`
   - `scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh`
   - `scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh`
+  - baseline script inventory remains authoritative; any new script path must be documented by refreshing the committed baseline fixture in the same change.
   - selector outputs:
     - `run_ci_tool_checks=true`
     - `test_scope=ci-doc-contract`
@@ -1167,12 +1168,13 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `fixtures/ci/non_kolme_wave_trend_test_loc_soft_budget_thresholds.json`
     - checker command:
       - `bash scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh --output-json /tmp/non-kolme-wave-trend-test-loc-soft-budget-report.json`
-    - fails closed on trend-test LOC growth and stale baseline script inventory drift.
+    - fails closed on trend-test LOC growth, stale baseline script inventory drift, and undocumented current-script growth.
     - deterministic reason-code surface is emitted for automation:
       - `reason_codes=none` (pass)
       - `reason_codes=script_count_delta_threshold_exceeded`
       - `reason_codes=total_shell_loc_delta_threshold_exceeded`
       - `reason_codes=missing_baseline_scripts`
+      - `reason_codes=unexpected_current_scripts`
     - Regression: #2777
   - Non-Kolme governance dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/framework/test_non_kolme_contract_lane_dispatch_wrapper_matrix.sh`

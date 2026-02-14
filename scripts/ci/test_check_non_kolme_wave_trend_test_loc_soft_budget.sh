@@ -88,4 +88,44 @@ fi
 grep -q '^status=fail$' "$TMP_DIR/fail-stale.out"
 grep -q 'missing_baseline_scripts' "$TMP_DIR/fail-stale.out"
 
+RELAXED_THRESHOLD="$TMP_DIR/relaxed-threshold.json"
+cat >"$RELAXED_THRESHOLD" <<'JSON'
+{
+  "schema_version": "kamn.ci.non-kolme-wave-trend-test-loc-thresholds.v1",
+  "max_script_count_increase": 1,
+  "max_total_shell_loc_increase": 200
+}
+JSON
+
+MUTATED_UNDOCUMENTED_GROWTH_BASELINE="$TMP_DIR/mutated-undocumented-growth-baseline.json"
+cp "$BASELINE_FILE" "$MUTATED_UNDOCUMENTED_GROWTH_BASELINE"
+python3 - "$MUTATED_UNDOCUMENTED_GROWTH_BASELINE" "$ROOT_DIR" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+baseline_path = Path(sys.argv[1])
+root_dir = Path(sys.argv[2])
+payload = json.loads(baseline_path.read_text(encoding="utf-8"))
+
+removed_script = payload["script_files"].pop()
+removed_path = root_dir / removed_script
+with removed_path.open("r", encoding="utf-8") as handle:
+    removed_loc = sum(1 for _ in handle)
+
+payload["script_count"] = len(payload["script_files"])
+payload["total_shell_loc"] = int(payload["total_shell_loc"]) - removed_loc
+baseline_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if bash "$CHECKER" \
+  --baseline-file "$MUTATED_UNDOCUMENTED_GROWTH_BASELINE" \
+  --threshold-file "$RELAXED_THRESHOLD" >"$TMP_DIR/fail-undocumented-growth.out" 2>&1; then
+  echo "expected checker to fail on undocumented current-script growth even when threshold deltas are relaxed" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/fail-undocumented-growth.out"
+grep -q 'unexpected_current_scripts' "$TMP_DIR/fail-undocumented-growth.out"
+
 echo "non-Kolme wave trend-test LOC soft-budget checker tests passed."

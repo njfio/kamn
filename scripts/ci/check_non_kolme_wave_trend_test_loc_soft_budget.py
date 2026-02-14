@@ -136,14 +136,20 @@ def main(argv: list[str]) -> int:
     script_count_delta = current_script_count - baseline_script_count
     total_shell_loc_delta = current_total_shell_loc - baseline_total_shell_loc
 
+    baseline_script_set = set(baseline_script_files)
     current_script_set = set(current_script_files)
     missing_baseline_scripts = [
         script for script in baseline_script_files if script not in current_script_set
+    ]
+    unexpected_current_scripts = [
+        script for script in current_script_files if script not in baseline_script_set
     ]
 
     reason_codes: list[str] = []
     if missing_baseline_scripts:
         reason_codes.append("missing_baseline_scripts")
+    if unexpected_current_scripts:
+        reason_codes.append("unexpected_current_scripts")
     if script_count_delta > max_script_count_increase:
         reason_codes.append("script_count_delta_threshold_exceeded")
     if total_shell_loc_delta > max_total_shell_loc_increase:
@@ -164,6 +170,7 @@ def main(argv: list[str]) -> int:
         "max_script_count_increase": max_script_count_increase,
         "max_total_shell_loc_increase": max_total_shell_loc_increase,
         "missing_baseline_scripts": missing_baseline_scripts,
+        "unexpected_current_scripts": unexpected_current_scripts,
         "reason_codes": reason_codes,
         "violation_count": len(reason_codes),
     }
