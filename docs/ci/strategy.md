@@ -227,6 +227,25 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_reason_code_policy_marker_missing:route_error_mapping_status`
 
+## Runtime Service API Validation Negative-Matrix Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_service_api_validation_negative_matrix_live.sh --mode dry-run --output-json /tmp/service-api-validation-negative-matrix-live-summary.json`
+  - `KAMN_LOCAL_VALIDATION_NEGATIVE_MATRIX_OPT_IN=1 bash scripts/runtime/validate_service_api_validation_negative_matrix_live.sh --mode run --output-json /tmp/service-api-validation-negative-matrix-live-summary.json`
+  - `bash scripts/runtime/check_service_api_validation_negative_matrix_live_policy.sh --report-file /tmp/service-api-validation-negative-matrix-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-validation-negative-matrix-policy.json`
+  - `bash scripts/runtime/validate_service_api_validation_negative_matrix_live_contract_lane.sh --output-json /tmp/service-api-validation-negative-matrix-contract-lane-report.json --policy-output-json /tmp/service-api-validation-negative-matrix-policy.json`
+  - `bash scripts/runtime/test_validate_service_api_validation_negative_matrix_live_contract_lane.sh`
+  - `bash scripts/runtime/test_check_service_api_validation_negative_matrix_live_policy.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - dry-run mode executes no nested negative-matrix commands and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_LOCAL_VALIDATION_NEGATIVE_MATRIX_OPT_IN=1`.
+  - bounded to four targeted `kamn-node` negative-path tests when run mode is enabled.
+  - service api validation negative-matrix contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `service_api_validation_negative_matrix_policy_marker_missing:replay_guard_status`
+
 ## Kolme HTTPS Native Transport Contract
 - Runtime-commit HTTPS transport uses an in-process native TLS client path.
 - `openssl s_client` subprocess execution is prohibited in transport code paths (`Regression: #2671`).
@@ -2245,6 +2264,7 @@ Fast-mode CI tooling regression coverage includes:
 - PR CI declaration checker (`test_check_pr_ci_declaration.sh`)
 - Service API serde payload parity CI exclusion policy checker (`test_service_api_serde_payload_parity_ci_exclusion_policy.sh`)
 - Service API reason-code compatibility CI exclusion policy checker (`test_service_api_reason_code_compatibility_ci_exclusion_policy.sh`)
+- Service API validation negative-matrix CI exclusion policy checker (`test_service_api_validation_negative_matrix_ci_exclusion_policy.sh`)
 - Flaky report commenter (`test_post_flaky_report_comment.sh`)
 - Flaky issue syncer (`test_sync_flaky_registry_issues.sh`)
 - Workflow guard contracts (`test_workflow_retry_policy.sh`, `test_workflow_cache_policy.sh`, `test_workflow_scope_policy.sh`, `test_workflow_performance_policy.sh`)

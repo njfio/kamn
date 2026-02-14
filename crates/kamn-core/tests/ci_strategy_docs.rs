@@ -564,3 +564,33 @@ fn doc_contains_runtime_service_api_reason_code_compatibility_contract_lane_ci_m
         DOC.contains("service_api_reason_code_policy_marker_missing:route_error_mapping_status")
     );
 }
+
+#[test]
+fn doc_contains_runtime_service_api_validation_negative_matrix_contract_lane_ci_mode_markers() {
+    assert!(DOC.contains("## Runtime Service API Validation Negative-Matrix Contract Lane"));
+    assert!(DOC.contains(
+        "validate_service_api_validation_negative_matrix_live.sh --mode dry-run --output-json /tmp/service-api-validation-negative-matrix-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "KAMN_LOCAL_VALIDATION_NEGATIVE_MATRIX_OPT_IN=1 bash scripts/runtime/validate_service_api_validation_negative_matrix_live.sh --mode run --output-json /tmp/service-api-validation-negative-matrix-live-summary.json"
+    ));
+    assert!(DOC.contains(
+        "check_service_api_validation_negative_matrix_live_policy.sh --report-file /tmp/service-api-validation-negative-matrix-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-validation-negative-matrix-policy.json"
+    ));
+    assert!(DOC.contains(
+        "validate_service_api_validation_negative_matrix_live_contract_lane.sh --output-json /tmp/service-api-validation-negative-matrix-contract-lane-report.json --policy-output-json /tmp/service-api-validation-negative-matrix-policy.json"
+    ));
+    assert!(
+        DOC.contains("test_validate_service_api_validation_negative_matrix_live_contract_lane.sh")
+    );
+    assert!(DOC.contains("test_check_service_api_validation_negative_matrix_live_policy.sh"));
+    assert!(DOC.contains("ci-fast-gate mode: fast"));
+    assert!(DOC.contains("local-dev mode: local"));
+    assert!(DOC.contains("manual-hardened mode: manual"));
+    assert!(DOC.contains(
+        "service api validation negative-matrix contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode."
+    ));
+    assert!(DOC.contains(
+        "service_api_validation_negative_matrix_policy_marker_missing:replay_guard_status"
+    ));
+}
