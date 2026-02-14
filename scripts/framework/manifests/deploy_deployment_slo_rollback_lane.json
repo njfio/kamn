@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "deploy.deployment_slo_rollback.run",
+  "evidence_key": "deployment_slo_rollback_lane:v1",
+  "reason_key": "deployment_slo_rollback_reason_codes:GO:v1",
+  "phases": {
+    "run": [
+      "bash",
+      "scripts/deploy/run_deployment_slo_rollback_lane_impl.sh"
+    ]
+  }
+}

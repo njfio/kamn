@@ -60,6 +60,7 @@ resolve_manifest_name() {
     run_bridge_replay_redaction_contract_lane.sh) echo "bridge_bridge_replay_redaction_contract_lane.json" ;;
     run_cutover_rollback_contract_lane.sh) echo "cutover_cutover_rollback_contract_lane.json" ;;
     run_dr_evidence_contract_lane.sh) echo "deploy_dr_evidence_contract_lane.json" ;;
+    run_deployment_slo_rollback_lane.sh) echo "deploy_deployment_slo_rollback_lane.json" ;;
     run_backend_session_auth_freshness_contract_lane.sh) echo "dashboard_backend_session_auth_freshness_contract_lane.json" ;;
     run_backend_session_auth_freshness_lane.sh) echo "dashboard_backend_session_auth_freshness_lane.json" ;;
     run_cross_chain_outbound_intent_contract_lane.sh) echo "bridge_cross_chain_outbound_intent_contract_lane.json" ;;
@@ -146,6 +147,7 @@ resolve_manifest_name() {
 
 resolve_phase_name() {
   case "$1" in
+    run_deployment_slo_rollback_lane.sh) echo "run" ;;
     run_classification_redaction_lane.sh) echo "run" ;;
     run_backend_session_auth_freshness_lane.sh) echo "run" ;;
     run_dashboard_stale_error_budget_lane.sh) echo "run" ;;
