@@ -153,6 +153,22 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_full_runtime_policy_fast_gate_exclusion_mismatch`
 
+## Deploy Compose Topology Contract Lane
+- Entry commands:
+  - `bash scripts/deploy/validate_compose_topology_contract_lane.sh --output-json /tmp/compose-topology-contract-summary.json --ci-fast-gate PASS`
+  - `bash scripts/deploy/check_compose_topology_contract_policy.sh --report-file /tmp/compose-topology-contract-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/compose-topology-contract-policy.json`
+  - `bash scripts/deploy/test_validate_compose_topology_contract_lane.sh`
+  - `bash scripts/deploy/test_check_compose_topology_contract_policy.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - composes existing low-cost deployment asset checks and bounded live validation (`validate_deployment_assets_live.sh`).
+  - no external network dependency; checks are deterministic against local compose/docs artifacts.
+  - runtime budget is bounded via `KAMN_COMPOSE_TOPOLOGY_CONTRACT_MAX_SECONDS`.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `compose_topology_policy_docs_marker_mismatch`
+
 ## Runtime Observability Endpoint Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_runtime_observability_endpoint_live_contract_lane.sh --output-json /tmp/runtime-observability-endpoint-contract-lane-report.json --policy-output-json /tmp/runtime-observability-endpoint-policy-report.json`
