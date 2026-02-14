@@ -123,8 +123,10 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Entry commands:
   - `bash scripts/runtime/validate_runtime_observability_endpoint_live_contract_lane.sh --output-json /tmp/runtime-observability-endpoint-contract-lane-report.json --policy-output-json /tmp/runtime-observability-endpoint-policy-report.json`
   - `bash scripts/runtime/check_runtime_observability_endpoint_live_policy.sh --report-file /tmp/runtime-observability-endpoint-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/runtime-observability-endpoint-policy-report.json`
+  - `bash scripts/ci/check_observability_endpoint_drift_contract.sh --output-json /tmp/observability-endpoint-drift-report.json`
   - `bash scripts/runtime/test_validate_runtime_observability_endpoint_live_contract_lane.sh`
   - `bash scripts/runtime/test_check_runtime_observability_endpoint_live_policy.sh`
+  - `bash scripts/ci/test_check_observability_endpoint_drift_contract.sh`
 - ci-fast-gate mode: fast
 - local-dev mode: local
 - manual-hardened mode: manual
@@ -133,6 +135,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - no external network dependency or remote runtime process orchestration
   - explicit runtime budget cap via `KAMN_RUNTIME_OBSERVABILITY_ENDPOINT_CONTRACT_MAX_SECONDS`
   - deterministic fail-closed policy tamper drill executed in-process
+- Deterministic fail-closed marker for drift tamper drills:
+  - `observability_source_marker_missing:legacy_tcp_listener_import`
 
 ## Runtime Local Retry/Diagnostics Contract Lane
 - Entry commands:
@@ -2365,6 +2369,7 @@ Fast-mode CI tooling regression coverage includes:
 - Service API Prometheus metrics CI exclusion policy checker (`test_service_api_prometheus_metrics_ci_exclusion_policy.sh`)
 - Local metrics scrape CI exclusion policy checker (`test_local_metrics_scrape_ci_exclusion_policy.sh`)
 - Local observability scrape CI exclusion policy checker (`test_local_observability_scrape_ci_exclusion_policy.sh`)
+- Observability endpoint drift contract checker (`test_check_observability_endpoint_drift_contract.sh`)
 - Flaky report commenter (`test_post_flaky_report_comment.sh`)
 - Flaky issue syncer (`test_sync_flaky_registry_issues.sh`)
 - Workflow guard contracts (`test_workflow_retry_policy.sh`, `test_workflow_cache_policy.sh`, `test_workflow_scope_policy.sh`, `test_workflow_performance_policy.sh`)
