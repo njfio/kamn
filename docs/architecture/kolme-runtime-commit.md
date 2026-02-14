@@ -61,3 +61,5 @@ Primary tests:
 Command:
 
 - `cargo test -p kamn-node -- rejects_kolme_live_continuous_mode_without_tick_interval rejects_kolme_live_continuous_mode_without_max_ticks functional_runtime_kolme_live_continuous_mode_executes_multiple_cycles`
+- `bash scripts/kolme/run_continuous_runtime_commit_contract_lane.sh`
+- `bash scripts/kolme/validate_continuous_runtime_commit_live.sh`
