@@ -1,0 +1,6 @@
+{
+  "schema_version": "kamn.ci.kamn-node-main-rs-extraction-thresholds.v1",
+  "warn_line_count": 1100,
+  "fail_line_count": 1300
+}
+
