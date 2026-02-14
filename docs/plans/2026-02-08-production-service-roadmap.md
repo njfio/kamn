@@ -32,6 +32,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `websocket_upgrade_status=verified`, `fail_closed_status=verified`, `probe_status=verified`.
   - Fail-closed validation confirmed for invalid runtime budget argument: `max-seconds must be an integer`.
 - Phase 4.1 initial slice delivered: `runtime-mode kolme-live` now supports bounded continuous commit/finality execution when paired cycle controls are supplied (`--daemon-max-ticks` and `--daemon-tick-interval-ms`) with fail-closed guardrails for partial declarations (Task #2931, Subtask #2932).
+- Phase 4.1 live validation delivered:
+  - Runtime lane: `scripts/kolme/validate_continuous_runtime_commit_live.sh` and `scripts/kolme/test_validate_continuous_runtime_commit_live.sh` (Task #2933, Subtask #2934).
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `continuous_runtime_contract_status=verified`, `evidence_bundle_status=verified`, `fail_closed_status=verified`.
+  - Fail-closed validation confirmed for partial cycle-control declarations: `--daemon-tick-interval-ms`.
 - Phase 6.1 initial slice delivered: service API `/metrics` now exports deterministic runtime telemetry gauges and source/health labels with fail-closed unknown defaults when daemon/kolme telemetry is unavailable (Task #2961, Subtask #2962).
 - Phase 6.1 live validation delivered:
   - Runtime lane: `scripts/runtime/validate_service_api_observability_live.sh` and `scripts/runtime/test_validate_service_api_observability_live.sh` (Task #2963, Subtask #2964).
