@@ -35,6 +35,9 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
 - Post-roadmap hardening wave 2 runtime decomposition initial tranche delivered:
   - Extracted state-divergence orchestration from `crates/kamn-core/src/runtime.rs` into dedicated module `crates/kamn-core/src/runtime_state_divergence.rs` with unchanged external behavior (Task #3050, Subtask #3051).
   - Module-ownership contract documented in `docs/foundation/runtime-watchdog-attestation.md` and enforced by `crates/kamn-core/tests/runtime_watchdog_attestation_docs.rs`.
+- Post-roadmap hardening wave 2 runtime decomposition tranche 2 delivered:
+  - Extracted daemon phase-coordination orchestration from `crates/kamn-core/src/runtime.rs` into dedicated module `crates/kamn-core/src/runtime_phase_coordination.rs` with unchanged external behavior (Task #3050, Subtask #3057).
+  - Module-ownership contract documented in `docs/foundation/runtime-network.md` and enforced by `crates/kamn-core/tests/runtime_network_docs.rs` and `crates/kamn-core/tests/runtime_module_extraction_contract.rs`.
 - Phase 2.1 initial slice delivered: deterministic `runtime-mode api` ingress server with required messaging/channel/task/profile/health/metrics route contracts (Task #2906).
 - Phase 2.1 live validation delivered:
   - Runtime lane: `scripts/runtime/validate_service_api_live.sh` and `scripts/runtime/test_validate_service_api_live.sh` (Task #2908, Subtask #2909).

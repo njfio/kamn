@@ -8,6 +8,23 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `PeerLifecycleEvent`
   - `PeerLifecycle`
   - `RuntimeLifecycleError`
+- Added daemon phase-coordination primitives in `crates/kamn-core/src/runtime_phase_coordination.rs`:
+  - `ConstructLockLease`
+  - `ConstructLockGuard`
+  - `ConstructLockError`
+  - `execute_processor_daemon_tick(...)`
+  - `ListenerAttestation`
+  - `ListenerQuorumInput`
+  - `ListenerQuorumDecision`
+  - `ListenerQuorumEvaluator`
+  - `ListenerQuorumError`
+  - `evaluate_daemon_listener_quorum(...)`
+  - `ApproverAttestation`
+  - `ApproverQuorumInput`
+  - `ApproverQuorumDecision`
+  - `ApproverQuorumEvaluator`
+  - `ApproverQuorumError`
+  - `authorize_daemon_outbound_action(...)`
 - Added authenticated peer transport framing primitives in `crates/kamn-core/src/runtime.rs`:
   - `AuthenticatedPeerFrame`
   - `AuthenticatedPeerFrameError`
