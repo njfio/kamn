@@ -7,12 +7,14 @@ fn doc_contains_runtime_network_scope_and_models() {
     assert!(DOC.contains("crates/kamn-core/src/runtime_phase_coordination.rs"));
     assert!(DOC.contains("crates/kamn-core/src/runtime_transport_coordination.rs"));
     assert!(DOC.contains("crates/kamn-core/src/runtime_snapshot_store.rs"));
+    assert!(DOC.contains("crates/kamn-core/src/runtime_tests_snapshot_store.rs"));
     assert!(DOC.contains("crates/kamn-core/src/runtime_recovery_guard.rs"));
     assert!(DOC.contains("## Node CLI Recovery-Check Mapping"));
     assert!(DOC.contains("## Node CLI Daemon Lifecycle Mapping"));
     assert!(DOC.contains("## Bridge Quorum Runtime Mapping"));
     assert!(DOC.contains("## Snapshot Persistence and Restore Contract Rules"));
     assert!(DOC.contains("## Deterministic Fault Simulation Harness Rules"));
+    assert!(DOC.contains("## Runtime Test Module Ownership Rules"));
     assert!(DOC.contains("## Kolme Notifications Websocket Consumer Contract Rules"));
     assert!(DOC.contains("## Kolme Block Fallback Finality Reconciliation Contract Rules"));
     assert!(DOC.contains("PeerLifecycle"));
