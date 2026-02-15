@@ -16,12 +16,212 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 const LIBP2P_SWARM_BEHAVIOR_COMPONENTS: [&str; 6] =
     ["tcp", "noise", "yamux", "identify", "kad", "gossipsub"];
+const LIBP2P_IDENTIFY_PROTOCOL_ID: &str = "/kamn/libp2p-live/1.0.0";
+const LIBP2P_TOPIC_NAMESPACE: &str = "kamn/v1/";
+const LIBP2P_RUNTIME_EVENT_SCHEMA_MARKER: &str = "kamn.libp2p.runtime-event.v1";
 
 #[cfg(feature = "libp2p-live-transport")]
 #[derive(libp2p::swarm::NetworkBehaviour)]
 struct Libp2pDeterministicRuntimeBehaviour {
     gossipsub: gossipsub::Behaviour,
     identify: identify::Behaviour,
+}
+
+/// Failure classes produced while normalizing deterministic libp2p runtime events.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Libp2pBehaviorFailureClass {
+    /// Runtime publish call was rejected by behavior-level policy.
+    PublishRejected,
+    /// Runtime observed malformed or disallowed topic metadata.
+    InvalidTopic,
+    /// Runtime observed malformed peer metadata.
+    InvalidPeerEvent,
+    /// Runtime adapter control channel closed unexpectedly.
+    RuntimeChannelClosed,
+    /// Runtime frame send failed because sender peer was unknown.
+    UnknownSenderPeer,
+    /// Runtime frame send failed because recipient peer was unknown.
+    UnknownRecipientPeer,
+}
+
+impl Libp2pBehaviorFailureClass {
+    /// Returns deterministic reason code used by runtime policy checks.
+    pub fn reason_code(self) -> &'static str {
+        match self {
+            Self::PublishRejected => "p2p_libp2p_publish_rejected",
+            Self::InvalidTopic => "p2p_transport_invalid_topic",
+            Self::InvalidPeerEvent => "p2p_libp2p_event_invalid_peer_event",
+            Self::RuntimeChannelClosed => "p2p_libp2p_runtime_channel_closed",
+            Self::UnknownSenderPeer => "p2p_transport_unknown_sender_peer",
+            Self::UnknownRecipientPeer => "p2p_transport_unknown_recipient_peer",
+        }
+    }
+}
+
+/// Runtime event kinds emitted by deterministic libp2p adapter normalization.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Libp2pRuntimeEventKind {
+    /// Local peer advertised discovery metadata.
+    PeerAdvertised,
+    /// Discovery lookup returned one peer for requested topic.
+    PeerDiscovered,
+    /// Gossip payload published to one recipient.
+    GossipPublished,
+    /// Gossip payload accepted for one recipient inbox.
+    GossipReceived,
+    /// Behavior-level failure was emitted.
+    BehaviorFailure,
+}
+
+/// Deterministic libp2p runtime event schema consumed by runtime adapter policy checks.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Libp2pRuntimeEvent {
+    schema_marker: &'static str,
+    kind: Libp2pRuntimeEventKind,
+    peer_id: Option<String>,
+    topic_id: Option<String>,
+    payload: Option<String>,
+    reason_code: &'static str,
+}
+
+impl Libp2pRuntimeEvent {
+    fn new(
+        kind: Libp2pRuntimeEventKind,
+        peer_id: Option<String>,
+        topic_id: Option<String>,
+        payload: Option<String>,
+        reason_code: &'static str,
+    ) -> Self {
+        Self {
+            schema_marker: LIBP2P_RUNTIME_EVENT_SCHEMA_MARKER,
+            kind,
+            peer_id,
+            topic_id,
+            payload,
+            reason_code,
+        }
+    }
+
+    /// Builds normalized event for one successful peer advertisement.
+    pub fn peer_advertised(peer_id: &str) -> Result<Self, P2pTransportError> {
+        validate_peer_id(peer_id)?;
+        Ok(Self::new(
+            Libp2pRuntimeEventKind::PeerAdvertised,
+            Some(peer_id.to_owned()),
+            None,
+            None,
+            "p2p_libp2p_event_peer_advertised",
+        ))
+    }
+
+    /// Builds normalized event for one discovered peer and topic.
+    pub fn peer_discovered(peer_id: &str, topic: &str) -> Result<Self, P2pTransportError> {
+        validate_peer_id(peer_id)?;
+        let topic_id = canonical_libp2p_topic_id(topic)?;
+        Ok(Self::new(
+            Libp2pRuntimeEventKind::PeerDiscovered,
+            Some(peer_id.to_owned()),
+            Some(topic_id),
+            None,
+            "p2p_libp2p_event_peer_discovered",
+        ))
+    }
+
+    /// Builds normalized event for one successful gossip publish operation.
+    pub fn gossip_published(
+        peer_id: &str,
+        topic: &str,
+        payload: &str,
+    ) -> Result<Self, P2pTransportError> {
+        validate_peer_id(peer_id)?;
+        let topic_id = canonical_libp2p_topic_id(topic)?;
+        if payload.trim().is_empty() {
+            return Err(P2pTransportError::EmptyPayload);
+        }
+        Ok(Self::new(
+            Libp2pRuntimeEventKind::GossipPublished,
+            Some(peer_id.to_owned()),
+            Some(topic_id),
+            Some(payload.to_owned()),
+            "p2p_libp2p_event_gossip_published",
+        ))
+    }
+
+    /// Builds normalized event for one accepted gossip message delivery.
+    pub fn gossip_received(
+        peer_id: &str,
+        topic: &str,
+        payload: &str,
+    ) -> Result<Self, P2pTransportError> {
+        validate_peer_id(peer_id)?;
+        let topic_id = canonical_libp2p_topic_id(topic)?;
+        if payload.trim().is_empty() {
+            return Err(P2pTransportError::EmptyPayload);
+        }
+        Ok(Self::new(
+            Libp2pRuntimeEventKind::GossipReceived,
+            Some(peer_id.to_owned()),
+            Some(topic_id),
+            Some(payload.to_owned()),
+            "p2p_libp2p_event_gossip_received",
+        ))
+    }
+
+    /// Builds normalized event for one behavior-level failure.
+    pub fn behavior_failure(
+        class: Libp2pBehaviorFailureClass,
+        peer_id: Option<&str>,
+        topic: Option<&str>,
+    ) -> Result<Self, P2pTransportError> {
+        let peer_id = match peer_id {
+            Some(value) => {
+                validate_peer_id(value)?;
+                Some(value.to_owned())
+            }
+            None => None,
+        };
+        let topic_id = match topic {
+            Some(value) => Some(canonical_libp2p_topic_id(value)?),
+            None => None,
+        };
+        Ok(Self::new(
+            Libp2pRuntimeEventKind::BehaviorFailure,
+            peer_id,
+            topic_id,
+            None,
+            class.reason_code(),
+        ))
+    }
+
+    /// Returns deterministic schema marker for this event payload.
+    pub fn schema_marker(&self) -> &'static str {
+        self.schema_marker
+    }
+
+    /// Returns event kind.
+    pub fn kind(&self) -> Libp2pRuntimeEventKind {
+        self.kind
+    }
+
+    /// Returns optional peer identifier.
+    pub fn peer_id(&self) -> Option<&str> {
+        self.peer_id.as_deref()
+    }
+
+    /// Returns optional canonical topic identifier.
+    pub fn topic_id(&self) -> Option<&str> {
+        self.topic_id.as_deref()
+    }
+
+    /// Returns optional payload body.
+    pub fn payload(&self) -> Option<&str> {
+        self.payload.as_deref()
+    }
+
+    /// Returns deterministic reason code.
+    pub fn reason_code(&self) -> &'static str {
+        self.reason_code
+    }
 }
 
 /// Transport-level discovery metadata advertised by each active peer.
@@ -629,6 +829,19 @@ impl Libp2pLivePeerLifecycleTransport {
         self.live_network_id.as_str()
     }
 
+    /// Drains normalized runtime events emitted by this transport adapter.
+    pub fn drain_runtime_events(&self) -> Result<Vec<Libp2pRuntimeEvent>, P2pTransportError> {
+        #[cfg(feature = "libp2p-live-transport")]
+        {
+            self.native_runtime_loop.drain_runtime_events()
+        }
+        #[cfg(not(feature = "libp2p-live-transport"))]
+        {
+            let mut state = self.lock_live_data_plane_state()?;
+            Ok(state.runtime_events.drain(..).collect())
+        }
+    }
+
     #[cfg(feature = "libp2p-live-transport")]
     /// Returns deterministic native runtime loop marker for feature-enabled adapter wiring.
     pub fn native_runtime_loop_marker(&self) -> &'static str {
@@ -656,11 +869,13 @@ impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
         let mut state = self.lock_live_data_plane_state()?;
         #[cfg(not(feature = "libp2p-live-transport"))]
         {
+            let event = Libp2pRuntimeEvent::peer_advertised(record.peer_id.as_str())?;
             state
                 .inbox_by_peer
                 .entry(record.peer_id.clone())
                 .or_insert_with(VecDeque::new);
             state.peers_by_id.insert(record.peer_id.clone(), record);
+            state.runtime_events.push_back(event);
             Ok(())
         }
     }
@@ -679,17 +894,26 @@ impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
         #[cfg(not(feature = "libp2p-live-transport"))]
         validate_topic(topic)?;
         #[cfg(not(feature = "libp2p-live-transport"))]
-        let state = self.lock_live_data_plane_state()?;
+        let mut state = self.lock_live_data_plane_state()?;
         #[cfg(not(feature = "libp2p-live-transport"))]
         {
-            Ok(state
+            let discovered = state
                 .peers_by_id
                 .values()
                 .filter(|record| {
                     record.peer_id != requester_peer_id && record.supports_topic(topic)
                 })
                 .cloned()
-                .collect())
+                .collect::<Vec<PeerDiscoveryRecord>>();
+            for record in &discovered {
+                state
+                    .runtime_events
+                    .push_back(Libp2pRuntimeEvent::peer_discovered(
+                        record.peer_id.as_str(),
+                        topic,
+                    )?);
+            }
+            Ok(discovered)
         }
     }
 
@@ -702,23 +926,49 @@ impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
         let mut state = self.lock_live_data_plane_state()?;
         #[cfg(not(feature = "libp2p-live-transport"))]
         if !state.peers_by_id.contains_key(&frame.sender_peer_id) {
+            state
+                .runtime_events
+                .push_back(Libp2pRuntimeEvent::behavior_failure(
+                    Libp2pBehaviorFailureClass::UnknownSenderPeer,
+                    Some(frame.sender_peer_id.as_str()),
+                    Some(frame.topic.as_str()),
+                )?);
             return Err(P2pTransportError::UnknownSenderPeer(
                 frame.sender_peer_id.clone(),
             ));
         }
         #[cfg(not(feature = "libp2p-live-transport"))]
         if !state.peers_by_id.contains_key(&frame.recipient_peer_id) {
+            state
+                .runtime_events
+                .push_back(Libp2pRuntimeEvent::behavior_failure(
+                    Libp2pBehaviorFailureClass::UnknownRecipientPeer,
+                    Some(frame.recipient_peer_id.as_str()),
+                    Some(frame.topic.as_str()),
+                )?);
             return Err(P2pTransportError::UnknownRecipientPeer(
                 frame.recipient_peer_id.clone(),
             ));
         }
         #[cfg(not(feature = "libp2p-live-transport"))]
         {
+            let published = Libp2pRuntimeEvent::gossip_published(
+                frame.sender_peer_id.as_str(),
+                frame.topic.as_str(),
+                frame.payload.as_str(),
+            )?;
+            let received = Libp2pRuntimeEvent::gossip_received(
+                frame.recipient_peer_id.as_str(),
+                frame.topic.as_str(),
+                frame.payload.as_str(),
+            )?;
             state
                 .inbox_by_peer
                 .entry(frame.recipient_peer_id.clone())
                 .or_insert_with(VecDeque::new)
                 .push_back(frame);
+            state.runtime_events.push_back(published);
+            state.runtime_events.push_back(received);
             Ok(())
         }
     }
@@ -750,6 +1000,7 @@ impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
 struct Libp2pLiveDataPlaneState {
     peers_by_id: BTreeMap<String, PeerDiscoveryRecord>,
     inbox_by_peer: BTreeMap<String, VecDeque<PeerGossipFrame>>,
+    runtime_events: VecDeque<Libp2pRuntimeEvent>,
 }
 
 #[cfg(not(feature = "libp2p-live-transport"))]
@@ -799,6 +1050,9 @@ enum Libp2pNativeRuntimeAdapterLoopCommand {
     DrainInbox {
         recipient_peer_id: String,
         response: std::sync::mpsc::Sender<Result<Vec<PeerGossipFrame>, P2pTransportError>>,
+    },
+    DrainRuntimeEvents {
+        response: std::sync::mpsc::Sender<Result<Vec<Libp2pRuntimeEvent>, P2pTransportError>>,
     },
 }
 
@@ -889,6 +1143,18 @@ impl Libp2pNativeRuntimeAdapterLoop {
             .recv()
             .map_err(|_| P2pTransportError::StateUnavailable)?
     }
+
+    fn drain_runtime_events(&self) -> Result<Vec<Libp2pRuntimeEvent>, P2pTransportError> {
+        let (response_tx, response_rx) = std::sync::mpsc::channel();
+        self.command_tx
+            .send(Libp2pNativeRuntimeAdapterLoopCommand::DrainRuntimeEvents {
+                response: response_tx,
+            })
+            .map_err(|_| P2pTransportError::StateUnavailable)?;
+        response_rx
+            .recv()
+            .map_err(|_| P2pTransportError::StateUnavailable)?
+    }
 }
 
 #[cfg(feature = "libp2p-live-transport")]
@@ -902,7 +1168,8 @@ fn run_libp2p_native_runtime_adapter_loop(
                 let result = state
                     .lock()
                     .map_err(|_| P2pTransportError::StateUnavailable)
-                    .map(|mut locked_state| {
+                    .and_then(|mut locked_state| {
+                        let event = Libp2pRuntimeEvent::peer_advertised(record.peer_id.as_str())?;
                         locked_state
                             .inbox_by_peer
                             .entry(record.peer_id.clone())
@@ -910,8 +1177,10 @@ fn run_libp2p_native_runtime_adapter_loop(
                         locked_state
                             .peers_by_id
                             .insert(record.peer_id.clone(), record);
+                        locked_state.runtime_events.push_back(event);
+                        Ok(())
                     });
-                let _ = response.send(result.map(|_| ()));
+                let _ = response.send(result);
             }
             Libp2pNativeRuntimeAdapterLoopCommand::Discover {
                 requester_peer_id,
@@ -924,8 +1193,8 @@ fn run_libp2p_native_runtime_adapter_loop(
                         state
                             .lock()
                             .map_err(|_| P2pTransportError::StateUnavailable)
-                            .map(|locked_state| {
-                                locked_state
+                            .and_then(|mut locked_state| {
+                                let discovered = locked_state
                                     .peers_by_id
                                     .values()
                                     .filter(|record| {
@@ -933,34 +1202,76 @@ fn run_libp2p_native_runtime_adapter_loop(
                                             && record.supports_topic(topic.as_str())
                                     })
                                     .cloned()
-                                    .collect::<Vec<PeerDiscoveryRecord>>()
+                                    .collect::<Vec<PeerDiscoveryRecord>>();
+                                for record in &discovered {
+                                    locked_state.runtime_events.push_back(
+                                        Libp2pRuntimeEvent::peer_discovered(
+                                            record.peer_id.as_str(),
+                                            topic.as_str(),
+                                        )?,
+                                    );
+                                }
+                                Ok(discovered)
                             })
                     });
                 let _ = response.send(result);
             }
             Libp2pNativeRuntimeAdapterLoopCommand::Send { frame, response } => {
+                let sender_peer_id = frame.sender_peer_id.clone();
+                let recipient_peer_id = frame.recipient_peer_id.clone();
+                let topic = frame.topic.clone();
+                let payload = frame.payload.clone();
                 let result = state
                     .lock()
                     .map_err(|_| P2pTransportError::StateUnavailable)
                     .and_then(|mut locked_state| {
-                        if !locked_state.peers_by_id.contains_key(&frame.sender_peer_id) {
+                        if !locked_state
+                            .peers_by_id
+                            .contains_key(sender_peer_id.as_str())
+                        {
+                            locked_state.runtime_events.push_back(
+                                Libp2pRuntimeEvent::behavior_failure(
+                                    Libp2pBehaviorFailureClass::UnknownSenderPeer,
+                                    Some(sender_peer_id.as_str()),
+                                    Some(topic.as_str()),
+                                )?,
+                            );
                             return Err(P2pTransportError::UnknownSenderPeer(
-                                frame.sender_peer_id.clone(),
+                                sender_peer_id.clone(),
                             ));
                         }
                         if !locked_state
                             .peers_by_id
-                            .contains_key(&frame.recipient_peer_id)
+                            .contains_key(recipient_peer_id.as_str())
                         {
+                            locked_state.runtime_events.push_back(
+                                Libp2pRuntimeEvent::behavior_failure(
+                                    Libp2pBehaviorFailureClass::UnknownRecipientPeer,
+                                    Some(recipient_peer_id.as_str()),
+                                    Some(topic.as_str()),
+                                )?,
+                            );
                             return Err(P2pTransportError::UnknownRecipientPeer(
-                                frame.recipient_peer_id.clone(),
+                                recipient_peer_id.clone(),
                             ));
                         }
+                        let published = Libp2pRuntimeEvent::gossip_published(
+                            sender_peer_id.as_str(),
+                            topic.as_str(),
+                            payload.as_str(),
+                        )?;
+                        let received = Libp2pRuntimeEvent::gossip_received(
+                            recipient_peer_id.as_str(),
+                            topic.as_str(),
+                            payload.as_str(),
+                        )?;
                         locked_state
                             .inbox_by_peer
-                            .entry(frame.recipient_peer_id.clone())
+                            .entry(recipient_peer_id.clone())
                             .or_insert_with(VecDeque::new)
                             .push_back(frame);
+                        locked_state.runtime_events.push_back(published);
+                        locked_state.runtime_events.push_back(received);
                         Ok(())
                     });
                 let _ = response.send(result);
@@ -983,8 +1294,26 @@ fn run_libp2p_native_runtime_adapter_loop(
                 });
                 let _ = response.send(result);
             }
+            Libp2pNativeRuntimeAdapterLoopCommand::DrainRuntimeEvents { response } => {
+                let result = state
+                    .lock()
+                    .map_err(|_| P2pTransportError::StateUnavailable)
+                    .map(|mut locked_state| locked_state.runtime_events.drain(..).collect());
+                let _ = response.send(result);
+            }
         }
     }
+}
+
+/// Returns canonical identify protocol id for deterministic libp2p runtime composition.
+pub fn canonical_libp2p_identify_protocol_id() -> &'static str {
+    LIBP2P_IDENTIFY_PROTOCOL_ID
+}
+
+/// Returns canonical gossipsub topic id for deterministic runtime policy checks.
+pub fn canonical_libp2p_topic_id(topic: &str) -> Result<String, P2pTransportError> {
+    validate_topic(topic)?;
+    Ok(format!("{LIBP2P_TOPIC_NAMESPACE}{}", topic.trim()))
 }
 
 fn build_live_data_plane_network_id(config: &P2pSwarmDeterministicConfig) -> String {
@@ -1012,7 +1341,9 @@ fn validate_libp2p_native_runtime_config(
             .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
     }
     for topic in config.gossip_topics() {
-        let _ = libp2p::gossipsub::IdentTopic::new(topic.clone());
+        let topic_id = canonical_libp2p_topic_id(topic.as_str())
+            .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
+        let _ = libp2p::gossipsub::IdentTopic::new(topic_id);
     }
     Ok(())
 }
@@ -1230,6 +1561,8 @@ pub struct P2pSwarmBehaviorStack {
     bootstrap_peers: Vec<String>,
     gossip_topics: Vec<String>,
     behavior_components: Vec<&'static str>,
+    identify_protocol_id: &'static str,
+    gossip_topic_namespace: &'static str,
 }
 
 impl P2pSwarmBehaviorStack {
@@ -1252,6 +1585,16 @@ impl P2pSwarmBehaviorStack {
     pub fn listen_address(&self) -> &str {
         &self.listen_address
     }
+
+    /// Returns canonical identify protocol id.
+    pub fn identify_protocol_id(&self) -> &'static str {
+        self.identify_protocol_id
+    }
+
+    /// Returns canonical topic namespace prefix used during topic normalization.
+    pub fn gossip_topic_namespace(&self) -> &'static str {
+        self.gossip_topic_namespace
+    }
 }
 
 /// Composes deterministic libp2p behavior stack metadata.
@@ -1263,6 +1606,8 @@ pub fn compose_libp2p_swarm_behavior_stack(
         bootstrap_peers: config.bootstrap_peers().to_vec(),
         gossip_topics: config.gossip_topics().to_vec(),
         behavior_components: LIBP2P_SWARM_BEHAVIOR_COMPONENTS.to_vec(),
+        identify_protocol_id: canonical_libp2p_identify_protocol_id(),
+        gossip_topic_namespace: LIBP2P_TOPIC_NAMESPACE,
     }
 }
 
@@ -1723,14 +2068,16 @@ fn validate_libp2p_runtime_stack_composition(
                 )
                 .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
                 for topic in config.gossip_topics() {
+                    let topic_id = canonical_libp2p_topic_id(topic.as_str())
+                        .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
                     gossipsub_behavior
-                        .subscribe(&gossipsub::IdentTopic::new(topic.clone()))
+                        .subscribe(&gossipsub::IdentTopic::new(topic_id))
                         .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
                 }
                 Ok(Libp2pDeterministicRuntimeBehaviour {
                     gossipsub: gossipsub_behavior,
                     identify: identify::Behaviour::new(identify::Config::new(
-                        "/kamn/libp2p-live/1.0.0".to_owned(),
+                        canonical_libp2p_identify_protocol_id().to_owned(),
                         key.public(),
                     )),
                 })

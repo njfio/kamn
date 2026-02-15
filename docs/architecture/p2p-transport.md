@@ -89,11 +89,24 @@ libp2p I/O integration while preserving low-cost default CI behavior.
     - `identify`
     - `kad`
     - `gossipsub`
+  - canonical protocol-id/topic-namespace metadata:
+    - `canonical_libp2p_identify_protocol_id()`
+    - `canonical_libp2p_topic_id(...)`
 - `P2pSwarmHarnessTask`
   - controlled runtime-harness startup surface for deterministic `DryRun` / `Run`
     execution modes used by local integration tests.
   - feature-enabled `Run` mode validates native libp2p stack composition and
     appends `libp2p-runtime-swarm` to harness behavior markers.
+- `Libp2pRuntimeEvent`
+  - normalized runtime event payload schema:
+    - `kamn.libp2p.runtime-event.v1`
+    - `PeerAdvertised`
+    - `PeerDiscovered`
+    - `GossipPublished`
+    - `GossipReceived`
+    - `BehaviorFailure`
+- `Libp2pBehaviorFailureClass`
+  - typed behavior-failure taxonomy mapped to deterministic reason codes.
 - `LiveTransportReconnectPolicy`
   - deterministic reconnect/backoff evaluator for live transport faults.
 - `LiveTransportReconnectDecision`
@@ -144,6 +157,9 @@ deterministic network identity.
 
 - `Libp2pLivePeerLifecycleTransport::live_data_plane_network_id()`
   - exposes the deterministic network identifier used for adapter mesh routing.
+- `Libp2pLivePeerLifecycleTransport::drain_runtime_events()`
+  - drains normalized runtime events emitted by advertise/discover/send paths for
+    deterministic adapter-policy validation.
 - Independent live adapter instances with matching deterministic network inputs
   can discover and exchange gossip frames without cloning one shared adapter.
 - Unsupported lifecycle transitions still fail closed through
@@ -217,6 +233,13 @@ Deterministic reason-code markers:
   - lifecycle state remains unchanged across retries.
   - `P2pTransportError::reason_code()` remains stable at
     `runtime_peer_transition_invalid` for invalid transition retries.
+- Runtime event normalization emits deterministic reason-code contracts:
+  - `p2p_libp2p_event_peer_advertised`
+  - `p2p_libp2p_event_peer_discovered`
+  - `p2p_libp2p_event_gossip_published`
+  - `p2p_libp2p_event_gossip_received`
+  - `p2p_transport_unknown_sender_peer`
+  - `p2p_transport_unknown_recipient_peer`
 
 ## Peer Lifecycle Proptest Invariants
 
@@ -251,8 +274,10 @@ cargo test -p kamn-core --test p2p_transport_feature_gates
 cargo test -p kamn-core --test p2p_transport_feature_gates --features libp2p-live-transport
 cargo test -p kamn-core --test p2p_libp2p_native_adapter_runtime --features libp2p-live-transport
 cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_data_plane_supports_independent_adapter_exchange -- --exact
+cargo test -p kamn-core --test p2p_live_transport_runtime functional_live_transport_emits_normalized_runtime_events -- --exact
 cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_invalid_event_retries_are_idempotent -- --exact
 cargo test -p kamn-core --test p2p_live_transport_runtime regression_live_transport_invalid_transition_reason_code_stable -- --exact
+cargo test -p kamn-core --test p2p_live_transport_runtime unit_libp2p_runtime_protocol_and_topic_ids_are_deterministic -- --exact
 cargo test -p kamn-core --test p2p_reconnect_policy_runtime
 cargo test -p kamn-core --test peer_lifecycle_proptest_invariants unit_peer_lifecycle_proptest_config_is_deterministic_and_persistent -- --exact
 cargo test -p kamn-core --test peer_lifecycle_proptest_invariants functional_peer_lifecycle_proptest_enforces_legal_transition_graph -- --exact
