@@ -503,6 +503,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - local-dev mode: local
 - manual-hardened mode: manual
 - Cost controls:
+  - lane orchestration is centralized in `scripts/runtime/service_api_contract_lane_runner.sh`; wrapper entrypoints remain stable for command-surface compatibility.
   - uses only localhost process-level probes against `runtime-mode api`.
   - no external Kolme node, remote service, or internet dependency.
   - ingress limit config matrix defaults remain parity-checked against source constants and API docs (`api_max_requests_default=1`, `api_idle_timeout_default_ms=5000`, `body_size_limit_bytes=65536`, `api_concurrency_limit_default=32`, `api_rate_limit_per_second_default=120`).
@@ -523,6 +524,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - local-dev mode: local
 - manual-hardened mode: manual
 - Cost controls:
+  - lane orchestration is centralized in `scripts/runtime/service_api_contract_lane_runner.sh`; wrapper entrypoints remain stable for command-surface compatibility.
   - bounded to three targeted `kamn-node` serde payload tests.
   - source-marker checks run locally and avoid external network dependencies.
   - runtime budget is bounded via `KAMN_SERVICE_API_SERDE_PAYLOAD_CONTRACT_MAX_SECONDS`.
@@ -541,6 +543,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - local-dev mode: local
 - manual-hardened mode: manual
 - Cost controls:
+  - lane orchestration is centralized in `scripts/runtime/service_api_contract_lane_runner.sh`; wrapper entrypoints remain stable for command-surface compatibility.
   - bounded to seven targeted local-only checks (five `kamn-node` contract tests + one Rust SDK regression + one Python SDK regression).
   - source-marker checks run locally and avoid external network dependencies.
   - includes SDK parity marker checks for structured envelope decoding in `crates/kamn-sdk/src/service.rs` and `kamn_sdk.py`.
