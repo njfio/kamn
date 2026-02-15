@@ -1,7 +1,7 @@
 //! Mempool block production and consensus validation pipeline contracts.
 
 use crate::config::NodeRole;
-use crate::p2p_transport::PeerGossipFrame;
+use crate::p2p_transport::{PeerGossipFrame, PeerLifecycleTransport};
 use crate::runtime::{
     ApproverAttestation, ApproverQuorumDecision, ApproverQuorumError, ApproverQuorumEvaluator,
     ApproverQuorumInput, ListenerAttestation, ListenerQuorumDecision, ListenerQuorumError,
@@ -124,6 +124,69 @@ const TOPIC_MESSAGES_LEGACY: &str = "messages";
 const TOPIC_MESSAGES_V1: &str = "kamn/messages/v1";
 const TOPIC_BLOCKS_LEGACY: &str = "blocks";
 const TOPIC_BLOCKS_V1: &str = "kamn/blocks/v1";
+
+/// Encodes a baseline transaction into deterministic transport-candidate wire payload.
+pub fn encode_transport_candidate_payload(
+    tx: &BaselineTransaction,
+) -> Result<String, BlockPipelineError> {
+    validate_transport_payload_field_value("id", tx.id.as_str())?;
+    validate_transport_payload_field_value("sender", tx.sender.as_str())?;
+    validate_transport_payload_field_value("state_hash", tx.state_hash.as_str())?;
+    validate_transport_payload_field_value("payload", tx.payload.as_str())?;
+    validate_transport_payload_field_value("signature", tx.signature.as_str())?;
+    if tx.nonce == 0 {
+        return Err(BlockPipelineError::TransportFeed(
+            "transport candidate nonce must be positive (transport_candidate_nonce_invalid)"
+                .to_owned(),
+        ));
+    }
+
+    Ok(format!(
+        "id={}\nsender={}\nnonce={}\nstate_hash={}\npayload={}\nsignature={}",
+        tx.id, tx.sender, tx.nonce, tx.state_hash, tx.payload, tx.signature
+    ))
+}
+
+/// Decodes deterministic transport-candidate wire payload into baseline transaction.
+pub fn decode_transport_candidate_payload(
+    payload: &str,
+) -> Result<BaselineTransaction, BlockPipelineError> {
+    let frame = PeerGossipFrame {
+        topic: TOPIC_MESSAGES_V1.to_owned(),
+        sender_peer_id: "transport-candidate-decode-source".to_owned(),
+        recipient_peer_id: "transport-candidate-decode-target".to_owned(),
+        payload: payload.to_owned(),
+    };
+    match GossipIngressAdapter::decode_frame(&frame) {
+        Ok(GossipIngressRecord::Transaction(tx)) => Ok(tx),
+        Ok(GossipIngressRecord::BlockCandidate(_)) => Err(BlockPipelineError::TransportFeed(
+            "transport candidate decode yielded block candidate payload (transport_candidate_payload_kind_invalid)"
+                .to_owned(),
+        )),
+        Err(error) => Err(BlockPipelineError::TransportFeed(format!(
+            "{}:{}",
+            error.reason_code(),
+            error
+        ))),
+    }
+}
+
+fn validate_transport_payload_field_value(
+    field: &str,
+    value: &str,
+) -> Result<(), BlockPipelineError> {
+    if value.trim().is_empty() {
+        return Err(BlockPipelineError::TransportFeed(format!(
+            "transport candidate field is empty: {field} (transport_candidate_field_empty)"
+        )));
+    }
+    if value.contains('\n') || value.contains('\r') {
+        return Err(BlockPipelineError::TransportFeed(format!(
+            "transport candidate field contains line break: {field} (transport_candidate_field_line_break)"
+        )));
+    }
+    Ok(())
+}
 
 /// Decoded gossip ingress record classified by payload intent.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -387,6 +450,125 @@ impl TransportCanonicalCandidateFeed for InMemoryTransportMempoolFeed {
         &mut self,
     ) -> Result<Vec<CanonicalCommitRecord>, BlockPipelineError> {
         Ok(Vec::new())
+    }
+}
+
+/// Transport-backed feed that drains one peer inbox and decodes transport ingress records.
+#[derive(Debug, Clone)]
+pub struct TransportEventMempoolFeed<TTransport> {
+    transport: TTransport,
+    local_peer_id: String,
+    required_topics: Option<BTreeSet<String>>,
+    pending_transactions: Vec<BaselineTransaction>,
+    pending_candidates: Vec<CanonicalCommitRecord>,
+}
+
+impl<TTransport> TransportEventMempoolFeed<TTransport> {
+    /// Creates a transport-event feed bound to one local peer inbox.
+    pub fn new(
+        transport: TTransport,
+        local_peer_id: &str,
+        required_topics: Option<Vec<String>>,
+    ) -> Result<Self, BlockPipelineError> {
+        if local_peer_id.trim().is_empty() {
+            return Err(BlockPipelineError::TransportFeed(
+                "transport feed local peer id is empty (transport_feed_local_peer_id_invalid)"
+                    .to_owned(),
+            ));
+        }
+        let required_topics = match required_topics {
+            Some(topics) => {
+                if topics.is_empty() {
+                    return Err(BlockPipelineError::TransportFeed(
+                        "transport feed required topics list is empty (transport_feed_topics_invalid)"
+                            .to_owned(),
+                    ));
+                }
+                let mut normalized = BTreeSet::new();
+                for topic in topics {
+                    if topic.trim().is_empty() {
+                        return Err(BlockPipelineError::TransportFeed(
+                            "transport feed required topic is empty (transport_feed_topics_invalid)"
+                                .to_owned(),
+                        ));
+                    }
+                    normalized.insert(topic.trim().to_owned());
+                }
+                Some(normalized)
+            }
+            None => None,
+        };
+
+        Ok(Self {
+            transport,
+            local_peer_id: local_peer_id.to_owned(),
+            required_topics,
+            pending_transactions: Vec::new(),
+            pending_candidates: Vec::new(),
+        })
+    }
+
+    fn decode_inbox_if_needed(&mut self) -> Result<(), BlockPipelineError>
+    where
+        TTransport: PeerLifecycleTransport,
+    {
+        if !self.pending_transactions.is_empty() || !self.pending_candidates.is_empty() {
+            return Ok(());
+        }
+
+        let frames = self
+            .transport
+            .drain_inbox(self.local_peer_id.as_str())
+            .map_err(|error| {
+                BlockPipelineError::TransportFeed(format!(
+                    "transport feed inbox drain failed: {error} (transport_feed_inbox_drain_failed)"
+                ))
+            })?;
+        if frames.is_empty() {
+            return Ok(());
+        }
+
+        if let Some(required_topics) = self.required_topics.as_ref() {
+            for frame in &frames {
+                if !required_topics.contains(frame.topic.as_str()) {
+                    return Err(BlockPipelineError::TransportFeed(format!(
+                        "transport frame topic mismatch: found {} (transport_candidate_topic_mismatch)",
+                        frame.topic
+                    )));
+                }
+            }
+        }
+
+        let decoded = GossipIngressAdapter::decode_frames(&frames).map_err(|error| {
+            BlockPipelineError::TransportFeed(format!("{}:{}", error.reason_code(), error))
+        })?;
+        self.pending_transactions = decoded.transactions;
+        self.pending_candidates = decoded.canonical_candidates;
+        Ok(())
+    }
+}
+
+impl<TTransport> TransportMempoolFeed for TransportEventMempoolFeed<TTransport>
+where
+    TTransport: PeerLifecycleTransport,
+{
+    fn drain_pending_transactions(
+        &mut self,
+    ) -> Result<Vec<BaselineTransaction>, BlockPipelineError> {
+        self.decode_inbox_if_needed()?;
+        Ok(std::mem::take(&mut self.pending_transactions))
+    }
+}
+
+impl<TTransport> TransportCanonicalCandidateFeed for TransportEventMempoolFeed<TTransport>
+where
+    TTransport: PeerLifecycleTransport,
+{
+    fn drain_canonical_candidates(
+        &mut self,
+    ) -> Result<Vec<CanonicalCommitRecord>, BlockPipelineError> {
+        self.decode_inbox_if_needed()?;
+        Ok(std::mem::take(&mut self.pending_candidates))
     }
 }
 
