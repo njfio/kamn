@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECK_SCRIPT="$ROOT_DIR/scripts/ci/check_observability_endpoint_drift_contract.sh"
 OBSERVABILITY_DOC="$ROOT_DIR/docs/foundation/observability-slo-dashboards.md"
+CONTRACT_DOC="$ROOT_DIR/docs/observability/contracts.md"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -135,8 +136,8 @@ import sys
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
 text = text.replace(
-    "{\\\"schema_version\\\":\\\"kamn.runtime.observability.stream.v1\\\"",
-    "{\\\"schema_version\\\":\\\"kamn.runtime.observability.stream.vX\\\"",
+    'const OBSERVABILITY_STREAM_SCHEMA_VERSION: &str = "kamn.runtime.observability.stream.v1";',
+    'const OBSERVABILITY_STREAM_SCHEMA_VERSION: &str = "kamn.runtime.observability.stream.vX";',
     1,
 )
 path.write_text(text, encoding="utf-8")
@@ -186,6 +187,35 @@ if ! printf '%s\n' "$tampered_observability_docs_output" | grep -q 'observabilit
   exit 1
 fi
 
+tampered_contract_docs="$TMP_DIR/observability-contracts.md"
+cp "$CONTRACT_DOC" "$tampered_contract_docs"
+python3 - "$tampered_contract_docs" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+needle = 'schema_version="kamn.runtime.observability.readiness.v1"'
+if needle not in text:
+    raise SystemExit("expected observability contracts docs marker not found in baseline copy")
+path.write_text(text.replace(needle, "", 1), encoding="utf-8")
+PY
+
+set +e
+tampered_contract_docs_output="$(
+  bash "$CHECK_SCRIPT" --observability-contract-doc-file "$tampered_contract_docs" --output-json "$TMP_DIR/observability-endpoint-drift-report.tampered-contract-docs.json" 2>&1
+)"
+tampered_contract_docs_code=$?
+set -e
+if [ "$tampered_contract_docs_code" -eq 0 ]; then
+  echo "expected observability endpoint drift checker to fail on contracts docs marker drift" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_contract_docs_output" | grep -q 'observability_contract_docs_marker_missing:readiness_schema_marker'; then
+  echo "expected deterministic observability contracts docs-marker drift reason code" >&2
+  exit 1
+fi
+
 tampered_strategy_docs="$TMP_DIR/ci-strategy.md"
 cp "$STRATEGY_DOC" "$tampered_strategy_docs"
 python3 - "$tampered_strategy_docs" <<'PY'
@@ -194,7 +224,7 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-needle = "telemetry schema docs-contract marker set remains fail-closed for stream schema_version and readiness_reason_code taxonomy."
+needle = "telemetry schema docs-contract marker set remains fail-closed for health/readiness/stream schema_version markers and readiness_reason_code taxonomy."
 if needle not in text:
     raise SystemExit("expected telemetry strategy marker not found in baseline copy")
 path.write_text(text.replace(needle, "", 1), encoding="utf-8")

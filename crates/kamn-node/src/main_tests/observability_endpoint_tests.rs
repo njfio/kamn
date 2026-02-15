@@ -264,11 +264,17 @@ fn functional_observability_endpoint_renders_metrics_and_health_payloads() {
     let health = render_observability_endpoint_response(&snapshot, "/healthz");
     assert_eq!(health.status_code, 200);
     assert_eq!(health.content_type, "application/json");
+    assert!(health
+        .body
+        .contains("\"schema_version\":\"kamn.runtime.observability.health.v1\""));
     assert!(health.body.contains("\"health\":\"healthy\""));
     assert!(health.body.contains("\"runtime_mode\":\"daemon\""));
     assert!(health.body.contains("\"reason_code\":\"none\""));
     assert!(health.body.contains("\"ready\":true"));
     assert!(health.body.contains("\"readiness_reason_code\":\"none\""));
+    assert!(health.body.contains(
+        "\"readiness_reason_taxonomy_version\":\"kamn.runtime.observability.readiness.reason-taxonomy.v1\""
+    ));
     assert!(health
         .body
         .contains("\"transport_dependency_status\":\"ready\""));
@@ -285,10 +291,16 @@ fn functional_observability_endpoint_renders_metrics_and_health_payloads() {
     let readiness = render_observability_endpoint_response(&snapshot, "/readyz");
     assert_eq!(readiness.status_code, 200);
     assert_eq!(readiness.content_type, "application/json");
+    assert!(readiness
+        .body
+        .contains("\"schema_version\":\"kamn.runtime.observability.readiness.v1\""));
     assert!(readiness.body.contains("\"ready\":true"));
     assert!(readiness
         .body
         .contains("\"readiness_reason_code\":\"none\""));
+    assert!(readiness.body.contains(
+        "\"readiness_reason_taxonomy_version\":\"kamn.runtime.observability.readiness.reason-taxonomy.v1\""
+    ));
     assert!(readiness
         .body
         .contains("\"transport_dependency_status\":\"ready\""));
@@ -568,13 +580,22 @@ fn integration_runtime_observability_endpoint_serves_metrics_and_health_paths() 
         health_response.contains("HTTP/1.1 200 OK"),
         "health endpoint should return 200 response"
     );
+    assert!(health_response.contains("\"schema_version\":\"kamn.runtime.observability.health.v1\""));
     assert!(health_response.contains("\"health\":\"healthy\""));
     assert!(health_response.contains("\"reason_code\":\"none\""));
     assert!(health_response.contains("\"ready\":true"));
     assert!(health_response.contains("\"readiness_reason_code\":\"none\""));
+    assert!(health_response.contains(
+        "\"readiness_reason_taxonomy_version\":\"kamn.runtime.observability.readiness.reason-taxonomy.v1\""
+    ));
     assert!(readiness_response.contains("HTTP/1.1 200 OK"));
+    assert!(readiness_response
+        .contains("\"schema_version\":\"kamn.runtime.observability.readiness.v1\""));
     assert!(readiness_response.contains("\"ready\":true"));
     assert!(readiness_response.contains("\"readiness_reason_code\":\"none\""));
+    assert!(readiness_response.contains(
+        "\"readiness_reason_taxonomy_version\":\"kamn.runtime.observability.readiness.reason-taxonomy.v1\""
+    ));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(

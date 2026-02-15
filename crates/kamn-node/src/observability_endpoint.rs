@@ -10,6 +10,11 @@ pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_READINESS_PATH: &str = "/readyz"
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH: &str = "/metrics.stream";
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_MAX_REQUESTS: u64 = 1;
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_IDLE_TIMEOUT_MS: u64 = 5_000;
+const OBSERVABILITY_HEALTH_SCHEMA_VERSION: &str = "kamn.runtime.observability.health.v1";
+const OBSERVABILITY_READINESS_SCHEMA_VERSION: &str = "kamn.runtime.observability.readiness.v1";
+const OBSERVABILITY_STREAM_SCHEMA_VERSION: &str = "kamn.runtime.observability.stream.v1";
+const OBSERVABILITY_READINESS_REASON_TAXONOMY_VERSION: &str =
+    "kamn.runtime.observability.readiness.reason-taxonomy.v1";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ObservabilityEndpointConfig {
@@ -370,7 +375,8 @@ fn render_metrics_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
 fn render_health_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
     let readiness_reason_code = readiness_reason_code(snapshot);
     format!(
-        "{{\"source\":\"{}\",\"runtime_mode\":\"{}\",\"health\":\"{}\",\"alert_count\":{},\"reason_code\":\"{}\",\"ready\":{},\"readiness_reason_code\":\"{}\",\"transport_dependency_status\":\"{}\",\"signer_dependency_status\":\"{}\",\"commit_dependency_status\":\"{}\",\"transport_checkpoint_failures\":{},\"signer_checkpoint_failures\":{},\"commit_checkpoint_failures\":{},\"latency_p50_ms\":{},\"latency_p99_ms\":{},\"throughput_tps\":{},\"error_rate_bps\":{},\"availability_bps\":{}}}",
+        "{{\"schema_version\":\"{}\",\"source\":\"{}\",\"runtime_mode\":\"{}\",\"health\":\"{}\",\"alert_count\":{},\"reason_code\":\"{}\",\"ready\":{},\"readiness_reason_code\":\"{}\",\"readiness_reason_taxonomy_version\":\"{}\",\"transport_dependency_status\":\"{}\",\"signer_dependency_status\":\"{}\",\"commit_dependency_status\":\"{}\",\"transport_checkpoint_failures\":{},\"signer_checkpoint_failures\":{},\"commit_checkpoint_failures\":{},\"latency_p50_ms\":{},\"latency_p99_ms\":{},\"throughput_tps\":{},\"error_rate_bps\":{},\"availability_bps\":{}}}",
+        OBSERVABILITY_HEALTH_SCHEMA_VERSION,
         escape_json_string(snapshot.source.as_str()),
         escape_json_string(snapshot.runtime_mode.as_str()),
         escape_json_string(snapshot.health.as_str()),
@@ -378,6 +384,7 @@ fn render_health_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
         escape_json_string(snapshot.reason_code.as_str()),
         is_runtime_ready(snapshot),
         escape_json_string(readiness_reason_code),
+        OBSERVABILITY_READINESS_REASON_TAXONOMY_VERSION,
         transport_dependency_status(snapshot),
         signer_dependency_status(snapshot),
         commit_dependency_status(snapshot),
@@ -395,7 +402,8 @@ fn render_health_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
 fn render_stream_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
     let readiness_reason_code = readiness_reason_code(snapshot);
     format!(
-        "{{\"schema_version\":\"kamn.runtime.observability.stream.v1\",\"source\":\"{}\",\"runtime_mode\":\"{}\",\"health\":\"{}\",\"alert_count\":{},\"reason_code\":\"{}\",\"ready\":{},\"readiness_reason_code\":\"{}\",\"transport_dependency_status\":\"{}\",\"signer_dependency_status\":\"{}\",\"commit_dependency_status\":\"{}\",\"transport_checkpoint_failures\":{},\"signer_checkpoint_failures\":{},\"commit_checkpoint_failures\":{},\"latency_p50_ms\":{},\"latency_p99_ms\":{},\"throughput_tps\":{},\"error_rate_bps\":{},\"availability_bps\":{}}}\n",
+        "{{\"schema_version\":\"{}\",\"source\":\"{}\",\"runtime_mode\":\"{}\",\"health\":\"{}\",\"alert_count\":{},\"reason_code\":\"{}\",\"ready\":{},\"readiness_reason_code\":\"{}\",\"transport_dependency_status\":\"{}\",\"signer_dependency_status\":\"{}\",\"commit_dependency_status\":\"{}\",\"transport_checkpoint_failures\":{},\"signer_checkpoint_failures\":{},\"commit_checkpoint_failures\":{},\"latency_p50_ms\":{},\"latency_p99_ms\":{},\"throughput_tps\":{},\"error_rate_bps\":{},\"availability_bps\":{}}}\n",
+        OBSERVABILITY_STREAM_SCHEMA_VERSION,
         escape_json_string(snapshot.source.as_str()),
         escape_json_string(snapshot.runtime_mode.as_str()),
         escape_json_string(snapshot.health.as_str()),
@@ -420,13 +428,15 @@ fn render_stream_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
 fn render_readiness_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
     let readiness_reason_code = readiness_reason_code(snapshot);
     format!(
-        "{{\"source\":\"{}\",\"runtime_mode\":\"{}\",\"ready\":{},\"health\":\"{}\",\"reason_code\":\"{}\",\"readiness_reason_code\":\"{}\",\"transport_dependency_status\":\"{}\",\"signer_dependency_status\":\"{}\",\"commit_dependency_status\":\"{}\",\"transport_checkpoint_failures\":{},\"signer_checkpoint_failures\":{},\"commit_checkpoint_failures\":{}}}",
+        "{{\"schema_version\":\"{}\",\"source\":\"{}\",\"runtime_mode\":\"{}\",\"ready\":{},\"health\":\"{}\",\"reason_code\":\"{}\",\"readiness_reason_code\":\"{}\",\"readiness_reason_taxonomy_version\":\"{}\",\"transport_dependency_status\":\"{}\",\"signer_dependency_status\":\"{}\",\"commit_dependency_status\":\"{}\",\"transport_checkpoint_failures\":{},\"signer_checkpoint_failures\":{},\"commit_checkpoint_failures\":{}}}",
+        OBSERVABILITY_READINESS_SCHEMA_VERSION,
         escape_json_string(snapshot.source.as_str()),
         escape_json_string(snapshot.runtime_mode.as_str()),
         is_runtime_ready(snapshot),
         escape_json_string(snapshot.health.as_str()),
         escape_json_string(snapshot.reason_code.as_str()),
         escape_json_string(readiness_reason_code),
+        OBSERVABILITY_READINESS_REASON_TAXONOMY_VERSION,
         transport_dependency_status(snapshot),
         signer_dependency_status(snapshot),
         commit_dependency_status(snapshot),

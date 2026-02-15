@@ -487,7 +487,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - deterministic fail-closed policy tamper drill executed in-process
 - Deterministic fail-closed marker for drift tamper drills:
   - `observability_source_marker_missing:async_dispatch`
-  - telemetry schema docs-contract marker set remains fail-closed for stream schema_version and readiness_reason_code taxonomy.
+  - `observability_source_marker_missing:legacy_tcp_listener_import`
+  - telemetry schema docs-contract marker set remains fail-closed for health/readiness/stream schema_version markers and readiness_reason_code taxonomy.
 
 ## Runtime Local Retry/Diagnostics Contract Lane
 - Entry commands:
