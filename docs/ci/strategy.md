@@ -2933,6 +2933,24 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `runtime_budget_exceeded` (warning reason)
   - `gate_decision_fault_injection_triggered` (fail reason)
 
+## Flaky Reproducer Contract
+- Deterministic reproducer command:
+  - `bash scripts/ci/run_flaky_reproducer.sh --seed 17 --attempts 5 --max-seconds 120 --artifact-dir /tmp/flaky-reproducer-artifacts --output-json /tmp/flaky-reproducer-report.json -- cargo test -p kamn-core --test invariant_harness`
+- Contract test command:
+  - `bash scripts/ci/test_run_flaky_reproducer.sh`
+- Reproducer artifact schema:
+  - `kamn.ci.flaky-reproducer-report.v1`
+- Required artifact fields:
+  - `schema_version`, `status`, `final_decision`, `reason_code`, `seed`, `attempts`, `max_seconds`, `label`, `elapsed_seconds`, `command`, `command_string`, `flaky_detected`, `success_count`, `failure_count`, `artifact_dir`, `attempt_results`
+- Deterministic reason codes:
+  - `stable_success`
+  - `flaky_pattern_observed`
+  - `reproducible_failure`
+  - `runtime_budget_exceeded`
+- Fail-closed behavior:
+  - mixed or all-failing attempt outcomes emit `final_decision=NO-GO` and exit non-zero.
+  - runtime budget overrun emits `runtime_budget_exceeded` and exit non-zero.
+
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
 - Weekly workflow `ci-flaky-report-comment` posts an automated report comment to issue `#70`.
