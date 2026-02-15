@@ -1,5 +1,7 @@
 {
   "schema_version": "kamn.ci.non-kolme-wave-trend-test-loc-thresholds.v1",
+  "threshold_refreshed_on": "2026-02-15",
+  "threshold_max_age_days": 365,
   "max_script_count_increase": 0,
   "max_total_shell_loc_increase": 0
 }
