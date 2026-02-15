@@ -388,6 +388,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic no-shared-state zero-delivery marker (`no_shared_state_zero_delivery_status=verified`) with guard reason marker (`no_shared_state_unexpected_delivery_reason_code=no_shared_state_unexpected_delivery_detected`) and deterministic zero-delivery count (`no_shared_state_delivery_count=0`).
   - lane emits deterministic two-node discovery marker (`two_node_discovery_status=verified`).
   - lane emits deterministic two-node gossip marker (`two_node_gossip_status=verified`).
+  - lane emits deterministic native compile-mode marker (`native_compile_mode_status=verified`).
   - lane emits deterministic three-node partition/rejoin marker (`three_node_partition_rejoin_status=verified`).
   - lane emits deterministic three-node publish-drop recovery marker (`three_node_publish_drop_recovery_status=verified`).
   - lane emits deterministic convergence reason-code marker (`convergence_reason_code_status=verified`) with reason-code matrix (`convergence_reason_codes=fork_choice_stale_block_height`).

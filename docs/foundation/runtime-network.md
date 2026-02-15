@@ -193,6 +193,8 @@ This document captures the initial runtime-network foundation slice for peer lif
     `two_node_disconnected_fail_closed_reason_code=p2p_transport_live_socket_send_failed`.
   - connected two-node drill must succeed and emit
     `two_node_connected_delivery_status=verified`.
+  - lane must emit deterministic native compile-mode marker
+    `native_compile_mode_status=verified`.
   - no-shared-state invariant must emit deterministic zero-delivery marker
     `no_shared_state_zero_delivery_status=verified` with guard reason marker
     `no_shared_state_unexpected_delivery_reason_code=no_shared_state_unexpected_delivery_detected`
