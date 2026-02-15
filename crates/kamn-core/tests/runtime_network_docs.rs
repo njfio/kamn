@@ -36,10 +36,12 @@ fn doc_contains_runtime_network_scope_and_models() {
     assert!(DOC.contains("RuntimeTransportProfile::Libp2pLive"));
     assert!(DOC.contains("p2p-transport-profile:libp2p-live"));
     assert!(DOC.contains("p2p-live-libp2p-provider"));
+    assert!(DOC.contains("p2p-live-libp2p-provider:native"));
     assert!(DOC.contains("runtime_transport_profile_gossip_disabled_for_production"));
     assert!(DOC.contains("runtime_transport_profile_in_memory_fallback_forbidden"));
     assert!(DOC.contains("runtime_transport_profile_live_marker_missing"));
     assert!(DOC.contains("runtime_transport_profile_live_provider_missing"));
+    assert!(DOC.contains("runtime_transport_profile_compile_mode_not_native"));
 }
 
 #[test]

@@ -193,6 +193,18 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `full_supervisor_invariant_violation:full_supervisor_bootstrap_component_order_mismatch`
   - `full_supervisor_invariant_violation:full_supervisor_stop_unknown_completion_reason`
 
+## Node Runtime Native Libp2p Production Marker Contract Lane
+- For `kamn-node` runtime transport policy/build-wiring changes, keep PR validation on bounded deterministic checks:
+  - `cargo test -p kamn-node --test native_libp2p_feature_contract`
+  - `cargo test -p kamn-node main_tests::runtime_tests::functional_production_transport_profile_classifier_rejects_contract_only_compile_mode -- --exact`
+  - `cargo test -p kamn-node main_tests::runtime_tests::integration_runtime_full_uses_live_transport_profile_components_by_default -- --exact`
+- This lane is cost-effective:
+  - all checks run in-process with no external node orchestration.
+  - compile-mode drift is validated through deterministic component markers.
+- Deterministic fail-closed markers:
+  - `runtime_transport_profile_compile_mode_not_native`
+  - missing `p2p-live-libp2p-provider:native` marker in production runtime reports.
+
 ## Transport-Fed Restart/Replay Canonical Persistence Fast Lane
 - For transport-fed block pipeline canonical persistence/restart drift changes, keep PR checks bounded to:
   - `cargo test -p kamn-core --test block_pipeline_transport_fed unit_canonical_replay_checkpoint_validator_accepts_matching_lineage -- --exact`

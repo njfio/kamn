@@ -142,6 +142,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - resulting component set must include:
     - `p2p-transport-profile:libp2p-live`
     - `p2p-live-libp2p-provider`
+    - `p2p-live-libp2p-provider:native`
   - resulting component set must not include:
     - `p2p-transport-profile:in-memory-deterministic`
     - `p2p-in-memory-transport-fallback`
@@ -150,6 +151,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `runtime_transport_profile_in_memory_fallback_forbidden`
   - `runtime_transport_profile_live_marker_missing`
   - `runtime_transport_profile_live_provider_missing`
+  - `runtime_transport_profile_compile_mode_not_native`
 - Operator remediation contract for production policy failures:
   - `runtime_transport_profile_gossip_disabled_for_production`
     - remove `--disable-gossip` (or set `enable_gossip=true`) for production modes
@@ -161,6 +163,9 @@ This document captures the initial runtime-network foundation slice for peer lif
     - ensure bootstrap path selects `RuntimeTransportProfile::Libp2pLive`
   - `runtime_transport_profile_live_provider_missing`
     - ensure `p2p-live-libp2p-provider` marker is present and provider wiring is initialized
+  - `runtime_transport_profile_compile_mode_not_native`
+    - ensure `kamn-node` enables `kamn-core/libp2p-live-transport`
+    - ensure runtime wiring emits `p2p-live-libp2p-provider:native`
 
 ## Node Observability Ingress Runtime Mapping
 - `kamn-node` observability export serving path is runtime-aligned and async-driven:
