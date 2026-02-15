@@ -366,6 +366,60 @@ milestone_missing_artifact_policy_output="$(bash "$POLICY_CHECKER" --bundle-file
 assert_eq "$(extract_value "$milestone_missing_artifact_policy_output" "status")" "ok" "expected policy checker to preserve deterministic NO-GO for missing artifact bundle"
 assert_eq "$(extract_value "$milestone_missing_artifact_policy_output" "final_decision")" "NO-GO" "expected policy checker NO-GO decision for missing linked artifact bundle"
 
+milestone_missing_runbook_marker_doc="$TMP_DIR/milestone-runbook-marker-missing.md"
+cat >"$milestone_missing_runbook_marker_doc" <<'TXT'
+# Upgrade Rollback Runbook
+
+Marker intentionally incomplete for regression coverage.
+TXT
+
+milestone_missing_runbook_bundle="$TMP_DIR/gonogo-milestone-missing-runbook.json"
+milestone_missing_runbook_output="$(
+  KAMN_GONOGO_RUNBOOK_DOC_FILE="$milestone_missing_runbook_marker_doc" \
+    bash "$GENERATOR" \
+      --output-file "$milestone_missing_runbook_bundle" \
+      --release-candidate "v1.0.0-rc.6" \
+      --schema-target-version "1.0.0" \
+      --runtime-image-digest "sha256:milestone-missing-runbook" \
+      --ci-fast-gate PASS \
+      --ci-deep-lane PASS \
+      --rollback-precheck PASS \
+      --rollback-trigger-status CLEAR \
+      --required-approvals 2 \
+      --received-approvals 2 \
+      --deployment-preflight-summary-file "$milestone_preflight_summary" \
+      --deployment-preflight-policy-file "$milestone_preflight_policy" \
+      --live-node-validation-summary-file "$milestone_live_bundle_summary" \
+      --live-node-validation-policy-file "$milestone_live_bundle_policy" \
+      --go-no-go-gate-report-file "$milestone_gate_report"
+)"
+
+assert_eq "$(extract_value "$milestone_missing_runbook_output" "final_decision")" "NO-GO" "expected milestone bundle to fail closed when operator runbook markers are missing"
+
+python3 - "$milestone_missing_runbook_bundle" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+milestone = payload.get("milestone_review_bundle", {})
+reason_codes = milestone.get("reason_codes")
+if not isinstance(reason_codes, list):
+    raise SystemExit("expected milestone reason_codes list for missing runbook marker case")
+if "milestone_review_operator_runbook_markers_missing" not in reason_codes:
+    raise SystemExit("expected missing operator runbook markers reason code in milestone review bundle")
+if milestone.get("lineage_status") != "fail-closed":
+    raise SystemExit("expected fail-closed lineage status for missing runbook marker case")
+PY
+
+milestone_missing_runbook_policy_output="$(
+  KAMN_GONOGO_RUNBOOK_DOC_FILE="$milestone_missing_runbook_marker_doc" \
+    bash "$POLICY_CHECKER" \
+      --bundle-file "$milestone_missing_runbook_bundle"
+)"
+assert_eq "$(extract_value "$milestone_missing_runbook_policy_output" "status")" "ok" "expected policy checker to preserve deterministic NO-GO for missing runbook marker bundle"
+assert_eq "$(extract_value "$milestone_missing_runbook_policy_output" "final_decision")" "NO-GO" "expected policy checker NO-GO decision for missing runbook marker bundle"
+
 milestone_lineage_tampered_bundle="$TMP_DIR/gonogo-milestone-lineage-tampered.json"
 cp "$milestone_bundle" "$milestone_lineage_tampered_bundle"
 python3 - "$milestone_lineage_tampered_bundle" <<'PY'

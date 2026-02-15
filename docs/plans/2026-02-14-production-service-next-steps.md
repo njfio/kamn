@@ -68,6 +68,8 @@ This refreshed version separates:
 ### Composed full-stack E2E against `kolme_fork`
 - Delivered chain: `#3333 -> #3419 -> #3420 -> (#3432, #3433, #3434)`.
 - Delivery includes composed local-heavy integration evidence bundle, release go/no-go linkage, and architecture/documentation lineage.
+- Promotion evidence gate lineage now fails closed when operator runbook markers drift or go missing (`milestone_review_operator_runbook_missing`, `milestone_review_operator_runbook_markers_missing`) in `scripts/deploy/gonogo_evidence_contract.py`.
+- Local validation drill override for runbook-marker regression uses `KAMN_GONOGO_RUNBOOK_DOC_FILE=<path>`.
 
 ### Runtime observability reason-code/checkpoint projection
 - Delivered chain: `#3333 -> #3471 -> #3472 -> #3473 -> #3474 -> #3490`.

@@ -130,11 +130,15 @@ Milestone go/no-go review must aggregate linked preflight/live/gate artifacts in
   - `lineage_status=verified|fail-closed`
   - `milestone_review_go_no_go_gate_report_missing`
   - `milestone_review_live_node_validation_runtime_provider_mismatch`
+  - `milestone_review_operator_runbook_missing`
+  - `milestone_review_operator_runbook_markers_missing`
   - `contracts.linked_artifact_lineage_required=true`
+  - `contracts.operator_runbook_markers_required=true`
   - `contracts.live_bundle_runtime_provider_client_required=KolmeRuntimeCommitLiveProvider`
   - `contracts.go_no_go_gate_final_decision_required=GO`
 - Decision contract:
   - aggregate lineage drift or missing linked artifacts force `NO-GO` through deterministic milestone reason codes.
+  - missing operator runbook file/markers force `NO-GO` through milestone-review reason taxonomy.
   - policy checker fails closed on tampered milestone lineage payloads (`milestone review bundle lineage mismatch`).
 
 ## Staging Deploy + Rollback Rehearsal Contract (Issue #658)
