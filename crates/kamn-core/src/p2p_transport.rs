@@ -526,11 +526,46 @@ impl<T: PeerLifecycleTransport> PeerLifecycleTransportCoordinator<T> {
     }
 }
 
+/// Runtime backend mode selected for live libp2p transport operations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Libp2pLiveRuntimeBackend {
+    /// Deterministic in-process data-plane fallback path.
+    ContractDataPlane,
+    /// Native socket-backed path used by feature-enabled runtime builds.
+    NativeSocket,
+}
+
+impl Libp2pLiveRuntimeBackend {
+    /// Returns deterministic backend marker for policy and docs contracts.
+    pub fn marker(self) -> &'static str {
+        match self {
+            Self::ContractDataPlane => "contract-data-plane",
+            Self::NativeSocket => "native-socket",
+        }
+    }
+}
+
+/// Resolves live libp2p runtime backend mode from compile-time feature gates.
+pub fn resolve_libp2p_live_runtime_backend() -> Libp2pLiveRuntimeBackend {
+    #[cfg(feature = "libp2p-live-transport")]
+    {
+        Libp2pLiveRuntimeBackend::NativeSocket
+    }
+    #[cfg(not(feature = "libp2p-live-transport"))]
+    {
+        Libp2pLiveRuntimeBackend::ContractDataPlane
+    }
+}
+
 /// Live libp2p transport adapter contract backed by deterministic swarm startup.
 #[derive(Debug, Clone)]
 pub struct Libp2pLivePeerLifecycleTransport {
     swarm_config: P2pSwarmDeterministicConfig,
     harness_report: P2pSwarmHarnessReport,
+    live_network_id: String,
+    #[cfg(feature = "libp2p-live-transport")]
+    native_socket_transport: UdpPeerLifecycleTransport,
+    #[cfg(not(feature = "libp2p-live-transport"))]
     live_data_plane: Libp2pLiveDataPlane,
 }
 
@@ -543,11 +578,21 @@ impl Libp2pLivePeerLifecycleTransport {
         let task = P2pSwarmHarnessTask::new(config.clone());
         let harness_report = task.start(harness_mode)?;
         let network_id = build_live_data_plane_network_id(&config);
+        #[cfg(feature = "libp2p-live-transport")]
+        validate_libp2p_native_runtime_config(&config)?;
+        #[cfg(feature = "libp2p-live-transport")]
+        let native_socket_transport =
+            UdpPeerLifecycleTransport::bind_ephemeral(network_id.as_str(), config.local_peer_id())?;
+        #[cfg(not(feature = "libp2p-live-transport"))]
         let state = resolve_live_data_plane_state(network_id.as_str())?;
         Ok(Self {
             swarm_config: config,
             harness_report,
-            live_data_plane: Libp2pLiveDataPlane { network_id, state },
+            live_network_id: network_id.clone(),
+            #[cfg(feature = "libp2p-live-transport")]
+            native_socket_transport,
+            #[cfg(not(feature = "libp2p-live-transport"))]
+            live_data_plane: Libp2pLiveDataPlane { state },
         })
     }
 
@@ -561,6 +606,11 @@ impl Libp2pLivePeerLifecycleTransport {
         &self.harness_report
     }
 
+    /// Returns compile-mode runtime backend selected for this adapter.
+    pub fn runtime_backend(&self) -> Libp2pLiveRuntimeBackend {
+        resolve_libp2p_live_runtime_backend()
+    }
+
     /// Returns configured listen address for this live adapter.
     pub fn listen_address(&self) -> &str {
         self.swarm_config.listen_address()
@@ -568,9 +618,10 @@ impl Libp2pLivePeerLifecycleTransport {
 
     /// Returns deterministic live data-plane network identifier.
     pub fn live_data_plane_network_id(&self) -> &str {
-        self.live_data_plane.network_id.as_str()
+        self.live_network_id.as_str()
     }
 
+    #[cfg(not(feature = "libp2p-live-transport"))]
     fn lock_live_data_plane_state(
         &self,
     ) -> Result<std::sync::MutexGuard<'_, Libp2pLiveDataPlaneState>, P2pTransportError> {
@@ -583,13 +634,21 @@ impl Libp2pLivePeerLifecycleTransport {
 
 impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
     fn advertise(&self, record: PeerDiscoveryRecord) -> Result<(), P2pTransportError> {
+        #[cfg(feature = "libp2p-live-transport")]
+        {
+            self.native_socket_transport.advertise(record)
+        }
+        #[cfg(not(feature = "libp2p-live-transport"))]
         let mut state = self.lock_live_data_plane_state()?;
-        state
-            .inbox_by_peer
-            .entry(record.peer_id.clone())
-            .or_insert_with(VecDeque::new);
-        state.peers_by_id.insert(record.peer_id.clone(), record);
-        Ok(())
+        #[cfg(not(feature = "libp2p-live-transport"))]
+        {
+            state
+                .inbox_by_peer
+                .entry(record.peer_id.clone())
+                .or_insert_with(VecDeque::new);
+            state.peers_by_id.insert(record.peer_id.clone(), record);
+            Ok(())
+        }
     }
 
     fn discover(
@@ -597,63 +656,97 @@ impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
         requester_peer_id: &str,
         topic: &str,
     ) -> Result<Vec<PeerDiscoveryRecord>, P2pTransportError> {
+        #[cfg(feature = "libp2p-live-transport")]
+        {
+            self.native_socket_transport
+                .discover(requester_peer_id, topic)
+        }
+        #[cfg(not(feature = "libp2p-live-transport"))]
         validate_peer_id(requester_peer_id)?;
+        #[cfg(not(feature = "libp2p-live-transport"))]
         validate_topic(topic)?;
+        #[cfg(not(feature = "libp2p-live-transport"))]
         let state = self.lock_live_data_plane_state()?;
-        Ok(state
-            .peers_by_id
-            .values()
-            .filter(|record| record.peer_id != requester_peer_id && record.supports_topic(topic))
-            .cloned()
-            .collect())
+        #[cfg(not(feature = "libp2p-live-transport"))]
+        {
+            Ok(state
+                .peers_by_id
+                .values()
+                .filter(|record| {
+                    record.peer_id != requester_peer_id && record.supports_topic(topic)
+                })
+                .cloned()
+                .collect())
+        }
     }
 
     fn send(&self, frame: PeerGossipFrame) -> Result<(), P2pTransportError> {
+        #[cfg(feature = "libp2p-live-transport")]
+        {
+            self.native_socket_transport.send(frame)
+        }
+        #[cfg(not(feature = "libp2p-live-transport"))]
         let mut state = self.lock_live_data_plane_state()?;
+        #[cfg(not(feature = "libp2p-live-transport"))]
         if !state.peers_by_id.contains_key(&frame.sender_peer_id) {
             return Err(P2pTransportError::UnknownSenderPeer(
                 frame.sender_peer_id.clone(),
             ));
         }
+        #[cfg(not(feature = "libp2p-live-transport"))]
         if !state.peers_by_id.contains_key(&frame.recipient_peer_id) {
             return Err(P2pTransportError::UnknownRecipientPeer(
                 frame.recipient_peer_id.clone(),
             ));
         }
-        state
-            .inbox_by_peer
-            .entry(frame.recipient_peer_id.clone())
-            .or_insert_with(VecDeque::new)
-            .push_back(frame);
-        Ok(())
+        #[cfg(not(feature = "libp2p-live-transport"))]
+        {
+            state
+                .inbox_by_peer
+                .entry(frame.recipient_peer_id.clone())
+                .or_insert_with(VecDeque::new)
+                .push_back(frame);
+            Ok(())
+        }
     }
 
     fn drain_inbox(
         &self,
         recipient_peer_id: &str,
     ) -> Result<Vec<PeerGossipFrame>, P2pTransportError> {
+        #[cfg(feature = "libp2p-live-transport")]
+        {
+            self.native_socket_transport.drain_inbox(recipient_peer_id)
+        }
+        #[cfg(not(feature = "libp2p-live-transport"))]
         validate_peer_id(recipient_peer_id)?;
+        #[cfg(not(feature = "libp2p-live-transport"))]
         let mut state = self.lock_live_data_plane_state()?;
-        let queue = state
-            .inbox_by_peer
-            .entry(recipient_peer_id.to_owned())
-            .or_insert_with(VecDeque::new);
-        Ok(queue.drain(..).collect())
+        #[cfg(not(feature = "libp2p-live-transport"))]
+        {
+            let queue = state
+                .inbox_by_peer
+                .entry(recipient_peer_id.to_owned())
+                .or_insert_with(VecDeque::new);
+            Ok(queue.drain(..).collect())
+        }
     }
 }
 
+#[cfg(not(feature = "libp2p-live-transport"))]
 #[derive(Debug, Default)]
 struct Libp2pLiveDataPlaneState {
     peers_by_id: BTreeMap<String, PeerDiscoveryRecord>,
     inbox_by_peer: BTreeMap<String, VecDeque<PeerGossipFrame>>,
 }
 
+#[cfg(not(feature = "libp2p-live-transport"))]
 #[derive(Debug, Clone)]
 struct Libp2pLiveDataPlane {
-    network_id: String,
     state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
 }
 
+#[cfg(not(feature = "libp2p-live-transport"))]
 fn libp2p_live_data_plane_registry(
 ) -> &'static Mutex<BTreeMap<String, Arc<Mutex<Libp2pLiveDataPlaneState>>>> {
     static REGISTRY: OnceLock<Mutex<BTreeMap<String, Arc<Mutex<Libp2pLiveDataPlaneState>>>>> =
@@ -661,6 +754,7 @@ fn libp2p_live_data_plane_registry(
     REGISTRY.get_or_init(|| Mutex::new(BTreeMap::new()))
 }
 
+#[cfg(not(feature = "libp2p-live-transport"))]
 fn resolve_live_data_plane_state(
     network_id: &str,
 ) -> Result<Arc<Mutex<Libp2pLiveDataPlaneState>>, P2pTransportError> {
@@ -681,6 +775,21 @@ fn build_live_data_plane_network_id(config: &P2pSwarmDeterministicConfig) -> Str
     };
     let topic_segment = format!("topics={}", config.gossip_topics().join(","));
     format!("{bootstrap_segment}|{topic_segment}")
+}
+
+#[cfg(feature = "libp2p-live-transport")]
+fn validate_libp2p_native_runtime_config(
+    config: &P2pSwarmDeterministicConfig,
+) -> Result<(), P2pTransportError> {
+    use libp2p::Multiaddr;
+    config
+        .listen_address()
+        .parse::<Multiaddr>()
+        .map_err(|_| P2pTransportError::Libp2pRuntimeConfigInvalid)?;
+    for topic in config.gossip_topics() {
+        let _ = libp2p::gossipsub::IdentTopic::new(topic.clone());
+    }
+    Ok(())
 }
 
 /// Fault classes observed during live libp2p reconnect/discovery operations.
@@ -1393,6 +1502,8 @@ pub enum P2pTransportError {
     LiveSocketReceiveFailed,
     /// Live socket datagram payload is malformed.
     LiveSocketFrameMalformed,
+    /// Libp2p runtime config validation failed in native mode.
+    Libp2pRuntimeConfigInvalid,
     /// Transport state lock is unavailable.
     StateUnavailable,
     /// Lifecycle state does not permit transport I/O.
@@ -1435,6 +1546,7 @@ impl P2pTransportError {
             Self::LiveSocketSendFailed => "p2p_transport_live_socket_send_failed",
             Self::LiveSocketReceiveFailed => "p2p_transport_live_socket_receive_failed",
             Self::LiveSocketFrameMalformed => "p2p_transport_live_socket_frame_malformed",
+            Self::Libp2pRuntimeConfigInvalid => "p2p_transport_libp2p_runtime_config_invalid",
             Self::StateUnavailable => "p2p_transport_state_unavailable",
             Self::InactivePeerLifecycleState(_) => "p2p_transport_inactive_lifecycle_state",
             Self::Lifecycle(error) => error.reason_code(),
@@ -1493,6 +1605,9 @@ impl Display for P2pTransportError {
             Self::LiveSocketSendFailed => write!(f, "p2p live socket send failed"),
             Self::LiveSocketReceiveFailed => write!(f, "p2p live socket receive failed"),
             Self::LiveSocketFrameMalformed => write!(f, "p2p live socket frame is malformed"),
+            Self::Libp2pRuntimeConfigInvalid => {
+                write!(f, "p2p libp2p native runtime config is invalid")
+            }
             Self::StateUnavailable => write!(f, "p2p in-memory transport state is unavailable"),
             Self::InactivePeerLifecycleState(state) => {
                 write!(

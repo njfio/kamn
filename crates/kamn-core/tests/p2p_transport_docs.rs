@@ -21,6 +21,9 @@ fn architecture_doc_contains_p2p_transport_core_components() {
     assert!(DOC.contains("KademliaDiscoveryBootstrapPlan"));
     assert!(DOC.contains("PeerLifecycleRegressionCase"));
     assert!(DOC.contains("PeerLifecycleRegressionOutcome"));
+    assert!(DOC.contains("Libp2pLiveRuntimeBackend"));
+    assert!(DOC.contains("resolve_libp2p_live_runtime_backend()"));
+    assert!(DOC.contains("UdpPeerLifecycleTransport"));
 }
 
 #[test]
@@ -45,7 +48,10 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     assert!(DOC.contains("P2pTransportError::InvalidReconnectRetryBudget"));
     assert!(DOC.contains("P2pTransportError::InvalidReconnectBackoffWindow"));
     assert!(DOC.contains("P2pTransportError::GossipTransportDisabled"));
+    assert!(DOC.contains("P2pTransportError::Libp2pRuntimeConfigInvalid"));
     assert!(DOC.contains("P2pTransportError::MissingKademliaBootstrapSeeds"));
+    assert!(DOC.contains("p2p-live-libp2p-provider:native"));
+    assert!(DOC.contains("p2p-live-libp2p-provider:contract-only"));
     assert!(DOC.contains("runtime_peer_transition_invalid"));
     assert!(DOC.contains("validate_p2p_transport_live.sh"));
     assert!(DOC.contains("test_validate_p2p_transport_live.sh"));
@@ -59,6 +65,9 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     ));
     assert!(DOC.contains(
         "cargo test -p kamn-core --test p2p_live_transport_runtime regression_live_transport_invalid_transition_reason_code_stable -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test p2p_libp2p_native_adapter_runtime --features libp2p-live-transport"
     ));
     assert!(DOC.contains("cargo test -p kamn-core --test p2p_reconnect_policy_runtime"));
     assert!(DOC.contains("p2p_live_reconnect_retry_dial_timeout"));
