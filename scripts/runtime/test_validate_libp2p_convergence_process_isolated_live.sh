@@ -51,6 +51,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^two_node_connected_delivery_
   echo "expected process-isolated convergence connected delivery marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^no_shared_state_zero_delivery_status=verified$'; then
+  echo "expected process-isolated convergence no-shared-state zero-delivery marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^no_shared_state_unexpected_delivery_reason_code=no_shared_state_unexpected_delivery_detected$'; then
+  echo "expected process-isolated convergence no-shared-state unexpected-delivery reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^no_shared_state_delivery_count=0$'; then
+  echo "expected process-isolated convergence no-shared-state delivery-count marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^two_node_discovery_status=verified$'; then
   echo "expected process-isolated convergence two-node discovery marker" >&2
   exit 1
@@ -105,6 +117,12 @@ if payload.get("two_node_disconnected_fail_closed_reason_code") != "p2p_transpor
     raise SystemExit("expected disconnected fail-closed reason code marker")
 if payload.get("two_node_connected_delivery_status") != "verified":
     raise SystemExit("expected connected delivery status marker")
+if payload.get("no_shared_state_zero_delivery_status") != "verified":
+    raise SystemExit("expected no-shared-state zero-delivery status marker")
+if payload.get("no_shared_state_unexpected_delivery_reason_code") != "no_shared_state_unexpected_delivery_detected":
+    raise SystemExit("expected no-shared-state unexpected-delivery reason marker")
+if payload.get("no_shared_state_delivery_count") != 0:
+    raise SystemExit("expected no-shared-state delivery-count marker")
 PY
 
 smoke_run_output="$(
