@@ -186,6 +186,10 @@ This document captures the initial runtime-network foundation slice for peer lif
 ## Process-Isolated Libp2p Connectivity Matrix
 - Process-isolated convergence lane command:
   - `bash scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh --mode run --lane-profile smoke --ci-fast-gate PASS --output-json /tmp/libp2p-convergence-process-isolated-live-summary.json`
+- Deep harness native selector matrix:
+  - `cargo test -p kamn-core --features libp2p-live-transport --test p2p_libp2p_native_adapter_runtime integration_libp2p_native_adapter_supports_discovery_and_gossip_over_sockets -- --exact`
+  - `cargo test -p kamn-core --features libp2p-live-transport --test p2p_libp2p_native_adapter_runtime integration_libp2p_native_adapter_three_node_partition_rejoin_and_publish_drop_convergence_over_sockets -- --exact`
+  - `cargo test -p kamn-core --features libp2p-live-transport --test p2p_libp2p_native_adapter_runtime regression_libp2p_native_adapter_partition_publish_drop_reason_code_stays_stable -- --exact`
 - Connectivity matrix evidence contracts:
   - disconnected two-node drill must fail closed and emit
     `two_node_disconnected_fail_closed_status=verified`.
@@ -201,6 +205,8 @@ This document captures the initial runtime-network foundation slice for peer lif
     and deterministic count marker `no_shared_state_delivery_count=0`.
   - lane must retain deterministic transport marker
     `runtime_transport_mode=libp2p_process_isolated_convergence`.
+  - deep harness three-node partition/rejoin and publish-drop validation must execute over native
+    libp2p socket transport selectors (not UDP fallback selectors).
 - Policy fail-closed contracts:
   - missing/tampered disconnected marker rejects with
     `libp2p_process_isolated_convergence_policy_marker_missing:no_shared_state_zero_delivery_status`.

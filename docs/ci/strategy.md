@@ -397,9 +397,13 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - policy checker fails closed on schema/marker drift and decision mismatches.
 - Cost controls:
   - dry-run mode executes no nested commands and emits deterministic `dry_run_no_commands_executed`.
-  - smoke run-mode executes two bounded selectors (disconnected fail-closed and connected delivery) for minimal fast feedback.
+  - smoke run-mode executes three bounded selectors (disconnected fail-closed, connected delivery, and native compile-mode contract) for minimal fast feedback.
   - deep run-mode is explicit local-only and requires `KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_DEEP_OPT_IN=1` (legacy `KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_LIVE_OPT_IN=1` remains accepted).
   - deep run-mode composes the process-isolated harness (`validate_libp2p_process_isolated_harness.sh`) for full 3-node/fault validation.
+  - deep process-isolated harness executes native libp2p selectors:
+    - `cargo test -p kamn-core --features libp2p-live-transport --test p2p_libp2p_native_adapter_runtime integration_libp2p_native_adapter_supports_discovery_and_gossip_over_sockets -- --exact`
+    - `cargo test -p kamn-core --features libp2p-live-transport --test p2p_libp2p_native_adapter_runtime integration_libp2p_native_adapter_three_node_partition_rejoin_and_publish_drop_convergence_over_sockets -- --exact`
+    - `cargo test -p kamn-core --features libp2p-live-transport --test p2p_libp2p_native_adapter_runtime regression_libp2p_native_adapter_partition_publish_drop_reason_code_stays_stable -- --exact`
   - process-isolated convergence deep run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `libp2p_process_isolated_convergence_policy_marker_missing:no_shared_state_zero_delivery_status`
