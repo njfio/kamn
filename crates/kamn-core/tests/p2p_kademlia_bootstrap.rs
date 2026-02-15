@@ -59,9 +59,9 @@ fn functional_kademlia_bootstrap_plan_normalizes_seed_order() {
         "peer-processor",
         "/ip4/127.0.0.1/tcp/9100",
         vec![
-            "/ip4/127.0.0.1/tcp/9102/p2p/peer-c".to_owned(),
-            "/ip4/127.0.0.1/tcp/9101/p2p/peer-b".to_owned(),
-            "/ip4/127.0.0.1/tcp/9101/p2p/peer-b".to_owned(),
+            "/ip4/127.0.0.1/tcp/9102".to_owned(),
+            "/ip4/127.0.0.1/tcp/9101".to_owned(),
+            "/ip4/127.0.0.1/tcp/9101".to_owned(),
         ],
         vec!["messages".to_owned(), "blocks".to_owned()],
         3,
@@ -74,8 +74,8 @@ fn functional_kademlia_bootstrap_plan_normalizes_seed_order() {
     assert_eq!(
         plan.seed_peers(),
         vec![
-            "/ip4/127.0.0.1/tcp/9101/p2p/peer-b".to_owned(),
-            "/ip4/127.0.0.1/tcp/9102/p2p/peer-c".to_owned(),
+            "/ip4/127.0.0.1/tcp/9101".to_owned(),
+            "/ip4/127.0.0.1/tcp/9102".to_owned(),
         ]
     );
 }
@@ -87,8 +87,8 @@ fn integration_kademlia_bootstrap_plan_composes_with_swarm_harness_startup() {
         "peer-processor",
         "/ip4/127.0.0.1/tcp/9100",
         vec![
-            "/ip4/127.0.0.1/tcp/9101/p2p/peer-listener".to_owned(),
-            "/ip4/127.0.0.1/tcp/9102/p2p/peer-approver".to_owned(),
+            "/ip4/127.0.0.1/tcp/9101".to_owned(),
+            "/ip4/127.0.0.1/tcp/9102".to_owned(),
         ],
         vec!["messages".to_owned(), "blocks".to_owned()],
         3,
