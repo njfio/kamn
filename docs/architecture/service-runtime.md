@@ -8,7 +8,9 @@ full runtime execution paths.
 - Runtime mode: `daemon`, `full`
 - Trigger sources:
 - deterministic signal-tick controls (`--daemon-shutdown-signal-tick`)
-- OS signals (`--daemon-shutdown-os-signals`) on Unix
+- OS signals on Unix (default when no explicit signal-tick controls are provided)
+- explicit OS-signal override flag (`--daemon-shutdown-os-signals`) remains
+  supported for policy clarity and cross-platform fail-closed checks
 
 ## Drain Marker Contract
 
@@ -38,6 +40,8 @@ between completion reason, drain status, and snapshot flush status:
 - `tick-budget-exhausted` requires `not-signaled` + `snapshot-not-requested`.
 - `graceful-shutdown:*` requires `completed` + `snapshot-flushed`.
 - `graceful-shutdown-timeout:*` requires `timeout` + `snapshot-flush-timeout`.
+- signal-tick controls, when present, take precedence over default OS-signal
+  shutdown policy.
 
 Invalid combinations emit deterministic reason codes and fail closed.
 
