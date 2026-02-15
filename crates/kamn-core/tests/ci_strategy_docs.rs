@@ -586,6 +586,7 @@ fn doc_contains_runtime_local_observability_scrape_contract_lane_ci_mode_markers
     assert!(DOC.contains("ci-fast-gate mode: fast"));
     assert!(DOC.contains("local-dev mode: local"));
     assert!(DOC.contains("manual-hardened mode: manual"));
+    assert!(DOC.contains("docs/observability/streaming.md"));
     assert!(DOC.contains(
         "local observability scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
     ));
