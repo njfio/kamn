@@ -10,6 +10,10 @@ if grep -Fq "bash scripts/runtime/validate_local_observability_scrape_live.sh --
   echo "expected local observability scrape run-mode lane to remain excluded from ci-fast-gate.yml" >&2
   exit 1
 fi
+if grep -Fq "bash scripts/runtime/validate_local_observability_scrape_live.sh --mode run --lane-profile soak" "$FAST_WORKFLOW"; then
+  echo "expected local observability soak run-mode lane to remain excluded from ci-fast-gate.yml" >&2
+  exit 1
+fi
 
 fast_mode_block="$(
   awk '
@@ -36,6 +40,10 @@ done
 
 if ! grep -Fq "local observability scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode." "$STRATEGY_DOC"; then
   echo "expected CI strategy docs to include local observability scrape run-mode exclusion marker" >&2
+  exit 1
+fi
+if ! grep -Fq "local observability soak run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode." "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include local observability soak run-mode exclusion marker" >&2
   exit 1
 fi
 

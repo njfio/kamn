@@ -14,6 +14,8 @@ policy_output_json=""
 max_seconds="${KAMN_LOCAL_OBSERVABILITY_SCRAPE_CONTRACT_MAX_SECONDS:-240}"
 ci_fast_gate="PASS"
 mode="dry-run"
+lane_profile="standard"
+soak_iterations="${KAMN_LOCAL_OBSERVABILITY_SCRAPE_SOAK_ITERATIONS:-3}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -37,6 +39,14 @@ while [[ $# -gt 0 ]]; do
       mode="${2:-}"
       shift 2
       ;;
+    --lane-profile)
+      lane_profile="${2:-}"
+      shift 2
+      ;;
+    --soak-iterations)
+      soak_iterations="${2:-}"
+      shift 2
+      ;;
     *)
       echo "unknown argument: $1" >&2
       exit 1
@@ -58,6 +68,18 @@ if [[ "$ci_fast_gate" != "PASS" && "$ci_fast_gate" != "FAIL" ]]; then
 fi
 if [[ "$mode" != "dry-run" && "$mode" != "run" ]]; then
   echo "mode must be dry-run or run" >&2
+  exit 1
+fi
+if [[ "$lane_profile" != "standard" && "$lane_profile" != "soak" ]]; then
+  echo "lane-profile must be standard or soak" >&2
+  exit 1
+fi
+if ! [[ "$soak_iterations" =~ ^[0-9]+$ ]]; then
+  echo "soak-iterations must be an integer" >&2
+  exit 1
+fi
+if [ "$soak_iterations" -le 0 ]; then
+  echo "soak-iterations must be greater than zero" >&2
   exit 1
 fi
 
@@ -89,6 +111,8 @@ tampered_report="$TMP_DIR/local-observability-scrape-live-summary.tampered.json"
 validation_output="$(
   bash "$VALIDATION_SCRIPT" \
     --mode "$mode" \
+    --lane-profile "$lane_profile" \
+    --soak-iterations "$soak_iterations" \
     --max-seconds "$max_seconds" \
     --output-json "$summary_report"
 )"
@@ -102,6 +126,10 @@ if ! printf '%s\n' "$validation_output" | grep -q '^final_decision=GO$'; then
 fi
 if ! printf '%s\n' "$validation_output" | grep -q "^lane_mode=$mode$"; then
   echo "expected local observability scrape validation lane mode marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q "^lane_profile=$lane_profile$"; then
+  echo "expected local observability scrape validation lane profile marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^scrape_probe_status=verified$'; then
@@ -201,6 +229,14 @@ if ! grep -q "local observability scrape run-mode commands remain excluded from 
   echo "expected CI strategy docs to include local observability scrape run-mode exclusion marker" >&2
   exit 1
 fi
+if ! grep -q "validate_local_observability_scrape_live.sh --mode run --lane-profile soak --soak-iterations" "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to reference local observability soak lane run-mode command" >&2
+  exit 1
+fi
+if ! grep -q "local observability soak run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode." "$STRATEGY_DOC"; then
+  echo "expected CI strategy docs to include local observability soak run-mode exclusion marker" >&2
+  exit 1
+fi
 if ! grep -q "bounded to five targeted \`kamn-node\` observability endpoint tests when run mode is enabled" "$STRATEGY_DOC"; then
   echo "expected CI strategy docs to include five-test local observability scrape run-mode budget marker" >&2
   exit 1
@@ -242,7 +278,7 @@ if [ "$elapsed_seconds" -gt "$max_seconds" ]; then
 fi
 
 lane_report="$TMP_DIR/local-observability-scrape-live-contract-lane-report.json"
-python3 - "$summary_report" "$policy_report" "$lane_report" "$elapsed_seconds" "$max_seconds" "$mode" <<'PY'
+python3 - "$summary_report" "$policy_report" "$lane_report" "$elapsed_seconds" "$max_seconds" "$mode" "$lane_profile" <<'PY'
 import json
 import pathlib
 import sys
@@ -253,6 +289,7 @@ lane_report_file = pathlib.Path(sys.argv[3])
 elapsed_seconds = int(sys.argv[4])
 max_seconds = int(sys.argv[5])
 mode = sys.argv[6]
+lane_profile = sys.argv[7]
 
 if summary_report.get("schema_version") != "kamn.runtime.local-observability-scrape-live-report.v1":
     raise SystemExit("unexpected local observability scrape live summary schema")
@@ -268,6 +305,16 @@ lane_report = {
     "status": "pass",
     "final_decision": "GO",
     "lane_mode": mode,
+    "lane_profile": lane_profile,
+    "local_heavy_soak_lane_status": summary_report.get(
+        "local_heavy_soak_lane_status"
+    ),
+    "soak_iterations_requested": summary_report.get(
+        "soak_iterations_requested"
+    ),
+    "soak_iterations_executed": summary_report.get(
+        "soak_iterations_executed"
+    ),
     "local_observability_scrape_contract_status": "verified",
     "local_observability_scrape_policy_status": policy_report.get(
         "local_observability_scrape_policy_status"
@@ -292,6 +339,23 @@ fi
 echo "status=pass"
 echo "final_decision=GO"
 echo "lane_mode=$mode"
+echo "lane_profile=$lane_profile"
+if [[ "$lane_profile" == "soak" ]]; then
+  echo "local_heavy_soak_lane_status=verified"
+  echo "soak_iterations_requested=$soak_iterations"
+else
+  echo "local_heavy_soak_lane_status=not_enabled"
+  echo "soak_iterations_requested=1"
+fi
+if [[ "$mode" == "run" ]]; then
+  if [[ "$lane_profile" == "soak" ]]; then
+    echo "soak_iterations_executed=$soak_iterations"
+  else
+    echo "soak_iterations_executed=1"
+  fi
+else
+  echo "soak_iterations_executed=0"
+fi
 echo "local_observability_scrape_contract_status=verified"
 echo "local_observability_scrape_policy_status=verified"
 echo "docs_contract_status=verified"

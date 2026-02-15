@@ -40,6 +40,10 @@ if ! printf '%s\n' "$dry_run_output" | grep -q '^lane_mode=dry-run$'; then
   echo "expected local observability scrape dry-run mode marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^lane_profile=standard$'; then
+  echo "expected local observability scrape dry-run lane profile marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$dry_run_output" | grep -q '^readiness_probe_status=verified$'; then
   echo "expected local observability scrape dry-run readiness probe marker" >&2
   exit 1
@@ -50,6 +54,18 @@ if ! printf '%s\n' "$dry_run_output" | grep -q '^readiness_failure_drill_status=
 fi
 if ! printf '%s\n' "$dry_run_output" | grep -q '^readiness_reason_taxonomy_status=verified$'; then
   echo "expected local observability scrape dry-run readiness reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^local_heavy_soak_lane_status=not_enabled$'; then
+  echo "expected local observability scrape dry-run soak lane status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^soak_iterations_requested=1$'; then
+  echo "expected local observability scrape dry-run soak iteration request marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^soak_iterations_executed=0$'; then
+  echo "expected local observability scrape dry-run soak iteration execution marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$dry_run_output" | grep -q '^execution_reason_code=dry_run_no_commands_executed$'; then
@@ -75,6 +91,14 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected local observability scrape dry-run final_decision=GO")
 if payload.get("lane_mode") != "dry-run":
     raise SystemExit("expected local observability scrape dry-run lane_mode=dry-run")
+if payload.get("lane_profile") != "standard":
+    raise SystemExit("expected local observability scrape dry-run lane_profile=standard")
+if payload.get("local_heavy_soak_lane_status") != "not_enabled":
+    raise SystemExit("expected local observability scrape dry-run local_heavy_soak_lane_status=not_enabled")
+if payload.get("soak_iterations_requested") != 1:
+    raise SystemExit("expected local observability scrape dry-run soak_iterations_requested=1")
+if payload.get("soak_iterations_executed") != 0:
+    raise SystemExit("expected local observability scrape dry-run soak_iterations_executed=0")
 if payload.get("execution_reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected local observability scrape dry-run reason code")
 if payload.get("command_count") != 0:
@@ -126,6 +150,65 @@ if payload.get("reason_codes") != ["none"]:
     raise SystemExit("expected local observability scrape policy reason code ['none']")
 PY
 
+soak_dry_run_report="$TMP_DIR/local-observability-scrape-live-summary.soak-dry-run.json"
+soak_dry_run_output="$(
+  bash "$VALIDATION_SCRIPT" \
+    --mode dry-run \
+    --lane-profile soak \
+    --soak-iterations 2 \
+    --max-seconds 60 \
+    --output-json "$soak_dry_run_report"
+)"
+if ! printf '%s\n' "$soak_dry_run_output" | grep -q '^lane_profile=soak$'; then
+  echo "expected local observability scrape soak dry-run lane profile marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$soak_dry_run_output" | grep -q '^local_heavy_soak_lane_status=verified$'; then
+  echo "expected local observability scrape soak dry-run status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$soak_dry_run_output" | grep -q '^soak_iterations_requested=2$'; then
+  echo "expected local observability scrape soak dry-run requested-iterations marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$soak_dry_run_output" | grep -q '^soak_iterations_executed=0$'; then
+  echo "expected local observability scrape soak dry-run executed-iterations marker" >&2
+  exit 1
+fi
+
+python3 - "$soak_dry_run_report" <<'PY'
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+if payload.get("lane_profile") != "soak":
+    raise SystemExit("expected local observability scrape soak dry-run lane_profile=soak")
+if payload.get("local_heavy_soak_lane_status") != "verified":
+    raise SystemExit("expected local observability scrape soak dry-run local_heavy_soak_lane_status=verified")
+if payload.get("soak_iterations_requested") != 2:
+    raise SystemExit("expected local observability scrape soak dry-run soak_iterations_requested=2")
+if payload.get("soak_iterations_executed") != 0:
+    raise SystemExit("expected local observability scrape soak dry-run soak_iterations_executed=0")
+PY
+
+soak_policy_report="$TMP_DIR/local-observability-scrape-live-policy.soak-dry-run.json"
+soak_policy_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$soak_dry_run_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$soak_policy_report"
+)"
+if ! printf '%s\n' "$soak_policy_output" | grep -q '^status=ok$'; then
+  echo "expected local observability scrape soak dry-run policy status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$soak_policy_output" | grep -q '^local_observability_scrape_policy_status=verified$'; then
+  echo "expected local observability scrape soak dry-run policy status marker" >&2
+  exit 1
+fi
+
 set +e
 missing_opt_in_output="$(
   bash "$VALIDATION_SCRIPT" \
@@ -156,6 +239,22 @@ if [ "$invalid_mode_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$invalid_mode_output" | grep -q -- '--mode must be one of: dry-run, run'; then
   echo "expected deterministic invalid-mode marker for local observability scrape validation" >&2
+  exit 1
+fi
+
+set +e
+invalid_lane_profile_output="$(
+  bash "$VALIDATION_SCRIPT" \
+    --lane-profile invalid 2>&1
+)"
+invalid_lane_profile_code=$?
+set -e
+if [ "$invalid_lane_profile_code" -eq 0 ]; then
+  echo "expected local observability scrape validation to reject invalid lane-profile" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$invalid_lane_profile_output" | grep -q -- '--lane-profile must be one of: standard, soak'; then
+  echo "expected deterministic invalid lane-profile marker for local observability scrape validation" >&2
   exit 1
 fi
 

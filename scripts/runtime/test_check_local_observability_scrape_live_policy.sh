@@ -18,12 +18,16 @@ cat >"$report_file" <<'JSON'
   "status": "pass",
   "final_decision": "GO",
   "lane_mode": "dry-run",
+  "lane_profile": "standard",
   "scrape_probe_status": "verified",
   "metrics_content_type_status": "verified",
   "stream_lifecycle_status": "verified",
   "readiness_probe_status": "verified",
   "readiness_failure_drill_status": "verified",
   "readiness_reason_taxonomy_status": "verified",
+  "local_heavy_soak_lane_status": "not_enabled",
+  "soak_iterations_requested": 1,
+  "soak_iterations_executed": 0,
   "fail_closed_status": "verified",
   "ci_fast_gate_exclusion_status": "verified",
   "performance_budget_status": "verified",
@@ -102,6 +106,45 @@ if [ "$tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_output" | grep -q 'local_observability_scrape_policy_marker_missing:readiness_failure_drill_status'; then
   echo "expected deterministic mismatch reason code for tampered local observability scrape policy validation" >&2
+  exit 1
+fi
+
+tampered_soak_report="$TMP_DIR/local-observability-scrape-live-summary.soak.tampered.json"
+cp "$report_file" "$tampered_soak_report"
+python3 - "$tampered_soak_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["lane_mode"] = "run"
+payload["lane_profile"] = "soak"
+payload["local_heavy_soak_lane_status"] = "missing"
+payload["soak_iterations_requested"] = 2
+payload["soak_iterations_executed"] = 2
+payload["execution_reason_code"] = "soak_run_mode_commands_executed"
+payload["command_count"] = 10
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_soak_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_soak_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/local-observability-scrape-live-policy.soak.tampered.json" 2>&1
+)"
+tampered_soak_code=$?
+set -e
+
+if [ "$tampered_soak_code" -eq 0 ]; then
+  echo "expected tampered local observability soak report to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_soak_output" | grep -q 'local_observability_scrape_policy_marker_missing:local_heavy_soak_lane_status'; then
+  echo "expected deterministic soak-marker mismatch reason code for tampered local observability policy validation" >&2
   exit 1
 fi
 

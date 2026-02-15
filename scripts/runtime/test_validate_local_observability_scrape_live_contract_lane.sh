@@ -42,12 +42,28 @@ if ! printf '%s\n' "$lane_output" | grep -q '^lane_mode=dry-run$'; then
   echo "expected local observability scrape contract lane mode marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^lane_profile=standard$'; then
+  echo "expected local observability scrape contract lane profile marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^local_observability_scrape_contract_status=verified$'; then
   echo "expected local observability scrape contract lane status marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^local_observability_scrape_policy_status=verified$'; then
   echo "expected local observability scrape contract lane policy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^local_heavy_soak_lane_status=not_enabled$'; then
+  echo "expected local observability scrape contract lane soak status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^soak_iterations_requested=1$'; then
+  echo "expected local observability scrape contract lane soak requested marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^soak_iterations_executed=0$'; then
+  echo "expected local observability scrape contract lane soak executed marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=local_observability_scrape_policy_marker_missing:readiness_failure_drill_status$'; then
@@ -67,10 +83,18 @@ if lane_payload.get("status") != "pass":
     raise SystemExit("expected contract lane status=pass")
 if lane_payload.get("final_decision") != "GO":
     raise SystemExit("expected contract lane final_decision=GO")
+if lane_payload.get("lane_profile") != "standard":
+    raise SystemExit("expected lane_profile=standard")
 if lane_payload.get("local_observability_scrape_contract_status") != "verified":
     raise SystemExit("expected local_observability_scrape_contract_status=verified")
 if lane_payload.get("local_observability_scrape_policy_status") != "verified":
     raise SystemExit("expected local_observability_scrape_policy_status=verified")
+if lane_payload.get("local_heavy_soak_lane_status") != "not_enabled":
+    raise SystemExit("expected local_heavy_soak_lane_status=not_enabled")
+if lane_payload.get("soak_iterations_requested") != 1:
+    raise SystemExit("expected soak_iterations_requested=1")
+if lane_payload.get("soak_iterations_executed") != 0:
+    raise SystemExit("expected soak_iterations_executed=0")
 if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":
@@ -96,6 +120,31 @@ if ! grep -q "validate_local_observability_scrape_live.sh" "$CONTRACT_LANE"; the
   exit 1
 fi
 
+soak_lane_output="$(
+  bash "$CONTRACT_LANE" \
+    --mode dry-run \
+    --lane-profile soak \
+    --soak-iterations 2 \
+    --output-json "$TMP_DIR/local-observability-scrape-contract-lane-report.soak.json" \
+    --policy-output-json "$TMP_DIR/local-observability-scrape-policy-report.soak.json"
+)"
+if ! printf '%s\n' "$soak_lane_output" | grep -q '^lane_profile=soak$'; then
+  echo "expected local observability scrape contract lane soak profile marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$soak_lane_output" | grep -q '^local_heavy_soak_lane_status=verified$'; then
+  echo "expected local observability scrape contract lane soak status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$soak_lane_output" | grep -q '^soak_iterations_requested=2$'; then
+  echo "expected local observability scrape contract lane soak requested-iterations marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$soak_lane_output" | grep -q '^soak_iterations_executed=0$'; then
+  echo "expected local observability scrape contract lane soak executed-iterations marker" >&2
+  exit 1
+fi
+
 set +e
 invalid_ci_fast_gate_output="$(
   bash "$CONTRACT_LANE" \
@@ -109,6 +158,22 @@ if [ "$invalid_ci_fast_gate_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$invalid_ci_fast_gate_output" | grep -q 'ci-fast-gate must be PASS or FAIL'; then
   echo "expected deterministic invalid ci-fast-gate marker for local observability scrape contract lane" >&2
+  exit 1
+fi
+
+set +e
+invalid_lane_profile_output="$(
+  bash "$CONTRACT_LANE" \
+    --lane-profile unknown 2>&1
+)"
+invalid_lane_profile_code=$?
+set -e
+if [ "$invalid_lane_profile_code" -eq 0 ]; then
+  echo "expected local observability scrape contract lane to reject invalid lane-profile value" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$invalid_lane_profile_output" | grep -q 'lane-profile must be standard or soak'; then
+  echo "expected deterministic invalid lane-profile marker for local observability scrape contract lane" >&2
   exit 1
 fi
 
