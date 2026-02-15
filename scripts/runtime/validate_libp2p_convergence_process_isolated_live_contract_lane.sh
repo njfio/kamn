@@ -117,6 +117,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^runtime_transport_mode=libp2
   echo "expected process-isolated convergence runtime transport mode marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^two_node_disconnected_fail_closed_status=verified$'; then
+  echo "expected process-isolated convergence disconnected fail-closed marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^two_node_disconnected_fail_closed_reason_code=p2p_transport_live_socket_send_failed$'; then
+  echo "expected process-isolated convergence disconnected fail-closed reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^two_node_connected_delivery_status=verified$'; then
+  echo "expected process-isolated convergence connected delivery marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^two_node_discovery_status=verified$'; then
   echo "expected process-isolated convergence two-node discovery marker" >&2
   exit 1
@@ -166,7 +178,7 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 payload = json.loads(path.read_text(encoding="utf-8"))
-payload["three_node_partition_rejoin_status"] = "tampered"
+payload["two_node_disconnected_fail_closed_status"] = "tampered"
 path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
@@ -184,7 +196,7 @@ if [ "$tampered_policy_code" -eq 0 ]; then
   echo "expected tampered process-isolated convergence report to fail policy validation" >&2
   exit 1
 fi
-if ! printf '%s\n' "$tampered_policy_output" | grep -q 'libp2p_process_isolated_convergence_policy_marker_missing:three_node_partition_rejoin_status'; then
+if ! printf '%s\n' "$tampered_policy_output" | grep -q 'libp2p_process_isolated_convergence_policy_marker_missing:two_node_disconnected_fail_closed_status'; then
   echo "expected deterministic fail-closed reason for tampered process-isolated convergence report" >&2
   exit 1
 fi
@@ -253,7 +265,7 @@ lane_report = {
     "runtime_transport_mode_status": "verified",
     "reason_taxonomy_status": "verified",
     "fail_closed_status": "verified",
-    "fail_closed_reason_code": "libp2p_process_isolated_convergence_policy_marker_missing:three_node_partition_rejoin_status",
+    "fail_closed_reason_code": "libp2p_process_isolated_convergence_policy_marker_missing:two_node_disconnected_fail_closed_status",
     "performance_budget_status": "verified",
     "elapsed_seconds": elapsed_seconds,
     "max_seconds": max_seconds,
@@ -278,5 +290,5 @@ echo "docs_contract_status=verified"
 echo "runtime_transport_mode_status=verified"
 echo "reason_taxonomy_status=verified"
 echo "fail_closed_status=verified"
-echo "fail_closed_reason_code=libp2p_process_isolated_convergence_policy_marker_missing:three_node_partition_rejoin_status"
+echo "fail_closed_reason_code=libp2p_process_isolated_convergence_policy_marker_missing:two_node_disconnected_fail_closed_status"
 echo "performance_budget_status=verified"

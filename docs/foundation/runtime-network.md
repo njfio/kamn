@@ -177,6 +177,24 @@ This document captures the initial runtime-network foundation slice for peer lif
   - readiness: fixed `/readyz`
   - stream: fixed `/metrics.stream`
 
+## Process-Isolated Libp2p Connectivity Matrix
+- Process-isolated convergence lane command:
+  - `bash scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh --mode run --lane-profile smoke --ci-fast-gate PASS --output-json /tmp/libp2p-convergence-process-isolated-live-summary.json`
+- Connectivity matrix evidence contracts:
+  - disconnected two-node drill must fail closed and emit
+    `two_node_disconnected_fail_closed_status=verified`.
+  - disconnected two-node drill must emit deterministic reason code
+    `two_node_disconnected_fail_closed_reason_code=p2p_transport_live_socket_send_failed`.
+  - connected two-node drill must succeed and emit
+    `two_node_connected_delivery_status=verified`.
+  - lane must retain deterministic transport marker
+    `runtime_transport_mode=libp2p_process_isolated_convergence`.
+- Policy fail-closed contracts:
+  - missing/tampered disconnected marker rejects with
+    `libp2p_process_isolated_convergence_policy_marker_missing:two_node_disconnected_fail_closed_status`.
+  - disconnected reason-code drift rejects with
+    `libp2p_process_isolated_convergence_policy_disconnected_fail_closed_reason_code_mismatch`.
+
 ## Bridge Quorum Runtime Mapping
 - Listener and approver bridge quorum runtime contracts are documented in:
   - `docs/foundation/bridge-quorum-runtime.md`

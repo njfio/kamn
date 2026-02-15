@@ -39,6 +39,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^deep_lane_status=skipped_loc
   echo "expected process-isolated convergence deep lane exclusion marker in smoke mode" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^two_node_disconnected_fail_closed_status=verified$'; then
+  echo "expected process-isolated convergence disconnected fail-closed marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^two_node_disconnected_fail_closed_reason_code=p2p_transport_live_socket_send_failed$'; then
+  echo "expected process-isolated convergence disconnected fail-closed reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^two_node_connected_delivery_status=verified$'; then
+  echo "expected process-isolated convergence connected delivery marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^two_node_discovery_status=verified$'; then
   echo "expected process-isolated convergence two-node discovery marker" >&2
   exit 1
@@ -87,6 +99,12 @@ if payload.get("smoke_lane_status") != "verified":
     raise SystemExit("expected smoke_lane_status=verified")
 if payload.get("deep_lane_status") != "skipped_local_only":
     raise SystemExit("expected deep_lane_status=skipped_local_only for smoke lane")
+if payload.get("two_node_disconnected_fail_closed_status") != "verified":
+    raise SystemExit("expected disconnected fail-closed status marker")
+if payload.get("two_node_disconnected_fail_closed_reason_code") != "p2p_transport_live_socket_send_failed":
+    raise SystemExit("expected disconnected fail-closed reason code marker")
+if payload.get("two_node_connected_delivery_status") != "verified":
+    raise SystemExit("expected connected delivery status marker")
 PY
 
 smoke_run_output="$(
@@ -101,8 +119,8 @@ if ! printf '%s\n' "$smoke_run_output" | grep -q '^execution_reason_code=run_mod
   echo "expected smoke run-mode command execution marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$smoke_run_output" | grep -q '^command_count=1$'; then
-  echo "expected smoke run-mode command_count=1 marker" >&2
+if ! printf '%s\n' "$smoke_run_output" | grep -q '^command_count=2$'; then
+  echo "expected smoke run-mode command_count=2 marker" >&2
   exit 1
 fi
 
