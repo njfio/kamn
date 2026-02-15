@@ -6,18 +6,125 @@ use crate::service_api_endpoint::{
     DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
 };
 use kamn_core::baseline_signature_for_fields;
+use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
 use serde::Deserialize;
+use std::fs;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Barrier};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+
+const TEST_SERVICE_API_TLS_CERT_PEM: &str = "-----BEGIN CERTIFICATE-----
+MIIDCTCCAfGgAwIBAgIUX9dYtx2K5dX0X33CQvg4re7nVwwwDQYJKoZIhvcNAQEL
+BQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDIxNTEzMDkwNFoXDTI2MDIx
+NjEzMDkwNFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEF
+AAOCAQ8AMIIBCgKCAQEApfGNzxPiL+e4z6Pok8RT5RkZE631O/Pg7VBgN4xnCjTz
+xwjDihOJSCBl1wYM09xeFUHE6JjTO2ABHdmtXJxXWaAygWRUvdYOBbf1c8ObkanC
++0f0xzUn8rxYyDo8PknR9QR32dCVG5LM5XrIw08TQPAZxEdOEKPkgDqeCWRGsWO/
+YbaziAHXNsNShvYucAlHxzfhXnhRhVKrdVyZ0G7wZZAZoMgSC15lWDWw1JxVbBqr
+0ui8eajKEDg8NZz9mw0VEYGCJGacgn/Y7+YQviEKNL+2yj57LbGsFrXRfSczpNxV
+JmgXChRy5849aLJsatm1NSAhYmFamX7d+7EErKPwhQIDAQABo1MwUTAdBgNVHQ4E
+FgQU/EbABKdaVJZGhOBJ2/WodsjxNJcwHwYDVR0jBBgwFoAU/EbABKdaVJZGhOBJ
+2/WodsjxNJcwDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAcYPD
+j0Me1W3oQkgz9yGT75IYrM6bdSJRQt+vIKQI5AAVIqX5IoGfjP/zJFner96T0i/7
+rPVinMFmyYTXYr/qqbQ9jdLt9FS+l0eIqN9oCmHC6Anhn9/FORZzBsIBQDPkZxXk
+G5QUhQ/joTqTdUaQcrKh4UeRA1LJtlAnFnYc3CeQdKQQqB4W5JeZSdsU1E0FU5wl
+fE7ucg85yIEn33V6aCexCfHhDh2TnLo25awqoyNCbFhu7DLnbnyOeKSB5lI3TdvK
+ag0XPq+nohTyUBXw+XUR2PnYXOEGZxBQdhvyQO0ib/y2dcODuYbXkQDq+f0UuBbn
+R/+8zPGgzivZEPa01Q==
+-----END CERTIFICATE-----
+";
+
+const TEST_SERVICE_API_TLS_KEY_PEM: &str = "-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCl8Y3PE+Iv57jP
+o+iTxFPlGRkTrfU78+DtUGA3jGcKNPPHCMOKE4lIIGXXBgzT3F4VQcTomNM7YAEd
+2a1cnFdZoDKBZFS91g4Ft/Vzw5uRqcL7R/THNSfyvFjIOjw+SdH1BHfZ0JUbkszl
+esjDTxNA8BnER04Qo+SAOp4JZEaxY79htrOIAdc2w1KG9i5wCUfHN+FeeFGFUqt1
+XJnQbvBlkBmgyBILXmVYNbDUnFVsGqvS6Lx5qMoQODw1nP2bDRURgYIkZpyCf9jv
+5hC+IQo0v7bKPnstsawWtdF9JzOk3FUmaBcKFHLnzj1osmxq2bU1ICFiYVqZft37
+sQSso/CFAgMBAAECggEACrFhAOn4FjwpRX/7WaI6AbY3TnRULBPP95rJSGsMrLSy
+zK185CXUH8iup0dlhjVZ/qapSI+odNf/2muPZztPyZ+wAXR0nXLwnl+3Okltedpl
+jQma9UcwlsyaL/TIsv7Qv6gVDP0KzqcL+vGJhERRKksObf5mQl49OCIO0u4aPA3l
+0Y0h9WVtvydyhztQCFfVkkZNgiAY2WSI73xO72RFU0ZKnwc9ZVvona7yTKJIpV+i
+3k0N/27kfc21UUtXJ7Nv5b07MIH8vkx+c1FX63vAPkyBdfXguNG/Yn/uVGqq2fbZ
+xypp3JIRW3b2Heo/Ox02791gRuWJcpEmU369E4fq9QKBgQDT2T5m5HfHcA4Zpjk5
+HtPvdINWntwkSZw8E/41LVY0PptOqM3yWDSb0TLQCoefhtPWm571RvSdevU+NpyB
+jnzx+8gEXAeC1D6TKYmucO0wv7A5ZqC1WzLO7LKG4DuJbANs9PApuqPkzPAGegey
+NkVOTRWO7ggLzmPxYFN8leW+fwKBgQDIhyOkchw1cl+GMDibnrB4Ynljvlxn0tDo
+A4N3oSTv1Az8mO7DGJ+S/mY8aYmw4ogbPIGXZkxlhie0pS7kfttzswbY6TePgml6
+pbLvfzv9OGUKLp0QhmNzfNygP6A8pIb2vbuEYJl6boE/jEIG7c8E0VmsUqe60Aoz
+EcDLDtzW+wKBgQC5Hnj9CF/ykuR/XVVbqKih8jpikubjfr9bcE0OwtM1TBACqFdu
+kc1G64NvcAQbToIGYm6A/sP6aNusxaP1QkHEYrPhu1mE5VrY1c9N87gQhTDEt/1u
+/IZlc0h9u6vK5ewIZfEHReS5pquHvVLEU9A0H//aqf2182A6KGZL0+CymQKBgGsd
+xSxSyD7EmcJUf+ihHCMydyWQykurkWxedBuzOMfjvgwwpVoSDSu4OWSL+8FBQPNL
+nu4A905EG3GjyyjDmvZy63VzHvrJ7w5U9QB6NtFNDqwhukTZhMZsLG5tjmrWeEHV
+mBVehJ2h6ejIQ3zwC2XHbt9eR7rC5q/hC9tsVQuBAoGAG8WncvZ15/VwncKQwz3G
+bgoNsx0W5SO8NNfecDRVJLsCCuy5M9s5vn/u1Xz7l9pA0vCup9l6v96hQJTQBEQ6
+urk/MQl1UlrSRdDK2gu40MToc8X5ig0dVDVG5QhPl7YmUu9G2EAL3WZTpJXsRh22
+VpYUFFjotXCdBIUnUQ51PGg=
+-----END PRIVATE KEY-----
+";
 
 #[derive(Debug, Deserialize)]
 struct ServiceApiErrorEnvelope {
     error: String,
     reason_code: String,
     message: String,
+}
+
+#[derive(Debug)]
+struct TestSkipServerVerification(Arc<rustls::crypto::CryptoProvider>);
+
+impl TestSkipServerVerification {
+    fn new() -> Arc<Self> {
+        Arc::new(Self(Arc::new(rustls::crypto::ring::default_provider())))
+    }
+}
+
+impl rustls::client::danger::ServerCertVerifier for TestSkipServerVerification {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &CertificateDer<'_>,
+        _intermediates: &[CertificateDer<'_>],
+        _server_name: &ServerName<'_>,
+        _ocsp_response: &[u8],
+        _now: UnixTime,
+    ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
+        Ok(rustls::client::danger::ServerCertVerified::assertion())
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls12_signature(
+            message,
+            cert,
+            dss,
+            &self.0.signature_verification_algorithms,
+        )
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls13_signature(
+            message,
+            cert,
+            dss,
+            &self.0.signature_verification_algorithms,
+        )
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
+        self.0.signature_verification_algorithms.supported_schemes()
+    }
 }
 
 fn reserve_loopback_addr() -> String {
@@ -75,6 +182,86 @@ fn send_http_request_with_headers(
         }
     }
     response
+}
+
+fn send_https_request_with_headers(
+    addr: &str,
+    method: &str,
+    path: &str,
+    body: &str,
+    headers: &[(&str, &str)],
+    _root_cert_pem: &str,
+) -> String {
+    let client_config = rustls::ClientConfig::builder()
+        .dangerous()
+        .with_custom_certificate_verifier(TestSkipServerVerification::new())
+        .with_no_client_auth();
+    let server_name = rustls::pki_types::ServerName::try_from("localhost".to_owned())
+        .expect("server name should parse");
+    let connection = rustls::ClientConnection::new(Arc::new(client_config), server_name)
+        .expect("tls client connection should initialize");
+    let tcp_stream = TcpStream::connect(addr).expect("tls endpoint should accept connections");
+    tcp_stream
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .expect("tls read timeout should be configurable");
+    let mut stream = rustls::StreamOwned::new(connection, tcp_stream);
+
+    let mut header_lines = String::new();
+    for (name, value) in headers {
+        header_lines.push_str(name);
+        header_lines.push_str(": ");
+        header_lines.push_str(value);
+        header_lines.push_str("\r\n");
+    }
+    let request = format!(
+        "{method} {path} HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n{}Content-Length: {}\r\nConnection: close\r\n\r\n{}",
+        header_lines,
+        body.len(),
+        body
+    );
+    stream
+        .write_all(request.as_bytes())
+        .expect("tls request should write");
+    stream.flush().expect("tls request should flush");
+
+    let mut response = String::new();
+    let mut chunk = [0_u8; 1024];
+    loop {
+        match stream.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(read_count) => {
+                response.push_str(
+                    std::str::from_utf8(&chunk[..read_count]).expect("response must be utf-8"),
+                );
+            }
+            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
+                break;
+            }
+            Err(error) => panic!("tls response should be readable: {error}"),
+        }
+    }
+    response
+}
+
+fn write_test_service_api_tls_materials() -> (String, String) {
+    let entropy = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock should be monotonic")
+        .as_nanos();
+    let base = std::env::temp_dir().join(format!(
+        "kamn-node-service-api-tls-{}-{entropy}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&base).expect("temporary tls directory should be created");
+    let cert_path = base.join("server-cert.pem");
+    let key_path = base.join("server-key.pem");
+    fs::write(&cert_path, TEST_SERVICE_API_TLS_CERT_PEM.as_bytes())
+        .expect("test cert should write");
+    fs::write(&key_path, TEST_SERVICE_API_TLS_KEY_PEM.as_bytes()).expect("test key should write");
+    (
+        cert_path.to_string_lossy().to_string(),
+        key_path.to_string_lossy().to_string(),
+    )
 }
 
 fn send_websocket_upgrade_request(addr: &str, path: &str, headers: &[(&str, &str)]) -> Vec<u8> {
@@ -508,6 +695,124 @@ fn integration_service_api_endpoint_serves_required_http_routes() {
         server_result.is_ok(),
         "service api endpoint should stop cleanly after configured request budget"
     );
+}
+
+#[test]
+fn integration_service_api_endpoint_tls_mode_serves_required_https_routes() {
+    let env_lock = signer_env_lock()
+        .lock()
+        .expect("environment lock for tls test should acquire");
+    let (cert_file, key_file) = write_test_service_api_tls_materials();
+    let _tls_mode = EnvVarGuard::set("KAMN_SERVICE_API_TLS_MODE", Some("require"));
+    let _tls_cert = EnvVarGuard::set("KAMN_SERVICE_API_TLS_CERT_FILE", Some(cert_file.as_str()));
+    let _tls_key = EnvVarGuard::set("KAMN_SERVICE_API_TLS_KEY_FILE", Some(key_file.as_str()));
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34091".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 2,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_service_api_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let health_response = send_https_request_with_headers(
+        bind_addr.as_str(),
+        "GET",
+        "/healthz",
+        "",
+        &[],
+        TEST_SERVICE_API_TLS_CERT_PEM,
+    );
+    let metrics_response = send_https_request_with_headers(
+        bind_addr.as_str(),
+        "GET",
+        "/metrics",
+        "",
+        &[],
+        TEST_SERVICE_API_TLS_CERT_PEM,
+    );
+    assert!(health_response.contains("HTTP/1.1 200 OK"));
+    assert!(health_response.contains("\"status\":\"ok\""));
+    assert!(metrics_response.contains("HTTP/1.1 200 OK"));
+    assert!(
+        metrics_response.contains("kamn_service_api_observability_source{source=\"unknown\"} 1")
+    );
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "service api endpoint tls mode should stop cleanly after configured request budget"
+    );
+    drop(env_lock);
+}
+
+#[test]
+fn regression_service_api_endpoint_tls_mode_rejects_missing_cert_file() {
+    let env_lock = signer_env_lock()
+        .lock()
+        .expect("environment lock for tls test should acquire");
+    let missing_cert_file = std::env::temp_dir().join("kamn-service-api-missing-cert.pem");
+    let missing_key_file = std::env::temp_dir().join("kamn-service-api-missing-key.pem");
+    let _tls_mode = EnvVarGuard::set("KAMN_SERVICE_API_TLS_MODE", Some("require"));
+    let _tls_cert = EnvVarGuard::set(
+        "KAMN_SERVICE_API_TLS_CERT_FILE",
+        Some(missing_cert_file.to_string_lossy().as_ref()),
+    );
+    let _tls_key = EnvVarGuard::set(
+        "KAMN_SERVICE_API_TLS_KEY_FILE",
+        Some(missing_key_file.to_string_lossy().as_ref()),
+    );
+
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "api".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:34101".to_owned(),
+    ])
+    .expect("api args should parse");
+    let report = execute(parsed).expect("api execution should succeed");
+    let snapshot = build_service_api_snapshot(&report);
+
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ServiceApiEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        max_requests: 1,
+        idle_timeout_ms: 2_000,
+        body_limit_bytes: DEFAULT_SERVICE_API_BODY_LIMIT_BYTES,
+        concurrency_limit: DEFAULT_SERVICE_API_CONCURRENCY_LIMIT,
+        rate_limit_per_second: DEFAULT_SERVICE_API_RATE_LIMIT_PER_SECOND,
+    };
+
+    let error = serve_service_api_endpoint(&endpoint_config, &snapshot)
+        .expect_err("missing tls cert should fail closed");
+    assert!(
+        error.contains("service api tls certificate file read failed"),
+        "unexpected tls missing-cert marker: {error}"
+    );
+    drop(env_lock);
 }
 
 #[test]
