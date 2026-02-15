@@ -29,17 +29,25 @@ from framework.contract_framework import (  # noqa: E402
 RUN_LANE_SCHEMA = "kamn.runtime.local-full-stack-integration-live-report.v1"
 POLICY_SCHEMA = "kamn.runtime.local-full-stack-integration-live-policy-report.v1"
 EVIDENCE_BUNDLE_SCHEMA = "kamn.runtime.local-full-stack-integration-evidence-bundle.v1"
+LIBP2P_CONVERGENCE_REPORT_SCHEMA = "kamn.runtime.libp2p-convergence-process-isolated-live-report.v1"
+LIBP2P_CONVERGENCE_POLICY_SCHEMA = "kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1"
+LIBP2P_RUNTIME_TRANSPORT_MODE = "libp2p_process_isolated_convergence"
+LIBP2P_CONVERGENCE_REASON_CODE = "fork_choice_stale_block_height"
 KOLME_INTEGRATION_REPORT_SCHEMA = "kamn.kolme.local-kamn-live-runtime-integration-summary.v1"
 KOLME_INTEGRATION_POLICY_SCHEMA = "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1"
 KOLME_PROVIDER_CLIENT_CONTRACT = "KolmeRuntimeCommitLiveProvider"
 KOLME_RUNTIME_SIGNING_PROFILE = "kolme-fork-secp256k1-v1"
 KOLME_SIGNER_ATTESTATION_SCHEMA = "kamn.kolme.runtime-signer-attestation.v1"
+KOLME_RUNTIME_COMMIT_PROFILE = "real-node-non-synthetic-v1"
+KOLME_RUNTIME_COMMIT_PROFILE_VERSION = "v1"
+KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION = "v1"
 KOLME_RUNTIME_INTEGRATION_RUN_REASON = "live_runtime_integration_passed"
 KOLME_DEFAULT_CHECKOUT_PATH = "/tmp/kolme_fork"
 KOLME_DEFAULT_EXPECTED_REMOTE_URL = "https://github.com/njfio/kolme_fork.git"
 KOLME_DEFAULT_EXPECTED_REF = "refs/heads/main"
 KOLME_DEFAULT_BASE_URL = "http://127.0.0.1:3000"
 KOLME_DEFAULT_FORK_CHAIN_VERSION = "v0.15.2"
+COMBINED_REASON_TAXONOMY_VERSION = "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1"
 OPT_IN_ENV = "KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN"
 DRY_RUN_REASON = "dry_run_no_commands_executed"
 RUN_REASON = "local_full_stack_integration_live_validation_executed"
@@ -182,11 +190,19 @@ def run_lane(args: argparse.Namespace) -> int:
     kolme_local_only_enforced_status = "planned" if mode == "dry-run" else "verified"
     kolme_integration_mode_status = "planned" if mode == "dry-run" else "verified"
     kolme_integration_policy_status = "planned" if mode == "dry-run" else "verified"
+    kolme_fixture_profile_status = "planned" if mode == "dry-run" else "verified"
+    combined_transport_reason_codes: list[str] = [LIBP2P_CONVERGENCE_REASON_CODE]
+    combined_kolme_runtime_reason_code = "not_run"
+    kolme_runtime_commit_failure_taxonomy_version = KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION
+    kolme_runtime_commit_failure_taxonomy = "not_run"
+    kolme_fixture_profile = KOLME_RUNTIME_COMMIT_PROFILE
+    kolme_fixture_profile_version = KOLME_RUNTIME_COMMIT_PROFILE_VERSION
 
     if mode == "run":
         artifact_dir = Path(tempfile.mkdtemp(prefix="local-full-stack-integration-live-"))
         full_io_report = artifact_dir / "full-io-scenario-matrix-report.json"
-        full_runtime_report = artifact_dir / "local-full-runtime-report.json"
+        libp2p_convergence_report = artifact_dir / "libp2p-convergence-process-isolated-report.json"
+        libp2p_convergence_policy_report = artifact_dir / "libp2p-convergence-process-isolated-policy.json"
         kolme_integration_report = artifact_dir / "kolme-runtime-integration-summary.json"
         kolme_integration_policy_report = artifact_dir / "kolme-runtime-integration-policy.json"
         evidence_bundle_file = artifact_dir / "local-full-stack-evidence-bundle.json"
@@ -213,12 +229,14 @@ def run_lane(args: argparse.Namespace) -> int:
             fail("full I/O scenario matrix command did not emit final_decision=GO")
         commands_executed += 1
 
-        full_runtime_output = _run_command(
+        libp2p_output = _run_command(
             [
                 "bash",
-                "scripts/runtime/validate_local_full_runtime_live.sh",
+                "scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh",
                 "--mode",
                 "run",
+                "--lane-profile",
+                "deep",
                 "--ci-fast-gate",
                 "FAIL",
                 "--max-seconds",
@@ -226,15 +244,41 @@ def run_lane(args: argparse.Namespace) -> int:
                 "--command-max-seconds",
                 str(min(command_max_seconds, 180)),
                 "--output-json",
-                str(full_runtime_report),
+                str(libp2p_convergence_report),
             ],
             timeout_seconds=command_max_seconds,
-            env={**os.environ, "KAMN_LOCAL_FULL_RUNTIME_LIVE_OPT_IN": "1"},
+            env={
+                **os.environ,
+                "KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_DEEP_OPT_IN": "1",
+            },
         )
-        if _extract_line_value(full_runtime_output, "status") != "pass":
-            fail("local full-runtime command did not emit status=pass")
-        if _extract_line_value(full_runtime_output, "final_decision") != "GO":
-            fail("local full-runtime command did not emit final_decision=GO")
+        if _extract_line_value(libp2p_output, "status") != "pass":
+            fail("native libp2p convergence command did not emit status=pass")
+        if _extract_line_value(libp2p_output, "final_decision") != "GO":
+            fail("native libp2p convergence command did not emit final_decision=GO")
+        if _extract_line_value(libp2p_output, "lane_profile") != "deep":
+            fail("native libp2p convergence command did not emit lane_profile=deep")
+        commands_executed += 1
+
+        libp2p_policy_output = _run_command(
+            [
+                "bash",
+                "scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh",
+                "--report-file",
+                str(libp2p_convergence_report),
+                "--expected-final-decision",
+                "GO",
+                "--ci-fast-gate",
+                "FAIL",
+                "--output-json",
+                str(libp2p_convergence_policy_report),
+            ],
+            timeout_seconds=command_max_seconds,
+        )
+        if _extract_line_value(libp2p_policy_output, "status") != "ok":
+            fail("native libp2p convergence policy checker did not emit status=ok")
+        if _extract_line_value(libp2p_policy_output, "final_decision") != "GO":
+            fail("native libp2p convergence policy checker did not emit final_decision=GO")
         commands_executed += 1
 
         kolme_output = _run_command(
@@ -294,9 +338,13 @@ def run_lane(args: argparse.Namespace) -> int:
             full_io_report,
             failure_reason="full_i_o_scenario_matrix_report_invalid",
         )
-        full_runtime_payload = _read_json_dict(
-            full_runtime_report,
-            failure_reason="local_full_runtime_report_invalid",
+        libp2p_convergence_payload = _read_json_dict(
+            libp2p_convergence_report,
+            failure_reason="native_libp2p_convergence_report_invalid",
+        )
+        libp2p_policy_payload = _read_json_dict(
+            libp2p_convergence_policy_report,
+            failure_reason="native_libp2p_convergence_policy_report_invalid",
         )
         kolme_integration_payload = _read_json_dict(
             kolme_integration_report,
@@ -309,8 +357,32 @@ def run_lane(args: argparse.Namespace) -> int:
 
         if full_io_payload.get("final_decision") != "GO":
             fail("full I/O scenario matrix report missing final_decision=GO")
-        if full_runtime_payload.get("final_decision") != "GO":
-            fail("local full-runtime report missing final_decision=GO")
+        if libp2p_convergence_payload.get("schema_version") != LIBP2P_CONVERGENCE_REPORT_SCHEMA:
+            fail("native libp2p convergence report schema mismatch")
+        if libp2p_convergence_payload.get("status") != "pass":
+            fail("native libp2p convergence report status mismatch")
+        if libp2p_convergence_payload.get("final_decision") != "GO":
+            fail("native libp2p convergence report final_decision mismatch")
+        if libp2p_convergence_payload.get("lane_mode") != "run":
+            fail("native libp2p convergence report lane mode mismatch")
+        if libp2p_convergence_payload.get("lane_profile") != "deep":
+            fail("native libp2p convergence report lane profile mismatch")
+        if libp2p_convergence_payload.get("runtime_transport_mode") != LIBP2P_RUNTIME_TRANSPORT_MODE:
+            fail("native libp2p convergence report runtime transport mode mismatch")
+        if (
+            libp2p_convergence_payload.get("convergence_reason_codes")
+            != [LIBP2P_CONVERGENCE_REASON_CODE]
+        ):
+            fail("native libp2p convergence report reason taxonomy mismatch")
+        if libp2p_policy_payload.get("schema_version") != LIBP2P_CONVERGENCE_POLICY_SCHEMA:
+            fail("native libp2p convergence policy schema mismatch")
+        if libp2p_policy_payload.get("final_decision") != "GO":
+            fail("native libp2p convergence policy final_decision mismatch")
+        if (
+            libp2p_policy_payload.get("libp2p_process_isolated_convergence_policy_status")
+            != "verified"
+        ):
+            fail("native libp2p convergence policy status mismatch")
         if kolme_integration_payload.get("schema_version") != KOLME_INTEGRATION_REPORT_SCHEMA:
             fail("kolme runtime integration report schema mismatch")
         if kolme_integration_payload.get("status") != "ok":
@@ -350,6 +422,28 @@ def run_lane(args: argparse.Namespace) -> int:
             != KOLME_SIGNER_ATTESTATION_SCHEMA
         ):
             fail("kolme runtime integration report signer attestation schema mismatch")
+        if (
+            kolme_integration_payload.get("runtime_commit_command_profile")
+            != KOLME_RUNTIME_COMMIT_PROFILE
+        ):
+            fail("kolme runtime integration report fixture command profile mismatch")
+        if (
+            kolme_integration_payload.get("runtime_commit_policy_command_profile")
+            != KOLME_RUNTIME_COMMIT_PROFILE
+        ):
+            fail("kolme runtime integration report fixture policy profile mismatch")
+        if (
+            kolme_integration_payload.get("runtime_commit_command_profile_version")
+            != KOLME_RUNTIME_COMMIT_PROFILE_VERSION
+        ):
+            fail("kolme runtime integration report fixture profile version mismatch")
+        if (
+            kolme_integration_payload.get("runtime_commit_failure_taxonomy_version")
+            != KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION
+        ):
+            fail("kolme runtime integration report failure taxonomy version mismatch")
+        if kolme_integration_payload.get("runtime_commit_failure_taxonomy") != "none":
+            fail("kolme runtime integration report failure taxonomy mismatch")
         runtime_commit_command = kolme_integration_payload.get("runtime_commit_command")
         if (
             not isinstance(runtime_commit_command, str)
@@ -364,13 +458,21 @@ def run_lane(args: argparse.Namespace) -> int:
         if kolme_policy_payload.get("observed_reason_code") != KOLME_RUNTIME_INTEGRATION_RUN_REASON:
             fail("kolme runtime integration policy observed reason code mismatch")
 
+        combined_transport_reason_codes = [LIBP2P_CONVERGENCE_REASON_CODE]
+        combined_kolme_runtime_reason_code = KOLME_RUNTIME_INTEGRATION_RUN_REASON
+        kolme_runtime_commit_failure_taxonomy_version = KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION
+        kolme_runtime_commit_failure_taxonomy = "none"
+        kolme_fixture_profile = KOLME_RUNTIME_COMMIT_PROFILE
+        kolme_fixture_profile_version = KOLME_RUNTIME_COMMIT_PROFILE_VERSION
+
         evidence_bundle = {
             "schema_version": EVIDENCE_BUNDLE_SCHEMA,
             "status": "pass",
             "final_decision": "GO",
             "lane_mode": mode,
             "full_io_matrix_report_file": str(full_io_report),
-            "full_runtime_report_file": str(full_runtime_report),
+            "native_libp2p_convergence_report_file": str(libp2p_convergence_report),
+            "native_libp2p_convergence_policy_report_file": str(libp2p_convergence_policy_report),
             "kolme_runtime_integration_report_file": str(kolme_integration_report),
             "kolme_runtime_integration_policy_report_file": str(kolme_integration_policy_report),
             "transport_convergence_status": transport_convergence_status,
@@ -390,6 +492,14 @@ def run_lane(args: argparse.Namespace) -> int:
             "kolme_expected_ref": kolme_expected_ref,
             "kolme_base_url": kolme_base_url,
             "kolme_fork_chain_version": kolme_fork_chain_version,
+            "combined_reason_taxonomy_version": COMBINED_REASON_TAXONOMY_VERSION,
+            "combined_transport_reason_codes": combined_transport_reason_codes,
+            "combined_kolme_runtime_reason_code": combined_kolme_runtime_reason_code,
+            "kolme_runtime_commit_failure_taxonomy_version": kolme_runtime_commit_failure_taxonomy_version,
+            "kolme_runtime_commit_failure_taxonomy": kolme_runtime_commit_failure_taxonomy,
+            "kolme_fixture_profile": kolme_fixture_profile,
+            "kolme_fixture_profile_version": kolme_fixture_profile_version,
+            "kolme_fixture_profile_status": kolme_fixture_profile_status,
             "commands_executed": commands_executed,
             "ci_fast_gate_eligibility": "excluded_local_heavy",
         }
@@ -397,7 +507,8 @@ def run_lane(args: argparse.Namespace) -> int:
 
         artifact_paths = {
             "full_io_matrix_report": str(full_io_report),
-            "full_runtime_report": str(full_runtime_report),
+            "native_libp2p_convergence_report": str(libp2p_convergence_report),
+            "native_libp2p_convergence_policy_report": str(libp2p_convergence_policy_report),
             "kolme_runtime_integration_summary_report": str(kolme_integration_report),
             "kolme_runtime_integration_policy_report": str(kolme_integration_policy_report),
             "evidence_bundle_file": str(evidence_bundle_file),
@@ -425,6 +536,10 @@ def run_lane(args: argparse.Namespace) -> int:
         "fast_gate_exclusion_reason_code": FAST_GATE_EXCLUSION_REASON,
         "scenario_matrix_status": "verified",
         "full_runtime_status": "verified",
+        "native_libp2p_convergence_status": transport_convergence_status,
+        "libp2p_runtime_transport_mode": LIBP2P_RUNTIME_TRANSPORT_MODE,
+        "libp2p_convergence_report_schema_version": LIBP2P_CONVERGENCE_REPORT_SCHEMA,
+        "libp2p_convergence_policy_schema_version": LIBP2P_CONVERGENCE_POLICY_SCHEMA,
         "evidence_bundle_status": "verified",
         "transport_convergence_status": transport_convergence_status,
         "signer_provenance_status": signer_provenance_status,
@@ -445,6 +560,14 @@ def run_lane(args: argparse.Namespace) -> int:
         "kolme_fork_chain_version": kolme_fork_chain_version,
         "kolme_integration_report_schema_version": KOLME_INTEGRATION_REPORT_SCHEMA,
         "kolme_integration_policy_schema_version": KOLME_INTEGRATION_POLICY_SCHEMA,
+        "combined_reason_taxonomy_version": COMBINED_REASON_TAXONOMY_VERSION,
+        "combined_transport_reason_codes": combined_transport_reason_codes,
+        "combined_kolme_runtime_reason_code": combined_kolme_runtime_reason_code,
+        "kolme_runtime_commit_failure_taxonomy_version": kolme_runtime_commit_failure_taxonomy_version,
+        "kolme_runtime_commit_failure_taxonomy": kolme_runtime_commit_failure_taxonomy,
+        "kolme_fixture_profile": kolme_fixture_profile,
+        "kolme_fixture_profile_version": kolme_fixture_profile_version,
+        "kolme_fixture_profile_status": kolme_fixture_profile_status,
         "run_mode_command_status": run_mode_command_status,
         "run_mode_command_count": commands_executed,
         "reason_code": reason_code,
@@ -465,6 +588,10 @@ def run_lane(args: argparse.Namespace) -> int:
     print(f"fast_gate_exclusion_reason_code={FAST_GATE_EXCLUSION_REASON}")
     print("scenario_matrix_status=verified")
     print("full_runtime_status=verified")
+    print(f"native_libp2p_convergence_status={transport_convergence_status}")
+    print(f"libp2p_runtime_transport_mode={LIBP2P_RUNTIME_TRANSPORT_MODE}")
+    print(f"libp2p_convergence_report_schema_version={LIBP2P_CONVERGENCE_REPORT_SCHEMA}")
+    print(f"libp2p_convergence_policy_schema_version={LIBP2P_CONVERGENCE_POLICY_SCHEMA}")
     print("evidence_bundle_status=verified")
     print(f"transport_convergence_status={transport_convergence_status}")
     print(f"signer_provenance_status={signer_provenance_status}")
@@ -485,6 +612,17 @@ def run_lane(args: argparse.Namespace) -> int:
     print(f"kolme_fork_chain_version={kolme_fork_chain_version}")
     print(f"kolme_integration_report_schema_version={KOLME_INTEGRATION_REPORT_SCHEMA}")
     print(f"kolme_integration_policy_schema_version={KOLME_INTEGRATION_POLICY_SCHEMA}")
+    print(f"combined_reason_taxonomy_version={COMBINED_REASON_TAXONOMY_VERSION}")
+    print(f"combined_transport_reason_codes={','.join(combined_transport_reason_codes)}")
+    print(f"combined_kolme_runtime_reason_code={combined_kolme_runtime_reason_code}")
+    print(
+        "kolme_runtime_commit_failure_taxonomy_version="
+        f"{kolme_runtime_commit_failure_taxonomy_version}"
+    )
+    print(f"kolme_runtime_commit_failure_taxonomy={kolme_runtime_commit_failure_taxonomy}")
+    print(f"kolme_fixture_profile={kolme_fixture_profile}")
+    print(f"kolme_fixture_profile_version={kolme_fixture_profile_version}")
+    print(f"kolme_fixture_profile_status={kolme_fixture_profile_status}")
     print(f"run_mode_command_status={run_mode_command_status}")
     print(f"run_mode_command_count={commands_executed}")
     print(f"reason_code={reason_code}")
@@ -537,6 +675,22 @@ def check_policy(args: argparse.Namespace) -> int:
         "local_full_stack_integration_policy_full_runtime_status_mismatch",
     )
     checks.reject_if(
+        payload.get("native_libp2p_convergence_status") not in ("planned", "verified"),
+        "local_full_stack_integration_policy_native_libp2p_convergence_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("libp2p_runtime_transport_mode") != LIBP2P_RUNTIME_TRANSPORT_MODE,
+        "local_full_stack_integration_policy_libp2p_transport_mode_mismatch",
+    )
+    checks.reject_if(
+        payload.get("libp2p_convergence_report_schema_version") != LIBP2P_CONVERGENCE_REPORT_SCHEMA,
+        "local_full_stack_integration_policy_libp2p_report_schema_contract_mismatch",
+    )
+    checks.reject_if(
+        payload.get("libp2p_convergence_policy_schema_version") != LIBP2P_CONVERGENCE_POLICY_SCHEMA,
+        "local_full_stack_integration_policy_libp2p_policy_schema_contract_mismatch",
+    )
+    checks.reject_if(
         payload.get("evidence_bundle_status") != "verified",
         "local_full_stack_integration_policy_evidence_bundle_status_mismatch",
     )
@@ -560,6 +714,23 @@ def check_policy(args: argparse.Namespace) -> int:
         payload.get("kolme_integration_policy_schema_version") != KOLME_INTEGRATION_POLICY_SCHEMA,
         "local_full_stack_integration_policy_kolme_policy_schema_contract_mismatch",
     )
+    checks.reject_if(
+        payload.get("combined_reason_taxonomy_version") != COMBINED_REASON_TAXONOMY_VERSION,
+        "local_full_stack_integration_policy_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("kolme_runtime_commit_failure_taxonomy_version")
+        != KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION,
+        "local_full_stack_integration_policy_kolme_runtime_failure_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("kolme_fixture_profile") != KOLME_RUNTIME_COMMIT_PROFILE,
+        "local_full_stack_integration_policy_kolme_fixture_profile_mismatch",
+    )
+    checks.reject_if(
+        payload.get("kolme_fixture_profile_version") != KOLME_RUNTIME_COMMIT_PROFILE_VERSION,
+        "local_full_stack_integration_policy_kolme_fixture_profile_version_mismatch",
+    )
 
     lane_mode = payload.get("lane_mode")
     checks.reject_if(
@@ -573,6 +744,17 @@ def check_policy(args: argparse.Namespace) -> int:
     )
     command_status = payload.get("run_mode_command_status")
     reason_code = payload.get("reason_code")
+    checks.reject_if(
+        reason_code not in {DRY_RUN_REASON, RUN_REASON},
+        "local_full_stack_integration_policy_reason_code_unsupported",
+    )
+    combined_transport_reason_codes = payload.get("combined_transport_reason_codes")
+    checks.reject_if(
+        combined_transport_reason_codes != [LIBP2P_CONVERGENCE_REASON_CODE],
+        "local_full_stack_integration_policy_transport_reason_taxonomy_mismatch",
+    )
+    combined_kolme_runtime_reason_code = payload.get("combined_kolme_runtime_reason_code")
+    kolme_runtime_commit_failure_taxonomy = payload.get("kolme_runtime_commit_failure_taxonomy")
     artifact_paths = payload.get("artifact_paths")
     checks.reject_if(
         not isinstance(artifact_paths, dict),
@@ -614,6 +796,14 @@ def check_policy(args: argparse.Namespace) -> int:
     checks.reject_if(
         payload.get("kolme_integration_policy_status") != expected_domain_status,
         "local_full_stack_integration_policy_kolme_integration_policy_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("native_libp2p_convergence_status") != expected_domain_status,
+        "local_full_stack_integration_policy_native_libp2p_convergence_domain_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("kolme_fixture_profile_status") != expected_domain_status,
+        "local_full_stack_integration_policy_kolme_fixture_profile_status_mismatch",
     )
 
     kolme_checkout_path = payload.get("kolme_checkout_path")
@@ -660,13 +850,21 @@ def check_policy(args: argparse.Namespace) -> int:
             reason_code != DRY_RUN_REASON,
             "local_full_stack_integration_policy_dry_run_reason_code_mismatch",
         )
+        checks.reject_if(
+            combined_kolme_runtime_reason_code != "not_run",
+            "local_full_stack_integration_policy_dry_run_kolme_reason_code_mismatch",
+        )
+        checks.reject_if(
+            kolme_runtime_commit_failure_taxonomy != "not_run",
+            "local_full_stack_integration_policy_dry_run_kolme_failure_taxonomy_mismatch",
+        )
     elif lane_mode == "run":
         checks.reject_if(
             payload.get("ci_fast_gate_eligibility") != "excluded_local_heavy",
             "local_full_stack_integration_policy_run_mode_exclusion_mismatch",
         )
         checks.reject_if(
-            command_count < 4,
+            command_count < 5,
             "local_full_stack_integration_policy_run_mode_command_count_mismatch",
         )
         checks.reject_if(
@@ -677,13 +875,24 @@ def check_policy(args: argparse.Namespace) -> int:
             reason_code != RUN_REASON,
             "local_full_stack_integration_policy_run_mode_reason_code_mismatch",
         )
+        checks.reject_if(
+            combined_kolme_runtime_reason_code != KOLME_RUNTIME_INTEGRATION_RUN_REASON,
+            "local_full_stack_integration_policy_run_mode_kolme_reason_code_mismatch",
+        )
+        checks.reject_if(
+            kolme_runtime_commit_failure_taxonomy != "none",
+            "local_full_stack_integration_policy_run_mode_kolme_failure_taxonomy_mismatch",
+        )
         required_artifacts = (
             "full_io_matrix_report",
-            "full_runtime_report",
+            "native_libp2p_convergence_report",
+            "native_libp2p_convergence_policy_report",
             "kolme_runtime_integration_summary_report",
             "kolme_runtime_integration_policy_report",
             "evidence_bundle_file",
         )
+        libp2p_summary_report_path = ""
+        libp2p_policy_report_path = ""
         kolme_summary_report_path = ""
         kolme_policy_report_path = ""
         if isinstance(artifact_paths, dict):
@@ -693,12 +902,96 @@ def check_policy(args: argparse.Namespace) -> int:
                     not isinstance(artifact_value, str) or not Path(artifact_value).is_file(),
                     f"local_full_stack_integration_policy_artifact_missing:{artifact_key}",
                 )
+            libp2p_summary_value = artifact_paths.get("native_libp2p_convergence_report")
+            libp2p_policy_value = artifact_paths.get("native_libp2p_convergence_policy_report")
             summary_value = artifact_paths.get("kolme_runtime_integration_summary_report")
             policy_value = artifact_paths.get("kolme_runtime_integration_policy_report")
+            if isinstance(libp2p_summary_value, str):
+                libp2p_summary_report_path = libp2p_summary_value
+            if isinstance(libp2p_policy_value, str):
+                libp2p_policy_report_path = libp2p_policy_value
             if isinstance(summary_value, str):
                 kolme_summary_report_path = summary_value
             if isinstance(policy_value, str):
                 kolme_policy_report_path = policy_value
+
+        if libp2p_summary_report_path:
+            try:
+                libp2p_summary_payload = json.loads(
+                    Path(libp2p_summary_report_path).read_text(encoding="utf-8")
+                )
+            except (OSError, json.JSONDecodeError):
+                libp2p_summary_payload = {}
+                checks.reject_if(
+                    True,
+                    "local_full_stack_integration_policy_libp2p_summary_json_invalid",
+                )
+            if not isinstance(libp2p_summary_payload, dict):
+                libp2p_summary_payload = {}
+                checks.reject_if(
+                    True,
+                    "local_full_stack_integration_policy_libp2p_summary_root_invalid",
+                )
+            checks.reject_if(
+                libp2p_summary_payload.get("schema_version") != LIBP2P_CONVERGENCE_REPORT_SCHEMA,
+                "local_full_stack_integration_policy_libp2p_summary_schema_mismatch",
+            )
+            checks.reject_if(
+                libp2p_summary_payload.get("status") != "pass",
+                "local_full_stack_integration_policy_libp2p_summary_status_mismatch",
+            )
+            checks.reject_if(
+                libp2p_summary_payload.get("final_decision") != "GO",
+                "local_full_stack_integration_policy_libp2p_summary_final_decision_mismatch",
+            )
+            checks.reject_if(
+                libp2p_summary_payload.get("lane_mode") != "run",
+                "local_full_stack_integration_policy_libp2p_summary_lane_mode_mismatch",
+            )
+            checks.reject_if(
+                libp2p_summary_payload.get("lane_profile") != "deep",
+                "local_full_stack_integration_policy_libp2p_summary_lane_profile_mismatch",
+            )
+            checks.reject_if(
+                libp2p_summary_payload.get("runtime_transport_mode") != LIBP2P_RUNTIME_TRANSPORT_MODE,
+                "local_full_stack_integration_policy_libp2p_summary_runtime_transport_mode_mismatch",
+            )
+            checks.reject_if(
+                libp2p_summary_payload.get("convergence_reason_codes")
+                != [LIBP2P_CONVERGENCE_REASON_CODE],
+                "local_full_stack_integration_policy_libp2p_summary_reason_taxonomy_mismatch",
+            )
+
+        if libp2p_policy_report_path:
+            try:
+                libp2p_policy_payload = json.loads(
+                    Path(libp2p_policy_report_path).read_text(encoding="utf-8")
+                )
+            except (OSError, json.JSONDecodeError):
+                libp2p_policy_payload = {}
+                checks.reject_if(
+                    True,
+                    "local_full_stack_integration_policy_libp2p_policy_json_invalid",
+                )
+            if not isinstance(libp2p_policy_payload, dict):
+                libp2p_policy_payload = {}
+                checks.reject_if(
+                    True,
+                    "local_full_stack_integration_policy_libp2p_policy_root_invalid",
+                )
+            checks.reject_if(
+                libp2p_policy_payload.get("schema_version") != LIBP2P_CONVERGENCE_POLICY_SCHEMA,
+                "local_full_stack_integration_policy_libp2p_policy_schema_mismatch",
+            )
+            checks.reject_if(
+                libp2p_policy_payload.get("final_decision") != "GO",
+                "local_full_stack_integration_policy_libp2p_policy_final_decision_mismatch",
+            )
+            checks.reject_if(
+                libp2p_policy_payload.get("libp2p_process_isolated_convergence_policy_status")
+                != "verified",
+                "local_full_stack_integration_policy_libp2p_policy_status_mismatch",
+            )
 
         if kolme_summary_report_path:
             try:
@@ -784,6 +1077,30 @@ def check_policy(args: argparse.Namespace) -> int:
                 kolme_summary_payload.get("runtime_signer_attestation_schema_version")
                 != KOLME_SIGNER_ATTESTATION_SCHEMA,
                 "local_full_stack_integration_policy_kolme_summary_signer_attestation_schema_mismatch",
+            )
+            checks.reject_if(
+                kolme_summary_payload.get("runtime_commit_command_profile")
+                != KOLME_RUNTIME_COMMIT_PROFILE,
+                "local_full_stack_integration_policy_kolme_summary_fixture_profile_mismatch",
+            )
+            checks.reject_if(
+                kolme_summary_payload.get("runtime_commit_policy_command_profile")
+                != KOLME_RUNTIME_COMMIT_PROFILE,
+                "local_full_stack_integration_policy_kolme_summary_fixture_policy_profile_mismatch",
+            )
+            checks.reject_if(
+                kolme_summary_payload.get("runtime_commit_command_profile_version")
+                != KOLME_RUNTIME_COMMIT_PROFILE_VERSION,
+                "local_full_stack_integration_policy_kolme_summary_fixture_profile_version_mismatch",
+            )
+            checks.reject_if(
+                kolme_summary_payload.get("runtime_commit_failure_taxonomy_version")
+                != KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION,
+                "local_full_stack_integration_policy_kolme_summary_failure_taxonomy_version_mismatch",
+            )
+            checks.reject_if(
+                kolme_summary_payload.get("runtime_commit_failure_taxonomy") != "none",
+                "local_full_stack_integration_policy_kolme_summary_failure_taxonomy_mismatch",
             )
             runtime_commit_command = kolme_summary_payload.get("runtime_commit_command")
             checks.reject_if(

@@ -25,7 +25,8 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Composition contract:
   - run-mode composes:
     - `scripts/runtime/validate_full_io_scenario_matrix_live.sh`
-    - `scripts/runtime/validate_local_full_runtime_live.sh`
+    - `scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh`
+    - `scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh`
     - `scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh`
   - nested Kolme summary/policy evidence is fail-closed for:
     - signer provenance markers
@@ -34,8 +35,11 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - provider contract marker `KolmeRuntimeCommitLiveProvider`
     - local checkout/remote/ref/base-url/fork-chain prerequisite markers
     - local-only enforcement and nested run-mode policy reason-code marker `live_runtime_integration_passed`
+    - combined reason taxonomy marker `kamn.runtime.local-full-stack-integration-reason-taxonomy.v1`
+    - combined transport reason marker `fork_choice_stale_block_height`
+    - deterministic Kolme fixture profile markers (`real-node-non-synthetic-v1`, profile version `v1`)
 - Deterministic tamper reason:
-  - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
+  - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
 - Release go/no-go linkage:
   - `scripts/runtime/release_evidence_manifest.json` includes required artifact ids:
     `local_full_stack_integration`,
