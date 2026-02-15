@@ -208,6 +208,23 @@ fn functional_observability_endpoint_renders_metrics_and_health_payloads() {
     assert!(health.body.contains("\"transport_checkpoint_failures\":0"));
     assert!(health.body.contains("\"signer_checkpoint_failures\":0"));
     assert!(health.body.contains("\"commit_checkpoint_failures\":0"));
+
+    let readiness = render_observability_endpoint_response(&snapshot, "/readyz");
+    assert_eq!(readiness.status_code, 200);
+    assert_eq!(readiness.content_type, "application/json");
+    assert!(readiness.body.contains("\"ready\":true"));
+    assert!(readiness
+        .body
+        .contains("\"readiness_reason_code\":\"none\""));
+    assert!(readiness
+        .body
+        .contains("\"transport_dependency_status\":\"ready\""));
+    assert!(readiness
+        .body
+        .contains("\"signer_dependency_status\":\"ready\""));
+    assert!(readiness
+        .body
+        .contains("\"commit_dependency_status\":\"ready\""));
 }
 
 #[test]
@@ -242,6 +259,52 @@ fn functional_observability_endpoint_renders_stream_payload() {
 }
 
 #[test]
+fn functional_observability_endpoint_readiness_reports_degraded_timeout_reason_codes() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "100".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "1".to_owned(),
+        "--daemon-shutdown-signal-tick".to_owned(),
+        "7".to_owned(),
+        "--daemon-shutdown-drain-ticks".to_owned(),
+        "4".to_owned(),
+        "--daemon-shutdown-timeout-ticks".to_owned(),
+        "2".to_owned(),
+    ])
+    .expect("daemon timeout args should parse");
+    let report = execute(parsed).expect("daemon timeout execution should succeed");
+    let snapshot =
+        build_runtime_observability_snapshot(&report).expect("timeout report should map snapshot");
+
+    let readiness = render_observability_endpoint_response(&snapshot, "/readyz");
+    assert_eq!(readiness.status_code, 200);
+    assert_eq!(readiness.content_type, "application/json");
+    assert!(readiness.body.contains("\"ready\":false"));
+    assert!(readiness.body.contains("\"health\":\"critical\""));
+    assert!(readiness
+        .body
+        .contains("\"reason_code\":\"daemon_shutdown_timeout\""));
+    assert!(readiness
+        .body
+        .contains("\"readiness_reason_code\":\"readiness_commit_dependency_unhealthy\""));
+    assert!(readiness
+        .body
+        .contains("\"transport_dependency_status\":\"ready\""));
+    assert!(readiness
+        .body
+        .contains("\"signer_dependency_status\":\"ready\""));
+    assert!(readiness
+        .body
+        .contains("\"commit_dependency_status\":\"degraded\""));
+}
+
+#[test]
 fn integration_runtime_observability_endpoint_serves_metrics_and_health_paths() {
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),
@@ -263,7 +326,7 @@ fn integration_runtime_observability_endpoint_serves_metrics_and_health_paths() 
         bind_addr: bind_addr.clone(),
         metrics_path: "/metrics".to_owned(),
         health_path: "/healthz".to_owned(),
-        max_requests: 3,
+        max_requests: 4,
         idle_timeout_ms: 2_000,
     };
 
@@ -274,6 +337,7 @@ fn integration_runtime_observability_endpoint_serves_metrics_and_health_paths() 
 
     let metrics_response = send_http_get(bind_addr.as_str(), "/metrics");
     let health_response = send_http_get(bind_addr.as_str(), "/healthz");
+    let readiness_response = send_http_get(bind_addr.as_str(), "/readyz");
 
     assert!(
         metrics_response.contains("HTTP/1.1 200 OK"),
@@ -287,6 +351,9 @@ fn integration_runtime_observability_endpoint_serves_metrics_and_health_paths() 
     );
     assert!(health_response.contains("\"health\":\"healthy\""));
     assert!(health_response.contains("\"reason_code\":\"none\""));
+    assert!(readiness_response.contains("HTTP/1.1 200 OK"));
+    assert!(readiness_response.contains("\"ready\":true"));
+    assert!(readiness_response.contains("\"readiness_reason_code\":\"none\""));
 
     let server_result = server.join().expect("endpoint thread should complete");
     assert!(

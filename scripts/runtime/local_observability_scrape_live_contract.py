@@ -42,6 +42,10 @@ LOCAL_OBSERVABILITY_SCRAPE_TESTS: list[tuple[str, str]] = [
         "stream_lifecycle",
         "main_tests::observability_endpoint_tests::integration_runtime_observability_endpoint_serves_stream_path",
     ),
+    (
+        "readiness_failure_drill",
+        "main_tests::observability_endpoint_tests::functional_observability_endpoint_readiness_reports_degraded_timeout_reason_codes",
+    ),
 ]
 
 
@@ -107,6 +111,9 @@ def _run_lane(args: argparse.Namespace) -> int:
         "scrape_probe_status": "verified",
         "metrics_content_type_status": "verified",
         "stream_lifecycle_status": "verified",
+        "readiness_probe_status": "verified",
+        "readiness_failure_drill_status": "verified",
+        "readiness_reason_taxonomy_status": "verified",
         "fail_closed_status": "verified",
         "ci_fast_gate_exclusion_status": "verified",
         "performance_budget_status": "verified",
@@ -128,6 +135,9 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("scrape_probe_status=verified")
     print("metrics_content_type_status=verified")
     print("stream_lifecycle_status=verified")
+    print("readiness_probe_status=verified")
+    print("readiness_failure_drill_status=verified")
+    print("readiness_reason_taxonomy_status=verified")
     print("fail_closed_status=verified")
     print("ci_fast_gate_exclusion_status=verified")
     print("performance_budget_status=verified")
@@ -163,6 +173,9 @@ def _check_policy(args: argparse.Namespace) -> int:
         "scrape_probe_status",
         "metrics_content_type_status",
         "stream_lifecycle_status",
+        "readiness_probe_status",
+        "readiness_failure_drill_status",
+        "readiness_reason_taxonomy_status",
         "fail_closed_status",
         "ci_fast_gate_exclusion_status",
         "performance_budget_status",
@@ -196,6 +209,9 @@ def _check_policy(args: argparse.Namespace) -> int:
         "scrape_probe_status",
         "metrics_content_type_status",
         "stream_lifecycle_status",
+        "readiness_probe_status",
+        "readiness_failure_drill_status",
+        "readiness_reason_taxonomy_status",
         "fail_closed_status",
         "ci_fast_gate_exclusion_status",
         "performance_budget_status",

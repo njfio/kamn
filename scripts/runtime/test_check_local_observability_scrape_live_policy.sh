@@ -21,6 +21,9 @@ cat >"$report_file" <<'JSON'
   "scrape_probe_status": "verified",
   "metrics_content_type_status": "verified",
   "stream_lifecycle_status": "verified",
+  "readiness_probe_status": "verified",
+  "readiness_failure_drill_status": "verified",
+  "readiness_reason_taxonomy_status": "verified",
   "fail_closed_status": "verified",
   "ci_fast_gate_exclusion_status": "verified",
   "performance_budget_status": "verified",
@@ -78,7 +81,7 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 payload = json.loads(path.read_text(encoding="utf-8"))
-payload["scrape_probe_status"] = "missing"
+payload["readiness_failure_drill_status"] = "missing"
 path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
@@ -97,7 +100,7 @@ if [ "$tampered_code" -eq 0 ]; then
   echo "expected tampered local observability scrape report to fail policy checker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$tampered_output" | grep -q 'local_observability_scrape_policy_marker_missing:scrape_probe_status'; then
+if ! printf '%s\n' "$tampered_output" | grep -q 'local_observability_scrape_policy_marker_missing:readiness_failure_drill_status'; then
   echo "expected deterministic mismatch reason code for tampered local observability scrape policy validation" >&2
   exit 1
 fi

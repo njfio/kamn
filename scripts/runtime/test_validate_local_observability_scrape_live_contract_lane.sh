@@ -50,7 +50,7 @@ if ! printf '%s\n' "$lane_output" | grep -q '^local_observability_scrape_policy_
   echo "expected local observability scrape contract lane policy marker" >&2
   exit 1
 fi
-if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=local_observability_scrape_policy_marker_missing:scrape_probe_status$'; then
+if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=local_observability_scrape_policy_marker_missing:readiness_failure_drill_status$'; then
   echo "expected local observability scrape contract lane fail-closed reason marker" >&2
   exit 1
 fi
@@ -75,6 +75,8 @@ if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
+if lane_payload.get("fail_closed_reason_code") != "local_observability_scrape_policy_marker_missing:readiness_failure_drill_status":
+    raise SystemExit("expected deterministic readiness failure-drill fail-closed reason code")
 
 policy_payload = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
 if policy_payload.get("schema_version") != "kamn.runtime.local-observability-scrape-live-policy-report.v1":
