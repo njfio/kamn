@@ -223,6 +223,9 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic partition marker (`block_reconciliation_partition_status=verified`).
   - lane emits deterministic rejoin marker (`block_reconciliation_rejoin_status=verified`).
   - lane emits deterministic canonical convergence marker (`canonical_convergence_status=verified`).
+  - lane emits deterministic transport-mode marker (`runtime_transport_mode=libp2p_transport_fed`).
+  - lane emits deterministic reconciliation taxonomy marker (`reconciliation_reason_taxonomy_status=verified`).
+  - lane emits deterministic reconciliation reason-code matrix marker (`reconciliation_reason_codes=none|...`).
   - policy checker fails closed on schema/marker drift and decision mismatches.
 - Cost controls:
   - dry-run mode executes no nested lane commands and emits deterministic `dry_run_no_commands_executed`.

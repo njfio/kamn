@@ -1539,6 +1539,23 @@ Operator checkpoints:
   - matrix execution remains local-only and is excluded from PR fast-gate workflow routing.
   - shared opt-in enforcement helper: `scripts/framework/assert_local_heavy_opt_in.sh`.
 
+## Runtime Block Reconciliation Partition/Rejoin (Issue #3418)
+
+- Bounded dry-run contract lane:
+  - `bash scripts/runtime/validate_block_reconciliation_partition_rejoin_live_contract_lane.sh --mode dry-run --ci-fast-gate PASS --output-json /tmp/block-reconciliation-partition-rejoin-contract-lane-report.json --policy-output-json /tmp/block-reconciliation-partition-rejoin-policy-report.json`
+- Explicit local-heavy run mode:
+  - `KAMN_BLOCK_RECONCILIATION_PARTITION_REJOIN_LIVE_OPT_IN=1 bash scripts/runtime/validate_block_reconciliation_partition_rejoin_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/block-reconciliation-partition-rejoin-live-summary.json`
+- Required reconciliation evidence markers:
+  - `runtime_transport_mode=libp2p_transport_fed`
+  - `transport_state_transition_status=verified`
+  - `reconciliation_reason_taxonomy_status=verified`
+  - `reconciliation_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1`
+  - `reconciliation_reason_codes=none|...`
+- Deterministic fail-closed policy reason markers:
+  - `block_reconciliation_partition_rejoin_policy_transport_mode_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_version_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid`
+
 ## Failover + Sync Drill Lane Policy (Issues #787, #788)
 
 - Selector policy:
