@@ -60,7 +60,8 @@ use signer::{
     KolmeForkSecp256k1SignerAdapter,
 };
 use signer::{
-    normalize_kolme_live_signer_key_source, normalize_kolme_live_signer_profile_selector,
+    enforce_kolme_live_signer_preflight, normalize_kolme_live_signer_key_source,
+    normalize_kolme_live_signer_profile_selector,
 };
 #[cfg(test)]
 use wire_payload::render_kolme_live_native_direct_message;
@@ -1218,6 +1219,10 @@ fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> {
                 strict_signer_key_source,
                 allow_local_signer_testing_override,
                 cfg!(test),
+            )?;
+            let _signer_preflight = enforce_kolme_live_signer_preflight(
+                strict_signer_profile,
+                strict_signer_key_source,
             )?;
             let kolme_live_execution =
                 if daemon_max_ticks.is_some() || daemon_tick_interval_ms.is_some() {

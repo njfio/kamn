@@ -776,6 +776,27 @@ fn resolve_kolme_live_signer_selection(
     })
 }
 
+pub(crate) fn enforce_kolme_live_signer_preflight(
+    strict_signer_profile: Option<&str>,
+    strict_signer_key_source: Option<&str>,
+) -> Result<KolmeLiveSignerPreflightReadiness, ConfigError> {
+    let signer_selection =
+        resolve_kolme_live_signer_selection(strict_signer_profile, strict_signer_key_source)?;
+    let readiness = evaluate_kolme_live_signer_preflight_readiness(&signer_selection)?;
+    let provider = EnvKolmeLiveSignerSecretProvider;
+    provider.ensure_no_fallback_private_key_path()?;
+    if signer_selection.key_source == KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL {
+        ensure_kolme_live_managed_external_private_key_env_unset(&signer_selection)?;
+        let _managed_signer_required_marker = resolve_kolme_live_managed_signer_required_marker()?;
+        let _managed_signer_command = resolve_required_kolme_live_managed_signer_command()?;
+        let _managed_signer_public_key =
+            resolve_required_managed_signer_public_key_hex(&signer_selection)?;
+        let _managed_key_reference =
+            read_required_kolme_live_key_reference_from_env(&signer_selection)?;
+    }
+    Ok(readiness)
+}
+
 fn parse_kolme_live_signer_profile_value(
     value: &str,
     env_name: &str,
