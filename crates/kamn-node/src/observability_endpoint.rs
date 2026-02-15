@@ -1,7 +1,19 @@
 use crate::NodeBootstrapReport;
+use axum::{
+    body::Body,
+    extract::State,
+    http::{header::CONTENT_TYPE, HeaderValue, Method, StatusCode, Uri},
+    response::Response,
+    routing::any,
+    Router,
+};
+use std::sync::{
+    atomic::{AtomicBool, AtomicU64, Ordering},
+    Arc,
+};
 use std::time::Duration;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::runtime::Builder;
+use tokio::sync::Notify;
 use tokio::time::Instant;
 
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH: &str = "/metrics";
@@ -40,6 +52,47 @@ pub(crate) struct RuntimeObservabilitySnapshot {
     pub(crate) transport_checkpoint_failures: u64,
     pub(crate) signer_checkpoint_failures: u64,
     pub(crate) commit_checkpoint_failures: u64,
+}
+
+#[derive(Debug)]
+struct ObservabilityRequestBudget {
+    max_requests: u64,
+    served_requests: AtomicU64,
+    completion: Notify,
+}
+
+impl ObservabilityRequestBudget {
+    fn new(max_requests: u64) -> Self {
+        Self {
+            max_requests,
+            served_requests: AtomicU64::new(0),
+            completion: Notify::new(),
+        }
+    }
+
+    fn record_request(&self) {
+        let served = self.served_requests.fetch_add(1, Ordering::SeqCst) + 1;
+        if served >= self.max_requests {
+            self.completion.notify_waiters();
+        }
+    }
+
+    async fn wait_until_complete(&self) {
+        loop {
+            if self.served_requests.load(Ordering::SeqCst) >= self.max_requests {
+                return;
+            }
+            self.completion.notified().await;
+        }
+    }
+}
+
+#[derive(Debug)]
+struct ObservabilityEndpointRuntimeState {
+    snapshot: RuntimeObservabilitySnapshot,
+    metrics_path: String,
+    health_path: String,
+    request_budget: Arc<ObservabilityRequestBudget>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -189,42 +242,71 @@ async fn serve_observability_endpoint_async(
     let listener = tokio::net::TcpListener::bind(config.bind_addr.as_str())
         .await
         .map_err(|error| format!("observability endpoint bind failed: {error}"))?;
+    let request_budget = Arc::new(ObservabilityRequestBudget::new(config.max_requests));
+    let runtime_state = Arc::new(ObservabilityEndpointRuntimeState {
+        snapshot,
+        metrics_path: config.metrics_path,
+        health_path: config.health_path,
+        request_budget: request_budget.clone(),
+    });
+    let timeout_reached = Arc::new(AtomicBool::new(false));
+    let timeout_flag = timeout_reached.clone();
     let deadline = Instant::now() + Duration::from_millis(config.idle_timeout_ms);
-    let mut served_requests = 0_u64;
-    while served_requests < config.max_requests {
-        let now = Instant::now();
-        if now >= deadline {
-            return Err(format!(
-                "observability endpoint timed out after {} ms waiting for requests",
-                config.idle_timeout_ms
-            ));
-        }
-        let accept_window = deadline.saturating_duration_since(now);
-        let (mut stream, _) = tokio::time::timeout(accept_window, listener.accept())
-            .await
-            .map_err(|_| {
-                format!(
-                    "observability endpoint timed out after {} ms waiting for requests",
-                    config.idle_timeout_ms
-                )
-            })?
-            .map_err(|error| format!("observability endpoint accept failed: {error}"))?;
-        let path = read_http_request_path_async(&mut stream)
-            .await
-            .unwrap_or_else(|_| "/".to_owned());
-        let response = dispatch_observability_endpoint_request(
-            &snapshot,
-            path.as_str(),
-            config.metrics_path.as_str(),
-            config.health_path.as_str(),
+    let app = build_observability_endpoint_router(runtime_state);
+
+    axum::serve(listener, app)
+        .with_graceful_shutdown(async move {
+            let wait_for_budget = request_budget.wait_until_complete();
+            tokio::pin!(wait_for_budget);
+            let idle_timeout = tokio::time::sleep_until(deadline);
+            tokio::pin!(idle_timeout);
+            tokio::select! {
+                _ = &mut wait_for_budget => {}
+                _ = &mut idle_timeout => {
+                    timeout_flag.store(true, Ordering::SeqCst);
+                }
+            }
+        })
+        .await
+        .map_err(|error| format!("observability endpoint serve failed: {error}"))?;
+
+    if timeout_reached.load(Ordering::SeqCst) {
+        return Err(format!(
+            "observability endpoint timed out after {} ms waiting for requests",
+            config.idle_timeout_ms
+        ));
+    }
+
+    Ok(())
+}
+
+fn build_observability_endpoint_router(state: Arc<ObservabilityEndpointRuntimeState>) -> Router {
+    Router::new()
+        .route("/", any(handle_observability_http_route))
+        .route("/{*path}", any(handle_observability_http_route))
+        .with_state(state)
+}
+
+async fn handle_observability_http_route(
+    State(state): State<Arc<ObservabilityEndpointRuntimeState>>,
+    method: Method,
+    uri: Uri,
+) -> Response {
+    let response = if method != Method::GET {
+        handle_observability_not_found_path().await
+    } else {
+        dispatch_observability_endpoint_request(
+            &state.snapshot,
+            uri.path(),
+            state.metrics_path.as_str(),
+            state.health_path.as_str(),
             DEFAULT_OBSERVABILITY_ENDPOINT_READINESS_PATH,
             DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH,
         )
-        .await;
-        write_http_response_async(&mut stream, &response).await?;
-        served_requests = served_requests.saturating_add(1);
-    }
-    Ok(())
+        .await
+    };
+    state.request_budget.record_request();
+    render_observability_http_response(response)
 }
 
 async fn dispatch_observability_endpoint_request(
@@ -491,69 +573,16 @@ fn commit_dependency_status(snapshot: &RuntimeObservabilitySnapshot) -> &'static
     }
 }
 
-async fn write_http_response_async(
-    stream: &mut tokio::net::TcpStream,
-    response: &ObservabilityEndpointResponse,
-) -> Result<(), String> {
-    let status_text = match response.status_code {
-        200 => "200 OK",
-        404 => "404 Not Found",
-        _ => "500 Internal Server Error",
-    };
-    let payload = format!(
-        "HTTP/1.1 {status_text}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-        response.content_type,
-        response.body.len(),
-        response.body
+fn render_observability_http_response(response: ObservabilityEndpointResponse) -> Response {
+    let status_code =
+        StatusCode::from_u16(response.status_code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+    let mut payload = Response::new(Body::from(response.body));
+    *payload.status_mut() = status_code;
+    payload.headers_mut().insert(
+        CONTENT_TYPE,
+        HeaderValue::from_static(response.content_type),
     );
-    stream
-        .write_all(payload.as_bytes())
-        .await
-        .map_err(|error| format!("observability endpoint write failed: {error}"))
-}
-
-async fn read_http_request_path_async(
-    stream: &mut tokio::net::TcpStream,
-) -> Result<String, String> {
-    let mut request = Vec::new();
-    let mut chunk = [0_u8; 256];
-    loop {
-        match tokio::time::timeout(Duration::from_secs(1), stream.read(&mut chunk)).await {
-            Ok(Ok(0)) => break,
-            Ok(Ok(read_count)) => {
-                request.extend_from_slice(&chunk[..read_count]);
-                if request.windows(2).any(|window| window == b"\r\n") {
-                    break;
-                }
-                if request.len() > 8 * 1024 {
-                    return Err("observability endpoint request header too large".to_owned());
-                }
-            }
-            Ok(Err(error)) => {
-                return Err(format!("observability endpoint read failed: {error}"));
-            }
-            Err(_) => {
-                break;
-            }
-        }
-    }
-    let request = String::from_utf8(request)
-        .map_err(|_| "observability endpoint request was not valid utf-8".to_owned())?;
-    let request_line = request
-        .lines()
-        .next()
-        .ok_or_else(|| "observability endpoint request line missing".to_owned())?;
-    let mut parts = request_line.split_whitespace();
-    let method = parts
-        .next()
-        .ok_or_else(|| "observability endpoint request method missing".to_owned())?;
-    let path = parts
-        .next()
-        .ok_or_else(|| "observability endpoint request path missing".to_owned())?;
-    if method != "GET" {
-        return Err("observability endpoint only supports GET".to_owned());
-    }
-    Ok(path.to_owned())
+    payload
 }
 
 fn escape_json_string(input: &str) -> String {

@@ -101,8 +101,36 @@ fn send_raw_http_request(addr: &str, request: &str) -> String {
 fn wait_for_endpoint_ready(addr: &str) {
     let deadline = Instant::now() + Duration::from_secs(2);
     while Instant::now() < deadline {
-        if TcpStream::connect(addr).is_ok() {
-            return;
+        if let Ok(mut stream) = TcpStream::connect(addr) {
+            let request =
+                format!("GET /readyz HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\n\r\n");
+            if stream.write_all(request.as_bytes()).is_ok() {
+                let mut response = String::new();
+                let mut chunk = [0_u8; 1024];
+                loop {
+                    match stream.read(&mut chunk) {
+                        Ok(0) => break,
+                        Ok(read_count) => {
+                            response.push_str(
+                                std::str::from_utf8(&chunk[..read_count])
+                                    .expect("response must be utf-8"),
+                            );
+                        }
+                        Err(error)
+                            if matches!(
+                                error.kind(),
+                                ErrorKind::WouldBlock | ErrorKind::TimedOut
+                            ) =>
+                        {
+                            break;
+                        }
+                        Err(_) => break,
+                    }
+                }
+                if response.contains("HTTP/1.1") {
+                    return;
+                }
+            }
         }
         thread::sleep(Duration::from_millis(10));
     }
@@ -919,24 +947,24 @@ fn regression_observability_endpoint_uses_async_listener_serving_path() {
 }
 
 #[test]
-fn regression_observability_endpoint_uses_async_metrics_health_stream_adapters() {
+fn regression_observability_endpoint_uses_axum_route_composition() {
     // Regression: #3512
     let source = include_str!("../observability_endpoint.rs");
     assert!(
-        source.contains("async fn dispatch_observability_endpoint_request("),
-        "observability endpoint should dispatch requests through async adapter routing"
+        source.contains("fn build_observability_endpoint_router("),
+        "observability endpoint should build an explicit axum router for route composition"
     );
     assert!(
-        source.contains("async fn handle_observability_metrics_path("),
-        "observability endpoint should expose async metrics handler adapter"
+        source.contains("Router::new()"),
+        "observability endpoint should compose routes through Router::new()"
     );
     assert!(
-        source.contains("async fn handle_observability_health_path("),
-        "observability endpoint should expose async health handler adapter"
+        source.contains(".route(\"/\", any(handle_observability_http_route))"),
+        "observability endpoint should mount root route through axum"
     );
     assert!(
-        source.contains("async fn handle_observability_stream_path("),
-        "observability endpoint should expose async stream handler adapter"
+        source.contains(".route(\"/{*path}\", any(handle_observability_http_route))"),
+        "observability endpoint should mount wildcard route through axum"
     );
 }
 
@@ -949,8 +977,8 @@ fn regression_observability_endpoint_keeps_async_negative_matrix_contracts() {
         "async dispatch must route unsupported paths through deterministic not-found handler"
     );
     assert!(
-        source.contains("if method != \"GET\""),
-        "request parser must fail closed on malformed method contracts"
+        source.contains("if method != Method::GET"),
+        "axum route handler must fail closed on non-GET method contracts"
     );
     assert!(
         source.contains("observability endpoint timed out after {} ms waiting for requests"),
