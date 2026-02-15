@@ -486,6 +486,10 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - emits deterministic evidence bundle schema `kamn.runtime.local-full-stack-integration-evidence-bundle.v1`.
 - Cost controls:
   - dry-run mode executes no nested local-heavy commands and emits deterministic `dry_run_no_commands_executed`.
+  - ci-fast-gate/ci-tools fast mode executes deterministic dry-run combined-lane coverage via:
+    - `scripts/runtime/test_validate_local_full_stack_integration_live.sh`
+    - `scripts/runtime/test_check_local_full_stack_integration_live_policy.sh`
+    - `scripts/runtime/test_validate_local_full_stack_integration_live_contract_lane.sh`
   - run mode is explicit local-only and requires `KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1`.
   - nested run-mode commands propagate local-only opt-in for composed lanes.
   - local full-stack integration run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
