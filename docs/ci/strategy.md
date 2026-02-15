@@ -475,6 +475,9 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - composes Kolme runtime integration lane (`run_local_kamn_live_runtime_integration_lane.sh`) in run mode.
   - enforces top-level marker domains for:
     - transport convergence
+    - process-isolated libp2p execution (`libp2p_process_isolation_status`)
+    - two-node process-isolated proof (`libp2p_two_node_process_isolated_status`)
+    - three-node process-isolated proof (`libp2p_three_node_process_isolated_status`)
     - signer provenance
     - runtime commit submission
     - runtime commit finality
@@ -497,6 +500,9 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - local full-stack integration run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
+  - `local_full_stack_integration_policy_libp2p_process_isolation_status_mismatch`
+  - `local_full_stack_integration_policy_libp2p_two_node_process_isolated_status_mismatch`
+  - `local_full_stack_integration_policy_libp2p_three_node_process_isolated_status_mismatch`
 
 ## Deploy Compose Topology Contract Lane
 - Entry commands:

@@ -20,6 +20,9 @@ runtime signing and `njfio/kolme_fork` compatibility expectations.
   - release manifest linkage: `scripts/runtime/release_evidence_manifest.json` requires artifact id `local_full_stack_integration`.
 - Marker taxonomy (top-level fail-closed contract):
   - `transport_convergence_status`
+  - `libp2p_process_isolation_status`
+  - `libp2p_two_node_process_isolated_status`
+  - `libp2p_three_node_process_isolated_status`
   - `signer_provenance_status`
   - `runtime_commit_submission_status`
   - `runtime_commit_finality_status`
@@ -37,6 +40,11 @@ runtime signing and `njfio/kolme_fork` compatibility expectations.
   - `runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1`
 - Deterministic fail-closed reasons:
   - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
+  - `local_full_stack_integration_policy_libp2p_process_isolation_status_mismatch`
+  - `local_full_stack_integration_policy_libp2p_two_node_process_isolated_status_mismatch`
+  - `local_full_stack_integration_policy_libp2p_three_node_process_isolated_status_mismatch`
+  - `local_full_stack_integration_policy_libp2p_summary_three_node_partition_rejoin_status_mismatch`
+  - `local_full_stack_integration_policy_libp2p_summary_three_node_publish_drop_status_mismatch`
   - `local_full_stack_integration_policy_kolme_summary_schema_mismatch`
   - `local_full_stack_integration_policy_kolme_policy_final_decision_mismatch`
   - `release_manifest_missing_required_artifact:local_full_stack_integration`

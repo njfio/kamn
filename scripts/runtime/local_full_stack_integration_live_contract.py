@@ -187,6 +187,9 @@ def run_lane(args: argparse.Namespace) -> int:
     commands_executed = 0
     artifact_paths: dict[str, str] = {}
     transport_convergence_status = "planned" if mode == "dry-run" else "verified"
+    libp2p_process_isolation_status = "planned" if mode == "dry-run" else "verified"
+    libp2p_two_node_process_isolated_status = "planned" if mode == "dry-run" else "verified"
+    libp2p_three_node_process_isolated_status = "planned" if mode == "dry-run" else "verified"
     signer_provenance_status = "planned" if mode == "dry-run" else "verified"
     runtime_commit_submission_status = "planned" if mode == "dry-run" else "verified"
     runtime_commit_finality_status = "planned" if mode == "dry-run" else "verified"
@@ -383,6 +386,14 @@ def run_lane(args: argparse.Namespace) -> int:
             != [LIBP2P_CONVERGENCE_REASON_CODE]
         ):
             fail("native libp2p convergence report reason taxonomy mismatch")
+        if libp2p_convergence_payload.get("two_node_disconnected_fail_closed_status") != "verified":
+            fail("native libp2p convergence report two-node disconnected marker mismatch")
+        if libp2p_convergence_payload.get("two_node_connected_delivery_status") != "verified":
+            fail("native libp2p convergence report two-node connected marker mismatch")
+        if libp2p_convergence_payload.get("three_node_partition_rejoin_status") != "verified":
+            fail("native libp2p convergence report three-node partition/rejoin marker mismatch")
+        if libp2p_convergence_payload.get("three_node_publish_drop_recovery_status") != "verified":
+            fail("native libp2p convergence report three-node publish-drop marker mismatch")
         if libp2p_policy_payload.get("schema_version") != LIBP2P_CONVERGENCE_POLICY_SCHEMA:
             fail("native libp2p convergence policy schema mismatch")
         if libp2p_policy_payload.get("final_decision") != "GO":
@@ -485,6 +496,9 @@ def run_lane(args: argparse.Namespace) -> int:
             "kolme_runtime_integration_report_file": str(kolme_integration_report),
             "kolme_runtime_integration_policy_report_file": str(kolme_integration_policy_report),
             "transport_convergence_status": transport_convergence_status,
+            "libp2p_process_isolation_status": libp2p_process_isolation_status,
+            "libp2p_two_node_process_isolated_status": libp2p_two_node_process_isolated_status,
+            "libp2p_three_node_process_isolated_status": libp2p_three_node_process_isolated_status,
             "signer_provenance_status": signer_provenance_status,
             "runtime_commit_submission_status": runtime_commit_submission_status,
             "runtime_commit_finality_status": runtime_commit_finality_status,
@@ -555,6 +569,9 @@ def run_lane(args: argparse.Namespace) -> int:
         "libp2p_convergence_policy_schema_version": LIBP2P_CONVERGENCE_POLICY_SCHEMA,
         "evidence_bundle_status": "verified",
         "transport_convergence_status": transport_convergence_status,
+        "libp2p_process_isolation_status": libp2p_process_isolation_status,
+        "libp2p_two_node_process_isolated_status": libp2p_two_node_process_isolated_status,
+        "libp2p_three_node_process_isolated_status": libp2p_three_node_process_isolated_status,
         "signer_provenance_status": signer_provenance_status,
         "runtime_commit_submission_status": runtime_commit_submission_status,
         "runtime_commit_finality_status": runtime_commit_finality_status,
@@ -614,6 +631,12 @@ def run_lane(args: argparse.Namespace) -> int:
     print(f"libp2p_convergence_policy_schema_version={LIBP2P_CONVERGENCE_POLICY_SCHEMA}")
     print("evidence_bundle_status=verified")
     print(f"transport_convergence_status={transport_convergence_status}")
+    print(f"libp2p_process_isolation_status={libp2p_process_isolation_status}")
+    print(f"libp2p_two_node_process_isolated_status={libp2p_two_node_process_isolated_status}")
+    print(
+        "libp2p_three_node_process_isolated_status="
+        f"{libp2p_three_node_process_isolated_status}"
+    )
     print(f"signer_provenance_status={signer_provenance_status}")
     print(f"runtime_commit_submission_status={runtime_commit_submission_status}")
     print(f"runtime_commit_finality_status={runtime_commit_finality_status}")
@@ -806,6 +829,18 @@ def check_policy(args: argparse.Namespace) -> int:
     checks.reject_if(
         payload.get("transport_convergence_status") != expected_domain_status,
         "local_full_stack_integration_policy_transport_convergence_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("libp2p_process_isolation_status") != expected_domain_status,
+        "local_full_stack_integration_policy_libp2p_process_isolation_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("libp2p_two_node_process_isolated_status") != expected_domain_status,
+        "local_full_stack_integration_policy_libp2p_two_node_process_isolated_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("libp2p_three_node_process_isolated_status") != expected_domain_status,
+        "local_full_stack_integration_policy_libp2p_three_node_process_isolated_status_mismatch",
     )
     checks.reject_if(
         payload.get("signer_provenance_status") != expected_domain_status,
@@ -1002,6 +1037,36 @@ def check_policy(args: argparse.Namespace) -> int:
                 libp2p_summary_payload.get("convergence_reason_codes")
                 != [LIBP2P_CONVERGENCE_REASON_CODE],
                 "local_full_stack_integration_policy_libp2p_summary_reason_taxonomy_mismatch",
+            )
+            checks.reject_if(
+                libp2p_summary_payload.get("two_node_disconnected_fail_closed_status")
+                != "verified",
+                (
+                    "local_full_stack_integration_policy_libp2p_summary_two_node_"
+                    "disconnected_status_mismatch"
+                ),
+            )
+            checks.reject_if(
+                libp2p_summary_payload.get("two_node_connected_delivery_status") != "verified",
+                (
+                    "local_full_stack_integration_policy_libp2p_summary_two_node_"
+                    "connected_status_mismatch"
+                ),
+            )
+            checks.reject_if(
+                libp2p_summary_payload.get("three_node_partition_rejoin_status") != "verified",
+                (
+                    "local_full_stack_integration_policy_libp2p_summary_three_node_"
+                    "partition_rejoin_status_mismatch"
+                ),
+            )
+            checks.reject_if(
+                libp2p_summary_payload.get("three_node_publish_drop_recovery_status")
+                != "verified",
+                (
+                    "local_full_stack_integration_policy_libp2p_summary_three_node_"
+                    "publish_drop_status_mismatch"
+                ),
             )
 
         if libp2p_policy_report_path:
