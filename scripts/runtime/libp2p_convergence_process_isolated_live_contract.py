@@ -30,18 +30,39 @@ POLICY_SCHEMA = "kamn.runtime.libp2p-convergence-process-isolated-live-policy-re
 RUNTIME_TRANSPORT_MODE = "libp2p_process_isolated_convergence"
 LEGACY_OPT_IN_ENV = "KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_LIVE_OPT_IN"
 DEEP_OPT_IN_ENV = "KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_DEEP_OPT_IN"
+EXPECTED_DISCONNECTED_FAIL_CLOSED_REASON_CODE = (
+    "p2p_transport_live_socket_send_failed"
+)
 
 SMOKE_TESTS: list[tuple[str, list[str]]] = [
     (
-        "two_node_handshake_discovery_gossip",
+        "two_node_disconnected_fail_closed_native_socket",
         [
             "cargo",
             "test",
             "-p",
             "kamn-core",
+            "--features",
+            "libp2p-live-transport",
             "--test",
-            "p2p_live_transport_runtime",
-            "integration_live_transport_data_plane_supports_independent_adapter_exchange",
+            "p2p_libp2p_native_adapter_runtime",
+            "integration_libp2p_native_adapter_disconnected_publish_fails_closed",
+            "--",
+            "--exact",
+        ],
+    ),
+    (
+        "two_node_connected_delivery_native_socket",
+        [
+            "cargo",
+            "test",
+            "-p",
+            "kamn-core",
+            "--features",
+            "libp2p-live-transport",
+            "--test",
+            "p2p_libp2p_native_adapter_runtime",
+            "integration_libp2p_native_adapter_supports_discovery_and_gossip_over_sockets",
             "--",
             "--exact",
         ],
@@ -179,6 +200,11 @@ def _run_lane(args: argparse.Namespace) -> int:
             if lane_profile == "deep" and mode == "run"
             else ""
         ),
+        "two_node_disconnected_fail_closed_status": "verified",
+        "two_node_disconnected_fail_closed_reason_code": (
+            EXPECTED_DISCONNECTED_FAIL_CLOSED_REASON_CODE
+        ),
+        "two_node_connected_delivery_status": "verified",
         "two_node_discovery_status": "verified",
         "two_node_gossip_status": "verified",
         "three_node_partition_rejoin_status": "verified",
@@ -186,6 +212,8 @@ def _run_lane(args: argparse.Namespace) -> int:
         "convergence_reason_code_status": "verified",
         "convergence_reason_codes": ["fork_choice_stale_block_height"],
         "evidence_keys": [
+            "two_node_disconnected_fail_closed_status",
+            "two_node_connected_delivery_status",
             "two_node_discovery_status",
             "two_node_gossip_status",
             "three_node_partition_rejoin_status",
@@ -214,6 +242,12 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("smoke_lane_status=verified")
     print(f"deep_lane_status={deep_lane_status}")
     print("deep_lane_local_only_status=required")
+    print("two_node_disconnected_fail_closed_status=verified")
+    print(
+        "two_node_disconnected_fail_closed_reason_code="
+        f"{EXPECTED_DISCONNECTED_FAIL_CLOSED_REASON_CODE}"
+    )
+    print("two_node_connected_delivery_status=verified")
     print("two_node_discovery_status=verified")
     print("two_node_gossip_status=verified")
     print("three_node_partition_rejoin_status=verified")
@@ -258,6 +292,9 @@ def _check_policy(args: argparse.Namespace) -> int:
         "smoke_lane_status",
         "deep_lane_status",
         "deep_lane_local_only_status",
+        "two_node_disconnected_fail_closed_status",
+        "two_node_disconnected_fail_closed_reason_code",
+        "two_node_connected_delivery_status",
         "two_node_discovery_status",
         "two_node_gossip_status",
         "three_node_partition_rejoin_status",
@@ -296,6 +333,8 @@ def _check_policy(args: argparse.Namespace) -> int:
         "ci_fast_gate_exclusion_status",
         "smoke_lane_status",
         "deep_lane_local_only_status",
+        "two_node_disconnected_fail_closed_status",
+        "two_node_connected_delivery_status",
         "two_node_discovery_status",
         "two_node_gossip_status",
         "three_node_partition_rejoin_status",
@@ -313,6 +352,15 @@ def _check_policy(args: argparse.Namespace) -> int:
         )
 
     decision.reject_if(
+        report.get("two_node_disconnected_fail_closed_reason_code")
+        != EXPECTED_DISCONNECTED_FAIL_CLOSED_REASON_CODE,
+        (
+            "libp2p_process_isolated_convergence_policy_disconnected_"
+            "fail_closed_reason_code_mismatch"
+        ),
+    )
+
+    decision.reject_if(
         report.get("runtime_transport_mode") != RUNTIME_TRANSPORT_MODE,
         "libp2p_process_isolated_convergence_policy_runtime_transport_mode_mismatch",
     )
@@ -325,6 +373,8 @@ def _check_policy(args: argparse.Namespace) -> int:
     )
 
     expected_evidence_keys = {
+        "two_node_disconnected_fail_closed_status",
+        "two_node_connected_delivery_status",
         "two_node_discovery_status",
         "two_node_gossip_status",
         "three_node_partition_rejoin_status",

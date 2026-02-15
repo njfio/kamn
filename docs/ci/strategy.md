@@ -371,6 +371,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - local-dev mode: local
 - manual-hardened mode: manual
 - Process-isolated convergence evidence contracts:
+  - lane emits deterministic disconnected fail-closed marker (`two_node_disconnected_fail_closed_status=verified`) with reason-code marker (`two_node_disconnected_fail_closed_reason_code=p2p_transport_live_socket_send_failed`).
+  - lane emits deterministic connected delivery marker (`two_node_connected_delivery_status=verified`).
   - lane emits deterministic two-node discovery marker (`two_node_discovery_status=verified`).
   - lane emits deterministic two-node gossip marker (`two_node_gossip_status=verified`).
   - lane emits deterministic three-node partition/rejoin marker (`three_node_partition_rejoin_status=verified`).
@@ -381,12 +383,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - policy checker fails closed on schema/marker drift and decision mismatches.
 - Cost controls:
   - dry-run mode executes no nested commands and emits deterministic `dry_run_no_commands_executed`.
-  - smoke run-mode executes a single bounded two-node selector for minimal fast feedback.
+  - smoke run-mode executes two bounded selectors (disconnected fail-closed and connected delivery) for minimal fast feedback.
   - deep run-mode is explicit local-only and requires `KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_DEEP_OPT_IN=1` (legacy `KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_LIVE_OPT_IN=1` remains accepted).
   - deep run-mode composes the process-isolated harness (`validate_libp2p_process_isolated_harness.sh`) for full 3-node/fault validation.
   - process-isolated convergence deep run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
-  - `libp2p_process_isolated_convergence_policy_marker_missing:three_node_partition_rejoin_status`
+  - `libp2p_process_isolated_convergence_policy_marker_missing:two_node_disconnected_fail_closed_status`
 
 ## Process Harness Primitive Contract
 - Entry commands:
