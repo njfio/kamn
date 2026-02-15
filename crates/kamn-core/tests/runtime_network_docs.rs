@@ -12,6 +12,7 @@ fn doc_contains_runtime_network_scope_and_models() {
     assert!(DOC.contains("crates/kamn-core/src/runtime_recovery_guard.rs"));
     assert!(DOC.contains("## Node CLI Recovery-Check Mapping"));
     assert!(DOC.contains("## Node CLI Daemon Lifecycle Mapping"));
+    assert!(DOC.contains("## Canonical Commit Crash-Recovery Replay Matrix Rules"));
     assert!(DOC.contains("## Bridge Quorum Runtime Mapping"));
     assert!(DOC.contains("## Snapshot Persistence and Restore Contract Rules"));
     assert!(DOC.contains("## Deterministic Fault Simulation Harness Rules"));
@@ -43,6 +44,10 @@ fn doc_contains_peer_lifecycle_and_queue_rules() {
     assert!(DOC.contains("## Deterministic Backpressure and Stale-Peer Queue Rules"));
     assert!(DOC.contains("## Scheduler Determinism Rules"));
     assert!(DOC.contains("## Recovery and Rejoin Guard Rules"));
+    assert!(DOC.contains("canonical_commit_store_record_malformed"));
+    assert!(DOC.contains("canonical_commit_store_sqlite_schema_missing"));
+    assert!(DOC.contains("canonical_commit_store_sqlite_schema_mismatch"));
+    assert!(DOC.contains("canonical_commit_store_sqlite_payload_not_utf8"));
     assert!(DOC.contains("version/hash/cursor"));
     assert!(DOC.contains("<state-version>|<state-hash>|<cursor>"));
     assert!(DOC.contains("`--rejoin-attempt <node-id|state-version|state-hash|resume-token>`"));
@@ -105,6 +110,7 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
     ));
     assert!(DOC.contains("cargo test -p kamn-core network_fault_simulation"));
     assert!(DOC.contains("cargo test -p kamn-core snapshot_store"));
+    assert!(DOC.contains("cargo test -p kamn-core --test block_pipeline_recovery_matrix"));
     assert!(DOC.contains("cargo test -p kamn-core --test bridge_quorum_runtime_docs"));
     assert!(DOC.contains("cargo test -p kamn-core --test kolme_runtime_commit_notifications"));
     assert!(DOC.contains("cargo test -p kamn-core --test kolme_runtime_commit_block_fallback"));
@@ -181,6 +187,11 @@ fn regression_requires_rejoin_and_overflow_rejection_rules() {
     ));
     assert!(DOC.contains("snapshot stale metadata rejection (`Regression: #617`)"));
     assert!(DOC.contains("snapshot restore cursor mismatch rejection (`Regression: #617`)"));
+    assert!(
+        DOC.contains(
+            "canonical crash-recovery stale-artifact matrix remains deterministic (`Regression: #3581`)"
+        )
+    );
     assert!(
         DOC.contains("concurrent accept races never allow multiple winners (`Regression: #844`)")
     );

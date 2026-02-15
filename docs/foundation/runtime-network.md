@@ -411,6 +411,27 @@ This document captures the initial runtime-network foundation slice for peer lif
   - replayed resume tokens are rejected (`ReplayResumeToken`)
   - matching version/hash with unique resume token is accepted (`RejoinAccepted`)
 
+## Canonical Commit Crash-Recovery Replay Matrix Rules
+- Transport-fed canonical commit recovery must validate deterministic restart
+  continuity across durable stores.
+- Recovery drills must include both file-backed and sqlite-backed canonical
+  commit stores.
+- Stale/corrupt artifacts fail closed with deterministic reason markers:
+  - `canonical_commit_store_record_malformed`
+  - `canonical_commit_store_sqlite_schema_missing`
+  - `canonical_commit_store_sqlite_schema_mismatch`
+  - `canonical_commit_store_sqlite_payload_not_utf8`
+- Replay continuity drift remains fail-closed with deterministic reason markers:
+  - `canonical_replay_checkpoint_missing`
+  - `canonical_replay_block_height_mismatch`
+  - `canonical_replay_payload_digest_mismatch`
+  - `canonical_replay_transaction_ids_mismatch`
+- Validation commands:
+  - `cargo test -p kamn-core --test block_pipeline_recovery_matrix`
+  - `cargo test -p kamn-core --test block_pipeline_transport_fed`
+- Regression contract:
+  - canonical crash-recovery stale-artifact matrix remains deterministic (`Regression: #3581`)
+
 ## Snapshot Persistence and Restore Contract Rules
 - Runtime snapshot persistence enforces strict continuity across:
   - state version
@@ -508,6 +529,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - invalid backpressure threshold ordering and queue-depth validation rejection
   - empty proposal candidate ID rejection
   - empty resume-token rejoin attempt rejection
+  - deterministic canonical commit recovery reason-code extraction
   - snapshot cursor/hash validation and continuity regression checks
   - websocket notification variant decode and txhash extraction invariants
   - block fallback lookup-window and response-height guard validation
@@ -520,6 +542,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - deterministic queue saturation backpressure classification
   - planner deterministic ordering contract
   - rejoin acceptance with matching snapshot
+  - canonical restart replay continuity validation across file/sqlite stores
   - snapshot recovery truncation with stale metadata suffix
   - websocket reconnect-after-close receipt continuation behavior
   - missed-notification block fallback reconciliation to final/failed receipts
@@ -529,6 +552,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - stale disconnected peer queue purge decision mapping
   - queue-drain to planner ordering preservation
   - lagging-node catch-up guidance output
+  - canonical stale-tail and schema-artifact fail-closed recovery drills
   - daemon network-fault simulation with queue-overflow/degradation reporting
   - deterministic runtime mutation contract lane command coverage
   - deterministic concurrency replay summaries across peer lifecycle phase transitions
@@ -554,6 +578,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - stale disconnected peer queue purge decision remains deterministic (`Regression: #618`)
   - snapshot stale metadata rejection (`Regression: #617`)
   - snapshot restore cursor mismatch rejection (`Regression: #617`)
+  - canonical crash-recovery stale-artifact matrix remains deterministic (`Regression: #3581`)
   - concurrent accept races never allow multiple winners (`Regression: #844`)
 - deterministic envelope/DID mutation fail-closed reasons remain stable (`Regression: #843`)
 - deep coverage-guided parser fuzz remains local-only and excluded from `ci-fast-gate` (`Regression: #2693`)
@@ -571,6 +596,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - bounded PR-lane concurrency mutation validation budget check
   - bounded PR-lane combined invariant/fuzz/concurrency validation budget check
   - bounded PR-lane snapshot recovery budget check
+  - bounded PR-lane canonical replay recovery matrix budget check
   - bounded PR-lane block fallback reconciliation budget check
   - scheduled chaos lane stress hook (`--ignored`)
   - scheduled concurrency stress deep lane hook (`--ignored`)
@@ -587,6 +613,7 @@ cargo test -p kamn-core runtime::tests::functional_authenticated_peer_frame_roun
 cargo test -p kamn-core runtime::tests::regression_forged_or_unauthorized_peer_frame_is_rejected
 cargo test -p kamn-core network_fault_simulation
 cargo test -p kamn-core snapshot_store
+cargo test -p kamn-core --test block_pipeline_recovery_matrix
 cargo test -p kamn-core --test runtime_network_docs
 cargo test -p kamn-core --test bridge_quorum_runtime_docs
 cargo test -p kamn-core --test kolme_runtime_commit_notifications

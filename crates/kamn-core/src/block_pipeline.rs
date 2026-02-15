@@ -81,6 +81,47 @@ pub enum BlockPipelineError {
     },
 }
 
+impl BlockPipelineError {
+    /// Returns deterministic reason code marker for policy and recovery matrix checks.
+    pub fn reason_code(&self) -> String {
+        match self {
+            Self::Listener(_) => "block_pipeline_listener_error".to_owned(),
+            Self::Approver(_) => "block_pipeline_approver_error".to_owned(),
+            Self::Smoke(_) => "block_pipeline_smoke_error".to_owned(),
+            Self::EmptyMempool => "block_pipeline_empty_mempool".to_owned(),
+            Self::ConsensusPayloadDigestMismatch { .. } => {
+                "block_pipeline_payload_digest_mismatch".to_owned()
+            }
+            Self::TransportFeed(detail) => extract_error_reason_marker(detail)
+                .unwrap_or_else(|| "block_pipeline_transport_feed_error".to_owned()),
+            Self::CommitStore(detail) => extract_error_reason_marker(detail)
+                .unwrap_or_else(|| "block_pipeline_commit_store_error".to_owned()),
+            Self::ForkChoiceRejected { reason_code } => reason_code.clone(),
+            Self::ReplayDrift { reason_code, .. } => reason_code.clone(),
+        }
+    }
+}
+
+fn extract_error_reason_marker(detail: &str) -> Option<String> {
+    let trimmed = detail.trim();
+    let open_index = trimmed.rfind('(')?;
+    let close_index = trimmed.rfind(')')?;
+    if close_index != trimmed.len().saturating_sub(1) || close_index <= open_index + 1 {
+        return None;
+    }
+    let marker = &trimmed[open_index + 1..close_index];
+    if marker.chars().all(|character| {
+        character.is_ascii_lowercase()
+            || character.is_ascii_digit()
+            || character == '_'
+            || character == '-'
+            || character == ':'
+    }) {
+        return Some(marker.to_owned());
+    }
+    None
+}
+
 impl From<ListenerQuorumError> for BlockPipelineError {
     fn from(value: ListenerQuorumError) -> Self {
         Self::Listener(value)
@@ -1894,5 +1935,19 @@ mod tests {
                 reason_code: "fork_choice_duplicate_candidate".to_owned(),
             }
         );
+    }
+
+    #[test]
+    fn block_pipeline_error_reason_code_extracts_commit_store_marker() {
+        let error = BlockPipelineError::CommitStore(
+            "commit store read failed (canonical_commit_store_io)".to_owned(),
+        );
+        assert_eq!(error.reason_code(), "canonical_commit_store_io");
+    }
+
+    #[test]
+    fn block_pipeline_error_reason_code_uses_stable_fallback_when_marker_missing() {
+        let error = BlockPipelineError::CommitStore("opaque commit store failure".to_owned());
+        assert_eq!(error.reason_code(), "block_pipeline_commit_store_error");
     }
 }
