@@ -14,4 +14,12 @@ fn doc_contains_signer_provenance_failure_taxonomy_markers() {
     assert!(DOC.contains("managed_signer_backend_response_provenance_missing"));
     assert!(DOC.contains("managed_signer_backend_response_provenance_malformed"));
     assert!(DOC.contains("managed_signer_backend_response_provenance_mismatch"));
+    assert!(DOC.contains("runtime_signer_key_source_profile_pair_disallowed"));
+    assert!(DOC.contains("runtime_signer_rotation_epoch_stale"));
+    assert!(DOC.contains("runtime_signer_attestation_quorum_shortfall"));
+    assert!(DOC.contains("runtime_signer_quorum_linkage_violation"));
+    assert!(DOC.contains("runtime_signer_failover_attestation_required_approvals_insufficient"));
+    assert!(DOC.contains("runtime_signer_failover_attestation_previous_profile_not_approved"));
+    assert!(DOC.contains("signer_quorum_linkage_contract_version=v1"));
+    assert!(DOC.contains("signer_quorum_linked"));
 }

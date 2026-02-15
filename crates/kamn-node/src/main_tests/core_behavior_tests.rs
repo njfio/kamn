@@ -2075,6 +2075,16 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
     assert!(rendered.contains("finality_retry_max_attempts=3"));
     assert!(rendered.contains("retry_backoff_base_ms=10"));
     assert!(rendered.contains("retry_backoff_cap_ms=40"));
+    assert!(rendered.contains("signer_previous_profile=ops-primary"));
+    assert!(rendered.contains("signer_failover_active=false"));
+    assert!(rendered.contains("signer_rotation_epoch=1"));
+    assert!(rendered.contains("signer_previous_rotation_epoch=1"));
+    assert!(rendered.contains("signer_quorum_linkage_contract_version=v1"));
+    assert!(rendered.contains("signer_quorum_required_approvals=1"));
+    assert!(rendered.contains("signer_quorum_approved_signers_count=1"));
+    assert!(rendered.contains("signer_quorum_profile_linked=true"));
+    assert!(rendered.contains("signer_quorum_satisfied=true"));
+    assert!(rendered.contains("signer_quorum_linked=true"));
 
     let recorded_requests = requests.lock().expect("request mutex should lock");
     assert_eq!(
@@ -2099,6 +2109,104 @@ fn integration_runtime_kolme_live_renders_provider_contract_markers() {
     );
     assert!(recorded_requests[2]
         .contains("GET /runtime-commit/status?commit_id=kolme-commit%3Aab12cd34 HTTP/1.1"));
+}
+
+#[test]
+fn functional_runtime_kolme_live_rejects_stale_signer_rotation_epoch_preflight() {
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-secondary"));
+    let _previous_profile_env_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
+        Some("ops-primary"),
+    );
+    let _rotation_epoch_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", Some("2"));
+    let _previous_rotation_epoch_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH", Some("2"));
+    let _key_env_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
+        Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY),
+    );
+    let (base_url, _requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+        r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#,
+    )]);
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        base_url,
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-profile".to_owned(),
+        "ops-secondary".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
+        "--output".to_owned(),
+        "json".to_owned(),
+    ];
+    let parsed = parse_args(args).expect("kolme-live args should parse");
+    let error = execute(parsed).expect_err("stale signer rotation epoch must fail closed");
+    assert!(
+        matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("runtime_signer_rotation_epoch_stale")),
+        "stale signer rotation epochs must return runtime_signer_rotation_epoch_stale reason code"
+    );
+}
+
+#[test]
+fn functional_runtime_kolme_live_rejects_signer_quorum_shortfall_preflight() {
+    let _lock = signer_env_lock()
+        .lock()
+        .expect("signer env lock should guard test mutation");
+    let _profile_env_guard =
+        EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PROFILE", Some("ops-primary"));
+    let _required_approvals_env_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS",
+        Some("2"),
+    );
+    let _approved_signers_env_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS",
+        Some("ops-primary"),
+    );
+    let _key_env_guard = EnvVarGuard::set(
+        "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+        Some(TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX),
+    );
+    let (base_url, _requests) = spawn_kolme_live_mock_server(vec![MockHttpReply::ok(
+        r#"{"next_nonce":17,"account_id":"acct-live-processor"}"#,
+    )]);
+    let args = vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "kolme-live".to_owned(),
+        "--kolme-live-base-url".to_owned(),
+        base_url,
+        "--kolme-live-provider-hint".to_owned(),
+        "kolme-fork-local".to_owned(),
+        "--kolme-live-signing-profile".to_owned(),
+        "kolme-fork-secp256k1-v1".to_owned(),
+        "--kolme-live-signer-profile".to_owned(),
+        "ops-primary".to_owned(),
+        "--kolme-live-signer-key-source".to_owned(),
+        "env-local".to_owned(),
+        "--output".to_owned(),
+        "json".to_owned(),
+    ];
+    let parsed = parse_args(args).expect("kolme-live args should parse");
+    let error = execute(parsed).expect_err("signer quorum shortfall must fail closed");
+    assert!(
+        matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("runtime_signer_attestation_quorum_shortfall")),
+        "quorum shortfall must return runtime_signer_attestation_quorum_shortfall reason code"
+    );
 }
 
 #[test]

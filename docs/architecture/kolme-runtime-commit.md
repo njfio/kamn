@@ -69,6 +69,37 @@ Signer contracts are fail-closed and reason-code stable:
 - `managed_signer_backend_response_provenance_missing` / `managed_signer_backend_response_provenance_malformed` / `managed_signer_backend_response_provenance_mismatch`:
   managed-external backend output provenance is missing, malformed, or does not match expected signer key material.
 
+### Signer Rotation and Quorum Preflight Contracts
+
+Before nonce resolution and submit/finality calls, the live runtime now performs signer
+rotation/quorum preflight checks and fails closed on contract violations:
+
+- `runtime_signer_key_source_profile_pair_disallowed`:
+  disallowed signer profile/key-source pair was requested.
+- `runtime_signer_rotation_epoch_stale`:
+  failover was active and signer rotation epoch did not increase.
+- `runtime_signer_attestation_quorum_shortfall`:
+  quorum-approved signer count was below the required approval threshold.
+- `runtime_signer_quorum_linkage_violation`:
+  active signer profile was not linked to the quorum-approved signer set.
+- `runtime_signer_failover_attestation_required_approvals_insufficient`:
+  failover signer rotation declared fewer than two required approvals.
+- `runtime_signer_failover_attestation_previous_profile_not_approved`:
+  failover signer rotation did not include the previous signer profile in approvals.
+
+Execution status now emits deterministic signer readiness markers:
+
+- `signer_previous_profile`
+- `signer_failover_active`
+- `signer_rotation_epoch`
+- `signer_previous_rotation_epoch`
+- `signer_quorum_linkage_contract_version=v1`
+- `signer_quorum_required_approvals`
+- `signer_quorum_approved_signers_count`
+- `signer_quorum_profile_linked`
+- `signer_quorum_satisfied`
+- `signer_quorum_linked`
+
 ## Validation Evidence
 
 Primary tests:

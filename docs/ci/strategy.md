@@ -2090,6 +2090,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_profile_mismatch`
       - `runtime_signer_failover_profile_unchanged`
       - `runtime_signer_rotation_epoch_stale`
+      - `runtime_signer_failover_attestation_required_approvals_insufficient`
+      - `runtime_signer_failover_attestation_previous_profile_not_approved`
       - `runtime_signer_key_source_profile_pair_disallowed`
       - `runtime_signer_private_key_env_mismatch`
       - `runtime_commit_signer_key_source_marker_missing`
@@ -2103,6 +2105,8 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `runtime_signer_managed_external_raw_private_key_present_violation`
       - `runtime_signer_attestation_approved_signers_not_unique`
       - `runtime_signer_attestation_quorum_shortfall`
+      - `runtime_signer_failover_attestation_required_approvals_insufficient`
+      - `runtime_signer_failover_attestation_previous_profile_not_approved`
       - `runtime_signer_attestation_schema_invalid`
       - `runtime_signer_quorum_linkage_drift`
       - `runtime_signer_quorum_linkage_violation`
