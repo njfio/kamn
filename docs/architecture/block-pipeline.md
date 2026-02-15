@@ -39,6 +39,9 @@ production and consensus validation (Task #2926, Subtask #2927).
 - `UdpPeerLifecycleTransport`
   - local UDP socket-backed transport adapter used by live convergence drill
     harness tests.
+- `scripts/runtime/libp2p_convergence_process_isolated_live_contract.py`
+  - process-isolated two-node/three-node convergence lane contract that
+    validates partition/rejoin and publish-drop recovery selectors.
 - `BlockConsensusRoundInput`
   - listener and approver attestation input envelope for a round.
 - `BlockPipelineCommitReport`
@@ -122,6 +125,8 @@ Regression marker:
   reason-code outcomes deterministic.
 - `Regression: #3652` keeps live socket delayed-delivery stale-height reject
   reason code deterministic.
+- `Regression: #3670` keeps process-isolated two-node/three-node convergence
+  marker taxonomy and stale-height reason-code coverage deterministic.
 
 ## Validation Commands
 
@@ -133,6 +138,7 @@ cargo test -p kamn-core --test block_pipeline_transport_fed
 cargo test -p kamn-core --test block_pipeline_sqlite_commit_store
 cargo test -p kamn-core --test block_pipeline_transport_convergence_faults
 cargo test -p kamn-core --test block_pipeline_transport_convergence_live_sockets
+cargo test -p kamn-core --test block_pipeline_transport_convergence_live_sockets integration_process_isolated_three_node_partition_rejoin_and_publish_drop_convergence_over_udp -- --exact
 cargo test -p kamn-core block_pipeline
 cargo clippy -p kamn-core -- -D warnings
 cargo fmt --check
@@ -145,6 +151,9 @@ Use these deterministic lane commands to validate integration evidence:
 ```bash
 scripts/runtime/validate_block_pipeline_live.sh
 scripts/runtime/test_validate_block_pipeline_live.sh
+scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh
+scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh
+scripts/runtime/validate_libp2p_convergence_process_isolated_live_contract_lane.sh
 ```
 
 Expected live markers:
@@ -154,3 +163,7 @@ Expected live markers:
 - `docs_contract_status=verified`
 - `fail_closed_status=verified`
 - `fail_closed_reason_code=block_pipeline_payload_digest_mismatch`
+- `two_node_discovery_status=verified`
+- `three_node_partition_rejoin_status=verified`
+- `three_node_publish_drop_recovery_status=verified`
+- `convergence_reason_codes=fork_choice_stale_block_height`

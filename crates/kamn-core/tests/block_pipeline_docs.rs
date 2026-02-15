@@ -66,5 +66,8 @@ fn regression_doc_tracks_transport_convergence_fault_matrix_markers() {
     assert!(DOC.contains("block_pipeline_transport_convergence_faults"));
     assert!(DOC.contains("block_pipeline_transport_convergence_live_sockets"));
     assert!(DOC.contains("Regression: #3652"));
+    assert!(DOC.contains("Regression: #3670"));
     assert!(DOC.contains("p2p_transport_live_socket_send_failed"));
+    assert!(DOC.contains("validate_libp2p_convergence_process_isolated_live_contract_lane.sh"));
+    assert!(DOC.contains("convergence_reason_codes=fork_choice_stale_block_height"));
 }

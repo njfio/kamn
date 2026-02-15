@@ -34,18 +34,21 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `bash scripts/ci/test_sqlite_crash_recovery_ci_exclusion_policy.sh`
   - `bash scripts/ci/test_libp2p_three_node_discovery_ci_exclusion_policy.sh`
   - `bash scripts/ci/test_live_transport_fault_matrix_ci_exclusion_policy.sh`
+  - `bash scripts/ci/test_libp2p_convergence_process_isolated_ci_exclusion_policy.sh`
 - Fail-closed CI scope rules:
   - `validate_full_io_scenario_matrix_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
   - `validate_local_full_stack_integration_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
   - `validate_sqlite_crash_recovery_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
   - `validate_libp2p_three_node_discovery_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
   - `validate_live_transport_fault_matrix_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
+  - `validate_libp2p_convergence_process_isolated_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
   - regression command surfaces must retain dry-run policy and contract-lane tests for both lanes in `scripts/ci/test_ci_tools.sh`.
 - Deterministic drift markers:
   - `full_io_scenario_matrix_policy_multinode_propagation_mismatch`
   - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
   - `sqlite_crash_recovery_policy_fast_gate_exclusion_mismatch`
   - `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`
+  - `libp2p_process_isolated_convergence_policy_marker_missing:three_node_partition_rejoin_status`
 
 ## Production Plan Truth Contract
 - Production-service roadmap truth refresh is tracked in `docs/plans/2026-02-14-production-service-next-steps.md`.
@@ -352,6 +355,34 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - live transport fault matrix run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `live_transport_fault_matrix_policy_marker_missing:partition_rejoin_status`
+
+## Runtime Libp2p Process-Isolated Convergence Validation Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh --mode dry-run --output-json /tmp/libp2p-convergence-process-isolated-live-summary.json`
+  - `KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_LIVE_OPT_IN=1 bash scripts/runtime/validate_libp2p_convergence_process_isolated_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/libp2p-convergence-process-isolated-live-summary.json`
+  - `bash scripts/runtime/check_libp2p_convergence_process_isolated_live_policy.sh --report-file /tmp/libp2p-convergence-process-isolated-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/libp2p-convergence-process-isolated-live-policy.json`
+  - `bash scripts/runtime/validate_libp2p_convergence_process_isolated_live_contract_lane.sh --output-json /tmp/libp2p-convergence-process-isolated-live-contract-lane-report.json --policy-output-json /tmp/libp2p-convergence-process-isolated-live-policy.json`
+  - `bash scripts/runtime/test_validate_libp2p_convergence_process_isolated_live.sh`
+  - `bash scripts/runtime/test_check_libp2p_convergence_process_isolated_live_policy.sh`
+  - `bash scripts/runtime/test_validate_libp2p_convergence_process_isolated_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Process-isolated convergence evidence contracts:
+  - lane emits deterministic two-node discovery marker (`two_node_discovery_status=verified`).
+  - lane emits deterministic two-node gossip marker (`two_node_gossip_status=verified`).
+  - lane emits deterministic three-node partition/rejoin marker (`three_node_partition_rejoin_status=verified`).
+  - lane emits deterministic three-node publish-drop recovery marker (`three_node_publish_drop_recovery_status=verified`).
+  - lane emits deterministic convergence reason-code marker (`convergence_reason_code_status=verified`) with reason-code matrix (`convergence_reason_codes=fork_choice_stale_block_height`).
+  - lane emits deterministic runtime transport marker (`runtime_transport_mode=libp2p_process_isolated_convergence`).
+  - policy checker fails closed on schema/marker drift and decision mismatches.
+- Cost controls:
+  - dry-run mode executes no nested commands and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_LIVE_OPT_IN=1`.
+  - run mode executes three bounded targeted `cargo test` selectors for two-node exchange, three-node partition/rejoin publish-drop convergence, and stale reason-code stability.
+  - process-isolated convergence run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `libp2p_process_isolated_convergence_policy_marker_missing:three_node_partition_rejoin_status`
 
 ## Process Harness Primitive Contract
 - Entry commands:
