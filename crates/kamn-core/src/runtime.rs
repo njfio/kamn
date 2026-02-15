@@ -26,11 +26,12 @@ pub use runtime_network_fault::{
     NetworkFaultSimulationInput, NetworkFaultSimulationReport,
 };
 pub use runtime_peer_coordination::{
-    build_runtime_wiring, build_runtime_wiring_with_transport_profile, AuthenticatedPeerFrame,
-    AuthenticatedPeerFrameError, BoundedRuntimeQueue, DeterministicProposalPlanner,
-    PeerFrameAuthenticator, PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState,
-    ProposalCandidate, ProposalPlan, ProposalPlannerError, RuntimeLifecycleError,
-    RuntimeQueueError, RuntimeTransportProfile, RuntimeWiring,
+    build_runtime_wiring, build_runtime_wiring_with_transport_profile, libp2p_feature_gate_name,
+    resolve_libp2p_compile_mode, AuthenticatedPeerFrame, AuthenticatedPeerFrameError,
+    BoundedRuntimeQueue, DeterministicProposalPlanner, Libp2pCompileMode, PeerFrameAuthenticator,
+    PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, ProposalPlan,
+    ProposalPlannerError, RuntimeLifecycleError, RuntimeQueueError, RuntimeTransportProfile,
+    RuntimeWiring,
 };
 pub use runtime_phase_coordination::{
     authorize_daemon_outbound_action, evaluate_daemon_listener_quorum,

@@ -10,10 +10,12 @@ path = "src/lib.rs"
 [features]
 default = ["live-https"]
 live-https = ["dep:rustls", "dep:rustls-pemfile", "dep:webpki-roots"]
+libp2p-live-transport = ["dep:libp2p"]
 
 [dependencies]
 kamn-kolme = { path = "../kamn-kolme" }
 rusqlite = { version = "0.31.0", features = ["bundled"] }
+libp2p = { version = "0.56.0", default-features = false, features = ["dns", "gossipsub", "identify", "kad", "macros", "noise", "ping", "tcp", "tokio", "yamux"], optional = true }
 # Live HTTPS runtime-commit transport uses rustls directly (no subprocess curl path).
 rustls = { version = "0.23.36", default-features = false, features = ["ring", "std", "tls12"], optional = true }
 rustls-pemfile = { version = "2.2.0", optional = true }
