@@ -36,6 +36,26 @@ SOURCE_MARKERS: dict[str, str] = {
     "async_idle_timeout_reason": "observability endpoint timed out after {} ms waiting for requests",
 }
 
+TELEMETRY_SOURCE_MARKERS: dict[str, str] = {
+    "stream_schema_marker": "{\\\"schema_version\\\":\\\"kamn.runtime.observability.stream.v1\\\"",
+    "metrics_readiness_reason_code_marker": "kamn_observability_readiness_reason_code{{readiness_reason_code=\\\"{}\\\"}} 1",
+    "readiness_reason_projection_fn": "fn readiness_reason_code(snapshot: &RuntimeObservabilitySnapshot) -> &'static str {",
+}
+
+TELEMETRY_DOC_MARKERS: dict[str, str] = {
+    "stream_schema_marker": "schema_version=\"kamn.runtime.observability.stream.v1\"",
+    "readiness_reason_taxonomy_marker": "`readiness_reason_code` (dependency-derived readiness taxonomy)",
+    "readiness_transport_marker": "`readiness_transport_dependency_unhealthy`",
+    "readiness_signer_marker": "`readiness_signer_dependency_unhealthy`",
+    "readiness_commit_marker": "`readiness_commit_dependency_unhealthy`",
+    "readiness_runtime_health_marker": "`readiness_runtime_health_degraded`",
+}
+
+TELEMETRY_STRATEGY_MARKER = (
+    "telemetry schema docs-contract marker set remains fail-closed for stream "
+    "schema_version and readiness_reason_code taxonomy."
+)
+
 MAIN_WIRING_MARKER = "serve_observability_endpoint(&endpoint_config, &snapshot)"
 FRAMEWORK_INGRESS_MARKER = "tokio::net::TcpListener::bind(config.bind_addr.as_str())"
 
@@ -51,6 +71,8 @@ def _run(args: argparse.Namespace) -> int:
     main_file = Path(args.main_file).resolve()
     framework_file = Path(args.framework_file).resolve()
     docs_file = Path(args.docs_file).resolve()
+    observability_doc_file = Path(args.observability_doc_file).resolve()
+    strategy_doc_file = Path(args.strategy_doc_file).resolve()
 
     source_text = _read_text(
         source_file,
@@ -69,6 +91,14 @@ def _run(args: argparse.Namespace) -> int:
         docs_file,
         reason_code="observability_docs_file_missing",
     )
+    observability_docs_text = _read_text(
+        observability_doc_file,
+        reason_code="observability_schema_docs_file_missing",
+    )
+    strategy_doc_text = _read_text(
+        strategy_doc_file,
+        reason_code="observability_strategy_doc_file_missing",
+    )
 
     decision = DecisionAccumulator()
 
@@ -79,6 +109,24 @@ def _run(args: argparse.Namespace) -> int:
             decision.reject_if(
                 True,
                 f"observability_source_marker_missing:{marker_key}",
+            )
+
+    missing_telemetry_source_markers: list[str] = []
+    for marker_key, marker_value in TELEMETRY_SOURCE_MARKERS.items():
+        if marker_value not in source_contract_text:
+            missing_telemetry_source_markers.append(marker_key)
+            decision.reject_if(
+                True,
+                f"observability_source_marker_missing:{marker_key}",
+            )
+
+    missing_telemetry_doc_markers: list[str] = []
+    for marker_key, marker_value in TELEMETRY_DOC_MARKERS.items():
+        if marker_value not in observability_docs_text:
+            missing_telemetry_doc_markers.append(marker_key)
+            decision.reject_if(
+                True,
+                f"observability_schema_docs_marker_missing:{marker_key}",
             )
 
     decision.reject_if(
@@ -92,6 +140,10 @@ def _run(args: argparse.Namespace) -> int:
     decision.reject_if(
         DOCS_MIGRATION_MARKER not in docs_text,
         "observability_docs_marker_missing",
+    )
+    decision.reject_if(
+        TELEMETRY_STRATEGY_MARKER not in strategy_doc_text,
+        "observability_strategy_marker_missing:telemetry_schema_contract_marker",
     )
 
     final_decision, reason_codes = decision.finalize("none")
@@ -112,13 +164,32 @@ def _run(args: argparse.Namespace) -> int:
         "docs_migration_contract_status": (
             "verified" if DOCS_MIGRATION_MARKER in docs_text else "rejected"
         ),
+        "telemetry_schema_contract_status": (
+            "verified"
+            if (
+                not missing_telemetry_source_markers
+                and not missing_telemetry_doc_markers
+                and TELEMETRY_STRATEGY_MARKER in strategy_doc_text
+            )
+            else "rejected"
+        ),
         "source_marker_count": len(SOURCE_MARKERS) - len(missing_source_markers),
         "expected_source_marker_count": len(SOURCE_MARKERS),
+        "telemetry_source_marker_count": (
+            len(TELEMETRY_SOURCE_MARKERS) - len(missing_telemetry_source_markers)
+        ),
+        "expected_telemetry_source_marker_count": len(TELEMETRY_SOURCE_MARKERS),
+        "telemetry_doc_marker_count": (
+            len(TELEMETRY_DOC_MARKERS) - len(missing_telemetry_doc_markers)
+        ),
+        "expected_telemetry_doc_marker_count": len(TELEMETRY_DOC_MARKERS),
         "reason_codes": reason_codes,
         "source_file": str(source_file),
         "main_file": str(main_file),
         "framework_file": str(framework_file),
         "docs_file": str(docs_file),
+        "observability_doc_file": str(observability_doc_file),
+        "strategy_doc_file": str(strategy_doc_file),
         "generated_at_epoch": int(time.time()),
     }
 
@@ -139,6 +210,7 @@ def _run(args: argparse.Namespace) -> int:
         f"{report['observability_framework_parity_status']}"
     )
     print(f"docs_migration_contract_status={report['docs_migration_contract_status']}")
+    print(f"telemetry_schema_contract_status={report['telemetry_schema_contract_status']}")
     print(f"reason_codes={reason_codes_csv}")
     if output_json is not None:
         print(f"report_file={output_json}")
@@ -172,6 +244,16 @@ def main() -> int:
         "--docs-file",
         default=str(ROOT_DIR / "docs/foundation/node-runtime-cli.md"),
         help="Node runtime CLI documentation path.",
+    )
+    parser.add_argument(
+        "--observability-doc-file",
+        default=str(ROOT_DIR / "docs/foundation/observability-slo-dashboards.md"),
+        help="Observability telemetry schema documentation path.",
+    )
+    parser.add_argument(
+        "--strategy-doc-file",
+        default=str(ROOT_DIR / "docs/ci/strategy.md"),
+        help="CI strategy documentation path for telemetry schema contract markers.",
     )
     parser.add_argument(
         "--output-json",
