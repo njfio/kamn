@@ -2756,6 +2756,10 @@ Fast-mode CI tooling regression coverage includes:
     - `reason_codes=command_surface_shell_line_total_trend_fail_delta_exceeded`
     - `reason_codes=command_surface_budget_status_fail`
 - Fast-gate runtime/cost trend contract lane (`test_run_fast_gate_budget_delta_contract_lane.sh`)
+  - delta report generator test:
+    - `bash scripts/ci/test_generate_fast_gate_budget_delta_report.sh`
+  - delta threshold checker test:
+    - `bash scripts/ci/test_check_fast_gate_budget_delta_threshold.sh`
   - contract lane command:
     - `bash scripts/ci/run_fast_gate_budget_delta_contract_lane.sh --output-json /tmp/fast-gate-budget-delta-contract-report.json`
   - deterministic threshold-guard reason-code surface:
