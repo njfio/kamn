@@ -1,10 +1,12 @@
 use kamn_core::{
-    encode_transport_candidate_payload, BaselineTransaction, BlockConsensusRoundInput,
-    BlockPipelineError, CanonicalCommitRecord, DeterministicCompetingBranchForkChoiceHook,
-    ForkChoiceDecision, ForkChoiceHook, InMemoryCanonicalCommitStore,
-    InMemoryPeerLifecycleTransport, InMemoryTransportMempoolFeed, MempoolBlockPipeline, NodeRole,
-    PeerDiscoveryRecord, PeerGossipFrame, PeerLifecycleTransport, TransportEventMempoolFeed,
-    TransportFedBlockPipeline, TransportMempoolFeed,
+    decode_transport_canonical_candidate_payload, encode_transport_candidate_payload,
+    encode_transport_canonical_candidate_payload, encode_transport_commit_report_payload,
+    BaselineTransaction, BlockConsensusRoundInput, BlockPipelineError, CanonicalCommitRecord,
+    DeterministicCompetingBranchForkChoiceHook, ForkChoiceDecision, ForkChoiceHook,
+    InMemoryCanonicalCommitStore, InMemoryPeerLifecycleTransport, InMemoryTransportMempoolFeed,
+    MempoolBlockPipeline, NodeRole, PeerDiscoveryRecord, PeerGossipFrame, PeerLifecycleTransport,
+    TransportCanonicalCandidateFeed, TransportEventMempoolFeed, TransportFedBlockPipeline,
+    TransportMempoolFeed,
 };
 use std::time::{Duration, Instant};
 
@@ -326,4 +328,87 @@ fn regression_transport_event_feed_rejects_topic_mismatch() {
             if detail.contains("transport_candidate_topic_mismatch")),
         "topic mismatch should fail with deterministic marker"
     );
+}
+
+#[test]
+fn functional_transport_canonical_candidate_payload_round_trip_from_commit_report() {
+    let feed = InMemoryTransportMempoolFeed::new(build_valid_chain_transactions());
+    let store = InMemoryCanonicalCommitStore::default();
+    let mut pipeline =
+        TransportFedBlockPipeline::new(true, 1, 1, feed, store, kamn_core::AcceptAllForkChoiceHook)
+            .expect("transport-fed pipeline should build");
+    let report = pipeline
+        .run_transport_consensus_round(sample_consensus_input())
+        .expect("transport-fed round should commit");
+
+    let payload = encode_transport_commit_report_payload(&report)
+        .expect("commit report payload should encode");
+    let decoded = decode_transport_canonical_candidate_payload(payload.as_str())
+        .expect("canonical candidate payload should decode");
+
+    assert_eq!(decoded.block_height, report.block.height);
+    assert_eq!(decoded.payload_digest, report.payload_digest);
+    assert_eq!(decoded.transaction_ids, vec!["tx-1", "tx-2"]);
+}
+
+#[test]
+fn regression_transport_canonical_candidate_payload_rejects_invalid_transaction_id() {
+    let record = CanonicalCommitRecord {
+        block_height: 9,
+        producer_role: NodeRole::Processor,
+        payload_digest: "digest-9".to_owned(),
+        transaction_ids: vec!["tx-1".to_owned(), "tx,2".to_owned()],
+    };
+
+    let error = encode_transport_canonical_candidate_payload(&record)
+        .expect_err("comma in transaction id must fail closed");
+    assert!(
+        matches!(error, BlockPipelineError::TransportFeed(detail)
+            if detail.contains("transport_candidate_transaction_id_invalid")),
+        "invalid transaction id should carry deterministic reason-code marker"
+    );
+}
+
+#[test]
+fn functional_transport_event_feed_drains_canonical_candidates_from_block_topic_frames() {
+    let transport = InMemoryPeerLifecycleTransport::default();
+    let topic = "kamn/blocks/v1";
+    let sender = "peer-block-sender";
+    let recipient = "peer-block-recipient";
+
+    transport
+        .advertise(
+            PeerDiscoveryRecord::new(sender, NodeRole::Approver, vec![topic.to_owned()])
+                .expect("sender discovery record should build"),
+        )
+        .expect("sender should advertise");
+    transport
+        .advertise(
+            PeerDiscoveryRecord::new(recipient, NodeRole::Processor, vec![topic.to_owned()])
+                .expect("recipient discovery record should build"),
+        )
+        .expect("recipient should advertise");
+
+    let record = CanonicalCommitRecord {
+        block_height: 17,
+        producer_role: NodeRole::Processor,
+        payload_digest: "digest-17".to_owned(),
+        transaction_ids: vec!["tx-17".to_owned()],
+    };
+    let payload = encode_transport_canonical_candidate_payload(&record)
+        .expect("canonical candidate payload should encode");
+    transport
+        .send(
+            PeerGossipFrame::new(topic, sender, recipient, payload.as_str())
+                .expect("gossip frame should build"),
+        )
+        .expect("gossip frame should send");
+
+    let mut feed =
+        TransportEventMempoolFeed::new(transport, recipient, Some(vec![topic.to_owned()]))
+            .expect("feed should build");
+    let candidates = feed
+        .drain_canonical_candidates()
+        .expect("candidate drain should decode block frame");
+    assert_eq!(candidates, vec![record]);
 }
