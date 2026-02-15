@@ -82,6 +82,24 @@ fn runtime_mode_requires_live_transport_profile(runtime_mode: RuntimeMode) -> bo
     )
 }
 
+pub(crate) fn should_use_os_signal_shutdown(
+    runtime_mode: RuntimeMode,
+    daemon_shutdown_os_signals: bool,
+    daemon_shutdown_signal_ticks: &[u64],
+) -> bool {
+    if !daemon_shutdown_signal_ticks.is_empty() {
+        return false;
+    }
+    if daemon_shutdown_os_signals {
+        return true;
+    }
+    cfg!(unix)
+        && matches!(
+            runtime_mode.kind,
+            RuntimeModeKind::Daemon | RuntimeModeKind::Full
+        )
+}
+
 pub(crate) fn select_runtime_transport_profile_for_runtime_mode(
     runtime_mode: RuntimeMode,
     enable_gossip: bool,
@@ -360,8 +378,11 @@ fn execute_daemon_runtime(
         }
         None => (None, None, None),
     };
-    let daemon_completion = if daemon_shutdown_os_signals && daemon_shutdown_signal_ticks.is_empty()
-    {
+    let daemon_completion = if should_use_os_signal_shutdown(
+        runtime_mode,
+        daemon_shutdown_os_signals,
+        daemon_shutdown_signal_ticks.as_slice(),
+    ) {
         evaluate_daemon_completion_with_os_signals(
             max_ticks,
             tick_interval_ms,

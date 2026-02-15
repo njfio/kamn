@@ -841,6 +841,39 @@ fn unit_select_runtime_transport_profile_for_production_modes_defaults_live() {
 }
 
 #[test]
+fn unit_shutdown_policy_defaults_to_os_signal_path_for_daemon_and_full_on_unix() {
+    let expected_default = cfg!(unix);
+    assert_eq!(
+        crate::should_use_os_signal_shutdown(RuntimeMode::daemon(), false, &[]),
+        expected_default
+    );
+    assert_eq!(
+        crate::should_use_os_signal_shutdown(RuntimeMode::full(), false, &[]),
+        expected_default
+    );
+    assert!(!crate::should_use_os_signal_shutdown(
+        RuntimeMode::bootstrap(),
+        false,
+        &[]
+    ));
+}
+
+#[test]
+fn regression_shutdown_policy_prioritizes_explicit_controls_over_defaults() {
+    // Regression: #3734
+    assert!(crate::should_use_os_signal_shutdown(
+        RuntimeMode::daemon(),
+        true,
+        &[]
+    ));
+    assert!(!crate::should_use_os_signal_shutdown(
+        RuntimeMode::daemon(),
+        false,
+        &[3]
+    ));
+}
+
+#[test]
 fn functional_production_transport_profile_classifier_rejects_in_memory_fallback() {
     let components = vec![
         "p2p-discovery".to_owned(),
