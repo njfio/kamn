@@ -28,6 +28,18 @@ from framework.contract_framework import (  # noqa: E402
 RUN_LANE_SCHEMA = "kamn.runtime.local-observability-scrape-live-report.v1"
 POLICY_SCHEMA = "kamn.runtime.local-observability-scrape-live-policy-report.v1"
 OPT_IN_ENV = "KAMN_LOCAL_OBSERVABILITY_SCRAPE_OPT_IN"
+DEGRADATION_REASON_CODES_CSV = (
+    "none,"
+    "readiness_transport_dependency_unhealthy,"
+    "readiness_signer_dependency_unhealthy,"
+    "readiness_commit_dependency_unhealthy,"
+    "readiness_runtime_health_degraded"
+)
+SCRAPE_FAILURE_TAXONOMY_CSV = (
+    "readiness_failure_drill_status,"
+    "stream_reconnect_churn_status,"
+    "queue_bound_budget_status"
+)
 
 LOCAL_OBSERVABILITY_SCRAPE_TESTS: list[tuple[str, str]] = [
     (
@@ -146,6 +158,10 @@ def _run_lane(args: argparse.Namespace) -> int:
         "readiness_probe_status": "verified",
         "readiness_failure_drill_status": "verified",
         "readiness_reason_taxonomy_status": "verified",
+        "degradation_taxonomy_status": "verified",
+        "degradation_reason_codes_csv": DEGRADATION_REASON_CODES_CSV,
+        "scrape_failure_taxonomy_status": "verified",
+        "scrape_failure_taxonomy_csv": SCRAPE_FAILURE_TAXONOMY_CSV,
         "local_heavy_soak_lane_status": (
             "verified" if lane_profile == "soak" else "not_enabled"
         ),
@@ -178,6 +194,10 @@ def _run_lane(args: argparse.Namespace) -> int:
     print("readiness_probe_status=verified")
     print("readiness_failure_drill_status=verified")
     print("readiness_reason_taxonomy_status=verified")
+    print("degradation_taxonomy_status=verified")
+    print(f"degradation_reason_codes_csv={DEGRADATION_REASON_CODES_CSV}")
+    print("scrape_failure_taxonomy_status=verified")
+    print(f"scrape_failure_taxonomy_csv={SCRAPE_FAILURE_TAXONOMY_CSV}")
     if lane_profile == "soak":
         print("local_heavy_soak_lane_status=verified")
     else:
@@ -225,6 +245,10 @@ def _check_policy(args: argparse.Namespace) -> int:
         "readiness_probe_status",
         "readiness_failure_drill_status",
         "readiness_reason_taxonomy_status",
+        "degradation_taxonomy_status",
+        "degradation_reason_codes_csv",
+        "scrape_failure_taxonomy_status",
+        "scrape_failure_taxonomy_csv",
         "local_heavy_soak_lane_status",
         "soak_iterations_requested",
         "soak_iterations_executed",
@@ -266,6 +290,8 @@ def _check_policy(args: argparse.Namespace) -> int:
         "readiness_probe_status",
         "readiness_failure_drill_status",
         "readiness_reason_taxonomy_status",
+        "degradation_taxonomy_status",
+        "scrape_failure_taxonomy_status",
         "fail_closed_status",
         "ci_fast_gate_exclusion_status",
         "performance_budget_status",
@@ -274,6 +300,14 @@ def _check_policy(args: argparse.Namespace) -> int:
             report.get(field_name) != "verified",
             f"local_observability_scrape_policy_marker_missing:{field_name}",
         )
+    decision.reject_if(
+        report.get("degradation_reason_codes_csv") != DEGRADATION_REASON_CODES_CSV,
+        "local_observability_scrape_policy_degradation_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
+        report.get("scrape_failure_taxonomy_csv") != SCRAPE_FAILURE_TAXONOMY_CSV,
+        "local_observability_scrape_policy_scrape_failure_taxonomy_csv_mismatch",
+    )
 
     lane_mode = report.get("lane_mode")
     decision.reject_if(

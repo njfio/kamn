@@ -56,6 +56,22 @@ if ! printf '%s\n' "$dry_run_output" | grep -q '^readiness_reason_taxonomy_statu
   echo "expected local observability scrape dry-run readiness reason taxonomy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^degradation_taxonomy_status=verified$'; then
+  echo "expected local observability scrape dry-run degradation taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^degradation_reason_codes_csv=none,readiness_transport_dependency_unhealthy,readiness_signer_dependency_unhealthy,readiness_commit_dependency_unhealthy,readiness_runtime_health_degraded$'; then
+  echo "expected local observability scrape dry-run degradation reason-code taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^scrape_failure_taxonomy_status=verified$'; then
+  echo "expected local observability scrape dry-run scrape-failure taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$dry_run_output" | grep -q '^scrape_failure_taxonomy_csv=readiness_failure_drill_status,stream_reconnect_churn_status,queue_bound_budget_status$'; then
+  echo "expected local observability scrape dry-run scrape-failure taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$dry_run_output" | grep -q '^stream_reconnect_churn_status=verified$'; then
   echo "expected local observability scrape dry-run stream reconnect churn marker" >&2
   exit 1
@@ -111,6 +127,14 @@ if payload.get("stream_reconnect_churn_status") != "verified":
     raise SystemExit("expected local observability scrape dry-run stream_reconnect_churn_status=verified")
 if payload.get("queue_bound_budget_status") != "verified":
     raise SystemExit("expected local observability scrape dry-run queue_bound_budget_status=verified")
+if payload.get("degradation_taxonomy_status") != "verified":
+    raise SystemExit("expected local observability scrape dry-run degradation_taxonomy_status=verified")
+if payload.get("degradation_reason_codes_csv") != "none,readiness_transport_dependency_unhealthy,readiness_signer_dependency_unhealthy,readiness_commit_dependency_unhealthy,readiness_runtime_health_degraded":
+    raise SystemExit("expected local observability scrape dry-run degradation_reason_codes_csv taxonomy")
+if payload.get("scrape_failure_taxonomy_status") != "verified":
+    raise SystemExit("expected local observability scrape dry-run scrape_failure_taxonomy_status=verified")
+if payload.get("scrape_failure_taxonomy_csv") != "readiness_failure_drill_status,stream_reconnect_churn_status,queue_bound_budget_status":
+    raise SystemExit("expected local observability scrape dry-run scrape_failure_taxonomy_csv taxonomy")
 if payload.get("execution_reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected local observability scrape dry-run reason code")
 if payload.get("command_count") != 0:

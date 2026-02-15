@@ -27,6 +27,10 @@ cat >"$report_file" <<'JSON'
   "readiness_probe_status": "verified",
   "readiness_failure_drill_status": "verified",
   "readiness_reason_taxonomy_status": "verified",
+  "degradation_taxonomy_status": "verified",
+  "degradation_reason_codes_csv": "none,readiness_transport_dependency_unhealthy,readiness_signer_dependency_unhealthy,readiness_commit_dependency_unhealthy,readiness_runtime_health_degraded",
+  "scrape_failure_taxonomy_status": "verified",
+  "scrape_failure_taxonomy_csv": "readiness_failure_drill_status,stream_reconnect_churn_status,queue_bound_budget_status",
   "local_heavy_soak_lane_status": "not_enabled",
   "soak_iterations_requested": 1,
   "soak_iterations_executed": 0,
@@ -141,6 +145,72 @@ if [ "$tampered_queue_bound_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_queue_bound_output" | grep -q 'local_observability_scrape_policy_marker_missing:queue_bound_budget_status'; then
   echo "expected deterministic queue-bound marker mismatch reason code for tampered local observability policy validation" >&2
+  exit 1
+fi
+
+tampered_degradation_taxonomy_report="$TMP_DIR/local-observability-scrape-live-summary.degradation-taxonomy.tampered.json"
+cp "$report_file" "$tampered_degradation_taxonomy_report"
+python3 - "$tampered_degradation_taxonomy_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["degradation_taxonomy_status"] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_degradation_taxonomy_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_degradation_taxonomy_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/local-observability-scrape-live-policy.degradation-taxonomy.tampered.json" 2>&1
+)"
+tampered_degradation_taxonomy_code=$?
+set -e
+
+if [ "$tampered_degradation_taxonomy_code" -eq 0 ]; then
+  echo "expected tampered local observability degradation taxonomy marker report to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_degradation_taxonomy_output" | grep -q 'local_observability_scrape_policy_marker_missing:degradation_taxonomy_status'; then
+  echo "expected deterministic degradation taxonomy marker mismatch reason code for tampered local observability policy validation" >&2
+  exit 1
+fi
+
+tampered_degradation_csv_report="$TMP_DIR/local-observability-scrape-live-summary.degradation-csv.tampered.json"
+cp "$report_file" "$tampered_degradation_csv_report"
+python3 - "$tampered_degradation_csv_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["degradation_reason_codes_csv"] = "none,unexpected_code"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_degradation_csv_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_degradation_csv_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/local-observability-scrape-live-policy.degradation-csv.tampered.json" 2>&1
+)"
+tampered_degradation_csv_code=$?
+set -e
+
+if [ "$tampered_degradation_csv_code" -eq 0 ]; then
+  echo "expected tampered local observability degradation reason-code csv report to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_degradation_csv_output" | grep -q 'local_observability_scrape_policy_degradation_reason_codes_csv_mismatch'; then
+  echo "expected deterministic degradation reason-code csv mismatch marker for tampered local observability policy validation" >&2
   exit 1
 fi
 
