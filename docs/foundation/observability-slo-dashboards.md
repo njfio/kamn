@@ -27,6 +27,7 @@ This document captures the first implementation slice for deterministic observab
 - Endpoint paths:
   - metrics: `/metrics` (Prometheus text format)
   - health: `/healthz` (JSON payload)
+  - readiness: `/readyz` (JSON payload)
 - Metrics payload keys:
   - `kamn_observability_latency_p50_ms`
   - `kamn_observability_latency_p99_ms`
@@ -49,6 +50,25 @@ This document captures the first implementation slice for deterministic observab
   - `signer_checkpoint_failures`
   - `commit_checkpoint_failures`
   - latency/throughput/error/availability numeric fields
+- Readiness payload fields:
+  - `source`
+  - `runtime_mode`
+  - `ready` (boolean)
+  - `health`
+  - `reason_code` (runtime telemetry reason)
+  - `readiness_reason_code` (dependency-derived readiness taxonomy)
+  - `transport_dependency_status`
+  - `signer_dependency_status`
+  - `commit_dependency_status`
+  - `transport_checkpoint_failures`
+  - `signer_checkpoint_failures`
+  - `commit_checkpoint_failures`
+- Readiness reason-code taxonomy:
+  - `none`
+  - `readiness_transport_dependency_unhealthy`
+  - `readiness_signer_dependency_unhealthy`
+  - `readiness_commit_dependency_unhealthy`
+  - `readiness_runtime_health_degraded`
 - Export characteristics:
   - deterministic payloads derived from runtime report telemetry fields.
   - bounded endpoint lifetime controlled by `--observability-endpoint-max-requests` and `--observability-endpoint-idle-timeout-ms`.

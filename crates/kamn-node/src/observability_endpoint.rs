@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH: &str = "/metrics";
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_HEALTH_PATH: &str = "/healthz";
+pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_READINESS_PATH: &str = "/readyz";
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH: &str = "/metrics.stream";
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_MAX_REQUESTS: u64 = 1;
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_IDLE_TIMEOUT_MS: u64 = 5_000;
@@ -143,6 +144,7 @@ pub(crate) fn render_observability_endpoint_response(
         path,
         DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH,
         DEFAULT_OBSERVABILITY_ENDPOINT_HEALTH_PATH,
+        DEFAULT_OBSERVABILITY_ENDPOINT_READINESS_PATH,
         DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH,
     )
 }
@@ -187,6 +189,7 @@ pub(crate) fn serve_observability_endpoint(
                     path.as_str(),
                     config.metrics_path.as_str(),
                     config.health_path.as_str(),
+                    DEFAULT_OBSERVABILITY_ENDPOINT_READINESS_PATH,
                     DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH,
                 );
                 write_http_response(&mut stream, &response)?;
@@ -208,6 +211,7 @@ fn render_observability_endpoint_response_with_paths(
     path: &str,
     metrics_path: &str,
     health_path: &str,
+    readiness_path: &str,
     stream_path: &str,
 ) -> ObservabilityEndpointResponse {
     if path == metrics_path {
@@ -222,6 +226,13 @@ fn render_observability_endpoint_response_with_paths(
             status_code: 200,
             content_type: "application/json",
             body: render_health_body(snapshot),
+        };
+    }
+    if path == readiness_path {
+        return ObservabilityEndpointResponse {
+            status_code: 200,
+            content_type: "application/json",
+            body: render_readiness_body(snapshot),
         };
     }
     if path == stream_path {
@@ -295,6 +306,70 @@ fn render_stream_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
         snapshot.error_rate_bps,
         snapshot.availability_bps
     )
+}
+
+fn render_readiness_body(snapshot: &RuntimeObservabilitySnapshot) -> String {
+    let readiness_reason_code = readiness_reason_code(snapshot);
+    format!(
+        "{{\"source\":\"{}\",\"runtime_mode\":\"{}\",\"ready\":{},\"health\":\"{}\",\"reason_code\":\"{}\",\"readiness_reason_code\":\"{}\",\"transport_dependency_status\":\"{}\",\"signer_dependency_status\":\"{}\",\"commit_dependency_status\":\"{}\",\"transport_checkpoint_failures\":{},\"signer_checkpoint_failures\":{},\"commit_checkpoint_failures\":{}}}",
+        escape_json_string(snapshot.source.as_str()),
+        escape_json_string(snapshot.runtime_mode.as_str()),
+        is_runtime_ready(snapshot),
+        escape_json_string(snapshot.health.as_str()),
+        escape_json_string(snapshot.reason_code.as_str()),
+        escape_json_string(readiness_reason_code),
+        transport_dependency_status(snapshot),
+        signer_dependency_status(snapshot),
+        commit_dependency_status(snapshot),
+        snapshot.transport_checkpoint_failures,
+        snapshot.signer_checkpoint_failures,
+        snapshot.commit_checkpoint_failures
+    )
+}
+
+fn is_runtime_ready(snapshot: &RuntimeObservabilitySnapshot) -> bool {
+    snapshot.transport_checkpoint_failures == 0
+        && snapshot.signer_checkpoint_failures == 0
+        && snapshot.commit_checkpoint_failures == 0
+        && snapshot.health == "healthy"
+}
+
+fn readiness_reason_code(snapshot: &RuntimeObservabilitySnapshot) -> &'static str {
+    if snapshot.transport_checkpoint_failures > 0 {
+        "readiness_transport_dependency_unhealthy"
+    } else if snapshot.signer_checkpoint_failures > 0 {
+        "readiness_signer_dependency_unhealthy"
+    } else if snapshot.commit_checkpoint_failures > 0 {
+        "readiness_commit_dependency_unhealthy"
+    } else if snapshot.health != "healthy" {
+        "readiness_runtime_health_degraded"
+    } else {
+        "none"
+    }
+}
+
+fn transport_dependency_status(snapshot: &RuntimeObservabilitySnapshot) -> &'static str {
+    if snapshot.transport_checkpoint_failures > 0 {
+        "degraded"
+    } else {
+        "ready"
+    }
+}
+
+fn signer_dependency_status(snapshot: &RuntimeObservabilitySnapshot) -> &'static str {
+    if snapshot.signer_checkpoint_failures > 0 {
+        "degraded"
+    } else {
+        "ready"
+    }
+}
+
+fn commit_dependency_status(snapshot: &RuntimeObservabilitySnapshot) -> &'static str {
+    if snapshot.commit_checkpoint_failures > 0 {
+        "degraded"
+    } else {
+        "ready"
+    }
 }
 
 fn write_http_response(
@@ -430,6 +505,59 @@ mod tests {
         let response = render_observability_endpoint_response(&snapshot, "/unknown");
         assert_eq!(response.status_code, 404);
         assert_eq!(response.content_type, "text/plain; charset=utf-8");
+    }
+
+    #[test]
+    fn unit_observability_endpoint_readiness_reports_ready_with_none_reason_code() {
+        let snapshot = RuntimeObservabilitySnapshot {
+            source: "daemon".to_owned(),
+            runtime_mode: "daemon".to_owned(),
+            latency_p50_ms: 25,
+            latency_p99_ms: 50,
+            throughput_tps: 2_000,
+            error_rate_bps: 50,
+            availability_bps: 9_990,
+            health: "healthy".to_owned(),
+            alert_count: 0,
+            reason_code: "none".to_owned(),
+            transport_checkpoint_failures: 0,
+            signer_checkpoint_failures: 0,
+            commit_checkpoint_failures: 0,
+        };
+        let response = render_observability_endpoint_response(&snapshot, "/readyz");
+        assert_eq!(response.status_code, 200);
+        assert_eq!(response.content_type, "application/json");
+        assert!(response.body.contains("\"ready\":true"));
+        assert!(response.body.contains("\"readiness_reason_code\":\"none\""));
+    }
+
+    #[test]
+    fn unit_observability_endpoint_readiness_reports_commit_degraded_reason_code() {
+        let snapshot = RuntimeObservabilitySnapshot {
+            source: "daemon".to_owned(),
+            runtime_mode: "daemon".to_owned(),
+            latency_p50_ms: 145,
+            latency_p99_ms: 425,
+            throughput_tps: 900,
+            error_rate_bps: 250,
+            availability_bps: 9_800,
+            health: "critical".to_owned(),
+            alert_count: 4,
+            reason_code: "daemon_shutdown_timeout".to_owned(),
+            transport_checkpoint_failures: 0,
+            signer_checkpoint_failures: 0,
+            commit_checkpoint_failures: 1,
+        };
+        let response = render_observability_endpoint_response(&snapshot, "/readyz");
+        assert_eq!(response.status_code, 200);
+        assert_eq!(response.content_type, "application/json");
+        assert!(response.body.contains("\"ready\":false"));
+        assert!(response
+            .body
+            .contains("\"readiness_reason_code\":\"readiness_commit_dependency_unhealthy\""));
+        assert!(response
+            .body
+            .contains("\"commit_dependency_status\":\"degraded\""));
     }
 
     #[test]

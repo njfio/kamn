@@ -549,10 +549,14 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Cost controls:
   - dry-run mode executes no nested local observability scrape commands and emits deterministic `dry_run_no_commands_executed`.
   - run mode is explicit local-only and requires `KAMN_LOCAL_OBSERVABILITY_SCRAPE_OPT_IN=1`.
-  - bounded to three targeted `kamn-node` observability endpoint scrape/content-type/stream tests when run mode is enabled.
+  - bounded to four targeted `kamn-node` observability endpoint tests when run mode is enabled (metrics/health scrape, stream projection, and readiness failure-drill degradation taxonomy).
   - local observability scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Readiness/failure-drill contracts:
+  - lane emits deterministic readiness probe marker (`readiness_probe_status=verified`).
+  - lane emits deterministic readiness degradation drill marker (`readiness_failure_drill_status=verified`).
+  - lane emits deterministic readiness reason taxonomy marker (`readiness_reason_taxonomy_status=verified`).
 - Deterministic fail-closed marker for policy tamper drills:
-  - `local_observability_scrape_policy_marker_missing:scrape_probe_status`
+  - `local_observability_scrape_policy_marker_missing:readiness_failure_drill_status`
 
 ## Runtime Service API Axum Ingress Contract Lane
 - Entry commands:

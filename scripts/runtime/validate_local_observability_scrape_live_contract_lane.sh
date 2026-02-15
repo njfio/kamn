@@ -110,6 +110,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^stream_lifecycle_status=veri
   echo "expected local observability scrape validation stream marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^readiness_probe_status=verified$'; then
+  echo "expected local observability scrape validation readiness probe marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^readiness_failure_drill_status=verified$'; then
+  echo "expected local observability scrape validation readiness failure-drill marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^readiness_reason_taxonomy_status=verified$'; then
+  echo "expected local observability scrape validation readiness reason taxonomy marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^fail_closed_status=verified$'; then
   echo "expected local observability scrape validation fail-closed marker" >&2
   exit 1
@@ -143,7 +155,7 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 payload = json.loads(path.read_text(encoding="utf-8"))
-payload["scrape_probe_status"] = "missing"
+payload["readiness_failure_drill_status"] = "missing"
 path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
@@ -162,7 +174,7 @@ if [ "$tampered_policy_code" -eq 0 ]; then
   echo "expected tampered local observability scrape report to fail policy validation" >&2
   exit 1
 fi
-if ! printf '%s\n' "$tampered_policy_output" | grep -q 'local_observability_scrape_policy_marker_missing:scrape_probe_status'; then
+if ! printf '%s\n' "$tampered_policy_output" | grep -q 'local_observability_scrape_policy_marker_missing:readiness_failure_drill_status'; then
   echo "expected deterministic fail-closed reason for tampered local observability scrape report" >&2
   exit 1
 fi
@@ -235,7 +247,7 @@ lane_report = {
     ),
     "docs_contract_status": "verified",
     "fail_closed_status": "verified",
-    "fail_closed_reason_code": "local_observability_scrape_policy_marker_missing:scrape_probe_status",
+    "fail_closed_reason_code": "local_observability_scrape_policy_marker_missing:readiness_failure_drill_status",
     "performance_budget_status": "verified",
     "elapsed_seconds": elapsed_seconds,
     "max_seconds": max_seconds,
@@ -257,7 +269,7 @@ echo "local_observability_scrape_contract_status=verified"
 echo "local_observability_scrape_policy_status=verified"
 echo "docs_contract_status=verified"
 echo "fail_closed_status=verified"
-echo "fail_closed_reason_code=local_observability_scrape_policy_marker_missing:scrape_probe_status"
+echo "fail_closed_reason_code=local_observability_scrape_policy_marker_missing:readiness_failure_drill_status"
 echo "performance_budget_status=verified"
 if [[ -n "$output_json" ]]; then
   echo "contract_lane_report=$output_json"

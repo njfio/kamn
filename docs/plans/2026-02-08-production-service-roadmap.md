@@ -240,8 +240,8 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
 - Phase 2.12 local observability scrape contract-lane policy delivered:
   - Runtime lane: `scripts/runtime/validate_local_observability_scrape_live.sh`, `scripts/runtime/validate_local_observability_scrape_live_contract_lane.sh`, and tests `scripts/runtime/test_validate_local_observability_scrape_live_contract_lane.sh`, `scripts/runtime/test_check_local_observability_scrape_live_policy.sh` (Task #3335, Subtask #3336).
   - Policy checker: `scripts/runtime/check_local_observability_scrape_live_policy.sh`.
-  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `scrape_probe_status=verified`, `metrics_content_type_status=verified`, `stream_lifecycle_status=verified`, `local_observability_scrape_policy_status=verified`, `performance_budget_status=verified`.
-  - Fail-closed validation confirmed for tamper and local observability scrape guard drills: `local_observability_scrape_policy_marker_missing:scrape_probe_status`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `scrape_probe_status=verified`, `metrics_content_type_status=verified`, `stream_lifecycle_status=verified`, `readiness_probe_status=verified`, `readiness_failure_drill_status=verified`, `readiness_reason_taxonomy_status=verified`, `local_observability_scrape_policy_status=verified`, `performance_budget_status=verified`.
+  - Fail-closed validation confirmed for tamper and local observability scrape guard drills: `local_observability_scrape_policy_marker_missing:readiness_failure_drill_status`.
 - Phase 2.13 observability endpoint legacy-parser drift contracts delivered:
   - Drift checker: `scripts/ci/check_observability_endpoint_drift_contract.sh` and regression test `scripts/ci/test_check_observability_endpoint_drift_contract.sh` (Task #3335, Subtask #3337).
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `observability_legacy_parser_contract_status=verified`, `observability_framework_parity_status=verified`, `docs_migration_contract_status=verified`.
