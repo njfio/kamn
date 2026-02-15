@@ -10,7 +10,7 @@ That produced contradictory signals (for example, marking ingress/storage as sca
 
 This refreshed version separates:
 - delivered roadmap items and their closed chains,
-- remaining open production gaps and their active issue chains,
+- active production gaps (when present) and their issue chains,
 - explicit local-heavy validation scope and CI cost boundaries.
 
 ## Status Truth Snapshot
@@ -19,8 +19,8 @@ This refreshed version separates:
 |---|---|---|
 | 1. HTTP ingress runtime | Delivered (`axum` server + auth/ws integration) | #3254 -> #3305 -> #3306 |
 | 2. Persistent storage | Delivered (sqlite backend adapters + migration parity) | #3221 -> #3309 -> #3310 |
-| 3. Real P2P transport | Open (libp2p transport hardening still active) | #3228 -> #3229 -> #3313 |
-| 4. Transport-fed consensus pipeline | Open follow-on (real gossip-fed convergence still active) | #3228 -> #3413 -> #3414 |
+| 3. Real P2P transport | Delivered (live libp2p provider + lifecycle/fault hardening) | #3228 -> #3229 -> #3313 |
+| 4. Transport-fed consensus pipeline | Delivered (transport-fed convergence + go/no-go evidence gate) | #3228 -> #3413 -> #3414 |
 | 5. Serde API/domain serialization | Delivered | #3263 -> #3264 -> #3265 |
 | 6. Prometheus/metrics contract | Delivered | #3263 -> #3268 -> #3269 |
 | 7. Graceful shutdown path | Delivered | #3263 -> #3272 -> #3273 |
@@ -52,54 +52,36 @@ This refreshed version separates:
 - Structured errors: `#3289 -> #3294 -> #3295 -> (#3364, #3365, #3296, #3297)`.
 - Rate limiting: `#3289 -> #3298 -> #3299 -> (#3366, #3367, #3300, #3301)`.
 
-## Remaining Open Gaps (Active)
+## Tier-5 Closure Roll-up (Delivered)
 
 ### Item 3: Real libp2p transport delivery
-- Open chain: `#3228 -> #3229 -> #3313 -> (#3356, #3314, #3315, #3319, #3470)`.
-- Current focus:
-  - deterministic swarm behavior composition,
-  - lifecycle/discovery fail-closed evidence,
-  - local-heavy live lane validation with CI fast-gate exclusion,
-  - Task #3470 live transport fault matrix policy lane:
-    `scripts/runtime/validate_live_transport_fault_matrix_live_contract_lane.sh`,
-    `scripts/runtime/check_live_transport_fault_matrix_live_policy.sh`.
+- Delivered chain: `#3228 -> #3229 -> #3313 -> (#3356, #3314, #3315, #3319, #3470)`.
+- Delivery includes deterministic swarm composition, lifecycle/discovery fail-closed evidence, and local-heavy fault-matrix lane policy validation.
+- Reference scripts:
+  - `scripts/runtime/validate_live_transport_fault_matrix_live_contract_lane.sh`
+  - `scripts/runtime/check_live_transport_fault_matrix_live_policy.sh`
 
 ### Item 4 follow-on: Transport-fed consensus convergence
-- Open chain: `#3228 -> #3413 -> #3414 -> (#3443, #3444, #3446, #3447, #3448)`.
-- Current focus:
-  - block pipeline consumption from real transport adapters,
-  - canonical fork-choice/reconciliation under partition-rejoin/publish-drop/churn convergence drills,
-  - deterministic policy/taxonomy reason-code contracts,
-  - release go/no-go artifact gating on transport-fed convergence + fault-matrix evidence.
-- Status progression note:
-  - delivered in this chain: `#3443`, `#3444`, `#3446`, `#3447`
-  - remaining in this chain: `#3448`
+- Delivered chain: `#3228 -> #3413 -> #3414 -> (#3443, #3444, #3446, #3447, #3448)`.
+- Delivery includes transport-fed pipeline wiring, partition/publish-drop/churn convergence drills, and deterministic go/no-go artifact gating.
 
 ### Composed full-stack E2E against `kolme_fork`
-- Open chain: `#3333 -> #3419 -> #3420 -> (#3432, #3433, #3434)`.
-- Scope:
-  - composed local-heavy integration evidence bundle,
-  - release go/no-go linkage,
-  - architecture/documentation lineage.
-- Remaining work is tracked under the parent story until stacked PR chain merges.
+- Delivered chain: `#3333 -> #3419 -> #3420 -> (#3432, #3433, #3434)`.
+- Delivery includes composed local-heavy integration evidence bundle, release go/no-go linkage, and architecture/documentation lineage.
 
 ### Runtime observability reason-code/checkpoint projection
-- Active chain: `#3333 -> #3471 -> #3472 -> #3473 -> #3474 -> #3490`.
-- Scope:
-  - include deterministic `reason_code` and checkpoint-failure counters across daemon and `kolme-live` runtime reports,
-  - project the same fields into `/metrics`, `/healthz`, and `/metrics.stream`,
-  - keep report text/json output deterministic while expanding observability payload contracts,
-  - maintain local observability scrape failure-drill contract-lane parity (`scripts/runtime/validate_local_observability_scrape_live_contract_lane.sh`, `scripts/runtime/test_validate_local_observability_scrape_live.sh`, `scripts/runtime/test_validate_local_observability_scrape_live_contract_lane.sh`).
-- Validation:
-  - local-focused targeted tests in `kamn-node` for daemon and `kolme-live` runtime execution status mapping,
-  - endpoint rendering contract tests for metrics/health/stream payload parity,
-  - readiness degradation/failure-drill marker coverage in the local observability scrape lane and policy checker,
-  - readiness dependency-probe taxonomy matrix coverage (`main_tests::observability_endpoint_tests::functional_observability_endpoint_readiness_reason_taxonomy_covers_dependency_probe_matrix`) tracked under #3489.
+- Delivered chain: `#3333 -> #3471 -> #3472 -> #3473 -> #3474 -> #3490`.
+- Delivery includes deterministic `reason_code` and checkpoint-failure counters in daemon and `kolme-live` reports, parity projection into `/metrics`, `/healthz`, `/metrics.stream`, and bounded local scrape failure-drill validation.
+- Key validation script: `scripts/runtime/test_validate_local_observability_scrape_live.sh`.
+- Validation marker remains tracked in `main_tests::observability_endpoint_tests::functional_observability_endpoint_readiness_reason_taxonomy_covers_dependency_probe_matrix` (issue `#3489`).
 
 ### Docs truth synchronization (this tranche)
-- Open chain: `#3333 -> #3424 -> #3425 -> #3426`.
-- Scope:
-  - keep this document and CI docs-contract guards synchronized with real state.
+- Delivered chain: `#3333 -> #3424 -> #3425 -> #3426`.
+- Scope: keep this document and CI docs-contract guards synchronized with real state as issue chains close.
+
+## Active Open Chains
+- None in this document scope as of 2026-02-15.
+- New production gaps should be decomposed under `#3333` with a new epic/story/task/subtask chain before implementation work starts.
 
 ## Cost and CI Policy Boundaries
 - Heavy local integration run-mode lanes remain excluded from `ci-fast-gate` and fast `ci-tools` blocks.

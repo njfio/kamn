@@ -24,11 +24,14 @@ required_markers = (
     "Status Truth Snapshot",
     "| 1. HTTP ingress runtime | Delivered (`axum` server + auth/ws integration) |",
     "| 2. Persistent storage | Delivered (sqlite backend adapters + migration parity) |",
-    "| 3. Real P2P transport | Open (libp2p transport hardening still active) |",
-    "| 4. Transport-fed consensus pipeline | Open follow-on (real gossip-fed convergence still active) |",
-    "#3228 -> #3229 -> #3313",
-    "#3228 -> #3413 -> #3414",
+    "| 3. Real P2P transport | Delivered (live libp2p provider + lifecycle/fault hardening) |",
+    "| 4. Transport-fed consensus pipeline | Delivered (transport-fed convergence + go/no-go evidence gate) |",
+    "#3228 -> #3229 -> #3313 -> (#3356, #3314, #3315, #3319, #3470)",
+    "#3228 -> #3413 -> #3414 -> (#3443, #3444, #3446, #3447, #3448)",
+    "#3333 -> #3471 -> #3472 -> #3473 -> #3474 -> #3490",
     "#3333 -> #3424 -> #3425 -> #3426",
+    "Active Open Chains",
+    "None in this document scope as of 2026-02-15.",
     "Historical Baseline (Superseded)",
 )
 for marker in required_markers:
