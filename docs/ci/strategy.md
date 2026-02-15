@@ -32,10 +32,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `bash scripts/ci/test_full_io_scenario_matrix_ci_exclusion_policy.sh`
   - `bash scripts/ci/test_local_full_stack_integration_ci_exclusion_policy.sh`
   - `bash scripts/ci/test_sqlite_crash_recovery_ci_exclusion_policy.sh`
+  - `bash scripts/ci/test_libp2p_three_node_discovery_ci_exclusion_policy.sh`
 - Fail-closed CI scope rules:
   - `validate_full_io_scenario_matrix_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
   - `validate_local_full_stack_integration_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
   - `validate_sqlite_crash_recovery_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
+  - `validate_libp2p_three_node_discovery_live.sh --mode run` must not appear in `.github/workflows/ci-fast-gate.yml` or `scripts/ci/test_ci_tools.sh` fast-mode block.
   - regression command surfaces must retain dry-run policy and contract-lane tests for both lanes in `scripts/ci/test_ci_tools.sh`.
 - Deterministic drift markers:
   - `full_io_scenario_matrix_policy_multinode_propagation_mismatch`
@@ -279,6 +281,32 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - block reconciliation partition/rejoin run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `block_reconciliation_partition_rejoin_policy_fast_gate_exclusion_mismatch`
+
+## Runtime Libp2p Three-Node Discovery Live Validation Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_libp2p_three_node_discovery_live.sh --mode dry-run --output-json /tmp/libp2p-three-node-discovery-live-summary.json`
+  - `KAMN_LIBP2P_THREE_NODE_DISCOVERY_LIVE_OPT_IN=1 bash scripts/runtime/validate_libp2p_three_node_discovery_live.sh --mode run --output-json /tmp/libp2p-three-node-discovery-live-summary.json`
+  - `bash scripts/runtime/check_libp2p_three_node_discovery_live_policy.sh --report-file /tmp/libp2p-three-node-discovery-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/libp2p-three-node-discovery-live-policy.json`
+  - `bash scripts/runtime/validate_libp2p_three_node_discovery_live_contract_lane.sh --output-json /tmp/libp2p-three-node-discovery-live-contract-lane-report.json --policy-output-json /tmp/libp2p-three-node-discovery-live-policy.json`
+  - `bash scripts/runtime/test_validate_libp2p_three_node_discovery_live.sh`
+  - `bash scripts/runtime/test_check_libp2p_three_node_discovery_live_policy.sh`
+  - `bash scripts/runtime/test_validate_libp2p_three_node_discovery_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Three-node discovery/gossip evidence contracts:
+  - lane emits deterministic three-node discovery marker (`three_node_discovery_status=verified`).
+  - lane emits deterministic gossip propagation marker (`gossip_propagation_status=verified`).
+  - lane emits deterministic lifecycle transition marker (`lifecycle_transition_status=verified`).
+  - lane emits deterministic runtime transport marker (`runtime_transport_mode=libp2p_discovery_gossip_three_node`).
+  - policy checker fails closed on schema/marker drift and decision mismatches.
+- Cost controls:
+  - dry-run mode executes no nested commands and emits deterministic `dry_run_no_commands_executed`.
+  - run mode is explicit local-only and requires `KAMN_LIBP2P_THREE_NODE_DISCOVERY_LIVE_OPT_IN=1`.
+  - run mode executes three bounded targeted `cargo test` selectors covering discovery, gossip, and lifecycle guards.
+  - libp2p three-node discovery run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `libp2p_three_node_discovery_policy_marker_missing:three_node_discovery_status`
 
 ## Process Harness Primitive Contract
 - Entry commands:
