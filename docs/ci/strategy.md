@@ -570,6 +570,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - local observability scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
   - local observability soak run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Readiness/failure-drill contracts:
+  - streaming contract reference: `docs/observability/streaming.md`
   - lane emits deterministic readiness probe marker (`readiness_probe_status=verified`).
   - lane emits deterministic readiness degradation drill marker (`readiness_failure_drill_status=verified`).
   - lane emits deterministic readiness reason taxonomy marker (`readiness_reason_taxonomy_status=verified`).
