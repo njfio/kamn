@@ -86,6 +86,8 @@ This refreshed version separates:
   - `scripts/runtime/test_check_runtime_observability_endpoint_live_policy.sh`
   - `scripts/runtime/test_validate_runtime_observability_endpoint_live_contract_lane.sh`
   - `scripts/ci/test_check_observability_endpoint_drift_contract.sh`
+- Readiness parity selector coverage:
+  - `main_tests::observability_endpoint_tests::functional_observability_endpoint_projects_readiness_reason_code_parity_across_endpoint_surfaces` (issue `#3519`).
 
 ### Docs truth synchronization (this tranche)
 - Delivered chain: `#3333 -> #3424 -> #3425 -> #3426`.
