@@ -1075,6 +1075,30 @@ impl From<RuntimeLifecycleError> for P2pTransportError {
     }
 }
 
+impl P2pTransportError {
+    /// Returns deterministic reason code for policy and regression guard checks.
+    pub fn reason_code(&self) -> &'static str {
+        match self {
+            Self::InvalidPeerId => "p2p_transport_invalid_peer_id",
+            Self::InvalidTopic => "p2p_transport_invalid_topic",
+            Self::MissingGossipTopics => "p2p_transport_missing_gossip_topics",
+            Self::EmptyPayload => "p2p_transport_empty_payload",
+            Self::UnknownSenderPeer(_) => "p2p_transport_unknown_sender_peer",
+            Self::UnknownRecipientPeer(_) => "p2p_transport_unknown_recipient_peer",
+            Self::MissingKademliaBootstrapSeeds => "p2p_transport_missing_kademlia_seeds",
+            Self::InvalidSwarmListenAddress => "p2p_transport_invalid_swarm_listen_address",
+            Self::InvalidSwarmBootstrapPeerAddress(_) => {
+                "p2p_transport_invalid_swarm_bootstrap_peer_address"
+            }
+            Self::InvalidSwarmHarnessTickBudget => "p2p_transport_invalid_harness_tick_budget",
+            Self::GossipTransportDisabled => "p2p_transport_gossip_disabled",
+            Self::StateUnavailable => "p2p_transport_state_unavailable",
+            Self::InactivePeerLifecycleState(_) => "p2p_transport_inactive_lifecycle_state",
+            Self::Lifecycle(error) => error.reason_code(),
+        }
+    }
+}
+
 impl Display for P2pTransportError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -1178,7 +1202,7 @@ mod tests {
     };
     use crate::config::NodeRole;
     use crate::p2p_transport::{PeerDiscoveryRecord, PeerLifecycleTransportCoordinator};
-    use crate::runtime::PeerLifecycleState;
+    use crate::runtime::{PeerLifecycleEvent, PeerLifecycleState, RuntimeLifecycleError};
 
     #[test]
     fn transport_discovery_filters_by_topic_and_excludes_requester() {
@@ -1270,6 +1294,22 @@ mod tests {
             Err(P2pTransportError::InactivePeerLifecycleState(
                 PeerLifecycleState::Disconnected
             ))
+        );
+    }
+
+    #[test]
+    fn transport_error_reason_code_remains_deterministic() {
+        assert_eq!(
+            P2pTransportError::UnknownRecipientPeer("peer-z".to_owned()).reason_code(),
+            "p2p_transport_unknown_recipient_peer"
+        );
+        assert_eq!(
+            P2pTransportError::Lifecycle(RuntimeLifecycleError::InvalidTransition {
+                from: PeerLifecycleState::Disconnected,
+                event: PeerLifecycleEvent::HeartbeatRestored,
+            })
+            .reason_code(),
+            "runtime_peer_transition_invalid"
         );
     }
 }

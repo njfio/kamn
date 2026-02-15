@@ -31,6 +31,7 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     assert!(DOC.contains("p2p-transport-profile:libp2p-live"));
     assert!(DOC.contains("p2p-live-libp2p-provider"));
     assert!(DOC.contains("no `InMemoryPeerLifecycleTransport` delegate fallback path"));
+    assert!(DOC.contains("P2pTransportError::reason_code()"));
     assert!(DOC.contains("gossip-transport-disabled"));
     assert!(DOC.contains("P2pTransportError::InvalidPeerId"));
     assert!(DOC.contains("P2pTransportError::InvalidTopic"));
@@ -48,6 +49,12 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     assert!(DOC.contains(
         "cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_data_plane_supports_independent_adapter_exchange -- --exact"
     ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test p2p_live_transport_runtime integration_live_transport_invalid_event_retries_are_idempotent -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-core --test p2p_live_transport_runtime regression_live_transport_invalid_transition_reason_code_stable -- --exact"
+    ));
 }
 
 #[test]
@@ -63,6 +70,7 @@ fn architecture_doc_contains_peer_lifecycle_proptest_invariant_catalog() {
     ));
     assert!(DOC.contains("invalid transition retries must remain idempotent"));
     assert!(DOC.contains("runtime_peer_transition_invalid"));
+    assert!(DOC.contains("lifecycle state remains unchanged across retries"));
 }
 
 #[test]

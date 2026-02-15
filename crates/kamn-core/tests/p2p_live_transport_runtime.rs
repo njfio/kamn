@@ -94,6 +94,14 @@ fn functional_live_transport_signal_bridge_maps_deterministic_lifecycle_states()
         coordinator.apply_live_transport_signal(PeerLifecycleEvent::Disconnect),
         Ok(PeerLifecycleState::Disconnected)
     );
+    assert_eq!(
+        coordinator.apply_live_transport_signal(PeerLifecycleEvent::Rejoin),
+        Ok(PeerLifecycleState::Connecting)
+    );
+    assert_eq!(
+        coordinator.apply_live_transport_signal(PeerLifecycleEvent::HandshakeSucceeded),
+        Ok(PeerLifecycleState::Active)
+    );
 }
 
 #[test]
@@ -187,6 +195,27 @@ fn integration_live_transport_data_plane_supports_independent_adapter_exchange()
 }
 
 #[test]
+fn integration_live_transport_invalid_event_retries_are_idempotent() {
+    let transport =
+        Libp2pLivePeerLifecycleTransport::new(live_swarm_config(), P2pSwarmHarnessMode::DryRun)
+            .expect("live transport should initialize");
+    let mut coordinator =
+        PeerLifecycleTransportCoordinator::new("peer-processor", NodeRole::Processor, transport)
+            .expect("coordinator should initialize");
+
+    for _ in 0..3 {
+        let error = coordinator
+            .apply_live_transport_signal(PeerLifecycleEvent::HeartbeatRestored)
+            .expect_err("heartbeat restore from disconnected must fail");
+        assert_eq!(error.reason_code(), "runtime_peer_transition_invalid");
+        assert_eq!(
+            coordinator.lifecycle_state(),
+            PeerLifecycleState::Disconnected
+        );
+    }
+}
+
+#[test]
 fn regression_live_transport_data_plane_unknown_recipient_fails_closed() {
     // Regression: #3574
     let bootstrap_seed = unique_bootstrap_seed("live-fail-closed");
@@ -225,6 +254,22 @@ fn regression_live_transport_data_plane_unknown_recipient_fails_closed() {
             "peer-missing-live".to_owned()
         ))
     );
+}
+
+#[test]
+fn regression_live_transport_invalid_transition_reason_code_stable() {
+    // Regression: #3575
+    let transport =
+        Libp2pLivePeerLifecycleTransport::new(live_swarm_config(), P2pSwarmHarnessMode::DryRun)
+            .expect("live transport should initialize");
+    let mut coordinator =
+        PeerLifecycleTransportCoordinator::new("peer-processor", NodeRole::Processor, transport)
+            .expect("coordinator should initialize");
+
+    let error = coordinator
+        .apply_live_transport_signal(PeerLifecycleEvent::HeartbeatRestored)
+        .expect_err("heartbeat restore from disconnected must fail");
+    assert_eq!(error.reason_code(), "runtime_peer_transition_invalid");
 }
 
 #[test]
