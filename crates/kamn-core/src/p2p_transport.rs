@@ -2215,7 +2215,6 @@ fn runtime_channel_closed_behavior_failure_class(
         }
     }
 }
-
 /// Deterministic p2p discovery and gossip transport error variants.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum P2pTransportError {
