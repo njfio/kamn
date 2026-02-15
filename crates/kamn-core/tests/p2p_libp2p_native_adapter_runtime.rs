@@ -77,6 +77,23 @@ fn functional_libp2p_native_backend_selection_marker_is_stable() {
 }
 
 #[test]
+fn functional_libp2p_native_adapter_loop_marker_is_stable() {
+    let transport = Libp2pLivePeerLifecycleTransport::new(
+        live_swarm_config_for_peer(
+            "peer-native-loop-marker",
+            "/ip4/127.0.0.1/tcp/9560",
+            unique_bootstrap_seed().as_str(),
+        ),
+        P2pSwarmHarnessMode::DryRun,
+    )
+    .expect("native transport should initialize");
+    assert_eq!(
+        transport.native_runtime_loop_marker(),
+        "libp2p-runtime-adapter-loop"
+    );
+}
+
+#[test]
 fn integration_libp2p_native_adapter_supports_discovery_and_gossip_over_sockets() {
     let bootstrap_seed = unique_bootstrap_seed();
     let processor_transport = Libp2pLivePeerLifecycleTransport::new(

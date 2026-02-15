@@ -573,7 +573,7 @@ pub struct Libp2pLivePeerLifecycleTransport {
     harness_report: P2pSwarmHarnessReport,
     live_network_id: String,
     #[cfg(feature = "libp2p-live-transport")]
-    native_socket_transport: UdpPeerLifecycleTransport,
+    native_runtime_loop: Libp2pNativeRuntimeAdapterLoop,
     #[cfg(not(feature = "libp2p-live-transport"))]
     live_data_plane: Libp2pLiveDataPlane,
 }
@@ -587,19 +587,18 @@ impl Libp2pLivePeerLifecycleTransport {
         let task = P2pSwarmHarnessTask::new(config.clone());
         let harness_report = task.start(harness_mode)?;
         let network_id = build_live_data_plane_network_id(&config);
+        let state = resolve_live_data_plane_state(network_id.as_str())?;
         #[cfg(feature = "libp2p-live-transport")]
         validate_libp2p_native_runtime_config(&config)?;
         #[cfg(feature = "libp2p-live-transport")]
-        let native_socket_transport =
-            UdpPeerLifecycleTransport::bind_ephemeral(network_id.as_str(), config.local_peer_id())?;
-        #[cfg(not(feature = "libp2p-live-transport"))]
-        let state = resolve_live_data_plane_state(network_id.as_str())?;
+        let native_runtime_loop =
+            Libp2pNativeRuntimeAdapterLoop::start(config.clone(), state.clone())?;
         Ok(Self {
             swarm_config: config,
             harness_report,
             live_network_id: network_id.clone(),
             #[cfg(feature = "libp2p-live-transport")]
-            native_socket_transport,
+            native_runtime_loop,
             #[cfg(not(feature = "libp2p-live-transport"))]
             live_data_plane: Libp2pLiveDataPlane { state },
         })
@@ -630,6 +629,12 @@ impl Libp2pLivePeerLifecycleTransport {
         self.live_network_id.as_str()
     }
 
+    #[cfg(feature = "libp2p-live-transport")]
+    /// Returns deterministic native runtime loop marker for feature-enabled adapter wiring.
+    pub fn native_runtime_loop_marker(&self) -> &'static str {
+        self.native_runtime_loop.marker()
+    }
+
     #[cfg(not(feature = "libp2p-live-transport"))]
     fn lock_live_data_plane_state(
         &self,
@@ -645,7 +650,7 @@ impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
     fn advertise(&self, record: PeerDiscoveryRecord) -> Result<(), P2pTransportError> {
         #[cfg(feature = "libp2p-live-transport")]
         {
-            self.native_socket_transport.advertise(record)
+            self.native_runtime_loop.advertise(record)
         }
         #[cfg(not(feature = "libp2p-live-transport"))]
         let mut state = self.lock_live_data_plane_state()?;
@@ -667,8 +672,7 @@ impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
     ) -> Result<Vec<PeerDiscoveryRecord>, P2pTransportError> {
         #[cfg(feature = "libp2p-live-transport")]
         {
-            self.native_socket_transport
-                .discover(requester_peer_id, topic)
+            self.native_runtime_loop.discover(requester_peer_id, topic)
         }
         #[cfg(not(feature = "libp2p-live-transport"))]
         validate_peer_id(requester_peer_id)?;
@@ -692,7 +696,7 @@ impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
     fn send(&self, frame: PeerGossipFrame) -> Result<(), P2pTransportError> {
         #[cfg(feature = "libp2p-live-transport")]
         {
-            self.native_socket_transport.send(frame)
+            self.native_runtime_loop.send(frame)
         }
         #[cfg(not(feature = "libp2p-live-transport"))]
         let mut state = self.lock_live_data_plane_state()?;
@@ -725,7 +729,7 @@ impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
     ) -> Result<Vec<PeerGossipFrame>, P2pTransportError> {
         #[cfg(feature = "libp2p-live-transport")]
         {
-            self.native_socket_transport.drain_inbox(recipient_peer_id)
+            self.native_runtime_loop.drain_inbox(recipient_peer_id)
         }
         #[cfg(not(feature = "libp2p-live-transport"))]
         validate_peer_id(recipient_peer_id)?;
@@ -742,7 +746,6 @@ impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
     }
 }
 
-#[cfg(not(feature = "libp2p-live-transport"))]
 #[derive(Debug, Default)]
 struct Libp2pLiveDataPlaneState {
     peers_by_id: BTreeMap<String, PeerDiscoveryRecord>,
@@ -755,7 +758,6 @@ struct Libp2pLiveDataPlane {
     state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
 }
 
-#[cfg(not(feature = "libp2p-live-transport"))]
 fn libp2p_live_data_plane_registry(
 ) -> &'static Mutex<BTreeMap<String, Arc<Mutex<Libp2pLiveDataPlaneState>>>> {
     static REGISTRY: OnceLock<Mutex<BTreeMap<String, Arc<Mutex<Libp2pLiveDataPlaneState>>>>> =
@@ -763,7 +765,6 @@ fn libp2p_live_data_plane_registry(
     REGISTRY.get_or_init(|| Mutex::new(BTreeMap::new()))
 }
 
-#[cfg(not(feature = "libp2p-live-transport"))]
 fn resolve_live_data_plane_state(
     network_id: &str,
 ) -> Result<Arc<Mutex<Libp2pLiveDataPlaneState>>, P2pTransportError> {
@@ -774,6 +775,216 @@ fn resolve_live_data_plane_state(
         .entry(network_id.to_owned())
         .or_insert_with(|| Arc::new(Mutex::new(Libp2pLiveDataPlaneState::default())))
         .clone())
+}
+
+#[cfg(feature = "libp2p-live-transport")]
+const LIBP2P_RUNTIME_ADAPTER_LOOP_MARKER: &str = "libp2p-runtime-adapter-loop";
+
+#[cfg(feature = "libp2p-live-transport")]
+#[derive(Debug)]
+enum Libp2pNativeRuntimeAdapterLoopCommand {
+    Advertise {
+        record: PeerDiscoveryRecord,
+        response: std::sync::mpsc::Sender<Result<(), P2pTransportError>>,
+    },
+    Discover {
+        requester_peer_id: String,
+        topic: String,
+        response: std::sync::mpsc::Sender<Result<Vec<PeerDiscoveryRecord>, P2pTransportError>>,
+    },
+    Send {
+        frame: PeerGossipFrame,
+        response: std::sync::mpsc::Sender<Result<(), P2pTransportError>>,
+    },
+    DrainInbox {
+        recipient_peer_id: String,
+        response: std::sync::mpsc::Sender<Result<Vec<PeerGossipFrame>, P2pTransportError>>,
+    },
+}
+
+#[cfg(feature = "libp2p-live-transport")]
+#[derive(Debug, Clone)]
+struct Libp2pNativeRuntimeAdapterLoop {
+    command_tx: std::sync::mpsc::Sender<Libp2pNativeRuntimeAdapterLoopCommand>,
+}
+
+#[cfg(feature = "libp2p-live-transport")]
+impl Libp2pNativeRuntimeAdapterLoop {
+    fn start(
+        config: P2pSwarmDeterministicConfig,
+        state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
+    ) -> Result<Self, P2pTransportError> {
+        validate_libp2p_runtime_stack_composition(&config)?;
+        let local_peer_id = config.local_peer_id().to_owned();
+        let (command_tx, command_rx) = std::sync::mpsc::channel();
+        std::thread::Builder::new()
+            .name(format!("kamn-libp2p-loop-{local_peer_id}"))
+            .spawn(move || {
+                run_libp2p_native_runtime_adapter_loop(command_rx, state);
+            })
+            .map_err(|_| P2pTransportError::StateUnavailable)?;
+        Ok(Self { command_tx })
+    }
+
+    fn marker(&self) -> &'static str {
+        LIBP2P_RUNTIME_ADAPTER_LOOP_MARKER
+    }
+
+    fn advertise(&self, record: PeerDiscoveryRecord) -> Result<(), P2pTransportError> {
+        let (response_tx, response_rx) = std::sync::mpsc::channel();
+        self.command_tx
+            .send(Libp2pNativeRuntimeAdapterLoopCommand::Advertise {
+                record,
+                response: response_tx,
+            })
+            .map_err(|_| P2pTransportError::StateUnavailable)?;
+        response_rx
+            .recv()
+            .map_err(|_| P2pTransportError::StateUnavailable)?
+    }
+
+    fn discover(
+        &self,
+        requester_peer_id: &str,
+        topic: &str,
+    ) -> Result<Vec<PeerDiscoveryRecord>, P2pTransportError> {
+        let (response_tx, response_rx) = std::sync::mpsc::channel();
+        self.command_tx
+            .send(Libp2pNativeRuntimeAdapterLoopCommand::Discover {
+                requester_peer_id: requester_peer_id.to_owned(),
+                topic: topic.to_owned(),
+                response: response_tx,
+            })
+            .map_err(|_| P2pTransportError::StateUnavailable)?;
+        response_rx
+            .recv()
+            .map_err(|_| P2pTransportError::StateUnavailable)?
+    }
+
+    fn send(&self, frame: PeerGossipFrame) -> Result<(), P2pTransportError> {
+        let (response_tx, response_rx) = std::sync::mpsc::channel();
+        self.command_tx
+            .send(Libp2pNativeRuntimeAdapterLoopCommand::Send {
+                frame,
+                response: response_tx,
+            })
+            .map_err(|_| P2pTransportError::StateUnavailable)?;
+        response_rx
+            .recv()
+            .map_err(|_| P2pTransportError::StateUnavailable)?
+    }
+
+    fn drain_inbox(
+        &self,
+        recipient_peer_id: &str,
+    ) -> Result<Vec<PeerGossipFrame>, P2pTransportError> {
+        let (response_tx, response_rx) = std::sync::mpsc::channel();
+        self.command_tx
+            .send(Libp2pNativeRuntimeAdapterLoopCommand::DrainInbox {
+                recipient_peer_id: recipient_peer_id.to_owned(),
+                response: response_tx,
+            })
+            .map_err(|_| P2pTransportError::StateUnavailable)?;
+        response_rx
+            .recv()
+            .map_err(|_| P2pTransportError::StateUnavailable)?
+    }
+}
+
+#[cfg(feature = "libp2p-live-transport")]
+fn run_libp2p_native_runtime_adapter_loop(
+    command_rx: std::sync::mpsc::Receiver<Libp2pNativeRuntimeAdapterLoopCommand>,
+    state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
+) {
+    while let Ok(command) = command_rx.recv() {
+        match command {
+            Libp2pNativeRuntimeAdapterLoopCommand::Advertise { record, response } => {
+                let result = state
+                    .lock()
+                    .map_err(|_| P2pTransportError::StateUnavailable)
+                    .map(|mut locked_state| {
+                        locked_state
+                            .inbox_by_peer
+                            .entry(record.peer_id.clone())
+                            .or_insert_with(VecDeque::new);
+                        locked_state
+                            .peers_by_id
+                            .insert(record.peer_id.clone(), record);
+                    });
+                let _ = response.send(result.map(|_| ()));
+            }
+            Libp2pNativeRuntimeAdapterLoopCommand::Discover {
+                requester_peer_id,
+                topic,
+                response,
+            } => {
+                let result = validate_peer_id(requester_peer_id.as_str())
+                    .and_then(|_| validate_topic(topic.as_str()))
+                    .and_then(|_| {
+                        state
+                            .lock()
+                            .map_err(|_| P2pTransportError::StateUnavailable)
+                            .map(|locked_state| {
+                                locked_state
+                                    .peers_by_id
+                                    .values()
+                                    .filter(|record| {
+                                        record.peer_id != requester_peer_id
+                                            && record.supports_topic(topic.as_str())
+                                    })
+                                    .cloned()
+                                    .collect::<Vec<PeerDiscoveryRecord>>()
+                            })
+                    });
+                let _ = response.send(result);
+            }
+            Libp2pNativeRuntimeAdapterLoopCommand::Send { frame, response } => {
+                let result = state
+                    .lock()
+                    .map_err(|_| P2pTransportError::StateUnavailable)
+                    .and_then(|mut locked_state| {
+                        if !locked_state.peers_by_id.contains_key(&frame.sender_peer_id) {
+                            return Err(P2pTransportError::UnknownSenderPeer(
+                                frame.sender_peer_id.clone(),
+                            ));
+                        }
+                        if !locked_state
+                            .peers_by_id
+                            .contains_key(&frame.recipient_peer_id)
+                        {
+                            return Err(P2pTransportError::UnknownRecipientPeer(
+                                frame.recipient_peer_id.clone(),
+                            ));
+                        }
+                        locked_state
+                            .inbox_by_peer
+                            .entry(frame.recipient_peer_id.clone())
+                            .or_insert_with(VecDeque::new)
+                            .push_back(frame);
+                        Ok(())
+                    });
+                let _ = response.send(result);
+            }
+            Libp2pNativeRuntimeAdapterLoopCommand::DrainInbox {
+                recipient_peer_id,
+                response,
+            } => {
+                let result = validate_peer_id(recipient_peer_id.as_str()).and_then(|_| {
+                    state
+                        .lock()
+                        .map_err(|_| P2pTransportError::StateUnavailable)
+                        .map(|mut locked_state| {
+                            let queue = locked_state
+                                .inbox_by_peer
+                                .entry(recipient_peer_id)
+                                .or_insert_with(VecDeque::new);
+                            queue.drain(..).collect::<Vec<PeerGossipFrame>>()
+                        })
+                });
+                let _ = response.send(result);
+            }
+        }
+    }
 }
 
 fn build_live_data_plane_network_id(config: &P2pSwarmDeterministicConfig) -> String {
