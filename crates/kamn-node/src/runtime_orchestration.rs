@@ -28,6 +28,93 @@ pub(crate) fn build_runtime_execution_id(
     format!("node-runtime:{}:{chain_id}:{role}", runtime_mode.as_str())
 }
 
+const RUNTIME_TRANSPORT_PROFILE_POLICY_STORE: &str = "runtime-transport-profile";
+const RUNTIME_TRANSPORT_PROFILE_GOSSIP_DISABLED_FOR_PRODUCTION_REASON: &str =
+    "runtime_transport_profile_gossip_disabled_for_production";
+const RUNTIME_TRANSPORT_PROFILE_IN_MEMORY_FALLBACK_FORBIDDEN_REASON: &str =
+    "runtime_transport_profile_in_memory_fallback_forbidden";
+const RUNTIME_TRANSPORT_PROFILE_LIVE_MARKER_MISSING_REASON: &str =
+    "runtime_transport_profile_live_marker_missing";
+const RUNTIME_TRANSPORT_PROFILE_LIVE_PROVIDER_MISSING_REASON: &str =
+    "runtime_transport_profile_live_provider_missing";
+
+fn runtime_mode_requires_live_transport_profile(runtime_mode: RuntimeMode) -> bool {
+    matches!(
+        runtime_mode.kind,
+        RuntimeModeKind::Daemon
+            | RuntimeModeKind::Api
+            | RuntimeModeKind::Full
+            | RuntimeModeKind::KolmeLive
+    )
+}
+
+pub(crate) fn select_runtime_transport_profile_for_runtime_mode(
+    runtime_mode: RuntimeMode,
+    enable_gossip: bool,
+) -> Option<RuntimeTransportProfile> {
+    if !enable_gossip {
+        return None;
+    }
+    if runtime_mode_requires_live_transport_profile(runtime_mode) {
+        return Some(RuntimeTransportProfile::Libp2pLive);
+    }
+    None
+}
+
+pub(crate) fn classify_production_transport_profile_violation(
+    runtime_mode: RuntimeMode,
+    enable_gossip: bool,
+    components: &[String],
+) -> Option<&'static str> {
+    if !runtime_mode_requires_live_transport_profile(runtime_mode) {
+        return None;
+    }
+    if !enable_gossip {
+        return Some(RUNTIME_TRANSPORT_PROFILE_GOSSIP_DISABLED_FOR_PRODUCTION_REASON);
+    }
+
+    let has_component = |expected: &str| components.iter().any(|component| component == expected);
+    if has_component("p2p-transport-profile:in-memory-deterministic")
+        || has_component("p2p-in-memory-transport-fallback")
+    {
+        return Some(RUNTIME_TRANSPORT_PROFILE_IN_MEMORY_FALLBACK_FORBIDDEN_REASON);
+    }
+    if !has_component("p2p-transport-profile:libp2p-live") {
+        return Some(RUNTIME_TRANSPORT_PROFILE_LIVE_MARKER_MISSING_REASON);
+    }
+    if !has_component("p2p-live-libp2p-provider") {
+        return Some(RUNTIME_TRANSPORT_PROFILE_LIVE_PROVIDER_MISSING_REASON);
+    }
+    None
+}
+
+fn enforce_production_transport_profile_policy(
+    runtime_mode: RuntimeMode,
+    plan: &kamn_core::BootstrapPlan,
+) -> Result<(), ConfigError> {
+    let components = plan
+        .wiring
+        .all_components()
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<Vec<String>>();
+    if let Some(reason_code) = classify_production_transport_profile_violation(
+        runtime_mode,
+        plan.config.enable_gossip,
+        components.as_slice(),
+    ) {
+        return Err(ConfigError::RuntimeStoreCompatibility {
+            store: RUNTIME_TRANSPORT_PROFILE_POLICY_STORE,
+            reason_code,
+            detail: format!(
+                "runtime mode {} requires live libp2p transport profile wiring",
+                runtime_mode.as_str()
+            ),
+        });
+    }
+    Ok(())
+}
+
 pub(crate) fn daemon_shutdown_drain_status(completion_reason: &str) -> &'static str {
     if completion_reason.starts_with("graceful-shutdown:signal@") {
         "completed"
@@ -450,7 +537,13 @@ pub(crate) fn execute(cli: NodeCli) -> Result<NodeBootstrapReport, ConfigError> 
         sync_mode,
     };
 
-    let plan = bootstrap(config)?;
+    let selected_transport_profile =
+        select_runtime_transport_profile_for_runtime_mode(runtime_mode, config.enable_gossip);
+    let plan = match selected_transport_profile {
+        Some(transport_profile) => bootstrap_with_transport_profile(config, transport_profile)?,
+        None => bootstrap(config)?,
+    };
+    enforce_production_transport_profile_policy(runtime_mode, &plan)?;
     log_info(
         "node.runtime.mode.dispatch",
         &[

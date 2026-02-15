@@ -166,7 +166,9 @@ pub use block_pipeline::{
     TransportConvergenceEvidenceBundle, TransportEventMempoolFeed, TransportFedBlockPipeline,
     TransportMempoolFeed,
 };
-pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};
+pub use bootstrap::{
+    bootstrap, bootstrap_from_state_version, bootstrap_with_transport_profile, BootstrapPlan,
+};
 pub use bridge_adapter::{
     AllowAllBridgePolicy, BridgeAdapter, BridgeAdapterEngine, BridgeAdapterError, BridgeDirection,
     BridgeInboundEnvelope, BridgeOutboundEnvelope, BridgeOutboundRequest, BridgePlatform,

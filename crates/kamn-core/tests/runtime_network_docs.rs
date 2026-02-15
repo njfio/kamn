@@ -12,6 +12,7 @@ fn doc_contains_runtime_network_scope_and_models() {
     assert!(DOC.contains("crates/kamn-core/src/runtime_recovery_guard.rs"));
     assert!(DOC.contains("## Node CLI Recovery-Check Mapping"));
     assert!(DOC.contains("## Node CLI Daemon Lifecycle Mapping"));
+    assert!(DOC.contains("## Production Transport Profile Mapping"));
     assert!(DOC.contains("## Canonical Commit Crash-Recovery Replay Matrix Rules"));
     assert!(DOC.contains("## Bridge Quorum Runtime Mapping"));
     assert!(DOC.contains("## Snapshot Persistence and Restore Contract Rules"));
@@ -32,6 +33,13 @@ fn doc_contains_runtime_network_scope_and_models() {
     assert!(DOC.contains("SnapshotRestoreGuard"));
     assert!(DOC.contains("SnapshotStoreError"));
     assert!(DOC.contains("simulate_daemon_network_fault(...)"));
+    assert!(DOC.contains("RuntimeTransportProfile::Libp2pLive"));
+    assert!(DOC.contains("p2p-transport-profile:libp2p-live"));
+    assert!(DOC.contains("p2p-live-libp2p-provider"));
+    assert!(DOC.contains("runtime_transport_profile_gossip_disabled_for_production"));
+    assert!(DOC.contains("runtime_transport_profile_in_memory_fallback_forbidden"));
+    assert!(DOC.contains("runtime_transport_profile_live_marker_missing"));
+    assert!(DOC.contains("runtime_transport_profile_live_provider_missing"));
 }
 
 #[test]
@@ -149,6 +157,12 @@ fn doc_contains_fast_and_cost_effective_validation_lane() {
         "bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /tmp/invariant-fuzz-concurrency-contract-report.json"
     ));
     assert!(DOC.contains("cargo test -p kamn-node --test node_runtime_cli_docs"));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node main_tests::runtime_tests::integration_runtime_full_uses_live_transport_profile_components_by_default -- --exact"
+    ));
+    assert!(DOC.contains(
+        "cargo test -p kamn-node main_tests::runtime_tests::regression_production_transport_profile_in_memory_rejection_reason_code_is_stable -- --exact"
+    ));
     assert!(DOC.contains("bash scripts/runtime/run_runtime_snapshot_contract_lane.sh"));
     assert!(DOC.contains("bash scripts/kolme/run_notifications_consumer_contract_lane.sh"));
     assert!(DOC.contains("bash scripts/kolme/run_block_fallback_reconciliation_contract_lane.sh"));

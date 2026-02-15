@@ -125,6 +125,32 @@ This document captures the initial runtime-network foundation slice for peer lif
   - invalid lifecycle event argument -> `ConfigError::InvalidDaemonLifecycleEvent`
   - invalid transition from lifecycle state machine -> `ConfigError::RuntimeDaemonLifecycle`
 
+## Production Transport Profile Mapping
+- Production-targeted runtime modes:
+  - `daemon`
+  - `api`
+  - `full`
+  - `kolme-live`
+- Profile selection contract:
+  - `select_runtime_transport_profile_for_runtime_mode(...)` returns
+    `RuntimeTransportProfile::Libp2pLive` when production mode and gossip are
+    enabled.
+  - non-production modes keep deterministic default profile selection.
+- Bootstrap wiring contract:
+  - production mode with gossip enabled uses
+    `bootstrap_with_transport_profile(..., RuntimeTransportProfile::Libp2pLive)`.
+  - resulting component set must include:
+    - `p2p-transport-profile:libp2p-live`
+    - `p2p-live-libp2p-provider`
+  - resulting component set must not include:
+    - `p2p-transport-profile:in-memory-deterministic`
+    - `p2p-in-memory-transport-fallback`
+- Fail-closed production policy reason codes:
+  - `runtime_transport_profile_gossip_disabled_for_production`
+  - `runtime_transport_profile_in_memory_fallback_forbidden`
+  - `runtime_transport_profile_live_marker_missing`
+  - `runtime_transport_profile_live_provider_missing`
+
 ## Node Observability Ingress Runtime Mapping
 - `kamn-node` observability export serving path is runtime-aligned and async-driven:
   - sync wrapper: `serve_observability_endpoint(...)`
@@ -632,6 +658,8 @@ bash scripts/runtime/run_lifecycle_property_contract_lane.sh
 bash scripts/runtime/run_invariant_fuzz_concurrency_contract_lane.sh --output-json /tmp/invariant-fuzz-concurrency-contract-report.json
 bash scripts/runtime/check_invariant_fuzz_concurrency_policy.sh --report-file /tmp/invariant-fuzz-concurrency-contract-report.json
 cargo test -p kamn-node --test node_runtime_cli_docs
+cargo test -p kamn-node main_tests::runtime_tests::integration_runtime_full_uses_live_transport_profile_components_by_default -- --exact
+cargo test -p kamn-node main_tests::runtime_tests::regression_production_transport_profile_in_memory_rejection_reason_code_is_stable -- --exact
 cargo test -p kamn-node regression_runtime_daemon_rejects_invalid_lifecycle_transition
 bash scripts/runtime/run_runtime_snapshot_contract_lane.sh
 bash scripts/kolme/run_notifications_consumer_contract_lane.sh
