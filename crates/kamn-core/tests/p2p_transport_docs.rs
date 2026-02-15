@@ -13,6 +13,8 @@ fn architecture_doc_contains_p2p_transport_core_components() {
     assert!(DOC.contains("P2pSwarmHarnessTask"));
     assert!(DOC.contains("KademliaBootstrapSeedSet"));
     assert!(DOC.contains("KademliaDiscoveryBootstrapPlan"));
+    assert!(DOC.contains("PeerLifecycleRegressionCase"));
+    assert!(DOC.contains("PeerLifecycleRegressionOutcome"));
 }
 
 #[test]
@@ -30,9 +32,11 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     assert!(DOC.contains("P2pTransportError::InvalidSwarmHarnessTickBudget"));
     assert!(DOC.contains("P2pTransportError::GossipTransportDisabled"));
     assert!(DOC.contains("P2pTransportError::MissingKademliaBootstrapSeeds"));
+    assert!(DOC.contains("runtime_peer_transition_invalid"));
     assert!(DOC.contains("validate_p2p_transport_live.sh"));
     assert!(DOC.contains("test_validate_p2p_transport_live.sh"));
     assert!(DOC.contains("cargo test -p kamn-core --test p2p_kademlia_bootstrap"));
+    assert!(DOC.contains("cargo test -p kamn-core --test p2p_lifecycle_regression_corpus"));
 }
 
 #[test]
