@@ -90,6 +90,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^local_full_stack_integration_statu
   echo "expected go/no-go gate lane dry-run local full-stack integration status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^local_full_runtime_convergence_status=dry_run_pending$'; then
+  echo "expected go/no-go gate lane dry-run local full-runtime convergence status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^transport_fault_matrix_status=dry_run_pending$'; then
+  echo "expected go/no-go gate lane dry-run transport fault-matrix status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^policy_evaluator_status=verified$'; then
   echo "expected go/no-go gate lane policy evaluator status marker" >&2
   exit 1
@@ -161,6 +169,10 @@ if payload.get("dr_readiness_status") != "dry_run_pending":
     raise SystemExit("expected dr_readiness_status=dry_run_pending")
 if payload.get("local_full_stack_integration_status") != "dry_run_pending":
     raise SystemExit("expected local_full_stack_integration_status=dry_run_pending")
+if payload.get("local_full_runtime_convergence_status") != "dry_run_pending":
+    raise SystemExit("expected local_full_runtime_convergence_status=dry_run_pending")
+if payload.get("transport_fault_matrix_status") != "dry_run_pending":
+    raise SystemExit("expected transport_fault_matrix_status=dry_run_pending")
 if payload.get("policy_evaluator_status") != "verified":
     raise SystemExit("expected policy_evaluator_status=verified")
 if payload.get("manifest_schema_version") != "kamn.runtime.release-evidence-manifest.v1":
@@ -168,13 +180,22 @@ if payload.get("manifest_schema_version") != "kamn.runtime.release-evidence-mani
 if payload.get("manifest_registry_status") != "verified":
     raise SystemExit("expected manifest_registry_status=verified")
 inventory = payload.get("artifact_inventory")
-if not isinstance(inventory, list) or len(inventory) != 4:
-    raise SystemExit("expected deterministic artifact inventory list with four required entries")
+if not isinstance(inventory, list) or len(inventory) != 6:
+    raise SystemExit("expected deterministic artifact inventory list with six required entries")
 required_ids = payload.get("required_artifact_ids")
 if not isinstance(required_ids, list) or sorted(required_ids) != sorted(
-    ["go_no_go_evidence", "rollback_readiness", "dr_readiness", "local_full_stack_integration"]
+    [
+        "go_no_go_evidence",
+        "rollback_readiness",
+        "dr_readiness",
+        "local_full_stack_integration",
+        "local_full_runtime_convergence",
+        "transport_fault_matrix",
+    ]
 ):
-    raise SystemExit("expected required_artifact_ids to include local_full_stack_integration")
+    raise SystemExit(
+        "expected required_artifact_ids to include local_full_stack_integration, local_full_runtime_convergence, and transport_fault_matrix"
+    )
 for entry in inventory:
     if not isinstance(entry, dict):
         raise SystemExit("artifact inventory entry must be an object")
@@ -234,6 +255,14 @@ if ! printf '%s\n' "$run_mode_output" | grep -q '^local_full_stack_integration_s
   echo "expected go/no-go gate lane run-mode local full-stack integration status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^local_full_runtime_convergence_status=verified$'; then
+  echo "expected go/no-go gate lane run-mode local full-runtime convergence status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^transport_fault_matrix_status=verified$'; then
+  echo "expected go/no-go gate lane run-mode transport fault-matrix status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$run_mode_output" | grep -q '^ci_fast_gate_eligible=false$'; then
   echo "expected go/no-go gate lane run-mode fast-gate exclusion marker" >&2
   exit 1
@@ -281,11 +310,24 @@ if payload.get("dr_readiness_status") != "verified":
     raise SystemExit("expected dr_readiness_status=verified in run-mode go/no-go gate report")
 if payload.get("local_full_stack_integration_status") != "verified":
     raise SystemExit("expected local_full_stack_integration_status=verified in run-mode go/no-go gate report")
+if payload.get("local_full_runtime_convergence_status") != "verified":
+    raise SystemExit("expected local_full_runtime_convergence_status=verified in run-mode go/no-go gate report")
+if payload.get("transport_fault_matrix_status") != "verified":
+    raise SystemExit("expected transport_fault_matrix_status=verified in run-mode go/no-go gate report")
 required_ids = payload.get("required_artifact_ids")
 if not isinstance(required_ids, list) or sorted(required_ids) != sorted(
-    ["go_no_go_evidence", "rollback_readiness", "dr_readiness", "local_full_stack_integration"]
+    [
+        "go_no_go_evidence",
+        "rollback_readiness",
+        "dr_readiness",
+        "local_full_stack_integration",
+        "local_full_runtime_convergence",
+        "transport_fault_matrix",
+    ]
 ):
-    raise SystemExit("expected run-mode required_artifact_ids to include local_full_stack_integration")
+    raise SystemExit(
+        "expected run-mode required_artifact_ids to include local_full_stack_integration, local_full_runtime_convergence, and transport_fault_matrix"
+    )
 PY
 
 set +e

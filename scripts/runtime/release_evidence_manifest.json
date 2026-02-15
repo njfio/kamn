@@ -21,6 +21,16 @@
       "artifact_id": "local_full_stack_integration",
       "expected_lane": "runtime.validate_local_full_stack_integration_live_contract_lane",
       "expected_success_marker": "local_full_stack_integration_policy_status=verified"
+    },
+    {
+      "artifact_id": "local_full_runtime_convergence",
+      "expected_lane": "runtime.validate_local_full_runtime_live_contract_lane",
+      "expected_success_marker": "local_full_runtime_policy_status=verified"
+    },
+    {
+      "artifact_id": "transport_fault_matrix",
+      "expected_lane": "runtime.validate_block_reconciliation_partition_rejoin_live_contract_lane",
+      "expected_success_marker": "block_reconciliation_partition_rejoin_policy_status=verified"
     }
   ]
 }

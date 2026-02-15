@@ -37,6 +37,8 @@ REQUIRED_ARTIFACT_IDS = (
     "rollback_readiness",
     "dr_readiness",
     "local_full_stack_integration",
+    "local_full_runtime_convergence",
+    "transport_fault_matrix",
 )
 ARTIFACT_LANE_REGISTRY: dict[str, dict[str, object]] = {
     "go_no_go_evidence": {
@@ -70,6 +72,31 @@ ARTIFACT_LANE_REGISTRY: dict[str, dict[str, object]] = {
         ],
         "success_marker": "local_full_stack_integration_policy_status=verified",
         "failure_label": "local full-stack integration lane failed unexpectedly",
+    },
+    "local_full_runtime_convergence": {
+        "expected_lane": "runtime.validate_local_full_runtime_live_contract_lane",
+        "command": [
+            "bash",
+            str(ROOT_DIR / "scripts/runtime/validate_local_full_runtime_live_contract_lane.sh"),
+            "--mode",
+            "dry-run",
+        ],
+        "success_marker": "local_full_runtime_policy_status=verified",
+        "failure_label": "local full-runtime convergence lane failed unexpectedly",
+    },
+    "transport_fault_matrix": {
+        "expected_lane": "runtime.validate_block_reconciliation_partition_rejoin_live_contract_lane",
+        "command": [
+            "bash",
+            str(
+                ROOT_DIR
+                / "scripts/runtime/validate_block_reconciliation_partition_rejoin_live_contract_lane.sh"
+            ),
+            "--mode",
+            "dry-run",
+        ],
+        "success_marker": "block_reconciliation_partition_rejoin_policy_status=verified",
+        "failure_label": "transport fault-matrix lane failed unexpectedly",
     },
 }
 
@@ -464,6 +491,12 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         "local_full_stack_integration_status": "verified"
         if lane_mode == "run"
         else "dry_run_pending",
+        "local_full_runtime_convergence_status": "verified"
+        if lane_mode == "run"
+        else "dry_run_pending",
+        "transport_fault_matrix_status": "verified"
+        if lane_mode == "run"
+        else "dry_run_pending",
         "policy_evaluator_status": "verified",
         "manifest_schema_version": manifest_payload["schema_version"],
         "manifest_registry_status": "verified",
@@ -503,11 +536,15 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         print("rollback_readiness_status=verified")
         print("dr_readiness_status=verified")
         print("local_full_stack_integration_status=verified")
+        print("local_full_runtime_convergence_status=verified")
+        print("transport_fault_matrix_status=verified")
     else:
         print("go_no_go_evidence_status=dry_run_pending")
         print("rollback_readiness_status=dry_run_pending")
         print("dr_readiness_status=dry_run_pending")
         print("local_full_stack_integration_status=dry_run_pending")
+        print("local_full_runtime_convergence_status=dry_run_pending")
+        print("transport_fault_matrix_status=dry_run_pending")
     print("policy_evaluator_status=verified")
     print(f"manifest_schema_version={manifest_payload['schema_version']}")
     print(f"reason_taxonomy_version={GO_NO_GO_REASON_TAXONOMY_VERSION}")
