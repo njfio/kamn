@@ -2,6 +2,7 @@ use super::*;
 use crate::observability_endpoint::RuntimeObservabilitySnapshot;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -520,6 +521,77 @@ fn integration_runtime_observability_endpoint_serves_stream_path() {
 }
 
 #[test]
+fn integration_runtime_observability_endpoint_handles_concurrent_metrics_and_stream_requests() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "daemon".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "3".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "25".to_owned(),
+    ])
+    .expect("daemon args should parse");
+    let report = execute(parsed).expect("daemon execution should succeed");
+    let snapshot =
+        build_runtime_observability_snapshot(&report).expect("daemon report should map snapshot");
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 5,
+        idle_timeout_ms: 2_000,
+    };
+
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_observability_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let barrier = Arc::new(Barrier::new(3));
+    let metrics_barrier = Arc::clone(&barrier);
+    let metrics_addr = bind_addr.clone();
+    let metrics_worker = thread::spawn(move || {
+        metrics_barrier.wait();
+        send_http_get(metrics_addr.as_str(), "/metrics")
+    });
+
+    let stream_barrier = Arc::clone(&barrier);
+    let stream_addr = bind_addr.clone();
+    let stream_worker = thread::spawn(move || {
+        stream_barrier.wait();
+        send_http_get(stream_addr.as_str(), "/metrics.stream")
+    });
+
+    barrier.wait();
+    let metrics_response = metrics_worker
+        .join()
+        .expect("metrics worker thread should complete");
+    let stream_response = stream_worker
+        .join()
+        .expect("stream worker thread should complete");
+    assert!(metrics_response.contains("HTTP/1.1 200 OK"));
+    assert!(metrics_response.contains("kamn_observability_ready 1"));
+    assert!(stream_response.contains("HTTP/1.1 200 OK"));
+    assert!(stream_response.contains("kamn.runtime.observability.stream.v1"));
+
+    let health_response = send_http_get(bind_addr.as_str(), "/healthz");
+    let readiness_response = send_http_get(bind_addr.as_str(), "/readyz");
+    assert!(health_response.contains("HTTP/1.1 200 OK"));
+    assert!(readiness_response.contains("HTTP/1.1 200 OK"));
+    assert!(readiness_response.contains("\"ready\":true"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "endpoint server should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
 fn regression_observability_endpoint_export_keeps_bootstrap_report_rendering_unchanged() {
     // Regression: #2830
     let parsed = parse_args(vec![
@@ -561,5 +633,27 @@ fn regression_observability_endpoint_uses_async_listener_serving_path() {
     assert!(
         source.contains("runtime.block_on(serve_observability_endpoint_async("),
         "sync wrapper must drive async observability serving via runtime block_on"
+    );
+}
+
+#[test]
+fn regression_observability_endpoint_uses_async_metrics_health_stream_adapters() {
+    // Regression: #3512
+    let source = include_str!("../observability_endpoint.rs");
+    assert!(
+        source.contains("async fn dispatch_observability_endpoint_request("),
+        "observability endpoint should dispatch requests through async adapter routing"
+    );
+    assert!(
+        source.contains("async fn handle_observability_metrics_path("),
+        "observability endpoint should expose async metrics handler adapter"
+    );
+    assert!(
+        source.contains("async fn handle_observability_health_path("),
+        "observability endpoint should expose async health handler adapter"
+    );
+    assert!(
+        source.contains("async fn handle_observability_stream_path("),
+        "observability endpoint should expose async stream handler adapter"
     );
 }

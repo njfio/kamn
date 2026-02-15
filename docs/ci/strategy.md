@@ -551,6 +551,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - dry-run mode executes no nested local observability scrape commands and emits deterministic `dry_run_no_commands_executed`.
   - run mode is explicit local-only and requires `KAMN_LOCAL_OBSERVABILITY_SCRAPE_OPT_IN=1`.
   - bounded to five targeted `kamn-node` observability endpoint tests when run mode is enabled (metrics/health scrape, stream projection, readiness failure-drill degradation taxonomy, and readiness dependency-probe taxonomy matrix coverage).
+  - async handler parity checks remain in the bounded test scope, including concurrent metrics/stream request handling against the async observability adapter path.
   - local observability scrape run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Readiness/failure-drill contracts:
   - lane emits deterministic readiness probe marker (`readiness_probe_status=verified`).
