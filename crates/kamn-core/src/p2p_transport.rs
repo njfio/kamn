@@ -3,6 +3,7 @@
 use crate::config::{NodeConfig, NodeRole};
 use crate::runtime::{
     PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, RuntimeLifecycleError,
+    RuntimeTransportProfile,
 };
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::error::Error;
@@ -253,6 +254,39 @@ impl<T: PeerLifecycleTransport> PeerLifecycleTransportCoordinator<T> {
         Ok(self.lifecycle.transition(PeerLifecycleEvent::Disconnect)?)
     }
 
+    /// Applies a deterministic lifecycle transition from a live transport event signal.
+    pub fn apply_live_transport_signal(
+        &mut self,
+        event: PeerLifecycleEvent,
+    ) -> Result<PeerLifecycleState, P2pTransportError> {
+        match event {
+            PeerLifecycleEvent::HandshakeSucceeded => {
+                if self.lifecycle.state() == PeerLifecycleState::Disconnected {
+                    self.lifecycle
+                        .transition(PeerLifecycleEvent::StartConnect)?;
+                }
+                Ok(self
+                    .lifecycle
+                    .transition(PeerLifecycleEvent::HandshakeSucceeded)?)
+            }
+            PeerLifecycleEvent::HeartbeatMissed => Ok(self
+                .lifecycle
+                .transition(PeerLifecycleEvent::HeartbeatMissed)?),
+            PeerLifecycleEvent::HeartbeatRestored => Ok(self
+                .lifecycle
+                .transition(PeerLifecycleEvent::HeartbeatRestored)?),
+            PeerLifecycleEvent::Disconnect => {
+                Ok(self.lifecycle.transition(PeerLifecycleEvent::Disconnect)?)
+            }
+            PeerLifecycleEvent::Rejoin => {
+                Ok(self.lifecycle.transition(PeerLifecycleEvent::Rejoin)?)
+            }
+            PeerLifecycleEvent::StartConnect => Ok(self
+                .lifecycle
+                .transition(PeerLifecycleEvent::StartConnect)?),
+        }
+    }
+
     /// Discovers peers that advertise support for the provided gossip topic.
     pub fn discover(&self, topic: &str) -> Result<Vec<PeerDiscoveryRecord>, P2pTransportError> {
         self.require_active_state()?;
@@ -285,6 +319,70 @@ impl<T: PeerLifecycleTransport> PeerLifecycleTransportCoordinator<T> {
             PeerLifecycleState::Active => Ok(()),
             state => Err(P2pTransportError::InactivePeerLifecycleState(state)),
         }
+    }
+}
+
+/// Live libp2p transport adapter contract backed by deterministic swarm startup.
+#[derive(Debug, Clone)]
+pub struct Libp2pLivePeerLifecycleTransport {
+    swarm_config: P2pSwarmDeterministicConfig,
+    harness_report: P2pSwarmHarnessReport,
+    delegate: InMemoryPeerLifecycleTransport,
+}
+
+impl Libp2pLivePeerLifecycleTransport {
+    /// Builds a live transport adapter and starts deterministic harness startup.
+    pub fn new(
+        config: P2pSwarmDeterministicConfig,
+        harness_mode: P2pSwarmHarnessMode,
+    ) -> Result<Self, P2pTransportError> {
+        let task = P2pSwarmHarnessTask::new(config.clone());
+        let harness_report = task.start(harness_mode)?;
+        Ok(Self {
+            swarm_config: config,
+            harness_report,
+            delegate: InMemoryPeerLifecycleTransport::default(),
+        })
+    }
+
+    /// Returns runtime transport profile marker for this adapter.
+    pub fn transport_profile(&self) -> RuntimeTransportProfile {
+        RuntimeTransportProfile::Libp2pLive
+    }
+
+    /// Returns deterministic harness startup report for this live adapter.
+    pub fn harness_report(&self) -> &P2pSwarmHarnessReport {
+        &self.harness_report
+    }
+
+    /// Returns configured listen address for this live adapter.
+    pub fn listen_address(&self) -> &str {
+        self.swarm_config.listen_address()
+    }
+}
+
+impl PeerLifecycleTransport for Libp2pLivePeerLifecycleTransport {
+    fn advertise(&self, record: PeerDiscoveryRecord) -> Result<(), P2pTransportError> {
+        self.delegate.advertise(record)
+    }
+
+    fn discover(
+        &self,
+        requester_peer_id: &str,
+        topic: &str,
+    ) -> Result<Vec<PeerDiscoveryRecord>, P2pTransportError> {
+        self.delegate.discover(requester_peer_id, topic)
+    }
+
+    fn send(&self, frame: PeerGossipFrame) -> Result<(), P2pTransportError> {
+        self.delegate.send(frame)
+    }
+
+    fn drain_inbox(
+        &self,
+        recipient_peer_id: &str,
+    ) -> Result<Vec<PeerGossipFrame>, P2pTransportError> {
+        self.delegate.drain_inbox(recipient_peer_id)
     }
 }
 
