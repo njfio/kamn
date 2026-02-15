@@ -22,6 +22,10 @@ mod wire_payload;
 
 use cli::parse_args;
 use daemon_observability::build_daemon_observability_telemetry;
+#[cfg(test)]
+pub(crate) use daemon_shutdown::{
+    configure_os_signal_test_triggers, OsSignalTestKind, OsSignalTestTrigger,
+};
 use daemon_shutdown::{evaluate_daemon_completion, evaluate_daemon_completion_with_os_signals};
 #[cfg(test)]
 use logging::{
@@ -114,6 +118,14 @@ const KOLME_LIVE_MANAGED_SIGNER_POLL_INTERVAL_MILLIS: u64 = 10;
 const KOLME_LIVE_NATIVE_CREATED_AT: &str = "2026-02-12T00:00:00Z";
 const FULL_RUNTIME_BOOTSTRAP_COMPONENT_SEQUENCE: [&str; 4] =
     ["daemon", "api", "transport", "kolme-commit"];
+
+#[cfg(test)]
+pub(crate) fn daemon_test_env_lock() -> &'static std::sync::Mutex<()> {
+    use std::sync::{Mutex, OnceLock};
+
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct OutputMode {

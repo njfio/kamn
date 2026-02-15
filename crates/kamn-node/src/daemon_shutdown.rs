@@ -1,4 +1,6 @@
 use std::time::Duration;
+#[cfg(test)]
+use std::{cell::RefCell, thread::JoinHandle};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct DaemonCompletion {
@@ -12,6 +14,83 @@ fn os_signal_test_runtime_lock() -> &'static std::sync::Mutex<()> {
 
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))
+}
+
+#[cfg(test)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum OsSignalTestKind {
+    Sigint,
+    Sigterm,
+}
+
+#[cfg(test)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct OsSignalTestTrigger {
+    delay_ms: u64,
+    signal: OsSignalTestKind,
+}
+
+#[cfg(test)]
+impl OsSignalTestTrigger {
+    pub(super) const fn new(delay_ms: u64, signal: OsSignalTestKind) -> Self {
+        Self { delay_ms, signal }
+    }
+}
+
+#[cfg(test)]
+thread_local! {
+    static OS_SIGNAL_TEST_TRIGGERS: RefCell<Option<Vec<OsSignalTestTrigger>>> = const { RefCell::new(None) };
+}
+
+#[cfg(test)]
+pub(super) fn configure_os_signal_test_triggers(triggers: Vec<OsSignalTestTrigger>) {
+    OS_SIGNAL_TEST_TRIGGERS.with(|slot| {
+        *slot.borrow_mut() = Some(triggers);
+    });
+}
+
+#[cfg(test)]
+fn take_os_signal_test_triggers() -> Vec<OsSignalTestTrigger> {
+    OS_SIGNAL_TEST_TRIGGERS.with(|slot| slot.borrow_mut().take().unwrap_or_default())
+}
+
+#[cfg(all(test, unix))]
+const TEST_SIGINT: i32 = 2;
+#[cfg(all(test, unix))]
+const TEST_SIGTERM: i32 = 15;
+
+#[cfg(all(test, unix))]
+unsafe extern "C" {
+    fn raise(sig: i32) -> i32;
+}
+
+#[cfg(all(test, unix))]
+fn raise_os_signal_for_test(signal: OsSignalTestKind) -> Result<(), String> {
+    let signal_number = match signal {
+        OsSignalTestKind::Sigint => TEST_SIGINT,
+        OsSignalTestKind::Sigterm => TEST_SIGTERM,
+    };
+    let result = unsafe { raise(signal_number) };
+    if result == 0 {
+        Ok(())
+    } else {
+        Err(format!("failed to raise test os signal: {signal:?}"))
+    }
+}
+
+#[cfg(all(test, unix))]
+fn spawn_os_signal_test_trigger_threads(
+    triggers: Vec<OsSignalTestTrigger>,
+) -> Vec<JoinHandle<Result<(), String>>> {
+    triggers
+        .into_iter()
+        .map(|trigger| {
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_millis(trigger.delay_ms));
+                raise_os_signal_for_test(trigger.signal)
+            })
+        })
+        .collect()
 }
 
 fn evaluate_daemon_completion_from_signal(
@@ -100,7 +179,10 @@ pub(super) fn evaluate_daemon_completion_with_os_signals(
             .enable_time()
             .build()
             .map_err(|error| format!("failed to build tokio signal runtime: {error}"))?;
-        signal_runtime.block_on(async move {
+        #[cfg(test)]
+        let trigger_handles = spawn_os_signal_test_trigger_threads(take_os_signal_test_triggers());
+
+        let runtime_result = signal_runtime.block_on(async move {
             let mut sigint_stream = tokio::signal::unix::signal(
                 tokio::signal::unix::SignalKind::interrupt(),
             )
@@ -163,7 +245,17 @@ pub(super) fn evaluate_daemon_completion_with_os_signals(
                 executed_ticks: max_ticks,
                 completion_reason: "tick-budget-exhausted".to_owned(),
             })
-        })
+        });
+
+        #[cfg(test)]
+        for handle in trigger_handles {
+            let trigger_result = handle
+                .join()
+                .map_err(|_| "daemon os-signal test trigger thread panicked".to_owned())?;
+            trigger_result?;
+        }
+
+        runtime_result
     }
 
     #[cfg(not(unix))]
@@ -175,41 +267,12 @@ pub(super) fn evaluate_daemon_completion_with_os_signals(
 
 #[cfg(test)]
 mod tests {
-    use super::{evaluate_daemon_completion, evaluate_daemon_completion_with_os_signals};
-    #[cfg(unix)]
-    use std::thread;
+    use super::{
+        configure_os_signal_test_triggers, evaluate_daemon_completion,
+        evaluate_daemon_completion_with_os_signals, OsSignalTestKind, OsSignalTestTrigger,
+    };
     #[cfg(unix)]
     use std::time::{Duration, Instant};
-
-    #[cfg(unix)]
-    const SIGINT: i32 = 2;
-    #[cfg(unix)]
-    const SIGTERM: i32 = 15;
-
-    #[cfg(unix)]
-    unsafe extern "C" {
-        fn raise(sig: i32) -> i32;
-    }
-
-    #[cfg(unix)]
-    fn raise_sigint_for_test() -> Result<(), String> {
-        let result = unsafe { raise(SIGINT) };
-        if result == 0 {
-            Ok(())
-        } else {
-            Err("failed to raise SIGINT".to_owned())
-        }
-    }
-
-    #[cfg(unix)]
-    fn raise_sigterm_for_test() -> Result<(), String> {
-        let result = unsafe { raise(SIGTERM) };
-        if result == 0 {
-            Ok(())
-        } else {
-            Err("failed to raise SIGTERM".to_owned())
-        }
-    }
 
     #[test]
     fn unit_daemon_completion_defaults_to_tick_budget_without_shutdown_signal() {
@@ -262,15 +325,12 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn integration_daemon_completion_with_os_signals_applies_graceful_shutdown() {
-        let trigger = thread::spawn(|| {
-            thread::sleep(Duration::from_millis(5));
-            raise_sigterm_for_test().expect("SIGTERM test signal should be raised");
-        });
+        configure_os_signal_test_triggers(vec![OsSignalTestTrigger::new(
+            5,
+            OsSignalTestKind::Sigterm,
+        )]);
         let completion = evaluate_daemon_completion_with_os_signals(40, 1, Some(2), Some(5))
             .expect("daemon completion with OS signal handling should succeed");
-        trigger
-            .join()
-            .expect("signal trigger thread should complete");
         assert!(
             completion
                 .completion_reason
@@ -288,17 +348,12 @@ mod tests {
     #[test]
     fn regression_daemon_completion_with_os_signals_counts_replayed_signals() {
         // Regression: #3596
-        let trigger = thread::spawn(|| {
-            thread::sleep(Duration::from_millis(5));
-            raise_sigterm_for_test().expect("SIGTERM test signal should be raised");
-            thread::sleep(Duration::from_millis(1));
-            raise_sigint_for_test().expect("SIGINT test signal should be raised");
-        });
+        configure_os_signal_test_triggers(vec![
+            OsSignalTestTrigger::new(5, OsSignalTestKind::Sigterm),
+            OsSignalTestTrigger::new(6, OsSignalTestKind::Sigint),
+        ]);
         let completion = evaluate_daemon_completion_with_os_signals(60, 1, Some(5), Some(12))
             .expect("daemon completion with OS signal handling should succeed");
-        trigger
-            .join()
-            .expect("signal trigger thread should complete");
         assert!(
             completion.completion_reason.contains("ignored_signals=1"),
             "expected repeated signal count to be recorded, got {}",
@@ -325,13 +380,12 @@ mod tests {
     fn regression_daemon_completion_with_os_signals_uses_tokio_signal_runtime_path() {
         // Regression: #2896
         let source = include_str!("daemon_shutdown.rs");
-        let production_source = source.split("#[cfg(test)]").next().unwrap_or(source);
         assert!(
-            production_source.contains("tokio::signal::unix::signal("),
+            source.contains("tokio::signal::unix::signal("),
             "expected daemon os signal path to use tokio unix signal streams"
         );
         assert!(
-            production_source.contains("tokio::time::sleep("),
+            source.contains("tokio::time::sleep("),
             "expected daemon os signal path to use tokio timer-driven tick cadence"
         );
     }
