@@ -19,8 +19,9 @@ use crate::message_lifecycle::{
 use crate::migrations::{MigrationPlan, MigrationRegistry};
 use crate::namespaces::StateNamespaces;
 use crate::runtime::{
-    build_runtime_wiring, FileRuntimeSnapshotStore, RuntimeSnapshotStore, RuntimeWiring,
-    SnapshotStoreError, SqliteRuntimeSnapshotStore,
+    build_runtime_wiring, build_runtime_wiring_with_transport_profile, FileRuntimeSnapshotStore,
+    RuntimeSnapshotStore, RuntimeTransportProfile, RuntimeWiring, SnapshotStoreError,
+    SqliteRuntimeSnapshotStore,
 };
 use crate::state::{AppStateSchema, StateVersion, APP_STATE_VERSION};
 use crate::task_operations::{
@@ -97,10 +98,30 @@ pub fn bootstrap(config: NodeConfig) -> Result<BootstrapPlan, ConfigError> {
     bootstrap_from_state_version(config, APP_STATE_VERSION)
 }
 
+/// Builds a bootstrap plan with explicit runtime transport profile selection.
+pub fn bootstrap_with_transport_profile(
+    config: NodeConfig,
+    transport_profile: RuntimeTransportProfile,
+) -> Result<BootstrapPlan, ConfigError> {
+    bootstrap_from_state_version_with_transport_profile(
+        config,
+        APP_STATE_VERSION,
+        Some(transport_profile),
+    )
+}
+
 /// Builds a bootstrap plan from an explicit persisted state version.
 pub fn bootstrap_from_state_version(
     config: NodeConfig,
     persisted_state_version: StateVersion,
+) -> Result<BootstrapPlan, ConfigError> {
+    bootstrap_from_state_version_with_transport_profile(config, persisted_state_version, None)
+}
+
+fn bootstrap_from_state_version_with_transport_profile(
+    config: NodeConfig,
+    persisted_state_version: StateVersion,
+    transport_profile: Option<RuntimeTransportProfile>,
 ) -> Result<BootstrapPlan, ConfigError> {
     config.validate()?;
 
@@ -120,7 +141,10 @@ pub fn bootstrap_from_state_version(
     let persistence_layout = resolve_runtime_persistence_layout(config.storage_dir.as_str())?;
     validate_runtime_persistence_layout(&persistence_layout)?;
 
-    let mut wiring = build_runtime_wiring(&config);
+    let mut wiring = match transport_profile {
+        Some(profile) => build_runtime_wiring_with_transport_profile(&config, profile),
+        None => build_runtime_wiring(&config),
+    };
     for component in prioritized_runtime_store_components(&persistence_layout.runtime_store_adapter)
     {
         if !wiring.common_components.contains(&component) {

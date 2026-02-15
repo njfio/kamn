@@ -1,7 +1,7 @@
 use kamn_core::{
-    bootstrap, ConfigError, DeterministicProposalPlanner, NodeConfig, NodeRole, PeerLifecycle,
-    PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate, RecoveryRejoinGuard, RecoveryStatus,
-    RejoinAttempt, SyncMode,
+    bootstrap, bootstrap_with_transport_profile, ConfigError, DeterministicProposalPlanner,
+    NodeConfig, NodeRole, PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, ProposalCandidate,
+    RecoveryRejoinGuard, RecoveryStatus, RejoinAttempt, RuntimeTransportProfile, SyncMode,
 };
 use std::env;
 use std::process::ExitCode;
@@ -50,8 +50,10 @@ pub(crate) use runtime_orchestration::{
     classify_full_bootstrap_component_contract_violation,
     classify_full_supervisor_stop_contract_violation,
     classify_kolme_live_signer_key_source_policy_violation,
-    enforce_kolme_live_signer_contract_policy, enforce_kolme_live_signer_key_source_policy,
-    resolve_kolme_live_allow_local_signer_testing_override, validate_full_supervisor_stop_contract,
+    classify_production_transport_profile_violation, enforce_kolme_live_signer_contract_policy,
+    enforce_kolme_live_signer_key_source_policy,
+    resolve_kolme_live_allow_local_signer_testing_override,
+    select_runtime_transport_profile_for_runtime_mode, validate_full_supervisor_stop_contract,
 };
 #[cfg(test)]
 pub(crate) use service_api_endpoint::render_service_api_endpoint_response;

@@ -817,6 +817,113 @@ fn parses_runtime_mode_full_with_required_controls() {
 }
 
 #[test]
+fn unit_select_runtime_transport_profile_for_production_modes_defaults_live() {
+    assert_eq!(
+        select_runtime_transport_profile_for_runtime_mode(RuntimeMode::full(), true),
+        Some(kamn_core::RuntimeTransportProfile::Libp2pLive)
+    );
+    assert_eq!(
+        select_runtime_transport_profile_for_runtime_mode(RuntimeMode::daemon(), true),
+        Some(kamn_core::RuntimeTransportProfile::Libp2pLive)
+    );
+    assert_eq!(
+        select_runtime_transport_profile_for_runtime_mode(RuntimeMode::api(), true),
+        Some(kamn_core::RuntimeTransportProfile::Libp2pLive)
+    );
+    assert_eq!(
+        select_runtime_transport_profile_for_runtime_mode(RuntimeMode::kolme_live(), true),
+        Some(kamn_core::RuntimeTransportProfile::Libp2pLive)
+    );
+    assert_eq!(
+        select_runtime_transport_profile_for_runtime_mode(RuntimeMode::planning(), true),
+        None
+    );
+}
+
+#[test]
+fn functional_production_transport_profile_classifier_rejects_in_memory_fallback() {
+    let components = vec![
+        "p2p-discovery".to_owned(),
+        "p2p-gossip-transport".to_owned(),
+        "p2p-transport-profile:in-memory-deterministic".to_owned(),
+        "p2p-in-memory-transport-fallback".to_owned(),
+    ];
+    assert_eq!(
+        classify_production_transport_profile_violation(RuntimeMode::full(), true, &components),
+        Some("runtime_transport_profile_in_memory_fallback_forbidden")
+    );
+}
+
+#[test]
+fn integration_runtime_full_uses_live_transport_profile_components_by_default() {
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "1".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "5".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:19091".to_owned(),
+    ])
+    .expect("full args should parse");
+
+    let report = execute(parsed).expect("full execution should succeed");
+    assert!(report
+        .components
+        .contains(&"p2p-transport-profile:libp2p-live".to_owned()));
+    assert!(report
+        .components
+        .contains(&"p2p-live-libp2p-provider".to_owned()));
+    assert!(!report
+        .components
+        .contains(&"p2p-in-memory-transport-fallback".to_owned()));
+}
+
+#[test]
+fn regression_production_transport_profile_in_memory_rejection_reason_code_is_stable() {
+    // Regression: #3634
+    let components = vec![
+        "p2p-discovery".to_owned(),
+        "p2p-gossip-transport".to_owned(),
+        "p2p-in-memory-transport-fallback".to_owned(),
+    ];
+    assert_eq!(
+        classify_production_transport_profile_violation(RuntimeMode::daemon(), true, &components),
+        Some("runtime_transport_profile_in_memory_fallback_forbidden")
+    );
+}
+
+#[test]
+fn performance_runtime_full_live_transport_profile_startup_stays_within_local_budget() {
+    let started = std::time::Instant::now();
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "1".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "5".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:19092".to_owned(),
+    ])
+    .expect("full args should parse");
+
+    let report = execute(parsed).expect("full execution should succeed");
+    assert_eq!(report.runtime_mode, "full");
+    assert!(
+        started.elapsed() <= std::time::Duration::from_secs(2),
+        "full runtime live transport profile startup exceeded local budget"
+    );
+}
+
+#[test]
 fn integration_runtime_full_emits_ordered_bootstrap_readiness_markers() {
     let _lock = log_env_lock()
         .lock()
