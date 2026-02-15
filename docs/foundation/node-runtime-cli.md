@@ -50,7 +50,7 @@ This document captures node-runtime productionization slices for machine-readabl
   - `--observability-endpoint-health-path </path>` (default: `/healthz`)
   - `--observability-endpoint-max-requests <positive-integer>` (default: `1`)
   - `--observability-endpoint-idle-timeout-ms <positive-integer>` (default: `5000`)
-- Legacy observability endpoint parser path remains synchronous and is migration-targeted; drift contracts enforce fail-closed visibility until framework ingress replacement lands.
+- Runtime observability endpoint ingress runs on async tokio listener path; drift contracts enforce fail-closed parity for unknown-path, malformed-request, and timeout compatibility behavior.
 - Added Kolme live runtime controls:
   - `--kolme-live-base-url <http(s)-endpoint>`
   - `--kolme-live-provider-hint <provider-hint>`

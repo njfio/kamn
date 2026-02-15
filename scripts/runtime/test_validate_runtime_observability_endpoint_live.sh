@@ -24,6 +24,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^runtime_observability_stream
   echo "expected runtime observability stream contract marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^unknown_path_contract_status=verified$'; then
+  echo "expected unknown-path contract marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^malformed_input_contract_status=verified$'; then
+  echo "expected malformed-input contract marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^timeout_contract_status=verified$'; then
+  echo "expected timeout contract marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^fail_closed_status=verified$'; then
   echo "expected fail-closed status marker" >&2
   exit 1
@@ -47,12 +59,20 @@ if payload.get("schema_version") != "kamn.runtime.observability-endpoint-live-va
     raise SystemExit("unexpected runtime observability endpoint live schema")
 if payload.get("runtime_observability_stream_contract_status") != "verified":
     raise SystemExit("expected runtime_observability_stream_contract_status=verified")
+if payload.get("unknown_path_contract_status") != "verified":
+    raise SystemExit("expected unknown_path_contract_status=verified")
+if payload.get("malformed_input_contract_status") != "verified":
+    raise SystemExit("expected malformed_input_contract_status=verified")
+if payload.get("timeout_contract_status") != "verified":
+    raise SystemExit("expected timeout_contract_status=verified")
 if payload.get("fail_closed_status") != "verified":
     raise SystemExit("expected fail_closed_status=verified")
 if payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
 if payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
+if payload.get("fail_closed_reason_codes_csv") != "observability_endpoint_not_found,observability_endpoint_malformed_request,observability_endpoint_idle_timeout":
+    raise SystemExit("expected deterministic fail_closed_reason_codes_csv taxonomy")
 PY
 
 set +e

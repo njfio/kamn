@@ -58,6 +58,8 @@ if payload.get("runtime_observability_policy_status") != "verified":
     raise SystemExit("expected runtime_observability_policy_status=verified")
 if payload.get("reason_codes") != ["none"]:
     raise SystemExit("expected policy checker success reason code ['none']")
+if payload.get("fail_closed_reason_codes_csv") != "observability_endpoint_not_found,observability_endpoint_malformed_request,observability_endpoint_idle_timeout":
+    raise SystemExit("expected deterministic fail-closed reason-code taxonomy")
 PY
 
 cp "$summary_report" "$tampered_report"
@@ -89,6 +91,73 @@ if [ "$tampered_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_output" | grep -q 'runtime_observability_policy_final_decision_mismatch'; then
   echo "expected deterministic mismatch reason code for tampered policy validation" >&2
+  exit 1
+fi
+
+for marker_field in unknown_path_contract_status malformed_input_contract_status timeout_contract_status; do
+  tampered_marker_report="$TMP_DIR/runtime-observability-endpoint-live-summary.${marker_field}.json"
+  cp "$summary_report" "$tampered_marker_report"
+  python3 - "$tampered_marker_report" "$marker_field" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+marker_field = sys.argv[2]
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload[marker_field] = "missing"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+  set +e
+  tampered_marker_output="$(
+    bash "$POLICY_CHECKER" \
+      --report-file "$tampered_marker_report" \
+      --expected-final-decision GO \
+      --ci-fast-gate PASS \
+      --output-json "$TMP_DIR/runtime-observability-endpoint-live-policy.${marker_field}.json" 2>&1
+  )"
+  tampered_marker_code=$?
+  set -e
+  if [ "$tampered_marker_code" -eq 0 ]; then
+    echo "expected marker tamper for $marker_field to fail policy checker" >&2
+    exit 1
+  fi
+  if ! printf '%s\n' "$tampered_marker_output" | grep -q "runtime_observability_policy_marker_missing:${marker_field}"; then
+    echo "expected deterministic marker-missing reason code for tampered field $marker_field" >&2
+    exit 1
+  fi
+done
+
+tampered_taxonomy_report="$TMP_DIR/runtime-observability-endpoint-live-summary.fail-closed-taxonomy.json"
+cp "$summary_report" "$tampered_taxonomy_report"
+python3 - "$tampered_taxonomy_report" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["fail_closed_reason_codes_csv"] = "observability_endpoint_not_found"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_taxonomy_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$tampered_taxonomy_report" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_DIR/runtime-observability-endpoint-live-policy.fail-closed-taxonomy.json" 2>&1
+)"
+tampered_taxonomy_code=$?
+set -e
+if [ "$tampered_taxonomy_code" -eq 0 ]; then
+  echo "expected fail-closed taxonomy tamper to fail policy checker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_taxonomy_output" | grep -q 'runtime_observability_policy_fail_closed_reason_codes_csv_mismatch'; then
+  echo "expected deterministic fail-closed taxonomy mismatch reason code" >&2
   exit 1
 fi
 

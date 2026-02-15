@@ -111,11 +111,15 @@ Expected markers:
 - `status=pass`
 - `final_decision=GO`
 - `runtime_observability_stream_contract_status=verified`
+- `unknown_path_contract_status=verified`
+- `malformed_input_contract_status=verified`
+- `timeout_contract_status=verified`
 - `runtime_observability_policy_status=verified`
 - `runtime_observability_contract_lane_status=verified`
 - `fail_closed_status=verified`
 - `docs_contract_status=verified`
 - `fail_closed_reason_code=observability_endpoint_not_found`
+- `fail_closed_reason_codes_csv=observability_endpoint_not_found,observability_endpoint_malformed_request,observability_endpoint_idle_timeout`
 - `fail_closed_reason_code=runtime_observability_policy_final_decision_mismatch`
 - `metrics_reason_code_contract_status=verified`
 - `health_stream_reason_code_contract_status=verified`

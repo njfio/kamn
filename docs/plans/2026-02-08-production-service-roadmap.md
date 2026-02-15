@@ -242,10 +242,10 @@ There is **zero async code** in the entire codebase. No tokio, no `async fn`, no
   - Policy checker: `scripts/runtime/check_local_observability_scrape_live_policy.sh`.
   - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `scrape_probe_status=verified`, `metrics_content_type_status=verified`, `stream_lifecycle_status=verified`, `readiness_probe_status=verified`, `readiness_failure_drill_status=verified`, `readiness_reason_taxonomy_status=verified`, `local_observability_scrape_policy_status=verified`, `performance_budget_status=verified`.
   - Fail-closed validation confirmed for tamper and local observability scrape guard drills: `local_observability_scrape_policy_marker_missing:readiness_failure_drill_status`.
-- Phase 2.13 observability endpoint legacy-parser drift contracts delivered:
+- Phase 2.13 observability endpoint async-ingress drift contracts delivered:
   - Drift checker: `scripts/ci/check_observability_endpoint_drift_contract.sh` and regression test `scripts/ci/test_check_observability_endpoint_drift_contract.sh` (Task #3335, Subtask #3337).
-  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `observability_legacy_parser_contract_status=verified`, `observability_framework_parity_status=verified`, `docs_migration_contract_status=verified`.
-  - Fail-closed validation confirmed for source/docs drift drills: `observability_source_marker_missing:legacy_tcp_listener_import`, `observability_docs_marker_missing`.
+  - Deterministic GO markers validated: `status=pass`, `final_decision=GO`, `observability_async_ingress_contract_status=verified`, `observability_framework_parity_status=verified`, `docs_migration_contract_status=verified`.
+  - Fail-closed validation confirmed for source/docs drift drills: `observability_source_marker_missing:async_dispatch`, `observability_docs_marker_missing`.
 - Runtime decomposition wave 1 delivered:
   - Extracted network-fault simulation APIs from `crates/kamn-core/src/runtime_transport_coordination.rs` into `crates/kamn-core/src/runtime_network_fault.rs` with stable `runtime.rs` re-export compatibility (Task #3186, Subtask #3187).
   - Added extraction regression contract coverage for module declaration and re-export continuity (`runtime::tests::regression_runtime_source_routes_network_fault_domain_via_dedicated_module`).

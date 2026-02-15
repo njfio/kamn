@@ -26,21 +26,33 @@ from framework.contract_framework import (  # noqa: E402
 REPORT_SCHEMA = "kamn.runtime.observability-endpoint-live-validation.v1"
 POLICY_SCHEMA = "kamn.runtime.observability-endpoint-live-policy-report.v1"
 EXPECTED_FAIL_CLOSED_REASON_CODE = "observability_endpoint_not_found"
+EXPECTED_FAIL_CLOSED_REASON_CODES_CSV = (
+    "observability_endpoint_not_found,"
+    "observability_endpoint_malformed_request,"
+    "observability_endpoint_idle_timeout"
+)
 
 REQUIRED_REPORT_FIELDS = [
     "schema_version",
     "status",
     "final_decision",
     "runtime_observability_stream_contract_status",
+    "unknown_path_contract_status",
+    "malformed_input_contract_status",
+    "timeout_contract_status",
     "fail_closed_status",
     "docs_contract_status",
     "fail_closed_reason_code",
+    "fail_closed_reason_codes_csv",
     "performance_budget_status",
     "elapsed_seconds",
 ]
 
 REQUIRED_VERIFIED_FIELDS = [
     "runtime_observability_stream_contract_status",
+    "unknown_path_contract_status",
+    "malformed_input_contract_status",
+    "timeout_contract_status",
     "fail_closed_status",
     "docs_contract_status",
     "performance_budget_status",
@@ -100,6 +112,10 @@ def _check_policy(args: argparse.Namespace) -> int:
         "runtime_observability_policy_fail_closed_reason_code_mismatch",
     )
     decision.reject_if(
+        report.get("fail_closed_reason_codes_csv") != EXPECTED_FAIL_CLOSED_REASON_CODES_CSV,
+        "runtime_observability_policy_fail_closed_reason_codes_csv_mismatch",
+    )
+    decision.reject_if(
         not _is_non_negative_int(report.get("elapsed_seconds")),
         "runtime_observability_policy_elapsed_seconds_invalid",
     )
@@ -120,6 +136,7 @@ def _check_policy(args: argparse.Namespace) -> int:
         "reason_codes": reason_codes,
         "ci_fast_gate": ci_fast_gate,
         "fail_closed_reason_code": report.get("fail_closed_reason_code"),
+        "fail_closed_reason_codes_csv": report.get("fail_closed_reason_codes_csv"),
         "source_report_file": str(report_file),
         "generated_at_epoch": int(time.time()),
     }
