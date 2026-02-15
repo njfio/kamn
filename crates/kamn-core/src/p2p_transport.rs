@@ -8,6 +8,8 @@ use crate::runtime::{
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::io::ErrorKind;
+use std::net::UdpSocket;
 use std::sync::{Arc, Mutex, OnceLock};
 
 const LIBP2P_SWARM_BEHAVIOR_COMPONENTS: [&str; 6] =
@@ -201,6 +203,208 @@ impl InMemoryPeerLifecycleTransport {
             .lock()
             .map_err(|_| P2pTransportError::StateUnavailable)
     }
+}
+
+#[derive(Debug, Default)]
+struct UdpPeerLifecycleTransportState {
+    peers_by_id: BTreeMap<String, PeerDiscoveryRecord>,
+    socket_addr_by_peer: BTreeMap<String, String>,
+}
+
+#[derive(Debug, Clone)]
+/// UDP socket-backed transport adapter for live local convergence drill execution.
+pub struct UdpPeerLifecycleTransport {
+    network_id: String,
+    local_peer_id: String,
+    socket: Arc<UdpSocket>,
+    state: Arc<Mutex<UdpPeerLifecycleTransportState>>,
+}
+
+impl UdpPeerLifecycleTransport {
+    /// Binds a UDP socket-backed transport adapter to one local peer id.
+    pub fn bind(
+        network_id: &str,
+        local_peer_id: &str,
+        bind_address: &str,
+    ) -> Result<Self, P2pTransportError> {
+        if network_id.trim().is_empty() {
+            return Err(P2pTransportError::InvalidLiveSocketNetworkId);
+        }
+        validate_peer_id(local_peer_id)?;
+        if bind_address.trim().is_empty() {
+            return Err(P2pTransportError::InvalidSocketBindAddress);
+        }
+
+        let socket =
+            UdpSocket::bind(bind_address).map_err(|_| P2pTransportError::LiveSocketBindFailed)?;
+        socket
+            .set_nonblocking(true)
+            .map_err(|_| P2pTransportError::LiveSocketBindFailed)?;
+        let state = resolve_udp_live_transport_state(network_id)?;
+
+        Ok(Self {
+            network_id: network_id.to_owned(),
+            local_peer_id: local_peer_id.to_owned(),
+            socket: Arc::new(socket),
+            state,
+        })
+    }
+
+    /// Binds a UDP socket-backed transport adapter to an ephemeral local port.
+    pub fn bind_ephemeral(
+        network_id: &str,
+        local_peer_id: &str,
+    ) -> Result<Self, P2pTransportError> {
+        Self::bind(network_id, local_peer_id, "127.0.0.1:0")
+    }
+
+    /// Returns the deterministic network identifier for this live socket transport.
+    pub fn network_id(&self) -> &str {
+        &self.network_id
+    }
+
+    fn lock_state(
+        &self,
+    ) -> Result<std::sync::MutexGuard<'_, UdpPeerLifecycleTransportState>, P2pTransportError> {
+        self.state
+            .lock()
+            .map_err(|_| P2pTransportError::StateUnavailable)
+    }
+
+    fn encode_frame(frame: &PeerGossipFrame) -> Vec<u8> {
+        format!(
+            "{}\n{}\n{}\n{}",
+            frame.topic, frame.sender_peer_id, frame.recipient_peer_id, frame.payload
+        )
+        .into_bytes()
+    }
+
+    fn decode_frame(payload: &[u8]) -> Result<PeerGossipFrame, P2pTransportError> {
+        let raw = std::str::from_utf8(payload)
+            .map_err(|_| P2pTransportError::LiveSocketFrameMalformed)?;
+        let mut parts = raw.splitn(4, '\n');
+        let topic = parts
+            .next()
+            .ok_or(P2pTransportError::LiveSocketFrameMalformed)?;
+        let sender_peer_id = parts
+            .next()
+            .ok_or(P2pTransportError::LiveSocketFrameMalformed)?;
+        let recipient_peer_id = parts
+            .next()
+            .ok_or(P2pTransportError::LiveSocketFrameMalformed)?;
+        let frame_payload = parts
+            .next()
+            .ok_or(P2pTransportError::LiveSocketFrameMalformed)?;
+        PeerGossipFrame::new(topic, sender_peer_id, recipient_peer_id, frame_payload)
+    }
+}
+
+impl PeerLifecycleTransport for UdpPeerLifecycleTransport {
+    fn advertise(&self, record: PeerDiscoveryRecord) -> Result<(), P2pTransportError> {
+        let socket_address = self
+            .socket
+            .local_addr()
+            .map_err(|_| P2pTransportError::LiveSocketLocalAddressUnavailable)?
+            .to_string();
+        let mut state = self.lock_state()?;
+        state
+            .socket_addr_by_peer
+            .insert(record.peer_id.clone(), socket_address);
+        state.peers_by_id.insert(record.peer_id.clone(), record);
+        Ok(())
+    }
+
+    fn discover(
+        &self,
+        requester_peer_id: &str,
+        topic: &str,
+    ) -> Result<Vec<PeerDiscoveryRecord>, P2pTransportError> {
+        validate_peer_id(requester_peer_id)?;
+        validate_topic(topic)?;
+        let state = self.lock_state()?;
+        Ok(state
+            .peers_by_id
+            .values()
+            .filter(|record| record.peer_id != requester_peer_id && record.supports_topic(topic))
+            .cloned()
+            .collect())
+    }
+
+    fn send(&self, frame: PeerGossipFrame) -> Result<(), P2pTransportError> {
+        let recipient_socket_address = {
+            let state = self.lock_state()?;
+            if !state.peers_by_id.contains_key(&frame.sender_peer_id) {
+                return Err(P2pTransportError::UnknownSenderPeer(
+                    frame.sender_peer_id.clone(),
+                ));
+            }
+            if !state.peers_by_id.contains_key(&frame.recipient_peer_id) {
+                return Err(P2pTransportError::UnknownRecipientPeer(
+                    frame.recipient_peer_id.clone(),
+                ));
+            }
+            state
+                .socket_addr_by_peer
+                .get(&frame.recipient_peer_id)
+                .cloned()
+                .ok_or_else(|| {
+                    P2pTransportError::UnknownRecipientPeer(frame.recipient_peer_id.clone())
+                })?
+        };
+
+        let encoded = Self::encode_frame(&frame);
+        self.socket
+            .send_to(encoded.as_slice(), recipient_socket_address.as_str())
+            .map_err(|_| P2pTransportError::LiveSocketSendFailed)?;
+        Ok(())
+    }
+
+    fn drain_inbox(
+        &self,
+        recipient_peer_id: &str,
+    ) -> Result<Vec<PeerGossipFrame>, P2pTransportError> {
+        validate_peer_id(recipient_peer_id)?;
+        if recipient_peer_id != self.local_peer_id {
+            return Err(P2pTransportError::UnknownRecipientPeer(
+                recipient_peer_id.to_owned(),
+            ));
+        }
+
+        let mut frames = Vec::new();
+        let mut buffer = [0u8; 32 * 1024];
+        loop {
+            match self.socket.recv_from(&mut buffer) {
+                Ok((payload_size, _source)) => {
+                    let frame = Self::decode_frame(&buffer[..payload_size])?;
+                    if frame.recipient_peer_id == recipient_peer_id {
+                        frames.push(frame);
+                    }
+                }
+                Err(error) if error.kind() == ErrorKind::WouldBlock => break,
+                Err(_) => return Err(P2pTransportError::LiveSocketReceiveFailed),
+            }
+        }
+        Ok(frames)
+    }
+}
+
+fn udp_live_transport_registry(
+) -> &'static Mutex<BTreeMap<String, Arc<Mutex<UdpPeerLifecycleTransportState>>>> {
+    static REGISTRY: OnceLock<Mutex<BTreeMap<String, Arc<Mutex<UdpPeerLifecycleTransportState>>>>> =
+        OnceLock::new();
+    REGISTRY.get_or_init(|| Mutex::new(BTreeMap::new()))
+}
+
+fn resolve_udp_live_transport_state(
+    network_id: &str,
+) -> Result<Arc<Mutex<UdpPeerLifecycleTransportState>>, P2pTransportError> {
+    let mut registry = udp_live_transport_registry()
+        .lock()
+        .map_err(|_| P2pTransportError::StateUnavailable)?;
+    Ok(registry
+        .entry(network_id.to_owned())
+        .or_insert_with(|| Arc::new(Mutex::new(UdpPeerLifecycleTransportState::default())))
+        .clone())
 }
 
 /// Coordinator that wires lifecycle transitions to transport discovery and gossip operations.
@@ -1175,6 +1379,20 @@ pub enum P2pTransportError {
     InvalidReconnectBackoffWindow,
     /// Swarm composition requested while gossip transport is disabled.
     GossipTransportDisabled,
+    /// Live socket network id is empty.
+    InvalidLiveSocketNetworkId,
+    /// Live socket bind address is empty or malformed.
+    InvalidSocketBindAddress,
+    /// Live socket bind operation failed.
+    LiveSocketBindFailed,
+    /// Live socket local address lookup failed.
+    LiveSocketLocalAddressUnavailable,
+    /// Live socket datagram send operation failed.
+    LiveSocketSendFailed,
+    /// Live socket datagram receive operation failed.
+    LiveSocketReceiveFailed,
+    /// Live socket datagram payload is malformed.
+    LiveSocketFrameMalformed,
     /// Transport state lock is unavailable.
     StateUnavailable,
     /// Lifecycle state does not permit transport I/O.
@@ -1208,6 +1426,15 @@ impl P2pTransportError {
             Self::InvalidReconnectRetryBudget => "p2p_transport_invalid_reconnect_retry_budget",
             Self::InvalidReconnectBackoffWindow => "p2p_transport_invalid_reconnect_backoff_window",
             Self::GossipTransportDisabled => "p2p_transport_gossip_disabled",
+            Self::InvalidLiveSocketNetworkId => "p2p_transport_live_socket_network_id_invalid",
+            Self::InvalidSocketBindAddress => "p2p_transport_live_socket_bind_address_invalid",
+            Self::LiveSocketBindFailed => "p2p_transport_live_socket_bind_failed",
+            Self::LiveSocketLocalAddressUnavailable => {
+                "p2p_transport_live_socket_local_address_unavailable"
+            }
+            Self::LiveSocketSendFailed => "p2p_transport_live_socket_send_failed",
+            Self::LiveSocketReceiveFailed => "p2p_transport_live_socket_receive_failed",
+            Self::LiveSocketFrameMalformed => "p2p_transport_live_socket_frame_malformed",
             Self::StateUnavailable => "p2p_transport_state_unavailable",
             Self::InactivePeerLifecycleState(_) => "p2p_transport_inactive_lifecycle_state",
             Self::Lifecycle(error) => error.reason_code(),
@@ -1253,6 +1480,19 @@ impl Display for P2pTransportError {
                     "p2p swarm composition requires gossip transport to be enabled"
                 )
             }
+            Self::InvalidLiveSocketNetworkId => {
+                write!(f, "p2p live socket network id cannot be empty")
+            }
+            Self::InvalidSocketBindAddress => {
+                write!(f, "p2p live socket bind address is invalid")
+            }
+            Self::LiveSocketBindFailed => write!(f, "p2p live socket bind failed"),
+            Self::LiveSocketLocalAddressUnavailable => {
+                write!(f, "p2p live socket local address lookup failed")
+            }
+            Self::LiveSocketSendFailed => write!(f, "p2p live socket send failed"),
+            Self::LiveSocketReceiveFailed => write!(f, "p2p live socket receive failed"),
+            Self::LiveSocketFrameMalformed => write!(f, "p2p live socket frame is malformed"),
             Self::StateUnavailable => write!(f, "p2p in-memory transport state is unavailable"),
             Self::InactivePeerLifecycleState(state) => {
                 write!(

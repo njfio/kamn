@@ -9,6 +9,7 @@ fn architecture_doc_contains_block_pipeline_core_components() {
     assert!(DOC.contains("BlockPipelineError"));
     assert!(DOC.contains("SqliteCanonicalCommitStore"));
     assert!(DOC.contains("build_transport_convergence_evidence_bundle(...)"));
+    assert!(DOC.contains("UdpPeerLifecycleTransport"));
 }
 
 #[test]
@@ -63,4 +64,7 @@ fn regression_doc_tracks_transport_convergence_fault_matrix_markers() {
     assert!(DOC.contains("transport_convergence_case_id_missing"));
     assert!(DOC.contains("transport_convergence_commit_height_regression"));
     assert!(DOC.contains("block_pipeline_transport_convergence_faults"));
+    assert!(DOC.contains("block_pipeline_transport_convergence_live_sockets"));
+    assert!(DOC.contains("Regression: #3652"));
+    assert!(DOC.contains("p2p_transport_live_socket_send_failed"));
 }
