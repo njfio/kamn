@@ -1015,6 +1015,9 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
   - `scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.py`
   - `scripts/ci/check_non_kolme_wave_trend_test_loc_soft_budget.sh`
   - `scripts/ci/test_check_non_kolme_wave_trend_test_loc_soft_budget.sh`
+  - threshold fixture metadata is mandatory and fail-closed:
+    - `threshold_refreshed_on` (ISO-8601 date, `YYYY-MM-DD`)
+    - `threshold_max_age_days` (non-negative integer freshness budget)
   - baseline script inventory remains authoritative; any new script path must be documented by refreshing the committed baseline fixture in the same change.
   - selector outputs:
     - `run_ci_tool_checks=true`
@@ -1769,6 +1772,10 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=none` (pass)
       - `reason_codes=script_count_delta_threshold_exceeded`
       - `reason_codes=total_shell_loc_delta_threshold_exceeded`
+      - `reason_codes=threshold_json_invalid`
+      - `reason_codes=threshold_refresh_metadata_invalid`
+      - `reason_codes=threshold_refreshed_on_invalid`
+      - `reason_codes=threshold_file_stale`
       - `reason_codes=missing_baseline_scripts`
       - `reason_codes=unexpected_current_scripts`
       - `reason_codes=delta_threshold_violation_unwaived`

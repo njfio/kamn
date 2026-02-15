@@ -71,7 +71,7 @@ def fail_with_output(
         "waived_reason_codes": [],
         "reason_codes": [reason_code],
         "error": error,
-        "remediation": "Fix invalid waiver metadata or checker inputs and rerun.",
+        "remediation": "Fix invalid threshold/waiver metadata or checker inputs and rerun.",
     }
     if output_json:
         output_path = Path(output_json)
@@ -83,7 +83,7 @@ def fail_with_output(
     print("waived_reason_codes=none")
     print(f"reason_codes={reason_code}")
     print(f"error={error}")
-    print("remediation=Fix invalid waiver metadata or checker inputs and rerun.")
+    print("remediation=Fix invalid threshold/waiver metadata or checker inputs and rerun.")
     return 1
 
 
@@ -172,12 +172,26 @@ def main(argv: list[str]) -> int:
     try:
         baseline = read_json(baseline_file)
     except json.JSONDecodeError as error:
-        return fail("baseline_json_invalid", f"baseline JSON invalid: {error}")
+        return fail_with_output(
+            "baseline_json_invalid",
+            f"baseline JSON invalid: {error}",
+            output_json=args.output_json,
+            baseline_file=baseline_file,
+            threshold_file=threshold_file,
+            waiver_file=waiver_file,
+        )
 
     try:
         thresholds = read_json(threshold_file)
     except json.JSONDecodeError as error:
-        return fail("threshold_json_invalid", f"threshold JSON invalid: {error}")
+        return fail_with_output(
+            "threshold_json_invalid",
+            f"threshold JSON invalid: {error}",
+            output_json=args.output_json,
+            baseline_file=baseline_file,
+            threshold_file=threshold_file,
+            waiver_file=waiver_file,
+        )
 
     if baseline.get("schema_version") != BASELINE_SCHEMA:
         return fail_with_output(
@@ -222,6 +236,8 @@ def main(argv: list[str]) -> int:
 
     max_script_count_increase = thresholds.get("max_script_count_increase")
     max_total_shell_loc_increase = thresholds.get("max_total_shell_loc_increase")
+    threshold_refreshed_on = thresholds.get("threshold_refreshed_on")
+    threshold_max_age_days = thresholds.get("threshold_max_age_days")
 
     if not isinstance(max_script_count_increase, int) or max_script_count_increase < 0:
         return fail(
@@ -232,6 +248,45 @@ def main(argv: list[str]) -> int:
         return fail(
             "threshold_total_shell_loc_invalid",
             "max_total_shell_loc_increase must be non-negative int",
+        )
+    if (
+        not isinstance(threshold_refreshed_on, str)
+        or not threshold_refreshed_on
+        or not isinstance(threshold_max_age_days, int)
+        or threshold_max_age_days < 0
+    ):
+        return fail_with_output(
+            "threshold_refresh_metadata_invalid",
+            "threshold_refreshed_on must be YYYY-MM-DD and threshold_max_age_days must be non-negative int",
+            output_json=args.output_json,
+            baseline_file=baseline_file,
+            threshold_file=threshold_file,
+            waiver_file=waiver_file,
+        )
+    try:
+        refreshed_on = dt.date.fromisoformat(threshold_refreshed_on)
+    except ValueError:
+        return fail_with_output(
+            "threshold_refreshed_on_invalid",
+            "threshold_refreshed_on must be valid YYYY-MM-DD",
+            output_json=args.output_json,
+            baseline_file=baseline_file,
+            threshold_file=threshold_file,
+            waiver_file=waiver_file,
+        )
+    threshold_age_days = (dt.date.today() - refreshed_on).days
+    if threshold_age_days > threshold_max_age_days:
+        return fail_with_output(
+            "threshold_file_stale",
+            (
+                "threshold metadata is stale: "
+                f"refreshed_on={threshold_refreshed_on} "
+                f"threshold_max_age_days={threshold_max_age_days}"
+            ),
+            output_json=args.output_json,
+            baseline_file=baseline_file,
+            threshold_file=threshold_file,
+            waiver_file=waiver_file,
         )
 
     current_script_files, current_total_shell_loc = collect_current_scripts(root_dir)
@@ -315,6 +370,8 @@ def main(argv: list[str]) -> int:
         "total_shell_loc_delta": total_shell_loc_delta,
         "max_script_count_increase": max_script_count_increase,
         "max_total_shell_loc_increase": max_total_shell_loc_increase,
+        "threshold_refreshed_on": threshold_refreshed_on,
+        "threshold_max_age_days": threshold_max_age_days,
         "missing_baseline_scripts": missing_baseline_scripts,
         "unexpected_current_scripts": unexpected_current_scripts,
         "reason_codes": reason_codes,

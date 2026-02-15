@@ -46,6 +46,93 @@ grep -q '^total_shell_loc_delta=0$' "$TMP_DIR/pass.out"
 grep -q '^violation_count=0$' "$TMP_DIR/pass.out"
 grep -q '^reason_codes=none$' "$TMP_DIR/pass.out"
 
+CORRUPT_THRESHOLD_FILE="$TMP_DIR/corrupt-threshold.json"
+cat >"$CORRUPT_THRESHOLD_FILE" <<'JSON'
+{ "schema_version":
+JSON
+
+if bash "$CHECKER" \
+  --baseline-file "$BASELINE_FILE" \
+  --threshold-file "$CORRUPT_THRESHOLD_FILE" >"$TMP_DIR/fail-threshold-corrupt.out" 2>&1; then
+  echo "expected checker to fail when threshold JSON is corrupt" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/fail-threshold-corrupt.out"
+grep -q '^reason_codes=threshold_json_invalid$' "$TMP_DIR/fail-threshold-corrupt.out"
+
+MALFORMED_THRESHOLD_FILE="$TMP_DIR/malformed-threshold.json"
+cp "$THRESHOLD_FILE" "$MALFORMED_THRESHOLD_FILE"
+python3 - "$MALFORMED_THRESHOLD_FILE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+threshold_path = Path(sys.argv[1])
+payload = json.loads(threshold_path.read_text(encoding="utf-8"))
+payload.pop("threshold_refreshed_on", None)
+payload["threshold_max_age_days"] = -1
+threshold_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if bash "$CHECKER" \
+  --baseline-file "$BASELINE_FILE" \
+  --threshold-file "$MALFORMED_THRESHOLD_FILE" >"$TMP_DIR/fail-threshold-malformed.out" 2>&1; then
+  echo "expected checker to fail when threshold metadata is malformed" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/fail-threshold-malformed.out"
+grep -q '^reason_codes=threshold_refresh_metadata_invalid$' "$TMP_DIR/fail-threshold-malformed.out"
+
+INVALID_DATE_THRESHOLD_FILE="$TMP_DIR/invalid-date-threshold.json"
+cp "$THRESHOLD_FILE" "$INVALID_DATE_THRESHOLD_FILE"
+python3 - "$INVALID_DATE_THRESHOLD_FILE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+threshold_path = Path(sys.argv[1])
+payload = json.loads(threshold_path.read_text(encoding="utf-8"))
+payload["threshold_refreshed_on"] = "not-a-date"
+payload["threshold_max_age_days"] = 30
+threshold_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if bash "$CHECKER" \
+  --baseline-file "$BASELINE_FILE" \
+  --threshold-file "$INVALID_DATE_THRESHOLD_FILE" >"$TMP_DIR/fail-threshold-invalid-date.out" 2>&1; then
+  echo "expected checker to fail when threshold_refreshed_on is invalid" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/fail-threshold-invalid-date.out"
+grep -q '^reason_codes=threshold_refreshed_on_invalid$' "$TMP_DIR/fail-threshold-invalid-date.out"
+
+STALE_THRESHOLD_FILE="$TMP_DIR/stale-threshold.json"
+cp "$THRESHOLD_FILE" "$STALE_THRESHOLD_FILE"
+python3 - "$STALE_THRESHOLD_FILE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+threshold_path = Path(sys.argv[1])
+payload = json.loads(threshold_path.read_text(encoding="utf-8"))
+payload["threshold_refreshed_on"] = "2000-01-01"
+payload["threshold_max_age_days"] = 30
+threshold_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+if bash "$CHECKER" \
+  --baseline-file "$BASELINE_FILE" \
+  --threshold-file "$STALE_THRESHOLD_FILE" >"$TMP_DIR/fail-threshold-stale.out" 2>&1; then
+  echo "expected checker to fail when threshold metadata is stale" >&2
+  exit 1
+fi
+
+grep -q '^status=fail$' "$TMP_DIR/fail-threshold-stale.out"
+grep -q '^reason_codes=threshold_file_stale$' "$TMP_DIR/fail-threshold-stale.out"
+
 MUTATED_TOTAL_BASELINE="$TMP_DIR/mutated-total-baseline.json"
 cp "$BASELINE_FILE" "$MUTATED_TOTAL_BASELINE"
 python3 - "$MUTATED_TOTAL_BASELINE" <<'PY'
@@ -100,6 +187,8 @@ RELAXED_THRESHOLD="$TMP_DIR/relaxed-threshold.json"
 cat >"$RELAXED_THRESHOLD" <<'JSON'
 {
   "schema_version": "kamn.ci.non-kolme-wave-trend-test-loc-thresholds.v1",
+  "threshold_refreshed_on": "2026-02-15",
+  "threshold_max_age_days": 365,
   "max_script_count_increase": 1,
   "max_total_shell_loc_increase": 200
 }
