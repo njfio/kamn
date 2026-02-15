@@ -32,6 +32,11 @@ RUN_MODE_OPT_IN_ENV = "KAMN_GONOGO_GATE_LOCAL_OPT_IN"
 WAIVER_SCHEMA = "kamn.runtime.go-no-go-gate-waiver.v1"
 WAIVER_SCOPE = "runtime_go_no_go_gate_required_artifacts"
 WAIVER_APPLIED_REASON = "release_manifest_required_artifact_waiver_applied"
+COMBINED_REASON_TAXONOMY_VERSION = "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1"
+COMBINED_TRANSPORT_REASON_CODE = "fork_choice_stale_block_height"
+KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION = "v1"
+KOLME_RUNTIME_COMMIT_PROFILE = "real-node-non-synthetic-v1"
+KOLME_RUNTIME_COMMIT_PROFILE_VERSION = "v1"
 REQUIRED_ARTIFACT_IDS = (
     "go_no_go_evidence",
     "rollback_readiness",
@@ -114,6 +119,21 @@ def _run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
         text=True,
         check=False,
     )
+
+
+def _extract_line_value(output: str, key: str) -> str:
+    prefix = f"{key}="
+    for line in output.splitlines():
+        if line.startswith(prefix):
+            return line[len(prefix) :]
+    return ""
+
+
+def _require_line_value(output: str, key: str, reason_code: str) -> str:
+    value = _extract_line_value(output, key)
+    if not value:
+        fail(reason_code)
+    return value
 
 
 def _resolve_manifest_path(raw: str) -> Path:
@@ -368,6 +388,14 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         reason_codes.append(WAIVER_APPLIED_REASON)
     artifact_inventory: list[dict[str, str]] = []
     run_mode_command_count = 0
+    combined_reason_taxonomy_version = COMBINED_REASON_TAXONOMY_VERSION
+    combined_transport_reason_codes = [COMBINED_TRANSPORT_REASON_CODE]
+    combined_kolme_runtime_reason_code = "not_run"
+    kolme_runtime_commit_failure_taxonomy_version = KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION
+    kolme_runtime_commit_failure_taxonomy = "not_run"
+    kolme_fixture_profile = KOLME_RUNTIME_COMMIT_PROFILE
+    kolme_fixture_profile_version = KOLME_RUNTIME_COMMIT_PROFILE_VERSION
+    kolme_fixture_profile_status = "planned" if lane_mode == "dry-run" else "verified"
 
     for artifact in required_artifacts:
         artifact_id = artifact["artifact_id"]
@@ -394,6 +422,78 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
                 fail(f"release_manifest_artifact_execution_failed:{artifact_id}:{detail}")
             if expected_marker not in run_result.stdout:
                 fail(f"release_manifest_required_marker_missing:{artifact_id}")
+
+            if artifact_id == "local_full_stack_integration":
+                combined_reason_taxonomy_version = _require_line_value(
+                    run_result.stdout,
+                    "combined_reason_taxonomy_version",
+                    "local_full_stack_integration_combined_reason_taxonomy_version_missing",
+                )
+                if combined_reason_taxonomy_version != COMBINED_REASON_TAXONOMY_VERSION:
+                    fail("local_full_stack_integration_combined_reason_taxonomy_version_mismatch")
+
+                combined_transport_reason_codes_csv = _require_line_value(
+                    run_result.stdout,
+                    "combined_transport_reason_codes",
+                    "local_full_stack_integration_combined_transport_reason_codes_missing",
+                )
+                if combined_transport_reason_codes_csv != COMBINED_TRANSPORT_REASON_CODE:
+                    fail("local_full_stack_integration_combined_transport_reason_codes_mismatch")
+                combined_transport_reason_codes = [combined_transport_reason_codes_csv]
+
+                combined_kolme_runtime_reason_code = _require_line_value(
+                    run_result.stdout,
+                    "combined_kolme_runtime_reason_code",
+                    "local_full_stack_integration_combined_kolme_runtime_reason_code_missing",
+                )
+
+                kolme_runtime_commit_failure_taxonomy_version = _require_line_value(
+                    run_result.stdout,
+                    "kolme_runtime_commit_failure_taxonomy_version",
+                    (
+                        "local_full_stack_integration_kolme_runtime_commit_"
+                        "failure_taxonomy_version_missing"
+                    ),
+                )
+                if (
+                    kolme_runtime_commit_failure_taxonomy_version
+                    != KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION
+                ):
+                    fail(
+                        "local_full_stack_integration_kolme_runtime_commit_"
+                        "failure_taxonomy_version_mismatch"
+                    )
+
+                kolme_runtime_commit_failure_taxonomy = _require_line_value(
+                    run_result.stdout,
+                    "kolme_runtime_commit_failure_taxonomy",
+                    "local_full_stack_integration_kolme_runtime_commit_failure_taxonomy_missing",
+                )
+
+                kolme_fixture_profile = _require_line_value(
+                    run_result.stdout,
+                    "kolme_fixture_profile",
+                    "local_full_stack_integration_kolme_fixture_profile_missing",
+                )
+                if kolme_fixture_profile != KOLME_RUNTIME_COMMIT_PROFILE:
+                    fail("local_full_stack_integration_kolme_fixture_profile_mismatch")
+
+                kolme_fixture_profile_version = _require_line_value(
+                    run_result.stdout,
+                    "kolme_fixture_profile_version",
+                    "local_full_stack_integration_kolme_fixture_profile_version_missing",
+                )
+                if kolme_fixture_profile_version != KOLME_RUNTIME_COMMIT_PROFILE_VERSION:
+                    fail("local_full_stack_integration_kolme_fixture_profile_version_mismatch")
+
+                kolme_fixture_profile_status = _require_line_value(
+                    run_result.stdout,
+                    "kolme_fixture_profile_status",
+                    "local_full_stack_integration_kolme_fixture_profile_status_missing",
+                )
+                if kolme_fixture_profile_status not in {"planned", "verified"}:
+                    fail("local_full_stack_integration_kolme_fixture_profile_status_mismatch")
+
             artifact_entry["status"] = "verified"
             run_mode_command_count += 1
         else:
@@ -500,6 +600,15 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         "policy_evaluator_status": "verified",
         "manifest_schema_version": manifest_payload["schema_version"],
         "manifest_registry_status": "verified",
+        "combined_reason_taxonomy_version": combined_reason_taxonomy_version,
+        "combined_transport_reason_codes": combined_transport_reason_codes,
+        "combined_kolme_runtime_reason_code": combined_kolme_runtime_reason_code,
+        "kolme_runtime_commit_failure_taxonomy_version": kolme_runtime_commit_failure_taxonomy_version,
+        "kolme_runtime_commit_failure_taxonomy": kolme_runtime_commit_failure_taxonomy,
+        "kolme_fixture_profile": kolme_fixture_profile,
+        "kolme_fixture_profile_version": kolme_fixture_profile_version,
+        "kolme_fixture_profile_status": kolme_fixture_profile_status,
+        "combined_lane_marker_contract_status": "verified",
         "waiver_status": waiver_status,
         "waived_reason_codes": waived_reason_codes,
         "waiver_review_required": waiver_status == "applied",
@@ -549,6 +658,18 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
     print(f"manifest_schema_version={manifest_payload['schema_version']}")
     print(f"reason_taxonomy_version={GO_NO_GO_REASON_TAXONOMY_VERSION}")
     print("manifest_registry_status=verified")
+    print(f"combined_reason_taxonomy_version={combined_reason_taxonomy_version}")
+    print(f"combined_transport_reason_codes={','.join(combined_transport_reason_codes)}")
+    print(f"combined_kolme_runtime_reason_code={combined_kolme_runtime_reason_code}")
+    print(
+        "kolme_runtime_commit_failure_taxonomy_version="
+        f"{kolme_runtime_commit_failure_taxonomy_version}"
+    )
+    print(f"kolme_runtime_commit_failure_taxonomy={kolme_runtime_commit_failure_taxonomy}")
+    print(f"kolme_fixture_profile={kolme_fixture_profile}")
+    print(f"kolme_fixture_profile_version={kolme_fixture_profile_version}")
+    print(f"kolme_fixture_profile_status={kolme_fixture_profile_status}")
+    print("combined_lane_marker_contract_status=verified")
     print(f"waiver_status={waiver_status}")
     print(
         "waived_reason_codes="

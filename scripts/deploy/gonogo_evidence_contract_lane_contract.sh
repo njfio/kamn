@@ -87,7 +87,17 @@ cat >"$milestone_gate_report" <<'JSON'
 {
   "schema_version": "kamn.runtime.go-no-go-gate-report.v1",
   "status": "pass",
-  "final_decision": "GO"
+  "final_decision": "GO",
+  "combined_reason_taxonomy_version": "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1",
+  "combined_transport_reason_codes": [
+    "fork_choice_stale_block_height"
+  ],
+  "combined_kolme_runtime_reason_code": "not_run",
+  "kolme_runtime_commit_failure_taxonomy_version": "v1",
+  "kolme_fixture_profile": "real-node-non-synthetic-v1",
+  "kolme_fixture_profile_version": "v1",
+  "kolme_fixture_profile_status": "planned",
+  "combined_lane_marker_contract_status": "verified"
 }
 JSON
 

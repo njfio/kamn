@@ -37,6 +37,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - local-only enforcement and nested run-mode policy reason-code marker `live_runtime_integration_passed`
     - combined reason taxonomy marker `kamn.runtime.local-full-stack-integration-reason-taxonomy.v1`
     - combined transport reason marker `fork_choice_stale_block_height`
+    - combined Kolme runtime reason marker (`not_run` in dry-run, `live_runtime_integration_passed` in run mode)
+    - combined lane marker contract status marker `combined_lane_marker_contract_status=verified`
+    - Kolme runtime commit failure taxonomy version marker `v1`
     - deterministic Kolme fixture profile markers (`real-node-non-synthetic-v1`, profile version `v1`)
 - Deterministic tamper reason:
   - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`

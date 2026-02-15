@@ -21,15 +21,15 @@ check_architecture_markers() {
   local required_markers=(
     "Composed Full-Stack E2E Boundary (Task #3433)"
     "validate_local_full_stack_integration_live.sh"
-    "run_local_kamn_live_runtime_integration_contract_lane.sh"
+    "run_local_kamn_live_runtime_integration_lane.sh"
     "run_go_no_go_gate_lane.sh"
     "transport_convergence_status"
     "signer_provenance_status"
     "runtime_commit_submission_status"
     "runtime_commit_finality_status"
-    "runtime_commit_failure_taxonomy"
+    "\`kolme_runtime_commit_failure_taxonomy\`"
     "runtime_provider_client_contract=KolmeRuntimeCommitLiveProvider"
-    "local_full_stack_integration_policy_runtime_commit_finality_status_mismatch"
+    "local_full_stack_integration_policy_reason_taxonomy_version_mismatch"
     "release_manifest_missing_required_artifact:local_full_stack_integration"
   )
 
@@ -65,7 +65,11 @@ import sys
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
 path.write_text(
-    text.replace("runtime_commit_failure_taxonomy", "runtime_commit_failure_classification", 1),
+    text.replace(
+        "`kolme_runtime_commit_failure_taxonomy`",
+        "`kolme_runtime_commit_failure_classification`",
+        1,
+    ),
     encoding="utf-8",
 )
 PY
@@ -74,7 +78,7 @@ if check_architecture_markers "$BROKEN_ARCH_DOC" >"$TMP_DIR/broken.out" 2>"$TMP_
   echo "expected architecture marker check to fail for tampered document" >&2
   exit 1
 fi
-if ! grep -Fq "marker_missing:runtime_commit_failure_taxonomy" "$TMP_DIR/broken.err"; then
+if ! grep -Fq "marker_missing:\`kolme_runtime_commit_failure_taxonomy\`" "$TMP_DIR/broken.err"; then
   echo "expected deterministic marker_missing reason for tampered architecture marker" >&2
   cat "$TMP_DIR/broken.err" >&2 || true
   exit 1

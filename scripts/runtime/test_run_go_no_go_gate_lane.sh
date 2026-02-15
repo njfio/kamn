@@ -106,6 +106,42 @@ if ! printf '%s\n' "$lane_output" | grep -q '^reason_taxonomy_version=kamn.runti
   echo "expected go/no-go gate lane reason taxonomy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1$'; then
+  echo "expected go/no-go gate lane combined reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^combined_transport_reason_codes=fork_choice_stale_block_height$'; then
+  echo "expected go/no-go gate lane combined transport reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^combined_kolme_runtime_reason_code=not_run$'; then
+  echo "expected go/no-go gate lane combined Kolme reason marker in dry-run mode" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^kolme_runtime_commit_failure_taxonomy_version=v1$'; then
+  echo "expected go/no-go gate lane Kolme failure taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^kolme_runtime_commit_failure_taxonomy=not_run$'; then
+  echo "expected go/no-go gate lane Kolme failure taxonomy marker in dry-run mode" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^kolme_fixture_profile=real-node-non-synthetic-v1$'; then
+  echo "expected go/no-go gate lane Kolme fixture profile marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^kolme_fixture_profile_version=v1$'; then
+  echo "expected go/no-go gate lane Kolme fixture profile version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^kolme_fixture_profile_status=planned$'; then
+  echo "expected go/no-go gate lane Kolme fixture profile status marker in dry-run mode" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^combined_lane_marker_contract_status=verified$'; then
+  echo "expected go/no-go gate lane combined marker contract status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^lane_mode=dry-run$'; then
   echo "expected go/no-go gate lane dry-run mode marker" >&2
   exit 1
@@ -179,6 +215,24 @@ if payload.get("manifest_schema_version") != "kamn.runtime.release-evidence-mani
     raise SystemExit("expected manifest_schema_version marker in go/no-go gate report")
 if payload.get("manifest_registry_status") != "verified":
     raise SystemExit("expected manifest_registry_status=verified")
+if payload.get("combined_reason_taxonomy_version") != "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1":
+    raise SystemExit("expected combined_reason_taxonomy_version marker")
+if payload.get("combined_transport_reason_codes") != ["fork_choice_stale_block_height"]:
+    raise SystemExit("expected combined_transport_reason_codes marker")
+if payload.get("combined_kolme_runtime_reason_code") != "not_run":
+    raise SystemExit("expected combined_kolme_runtime_reason_code=not_run in dry-run mode")
+if payload.get("kolme_runtime_commit_failure_taxonomy_version") != "v1":
+    raise SystemExit("expected kolme_runtime_commit_failure_taxonomy_version marker")
+if payload.get("kolme_runtime_commit_failure_taxonomy") != "not_run":
+    raise SystemExit("expected kolme_runtime_commit_failure_taxonomy=not_run in dry-run mode")
+if payload.get("kolme_fixture_profile") != "real-node-non-synthetic-v1":
+    raise SystemExit("expected kolme_fixture_profile marker")
+if payload.get("kolme_fixture_profile_version") != "v1":
+    raise SystemExit("expected kolme_fixture_profile_version marker")
+if payload.get("kolme_fixture_profile_status") != "planned":
+    raise SystemExit("expected kolme_fixture_profile_status=planned in dry-run mode")
+if payload.get("combined_lane_marker_contract_status") != "verified":
+    raise SystemExit("expected combined_lane_marker_contract_status=verified")
 inventory = payload.get("artifact_inventory")
 if not isinstance(inventory, list) or len(inventory) != 6:
     raise SystemExit("expected deterministic artifact inventory list with six required entries")
@@ -263,6 +317,42 @@ if ! printf '%s\n' "$run_mode_output" | grep -q '^transport_fault_matrix_status=
   echo "expected go/no-go gate lane run-mode transport fault-matrix status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^combined_reason_taxonomy_version=kamn.runtime.local-full-stack-integration-reason-taxonomy.v1$'; then
+  echo "expected go/no-go gate lane run-mode combined reason taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^combined_transport_reason_codes=fork_choice_stale_block_height$'; then
+  echo "expected go/no-go gate lane run-mode combined transport reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^combined_kolme_runtime_reason_code=not_run$'; then
+  echo "expected go/no-go gate lane run-mode combined Kolme reason marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^kolme_runtime_commit_failure_taxonomy_version=v1$'; then
+  echo "expected go/no-go gate lane run-mode Kolme failure taxonomy version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^kolme_runtime_commit_failure_taxonomy=not_run$'; then
+  echo "expected go/no-go gate lane run-mode Kolme failure taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^kolme_fixture_profile=real-node-non-synthetic-v1$'; then
+  echo "expected go/no-go gate lane run-mode Kolme fixture profile marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^kolme_fixture_profile_version=v1$'; then
+  echo "expected go/no-go gate lane run-mode Kolme fixture profile version marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^kolme_fixture_profile_status=planned$'; then
+  echo "expected go/no-go gate lane run-mode Kolme fixture profile status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_mode_output" | grep -q '^combined_lane_marker_contract_status=verified$'; then
+  echo "expected go/no-go gate lane run-mode combined marker contract status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$run_mode_output" | grep -q '^ci_fast_gate_eligible=false$'; then
   echo "expected go/no-go gate lane run-mode fast-gate exclusion marker" >&2
   exit 1
@@ -314,6 +404,24 @@ if payload.get("local_full_runtime_convergence_status") != "verified":
     raise SystemExit("expected local_full_runtime_convergence_status=verified in run-mode go/no-go gate report")
 if payload.get("transport_fault_matrix_status") != "verified":
     raise SystemExit("expected transport_fault_matrix_status=verified in run-mode go/no-go gate report")
+if payload.get("combined_reason_taxonomy_version") != "kamn.runtime.local-full-stack-integration-reason-taxonomy.v1":
+    raise SystemExit("expected combined_reason_taxonomy_version marker in run-mode go/no-go gate report")
+if payload.get("combined_transport_reason_codes") != ["fork_choice_stale_block_height"]:
+    raise SystemExit("expected combined_transport_reason_codes marker in run-mode go/no-go gate report")
+if payload.get("combined_kolme_runtime_reason_code") != "not_run":
+    raise SystemExit("expected combined_kolme_runtime_reason_code=not_run in run-mode go/no-go gate report")
+if payload.get("kolme_runtime_commit_failure_taxonomy_version") != "v1":
+    raise SystemExit("expected kolme_runtime_commit_failure_taxonomy_version marker in run-mode go/no-go gate report")
+if payload.get("kolme_runtime_commit_failure_taxonomy") != "not_run":
+    raise SystemExit("expected kolme_runtime_commit_failure_taxonomy=not_run in run-mode go/no-go gate report")
+if payload.get("kolme_fixture_profile") != "real-node-non-synthetic-v1":
+    raise SystemExit("expected kolme_fixture_profile marker in run-mode go/no-go gate report")
+if payload.get("kolme_fixture_profile_version") != "v1":
+    raise SystemExit("expected kolme_fixture_profile_version marker in run-mode go/no-go gate report")
+if payload.get("kolme_fixture_profile_status") != "planned":
+    raise SystemExit("expected kolme_fixture_profile_status=planned in run-mode go/no-go gate report")
+if payload.get("combined_lane_marker_contract_status") != "verified":
+    raise SystemExit("expected combined_lane_marker_contract_status=verified in run-mode go/no-go gate report")
 required_ids = payload.get("required_artifact_ids")
 if not isinstance(required_ids, list) or sorted(required_ids) != sorted(
     [
