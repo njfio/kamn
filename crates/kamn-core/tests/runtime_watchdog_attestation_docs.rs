@@ -71,6 +71,21 @@ fn doc_contains_parser_fuzz_surface_inventory_contracts() {
 }
 
 #[test]
+fn doc_contains_task_escrow_proptest_invariant_catalog_contracts() {
+    assert!(DOC.contains("## Task/Escrow Proptest Invariant Catalog"));
+    assert!(DOC.contains("cargo test -p kamn-core --test task_escrow_proptest_invariants"));
+    assert!(DOC.contains("TASK_SEED"));
+    assert!(DOC.contains("ESCROW_SEED"));
+    assert!(DOC.contains("FileFailurePersistence::SourceParallel(\"proptest-regressions\")"));
+    assert!(DOC.contains(
+        "crates/kamn-core/proptest-regressions/tests/task_escrow_proptest_invariants.txt"
+    ));
+    assert!(DOC.contains("accepted transitions must match the legal state graph."));
+    assert!(DOC.contains("released + refunded + remaining == total"));
+    assert!(DOC.contains("deterministic seed corpus is versioned in git"));
+}
+
+#[test]
 fn regression_requires_divergence_and_censorship_guard_rules() {
     // Regression: #383
     assert!(DOC

@@ -21,6 +21,7 @@ webpki-roots = { version = "1.0.3", optional = true }
 
 [dev-dependencies]
 k256 = { version = "0.13.4", features = ["ecdsa"] }
+proptest = "1.6.0"
 
 [lints]
 workspace = true

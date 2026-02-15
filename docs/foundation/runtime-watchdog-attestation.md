@@ -97,6 +97,25 @@ It complements `docs/foundation/watchdog-node-prototype.md` with runtime-facing 
 - Cost boundary:
   - parser fuzz and concurrency deep paths remain local-only and excluded from `ci-fast-gate`; PR path uses deterministic contract-lane evidence.
 
+## Task/Escrow Proptest Invariant Catalog
+- Proptest target:
+  - `cargo test -p kamn-core --test task_escrow_proptest_invariants`
+- Deterministic runner contract:
+  - fixed runner seeds are used for task and escrow invariants (`TASK_SEED`, `ESCROW_SEED`).
+  - runner persistence is enabled with `FileFailurePersistence::SourceParallel("proptest-regressions")`.
+  - tracked seed corpus path: `crates/kamn-core/proptest-regressions/tests/task_escrow_proptest_invariants.txt`.
+- Task lifecycle invariants:
+  - accepted transitions must match the legal state graph.
+  - rejected transitions must preserve state and history.
+  - restore replay roundtrip must preserve state and history.
+- Escrow safety invariants:
+  - `released + refunded + remaining == total` for every step.
+  - terminal projections (`Released`, `Refunded`, `Resolved`) must keep remaining amount at zero.
+  - rejected escrow actions must preserve status and ledger counters.
+- Regression inventory:
+  - deterministic seed corpus is versioned in git and replayed before novel generated cases.
+  - rejection reason-code guardrail allows only expected escrow classes (`escrow_amount_invalid`, `escrow_transition_invalid`, `escrow_resolution_mismatch`, `escrow_amount_overflow`) inside this lane.
+
 ## Incident Response Mapping
 - Runtime watchdog output is triaged with `WatchdogSeverity` and `incident_fingerprint`.
 - Incident operators execute deterministic response workflow from `docs/foundation/upgrade-rollback-runbook.md`.
@@ -116,6 +135,10 @@ cargo test -p kamn-core runtime::tests::functional_runtime_backpressure_classifi
 bash scripts/runtime/test_generate_watchdog_proof_consensus_evidence_bundle.sh
 bash scripts/runtime/test_run_watchdog_proof_consensus_contract_lane.sh
 bash scripts/runtime/test_run_watchdog_proof_consensus_deep_lane.sh
+cargo test -p kamn-core --test task_escrow_proptest_invariants unit_task_escrow_proptest_config_is_deterministic_and_persistent -- --exact
+cargo test -p kamn-core --test task_escrow_proptest_invariants functional_task_lifecycle_proptest_sequence_invariants_hold -- --exact
+cargo test -p kamn-core --test task_escrow_proptest_invariants integration_task_lifecycle_proptest_restore_roundtrip_is_stable -- --exact
+cargo test -p kamn-core --test task_escrow_proptest_invariants integration_escrow_proptest_conserves_amounts_and_status_projections -- --exact
 cargo fmt --check
 cargo clippy -p kamn-core -- -D warnings
 ```
