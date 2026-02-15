@@ -9,7 +9,9 @@ TMP_POLICY="$(mktemp)"
 TMP_TAMPERED="$(mktemp)"
 TMP_TAMPERED_TRANSPORT="$(mktemp)"
 TMP_TAMPERED_RECOVERY="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED" "$TMP_TAMPERED_TRANSPORT" "$TMP_TAMPERED_RECOVERY"' EXIT
+TMP_TAMPERED_TAXONOMY="$(mktemp)"
+TMP_TAMPERED_CONSISTENCY="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED" "$TMP_TAMPERED_TRANSPORT" "$TMP_TAMPERED_RECOVERY" "$TMP_TAMPERED_TAXONOMY" "$TMP_TAMPERED_CONSISTENCY"' EXIT
 
 if [ ! -x "$VALIDATION_SCRIPT" ]; then
   echo "expected block reconciliation partition/rejoin validation script to be executable" >&2
@@ -54,6 +56,10 @@ if payload.get("final_decision") != "GO":
     raise SystemExit("expected block reconciliation partition/rejoin policy final_decision=GO")
 if payload.get("block_reconciliation_partition_rejoin_policy_status") != "verified":
     raise SystemExit("expected block_reconciliation_partition_rejoin_policy_status=verified")
+if payload.get("reconciliation_consistency_reason_taxonomy_version") != "kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reconciliation_consistency_reason_taxonomy_version marker")
+if payload.get("reconciliation_consistency_reason_codes_csv") != "snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch":
+    raise SystemExit("expected deterministic reconciliation_consistency_reason_codes_csv marker")
 PY
 
 cp "$TMP_REPORT" "$TMP_TAMPERED"
@@ -158,6 +164,66 @@ if [ "$tampered_recovery_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_recovery_output" | grep -q 'block_reconciliation_partition_rejoin_policy_head_alignment_status_mismatch'; then
   echo "expected deterministic head-alignment mismatch reason for block reconciliation partition/rejoin report" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED_TAXONOMY"
+python3 - "$TMP_TAMPERED_TAXONOMY" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["reconciliation_consistency_reason_taxonomy_version"] = "tampered-taxonomy"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_taxonomy_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$TMP_TAMPERED_TAXONOMY" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_taxonomy_code=$?
+set -e
+if [ "$tampered_taxonomy_code" -eq 0 ]; then
+  echo "expected consistency-taxonomy tampered block reconciliation partition/rejoin report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_taxonomy_output" | grep -q 'block_reconciliation_partition_rejoin_policy_reconciliation_consistency_reason_taxonomy_version_mismatch'; then
+  echo "expected deterministic consistency-taxonomy mismatch reason for block reconciliation partition/rejoin report" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED_CONSISTENCY"
+python3 - "$TMP_TAMPERED_CONSISTENCY" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["consistency_classification_status"] = "drifted"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_consistency_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$TMP_TAMPERED_CONSISTENCY" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_consistency_code=$?
+set -e
+if [ "$tampered_consistency_code" -eq 0 ]; then
+  echo "expected consistency-classification tampered block reconciliation partition/rejoin report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_consistency_output" | grep -q 'block_reconciliation_partition_rejoin_policy_consistency_classification_status_mismatch'; then
+  echo "expected deterministic consistency-classification mismatch reason for block reconciliation partition/rejoin report" >&2
   exit 1
 fi
 

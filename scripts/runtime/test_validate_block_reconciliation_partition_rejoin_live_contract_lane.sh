@@ -60,6 +60,22 @@ if ! printf '%s\n' "$lane_output" | grep -q '^reconciliation_reason_taxonomy_sta
   echo "expected block reconciliation partition/rejoin contract lane reconciliation taxonomy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^snapshot_wal_reconciliation_status=verified$'; then
+  echo "expected block reconciliation partition/rejoin contract lane snapshot-vs-wal reconciliation marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^consistency_classification_status=verified$'; then
+  echo "expected block reconciliation partition/rejoin contract lane consistency classification marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^reconciliation_consistency_reason_taxonomy_version=kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1$'; then
+  echo "expected block reconciliation partition/rejoin contract lane consistency taxonomy marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^reconciliation_consistency_reason_codes_csv=snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch$'; then
+  echo "expected block reconciliation partition/rejoin contract lane consistency taxonomy csv marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=block_reconciliation_partition_rejoin_policy_fast_gate_exclusion_mismatch$'; then
   echo "expected block reconciliation partition/rejoin contract lane fail-closed reason marker" >&2
   exit 1
@@ -87,6 +103,14 @@ if lane_payload.get("runtime_transport_mode_status") != "verified":
     raise SystemExit("expected runtime_transport_mode_status=verified")
 if lane_payload.get("reconciliation_reason_taxonomy_status") != "verified":
     raise SystemExit("expected reconciliation_reason_taxonomy_status=verified")
+if lane_payload.get("snapshot_wal_reconciliation_status") != "verified":
+    raise SystemExit("expected snapshot_wal_reconciliation_status=verified")
+if lane_payload.get("consistency_classification_status") != "verified":
+    raise SystemExit("expected consistency_classification_status=verified")
+if lane_payload.get("reconciliation_consistency_reason_taxonomy_version") != "kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reconciliation_consistency_reason_taxonomy_version marker")
+if lane_payload.get("reconciliation_consistency_reason_codes_csv") != "snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch":
+    raise SystemExit("expected deterministic reconciliation_consistency_reason_codes_csv marker")
 if lane_payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
 
@@ -97,6 +121,10 @@ if policy_payload.get("final_decision") != "GO":
     raise SystemExit("expected policy final_decision=GO")
 if policy_payload.get("block_reconciliation_partition_rejoin_policy_status") != "verified":
     raise SystemExit("expected block_reconciliation_partition_rejoin_policy_status=verified in policy report")
+if policy_payload.get("reconciliation_consistency_reason_taxonomy_version") != "kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reconciliation_consistency_reason_taxonomy_version marker in policy report")
+if policy_payload.get("reconciliation_consistency_reason_codes_csv") != "snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch":
+    raise SystemExit("expected deterministic reconciliation_consistency_reason_codes_csv marker in policy report")
 PY
 
 if ! grep -q "check_block_reconciliation_partition_rejoin_live_policy.sh" "$CONTRACT_LANE"; then

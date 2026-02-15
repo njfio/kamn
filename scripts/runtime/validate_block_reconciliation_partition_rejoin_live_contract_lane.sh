@@ -115,6 +115,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^reconciliation_reason_taxono
   echo "expected reconciliation reason taxonomy status marker for block reconciliation partition/rejoin validation" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^snapshot_wal_reconciliation_status=verified$'; then
+  echo "expected snapshot-vs-wal reconciliation status marker for block reconciliation partition/rejoin validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^consistency_classification_status=verified$'; then
+  echo "expected consistency classification status marker for block reconciliation partition/rejoin validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reconciliation_consistency_reason_taxonomy_version=kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1$'; then
+  echo "expected reconciliation consistency reason taxonomy version marker for block reconciliation partition/rejoin validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reconciliation_consistency_reason_codes_csv=snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch$'; then
+  echo "expected reconciliation consistency reason taxonomy csv marker for block reconciliation partition/rejoin validation" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^reconciliation_reason_codes=none$'; then
   echo "expected deterministic reconciliation reason-code matrix marker for block reconciliation partition/rejoin validation" >&2
   exit 1
@@ -223,6 +239,14 @@ if summary_report.get("reconciliation_reason_taxonomy_status") != "verified":
     raise SystemExit("expected summary reconciliation_reason_taxonomy_status=verified")
 if summary_report.get("reconciliation_reason_codes") != ["none"]:
     raise SystemExit("expected summary reconciliation_reason_codes=['none']")
+if summary_report.get("snapshot_wal_reconciliation_status") != "verified":
+    raise SystemExit("expected summary snapshot_wal_reconciliation_status=verified")
+if summary_report.get("consistency_classification_status") != "verified":
+    raise SystemExit("expected summary consistency_classification_status=verified")
+if summary_report.get("reconciliation_consistency_reason_taxonomy_version") != "kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1":
+    raise SystemExit("expected summary reconciliation_consistency_reason_taxonomy_version marker")
+if summary_report.get("reconciliation_consistency_reason_codes_csv") != "snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch":
+    raise SystemExit("expected summary reconciliation_consistency_reason_codes_csv marker")
 
 lane_report = {
     "schema_version": "kamn.runtime.block-reconciliation-partition-rejoin-live-contract-lane-report.v1",
@@ -236,6 +260,18 @@ lane_report = {
     "docs_contract_status": "verified",
     "runtime_transport_mode_status": "verified",
     "reconciliation_reason_taxonomy_status": "verified",
+    "snapshot_wal_reconciliation_status": summary_report.get(
+        "snapshot_wal_reconciliation_status"
+    ),
+    "consistency_classification_status": summary_report.get(
+        "consistency_classification_status"
+    ),
+    "reconciliation_consistency_reason_taxonomy_version": summary_report.get(
+        "reconciliation_consistency_reason_taxonomy_version"
+    ),
+    "reconciliation_consistency_reason_codes_csv": summary_report.get(
+        "reconciliation_consistency_reason_codes_csv"
+    ),
     "fail_closed_status": "verified",
     "fail_closed_reason_code": "block_reconciliation_partition_rejoin_policy_fast_gate_exclusion_mismatch",
     "performance_budget_status": "verified",
@@ -260,6 +296,10 @@ echo "block_reconciliation_partition_rejoin_policy_status=verified"
 echo "docs_contract_status=verified"
 echo "runtime_transport_mode_status=verified"
 echo "reconciliation_reason_taxonomy_status=verified"
+echo "snapshot_wal_reconciliation_status=verified"
+echo "consistency_classification_status=verified"
+echo "reconciliation_consistency_reason_taxonomy_version=kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1"
+echo "reconciliation_consistency_reason_codes_csv=snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch"
 echo "fail_closed_status=verified"
 echo "fail_closed_reason_code=block_reconciliation_partition_rejoin_policy_fast_gate_exclusion_mismatch"
 echo "performance_budget_status=verified"

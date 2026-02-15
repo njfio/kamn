@@ -67,3 +67,18 @@ Deterministic lane and policy markers include:
 - `wal_durability_reason_taxonomy_version=kamn.runtime.wal-durability-reason-taxonomy.v1`
 - `wal_durability_reason_codes_csv=wal_append_rejected,wal_checkpoint_skipped,wal_replay_incomplete`
 - `sqlite_crash_recovery_policy_status=verified`
+
+## Reconciliation Consistency Governance
+
+Snapshot-vs-WAL reconciliation and consistency-classification drift is enforced through:
+
+- `scripts/runtime/check_block_reconciliation_partition_rejoin_live_policy.sh`
+- `scripts/runtime/validate_block_reconciliation_partition_rejoin_live_contract_lane.sh`
+
+Deterministic lane and policy markers include:
+
+- `reconciliation_reason_taxonomy_status=verified`
+- `snapshot_wal_reconciliation_status=verified`
+- `consistency_classification_status=verified`
+- `reconciliation_consistency_reason_taxonomy_version=kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1`
+- `reconciliation_consistency_reason_codes_csv=snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch`

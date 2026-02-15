@@ -37,6 +37,13 @@ TRANSPORT_RUNTIME_MODE = "libp2p_transport_fed"
 RECONCILIATION_REASON_TAXONOMY_VERSION = (
     "kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1"
 )
+RECONCILIATION_CONSISTENCY_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1"
+)
+RECONCILIATION_CONSISTENCY_REASON_CODES_CSV = (
+    "snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,"
+    "consistency_classification_mismatch"
+)
 RECONCILIATION_REASON_CODES_ALLOWED = {
     "none",
     "reconciliation_partition_transition_failed",
@@ -243,6 +250,14 @@ def run_lane(args: argparse.Namespace) -> int:
         "transport_state_transition_status": "verified",
         "reconciliation_reason_taxonomy_version": RECONCILIATION_REASON_TAXONOMY_VERSION,
         "reconciliation_reason_taxonomy_status": "verified",
+        "snapshot_wal_reconciliation_status": "verified",
+        "consistency_classification_status": "verified",
+        "reconciliation_consistency_reason_taxonomy_version": (
+            RECONCILIATION_CONSISTENCY_REASON_TAXONOMY_VERSION
+        ),
+        "reconciliation_consistency_reason_codes_csv": (
+            RECONCILIATION_CONSISTENCY_REASON_CODES_CSV
+        ),
         "reconciliation_reason_codes": reconciliation_reason_codes,
         "head_alignment_status": recovery_markers["head_alignment_status"],
         "quorum_restore_status": recovery_markers["quorum_restore_status"],
@@ -279,6 +294,16 @@ def run_lane(args: argparse.Namespace) -> int:
     print("canonical_convergence_status=verified")
     print(f"runtime_transport_mode={TRANSPORT_RUNTIME_MODE}")
     print("reconciliation_reason_taxonomy_status=verified")
+    print("snapshot_wal_reconciliation_status=verified")
+    print("consistency_classification_status=verified")
+    print(
+        "reconciliation_consistency_reason_taxonomy_version="
+        f"{RECONCILIATION_CONSISTENCY_REASON_TAXONOMY_VERSION}"
+    )
+    print(
+        "reconciliation_consistency_reason_codes_csv="
+        f"{RECONCILIATION_CONSISTENCY_REASON_CODES_CSV}"
+    )
     print(f"head_alignment_status={recovery_markers['head_alignment_status']}")
     print(f"quorum_restore_status={recovery_markers['quorum_restore_status']}")
     print(f"replay_stabilization_status={recovery_markers['replay_stabilization_status']}")
@@ -362,6 +387,24 @@ def check_policy(args: argparse.Namespace) -> int:
     checks.reject_if(
         payload.get("reconciliation_reason_taxonomy_status") != "verified",
         "block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("snapshot_wal_reconciliation_status") != "verified",
+        "block_reconciliation_partition_rejoin_policy_snapshot_wal_reconciliation_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("consistency_classification_status") != "verified",
+        "block_reconciliation_partition_rejoin_policy_consistency_classification_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("reconciliation_consistency_reason_taxonomy_version")
+        != RECONCILIATION_CONSISTENCY_REASON_TAXONOMY_VERSION,
+        "block_reconciliation_partition_rejoin_policy_reconciliation_consistency_reason_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("reconciliation_consistency_reason_codes_csv")
+        != RECONCILIATION_CONSISTENCY_REASON_CODES_CSV,
+        "block_reconciliation_partition_rejoin_policy_reconciliation_consistency_reason_codes_csv_mismatch",
     )
     checks.reject_if(
         payload.get("head_alignment_status") != "verified",
@@ -480,6 +523,12 @@ def check_policy(args: argparse.Namespace) -> int:
         "observed_final_decision": observed_final_decision,
         "failed_checks": failed_checks,
         "ci_fast_gate": ci_fast_gate,
+        "reconciliation_consistency_reason_taxonomy_version": (
+            RECONCILIATION_CONSISTENCY_REASON_TAXONOMY_VERSION
+        ),
+        "reconciliation_consistency_reason_codes_csv": (
+            RECONCILIATION_CONSISTENCY_REASON_CODES_CSV
+        ),
         "block_reconciliation_partition_rejoin_policy_status": (
             "verified" if not failed_checks else "failed"
         ),

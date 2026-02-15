@@ -305,6 +305,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     `publish_drop_recovery_status=verified`,
     `peer_churn_recovery_status=verified`.
   - lane emits deterministic reconciliation taxonomy marker (`reconciliation_reason_taxonomy_status=verified`).
+  - lane emits deterministic snapshot-vs-WAL consistency markers:
+    `snapshot_wal_reconciliation_status=verified`,
+    `consistency_classification_status=verified`.
+  - lane emits deterministic reconciliation-consistency taxonomy markers:
+    `reconciliation_consistency_reason_taxonomy_version=kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1`,
+    `reconciliation_consistency_reason_codes_csv=snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch`.
   - lane emits deterministic reconciliation reason-code matrix marker (`reconciliation_reason_codes=none|...`) covering:
     `reconciliation_partition_transition_failed`,
     `reconciliation_rejoin_transition_failed`,
@@ -320,6 +326,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - block reconciliation partition/rejoin run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `block_reconciliation_partition_rejoin_policy_fast_gate_exclusion_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_reconciliation_consistency_reason_taxonomy_version_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_consistency_classification_status_mismatch`
 
 ## Runtime Libp2p Three-Node Discovery Live Validation Contract Lane
 - Entry commands:

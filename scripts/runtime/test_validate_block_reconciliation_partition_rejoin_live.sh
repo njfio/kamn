@@ -55,6 +55,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^reconciliation_reason_taxono
   echo "expected reconciliation reason taxonomy status marker for block reconciliation partition/rejoin validation" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^snapshot_wal_reconciliation_status=verified$'; then
+  echo "expected snapshot-vs-wal reconciliation status marker for block reconciliation partition/rejoin validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^consistency_classification_status=verified$'; then
+  echo "expected consistency classification status marker for block reconciliation partition/rejoin validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reconciliation_consistency_reason_taxonomy_version=kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1$'; then
+  echo "expected reconciliation consistency reason taxonomy version marker for block reconciliation partition/rejoin validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^reconciliation_consistency_reason_codes_csv=snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch$'; then
+  echo "expected reconciliation consistency reason taxonomy csv marker for block reconciliation partition/rejoin validation" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^head_alignment_status=verified$'; then
   echo "expected deterministic head-alignment recovery marker" >&2
   exit 1
@@ -112,6 +128,14 @@ if payload.get("reconciliation_reason_taxonomy_status") != "verified":
     raise SystemExit("expected reconciliation_reason_taxonomy_status=verified")
 if payload.get("reconciliation_reason_taxonomy_version") != "kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1":
     raise SystemExit("expected deterministic reconciliation reason taxonomy version")
+if payload.get("snapshot_wal_reconciliation_status") != "verified":
+    raise SystemExit("expected snapshot_wal_reconciliation_status=verified")
+if payload.get("consistency_classification_status") != "verified":
+    raise SystemExit("expected consistency_classification_status=verified")
+if payload.get("reconciliation_consistency_reason_taxonomy_version") != "kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reconciliation_consistency_reason_taxonomy_version marker")
+if payload.get("reconciliation_consistency_reason_codes_csv") != "snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch":
+    raise SystemExit("expected deterministic reconciliation_consistency_reason_codes_csv marker")
 if payload.get("head_alignment_status") != "verified":
     raise SystemExit("expected deterministic head_alignment_status=verified")
 if payload.get("quorum_restore_status") != "verified":
@@ -223,6 +247,14 @@ if payload.get("publish_drop_recovery_status") != "verified":
     raise SystemExit("expected deterministic publish_drop_recovery_status=verified for run mode")
 if payload.get("peer_churn_recovery_status") != "verified":
     raise SystemExit("expected deterministic peer_churn_recovery_status=verified for run mode")
+if payload.get("snapshot_wal_reconciliation_status") != "verified":
+    raise SystemExit("expected snapshot_wal_reconciliation_status=verified for run mode")
+if payload.get("consistency_classification_status") != "verified":
+    raise SystemExit("expected consistency_classification_status=verified for run mode")
+if payload.get("reconciliation_consistency_reason_taxonomy_version") != "kamn.runtime.snapshot-wal-consistency-reason-taxonomy.v1":
+    raise SystemExit("expected deterministic reconciliation_consistency_reason_taxonomy_version marker for run mode")
+if payload.get("reconciliation_consistency_reason_codes_csv") != "snapshot_wal_lineage_diverged,snapshot_wal_checkpoint_stale,consistency_classification_mismatch":
+    raise SystemExit("expected deterministic reconciliation_consistency_reason_codes_csv marker for run mode")
 if payload.get("reconciliation_reason_codes") != ["none"]:
     raise SystemExit("expected deterministic reconciliation_reason_codes=['none'] for run mode")
 PY
