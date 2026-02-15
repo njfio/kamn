@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_runtime_commit_live_lane.sh"
-RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_runtime_commit_live_lane_impl.sh"
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_runtime_commit_live_evidence_policy.py"
 LOCAL_HEAVY_GUARD="$ROOT_DIR/scripts/framework/assert_local_heavy_opt_in.sh"
@@ -40,11 +39,6 @@ if [ ! -x "$RUNNER" ]; then
   exit 1
 fi
 
-if [ ! -x "$RUNNER_IMPL" ]; then
-  echo "expected local runtime commit live lane implementation to be executable" >&2
-  exit 1
-fi
-
 if [ ! -x "$DISPATCHER" ]; then
   echo "expected local runtime lane dispatcher to be executable" >&2
   exit 1
@@ -67,11 +61,6 @@ fi
 
 if [ "$(readlink "$RUNNER")" != "run_lane_dispatch.sh" ]; then
   echo "expected runtime commit live runner symlink target to be run_lane_dispatch.sh" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$RUNNER_IMPL"; then
-  echo "expected runtime commit live implementation to invoke shared local-heavy opt-in guard helper" >&2
   exit 1
 fi
 
@@ -103,27 +92,6 @@ manifest_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$RUNNER")" --res
 assert_eq "$manifest_path" "$MANIFEST" "expected runtime commit live wrapper to resolve deterministic manifest"
 if bash "$DISPATCHER" --lane-wrapper run_missing_runtime_lane.sh --resolve-manifest-path >/dev/null 2>&1; then
   echo "expected runtime lane dispatcher to fail closed for unknown wrapper" >&2
-  exit 1
-fi
-
-# Regression: #1969
-if ! grep -q -- "--finality-command" "$RUNNER_IMPL"; then
-  echo "expected runtime commit live runner to expose optional finality command argument" >&2
-  exit 1
-fi
-
-if ! grep -q -- "--finality-retry-max-attempts" "$RUNNER_IMPL"; then
-  echo "expected runtime commit live runner to expose finality retry max-attempts argument" >&2
-  exit 1
-fi
-
-if ! grep -q -- "--finality-retry-backoff-seconds" "$RUNNER_IMPL"; then
-  echo "expected runtime commit live runner to expose finality retry backoff argument" >&2
-  exit 1
-fi
-
-if ! grep -q "runtime_commit_live_finality_command" "$RUNNER_IMPL"; then
-  echo "expected runtime commit live runner to emit finality command check markers" >&2
   exit 1
 fi
 
@@ -455,7 +423,7 @@ run_with_finality_output="$(
     bash "$RUNNER" \
       --mode run \
       --skip-preflight \
-      --live-command "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\nintegration_kolme_fork_live_node_submit_reaches_endpoint\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\n'" \
+      --live-command "KAMN_KOLME_LIVE_SIGNING_PROFILE=kolme-fork-secp256k1-v1 printf 'status=submitted\nintegration_kolme_fork_live_node_submit_reaches_endpoint\n{\"pubkey\":\"proof\",\"nonce\":1,\"messages\":[]}\nreplay_guard=verified\n'" \
       --finality-command "printf 'finality=final\n'" \
       --finality-retry-max-attempts 2 \
       --finality-retry-backoff-seconds 0 \

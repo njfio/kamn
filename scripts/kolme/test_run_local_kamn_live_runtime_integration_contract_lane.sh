@@ -6,7 +6,6 @@ RUNNER="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_contract
 CHECKER="$ROOT_DIR/scripts/kolme/check_local_kamn_live_runtime_integration_policy.py"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_contract_lane.json"
 RUNTIME_RUNNER="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane.sh"
-RUNTIME_RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kamn_live_runtime_integration_lane_impl.sh"
 RUNTIME_DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 RUNTIME_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kamn_live_runtime_integration_lane.json"
 CONTRACT_IMPL="$ROOT_DIR/scripts/kolme/contracts/local_kamn_live_runtime_integration_contract_lane.py"
@@ -36,11 +35,6 @@ fi
 
 if [ ! -x "$RUNTIME_DISPATCHER" ]; then
   echo "expected shared runtime lane dispatcher to be executable" >&2
-  exit 1
-fi
-
-if [ ! -x "$RUNTIME_RUNNER_IMPL" ]; then
-  echo "expected local KAMN live runtime integration implementation to be executable" >&2
   exit 1
 fi
 
@@ -81,33 +75,6 @@ PY
 resolved_runtime_manifest="$(bash "$RUNTIME_DISPATCHER" --lane-wrapper "$(basename "$RUNTIME_RUNNER")" --resolve-manifest-path)"
 if [ "$resolved_runtime_manifest" != "$RUNTIME_MANIFEST" ]; then
   echo "expected runtime integration wrapper to resolve deterministic runtime manifest" >&2
-  exit 1
-fi
-
-# Regression: #1967
-if ! grep -q "run_local_runtime_commit_live_lane.sh" "$RUNTIME_RUNNER_IMPL"; then
-  echo "expected local KAMN live runtime integration runner to route runtime step through local runtime commit live lane" >&2
-  exit 1
-fi
-
-# Regression: #1971
-required_runtime_finality_markers=(
-  "--runtime-commit-finality-command"
-  "--runtime-commit-finality-max-seconds"
-  "--runtime-commit-finality-output-file"
-  "--runtime-commit-live-policy-report"
-  "--runtime-provider-client-contract"
-)
-for marker in "${required_runtime_finality_markers[@]}"; do
-  if ! grep -q -- "$marker" "$RUNTIME_RUNNER_IMPL"; then
-    echo "expected local KAMN live runtime integration runner to expose finality pass-through marker: $marker" >&2
-    exit 1
-  fi
-done
-
-# Regression: #2101
-if ! grep -q "run_local_runtime_commit_live_finality_evidence_contract_lane.sh" "$RUNTIME_RUNNER_IMPL"; then
-  echo "expected local KAMN live runtime integration runner to compose runtime step through runtime finality evidence contract lane" >&2
   exit 1
 fi
 

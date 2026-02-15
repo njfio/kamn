@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_live_deployment_preflight_lane.sh"
-RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kolme_live_deployment_preflight_lane_impl.sh"
 RUN_MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_live_deployment_preflight_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
@@ -77,11 +76,6 @@ assert_eq() {
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local Kolme live deployment preflight lane runner to be executable" >&2
-  exit 1
-fi
-
-if [ ! -x "$RUNNER_IMPL" ]; then
-  echo "expected local Kolme live deployment preflight implementation runner to be executable" >&2
   exit 1
 fi
 

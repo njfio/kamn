@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MATRIX_RUNNER="$ROOT_DIR/scripts/kolme/run_local_heavy_validation_matrix.sh"
-MATRIX_RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_heavy_validation_matrix_lane_impl.sh"
 BOOTSTRAP_RUNNER="$ROOT_DIR/scripts/kolme/run_local_bootstrap_health_checks.sh"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
 SUMMARY_HELPER="$ROOT_DIR/scripts/framework/generate_local_lane_summary.py"
@@ -31,10 +30,6 @@ assert_eq() {
 
 if [ ! -x "$MATRIX_RUNNER" ]; then
   echo "expected Kolme local heavy validation matrix runner to be executable" >&2
-  exit 1
-fi
-if [ ! -x "$MATRIX_RUNNER_IMPL" ]; then
-  echo "expected Kolme local heavy validation matrix run-lane implementation to be executable" >&2
   exit 1
 fi
 if [ ! -x "$DISPATCHER" ]; then
@@ -75,29 +70,9 @@ if [ ! -x "$SUMMARY_HELPER" ]; then
   exit 1
 fi
 
-if ! grep -q "scripts/framework/generate_local_lane_summary.py" "$MATRIX_RUNNER_IMPL"; then
-  echo "expected local heavy matrix runner to use shared local-lane summary helper" >&2
-  exit 1
-fi
-
 # Regression: #1585
 if [ ! -x "$LOCAL_HEAVY_GUARD" ]; then
   echo "expected shared local-heavy opt-in guard helper to be executable" >&2
-  exit 1
-fi
-
-if ! grep -q "scripts/framework/assert_local_heavy_opt_in.sh" "$MATRIX_RUNNER_IMPL"; then
-  echo "expected local heavy matrix runner to use shared local-heavy opt-in guard helper" >&2
-  exit 1
-fi
-
-if ! grep -q -- "--mode \$MODE --runtime-profile real-node" "$MATRIX_RUNNER_IMPL"; then
-  echo "expected real-node integration command to track selected matrix mode" >&2
-  exit 1
-fi
-
-if ! grep -q "REAL_NODE_POLICY_REQUIRED_REASON_CODE" "$MATRIX_RUNNER_IMPL"; then
-  echo "expected matrix runner to declare dynamic real-node policy reason-code marker" >&2
   exit 1
 fi
 

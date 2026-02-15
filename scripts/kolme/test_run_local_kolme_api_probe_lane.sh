@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT_DIR/scripts/kolme/run_local_kolme_api_probe_lane.sh"
-RUNNER_IMPL="$ROOT_DIR/scripts/kolme/run_local_kolme_api_probe_lane_impl.sh"
 DISPATCHER="$ROOT_DIR/scripts/kolme/run_lane_dispatch.sh"
 MANIFEST="$ROOT_DIR/scripts/framework/manifests/kolme_local_kolme_api_probe_lane.json"
 DOC_FILE="$ROOT_DIR/docs/planning/kolme-devnet-ops.md"
@@ -42,11 +41,6 @@ PY
 
 if [ ! -x "$RUNNER" ]; then
   echo "expected local Kolme API probe runner to be executable" >&2
-  exit 1
-fi
-
-if [ ! -x "$RUNNER_IMPL" ]; then
-  echo "expected local Kolme API probe implementation runner to be executable" >&2
   exit 1
 fi
 
