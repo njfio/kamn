@@ -207,18 +207,90 @@ async fn serve_observability_endpoint_async(
         let path = read_http_request_path_async(&mut stream)
             .await
             .unwrap_or_else(|_| "/".to_owned());
-        let response = render_observability_endpoint_response_with_paths(
+        let response = dispatch_observability_endpoint_request(
             &snapshot,
             path.as_str(),
             config.metrics_path.as_str(),
             config.health_path.as_str(),
             DEFAULT_OBSERVABILITY_ENDPOINT_READINESS_PATH,
             DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH,
-        );
+        )
+        .await;
         write_http_response_async(&mut stream, &response).await?;
         served_requests = served_requests.saturating_add(1);
     }
     Ok(())
+}
+
+async fn dispatch_observability_endpoint_request(
+    snapshot: &RuntimeObservabilitySnapshot,
+    request_path: &str,
+    metrics_path: &str,
+    health_path: &str,
+    readiness_path: &str,
+    stream_path: &str,
+) -> ObservabilityEndpointResponse {
+    if request_path == metrics_path {
+        return handle_observability_metrics_path(snapshot).await;
+    }
+    if request_path == health_path {
+        return handle_observability_health_path(snapshot).await;
+    }
+    if request_path == readiness_path {
+        return handle_observability_readiness_path(snapshot).await;
+    }
+    if request_path == stream_path {
+        return handle_observability_stream_path(snapshot).await;
+    }
+    handle_observability_not_found_path().await
+}
+
+async fn handle_observability_metrics_path(
+    snapshot: &RuntimeObservabilitySnapshot,
+) -> ObservabilityEndpointResponse {
+    ObservabilityEndpointResponse {
+        status_code: 200,
+        content_type: "text/plain; version=0.0.4",
+        body: render_metrics_body(snapshot),
+    }
+}
+
+async fn handle_observability_health_path(
+    snapshot: &RuntimeObservabilitySnapshot,
+) -> ObservabilityEndpointResponse {
+    ObservabilityEndpointResponse {
+        status_code: 200,
+        content_type: "application/json",
+        body: render_health_body(snapshot),
+    }
+}
+
+async fn handle_observability_readiness_path(
+    snapshot: &RuntimeObservabilitySnapshot,
+) -> ObservabilityEndpointResponse {
+    ObservabilityEndpointResponse {
+        status_code: 200,
+        content_type: "application/json",
+        body: render_readiness_body(snapshot),
+    }
+}
+
+async fn handle_observability_stream_path(
+    snapshot: &RuntimeObservabilitySnapshot,
+) -> ObservabilityEndpointResponse {
+    ObservabilityEndpointResponse {
+        status_code: 200,
+        content_type: "application/x-ndjson",
+        body: render_stream_body(snapshot),
+    }
+}
+
+async fn handle_observability_not_found_path() -> ObservabilityEndpointResponse {
+    ObservabilityEndpointResponse {
+        status_code: 404,
+        content_type: "text/plain; charset=utf-8",
+        body: "not found\n".to_owned(),
+    }
 }
 
 fn render_observability_endpoint_response_with_paths(
