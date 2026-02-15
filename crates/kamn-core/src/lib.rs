@@ -152,11 +152,12 @@ pub use audit_exports::{
     AuditExportFilter, AuditExportFormat, AuditExportManifest, AuditExportRequest,
 };
 pub use block_pipeline::{
+    decode_transport_candidate_payload, encode_transport_candidate_payload,
     AcceptAllForkChoiceHook, BlockConsensusRoundInput, BlockPipelineCommitReport,
     BlockPipelineError, CanonicalCommitRecord, CanonicalCommitStore,
     DeterministicCompetingBranchForkChoiceHook, ForkChoiceDecision, ForkChoiceHook,
     InMemoryCanonicalCommitStore, InMemoryTransportMempoolFeed, MempoolBlockPipeline,
-    TransportFedBlockPipeline, TransportMempoolFeed,
+    TransportEventMempoolFeed, TransportFedBlockPipeline, TransportMempoolFeed,
 };
 pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};
 pub use bridge_adapter::{

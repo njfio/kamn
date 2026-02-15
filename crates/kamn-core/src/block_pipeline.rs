@@ -1,6 +1,7 @@
 //! Mempool block production and consensus validation pipeline contracts.
 
 use crate::config::NodeRole;
+use crate::p2p_transport::{PeerGossipFrame, PeerLifecycleTransport};
 use crate::runtime::{
     ApproverAttestation, ApproverQuorumDecision, ApproverQuorumError, ApproverQuorumEvaluator,
     ApproverQuorumInput, ListenerAttestation, ListenerQuorumDecision, ListenerQuorumError,
@@ -155,6 +156,102 @@ pub trait TransportMempoolFeed {
     ) -> Result<Vec<BaselineTransaction>, BlockPipelineError>;
 }
 
+const TRANSPORT_CANDIDATE_PAYLOAD_CODEC_VERSION: &str = "txwire:v1";
+const TRANSPORT_CANDIDATE_PAYLOAD_FIELD_COUNT: usize = 7;
+const TRANSPORT_CANDIDATE_PAYLOAD_SEPARATOR: char = '|';
+
+/// Encodes a baseline transaction into deterministic transport-candidate wire payload.
+pub fn encode_transport_candidate_payload(
+    tx: &BaselineTransaction,
+) -> Result<String, BlockPipelineError> {
+    validate_transport_candidate_field("id", tx.id.as_str())?;
+    validate_transport_candidate_field("sender", tx.sender.as_str())?;
+    validate_transport_candidate_field("payload", tx.payload.as_str())?;
+    validate_transport_candidate_field("state_hash", tx.state_hash.as_str())?;
+    validate_transport_candidate_field("signature", tx.signature.as_str())?;
+    if tx.nonce == 0 {
+        return Err(BlockPipelineError::TransportFeed(
+            "transport candidate nonce must be positive (transport_candidate_nonce_invalid)"
+                .to_owned(),
+        ));
+    }
+
+    Ok(format!(
+        "{TRANSPORT_CANDIDATE_PAYLOAD_CODEC_VERSION}{TRANSPORT_CANDIDATE_PAYLOAD_SEPARATOR}{}{TRANSPORT_CANDIDATE_PAYLOAD_SEPARATOR}{}{TRANSPORT_CANDIDATE_PAYLOAD_SEPARATOR}{}{TRANSPORT_CANDIDATE_PAYLOAD_SEPARATOR}{}{TRANSPORT_CANDIDATE_PAYLOAD_SEPARATOR}{}{TRANSPORT_CANDIDATE_PAYLOAD_SEPARATOR}{}",
+        tx.id, tx.sender, tx.nonce, tx.payload, tx.state_hash, tx.signature
+    ))
+}
+
+/// Decodes deterministic transport-candidate wire payload into baseline transaction.
+pub fn decode_transport_candidate_payload(
+    payload: &str,
+) -> Result<BaselineTransaction, BlockPipelineError> {
+    let fields = payload
+        .split(TRANSPORT_CANDIDATE_PAYLOAD_SEPARATOR)
+        .collect::<Vec<_>>();
+    if fields.len() != TRANSPORT_CANDIDATE_PAYLOAD_FIELD_COUNT {
+        return Err(BlockPipelineError::TransportFeed(format!(
+            "transport candidate payload malformed: expected {} fields, found {} (transport_candidate_payload_malformed)",
+            TRANSPORT_CANDIDATE_PAYLOAD_FIELD_COUNT,
+            fields.len()
+        )));
+    }
+    if fields[0] != TRANSPORT_CANDIDATE_PAYLOAD_CODEC_VERSION {
+        return Err(BlockPipelineError::TransportFeed(format!(
+            "transport candidate codec version mismatch: expected {TRANSPORT_CANDIDATE_PAYLOAD_CODEC_VERSION}, found {} (transport_candidate_codec_version_mismatch)",
+            fields[0]
+        )));
+    }
+
+    let id = fields[1];
+    let sender = fields[2];
+    let nonce = fields[3].parse::<u64>().map_err(|_| {
+        BlockPipelineError::TransportFeed(format!(
+            "transport candidate nonce is invalid: {} (transport_candidate_nonce_invalid)",
+            fields[3]
+        ))
+    })?;
+    let payload = fields[4];
+    let state_hash = fields[5];
+    let signature = fields[6];
+
+    validate_transport_candidate_field("id", id)?;
+    validate_transport_candidate_field("sender", sender)?;
+    validate_transport_candidate_field("payload", payload)?;
+    validate_transport_candidate_field("state_hash", state_hash)?;
+    validate_transport_candidate_field("signature", signature)?;
+    if nonce == 0 {
+        return Err(BlockPipelineError::TransportFeed(
+            "transport candidate nonce must be positive (transport_candidate_nonce_invalid)"
+                .to_owned(),
+        ));
+    }
+
+    Ok(BaselineTransaction {
+        id: id.to_owned(),
+        sender: sender.to_owned(),
+        nonce,
+        payload: payload.to_owned(),
+        state_hash: state_hash.to_owned(),
+        signature: signature.to_owned(),
+    })
+}
+
+fn validate_transport_candidate_field(label: &str, value: &str) -> Result<(), BlockPipelineError> {
+    if value.trim().is_empty() {
+        return Err(BlockPipelineError::TransportFeed(format!(
+            "transport candidate {label} is empty (transport_candidate_field_empty)"
+        )));
+    }
+    if value.contains(TRANSPORT_CANDIDATE_PAYLOAD_SEPARATOR) {
+        return Err(BlockPipelineError::TransportFeed(format!(
+            "transport candidate {label} contains reserved separator '{}' (transport_candidate_field_separator_conflict)",
+            TRANSPORT_CANDIDATE_PAYLOAD_SEPARATOR
+        )));
+    }
+    Ok(())
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 /// In-memory transport feed used for deterministic tests and local contract lanes.
 pub struct InMemoryTransportMempoolFeed {
@@ -178,6 +275,83 @@ impl TransportMempoolFeed for InMemoryTransportMempoolFeed {
         &mut self,
     ) -> Result<Vec<BaselineTransaction>, BlockPipelineError> {
         Ok(std::mem::take(&mut self.pending))
+    }
+}
+
+/// Transport-backed mempool feed that drains inbound gossip frames for one local peer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TransportEventMempoolFeed<TTransport> {
+    transport: TTransport,
+    local_peer_id: String,
+    required_topic: Option<String>,
+}
+
+impl<TTransport> TransportEventMempoolFeed<TTransport> {
+    /// Creates a transport-event feed bound to one local peer inbox.
+    pub fn new(
+        transport: TTransport,
+        local_peer_id: &str,
+        required_topic: Option<&str>,
+    ) -> Result<Self, BlockPipelineError> {
+        if local_peer_id.trim().is_empty() {
+            return Err(BlockPipelineError::TransportFeed(
+                "transport feed local peer id is empty (transport_feed_local_peer_id_invalid)"
+                    .to_owned(),
+            ));
+        }
+        let required_topic = match required_topic {
+            Some(topic) if topic.trim().is_empty() => {
+                return Err(BlockPipelineError::TransportFeed(
+                    "transport feed required topic is empty (transport_feed_topic_invalid)"
+                        .to_owned(),
+                ));
+            }
+            Some(topic) => Some(topic.to_owned()),
+            None => None,
+        };
+        Ok(Self {
+            transport,
+            local_peer_id: local_peer_id.to_owned(),
+            required_topic,
+        })
+    }
+
+    fn decode_frame(
+        &self,
+        frame: PeerGossipFrame,
+    ) -> Result<BaselineTransaction, BlockPipelineError> {
+        if let Some(required_topic) = self.required_topic.as_deref() {
+            if frame.topic != required_topic {
+                return Err(BlockPipelineError::TransportFeed(format!(
+                    "transport frame topic mismatch: expected {required_topic}, found {} (transport_candidate_topic_mismatch)",
+                    frame.topic
+                )));
+            }
+        }
+        decode_transport_candidate_payload(frame.payload.as_str())
+    }
+}
+
+impl<TTransport> TransportMempoolFeed for TransportEventMempoolFeed<TTransport>
+where
+    TTransport: PeerLifecycleTransport,
+{
+    fn drain_pending_transactions(
+        &mut self,
+    ) -> Result<Vec<BaselineTransaction>, BlockPipelineError> {
+        let frames = self
+            .transport
+            .drain_inbox(self.local_peer_id.as_str())
+            .map_err(|error| {
+                BlockPipelineError::TransportFeed(format!(
+                    "transport feed inbox drain failed: {error} (transport_feed_inbox_drain_failed)"
+                ))
+            })?;
+        let mut transactions = Vec::with_capacity(frames.len());
+        for frame in frames {
+            transactions.push(self.decode_frame(frame)?);
+        }
+        Ok(transactions)
     }
 }
 
