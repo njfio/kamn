@@ -34,6 +34,9 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
     - provider contract marker `KolmeRuntimeCommitLiveProvider`
 - Deterministic tamper reason:
   - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
+- Release go/no-go linkage:
+  - `scripts/runtime/release_evidence_manifest.json` includes required artifact id `local_full_stack_integration`.
+  - release gate runner consumes `validate_local_full_stack_integration_live_contract_lane.sh` and fails closed on missing/tampered evidence linkage.
 
 ## Lane Migration Matrix (Issue #1721)
 

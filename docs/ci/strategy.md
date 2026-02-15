@@ -2633,6 +2633,7 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `go_no_go_evidence`
   - `rollback_readiness`
   - `dr_readiness`
+  - `local_full_stack_integration`
 - contract lane command:
   - CI-safe dry-run policy path:
     - `bash scripts/runtime/run_go_no_go_gate_lane.sh --mode dry-run --max-seconds 120 --output-json /tmp/go-no-go-gate-report.json`

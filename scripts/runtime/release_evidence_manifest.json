@@ -16,6 +16,11 @@
       "artifact_id": "dr_readiness",
       "expected_lane": "deploy.run_dr_evidence_contract_lane",
       "expected_success_marker": "dr evidence contract lane tests passed."
+    },
+    {
+      "artifact_id": "local_full_stack_integration",
+      "expected_lane": "runtime.validate_local_full_stack_integration_live_contract_lane",
+      "expected_success_marker": "local_full_stack_integration_policy_status=verified"
     }
   ]
 }
