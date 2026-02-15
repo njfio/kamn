@@ -56,6 +56,10 @@ the default fast test lane.
   - deterministic seed-set normalization for discovery bootstrap startup.
 - `KademliaDiscoveryBootstrapPlan`
   - deterministic Kademlia backend marker + canonical seed-peer ordering.
+- `PeerLifecycleRegressionCase`
+  - deterministic transition replay case across connect/drop/heartbeat/rejoin scenarios.
+- `PeerLifecycleRegressionOutcome`
+  - deterministic replay result with explicit final-state or fail-closed reason-code markers.
 
 ## Runtime Wiring Integration
 
@@ -91,6 +95,8 @@ enabled for a node profile.
   `P2pTransportError::GossipTransportDisabled`.
 - Empty Kademlia seed sets fail closed with
   `P2pTransportError::MissingKademliaBootstrapSeeds`.
+- Invalid lifecycle transition replay remains fail closed with reason code
+  `runtime_peer_transition_invalid`.
 
 Regression marker:
 - `Regression: #2922` ensures disconnected peers cannot broadcast gossip frames.
@@ -101,6 +107,7 @@ Regression marker:
 cargo test -p kamn-core --test p2p_transport_runtime
 cargo test -p kamn-core --test p2p_swarm_stack_runtime
 cargo test -p kamn-core --test p2p_kademlia_bootstrap
+cargo test -p kamn-core --test p2p_lifecycle_regression_corpus
 cargo test -p kamn-core p2p_transport
 cargo clippy -p kamn-core -- -D warnings
 cargo fmt --check

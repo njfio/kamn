@@ -230,6 +230,10 @@ This document captures node-runtime productionization slices for machine-readabl
   - bootstrap seed list is canonicalized and deduplicated before startup.
   - empty seed lists fail closed with `P2pTransportError::MissingKademliaBootstrapSeeds`.
   - discovery backend marker remains deterministic: `kademlia`.
+- Lifecycle regression corpus contracts:
+  - `build_libp2p_lifecycle_regression_corpus(...)` provides deterministic connect/drop/heartbeat/rejoin replay cases.
+  - `run_libp2p_lifecycle_regression_case(...)` and `run_libp2p_lifecycle_regression_corpus(...)` enforce deterministic expected outcomes.
+  - invalid transition replay remains fail-closed with reason code `runtime_peer_transition_invalid`.
 - Harness startup modes:
   - `DryRun`: validates deterministic composition and reports `started=false`.
   - `Run`: starts bounded harness loop and reports deterministic `executed_ticks`.

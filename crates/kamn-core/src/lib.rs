@@ -344,11 +344,14 @@ pub use operator_dashboard_ui::{
     OperatorTaskTimelineEntry, ReputationRiskTier,
 };
 pub use p2p_transport::{
-    build_p2p_swarm_deterministic_config, compose_kademlia_discovery_bootstrap,
-    compose_libp2p_swarm_behavior_stack, InMemoryPeerLifecycleTransport, KademliaBootstrapSeedSet,
-    KademliaDiscoveryBootstrapPlan, P2pSwarmBehaviorStack, P2pSwarmDeterministicConfig,
-    P2pSwarmHarnessMode, P2pSwarmHarnessReport, P2pSwarmHarnessTask, P2pTransportError,
-    PeerDiscoveryRecord, PeerGossipFrame, PeerLifecycleTransport,
+    build_libp2p_lifecycle_regression_corpus, build_p2p_swarm_deterministic_config,
+    compose_kademlia_discovery_bootstrap, compose_libp2p_swarm_behavior_stack,
+    run_libp2p_lifecycle_regression_case, run_libp2p_lifecycle_regression_corpus,
+    InMemoryPeerLifecycleTransport, KademliaBootstrapSeedSet, KademliaDiscoveryBootstrapPlan,
+    P2pSwarmBehaviorStack, P2pSwarmDeterministicConfig, P2pSwarmHarnessMode, P2pSwarmHarnessReport,
+    P2pSwarmHarnessTask, P2pTransportError, PeerDiscoveryRecord, PeerGossipFrame,
+    PeerLifecycleRegressionCase, PeerLifecycleRegressionError,
+    PeerLifecycleRegressionExpectedOutcome, PeerLifecycleRegressionOutcome, PeerLifecycleTransport,
     PeerLifecycleTransportCoordinator,
 };
 pub use performance_targets::{
