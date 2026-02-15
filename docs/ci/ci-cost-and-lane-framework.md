@@ -392,6 +392,22 @@ Deterministic composed fail-closed markers:
 - `combined_shell_surface_ratio_fail_ceiling_exceeded`
 - `ignored_test_script_budget_trend_contract_status=pass|fail`
 
+Bridge deep-lane dispatcher migration tranche (bounded parity validation):
+
+```bash
+bash scripts/bridge/test_bridge_deep_lane_dispatch_wrapper_matrix.sh
+```
+
+Migrated wrappers in this tranche:
+- `scripts/bridge/run_bridge_credentialed_deep_lane.sh`
+- `scripts/bridge/run_bridge_replay_redaction_deep_lane.sh`
+- `scripts/bridge/run_cross_chain_outbound_intent_deep_lane.sh`
+
+Dispatcher-backed parity contracts:
+- wrapper remains a symlink to `scripts/framework/run_non_kolme_contract_lane_dispatch.sh`
+- manifest resolution and expected deep-phase impl path remain fail-closed
+- emitted deep-lane output markers remain equivalent after wrapper migration
+
 Deterministic command-surface drift markers in trend artifacts:
 - `command_surface_trend_status=within|warn|fail|invalid`
 - `command_surface_policy_decision=GO|WARN|NO-GO`

@@ -5,7 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/bridge/run_cross_chain_outbound_intent_contract_lane.sh"
 CONTRACT_LANE_IMPL="$ROOT_DIR/scripts/bridge/run_cross_chain_outbound_intent_contract_lane_impl.sh"
 DEEP_LANE="$ROOT_DIR/scripts/bridge/run_cross_chain_outbound_intent_deep_lane.sh"
+DEEP_LANE_IMPL="$ROOT_DIR/scripts/bridge/run_cross_chain_outbound_intent_deep_lane_impl.sh"
 MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/bridge_cross_chain_outbound_intent_contract_lane.json"
+DEEP_MANIFEST_FILE="$ROOT_DIR/scripts/framework/manifests/bridge_cross_chain_outbound_intent_deep_lane.json"
 DISPATCHER="$ROOT_DIR/scripts/framework/run_non_kolme_contract_lane_dispatch.sh"
 
 if [ ! -x "$CONTRACT_LANE" ]; then
@@ -18,6 +20,11 @@ if [ ! -x "$DEEP_LANE" ]; then
   exit 1
 fi
 
+if [ ! -x "$DEEP_LANE_IMPL" ]; then
+  echo "expected outbound intent deep lane implementation script to be executable" >&2
+  exit 1
+fi
+
 if [ ! -x "$CONTRACT_LANE_IMPL" ]; then
   echo "expected outbound intent contract lane implementation script to be executable" >&2
   exit 1
@@ -25,6 +32,11 @@ fi
 
 if [ ! -f "$MANIFEST_FILE" ]; then
   echo "expected outbound intent contract lane manifest to exist" >&2
+  exit 1
+fi
+
+if [ ! -f "$DEEP_MANIFEST_FILE" ]; then
+  echo "expected outbound intent deep lane manifest to exist" >&2
   exit 1
 fi
 
@@ -55,13 +67,34 @@ if ! grep -Fq "run_cross_chain_outbound_intent_contract_lane_impl.sh" "$MANIFEST
   exit 1
 fi
 
-if ! grep -Fq "run_cross_chain_outbound_intent_contract_lane.sh" "$DEEP_LANE"; then
-  echo "expected deep lane script to invoke outbound intent contract lane baseline checks first" >&2
+if [ ! -L "$DEEP_LANE" ]; then
+  echo "expected outbound intent deep lane wrapper to be a dispatcher symlink" >&2
   exit 1
 fi
 
-if ! grep -q "bridge-outbound-intent-deep-report.json" "$DEEP_LANE"; then
-  echo "expected deep lane script to emit outbound intent deep report artifact" >&2
+if [ "$(readlink "$DEEP_LANE")" != "../framework/run_non_kolme_contract_lane_dispatch.sh" ]; then
+  echo "expected outbound intent deep lane wrapper to target shared non-Kolme dispatcher" >&2
+  exit 1
+fi
+
+resolved_deep_manifest="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$DEEP_LANE")" --resolve-manifest-path)"
+if [ "$resolved_deep_manifest" != "$DEEP_MANIFEST_FILE" ]; then
+  echo "expected outbound intent deep wrapper to resolve bridge deep manifest via dispatcher" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_cross_chain_outbound_intent_deep_lane_impl.sh" "$DEEP_MANIFEST_FILE"; then
+  echo "expected outbound intent deep manifest to dispatch to implementation script" >&2
+  exit 1
+fi
+
+if ! grep -Fq "run_cross_chain_outbound_intent_contract_lane.sh" "$DEEP_LANE_IMPL"; then
+  echo "expected deep lane implementation script to invoke outbound intent contract lane baseline checks first" >&2
+  exit 1
+fi
+
+if ! grep -q "bridge-outbound-intent-deep-report.json" "$DEEP_LANE_IMPL"; then
+  echo "expected deep lane implementation script to emit outbound intent deep report artifact" >&2
   exit 1
 fi
 
