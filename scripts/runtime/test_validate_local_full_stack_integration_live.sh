@@ -42,6 +42,38 @@ if ! printf '%s\n' "$validation_output" | grep -q '^evidence_bundle_status=verif
   echo "expected local full-stack integration evidence bundle marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^transport_convergence_status=planned$'; then
+  echo "expected local full-stack integration transport convergence marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^signer_provenance_status=planned$'; then
+  echo "expected local full-stack integration signer provenance marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_commit_submission_status=planned$'; then
+  echo "expected local full-stack integration runtime submit marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_commit_finality_status=planned$'; then
+  echo "expected local full-stack integration runtime finality marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_provider_contract_status=planned$'; then
+  echo "expected local full-stack integration provider contract marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_provider_client_contract=KolmeRuntimeCommitLiveProvider$'; then
+  echo "expected local full-stack integration provider client contract marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_signing_profile=kolme-fork-secp256k1-v1$'; then
+  echo "expected local full-stack integration runtime signing profile marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1$'; then
+  echo "expected local full-stack integration runtime signer attestation schema marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^run_mode_command_status=dry_run_no_commands_executed$'; then
   echo "expected local full-stack integration dry-run command marker" >&2
   exit 1
@@ -67,6 +99,26 @@ if payload.get("run_mode_command_count") != 0:
     raise SystemExit("expected run_mode_command_count=0 for dry-run")
 if payload.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected deterministic dry-run reason code")
+if payload.get("transport_convergence_status") != "planned":
+    raise SystemExit("expected transport_convergence_status=planned in dry-run")
+if payload.get("signer_provenance_status") != "planned":
+    raise SystemExit("expected signer_provenance_status=planned in dry-run")
+if payload.get("runtime_commit_submission_status") != "planned":
+    raise SystemExit("expected runtime_commit_submission_status=planned in dry-run")
+if payload.get("runtime_commit_finality_status") != "planned":
+    raise SystemExit("expected runtime_commit_finality_status=planned in dry-run")
+if payload.get("runtime_provider_contract_status") != "planned":
+    raise SystemExit("expected runtime_provider_contract_status=planned in dry-run")
+if payload.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
+    raise SystemExit("expected runtime_provider_client_contract marker")
+if payload.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected runtime_signing_profile marker")
+if payload.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+    raise SystemExit("expected runtime_signer_attestation_schema_version marker")
+if payload.get("kolme_integration_report_schema_version") != "kamn.kolme.local-kamn-live-runtime-integration-summary.v1":
+    raise SystemExit("expected kolme_integration_report_schema_version marker")
+if payload.get("kolme_integration_policy_schema_version") != "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1":
+    raise SystemExit("expected kolme_integration_policy_schema_version marker")
 if not isinstance(payload.get("artifact_paths"), dict):
     raise SystemExit("expected artifact_paths dictionary")
 PY

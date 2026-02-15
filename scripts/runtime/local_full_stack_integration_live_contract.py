@@ -29,6 +29,11 @@ from framework.contract_framework import (  # noqa: E402
 RUN_LANE_SCHEMA = "kamn.runtime.local-full-stack-integration-live-report.v1"
 POLICY_SCHEMA = "kamn.runtime.local-full-stack-integration-live-policy-report.v1"
 EVIDENCE_BUNDLE_SCHEMA = "kamn.runtime.local-full-stack-integration-evidence-bundle.v1"
+KOLME_INTEGRATION_REPORT_SCHEMA = "kamn.kolme.local-kamn-live-runtime-integration-summary.v1"
+KOLME_INTEGRATION_POLICY_SCHEMA = "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1"
+KOLME_PROVIDER_CLIENT_CONTRACT = "KolmeRuntimeCommitLiveProvider"
+KOLME_RUNTIME_SIGNING_PROFILE = "kolme-fork-secp256k1-v1"
+KOLME_SIGNER_ATTESTATION_SCHEMA = "kamn.kolme.runtime-signer-attestation.v1"
 OPT_IN_ENV = "KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN"
 DRY_RUN_REASON = "dry_run_no_commands_executed"
 RUN_REASON = "local_full_stack_integration_live_validation_executed"
@@ -69,6 +74,16 @@ def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 
 
+def _read_json_dict(path: Path, *, failure_reason: str) -> dict[str, object]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        fail(failure_reason)
+    if not isinstance(payload, dict):
+        fail(failure_reason)
+    return payload
+
+
 def run_lane(args: argparse.Namespace) -> int:
     mode = require_enum("--mode", args.mode.strip(), ("dry-run", "run"))
     ci_fast_gate = require_enum("--ci-fast-gate", args.ci_fast_gate.strip(), ("PASS", "FAIL"))
@@ -87,10 +102,18 @@ def run_lane(args: argparse.Namespace) -> int:
     start_epoch = int(time.time())
     commands_executed = 0
     artifact_paths: dict[str, str] = {}
+    transport_convergence_status = "planned" if mode == "dry-run" else "verified"
+    signer_provenance_status = "planned" if mode == "dry-run" else "verified"
+    runtime_commit_submission_status = "planned" if mode == "dry-run" else "verified"
+    runtime_commit_finality_status = "planned" if mode == "dry-run" else "verified"
+    runtime_provider_contract_status = "planned" if mode == "dry-run" else "verified"
+
     if mode == "run":
         artifact_dir = Path(tempfile.mkdtemp(prefix="local-full-stack-integration-live-"))
         full_io_report = artifact_dir / "full-io-scenario-matrix-report.json"
         full_runtime_report = artifact_dir / "local-full-runtime-report.json"
+        kolme_integration_report = artifact_dir / "kolme-runtime-integration-summary.json"
+        kolme_integration_policy_report = artifact_dir / "kolme-runtime-integration-policy.json"
         evidence_bundle_file = artifact_dir / "local-full-stack-evidence-bundle.json"
 
         full_io_output = _run_command(
@@ -139,12 +162,76 @@ def run_lane(args: argparse.Namespace) -> int:
             fail("local full-runtime command did not emit final_decision=GO")
         commands_executed += 1
 
-        full_io_payload = json.loads(full_io_report.read_text(encoding="utf-8"))
-        full_runtime_payload = json.loads(full_runtime_report.read_text(encoding="utf-8"))
+        kolme_output = _run_command(
+            [
+                "bash",
+                "scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh",
+                "--output-json",
+                str(kolme_integration_report),
+                "--policy-output-json",
+                str(kolme_integration_policy_report),
+                "--max-seconds",
+                str(min(command_max_seconds, 210)),
+            ],
+            timeout_seconds=command_max_seconds,
+        )
+        if not any(line.strip() == "status=ok" for line in kolme_output.splitlines()):
+            fail("kolme runtime integration contract lane did not emit status=ok")
+        commands_executed += 1
+
+        full_io_payload = _read_json_dict(
+            full_io_report,
+            failure_reason="full_i_o_scenario_matrix_report_invalid",
+        )
+        full_runtime_payload = _read_json_dict(
+            full_runtime_report,
+            failure_reason="local_full_runtime_report_invalid",
+        )
+        kolme_integration_payload = _read_json_dict(
+            kolme_integration_report,
+            failure_reason="kolme_runtime_integration_report_invalid",
+        )
+        kolme_policy_payload = _read_json_dict(
+            kolme_integration_policy_report,
+            failure_reason="kolme_runtime_integration_policy_report_invalid",
+        )
+
         if full_io_payload.get("final_decision") != "GO":
             fail("full I/O scenario matrix report missing final_decision=GO")
         if full_runtime_payload.get("final_decision") != "GO":
             fail("local full-runtime report missing final_decision=GO")
+        if kolme_integration_payload.get("schema_version") != KOLME_INTEGRATION_REPORT_SCHEMA:
+            fail("kolme runtime integration report schema mismatch")
+        if kolme_integration_payload.get("status") != "ok":
+            fail("kolme runtime integration report status mismatch")
+        if kolme_integration_payload.get("runtime_profile") != "real-node":
+            fail("kolme runtime integration report runtime_profile mismatch")
+        if (
+            kolme_integration_payload.get("runtime_provider_client_contract")
+            != KOLME_PROVIDER_CLIENT_CONTRACT
+        ):
+            fail("kolme runtime integration report provider contract mismatch")
+        if (
+            kolme_integration_payload.get("runtime_signing_profile")
+            != KOLME_RUNTIME_SIGNING_PROFILE
+        ):
+            fail("kolme runtime integration report signing profile mismatch")
+        if (
+            kolme_integration_payload.get("runtime_signer_attestation_schema_version")
+            != KOLME_SIGNER_ATTESTATION_SCHEMA
+        ):
+            fail("kolme runtime integration report signer attestation schema mismatch")
+        runtime_commit_command = kolme_integration_payload.get("runtime_commit_command")
+        if (
+            not isinstance(runtime_commit_command, str)
+            or "run_local_runtime_commit_live_finality_evidence_contract_lane.sh"
+            not in runtime_commit_command
+        ):
+            fail("kolme runtime integration report missing runtime commit finality lane marker")
+        if kolme_policy_payload.get("schema_version") != KOLME_INTEGRATION_POLICY_SCHEMA:
+            fail("kolme runtime integration policy schema mismatch")
+        if kolme_policy_payload.get("final_decision") != "GO":
+            fail("kolme runtime integration policy missing final_decision=GO")
 
         evidence_bundle = {
             "schema_version": EVIDENCE_BUNDLE_SCHEMA,
@@ -153,6 +240,16 @@ def run_lane(args: argparse.Namespace) -> int:
             "lane_mode": mode,
             "full_io_matrix_report_file": str(full_io_report),
             "full_runtime_report_file": str(full_runtime_report),
+            "kolme_runtime_integration_report_file": str(kolme_integration_report),
+            "kolme_runtime_integration_policy_report_file": str(kolme_integration_policy_report),
+            "transport_convergence_status": transport_convergence_status,
+            "signer_provenance_status": signer_provenance_status,
+            "runtime_commit_submission_status": runtime_commit_submission_status,
+            "runtime_commit_finality_status": runtime_commit_finality_status,
+            "runtime_provider_contract_status": runtime_provider_contract_status,
+            "runtime_provider_client_contract": KOLME_PROVIDER_CLIENT_CONTRACT,
+            "runtime_signing_profile": KOLME_RUNTIME_SIGNING_PROFILE,
+            "runtime_signer_attestation_schema_version": KOLME_SIGNER_ATTESTATION_SCHEMA,
             "commands_executed": commands_executed,
             "ci_fast_gate_eligibility": "excluded_local_heavy",
         }
@@ -161,6 +258,8 @@ def run_lane(args: argparse.Namespace) -> int:
         artifact_paths = {
             "full_io_matrix_report": str(full_io_report),
             "full_runtime_report": str(full_runtime_report),
+            "kolme_runtime_integration_summary_report": str(kolme_integration_report),
+            "kolme_runtime_integration_policy_report": str(kolme_integration_policy_report),
             "evidence_bundle_file": str(evidence_bundle_file),
         }
 
@@ -187,6 +286,16 @@ def run_lane(args: argparse.Namespace) -> int:
         "scenario_matrix_status": "verified",
         "full_runtime_status": "verified",
         "evidence_bundle_status": "verified",
+        "transport_convergence_status": transport_convergence_status,
+        "signer_provenance_status": signer_provenance_status,
+        "runtime_commit_submission_status": runtime_commit_submission_status,
+        "runtime_commit_finality_status": runtime_commit_finality_status,
+        "runtime_provider_contract_status": runtime_provider_contract_status,
+        "runtime_provider_client_contract": KOLME_PROVIDER_CLIENT_CONTRACT,
+        "runtime_signing_profile": KOLME_RUNTIME_SIGNING_PROFILE,
+        "runtime_signer_attestation_schema_version": KOLME_SIGNER_ATTESTATION_SCHEMA,
+        "kolme_integration_report_schema_version": KOLME_INTEGRATION_REPORT_SCHEMA,
+        "kolme_integration_policy_schema_version": KOLME_INTEGRATION_POLICY_SCHEMA,
         "run_mode_command_status": run_mode_command_status,
         "run_mode_command_count": commands_executed,
         "reason_code": reason_code,
@@ -208,6 +317,16 @@ def run_lane(args: argparse.Namespace) -> int:
     print("scenario_matrix_status=verified")
     print("full_runtime_status=verified")
     print("evidence_bundle_status=verified")
+    print(f"transport_convergence_status={transport_convergence_status}")
+    print(f"signer_provenance_status={signer_provenance_status}")
+    print(f"runtime_commit_submission_status={runtime_commit_submission_status}")
+    print(f"runtime_commit_finality_status={runtime_commit_finality_status}")
+    print(f"runtime_provider_contract_status={runtime_provider_contract_status}")
+    print(f"runtime_provider_client_contract={KOLME_PROVIDER_CLIENT_CONTRACT}")
+    print(f"runtime_signing_profile={KOLME_RUNTIME_SIGNING_PROFILE}")
+    print(f"runtime_signer_attestation_schema_version={KOLME_SIGNER_ATTESTATION_SCHEMA}")
+    print(f"kolme_integration_report_schema_version={KOLME_INTEGRATION_REPORT_SCHEMA}")
+    print(f"kolme_integration_policy_schema_version={KOLME_INTEGRATION_POLICY_SCHEMA}")
     print(f"run_mode_command_status={run_mode_command_status}")
     print(f"run_mode_command_count={commands_executed}")
     print(f"reason_code={reason_code}")
@@ -263,6 +382,26 @@ def check_policy(args: argparse.Namespace) -> int:
         payload.get("evidence_bundle_status") != "verified",
         "local_full_stack_integration_policy_evidence_bundle_status_mismatch",
     )
+    checks.reject_if(
+        payload.get("runtime_provider_client_contract") != KOLME_PROVIDER_CLIENT_CONTRACT,
+        "local_full_stack_integration_policy_runtime_provider_client_contract_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_signing_profile") != KOLME_RUNTIME_SIGNING_PROFILE,
+        "local_full_stack_integration_policy_runtime_signing_profile_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_signer_attestation_schema_version") != KOLME_SIGNER_ATTESTATION_SCHEMA,
+        "local_full_stack_integration_policy_runtime_signer_attestation_schema_mismatch",
+    )
+    checks.reject_if(
+        payload.get("kolme_integration_report_schema_version") != KOLME_INTEGRATION_REPORT_SCHEMA,
+        "local_full_stack_integration_policy_kolme_report_schema_contract_mismatch",
+    )
+    checks.reject_if(
+        payload.get("kolme_integration_policy_schema_version") != KOLME_INTEGRATION_POLICY_SCHEMA,
+        "local_full_stack_integration_policy_kolme_policy_schema_contract_mismatch",
+    )
 
     lane_mode = payload.get("lane_mode")
     checks.reject_if(
@@ -280,6 +419,27 @@ def check_policy(args: argparse.Namespace) -> int:
     checks.reject_if(
         not isinstance(artifact_paths, dict),
         "local_full_stack_integration_policy_artifact_paths_invalid",
+    )
+    expected_domain_status = "planned" if lane_mode == "dry-run" else "verified"
+    checks.reject_if(
+        payload.get("transport_convergence_status") != expected_domain_status,
+        "local_full_stack_integration_policy_transport_convergence_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("signer_provenance_status") != expected_domain_status,
+        "local_full_stack_integration_policy_signer_provenance_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_commit_submission_status") != expected_domain_status,
+        "local_full_stack_integration_policy_runtime_commit_submission_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_commit_finality_status") != expected_domain_status,
+        "local_full_stack_integration_policy_runtime_commit_finality_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_provider_contract_status") != expected_domain_status,
+        "local_full_stack_integration_policy_runtime_provider_contract_status_mismatch",
     )
 
     if lane_mode == "dry-run":
@@ -305,7 +465,7 @@ def check_policy(args: argparse.Namespace) -> int:
             "local_full_stack_integration_policy_run_mode_exclusion_mismatch",
         )
         checks.reject_if(
-            command_count < 2,
+            command_count < 3,
             "local_full_stack_integration_policy_run_mode_command_count_mismatch",
         )
         checks.reject_if(
@@ -319,8 +479,12 @@ def check_policy(args: argparse.Namespace) -> int:
         required_artifacts = (
             "full_io_matrix_report",
             "full_runtime_report",
+            "kolme_runtime_integration_summary_report",
+            "kolme_runtime_integration_policy_report",
             "evidence_bundle_file",
         )
+        kolme_summary_report_path = ""
+        kolme_policy_report_path = ""
         if isinstance(artifact_paths, dict):
             for artifact_key in required_artifacts:
                 artifact_value = artifact_paths.get(artifact_key)
@@ -328,6 +492,94 @@ def check_policy(args: argparse.Namespace) -> int:
                     not isinstance(artifact_value, str) or not Path(artifact_value).is_file(),
                     f"local_full_stack_integration_policy_artifact_missing:{artifact_key}",
                 )
+            summary_value = artifact_paths.get("kolme_runtime_integration_summary_report")
+            policy_value = artifact_paths.get("kolme_runtime_integration_policy_report")
+            if isinstance(summary_value, str):
+                kolme_summary_report_path = summary_value
+            if isinstance(policy_value, str):
+                kolme_policy_report_path = policy_value
+
+        if kolme_summary_report_path:
+            try:
+                kolme_summary_payload = json.loads(
+                    Path(kolme_summary_report_path).read_text(encoding="utf-8")
+                )
+            except (OSError, json.JSONDecodeError):
+                kolme_summary_payload = {}
+                checks.reject_if(
+                    True,
+                    "local_full_stack_integration_policy_kolme_summary_json_invalid",
+                )
+            if not isinstance(kolme_summary_payload, dict):
+                kolme_summary_payload = {}
+                checks.reject_if(
+                    True,
+                    "local_full_stack_integration_policy_kolme_summary_root_invalid",
+                )
+            checks.reject_if(
+                kolme_summary_payload.get("schema_version") != KOLME_INTEGRATION_REPORT_SCHEMA,
+                "local_full_stack_integration_policy_kolme_summary_schema_mismatch",
+            )
+            checks.reject_if(
+                kolme_summary_payload.get("status") != "ok",
+                "local_full_stack_integration_policy_kolme_summary_status_mismatch",
+            )
+            checks.reject_if(
+                kolme_summary_payload.get("runtime_profile") != "real-node",
+                "local_full_stack_integration_policy_kolme_summary_runtime_profile_mismatch",
+            )
+            checks.reject_if(
+                kolme_summary_payload.get("runtime_provider_client_contract")
+                != KOLME_PROVIDER_CLIENT_CONTRACT,
+                "local_full_stack_integration_policy_kolme_summary_provider_contract_mismatch",
+            )
+            checks.reject_if(
+                kolme_summary_payload.get("runtime_signing_profile")
+                != KOLME_RUNTIME_SIGNING_PROFILE,
+                "local_full_stack_integration_policy_kolme_summary_signing_profile_mismatch",
+            )
+            checks.reject_if(
+                kolme_summary_payload.get("runtime_signer_attestation_schema_version")
+                != KOLME_SIGNER_ATTESTATION_SCHEMA,
+                "local_full_stack_integration_policy_kolme_summary_signer_attestation_schema_mismatch",
+            )
+            runtime_commit_command = kolme_summary_payload.get("runtime_commit_command")
+            checks.reject_if(
+                not isinstance(runtime_commit_command, str)
+                or "run_local_runtime_commit_live_finality_evidence_contract_lane.sh"
+                not in runtime_commit_command,
+                "local_full_stack_integration_policy_kolme_summary_runtime_commit_contract_mismatch",
+            )
+            checks.reject_if(
+                kolme_summary_payload.get("runtime_commit_finality_enabled") is not True,
+                "local_full_stack_integration_policy_kolme_summary_finality_marker_mismatch",
+            )
+
+        if kolme_policy_report_path:
+            try:
+                kolme_policy_payload = json.loads(
+                    Path(kolme_policy_report_path).read_text(encoding="utf-8")
+                )
+            except (OSError, json.JSONDecodeError):
+                kolme_policy_payload = {}
+                checks.reject_if(
+                    True,
+                    "local_full_stack_integration_policy_kolme_policy_json_invalid",
+                )
+            if not isinstance(kolme_policy_payload, dict):
+                kolme_policy_payload = {}
+                checks.reject_if(
+                    True,
+                    "local_full_stack_integration_policy_kolme_policy_root_invalid",
+                )
+            checks.reject_if(
+                kolme_policy_payload.get("schema_version") != KOLME_INTEGRATION_POLICY_SCHEMA,
+                "local_full_stack_integration_policy_kolme_policy_schema_mismatch",
+            )
+            checks.reject_if(
+                kolme_policy_payload.get("final_decision") != "GO",
+                "local_full_stack_integration_policy_kolme_policy_final_decision_mismatch",
+            )
 
     observed_final_decision, decision_reasons = checks.finalize(
         "local_full_stack_integration_policy_verified"

@@ -26,6 +26,16 @@ cat >"$TMP_REPORT" <<'JSON'
   "scenario_matrix_status": "verified",
   "full_runtime_status": "verified",
   "evidence_bundle_status": "verified",
+  "transport_convergence_status": "planned",
+  "signer_provenance_status": "planned",
+  "runtime_commit_submission_status": "planned",
+  "runtime_commit_finality_status": "planned",
+  "runtime_provider_contract_status": "planned",
+  "runtime_provider_client_contract": "KolmeRuntimeCommitLiveProvider",
+  "runtime_signing_profile": "kolme-fork-secp256k1-v1",
+  "runtime_signer_attestation_schema_version": "kamn.kolme.runtime-signer-attestation.v1",
+  "kolme_integration_report_schema_version": "kamn.kolme.local-kamn-live-runtime-integration-summary.v1",
+  "kolme_integration_policy_schema_version": "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1",
   "run_mode_command_status": "dry_run_no_commands_executed",
   "run_mode_command_count": 0,
   "reason_code": "dry_run_no_commands_executed",
@@ -80,7 +90,7 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 payload = json.loads(path.read_text(encoding="utf-8"))
-payload["scenario_matrix_status"] = "missing"
+payload["runtime_commit_finality_status"] = "missing"
 path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 PY
 
@@ -98,8 +108,8 @@ if [ "$tampered_code" -eq 0 ]; then
   echo "expected tampered local full-stack integration report to fail policy check" >&2
   exit 1
 fi
-if ! printf '%s\n' "$tampered_output" | grep -q 'local_full_stack_integration_policy_scenario_matrix_status_mismatch'; then
-  echo "expected deterministic reason marker for tampered scenario matrix status" >&2
+if ! printf '%s\n' "$tampered_output" | grep -q 'local_full_stack_integration_policy_runtime_commit_finality_status_mismatch'; then
+  echo "expected deterministic reason marker for tampered runtime commit finality status" >&2
   exit 1
 fi
 

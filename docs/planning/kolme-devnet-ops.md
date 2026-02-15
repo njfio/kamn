@@ -12,6 +12,29 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Deterministic marker validation from fixture contract.
 - PR-safe runtime budget guard for smoke lane cost control.
 
+## Composed Full-Stack E2E Lane (Issue #3420)
+
+- Composed runtime lane command:
+  - `bash scripts/runtime/validate_local_full_stack_integration_live.sh --mode dry-run --output-json /tmp/local-full-stack-integration-summary.json`
+- Local-only composed run-mode command:
+  - `KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1 bash scripts/runtime/validate_local_full_stack_integration_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/local-full-stack-integration-summary.json`
+- Policy checker command:
+  - `bash scripts/runtime/check_local_full_stack_integration_live_policy.sh --report-file /tmp/local-full-stack-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-full-stack-integration-policy.json`
+- Contract lane command:
+  - `bash scripts/runtime/validate_local_full_stack_integration_live_contract_lane.sh --output-json /tmp/local-full-stack-integration-contract-lane-report.json --policy-output-json /tmp/local-full-stack-integration-policy.json`
+- Composition contract:
+  - run-mode composes:
+    - `scripts/runtime/validate_full_io_scenario_matrix_live.sh`
+    - `scripts/runtime/validate_local_full_runtime_live.sh`
+    - `scripts/kolme/run_local_kamn_live_runtime_integration_contract_lane.sh`
+  - nested Kolme summary/policy evidence is fail-closed for:
+    - signer provenance markers
+    - runtime commit submission markers
+    - runtime commit finality markers
+    - provider contract marker `KolmeRuntimeCommitLiveProvider`
+- Deterministic tamper reason:
+  - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
+
 ## Lane Migration Matrix (Issue #1721)
 
 - Canonical prioritized lane migration matrix fixture:

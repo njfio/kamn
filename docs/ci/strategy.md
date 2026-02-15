@@ -39,7 +39,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - regression command surfaces must retain dry-run policy and contract-lane tests for both lanes in `scripts/ci/test_ci_tools.sh`.
 - Deterministic drift markers:
   - `full_io_scenario_matrix_policy_multinode_propagation_mismatch`
-  - `local_full_stack_integration_policy_evidence_bundle_status_mismatch`
+  - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
   - `sqlite_crash_recovery_policy_fast_gate_exclusion_mismatch`
 
 ## Test Layering Policy Contract
@@ -303,6 +303,13 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Integration composition contract:
   - composes full I/O scenario matrix lane (`validate_full_io_scenario_matrix_live.sh`) in run mode.
   - composes full-runtime supervisor lane (`validate_local_full_runtime_live.sh`) in run mode.
+  - composes Kolme runtime integration contract lane (`run_local_kamn_live_runtime_integration_contract_lane.sh`) in run mode.
+  - enforces top-level marker domains for:
+    - transport convergence
+    - signer provenance
+    - runtime commit submission
+    - runtime commit finality
+    - runtime provider contract (`KolmeRuntimeCommitLiveProvider`)
   - emits deterministic evidence bundle schema `kamn.runtime.local-full-stack-integration-evidence-bundle.v1`.
 - Cost controls:
   - dry-run mode executes no nested local-heavy commands and emits deterministic `dry_run_no_commands_executed`.
@@ -310,7 +317,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - nested run-mode commands propagate local-only opt-in for composed lanes.
   - local full-stack integration run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
-  - `local_full_stack_integration_policy_evidence_bundle_status_mismatch`
+  - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
 
 ## Deploy Compose Topology Contract Lane
 - Entry commands:
