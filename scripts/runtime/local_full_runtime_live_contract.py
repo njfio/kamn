@@ -31,6 +31,7 @@ OPT_IN_ENV = "KAMN_LOCAL_FULL_RUNTIME_LIVE_OPT_IN"
 RUN_MODE_FAST_GATE_EXCLUSION_REASON = "local_full_runtime_run_mode_excluded_from_fast_gate"
 DRY_RUN_REASON = "dry_run_no_commands_executed"
 RUN_REASON = "full_runtime_live_validation_executed"
+TRANSPORT_RUNTIME_MODE = "libp2p_transport_fed"
 
 
 def _extract_line_value(output: str, key: str) -> str:
@@ -91,6 +92,28 @@ def run_lane(args: argparse.Namespace) -> int:
             "--",
             "--exact",
         ],
+        [
+            "cargo",
+            "test",
+            "-p",
+            "kamn-core",
+            "--test",
+            "p2p_transport_runtime",
+            "functional_p2p_transport_gossip_broadcast_reaches_discovered_roles",
+            "--",
+            "--exact",
+        ],
+        [
+            "cargo",
+            "test",
+            "-p",
+            "kamn-core",
+            "--test",
+            "block_pipeline_transport_fed",
+            "functional_transport_fed_pipeline_orders_candidates_and_persists_commit",
+            "--",
+            "--exact",
+        ],
     ]
 
     commands_executed = 0
@@ -123,6 +146,10 @@ def run_lane(args: argparse.Namespace) -> int:
         "fast_gate_exclusion_reason_code": RUN_MODE_FAST_GATE_EXCLUSION_REASON,
         "full_runtime_bootstrap_status": "verified",
         "full_runtime_shutdown_status": "verified",
+        "three_node_role_set_status": "verified",
+        "transport_propagation_status": "verified",
+        "canonical_convergence_status": "verified",
+        "runtime_transport_mode": TRANSPORT_RUNTIME_MODE,
         "run_mode_command_status": run_mode_command_status,
         "run_mode_command_count": commands_executed,
         "reason_code": reason_code,
@@ -143,6 +170,10 @@ def run_lane(args: argparse.Namespace) -> int:
     print(f"fast_gate_exclusion_reason_code={RUN_MODE_FAST_GATE_EXCLUSION_REASON}")
     print("full_runtime_bootstrap_status=verified")
     print("full_runtime_shutdown_status=verified")
+    print("three_node_role_set_status=verified")
+    print("transport_propagation_status=verified")
+    print("canonical_convergence_status=verified")
+    print(f"runtime_transport_mode={TRANSPORT_RUNTIME_MODE}")
     print(f"run_mode_command_status={run_mode_command_status}")
     print(f"run_mode_command_count={commands_executed}")
     print(f"reason_code={reason_code}")
@@ -193,6 +224,22 @@ def check_policy(args: argparse.Namespace) -> int:
     checks.reject_if(
         payload.get("full_runtime_shutdown_status") != "verified",
         "local_full_runtime_policy_shutdown_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("three_node_role_set_status") != "verified",
+        "local_full_runtime_policy_three_node_role_set_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("transport_propagation_status") != "verified",
+        "local_full_runtime_policy_transport_propagation_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("canonical_convergence_status") != "verified",
+        "local_full_runtime_policy_canonical_convergence_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("runtime_transport_mode") != TRANSPORT_RUNTIME_MODE,
+        "local_full_runtime_policy_runtime_transport_mode_mismatch",
     )
 
     lane_mode = payload.get("lane_mode")

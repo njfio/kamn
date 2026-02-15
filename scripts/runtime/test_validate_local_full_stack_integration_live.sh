@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_local_full_stack_integration_live.sh"
 TMP_REPORT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT"' EXIT
+TMP_DIR="$(mktemp -d)"
+trap 'rm -f "$TMP_REPORT"; rm -rf "$TMP_DIR"' EXIT
 
 if [ ! -x "$VALIDATION_SCRIPT" ]; then
   echo "expected local full-stack integration validation script to be executable" >&2
@@ -42,6 +43,54 @@ if ! printf '%s\n' "$validation_output" | grep -q '^evidence_bundle_status=verif
   echo "expected local full-stack integration evidence bundle marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^transport_convergence_status=planned$'; then
+  echo "expected local full-stack integration transport convergence marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^signer_provenance_status=planned$'; then
+  echo "expected local full-stack integration signer provenance marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_commit_submission_status=planned$'; then
+  echo "expected local full-stack integration runtime submit marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_commit_finality_status=planned$'; then
+  echo "expected local full-stack integration runtime finality marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_provider_contract_status=planned$'; then
+  echo "expected local full-stack integration provider contract marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_provider_client_contract=KolmeRuntimeCommitLiveProvider$'; then
+  echo "expected local full-stack integration provider client contract marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_signing_profile=kolme-fork-secp256k1-v1$'; then
+  echo "expected local full-stack integration runtime signing profile marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1$'; then
+  echo "expected local full-stack integration runtime signer attestation schema marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^kolme_local_prerequisite_status=planned$'; then
+  echo "expected local full-stack integration Kolme local prerequisite marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^kolme_local_only_enforced_status=planned$'; then
+  echo "expected local full-stack integration Kolme local-only marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^kolme_integration_mode_status=planned$'; then
+  echo "expected local full-stack integration Kolme integration mode marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^kolme_integration_policy_status=planned$'; then
+  echo "expected local full-stack integration Kolme integration policy marker in dry-run" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^run_mode_command_status=dry_run_no_commands_executed$'; then
   echo "expected local full-stack integration dry-run command marker" >&2
   exit 1
@@ -67,6 +116,44 @@ if payload.get("run_mode_command_count") != 0:
     raise SystemExit("expected run_mode_command_count=0 for dry-run")
 if payload.get("reason_code") != "dry_run_no_commands_executed":
     raise SystemExit("expected deterministic dry-run reason code")
+if payload.get("transport_convergence_status") != "planned":
+    raise SystemExit("expected transport_convergence_status=planned in dry-run")
+if payload.get("signer_provenance_status") != "planned":
+    raise SystemExit("expected signer_provenance_status=planned in dry-run")
+if payload.get("runtime_commit_submission_status") != "planned":
+    raise SystemExit("expected runtime_commit_submission_status=planned in dry-run")
+if payload.get("runtime_commit_finality_status") != "planned":
+    raise SystemExit("expected runtime_commit_finality_status=planned in dry-run")
+if payload.get("runtime_provider_contract_status") != "planned":
+    raise SystemExit("expected runtime_provider_contract_status=planned in dry-run")
+if payload.get("runtime_provider_client_contract") != "KolmeRuntimeCommitLiveProvider":
+    raise SystemExit("expected runtime_provider_client_contract marker")
+if payload.get("runtime_signing_profile") != "kolme-fork-secp256k1-v1":
+    raise SystemExit("expected runtime_signing_profile marker")
+if payload.get("runtime_signer_attestation_schema_version") != "kamn.kolme.runtime-signer-attestation.v1":
+    raise SystemExit("expected runtime_signer_attestation_schema_version marker")
+if payload.get("kolme_integration_report_schema_version") != "kamn.kolme.local-kamn-live-runtime-integration-summary.v1":
+    raise SystemExit("expected kolme_integration_report_schema_version marker")
+if payload.get("kolme_integration_policy_schema_version") != "kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1":
+    raise SystemExit("expected kolme_integration_policy_schema_version marker")
+if payload.get("kolme_local_prerequisite_status") != "planned":
+    raise SystemExit("expected kolme_local_prerequisite_status=planned")
+if payload.get("kolme_local_only_enforced_status") != "planned":
+    raise SystemExit("expected kolme_local_only_enforced_status=planned")
+if payload.get("kolme_integration_mode_status") != "planned":
+    raise SystemExit("expected kolme_integration_mode_status=planned")
+if payload.get("kolme_integration_policy_status") != "planned":
+    raise SystemExit("expected kolme_integration_policy_status=planned")
+if payload.get("kolme_checkout_path") != "/tmp/kolme_fork":
+    raise SystemExit("expected default kolme_checkout_path marker")
+if payload.get("kolme_expected_remote_url") != "https://github.com/njfio/kolme_fork.git":
+    raise SystemExit("expected default kolme_expected_remote_url marker")
+if payload.get("kolme_expected_ref") != "refs/heads/main":
+    raise SystemExit("expected default kolme_expected_ref marker")
+if payload.get("kolme_base_url") != "http://127.0.0.1:3000":
+    raise SystemExit("expected default kolme_base_url marker")
+if payload.get("kolme_fork_chain_version") != "v0.15.2":
+    raise SystemExit("expected default kolme_fork_chain_version marker")
 if not isinstance(payload.get("artifact_paths"), dict):
     raise SystemExit("expected artifact_paths dictionary")
 PY
@@ -86,6 +173,29 @@ if [ "$run_without_opt_in_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$run_without_opt_in_output" | grep -q 'run mode requires explicit local-only opt-in via KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1'; then
   echo "expected deterministic opt-in marker for local full-stack integration run mode" >&2
+  exit 1
+fi
+
+set +e
+run_missing_checkout_output="$(
+  KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1 bash "$VALIDATION_SCRIPT" \
+    --mode run \
+    --max-seconds 120 \
+    --ci-fast-gate PASS \
+    --kolme-checkout-path "$TMP_DIR/missing-checkout" \
+    --kolme-expected-remote-url "https://github.com/njfio/kolme_fork.git" \
+    --kolme-expected-ref "refs/heads/main" \
+    --kolme-base-url "http://127.0.0.1:3000" \
+    --kolme-fork-chain-version "v0.15.2" 2>&1
+)"
+run_missing_checkout_code=$?
+set -e
+if [ "$run_missing_checkout_code" -eq 0 ]; then
+  echo "expected run mode without local checkout prerequisite to fail closed" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$run_missing_checkout_output" | grep -q 'local_kolme_checkout_missing'; then
+  echo "expected deterministic local checkout missing reason for run mode prerequisites" >&2
   exit 1
 fi
 

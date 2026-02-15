@@ -52,6 +52,14 @@ if ! printf '%s\n' "$lane_output" | grep -q '^local_full_runtime_contract_status
   echo "expected local full-runtime contract lane status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$lane_output" | grep -q '^three_node_convergence_status=verified$'; then
+  echo "expected local full-runtime contract lane three-node convergence marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^runtime_transport_mode_status=verified$'; then
+  echo "expected local full-runtime contract lane runtime transport mode marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$lane_output" | grep -q '^fail_closed_reason_code=local_full_runtime_policy_fast_gate_exclusion_mismatch$'; then
   echo "expected local full-runtime contract lane fail-closed reason marker" >&2
   exit 1
@@ -75,6 +83,10 @@ if lane_payload.get("local_full_runtime_contract_status") != "verified":
     raise SystemExit("expected local_full_runtime_contract_status=verified")
 if lane_payload.get("docs_contract_status") != "verified":
     raise SystemExit("expected docs_contract_status=verified")
+if lane_payload.get("three_node_convergence_status") != "verified":
+    raise SystemExit("expected three_node_convergence_status=verified")
+if lane_payload.get("runtime_transport_mode_status") != "verified":
+    raise SystemExit("expected runtime_transport_mode_status=verified")
 if lane_payload.get("performance_budget_status") != "verified":
     raise SystemExit("expected performance_budget_status=verified")
 

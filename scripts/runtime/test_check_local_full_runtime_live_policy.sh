@@ -7,7 +7,8 @@ POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_local_full_runtime_live_policy.s
 TMP_REPORT="$(mktemp)"
 TMP_POLICY="$(mktemp)"
 TMP_TAMPERED="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED"' EXIT
+TMP_TAMPERED_TRANSPORT="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED" "$TMP_TAMPERED_TRANSPORT"' EXIT
 
 if [ ! -x "$VALIDATION_SCRIPT" ]; then
   echo "expected local full-runtime validation script to be executable" >&2
@@ -97,5 +98,35 @@ reason_codes = [entry for entry in failed_checks.split(",") if entry]
 if "local_full_runtime_policy_fast_gate_exclusion_mismatch" not in reason_codes:
     raise SystemExit("expected parser to recover deterministic local full-runtime reason code")
 PY
+
+cp "$TMP_REPORT" "$TMP_TAMPERED_TRANSPORT"
+python3 - "$TMP_TAMPERED_TRANSPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["runtime_transport_mode"] = "in_memory_simulation"
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_transport_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$TMP_TAMPERED_TRANSPORT" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_transport_code=$?
+set -e
+if [ "$tampered_transport_code" -eq 0 ]; then
+  echo "expected transport-mode tampered local full-runtime report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_transport_output" | grep -q 'local_full_runtime_policy_runtime_transport_mode_mismatch'; then
+  echo "expected deterministic runtime transport-mode mismatch reason for local full-runtime report" >&2
+  exit 1
+fi
 
 echo "local full-runtime live policy tests passed."

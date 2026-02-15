@@ -39,7 +39,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - regression command surfaces must retain dry-run policy and contract-lane tests for both lanes in `scripts/ci/test_ci_tools.sh`.
 - Deterministic drift markers:
   - `full_io_scenario_matrix_policy_multinode_propagation_mismatch`
-  - `local_full_stack_integration_policy_evidence_bundle_status_mismatch`
+  - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
   - `sqlite_crash_recovery_policy_fast_gate_exclusion_mismatch`
 
 ## Test Layering Policy Contract
@@ -175,13 +175,20 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - ci-fast-gate mode: fast
 - local-dev mode: local
 - manual-hardened mode: manual
+- Three-node convergence evidence contracts:
+  - lane emits deterministic three-node role-set marker (`three_node_role_set_status=verified`).
+  - lane emits deterministic transport propagation marker (`transport_propagation_status=verified`).
+  - lane emits deterministic canonical convergence marker (`canonical_convergence_status=verified`).
+  - lane emits deterministic runtime transport mode marker (`runtime_transport_mode=libp2p_transport_fed`).
+  - policy checker fails closed on transport/convergence marker drift and decision mismatches.
 - Cost controls:
   - dry-run mode executes no nested `cargo test` commands and emits deterministic `dry_run_no_commands_executed`.
   - run mode is explicit local-only and requires `KAMN_LOCAL_FULL_RUNTIME_LIVE_OPT_IN=1`.
-  - run mode executes only two targeted full-runtime integration tests with bounded per-command budgets.
+  - run mode executes four targeted full-runtime/transport convergence checks with bounded per-command budgets.
   - local full-runtime run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_full_runtime_policy_fast_gate_exclusion_mismatch`
+  - `local_full_runtime_policy_runtime_transport_mode_mismatch`
 
 ## Runtime Sqlite Crash-Recovery Live Validation Contract Lane
 - Entry commands:
@@ -223,6 +230,9 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - lane emits deterministic partition marker (`block_reconciliation_partition_status=verified`).
   - lane emits deterministic rejoin marker (`block_reconciliation_rejoin_status=verified`).
   - lane emits deterministic canonical convergence marker (`canonical_convergence_status=verified`).
+  - lane emits deterministic transport-mode marker (`runtime_transport_mode=libp2p_transport_fed`).
+  - lane emits deterministic reconciliation taxonomy marker (`reconciliation_reason_taxonomy_status=verified`).
+  - lane emits deterministic reconciliation reason-code matrix marker (`reconciliation_reason_codes=none|...`).
   - policy checker fails closed on schema/marker drift and decision mismatches.
 - Cost controls:
   - dry-run mode executes no nested lane commands and emits deterministic `dry_run_no_commands_executed`.
@@ -281,7 +291,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 ## Runtime Local Full-Stack Integration Contract Lane
 - Entry commands:
   - `bash scripts/runtime/validate_local_full_stack_integration_live.sh --mode dry-run --output-json /tmp/local-full-stack-integration-summary.json`
-  - `KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1 bash scripts/runtime/validate_local_full_stack_integration_live.sh --mode run --ci-fast-gate FAIL --output-json /tmp/local-full-stack-integration-summary.json`
+- `KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1 bash scripts/runtime/validate_local_full_stack_integration_live.sh --mode run --ci-fast-gate FAIL --kolme-checkout-path /tmp/kolme_fork --kolme-expected-remote-url https://github.com/njfio/kolme_fork.git --kolme-expected-ref refs/heads/main --kolme-base-url http://127.0.0.1:3000 --kolme-fork-chain-version v0.15.2 --output-json /tmp/local-full-stack-integration-summary.json`
   - `bash scripts/runtime/check_local_full_stack_integration_live_policy.sh --report-file /tmp/local-full-stack-integration-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-full-stack-integration-policy.json`
   - `bash scripts/runtime/validate_local_full_stack_integration_live_contract_lane.sh --output-json /tmp/local-full-stack-integration-contract-lane-report.json --policy-output-json /tmp/local-full-stack-integration-policy.json`
   - `bash scripts/runtime/test_validate_local_full_stack_integration_live.sh`
@@ -293,6 +303,16 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Integration composition contract:
   - composes full I/O scenario matrix lane (`validate_full_io_scenario_matrix_live.sh`) in run mode.
   - composes full-runtime supervisor lane (`validate_local_full_runtime_live.sh`) in run mode.
+  - composes Kolme runtime integration lane (`run_local_kamn_live_runtime_integration_lane.sh`) in run mode.
+  - enforces top-level marker domains for:
+    - transport convergence
+    - signer provenance
+    - runtime commit submission
+    - runtime commit finality
+    - runtime provider contract (`KolmeRuntimeCommitLiveProvider`)
+    - local-only Kolme checkout/remote/ref/base-url/fork-chain prerequisites
+    - nested Kolme local-only enforcement and run-mode policy markers
+  - architecture boundary reference: `docs/architecture/kolme-live-integration.md`
   - emits deterministic evidence bundle schema `kamn.runtime.local-full-stack-integration-evidence-bundle.v1`.
 - Cost controls:
   - dry-run mode executes no nested local-heavy commands and emits deterministic `dry_run_no_commands_executed`.
@@ -300,7 +320,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - nested run-mode commands propagate local-only opt-in for composed lanes.
   - local full-stack integration run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
-  - `local_full_stack_integration_policy_evidence_bundle_status_mismatch`
+  - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
 
 ## Deploy Compose Topology Contract Lane
 - Entry commands:
@@ -2617,6 +2637,7 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - `go_no_go_evidence`
   - `rollback_readiness`
   - `dr_readiness`
+  - `local_full_stack_integration`
 - contract lane command:
   - CI-safe dry-run policy path:
     - `bash scripts/runtime/run_go_no_go_gate_lane.sh --mode dry-run --max-seconds 120 --output-json /tmp/go-no-go-gate-report.json`

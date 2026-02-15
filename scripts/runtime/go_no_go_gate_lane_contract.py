@@ -36,6 +36,7 @@ REQUIRED_ARTIFACT_IDS = (
     "go_no_go_evidence",
     "rollback_readiness",
     "dr_readiness",
+    "local_full_stack_integration",
 )
 ARTIFACT_LANE_REGISTRY: dict[str, dict[str, object]] = {
     "go_no_go_evidence": {
@@ -58,6 +59,17 @@ ARTIFACT_LANE_REGISTRY: dict[str, dict[str, object]] = {
         "command": ["bash", str(ROOT_DIR / "scripts/deploy/run_dr_evidence_contract_lane.sh")],
         "success_marker": "dr evidence contract lane tests passed.",
         "failure_label": "dr readiness lane failed unexpectedly",
+    },
+    "local_full_stack_integration": {
+        "expected_lane": "runtime.validate_local_full_stack_integration_live_contract_lane",
+        "command": [
+            "bash",
+            str(ROOT_DIR / "scripts/runtime/validate_local_full_stack_integration_live_contract_lane.sh"),
+            "--mode",
+            "dry-run",
+        ],
+        "success_marker": "local_full_stack_integration_policy_status=verified",
+        "failure_label": "local full-stack integration lane failed unexpectedly",
     },
 }
 
@@ -449,6 +461,9 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         "go_no_go_evidence_status": "verified" if lane_mode == "run" else "dry_run_pending",
         "rollback_readiness_status": "verified" if lane_mode == "run" else "dry_run_pending",
         "dr_readiness_status": "verified" if lane_mode == "run" else "dry_run_pending",
+        "local_full_stack_integration_status": "verified"
+        if lane_mode == "run"
+        else "dry_run_pending",
         "policy_evaluator_status": "verified",
         "manifest_schema_version": manifest_payload["schema_version"],
         "manifest_registry_status": "verified",
@@ -487,10 +502,12 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         print("go_no_go_evidence_status=verified")
         print("rollback_readiness_status=verified")
         print("dr_readiness_status=verified")
+        print("local_full_stack_integration_status=verified")
     else:
         print("go_no_go_evidence_status=dry_run_pending")
         print("rollback_readiness_status=dry_run_pending")
         print("dr_readiness_status=dry_run_pending")
+        print("local_full_stack_integration_status=dry_run_pending")
     print("policy_evaluator_status=verified")
     print(f"manifest_schema_version={manifest_payload['schema_version']}")
     print(f"reason_taxonomy_version={GO_NO_GO_REASON_TAXONOMY_VERSION}")

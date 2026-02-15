@@ -32,7 +32,11 @@ RUN_MODE_FAST_GATE_EXCLUSION_REASON = (
 )
 DRY_RUN_REASON = "dry_run_no_commands_executed"
 RUN_REASON = "block_reconciliation_partition_rejoin_live_validation_executed"
-PARTITION_RECONNECT_SCHEMA = "kamn.runtime.live-network-partition-reconnect-contract-report.v1"
+PARTITION_RECONNECT_SCHEMA = "kamn.runtime.live-network-partition-reconnect-matrix-report.v1"
+TRANSPORT_RUNTIME_MODE = "libp2p_transport_fed"
+RECONCILIATION_REASON_TAXONOMY_VERSION = (
+    "kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1"
+)
 
 
 def _run_command(command: list[str], *, timeout_seconds: int) -> str:
@@ -48,6 +52,69 @@ def _run_command(command: list[str], *, timeout_seconds: int) -> str:
         detail = (completed.stderr or completed.stdout or "command failed").strip()
         fail(f"lane command failed: {' '.join(command)}: {detail}")
     return completed.stdout
+
+
+def _scenario_reconciliation_reason_code(scenario_name: str) -> str:
+    scenario = scenario_name.lower()
+    if "primary_loss" in scenario or "failover" in scenario or "partition" in scenario:
+        return "reconciliation_partition_transition_failed"
+    if "reconnect" in scenario or "rejoin" in scenario or "catchup" in scenario:
+        return "reconciliation_rejoin_transition_failed"
+    if "fixture" in scenario:
+        return "reconciliation_fixture_contract_failed"
+    return "reconciliation_unclassified_scenario_failed"
+
+
+def _derive_reconciliation_reason_codes(
+    partition_payload: dict[str, object] | None, *, lane_mode: str
+) -> list[str]:
+    if lane_mode == "dry-run" or partition_payload is None:
+        return ["none"]
+
+    reason_codes: list[str] = []
+    scenario_results = partition_payload.get("scenario_results")
+    if isinstance(scenario_results, list):
+        for scenario_result in scenario_results:
+            if not isinstance(scenario_result, dict):
+                continue
+            if scenario_result.get("status") != "fail":
+                continue
+            scenario_name = scenario_result.get("scenario")
+            if isinstance(scenario_name, str) and scenario_name:
+                reason_codes.append(_scenario_reconciliation_reason_code(scenario_name))
+            else:
+                reason_codes.append("reconciliation_unclassified_scenario_failed")
+
+    upstream_reason_codes = partition_payload.get("reason_codes")
+    if isinstance(upstream_reason_codes, list):
+        if "runtime_budget_exceeded" in upstream_reason_codes:
+            reason_codes.append("reconciliation_runtime_budget_exceeded")
+        if "ci_fast_gate_failed" in upstream_reason_codes:
+            reason_codes.append("reconciliation_ci_fast_gate_failed")
+
+    deduplicated = sorted(set(reason_codes))
+    if not deduplicated:
+        return ["none"]
+    return deduplicated
+
+
+def _validate_partition_reconnect_report_payload(partition_payload: dict[str, object]) -> None:
+    if partition_payload.get("schema_version") != PARTITION_RECONNECT_SCHEMA:
+        fail("partition/rejoin contract lane report schema mismatch")
+    if partition_payload.get("status") != "pass":
+        fail("partition/rejoin contract lane status mismatch")
+    if partition_payload.get("final_decision") != "GO":
+        fail("partition/rejoin contract lane final_decision mismatch")
+    if not isinstance(partition_payload.get("lane"), str):
+        fail("partition/rejoin contract lane missing lane marker")
+    reason_codes = partition_payload.get("reason_codes")
+    if not isinstance(reason_codes, list) or not all(
+        isinstance(code, str) and code for code in reason_codes
+    ):
+        fail("partition/rejoin contract lane reason_codes must be a string list")
+    scenario_results = partition_payload.get("scenario_results")
+    if not isinstance(scenario_results, list):
+        fail("partition/rejoin contract lane scenario_results must be an array")
 
 
 def run_lane(args: argparse.Namespace) -> int:
@@ -89,19 +156,16 @@ def run_lane(args: argparse.Namespace) -> int:
 
     start_epoch = int(time.time())
     commands_executed = 0
+    partition_payload: dict[str, object] | None = None
     if mode == "run":
         partition_report_file.parent.mkdir(parents=True, exist_ok=True)
         for command in command_specs:
             _run_command(command, timeout_seconds=command_max_seconds)
             commands_executed += 1
 
-        partition_payload = load_json(partition_report_file)
-        if partition_payload.get("schema_version") != PARTITION_RECONNECT_SCHEMA:
-            fail("partition/rejoin contract lane report schema mismatch")
-        if partition_payload.get("status") != "pass":
-            fail("partition/rejoin contract lane status mismatch")
-        if partition_payload.get("final_decision") != "GO":
-            fail("partition/rejoin contract lane final_decision mismatch")
+        loaded_partition_payload = load_json(partition_report_file)
+        _validate_partition_reconnect_report_payload(loaded_partition_payload)
+        partition_payload = loaded_partition_payload
 
     elapsed_seconds = int(time.time()) - start_epoch
     if elapsed_seconds > max_seconds:
@@ -113,6 +177,9 @@ def run_lane(args: argparse.Namespace) -> int:
     run_mode_command_status = "executed" if mode == "run" else "dry_run_no_commands_executed"
     ci_fast_gate_eligibility = "excluded_local_heavy" if mode == "run" else "eligible"
     reason_code = RUN_REASON if mode == "run" else DRY_RUN_REASON
+    reconciliation_reason_codes = _derive_reconciliation_reason_codes(
+        partition_payload, lane_mode=mode
+    )
 
     payload = {
         "schema_version": RUN_LANE_SCHEMA,
@@ -126,6 +193,11 @@ def run_lane(args: argparse.Namespace) -> int:
         "block_reconciliation_partition_status": "verified",
         "block_reconciliation_rejoin_status": "verified",
         "canonical_convergence_status": "verified",
+        "runtime_transport_mode": TRANSPORT_RUNTIME_MODE,
+        "transport_state_transition_status": "verified",
+        "reconciliation_reason_taxonomy_version": RECONCILIATION_REASON_TAXONOMY_VERSION,
+        "reconciliation_reason_taxonomy_status": "verified",
+        "reconciliation_reason_codes": reconciliation_reason_codes,
         "run_mode_command_status": run_mode_command_status,
         "run_mode_command_count": commands_executed,
         "reason_code": reason_code,
@@ -154,6 +226,12 @@ def run_lane(args: argparse.Namespace) -> int:
     print("block_reconciliation_partition_status=verified")
     print("block_reconciliation_rejoin_status=verified")
     print("canonical_convergence_status=verified")
+    print(f"runtime_transport_mode={TRANSPORT_RUNTIME_MODE}")
+    print("reconciliation_reason_taxonomy_status=verified")
+    print(
+        "reconciliation_reason_codes="
+        + ("none" if reconciliation_reason_codes == ["none"] else ",".join(reconciliation_reason_codes))
+    )
     print(f"run_mode_command_status={run_mode_command_status}")
     print(f"run_mode_command_count={commands_executed}")
     print(f"reason_code={reason_code}")
@@ -212,6 +290,39 @@ def check_policy(args: argparse.Namespace) -> int:
         payload.get("canonical_convergence_status") != "verified",
         "block_reconciliation_partition_rejoin_policy_canonical_convergence_status_mismatch",
     )
+    checks.reject_if(
+        payload.get("runtime_transport_mode") != TRANSPORT_RUNTIME_MODE,
+        "block_reconciliation_partition_rejoin_policy_transport_mode_mismatch",
+    )
+    checks.reject_if(
+        payload.get("transport_state_transition_status") != "verified",
+        "block_reconciliation_partition_rejoin_policy_transport_transition_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("reconciliation_reason_taxonomy_version")
+        != RECONCILIATION_REASON_TAXONOMY_VERSION,
+        "block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_version_mismatch",
+    )
+    checks.reject_if(
+        payload.get("reconciliation_reason_taxonomy_status") != "verified",
+        "block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_status_mismatch",
+    )
+
+    reconciliation_reason_codes = payload.get("reconciliation_reason_codes")
+    reconciliation_reason_codes_are_valid = isinstance(reconciliation_reason_codes, list) and bool(
+        reconciliation_reason_codes
+    ) and all(
+        isinstance(code, str) and code for code in reconciliation_reason_codes
+    )
+    checks.reject_if(
+        not reconciliation_reason_codes_are_valid,
+        "block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid",
+    )
+    if reconciliation_reason_codes_are_valid:
+        checks.reject_if(
+            reconciliation_reason_codes != sorted(set(reconciliation_reason_codes)),
+            "block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid",
+        )
 
     lane_mode = payload.get("lane_mode")
     checks.reject_if(
@@ -244,6 +355,10 @@ def check_policy(args: argparse.Namespace) -> int:
             reason_code != DRY_RUN_REASON,
             "block_reconciliation_partition_rejoin_policy_dry_run_reason_code_mismatch",
         )
+        checks.reject_if(
+            reconciliation_reason_codes != ["none"],
+            "block_reconciliation_partition_rejoin_policy_dry_run_reconciliation_reason_codes_mismatch",
+        )
     elif lane_mode == "run":
         checks.reject_if(
             payload.get("ci_fast_gate_eligibility") != "excluded_local_heavy",
@@ -260,6 +375,10 @@ def check_policy(args: argparse.Namespace) -> int:
         checks.reject_if(
             reason_code != RUN_REASON,
             "block_reconciliation_partition_rejoin_policy_run_mode_reason_code_mismatch",
+        )
+        checks.reject_if(
+            reconciliation_reason_codes != ["none"],
+            "block_reconciliation_partition_rejoin_policy_run_mode_reconciliation_reason_codes_mismatch",
         )
 
     observed_final_decision, decision_reasons = checks.finalize(
