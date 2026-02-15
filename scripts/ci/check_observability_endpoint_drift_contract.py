@@ -27,12 +27,12 @@ DOCS_MIGRATION_MARKER = (
 )
 
 SOURCE_MARKERS: dict[str, str] = {
-    "async_io_import": "use tokio::io::{AsyncReadExt, AsyncWriteExt};",
+    "axum_import": "use axum::{",
     "async_listener_bind": "let listener = tokio::net::TcpListener::bind(config.bind_addr.as_str())",
-    "async_request_parser": "async fn read_http_request_path_async(",
-    "async_response_writer": "async fn write_http_response_async(",
+    "async_route_handler": "async fn handle_observability_http_route(",
     "async_dispatch": "async fn dispatch_observability_endpoint_request(",
     "async_not_found_handler": "handle_observability_not_found_path().await",
+    "request_budget_record": "state.request_budget.record_request();",
     "async_idle_timeout_reason": "observability endpoint timed out after {} ms waiting for requests",
 }
 
