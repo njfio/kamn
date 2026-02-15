@@ -855,6 +855,49 @@ fn functional_production_transport_profile_classifier_rejects_in_memory_fallback
 }
 
 #[test]
+fn regression_production_transport_policy_error_detail_includes_remediation_guidance() {
+    // Regression: #3673
+    let parsed = parse_args(vec![
+        "kamn-node".to_owned(),
+        "--role".to_owned(),
+        "processor".to_owned(),
+        "--runtime-mode".to_owned(),
+        "full".to_owned(),
+        "--disable-gossip".to_owned(),
+        "--daemon-max-ticks".to_owned(),
+        "1".to_owned(),
+        "--daemon-tick-interval-ms".to_owned(),
+        "5".to_owned(),
+        "--api-bind".to_owned(),
+        "127.0.0.1:19093".to_owned(),
+    ])
+    .expect("full args should parse");
+
+    let error = execute(parsed).expect_err("production transport policy must fail closed");
+    match error {
+        ConfigError::RuntimeStoreCompatibility {
+            reason_code,
+            detail,
+            ..
+        } => {
+            assert_eq!(
+                reason_code,
+                "runtime_transport_profile_gossip_disabled_for_production"
+            );
+            assert!(
+                detail.contains("remove --disable-gossip"),
+                "detail should include actionable gossip remediation guidance"
+            );
+            assert!(
+                detail.contains("or use non-production runtime modes"),
+                "detail should include non-production fallback guidance"
+            );
+        }
+        other => panic!("expected runtime store compatibility failure, found {other:?}"),
+    }
+}
+
+#[test]
 fn integration_runtime_full_uses_live_transport_profile_components_by_default() {
     let parsed = parse_args(vec![
         "kamn-node".to_owned(),

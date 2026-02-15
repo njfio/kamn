@@ -240,6 +240,11 @@ Deterministic reason-code markers:
   - `p2p_libp2p_event_gossip_received`
   - `p2p_transport_unknown_sender_peer`
   - `p2p_transport_unknown_recipient_peer`
+- Production transport-profile policy failures remain fail-closed with remediation:
+  - `runtime_transport_profile_gossip_disabled_for_production`
+    - remediation: remove `--disable-gossip` or switch to non-production runtime mode
+  - `runtime_transport_profile_in_memory_fallback_forbidden`
+    - remediation: remove in-memory fallback markers and enforce live profile markers
 
 ## Peer Lifecycle Proptest Invariants
 

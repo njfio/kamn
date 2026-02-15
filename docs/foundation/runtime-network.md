@@ -150,6 +150,17 @@ This document captures the initial runtime-network foundation slice for peer lif
   - `runtime_transport_profile_in_memory_fallback_forbidden`
   - `runtime_transport_profile_live_marker_missing`
   - `runtime_transport_profile_live_provider_missing`
+- Operator remediation contract for production policy failures:
+  - `runtime_transport_profile_gossip_disabled_for_production`
+    - remove `--disable-gossip` (or set `enable_gossip=true`) for production modes
+    - otherwise switch to non-production runtime modes (`planning`/`recovery-check`)
+  - `runtime_transport_profile_in_memory_fallback_forbidden`
+    - remove in-memory fallback profile markers
+    - ensure runtime wiring emits `p2p-transport-profile:libp2p-live`
+  - `runtime_transport_profile_live_marker_missing`
+    - ensure bootstrap path selects `RuntimeTransportProfile::Libp2pLive`
+  - `runtime_transport_profile_live_provider_missing`
+    - ensure `p2p-live-libp2p-provider` marker is present and provider wiring is initialized
 
 ## Node Observability Ingress Runtime Mapping
 - `kamn-node` observability export serving path is runtime-aligned and async-driven:
