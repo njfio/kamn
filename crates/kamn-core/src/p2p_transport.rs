@@ -2624,13 +2624,7 @@ mod tests {
     #[cfg(feature = "libp2p-live-transport")]
     #[test]
     fn native_runtime_loop_channel_close_records_behavior_failure_event() {
-        let state = Arc::new(Mutex::new(super::Libp2pLiveDataPlaneState::default()));
-        let (command_tx, command_rx) = std::sync::mpsc::channel();
-        drop(command_rx);
-        let runtime_loop = super::Libp2pNativeRuntimeAdapterLoop {
-            command_tx,
-            state: state.clone(),
-        };
+        let (runtime_loop, state) = build_closed_native_runtime_loop();
 
         let error = runtime_loop
             .discover("peer-runtime-loop", "messages")
@@ -2654,5 +2648,161 @@ mod tests {
             events[0].reason_code(),
             "p2p_libp2p_runtime_discover_channel_closed"
         );
+    }
+
+    #[cfg(feature = "libp2p-live-transport")]
+    fn build_closed_native_runtime_loop() -> (
+        super::Libp2pNativeRuntimeAdapterLoop,
+        Arc<Mutex<super::Libp2pLiveDataPlaneState>>,
+    ) {
+        let state = Arc::new(Mutex::new(super::Libp2pLiveDataPlaneState::default()));
+        let (command_tx, command_rx) = std::sync::mpsc::channel();
+        drop(command_rx);
+        (
+            super::Libp2pNativeRuntimeAdapterLoop {
+                command_tx,
+                state: state.clone(),
+            },
+            state,
+        )
+    }
+
+    #[cfg(feature = "libp2p-live-transport")]
+    #[test]
+    fn native_runtime_loop_channel_close_operation_mapping_is_deterministic() {
+        {
+            let (runtime_loop, state) = build_closed_native_runtime_loop();
+            let error = runtime_loop
+                .advertise(
+                    PeerDiscoveryRecord::new(
+                        "peer-connect-op",
+                        NodeRole::Processor,
+                        vec!["messages".to_owned()],
+                    )
+                    .expect("record should build"),
+                )
+                .expect_err("closed bridge should fail");
+            assert_eq!(
+                error,
+                P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
+                    Libp2pRuntimeAdapterOperation::Connect,
+                )
+            );
+            let events = state
+                .lock()
+                .expect("state lock should succeed")
+                .runtime_events
+                .drain(..)
+                .collect::<Vec<Libp2pRuntimeEvent>>();
+            assert_eq!(events.len(), 1);
+            assert_eq!(
+                events[0].reason_code(),
+                "p2p_libp2p_runtime_connect_channel_closed"
+            );
+        }
+
+        {
+            let (runtime_loop, state) = build_closed_native_runtime_loop();
+            let error = runtime_loop
+                .discover("peer-discover-op", "messages")
+                .expect_err("closed bridge should fail");
+            assert_eq!(
+                error,
+                P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
+                    Libp2pRuntimeAdapterOperation::Discover,
+                )
+            );
+            let events = state
+                .lock()
+                .expect("state lock should succeed")
+                .runtime_events
+                .drain(..)
+                .collect::<Vec<Libp2pRuntimeEvent>>();
+            assert_eq!(events.len(), 1);
+            assert_eq!(
+                events[0].reason_code(),
+                "p2p_libp2p_runtime_discover_channel_closed"
+            );
+        }
+
+        {
+            let (runtime_loop, state) = build_closed_native_runtime_loop();
+            let error = runtime_loop
+                .send(
+                    PeerGossipFrame::new(
+                        "messages",
+                        "peer-publish-op",
+                        "peer-recipient-op",
+                        "tx-runtime-op",
+                    )
+                    .expect("frame should build"),
+                )
+                .expect_err("closed bridge should fail");
+            assert_eq!(
+                error,
+                P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
+                    Libp2pRuntimeAdapterOperation::Publish,
+                )
+            );
+            let events = state
+                .lock()
+                .expect("state lock should succeed")
+                .runtime_events
+                .drain(..)
+                .collect::<Vec<Libp2pRuntimeEvent>>();
+            assert_eq!(events.len(), 1);
+            assert_eq!(
+                events[0].reason_code(),
+                "p2p_libp2p_runtime_publish_channel_closed"
+            );
+        }
+
+        {
+            let (runtime_loop, state) = build_closed_native_runtime_loop();
+            let error = runtime_loop
+                .drain_inbox("peer-receive-op")
+                .expect_err("closed bridge should fail");
+            assert_eq!(
+                error,
+                P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
+                    Libp2pRuntimeAdapterOperation::Receive,
+                )
+            );
+            let events = state
+                .lock()
+                .expect("state lock should succeed")
+                .runtime_events
+                .drain(..)
+                .collect::<Vec<Libp2pRuntimeEvent>>();
+            assert_eq!(events.len(), 1);
+            assert_eq!(
+                events[0].reason_code(),
+                "p2p_libp2p_runtime_receive_channel_closed"
+            );
+        }
+
+        {
+            let (runtime_loop, state) = build_closed_native_runtime_loop();
+            let error = runtime_loop
+                .drain_runtime_events()
+                .expect_err("closed bridge should fail");
+            assert_eq!(
+                error,
+                P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
+                    Libp2pRuntimeAdapterOperation::EventDrain,
+                )
+            );
+            let events = state
+                .lock()
+                .expect("state lock should succeed")
+                .runtime_events
+                .drain(..)
+                .collect::<Vec<Libp2pRuntimeEvent>>();
+            assert_eq!(events.len(), 1);
+            assert_eq!(
+                events[0].reason_code(),
+                "p2p_libp2p_runtime_event_drain_channel_closed"
+            );
+        }
     }
 }
