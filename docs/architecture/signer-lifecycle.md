@@ -22,6 +22,8 @@ This document defines the `kolme-live` signer lifecycle contract enforced by `ka
 - Resolves signer selection from declared profile/key-source inputs.
 - Evaluates rotation/failover/quorum readiness.
 - Rejects fallback signer secret path (`KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_FALLBACK`).
+- For strict `env-local` signer contracts, rejects dual-secret sources by requiring the
+  non-selected profile private-key env marker to remain unset.
 - For `managed-external`, verifies:
 - managed signer command marker exists
 - managed signer public key marker exists and is valid secp256k1 compressed key material
@@ -40,6 +42,7 @@ Primary fail-closed signer reason codes include:
 - `legacy_local_signer_path_override_invalid`
 - `production_signer_key_source_env_local_forbidden`
 - `fallback_signer_secret_present_violation`
+- `signer_secret_source_precedence_violation`
 - `managed_signer_backend_required_missing`
 - `managed_signer_backend_required_invalid`
 - `managed_signer_key_reference_missing`
@@ -64,6 +67,11 @@ Primary fail-closed signer reason codes include:
 - `KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY` for `ops-secondary`
 - unset profile-local raw private key marker when using `managed-external`
 - ensure fallback private key env marker is unset
+
+- If strict `env-local` signer-source checks fail:
+- unset non-selected profile private key marker:
+- `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY` when selecting `ops-primary`
+- `KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX` when selecting `ops-secondary`
 
 - If failover/rotation checks fail:
 - increment `KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH` relative to previous epoch

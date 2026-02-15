@@ -163,7 +163,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `cargo test -p kamn-node cli_tests::regression_3598_startup_paths_have_no_panic_control_flow -- --exact`
 - Deterministic fail-closed startup matrix contracts:
   - coverage corpus must preserve all required case IDs and fail closed with `startup_negative_matrix_policy_marker_missing` when coverage drifts.
-  - strict signer selector/profile mismatch and fallback-secret violations must fail before network dispatch.
+  - strict signer selector/profile mismatch, fallback-secret violations, and strict secret-source precedence violations must fail before network dispatch.
 - This lane is intentionally bounded and cost-effective:
   - all checks run in-process with deterministic env guards and localhost mock transport only.
   - no external Kolme node process is required for PR fast-gate validation.
@@ -604,6 +604,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - explicit runtime budget cap via `KAMN_LOCAL_SIGNAL_SECRET_HYGIENE_MAX_SECONDS`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `fallback_signer_secret_present_violation`
+  - `signer_secret_source_precedence_violation`
 
 ## Runtime Local Metrics Scrape Contract Lane
 - Entry commands:
