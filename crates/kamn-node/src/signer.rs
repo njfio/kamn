@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::env;
 use std::io::Read;
 use std::process::{Command, Stdio};
@@ -30,6 +31,15 @@ use super::{
 const KOLME_LIVE_NONCE_RETRY_MAX_ATTEMPTS: u32 = 3;
 const KOLME_LIVE_NONCE_RETRY_BASE_BACKOFF_MILLIS: u64 = 10;
 const KOLME_LIVE_NONCE_RETRY_MAX_BACKOFF_MILLIS: u64 = 40;
+const KOLME_LIVE_SIGNER_PREVIOUS_PROFILE_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE";
+const KOLME_LIVE_SIGNER_ROTATION_EPOCH_ENV: &str = "KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH";
+const KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH_ENV: &str =
+    "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH";
+const KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS_ENV: &str =
+    "KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS";
+const KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS_ENV: &str =
+    "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS";
+const KOLME_LIVE_SIGNER_QUORUM_LINKAGE_CONTRACT_VERSION: &str = "v1";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct KolmeLiveSignerSelection {
@@ -37,6 +47,20 @@ pub(crate) struct KolmeLiveSignerSelection {
     pub(crate) key_source: &'static str,
     pub(crate) private_key_env: &'static str,
     pub(crate) key_reference_env: &'static str,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct KolmeLiveSignerPreflightReadiness {
+    pub(crate) previous_profile: &'static str,
+    pub(crate) failover_active: bool,
+    pub(crate) rotation_epoch: u64,
+    pub(crate) previous_rotation_epoch: u64,
+    pub(crate) quorum_linkage_contract_version: &'static str,
+    pub(crate) quorum_required_approvals: usize,
+    pub(crate) quorum_approved_signers_count: usize,
+    pub(crate) quorum_profile_linked: bool,
+    pub(crate) quorum_satisfied: bool,
+    pub(crate) quorum_linked: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -752,6 +776,225 @@ fn resolve_kolme_live_signer_selection(
     })
 }
 
+fn parse_kolme_live_signer_profile_value(
+    value: &str,
+    env_name: &str,
+    reason_code: &str,
+) -> Result<&'static str, ConfigError> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "{env_name} must not be empty when present ({reason_code})"
+        )));
+    }
+    match trimmed {
+        KOLME_LIVE_SIGNER_PROFILE_PRIMARY => Ok(KOLME_LIVE_SIGNER_PROFILE_PRIMARY),
+        KOLME_LIVE_SIGNER_PROFILE_SECONDARY => Ok(KOLME_LIVE_SIGNER_PROFILE_SECONDARY),
+        _ => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{env_name} must be one of {KOLME_LIVE_SIGNER_PROFILE_PRIMARY}, {KOLME_LIVE_SIGNER_PROFILE_SECONDARY}; found {trimmed} ({reason_code})"
+        ))),
+    }
+}
+
+fn parse_positive_u64_env_or_default(
+    env_name: &str,
+    default: u64,
+    reason_code: &str,
+) -> Result<u64, ConfigError> {
+    match env::var(env_name) {
+        Ok(raw) => {
+            let trimmed = raw.trim();
+            if trimmed.is_empty() {
+                return Err(ConfigError::RuntimeKolmeLive(format!(
+                    "{env_name} must not be empty when present ({reason_code})"
+                )));
+            }
+            let parsed = trimmed.parse::<u64>().map_err(|_| {
+                ConfigError::RuntimeKolmeLive(format!(
+                    "{env_name} must be a positive integer, found '{trimmed}' ({reason_code})"
+                ))
+            })?;
+            if parsed == 0 {
+                return Err(ConfigError::RuntimeKolmeLive(format!(
+                    "{env_name} must be greater than zero ({reason_code})"
+                )));
+            }
+            Ok(parsed)
+        }
+        Err(env::VarError::NotPresent) => Ok(default),
+        Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{env_name} must be valid utf-8 when present ({reason_code})"
+        ))),
+    }
+}
+
+fn parse_positive_usize_env_or_default(
+    env_name: &str,
+    default: usize,
+    reason_code: &str,
+) -> Result<usize, ConfigError> {
+    match env::var(env_name) {
+        Ok(raw) => {
+            let trimmed = raw.trim();
+            if trimmed.is_empty() {
+                return Err(ConfigError::RuntimeKolmeLive(format!(
+                    "{env_name} must not be empty when present ({reason_code})"
+                )));
+            }
+            let parsed = trimmed.parse::<usize>().map_err(|_| {
+                ConfigError::RuntimeKolmeLive(format!(
+                    "{env_name} must be a positive integer, found '{trimmed}' ({reason_code})"
+                ))
+            })?;
+            if parsed == 0 {
+                return Err(ConfigError::RuntimeKolmeLive(format!(
+                    "{env_name} must be greater than zero ({reason_code})"
+                )));
+            }
+            Ok(parsed)
+        }
+        Err(env::VarError::NotPresent) => Ok(default),
+        Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{env_name} must be valid utf-8 when present ({reason_code})"
+        ))),
+    }
+}
+
+fn resolve_kolme_live_signer_previous_profile(
+    signer_selection: &KolmeLiveSignerSelection,
+) -> Result<&'static str, ConfigError> {
+    match env::var(KOLME_LIVE_SIGNER_PREVIOUS_PROFILE_ENV) {
+        Ok(value) => parse_kolme_live_signer_profile_value(
+            value.as_str(),
+            KOLME_LIVE_SIGNER_PREVIOUS_PROFILE_ENV,
+            "runtime_signer_previous_profile_invalid",
+        ),
+        Err(env::VarError::NotPresent) => Ok(signer_selection.profile),
+        Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_SIGNER_PREVIOUS_PROFILE_ENV} must be valid utf-8 when present (runtime_signer_previous_profile_invalid)"
+        ))),
+    }
+}
+
+fn resolve_kolme_live_signer_quorum_approved_signers(
+    signer_selection: &KolmeLiveSignerSelection,
+) -> Result<Vec<&'static str>, ConfigError> {
+    match env::var(KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS_ENV) {
+        Ok(value) => {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                return Err(ConfigError::RuntimeKolmeLive(format!(
+                    "{KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS_ENV} must not be empty when present (runtime_signer_attestation_approved_signers_invalid)"
+                )));
+            }
+            let mut seen = BTreeSet::new();
+            let mut approved_signers = Vec::new();
+            for entry in trimmed.split(',') {
+                let profile = parse_kolme_live_signer_profile_value(
+                    entry,
+                    KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS_ENV,
+                    "runtime_signer_attestation_approved_signers_invalid",
+                )?;
+                if !seen.insert(profile) {
+                    return Err(ConfigError::RuntimeKolmeLive(format!(
+                        "{KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS_ENV} must not contain duplicate signer profile {profile} (runtime_signer_attestation_approved_signers_not_unique)"
+                    )));
+                }
+                approved_signers.push(profile);
+            }
+            if approved_signers.is_empty() {
+                return Err(ConfigError::RuntimeKolmeLive(format!(
+                    "{KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS_ENV} must include at least one signer profile (runtime_signer_attestation_approved_signers_invalid)"
+                )));
+            }
+            Ok(approved_signers)
+        }
+        Err(env::VarError::NotPresent) => Ok(vec![signer_selection.profile]),
+        Err(env::VarError::NotUnicode(_)) => Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS_ENV} must be valid utf-8 when present (runtime_signer_attestation_approved_signers_invalid)"
+        ))),
+    }
+}
+
+pub(crate) fn evaluate_kolme_live_signer_preflight_readiness(
+    signer_selection: &KolmeLiveSignerSelection,
+) -> Result<KolmeLiveSignerPreflightReadiness, ConfigError> {
+    if signer_selection.profile == KOLME_LIVE_SIGNER_PROFILE_SECONDARY
+        && signer_selection.key_source == KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL
+    {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "signer profile {} cannot be paired with --kolme-live-signer-key-source={} (runtime_signer_key_source_profile_pair_disallowed)",
+            signer_selection.profile, signer_selection.key_source
+        )));
+    }
+
+    let previous_profile = resolve_kolme_live_signer_previous_profile(signer_selection)?;
+    let failover_active = signer_selection.profile != previous_profile;
+    let rotation_epoch = parse_positive_u64_env_or_default(
+        KOLME_LIVE_SIGNER_ROTATION_EPOCH_ENV,
+        1,
+        "runtime_signer_rotation_epoch_invalid",
+    )?;
+    let previous_rotation_epoch = parse_positive_u64_env_or_default(
+        KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH_ENV,
+        1,
+        "runtime_signer_previous_rotation_epoch_invalid",
+    )?;
+    if failover_active && rotation_epoch <= previous_rotation_epoch {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "signer failover rotation epoch must increase (current={rotation_epoch}, previous={previous_rotation_epoch}) (runtime_signer_rotation_epoch_stale)"
+        )));
+    }
+
+    let approved_signers = resolve_kolme_live_signer_quorum_approved_signers(signer_selection)?;
+    let quorum_required_approvals = parse_positive_usize_env_or_default(
+        KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS_ENV,
+        if failover_active { 2 } else { 1 },
+        "runtime_signer_attestation_required_approvals_invalid",
+    )?;
+    if failover_active && quorum_required_approvals < 2 {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "{KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS_ENV} must be at least 2 when signer failover is active (runtime_signer_failover_attestation_required_approvals_insufficient)"
+        )));
+    }
+
+    if failover_active && !approved_signers.contains(&previous_profile) {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "approved signer set must include previous signer profile {previous_profile} during failover (runtime_signer_failover_attestation_previous_profile_not_approved)"
+        )));
+    }
+
+    let quorum_approved_signers_count = approved_signers.len();
+    let quorum_profile_linked = approved_signers.contains(&signer_selection.profile);
+    let quorum_satisfied = quorum_approved_signers_count >= quorum_required_approvals;
+    let quorum_linked = quorum_profile_linked && quorum_satisfied;
+
+    if !quorum_profile_linked {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "current signer profile {} is not present in quorum-approved signer set (runtime_signer_quorum_linkage_violation)",
+            signer_selection.profile
+        )));
+    }
+    if !quorum_satisfied {
+        return Err(ConfigError::RuntimeKolmeLive(format!(
+            "runtime signer quorum shortfall: required {quorum_required_approvals}, approved {quorum_approved_signers_count} (runtime_signer_attestation_quorum_shortfall)"
+        )));
+    }
+
+    Ok(KolmeLiveSignerPreflightReadiness {
+        previous_profile,
+        failover_active,
+        rotation_epoch,
+        previous_rotation_epoch,
+        quorum_linkage_contract_version: KOLME_LIVE_SIGNER_QUORUM_LINKAGE_CONTRACT_VERSION,
+        quorum_required_approvals,
+        quorum_approved_signers_count,
+        quorum_profile_linked,
+        quorum_satisfied,
+        quorum_linked,
+    })
+}
+
 fn managed_signer_public_key_env_for_profile(profile: &str) -> Result<&'static str, ConfigError> {
     match profile {
         KOLME_LIVE_SIGNER_PROFILE_PRIMARY => Ok(KOLME_LIVE_SIGNER_PUBLIC_KEY_HEX_ENV),
@@ -1092,6 +1335,7 @@ pub(crate) fn build_kolme_live_direct_signed_wire_payload(
 ) -> Result<(String, KolmeLiveSignerSelection), ConfigError> {
     let signer_selection =
         resolve_kolme_live_signer_selection(strict_signer_profile, strict_signer_key_source)?;
+    let _signer_preflight = evaluate_kolme_live_signer_preflight_readiness(&signer_selection)?;
     let (canonical_message, signature_hex, recovery_id) = if signer_selection.key_source
         == KOLME_LIVE_SIGNER_KEY_SOURCE_MANAGED_EXTERNAL
     {
@@ -1154,13 +1398,56 @@ pub(crate) fn build_kolme_live_direct_signed_wire_payload(
 mod tests {
     use super::KolmeForkSecp256k1SignerAdapter;
     use super::{
-        classify_nonce_retry_category, deterministic_nonce_retry_backoff_millis, ConfigError,
-        Duration, Instant, KolmeRuntimeCommitProviderError,
+        classify_nonce_retry_category, deterministic_nonce_retry_backoff_millis,
+        evaluate_kolme_live_signer_preflight_readiness, ConfigError, Duration, Instant,
+        KolmeLiveSignerSelection, KolmeRuntimeCommitProviderError,
     };
+    use std::env;
+    use std::sync::{Mutex, OnceLock};
 
     const TEST_PRIVATE_KEY_HEX: &str =
         "658c3528422eb527b4c108b8f6d1e5f629543c304ea49cf608c67794424291c4";
     const TEST_PRIVATE_KEY_ENV: &str = "TEST_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX";
+
+    fn test_signer_env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    struct EnvVarGuard {
+        key: &'static str,
+        previous: Option<String>,
+    }
+
+    impl EnvVarGuard {
+        fn set(key: &'static str, value: Option<&str>) -> Self {
+            let previous = env::var(key).ok();
+            match value {
+                Some(value) => env::set_var(key, value),
+                None => env::remove_var(key),
+            }
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            if let Some(previous) = self.previous.as_deref() {
+                env::set_var(self.key, previous);
+            } else {
+                env::remove_var(self.key);
+            }
+        }
+    }
+
+    fn test_primary_selection() -> KolmeLiveSignerSelection {
+        KolmeLiveSignerSelection {
+            profile: "ops-primary",
+            key_source: "env-local",
+            private_key_env: "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX",
+            key_reference_env: "KAMN_KOLME_LIVE_SIGNER_KEY_REF",
+        }
+    }
 
     fn is_zeroized_hex_buffer(value: &str) -> bool {
         value.as_bytes().iter().all(|byte| *byte == 0)
@@ -1246,6 +1533,165 @@ mod tests {
         assert!(
             started.elapsed() < Duration::from_secs(2),
             "private key parse + zeroization loop exceeded 2s for 2k iterations"
+        );
+    }
+
+    #[test]
+    fn unit_signer_preflight_defaults_to_single_signer_quorum_ready() {
+        let _lock = test_signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _previous_profile = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE", None);
+        let _rotation_epoch = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", None);
+        let _previous_rotation_epoch =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH", None);
+        let _required_approvals =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS", None);
+        let _approved_signers =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS", None);
+
+        let readiness = evaluate_kolme_live_signer_preflight_readiness(&test_primary_selection())
+            .expect("default single-signer preflight should be ready");
+        assert_eq!(readiness.previous_profile, "ops-primary");
+        assert!(!readiness.failover_active);
+        assert_eq!(readiness.rotation_epoch, 1);
+        assert_eq!(readiness.previous_rotation_epoch, 1);
+        assert_eq!(readiness.quorum_linkage_contract_version, "v1");
+        assert_eq!(readiness.quorum_required_approvals, 1);
+        assert_eq!(readiness.quorum_approved_signers_count, 1);
+        assert!(readiness.quorum_profile_linked);
+        assert!(readiness.quorum_satisfied);
+        assert!(readiness.quorum_linked);
+    }
+
+    #[test]
+    fn regression_signer_preflight_rejects_stale_failover_rotation_epoch() {
+        // Regression: #3472
+        let _lock = test_signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _previous_profile = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
+            Some("ops-primary"),
+        );
+        let _rotation_epoch = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", Some("2"));
+        let _previous_rotation_epoch =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH", Some("2"));
+        let _required_approvals = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS",
+            Some("2"),
+        );
+        let _approved_signers = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS",
+            Some("ops-primary,ops-secondary"),
+        );
+        let selection = KolmeLiveSignerSelection {
+            profile: "ops-secondary",
+            key_source: "env-local",
+            private_key_env: "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
+            key_reference_env: "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY",
+        };
+        let error = evaluate_kolme_live_signer_preflight_readiness(&selection)
+            .expect_err("stale failover rotation epoch must fail closed");
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("runtime_signer_rotation_epoch_stale")),
+            "stale failover rotation epoch must preserve runtime_signer_rotation_epoch_stale"
+        );
+    }
+
+    #[test]
+    fn regression_signer_preflight_rejects_disallowed_secondary_managed_external_pair() {
+        // Regression: #3472
+        let _lock = test_signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _previous_profile = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
+            Some("ops-secondary"),
+        );
+        let _rotation_epoch = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", Some("1"));
+        let _previous_rotation_epoch =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH", Some("1"));
+        let _required_approvals = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS",
+            Some("1"),
+        );
+        let _approved_signers = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS",
+            Some("ops-secondary"),
+        );
+        let selection = KolmeLiveSignerSelection {
+            profile: "ops-secondary",
+            key_source: "managed-external",
+            private_key_env: "KAMN_KOLME_LIVE_SIGNER_PRIVATE_KEY_HEX_SECONDARY",
+            key_reference_env: "KAMN_KOLME_LIVE_SIGNER_KEY_REF_SECONDARY",
+        };
+        let error = evaluate_kolme_live_signer_preflight_readiness(&selection)
+            .expect_err("secondary managed-external pair must fail closed");
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("runtime_signer_key_source_profile_pair_disallowed")),
+            "disallowed secondary managed-external pair must preserve reason code"
+        );
+    }
+
+    #[test]
+    fn functional_signer_preflight_rejects_quorum_shortfall() {
+        let _lock = test_signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _previous_profile = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
+            Some("ops-primary"),
+        );
+        let _rotation_epoch = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", Some("1"));
+        let _previous_rotation_epoch =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH", Some("1"));
+        let _required_approvals = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS",
+            Some("2"),
+        );
+        let _approved_signers = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS",
+            Some("ops-primary"),
+        );
+        let error = evaluate_kolme_live_signer_preflight_readiness(&test_primary_selection())
+            .expect_err("quorum shortfall must fail closed");
+        assert!(
+            matches!(error, ConfigError::RuntimeKolmeLive(message) if message.contains("runtime_signer_attestation_quorum_shortfall")),
+            "quorum shortfall must preserve runtime_signer_attestation_quorum_shortfall"
+        );
+    }
+
+    #[test]
+    fn performance_signer_preflight_readiness_stays_bounded() {
+        let _lock = test_signer_env_lock()
+            .lock()
+            .expect("signer env lock should guard test mutation");
+        let _previous_profile = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_PREVIOUS_PROFILE",
+            Some("ops-primary"),
+        );
+        let _rotation_epoch = EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_ROTATION_EPOCH", Some("1"));
+        let _previous_rotation_epoch =
+            EnvVarGuard::set("KAMN_KOLME_LIVE_SIGNER_PREVIOUS_ROTATION_EPOCH", Some("1"));
+        let _required_approvals = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_QUORUM_REQUIRED_APPROVALS",
+            Some("1"),
+        );
+        let _approved_signers = EnvVarGuard::set(
+            "KAMN_KOLME_LIVE_SIGNER_QUORUM_APPROVED_SIGNERS",
+            Some("ops-primary"),
+        );
+        let selection = test_primary_selection();
+        let started = Instant::now();
+        for _ in 0..5_000 {
+            let readiness = evaluate_kolme_live_signer_preflight_readiness(&selection)
+                .expect("preflight readiness must remain stable");
+            assert!(readiness.quorum_linked);
+        }
+        assert!(
+            started.elapsed() < Duration::from_secs(2),
+            "signer preflight readiness exceeded 2s for 5k evaluations"
         );
     }
 }

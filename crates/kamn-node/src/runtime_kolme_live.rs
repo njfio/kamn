@@ -1,5 +1,7 @@
 use super::kolme_live_observability::build_kolme_live_observability_telemetry;
-use super::signer::build_kolme_live_direct_signed_wire_payload;
+use super::signer::{
+    build_kolme_live_direct_signed_wire_payload, evaluate_kolme_live_signer_preflight_readiness,
+};
 use super::{
     logging::{log_info, log_warn},
     KolmeLiveExecution, KOLME_IN_MEMORY_PROVIDER_MARKER, KOLME_LIVE_FINALITY_MAX_ATTEMPTS,
@@ -128,6 +130,7 @@ pub(crate) fn execute_kolme_live_runtime(
         strict_signer_profile,
         strict_signer_key_source,
     )?;
+    let signer_preflight = evaluate_kolme_live_signer_preflight_readiness(&signer_selection)?;
     let mut provider = KolmeRuntimeCommitLiveProvider::new_kolme_fork_broadcast_profile(
         base_url.as_str(),
         provider_hint.as_str(),
@@ -282,8 +285,19 @@ pub(crate) fn execute_kolme_live_runtime(
     let retry_backoff_base_ms = KOLME_LIVE_RETRY_BASE_BACKOFF_MILLIS;
     let retry_backoff_cap_ms = KOLME_LIVE_RETRY_MAX_BACKOFF_MILLIS;
     let execution_status = format!(
-        "{submit_status};commit_id={};finality={finality};resolution={resolution};submit_attempts={submit_attempts};submit_retry_reason={submit_retry_reason};submit_retry_max_attempts={submit_retry_max_attempts};finality_retry_attempts={finality_retry_attempts};finality_retry_reason={finality_retry_reason};finality_retry_max_attempts={finality_retry_max_attempts};retry_backoff_base_ms={retry_backoff_base_ms};retry_backoff_cap_ms={retry_backoff_cap_ms}",
+        "{submit_status};commit_id={};finality={finality};resolution={resolution};submit_attempts={submit_attempts};submit_retry_reason={submit_retry_reason};submit_retry_max_attempts={submit_retry_max_attempts};finality_retry_attempts={finality_retry_attempts};finality_retry_reason={finality_retry_reason};finality_retry_max_attempts={finality_retry_max_attempts};retry_backoff_base_ms={retry_backoff_base_ms};retry_backoff_cap_ms={retry_backoff_cap_ms};signer_previous_profile={};signer_failover_active={};signer_rotation_epoch={};signer_previous_rotation_epoch={};signer_quorum_linkage_contract_version={};signer_quorum_required_approvals={};signer_quorum_approved_signers_count={};signer_quorum_profile_linked={};signer_quorum_satisfied={};signer_quorum_linked={}",
         receipt.commit_id
+        ,
+        signer_preflight.previous_profile,
+        signer_preflight.failover_active,
+        signer_preflight.rotation_epoch,
+        signer_preflight.previous_rotation_epoch,
+        signer_preflight.quorum_linkage_contract_version,
+        signer_preflight.quorum_required_approvals,
+        signer_preflight.quorum_approved_signers_count,
+        signer_preflight.quorum_profile_linked,
+        signer_preflight.quorum_satisfied,
+        signer_preflight.quorum_linked
     );
     let observability = build_kolme_live_observability_telemetry(execution_status.as_str())
         .map_err(|error| ConfigError::RuntimeKolmeLive(error.to_string()))?;
