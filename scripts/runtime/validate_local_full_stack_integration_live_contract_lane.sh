@@ -141,6 +141,18 @@ if ! printf '%s\n' "$validation_output" | grep -q "^transport_convergence_status
   echo "expected local full-stack integration transport convergence marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q "^libp2p_process_isolation_status=${domain_expected_status}$"; then
+  echo "expected local full-stack integration process-isolation marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q "^libp2p_two_node_process_isolated_status=${domain_expected_status}$"; then
+  echo "expected local full-stack integration two-node process-isolated marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q "^libp2p_three_node_process_isolated_status=${domain_expected_status}$"; then
+  echo "expected local full-stack integration three-node process-isolated marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q "^signer_provenance_status=${domain_expected_status}$"; then
   echo "expected local full-stack integration signer provenance marker" >&2
   exit 1
@@ -360,6 +372,9 @@ if summary_report.get("kolme_fork_chain_version") != sys.argv[11]:
 
 for marker in (
     "transport_convergence_status",
+    "libp2p_process_isolation_status",
+    "libp2p_two_node_process_isolated_status",
+    "libp2p_three_node_process_isolated_status",
     "signer_provenance_status",
     "runtime_commit_submission_status",
     "runtime_commit_finality_status",
@@ -382,6 +397,18 @@ lane_report = {
         "local_full_stack_integration_policy_status", "unknown"
     ),
     "transport_convergence_status": summary_report.get("transport_convergence_status", "unknown"),
+    "libp2p_process_isolation_status": summary_report.get(
+        "libp2p_process_isolation_status",
+        "unknown",
+    ),
+    "libp2p_two_node_process_isolated_status": summary_report.get(
+        "libp2p_two_node_process_isolated_status",
+        "unknown",
+    ),
+    "libp2p_three_node_process_isolated_status": summary_report.get(
+        "libp2p_three_node_process_isolated_status",
+        "unknown",
+    ),
     "signer_provenance_status": summary_report.get("signer_provenance_status", "unknown"),
     "runtime_commit_submission_status": summary_report.get("runtime_commit_submission_status", "unknown"),
     "runtime_commit_finality_status": summary_report.get("runtime_commit_finality_status", "unknown"),
@@ -464,6 +491,9 @@ echo "lane_mode=${mode}"
 echo "local_full_stack_integration_contract_status=verified"
 echo "local_full_stack_integration_policy_status=verified"
 echo "transport_convergence_status=${domain_expected_status}"
+echo "libp2p_process_isolation_status=${domain_expected_status}"
+echo "libp2p_two_node_process_isolated_status=${domain_expected_status}"
+echo "libp2p_three_node_process_isolated_status=${domain_expected_status}"
 echo "signer_provenance_status=${domain_expected_status}"
 echo "runtime_commit_submission_status=${domain_expected_status}"
 echo "runtime_commit_finality_status=${domain_expected_status}"

@@ -63,6 +63,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_provider_marker_contr
   echo "expected local full-stack integration provider marker contract status marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_process_isolation_status=planned$'; then
+  echo "expected local full-stack integration process-isolation marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_two_node_process_isolated_status=planned$'; then
+  echo "expected local full-stack integration two-node process-isolated marker in dry-run" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_three_node_process_isolated_status=planned$'; then
+  echo "expected local full-stack integration three-node process-isolated marker in dry-run" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_convergence_report_schema_version=kamn.runtime.libp2p-convergence-process-isolated-live-report.v1$'; then
   echo "expected local full-stack integration libp2p convergence report schema marker" >&2
   exit 1
@@ -215,6 +227,12 @@ if payload.get("libp2p_fallback_markers_detected") != []:
     raise SystemExit("expected no libp2p fallback markers in report")
 if payload.get("libp2p_provider_marker_contract_status") != "verified":
     raise SystemExit("expected libp2p_provider_marker_contract_status")
+if payload.get("libp2p_process_isolation_status") != "planned":
+    raise SystemExit("expected libp2p_process_isolation_status=planned")
+if payload.get("libp2p_two_node_process_isolated_status") != "planned":
+    raise SystemExit("expected libp2p_two_node_process_isolated_status=planned")
+if payload.get("libp2p_three_node_process_isolated_status") != "planned":
+    raise SystemExit("expected libp2p_three_node_process_isolated_status=planned")
 if payload.get("libp2p_convergence_report_schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-report.v1":
     raise SystemExit("expected libp2p_convergence_report_schema_version marker")
 if payload.get("libp2p_convergence_policy_schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1":
