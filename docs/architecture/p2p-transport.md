@@ -240,7 +240,8 @@ Deterministic reason-code markers:
   - `p2p_libp2p_event_gossip_received`
   - `p2p_transport_unknown_sender_peer`
   - `p2p_transport_unknown_recipient_peer`
-- Native adapter command-bridge channel failures emit deterministic reason codes:
+- Native adapter command-bridge channel failures emit `BehaviorFailure`
+  runtime events with deterministic reason codes:
   - `p2p_libp2p_runtime_connect_channel_closed`
   - `p2p_libp2p_runtime_discover_channel_closed`
   - `p2p_libp2p_runtime_publish_channel_closed`
