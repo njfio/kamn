@@ -36,8 +36,16 @@ pub enum Libp2pBehaviorFailureClass {
     InvalidTopic,
     /// Runtime observed malformed peer metadata.
     InvalidPeerEvent,
-    /// Runtime adapter control channel closed unexpectedly.
-    RuntimeChannelClosed,
+    /// Runtime adapter connect control channel closed unexpectedly.
+    RuntimeConnectChannelClosed,
+    /// Runtime adapter discover control channel closed unexpectedly.
+    RuntimeDiscoverChannelClosed,
+    /// Runtime adapter publish control channel closed unexpectedly.
+    RuntimePublishChannelClosed,
+    /// Runtime adapter receive control channel closed unexpectedly.
+    RuntimeReceiveChannelClosed,
+    /// Runtime adapter runtime-event drain control channel closed unexpectedly.
+    RuntimeEventDrainChannelClosed,
     /// Runtime frame send failed because sender peer was unknown.
     UnknownSenderPeer,
     /// Runtime frame send failed because recipient peer was unknown.
@@ -51,7 +59,11 @@ impl Libp2pBehaviorFailureClass {
             Self::PublishRejected => "p2p_libp2p_publish_rejected",
             Self::InvalidTopic => "p2p_transport_invalid_topic",
             Self::InvalidPeerEvent => "p2p_libp2p_event_invalid_peer_event",
-            Self::RuntimeChannelClosed => "p2p_libp2p_runtime_channel_closed",
+            Self::RuntimeConnectChannelClosed => "p2p_libp2p_runtime_connect_channel_closed",
+            Self::RuntimeDiscoverChannelClosed => "p2p_libp2p_runtime_discover_channel_closed",
+            Self::RuntimePublishChannelClosed => "p2p_libp2p_runtime_publish_channel_closed",
+            Self::RuntimeReceiveChannelClosed => "p2p_libp2p_runtime_receive_channel_closed",
+            Self::RuntimeEventDrainChannelClosed => "p2p_libp2p_runtime_event_drain_channel_closed",
             Self::UnknownSenderPeer => "p2p_transport_unknown_sender_peer",
             Self::UnknownRecipientPeer => "p2p_transport_unknown_recipient_peer",
         }
@@ -1060,6 +1072,7 @@ enum Libp2pNativeRuntimeAdapterLoopCommand {
 #[derive(Debug, Clone)]
 struct Libp2pNativeRuntimeAdapterLoop {
     command_tx: std::sync::mpsc::Sender<Libp2pNativeRuntimeAdapterLoopCommand>,
+    state: Arc<Mutex<Libp2pLiveDataPlaneState>>,
 }
 
 #[cfg(feature = "libp2p-live-transport")]
@@ -1071,36 +1084,54 @@ impl Libp2pNativeRuntimeAdapterLoop {
         validate_libp2p_runtime_stack_composition(&config)?;
         let local_peer_id = config.local_peer_id().to_owned();
         let (command_tx, command_rx) = std::sync::mpsc::channel();
+        let runtime_state = state.clone();
         std::thread::Builder::new()
             .name(format!("kamn-libp2p-loop-{local_peer_id}"))
             .spawn(move || {
                 run_libp2p_native_runtime_adapter_loop(command_rx, state);
             })
             .map_err(|_| P2pTransportError::StateUnavailable)?;
-        Ok(Self { command_tx })
+        Ok(Self {
+            command_tx,
+            state: runtime_state,
+        })
     }
 
     fn marker(&self) -> &'static str {
         LIBP2P_RUNTIME_ADAPTER_LOOP_MARKER
     }
 
+    fn emit_channel_closed_runtime_event(&self, operation: Libp2pRuntimeAdapterOperation) {
+        let class = runtime_channel_closed_behavior_failure_class(operation);
+        let event = match Libp2pRuntimeEvent::behavior_failure(class, None, None) {
+            Ok(event) => event,
+            Err(_) => return,
+        };
+        if let Ok(mut state) = self.state.lock() {
+            state.runtime_events.push_back(event);
+        }
+    }
+
+    fn channel_closed_error(&self, operation: Libp2pRuntimeAdapterOperation) -> P2pTransportError {
+        self.emit_channel_closed_runtime_event(operation);
+        P2pTransportError::Libp2pRuntimeAdapterChannelClosed(operation)
+    }
+
     fn advertise(&self, record: PeerDiscoveryRecord) -> Result<(), P2pTransportError> {
         let (response_tx, response_rx) = std::sync::mpsc::channel();
-        self.command_tx
+        if self
+            .command_tx
             .send(Libp2pNativeRuntimeAdapterLoopCommand::Advertise {
                 record,
                 response: response_tx,
             })
-            .map_err(|_| {
-                P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
-                    Libp2pRuntimeAdapterOperation::Connect,
-                )
-            })?;
-        response_rx.recv().map_err(|_| {
-            P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
-                Libp2pRuntimeAdapterOperation::Connect,
-            )
-        })?
+            .is_err()
+        {
+            return Err(self.channel_closed_error(Libp2pRuntimeAdapterOperation::Connect));
+        }
+        response_rx
+            .recv()
+            .map_err(|_| self.channel_closed_error(Libp2pRuntimeAdapterOperation::Connect))?
     }
 
     fn discover(
@@ -1109,41 +1140,37 @@ impl Libp2pNativeRuntimeAdapterLoop {
         topic: &str,
     ) -> Result<Vec<PeerDiscoveryRecord>, P2pTransportError> {
         let (response_tx, response_rx) = std::sync::mpsc::channel();
-        self.command_tx
+        if self
+            .command_tx
             .send(Libp2pNativeRuntimeAdapterLoopCommand::Discover {
                 requester_peer_id: requester_peer_id.to_owned(),
                 topic: topic.to_owned(),
                 response: response_tx,
             })
-            .map_err(|_| {
-                P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
-                    Libp2pRuntimeAdapterOperation::Discover,
-                )
-            })?;
-        response_rx.recv().map_err(|_| {
-            P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
-                Libp2pRuntimeAdapterOperation::Discover,
-            )
-        })?
+            .is_err()
+        {
+            return Err(self.channel_closed_error(Libp2pRuntimeAdapterOperation::Discover));
+        }
+        response_rx
+            .recv()
+            .map_err(|_| self.channel_closed_error(Libp2pRuntimeAdapterOperation::Discover))?
     }
 
     fn send(&self, frame: PeerGossipFrame) -> Result<(), P2pTransportError> {
         let (response_tx, response_rx) = std::sync::mpsc::channel();
-        self.command_tx
+        if self
+            .command_tx
             .send(Libp2pNativeRuntimeAdapterLoopCommand::Send {
                 frame,
                 response: response_tx,
             })
-            .map_err(|_| {
-                P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
-                    Libp2pRuntimeAdapterOperation::Publish,
-                )
-            })?;
-        response_rx.recv().map_err(|_| {
-            P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
-                Libp2pRuntimeAdapterOperation::Publish,
-            )
-        })?
+            .is_err()
+        {
+            return Err(self.channel_closed_error(Libp2pRuntimeAdapterOperation::Publish));
+        }
+        response_rx
+            .recv()
+            .map_err(|_| self.channel_closed_error(Libp2pRuntimeAdapterOperation::Publish))?
     }
 
     fn drain_inbox(
@@ -1151,39 +1178,35 @@ impl Libp2pNativeRuntimeAdapterLoop {
         recipient_peer_id: &str,
     ) -> Result<Vec<PeerGossipFrame>, P2pTransportError> {
         let (response_tx, response_rx) = std::sync::mpsc::channel();
-        self.command_tx
+        if self
+            .command_tx
             .send(Libp2pNativeRuntimeAdapterLoopCommand::DrainInbox {
                 recipient_peer_id: recipient_peer_id.to_owned(),
                 response: response_tx,
             })
-            .map_err(|_| {
-                P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
-                    Libp2pRuntimeAdapterOperation::Receive,
-                )
-            })?;
-        response_rx.recv().map_err(|_| {
-            P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
-                Libp2pRuntimeAdapterOperation::Receive,
-            )
-        })?
+            .is_err()
+        {
+            return Err(self.channel_closed_error(Libp2pRuntimeAdapterOperation::Receive));
+        }
+        response_rx
+            .recv()
+            .map_err(|_| self.channel_closed_error(Libp2pRuntimeAdapterOperation::Receive))?
     }
 
     fn drain_runtime_events(&self) -> Result<Vec<Libp2pRuntimeEvent>, P2pTransportError> {
         let (response_tx, response_rx) = std::sync::mpsc::channel();
-        self.command_tx
+        if self
+            .command_tx
             .send(Libp2pNativeRuntimeAdapterLoopCommand::DrainRuntimeEvents {
                 response: response_tx,
             })
-            .map_err(|_| {
-                P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
-                    Libp2pRuntimeAdapterOperation::EventDrain,
-                )
-            })?;
-        response_rx.recv().map_err(|_| {
-            P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
-                Libp2pRuntimeAdapterOperation::EventDrain,
-            )
-        })?
+            .is_err()
+        {
+            return Err(self.channel_closed_error(Libp2pRuntimeAdapterOperation::EventDrain));
+        }
+        response_rx
+            .recv()
+            .map_err(|_| self.channel_closed_error(Libp2pRuntimeAdapterOperation::EventDrain))?
     }
 }
 
@@ -2170,6 +2193,29 @@ impl Libp2pRuntimeAdapterOperation {
     }
 }
 
+#[cfg(feature = "libp2p-live-transport")]
+fn runtime_channel_closed_behavior_failure_class(
+    operation: Libp2pRuntimeAdapterOperation,
+) -> Libp2pBehaviorFailureClass {
+    match operation {
+        Libp2pRuntimeAdapterOperation::Connect => {
+            Libp2pBehaviorFailureClass::RuntimeConnectChannelClosed
+        }
+        Libp2pRuntimeAdapterOperation::Discover => {
+            Libp2pBehaviorFailureClass::RuntimeDiscoverChannelClosed
+        }
+        Libp2pRuntimeAdapterOperation::Publish => {
+            Libp2pBehaviorFailureClass::RuntimePublishChannelClosed
+        }
+        Libp2pRuntimeAdapterOperation::Receive => {
+            Libp2pBehaviorFailureClass::RuntimeReceiveChannelClosed
+        }
+        Libp2pRuntimeAdapterOperation::EventDrain => {
+            Libp2pBehaviorFailureClass::RuntimeEventDrainChannelClosed
+        }
+    }
+}
+
 /// Deterministic p2p discovery and gossip transport error variants.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum P2pTransportError {
@@ -2396,13 +2442,17 @@ fn is_supported_swarm_multiaddr(value: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "libp2p-live-transport")]
+    use super::Libp2pRuntimeEventKind;
     use super::{
-        InMemoryPeerLifecycleTransport, Libp2pRuntimeAdapterOperation, P2pTransportError,
-        PeerGossipFrame, PeerLifecycleTransport,
+        InMemoryPeerLifecycleTransport, Libp2pBehaviorFailureClass, Libp2pRuntimeAdapterOperation,
+        Libp2pRuntimeEvent, P2pTransportError, PeerGossipFrame, PeerLifecycleTransport,
     };
     use crate::config::NodeRole;
     use crate::p2p_transport::{PeerDiscoveryRecord, PeerLifecycleTransportCoordinator};
     use crate::runtime::{PeerLifecycleEvent, PeerLifecycleState, RuntimeLifecycleError};
+    #[cfg(feature = "libp2p-live-transport")]
+    use std::sync::{Arc, Mutex};
 
     #[test]
     fn transport_discovery_filters_by_topic_and_excludes_requester() {
@@ -2518,12 +2568,92 @@ mod tests {
             "p2p_libp2p_runtime_publish_channel_closed"
         );
         assert_eq!(
+            P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
+                Libp2pRuntimeAdapterOperation::Discover,
+            )
+            .reason_code(),
+            "p2p_libp2p_runtime_discover_channel_closed"
+        );
+        assert_eq!(
+            P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
+                Libp2pRuntimeAdapterOperation::Receive,
+            )
+            .reason_code(),
+            "p2p_libp2p_runtime_receive_channel_closed"
+        );
+        assert_eq!(
+            P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
+                Libp2pRuntimeAdapterOperation::EventDrain,
+            )
+            .reason_code(),
+            "p2p_libp2p_runtime_event_drain_channel_closed"
+        );
+        assert_eq!(
             P2pTransportError::Lifecycle(RuntimeLifecycleError::InvalidTransition {
                 from: PeerLifecycleState::Disconnected,
                 event: PeerLifecycleEvent::HeartbeatRestored,
             })
             .reason_code(),
             "runtime_peer_transition_invalid"
+        );
+    }
+
+    #[test]
+    fn runtime_behavior_failure_reason_code_for_native_channel_close_is_operation_scoped() {
+        assert_eq!(
+            Libp2pRuntimeEvent::behavior_failure(
+                Libp2pBehaviorFailureClass::RuntimeConnectChannelClosed,
+                None,
+                None,
+            )
+            .expect("behavior failure should build")
+            .reason_code(),
+            "p2p_libp2p_runtime_connect_channel_closed"
+        );
+        assert_eq!(
+            Libp2pRuntimeEvent::behavior_failure(
+                Libp2pBehaviorFailureClass::RuntimePublishChannelClosed,
+                None,
+                None,
+            )
+            .expect("behavior failure should build")
+            .reason_code(),
+            "p2p_libp2p_runtime_publish_channel_closed"
+        );
+    }
+
+    #[cfg(feature = "libp2p-live-transport")]
+    #[test]
+    fn native_runtime_loop_channel_close_records_behavior_failure_event() {
+        let state = Arc::new(Mutex::new(super::Libp2pLiveDataPlaneState::default()));
+        let (command_tx, command_rx) = std::sync::mpsc::channel();
+        drop(command_rx);
+        let runtime_loop = super::Libp2pNativeRuntimeAdapterLoop {
+            command_tx,
+            state: state.clone(),
+        };
+
+        let error = runtime_loop
+            .discover("peer-runtime-loop", "messages")
+            .expect_err("closed bridge should fail");
+        assert_eq!(
+            error,
+            P2pTransportError::Libp2pRuntimeAdapterChannelClosed(
+                Libp2pRuntimeAdapterOperation::Discover,
+            )
+        );
+
+        let events = state
+            .lock()
+            .expect("state lock should succeed")
+            .runtime_events
+            .drain(..)
+            .collect::<Vec<Libp2pRuntimeEvent>>();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].kind(), Libp2pRuntimeEventKind::BehaviorFailure);
+        assert_eq!(
+            events[0].reason_code(),
+            "p2p_libp2p_runtime_discover_channel_closed"
         );
     }
 }
