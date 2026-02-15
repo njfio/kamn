@@ -796,6 +796,26 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
 - Deterministic fail-closed marker for policy tamper drills:
   - `service_api_prometheus_metrics_policy_marker_missing:metrics_contract_status`
 
+## Runtime Service API + Observability Route Compatibility Matrix Contract Lane
+- Entry commands:
+  - `bash scripts/runtime/validate_service_api_observability_route_compatibility_live.sh --mode dry-run --output-json /tmp/service-api-observability-route-compatibility-summary.json`
+  - `bash scripts/runtime/check_service_api_observability_route_compatibility_live_policy.sh --report-file /tmp/service-api-observability-route-compatibility-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/service-api-observability-route-compatibility-policy.json`
+  - `bash scripts/runtime/validate_service_api_observability_route_compatibility_live_contract_lane.sh --mode dry-run --output-json /tmp/service-api-observability-route-compatibility-contract-lane-report.json --policy-output-json /tmp/service-api-observability-route-compatibility-policy.json`
+  - `bash scripts/runtime/test_validate_service_api_observability_route_compatibility_live.sh`
+  - `bash scripts/runtime/test_check_service_api_observability_route_compatibility_live_policy.sh`
+  - `bash scripts/runtime/test_validate_service_api_observability_route_compatibility_live_contract_lane.sh`
+- ci-fast-gate mode: fast
+- local-dev mode: local
+- manual-hardened mode: manual
+- Cost controls:
+  - dry-run mode executes no nested matrix evidence tests and emits deterministic `dry_run_no_commands_executed`.
+  - run mode (manual local verification) remains bounded to six targeted `kamn-node` route-compatibility tests.
+  - no external network dependencies; lane coverage is local cargo test selectors plus deterministic policy validation.
+  - runtime budget is bounded via `KAMN_SERVICE_API_OBSERVABILITY_ROUTE_COMPATIBILITY_CONTRACT_MAX_SECONDS`.
+  - route compatibility contract-lane commands remain excluded from ci-fast-gate and ci-tools fast mode.
+- Deterministic fail-closed marker for policy tamper drills:
+  - `service_api_observability_route_compatibility_policy_matrix_row_status_mismatch:api_healthz_get`
+
 ## Runtime Service API Tranche-2 Wrapper Retirement Parity Matrix
 - service api tranche-2 wrapper retirement parity guard stays on PR fast gate:
   - `bash scripts/runtime/test_service_api_tranche1_wrapper_family_parity_matrix.sh`

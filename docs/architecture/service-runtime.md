@@ -74,6 +74,36 @@ hand-rolled parser/listener path.
     `Transfer-Encoding`) resolve to deterministic `404 not found`
   - request budget and idle timeout remain deterministic and fail closed
 
+## Service API + Observability Route Compatibility Matrix Contract
+
+Compatibility between service API routes and observability routes is enforced by
+a deterministic matrix lane with explicit route/method/status/content-type
+expectations.
+
+- lane entry:
+  - `scripts/runtime/validate_service_api_observability_route_compatibility_live.sh`
+- policy checker:
+  - `scripts/runtime/check_service_api_observability_route_compatibility_live_policy.sh`
+- composed contract lane:
+  - `scripts/runtime/validate_service_api_observability_route_compatibility_live_contract_lane.sh`
+
+Matrix row coverage includes:
+
+- service API:
+  - `GET /healthz -> 200 application/json`
+  - `GET /metrics -> 200 text/plain`
+  - `POST /metrics -> 405 application/json`
+- observability endpoint:
+  - `GET /metrics -> 200 text/plain`
+  - `GET /healthz -> 200 application/json`
+  - `GET /unknown -> 404 application/json`
+
+Fail-closed drift taxonomy includes:
+
+- `service_api_observability_route_compatibility_policy_matrix_row_missing:<row_id>`
+- `service_api_observability_route_compatibility_policy_matrix_row_status_mismatch:<row_id>`
+- `service_api_observability_route_compatibility_policy_matrix_row_content_type_mismatch:<row_id>`
+
 ## Combined Native Transport + Kolme Commit Validation Flow
 
 The local full-stack integration lane composes native libp2p transport and
