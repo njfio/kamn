@@ -213,6 +213,22 @@ if ! printf '%s\n' "$validation_output" | grep -q "^kolme_integration_policy_sta
   echo "expected local full-stack integration Kolme integration policy marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^local_heavy_runtime_budget_status=verified$'; then
+  echo "expected local full-stack integration local-heavy runtime budget status marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -Eq '^elapsed_seconds=[0-9]+$'; then
+  echo "expected local full-stack integration elapsed runtime marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -Eq '^max_seconds=[0-9]+$'; then
+  echo "expected local full-stack integration max runtime budget marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -Eq '^command_max_seconds=[0-9]+$'; then
+  echo "expected local full-stack integration per-command runtime budget marker" >&2
+  exit 1
+fi
 
 policy_output="$(
   bash "$POLICY_CHECKER" \
@@ -369,6 +385,24 @@ if summary_report.get("kolme_base_url") != sys.argv[10]:
     raise SystemExit("expected kolme base url marker in summary report")
 if summary_report.get("kolme_fork_chain_version") != sys.argv[11]:
     raise SystemExit("expected kolme fork chain version marker in summary report")
+if summary_report.get("local_heavy_runtime_budget_status") != "verified":
+    raise SystemExit("expected local_heavy_runtime_budget_status=verified in summary report")
+
+summary_elapsed_seconds = summary_report.get("elapsed_seconds")
+summary_max_seconds = summary_report.get("max_seconds")
+summary_command_max_seconds = summary_report.get("command_max_seconds")
+if not isinstance(summary_elapsed_seconds, int) or summary_elapsed_seconds < 0:
+    raise SystemExit("expected non-negative elapsed_seconds in summary report")
+if not isinstance(summary_max_seconds, int) or summary_max_seconds <= 0:
+    raise SystemExit("expected positive max_seconds in summary report")
+if not isinstance(summary_command_max_seconds, int) or summary_command_max_seconds <= 0:
+    raise SystemExit("expected positive command_max_seconds in summary report")
+if summary_elapsed_seconds > summary_max_seconds:
+    raise SystemExit("expected elapsed_seconds <= max_seconds in summary report")
+if summary_command_max_seconds > summary_max_seconds:
+    raise SystemExit("expected command_max_seconds <= max_seconds in summary report")
+if summary_max_seconds != max_seconds:
+    raise SystemExit("expected summary max_seconds to match contract lane max_seconds")
 
 for marker in (
     "transport_convergence_status",
@@ -469,6 +503,10 @@ lane_report = {
     ),
     "docs_contract_status": "verified",
     "performance_budget_status": "verified",
+    "local_heavy_runtime_budget_status": summary_report.get(
+        "local_heavy_runtime_budget_status",
+        "unknown",
+    ),
     "elapsed_seconds": elapsed_seconds,
     "max_seconds": max_seconds,
     "summary_report_file": str(pathlib.Path(sys.argv[1]).resolve()),
@@ -535,6 +573,9 @@ echo "kolme_integration_report_schema_version=kamn.kolme.local-kamn-live-runtime
 echo "kolme_integration_policy_schema_version=kamn.kolme.local-kamn-live-runtime-integration-policy-report.v1"
 echo "docs_contract_status=verified"
 echo "performance_budget_status=verified"
+echo "local_heavy_runtime_budget_status=verified"
+echo "elapsed_seconds=${elapsed_seconds}"
+echo "max_seconds=${max_seconds}"
 echo "fail_closed_reason_code=local_full_stack_integration_policy_reason_taxonomy_version_mismatch"
 if [[ -n "$output_json" ]]; then
   echo "report_file=$(realpath "$output_json")"

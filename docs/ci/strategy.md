@@ -481,6 +481,8 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     - signer provenance
     - runtime commit submission
     - runtime commit finality
+    - local-heavy runtime budget status (`local_heavy_runtime_budget_status`)
+    - local-heavy runtime budget marker trio (`elapsed_seconds`, `max_seconds`, `command_max_seconds`)
     - runtime provider contract (`KolmeRuntimeCommitLiveProvider`)
     - local-only Kolme checkout/remote/ref/base-url/fork-chain prerequisites
     - nested Kolme local-only enforcement and run-mode policy markers
@@ -497,12 +499,15 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
     - `scripts/runtime/test_validate_local_full_stack_integration_live_contract_lane.sh`
   - run mode is explicit local-only and requires `KAMN_LOCAL_FULL_STACK_INTEGRATION_OPT_IN=1`.
   - nested run-mode commands propagate local-only opt-in for composed lanes.
+  - budget drift is fail-closed when lane runtime markers exceed configured max budget.
   - local full-stack integration run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode.
 - Deterministic fail-closed marker for policy tamper drills:
   - `local_full_stack_integration_policy_reason_taxonomy_version_mismatch`
   - `local_full_stack_integration_policy_libp2p_process_isolation_status_mismatch`
   - `local_full_stack_integration_policy_libp2p_two_node_process_isolated_status_mismatch`
   - `local_full_stack_integration_policy_libp2p_three_node_process_isolated_status_mismatch`
+  - `local_full_stack_integration_policy_runtime_budget_status_mismatch`
+  - `local_full_stack_integration_policy_runtime_budget_exceeded`
 
 ## Deploy Compose Topology Contract Lane
 - Entry commands:

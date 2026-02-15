@@ -70,6 +70,7 @@ cat >"$TMP_REPORT" <<'JSON'
   "run_mode_command_status": "dry_run_no_commands_executed",
   "run_mode_command_count": 0,
   "reason_code": "dry_run_no_commands_executed",
+  "local_heavy_runtime_budget_status": "verified",
   "elapsed_seconds": 1,
   "max_seconds": 120,
   "command_max_seconds": 60,
@@ -203,6 +204,38 @@ if [ "$tampered_three_node_marker_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_three_node_marker_output" | grep -q 'local_full_stack_integration_policy_libp2p_three_node_process_isolated_status_mismatch'; then
   echo "expected deterministic reason marker for tampered three-node process-isolated status" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED"
+python3 - "$TMP_TAMPERED" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["elapsed_seconds"] = 130
+payload["max_seconds"] = 120
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_runtime_budget_output="$(
+  bash "$POLICY_SCRIPT" \
+    --report-file "$TMP_TAMPERED" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS \
+    --output-json "$TMP_POLICY" 2>&1
+)"
+tampered_runtime_budget_code=$?
+set -e
+if [ "$tampered_runtime_budget_code" -eq 0 ]; then
+  echo "expected runtime budget exceedance to fail local full-stack integration policy check" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_runtime_budget_output" | grep -q 'local_full_stack_integration_policy_runtime_budget_exceeded'; then
+  echo "expected deterministic reason marker for runtime budget exceedance" >&2
   exit 1
 fi
 
