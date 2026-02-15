@@ -24,6 +24,24 @@ if printf '%s\n' "$fast_mode_block" | grep -Fq 'bash "$ROOT_DIR/scripts/runtime/
   echo "expected local full-stack integration run-mode lane to remain excluded from ci-tools fast mode" >&2
   exit 1
 fi
+if printf '%s\n' "$fast_mode_block" | grep -Fq 'validate_libp2p_convergence_process_isolated_live.sh --mode run --lane-profile deep'; then
+  echo "expected nested native libp2p deep run-mode command to remain excluded from ci-tools fast mode" >&2
+  exit 1
+fi
+if printf '%s\n' "$fast_mode_block" | grep -Fq 'run_local_kamn_live_runtime_integration_lane.sh --mode run'; then
+  echo "expected nested Kolme runtime integration run-mode command to remain excluded from ci-tools fast mode" >&2
+  exit 1
+fi
+
+for required_command in \
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_local_full_stack_integration_live.sh"' \
+  'bash "$ROOT_DIR/scripts/runtime/test_check_local_full_stack_integration_live_policy.sh"' \
+  'bash "$ROOT_DIR/scripts/runtime/test_validate_local_full_stack_integration_live_contract_lane.sh"'; do
+  if ! printf '%s\n' "$fast_mode_block" | grep -Fq "$required_command"; then
+    echo "expected ci-tools fast mode to include deterministic local full-stack dry-run command: $required_command" >&2
+    exit 1
+  fi
+done
 
 for required_command in \
   'bash "$ROOT_DIR/scripts/runtime/test_validate_local_full_stack_integration_live.sh"' \
