@@ -28,6 +28,8 @@ This document captures the first implementation slice for deterministic observab
   - metrics: `/metrics` (Prometheus text format)
   - health: `/healthz` (JSON payload)
   - readiness: `/readyz` (JSON payload)
+- Contract reference:
+  - `docs/observability/contracts.md`
 - Metrics payload keys:
   - `kamn_observability_latency_p50_ms`
   - `kamn_observability_latency_p99_ms`
@@ -41,22 +43,28 @@ This document captures the first implementation slice for deterministic observab
   - `kamn_observability_reason_code{reason_code="<reason>"}` with deterministic label values.
   - `kamn_observability_health{health="<healthy|degraded|critical>"}`
 - Health payload fields:
+  - `schema_version` (`kamn.runtime.observability.health.v1`)
   - `source`
   - `runtime_mode`
   - `health`
   - `alert_count`
   - `reason_code`
+  - `ready`
+  - `readiness_reason_code`
+  - `readiness_reason_taxonomy_version` (`kamn.runtime.observability.readiness.reason-taxonomy.v1`)
   - `transport_checkpoint_failures`
   - `signer_checkpoint_failures`
   - `commit_checkpoint_failures`
   - latency/throughput/error/availability numeric fields
 - Readiness payload fields:
+  - `schema_version` (`kamn.runtime.observability.readiness.v1`)
   - `source`
   - `runtime_mode`
   - `ready` (boolean)
   - `health`
   - `reason_code` (runtime telemetry reason)
   - `readiness_reason_code` (dependency-derived readiness taxonomy)
+  - `readiness_reason_taxonomy_version` (`kamn.runtime.observability.readiness.reason-taxonomy.v1`)
   - `transport_dependency_status`
   - `signer_dependency_status`
   - `commit_dependency_status`

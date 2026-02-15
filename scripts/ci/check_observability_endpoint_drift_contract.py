@@ -37,13 +37,19 @@ SOURCE_MARKERS: dict[str, str] = {
 }
 
 TELEMETRY_SOURCE_MARKERS: dict[str, str] = {
-    "stream_schema_marker": "{\\\"schema_version\\\":\\\"kamn.runtime.observability.stream.v1\\\"",
+    "stream_schema_marker": "const OBSERVABILITY_STREAM_SCHEMA_VERSION: &str = \"kamn.runtime.observability.stream.v1\";",
+    "health_schema_marker": "const OBSERVABILITY_HEALTH_SCHEMA_VERSION: &str = \"kamn.runtime.observability.health.v1\";",
+    "readiness_schema_marker": "const OBSERVABILITY_READINESS_SCHEMA_VERSION: &str = \"kamn.runtime.observability.readiness.v1\";",
+    "readiness_reason_taxonomy_version_marker": "const OBSERVABILITY_READINESS_REASON_TAXONOMY_VERSION: &str =",
     "metrics_readiness_reason_code_marker": "kamn_observability_readiness_reason_code{{readiness_reason_code=\\\"{}\\\"}} 1",
     "readiness_reason_projection_fn": "fn readiness_reason_code(snapshot: &RuntimeObservabilitySnapshot) -> &'static str {",
 }
 
 TELEMETRY_DOC_MARKERS: dict[str, str] = {
     "stream_schema_marker": "schema_version=\"kamn.runtime.observability.stream.v1\"",
+    "health_schema_marker": "`schema_version` (`kamn.runtime.observability.health.v1`)",
+    "readiness_schema_marker": "`schema_version` (`kamn.runtime.observability.readiness.v1`)",
+    "readiness_reason_taxonomy_version_marker": "`readiness_reason_taxonomy_version` (`kamn.runtime.observability.readiness.reason-taxonomy.v1`)",
     "readiness_reason_taxonomy_marker": "`readiness_reason_code` (dependency-derived readiness taxonomy)",
     "readiness_transport_marker": "`readiness_transport_dependency_unhealthy`",
     "readiness_signer_marker": "`readiness_signer_dependency_unhealthy`",
@@ -51,9 +57,16 @@ TELEMETRY_DOC_MARKERS: dict[str, str] = {
     "readiness_runtime_health_marker": "`readiness_runtime_health_degraded`",
 }
 
+OBSERVABILITY_CONTRACT_DOC_MARKERS: dict[str, str] = {
+    "health_schema_marker": "schema_version=\"kamn.runtime.observability.health.v1\"",
+    "readiness_schema_marker": "schema_version=\"kamn.runtime.observability.readiness.v1\"",
+    "stream_schema_marker": "schema_version=\"kamn.runtime.observability.stream.v1\"",
+    "readiness_reason_taxonomy_version_marker": "readiness_reason_taxonomy_version=\"kamn.runtime.observability.readiness.reason-taxonomy.v1\"",
+}
+
 TELEMETRY_STRATEGY_MARKER = (
-    "telemetry schema docs-contract marker set remains fail-closed for stream "
-    "schema_version and readiness_reason_code taxonomy."
+    "telemetry schema docs-contract marker set remains fail-closed for "
+    "health/readiness/stream schema_version markers and readiness_reason_code taxonomy."
 )
 
 MAIN_WIRING_MARKER = "serve_observability_endpoint(&endpoint_config, &snapshot)"
@@ -72,6 +85,7 @@ def _run(args: argparse.Namespace) -> int:
     framework_file = Path(args.framework_file).resolve()
     docs_file = Path(args.docs_file).resolve()
     observability_doc_file = Path(args.observability_doc_file).resolve()
+    observability_contract_doc_file = Path(args.observability_contract_doc_file).resolve()
     strategy_doc_file = Path(args.strategy_doc_file).resolve()
 
     source_text = _read_text(
@@ -94,6 +108,10 @@ def _run(args: argparse.Namespace) -> int:
     observability_docs_text = _read_text(
         observability_doc_file,
         reason_code="observability_schema_docs_file_missing",
+    )
+    observability_contract_docs_text = _read_text(
+        observability_contract_doc_file,
+        reason_code="observability_contract_docs_file_missing",
     )
     strategy_doc_text = _read_text(
         strategy_doc_file,
@@ -127,6 +145,15 @@ def _run(args: argparse.Namespace) -> int:
             decision.reject_if(
                 True,
                 f"observability_schema_docs_marker_missing:{marker_key}",
+            )
+
+    missing_contract_doc_markers: list[str] = []
+    for marker_key, marker_value in OBSERVABILITY_CONTRACT_DOC_MARKERS.items():
+        if marker_value not in observability_contract_docs_text:
+            missing_contract_doc_markers.append(marker_key)
+            decision.reject_if(
+                True,
+                f"observability_contract_docs_marker_missing:{marker_key}",
             )
 
     decision.reject_if(
@@ -169,6 +196,7 @@ def _run(args: argparse.Namespace) -> int:
             if (
                 not missing_telemetry_source_markers
                 and not missing_telemetry_doc_markers
+                and not missing_contract_doc_markers
                 and TELEMETRY_STRATEGY_MARKER in strategy_doc_text
             )
             else "rejected"
@@ -183,12 +211,17 @@ def _run(args: argparse.Namespace) -> int:
             len(TELEMETRY_DOC_MARKERS) - len(missing_telemetry_doc_markers)
         ),
         "expected_telemetry_doc_marker_count": len(TELEMETRY_DOC_MARKERS),
+        "contract_doc_marker_count": (
+            len(OBSERVABILITY_CONTRACT_DOC_MARKERS) - len(missing_contract_doc_markers)
+        ),
+        "expected_contract_doc_marker_count": len(OBSERVABILITY_CONTRACT_DOC_MARKERS),
         "reason_codes": reason_codes,
         "source_file": str(source_file),
         "main_file": str(main_file),
         "framework_file": str(framework_file),
         "docs_file": str(docs_file),
         "observability_doc_file": str(observability_doc_file),
+        "observability_contract_doc_file": str(observability_contract_doc_file),
         "strategy_doc_file": str(strategy_doc_file),
         "generated_at_epoch": int(time.time()),
     }
@@ -249,6 +282,11 @@ def main() -> int:
         "--observability-doc-file",
         default=str(ROOT_DIR / "docs/foundation/observability-slo-dashboards.md"),
         help="Observability telemetry schema documentation path.",
+    )
+    parser.add_argument(
+        "--observability-contract-doc-file",
+        default=str(ROOT_DIR / "docs/observability/contracts.md"),
+        help="Observability runtime contracts documentation path.",
     )
     parser.add_argument(
         "--strategy-doc-file",
