@@ -3026,6 +3026,29 @@ The runtime go/no-go gate lane enforces a versioned release evidence manifest:
   - mixed or all-failing attempt outcomes emit `final_decision=NO-GO` and exit non-zero.
   - runtime budget overrun emits `runtime_budget_exceeded` and exit non-zero.
 
+## Daemon OS-Signal Reproducer Contract
+- Deterministic daemon reproducer command:
+  - `bash scripts/ci/run_daemon_os_signal_reproducer.sh --attempts 3 --max-seconds 180 --artifact-dir /tmp/daemon-os-signal-reproducer-artifacts --output-json /tmp/daemon-os-signal-reproducer-report.json`
+- Contract test command:
+  - `bash scripts/ci/test_run_daemon_os_signal_reproducer.sh`
+- Daemon reproducer artifact schema:
+  - `kamn.ci.daemon-os-signal-reproducer-report.v1`
+- Default daemon failure corpus (three tests, `--exact`):
+  - `daemon_shutdown::tests::regression_daemon_completion_with_os_signals_without_signal_stays_bounded`
+  - `main_tests::daemon_tests::integration_runtime_daemon_applies_graceful_shutdown_on_os_signal`
+  - `main_tests::runtime_tests::regression_runtime_full_os_signal_stop_markers_project_shutdown_field_parity`
+- Required artifact run fields:
+  - test_name, attempt_index, run_index, status, exit_code, log_file, stdout_excerpt, failure_markers
+- Deterministic reason codes:
+  - `stable_success`
+  - `flaky_pattern_observed`
+  - `reproducible_failure`
+  - `runtime_budget_exceeded`
+- Cost controls:
+  - lane uses bounded attempt and wall-clock budgets (`--attempts`, `--max-seconds`).
+  - per-run payload stays compact by truncating captured output with `--stdout-excerpt-lines`.
+  - local validation remains deterministic and does not require external network services.
+
 ## Reporting and Burn-down
 - Weekly workflow `ci-flaky-registry` validates the quarantine registry and publishes a report artifact.
 - Weekly workflow `ci-flaky-report-comment` posts an automated report comment to issue `#70`.
