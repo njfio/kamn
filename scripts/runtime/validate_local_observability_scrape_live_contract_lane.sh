@@ -6,6 +6,7 @@ VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_local_observability_scrape
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_local_observability_scrape_live_policy.sh"
 STRATEGY_DOC="$ROOT_DIR/docs/ci/strategy.md"
 ROADMAP_DOC="$ROOT_DIR/docs/plans/2026-02-08-production-service-roadmap.md"
+NEXT_STEPS_DOC="$ROOT_DIR/docs/plans/2026-02-14-production-service-next-steps.md"
 
 output_json=""
 policy_output_json=""
@@ -65,7 +66,7 @@ for required_exec in "$VALIDATION_SCRIPT" "$POLICY_CHECKER"; do
     exit 1
   fi
 done
-for required_doc in "$STRATEGY_DOC" "$ROADMAP_DOC"; do
+for required_doc in "$STRATEGY_DOC" "$ROADMAP_DOC" "$NEXT_STEPS_DOC"; do
   if [ ! -f "$required_doc" ]; then
     echo "expected required documentation file '$required_doc'" >&2
     exit 1
@@ -182,6 +183,7 @@ fi
 for required_ref in \
   "validate_local_observability_scrape_live.sh" \
   "check_local_observability_scrape_live_policy.sh" \
+  "test_validate_local_observability_scrape_live.sh" \
   "validate_local_observability_scrape_live_contract_lane.sh" \
   "test_validate_local_observability_scrape_live_contract_lane.sh" \
   "test_check_local_observability_scrape_live_policy.sh"; do
@@ -205,6 +207,14 @@ if ! grep -q "scripts/runtime/validate_local_observability_scrape_live_contract_
 fi
 if ! grep -q "scripts/runtime/check_local_observability_scrape_live_policy.sh" "$ROADMAP_DOC"; then
   echo "expected roadmap to reference local observability scrape policy checker script" >&2
+  exit 1
+fi
+if ! grep -q "#3333 -> #3471 -> #3472 -> #3473 -> #3474 -> #3490" "$NEXT_STEPS_DOC"; then
+  echo "expected next-steps plan to include runtime observability chain marker through #3490" >&2
+  exit 1
+fi
+if ! grep -q "scripts/runtime/test_validate_local_observability_scrape_live.sh" "$NEXT_STEPS_DOC"; then
+  echo "expected next-steps plan to reference local observability scrape lane-runner test script" >&2
   exit 1
 fi
 

@@ -541,6 +541,7 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `KAMN_LOCAL_OBSERVABILITY_SCRAPE_OPT_IN=1 bash scripts/runtime/validate_local_observability_scrape_live.sh --mode run --output-json /tmp/local-observability-scrape-live-summary.json`
   - `bash scripts/runtime/check_local_observability_scrape_live_policy.sh --report-file /tmp/local-observability-scrape-live-summary.json --expected-final-decision GO --ci-fast-gate PASS --output-json /tmp/local-observability-scrape-live-policy.json`
   - `bash scripts/runtime/validate_local_observability_scrape_live_contract_lane.sh --output-json /tmp/local-observability-scrape-live-contract-lane-report.json --policy-output-json /tmp/local-observability-scrape-live-policy.json`
+  - `bash scripts/runtime/test_validate_local_observability_scrape_live.sh`
   - `bash scripts/runtime/test_validate_local_observability_scrape_live_contract_lane.sh`
   - `bash scripts/runtime/test_check_local_observability_scrape_live_policy.sh`
 - ci-fast-gate mode: fast
