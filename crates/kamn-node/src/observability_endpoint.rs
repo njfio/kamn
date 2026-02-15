@@ -1,8 +1,8 @@
 use crate::NodeBootstrapReport;
-use std::io::{ErrorKind, Read, Write};
-use std::net::{TcpListener, TcpStream};
-use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::runtime::Builder;
+use tokio::time::Instant;
 
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_METRICS_PATH: &str = "/metrics";
 pub(crate) const DEFAULT_OBSERVABILITY_ENDPOINT_HEALTH_PATH: &str = "/healthz";
@@ -166,42 +166,57 @@ pub(crate) fn serve_observability_endpoint(
         return Err("observability endpoint idle timeout must be greater than zero".to_owned());
     }
 
-    let listener = TcpListener::bind(config.bind_addr.as_str())
-        .map_err(|error| format!("observability endpoint bind failed: {error}"))?;
-    listener
-        .set_nonblocking(true)
-        .map_err(|error| format!("observability endpoint nonblocking mode failed: {error}"))?;
+    let runtime = Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
+        .build()
+        .map_err(|error| format!("observability endpoint runtime init failed: {error}"))?;
+    runtime.block_on(serve_observability_endpoint_async(
+        config.clone(),
+        snapshot.clone(),
+    ))
+}
 
+async fn serve_observability_endpoint_async(
+    config: ObservabilityEndpointConfig,
+    snapshot: RuntimeObservabilitySnapshot,
+) -> Result<(), String> {
+    let listener = tokio::net::TcpListener::bind(config.bind_addr.as_str())
+        .await
+        .map_err(|error| format!("observability endpoint bind failed: {error}"))?;
     let deadline = Instant::now() + Duration::from_millis(config.idle_timeout_ms);
     let mut served_requests = 0_u64;
     while served_requests < config.max_requests {
-        if Instant::now() >= deadline {
+        let now = Instant::now();
+        if now >= deadline {
             return Err(format!(
                 "observability endpoint timed out after {} ms waiting for requests",
                 config.idle_timeout_ms
             ));
         }
-        match listener.accept() {
-            Ok((mut stream, _)) => {
-                let path = read_http_request_path(&mut stream).unwrap_or_else(|_| "/".to_owned());
-                let response = render_observability_endpoint_response_with_paths(
-                    snapshot,
-                    path.as_str(),
-                    config.metrics_path.as_str(),
-                    config.health_path.as_str(),
-                    DEFAULT_OBSERVABILITY_ENDPOINT_READINESS_PATH,
-                    DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH,
-                );
-                write_http_response(&mut stream, &response)?;
-                served_requests = served_requests.saturating_add(1);
-            }
-            Err(error) if error.kind() == ErrorKind::WouldBlock => {
-                thread::sleep(Duration::from_millis(5));
-            }
-            Err(error) => {
-                return Err(format!("observability endpoint accept failed: {error}"));
-            }
-        }
+        let accept_window = deadline.saturating_duration_since(now);
+        let (mut stream, _) = tokio::time::timeout(accept_window, listener.accept())
+            .await
+            .map_err(|_| {
+                format!(
+                    "observability endpoint timed out after {} ms waiting for requests",
+                    config.idle_timeout_ms
+                )
+            })?
+            .map_err(|error| format!("observability endpoint accept failed: {error}"))?;
+        let path = read_http_request_path_async(&mut stream)
+            .await
+            .unwrap_or_else(|_| "/".to_owned());
+        let response = render_observability_endpoint_response_with_paths(
+            &snapshot,
+            path.as_str(),
+            config.metrics_path.as_str(),
+            config.health_path.as_str(),
+            DEFAULT_OBSERVABILITY_ENDPOINT_READINESS_PATH,
+            DEFAULT_OBSERVABILITY_ENDPOINT_STREAM_PATH,
+        );
+        write_http_response_async(&mut stream, &response).await?;
+        served_requests = served_requests.saturating_add(1);
     }
     Ok(())
 }
@@ -394,8 +409,8 @@ fn commit_dependency_status(snapshot: &RuntimeObservabilitySnapshot) -> &'static
     }
 }
 
-fn write_http_response(
-    stream: &mut TcpStream,
+async fn write_http_response_async(
+    stream: &mut tokio::net::TcpStream,
     response: &ObservabilityEndpointResponse,
 ) -> Result<(), String> {
     let status_text = match response.status_code {
@@ -411,19 +426,19 @@ fn write_http_response(
     );
     stream
         .write_all(payload.as_bytes())
+        .await
         .map_err(|error| format!("observability endpoint write failed: {error}"))
 }
 
-fn read_http_request_path(stream: &mut TcpStream) -> Result<String, String> {
+async fn read_http_request_path_async(
+    stream: &mut tokio::net::TcpStream,
+) -> Result<String, String> {
     let mut request = Vec::new();
     let mut chunk = [0_u8; 256];
-    stream
-        .set_read_timeout(Some(Duration::from_secs(1)))
-        .map_err(|error| format!("observability endpoint read-timeout failed: {error}"))?;
     loop {
-        match stream.read(&mut chunk) {
-            Ok(0) => break,
-            Ok(read_count) => {
+        match tokio::time::timeout(Duration::from_secs(1), stream.read(&mut chunk)).await {
+            Ok(Ok(0)) => break,
+            Ok(Ok(read_count)) => {
                 request.extend_from_slice(&chunk[..read_count]);
                 if request.windows(2).any(|window| window == b"\r\n") {
                     break;
@@ -432,11 +447,11 @@ fn read_http_request_path(stream: &mut TcpStream) -> Result<String, String> {
                     return Err("observability endpoint request header too large".to_owned());
                 }
             }
-            Err(error) if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
-                break;
-            }
-            Err(error) => {
+            Ok(Err(error)) => {
                 return Err(format!("observability endpoint read failed: {error}"));
+            }
+            Err(_) => {
+                break;
             }
         }
     }

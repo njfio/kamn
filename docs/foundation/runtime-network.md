@@ -125,6 +125,21 @@ This document captures the initial runtime-network foundation slice for peer lif
   - invalid lifecycle event argument -> `ConfigError::InvalidDaemonLifecycleEvent`
   - invalid transition from lifecycle state machine -> `ConfigError::RuntimeDaemonLifecycle`
 
+## Node Observability Ingress Runtime Mapping
+- `kamn-node` observability export serving path is runtime-aligned and async-driven:
+  - sync wrapper: `serve_observability_endpoint(...)`
+  - async implementation: `serve_observability_endpoint_async(...)`
+  - listener binding: `tokio::net::TcpListener::bind(...)`
+- Serving loop contracts:
+  - request budget is bounded by `observability_endpoint_max_requests`
+  - idle timeout is bounded by `observability_endpoint_idle_timeout_ms`
+  - timeout and accept failures remain fail-closed with deterministic error messages
+- Endpoint contract paths:
+  - metrics: `--observability-endpoint-metrics-path` (default `/metrics`)
+  - health: `--observability-endpoint-health-path` (default `/healthz`)
+  - readiness: fixed `/readyz`
+  - stream: fixed `/metrics.stream`
+
 ## Bridge Quorum Runtime Mapping
 - Listener and approver bridge quorum runtime contracts are documented in:
   - `docs/foundation/bridge-quorum-runtime.md`
