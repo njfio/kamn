@@ -149,6 +149,16 @@ provider marker contracts for local-heavy runtime rehearsal:
     - `p2p-live-libp2p-provider:contract-only` (feature disabled)
     - `p2p-live-libp2p-provider:native` (`libp2p-live-transport` enabled)
 
+Release-gate marker contracts (Task #3736) require deterministic native-only
+provider evidence in runtime summary lanes:
+
+- `libp2p_native_provider_marker=p2p-live-libp2p-provider:native`
+- fallback marker deny-list:
+  - `p2p-in-memory-transport-fallback`
+  - `p2p-live-libp2p-provider:contract-only`
+- `libp2p_fallback_markers_detected` must be empty
+- `libp2p_provider_marker_contract_status=verified`
+
 ## Live Data-Plane Execution
 
 Subtask #3574 moves the live adapter execution path off the in-memory delegate
@@ -252,6 +262,14 @@ Deterministic reason-code markers:
     - remediation: remove `--disable-gossip` or switch to non-production runtime mode
   - `runtime_transport_profile_in_memory_fallback_forbidden`
     - remediation: remove in-memory fallback markers and enforce live profile markers
+  - `gate_policy_native_libp2p_provider_marker_mismatch`
+    - remediation: restore `p2p-live-libp2p-provider:native` marker in runtime report path
+  - `gate_policy_libp2p_fallback_marker_blocklist_mismatch`
+    - remediation: restore canonical fallback-marker deny-list in release-gate contracts
+  - `gate_policy_libp2p_fallback_markers_detected`
+    - remediation: remove fallback markers and enforce native provider marker contract
+  - `gate_policy_native_libp2p_provider_marker_contract_status_mismatch`
+    - remediation: restore `libp2p_provider_marker_contract_status=verified`
 
 ## Peer Lifecycle Proptest Invariants
 

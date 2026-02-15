@@ -37,6 +37,11 @@ COMBINED_TRANSPORT_REASON_CODE = "fork_choice_stale_block_height"
 KOLME_RUNTIME_COMMIT_FAILURE_TAXONOMY_VERSION = "v1"
 KOLME_RUNTIME_COMMIT_PROFILE = "real-node-non-synthetic-v1"
 KOLME_RUNTIME_COMMIT_PROFILE_VERSION = "v1"
+NATIVE_LIBP2P_PROVIDER_MARKER = "p2p-live-libp2p-provider:native"
+LIBP2P_FALLBACK_MARKER_BLOCKLIST = [
+    "p2p-in-memory-transport-fallback",
+    "p2p-live-libp2p-provider:contract-only",
+]
 REQUIRED_ARTIFACT_IDS = (
     "go_no_go_evidence",
     "rollback_readiness",
@@ -134,6 +139,13 @@ def _require_line_value(output: str, key: str, reason_code: str) -> str:
     if not value:
         fail(reason_code)
     return value
+
+
+def _parse_csv_field(value: str) -> list[str]:
+    normalized = value.strip()
+    if not normalized or normalized == "none":
+        return []
+    return [segment.strip() for segment in normalized.split(",") if segment.strip()]
 
 
 def _resolve_manifest_path(raw: str) -> Path:
@@ -301,6 +313,10 @@ def _evaluate_go_no_go_policy(
     artifact_inventory: list[dict[str, str]],
     observed_reason_codes: list[str],
     lane_mode: str,
+    native_libp2p_provider_marker: str,
+    libp2p_fallback_marker_blocklist: list[str],
+    libp2p_fallback_markers_detected: list[str],
+    native_libp2p_provider_marker_contract_status: str,
 ) -> tuple[str, str, str, list[str]]:
     fail_reasons: list[str] = []
     warn_reasons: list[str] = []
@@ -323,6 +339,15 @@ def _evaluate_go_no_go_policy(
             continue
         fail_reasons.append(f"gate_policy_unknown_reason_code:{reason_code}")
 
+    if native_libp2p_provider_marker != NATIVE_LIBP2P_PROVIDER_MARKER:
+        fail_reasons.append("gate_policy_native_libp2p_provider_marker_mismatch")
+    if libp2p_fallback_marker_blocklist != LIBP2P_FALLBACK_MARKER_BLOCKLIST:
+        fail_reasons.append("gate_policy_libp2p_fallback_marker_blocklist_mismatch")
+    if libp2p_fallback_markers_detected:
+        fail_reasons.append("gate_policy_libp2p_fallback_markers_detected")
+    if native_libp2p_provider_marker_contract_status != "verified":
+        fail_reasons.append("gate_policy_native_libp2p_provider_marker_contract_status_mismatch")
+
     fail_reasons = sorted(set(fail_reasons))
     warn_reasons = sorted(set(warn_reasons))
 
@@ -338,8 +363,16 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
     lane_mode = require_enum("--mode", args.mode.strip(), ("dry-run", "run"))
     ci_fast_gate = require_enum("--ci-fast-gate", args.ci_fast_gate.strip(), ("PASS", "FAIL"))
     fault_profile = args.fault_profile.strip()
-    if fault_profile not in {"none", "gate_decision", "runtime_budget_warn"}:
-        fail("--fault-profile must be one of: none, gate_decision, runtime_budget_warn")
+    if fault_profile not in {
+        "none",
+        "gate_decision",
+        "runtime_budget_warn",
+        "libp2p_fallback_marker",
+    }:
+        fail(
+            "--fault-profile must be one of: "
+            "none, gate_decision, runtime_budget_warn, libp2p_fallback_marker"
+        )
     if lane_mode == "run" and args.local_opt_in.strip() != "1":
         fail(f"run mode requires {RUN_MODE_OPT_IN_ENV}=1")
 
@@ -396,6 +429,10 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
     kolme_fixture_profile = KOLME_RUNTIME_COMMIT_PROFILE
     kolme_fixture_profile_version = KOLME_RUNTIME_COMMIT_PROFILE_VERSION
     kolme_fixture_profile_status = "planned" if lane_mode == "dry-run" else "verified"
+    native_libp2p_provider_marker = NATIVE_LIBP2P_PROVIDER_MARKER
+    libp2p_fallback_marker_blocklist = list(LIBP2P_FALLBACK_MARKER_BLOCKLIST)
+    libp2p_fallback_markers_detected: list[str] = []
+    native_libp2p_provider_marker_contract_status = "verified"
 
     for artifact in required_artifacts:
         artifact_id = artifact["artifact_id"]
@@ -494,6 +531,39 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
                 if kolme_fixture_profile_status not in {"planned", "verified"}:
                     fail("local_full_stack_integration_kolme_fixture_profile_status_mismatch")
 
+                native_libp2p_provider_marker = _require_line_value(
+                    run_result.stdout,
+                    "libp2p_native_provider_marker",
+                    "local_full_stack_integration_libp2p_native_provider_marker_missing",
+                )
+                libp2p_fallback_marker_blocklist_csv = _require_line_value(
+                    run_result.stdout,
+                    "libp2p_fallback_marker_blocklist",
+                    "local_full_stack_integration_libp2p_fallback_marker_blocklist_missing",
+                )
+                libp2p_fallback_marker_blocklist = _parse_csv_field(
+                    libp2p_fallback_marker_blocklist_csv
+                )
+                if not libp2p_fallback_marker_blocklist:
+                    fail("local_full_stack_integration_libp2p_fallback_marker_blocklist_invalid")
+
+                libp2p_fallback_markers_detected_csv = _require_line_value(
+                    run_result.stdout,
+                    "libp2p_fallback_markers_detected",
+                    "local_full_stack_integration_libp2p_fallback_markers_detected_missing",
+                )
+                libp2p_fallback_markers_detected = _parse_csv_field(
+                    libp2p_fallback_markers_detected_csv
+                )
+                native_libp2p_provider_marker_contract_status = _require_line_value(
+                    run_result.stdout,
+                    "libp2p_provider_marker_contract_status",
+                    (
+                        "local_full_stack_integration_"
+                        "libp2p_provider_marker_contract_status_missing"
+                    ),
+                )
+
             artifact_entry["status"] = "verified"
             run_mode_command_count += 1
         else:
@@ -551,6 +621,8 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
             if drift_run.returncode == 0:
                 fail("gate_decision fault profile expected policy checker fail-closed behavior")
             reason_codes.append(GATE_DECISION_FAULT_REASON)
+    elif fault_profile == "libp2p_fallback_marker":
+        libp2p_fallback_markers_detected = [LIBP2P_FALLBACK_MARKER_BLOCKLIST[0]]
     elif fault_profile == "runtime_budget_warn":
         reason_codes.append(RUNTIME_BUDGET_EXCEEDED_REASON)
 
@@ -567,6 +639,10 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         artifact_inventory,
         reason_codes,
         lane_mode,
+        native_libp2p_provider_marker,
+        libp2p_fallback_marker_blocklist,
+        libp2p_fallback_markers_detected,
+        native_libp2p_provider_marker_contract_status,
     )
 
     report_payload = {
@@ -609,6 +685,10 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
         "kolme_fixture_profile_version": kolme_fixture_profile_version,
         "kolme_fixture_profile_status": kolme_fixture_profile_status,
         "combined_lane_marker_contract_status": "verified",
+        "native_libp2p_provider_marker": native_libp2p_provider_marker,
+        "libp2p_fallback_marker_blocklist": libp2p_fallback_marker_blocklist,
+        "libp2p_fallback_markers_detected": libp2p_fallback_markers_detected,
+        "native_libp2p_provider_marker_contract_status": native_libp2p_provider_marker_contract_status,
         "waiver_status": waiver_status,
         "waived_reason_codes": waived_reason_codes,
         "waiver_review_required": waiver_status == "applied",
@@ -670,6 +750,16 @@ def run_go_no_go_gate_lane(args: argparse.Namespace) -> int:
     print(f"kolme_fixture_profile_version={kolme_fixture_profile_version}")
     print(f"kolme_fixture_profile_status={kolme_fixture_profile_status}")
     print("combined_lane_marker_contract_status=verified")
+    print(f"native_libp2p_provider_marker={native_libp2p_provider_marker}")
+    print(f"libp2p_fallback_marker_blocklist={','.join(libp2p_fallback_marker_blocklist)}")
+    print(
+        "libp2p_fallback_markers_detected="
+        f"{'none' if not libp2p_fallback_markers_detected else ','.join(libp2p_fallback_markers_detected)}"
+    )
+    print(
+        "native_libp2p_provider_marker_contract_status="
+        f"{native_libp2p_provider_marker_contract_status}"
+    )
     print(f"waiver_status={waiver_status}")
     print(
         "waived_reason_codes="

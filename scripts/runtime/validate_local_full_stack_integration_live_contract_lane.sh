@@ -169,6 +169,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^runtime_signer_attestation_s
   echo "expected local full-stack integration runtime signer attestation schema marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_native_provider_marker=p2p-live-libp2p-provider:native$'; then
+  echo "expected local full-stack integration native libp2p provider marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_fallback_marker_blocklist=p2p-in-memory-transport-fallback,p2p-live-libp2p-provider:contract-only$'; then
+  echo "expected local full-stack integration libp2p fallback marker blocklist" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_fallback_markers_detected=none$'; then
+  echo "expected local full-stack integration empty fallback marker detection output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_provider_marker_contract_status=verified$'; then
+  echo "expected local full-stack integration provider marker contract status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q "^kolme_local_prerequisite_status=${domain_expected_status}$"; then
   echo "expected local full-stack integration Kolme local prerequisite marker" >&2
   exit 1
@@ -294,6 +310,17 @@ if summary_report.get("native_libp2p_convergence_status") != expected_domain_sta
     raise SystemExit(f"expected native_libp2p_convergence_status={expected_domain_status} in summary report")
 if summary_report.get("libp2p_runtime_transport_mode") != "libp2p_process_isolated_convergence":
     raise SystemExit("expected libp2p runtime transport mode marker in summary report")
+if summary_report.get("libp2p_native_provider_marker") != "p2p-live-libp2p-provider:native":
+    raise SystemExit("expected libp2p native provider marker in summary report")
+if summary_report.get("libp2p_fallback_marker_blocklist") != [
+    "p2p-in-memory-transport-fallback",
+    "p2p-live-libp2p-provider:contract-only",
+]:
+    raise SystemExit("expected libp2p fallback marker blocklist in summary report")
+if summary_report.get("libp2p_fallback_markers_detected") != []:
+    raise SystemExit("expected empty libp2p fallback marker detection list in summary report")
+if summary_report.get("libp2p_provider_marker_contract_status") != "verified":
+    raise SystemExit("expected libp2p provider marker contract status in summary report")
 if summary_report.get("libp2p_convergence_report_schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-report.v1":
     raise SystemExit("expected libp2p convergence report schema marker in summary report")
 if summary_report.get("libp2p_convergence_policy_schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1":
@@ -367,6 +394,13 @@ lane_report = {
     ),
     "native_libp2p_convergence_status": summary_report.get("native_libp2p_convergence_status", "unknown"),
     "libp2p_runtime_transport_mode": summary_report.get("libp2p_runtime_transport_mode", ""),
+    "libp2p_native_provider_marker": summary_report.get("libp2p_native_provider_marker", ""),
+    "libp2p_fallback_marker_blocklist": summary_report.get("libp2p_fallback_marker_blocklist", []),
+    "libp2p_fallback_markers_detected": summary_report.get("libp2p_fallback_markers_detected", []),
+    "libp2p_provider_marker_contract_status": summary_report.get(
+        "libp2p_provider_marker_contract_status",
+        "",
+    ),
     "libp2p_convergence_report_schema_version": summary_report.get(
         "libp2p_convergence_report_schema_version",
         "",
@@ -439,6 +473,10 @@ echo "runtime_signing_profile=kolme-fork-secp256k1-v1"
 echo "runtime_signer_attestation_schema_version=kamn.kolme.runtime-signer-attestation.v1"
 echo "native_libp2p_convergence_status=${domain_expected_status}"
 echo "libp2p_runtime_transport_mode=libp2p_process_isolated_convergence"
+echo "libp2p_native_provider_marker=p2p-live-libp2p-provider:native"
+echo "libp2p_fallback_marker_blocklist=p2p-in-memory-transport-fallback,p2p-live-libp2p-provider:contract-only"
+echo "libp2p_fallback_markers_detected=none"
+echo "libp2p_provider_marker_contract_status=verified"
 echo "libp2p_convergence_report_schema_version=kamn.runtime.libp2p-convergence-process-isolated-live-report.v1"
 echo "libp2p_convergence_policy_schema_version=kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1"
 echo "kolme_local_prerequisite_status=${domain_expected_status}"

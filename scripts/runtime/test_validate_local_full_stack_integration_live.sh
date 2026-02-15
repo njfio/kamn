@@ -47,6 +47,22 @@ if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_runtime_transport_mod
   echo "expected local full-stack integration libp2p runtime transport mode marker" >&2
   exit 1
 fi
+if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_native_provider_marker=p2p-live-libp2p-provider:native$'; then
+  echo "expected local full-stack integration native libp2p provider marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_fallback_marker_blocklist=p2p-in-memory-transport-fallback,p2p-live-libp2p-provider:contract-only$'; then
+  echo "expected local full-stack integration libp2p fallback marker blocklist" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_fallback_markers_detected=none$'; then
+  echo "expected local full-stack integration empty fallback marker detection output" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_provider_marker_contract_status=verified$'; then
+  echo "expected local full-stack integration provider marker contract status marker" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$validation_output" | grep -q '^libp2p_convergence_report_schema_version=kamn.runtime.libp2p-convergence-process-isolated-live-report.v1$'; then
   echo "expected local full-stack integration libp2p convergence report schema marker" >&2
   exit 1
@@ -188,6 +204,17 @@ if payload.get("native_libp2p_convergence_status") != "planned":
     raise SystemExit("expected native_libp2p_convergence_status=planned in dry-run")
 if payload.get("libp2p_runtime_transport_mode") != "libp2p_process_isolated_convergence":
     raise SystemExit("expected libp2p_runtime_transport_mode marker")
+if payload.get("libp2p_native_provider_marker") != "p2p-live-libp2p-provider:native":
+    raise SystemExit("expected libp2p_native_provider_marker")
+if payload.get("libp2p_fallback_marker_blocklist") != [
+    "p2p-in-memory-transport-fallback",
+    "p2p-live-libp2p-provider:contract-only",
+]:
+    raise SystemExit("expected libp2p_fallback_marker_blocklist")
+if payload.get("libp2p_fallback_markers_detected") != []:
+    raise SystemExit("expected no libp2p fallback markers in report")
+if payload.get("libp2p_provider_marker_contract_status") != "verified":
+    raise SystemExit("expected libp2p_provider_marker_contract_status")
 if payload.get("libp2p_convergence_report_schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-report.v1":
     raise SystemExit("expected libp2p_convergence_report_schema_version marker")
 if payload.get("libp2p_convergence_policy_schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1":

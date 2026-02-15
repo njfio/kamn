@@ -54,6 +54,9 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     assert!(DOC.contains("P2pTransportError::MissingKademliaBootstrapSeeds"));
     assert!(DOC.contains("p2p-live-libp2p-provider:native"));
     assert!(DOC.contains("p2p-live-libp2p-provider:contract-only"));
+    assert!(DOC.contains("libp2p_native_provider_marker=p2p-live-libp2p-provider:native"));
+    assert!(DOC.contains("libp2p_fallback_markers_detected"));
+    assert!(DOC.contains("libp2p_provider_marker_contract_status=verified"));
     assert!(DOC.contains("bootstrap peer multiaddrs"));
     assert!(DOC.contains("runtime_peer_transition_invalid"));
     assert!(DOC.contains("validate_p2p_transport_live.sh"));
@@ -78,6 +81,10 @@ fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     assert!(DOC.contains("p2p_live_reconnect_retry_stream_churn"));
     assert!(DOC.contains("p2p_live_reconnect_protocol_violation"));
     assert!(DOC.contains("p2p_live_reconnect_retry_budget_exhausted"));
+    assert!(DOC.contains("gate_policy_native_libp2p_provider_marker_mismatch"));
+    assert!(DOC.contains("gate_policy_libp2p_fallback_marker_blocklist_mismatch"));
+    assert!(DOC.contains("gate_policy_libp2p_fallback_markers_detected"));
+    assert!(DOC.contains("gate_policy_native_libp2p_provider_marker_contract_status_mismatch"));
 }
 
 #[test]
