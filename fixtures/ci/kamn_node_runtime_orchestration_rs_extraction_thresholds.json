@@ -1,0 +1,5 @@
+{
+  "schema_version": "kamn.ci.kamn-node-runtime-orchestration-rs-extraction-thresholds.v1",
+  "warn_line_count": 950,
+  "fail_line_count": 1100
+}
