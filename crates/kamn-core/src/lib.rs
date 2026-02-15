@@ -344,8 +344,11 @@ pub use operator_dashboard_ui::{
     OperatorTaskTimelineEntry, ReputationRiskTier,
 };
 pub use p2p_transport::{
-    InMemoryPeerLifecycleTransport, P2pTransportError, PeerDiscoveryRecord, PeerGossipFrame,
-    PeerLifecycleTransport, PeerLifecycleTransportCoordinator,
+    build_p2p_swarm_deterministic_config, compose_libp2p_swarm_behavior_stack,
+    InMemoryPeerLifecycleTransport, P2pSwarmBehaviorStack, P2pSwarmDeterministicConfig,
+    P2pSwarmHarnessMode, P2pSwarmHarnessReport, P2pSwarmHarnessTask, P2pTransportError,
+    PeerDiscoveryRecord, PeerGossipFrame, PeerLifecycleTransport,
+    PeerLifecycleTransportCoordinator,
 };
 pub use performance_targets::{
     evaluate_performance_from_observability, evaluate_performance_run, PerformanceAggregate,

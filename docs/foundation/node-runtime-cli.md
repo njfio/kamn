@@ -202,6 +202,33 @@ This document captures node-runtime productionization slices for machine-readabl
   - deterministic payload digest
   - ordered committed transaction IDs
 
+## P2P Swarm Harness Contracts
+- Deterministic swarm composition for runtime integration uses:
+  - `build_p2p_swarm_deterministic_config(...)`
+  - `compose_libp2p_swarm_behavior_stack(...)`
+  - `P2pSwarmHarnessTask::start(...)`
+- Swarm config inputs are explicit and validated:
+  - `local_peer_id`
+  - `listen_address` (`/ip4|/ip6|/dns.../tcp/...` multiaddr shape)
+  - `bootstrap_peers` (repeatable multiaddr list)
+  - `gossip_topics` (repeatable topic list)
+  - `harness_tick_budget` (positive integer)
+- Runtime wiring with `enable_gossip=true` includes:
+  - `p2p-discovery`
+  - `p2p-gossip-transport`
+  - `p2p-libp2p-swarm-stack`
+  - `p2p-libp2p-harness-ready`
+- Runtime wiring with `enable_gossip=false` remains fail-closed for swarm startup and keeps:
+  - `gossip-transport-disabled`
+- Typed fail-closed error semantics:
+  - `P2pTransportError::InvalidSwarmListenAddress`
+  - `P2pTransportError::InvalidSwarmBootstrapPeerAddress`
+  - `P2pTransportError::InvalidSwarmHarnessTickBudget`
+  - `P2pTransportError::GossipTransportDisabled`
+- Harness startup modes:
+  - `DryRun`: validates deterministic composition and reports `started=false`.
+  - `Run`: starts bounded harness loop and reports deterministic `executed_ticks`.
+
 ## Diagnostics Snapshot Rules
 - Supported diagnostics modes:
   - `basic` (default)

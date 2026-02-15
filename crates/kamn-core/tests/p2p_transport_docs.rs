@@ -8,16 +8,25 @@ fn architecture_doc_contains_p2p_transport_core_components() {
     assert!(DOC.contains("PeerDiscoveryRecord"));
     assert!(DOC.contains("PeerGossipFrame"));
     assert!(DOC.contains("PeerLifecycleTransportCoordinator"));
+    assert!(DOC.contains("P2pSwarmDeterministicConfig"));
+    assert!(DOC.contains("P2pSwarmBehaviorStack"));
+    assert!(DOC.contains("P2pSwarmHarnessTask"));
 }
 
 #[test]
 fn architecture_doc_contains_runtime_wiring_and_guardrails() {
     assert!(DOC.contains("p2p-discovery"));
     assert!(DOC.contains("p2p-gossip-transport"));
+    assert!(DOC.contains("p2p-libp2p-swarm-stack"));
+    assert!(DOC.contains("p2p-libp2p-harness-ready"));
     assert!(DOC.contains("gossip-transport-disabled"));
     assert!(DOC.contains("P2pTransportError::InvalidPeerId"));
     assert!(DOC.contains("P2pTransportError::InvalidTopic"));
     assert!(DOC.contains("P2pTransportError::InactivePeerLifecycleState"));
+    assert!(DOC.contains("P2pTransportError::InvalidSwarmListenAddress"));
+    assert!(DOC.contains("P2pTransportError::InvalidSwarmBootstrapPeerAddress"));
+    assert!(DOC.contains("P2pTransportError::InvalidSwarmHarnessTickBudget"));
+    assert!(DOC.contains("P2pTransportError::GossipTransportDisabled"));
     assert!(DOC.contains("validate_p2p_transport_live.sh"));
     assert!(DOC.contains("test_validate_p2p_transport_live.sh"));
 }
