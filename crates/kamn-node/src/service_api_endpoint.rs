@@ -1591,6 +1591,43 @@ pub(crate) fn service_api_payload_decode_reason_code(error: &serde_json::Error) 
     }
 }
 
+fn serialize_service_api_json<T: Serialize>(payload: &T) -> String {
+    serde_json::to_string(payload).unwrap_or_else(|error| {
+        format!(
+            "{{\"error\":\"internal\",\"reason_code\":\"service_api_payload_serialization_failed\",\"message\":\"service api payload serialization failed: {}\"}}",
+            escape_json_string(error.to_string().as_str())
+        )
+    })
+}
+
+fn deterministic_body_tag(payload: &[u8]) -> u64 {
+    let mut acc: u64 = 0xcbf29ce484222325;
+    for byte in payload {
+        acc = acc.wrapping_mul(0x00000100000001B3);
+        acc ^= u64::from(*byte);
+    }
+    acc
+}
+
+fn escape_json_string(input: &str) -> String {
+    let mut escaped = String::with_capacity(input.len());
+    for ch in input.chars() {
+        match ch {
+            '"' => escaped.push_str("\\\""),
+            '\\' => escaped.push_str("\\\\"),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
+}
+
+fn escape_metrics_label(input: &str) -> String {
+    input.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -1650,41 +1687,4 @@ mod tests {
         );
         assert!(error.message.contains("message-1"));
     }
-}
-
-fn serialize_service_api_json<T: Serialize>(payload: &T) -> String {
-    serde_json::to_string(payload).unwrap_or_else(|error| {
-        format!(
-            "{{\"error\":\"internal\",\"reason_code\":\"service_api_payload_serialization_failed\",\"message\":\"service api payload serialization failed: {}\"}}",
-            escape_json_string(error.to_string().as_str())
-        )
-    })
-}
-
-fn deterministic_body_tag(payload: &[u8]) -> u64 {
-    let mut acc: u64 = 0xcbf29ce484222325;
-    for byte in payload {
-        acc = acc.wrapping_mul(0x00000100000001B3);
-        acc ^= u64::from(*byte);
-    }
-    acc
-}
-
-fn escape_json_string(input: &str) -> String {
-    let mut escaped = String::with_capacity(input.len());
-    for ch in input.chars() {
-        match ch {
-            '"' => escaped.push_str("\\\""),
-            '\\' => escaped.push_str("\\\\"),
-            '\n' => escaped.push_str("\\n"),
-            '\r' => escaped.push_str("\\r"),
-            '\t' => escaped.push_str("\\t"),
-            _ => escaped.push(ch),
-        }
-    }
-    escaped
-}
-
-fn escape_metrics_label(input: &str) -> String {
-    input.replace('\\', "\\\\").replace('"', "\\\"")
 }
