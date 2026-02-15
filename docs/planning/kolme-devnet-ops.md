@@ -37,8 +37,12 @@ The live backend contract inventory for `njfio/kolme_fork` is tracked in:
 - Deterministic tamper reason:
   - `local_full_stack_integration_policy_runtime_commit_finality_status_mismatch`
 - Release go/no-go linkage:
-  - `scripts/runtime/release_evidence_manifest.json` includes required artifact id `local_full_stack_integration`.
+  - `scripts/runtime/release_evidence_manifest.json` includes required artifact ids:
+    `local_full_stack_integration`,
+    `local_full_runtime_convergence`,
+    `transport_fault_matrix`.
   - release gate runner consumes `validate_local_full_stack_integration_live_contract_lane.sh` and fails closed on missing/tampered evidence linkage.
+  - release gate runner consumes `validate_local_full_runtime_live_contract_lane.sh` and `validate_block_reconciliation_partition_rejoin_live_contract_lane.sh` and fails closed on missing/tampered transport-fed convergence + fault-matrix evidence linkage.
 - Architecture boundary reference:
   - `docs/architecture/kolme-live-integration.md`
 
@@ -1123,7 +1127,8 @@ Operator checkpoints:
   2. `python3 scripts/kolme/check_local_kolme_live_deployment_preflight_policy.py --report-file /tmp/kolme-local-live-deployment-preflight-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-deployment-preflight-policy.json`
   3. `bash scripts/kolme/run_local_live_node_validation_bundle_lane.sh --mode dry-run --output-json /tmp/kolme-local-live-node-validation-bundle-summary.json`
   4. `python3 scripts/kolme/check_local_live_node_validation_bundle_policy.py --report-file /tmp/kolme-local-live-node-validation-bundle-summary.json --expected-final-decision GO --ci-fast-gate PASS --require-reason-code dry_run_no_commands_executed --output-json /tmp/kolme-local-live-node-validation-bundle-policy.json`
-  5. `bash scripts/runtime/run_go_no_go_gate_lane.sh --max-seconds 120 --output-json /tmp/go-no-go-gate-report.json`
+  5. `bash scripts/runtime/run_go_no_go_gate_lane.sh --mode dry-run --max-seconds 120 --output-json /tmp/go-no-go-gate-report.json`
+  6. `KAMN_GONOGO_GATE_LOCAL_OPT_IN=1 bash scripts/runtime/run_go_no_go_gate_lane.sh --mode run --max-seconds 120 --output-json /tmp/go-no-go-gate-run-report.json`
 - Generate deterministic milestone aggregate review bundle:
   - `bash scripts/deploy/generate_gonogo_evidence_bundle.sh --output-file /tmp/gonogo-milestone.json --release-candidate v1.0.0-rc.5 --schema-target-version 1.0.0 --runtime-image-digest sha256:abc123 --ci-fast-gate PASS --ci-deep-lane PASS --rollback-precheck PASS --rollback-trigger-status CLEAR --required-approvals 2 --received-approvals 2 --deployment-preflight-summary-file /tmp/kolme-local-live-deployment-preflight-summary.json --deployment-preflight-policy-file /tmp/kolme-local-live-deployment-preflight-policy.json --live-node-validation-summary-file /tmp/kolme-local-live-node-validation-bundle-summary.json --live-node-validation-policy-file /tmp/kolme-local-live-node-validation-bundle-policy.json --go-no-go-gate-report-file /tmp/go-no-go-gate-report.json`
 - Validate aggregate lineage policy:

@@ -62,11 +62,15 @@ This refreshed version separates:
   - local-heavy live lane validation with CI fast-gate exclusion.
 
 ### Item 4 follow-on: Transport-fed consensus convergence
-- Open chain: `#3228 -> #3413 -> #3414 -> (#3415, #3416, #3417, #3418)`.
+- Open chain: `#3228 -> #3413 -> #3414 -> (#3443, #3444, #3446, #3447, #3448)`.
 - Current focus:
   - block pipeline consumption from real transport adapters,
-  - canonical fork-choice/reconciliation under partition-rejoin and convergence drills,
-  - deterministic policy/taxonomy reason-code contracts.
+  - canonical fork-choice/reconciliation under partition-rejoin/publish-drop/churn convergence drills,
+  - deterministic policy/taxonomy reason-code contracts,
+  - release go/no-go artifact gating on transport-fed convergence + fault-matrix evidence.
+- Status progression note:
+  - delivered in this chain: `#3443`, `#3444`, `#3446`, `#3447`
+  - remaining in this chain: `#3448`
 
 ### Composed full-stack E2E against `kolme_fork`
 - Open chain: `#3333 -> #3419 -> #3420 -> (#3432, #3433, #3434)`.
