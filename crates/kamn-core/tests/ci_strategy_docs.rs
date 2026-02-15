@@ -380,6 +380,22 @@ fn doc_contains_make_and_demo_scope_contract_rules() {
     assert!(DOC.contains("reason_codes=main_rs_threshold_exception_expired"));
     assert!(DOC.contains("reason_codes=main_rs_threshold_exception_cap_exceeded"));
     assert!(DOC.contains("reason_codes=threshold_order_invalid"));
+    assert!(DOC.contains("test_check_kamn_node_runtime_orchestration_rs_extraction_threshold.sh"));
+    assert!(
+        DOC.contains("fixtures/ci/kamn_node_runtime_orchestration_rs_extraction_thresholds.json")
+    );
+    assert!(DOC.contains("check_kamn_node_runtime_orchestration_rs_extraction_threshold.sh --output-json /tmp/kamn-node-runtime-orchestration-rs-extraction-threshold-report.json"));
+    assert!(DOC.contains("check_kamn_node_runtime_orchestration_rs_extraction_threshold.sh --exception-file .ci/kamn_node_runtime_orchestration_rs_extraction_threshold_exception.json --output-json /tmp/kamn-node-runtime-orchestration-rs-extraction-threshold-report.json"));
+    assert!(DOC.contains("cargo test -p kamn-node --test main_module_extraction_contract"));
+    assert!(
+        DOC.contains("reason_codes=runtime_orchestration_rs_line_count_warn_threshold_exceeded")
+    );
+    assert!(
+        DOC.contains("reason_codes=runtime_orchestration_rs_line_count_fail_threshold_exceeded")
+    );
+    assert!(DOC.contains("reason_codes=runtime_orchestration_rs_threshold_exception_applied"));
+    assert!(DOC.contains("reason_codes=runtime_orchestration_rs_threshold_exception_expired"));
+    assert!(DOC.contains("reason_codes=runtime_orchestration_rs_threshold_exception_cap_exceeded"));
 }
 
 #[test]

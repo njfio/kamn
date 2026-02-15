@@ -1888,6 +1888,29 @@ Selector routing remains bounded through `scripts/ci/select_targets.sh`:
       - `reason_codes=threshold_order_invalid`
     - fail threshold crossings remain NO-GO unless a valid tracked exception is present.
     - Regression: #3261
+  - kamn-node `runtime_orchestration.rs` extraction-threshold + topology guard stays on PR fast gate:
+    - `bash scripts/ci/test_check_kamn_node_runtime_orchestration_rs_extraction_threshold.sh`
+    - threshold fixture:
+      - `fixtures/ci/kamn_node_runtime_orchestration_rs_extraction_thresholds.json`
+    - checker command:
+      - `bash scripts/ci/check_kamn_node_runtime_orchestration_rs_extraction_threshold.sh --output-json /tmp/kamn-node-runtime-orchestration-rs-extraction-threshold-report.json`
+      - `bash scripts/ci/check_kamn_node_runtime_orchestration_rs_extraction_threshold.sh --exception-file .ci/kamn_node_runtime_orchestration_rs_extraction_threshold_exception.json --output-json /tmp/kamn-node-runtime-orchestration-rs-extraction-threshold-report.json`
+    - topology contract command:
+      - `cargo test -p kamn-node --test main_module_extraction_contract`
+    - emits deterministic policy decisions:
+      - `policy_decision=GO|WARN|NO-GO`
+      - `exception_status=not-required|not-provided|applied|invalid|cap-exceeded`
+    - deterministic reason-code surface is emitted for automation:
+      - `reason_codes=none`
+      - `reason_codes=runtime_orchestration_rs_line_count_warn_threshold_exceeded`
+      - `reason_codes=runtime_orchestration_rs_line_count_fail_threshold_exceeded`
+      - `reason_codes=runtime_orchestration_rs_threshold_exception_applied`
+      - `reason_codes=runtime_orchestration_rs_threshold_exception_expired`
+      - `reason_codes=runtime_orchestration_rs_threshold_exception_cap_exceeded`
+      - `reason_codes=threshold_order_invalid`
+    - runtime orchestration topology drift remains fail-closed through module ownership checks in `main_module_extraction_contract`.
+    - fail threshold crossings remain NO-GO unless a valid tracked exception is present.
+    - Regression: #3733
   - Non-Kolme governance dispatcher wrapper-matrix guard stays on PR fast gate:
     - `bash scripts/framework/test_non_kolme_contract_lane_dispatch_wrapper_matrix.sh`
     - shared dispatcher:
