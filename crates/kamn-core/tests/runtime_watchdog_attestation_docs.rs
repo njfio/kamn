@@ -59,6 +59,18 @@ fn doc_contains_validator_watchdog_proof_consensus_deep_lane_contract() {
 }
 
 #[test]
+fn doc_contains_parser_fuzz_surface_inventory_contracts() {
+    assert!(DOC.contains("## Parser Fuzz Surface Inventory"));
+    assert!(DOC.contains("message_envelope_fuzz_smoke"));
+    assert!(DOC.contains("did_fuzz_smoke"));
+    assert!(DOC.contains("run_invariant_fuzz_concurrency_contract_lane.sh"));
+    assert!(DOC.contains("check_invariant_fuzz_concurrency_policy.sh"));
+    assert!(DOC.contains("kamn.runtime.invariant-fuzz-concurrency-contract-report.v1"));
+    assert!(DOC.contains("input_mutation_replay:v1"));
+    assert!(DOC.contains("concurrency_mutation_replay:v1"));
+}
+
+#[test]
 fn regression_requires_divergence_and_censorship_guard_rules() {
     // Regression: #383
     assert!(DOC
