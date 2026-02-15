@@ -101,6 +101,14 @@ summary = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 policy = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
 if summary.get("schema_version") != "kamn.kolme.local-heavy-validation-summary.v1":
     raise SystemExit("unexpected local heavy matrix contract-lane summary schema")
+if summary.get("scenario_matrix_schema_version") != "kamn.kolme.local-heavy-validation-scenario-matrix.v1":
+    raise SystemExit("expected scenario matrix schema marker in local heavy matrix contract-lane summary")
+if summary.get("scenario_runtime_mode") != "dry-run":
+    raise SystemExit("expected dry-run scenario runtime mode marker in local heavy matrix contract-lane summary")
+if summary.get("scenario_runtime_profiles") != ["real-node"]:
+    raise SystemExit("expected scenario runtime profile marker in local heavy matrix contract-lane summary")
+if summary.get("scenario_count") != 9:
+    raise SystemExit("expected scenario_count=9 in local heavy matrix contract-lane summary")
 if summary.get("status") != "ok":
     raise SystemExit("expected local heavy matrix contract-lane summary status ok")
 if summary.get("reason_code") != "dry_run_no_commands_executed":

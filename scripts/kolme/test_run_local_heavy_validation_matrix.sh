@@ -95,6 +95,31 @@ import sys
 report = json.loads(pathlib.Path(sys.argv[1]).read_text())
 if report.get("schema_version") != "kamn.kolme.local-heavy-validation-summary.v1":
     raise SystemExit("unexpected local heavy matrix report schema")
+if report.get("scenario_matrix_schema_version") != "kamn.kolme.local-heavy-validation-scenario-matrix.v1":
+    raise SystemExit("expected local heavy matrix scenario schema marker")
+if report.get("scenario_runtime_mode") != "dry-run":
+    raise SystemExit("expected scenario runtime mode marker in local heavy matrix summary")
+scenario_profiles = report.get("scenario_runtime_profiles")
+if not isinstance(scenario_profiles, list) or scenario_profiles != ["real-node"]:
+    raise SystemExit("expected scenario runtime profile matrix marker in local heavy matrix summary")
+scenario_ids = report.get("scenario_ids")
+if not isinstance(scenario_ids, list) or len(scenario_ids) != 9:
+    raise SystemExit("expected deterministic scenario id matrix with 9 entries in local heavy matrix summary")
+if report.get("scenario_count") != len(scenario_ids):
+    raise SystemExit("expected scenario_count to match scenario_ids length in local heavy matrix summary")
+for required_scenario in (
+    "bootstrap_health",
+    "version_compatibility_replay",
+    "fork_rust_matrix",
+    "live_api_conformance",
+    "signature_parity",
+    "runtime_commit_finality",
+    "native_api_parity",
+    "real_node_runtime_integration",
+    "real_node_runtime_policy",
+):
+    if required_scenario not in scenario_ids:
+        raise SystemExit(f"expected scenario id marker {required_scenario} in local heavy matrix summary")
 if report.get("mode") != "dry-run":
     raise SystemExit("expected dry-run mode in local heavy matrix summary")
 if report.get("local_only_enforced") is not True:
