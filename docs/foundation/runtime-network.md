@@ -167,6 +167,7 @@ This document captures the initial runtime-network foundation slice for peer lif
   - sync wrapper: `serve_observability_endpoint(...)`
   - async implementation: `serve_observability_endpoint_async(...)`
   - listener binding: `tokio::net::TcpListener::bind(...)`
+  - route composition: `build_observability_endpoint_router(...)` with axum `Router::new()`, root `"/"` route, and wildcard `"/{*path}"` route mounted through `any(handle_observability_http_route)`.
 - Serving loop contracts:
   - request budget is bounded by `observability_endpoint_max_requests`
   - idle timeout is bounded by `observability_endpoint_idle_timeout_ms`
