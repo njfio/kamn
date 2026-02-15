@@ -132,6 +132,19 @@ This refreshed version separates:
     - `#3774 -> #3780 -> (#3794, #3795)`.
 - New production gaps continue to be decomposed under `#3333` with epic/story/task/subtask hierarchy before implementation work starts.
 
+### R27.53 Closure Tranche (`#4653`)
+- Delivered chain: `#4653 -> (#4654, #4655) -> (#4656, #4657, #4658, #4659) -> (#4660-#4667)`.
+- Closure highlights:
+  - deployment preflight startup-budget governance now fails closed with deterministic taxonomy:
+    - `preflight_budget_exceeded`
+    - `startup_latency_budget_status_mismatch`
+    - `startup_latency_budget_reason_code_mismatch`
+  - managed-signer rollout governance now fails closed for promotion/custody drift:
+    - `signer_rotation_promotion_stalled`
+    - `quorum_evidence_custody_sha256_mismatch`
+  - ci-local promotion budget boundary enforced by managed-signer contract lane:
+    - `ci_local_promotion_budget_boundary_status=verified`
+
 ## Cost and CI Policy Boundaries
 - Heavy local integration run-mode lanes remain excluded from `ci-fast-gate` and fast `ci-tools` blocks.
 - Deterministic dry-run contract checks remain in PR path.
