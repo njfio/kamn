@@ -21,6 +21,7 @@ policy_report="$TMP_DIR/libp2p-convergence-process-isolated-policy-report.json"
 lane_output="$(
   bash "$CONTRACT_LANE" \
     --mode dry-run \
+    --lane-profile smoke \
     --ci-fast-gate PASS \
     --max-seconds 180 \
     --output-json "$lane_report" \
@@ -36,6 +37,10 @@ if ! printf '%s\n' "$lane_output" | grep -q '^final_decision=GO$'; then
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^lane_mode=dry-run$'; then
   echo "expected process-isolated convergence contract lane mode marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$lane_output" | grep -q '^lane_profile=smoke$'; then
+  echo "expected process-isolated convergence contract lane smoke profile marker" >&2
   exit 1
 fi
 if ! printf '%s\n' "$lane_output" | grep -q '^libp2p_process_isolated_convergence_contract_status=verified$'; then
@@ -69,6 +74,8 @@ if lane_payload.get("libp2p_process_isolated_convergence_contract_status") != "v
     raise SystemExit("expected libp2p_process_isolated_convergence_contract_status=verified")
 if lane_payload.get("libp2p_process_isolated_convergence_policy_status") != "verified":
     raise SystemExit("expected libp2p_process_isolated_convergence_policy_status=verified")
+if lane_payload.get("lane_profile") != "smoke":
+    raise SystemExit("expected lane_profile=smoke in contract lane report")
 
 if policy_payload.get("schema_version") != "kamn.runtime.libp2p-convergence-process-isolated-live-policy-report.v1":
     raise SystemExit("unexpected process-isolated convergence policy report schema")
@@ -82,6 +89,7 @@ set +e
 invalid_gate_output="$(
   bash "$CONTRACT_LANE" \
     --mode dry-run \
+    --lane-profile smoke \
     --ci-fast-gate MAYBE \
     --max-seconds 120 2>&1
 )"
@@ -100,6 +108,7 @@ set +e
 fail_gate_output="$(
   bash "$CONTRACT_LANE" \
     --mode dry-run \
+    --lane-profile smoke \
     --ci-fast-gate FAIL \
     --max-seconds 120 2>&1
 )"
@@ -111,6 +120,44 @@ if [ "$fail_gate_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$fail_gate_output" | grep -q 'libp2p_process_isolated_convergence_policy_ci_fast_gate_failed'; then
   echo "expected deterministic ci-fast-gate failure marker for process-isolated convergence contract lane" >&2
+  exit 1
+fi
+
+set +e
+invalid_profile_output="$(
+  bash "$CONTRACT_LANE" \
+    --mode dry-run \
+    --lane-profile unknown \
+    --ci-fast-gate PASS \
+    --max-seconds 120 2>&1
+)"
+invalid_profile_code=$?
+set -e
+if [ "$invalid_profile_code" -eq 0 ]; then
+  echo "expected process-isolated convergence contract lane to reject invalid lane-profile value" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$invalid_profile_output" | grep -q 'lane-profile must be smoke or deep'; then
+  echo "expected deterministic invalid lane-profile marker for process-isolated convergence contract lane" >&2
+  exit 1
+fi
+
+set +e
+deep_run_without_opt_in_output="$(
+  bash "$CONTRACT_LANE" \
+    --mode run \
+    --lane-profile deep \
+    --ci-fast-gate FAIL \
+    --max-seconds 120 2>&1
+)"
+deep_run_without_opt_in_code=$?
+set -e
+if [ "$deep_run_without_opt_in_code" -eq 0 ]; then
+  echo "expected deep run-mode contract lane without opt-in to fail closed" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$deep_run_without_opt_in_output" | grep -q 'KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_DEEP_OPT_IN=1'; then
+  echo "expected deterministic deep-lane opt-in marker for contract lane run mode" >&2
   exit 1
 fi
 

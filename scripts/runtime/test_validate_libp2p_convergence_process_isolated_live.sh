@@ -14,6 +14,7 @@ fi
 validation_output="$(
   bash "$VALIDATION_SCRIPT" \
     --mode dry-run \
+    --lane-profile smoke \
     --max-seconds 120 \
     --ci-fast-gate PASS \
     --output-json "$TMP_REPORT"
@@ -24,6 +25,18 @@ if ! printf '%s\n' "$validation_output" | grep -q '^status=pass$'; then
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^final_decision=GO$'; then
   echo "expected process-isolated convergence final_decision=GO marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^lane_profile=smoke$'; then
+  echo "expected process-isolated convergence smoke lane profile marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^smoke_lane_status=verified$'; then
+  echo "expected process-isolated convergence smoke lane marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$validation_output" | grep -q '^deep_lane_status=skipped_local_only$'; then
+  echo "expected process-isolated convergence deep lane exclusion marker in smoke mode" >&2
   exit 1
 fi
 if ! printf '%s\n' "$validation_output" | grep -q '^two_node_discovery_status=verified$'; then
@@ -68,20 +81,47 @@ if payload.get("runtime_transport_mode") != "libp2p_process_isolated_convergence
 reason_codes = payload.get("convergence_reason_codes")
 if reason_codes != ["fork_choice_stale_block_height"]:
     raise SystemExit("expected deterministic convergence reason-code marker")
+if payload.get("lane_profile") != "smoke":
+    raise SystemExit("expected lane_profile=smoke")
+if payload.get("smoke_lane_status") != "verified":
+    raise SystemExit("expected smoke_lane_status=verified")
+if payload.get("deep_lane_status") != "skipped_local_only":
+    raise SystemExit("expected deep_lane_status=skipped_local_only for smoke lane")
 PY
+
+smoke_run_output="$(
+  bash "$VALIDATION_SCRIPT" \
+    --mode run \
+    --lane-profile smoke \
+    --max-seconds 180 \
+    --command-max-seconds 120 \
+    --ci-fast-gate PASS
+)"
+if ! printf '%s\n' "$smoke_run_output" | grep -q '^execution_reason_code=run_mode_smoke_commands_executed$'; then
+  echo "expected smoke run-mode command execution marker" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$smoke_run_output" | grep -q '^command_count=1$'; then
+  echo "expected smoke run-mode command_count=1 marker" >&2
+  exit 1
+fi
 
 set +e
 run_without_opt_in_output="$({
-  bash "$VALIDATION_SCRIPT" --mode run --max-seconds 120 --ci-fast-gate PASS
+  bash "$VALIDATION_SCRIPT" \
+    --mode run \
+    --lane-profile deep \
+    --max-seconds 120 \
+    --ci-fast-gate FAIL
 } 2>&1)"
 run_without_opt_in_code=$?
 set -e
 if [ "$run_without_opt_in_code" -eq 0 ]; then
-  echo "expected run mode without opt-in to fail closed" >&2
+  echo "expected deep run mode without opt-in to fail closed" >&2
   exit 1
 fi
-if ! printf '%s\n' "$run_without_opt_in_output" | grep -q 'KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_LIVE_OPT_IN=1'; then
-  echo "expected deterministic opt-in marker for process-isolated convergence run mode" >&2
+if ! printf '%s\n' "$run_without_opt_in_output" | grep -q 'KAMN_LIBP2P_CONVERGENCE_PROCESS_ISOLATED_DEEP_OPT_IN=1'; then
+  echo "expected deterministic deep-lane opt-in marker for process-isolated convergence run mode" >&2
   exit 1
 fi
 
