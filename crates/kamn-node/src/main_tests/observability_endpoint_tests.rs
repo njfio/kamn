@@ -880,6 +880,37 @@ fn integration_runtime_observability_endpoint_returns_not_found_for_malformed_re
 }
 
 #[test]
+fn integration_runtime_observability_endpoint_returns_not_found_for_get_with_non_empty_body() {
+    let snapshot = sample_observability_snapshot();
+    let bind_addr = reserve_loopback_addr();
+    let endpoint_config = ObservabilityEndpointConfig {
+        bind_addr: bind_addr.clone(),
+        metrics_path: "/metrics".to_owned(),
+        health_path: "/healthz".to_owned(),
+        max_requests: 2,
+        idle_timeout_ms: 2_000,
+    };
+
+    let server_snapshot = snapshot.clone();
+    let server =
+        thread::spawn(move || serve_observability_endpoint(&endpoint_config, &server_snapshot));
+    wait_for_endpoint_ready(bind_addr.as_str());
+
+    let malformed_response = send_raw_http_request(
+        bind_addr.as_str(),
+        "GET /metrics HTTP/1.1\r\nHost: localhost\r\nContent-Length: 4\r\nConnection: close\r\n\r\nnope",
+    );
+    assert!(malformed_response.contains("HTTP/1.1 404 Not Found"));
+    assert!(malformed_response.contains("not found"));
+
+    let server_result = server.join().expect("endpoint thread should complete");
+    assert!(
+        server_result.is_ok(),
+        "endpoint server should stop cleanly after configured request budget"
+    );
+}
+
+#[test]
 fn integration_runtime_observability_endpoint_fails_closed_on_idle_timeout() {
     let snapshot = sample_observability_snapshot();
     let bind_addr = reserve_loopback_addr();
@@ -979,6 +1010,10 @@ fn regression_observability_endpoint_keeps_async_negative_matrix_contracts() {
     assert!(
         source.contains("if method != Method::GET"),
         "axum route handler must fail closed on non-GET method contracts"
+    );
+    assert!(
+        source.contains("request_has_non_empty_body(&headers)"),
+        "axum route handler must fail closed on non-empty request body contracts"
     );
     assert!(
         source.contains("observability endpoint timed out after {} ms waiting for requests"),

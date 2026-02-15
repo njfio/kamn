@@ -2,7 +2,10 @@ use crate::NodeBootstrapReport;
 use axum::{
     body::Body,
     extract::State,
-    http::{header::CONTENT_TYPE, HeaderValue, Method, StatusCode, Uri},
+    http::{
+        header::{CONTENT_LENGTH, CONTENT_TYPE, TRANSFER_ENCODING},
+        HeaderMap, HeaderValue, Method, StatusCode, Uri,
+    },
     response::Response,
     routing::any,
     Router,
@@ -291,8 +294,9 @@ async fn handle_observability_http_route(
     State(state): State<Arc<ObservabilityEndpointRuntimeState>>,
     method: Method,
     uri: Uri,
+    headers: HeaderMap,
 ) -> Response {
-    let response = if method != Method::GET {
+    let response = if method != Method::GET || request_has_non_empty_body(&headers) {
         handle_observability_not_found_path().await
     } else {
         dispatch_observability_endpoint_request(
@@ -307,6 +311,20 @@ async fn handle_observability_http_route(
     };
     state.request_budget.record_request();
     render_observability_http_response(response)
+}
+
+fn request_has_non_empty_body(headers: &HeaderMap) -> bool {
+    if headers.contains_key(TRANSFER_ENCODING) {
+        return true;
+    }
+
+    match headers.get(CONTENT_LENGTH) {
+        Some(content_length) => match content_length.to_str() {
+            Ok(value) => value.parse::<u64>().map_or(true, |parsed| parsed > 0),
+            Err(_) => true,
+        },
+        None => false,
+    }
 }
 
 async fn dispatch_observability_endpoint_request(

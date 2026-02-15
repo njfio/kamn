@@ -40,3 +40,21 @@ between completion reason, drain status, and snapshot flush status:
 - `graceful-shutdown-timeout:*` requires `timeout` + `snapshot-flush-timeout`.
 
 Invalid combinations emit deterministic reason codes and fail closed.
+
+## Observability Route Topology Contract
+
+Observability serving is on the unified axum route stack and no longer uses a
+hand-rolled parser/listener path.
+
+- Runtime path:
+  - `serve_observability_endpoint(...)` (sync wrapper)
+  - `serve_observability_endpoint_async(...)` (async runtime path)
+  - `build_observability_endpoint_router(...)` (axum route composition)
+- Route topology:
+  - root route: `"/"` via `any(handle_observability_http_route)`
+  - wildcard route: `"/{*path}"` via `any(handle_observability_http_route)`
+- Fail-closed malformed request contracts:
+  - non-`GET` methods resolve to deterministic `404 not found`
+  - `GET` requests with non-empty body indicators (`Content-Length > 0` or
+    `Transfer-Encoding`) resolve to deterministic `404 not found`
+  - request budget and idle timeout remain deterministic and fail closed
