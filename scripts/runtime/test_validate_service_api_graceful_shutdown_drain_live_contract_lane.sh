@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACT_LANE="$ROOT_DIR/scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane.sh"
 VALIDATION_SCRIPT="$ROOT_DIR/scripts/runtime/validate_service_api_graceful_shutdown_drain_live.sh"
 POLICY_CHECKER="$ROOT_DIR/scripts/runtime/check_service_api_graceful_shutdown_drain_live_policy.sh"
+DISPATCHER="$ROOT_DIR/scripts/runtime/run_service_api_tranche2_contract_lane_dispatch.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -18,6 +19,10 @@ if [ ! -x "$VALIDATION_SCRIPT" ]; then
 fi
 if [ ! -x "$POLICY_CHECKER" ]; then
   echo "expected service api graceful-shutdown drain policy checker script to be executable" >&2
+  exit 1
+fi
+if [ ! -x "$DISPATCHER" ]; then
+  echo "expected service api tranche-2 contract lane dispatcher script to be executable" >&2
   exit 1
 fi
 
@@ -85,12 +90,17 @@ if policy_payload.get("service_api_graceful_shutdown_drain_policy_status") != "v
     raise SystemExit("expected service_api_graceful_shutdown_drain_policy_status=verified in policy report")
 PY
 
-if ! grep -q "check_service_api_graceful_shutdown_drain_live_policy.sh" "$CONTRACT_LANE"; then
-  echo "expected service api graceful-shutdown drain contract lane to compose policy checker" >&2
+if [ ! -L "$CONTRACT_LANE" ]; then
+  echo "expected service api graceful-shutdown drain contract lane to be a dispatcher symlink" >&2
   exit 1
 fi
-if ! grep -q "validate_service_api_graceful_shutdown_drain_live.sh" "$CONTRACT_LANE"; then
-  echo "expected service api graceful-shutdown drain contract lane to compose validation lane" >&2
+if [ "$(readlink "$CONTRACT_LANE")" != "run_service_api_tranche2_contract_lane_dispatch.sh" ]; then
+  echo "expected service api graceful-shutdown drain contract lane symlink target to be tranche-2 dispatcher" >&2
+  exit 1
+fi
+resolved_impl_path="$(bash "$DISPATCHER" --lane-wrapper "$(basename "$CONTRACT_LANE")" --resolve-impl-path)"
+if [ "$resolved_impl_path" != "$ROOT_DIR/scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane_impl.sh" ]; then
+  echo "expected service api graceful-shutdown drain contract lane dispatcher to resolve implementation script" >&2
   exit 1
 fi
 

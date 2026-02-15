@@ -1,9 +1,12 @@
 {
-  "schema_version": "kamn.runtime.service-api-tranche1-wrapper-family-matrix.v1",
-  "max_shell_loc": 260,
+  "schema_version": "kamn.runtime.service-api-tranche2-wrapper-family-matrix.v1",
+  "expected_dispatch_target": "run_service_api_tranche2_contract_lane_dispatch.sh",
+  "max_wrapper_shell_loc": 8,
+  "max_impl_shell_loc": 260,
   "wrappers": [
     {
       "wrapper": "scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane.sh",
+      "impl_script": "scripts/runtime/validate_service_api_prometheus_metrics_live_contract_lane_impl.sh",
       "validation_script": "scripts/runtime/validate_service_api_prometheus_metrics_live.sh",
       "policy_checker": "scripts/runtime/check_service_api_prometheus_metrics_live_policy.sh",
       "contract_status_key": "service_api_prometheus_metrics_contract_status",
@@ -12,6 +15,7 @@
     },
     {
       "wrapper": "scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane.sh",
+      "impl_script": "scripts/runtime/validate_service_api_graceful_shutdown_drain_live_contract_lane_impl.sh",
       "validation_script": "scripts/runtime/validate_service_api_graceful_shutdown_drain_live.sh",
       "policy_checker": "scripts/runtime/check_service_api_graceful_shutdown_drain_live_policy.sh",
       "contract_status_key": "service_api_graceful_shutdown_drain_contract_status",
@@ -20,6 +24,7 @@
     },
     {
       "wrapper": "scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live_contract_lane.sh",
+      "impl_script": "scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live_contract_lane_impl.sh",
       "validation_script": "scripts/runtime/validate_service_api_shutdown_abrupt_close_regression_live.sh",
       "policy_checker": "scripts/runtime/check_service_api_shutdown_abrupt_close_regression_live_policy.sh",
       "contract_status_key": "service_api_shutdown_abrupt_close_regression_contract_status",
@@ -28,6 +33,7 @@
     },
     {
       "wrapper": "scripts/runtime/validate_service_api_validation_negative_matrix_live_contract_lane.sh",
+      "impl_script": "scripts/runtime/validate_service_api_validation_negative_matrix_live_contract_lane_impl.sh",
       "validation_script": "scripts/runtime/validate_service_api_validation_negative_matrix_live.sh",
       "policy_checker": "scripts/runtime/check_service_api_validation_negative_matrix_live_policy.sh",
       "contract_status_key": "service_api_validation_negative_matrix_contract_status",
