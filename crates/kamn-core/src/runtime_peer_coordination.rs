@@ -905,6 +905,8 @@ pub fn build_runtime_wiring(config: &NodeConfig) -> RuntimeWiring {
     if config.enable_gossip {
         common_components.push("p2p-discovery");
         common_components.push("p2p-gossip-transport");
+        common_components.push("p2p-libp2p-swarm-stack");
+        common_components.push("p2p-libp2p-harness-ready");
     } else {
         common_components.push("gossip-transport-disabled");
     }

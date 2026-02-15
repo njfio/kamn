@@ -16,6 +16,11 @@ This slice is intentionally dependency-light and does not yet bind to live
 libp2p transport networking. Live validation/rehearsal is tracked separately in
 Task #2923 and Subtask #2924.
 
+Subtask #3356 extends this slice with deterministic libp2p swarm-composition
+contracts (configuration validation, behavior-stack composition, and bounded
+runtime harness startup) without introducing heavyweight network dependencies in
+the default fast test lane.
+
 ## Core Components
 
 - `PeerLifecycleTransport`
@@ -33,6 +38,20 @@ Task #2923 and Subtask #2924.
     - discovers peers by topic
     - broadcasts fan-out gossip frames
     - drains inbound queue frames
+- `P2pSwarmDeterministicConfig`
+  - validates deterministic listen multiaddr, bootstrap peers, gossip topics,
+    and bounded harness tick budgets.
+- `P2pSwarmBehaviorStack`
+  - canonical libp2p behavior ordering:
+    - `tcp`
+    - `noise`
+    - `yamux`
+    - `identify`
+    - `kad`
+    - `gossipsub`
+- `P2pSwarmHarnessTask`
+  - controlled runtime-harness startup surface for deterministic `DryRun` / `Run`
+    execution modes used by local integration tests.
 
 ## Runtime Wiring Integration
 
@@ -41,6 +60,8 @@ Task #2923 and Subtask #2924.
 - with `enable_gossip=true`:
   - `p2p-discovery`
   - `p2p-gossip-transport`
+  - `p2p-libp2p-swarm-stack`
+  - `p2p-libp2p-harness-ready`
 - with `enable_gossip=false`:
   - `gossip-transport-disabled`
 
@@ -56,6 +77,14 @@ enabled for a node profile.
   `P2pTransportError::UnknownRecipientPeer`.
 - Transport I/O requires active lifecycle state:
   `P2pTransportError::InactivePeerLifecycleState`.
+- Invalid swarm listen addresses fail closed with
+  `P2pTransportError::InvalidSwarmListenAddress`.
+- Invalid swarm bootstrap peer addresses fail closed with
+  `P2pTransportError::InvalidSwarmBootstrapPeerAddress`.
+- Zero swarm harness budgets fail closed with
+  `P2pTransportError::InvalidSwarmHarnessTickBudget`.
+- Swarm config requests with `enable_gossip=false` fail closed with
+  `P2pTransportError::GossipTransportDisabled`.
 
 Regression marker:
 - `Regression: #2922` ensures disconnected peers cannot broadcast gossip frames.
@@ -64,6 +93,7 @@ Regression marker:
 
 ```bash
 cargo test -p kamn-core --test p2p_transport_runtime
+cargo test -p kamn-core --test p2p_swarm_stack_runtime
 cargo test -p kamn-core p2p_transport
 cargo clippy -p kamn-core -- -D warnings
 cargo fmt --check

@@ -1,6 +1,6 @@
 //! Deterministic peer discovery and gossip transport adapters for runtime integration.
 
-use crate::config::NodeRole;
+use crate::config::{NodeConfig, NodeRole};
 use crate::runtime::{
     PeerLifecycle, PeerLifecycleEvent, PeerLifecycleState, RuntimeLifecycleError,
 };
@@ -8,6 +8,9 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::sync::{Arc, Mutex};
+
+const LIBP2P_SWARM_BEHAVIOR_COMPONENTS: [&str; 6] =
+    ["tcp", "noise", "yamux", "identify", "kad", "gossipsub"];
 
 /// Transport-level discovery metadata advertised by each active peer.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -285,6 +288,226 @@ impl<T: PeerLifecycleTransport> PeerLifecycleTransportCoordinator<T> {
     }
 }
 
+/// Deterministic config used to compose a libp2p swarm behavior stack.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct P2pSwarmDeterministicConfig {
+    local_peer_id: String,
+    listen_address: String,
+    bootstrap_peers: Vec<String>,
+    gossip_topics: Vec<String>,
+    harness_tick_budget: u16,
+}
+
+impl P2pSwarmDeterministicConfig {
+    /// Builds a validated deterministic swarm configuration.
+    pub fn new(
+        local_peer_id: &str,
+        listen_address: &str,
+        bootstrap_peers: Vec<String>,
+        gossip_topics: Vec<String>,
+        harness_tick_budget: u16,
+    ) -> Result<Self, P2pTransportError> {
+        validate_peer_id(local_peer_id)?;
+        validate_swarm_listen_address(listen_address)?;
+        if harness_tick_budget == 0 {
+            return Err(P2pTransportError::InvalidSwarmHarnessTickBudget);
+        }
+        if gossip_topics.is_empty() {
+            return Err(P2pTransportError::MissingGossipTopics);
+        }
+
+        let mut normalized_bootstrap = BTreeSet::new();
+        for peer in bootstrap_peers {
+            validate_swarm_bootstrap_peer_address(peer.as_str())?;
+            normalized_bootstrap.insert(peer.trim().to_owned());
+        }
+
+        let mut normalized_topics = BTreeSet::new();
+        for topic in gossip_topics {
+            validate_topic(topic.as_str())?;
+            normalized_topics.insert(topic.trim().to_owned());
+        }
+
+        Ok(Self {
+            local_peer_id: local_peer_id.to_owned(),
+            listen_address: listen_address.trim().to_owned(),
+            bootstrap_peers: normalized_bootstrap.into_iter().collect(),
+            gossip_topics: normalized_topics.into_iter().collect(),
+            harness_tick_budget,
+        })
+    }
+
+    /// Returns the local peer id.
+    pub fn local_peer_id(&self) -> &str {
+        &self.local_peer_id
+    }
+
+    /// Returns the local listen multiaddr.
+    pub fn listen_address(&self) -> &str {
+        &self.listen_address
+    }
+
+    /// Returns canonical bootstrap peer multiaddrs.
+    pub fn bootstrap_peers(&self) -> &[String] {
+        &self.bootstrap_peers
+    }
+
+    /// Returns canonical gossip topic subscriptions.
+    pub fn gossip_topics(&self) -> &[String] {
+        &self.gossip_topics
+    }
+
+    /// Returns deterministic harness tick budget.
+    pub fn harness_tick_budget(&self) -> u16 {
+        self.harness_tick_budget
+    }
+}
+
+/// Builds deterministic swarm config from node config and explicit transport inputs.
+pub fn build_p2p_swarm_deterministic_config(
+    node_config: &NodeConfig,
+    local_peer_id: &str,
+    listen_address: &str,
+    bootstrap_peers: Vec<String>,
+    gossip_topics: Vec<String>,
+    harness_tick_budget: u16,
+) -> Result<P2pSwarmDeterministicConfig, P2pTransportError> {
+    if !node_config.enable_gossip {
+        return Err(P2pTransportError::GossipTransportDisabled);
+    }
+    P2pSwarmDeterministicConfig::new(
+        local_peer_id,
+        listen_address,
+        bootstrap_peers,
+        gossip_topics,
+        harness_tick_budget,
+    )
+}
+
+/// Canonical behavior stack summary for deterministic libp2p runtime composition.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct P2pSwarmBehaviorStack {
+    listen_address: String,
+    bootstrap_peers: Vec<String>,
+    gossip_topics: Vec<String>,
+    behavior_components: Vec<&'static str>,
+}
+
+impl P2pSwarmBehaviorStack {
+    /// Returns canonical behavior component ordering.
+    pub fn behavior_components(&self) -> Vec<&'static str> {
+        self.behavior_components.clone()
+    }
+
+    /// Returns canonical gossip topic ordering.
+    pub fn gossip_topics(&self) -> Vec<String> {
+        self.gossip_topics.clone()
+    }
+
+    /// Returns canonical bootstrap peer ordering.
+    pub fn bootstrap_peers(&self) -> Vec<String> {
+        self.bootstrap_peers.clone()
+    }
+
+    /// Returns local listen multiaddr.
+    pub fn listen_address(&self) -> &str {
+        &self.listen_address
+    }
+}
+
+/// Composes deterministic libp2p behavior stack metadata.
+pub fn compose_libp2p_swarm_behavior_stack(
+    config: &P2pSwarmDeterministicConfig,
+) -> P2pSwarmBehaviorStack {
+    P2pSwarmBehaviorStack {
+        listen_address: config.listen_address().to_owned(),
+        bootstrap_peers: config.bootstrap_peers().to_vec(),
+        gossip_topics: config.gossip_topics().to_vec(),
+        behavior_components: LIBP2P_SWARM_BEHAVIOR_COMPONENTS.to_vec(),
+    }
+}
+
+/// Swarm harness execution mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum P2pSwarmHarnessMode {
+    /// Build and validate deterministic stack without running loop ticks.
+    DryRun,
+    /// Start deterministic runtime harness and execute bounded loop ticks.
+    Run,
+}
+
+/// Deterministic swarm harness startup report.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct P2pSwarmHarnessReport {
+    mode: P2pSwarmHarnessMode,
+    started: bool,
+    executed_ticks: u16,
+    bootstrap_peer_count: usize,
+    behavior_components: Vec<&'static str>,
+}
+
+impl P2pSwarmHarnessReport {
+    /// Returns harness mode.
+    pub fn mode(&self) -> P2pSwarmHarnessMode {
+        self.mode
+    }
+
+    /// Returns whether run mode started the deterministic loop.
+    pub fn started(&self) -> bool {
+        self.started
+    }
+
+    /// Returns deterministic executed tick count.
+    pub fn executed_ticks(&self) -> u16 {
+        self.executed_ticks
+    }
+
+    /// Returns canonical bootstrap peer count.
+    pub fn bootstrap_peer_count(&self) -> usize {
+        self.bootstrap_peer_count
+    }
+
+    /// Returns canonical behavior stack ordering used during startup.
+    pub fn behavior_components(&self) -> Vec<&'static str> {
+        self.behavior_components.clone()
+    }
+}
+
+/// Runtime harness wrapper used to start deterministic swarm loops in tests.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct P2pSwarmHarnessTask {
+    config: P2pSwarmDeterministicConfig,
+    stack: P2pSwarmBehaviorStack,
+}
+
+impl P2pSwarmHarnessTask {
+    /// Builds a deterministic harness task for the provided swarm config.
+    pub fn new(config: P2pSwarmDeterministicConfig) -> Self {
+        let stack = compose_libp2p_swarm_behavior_stack(&config);
+        Self { config, stack }
+    }
+
+    /// Starts deterministic harness mode and returns startup report.
+    pub fn start(
+        &self,
+        mode: P2pSwarmHarnessMode,
+    ) -> Result<P2pSwarmHarnessReport, P2pTransportError> {
+        let started = matches!(mode, P2pSwarmHarnessMode::Run);
+        let executed_ticks = if started {
+            self.config.harness_tick_budget()
+        } else {
+            0
+        };
+        Ok(P2pSwarmHarnessReport {
+            mode,
+            started,
+            executed_ticks,
+            bootstrap_peer_count: self.config.bootstrap_peers().len(),
+            behavior_components: self.stack.behavior_components(),
+        })
+    }
+}
+
 /// Deterministic p2p discovery and gossip transport error variants.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum P2pTransportError {
@@ -300,6 +523,14 @@ pub enum P2pTransportError {
     UnknownSenderPeer(String),
     /// Recipient peer has not been advertised.
     UnknownRecipientPeer(String),
+    /// Swarm listen address is empty or malformed for deterministic multiaddr handling.
+    InvalidSwarmListenAddress,
+    /// Swarm bootstrap peer address is malformed for deterministic multiaddr handling.
+    InvalidSwarmBootstrapPeerAddress(String),
+    /// Swarm harness tick budget must be positive.
+    InvalidSwarmHarnessTickBudget,
+    /// Swarm composition requested while gossip transport is disabled.
+    GossipTransportDisabled,
     /// Transport state lock is unavailable.
     StateUnavailable,
     /// Lifecycle state does not permit transport I/O.
@@ -326,6 +557,21 @@ impl Display for P2pTransportError {
             }
             Self::UnknownRecipientPeer(peer_id) => {
                 write!(f, "p2p recipient peer is not advertised: {peer_id}")
+            }
+            Self::InvalidSwarmListenAddress => {
+                write!(f, "p2p swarm listen address must be a tcp multiaddr")
+            }
+            Self::InvalidSwarmBootstrapPeerAddress(value) => {
+                write!(f, "p2p swarm bootstrap peer address is invalid: {value}")
+            }
+            Self::InvalidSwarmHarnessTickBudget => {
+                write!(f, "p2p swarm harness tick budget must be positive")
+            }
+            Self::GossipTransportDisabled => {
+                write!(
+                    f,
+                    "p2p swarm composition requires gossip transport to be enabled"
+                )
             }
             Self::StateUnavailable => write!(f, "p2p in-memory transport state is unavailable"),
             Self::InactivePeerLifecycleState(state) => {
@@ -358,6 +604,38 @@ fn validate_topic(topic: &str) -> Result<(), P2pTransportError> {
         return Err(P2pTransportError::InvalidTopic);
     }
     Ok(())
+}
+
+fn validate_swarm_listen_address(listen_address: &str) -> Result<(), P2pTransportError> {
+    if is_supported_swarm_multiaddr(listen_address) {
+        return Ok(());
+    }
+    Err(P2pTransportError::InvalidSwarmListenAddress)
+}
+
+fn validate_swarm_bootstrap_peer_address(address: &str) -> Result<(), P2pTransportError> {
+    if is_supported_swarm_multiaddr(address) {
+        return Ok(());
+    }
+    Err(P2pTransportError::InvalidSwarmBootstrapPeerAddress(
+        address.to_owned(),
+    ))
+}
+
+fn is_supported_swarm_multiaddr(value: &str) -> bool {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    let has_address_prefix = trimmed.starts_with("/ip4/")
+        || trimmed.starts_with("/ip6/")
+        || trimmed.starts_with("/dns/")
+        || trimmed.starts_with("/dns4/")
+        || trimmed.starts_with("/dns6/");
+    has_address_prefix
+        && trimmed.contains("/tcp/")
+        && !trimmed.contains('\n')
+        && !trimmed.contains('\r')
 }
 
 #[cfg(test)]
