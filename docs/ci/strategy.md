@@ -174,10 +174,12 @@ Versioned thresholds are defined in `.ci/ci-budget.env`.
   - `cargo test -p kamn-node runtime_daemon`
   - `cargo test -p kamn-node main_tests::functional_runtime_daemon_emits_structured_transition_markers -- --exact`
   - `cargo test -p kamn-node integration_runtime_daemon_renders_bounded_completion_output`
+  - `cargo test -p kamn-node daemon_shutdown::tests::regression_daemon_completion_with_os_signals_without_signal_stays_bounded -- --exact`
 - This lane is cost-effective:
-  - no external processes or signal orchestration harnesses required
-  - deterministic tick-budget simulation with bounded loop-free assertions
-  - timeout behavior and observability telemetry validated through direct state transitions instead of wall-clock waits
+  - no external process orchestration is required.
+  - deterministic tick-budget simulation remains bounded.
+  - process-signal coverage remains in-process and bounded with test-only serialization guards to avoid cross-test signal bleed.
+  - timeout behavior and observability telemetry are validated through direct state transitions instead of long wall-clock waits.
 
 ## Node Runtime Full-Mode Supervisor Invariant Contract Lane
 - For `kamn-node` full runtime supervisor lifecycle contract changes, keep PR validation on bounded deterministic tests:
