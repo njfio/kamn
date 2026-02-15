@@ -27,6 +27,9 @@ production and consensus validation (Task #2926, Subtask #2927).
     candidates and persists accepted records before transaction consensus.
 - `FileCanonicalCommitStore`
   - persists canonical commit lineage across process restart boundaries.
+- `SqliteCanonicalCommitStore`
+  - persists canonical commit lineage in sqlite with strict schema/version
+    validation for restart/replay flows.
 - `build_canonical_replay_evidence_bundle(...)`
   - validates restart/replay lineage continuity and emits deterministic
     checkpoint evidence (`kamn.runtime.canonical-replay-evidence.v1`).
@@ -85,6 +88,11 @@ Processor role runtime wiring now includes:
   `canonical_commit_store_record_malformed`,
   `canonical_commit_store_block_height_regression`,
   `canonical_commit_store_transaction_ids_invalid`.
+- Sqlite-backed canonical persistence fails closed on schema/version and payload
+  corruption with deterministic reason markers such as:
+  `canonical_commit_store_sqlite_schema_mismatch`,
+  `canonical_commit_store_sqlite_payload_not_utf8`,
+  `canonical_commit_store_sqlite_key_height_mismatch`.
 
 Regression marker:
 - `Regression: #2927` keeps digest mismatch fail-closed before commit.
@@ -99,6 +107,7 @@ cargo test -p kamn-core --test block_pipeline
 cargo test -p kamn-core --test block_pipeline_gossip_ingest
 cargo test -p kamn-core --test block_pipeline_canonical_reconciliation
 cargo test -p kamn-core --test block_pipeline_transport_fed
+cargo test -p kamn-core --test block_pipeline_sqlite_commit_store
 cargo test -p kamn-core block_pipeline
 cargo clippy -p kamn-core -- -D warnings
 cargo fmt --check

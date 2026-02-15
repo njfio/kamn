@@ -161,8 +161,9 @@ pub use block_pipeline::{
     DeterministicCompetingBranchForkChoiceHook, FileCanonicalCommitStore, ForkChoiceDecision,
     ForkChoiceHook, GossipFrameTransportMempoolFeed, GossipIngressAdapter, GossipIngressBatch,
     GossipIngressError, GossipIngressRecord, InMemoryCanonicalCommitStore,
-    InMemoryTransportMempoolFeed, MempoolBlockPipeline, TransportCanonicalCandidateFeed,
-    TransportEventMempoolFeed, TransportFedBlockPipeline, TransportMempoolFeed,
+    InMemoryTransportMempoolFeed, MempoolBlockPipeline, SqliteCanonicalCommitStore,
+    TransportCanonicalCandidateFeed, TransportEventMempoolFeed, TransportFedBlockPipeline,
+    TransportMempoolFeed,
 };
 pub use bootstrap::{bootstrap, bootstrap_from_state_version, BootstrapPlan};
 pub use bridge_adapter::{
