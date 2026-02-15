@@ -6,7 +6,10 @@ use kamn_core::{
     PeerGossipFrame, PeerLifecycleEvent, PeerLifecycleState, PeerLifecycleTransport,
     PeerLifecycleTransportCoordinator, RuntimeLifecycleError, RuntimeTransportProfile, SyncMode,
 };
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::atomic::{AtomicU16, Ordering};
+use std::time::{Duration, Instant};
+
+static NEXT_TEST_PORT: AtomicU16 = AtomicU16::new(21_000);
 
 fn config_for(role: NodeRole, gossip_enabled: bool) -> NodeConfig {
     NodeConfig {
@@ -20,11 +23,13 @@ fn config_for(role: NodeRole, gossip_enabled: bool) -> NodeConfig {
 }
 
 fn live_swarm_config() -> kamn_core::P2pSwarmDeterministicConfig {
+    let listen_address = unique_tcp_listen_address();
+    let bootstrap_address = unique_tcp_listen_address();
     build_p2p_swarm_deterministic_config(
         &config_for(NodeRole::Processor, true),
         "peer-processor",
-        "/ip4/127.0.0.1/tcp/9200",
-        vec!["/ip4/127.0.0.1/tcp/9201/p2p/peer-listener".to_owned()],
+        listen_address.as_str(),
+        vec![bootstrap_address],
         vec!["messages".to_owned()],
         3,
     )
@@ -36,30 +41,85 @@ fn live_swarm_config_for_peer(
     listen_address: &str,
     bootstrap_seed: &str,
 ) -> kamn_core::P2pSwarmDeterministicConfig {
+    live_swarm_config_for_peer_with_bootstrap(
+        peer_id,
+        listen_address,
+        vec![bootstrap_seed.to_owned()],
+    )
+}
+
+fn live_swarm_config_for_peer_with_bootstrap(
+    peer_id: &str,
+    listen_address: &str,
+    bootstrap_peers: Vec<String>,
+) -> kamn_core::P2pSwarmDeterministicConfig {
     build_p2p_swarm_deterministic_config(
         &config_for(NodeRole::Processor, true),
         peer_id,
         listen_address,
-        vec![bootstrap_seed.to_owned()],
+        bootstrap_peers,
         vec!["messages".to_owned()],
         3,
     )
     .expect("swarm config should build")
 }
 
-fn unique_bootstrap_seed(label: &str) -> String {
-    let nonce = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("clock should be monotonic")
-        .as_nanos();
-    format!("/ip4/127.0.0.1/tcp/99{nonce}/p2p/{label}")
+fn unique_tcp_listen_address() -> String {
+    let port = NEXT_TEST_PORT.fetch_add(1, Ordering::Relaxed);
+    format!("/ip4/127.0.0.1/tcp/{port}")
+}
+
+fn send_with_retry(
+    transport: &Libp2pLivePeerLifecycleTransport,
+    frame: &PeerGossipFrame,
+    timeout: Duration,
+) -> Result<(), P2pTransportError> {
+    let started = Instant::now();
+    loop {
+        match transport.send(frame.clone()) {
+            Ok(()) => return Ok(()),
+            Err(P2pTransportError::LiveSocketSendFailed) if started.elapsed() < timeout => {
+                std::thread::sleep(Duration::from_millis(25));
+            }
+            Err(error) => return Err(error),
+        }
+    }
+}
+
+fn drain_until_count(
+    transport: &Libp2pLivePeerLifecycleTransport,
+    recipient_peer_id: &str,
+    expected: usize,
+    timeout: Duration,
+) -> Vec<PeerGossipFrame> {
+    let started = Instant::now();
+    let mut frames = Vec::new();
+    loop {
+        let mut drained = transport
+            .drain_inbox(recipient_peer_id)
+            .expect("recipient inbox should drain");
+        if !drained.is_empty() {
+            frames.append(&mut drained);
+        }
+        if frames.len() >= expected {
+            return frames;
+        }
+        assert!(
+            started.elapsed() < timeout,
+            "expected {expected} frames but only received {} within {:?}",
+            frames.len(),
+            timeout
+        );
+        std::thread::sleep(Duration::from_millis(25));
+    }
 }
 
 #[test]
 fn unit_live_transport_adapter_reports_harness_startup_profile() {
-    let transport =
-        Libp2pLivePeerLifecycleTransport::new(live_swarm_config(), P2pSwarmHarnessMode::Run)
-            .expect("live transport should initialize");
+    let config = live_swarm_config();
+    let expected_listen_address = config.listen_address().to_owned();
+    let transport = Libp2pLivePeerLifecycleTransport::new(config, P2pSwarmHarnessMode::Run)
+        .expect("live transport should initialize");
 
     assert_eq!(
         transport.transport_profile(),
@@ -67,7 +127,7 @@ fn unit_live_transport_adapter_reports_harness_startup_profile() {
     );
     assert!(transport.harness_report().started());
     assert_eq!(transport.harness_report().executed_ticks(), 3);
-    assert_eq!(transport.listen_address(), "/ip4/127.0.0.1/tcp/9200");
+    assert_eq!(transport.listen_address(), expected_listen_address);
 }
 
 #[test]
@@ -145,21 +205,24 @@ fn integration_runtime_wiring_can_enable_live_transport_profile_markers() {
 
 #[test]
 fn integration_live_transport_data_plane_supports_independent_adapter_exchange() {
-    let bootstrap_seed = unique_bootstrap_seed("live-data-plane");
+    let processor_listen = unique_tcp_listen_address();
+    let listener_listen = unique_tcp_listen_address();
+    let bootstrap_peers = vec![processor_listen.clone(), listener_listen.clone()];
     let processor_transport = Libp2pLivePeerLifecycleTransport::new(
-        live_swarm_config_for_peer(
+        live_swarm_config_for_peer_with_bootstrap(
             "peer-processor-live",
-            "/ip4/127.0.0.1/tcp/9220",
-            bootstrap_seed.as_str(),
+            processor_listen.as_str(),
+            bootstrap_peers.clone(),
         ),
         P2pSwarmHarnessMode::DryRun,
     )
     .expect("processor live transport should initialize");
+    std::thread::sleep(Duration::from_millis(250));
     let listener_transport = Libp2pLivePeerLifecycleTransport::new(
-        live_swarm_config_for_peer(
+        live_swarm_config_for_peer_with_bootstrap(
             "peer-listener-live",
-            "/ip4/127.0.0.1/tcp/9221",
-            bootstrap_seed.as_str(),
+            listener_listen.as_str(),
+            bootstrap_peers,
         ),
         P2pSwarmHarnessMode::DryRun,
     )
@@ -193,14 +256,34 @@ fn integration_live_transport_data_plane_supports_independent_adapter_exchange()
     assert_eq!(discovered.len(), 1);
     assert_eq!(discovered[0].peer_id, "peer-listener-live");
 
-    let delivered = processor
-        .broadcast("messages", "tx-live-001")
-        .expect("live broadcast should succeed");
+    let started = Instant::now();
+    let delivered = loop {
+        match processor.broadcast("messages", "tx-live-001") {
+            Ok(count) => break count,
+            Err(P2pTransportError::LiveSocketSendFailed)
+                if started.elapsed() < Duration::from_secs(5) =>
+            {
+                std::thread::sleep(Duration::from_millis(25));
+            }
+            Err(error) => panic!("live broadcast should succeed: {error:?}"),
+        }
+    };
     assert_eq!(delivered, 1);
 
-    let listener_frames = listener
-        .drain_inbox()
-        .expect("listener live inbox drain should succeed");
+    let started = Instant::now();
+    let listener_frames = loop {
+        let frames = listener
+            .drain_inbox()
+            .expect("listener live inbox drain should succeed");
+        if !frames.is_empty() {
+            break frames;
+        }
+        assert!(
+            started.elapsed() < Duration::from_secs(5),
+            "listener did not receive frame within timeout"
+        );
+        std::thread::sleep(Duration::from_millis(25));
+    };
     assert_eq!(listener_frames.len(), 1);
     assert_eq!(listener_frames[0].sender_peer_id, "peer-processor-live");
     assert_eq!(listener_frames[0].topic, "messages");
@@ -209,21 +292,24 @@ fn integration_live_transport_data_plane_supports_independent_adapter_exchange()
 
 #[test]
 fn functional_live_transport_emits_normalized_runtime_events() {
-    let bootstrap_seed = unique_bootstrap_seed("live-normalized-events");
+    let processor_listen = unique_tcp_listen_address();
+    let listener_listen = unique_tcp_listen_address();
+    let bootstrap_peers = vec![processor_listen.clone(), listener_listen.clone()];
     let processor_transport = Libp2pLivePeerLifecycleTransport::new(
-        live_swarm_config_for_peer(
+        live_swarm_config_for_peer_with_bootstrap(
             "peer-processor-live-events",
-            "/ip4/127.0.0.1/tcp/9230",
-            bootstrap_seed.as_str(),
+            processor_listen.as_str(),
+            bootstrap_peers.clone(),
         ),
         P2pSwarmHarnessMode::DryRun,
     )
     .expect("processor live transport should initialize");
+    std::thread::sleep(Duration::from_millis(250));
     let listener_transport = Libp2pLivePeerLifecycleTransport::new(
-        live_swarm_config_for_peer(
+        live_swarm_config_for_peer_with_bootstrap(
             "peer-listener-live-events",
-            "/ip4/127.0.0.1/tcp/9231",
-            bootstrap_seed.as_str(),
+            listener_listen.as_str(),
+            bootstrap_peers,
         ),
         P2pSwarmHarnessMode::DryRun,
     )
@@ -256,21 +342,36 @@ fn functional_live_transport_emits_normalized_runtime_events() {
     assert_eq!(discovered.len(), 1);
     assert_eq!(discovered[0].peer_id, "peer-listener-live-events");
 
-    processor_transport
-        .send(
-            PeerGossipFrame::new(
-                "messages",
-                "peer-processor-live-events",
-                "peer-listener-live-events",
-                "tx-live-events-001",
-            )
-            .expect("gossip frame should build"),
-        )
+    let frame = PeerGossipFrame::new(
+        "messages",
+        "peer-processor-live-events",
+        "peer-listener-live-events",
+        "tx-live-events-001",
+    )
+    .expect("gossip frame should build");
+    send_with_retry(&processor_transport, &frame, Duration::from_secs(5))
         .expect("gossip send should pass");
+    let _frames = drain_until_count(
+        &listener_transport,
+        "peer-listener-live-events",
+        1,
+        Duration::from_secs(5),
+    );
 
-    let events = processor_transport
-        .drain_runtime_events()
-        .expect("runtime events should drain");
+    let started = Instant::now();
+    let events = loop {
+        let drained = processor_transport
+            .drain_runtime_events()
+            .expect("runtime events should drain");
+        if drained.len() >= 5 {
+            break drained;
+        }
+        assert!(
+            started.elapsed() < Duration::from_secs(5),
+            "runtime events did not reach expected count within timeout"
+        );
+        std::thread::sleep(Duration::from_millis(25));
+    };
     assert_eq!(events.len(), 5);
     assert_eq!(
         events
@@ -314,11 +415,11 @@ fn integration_live_transport_invalid_event_retries_are_idempotent() {
 #[test]
 fn regression_live_transport_data_plane_unknown_recipient_fails_closed() {
     // Regression: #3574
-    let bootstrap_seed = unique_bootstrap_seed("live-fail-closed");
+    let bootstrap_seed = unique_tcp_listen_address();
     let transport = Libp2pLivePeerLifecycleTransport::new(
         live_swarm_config_for_peer(
             "peer-processor-live-fail-closed",
-            "/ip4/127.0.0.1/tcp/9222",
+            unique_tcp_listen_address().as_str(),
             bootstrap_seed.as_str(),
         ),
         P2pSwarmHarnessMode::DryRun,
