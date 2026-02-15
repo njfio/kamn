@@ -344,8 +344,9 @@ pub use operator_dashboard_ui::{
     OperatorTaskTimelineEntry, ReputationRiskTier,
 };
 pub use p2p_transport::{
-    build_p2p_swarm_deterministic_config, compose_libp2p_swarm_behavior_stack,
-    InMemoryPeerLifecycleTransport, P2pSwarmBehaviorStack, P2pSwarmDeterministicConfig,
+    build_p2p_swarm_deterministic_config, compose_kademlia_discovery_bootstrap,
+    compose_libp2p_swarm_behavior_stack, InMemoryPeerLifecycleTransport, KademliaBootstrapSeedSet,
+    KademliaDiscoveryBootstrapPlan, P2pSwarmBehaviorStack, P2pSwarmDeterministicConfig,
     P2pSwarmHarnessMode, P2pSwarmHarnessReport, P2pSwarmHarnessTask, P2pTransportError,
     PeerDiscoveryRecord, PeerGossipFrame, PeerLifecycleTransport,
     PeerLifecycleTransportCoordinator,

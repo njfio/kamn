@@ -427,6 +427,66 @@ pub fn compose_libp2p_swarm_behavior_stack(
     }
 }
 
+/// Canonical Kademlia bootstrap seed set for deterministic discovery startup.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KademliaBootstrapSeedSet {
+    seed_peers: Vec<String>,
+}
+
+impl KademliaBootstrapSeedSet {
+    /// Builds a validated deterministic Kademlia bootstrap seed set.
+    pub fn new(seed_peers: Vec<String>) -> Result<Self, P2pTransportError> {
+        if seed_peers.is_empty() {
+            return Err(P2pTransportError::MissingKademliaBootstrapSeeds);
+        }
+
+        let mut normalized = BTreeSet::new();
+        for peer in seed_peers {
+            validate_swarm_bootstrap_peer_address(peer.as_str())?;
+            normalized.insert(peer.trim().to_owned());
+        }
+
+        Ok(Self {
+            seed_peers: normalized.into_iter().collect(),
+        })
+    }
+
+    /// Returns canonical bootstrap peer ordering.
+    pub fn seed_peers(&self) -> Vec<String> {
+        self.seed_peers.clone()
+    }
+}
+
+/// Deterministic Kademlia discovery bootstrap plan.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KademliaDiscoveryBootstrapPlan {
+    discovery_backend: &'static str,
+    seed_peers: Vec<String>,
+}
+
+impl KademliaDiscoveryBootstrapPlan {
+    /// Returns the deterministic discovery backend marker.
+    pub fn discovery_backend(&self) -> &'static str {
+        self.discovery_backend
+    }
+
+    /// Returns canonical Kademlia bootstrap seed ordering.
+    pub fn seed_peers(&self) -> Vec<String> {
+        self.seed_peers.clone()
+    }
+}
+
+/// Composes deterministic Kademlia bootstrap behavior from swarm config seed peers.
+pub fn compose_kademlia_discovery_bootstrap(
+    config: &P2pSwarmDeterministicConfig,
+) -> Result<KademliaDiscoveryBootstrapPlan, P2pTransportError> {
+    let seed_set = KademliaBootstrapSeedSet::new(config.bootstrap_peers().to_vec())?;
+    Ok(KademliaDiscoveryBootstrapPlan {
+        discovery_backend: "kademlia",
+        seed_peers: seed_set.seed_peers(),
+    })
+}
+
 /// Swarm harness execution mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum P2pSwarmHarnessMode {
@@ -523,6 +583,8 @@ pub enum P2pTransportError {
     UnknownSenderPeer(String),
     /// Recipient peer has not been advertised.
     UnknownRecipientPeer(String),
+    /// Kademlia discovery bootstrap requires at least one seed peer.
+    MissingKademliaBootstrapSeeds,
     /// Swarm listen address is empty or malformed for deterministic multiaddr handling.
     InvalidSwarmListenAddress,
     /// Swarm bootstrap peer address is malformed for deterministic multiaddr handling.
@@ -557,6 +619,9 @@ impl Display for P2pTransportError {
             }
             Self::UnknownRecipientPeer(peer_id) => {
                 write!(f, "p2p recipient peer is not advertised: {peer_id}")
+            }
+            Self::MissingKademliaBootstrapSeeds => {
+                write!(f, "p2p kademlia bootstrap seed set cannot be empty")
             }
             Self::InvalidSwarmListenAddress => {
                 write!(f, "p2p swarm listen address must be a tcp multiaddr")

@@ -545,8 +545,12 @@ fn doc_contains_runtime_libp2p_three_node_discovery_contract_lane_ci_mode_marker
     assert!(DOC.contains(
         "libp2p three-node discovery run-mode commands remain excluded from ci-fast-gate and ci-tools fast mode."
     ));
+    assert!(DOC.contains(
+        "Kademlia bootstrap contracts are covered by `cargo test -p kamn-core --test p2p_kademlia_bootstrap`."
+    ));
     assert!(DOC
         .contains("libp2p_three_node_discovery_policy_marker_missing:three_node_discovery_status"));
+    assert!(DOC.contains("MissingKademliaBootstrapSeeds"));
 }
 
 #[test]
