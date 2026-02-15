@@ -1594,11 +1594,21 @@ Operator checkpoints:
 - Required reconciliation evidence markers:
   - `runtime_transport_mode=libp2p_transport_fed`
   - `transport_state_transition_status=verified`
+  - `head_alignment_status=verified`
+  - `quorum_restore_status=verified`
+  - `replay_stabilization_status=verified`
+  - `publish_drop_recovery_status=verified`
+  - `peer_churn_recovery_status=verified`
   - `reconciliation_reason_taxonomy_status=verified`
   - `reconciliation_reason_taxonomy_version=kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1`
-  - `reconciliation_reason_codes=none|...`
+  - `reconciliation_reason_codes=none|reconciliation_partition_transition_failed|reconciliation_rejoin_transition_failed|reconciliation_publish_drop_recovery_failed|reconciliation_peer_churn_recovery_failed|reconciliation_split_head_unresolved|reconciliation_replay_instability|...`
 - Deterministic fail-closed policy reason markers:
   - `block_reconciliation_partition_rejoin_policy_transport_mode_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_head_alignment_status_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_quorum_restore_status_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_replay_stabilization_status_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_publish_drop_recovery_status_mismatch`
+  - `block_reconciliation_partition_rejoin_policy_peer_churn_recovery_status_mismatch`
   - `block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_version_mismatch`
   - `block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid`
 

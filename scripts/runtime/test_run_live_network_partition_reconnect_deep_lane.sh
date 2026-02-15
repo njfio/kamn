@@ -56,8 +56,8 @@ if payload.get("status") != "pass":
     raise SystemExit("expected deep lane status=pass")
 if payload.get("final_decision") != "GO":
     raise SystemExit("expected deep lane final_decision=GO")
-if payload.get("scenario_count") != 6:
-    raise SystemExit("expected deep lane scenario count to include stress scenarios")
+if payload.get("scenario_count") != 8:
+    raise SystemExit("expected deep lane scenario count to include publish-drop/churn and split-head/replay recovery scenarios")
 PY
 
 set +e

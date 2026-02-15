@@ -37,6 +37,19 @@ TRANSPORT_RUNTIME_MODE = "libp2p_transport_fed"
 RECONCILIATION_REASON_TAXONOMY_VERSION = (
     "kamn.runtime.block-reconciliation-partition-rejoin-reason-taxonomy.v1"
 )
+RECONCILIATION_REASON_CODES_ALLOWED = {
+    "none",
+    "reconciliation_partition_transition_failed",
+    "reconciliation_rejoin_transition_failed",
+    "reconciliation_publish_drop_recovery_failed",
+    "reconciliation_peer_churn_recovery_failed",
+    "reconciliation_split_head_unresolved",
+    "reconciliation_replay_instability",
+    "reconciliation_fixture_contract_failed",
+    "reconciliation_unclassified_scenario_failed",
+    "reconciliation_runtime_budget_exceeded",
+    "reconciliation_ci_fast_gate_failed",
+}
 
 
 def _run_command(command: list[str], *, timeout_seconds: int) -> str:
@@ -56,6 +69,14 @@ def _run_command(command: list[str], *, timeout_seconds: int) -> str:
 
 def _scenario_reconciliation_reason_code(scenario_name: str) -> str:
     scenario = scenario_name.lower()
+    if "publish_drop" in scenario or "publish-drop" in scenario:
+        return "reconciliation_publish_drop_recovery_failed"
+    if "churn" in scenario:
+        return "reconciliation_peer_churn_recovery_failed"
+    if "split_head" in scenario or "split-head" in scenario:
+        return "reconciliation_split_head_unresolved"
+    if "replay_instability" in scenario or "replay-instability" in scenario:
+        return "reconciliation_replay_instability"
     if "primary_loss" in scenario or "failover" in scenario or "partition" in scenario:
         return "reconciliation_partition_transition_failed"
     if "reconnect" in scenario or "rejoin" in scenario or "catchup" in scenario:
@@ -96,6 +117,30 @@ def _derive_reconciliation_reason_codes(
     if not deduplicated:
         return ["none"]
     return deduplicated
+
+
+def _derive_recovery_markers(reconciliation_reason_codes: list[str]) -> dict[str, str]:
+    reasons = set(reconciliation_reason_codes)
+    if reasons == {"none"}:
+        reasons = set()
+
+    def marker(*blocking_reasons: str) -> str:
+        return "failed" if any(reason in reasons for reason in blocking_reasons) else "verified"
+
+    return {
+        "head_alignment_status": marker("reconciliation_split_head_unresolved"),
+        "quorum_restore_status": marker(
+            "reconciliation_partition_transition_failed",
+            "reconciliation_peer_churn_recovery_failed",
+        ),
+        "replay_stabilization_status": marker("reconciliation_replay_instability"),
+        "publish_drop_recovery_status": marker(
+            "reconciliation_publish_drop_recovery_failed"
+        ),
+        "peer_churn_recovery_status": marker(
+            "reconciliation_peer_churn_recovery_failed"
+        ),
+    }
 
 
 def _validate_partition_reconnect_report_payload(partition_payload: dict[str, object]) -> None:
@@ -180,6 +225,7 @@ def run_lane(args: argparse.Namespace) -> int:
     reconciliation_reason_codes = _derive_reconciliation_reason_codes(
         partition_payload, lane_mode=mode
     )
+    recovery_markers = _derive_recovery_markers(reconciliation_reason_codes)
 
     payload = {
         "schema_version": RUN_LANE_SCHEMA,
@@ -198,6 +244,11 @@ def run_lane(args: argparse.Namespace) -> int:
         "reconciliation_reason_taxonomy_version": RECONCILIATION_REASON_TAXONOMY_VERSION,
         "reconciliation_reason_taxonomy_status": "verified",
         "reconciliation_reason_codes": reconciliation_reason_codes,
+        "head_alignment_status": recovery_markers["head_alignment_status"],
+        "quorum_restore_status": recovery_markers["quorum_restore_status"],
+        "replay_stabilization_status": recovery_markers["replay_stabilization_status"],
+        "publish_drop_recovery_status": recovery_markers["publish_drop_recovery_status"],
+        "peer_churn_recovery_status": recovery_markers["peer_churn_recovery_status"],
         "run_mode_command_status": run_mode_command_status,
         "run_mode_command_count": commands_executed,
         "reason_code": reason_code,
@@ -228,6 +279,11 @@ def run_lane(args: argparse.Namespace) -> int:
     print("canonical_convergence_status=verified")
     print(f"runtime_transport_mode={TRANSPORT_RUNTIME_MODE}")
     print("reconciliation_reason_taxonomy_status=verified")
+    print(f"head_alignment_status={recovery_markers['head_alignment_status']}")
+    print(f"quorum_restore_status={recovery_markers['quorum_restore_status']}")
+    print(f"replay_stabilization_status={recovery_markers['replay_stabilization_status']}")
+    print(f"publish_drop_recovery_status={recovery_markers['publish_drop_recovery_status']}")
+    print(f"peer_churn_recovery_status={recovery_markers['peer_churn_recovery_status']}")
     print(
         "reconciliation_reason_codes="
         + ("none" if reconciliation_reason_codes == ["none"] else ",".join(reconciliation_reason_codes))
@@ -307,6 +363,26 @@ def check_policy(args: argparse.Namespace) -> int:
         payload.get("reconciliation_reason_taxonomy_status") != "verified",
         "block_reconciliation_partition_rejoin_policy_reconciliation_taxonomy_status_mismatch",
     )
+    checks.reject_if(
+        payload.get("head_alignment_status") != "verified",
+        "block_reconciliation_partition_rejoin_policy_head_alignment_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("quorum_restore_status") != "verified",
+        "block_reconciliation_partition_rejoin_policy_quorum_restore_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("replay_stabilization_status") != "verified",
+        "block_reconciliation_partition_rejoin_policy_replay_stabilization_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("publish_drop_recovery_status") != "verified",
+        "block_reconciliation_partition_rejoin_policy_publish_drop_recovery_status_mismatch",
+    )
+    checks.reject_if(
+        payload.get("peer_churn_recovery_status") != "verified",
+        "block_reconciliation_partition_rejoin_policy_peer_churn_recovery_status_mismatch",
+    )
 
     reconciliation_reason_codes = payload.get("reconciliation_reason_codes")
     reconciliation_reason_codes_are_valid = isinstance(reconciliation_reason_codes, list) and bool(
@@ -321,6 +397,10 @@ def check_policy(args: argparse.Namespace) -> int:
     if reconciliation_reason_codes_are_valid:
         checks.reject_if(
             reconciliation_reason_codes != sorted(set(reconciliation_reason_codes)),
+            "block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid",
+        )
+        checks.reject_if(
+            any(code not in RECONCILIATION_REASON_CODES_ALLOWED for code in reconciliation_reason_codes),
             "block_reconciliation_partition_rejoin_policy_reconciliation_reason_codes_invalid",
         )
 

@@ -72,6 +72,8 @@ required = payload.get("required_scenarios", [])
 if required != [
     "fixture_contract",
     "primary_loss_reconnect_catchup",
+    "publish_drop_recovery",
+    "transient_peer_churn_recovery",
     "three_process_failover",
 ]:
     raise SystemExit("unexpected smoke required scenario set")

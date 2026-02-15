@@ -8,7 +8,8 @@ TMP_REPORT="$(mktemp)"
 TMP_POLICY="$(mktemp)"
 TMP_TAMPERED="$(mktemp)"
 TMP_TAMPERED_TRANSPORT="$(mktemp)"
-trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED" "$TMP_TAMPERED_TRANSPORT"' EXIT
+TMP_TAMPERED_RECOVERY="$(mktemp)"
+trap 'rm -f "$TMP_REPORT" "$TMP_POLICY" "$TMP_TAMPERED" "$TMP_TAMPERED_TRANSPORT" "$TMP_TAMPERED_RECOVERY"' EXIT
 
 if [ ! -x "$VALIDATION_SCRIPT" ]; then
   echo "expected block reconciliation partition/rejoin validation script to be executable" >&2
@@ -126,6 +127,37 @@ if [ "$tampered_transport_code" -eq 0 ]; then
 fi
 if ! printf '%s\n' "$tampered_transport_output" | grep -q 'block_reconciliation_partition_rejoin_policy_transport_mode_mismatch'; then
   echo "expected deterministic transport-mode mismatch reason for block reconciliation partition/rejoin report" >&2
+  exit 1
+fi
+
+cp "$TMP_REPORT" "$TMP_TAMPERED_RECOVERY"
+python3 - "$TMP_TAMPERED_RECOVERY" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["head_alignment_status"] = "drifted"
+payload["reconciliation_reason_codes"] = ["reconciliation_split_head_unresolved"]
+path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+PY
+
+set +e
+tampered_recovery_output="$(
+  bash "$POLICY_CHECKER" \
+    --report-file "$TMP_TAMPERED_RECOVERY" \
+    --expected-final-decision GO \
+    --ci-fast-gate PASS 2>&1
+)"
+tampered_recovery_code=$?
+set -e
+if [ "$tampered_recovery_code" -eq 0 ]; then
+  echo "expected recovery-criteria tampered block reconciliation partition/rejoin report to fail policy validation" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$tampered_recovery_output" | grep -q 'block_reconciliation_partition_rejoin_policy_head_alignment_status_mismatch'; then
+  echo "expected deterministic head-alignment mismatch reason for block reconciliation partition/rejoin report" >&2
   exit 1
 fi
 
