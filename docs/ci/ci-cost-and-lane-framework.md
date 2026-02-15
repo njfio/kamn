@@ -379,6 +379,19 @@ bash scripts/ci/check_test_harness_loc_soft_budget.sh --report-file /tmp/test-ha
 bash scripts/ci/run_test_harness_loc_soft_budget_contract_lane.sh --output-json /tmp/test-harness-loc-soft-budget-contract-report.json
 ```
 
+Ignored-test + script-surface composed trend contract validation:
+
+```bash
+bash scripts/ci/run_ignored_test_and_script_budget_trend_contract_lane.sh --output-json /tmp/ignored-test-script-soft-budget-trend-contract-report.json
+bash scripts/ci/test_run_ignored_test_and_script_budget_trend_contract_lane.sh
+```
+
+Deterministic composed fail-closed markers:
+- `ignored_test_metadata_stale_entry`
+- `combined_shell_surface_shell_line_total_delta_fail_exceeded`
+- `combined_shell_surface_ratio_fail_ceiling_exceeded`
+- `ignored_test_script_budget_trend_contract_status=pass|fail`
+
 Deterministic command-surface drift markers in trend artifacts:
 - `command_surface_trend_status=within|warn|fail|invalid`
 - `command_surface_policy_decision=GO|WARN|NO-GO`

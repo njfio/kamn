@@ -2679,6 +2679,24 @@ Ignored-test inventory drift policy (fail-closed):
   - each metadata `reason` must map to a category in `ignored_test_promotion_criteria.json` with non-empty criteria list.
 - drift policy remains fail-closed on unapproved ignored-test inventory/metadata changes (`Regression: #2836`, `Regression: #2841`, `Regression: #2842`, `Regression: #2843`).
 
+Ignored-test + script-surface trend composed contract lane (fail-closed):
+- composed lane command:
+  - `bash scripts/ci/run_ignored_test_and_script_budget_trend_contract_lane.sh --output-json /tmp/ignored-test-script-soft-budget-trend-contract-report.json`
+- regression test command:
+  - `bash scripts/ci/test_run_ignored_test_and_script_budget_trend_contract_lane.sh`
+- composed contract validates:
+  - ignored-test baseline/metadata/promotion-criteria pass path remains GO.
+  - stale ignored-test metadata fails closed with `ignored_test_metadata_stale_entry`.
+  - script-surface trend threshold breaches fail closed with:
+    - `combined_shell_surface_shell_line_total_delta_fail_exceeded`
+    - `combined_shell_surface_ratio_fail_ceiling_exceeded`
+- deterministic contract markers:
+  - `ignored_test_script_budget_trend_contract_status=pass|fail`
+  - `ignored_test_script_budget_trend_contract_ignored_inventory_decision=GO`
+  - `ignored_test_script_budget_trend_contract_script_within_decision=GO`
+  - `ignored_test_script_budget_trend_contract_script_fail_decision=NO-GO`
+  - `ignored_test_script_budget_trend_contract_reason_code=ignored_test_script_budget_trend_contract_ok|ignored_test_script_budget_trend_contract_max_runtime_exceeded`
+
 Policy:
 - Warning at 90% of configured budget.
 - Failure at 100% of configured budget for `ci-fast-gate` (merge-critical lane).
@@ -2787,6 +2805,13 @@ Fast-mode CI tooling regression coverage includes:
     - `reason_codes=command_surface_script_count_trend_fail_delta_exceeded`
     - `reason_codes=command_surface_shell_line_total_trend_fail_delta_exceeded`
     - `reason_codes=command_surface_budget_status_fail`
+- Ignored-test + script-surface trend composed contract lane (`test_run_ignored_test_and_script_budget_trend_contract_lane.sh`)
+  - contract lane command:
+    - `bash scripts/ci/run_ignored_test_and_script_budget_trend_contract_lane.sh --output-json /tmp/ignored-test-script-soft-budget-trend-contract-report.json`
+  - deterministic stale-metadata and threshold-fail reason-code surface:
+    - `ignored_test_metadata_stale_entry`
+    - `combined_shell_surface_shell_line_total_delta_fail_exceeded`
+    - `combined_shell_surface_ratio_fail_ceiling_exceeded`
 - Fast-gate runtime/cost trend contract lane (`test_run_fast_gate_budget_delta_contract_lane.sh`)
   - delta report generator test:
     - `bash scripts/ci/test_generate_fast_gate_budget_delta_report.sh`

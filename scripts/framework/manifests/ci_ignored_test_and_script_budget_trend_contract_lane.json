@@ -1,0 +1,12 @@
+{
+  "schema_version": "kamn.contract-lane.manifest.v1",
+  "lane_id": "ci.ignored_test_and_script_budget_trend.contract",
+  "evidence_key": "ci_ignored_test_and_script_budget_trend_contract_lane:v1",
+  "reason_key": "ci_ignored_test_and_script_budget_trend_contract_lane_reason_codes:GO:v1",
+  "phases": {
+    "contract": [
+      "bash",
+      "scripts/ci/ignored_test_and_script_budget_trend_contract_lane_impl.sh"
+    ]
+  }
+}
